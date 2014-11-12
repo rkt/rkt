@@ -1,0 +1,36 @@
+{
+	"SCFVersion": "1",
+	"Name": "example.com/ourapp-1.0.0",
+	"OS": "linux",
+	"Arch": "amd64",
+	"Exec": ["/usr/bin/mysql"],
+	"Type": "oneshot",
+	"User": "100",
+	"Group": "300",
+	"Environment": {
+		"MYSQL_DEBUG": "true"
+	},
+	"MountPoints": [
+		{
+			"Name": "database",
+			"Path": "/var/lib/mysql",
+			"ReadOnly": false
+		}
+	],
+	"Ports": [
+		{
+			"Name": "mysql",
+			"Protocol": "tcp",
+			"Port": 3306
+		}
+	],
+	"Isolators": {
+		"PrivateNetwork": "true",
+		"CpuShares": "20",
+		"MemoryLimit": "1G",
+		"CapabilityBoundingSet": "CAP_NET_BIND_SERVICE CAP_SYS_ADMIN"
+	},
+	"Annotations": {
+		"Foo": "Bar"
+	}
+}
