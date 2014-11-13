@@ -72,6 +72,7 @@ func main() {
 	}
 	cm.ACVersion = *v
 
+	// - Generating the Container Unique ID (UID)
 	cuid, err := schema.NewUUID(genUID())
 	if err != nil {
 		log.Fatalf("error creating UID: %v", err)
@@ -80,7 +81,7 @@ func main() {
 
 	sApps := make(map[string]schema.App)
 	for _, name := range apps {
-		a, err := newApp(name)
+		a, err := newSchemaApp(name)
 		if err != nil {
 			log.Fatalf("error creating app: %v", err)
 		}
@@ -98,12 +99,21 @@ func main() {
 	if err != nil {
 		log.Fatalf("error marshalling container manifest: %v", err)
 	}
-	fmt.Println(string(b))
+
+	// - Generating the container document
+	cdoc := string(b)
+	fmt.Println(cdoc)
+
+	// - Creating a directory for the container
+
+	// - Copying the stage1 into the container directory
+
+	// - Copying the RAFs for each app into the stage2 directories
 }
 
-// newApp creates a new App
+// newSchemaApp creates a new schema.App from a command-line name
 // TODO(jonboulle): implement me
-func newApp(name string) (*schema.App, error) {
+func newSchemaApp(name string) (*schema.App, error) {
 	a := schema.App{
 		ID: name,
 	}
