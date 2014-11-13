@@ -24,7 +24,7 @@ type ExecGroup struct {
 
 type ExecUnit struct {
 	ID	string				`json:"ID"`
-	Prereqs	[]string			`json:"Before,omitempty"`
+	Befores	[]string			`json:"Before,omitempty"`
 }
 
 type Volume struct {
@@ -56,14 +56,14 @@ func loadManifest(blob []byte) (*Manifest, error) {
 		return nil, fmt.Errorf("UID is required")
 	}
 
-	/* ensure all ExecUnit.Prereqs refer to valid Units[keys] */
+	/* ensure all ExecUnit.Befores refer to valid Units[keys] */
 	for _, unit := range egm.Units {
 		if unit.ID == "" {
 			return nil, fmt.Errorf("ID is required")
 		}
 
-		if unit.Prereqs != nil {
-			for _, req := range unit.Prereqs {
+		if unit.Befores != nil {
+			for _, req := range unit.Befores {
 				if _, ok := egm.Units[req]; !ok {
 					return nil, fmt.Errorf("Invalid prerequisite: %s", req)
 				}

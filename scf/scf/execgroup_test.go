@@ -19,8 +19,8 @@ func TestLoadManifest(t *testing.T) {
 
 	for i, u := range egm.Units {
 		fmt.Printf(" Unit %v: ID: \"%s\"\n", i, u.ID);
-		for _, req := range u.Prereqs {
-			fmt.Printf("  Prereq: \"%s\"\n", req);
+		for _, req := range u.Befores {
+			fmt.Printf("  Before: \"%s\"\n", req);
 		}
 	}
 }
@@ -36,9 +36,9 @@ func TestLoadExecGroup(t *testing.T) {
 	fmt.Printf("Group: \"%s\"\n", eg.Manifest.UID)
 	for _, u := range eg.Units {
 		fmt.Printf(" Unit \"%s\"", u.Name)
-		if eg.Manifest.Units[u.Name].Prereqs != nil {
+		if eg.Manifest.Units[u.Name].Befores != nil {
 			fmt.Printf(" Before:")
-			for _, pre := range eg.Manifest.Units[u.Name].Prereqs {
+			for _, pre := range eg.Manifest.Units[u.Name].Befores {
 				fmt.Printf(" \"%s\"", pre)
 			}
 		}
