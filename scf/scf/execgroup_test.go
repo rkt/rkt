@@ -1,7 +1,6 @@
 package scf
 
 import (
-	"os"
 	"fmt"
 
 	"testing"
@@ -13,8 +12,7 @@ func TestLoadManifest(t *testing.T) {
 
 	egm, err := loadManifest(json)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load egm json: %v", err)
-		t.Fail()
+		t.Fatal("Failed to load egm json: %v", err)
 	}
 
 	fmt.Printf("Group: \"%s\"\n", egm.UID);
@@ -32,8 +30,7 @@ func TestLoadManifest(t *testing.T) {
 func TestLoadExecGroup(t *testing.T) {
 	eg, err := LoadExecGroup("examples/execgroup-skel")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load execgroup: %v", err)
-		t.Fail()
+		t.Fatal("Failed to load execgroup: %v", err)
 	}
 
 	fmt.Printf("Group: \"%s\"\n", eg.Manifest.UID)

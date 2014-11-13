@@ -1,9 +1,7 @@
 package scf
 
 import (
-	"os"
 	"fmt"
-
 	"testing"
 )
 
@@ -12,8 +10,7 @@ func TestLoadExecFile(t *testing.T) {
 
 	ef, err := loadExecFile(json)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load entry point")
-		t.Fail()
+		t.Fatal(err)
 	}
 
 	fmt.Printf("Unit: %s\n", ef.Name);
@@ -34,5 +31,4 @@ func TestLoadExecFile(t *testing.T) {
 	for k, v := range ef.Isols {
 		fmt.Printf(" isolator: %v=%s\n", k, v);
 	}
-
 }

@@ -2,9 +2,12 @@
 package scf
 
 import (
-	"os"
 	"fmt"
 	"encoding/json"
+)
+
+const (
+	CurrentVersion = "1"
 )
 
 type MountPoint struct {
@@ -39,19 +42,16 @@ func loadExecFile(blob []byte) (*ExecFile, error) {
 
 	err := json.Unmarshal(blob, ef)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to unmarshal execfile: %v\n", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to unmarshal execfile: %v", err)
 	}
 
 	/* ensure it has the minimum usable fields */
-	if ef.Version != "1" {
-		fmt.Fprintf(os.Stderr, "Unsupported version: %v\n", ef.Version)
-		return nil, err
+	if ef.Version != CurrentVersion {
+		return nil, fmt.Errorf("Unsupported version: %v", ef.Version)
 	}
 
 	if ef.Name == "" {
-		fmt.Fprintf(os.Stderr, "Name required\n")
-		return nil, err
+		return nil, fmt.Errorf("Name required")
 	}
 
 	/* TODO any further validation */

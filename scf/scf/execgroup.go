@@ -2,7 +2,6 @@
 package scf
 
 import (
-	"os"
 	"fmt"
 	"path/filepath"
 	"io/ioutil"
@@ -45,33 +44,28 @@ func loadManifest(blob []byte) (*Manifest, error) {
 
 	err := json.Unmarshal(blob, egm)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to unmarshal group manifest: %v\n", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to unmarshal group manifest: %v", err)
 	}
 
 	/* some validation */
 	if egm.Version != "1" {
-		fmt.Fprintf(os.Stderr, "Unsupported version: %v\n", egm.Version)
-		return nil, err
+		return nil, fmt.Errorf("Unsupported version: %v", egm.Version)
 	}
 
 	if egm.UID == "" {
-		fmt.Fprintf(os.Stderr, "UID is required\n")
-		return nil, err
+		return nil, fmt.Errorf("UID is required")
 	}
 
 	/* ensure all ExecUnit.Prereqs refer to valid Units[keys] */
 	for _, unit := range egm.Units {
 		if unit.ID == "" {
-			fmt.Fprintf(os.Stderr, "ID is required\n")
-			return nil, err
+			return nil, fmt.Errorf("ID is required")
 		}
 
 		if unit.Prereqs != nil {
 			for _, req := range unit.Prereqs {
 				if _, ok := egm.Units[req]; !ok {
-					fmt.Fprintf(os.Stderr, "Invalid prerequisite: %s\n", req)
-					return nil, err
+					return nil, fmt.Errorf("Invalid prerequisite: %s", req)
 				}
 			}
 		}
@@ -124,14 +118,12 @@ func LoadExecGroup(path string) (*ExecGroup, error) {
 
 	buf, err := ioutil.ReadFile(filepath.Join(path, ExecGroupPath))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed reading execfile: %v\n", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed reading execfile: %v", err)
 	}
 
 	eg.Manifest, err = loadManifest(buf)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed loading manifest: %v\n", err)
-		return nil, err
+		return nil, fmt.Errorf("Failed loading manifest: %v", err)
 	}
 
 	for name, _ := range eg.Manifest.Units {
@@ -140,14 +132,12 @@ func LoadExecGroup(path string) (*ExecGroup, error) {
 		/* XXX: here we're trusting name, should probably sanitize it */
 		buf, err := ioutil.ReadFile(filepath.Join(path, Stage2Path, esc, "entrypoints", name))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed reading runnable unit \"%s\": %v\n", name, err)
-			return nil, err
+			return nil, fmt.Errorf("Failed reading runnable unit \"%s\": %v", name, err)
 		}
 
 		rcu, err := loadExecFile(buf)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed loading entry point %s: %v\n", name, err)
-			return nil, err
+			return nil, fmt.Errorf("Failed loading entry point %s: %v\n", name, err)
 		}
 		eg.Units = append(eg.Units, rcu)
 	}
