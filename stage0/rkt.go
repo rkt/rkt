@@ -40,6 +40,7 @@ import (
 	// WARNING: here be dragons
 	// TODO(jonboulle): vendor this once the schema is stable
 	"github.com/containers/standard/schema"
+	"github.com/containers/standard/schema/types"
 	"github.com/containers/standard/taf"
 )
 
@@ -62,14 +63,14 @@ func main() {
 	fs.Parse(os.Args[1:])
 	args := fs.Args()
 	if len(args) < 2 || args[0] != "run" {
-		fmt.Fprintf(os.Stderr, "usage: rkt run [image] [app...]\n")
+		fmt.Fprintf(os.Stderr, "usage: rkt run [OPTION]... IMAGE [APP]...\n")
 		os.Exit(0)
 	}
 	img := args[1]
 	fs.Parse(args[2:])
 	apps := fs.Args()
 	if len(apps) < 1 {
-		fmt.Fprintf(os.Stderr, "usage: rkt run [image] [app...]\n")
+		fmt.Fprintf(os.Stderr, "usage: rkt run [OPTION]... IMAGE [APP]...\n")
 		os.Exit(0)
 	}
 
@@ -86,7 +87,7 @@ func main() {
 	// - Fetch the specified TAF
 	// (for now, we just assume it is local, named by its hash, and unencrypted)
 
-	// - Unpacking the TAFs and copying the RAFs for each app into the stage2 directories
+	// - Unpack the TAF and copy the RAFs for each specified app into the stage2 directories
 	fh, err := os.Open(img)
 	if err != nil {
 		log.Fatalf("error opening app: %v", err)
@@ -105,7 +106,7 @@ func main() {
 	}
 
 	// - Generating the Container Unique ID (UID)
-	cuid, err := schema.NewUUID(genUID())
+	cuid, err := types.NewUUID(genUID())
 	if err != nil {
 		log.Fatalf("error creating UID: %v", err)
 	}
@@ -116,7 +117,7 @@ func main() {
 		UUID:   *cuid,
 	}
 
-	v, err := schema.NewSemVer("1.0.0")
+	v, err := types.NewSemVer("1.0.0")
 	if err != nil {
 		log.Fatalf("error creating version: %v", err)
 	}
@@ -181,7 +182,7 @@ func main() {
 func newSchemaApp(name string) (*schema.App, error) {
 	// TODO(jonboulle): implement me properly
 	a := schema.App{
-		ImageID:     schema.Hash{},
+		ImageID:     types.Hash{},
 		Depends:     nil,
 		Isolators:   nil,
 		Annotations: nil,
