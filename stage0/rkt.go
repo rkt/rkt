@@ -53,7 +53,7 @@ var (
 
 func init() {
 	fs.StringVar(&flagDir, "dir", "", "directory in which to create container filesystem")
-	fs.StringVar(&flagStage1, "stage1", "./bin/stage1", "path to stage1 binary")
+	fs.StringVar(&flagStage1, "stage1-init", "./bin/init", "path to stage1 binary")
 	fs.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	flagVolumes = volumeMap{}
 }
