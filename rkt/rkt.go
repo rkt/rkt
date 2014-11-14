@@ -53,7 +53,7 @@ var (
 
 func init() {
 	fs.StringVar(&flagDir, "dir", "", "directory in which to create container filesystem")
-	fs.StringVar(&flagStage1, "stage1", "./stage1", "path to stage1 binary")
+	fs.StringVar(&flagStage1, "stage1", "./bin/stage1", "path to stage1 binary")
 	fs.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	flagVolumes = volumeMap{}
 }
@@ -62,7 +62,7 @@ func main() {
 	fs.Parse(os.Args[1:])
 	args := fs.Args()
 	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "usage: rkt run [image...]\n")
+		fmt.Fprintf(os.Stderr, "usage: rkt run [image_hash...]\n")
 		os.Exit(0)
 	}
 	cmd := args[0]
@@ -157,12 +157,11 @@ func main() {
 	}
 
 	// - Fetching the TAFs for the specified applications
-	// (for now, we just assume they are local and unencrypted)
+	// (for now, we just assume they are local, named by their hash, and unencrypted)
 
 	// - Unpacking the TAFs and copying the RAFs for each app into the stage2 directories
 	for _, name := range apps {
-		fn := name + ".tar.gz"
-		fh, err := os.Open(fn)
+		fh, err := os.Open(name)
 		if err != nil {
 			log.Fatalf("error opening app: %v", err)
 		}
