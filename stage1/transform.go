@@ -97,7 +97,12 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest) ([]string, error) {
 
 // take an prepared container execution group and return a systemd-nspawn argument list
 func (c *Container) ContainerToNspawnArgs() ([]string, error) {
-	args := []string{"-b"}
+	args := []string{
+		"--boot",
+		"--uuid="+c.Manifest.UUID.String(),
+		"--directory="+Stage1RootfsPath(false),
+	}
+
 
 	for _, am := range c.Apps {
 		aa, err := c.appToNspawnArgs(am)

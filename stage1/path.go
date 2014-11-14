@@ -34,6 +34,11 @@ func rootedPath(path string, chroot bool) string {
 	return path
 }
 
+// returns the path to the stage1 rootfs path
+func Stage1RootfsPath(chroot bool) string {
+	return rootedPath(Stage1Dir, chroot)
+}
+
 // returns the container manifest path
 func ContainerManifestPath(chroot bool) string {
 	return rootedPath(ContainerFile, chroot)
