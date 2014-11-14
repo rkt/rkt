@@ -13,5 +13,8 @@ export GOPATH=${PWD}/gopath
 
 eval $(go env)
 
-echo "Building rkt..."
+echo "Building rkt (stage0)..."
 go build -o $GOBIN/rkt ${REPO_PATH}/rkt
+
+echo "Building stage1..."
+go build -o $GOBIN/stage1 ${REPO_PATH}/scf
