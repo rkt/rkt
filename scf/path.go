@@ -7,12 +7,13 @@ import (
 )
 
 const (
-	ContainerDir = "/container"
-	Stage1Dir = "/stage1"
-	ServicesDir = Stage1Dir+"/run/systemd/system"
-	WantsDir = ServicesDir+"/default.target.wants"
+	ContainerDir  = "/container"
+	Stage1Dir     = "/stage1"
+	ServicesDir   = Stage1Dir + "/run/systemd/system"
+	WantsDir      = ServicesDir + "/default.target.wants"
 	ServiceSuffix = ".service"
-	Stage2Dir = Stage1Dir+"/opt/stage2"
+	Stage2Dir     = Stage1Dir + "/opt/stage2"
+	AppsSubdir    = "apps"
 )
 
 var (
@@ -39,12 +40,12 @@ func AppMountPath(name string) string {
 
 // returns the path to the app manifest file within stage1
 func AppManifestPath(name string) string {
-	return filepath.Join(AppMountPath(name), "apps", name)
+	return filepath.Join(AppMountPath(name), AppsSubdir, name)
 }
 
 // returns the systemd service path for the named app
 func ServicePath(name string) string {
-	return dbus.PathBusEscape(name)+ServiceSuffix
+	return dbus.PathBusEscape(name) + ServiceSuffix
 }
 
 // returns the systemd want symlink path for the named app
