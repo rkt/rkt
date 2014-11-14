@@ -8,24 +8,24 @@ import (
 	"github.com/containers/standard/schema"
 )
 
-// ContainerManifest + AppManifests encapsulator
+// ContainerRuntimeManifest + AppManifests encapsulator
 type Container struct {
-	Manifest *schema.ContainerManifest
+	Manifest *schema.ContainerRuntimeManifest
 	Apps     []*schema.AppManifest
 }
 
 // prep a container manifest
-func prepManifest(blob []byte) (*schema.ContainerManifest, error) {
-	cm := &schema.ContainerManifest{}
+func prepManifest(blob []byte) (*schema.ContainerRuntimeManifest, error) {
+	cm := &schema.ContainerRuntimeManifest{}
 
 	if err := json.Unmarshal(blob, cm); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal group manifest: %v", err)
 	}
 
-	/* ensure each app.Before refers to valid Apps[key] */
+	/* ensure each app.Depends refers to valid Apps[key] */
 	for _, app := range cm.Apps {
-		if app.Before != nil {
-			for _, b := range app.Before {
+		if app.Depends != nil {
+			for _, b := range app.Depends {
 				if _, ok := cm.Apps[b]; !ok {
 					return nil, fmt.Errorf("invalid before: %s", b)
 				}
@@ -33,7 +33,7 @@ func prepManifest(blob []byte) (*schema.ContainerManifest, error) {
 		}
 	}
 
-	// TODO any further necessary validation, like detecting circular Befores?
+	// TODO any further necessary validation, like detecting circular Depends?
 	// I don't think anything we do here is rkt-specific, such validation likely belongs in the standard unmarshal if possible
 	return cm, nil
 }

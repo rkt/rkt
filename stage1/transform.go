@@ -16,11 +16,11 @@ import (
 // transform the provided app manifest into a systemd service unit
 func (c *Container) appToSystemd(am *schema.AppManifest) error {
 	name := am.Name.String()
-	befores := c.Manifest.Apps[name].Before
+	befores := c.Manifest.Apps[name].Depends
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
-		&unit.UnitOption{"Service", "Type", am.Type.String()},
+		&unit.UnitOption{"Service", "Type", am.StartedOn.String()},
 		&unit.UnitOption{"Service", "Restart", "no"},
 		&unit.UnitOption{"Service", "RootDirectory", AppMountPath(name, true)},
 		&unit.UnitOption{"Service", "ExecStart", "\"" + strings.Join(am.Exec, "\" \"") + "\""},

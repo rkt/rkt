@@ -111,9 +111,9 @@ func main() {
 	}
 
 	// - Generating a Container Runtime Manifest
-	cm := &schema.ContainerManifest{
-		ACType: "ContainerManifest",
-		UID:    *cuid,
+	cm := &schema.ContainerRuntimeManifest{
+		ACKind: "ContainerRuntimeManifest",
+		UUID:   *cuid,
 	}
 
 	v, err := schema.NewSemVer("1.0.0")
@@ -134,7 +134,9 @@ func main() {
 
 	sVols := make(map[string]schema.Volume)
 	for key, path := range flagVolumes {
-		sVols[key] = schema.Volume{path}
+		sVols[key] = schema.Volume{
+			Path: path,
+		}
 	}
 	cm.Volumes = sVols
 
@@ -179,10 +181,10 @@ func main() {
 func newSchemaApp(name string) (*schema.App, error) {
 	// TODO(jonboulle): implement me properly
 	a := schema.App{
-		ID:          name,
+		ImageID:     schema.Hash{},
+		Depends:     nil,
 		Isolators:   nil,
 		Annotations: nil,
-		Before:      nil,
 	}
 	return &a, nil
 }
