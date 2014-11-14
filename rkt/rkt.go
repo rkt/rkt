@@ -26,8 +26,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	// WARNING: here be dragons
@@ -38,10 +40,12 @@ import (
 var (
 	fs = flag.NewFlagSet("rkt", flag.ExitOnError)
 
+	flagDir     string
 	flagVolumes volumeMap
 )
 
 func init() {
+	fs.StringVar(&flagDir, "dir", "", "directory in which to create container filesystem")
 	fs.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	flagVolumes = volumeMap{}
 }
@@ -61,9 +65,29 @@ func main() {
 		os.Exit(1)
 	}
 	fs.Parse(args[1:])
+
+	dir := flagDir
+	if dir == "" {
+		log.Printf("-dir unset - using temporary directory")
+		var err error
+		dir, err = ioutil.TempDir("", "rkt")
+		if err != nil {
+			log.Fatalf("error creating temporary directory: %v", err)
+		}
+	}
+
 	apps := fs.Args()
+
+	// - Generating the Container Unique ID (UID)
+	cuid, err := schema.NewUUID(genUID())
+	if err != nil {
+		log.Fatalf("error creating UID: %v", err)
+	}
+
+	// - Generating the container document
 	cm := &schema.ContainerManifest{
 		ACType: "ContainerManifest",
+		UID:    *cuid,
 	}
 
 	v, err := schema.NewSemVer("1.0.0")
@@ -71,13 +95,6 @@ func main() {
 		log.Fatalf("error creating version: %v", err)
 	}
 	cm.ACVersion = *v
-
-	// - Generating the Container Unique ID (UID)
-	cuid, err := schema.NewUUID(genUID())
-	if err != nil {
-		log.Fatalf("error creating UID: %v", err)
-	}
-	cm.UID = *cuid
 
 	sApps := make(map[string]schema.App)
 	for _, name := range apps {
@@ -95,38 +112,54 @@ func main() {
 	}
 	cm.Volumes = sVols
 
-	b, err := json.Marshal(cm)
+	cdoc, err := json.Marshal(cm)
 	if err != nil {
 		log.Fatalf("error marshalling container manifest: %v", err)
 	}
 
-	// - Generating the container document
-	cdoc := string(b)
-	fmt.Println(cdoc)
-
 	// - Creating a directory for the container
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		log.Fatalf("error creating directory: %v", err)
+	}
+
+	// Write the container document into the filesystem
+	fn := filepath.Join(dir, "container")
+	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
+		log.Fatalf("error writing container manifest: %v", err)
+	}
 
 	// - Copying the stage1 into the container directory
+	// TODO(jonboulle): ???
+	fn = filepath.Join(dir, "stage1", "opt")
+	if err := os.MkdirAll(fn, 0700); err != nil {
+		log.Fatalf("error setting up stage1: %v", err)
+	}
 
 	// - Copying the RAFs for each app into the stage2 directories
+
+	fmt.Printf("Wrote filesystem to %s\n", dir)
 }
 
 // newSchemaApp creates a new schema.App from a command-line name
-// TODO(jonboulle): implement me
 func newSchemaApp(name string) (*schema.App, error) {
+	// TODO(jonboulle): implement me properly
 	a := schema.App{
-		ID: name,
+		ID:          name,
+		Isolators:   nil,
+		Annotations: nil,
+		Before:      nil,
 	}
 	return &a, nil
 }
 
 // genUID generates a unique ID for the container
-// TODO(jonboulle): implement me
+// TODO(jonboulle): implement me properly - how is this generated?
 func genUID() string {
 	return "6733C088-A507-4694-AABF-EDBE4FC5266F"
 }
 
-// volumeMap implements the flag.Value interface
+// volumeMap implements the flag.Value interface to contain a set of mappings
+// from mount label --> mount path
 type volumeMap map[string]string
 
 func (vm *volumeMap) Set(s string) error {
