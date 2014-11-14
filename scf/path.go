@@ -7,13 +7,14 @@ import (
 )
 
 const (
-	ContainerDir  = "/container"
+	ContainerFile = "/container"
 	Stage1Dir     = "/stage1"
 	ServicesDir   = Stage1Dir + "/run/systemd/system"
 	WantsDir      = ServicesDir + "/default.target.wants"
 	ServiceSuffix = ".service"
 	Stage2Dir     = Stage1Dir + "/opt/stage2"
 	AppsSubdir    = "apps"
+	RootfsDir     = "rootfs"
 )
 
 var (
@@ -26,34 +27,47 @@ func SetRootPath(root string) {
 	rootPath = root
 }
 
+func rootedPath(path string, chroot bool) string {
+	if chroot == false {
+		return filepath.Join(rootPath, path)
+	}
+	return path
+}
+
 // returns the container manifest path
-func ContainerManifestPath() string {
-	return filepath.Join(rootPath, ContainerDir)
+func ContainerManifestPath(chroot bool) string {
+	return rootedPath(ContainerFile, chroot)
 }
 
 // returns the path where the named app is rooted i.e. where its contents are extracted within stage1
-// used Mount instead of Root to avoid confusion with the apps rootfs
-func AppMountPath(name string) string {
+// Mount is used instead of Root to avoid confusion with the app's rootfs directory
+func AppMountPath(name string, chroot bool) string {
 	esc := dbus.PathBusEscape(name)
-	return filepath.Join(rootPath, Stage2Dir, esc)
+	return rootedPath(filepath.Join(Stage2Dir, esc), chroot)
+}
+
+// returns the path to the named app's rootfs
+func AppRootfsPath(name string, chroot bool) string {
+	return filepath.Join(AppMountPath(name, chroot), RootfsDir)
 }
 
 // returns the path to the app manifest file within stage1
-func AppManifestPath(name string) string {
-	return filepath.Join(AppMountPath(name), AppsSubdir, name)
+func AppManifestPath(name string, chroot bool) string {
+	return filepath.Join(AppMountPath(name, chroot), AppsSubdir, name)
 }
 
 // returns the systemd service path for the named app
+// XXX this doesn't quite mesh in here
 func ServicePath(name string) string {
 	return dbus.PathBusEscape(name) + ServiceSuffix
 }
 
 // returns the systemd want symlink path for the named app
-func WantLinkPath(name string) string {
-	return filepath.Join(rootPath, WantsDir, ServicePath(name))
+func WantLinkPath(name string, chroot bool) string {
+	return rootedPath(filepath.Join(WantsDir, ServicePath(name)), chroot)
 }
 
 // returns the path to the systemd service file path for the named app
-func ServiceFilePath(name string) string {
-	return filepath.Join(rootPath, ServicesDir, ServicePath(name))
+func ServiceFilePath(name string, chroot bool) string {
+	return rootedPath(filepath.Join(ServicesDir, ServicePath(name)), chroot)
 }

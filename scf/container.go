@@ -42,7 +42,7 @@ func prepManifest(blob []byte) (*schema.ContainerManifest, error) {
 func LoadContainer() (*Container, error) {
 	c := &Container{}
 
-	buf, err := ioutil.ReadFile(ContainerManifestPath())
+	buf, err := ioutil.ReadFile(ContainerManifestPath(false))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading container manifest: %v", err)
 	}
@@ -53,7 +53,7 @@ func LoadContainer() (*Container, error) {
 	}
 
 	for name, _ := range c.Manifest.Apps {
-		ampath := AppManifestPath(name)
+		ampath := AppManifestPath(name, false)
 		buf, err := ioutil.ReadFile(ampath)
 		if err != nil {
 			return nil, fmt.Errorf("failed reading app manifest \"%s\": %v", ampath, err)

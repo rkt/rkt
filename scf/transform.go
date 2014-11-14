@@ -14,14 +14,15 @@ import (
 )
 
 // transform the provided app manifest into a systemd service unit
-func AppToSystemd(am *schema.AppManifest, befores []string) error {
+func (c *Container) appToSystemd(am *schema.AppManifest) error {
 	name := am.Name.String()
+	befores := c.Manifest.Apps[name].Before
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
 		&unit.UnitOption{"Service", "Type", am.Type.String()},
 		&unit.UnitOption{"Service", "Restart", "no"},
-		&unit.UnitOption{"Service", "RootDirectory", ServicePath(name)},
+		&unit.UnitOption{"Service", "RootDirectory", AppMountPath(name, true)},
 		&unit.UnitOption{"Service", "ExecStart", "\"" + strings.Join(am.Exec, "\" \"") + "\""},
 		&unit.UnitOption{"Service", "User", am.User},
 		&unit.UnitOption{"Service", "Group", am.Group},
@@ -35,7 +36,7 @@ func AppToSystemd(am *schema.AppManifest, befores []string) error {
 		opts = append(opts, &unit.UnitOption{"Unit", "Before", ServicePath(b)})
 	}
 
-	file, err := os.OpenFile(ServiceFilePath(name), os.O_WRONLY|os.O_CREATE, 0640)
+	file, err := os.OpenFile(ServiceFilePath(name, false), os.O_WRONLY|os.O_CREATE, 0640)
 	if err != nil {
 		return fmt.Errorf("failed to create service file: %v", err)
 	}
@@ -46,18 +47,18 @@ func AppToSystemd(am *schema.AppManifest, befores []string) error {
 		return fmt.Errorf("failed to write service file: %v", err)
 	}
 
-	if err = os.Symlink(path.Join("..", ServicePath(name)), WantLinkPath(name)); err != nil {
+	if err = os.Symlink(path.Join("..", ServicePath(name)), WantLinkPath(name, false)); err != nil {
 		return fmt.Errorf("failed to link service want: %v", err)
 	}
 
 	return nil
 }
 
-// take an prepared scf execution group and output systemd service unit files
-func ContainerToSystemd(c *Container) error {
+// take an prepared container execution group and output systemd service unit files
+func (c *Container) ContainerToSystemd() error {
 	for _, am := range c.Apps {
 		name := am.Name.String()
-		if err := AppToSystemd(am, c.Manifest.Apps[name].Before); err != nil {
+		if err := c.appToSystemd(am); err != nil {
 			return fmt.Errorf("failed to transform app \"%s\" into sysd service: %v", name, err)
 		}
 	}
@@ -65,17 +66,45 @@ func ContainerToSystemd(c *Container) error {
 	return nil
 }
 
-func main() {
-	SetRootPath(".")
+// transform the provided app manifest into a subset of applicable systemd-nspawn arguments
+func (c *Container) appToNspawnArgs(am *schema.AppManifest) ([]string, error) {
+	args := []string{}
+	name := am.Name.String()
 
-	c, err := LoadContainer()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load container: %v\n", err)
-		os.Exit(1)
+	for key, mp := range am.MountPoints {
+		if vol, ok := c.Manifest.Volumes[key.String()]; ok {
+			opt := make([]string, 4)
+
+			if mp.ReadOnly {
+				opt[0] = "--bind-ro="
+			} else {
+				opt[0] = "--bind="
+			}
+
+			opt[1] = vol.Path
+			opt[2] = ":"
+			opt[3] = path.Join(AppRootfsPath(name, true), mp.Path)
+
+			args = append(args, strings.Join(opt, ""))
+		} else {
+			return nil, fmt.Errorf("no volume for mountpoint \"%s\" in app \"%s\"", key, name)
+		}
 	}
 
-	if err = ContainerToSystemd(c); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to transform container into systemd units: %v\n", err)
-		os.Exit(2)
+	return args, nil
+}
+
+// take an prepared container execution group and return a systemd-nspawn argument list
+func (c *Container) ContainerToNspawnArgs() ([]string, error) {
+	args := []string{"-b"}
+
+	for _, am := range c.Apps {
+		aa, err := c.appToNspawnArgs(am)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct args for app \"%s\"", am.Name)
+		}
+		args = append(args, aa...)
 	}
+
+	return args, nil
 }
