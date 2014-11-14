@@ -123,21 +123,27 @@ func main() {
 	}
 	cm.ACVersion = *v
 
-	sApps := make(map[string]schema.App)
+	sApps := make(map[types.ACLabel]schema.App)
 	for _, name := range apps {
 		a, err := newSchemaApp(name)
 		if err != nil {
 			log.Fatalf("error creating app: %v", err)
 		}
-		sApps[name] = *a
+		sApps[types.ACLabel(name)] = *a
 	}
 	cm.Apps = sApps
 
-	sVols := make(map[string]schema.Volume)
+	var sVols []types.Volume
 	for key, path := range flagVolumes {
-		sVols[key] = schema.Volume{
-			Path: path,
+		v := types.Volume{
+			Kind:     "host",
+			Path:     path,
+			ReadOnly: "true",
+			Fulfills: []types.ACLabel{
+				types.ACLabel(key),
+			},
 		}
+		sVols = append(sVols, v)
 	}
 	cm.Volumes = sVols
 
