@@ -27,7 +27,7 @@ func prepManifest(blob []byte) (*schema.ContainerRuntimeManifest, error) {
 		if app.Depends != nil {
 			for _, b := range app.Depends {
 				if _, ok := cm.Apps[b]; !ok {
-					return nil, fmt.Errorf("invalid before: %s", b)
+					return nil, fmt.Errorf("invalid depends: %s", b)
 				}
 			}
 		}

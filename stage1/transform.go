@@ -15,12 +15,13 @@ import (
 
 // transform the provided app manifest into a systemd service unit
 func (c *Container) appToSystemd(am *schema.AppManifest) error {
+	typemap := map[string]string{"fork": "simple", "exit": "oneshot"}
 	name := am.Name.String()
-	befores := c.Manifest.Apps[name].Depends
+	depends := c.Manifest.Apps[name].Depends
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
-		&unit.UnitOption{"Service", "Type", am.StartedOn.String()},
+		&unit.UnitOption{"Service", "Type", typemap[am.StartedOn.String()]},
 		&unit.UnitOption{"Service", "Restart", "no"},
 		&unit.UnitOption{"Service", "RootDirectory", AppMountPath(name, true)},
 		&unit.UnitOption{"Service", "ExecStart", "\"" + strings.Join(am.Exec, "\" \"") + "\""},
@@ -32,8 +33,8 @@ func (c *Container) appToSystemd(am *schema.AppManifest) error {
 		opts = append(opts, &unit.UnitOption{"Service", "Environment", "\"" + ek + "=" + ev + "\""})
 	}
 
-	for _, b := range befores {
-		opts = append(opts, &unit.UnitOption{"Unit", "Before", ServicePath(b)})
+	for _, b := range depends {
+		opts = append(opts, &unit.UnitOption{"Unit", "After", ServicePath(b)})
 	}
 
 	file, err := os.OpenFile(ServiceFilePath(name, false), os.O_WRONLY|os.O_CREATE, 0640)
