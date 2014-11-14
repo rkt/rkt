@@ -1,31 +1,16 @@
 {
-	"SCFVersion": "1",
-	"Name": "example.com/logbackup-1.0.0",
+	"ACVersion": "1.0.0",
+	"ACType": "AppManifest",
+	"Name": "example.com/data-downloader-1.0.0",
 	"OS": "linux",
 	"Arch": "amd64",
-	"Exec": [
-		"/usr/bin/mysqlbackup"
-	],
+	"Exec": ["/usr/bin/downloader"],
 	"Type": "oneshot",
 	"User": "100",
 	"Group": "300",
 	"Environment": {
 		"MYSQL_DEBUG": "true"
 	},
-	"MountPoints": [
-		{
-			"Name": "database",
-			"Path": "/var/lib/mysql",
-			"ReadOnly": false
-		}
-	],
-	"Ports": [
-		{
-			"Name": "mysql",
-			"Protocol": "tcp",
-			"Port": 3306
-		}
-	],
 	"Isolators": {
 		"PrivateNetwork": "true",
 		"CpuShares": "20",

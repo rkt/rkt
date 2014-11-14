@@ -1,7 +1,8 @@
 {
-	"SEEVersion": "1",
+	"ACVersion": "1.0.0",
+	"ACType": "ContainerManifest",
 	"UID": "6733C088-A507-4694-AABF-EDBE4FC5266F",
-	"Group": {
+	"Apps": {
 		"example.com/data-downloader-1.0.0": {
 			"ID": "sha1-3e86b59982e49066c5d813af1c2e2579cbf573de",
 			"Isolators": {
@@ -24,5 +25,8 @@
 		"database": {
 			"Path": "/opt/tenant1/database"
 		}
+	},
+	"Annotations": {
+		"IPAddress": "10.2.3.4"
 	}
 }
