@@ -61,18 +61,17 @@ func init() {
 func main() {
 	fs.Parse(os.Args[1:])
 	args := fs.Args()
-	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "usage: rkt run [image_hash...]\n")
+	if len(args) < 2 || args[0] != "run" {
+		fmt.Fprintf(os.Stderr, "usage: rkt run [image] [app...]\n")
 		os.Exit(0)
 	}
-	cmd := args[0]
-	switch cmd {
-	case "run":
-	default:
-		fmt.Fprintf(os.Stderr, "rkt: unknown subcommand: %q\n", cmd)
-		os.Exit(1)
+	img := args[1]
+	fs.Parse(args[2:])
+	apps := fs.Args()
+	if len(apps) < 1 {
+		fmt.Fprintf(os.Stderr, "usage: rkt run [image] [app...]\n")
+		os.Exit(0)
 	}
-	fs.Parse(args[1:])
 
 	dir := flagDir
 	if dir == "" {
@@ -84,7 +83,26 @@ func main() {
 		}
 	}
 
-	apps := fs.Args()
+	// - Fetch the specified TAF
+	// (for now, we just assume it is local, named by its hash, and unencrypted)
+
+	// - Unpacking the TAFs and copying the RAFs for each app into the stage2 directories
+	fh, err := os.Open(img)
+	if err != nil {
+		log.Fatalf("error opening app: %v", err)
+	}
+	gz, err := gzip.NewReader(fh)
+	if err != nil {
+		log.Fatalf("error reading tarball: %v", err)
+	}
+	d := filepath.Join(dir, "stage1", "opt", "stage2", img)
+	err = os.MkdirAll(d, 0776)
+	if err != nil {
+		log.Fatalf("error creating app directory: %v", err)
+	}
+	if err := taf.ExtractTar(tar.NewReader(gz), d); err != nil {
+		log.Fatalf("error extracting TAF: %v", err)
+	}
 
 	// - Generating the Container Unique ID (UID)
 	cuid, err := schema.NewUUID(genUID())
@@ -136,12 +154,6 @@ func main() {
 		log.Fatalf("error writing container manifest: %v", err)
 	}
 
-	// - Setting up stage 1 and stage 2 directories in the filesystem
-	fn = filepath.Join(dir, "stage1", "opt", "stage2")
-	if err := os.MkdirAll(fn, 0700); err != nil {
-		log.Fatalf("error setting up stage1: %v", err)
-	}
-
 	// - Copying the stage1 binary into the container filesystem
 	in, err := os.Open(flagStage1)
 	if err != nil {
@@ -154,29 +166,6 @@ func main() {
 	}
 	if _, err := io.Copy(out, in); err != nil {
 		log.Fatalf("error writing stage1 init: %v", err)
-	}
-
-	// - Fetching the TAFs for the specified applications
-	// (for now, we just assume they are local, named by their hash, and unencrypted)
-
-	// - Unpacking the TAFs and copying the RAFs for each app into the stage2 directories
-	for _, name := range apps {
-		fh, err := os.Open(name)
-		if err != nil {
-			log.Fatalf("error opening app: %v", err)
-		}
-		gz, err := gzip.NewReader(fh)
-		if err != nil {
-			log.Fatalf("error reading tarball: %v", err)
-		}
-		d := filepath.Join(dir, "stage1", "opt", "stage2", name)
-		err = os.MkdirAll(d, 0776)
-		if err != nil {
-			log.Fatalf("error creating app directory: %v", err)
-		}
-		if err := taf.ExtractTar(tar.NewReader(gz), d); err != nil {
-			log.Fatalf("error extracting TAF: %v", err)
-		}
 	}
 
 	log.Printf("Wrote filesystem to %s\n", dir)

@@ -20,13 +20,14 @@ binary is in charge of doing a number of initial preparatory tasks:
 - Creating a filesystem for the container
 - Setting up stage 1 and stage 2 directories in the filesystem
 - Copying the stage1 binary into the container filesystem
-- Fetching the TAFs for the specified applications
-- Unpacking the TAFs and copying the RAFs for each app into the stage2 directories
+- Fetching the specified TAF
+- Unpacking the TAF and copying each app into the stage2 directories
 
 Given a run command such as:
 
 ```
 rkt run --volume bind:/opt/tenant1/database \
+	sha1-8a30f14877cd8065939e3912542a17d1a5fd9b4c \
 	example.com/data-downloader-1.0.0 \
 	example.com/ourapp-1.0.0 \
 	example.com/logbackup-1.0.0
@@ -40,17 +41,16 @@ filesystem created by stage0 should be:
 /stage1
 /stage1/init
 /stage1/opt
-/stage1/opt/stage2/sha1-3e86b59982e49066c5d813af1c2e2579cbf573de
-/stage1/opt/stage2/sha1-277205b3ae3eb3a8e042a62ae46934b470e431ac
-/stage1/opt/stage2/sha1-86298e1fdb95ec9a45b5935504e26ec29b8feffa
+/stage1/opt/stage2/example_2ecom_2fourapp_2d1_2e0_2e0
+/stage1/opt/stage2/example_2ecom_2fdata_2ddownloader_2d1_2e0_2e0
+/stage1/opt/stage2/example_2ecom_2flogbackup_2d1_2e0_2e0
 ```
 
 where:
 - `container` is the container manifest file
 - `stage1` is a copy of the stage1 filesystem that is safe for read/write
 - `stage1/init` is the actual stage1 binary to be executed
-- `stage1/opt/stage2` are the copies of the application containers in runnable
-  application format
+- `stage1/opt/stage2` are copies of the applications from the RAFs
 
 At this point the stage0 execs `/stage1/init` with the current working
 directory set to the root of the new filesystem.
