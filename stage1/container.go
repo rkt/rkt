@@ -53,7 +53,7 @@ func LoadContainer() (*Container, error) {
 	}
 
 	for name, _ := range c.Manifest.Apps {
-		ampath := AppManifestPath(name, false)
+		ampath := AppManifestPath(name.String(), false)
 		buf, err := ioutil.ReadFile(ampath)
 		if err != nil {
 			return nil, fmt.Errorf("failed reading app manifest \"%s\": %v", ampath, err)

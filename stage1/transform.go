@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/containers/standard/schema"
+	"github.com/containers/standard/schema/types"
 	"github.com/coreos/go-systemd/unit"
 )
 
@@ -17,7 +18,7 @@ import (
 func (c *Container) appToSystemd(am *schema.AppManifest) error {
 	typemap := map[string]string{"fork": "simple", "exit": "oneshot"}
 	name := am.Name.String()
-	depends := c.Manifest.Apps[name].Depends
+	depends := c.Manifest.Apps[am.Name].Depends
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
@@ -34,7 +35,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest) error {
 	}
 
 	for _, b := range depends {
-		opts = append(opts, &unit.UnitOption{"Unit", "After", ServicePath(b)})
+		opts = append(opts, &unit.UnitOption{"Unit", "After", ServicePath(b.String())})
 	}
 
 	file, err := os.OpenFile(ServiceFilePath(name, false), os.O_WRONLY|os.O_CREATE, 0640)
@@ -72,24 +73,31 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest) ([]string, error) {
 	args := []string{}
 	name := am.Name.String()
 
+	vols := make(map[types.ACLabel]types.Volume)
+	for _, v := range c.Manifest.Volumes {
+		for _, f := range v.Fulfills {
+			vols[f] = v
+		}
+	}
+
 	for key, mp := range am.MountPoints {
-		if vol, ok := c.Manifest.Volumes[key.String()]; ok {
-			opt := make([]string, 4)
-
-			if mp.ReadOnly {
-				opt[0] = "--bind-ro="
-			} else {
-				opt[0] = "--bind="
-			}
-
-			opt[1] = vol.Path
-			opt[2] = ":"
-			opt[3] = path.Join(AppRootfsPath(name, true), mp.Path)
-
-			args = append(args, strings.Join(opt, ""))
-		} else {
+		vol, ok := vols[key]
+		if !ok {
 			return nil, fmt.Errorf("no volume for mountpoint \"%s\" in app \"%s\"", key, name)
 		}
+		opt := make([]string, 4)
+
+		if mp.ReadOnly {
+			opt[0] = "--bind-ro="
+		} else {
+			opt[0] = "--bind="
+		}
+
+		opt[1] = vol.Path
+		opt[2] = ":"
+		opt[3] = path.Join(AppRootfsPath(name, true), mp.Path)
+
+		args = append(args, strings.Join(opt, ""))
 	}
 
 	return args, nil
