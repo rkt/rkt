@@ -11,8 +11,8 @@ package main
 // - Creating a filesystem for the container
 // - Setting up stage 1 and stage 2 directories in the filesystem
 // - Copying the stage1 binary into the container filesystem
-// - Fetching the TAFs for the specified applications
-// - Unpacking the TAFs and copying the RAFs for each app into the stage2 directories
+// - Fetching the specified application TAFs
+// - Unpacking the TAFs and copying the RAF for each app into the stage2
 //
 // Given a run command such as:
 //	rkt run --volume bind:/opt/tenant1/database \
@@ -125,7 +125,7 @@ func main() {
 
 	sApps := make(map[types.ACLabel]schema.App)
 	for _, name := range apps {
-		a, err := newSchemaApp(name)
+		a, err := newSchemaApp(name, img)
 		if err != nil {
 			log.Fatalf("error creating app: %v", err)
 		}
@@ -185,10 +185,14 @@ func main() {
 }
 
 // newSchemaApp creates a new schema.App from a command-line name
-func newSchemaApp(name string) (*schema.App, error) {
+func newSchemaApp(name, hash string) (*schema.App, error) {
 	// TODO(jonboulle): implement me properly
+	h, err := types.NewHash(hash)
+	if err != nil {
+		log.Fatalf("bad hash: %v", err)
+	}
 	a := schema.App{
-		ImageID:     types.Hash{},
+		ImageID:     *h,
 		Depends:     nil,
 		Isolators:   nil,
 		Annotations: nil,
