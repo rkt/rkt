@@ -18,3 +18,6 @@ go build -o $GOBIN/rkt ${REPO_PATH}/stage0
 
 echo "Building init (stage1)..."
 go build -o $GOBIN/init ${REPO_PATH}/stage1
+
+echo "Building metadatasvc..."
+go build -o $GOBIN/metadatasvc ${REPO_PATH}/metadatasvc
