@@ -145,10 +145,9 @@ func main() {
 		}
 
 		a := schema.App{
-			ImageID:   *h,
-			Isolators: am.Isolators,
-			// TODO(jonboulle): reimplement once type is clear
-			// Annotations: am.Annotations,
+			ImageID:     *h,
+			Isolators:   am.Isolators,
+			Annotations: am.Annotations,
 		}
 
 		cm.Apps[am.Name] = a
@@ -211,17 +210,6 @@ func main() {
 	if err := syscall.Exec("stage1/init", []string{"stage1/init"}, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
 	}
-}
-
-// newSchemaApp creates a new schema.App from a command-line name
-func newSchemaApp(name types.ACLabel, iid types.Hash) (*schema.App, error) {
-	// TODO(jonboulle): implement me properly
-	a := schema.App{
-		ImageID:     iid,
-		Isolators:   nil,
-		Annotations: nil,
-	}
-	return &a, nil
 }
 
 // genUID generates a unique ID for the container
