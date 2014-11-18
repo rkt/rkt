@@ -15,7 +15,6 @@ const (
 
 func main() {
 	root := "."
-	SetRootPath(root)
 
 	c, err := LoadContainer(root)
 	if err != nil {
