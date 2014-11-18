@@ -68,11 +68,13 @@ func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 	containerIP := queryValue(r.URL, "container_ip")
 	if containerIP == "" {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Print(w, "container_ip missing")
 		return
 	}
 	containerBrPort := queryValue(r.URL, "container_brport")
 	if containerBrPort == "" {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Print(w, "container_brport missing")
 		return
 	}
 
@@ -82,11 +84,13 @@ func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&m.manifest); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "JSON-decoding failed: %v", err)
 		return
 	}
 
 	if err := antiSpoof(containerBrPort, containerIP); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "failed to set anti-spoofing: %v", err)
 		return
 	}
 
@@ -106,15 +110,15 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 
 	uid, err := types.NewUUID(mux.Vars(r)["uid"])
 	if err != nil {
-		fmt.Println("mulformed UUID")
 		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "UUID is missing or mulformed: %v", err)
 		return
 	}
 
 	m, ok := metadataByUID[*uid]
 	if !ok {
-		fmt.Println("metadata by UUID not found", *uid)
 		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "Container with given UUID not found")
 		return
 	}
 
@@ -122,8 +126,8 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 
 	app := &schema.AppManifest{}
 	if err := json.NewDecoder(r.Body).Decode(&app); err != nil {
-		fmt.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "JSON-decoding failed: %v", err)
 		return
 	}
 
@@ -137,8 +141,8 @@ func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) f
 		remoteIP := strings.Split(r.RemoteAddr, ":")[0]
 		m, ok := metadataByIP[remoteIP]
 		if !ok {
-			fmt.Println("metadata by remoteIP not found ", remoteIP)
 			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "metadata by remoteIP (%v) not found", remoteIP)
 			return
 		}
 
@@ -153,8 +157,8 @@ func appGet(h func(w http.ResponseWriter, r *http.Request, m *metadata, am *sche
 		if am, ok := m.apps[appname]; ok {
 			h(w, r, m, am)
 		} else {
-			fmt.Println("app not found ", appname)
 			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "App (%v) not found", appname)
 		}
 	})
 }
@@ -172,8 +176,8 @@ func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, m *metada
 	k := mux.Vars(r)["name"]
 	v, ok := m.manifest.Annotations[types.ACLabel(k)]
 	if !ok {
-		fmt.Println("container annotation not found ", k)
 		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Container annotation (%v) not found", k)
 		return
 	}
 
@@ -233,8 +237,8 @@ func handleAppAnnotation(w http.ResponseWriter, r *http.Request, m *metadata, am
 		w.Write([]byte(v))
 		return
 	}
-	fmt.Println("app annotation not found ", k)
 	w.WriteHeader(http.StatusNotFound)
+	fmt.Fprintf(w, "App annotation (%v) not found", k)
 }
 
 func handleAppManifest(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.AppManifest) {
@@ -271,8 +275,8 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 	remoteIP := strings.Split(r.RemoteAddr, ":")[0]
 	m, ok := metadataByIP[remoteIP]
 	if !ok {
-		fmt.Println("metadata by remoteIP not found ", remoteIP)
 		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Metadata by remoteIP (%v) not found", remoteIP)
 		return
 	}
 
@@ -280,6 +284,7 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 	d, err := digest(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Digest computation failed: %v", err)
 		return
 	}
 
@@ -301,12 +306,14 @@ func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
 	uid, err := types.NewUUID(r.FormValue("uid"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "uid field missing or mulformed: %v", err)
 		return
 	}
 
 	sig, err := base64.StdEncoding.DecodeString(r.FormValue("signature"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "signature field missing or corrupt: %v", err)
 		return
 	}
 
