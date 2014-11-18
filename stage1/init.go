@@ -14,9 +14,10 @@ const (
 )
 
 func main() {
-	SetRootPath(".")
+	root := "."
+	SetRootPath(root)
 
-	c, err := LoadContainer()
+	c, err := LoadContainer(root)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load container: %v\n", err)
 		os.Exit(1)
@@ -29,7 +30,7 @@ func main() {
 
 	ex, err := exec.LookPath(SystemdNspawn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to locate "+SystemdNspawn+" executable: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to locate %s executable: %v\n", SystemdNspawn, err)
 		os.Exit(3)
 	}
 

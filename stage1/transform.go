@@ -18,7 +18,6 @@ import (
 func (c *Container) appToSystemd(am *schema.AppManifest) error {
 	typemap := map[string]string{"fork": "simple", "exit": "oneshot"}
 	name := am.Name.String()
-	depends := c.Manifest.Apps[am.Name].Depends
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
@@ -32,10 +31,6 @@ func (c *Container) appToSystemd(am *schema.AppManifest) error {
 
 	for ek, ev := range am.Environment {
 		opts = append(opts, &unit.UnitOption{"Service", "Environment", "\"" + ek + "=" + ev + "\""})
-	}
-
-	for _, b := range depends {
-		opts = append(opts, &unit.UnitOption{"Unit", "After", ServicePath(b.String())})
 	}
 
 	file, err := os.OpenFile(ServiceFilePath(name, false), os.O_WRONLY|os.O_CREATE, 0640)
@@ -58,6 +53,9 @@ func (c *Container) appToSystemd(am *schema.AppManifest) error {
 
 // take an prepared container execution group and output systemd service unit files
 func (c *Container) ContainerToSystemd() error {
+	if err := os.MkdirAll(path.Join(".", WantsDir), 0776); err != nil {
+		return err
+	}
 	for _, am := range c.Apps {
 		name := am.Name.String()
 		if err := c.appToSystemd(am); err != nil {
@@ -83,7 +81,7 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest) ([]string, error) {
 	for key, mp := range am.MountPoints {
 		vol, ok := vols[key]
 		if !ok {
-			return nil, fmt.Errorf("no volume for mountpoint \"%s\" in app \"%s\"", key, name)
+			return nil, fmt.Errorf("no volume for mountpoint %q in app %q", key, name)
 		}
 		opt := make([]string, 4)
 
@@ -93,7 +91,7 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest) ([]string, error) {
 			opt[0] = "--bind="
 		}
 
-		opt[1] = vol.Path
+		opt[1] = vol.Source
 		opt[2] = ":"
 		opt[3] = path.Join(AppRootfsPath(name, true), mp.Path)
 
@@ -107,15 +105,14 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest) ([]string, error) {
 func (c *Container) ContainerToNspawnArgs() ([]string, error) {
 	args := []string{
 		"--boot",
-		"--uuid="+c.Manifest.UUID.String(),
-		"--directory="+Stage1RootfsPath(false),
+		"--uuid=" + c.Manifest.UUID.String(),
+		"--directory=" + Stage1RootfsPath(false),
 	}
-
 
 	for _, am := range c.Apps {
 		aa, err := c.appToNspawnArgs(am)
 		if err != nil {
-			return nil, fmt.Errorf("failed to construct args for app \"%s\"", am.Name)
+			return nil, fmt.Errorf("failed to construct args for app %q: %v", am.Name, err)
 		}
 		args = append(args, aa...)
 	}

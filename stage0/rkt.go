@@ -36,12 +36,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	// WARNING: here be dragons
 	// TODO(jonboulle): vendor this once the schema is stable
 	"github.com/containers/standard/schema"
 	"github.com/containers/standard/schema/types"
 	"github.com/containers/standard/taf"
+	"github.com/coreos-inc/rkt/rkt"
 )
 
 var (
@@ -63,17 +65,10 @@ func main() {
 	fs.Parse(os.Args[1:])
 	args := fs.Args()
 	if len(args) < 2 || args[0] != "run" {
-		fmt.Fprintf(os.Stderr, "usage: rkt run [OPTION]... IMAGE [APP]...\n")
+		fmt.Fprintf(os.Stderr, "usage: rkt run [OPTION]... IMAGE...\n")
 		os.Exit(0)
 	}
-	img := args[1]
-	fs.Parse(args[2:])
-	apps := fs.Args()
-	if len(apps) < 1 {
-		fmt.Fprintf(os.Stderr, "usage: rkt run [OPTION]... IMAGE [APP]...\n")
-		os.Exit(0)
-	}
-
+	images := args[1:]
 	dir := flagDir
 	if dir == "" {
 		log.Printf("-dir unset - using temporary directory")
@@ -84,27 +79,6 @@ func main() {
 		}
 	}
 
-	// - Fetch the specified TAF
-	// (for now, we just assume it is local, named by its hash, and unencrypted)
-
-	// - Unpack the TAF and copy the RAFs for each specified app into the stage2 directories
-	fh, err := os.Open(img)
-	if err != nil {
-		log.Fatalf("error opening app: %v", err)
-	}
-	gz, err := gzip.NewReader(fh)
-	if err != nil {
-		log.Fatalf("error reading tarball: %v", err)
-	}
-	d := filepath.Join(dir, "stage1", "opt", "stage2", img)
-	err = os.MkdirAll(d, 0776)
-	if err != nil {
-		log.Fatalf("error creating app directory: %v", err)
-	}
-	if err := taf.ExtractTar(tar.NewReader(gz), d); err != nil {
-		log.Fatalf("error extracting TAF: %v", err)
-	}
-
 	// - Generating the Container Unique ID (UID)
 	cuid, err := types.NewUUID(genUID())
 	if err != nil {
@@ -112,33 +86,80 @@ func main() {
 	}
 
 	// - Generating a Container Runtime Manifest
-	cm := &schema.ContainerRuntimeManifest{
+	cm := schema.ContainerRuntimeManifest{
 		ACKind: "ContainerRuntimeManifest",
 		UUID:   *cuid,
+		Apps:   map[types.ACLabel]schema.App{},
 	}
 
-	v, err := types.NewSemVer("1.0.0")
+	v, err := types.NewSemVer(rkt.Version)
 	if err != nil {
 		log.Fatalf("error creating version: %v", err)
 	}
 	cm.ACVersion = *v
 
-	sApps := make(map[types.ACLabel]schema.App)
-	for _, name := range apps {
-		a, err := newSchemaApp(name, img)
+	// - Fetching the specified application TAFs
+	// (for now, we just assume they are local, named by their hash, and unencrypted)
+	// - Unpacking the TAFs and copying the RAF for each app into the stage2
+
+	for _, img := range images {
+		log.Println("Loading app", img)
+		fh, err := os.Open(img)
 		if err != nil {
-			log.Fatalf("error creating app: %v", err)
+			log.Fatalf("error opening app: %v", err)
 		}
-		sApps[types.ACLabel(name)] = *a
+		gz, err := gzip.NewReader(fh)
+		if err != nil {
+			log.Fatalf("error reading tarball: %v", err)
+		}
+		ad := rkt.AppMountPath(dir, img)
+		err = os.MkdirAll(ad, 0776)
+		if err != nil {
+			log.Fatalf("error creating app directory: %v", err)
+		}
+		if err := taf.ExtractTar(tar.NewReader(gz), ad); err != nil {
+			log.Fatalf("error extracting TAF: %v", err)
+		}
+		h, err := types.NewHash(img)
+		if err != nil {
+			log.Fatalf("bad hash: %v", err)
+		}
+
+		// TODO(jonboulle): clarify image<->appname
+		mpath := filepath.Join(ad, "manifest")
+		f, err := os.Open(mpath)
+		if err != nil {
+			log.Fatalf("error opening app manifest: %v", err)
+		}
+		b, err := ioutil.ReadAll(f)
+		if err != nil {
+			log.Fatalf("error reading app manifest: %v", err)
+		}
+		var am schema.AppManifest
+		if err := json.Unmarshal(b, &am); err != nil {
+			log.Fatalf("error unmarshaling app manifest: %v", err)
+		}
+
+		if _, ok := cm.Apps[am.Name]; ok {
+			log.Fatalf("got multiple apps by name %s", am.Name)
+		}
+
+		a := schema.App{
+			ImageID:   *h,
+			Isolators: am.Isolators,
+			// TODO(jonboulle): reimplement once type is clear
+			// Annotations: am.Annotations,
+		}
+
+		cm.Apps[am.Name] = a
 	}
-	cm.Apps = sApps
 
 	var sVols []types.Volume
 	for key, path := range flagVolumes {
 		v := types.Volume{
 			Kind:     "host",
-			Path:     path,
-			ReadOnly: "true",
+			Source:   path,
+			ReadOnly: true,
 			Fulfills: []types.ACLabel{
 				types.ACLabel(key),
 			},
@@ -157,13 +178,13 @@ func main() {
 		log.Fatalf("error creating directory: %v", err)
 	}
 
-	// Write the container document into the filesystem
+	log.Printf("Writing container manifest")
 	fn := filepath.Join(dir, "container")
 	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
 		log.Fatalf("error writing container manifest: %v", err)
 	}
 
-	// - Copying the stage1 binary into the container filesystem
+	log.Printf("Writing stage1 init")
 	in, err := os.Open(flagStage1)
 	if err != nil {
 		log.Fatalf("error loading stage1 binary: %v", err)
@@ -176,24 +197,27 @@ func main() {
 	if _, err := io.Copy(out, in); err != nil {
 		log.Fatalf("error writing stage1 init: %v", err)
 	}
+	if err := out.Close(); err != nil {
+		log.Fatalf("error closing stage1 init: %v", err)
+	}
 
 	log.Printf("Wrote filesystem to %s\n", dir)
 
+	log.Printf("Pivoting to filesystem")
 	if err := os.Chdir(dir); err != nil {
 		log.Fatalf("failed changing to dir: %v", err)
+	}
+	log.Printf("Execing stage1/init")
+	if err := syscall.Exec("stage1/init", []string{"stage1/init"}, os.Environ()); err != nil {
+		log.Fatalf("error execing init: %v", err)
 	}
 }
 
 // newSchemaApp creates a new schema.App from a command-line name
-func newSchemaApp(name, hash string) (*schema.App, error) {
+func newSchemaApp(name types.ACLabel, iid types.Hash) (*schema.App, error) {
 	// TODO(jonboulle): implement me properly
-	h, err := types.NewHash(hash)
-	if err != nil {
-		log.Fatalf("bad hash: %v", err)
-	}
 	a := schema.App{
-		ImageID:     *h,
-		Depends:     nil,
+		ImageID:     iid,
 		Isolators:   nil,
 		Annotations: nil,
 	}
