@@ -3,13 +3,13 @@
 Rocket is a reference implementation of the app container specification. The
 goal of rocket is to be a composable and minimal implementation of the spec.
 Other implementations are possible - for example, with a focus on tighter
-integration to particular projects, or an emphasis on speed.  
+integration to particular projects, or an emphasis on speed.
 
 ## Stages
 
 Execution with Rocket is divided into a number of distinct stages. The
 motivation for this is to separate the concerns of initial filesystem setup,
-execution environment, and finally the execution of the apps themselves.  
+execution environment, and finally the execution of the apps themselves.
 
 ### Stage 0
 
@@ -68,7 +68,7 @@ necessary cgroups, namespaces and mounts to launch the execution group:
 - Set up any external volumes (undefined at this point)
 - nspawn attaching to the bridge and launch the execution group systemd
 - Launch the root systemd
-- Have the root systemd 
+- Have the root systemd
 
 This process is slightly different for the qemu-kvm stage1 but a similar
 workflow starting at `exec()`'ing kvm instead of an nspawn.
