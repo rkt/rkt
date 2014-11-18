@@ -11,7 +11,9 @@ import (
 	"strings"
 
 	"github.com/containers/standard/schema"
+	"github.com/containers/standard/schema/types"
 	"github.com/coreos-inc/rkt/rkt"
+	"github.com/coreos/go-systemd/unit"
 )
 
 var (
