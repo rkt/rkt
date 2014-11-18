@@ -1,0 +1,5 @@
+[Unit]
+Description=Rocket shutdown service
+
+[Service]
+ExecStart=/usr/bin/systemctl halt --force
