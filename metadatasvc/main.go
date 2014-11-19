@@ -306,7 +306,7 @@ func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
 	uid, err := types.NewUUID(r.FormValue("uid"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "uid field missing or mulformed: %v", err)
+		fmt.Fprintf(w, "uid field missing or malformed: %v", err)
 		return
 	}
 
@@ -349,7 +349,7 @@ func (r *httpResp) WriteHeader(status int) {
 	r.writer.WriteHeader(status)
 }
 
-func logReq(h func (w http.ResponseWriter, r *http.Request)) func (w http.ResponseWriter, r *http.Request) {
+func logReq(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := &httpResp{w, 0}
 		h(resp, r)
