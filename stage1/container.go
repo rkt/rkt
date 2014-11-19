@@ -89,7 +89,9 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 		&unit.UnitOption{"Service", "Group", am.Group},
 	}
 
-	for ek, ev := range am.Environment {
+	env := am.Environment
+	env["AC_APP_NAME"] = string(am.Name)
+	for ek, ev := range env {
 		ee := fmt.Sprintf(`"%s=%s"`, ek, ev)
 		opts = append(opts, &unit.UnitOption{"Service", "Environment", ee})
 	}
