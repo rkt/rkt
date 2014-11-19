@@ -5,12 +5,15 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
+	"path/filepath"
 	"syscall"
+
+	"github.com/coreos-inc/rkt/rkt"
 )
 
 const (
-	SystemdNspawn = "systemd-nspawn"
+	// Path to systemd-nspawn binary within the stage1 rootfs
+	nspawnBin = "/usr/bin/systemd-nspawn"
 )
 
 func main() {
@@ -27,13 +30,16 @@ func main() {
 		os.Exit(2)
 	}
 
-	ex, err := exec.LookPath(SystemdNspawn)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to locate %s executable: %v\n", SystemdNspawn, err)
+	ex := filepath.Join(rkt.Stage1RootfsPath(c.Root), nspawnBin)
+	if _, err := os.Stat(ex); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed locating nspawn: %v\n", err)
 		os.Exit(3)
 	}
 
-	args := []string{ex}
+	args := []string{
+		ex,
+		"--register", "false", // We cannot assume the host system is running a compatible systemd
+	}
 
 	nsargs, err := c.ContainerToNspawnArgs()
 	if err != nil {
