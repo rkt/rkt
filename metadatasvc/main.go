@@ -61,19 +61,20 @@ func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 	remoteIP := strings.Split(r.RemoteAddr, ":")[0]
 	if _, ok := metadataByIP[remoteIP]; ok {
 		// not allowed from container IP
-		// return 403 Forbidden
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
 	containerIP := queryValue(r.URL, "container_ip")
 	if containerIP == "" {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Print(w, "container_ip missing")
 		return
 	}
 	containerBrPort := queryValue(r.URL, "container_brport")
 	if containerBrPort == "" {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Print(w, "container_brport missing")
 		return
 	}
 
@@ -82,43 +83,42 @@ func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&m.manifest); err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "JSON-decoding failed: %v", err)
 		return
 	}
 
 	if err := antiSpoof(containerBrPort, containerIP); err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "failed to set anti-spoofing: %v", err)
 		return
 	}
 
 	metadataByIP[containerIP] = m
-	fmt.Println("C:", m.manifest.UUID)
 	metadataByUID[m.manifest.UUID] = m
 
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 }
 
 func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 	remoteIP := strings.Split(r.RemoteAddr, ":")[0]
 	if _, ok := metadataByIP[remoteIP]; ok {
 		// not allowed from container IP
-		// return 403 Forbidden
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
 	uid, err := types.NewUUID(mux.Vars(r)["uid"])
 	if err != nil {
-		fmt.Println("mulformed UUID")
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "UUID is missing or mulformed: %v", err)
 		return
 	}
 
-	fmt.Println("A:", *uid)
 	m, ok := metadataByUID[*uid]
 	if !ok {
-		fmt.Println("metadata by UUID not found", *uid)
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "Container with given UUID not found")
 		return
 	}
 
@@ -126,24 +126,23 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 
 	app := &schema.AppManifest{}
 	if err := json.NewDecoder(r.Body).Decode(&app); err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "JSON-decoding failed: %v", err)
 		return
 	}
 
 	m.apps[an] = app
 
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 }
 
 func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println(r.Method, " ", r.RequestURI)
-
 		remoteIP := strings.Split(r.RemoteAddr, ":")[0]
 		m, ok := metadataByIP[remoteIP]
 		if !ok {
-			fmt.Println("metadata by remoteIP not found ", remoteIP)
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "metadata by remoteIP (%v) not found", remoteIP)
 			return
 		}
 
@@ -154,20 +153,21 @@ func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) f
 func appGet(h func(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.AppManifest)) func(http.ResponseWriter, *http.Request) {
 	return containerGet(func(w http.ResponseWriter, r *http.Request, m *metadata) {
 		appname := mux.Vars(r)["app"]
+
 		if am, ok := m.apps[appname]; ok {
 			h(w, r, m, am)
 		} else {
-			fmt.Println("app not found ", appname)
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(w, "App (%v) not found", appname)
 		}
 	})
 }
 
 func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, m *metadata) {
 	w.Header().Add("Content-Type", "text/plain")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 
-	for k := range m.manifest.Annotations {
+	for k, _ := range m.manifest.Annotations {
 		w.Write([]byte(k))
 	}
 }
@@ -176,19 +176,19 @@ func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, m *metada
 	k := mux.Vars(r)["name"]
 	v, ok := m.manifest.Annotations[types.ACLabel(k)]
 	if !ok {
-		fmt.Println("container annotation not found ", k)
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Container annotation (%v) not found", k)
 		return
 	}
 
 	w.Header().Add("Content-Type", "text/plain")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(v))
 }
 
 func handleContainerManifest(w http.ResponseWriter, r *http.Request, m *metadata) {
 	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(m.manifest); err != nil {
 		fmt.Println(err)
@@ -199,7 +199,7 @@ func handleContainerUID(w http.ResponseWriter, r *http.Request, m *metadata) {
 	uid := m.manifest.UUID.String()
 
 	w.Header().Add("Content-Type", "text/plain")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(uid))
 }
 
@@ -220,10 +220,10 @@ func mergeAppAnnotations(am *schema.AppManifest, cm *schema.ContainerRuntimeMani
 
 func handleAppAnnotations(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.AppManifest) {
 	w.Header().Add("Content-Type", "text/plain")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 
-	for k := range mergeAppAnnotations(am, &m.manifest) {
-		w.Write([]byte(k))
+	for k, _ := range mergeAppAnnotations(am, &m.manifest) {
+		w.Write([]byte(k + "\n"))
 	}
 }
 
@@ -233,17 +233,17 @@ func handleAppAnnotation(w http.ResponseWriter, r *http.Request, m *metadata, am
 	merged := mergeAppAnnotations(am, &m.manifest)
 	if v, ok := merged[types.ACLabel(k)]; ok {
 		w.Header().Add("Content-Type", "text/plain")
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(v))
 		return
 	}
-	fmt.Println("app annotation not found ", k)
-	w.WriteHeader(404)
+	w.WriteHeader(http.StatusNotFound)
+	fmt.Fprintf(w, "App annotation (%v) not found", k)
 }
 
 func handleAppManifest(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.AppManifest) {
 	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(*am); err != nil {
 		fmt.Println(err)
@@ -252,7 +252,7 @@ func handleAppManifest(w http.ResponseWriter, r *http.Request, m *metadata, am *
 
 func handleAppID(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.AppManifest) {
 	w.Header().Add("Content-Type", "text/plain")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(m.manifest.Apps[am.Name].ImageID.String()))
 }
 
@@ -275,15 +275,16 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 	remoteIP := strings.Split(r.RemoteAddr, ":")[0]
 	m, ok := metadataByIP[remoteIP]
 	if !ok {
-		fmt.Println("metadata by remoteIP not found ", remoteIP)
-		w.WriteHeader(404)
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Metadata by remoteIP (%v) not found", remoteIP)
 		return
 	}
 
 	// compute message digest
 	d, err := digest(r.Body)
 	if err != nil {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Digest computation failed: %v", err)
 		return
 	}
 
@@ -294,7 +295,7 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 
 	// Send back digest:HMAC as the signature
 	w.Header().Add("Content-Type", "text/plain")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	enc := base64.NewEncoder(base64.StdEncoding, w)
 	enc.Write(d)
 	enc.Write(h.Sum(nil))
@@ -304,13 +305,15 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
 	uid, err := types.NewUUID(r.FormValue("uid"))
 	if err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "uid field missing or mulformed: %v", err)
 		return
 	}
 
 	sig, err := base64.StdEncoding.DecodeString(r.FormValue("signature"))
 	if err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "signature field missing or corrupt: %v", err)
 		return
 	}
 
@@ -322,9 +325,35 @@ func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
 	h.Write(digest)
 
 	if hmac.Equal(sum, h.Sum(nil)) {
-		w.WriteHeader(200)
+		w.WriteHeader(http.StatusOK)
 	} else {
-		w.WriteHeader(403)
+		w.WriteHeader(http.StatusForbidden)
+	}
+}
+
+type httpResp struct {
+	writer http.ResponseWriter
+	status int
+}
+
+func (r *httpResp) Header() http.Header {
+	return r.writer.Header()
+}
+
+func (r *httpResp) Write(d []byte) (int, error) {
+	return r.writer.Write(d)
+}
+
+func (r *httpResp) WriteHeader(status int) {
+	r.status = status
+	r.writer.WriteHeader(status)
+}
+
+func logReq(h func (w http.ResponseWriter, r *http.Request)) func (w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resp := &httpResp{w, 0}
+		h(resp, r)
+		fmt.Printf("%v %v - %v\n", r.Method, r.RequestURI, resp.status)
 	}
 }
 
@@ -337,27 +366,26 @@ func main() {
 	initCrypto()
 
 	r := mux.NewRouter()
-	r.HandleFunc("/containers/", handleRegisterContainer).Methods("POST")
-	r.HandleFunc("/containers/{uid}/{app:.*}", handleRegisterApp).Methods("PUT")
+	r.HandleFunc("/containers/", logReq(handleRegisterContainer)).Methods("POST")
+	r.HandleFunc("/containers/{uid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
 
 	acRtr := r.Headers("Metadata-Flavor", "AppContainer header").
 		PathPrefix("/acMetadata/v1").Subrouter()
 
 	mr := acRtr.Methods("GET").Subrouter()
 
-	mr.HandleFunc("/container/annotations/", containerGet(handleContainerAnnotations))
-	mr.HandleFunc("/container/annotations/{name}", containerGet(handleContainerAnnotation))
-	mr.HandleFunc("/container/manifest", containerGet(handleContainerManifest))
-	mr.HandleFunc("/container/uid", containerGet(handleContainerUID))
+	mr.HandleFunc("/container/annotations/", logReq(containerGet(handleContainerAnnotations)))
+	mr.HandleFunc("/container/annotations/{name}", logReq(containerGet(handleContainerAnnotation)))
+	mr.HandleFunc("/container/manifest", logReq(containerGet(handleContainerManifest)))
+	mr.HandleFunc("/container/uid", logReq(containerGet(handleContainerUID)))
 
-	mr.HandleFunc("/apps/{app:.*}/annotations/", appGet(handleAppAnnotations))
-	mr.HandleFunc("/apps/{app:.*}/annotations/{name}", appGet(handleAppAnnotation))
-	mr.HandleFunc("/apps/{app:.*}/image/manifest", appGet(handleAppManifest))
-	mr.HandleFunc("/apps/{app:.*}/image/id", appGet(handleAppID))
+	mr.HandleFunc("/apps/{app:.*}/annotations/", logReq(appGet(handleAppAnnotations)))
+	mr.HandleFunc("/apps/{app:.*}/annotations/{name}", logReq(appGet(handleAppAnnotation)))
+	mr.HandleFunc("/apps/{app:.*}/image/manifest", logReq(appGet(handleAppManifest)))
+	mr.HandleFunc("/apps/{app:.*}/image/id", logReq(appGet(handleAppID)))
 
-	acRtr.HandleFunc("/container/hmac/sign", handleContainerSign).Methods("POST")
-	acRtr.HandleFunc("/container/hmac/verify", handleContainerVerify).Methods("POST")
+	acRtr.HandleFunc("/container/hmac/sign", logReq(handleContainerSign)).Methods("POST")
+	acRtr.HandleFunc("/container/hmac/verify", logReq(handleContainerVerify)).Methods("POST")
 
-	http.Handle("/", r)
-	log.Fatal(http.ListenAndServe(":4444", nil))
+	log.Fatal(http.ListenAndServe(":4444", r))
 }
