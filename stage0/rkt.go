@@ -49,14 +49,16 @@ import (
 var (
 	fs = flag.NewFlagSet("rkt", flag.ExitOnError)
 
-	flagDir     string
-	flagStage1  string
-	flagVolumes volumeMap
+	flagDir        string
+	flagStage1Init string
+	flagStage1Rfs  string
+	flagVolumes    volumeMap
 )
 
 func init() {
 	fs.StringVar(&flagDir, "dir", "", "directory in which to create container filesystem")
-	fs.StringVar(&flagStage1, "stage1-init", "./bin/init", "path to stage1 binary")
+	fs.StringVar(&flagStage1Init, "stage1-init", "./bin/init", "path to stage1 binary")
+	fs.StringVar(&flagStage1Rfs, "stage1-rootfs", "./stage1-rootfs.tar.gz", "path to stage1 rootfs tarball")
 	fs.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	flagVolumes = volumeMap{}
 }
@@ -84,6 +86,47 @@ func main() {
 	if err != nil {
 		log.Fatalf("error creating UID: %v", err)
 	}
+
+	// - Creating a filesystem for the container
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		log.Fatalf("error creating directory: %v", err)
+	}
+
+	log.Printf("Writing stage1 rootfs")
+	fh, err := os.Open(flagStage1Rfs)
+	if err != nil {
+		log.Fatalf("error opening stage1 rootfs: %v", err)
+	}
+	gz, err := gzip.NewReader(fh)
+	if err != nil {
+		log.Fatalf("error reading tarball: %v", err)
+	}
+	rfs := rkt.Stage1RootfsPath(dir)
+	if err = os.MkdirAll(rfs, 0776); err != nil {
+		log.Fatalf("error creating stage1 rootfs directory: %v", err)
+	}
+	if err := taf.ExtractTar(tar.NewReader(gz), rfs); err != nil {
+		log.Fatalf("error extracting TAF: %v", err)
+	}
+
+	log.Printf("Writing stage1 init")
+	in, err := os.Open(flagStage1Init)
+	if err != nil {
+		log.Fatalf("error loading stage1 binary: %v", err)
+	}
+	fn := rkt.Stage1InitPath(dir)
+	out, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY, 0555)
+	if err != nil {
+		log.Fatalf("error opening stage1 init for writing: %v", err)
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		log.Fatalf("error writing stage1 init: %v", err)
+	}
+	if err := out.Close(); err != nil {
+		log.Fatalf("error closing stage1 init: %v", err)
+	}
+
+	log.Printf("Wrote filesystem to %s\n", dir)
 
 	// - Generating a Container Runtime Manifest
 	cm := schema.ContainerRuntimeManifest{
@@ -182,35 +225,11 @@ func main() {
 		log.Fatalf("error marshalling container manifest: %v", err)
 	}
 
-	// - Creating a filesystem for the container
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		log.Fatalf("error creating directory: %v", err)
-	}
-
 	log.Printf("Writing container manifest")
-	fn := rkt.ContainerManifestPath(dir)
+	fn = rkt.ContainerManifestPath(dir)
 	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
 		log.Fatalf("error writing container manifest: %v", err)
 	}
-
-	log.Printf("Writing stage1 init")
-	in, err := os.Open(flagStage1)
-	if err != nil {
-		log.Fatalf("error loading stage1 binary: %v", err)
-	}
-	fn = rkt.Stage1InitPath(dir)
-	out, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY, 0555)
-	if err != nil {
-		log.Fatalf("error opening stage1 init for writing: %v", err)
-	}
-	if _, err := io.Copy(out, in); err != nil {
-		log.Fatalf("error writing stage1 init: %v", err)
-	}
-	if err := out.Close(); err != nil {
-		log.Fatalf("error closing stage1 init: %v", err)
-	}
-
-	log.Printf("Wrote filesystem to %s\n", dir)
 
 	log.Printf("Pivoting to filesystem")
 	if err := os.Chdir(dir); err != nil {
