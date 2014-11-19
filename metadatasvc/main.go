@@ -168,13 +168,19 @@ func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, m *metad
 	w.WriteHeader(http.StatusOK)
 
 	for k, _ := range m.manifest.Annotations {
-		w.Write([]byte(k))
+		fmt.Fprintln(w, k)
 	}
 }
 
 func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, m *metadata) {
-	k := mux.Vars(r)["name"]
-	v, ok := m.manifest.Annotations[types.ACLabel(k)]
+	k, err := types.NewACLabel(mux.Vars(r)["name"])
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Container annotation is not a valid AC Label")
+		return
+	}
+
+	v, ok := m.manifest.Annotations[*k]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Container annotation (%v) not found", k)
@@ -203,8 +209,9 @@ func handleContainerUID(w http.ResponseWriter, r *http.Request, m *metadata) {
 	w.Write([]byte(uid))
 }
 
-func mergeAppAnnotations(am *schema.AppManifest, cm *schema.ContainerRuntimeManifest) map[types.ACLabel]string {
-	merged := make(map[types.ACLabel]string)
+func mergeAppAnnotations(am *schema.AppManifest, cm *schema.ContainerRuntimeManifest) types.Annotations {
+	merged := make(types.Annotations)
+
 	for k, v := range am.Annotations {
 		merged[k] = v
 	}
@@ -223,22 +230,30 @@ func handleAppAnnotations(w http.ResponseWriter, r *http.Request, m *metadata, a
 	w.WriteHeader(http.StatusOK)
 
 	for k, _ := range mergeAppAnnotations(am, &m.manifest) {
-		w.Write([]byte(k + "\n"))
+		fmt.Fprintln(w, k)
 	}
 }
 
 func handleAppAnnotation(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.AppManifest) {
-	k := mux.Vars(r)["name"]
-
-	merged := mergeAppAnnotations(am, &m.manifest)
-	if v, ok := merged[types.ACLabel(k)]; ok {
-		w.Header().Add("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(v))
+	k, err := types.NewACLabel(mux.Vars(r)["name"])
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "App annotation is not a valid AC Label")
 		return
 	}
-	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprintf(w, "App annotation (%v) not found", k)
+
+	merged := mergeAppAnnotations(am, &m.manifest)
+
+	v, ok := merged[*k]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "App annotation (%v) not found", k)
+		return
+	}
+
+	w.Header().Add("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(v))
 }
 
 func handleAppManifest(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.AppManifest) {
