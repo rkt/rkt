@@ -77,7 +77,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 	if !ok {
 		return fmt.Errorf("unrecognized StartedOn: %s", am.StartedOn)
 	}
-	execStart := fmt.Sprintf(`"%s"`, strings.Join(am.Exec, `" "`))
+	execStart := fmt.Sprintf(`%s`, strings.Join(am.Exec, `" "`))
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
@@ -94,7 +94,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 		opts = append(opts, &unit.UnitOption{"Service", "Environment", ee})
 	}
 
-	file, err := os.OpenFile(rkt.ServiceFilePath(c.Root, name), os.O_WRONLY|os.O_CREATE, 0640)
+	file, err := os.OpenFile(rkt.ServiceFilePath(c.Root, name), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create service file: %v", err)
 	}
