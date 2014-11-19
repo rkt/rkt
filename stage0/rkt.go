@@ -26,6 +26,7 @@ package main
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha1"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -34,7 +35,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -99,11 +99,19 @@ func main() {
 	cm.ACVersion = *v
 
 	// - Fetching the specified application TAFs
-	// (for now, we just assume they are local, named by their hash, and unencrypted)
+	//   (for now, we just assume they are local, named by their hash, and unencrypted)
 	// - Unpacking the TAFs and copying the RAF for each app into the stage2
 
+	// TODO(jonboulle): clarify imagehash<->appname. Right now we have to
+	// unpack the entire TAF to access the manifest which contains the appname.
+
 	for _, img := range images {
-		log.Println("Loading app", img)
+		h, err := types.NewHash(img)
+		if err != nil {
+			log.Fatalf("bad hash given: %v", err)
+		}
+
+		log.Println("Loading app image", img)
 		fh, err := os.Open(img)
 		if err != nil {
 			log.Fatalf("error opening app: %v", err)
@@ -112,7 +120,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("error reading tarball: %v", err)
 		}
-		ad := rkt.AppMountPath(dir, img)
+		ad := rkt.AppImagePath(dir, img)
 		err = os.MkdirAll(ad, 0776)
 		if err != nil {
 			log.Fatalf("error creating app directory: %v", err)
@@ -120,13 +128,8 @@ func main() {
 		if err := taf.ExtractTar(tar.NewReader(gz), ad); err != nil {
 			log.Fatalf("error extracting TAF: %v", err)
 		}
-		h, err := types.NewHash(img)
-		if err != nil {
-			log.Fatalf("bad hash: %v", err)
-		}
 
-		// TODO(jonboulle): clarify image<->appname
-		mpath := filepath.Join(ad, "manifest")
+		mpath := rkt.AppManifestPath(dir, img)
 		f, err := os.Open(mpath)
 		if err != nil {
 			log.Fatalf("error opening app manifest: %v", err)
@@ -135,9 +138,16 @@ func main() {
 		if err != nil {
 			log.Fatalf("error reading app manifest: %v", err)
 		}
+
 		var am schema.AppManifest
 		if err := json.Unmarshal(b, &am); err != nil {
 			log.Fatalf("error unmarshaling app manifest: %v", err)
+		}
+
+		// Sanity check: provided image name matches checksum of app manifest
+		sum := sha1.Sum(b)
+		if id := fmt.Sprintf("%x", sum); id != h.Val {
+			log.Fatalf("app manifest hash does not match expected")
 		}
 
 		if _, ok := cm.Apps[am.Name]; ok {
@@ -178,7 +188,7 @@ func main() {
 	}
 
 	log.Printf("Writing container manifest")
-	fn := filepath.Join(dir, "container")
+	fn := rkt.ContainerManifestPath(dir)
 	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
 		log.Fatalf("error writing container manifest: %v", err)
 	}
@@ -188,7 +198,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error loading stage1 binary: %v", err)
 	}
-	fn = filepath.Join(dir, "stage1", "init")
+	fn = rkt.Stage1InitPath(dir)
 	out, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY, 0555)
 	if err != nil {
 		log.Fatalf("error opening stage1 init for writing: %v", err)
