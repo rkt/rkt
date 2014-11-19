@@ -174,6 +174,8 @@ func (c *Container) ContainerToNspawnArgs() ([]string, error) {
 		"--boot",
 		"--uuid=" + c.Manifest.UUID.String(),
 		"--directory=" + rkt.Stage1RootfsPath(c.Root),
+		"--",
+		"--default-standard-output=tty",
 	}
 
 	for _, am := range c.Apps {
