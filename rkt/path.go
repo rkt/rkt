@@ -41,10 +41,14 @@ func AppRootfsPath(root string, id string) string {
 	return filepath.Join(AppImagePath(root, id), "rootfs")
 }
 
+// RelAppImagePath returns the path of an application image relative to the
+// stage1 chroot
 func RelAppImagePath(id string) string {
 	return filepath.Join(stage2Dir, id)
 }
 
+// RelAppImagePath returns the path of an application's rootfs relative to the
+// stage1 chroot
 func RelAppRootfsPath(id string) string {
 	return filepath.Join(RelAppImagePath(id), "rootfs")
 }
