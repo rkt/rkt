@@ -18,6 +18,7 @@ const (
 
 func main() {
 	root := "."
+	debug := len(os.Args) > 1 && os.Args[1] == "debug"
 
 	c, err := LoadContainer(root)
 	if err != nil {
@@ -38,7 +39,12 @@ func main() {
 
 	args := []string{
 		ex,
+		"--boot",              // Launch systemd in the container
 		"--register", "false", // We cannot assume the host system is running a compatible systemd
+	}
+
+	if !debug {
+		args = append(args, "--quiet") // silence most nspawn output (log_warning is currently not covered by this)
 	}
 
 	nsargs, err := c.ContainerToNspawnArgs()
@@ -46,8 +52,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to generate nspawn args: %v\n", err)
 		os.Exit(4)
 	}
-
 	args = append(args, nsargs...)
+
+	// Arguments to systemd
+	args = append(args, "--")
+	args = append(args, "--default-standard-output=tty") // redirect all service logs straight to tty
+	if !debug {
+		args = append(args, "--log-target=null") // silence systemd output inside container
+		args = append(args, "--show-status=0")   // silence systemd initialization status output
+	}
 
 	env := os.Environ()
 

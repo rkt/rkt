@@ -171,11 +171,8 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest, id types.Hash) ([]st
 // argument list ready to be executed
 func (c *Container) ContainerToNspawnArgs() ([]string, error) {
 	args := []string{
-		"--boot",
 		"--uuid=" + c.Manifest.UUID.String(),
 		"--directory=" + rkt.Stage1RootfsPath(c.Root),
-		"--",
-		"--default-standard-output=tty",
 	}
 
 	for _, am := range c.Apps {

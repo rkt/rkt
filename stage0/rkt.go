@@ -49,6 +49,7 @@ import (
 var (
 	fs = flag.NewFlagSet("rkt", flag.ExitOnError)
 
+	flagDebug      bool
 	flagDir        string
 	flagStage1Init string
 	flagStage1Rfs  string
@@ -56,6 +57,8 @@ var (
 )
 
 func init() {
+	log.SetOutput(ioutil.Discard)
+	fs.BoolVar(&flagDebug, "debug", false, "output debugging log information")
 	fs.StringVar(&flagDir, "dir", "", "directory in which to create container filesystem")
 	fs.StringVar(&flagStage1Init, "stage1-init", "./bin/init", "path to stage1 binary")
 	fs.StringVar(&flagStage1Rfs, "stage1-rootfs", "./stage1-rootfs.tar.gz", "path to stage1 rootfs tarball")
@@ -65,6 +68,9 @@ func init() {
 
 func main() {
 	fs.Parse(os.Args[1:])
+	if flagDebug {
+		log.SetOutput(os.Stderr)
+	}
 	args := fs.Args()
 	if len(args) < 2 || args[0] != "run" {
 		fmt.Fprintf(os.Stderr, "usage: rkt run [OPTION]... IMAGE...\n")
@@ -235,8 +241,14 @@ func main() {
 	if err := os.Chdir(dir); err != nil {
 		log.Fatalf("failed changing to dir: %v", err)
 	}
+
 	log.Printf("Execing stage1/init")
-	if err := syscall.Exec("stage1/init", []string{"stage1/init"}, os.Environ()); err != nil {
+	init := "stage1/init"
+	args = []string{init}
+	if flagDebug {
+		args = append(args, "debug")
+	}
+	if err := syscall.Exec(init, args, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
 	}
 }
