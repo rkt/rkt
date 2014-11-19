@@ -9,7 +9,7 @@ import (
 const (
 	stage1Dir   = "/stage1"
 	stage1Init  = stage1Dir + "/init"
-	stage2Dir   = stage1Dir + "/opt/stage2"
+	stage2Dir   = "/opt/stage2"
 	servicesDir = stage1Dir + "/usr/lib/systemd/system"
 	wantsDir    = servicesDir + "/default.target.wants"
 )
@@ -32,13 +32,21 @@ func ContainerManifestPath(root string) string {
 // AppImagePath returns the path where an app image (i.e. RAF) is rooted (i.e.
 // where its contents are extracted during stage0), based on the app image ID.
 func AppImagePath(root string, id string) string {
-	return filepath.Join(root, stage2Dir, id)
+	return filepath.Join(root, stage1Dir, stage2Dir, id)
 }
 
 // AppRootfsPath returns the path to an app's rootfs.
 // id should be the app image ID.
 func AppRootfsPath(root string, id string) string {
 	return filepath.Join(AppImagePath(root, id), "rootfs")
+}
+
+func RelAppImagePath(id string) string {
+	return filepath.Join(stage2Dir, id)
+}
+
+func RelAppRootfsPath(id string) string {
+	return filepath.Join(RelAppImagePath(id), "rootfs")
 }
 
 // AppManifestPath returns the path to the app's manifest file inside the RAF.

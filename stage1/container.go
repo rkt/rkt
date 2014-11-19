@@ -83,7 +83,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
 		&unit.UnitOption{"Service", "Type", typ},
 		&unit.UnitOption{"Service", "Restart", "no"},
-		&unit.UnitOption{"Service", "RootDirectory", rkt.AppImagePath("/", id.String())},
+		&unit.UnitOption{"Service", "RootDirectory", rkt.RelAppImagePath(id.String())},
 		&unit.UnitOption{"Service", "ExecStart", execStart},
 		&unit.UnitOption{"Service", "User", am.User},
 		&unit.UnitOption{"Service", "Group", am.Group},
@@ -160,7 +160,7 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest, id types.Hash) ([]st
 		opt[1] = vol.Source
 		opt[2] = ":"
 		// TODO(jonboulle): decide whether to move this to rkt/path?
-		opt[3] = filepath.Join("/", rkt.AppRootfsPath(c.Root, id.String()), mp.Path)
+		opt[3] = filepath.Join(rkt.RelAppRootfsPath(id.String()), mp.Path)
 
 		args = append(args, strings.Join(opt, ""))
 	}
