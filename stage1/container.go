@@ -159,7 +159,6 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest, id types.Hash) ([]st
 
 		opt[1] = vol.Source
 		opt[2] = ":"
-		// TODO(jonboulle): decide whether to move this to rkt/path?
 		opt[3] = filepath.Join(rkt.RelAppRootfsPath(id.String()), mp.Path)
 
 		args = append(args, strings.Join(opt, ""))
