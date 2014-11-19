@@ -10,7 +10,7 @@ const (
 	stage1Dir   = "/stage1"
 	stage1Init  = stage1Dir + "/init"
 	stage2Dir   = stage1Dir + "/opt/stage2"
-	servicesDir = stage1Dir + "/run/systemd/system"
+	servicesDir = stage1Dir + "/usr/lib/systemd/system"
 	wantsDir    = servicesDir + "/default.target.wants"
 )
 
