@@ -83,7 +83,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
 		&unit.UnitOption{"Service", "Type", typ},
 		&unit.UnitOption{"Service", "Restart", "no"},
-		&unit.UnitOption{"Service", "RootDirectory", rkt.AppImagePath(c.Root, id.String())},
+		&unit.UnitOption{"Service", "RootDirectory", rkt.AppImagePath("/", id.String())},
 		&unit.UnitOption{"Service", "ExecStart", execStart},
 		&unit.UnitOption{"Service", "User", am.User},
 		&unit.UnitOption{"Service", "Group", am.Group},
