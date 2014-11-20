@@ -27,7 +27,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -177,7 +177,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("error reading tarball: %v", err)
 		}
-		sum := sha1.Sum(b)
+		sum := sha256.Sum256(b)
 		if id := fmt.Sprintf("%x", sum); id != h.Val {
 			log.Fatalf("app manifest hash does not match expected")
 		}
