@@ -25,6 +25,7 @@ package main
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"crypto/sha1"
 	"encoding/json"
@@ -148,7 +149,7 @@ func main() {
 	cm.ACVersion = *v
 
 	// - Fetching the specified application TAFs
-	//   (for now, we just assume they are local, named by their hash, and unencrypted)
+	//   (for now, we just assume they are local and named by their hash, and unencrypted)
 	// - Unpacking the TAFs and copying the RAF for each app into the stage2
 
 	// TODO(jonboulle): clarify imagehash<->appname. Right now we have to
@@ -169,12 +170,23 @@ func main() {
 		if err != nil {
 			log.Fatalf("error reading tarball: %v", err)
 		}
+
+		// Sanity check: provided image name matches image ID
+		b, err := ioutil.ReadAll(gz)
+		if err != nil {
+			log.Fatalf("error reading tarball: %v", err)
+		}
+		sum := sha1.Sum(b)
+		if id := fmt.Sprintf("%x", sum); id != h.Val {
+			log.Fatalf("app manifest hash does not match expected")
+		}
+
 		ad := rkt.AppImagePath(dir, img)
 		err = os.MkdirAll(ad, 0776)
 		if err != nil {
 			log.Fatalf("error creating app directory: %v", err)
 		}
-		if err := taf.ExtractTar(tar.NewReader(gz), ad); err != nil {
+		if err := taf.ExtractTar(tar.NewReader(bytes.NewReader(b)), ad); err != nil {
 			log.Fatalf("error extracting TAF: %v", err)
 		}
 
@@ -183,20 +195,13 @@ func main() {
 		if err != nil {
 			log.Fatalf("error opening app manifest: %v", err)
 		}
-		b, err := ioutil.ReadAll(f)
+		b, err = ioutil.ReadAll(f)
 		if err != nil {
 			log.Fatalf("error reading app manifest: %v", err)
 		}
-
 		var am schema.AppManifest
 		if err := json.Unmarshal(b, &am); err != nil {
 			log.Fatalf("error unmarshaling app manifest: %v", err)
-		}
-
-		// Sanity check: provided image name matches checksum of app manifest
-		sum := sha1.Sum(b)
-		if id := fmt.Sprintf("%x", sum); id != h.Val {
-			log.Fatalf("app manifest hash does not match expected")
 		}
 
 		if _, ok := cm.Apps[am.Name]; ok {
