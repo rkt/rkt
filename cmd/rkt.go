@@ -45,6 +45,9 @@ func init() {
 	out.Init(os.Stdout, 0, 8, 1, '\t', 0)
 	commands = []*Command{
 		cmdHelp,
+		cmdFetch,
+		cmdStatus,
+		cmdGC,
 		cmdRun,
 		cmdVersion,
 	}
