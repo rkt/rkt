@@ -1,7 +1,7 @@
 package main
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/url"
@@ -15,8 +15,8 @@ func blockTransform(s string) []string {
 	return pathSlice
 }
 
-func sha1sum(s string) string {
-	h := sha1.New()
+func sha256sum(s string) string {
+	h := sha256.New()
 	io.WriteString(h, s)
 	return fmt.Sprintf("%x", h.Sum(nil))
 }

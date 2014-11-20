@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,7 +37,7 @@ func (r *Remote) Unmarshal(data []byte) {
 }
 
 func (r Remote) Hash() string {
-	return sha1sum(r.Name)
+	return sha256sum(r.Name)
 }
 
 func (r Remote) Type() int64 {
@@ -47,7 +47,7 @@ func (r Remote) Type() int64 {
 // TODO: add locking
 func (r Remote) Download(ds DownloadStore) (*Remote, error) {
 	var b bytes.Buffer
-	hash := sha1.New()
+	hash := sha256.New()
 
 	res, err := http.Get(r.Name)
 	if err != nil {

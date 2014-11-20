@@ -27,8 +27,8 @@ Given a run command such as:
 
 ```
 rkt run --volume bind:/opt/tenant1/database \
-	sha1-8a30f14877cd8065939e3912542a17d1a5fd9b4c \
-	sha1-abcd29837d89389s9d0898ds908ds890df890908 
+	sha256-8a30f14877cd8065939e3912542a17d1a5fd9b4c \
+	sha256-abcd29837d89389s9d0898ds908ds890df890908 
 ```
 
 a container manifest compliant with the ACE spec will be generated, and the
@@ -39,8 +39,8 @@ filesystem created by stage0 should be:
 /stage1
 /stage1/init
 /stage1/opt
-/stage1/opt/stage2/sha1-8a30f14877cd8065939e3912542a17d1a5fd9b4c
-/stage1/opt/stage2/sha1-abcd29837d89389s9d0898ds908ds890df890908
+/stage1/opt/stage2/sha256-8a30f14877cd8065939e3912542a17d1a5fd9b4c
+/stage1/opt/stage2/sha256-abcd29837d89389s9d0898ds908ds890df890908
 ```
 
 where:

@@ -7,13 +7,12 @@ import (
 	"testing"
 )
 
-
 func TestObjectStore(t *testing.T) {
 	ds := NewDownloadStore()
 	for _, valueStr := range []string{
 		"I am a manually placed object",
 	} {
-		ds.stores[objectType].Write(sha1sum(valueStr), []byte(valueStr))
+		ds.stores[objectType].Write(sha256sum(valueStr), []byte(valueStr))
 	}
 
 	ds.Dump(false)
@@ -27,9 +26,9 @@ func TestDownloading(t *testing.T) {
 	defer ts.Close()
 
 	tests := []struct {
-		r Remote
+		r    Remote
 		body string
-		hit bool
+		hit  bool
 	}{
 		{Remote{ts.URL, []string{}, "12", "425656b85674825423ae7285e7837b60bc53401b"}, body, false},
 		{Remote{ts.URL, []string{}, "12", "425656b85674825423ae7285e7837b60bc53401b"}, body, true},
