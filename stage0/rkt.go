@@ -36,6 +36,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -188,6 +189,11 @@ func main() {
 		}
 		if err := taf.ExtractTar(tar.NewReader(bytes.NewReader(b)), ad); err != nil {
 			log.Fatalf("error extracting TAF: %v", err)
+		}
+
+		err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
+		if err != nil {
+			log.Fatalf("error creating tmp directory: %v", err)
 		}
 
 		mpath := rkt.AppManifestPath(dir, img)
