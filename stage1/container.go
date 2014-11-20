@@ -16,13 +16,6 @@ import (
 	"github.com/coreos/go-systemd/unit"
 )
 
-var (
-	startedOnToType = map[string]string{
-		"fork": "simple",
-		"exit": "oneshot",
-	}
-)
-
 // Container encapsulates a ContainerRuntimeManifest and AppManifests
 type Container struct {
 	Root     string // root directory where the container will be located
@@ -73,20 +66,29 @@ func LoadContainer(root string) (*Container, error) {
 // appToSystemd transforms the provided app manifest into a systemd service unit
 func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 	name := am.Name.String()
-	typ, ok := startedOnToType[am.StartedOn.String()]
-	if !ok {
-		return fmt.Errorf("unrecognized StartedOn: %s", am.StartedOn)
-	}
-	execStart := fmt.Sprintf(`%s`, strings.Join(am.Exec, `" "`))
+	execStart := strings.Join(am.Exec, " ")
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
-		&unit.UnitOption{"Service", "Type", typ},
 		&unit.UnitOption{"Service", "Restart", "no"},
 		&unit.UnitOption{"Service", "RootDirectory", rkt.RelAppRootfsPath(id.String())},
 		&unit.UnitOption{"Service", "ExecStart", execStart},
 		&unit.UnitOption{"Service", "User", am.User},
 		&unit.UnitOption{"Service", "Group", am.Group},
+	}
+
+	for _, eh := range am.EventHandlers {
+		var typ string
+		switch eh.Event {
+		case "preStart":
+			typ = "ExecStartPre"
+		case "postStop":
+			typ = "ExecStopPost"
+		default:
+			return fmt.Errorf("unrecognized eventHandler: %v", eh.Event)
+		}
+		exec := strings.Join(eh.Exec, " ")
+		opts = append(opts, &unit.UnitOption{"Service", typ, exec})
 	}
 
 	env := am.Environment
