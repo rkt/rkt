@@ -26,6 +26,7 @@ package stage0
 import (
 	"archive/tar"
 	"bytes"
+	"compress/bzip2"
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/json"
@@ -91,15 +92,36 @@ func Run(cfg Config) {
 	if err != nil {
 		log.Fatalf("error opening stage1 rootfs: %v", err)
 	}
-	gz, err := gzip.NewReader(fh)
+	typ, err := taf.DetectFileType(fh)
 	if err != nil {
-		log.Fatalf("error reading tarball: %v", err)
+		log.Fatalf("error detecting image type: %v", err)
 	}
+	if _, err := fh.Seek(0, 0); err != nil {
+		log.Fatalf("error seeking image: %v", err)
+	}
+	var r io.Reader
+	switch typ {
+	case taf.TypeGzip:
+		r, err = gzip.NewReader(fh)
+		if err != nil {
+			log.Fatalf("error reading gzip: %v", err)
+		}
+	case taf.TypeBzip2:
+		r = bzip2.NewReader(fh)
+	case taf.TypeXz:
+		r = taf.XzReader(fh)
+	case taf.TypeUnknown:
+		log.Fatalf("error: unknown image filetype")
+	default:
+		// should never happen
+		panic("no type returned from DetectFileType?")
+	}
+	tr := tar.NewReader(r)
 	rfs := rkt.Stage1RootfsPath(dir)
 	if err = os.MkdirAll(rfs, 0776); err != nil {
 		log.Fatalf("error creating stage1 rootfs directory: %v", err)
 	}
-	if err := taf.ExtractTar(tar.NewReader(gz), rfs); err != nil {
+	if err := taf.ExtractTar(tr, rfs); err != nil {
 		log.Fatalf("error extracting TAF: %v", err)
 	}
 
