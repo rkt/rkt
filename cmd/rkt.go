@@ -9,7 +9,9 @@ import (
 
 const (
 	cliName        = "rkt"
-	cliDescription = "rkt, the application container runner"
+	cliDescription = "rocket, the application container runner"
+
+	defaultDataDir = "/var/lib/rkt"
 )
 
 var (
@@ -26,7 +28,7 @@ var (
 func init() {
 	globalFlagset.BoolVar(&globalFlags.Help, "help", false, "Print usage information and exit")
 	globalFlagset.BoolVar(&globalFlags.Debug, "debug", false, "Print out more debug information to stderr")
-	globalFlagset.StringVar(&globalFlags.Dir, "dir", "", "rocket data directory")
+	globalFlagset.StringVar(&globalFlags.Dir, "dir", defaultDataDir, "rocket data directory")
 }
 
 type Command struct {

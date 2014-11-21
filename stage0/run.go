@@ -39,6 +39,7 @@ import (
 
 	// WARNING: here be dragons
 	// TODO(jonboulle): vendor this once the schema is stable
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/containers/standard/schema"
 	"github.com/containers/standard/schema/types"
 	"github.com/containers/standard/taf"
@@ -72,13 +73,13 @@ func Run(cfg Config) {
 	}
 
 	// - Generating the Container Unique ID (UID)
-	cuid, err := types.NewUUID(genUID())
+	cuuid, err := types.NewUUID(uuid.New())
 	if err != nil {
 		log.Fatalf("error creating UID: %v", err)
 	}
 
 	// Create a directory for this container
-	dir := filepath.Join(cfg.RktDir, cuid.String())
+	dir := filepath.Join(cfg.RktDir, cuuid.String())
 
 	// - Creating a filesystem for the container
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -124,7 +125,7 @@ func Run(cfg Config) {
 	// - Generating a Container Runtime Manifest
 	cm := schema.ContainerRuntimeManifest{
 		ACKind: "ContainerRuntimeManifest",
-		UUID:   *cuid,
+		UUID:   *cuuid,
 		Apps:   map[types.ACLabel]schema.App{},
 	}
 
@@ -247,10 +248,4 @@ func Run(cfg Config) {
 	if err := syscall.Exec(init, args, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
 	}
-}
-
-// genUID generates a unique ID for the container
-// TODO(jonboulle): implement me properly - how is this generated?
-func genUID() string {
-	return "6733C088-A507-4694-AABF-EDBE4FC5266F"
 }
