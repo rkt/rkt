@@ -1,4 +1,4 @@
-package main
+package stage0
 
 //
 // Rocket is a reference implementation of the app container specification.
@@ -29,15 +29,12 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 
 	// WARNING: here be dragons
@@ -48,42 +45,27 @@ import (
 	"github.com/coreos-inc/rkt/rkt"
 )
 
-var (
-	fs = flag.NewFlagSet("rkt", flag.ExitOnError)
-
-	flagDebug      bool
-	flagDir        string
-	flagStage1Init string
-	flagStage1Rfs  string
-	flagVolumes    volumeMap
-)
+type Config struct {
+	RktDir       string
+	Stage1Init   string
+	Stage1Rootfs string
+	Debug        bool
+	Images       []string
+	Volumes      map[string]string
+}
 
 func init() {
 	log.SetOutput(ioutil.Discard)
-	fs.BoolVar(&flagDebug, "debug", false, "output debugging log information")
-	fs.StringVar(&flagDir, "dir", "", "directory in which to create container filesystem")
-	fs.StringVar(&flagStage1Init, "stage1-init", "./bin/init", "path to stage1 binary")
-	fs.StringVar(&flagStage1Rfs, "stage1-rootfs", "./stage1-rootfs.tar.gz", "path to stage1 rootfs tarball")
-	fs.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
-	flagVolumes = volumeMap{}
 }
 
-func main() {
-	fs.Parse(os.Args[1:])
-	if flagDebug {
+func Run(cfg Config) {
+	if cfg.Debug {
 		log.SetOutput(os.Stderr)
 	}
-	args := fs.Args()
-	if len(args) < 2 || args[0] != "run" {
-		fmt.Fprintf(os.Stderr, "usage: rkt run [OPTION]... IMAGE...\n")
-		os.Exit(0)
-	}
-	images := args[1:]
-	dir := flagDir
-	if dir == "" {
-		log.Printf("-dir unset - using temporary directory")
+	if cfg.RktDir == "" {
+		log.Printf("rktDir unset - using temporary directory")
 		var err error
-		dir, err = ioutil.TempDir("", "rkt")
+		cfg.RktDir, err = ioutil.TempDir("", "rkt")
 		if err != nil {
 			log.Fatalf("error creating temporary directory: %v", err)
 		}
@@ -95,13 +77,16 @@ func main() {
 		log.Fatalf("error creating UID: %v", err)
 	}
 
+	// Create a directory for this container
+	dir := filepath.Join(cfg.RktDir, cuid.String())
+
 	// - Creating a filesystem for the container
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		log.Fatalf("error creating directory: %v", err)
 	}
 
 	log.Printf("Writing stage1 rootfs")
-	fh, err := os.Open(flagStage1Rfs)
+	fh, err := os.Open(cfg.Stage1Rootfs)
 	if err != nil {
 		log.Fatalf("error opening stage1 rootfs: %v", err)
 	}
@@ -118,7 +103,7 @@ func main() {
 	}
 
 	log.Printf("Writing stage1 init")
-	in, err := os.Open(flagStage1Init)
+	in, err := os.Open(cfg.Stage1Init)
 	if err != nil {
 		log.Fatalf("error loading stage1 binary: %v", err)
 	}
@@ -156,7 +141,7 @@ func main() {
 	// TODO(jonboulle): clarify imagehash<->appname. Right now we have to
 	// unpack the entire TAF to access the manifest which contains the appname.
 
-	for _, img := range images {
+	for _, img := range cfg.Images {
 		h, err := types.NewHash(img)
 		if err != nil {
 			log.Fatalf("bad hash given: %v", err)
@@ -224,7 +209,7 @@ func main() {
 	}
 
 	var sVols []types.Volume
-	for key, path := range flagVolumes {
+	for key, path := range cfg.Volumes {
 		v := types.Volume{
 			Kind:     "host",
 			Source:   path,
@@ -255,8 +240,8 @@ func main() {
 
 	log.Printf("Execing stage1/init")
 	init := "stage1/init"
-	args = []string{init}
-	if flagDebug {
+	args := []string{init}
+	if cfg.Debug {
 		args = append(args, "debug")
 	}
 	if err := syscall.Exec(init, args, os.Environ()); err != nil {
@@ -268,29 +253,4 @@ func main() {
 // TODO(jonboulle): implement me properly - how is this generated?
 func genUID() string {
 	return "6733C088-A507-4694-AABF-EDBE4FC5266F"
-}
-
-// volumeMap implements the flag.Value interface to contain a set of mappings
-// from mount label --> mount path
-type volumeMap map[string]string
-
-func (vm *volumeMap) Set(s string) error {
-	elems := strings.Split(s, ":")
-	if len(elems) != 2 {
-		return errors.New("volume must be of form key:path")
-	}
-	key := elems[0]
-	if _, ok := (*vm)[key]; ok {
-		return fmt.Errorf("got multiple flags for volume %q", key)
-	}
-	(*vm)[key] = elems[1]
-	return nil
-}
-
-func (vm *volumeMap) String() string {
-	var ss []string
-	for k, v := range *vm {
-		ss = append(ss, fmt.Sprintf("%s:%s", k, v))
-	}
-	return strings.Join(ss, ",")
 }
