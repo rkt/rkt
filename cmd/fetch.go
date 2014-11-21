@@ -73,7 +73,9 @@ func runFetch(args []string) (exit int) {
 			fmt.Fprintf(os.Stderr, "fetch: error creating image directory: %v", err)
 			return 1
 		}
-		taf.ExtractTar(tr, dir)
+		if err := taf.ExtractTar(tr, dir); err != nil {
+			fmt.Fprintf(os.Stderr, "fetch: error extracting tar: %v", err)
+		}
 	}
 	return
 }
