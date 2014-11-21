@@ -85,6 +85,7 @@ func Setup(cfg Config) (string, error) {
 		return "", fmt.Errorf("error creating UID: %v", err)
 	}
 
+	// TODO(jonboulle): collision detection/mitigation
 	// Create a directory for this container
 	dir := filepath.Join(cfg.RktDir, cuuid.String())
 
