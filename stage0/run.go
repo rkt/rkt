@@ -47,36 +47,42 @@ import (
 	"github.com/coreos-inc/rkt/rkt"
 )
 
+const (
+	initPath = "stage1/init"
+)
+
 type Config struct {
-	RktDir       string
-	Stage1Init   string
-	Stage1Rootfs string
+	RktDir       string // rocket root directory (if unset, a tmpdir is used)
+	Stage1Init   string // binary to be execed as stage1
+	Stage1Rootfs string // compressed bundle containing a rootfs for stage1
 	Debug        bool
-	Images       []string
-	Volumes      map[string]string
+	Images       []string          // application images (currently must be TAFs)
+	Volumes      map[string]string // map of volumes that rocket can provide to applications
 }
 
 func init() {
 	log.SetOutput(ioutil.Discard)
 }
 
-func Run(cfg Config) {
+// Setup sets up a filesystem for a container based on the given config.
+// The directory containing the filesystem is returned, and any error encountered.
+func Setup(cfg Config) (string, error) {
 	if cfg.Debug {
 		log.SetOutput(os.Stderr)
 	}
 	if cfg.RktDir == "" {
-		log.Printf("rktDir unset - using temporary directory")
+		log.Printf("RktDir unset - using temporary directory")
 		var err error
 		cfg.RktDir, err = ioutil.TempDir("", "rkt")
 		if err != nil {
-			log.Fatalf("error creating temporary directory: %v", err)
+			return "", fmt.Errorf("error creating temporary directory: %v", err)
 		}
 	}
 
 	// - Generating the Container Unique ID (UID)
 	cuuid, err := types.NewUUID(uuid.New())
 	if err != nil {
-		log.Fatalf("error creating UID: %v", err)
+		return "", fmt.Errorf("error creating UID: %v", err)
 	}
 
 	// Create a directory for this container
@@ -84,62 +90,29 @@ func Run(cfg Config) {
 
 	// - Creating a filesystem for the container
 	if err := os.MkdirAll(dir, 0700); err != nil {
-		log.Fatalf("error creating directory: %v", err)
+		return "", fmt.Errorf("error creating directory: %v", err)
 	}
 
-	log.Printf("Writing stage1 rootfs")
-	fh, err := os.Open(cfg.Stage1Rootfs)
-	if err != nil {
-		log.Fatalf("error opening stage1 rootfs: %v", err)
-	}
-	typ, err := taf.DetectFileType(fh)
-	if err != nil {
-		log.Fatalf("error detecting image type: %v", err)
-	}
-	if _, err := fh.Seek(0, 0); err != nil {
-		log.Fatalf("error seeking image: %v", err)
-	}
-	var r io.Reader
-	switch typ {
-	case taf.TypeGzip:
-		r, err = gzip.NewReader(fh)
-		if err != nil {
-			log.Fatalf("error reading gzip: %v", err)
-		}
-	case taf.TypeBzip2:
-		r = bzip2.NewReader(fh)
-	case taf.TypeXz:
-		r = taf.XzReader(fh)
-	case taf.TypeUnknown:
-		log.Fatalf("error: unknown image filetype")
-	default:
-		// should never happen
-		panic("no type returned from DetectFileType?")
-	}
-	tr := tar.NewReader(r)
-	rfs := rkt.Stage1RootfsPath(dir)
-	if err = os.MkdirAll(rfs, 0776); err != nil {
-		log.Fatalf("error creating stage1 rootfs directory: %v", err)
-	}
-	if err := taf.ExtractTar(tr, rfs); err != nil {
-		log.Fatalf("error extracting TAF: %v", err)
+	log.Printf("Unpacking stage1 rootfs")
+	if err = unpackRootfs(cfg.Stage1Rootfs, rkt.Stage1RootfsPath(dir)); err != nil {
+		return "", fmt.Errorf("error unpacking rootfs: %v", err)
 	}
 
 	log.Printf("Writing stage1 init")
 	in, err := os.Open(cfg.Stage1Init)
 	if err != nil {
-		log.Fatalf("error loading stage1 binary: %v", err)
+		return "", fmt.Errorf("error loading stage1 binary: %v", err)
 	}
 	fn := rkt.Stage1InitPath(dir)
 	out, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY, 0555)
 	if err != nil {
-		log.Fatalf("error opening stage1 init for writing: %v", err)
+		return "", fmt.Errorf("error opening stage1 init for writing: %v", err)
 	}
 	if _, err := io.Copy(out, in); err != nil {
-		log.Fatalf("error writing stage1 init: %v", err)
+		return "", fmt.Errorf("error writing stage1 init: %v", err)
 	}
 	if err := out.Close(); err != nil {
-		log.Fatalf("error closing stage1 init: %v", err)
+		return "", fmt.Errorf("error closing stage1 init: %v", err)
 	}
 
 	log.Printf("Wrote filesystem to %s\n", dir)
@@ -153,7 +126,7 @@ func Run(cfg Config) {
 
 	v, err := types.NewSemVer(rkt.Version)
 	if err != nil {
-		log.Fatalf("error creating version: %v", err)
+		return "", fmt.Errorf("error creating version: %v", err)
 	}
 	cm.ACVersion = *v
 
@@ -167,67 +140,20 @@ func Run(cfg Config) {
 	for _, img := range cfg.Images {
 		h, err := types.NewHash(img)
 		if err != nil {
-			log.Fatalf("bad hash given: %v", err)
+			return "", fmt.Errorf("error: bad image hash %q: %v", img, err)
 		}
-
-		log.Println("Loading app image", img)
-		fh, err := os.Open(img)
+		am, err := setupImage(img, *h, dir)
 		if err != nil {
-			log.Fatalf("error opening app: %v", err)
+			return "", fmt.Errorf("error setting up image %s: %v", img, err)
 		}
-		gz, err := gzip.NewReader(fh)
-		if err != nil {
-			log.Fatalf("error reading tarball: %v", err)
-		}
-
-		// Sanity check: provided image name matches image ID
-		b, err := ioutil.ReadAll(gz)
-		if err != nil {
-			log.Fatalf("error reading tarball: %v", err)
-		}
-		sum := sha256.Sum256(b)
-		if id := fmt.Sprintf("%x", sum); id != h.Val {
-			log.Fatalf("app manifest hash does not match expected")
-		}
-
-		ad := rkt.AppImagePath(dir, img)
-		err = os.MkdirAll(ad, 0776)
-		if err != nil {
-			log.Fatalf("error creating app directory: %v", err)
-		}
-		if err := taf.ExtractTar(tar.NewReader(bytes.NewReader(b)), ad); err != nil {
-			log.Fatalf("error extracting TAF: %v", err)
-		}
-
-		err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
-		if err != nil {
-			log.Fatalf("error creating tmp directory: %v", err)
-		}
-
-		mpath := rkt.AppManifestPath(dir, img)
-		f, err := os.Open(mpath)
-		if err != nil {
-			log.Fatalf("error opening app manifest: %v", err)
-		}
-		b, err = ioutil.ReadAll(f)
-		if err != nil {
-			log.Fatalf("error reading app manifest: %v", err)
-		}
-		var am schema.AppManifest
-		if err := json.Unmarshal(b, &am); err != nil {
-			log.Fatalf("error unmarshaling app manifest: %v", err)
-		}
-
 		if _, ok := cm.Apps[am.Name]; ok {
-			log.Fatalf("got multiple apps by name %s", am.Name)
+			return "", fmt.Errorf("error: multiple apps with name %s", am.Name)
 		}
-
 		a := schema.App{
 			ImageID:     *h,
 			Isolators:   am.Isolators,
 			Annotations: am.Annotations,
 		}
-
 		cm.Apps[am.Name] = a
 	}
 
@@ -243,31 +169,154 @@ func Run(cfg Config) {
 		}
 		sVols = append(sVols, v)
 	}
+	// TODO(jonboulle): check that app mountpoint expectations are
+	// satisfied here, rather than waiting for stage1
 	cm.Volumes = sVols
 
 	cdoc, err := json.Marshal(cm)
 	if err != nil {
-		log.Fatalf("error marshalling container manifest: %v", err)
+		return "", fmt.Errorf("error marshalling container manifest: %v", err)
 	}
 
 	log.Printf("Writing container manifest")
 	fn = rkt.ContainerManifestPath(dir)
 	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
-		log.Fatalf("error writing container manifest: %v", err)
+		return "", fmt.Errorf("error writing container manifest: %v", err)
 	}
+	return dir, nil
+}
 
-	log.Printf("Pivoting to filesystem")
+// Run actually runs the container by exec()ing the stage1 init inside
+// the container filesystem.
+func Run(dir string, debug bool) {
+	log.Printf("Pivoting to filesystem %s", dir)
 	if err := os.Chdir(dir); err != nil {
 		log.Fatalf("failed changing to dir: %v", err)
 	}
 
-	log.Printf("Execing stage1/init")
-	init := "stage1/init"
-	args := []string{init}
-	if cfg.Debug {
+	log.Printf("Execing %s", initPath)
+	args := []string{initPath}
+	if debug {
 		args = append(args, "debug")
 	}
-	if err := syscall.Exec(init, args, os.Environ()); err != nil {
+	if err := syscall.Exec(initPath, args, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
 	}
+}
+
+// unpackRootfs unpacks a stage1 rootfs (compressed file, pointed to by rfs)
+// into dir, returning any error encountered
+func unpackRootfs(rfs string, dir string) error {
+	fh, err := os.Open(rfs)
+	if err != nil {
+		return fmt.Errorf("error opening stage1 rootfs: %v", err)
+	}
+	typ, err := taf.DetectFileType(fh)
+	if err != nil {
+		return fmt.Errorf("error detecting image type: %v", err)
+	}
+	if _, err := fh.Seek(0, 0); err != nil {
+		return fmt.Errorf("error seeking image: %v", err)
+	}
+	var r io.Reader
+	switch typ {
+	case taf.TypeGzip:
+		r, err = gzip.NewReader(fh)
+		if err != nil {
+			return fmt.Errorf("error reading gzip: %v", err)
+		}
+	case taf.TypeBzip2:
+		r = bzip2.NewReader(fh)
+	case taf.TypeXz:
+		r = taf.XzReader(fh)
+	case taf.TypeUnknown:
+		return fmt.Errorf("error: unknown image filetype")
+	default:
+		// should never happen
+		panic("no type returned from DetectFileType?")
+	}
+	tr := tar.NewReader(r)
+	if err = os.MkdirAll(dir, 0776); err != nil {
+		return fmt.Errorf("error creating stage1 rootfs directory: %v", err)
+	}
+	if err := taf.ExtractTar(tr, dir); err != nil {
+		return fmt.Errorf("error extracting rootfs: %v", err)
+	}
+	return nil
+}
+
+// setupImage attempts to load the image by the given name (currently it just
+// assumes it is a file in the current directory), verifies that the image
+// matches the given hash (after decompression), and then extracts the image
+// into a directory in the given dir.
+// It returns the AppManifest that the image contains
+func setupImage(img string, h types.Hash, dir string) (*schema.AppManifest, error) {
+	log.Println("Loading image", img)
+	fh, err := os.Open(img)
+	if err != nil {
+		return nil, fmt.Errorf("error opening image: %v", err)
+	}
+	typ, err := taf.DetectFileType(fh)
+	if err != nil {
+		return nil, fmt.Errorf("error detecting image type: %v", err)
+	}
+	if _, err := fh.Seek(0, 0); err != nil {
+		return nil, fmt.Errorf("error seeking image: %v", err)
+	}
+	var r io.Reader
+	switch typ {
+	case taf.TypeGzip:
+		r, err = gzip.NewReader(fh)
+		if err != nil {
+			return nil, fmt.Errorf("error reading gzip: %v", err)
+		}
+	case taf.TypeBzip2:
+		r = bzip2.NewReader(fh)
+	case taf.TypeXz:
+		r = taf.XzReader(fh)
+	case taf.TypeUnknown:
+		return nil, fmt.Errorf("error: unknown image filetype")
+	default:
+		// should never happen
+		panic("no type returned from DetectFileType?")
+	}
+
+	// Sanity check: provided image name matches image ID
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("error reading tarball: %v", err)
+	}
+	sum := sha256.Sum256(b)
+	if id := fmt.Sprintf("%x", sum); id != h.Val {
+		return nil, fmt.Errorf("image hash does not match expected")
+	}
+
+	ad := rkt.AppImagePath(dir, img)
+	err = os.MkdirAll(ad, 0776)
+	if err != nil {
+		return nil, fmt.Errorf("error creating image directory: %v", err)
+	}
+	if err := taf.ExtractTar(tar.NewReader(bytes.NewReader(b)), ad); err != nil {
+		return nil, fmt.Errorf("error extracting TAF: %v", err)
+	}
+
+	err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
+	if err != nil {
+		return nil, fmt.Errorf("error creating tmp directory: %v", err)
+	}
+
+	mpath := rkt.AppManifestPath(dir, img)
+	f, err := os.Open(mpath)
+	if err != nil {
+		return nil, fmt.Errorf("error opening app manifest: %v", err)
+	}
+	b, err = ioutil.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("error reading app manifest: %v", err)
+	}
+	var am schema.AppManifest
+	if err := json.Unmarshal(b, &am); err != nil {
+		return nil, fmt.Errorf("error unmarshaling app manifest: %v", err)
+	}
+	return &am, nil
 }

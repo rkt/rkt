@@ -41,7 +41,12 @@ func runRun(args []string) (exit int) {
 		Images:       args,
 		Volumes:      flagVolumes,
 	}
-	stage0.Run(cfg) // execs, never returns
+	cdir, err := stage0.Setup(cfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "run: error setting up stage0: %v\n", err)
+		return 1
+	}
+	stage0.Run(cdir, cfg.Debug) // execs, never returns
 	return 1
 }
 
