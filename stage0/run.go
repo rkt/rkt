@@ -52,12 +52,12 @@ const (
 )
 
 type Config struct {
-	RktDir       string // rocket root directory (if unset, a tmpdir is used)
-	Stage1Init   string // binary to be execed as stage1
-	Stage1Rootfs string // compressed bundle containing a rootfs for stage1
-	Debug        bool
-	Images       []string          // application images (currently must be TAFs)
-	Volumes      map[string]string // map of volumes that rocket can provide to applications
+	ContainersDir string // root directory for rocket containers
+	Stage1Init    string // binary to be execed as stage1
+	Stage1Rootfs  string // compressed bundle containing a rootfs for stage1
+	Debug         bool
+	Images        []string          // application images (currently must be TAFs)
+	Volumes       map[string]string // map of volumes that rocket can provide to applications
 }
 
 func init() {
@@ -70,14 +70,6 @@ func Setup(cfg Config) (string, error) {
 	if cfg.Debug {
 		log.SetOutput(os.Stderr)
 	}
-	if cfg.RktDir == "" {
-		log.Printf("RktDir unset - using temporary directory")
-		var err error
-		cfg.RktDir, err = ioutil.TempDir("", "rkt")
-		if err != nil {
-			return "", fmt.Errorf("error creating temporary directory: %v", err)
-		}
-	}
 
 	// - Generating the Container Unique ID (UID)
 	cuuid, err := types.NewUUID(uuid.New())
@@ -87,7 +79,7 @@ func Setup(cfg Config) (string, error) {
 
 	// TODO(jonboulle): collision detection/mitigation
 	// Create a directory for this container
-	dir := filepath.Join(cfg.RktDir, cuuid.String())
+	dir := filepath.Join(cfg.ContainersDir, cuuid.String())
 
 	// - Creating a filesystem for the container
 	if err := os.MkdirAll(dir, 0700); err != nil {

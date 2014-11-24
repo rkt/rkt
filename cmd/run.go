@@ -3,7 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/coreos-inc/rkt/stage0"
@@ -33,13 +36,25 @@ func runRun(args []string) (exit int) {
 		fmt.Fprintf(os.Stderr, "run: Must provide at least one image\n")
 		return 1
 	}
+	gdir := globalFlags.Dir
+	if gdir == "" {
+		log.Printf("dir unset - using temporary directory")
+		var err error
+		gdir, err = ioutil.TempDir("", "rkt")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error creating temporary directory: %v", err)
+			return 1
+		}
+	}
+	// TODO(jonboulle): use rkt/path
+	cdir := filepath.Join(gdir, "containers")
 	cfg := stage0.Config{
-		RktDir:       globalFlags.Dir,
-		Debug:        globalFlags.Debug,
-		Stage1Init:   flagStage1Init,
-		Stage1Rootfs: flagStage1Rootfs,
-		Images:       args,
-		Volumes:      flagVolumes,
+		ContainersDir: cdir,
+		Debug:         globalFlags.Debug,
+		Stage1Init:    flagStage1Init,
+		Stage1Rootfs:  flagStage1Rootfs,
+		Images:        args,
+		Volumes:       flagVolumes,
 	}
 	cdir, err := stage0.Setup(cfg)
 	if err != nil {
