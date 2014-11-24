@@ -114,7 +114,7 @@ func Setup(cfg Config) (string, error) {
 	cm := schema.ContainerRuntimeManifest{
 		ACKind: "ContainerRuntimeManifest",
 		UUID:   *cuuid,
-		Apps:   map[types.ACLabel]schema.App{},
+		Apps:   map[types.ACName]schema.App{},
 	}
 
 	v, err := types.NewSemVer(rkt.Version)
@@ -156,8 +156,8 @@ func Setup(cfg Config) (string, error) {
 			Kind:     "host",
 			Source:   path,
 			ReadOnly: true,
-			Fulfills: []types.ACLabel{
-				types.ACLabel(key),
+			Fulfills: []types.ACName{
+				types.ACName(key),
 			},
 		}
 		sVols = append(sVols, v)

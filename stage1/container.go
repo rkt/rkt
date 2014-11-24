@@ -141,7 +141,7 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest, id types.Hash) ([]st
 	args := []string{}
 	name := am.Name.String()
 
-	vols := make(map[types.ACLabel]types.Volume)
+	vols := make(map[types.ACName]types.Volume)
 	for _, v := range c.Manifest.Volumes {
 		for _, f := range v.Fulfills {
 			vols[f] = v

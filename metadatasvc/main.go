@@ -173,7 +173,7 @@ func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, m *metad
 }
 
 func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, m *metadata) {
-	k, err := types.NewACLabel(mux.Vars(r)["name"])
+	k, err := types.NewACName(mux.Vars(r)["name"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Container annotation is not a valid AC Label")
@@ -235,7 +235,7 @@ func handleAppAnnotations(w http.ResponseWriter, r *http.Request, m *metadata, a
 }
 
 func handleAppAnnotation(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.AppManifest) {
-	k, err := types.NewACLabel(mux.Vars(r)["name"])
+	k, err := types.NewACName(mux.Vars(r)["name"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "App annotation is not a valid AC Label")
