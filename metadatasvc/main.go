@@ -216,7 +216,7 @@ func mergeAppAnnotations(am *schema.AppManifest, cm *schema.ContainerRuntimeMani
 		merged[k] = v
 	}
 
-	if app, ok := cm.Apps[am.Name]; ok {
+	if app := cm.Apps.Get(am.Name); app != nil {
 		for k, v := range app.Annotations {
 			merged[k] = v
 		}
@@ -268,7 +268,11 @@ func handleAppManifest(w http.ResponseWriter, r *http.Request, m *metadata, am *
 func handleAppID(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.AppManifest) {
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(m.manifest.Apps[am.Name].ImageID.String()))
+	a := m.manifest.Apps.Get(am.Name)
+	if a == nil {
+		panic("could not find app in manifest!")
+	}
+	w.Write([]byte(a.ImageID.String()))
 }
 
 func initCrypto() error {

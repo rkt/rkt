@@ -79,13 +79,13 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 
 	for _, eh := range am.EventHandlers {
 		var typ string
-		switch eh.Event {
-		case "preStart":
+		switch eh.Name {
+		case "pre-start":
 			typ = "ExecStartPre"
-		case "postStop":
+		case "post-stop":
 			typ = "ExecStopPost"
 		default:
-			return fmt.Errorf("unrecognized eventHandler: %v", eh.Event)
+			return fmt.Errorf("unrecognized eventHandler: %v", eh.Name)
 		}
 		exec := strings.Join(eh.Exec, " ")
 		opts = append(opts, &unit.UnitOption{"Service", typ, exec})
@@ -126,8 +126,12 @@ func (c *Container) ContainerToSystemd() error {
 		return fmt.Errorf("failed to create wants directory: %v", err)
 	}
 	for _, am := range c.Apps {
-		id := c.Manifest.Apps[am.Name].ImageID
-		if err := c.appToSystemd(am, id); err != nil {
+		a := c.Manifest.Apps.Get(am.Name)
+		if a == nil {
+			// should never happen
+			panic("app not found in container manifest")
+		}
+		if err := c.appToSystemd(am, a.ImageID); err != nil {
 			return fmt.Errorf("failed to transform app %q into systemd service: %v", am.Name, err)
 		}
 	}
@@ -148,7 +152,8 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest, id types.Hash) ([]st
 		}
 	}
 
-	for key, mp := range am.MountPoints {
+	for _, mp := range am.MountPoints {
+		key := mp.Name
 		vol, ok := vols[key]
 		if !ok {
 			return nil, fmt.Errorf("no volume for mountpoint %q in app %q", key, name)
@@ -180,8 +185,11 @@ func (c *Container) ContainerToNspawnArgs() ([]string, error) {
 	}
 
 	for _, am := range c.Apps {
-		id := c.Manifest.Apps[am.Name].ImageID
-		aa, err := c.appToNspawnArgs(am, id)
+		a := c.Manifest.Apps.Get(am.Name)
+		if a == nil {
+			panic("could not find app in container manifest!")
+		}
+		aa, err := c.appToNspawnArgs(am, a.ImageID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct args for app %q: %v", am.Name, err)
 		}

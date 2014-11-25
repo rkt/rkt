@@ -114,7 +114,7 @@ func Setup(cfg Config) (string, error) {
 	cm := schema.ContainerRuntimeManifest{
 		ACKind: "ContainerRuntimeManifest",
 		UUID:   *cuuid,
-		Apps:   map[types.ACName]schema.App{},
+		Apps:   make(schema.AppList, 0),
 	}
 
 	v, err := types.NewSemVer(rkt.Version)
@@ -139,15 +139,16 @@ func Setup(cfg Config) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("error setting up image %s: %v", img, err)
 		}
-		if _, ok := cm.Apps[am.Name]; ok {
+		if cm.Apps.Get(am.Name) != nil {
 			return "", fmt.Errorf("error: multiple apps with name %s", am.Name)
 		}
 		a := schema.App{
+			Name:        am.Name,
 			ImageID:     *h,
 			Isolators:   am.Isolators,
 			Annotations: am.Annotations,
 		}
-		cm.Apps[am.Name] = a
+		cm.Apps = append(cm.Apps, a)
 	}
 
 	var sVols []types.Volume
