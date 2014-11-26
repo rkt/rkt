@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/coreos-inc/rkt/downloadstore"
 	"github.com/coreos-inc/rkt/stage0"
 )
 
@@ -49,6 +50,7 @@ func runRun(args []string) (exit int) {
 	// TODO(jonboulle): use rkt/path
 	cdir := filepath.Join(gdir, "containers")
 	cfg := stage0.Config{
+		Store:         downloadstore.NewDownloadStore(globalFlags.Dir),
 		ContainersDir: cdir,
 		Debug:         globalFlags.Debug,
 		Stage1Init:    flagStage1Init,
