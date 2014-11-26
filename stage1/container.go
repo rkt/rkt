@@ -70,6 +70,9 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
+		&unit.UnitOption{"Unit", "OnFailureJobMode", "isolate"},
+		&unit.UnitOption{"Unit", "OnFailure", "reaper.service"},
+		&unit.UnitOption{"Unit", "Wants", "exit-watcher.service"},
 		&unit.UnitOption{"Service", "Restart", "no"},
 		&unit.UnitOption{"Service", "RootDirectory", rkt.RelAppRootfsPath(id)},
 		&unit.UnitOption{"Service", "ExecStart", execStart},
