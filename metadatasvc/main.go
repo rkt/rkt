@@ -16,7 +16,7 @@ import (
 
 	"github.com/coreos-inc/rkt/app-container/schema"
 	"github.com/coreos-inc/rkt/app-container/schema/types"
-	"github.com/gorilla/mux"
+	"github.com/coreos-inc/rkt/Godeps/_workspace/src/github.com/gorilla/mux"
 )
 
 type metadata struct {

@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	"golang.org/x/crypto/openpgp"
+	"github.com/coreos-inc/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
 
 // TODO(jonboulle): support detached signatures

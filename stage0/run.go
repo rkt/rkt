@@ -40,7 +40,7 @@ import (
 
 	// WARNING: here be dragons
 	// TODO(jonboulle): vendor this once the schema is stable
-	"code.google.com/p/go-uuid/uuid"
+	"github.com/coreos-inc/rkt/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
 	"github.com/coreos-inc/rkt/app-container/schema"
 	"github.com/coreos-inc/rkt/app-container/schema/types"
 	"github.com/coreos-inc/rkt/app-container/taf"
