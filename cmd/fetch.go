@@ -1,12 +1,10 @@
 package main
 
 import (
-	"archive/tar"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/coreos-inc/rkt/app-container/taf"
 	"github.com/coreos-inc/rkt/downloadstore"
 )
 
@@ -23,6 +21,18 @@ var (
 	}
 )
 
+func fetchURL(img string, ds *downloadstore.DownloadStore) (string, error) {
+	rem := downloadstore.NewRemote(img, []string{})
+	err := ds.Get(rem)
+	if err != nil && rem.File == "" {
+		rem, err = rem.Download(*ds)
+		if err != nil {
+			return "", fmt.Errorf("downloading: %v\n", err)
+		}
+	}
+	return rem.File, nil
+}
+
 func runFetch(args []string) (exit int) {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "fetch: Must provide at least one image\n")
@@ -37,31 +47,13 @@ func runFetch(args []string) (exit int) {
 	ds := downloadstore.NewDownloadStore(globalFlags.Dir)
 
 	for _, img := range args {
-		rem := downloadstore.NewRemote(img, []string{})
-		err := ds.Get(rem)
-		if err != nil && rem.File == "" {
-			rem, err = rem.Download(*ds)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "downloading: %v\n", err)
-			}
-		}
-		rs, err := ds.ObjectStream(rem.File)
+		hash, err := fetchURL(img, ds)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error fetching: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%v", err)
 			return 1
 		}
-
-		tr := tar.NewReader(rs)
-		dir := filepath.Join(root, "sha256-"+rem.File)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "fetch: error creating image directory: %v", err)
-			return 1
-		}
-		if err := taf.ExtractTar(tr, dir); err != nil {
-			fmt.Fprintf(os.Stderr, "fetch: error extracting tar: %v", err)
-			return 1
-		}
-		fmt.Println(rem.File)
+		fmt.Println(hash)
 	}
+
 	return
 }

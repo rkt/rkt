@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/coreos-inc/rkt/app-container/schema/types"
 	"github.com/coreos-inc/rkt/downloadstore"
 	"github.com/coreos-inc/rkt/stage0"
 )
@@ -32,6 +34,32 @@ func init() {
 	flagVolumes = volumeMap{}
 }
 
+func findImages(args []string, ds *downloadstore.DownloadStore) (out []string, err error) {
+	out = make([]string, len(args))
+	copy(out, args)
+	for i, img := range args {
+		// check if it is a valid hash, if so let it pass through
+		_, err := types.NewHash(img)
+		if err == nil {
+			continue
+		}
+		u, err := url.Parse(img)
+		if err != nil {
+			return nil, fmt.Errorf("%s: not a valid URL or hash", img)
+		}
+		if u.Scheme != "http" && u.Scheme != "https" {
+			return nil, fmt.Errorf("%s: rkt only supports http or https URLs", img)
+		}
+		hash, err := fetchURL(img, ds)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = hash
+	}
+
+	return out, nil
+}
+
 func runRun(args []string) (exit int) {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "run: Must provide at least one image\n")
@@ -47,18 +75,26 @@ func runRun(args []string) (exit int) {
 			return 1
 		}
 	}
+
+	ds := downloadstore.NewDownloadStore(globalFlags.Dir)
+	imgs, err := findImages(args, ds)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err)
+		return 1
+	}
+
 	// TODO(jonboulle): use rkt/path
 	cdir := filepath.Join(gdir, "containers")
 	cfg := stage0.Config{
-		Store:         downloadstore.NewDownloadStore(globalFlags.Dir),
+		Store:         ds,
 		ContainersDir: cdir,
 		Debug:         globalFlags.Debug,
 		Stage1Init:    flagStage1Init,
 		Stage1Rootfs:  flagStage1Rootfs,
-		Images:        args,
+		Images:        imgs,
 		Volumes:       flagVolumes,
 	}
-	cdir, err := stage0.Setup(cfg)
+	cdir, err = stage0.Setup(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "run: error setting up stage0: %v\n", err)
 		return 1
