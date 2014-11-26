@@ -1,7 +1,9 @@
-package main
+package downloadstore
 
 import (
 	"fmt"
+	"io"
+	"path/filepath"
 
 	"github.com/peterbourgon/diskv"
 )
@@ -29,13 +31,13 @@ type DownloadStore struct {
 	stores []*diskv.Diskv
 }
 
-func NewDownloadStore() *DownloadStore {
+func NewDownloadStore(base string) *DownloadStore {
 	ds := &DownloadStore{}
 	ds.stores = make([]*diskv.Diskv, len(otmap))
 
 	for i, p := range otmap {
 		ds.stores[i] = diskv.New(diskv.Options{
-			BasePath:     "data/"+p,
+			BasePath:     filepath.Join(base, "cas", p),
 			Transform:    blockTransform,
 			CacheSizeMax: 1024 * 1024, // 1MB
 		})
@@ -68,6 +70,10 @@ func (ds DownloadStore) Dump(hex bool) {
 
 func (ds DownloadStore) Store(b Blob) {
 	ds.stores[b.Type()].Write(b.Hash(), b.Marshal())
+}
+
+func (ds DownloadStore) ObjectStream(file string) (io.ReadCloser, error) {
+	return ds.stores[objectType].ReadStream(file, false)
 }
 
 func (ds DownloadStore) Get(b Blob) error {

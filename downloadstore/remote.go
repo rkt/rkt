@@ -1,12 +1,17 @@
-package main
+package downloadstore
 
 import (
 	"bytes"
+	"compress/bzip2"
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+
+	"github.com/containers/standard/taf"
 )
 
 func NewRemote(name string, mirrors []string) *Remote {
@@ -44,10 +49,33 @@ func (r Remote) Type() int64 {
 	return remoteType
 }
 
+func decompress(rs io.Reader, typ taf.FileType) (io.Reader, error) {
+	var (
+		dr io.Reader
+		err error
+	)
+	switch typ {
+	case taf.TypeGzip:
+		dr, err = gzip.NewReader(rs)
+		if err != nil {
+			return nil, err
+		}
+	case taf.TypeBzip2:
+		dr = bzip2.NewReader(rs)
+	case taf.TypeXz:
+		dr = taf.XzReader(rs)
+	case taf.TypeUnknown:
+		fmt.Fprintf(os.Stderr, "error: unknown image filetype\n")
+	default:
+		// should never happen
+		panic("no type returned from DetectFileType?")
+	}
+	return dr, nil
+}
+
 // TODO: add locking
 func (r Remote) Download(ds DownloadStore) (*Remote, error) {
 	var b bytes.Buffer
-	hash := sha256.New()
 
 	res, err := http.Get(r.Name)
 	if err != nil {
@@ -55,8 +83,9 @@ func (r Remote) Download(ds DownloadStore) (*Remote, error) {
 	}
 	defer res.Body.Close()
 
-	// TODO: use go routines to parallelize this pipeline
-	_, err = io.Copy(&b, io.TeeReader(res.Body, hash))
+	// TODO(philips): use go routines to parallelize this pipeline and make
+	// the file type detection happen without a second stream
+	_, err = io.Copy(&b, res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -65,12 +94,46 @@ func (r Remote) Download(ds DownloadStore) (*Remote, error) {
 		return nil, err
 	}
 
+	// Detect the filetype
 	rs, err := ds.stores[downloadType].ReadStream(r.Hash(), false)
 	if err != nil {
 		return nil, err
 	}
-	key := fmt.Sprintf("%x", hash.Sum(nil))
-	err = ds.stores[objectType].WriteStream(key, rs, true)
+	defer rs.Close()
+	typ, err := taf.DetectFileType(rs)
+	if err != nil {
+		return nil, err
+	}
+	rs, err = ds.stores[downloadType].ReadStream(r.Hash(), false)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+
+	// Generate the hash of the decompressed tar
+	dr, err := decompress(rs, typ)
+	if err != nil {
+		return nil, err
+	}
+	hash := sha256.New()
+	_, err = io.Copy(hash, dr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store the decompressed tar
+	rs, err = ds.stores[downloadType].ReadStream(r.Hash(), false)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Close()
+	dr, err = decompress(rs, typ)
+	if err != nil {
+		return nil, err
+	}
+
+	key := fmt.Sprintf("sha256-%x", hash.Sum(nil))
+	err = ds.stores[objectType].WriteStream(key, dr, true)
 	if err != nil {
 		return nil, err
 	}
