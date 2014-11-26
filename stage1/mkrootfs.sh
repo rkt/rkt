@@ -183,6 +183,7 @@ putunit exit-watcher.service <<EOF
 [Unit]
 Description=Graceful exit watcher
 StopWhenUnneeded=true
+DefaultDependencies=false
 
 [Service]
 ExecStart=/usr/bin/sleep 9999999999d 
