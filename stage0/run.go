@@ -285,7 +285,7 @@ func setupImage(img string, h types.Hash, dir string) (*schema.AppManifest, erro
 		return nil, fmt.Errorf("image hash does not match expected")
 	}
 
-	ad := rkt.AppImagePath(dir, img)
+	ad := rkt.AppImagePath(dir, h)
 	err = os.MkdirAll(ad, 0776)
 	if err != nil {
 		return nil, fmt.Errorf("error creating image directory: %v", err)
@@ -299,7 +299,7 @@ func setupImage(img string, h types.Hash, dir string) (*schema.AppManifest, erro
 		return nil, fmt.Errorf("error creating tmp directory: %v", err)
 	}
 
-	mpath := rkt.AppManifestPath(dir, img)
+	mpath := rkt.AppManifestPath(dir, h)
 	f, err := os.Open(mpath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening app manifest: %v", err)

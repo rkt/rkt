@@ -43,7 +43,7 @@ func LoadContainer(root string) (*Container, error) {
 	c.Manifest = cm
 
 	for _, app := range c.Manifest.Apps {
-		ampath := rkt.AppManifestPath(c.Root, app.ImageID.String())
+		ampath := rkt.AppManifestPath(c.Root, app.ImageID)
 		buf, err := ioutil.ReadFile(ampath)
 		if err != nil {
 			return nil, fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
@@ -64,9 +64,8 @@ func LoadContainer(root string) (*Container, error) {
 }
 
 // appToSystemd transforms the provided app manifest into a systemd service unit
-func (c *Container) appToSystemd(am *schema.AppManifest, appId types.Hash) error {
+func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 	name := am.Name.String()
-	id := appId.String()
 	execStart := strings.Join(am.Exec, " ")
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
@@ -169,7 +168,7 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest, id types.Hash) ([]st
 
 		opt[1] = vol.Source
 		opt[2] = ":"
-		opt[3] = filepath.Join(rkt.RelAppRootfsPath(id.String()), mp.Path)
+		opt[3] = filepath.Join(rkt.RelAppRootfsPath(id), mp.Path)
 
 		args = append(args, strings.Join(opt, ""))
 	}
