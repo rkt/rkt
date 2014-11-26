@@ -1,13 +1,15 @@
-package main
+package downloadstore
 
 import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/coreos-inc/rkt/downloadstore"
 )
 
 func main() {
-	ds := NewDownloadStore()
+	ds := NewDownloadStore(".")
 	r := NewRemote(os.Args[1], nil)
 	err := ds.Get(r)
 	if err != nil && r.File == "" {
