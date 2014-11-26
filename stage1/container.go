@@ -64,14 +64,15 @@ func LoadContainer(root string) (*Container, error) {
 }
 
 // appToSystemd transforms the provided app manifest into a systemd service unit
-func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
+func (c *Container) appToSystemd(am *schema.AppManifest, appId types.Hash) error {
 	name := am.Name.String()
+	id := appId.String()
 	execStart := strings.Join(am.Exec, " ")
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
 		&unit.UnitOption{"Service", "Restart", "no"},
-		&unit.UnitOption{"Service", "RootDirectory", rkt.RelAppRootfsPath(id.String())},
+		&unit.UnitOption{"Service", "RootDirectory", rkt.RelAppRootfsPath(id)},
 		&unit.UnitOption{"Service", "ExecStart", execStart},
 		&unit.UnitOption{"Service", "User", am.User},
 		&unit.UnitOption{"Service", "Group", am.Group},
@@ -98,7 +99,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 		opts = append(opts, &unit.UnitOption{"Service", "Environment", ee})
 	}
 
-	file, err := os.OpenFile(rkt.ServiceFilePath(c.Root, name), os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(rkt.ServiceFilePath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create service file: %v", err)
 	}
@@ -109,7 +110,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 		return fmt.Errorf("failed to write service file: %v", err)
 	}
 
-	if err = os.Symlink(path.Join("..", rkt.ServiceName(name)), rkt.WantLinkPath(c.Root, name)); err != nil {
+	if err = os.Symlink(path.Join("..", rkt.ServiceName(id)), rkt.WantLinkPath(c.Root, id)); err != nil {
 		return fmt.Errorf("failed to link service want: %v", err)
 	}
 

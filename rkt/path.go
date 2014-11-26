@@ -2,8 +2,6 @@ package rkt
 
 import (
 	"path/filepath"
-
-	"github.com/coreos/go-systemd/dbus"
 )
 
 const (
@@ -59,7 +57,7 @@ func AppManifestPath(root string, imageID string) string {
 	return filepath.Join(AppImagePath(root, imageID), "manifest")
 }
 
-// WantsPath returns the systemd "wantd" directory in root
+// WantsPath returns the systemd "wants" directory in root
 func WantsPath(root string) string {
 	return filepath.Join(root, wantsDir)
 }
@@ -70,19 +68,19 @@ func ServicesPath(root string) string {
 }
 
 // ServiceName returns a sanitized (escaped) systemd service name
-// for the given app name
-func ServiceName(appname string) string {
-	return dbus.PathBusEscape(appname) + ".service"
+// for the given appid
+func ServiceName(appid string) string {
+	return appid + ".service"
 }
 
 // ServiceFilePath returns the path to the systemd service file
-// path for the named app
-func ServiceFilePath(root, name string) string {
-	return filepath.Join(root, servicesDir, ServiceName(name))
+// path for the given appid
+func ServiceFilePath(root, appid string) string {
+	return filepath.Join(root, servicesDir, ServiceName(appid))
 }
 
 // WantLinkPath returns the systemd "want" symlink path for the
-// named app
-func WantLinkPath(root, name string) string {
-	return filepath.Join(root, wantsDir, ServiceName(name))
+// given appid
+func WantLinkPath(root, appid string) string {
+	return filepath.Join(root, wantsDir, ServiceName(appid))
 }
