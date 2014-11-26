@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/containers/standard/taf"
+	"github.com/coreos-inc/rkt/app-container/taf"
 	"github.com/coreos-inc/rkt/downloadstore"
 )
 

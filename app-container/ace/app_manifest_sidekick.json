@@ -1,0 +1,19 @@
+{
+    "acVersion": "1.0.0",
+    "acKind": "AppManifest",
+    "name": "coreos.com/ace-validator-sidekick-1.0.0",
+    "os": "linux",
+    "arch": "amd64",
+    "exec": [
+        "/ace_validator", "sidekick"
+    ],
+    "user": "0",
+    "group": "0",
+    "mountPoints": [
+        {
+            "name": "database",
+            "path": "/db",
+            "readOnly": false
+        }
+    ],
+}

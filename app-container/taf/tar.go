@@ -1,0 +1,75 @@
+package taf
+
+import (
+	"archive/tar"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"syscall"
+)
+
+// ExtractTar extracts a tarball (from a tar.Reader) into the given directory
+func ExtractTar(tr *tar.Reader, dir string) error {
+	um := syscall.Umask(0)
+	defer syscall.Umask(um)
+	for {
+		hdr, err := tr.Next()
+		switch err {
+		case io.EOF:
+			return nil
+		case nil:
+			p := filepath.Join(dir, hdr.Name)
+			fi := hdr.FileInfo()
+			typ := hdr.Typeflag
+			switch {
+			case typ == tar.TypeReg || typ == tar.TypeRegA:
+				f, err := os.OpenFile(p, os.O_CREATE|os.O_RDWR, fi.Mode())
+				if err != nil {
+					f.Close()
+					return err
+				}
+				_, err = io.Copy(f, tr)
+				if err != nil {
+					f.Close()
+					return err
+				}
+				f.Close()
+			case typ == tar.TypeDir:
+				if err := os.MkdirAll(p, fi.Mode()); err != nil {
+					return err
+				}
+			case typ == tar.TypeLink:
+				if err := os.Link(hdr.Linkname, p); err != nil {
+					return err
+				}
+			case typ == tar.TypeSymlink:
+				if err := os.Symlink(hdr.Linkname, p); err != nil {
+					return err
+				}
+			case typ == tar.TypeChar:
+				dev := makedev(int(hdr.Devmajor), int(hdr.Devminor))
+				mode := uint32(fi.Mode()) | syscall.S_IFCHR
+				if err := syscall.Mknod(p, mode, dev); err != nil {
+					return err
+				}
+			case typ == tar.TypeBlock:
+				dev := makedev(int(hdr.Devmajor), int(hdr.Devminor))
+				mode := uint32(fi.Mode()) | syscall.S_IFBLK
+				if err := syscall.Mknod(p, mode, dev); err != nil {
+					return err
+				}
+			// TODO(jonboulle): implement other modes
+			default:
+				return fmt.Errorf("unsupported type: %v", typ)
+			}
+		default:
+			return fmt.Errorf("error extracting tarball: %v", err)
+		}
+	}
+}
+
+// makedev mimics glib's gnu_dev_makedev
+func makedev(major, minor int) int {
+	return (minor & 0xff) | (major & 0xfff << 8) | int((uint64(minor & ^0xff) << 12)) | int(uint64(major & ^0xfff)<<32)
+}
