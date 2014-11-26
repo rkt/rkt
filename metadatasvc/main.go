@@ -14,8 +14,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/containers/standard/schema"
-	"github.com/containers/standard/schema/types"
+	"github.com/coreos-inc/rkt/app-container/schema"
+	"github.com/coreos-inc/rkt/app-container/schema/types"
 	"github.com/gorilla/mux"
 )
 

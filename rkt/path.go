@@ -1,7 +1,7 @@
 package rkt
 
 import (
-	"github.com/containers/standard/schema/types"
+	"github.com/coreos-inc/rkt/app-container/schema/types"
 	"path/filepath"
 )
 

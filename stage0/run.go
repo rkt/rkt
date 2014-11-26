@@ -41,9 +41,9 @@ import (
 	// WARNING: here be dragons
 	// TODO(jonboulle): vendor this once the schema is stable
 	"code.google.com/p/go-uuid/uuid"
-	"github.com/containers/standard/schema"
-	"github.com/containers/standard/schema/types"
-	"github.com/containers/standard/taf"
+	"github.com/coreos-inc/rkt/app-container/schema"
+	"github.com/coreos-inc/rkt/app-container/schema/types"
+	"github.com/coreos-inc/rkt/app-container/taf"
 	"github.com/coreos-inc/rkt/rkt"
 )
 
