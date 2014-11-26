@@ -10,13 +10,13 @@ The "App Container" defines an image format, image discovery mechanism and execu
 
 To achieve these goals this specification is split out into a number of smaller sections. 
 
-1. The **[App Image Format](#App Image Format)** defines: how the files are assembled together for transport, verified on download and placed onto disk to be run.
+1. The **[App Image Format](#app-image-formats)** defines: how the files are assembled together for transport, verified on download and placed onto disk to be run.
 
-2. The **[App Container Executor](#App Container Executor)** defines: how an app container image on disk is run and the environment it is run inside including cgroups, namespaces and networking.
+2. The **[App Container Executor](#app-container-executor)** defines: how an app container image on disk is run and the environment it is run inside including cgroups, namespaces and networking.
 
-    * The [Metadata Server](#Metadata Server) defines how a container can introspect and get a cryptographically verifiable identity from the execution environment.
+    * The [Metadata Server](#app-container-metadata-service) defines how a container can introspect and get a cryptographically verifiable identity from the execution environment.
 
-3. The **[App Container Image Discovery](#App Container Image Discovery)** defines: how to take a name like example.com/reduce-worker-1.0.0 and translate that into a downloadable image.
+3. The **[App Container Image Discovery](#app-container-image-discovery)** defines: how to take a name like example.com/reduce-worker-1.0.0 and translate that into a downloadable image.
 
 ## Glossary of Terms
 
