@@ -6,14 +6,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/coreos-inc/rkt/pkg/tarheader"
 	"github.com/coreos-inc/rkt/app-container/fileset"
 	"github.com/coreos-inc/rkt/app-container/schema"
+	"github.com/coreos-inc/rkt/pkg/tarheader"
 )
 
 var (
-	buildName string
-	cmdBuild  = &Command{
+	buildName      string
+	buildOverwrite bool
+	cmdBuild       = &Command{
 		Name:        "build",
 		Description: "Build a fileset from the target directory",
 		Summary:     "Build a fileset from the target directory",
@@ -24,6 +25,7 @@ var (
 func init() {
 	cmdBuild.Flags.StringVar(&buildName, "name", "",
 		"Name of the fileset (e.g. example.com/reduce-worker)")
+	cmdBuild.Flags.BoolVar(&buildOverwrite, "overwrite", false, "Overwrite target file if it already exists")
 }
 
 func buildWalker(root string, aw *fileset.ArchiveWriter) filepath.WalkFunc {
@@ -79,9 +81,17 @@ func runBuild(args []string) (exit int) {
 
 	fsm := schema.NewFileSetManifest(buildName)
 
-	afs, err := os.OpenFile(tgt, os.O_CREATE|os.O_EXCL|os.O_WRONLY|os.O_SYNC, 0655)
+	mode := os.O_CREATE | os.O_WRONLY
+	if !buildOverwrite {
+		mode |= os.O_EXCL
+	}
+	afs, err := os.OpenFile(tgt, mode, 0655)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "fileset: Unable to open target %s\n", tgt)
+		if os.IsExist(err) {
+			fmt.Fprintf(os.Stderr, "Target file exists (try --overwrite)\n")
+		} else {
+			fmt.Fprintf(os.Stderr, "fileset: Unable to open target %s: %v\n", tgt, err)
+		}
 		return 1
 	}
 	w := tar.NewWriter(afs)
