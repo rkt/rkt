@@ -13,7 +13,7 @@ import (
 	"github.com/coreos-inc/rkt/app-container/schema"
 	"github.com/coreos-inc/rkt/app-container/schema/types"
 	"github.com/coreos-inc/rkt/rkt"
-	"github.com/coreos/go-systemd/unit"
+	"github.com/coreos-inc/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 )
 
 // Container encapsulates a ContainerRuntimeManifest and AppManifests
