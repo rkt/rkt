@@ -22,7 +22,7 @@ for typ in main sidekick; do
 		for path in app rootfs rootfs/ace_validator; do
 			touch -a -m -d 1415660606 ${path}
 		done
-		../acfmt build --overwrite --name coreos.com/ace-validator-${typ}-1.0.0 . ../ace_validator_${typ}.afs
+		../actool build --overwrite --name coreos.com/ace-validator-${typ}-1.0.0 . ../ace_validator_${typ}.afs
 		HASH=sha256-$(sha256sum ../ace_validator_${typ}.afs|awk '{print $1}')
 		gzip -f ../ace_validator_${typ}.afs
 		mv ../ace_validator_${typ}.afs.gz ../ace_validator_${typ}.afs

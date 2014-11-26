@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	cliName        = "acfmt"
-	cliDescription = "acfmt, the application container formatter"
+	cliName        = "actool"
+	cliDescription = "actool, the application container tool"
 )
 
 var (
