@@ -44,6 +44,7 @@ import (
 	"github.com/coreos-inc/rkt/app-container/schema"
 	"github.com/coreos-inc/rkt/app-container/schema/types"
 	"github.com/coreos-inc/rkt/app-container/taf"
+	"github.com/coreos-inc/rkt/downloadstore"
 	"github.com/coreos-inc/rkt/rkt"
 )
 
@@ -52,6 +53,7 @@ const (
 )
 
 type Config struct {
+	Store         *downloadstore.DownloadStore
 	ContainersDir string // root directory for rocket containers
 	Stage1Init    string // binary to be execed as stage1
 	Stage1Rootfs  string // compressed bundle containing a rootfs for stage1
@@ -135,7 +137,7 @@ func Setup(cfg Config) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("error: bad image hash %q: %v", img, err)
 		}
-		am, err := setupImage(img, *h, dir)
+		am, err := setupImage(cfg, img, *h, dir)
 		if err != nil {
 			return "", fmt.Errorf("error setting up image %s: %v", img, err)
 		}
@@ -239,44 +241,20 @@ func unpackRootfs(rfs string, dir string) error {
 	return nil
 }
 
-// setupImage attempts to load the image by the given name (currently it just
-// assumes it is a file in the current directory), verifies that the image
-// matches the given hash (after decompression), and then extracts the image
+// setupImage attempts to load the image by the given hash from the store,
+// verifies that the image matches the given hash and then extracts the image
 // into a directory in the given dir.
 // It returns the AppManifest that the image contains
-func setupImage(img string, h types.Hash, dir string) (*schema.AppManifest, error) {
+func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppManifest, error) {
 	log.Println("Loading image", img)
-	fh, err := os.Open(img)
+
+	rs, err := cfg.Store.ObjectStream(img)
 	if err != nil {
-		return nil, fmt.Errorf("error opening image: %v", err)
-	}
-	typ, err := taf.DetectFileType(fh)
-	if err != nil {
-		return nil, fmt.Errorf("error detecting image type: %v", err)
-	}
-	if _, err := fh.Seek(0, 0); err != nil {
-		return nil, fmt.Errorf("error seeking image: %v", err)
-	}
-	var r io.Reader
-	switch typ {
-	case taf.TypeGzip:
-		r, err = gzip.NewReader(fh)
-		if err != nil {
-			return nil, fmt.Errorf("error reading gzip: %v", err)
-		}
-	case taf.TypeBzip2:
-		r = bzip2.NewReader(fh)
-	case taf.TypeXz:
-		r = taf.XzReader(fh)
-	case taf.TypeUnknown:
-		return nil, fmt.Errorf("error: unknown image filetype")
-	default:
-		// should never happen
-		panic("no type returned from DetectFileType?")
+		return nil, err
 	}
 
 	// Sanity check: provided image name matches image ID
-	b, err := ioutil.ReadAll(r)
+	b, err := ioutil.ReadAll(rs)
 	if err != nil {
 		return nil, fmt.Errorf("error reading tarball: %v", err)
 	}
