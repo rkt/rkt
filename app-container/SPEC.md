@@ -34,8 +34,8 @@ To provide context to the specs outlined below we will walk through an example.
 
 A user wants to launch a container running two processes. The two processes the user wants to run are the apps named `example.com/reduce-worker-register-1.0.0` and `example.com/reduce-worker-1.0.0`. First, the executor will check the cache and find that it doesn't have images available for these apps. So, it will make an HTTPS request to example.com and using the <meta> tags there finds that the containers can be found at:
 
-	https://storage-mirror.example.com/reduce-worker-register-1.0.0.afs
-	https://storage-mirror.example.com/reduce-worker-1.0.0.afs
+	https://storage-mirror.example.com/reduce-worker-register-1.0.0.aci
+	https://storage-mirror.example.com/reduce-worker-1.0.0.aci
 
 The executor downloads these two "fileset images" and puts them into its local on-disk cache. Then the executor extracts two fresh copies of these filesets to create instances of the "on-disk app format" and reads the two app manifests to figure out what binaries will need to executed. It finds that the register app has a main entry point at /usr/bin/register and the worker has one at /usr/bin/reduce-worker.
 
@@ -67,12 +67,12 @@ Fileset images v1 MUST be a tar file. The image may be optionally compressed wit
 ```
 tar cvvf reduce-worker.tar filset rootfs
 gpg --output reduce-worker.sig --detach-sig reduce-worker.tar
-gzip reduce-worker.tar -c > reduce-worker.afs
+gzip reduce-worker.tar -c > reduce-worker.aci
 ```
 Optional encryption:
 
 ```
-gpg --output reduce-worker.afs --cipher-algo AES256 --symmetric reduce-worker.afs
+gpg --output reduce-worker.aci --cipher-algo AES256 --symmetric reduce-worker.aci
 ```
 
 All files in the fileset must maintain all properties of their original fileset image including: timestamps, Unix modes and xattrs.
@@ -142,7 +142,7 @@ Every execution of an app container should start from a clean copy of the app fi
 ```
 cd $(mktemp -d -t temp.XXXX)
 mkdir hello
-tar xzvf /var/lib/pce/hello.afs -C hello
+tar xzvf /var/lib/pce/hello.aci -C hello
 ```
 
 Other implementations could increase performance and de-duplicate data by building on top of overlay filesystems, copy-on-write block devices, or a content-addressed file store. These details are orthogonal to the runtime environment.
@@ -217,7 +217,7 @@ An app name has a URL like structure, for example `example.com/reduce-worker-1.0
 
 ### Simple Download
 
-First, try to fetch the app fileset image by prepending https:// and appending .afs.  If this fails, move on to meta discovery. If this succeeds, try fetching the signature using the .sig extension.
+First, try to fetch the app fileset image by prepending https:// and appending .aci.  If this fails, move on to meta discovery. If this succeeds, try fetching the signature using the .sig extension.
 
 ### Meta Discovery
 
@@ -232,7 +232,7 @@ Then inspect the HTML returned for meta tags that have the following format:
 <meta name="ac-discovery-pubkeys" content="prefix-match url">
 ```
 
-* ac-discovery should give a URL that can have .afs, .sig or extensions to get the fileset or signature for the image
+* ac-discovery should give a URL that can have .aci, .sig or extensions to get the fileset or signature for the image
 * ac-discovery-pubkeys for the app image manifest only
 
 Some examples for different schemes and URLs:
@@ -253,7 +253,7 @@ In our example above this would be:
 
 sig: https://storage.example.com/linux/amd64/reduce-worker-1.0.0.sig
 
-afs: https://storage.example.com/linux/amd64/reduce-worker-1.0.0.afs
+aci: https://storage.example.com/linux/amd64/reduce-worker-1.0.0.aci
 
 keys: https://example.com/pubkeys.gpg
 
