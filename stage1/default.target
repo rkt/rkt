@@ -1,3 +1,0 @@
-[Unit]
-Description=Rocket stage2 target
-DefaultDependencies=false
