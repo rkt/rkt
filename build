@@ -13,8 +13,8 @@ export GOPATH=${GOPATH}:${PWD}/gopath
 
 eval $(go env)
 
-echo "Building acfmt..."
-go build -o $GOBIN/acfmt ${REPO_PATH}/app-container/acfmt
+echo "Building actool..."
+go build -o $GOBIN/actool ${REPO_PATH}/app-container/actool
 
 echo "Building ACE validator..."
 GOOS=linux CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o $GOBIN/ace_validator ${REPO_PATH}/app-container/ace

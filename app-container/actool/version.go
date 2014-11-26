@@ -14,6 +14,6 @@ var cmdVersion = &Command{
 }
 
 func runVersion(args []string) (exit int) {
-	fmt.Printf("acfmt version %s\n", schema.AppContainerVersion.String())
+	fmt.Printf("actool version %s\n", schema.AppContainerVersion.String())
 	return
 }
