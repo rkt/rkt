@@ -51,7 +51,7 @@ func (r Remote) Type() int64 {
 
 func decompress(rs io.Reader, typ taf.FileType) (io.Reader, error) {
 	var (
-		dr io.Reader
+		dr  io.Reader
 		err error
 	)
 	switch typ {
@@ -82,6 +82,11 @@ func (r Remote) Download(ds DownloadStore) (*Remote, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	// TODO(jonboulle): handle http more robustly (redirects?)
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
+	}
 
 	// TODO(philips): use go routines to parallelize this pipeline and make
 	// the file type detection happen without a second stream
