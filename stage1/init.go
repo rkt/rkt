@@ -31,6 +31,13 @@ func main() {
 		os.Exit(2)
 	}
 
+	// TODO(philips): compile a static version of systemd-nspawn with this
+	// stupidity patched out
+	_, err = os.Stat("/run/systemd/system")
+	if os.IsNotExist(err) {
+		os.MkdirAll("/run/systemd/system", 0755)
+	}
+
 	ex := filepath.Join(rkt.Stage1RootfsPath(c.Root), nspawnBin)
 	if _, err := os.Stat(ex); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed locating nspawn: %v\n", err)
