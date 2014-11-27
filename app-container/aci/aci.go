@@ -10,9 +10,8 @@ import (
 	"os"
 )
 
-// ValidateTar checks that a given io.Reader, which should
-// represent a tar file, tar contains a directory layout which
-// matches the RAF spec
+// ValidateTar checks that a given io.Reader, which should represent a tar
+// file, contains a directory layout which matches the ACI spec
 func ValidateTar(r io.Reader) error {
 	// TODO(jonboulle): do this in memory instead of writing out to disk? :/
 	dir, err := ioutil.TempDir("", "aci-validator")

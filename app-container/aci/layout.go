@@ -35,7 +35,7 @@ var (
 // matches that expected by the Application Container Image format.
 // If any errors are encountered during the validation, it will abort and
 // return the first one.
-// TODO(jonboulle): work on tar streams instead of requiring this be on disk
+// TODO(jonboulle): also support working on tar streams instead of requiring this be on disk
 func ValidateLayout(dir string) error {
 	fi, err := os.Stat(dir)
 	if err != nil {
