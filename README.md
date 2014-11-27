@@ -1,11 +1,78 @@
-# Rocket - App Container Reference Implementation
+# Rocket - App Container runtime
 
-Rocket is a reference implementation of the app container specification. The
-goal of rocket is to be a composable and minimal implementation of the spec.
-Other implementations are possible - for example, with a focus on tighter
-integration to particular projects, or an emphasis on speed.
+_Release early, release often: Rocket is currently a prototype and we are seeking your feedback via pull requests_
 
-## Stages
+Rocket is a cli for running App Containers. The goal of rocket is to be a composable, secure, and fast. 
+
+[Read more about Rocket in the launch announcement](https://coreos.com/blog/rocket). 
+
+## Trying out Rocket
+
+`rkt` is currently supported on amd64 Linux. We recommend booting up a fresh virtual machine to test out rocket. 
+
+To install the `rkt` binary:
+
+```
+```
+
+## Rocket basics
+
+### Downloading an App Container Image (ACI)
+
+Rocket uses content addressable storage (CAS) for storing an ACI on disk. In this example, the image is downloaded and added to the CAS. 
+
+```
+$ rkt fetch https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace_validator_main.tar.gz
+sha256-f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8
+```
+
+These files are now written to disk:
+
+```
+$ find /var/lib/rkt/cas/object/
+/var/lib/rkt/cas/object/
+/var/lib/rkt/cas/object/sha256
+/var/lib/rkt/cas/object/sha256/f5
+/var/lib/rkt/cas/object/sha256/f5/sha256-f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8
+```
+
+Per the App Container [spec][spec] the sha256 is of the tarball, which is reproducable with other tools:
+
+```
+$ wget https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace_validator_main.tar.gz
+...
+$ gunzip ace_validator_main.tar.gz
+$ sha256sum ace_validator_main.tar
+f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8  ace_validator_main.tar
+```
+
+### Launching an ACI
+
+To run an ACI, you can either use the sha256 hash, or the URL which you downloaded it from:
+
+```
+$ rkt run https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace_validator_main.tar.gz
+```
+
+rkt will do the appropriate etag checking on the URL to make sure it has the most up to date version of the image. 
+
+Or, you can explicitly choose an image to run based on the sha256:
+
+```
+$ rkt run sha256-f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8
+```
+
+These commands are interchangeable. 
+
+
+## App Container basics
+
+[App Container](app-container) is a [specification](app-container/SPEC.md) of an image format, runtime, and discovery protocol for running a container. We anticipate app container to be adopted by other runtimes outside of Rocket itself. Read more about it [here](app-container).
+
+
+## Rocket internals
+
+Rocket is designed to be modular and pluggable by default. To do this we have a concept of "stages" of execution of the container. 
 
 Execution with Rocket is divided into a number of distinct stages. The
 motivation for this is to separate the concerns of initial filesystem setup,
