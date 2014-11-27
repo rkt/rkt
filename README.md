@@ -151,4 +151,3 @@ The final stage is executing the actual application. The responsibilities of
 the stage2 include:
 
 - Launch the init process described in the Application Manifest
-
