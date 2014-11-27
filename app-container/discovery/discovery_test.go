@@ -46,14 +46,14 @@ func TestDiscoverEndpoints(t *testing.T) {
 		}
 	}
 
-	if len(de.TAF) != 2 {
-		t.Errorf("TAF array is wrong length")
+	if len(de.ACI) != 2 {
+		t.Errorf("ACI array is wrong length")
 	} else {
-		if de.TAF[0] != "https://storage.example.com/example.com/myapp-1.0.0.taf?torrent" {
-			t.Error("TAF[0] mismatch: ", de.TAF[0])
+		if de.ACI[0] != "https://storage.example.com/example.com/myapp-1.0.0.aci?torrent" {
+			t.Error("ACI[0] mismatch: ", de.ACI[0])
 		}
-		if de.TAF[1] != "hdfs://storage.example.com/example.com/myapp-1.0.0.taf" {
-			t.Error("TAF[1] mismatch: ", de.TAF[1])
+		if de.ACI[1] != "hdfs://storage.example.com/example.com/myapp-1.0.0.aci" {
+			t.Error("ACI[1] mismatch: ", de.ACI[1])
 		}
 	}
 

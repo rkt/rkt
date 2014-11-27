@@ -16,7 +16,7 @@ type acMeta struct {
 
 type Endpoints struct {
 	Sig  []string
-	TAF  []string
+	ACI  []string
 	Keys []string
 }
 
@@ -101,7 +101,7 @@ func DiscoverEndpoints(app, ver, os, arch string, insecure bool) (*Endpoints, er
 		case "ac-discovery":
 			m.uri = renderTemplate(m.uri, tplVars...)
 			de.Sig = append(de.Sig, renderTemplate(m.uri, "{ext}", "sig"))
-			de.TAF = append(de.TAF, renderTemplate(m.uri, "{ext}", "taf"))
+			de.ACI = append(de.ACI, renderTemplate(m.uri, "{ext}", "aci"))
 
 		case "ac-discovery-pubkeys":
 			de.Keys = append(de.Keys, m.uri)

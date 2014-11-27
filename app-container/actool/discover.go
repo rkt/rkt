@@ -38,7 +38,7 @@ func runDiscover(args []string) (exit int) {
 			fmt.Fprintf(os.Stderr, "error fetching %s: %s", name, err)
 			return 1
 		}
-		for _, list := range [][]string{eps.Sig, eps.TAF, eps.Keys} {
+		for _, list := range [][]string{eps.Sig, eps.ACI, eps.Keys} {
 			if len(list) != 0 {
 				fmt.Println(strings.Join(list, ","))
 			}

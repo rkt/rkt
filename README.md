@@ -87,8 +87,8 @@ binary is in charge of doing a number of initial preparatory tasks:
 - Creating a filesystem for the container
 - Setting up stage 1 and stage 2 directories in the filesystem
 - Copying the stage1 binary into the container filesystem
-- Fetching the specified TAFs
-- Unpacking the TAFs and copying each app into the stage2 directories
+- Fetching the specified ACIs
+- Unpacking the ACIs and copying each app into the stage2 directories
 
 Given a run command such as:
 

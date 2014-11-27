@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/coreos-inc/rkt/app-container/taf"
+	"github.com/coreos-inc/rkt/app-container/aci"
 )
 
 func NewRemote(name string, mirrors []string) *Remote {
@@ -49,22 +49,22 @@ func (r Remote) Type() int64 {
 	return remoteType
 }
 
-func decompress(rs io.Reader, typ taf.FileType) (io.Reader, error) {
+func decompress(rs io.Reader, typ aci.FileType) (io.Reader, error) {
 	var (
 		dr  io.Reader
 		err error
 	)
 	switch typ {
-	case taf.TypeGzip:
+	case aci.TypeGzip:
 		dr, err = gzip.NewReader(rs)
 		if err != nil {
 			return nil, err
 		}
-	case taf.TypeBzip2:
+	case aci.TypeBzip2:
 		dr = bzip2.NewReader(rs)
-	case taf.TypeXz:
-		dr = taf.XzReader(rs)
-	case taf.TypeUnknown:
+	case aci.TypeXz:
+		dr = aci.XzReader(rs)
+	case aci.TypeUnknown:
 		fmt.Fprintf(os.Stderr, "error: unknown image filetype\n")
 	default:
 		// should never happen
@@ -105,7 +105,7 @@ func (r Remote) Download(ds DownloadStore) (*Remote, error) {
 		return nil, err
 	}
 	defer rs.Close()
-	typ, err := taf.DetectFileType(rs)
+	typ, err := aci.DetectFileType(rs)
 	if err != nil {
 		return nil, err
 	}
