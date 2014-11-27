@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/coreos-inc/rkt/app-container/schema/types"
-	"github.com/coreos-inc/rkt/downloadstore"
+	"github.com/coreos-inc/rkt/cas"
 	"github.com/coreos-inc/rkt/stage0"
 )
 
@@ -34,7 +34,7 @@ func init() {
 	flagVolumes = volumeMap{}
 }
 
-func findImages(args []string, ds *downloadstore.DownloadStore) (out []string, err error) {
+func findImages(args []string, ds *cas.Store) (out []string, err error) {
 	out = make([]string, len(args))
 	copy(out, args)
 	for i, img := range args {
@@ -76,7 +76,7 @@ func runRun(args []string) (exit int) {
 		}
 	}
 
-	ds := downloadstore.NewDownloadStore(globalFlags.Dir)
+	ds := cas.NewStore(globalFlags.Dir)
 	imgs, err := findImages(args, ds)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err)
