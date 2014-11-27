@@ -283,7 +283,7 @@ Information about the container that this app is executing in.
 Retrievable at `http://169.254.169.254/acMetadata/v1/container`
 
 | Entry       | Description |
-|---------------------------|
+|-------------|-------------|
 |annotations/ | A directory of metadata values passed to the container.|
 |manifest     | The container manifest JSON |
 |uid          | The unique execution container uid.|
@@ -296,7 +296,7 @@ This is necessary to query for the correct endpoint metadata.
 Retrievable at `http://169.254.169.254/acMetadata/v1/apps/${ac_app_name}/`
 
 | Entry         | Description |
-|-----------------------------|
+|---------------|-------------|
 |annotations/   | A directory of metadata values on the entrypoint manifest.|
 |image/manifest | The original manifest file of the app. |
 |image/id       | Cryptographic image ID this app is on.|
