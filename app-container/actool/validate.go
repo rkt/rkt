@@ -1,7 +1,6 @@
 package main
 
 import (
-	"archive/tar"
 	"compress/bzip2"
 	"compress/gzip"
 	"errors"
@@ -13,7 +12,6 @@ import (
 	"path/filepath"
 
 	"github.com/coreos-inc/rkt/app-container/aci"
-	"github.com/coreos-inc/rkt/app-container/fileset"
 	"github.com/coreos-inc/rkt/app-container/schema"
 )
 
@@ -39,18 +37,6 @@ func runValidate(args []string) (exit int) {
 
 		// First key off extension, and then possibly fall back to
 		switch filepath.Ext(path) {
-		case schema.FileSetExtension:
-			tr := tar.NewReader(file)
-			err := fileset.ValidateArchive(tr)
-			file.Close()
-			if err != nil {
-				stderr("%s: error validating: %v\n", path, err)
-				return 1
-			}
-			if globalFlags.Debug {
-				stderr("%s: valid fileset\n", path)
-			}
-			continue
 		case schema.ACIExtension:
 			err := validateACI(file)
 			file.Close()
