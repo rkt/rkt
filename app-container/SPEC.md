@@ -309,7 +309,7 @@ This gives a cryptographically verifiable identity to the container based on its
 Accessible at `http://169.254.169.254/acMetadata/v1/container/hmac`
 
 | Entry | Description |
-|---------------------|
+|-------|-------------|
 |sign   | POST any object to this endpoint and retrieve a base64 hmac-sha256 signature as the response body. The metadata service holds onto the AES key as a sort of container TPM.|
 |verify | Verify a signature from another container. POST a form with signature=&lt;base64 encoded signature&gt; and uid=&lt;uid of the container that generated the signature&gt;. Returns 200 OK if the signature passes. |
 
