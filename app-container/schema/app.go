@@ -7,6 +7,10 @@ import (
 	"github.com/coreos-inc/rkt/app-container/schema/types"
 )
 
+const (
+	ACIExtension = ".aci"
+)
+
 type AppManifest struct {
 	ACVersion     types.SemVer         `json:"acVersion"`
 	ACKind        types.ACKind         `json:"acKind"`

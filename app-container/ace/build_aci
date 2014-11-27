@@ -1,11 +1,11 @@
 #!/bin/bash -eu
 #
-# Builds a TAF containing a go implementation of an ACE validator
+# Builds an ACI containing a go implementation of an ACE validator
 #
 
 PREFIX="app-container/ace"
 
-if ! [[ $0 =~ "${PREFIX}/build_taf" ]]; then 
+if ! [[ $0 =~ "${PREFIX}/build_aci" ]]; then 
 	echo "invoke from repository root" 1>&2
 	exit 255
 fi
@@ -30,8 +30,8 @@ for typ in main sidekick; do
 		mv ace_validator_${typ}.sig ../
 	popd >/dev/null
 	echo "Wrote ${typ} RAF to         ${rafdir}"
-	echo "Wrote unsigned ${typ} TAF   bin/ace_validator_${typ}.afs"
+	echo "Wrote unsigned ${typ} ACI   bin/ace_validator_${typ}.aci"
 	ln -s ${PWD}/bin/ace_validator_${typ}.afs bin/${HASH}
 	echo "Wrote ${typ} RAF hash       bin/${HASH}"
-	echo "Wrote ${typ} TAF signature  bin/ace_validator_${typ}.sig"
+	echo "Wrote ${typ} ACI signature  bin/ace_validator_${typ}.sig"
 done

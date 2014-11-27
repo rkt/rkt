@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 )
 
@@ -93,4 +94,9 @@ func getFlags(flagset *flag.FlagSet) (flags []*flag.Flag) {
 		flags = append(flags, f)
 	})
 	return
+}
+
+func stderr(format string, a ...interface{}) {
+	out := fmt.Sprintf(format, a...)
+	fmt.Fprintln(os.Stderr, strings.TrimSuffix(out, "\n"))
 }

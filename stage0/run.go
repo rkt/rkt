@@ -4,23 +4,7 @@ package stage0
 // Rocket is a reference implementation of the app container specification.
 //
 // Execution on Rocket is divided into a number of stages, and the `rkt`
-// binary implements the first stage (stage 0), which consists of the
-// following tasks:
-// - Generating a Container Unique ID (UID)
-// - Generating a Container Runtime Manifest
-// - Creating a filesystem for the container
-// - Setting up stage 1 and stage 2 directories in the filesystem
-// - Copying the stage1 binary into the container filesystem
-// - Fetching the specified application TAFs
-// - Unpacking the TAFs and copying the RAF for each app into the stage2
-//
-// Given a run command such as:
-//	rkt run --volume bind:/opt/tenant1/database \
-//		example.com/data-downloader-1.0.0 \
-//		example.com/ourapp-1.0.0 \
-//		example.com/logbackup-1.0.0
-//
-// the container manifest generated will be compliant with the ACE spec.
+// binary implements the first stage (stage 0)
 //
 
 import (
@@ -38,12 +22,10 @@ import (
 	"path/filepath"
 	"syscall"
 
-	// WARNING: here be dragons
-	// TODO(jonboulle): vendor this once the schema is stable
 	"github.com/coreos-inc/rkt/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
+	"github.com/coreos-inc/rkt/app-container/aci"
 	"github.com/coreos-inc/rkt/app-container/schema"
 	"github.com/coreos-inc/rkt/app-container/schema/types"
-	"github.com/coreos-inc/rkt/app-container/taf"
 	"github.com/coreos-inc/rkt/downloadstore"
 	"github.com/coreos-inc/rkt/rkt"
 )
@@ -58,7 +40,7 @@ type Config struct {
 	Stage1Init    string // binary to be execed as stage1
 	Stage1Rootfs  string // compressed bundle containing a rootfs for stage1
 	Debug         bool
-	Images        []string          // application images (currently must be TAFs)
+	Images        []string          // application images
 	Volumes       map[string]string // map of volumes that rocket can provide to applications
 }
 
@@ -73,7 +55,6 @@ func Setup(cfg Config) (string, error) {
 		log.SetOutput(os.Stderr)
 	}
 
-	// - Generating the Container Unique ID (UID)
 	cuuid, err := types.NewUUID(uuid.New())
 	if err != nil {
 		return "", fmt.Errorf("error creating UID: %v", err)
@@ -83,7 +64,6 @@ func Setup(cfg Config) (string, error) {
 	// Create a directory for this container
 	dir := filepath.Join(cfg.ContainersDir, cuuid.String())
 
-	// - Creating a filesystem for the container
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", fmt.Errorf("error creating directory: %v", err)
 	}
@@ -112,7 +92,6 @@ func Setup(cfg Config) (string, error) {
 
 	log.Printf("Wrote filesystem to %s\n", dir)
 
-	// - Generating a Container Runtime Manifest
 	cm := schema.ContainerRuntimeManifest{
 		ACKind: "ContainerRuntimeManifest",
 		UUID:   *cuuid,
@@ -124,13 +103,6 @@ func Setup(cfg Config) (string, error) {
 		return "", fmt.Errorf("error creating version: %v", err)
 	}
 	cm.ACVersion = *v
-
-	// - Fetching the specified application TAFs
-	//   (for now, we just assume they are local and named by their hash, and unencrypted)
-	// - Unpacking the TAFs and copying the RAF for each app into the stage2
-
-	// TODO(jonboulle): clarify imagehash<->appname. Right now we have to
-	// unpack the entire TAF to access the manifest which contains the appname.
 
 	for _, img := range cfg.Images {
 		h, err := types.NewHash(img)
@@ -207,7 +179,7 @@ func unpackRootfs(rfs string, dir string) error {
 	if err != nil {
 		return fmt.Errorf("error opening stage1 rootfs: %v", err)
 	}
-	typ, err := taf.DetectFileType(fh)
+	typ, err := aci.DetectFileType(fh)
 	if err != nil {
 		return fmt.Errorf("error detecting image type: %v", err)
 	}
@@ -216,16 +188,16 @@ func unpackRootfs(rfs string, dir string) error {
 	}
 	var r io.Reader
 	switch typ {
-	case taf.TypeGzip:
+	case aci.TypeGzip:
 		r, err = gzip.NewReader(fh)
 		if err != nil {
 			return fmt.Errorf("error reading gzip: %v", err)
 		}
-	case taf.TypeBzip2:
+	case aci.TypeBzip2:
 		r = bzip2.NewReader(fh)
-	case taf.TypeXz:
-		r = taf.XzReader(fh)
-	case taf.TypeUnknown:
+	case aci.TypeXz:
+		r = aci.XzReader(fh)
+	case aci.TypeUnknown:
 		return fmt.Errorf("error: unknown image filetype")
 	default:
 		// should never happen
@@ -235,7 +207,7 @@ func unpackRootfs(rfs string, dir string) error {
 	if err = os.MkdirAll(dir, 0776); err != nil {
 		return fmt.Errorf("error creating stage1 rootfs directory: %v", err)
 	}
-	if err := taf.ExtractTar(tr, dir); err != nil {
+	if err := aci.ExtractTar(tr, dir); err != nil {
 		return fmt.Errorf("error extracting rootfs: %v", err)
 	}
 	return nil
@@ -268,8 +240,8 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 	if err != nil {
 		return nil, fmt.Errorf("error creating image directory: %v", err)
 	}
-	if err := taf.ExtractTar(tar.NewReader(bytes.NewReader(b)), ad); err != nil {
-		return nil, fmt.Errorf("error extracting TAF: %v", err)
+	if err := aci.ExtractTar(tar.NewReader(bytes.NewReader(b)), ad); err != nil {
+		return nil, fmt.Errorf("error extracting ACI: %v", err)
 	}
 
 	err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)

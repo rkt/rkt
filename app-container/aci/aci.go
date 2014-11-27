@@ -1,6 +1,6 @@
-package taf
+package aci
 
-// Package taf contains a small library to validate files that comply with the TAF spec
+// Package aci contains a small library to validate files that comply with the ACI spec
 
 import (
 	"archive/tar"
@@ -17,7 +17,7 @@ import (
 // matches the RAF spec
 func ValidateTar(r io.Reader) error {
 	// TODO(jonboulle): do this in memory instead of writing out to disk? :/
-	dir, err := ioutil.TempDir("", "taf-validator")
+	dir, err := ioutil.TempDir("", "aci-validator")
 	if err != nil {
 		return fmt.Errorf("error creating tempdir for RAF validation: %v", err)
 	}

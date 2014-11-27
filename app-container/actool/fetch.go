@@ -34,7 +34,7 @@ func runFetch(args []string) (exit int) {
 			return 1
 		}
 		fmt.Println(strings.Join(eps.Sig, ","))
-		fmt.Println(strings.Join(eps.TAF, ","))
+		fmt.Println(strings.Join(eps.ACI, ","))
 		fmt.Println(strings.Join(eps.Keys, ","))
 	}
 
