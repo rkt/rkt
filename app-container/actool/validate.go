@@ -17,8 +17,9 @@ import (
 
 var cmdValidate = &Command{
 	Name:        "validate",
-	Description: "Validate an AppContainer file",
-	Summary:     "Validate an AppContainer file",
+	Description: "Validate one or more AppContainer files",
+	Summary:     "Validate that one or more images or manifests meet the AppContainer specification",
+	Usage:       "[--type=TYPE] FILE...",
 	Run:         runValidate,
 }
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/tar"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -18,6 +17,7 @@ var (
 		Name:        "build",
 		Description: "Build a fileset from the target directory",
 		Summary:     "Build a fileset from the target directory",
+		Usage:       "DIRECTORY",
 		Run:         runBuild,
 	}
 )
@@ -73,7 +73,7 @@ func buildWalker(root string, aw *fileset.ArchiveWriter) filepath.WalkFunc {
 
 func runBuild(args []string) (exit int) {
 	if len(args) != 2 {
-		fmt.Fprintf(os.Stderr, "build: Must provide directory and target fileset\n")
+		stderr("build: Must provide directory and target fileset")
 		return 1
 	}
 
@@ -81,7 +81,7 @@ func runBuild(args []string) (exit int) {
 	tgt := args[1]
 	ext := filepath.Ext(tgt)
 	if ext != schema.ACIExtension {
-		fmt.Fprintf(os.Stderr, "fileset: Extension must be %s was %s\n", schema.ACIExtension, ext)
+		stderr("fileset: Extension must be %s was %s", schema.ACIExtension, ext)
 	}
 
 	fsm := schema.NewFileSetManifest(buildName)
@@ -93,9 +93,9 @@ func runBuild(args []string) (exit int) {
 	afs, err := os.OpenFile(tgt, mode, 0655)
 	if err != nil {
 		if os.IsExist(err) {
-			fmt.Fprintf(os.Stderr, "Target file exists (try --overwrite)\n")
+			stderr("Target file exists (try --overwrite)")
 		} else {
-			fmt.Fprintf(os.Stderr, "fileset: Unable to open target %s: %v\n", tgt, err)
+			stderr("fileset: Unable to open target %s: %v", tgt, err)
 		}
 		return 1
 	}
@@ -105,7 +105,7 @@ func runBuild(args []string) (exit int) {
 
 	err = aw.Close()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "fileset: Unable to close fileset %s: %v\n", tgt, err)
+		stderr("fileset: Unable to close fileset %s: %v", tgt, err)
 		return 1
 	}
 

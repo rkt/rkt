@@ -11,8 +11,8 @@ import (
 var (
 	cmdFetch = &Command{
 		Name:        "fetch",
-		Description: "Discover and download a fileset",
-		Summary:     "Discover and download a fileset",
+		Description: "Discover and download an app container image",
+		Summary:     "Discover, download and store on disk the app container image for one or more apps",
 		Run:         runFetch,
 	}
 )
@@ -25,14 +25,15 @@ func runFetch(args []string) (exit int) {
 	for _, name := range args {
 		labels, err := appFromString(name)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: %s", name, err)
+			stderr("%s: %s", name, err)
 			return 1
 		}
 		eps, err := discovery.DiscoverEndpoints(labels["name"], labels["ver"], labels["os"], labels["arch"], transportFlags.Insecure)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error fetching %s: %s", name, err)
+			stderr("error fetching %s: %s", name, err)
 			return 1
 		}
+		// TODO(philips): store the images..
 		fmt.Println(strings.Join(eps.Sig, ","))
 		fmt.Println(strings.Join(eps.ACI, ","))
 		fmt.Println(strings.Join(eps.Keys, ","))

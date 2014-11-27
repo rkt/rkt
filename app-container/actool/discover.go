@@ -2,16 +2,18 @@ package main
 
 import (
 	"fmt"
-	"github.com/coreos-inc/rkt/app-container/discovery"
 	"os"
 	"strings"
+
+	"github.com/coreos-inc/rkt/app-container/discovery"
 )
 
 var (
 	cmdDiscover = &Command{
 		Name:        "discover",
-		Description: "Discover the download URLs for a fileset",
-		Summary:     "Discover the download URLs for a fileset",
+		Description: "Discover the download URLs for an app",
+		Summary:     "Discover the download URLs for one or more app container images",
+		Usage:       "APP...",
 		Run:         runDiscover,
 	}
 )
@@ -29,13 +31,13 @@ func runDiscover(args []string) (exit int) {
 	for _, name := range args {
 		labels, err := appFromString(name)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s: %s", name, err)
+			stderr("%s: %s", name, err)
 			return 1
 		}
 		eps, err := discovery.DiscoverEndpoints(labels["name"], labels["ver"], labels["os"], labels["amd64"], transportFlags.Insecure)
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error fetching %s: %s", name, err)
+			stderr("error fetching %s: %s", name, err)
 			return 1
 		}
 		for _, list := range [][]string{eps.Sig, eps.ACI, eps.Keys} {
