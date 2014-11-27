@@ -7,7 +7,11 @@ import (
 	"strings"
 )
 
-const defaultVersion = "latest"
+const (
+	defaultVersion = "latest"
+	defaultOS      = runtime.GOOS
+	defaultArch    = runtime.GOARCH
+)
 
 // appFromString takes a command line app parameter and returns a map of labels.
 //
@@ -17,7 +21,7 @@ const defaultVersion = "latest"
 func appFromString(app string) (out map[string]string, err error) {
 	out = make(map[string]string, 0)
 	app = strings.Replace(app, ":", ",ver=", -1)
-	app = "name="+app
+	app = "name=" + app
 	v, err := url.ParseQuery(strings.Replace(app, ",", "&", -1))
 	if err != nil {
 		return nil, err
@@ -32,10 +36,10 @@ func appFromString(app string) (out map[string]string, err error) {
 		out["ver"] = defaultVersion
 	}
 	if out["os"] == "" {
-		out["os"] = runtime.GOOS
+		out["os"] = defaultOS
 	}
 	if out["arch"] == "" {
-		out["arch"] = runtime.GOARCH
+		out["arch"] = defaultArch
 	}
 	return
 }
