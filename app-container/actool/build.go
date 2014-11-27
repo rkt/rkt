@@ -59,6 +59,11 @@ func buildWalker(root string, aw *fileset.ArchiveWriter) filepath.WalkFunc {
 		if err != nil {
 			panic(err)
 		}
+		// Because os.FileInfo's Name method returns only the base
+		// name of the file it describes, it may be necessary to
+		// modify the Name field of the returned header to provide the
+		// full path name of the file.
+		hdr.Name = relpath
 		tarheader.Populate(hdr, info)
 		aw.AddFile(relpath, hdr, file)
 
@@ -75,8 +80,8 @@ func runBuild(args []string) (exit int) {
 	root := args[0]
 	tgt := args[1]
 	ext := filepath.Ext(tgt)
-	if ext != schema.FileSetExtension {
-		fmt.Fprintf(os.Stderr, "fileset: Extension must be %s was %s\n", schema.FileSetExtension, ext)
+	if ext != schema.ACIExtension {
+		fmt.Fprintf(os.Stderr, "fileset: Extension must be %s was %s\n", schema.ACIExtension, ext)
 	}
 
 	fsm := schema.NewFileSetManifest(buildName)

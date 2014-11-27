@@ -7,10 +7,6 @@ import (
 	"github.com/coreos-inc/rkt/app-container/schema/types"
 )
 
-const (
-	FileSetExtension = ".afs"
-)
-
 type FileSetManifest struct {
 	ACVersion    types.SemVer `json:"acVersion"`
 	ACKind       types.ACKind `json:"acKind"`
