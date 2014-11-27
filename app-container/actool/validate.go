@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/coreos-inc/rkt/app-container/aci"
-	"github.com/coreos-inc/rkt/app-container/fileset"
 	"github.com/coreos-inc/rkt/app-container/schema"
 )
 
@@ -57,22 +56,27 @@ func runValidate(args []string) (exit int) {
 		if valType == "" {
 			valType, err = detectValType(file)
 			if err != nil {
-				stderr("error detecting file type: %v", err)
+				stderr("%s: error detecting file type: %v", path, err)
 				return 1
 			}
 		}
 		switch valType {
 		case typeAppImage:
-			tr := tar.NewReader(file)
-			err := fileset.ValidateArchive(tr)
-			//			err := validateACI(file)
+			fr, err := maybeDecompress(file)
+			if err != nil {
+				stderr("%s: error decompressing file: %v", path, err)
+				return 1
+			}
+			tr := tar.NewReader(fr)
+			err = aci.ValidateArchive(tr)
+			// err = aci.ValidateTar(r)
 			file.Close()
 			if err != nil {
 				stderr("%s: error validating: %v", path, err)
 				return 1
 			}
 			if globalFlags.Debug {
-				stderr("%s: valid fileset", path)
+				stderr("%s: valid app container image", path)
 			}
 			continue
 		case typeManifest:
@@ -133,31 +137,33 @@ func detectValType(file *os.File) (string, error) {
 	}
 }
 
-func validateACI(rs io.ReadSeeker) error {
+func maybeDecompress(rs io.ReadSeeker) (io.Reader, error) {
 	// TODO(jonboulle): this is a bit redundant with detectValType
 	typ, err := aci.DetectFileType(rs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := rs.Seek(0, 0); err != nil {
-		return err
+		return nil, err
 	}
 	var r io.Reader
 	switch typ {
 	case aci.TypeGzip:
 		r, err = gzip.NewReader(rs)
 		if err != nil {
-			return fmt.Errorf("error reading gzip: %v", err)
+			return nil, fmt.Errorf("error reading gzip: %v", err)
 		}
 	case aci.TypeBzip2:
 		r = bzip2.NewReader(rs)
 	case aci.TypeXz:
 		r = aci.XzReader(rs)
+	case aci.TypeTar:
+		r = rs
 	case aci.TypeUnknown:
-		return errors.New("unknown filetype")
+		return nil, errors.New("unknown filetype")
 	default:
 		// should never happen
 		panic(fmt.Sprintf("bad type returned from DetectFileType: %v", typ))
 	}
-	return aci.ValidateTar(r)
+	return r, nil
 }
