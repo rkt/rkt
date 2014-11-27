@@ -28,8 +28,8 @@ var (
 )
 
 func init() {
-	cmdRun.Flags.StringVar(&flagStage1Init, "stage1-init", "./bin/init", "path to stage1 binary")
-	cmdRun.Flags.StringVar(&flagStage1Rootfs, "stage1-rootfs", "./stage1-rootfs.tar.gz", "path to stage1 rootfs tarball")
+	cmdRun.Flags.StringVar(&flagStage1Init, "stage1-init", "", "path to stage1 binary override")
+	cmdRun.Flags.StringVar(&flagStage1Rootfs, "stage1-rootfs", "", "path to stage1 rootfs tarball override")
 	cmdRun.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	flagVolumes = volumeMap{}
 }

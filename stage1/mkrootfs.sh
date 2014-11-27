@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 # Derive a minimal rootfs for hosting systemd from a coreos release pxe image
+# This is only done when we need to update ../cmd/s1rootfs.go
 
 URL="http://stable.release.core-os.net/amd64-usr/current/coreos_production_pxe_image.cpio.gz"
 
@@ -16,13 +17,18 @@ req gzip
 req cpio
 req install
 req tar
+req go-bindata
 
 # extract the squashfs from the cpio then use unsquashfs to extract the required files for systemd
 WORK="mkroot"
 USRFS="usr.squashfs"
 ROOTDIR="${WORK}/rootfs"
+BINDIR="${WORK}/bins"
 USR="rootfs/usr"
 FILELIST="filelist.txt"
+OUTPUT=${OUTPUT:="../stage0/stage1_rootfs/bin.go"}
+
+[ -e "${WORK}" ] && rm -Rf "${WORK}"
 
 mkdir -p "${ROOTDIR}"
 
@@ -230,5 +236,9 @@ install -d "${ROOTDIR}/opt/stage2"
 install -d "${ROOTDIR}/rkt/status"
 
 # fin
-tar czvf stage1-rootfs.tar.gz -C mkroot/rootfs .
+mkdir "${BINDIR}"
+tar cf "${BINDIR}/s1rootfs.tar" -C "${ROOTDIR}" .
+OUTDIR=$(dirname "${OUTPUT}")
+[ -d "$OUTDIR" ] || mkdir -p "${OUTDIR}"
+go-bindata -o "${OUTPUT}" -prefix $(realpath "${BINDIR}") -pkg=stage1_rootfs "${BINDIR}"
 rm -Rf "${WORK}"

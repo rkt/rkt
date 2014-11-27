@@ -28,6 +28,9 @@ import (
 	"github.com/coreos-inc/rkt/app-container/schema/types"
 	"github.com/coreos-inc/rkt/cas"
 	"github.com/coreos-inc/rkt/rkt"
+
+	"github.com/coreos-inc/rkt/stage0/stage1_init"
+	"github.com/coreos-inc/rkt/stage0/stage1_rootfs"
 )
 
 const (
@@ -69,14 +72,29 @@ func Setup(cfg Config) (string, error) {
 	}
 
 	log.Printf("Unpacking stage1 rootfs")
-	if err = unpackRootfs(cfg.Stage1Rootfs, rkt.Stage1RootfsPath(dir)); err != nil {
-		return "", fmt.Errorf("error unpacking rootfs: %v", err)
+	if cfg.Stage1Rootfs != "" {
+		if err = unpackRootfs(cfg.Stage1Rootfs, rkt.Stage1RootfsPath(dir)); err != nil {
+			return "", fmt.Errorf("error unpacking rootfs: %v", err)
+		}
+	} else {
+		if err = unpackBuiltinRootfs(rkt.Stage1RootfsPath(dir)); err != nil {
+			return "", fmt.Errorf("error unpacking rootfs: %v", err)
+		}
 	}
 
 	log.Printf("Writing stage1 init")
-	in, err := os.Open(cfg.Stage1Init)
-	if err != nil {
-		return "", fmt.Errorf("error loading stage1 binary: %v", err)
+	var in io.Reader
+	if cfg.Stage1Init != "" {
+		in, err = os.Open(cfg.Stage1Init)
+		if err != nil {
+			return "", fmt.Errorf("error loading stage1 init binary: %v", err)
+		}
+	} else {
+		init_bin, err := stage1_init.Asset("s1init")
+		if err != nil {
+			return "", fmt.Errorf("error accessing stage1 init bindata: %v", err)
+		}
+		in = bytes.NewBuffer(init_bin)
 	}
 	fn := filepath.Join(dir, initPath)
 	out, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY, 0555)
@@ -172,6 +190,18 @@ func Run(dir string, debug bool) {
 	}
 }
 
+func untarRootfs(r io.Reader, dir string) error {
+	tr := tar.NewReader(r)
+	if err := os.MkdirAll(dir, 0776); err != nil {
+		return fmt.Errorf("error creating stage1 rootfs directory: %v", err)
+	}
+
+	if err := aci.ExtractTar(tr, dir); err != nil {
+		return fmt.Errorf("error extracting rootfs: %v", err)
+	}
+	return nil
+}
+
 // unpackRootfs unpacks a stage1 rootfs (compressed file, pointed to by rfs)
 // into dir, returning any error encountered
 func unpackRootfs(rfs string, dir string) error {
@@ -203,13 +233,26 @@ func unpackRootfs(rfs string, dir string) error {
 		// should never happen
 		panic("no type returned from DetectFileType?")
 	}
-	tr := tar.NewReader(r)
-	if err = os.MkdirAll(dir, 0776); err != nil {
-		return fmt.Errorf("error creating stage1 rootfs directory: %v", err)
+
+	if err := untarRootfs(r, dir); err != nil {
+		return fmt.Errorf("error untarring rootfs")
 	}
-	if err := aci.ExtractTar(tr, dir); err != nil {
-		return fmt.Errorf("error extracting rootfs: %v", err)
+
+	return nil
+}
+
+// unpackBuiltinRootfs unpacks the included stage1 rootfs into dir
+func unpackBuiltinRootfs(dir string) error {
+	b, err := stage1_rootfs.Asset("s1rootfs.tar")
+	if err != nil {
+		return fmt.Errorf("error accessing rootfs asset: %v", err)
 	}
+	buf := bytes.NewBuffer(b)
+
+	if err = untarRootfs(buf, dir); err != nil {
+		return fmt.Errorf("error untarring rootfs")
+	}
+
 	return nil
 }
 
