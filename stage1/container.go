@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/coreos-inc/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 	"github.com/coreos-inc/rkt/app-container/schema"
 	"github.com/coreos-inc/rkt/app-container/schema/types"
 	"github.com/coreos-inc/rkt/rkt"
-	"github.com/coreos-inc/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 )
 
 // Container encapsulates a ContainerRuntimeManifest and AppManifests
@@ -101,7 +101,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 		opts = append(opts, &unit.UnitOption{"Service", "Environment", ee})
 	}
 
-	file, err := os.OpenFile(rkt.ServiceFilePath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(ServiceFilePath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create service file: %v", err)
 	}
@@ -112,7 +112,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 		return fmt.Errorf("failed to write service file: %v", err)
 	}
 
-	if err = os.Symlink(path.Join("..", rkt.ServiceName(id)), rkt.WantLinkPath(c.Root, id)); err != nil {
+	if err = os.Symlink(path.Join("..", ServiceName(id)), WantLinkPath(c.Root, id)); err != nil {
 		return fmt.Errorf("failed to link service want: %v", err)
 	}
 
@@ -122,10 +122,10 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 // ContainerToSystemd creates the appropriate systemd service unit files for
 // all the constituent apps of the Container
 func (c *Container) ContainerToSystemd() error {
-	if err := os.MkdirAll(rkt.ServicesPath(c.Root), 0640); err != nil {
+	if err := os.MkdirAll(ServicesPath(c.Root), 0640); err != nil {
 		return fmt.Errorf("failed to create services directory: %v", err)
 	}
-	if err := os.MkdirAll(rkt.WantsPath(c.Root), 0640); err != nil {
+	if err := os.MkdirAll(WantsPath(c.Root), 0640); err != nil {
 		return fmt.Errorf("failed to create wants directory: %v", err)
 	}
 	for _, am := range c.Apps {

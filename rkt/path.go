@@ -1,26 +1,24 @@
 package rkt
 
+//
+// Functions defining paths that are shared by different parts of rkt
+// (e.g. stage0 and stage1)
+//
+
 import (
-	"github.com/coreos-inc/rkt/app-container/schema/types"
 	"path/filepath"
+
+	"github.com/coreos-inc/rkt/app-container/schema/types"
 )
 
 const (
-	stage1Dir   = "/stage1"
-	stage1Init  = stage1Dir + "/init"
-	stage2Dir   = "/opt/stage2"
-	servicesDir = stage1Dir + "/usr/lib/systemd/system"
-	wantsDir    = servicesDir + "/default.target.wants"
+	Stage1Dir = "/stage1"
+	stage2Dir = "/opt/stage2"
 )
 
 // Stage1RootfsPath returns the directory in root containing the rootfs for stage1
 func Stage1RootfsPath(root string) string {
-	return filepath.Join(root, stage1Dir)
-}
-
-// Stage1InitPath returns the path to the file in root that is the stage1 init process
-func Stage1InitPath(root string) string {
-	return filepath.Join(root, stage1Init)
+	return filepath.Join(root, Stage1Dir)
 }
 
 // ContainerManifestPath returns the path in root to the Container Runtime Manifest
@@ -31,7 +29,7 @@ func ContainerManifestPath(root string) string {
 // AppImagePath returns the path where an app image (i.e. RAF) is rooted (i.e.
 // where its contents are extracted during stage0), based on the app image ID.
 func AppImagePath(root string, imageID types.Hash) string {
-	return filepath.Join(root, stage1Dir, stage2Dir, imageID.String())
+	return filepath.Join(root, Stage1Dir, stage2Dir, imageID.String())
 }
 
 // AppRootfsPath returns the path to an app's rootfs.
@@ -56,32 +54,4 @@ func RelAppRootfsPath(imageID types.Hash) string {
 // id should be the app image ID.
 func AppManifestPath(root string, imageID types.Hash) string {
 	return filepath.Join(AppImagePath(root, imageID), "manifest")
-}
-
-// WantsPath returns the systemd "wants" directory in root
-func WantsPath(root string) string {
-	return filepath.Join(root, wantsDir)
-}
-
-// ServicesPath returns the systemd "services" directory in root
-func ServicesPath(root string) string {
-	return filepath.Join(root, servicesDir)
-}
-
-// ServiceName returns a sanitized (escaped) systemd service name
-// for the given imageID
-func ServiceName(imageID types.Hash) string {
-	return imageID.String() + ".service"
-}
-
-// ServiceFilePath returns the path to the systemd service file
-// path for the given imageID
-func ServiceFilePath(root string, imageID types.Hash) string {
-	return filepath.Join(root, servicesDir, ServiceName(imageID))
-}
-
-// WantLinkPath returns the systemd "want" symlink path for the
-// given imageID
-func WantLinkPath(root string, imageID types.Hash) string {
-	return filepath.Join(root, wantsDir, ServiceName(imageID))
 }

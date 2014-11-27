@@ -98,7 +98,7 @@ func Setup(cfg Config) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error loading stage1 binary: %v", err)
 	}
-	fn := rkt.Stage1InitPath(dir)
+	fn := filepath.Join(dir, initPath)
 	out, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY, 0555)
 	if err != nil {
 		return "", fmt.Errorf("error opening stage1 init for writing: %v", err)
