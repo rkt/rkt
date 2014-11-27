@@ -263,15 +263,9 @@ Inspired by: https://golang.org/cmd/go/#hdr-Remote_import_paths
 ## App Container Metadata Service
 
 For a variety of reasons, it is desirable to not write files to the filesystem in order to run a container:
-
-* Environment variables are not portable to virtual machines
 * Config-drives make assumptions about filesystems
 * Secrets can be kept outside of the container (such as the identity endpoint specified below)
-* Writing files leads to assumptions like a libc environment attempting parse /etc/hosts
-
 * Writing files leads to assumptions like a libc environment attempting parse `/etc/hosts`
-
->>>>>>> c89bcdc53906... appc: schema cleanup
 * The container can be run on top of a cryptographically secured read-only filesystem
 * Metadata is a proven system for virtual machines
 
