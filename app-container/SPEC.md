@@ -223,19 +223,26 @@ Additional isolators will be added to this specification over time.
 
 ## App Container Image Discovery
 
-An app name has a URL like structure, for example `example.com/reduce-worker-1.0.0`.
-However, there is no scheme on this app name so we can't resolve it to a fileset image.
+An app name has a URL-like structure, for example `example.com/reduce-worker-1.0.0`.
+However, there is no scheme on this app name so we can't directly resolve it to an app container image.
+App Container Image Discovery prescribes a discovery process to retrieve an image based on the app name
 
-### Simple Download
+### Simple Discovery
 
-First, try to fetch the app fileset image by prepending https:// and appending .aci.
+First, try to fetch the app container image by prepending `https://` and appending `.aci` and directly retrieving the resulting URL.
+For example, given the app name `example.com/reduce-worker-1.0.0`, try to retrieve:
+
+    https://example.com/reduce-worker-1.0.0.aci
+
 If this fails, move on to meta discovery.
-If this succeeds, try fetching the signature using the .sig extension.
+If this succeeds, try fetching the signature using the `.sig` extension:
+
+    https://example.com/reduce-worker-1.0.0.sig
 
 ### Meta Discovery
 
-If simple discovery fails then we use HTTPS+HTML meta tags to resolve an app name to a downloadable URL.
-For example if the ACE is looking for `example.com/reduce-worker-1.0.0` it will request:
+If simple discovery fails, then we use HTTPS+HTML meta tags to resolve an app name to a downloadable URL.
+For example, if the ACE is looking for `example.com/reduce-worker-1.0.0` it will request:
 
     https://example.com/reduce-worker?ac-discovery=1
 
@@ -246,8 +253,8 @@ Then inspect the HTML returned for meta tags that have the following format:
 <meta name="ac-discovery-pubkeys" content="prefix-match url">
 ```
 
-* ac-discovery should give a URL that can have .aci, .sig or extensions to get the fileset or signature for the image
-* ac-discovery-pubkeys for the app image manifest only
+* ac-discovery should give a URL that can have `.aci` or `.sig` extensions appended to retrieve the app image or signature 
+* ac-discovery-pubkeys should give a URL that provides a set of public keys that can be used to verify the signature of the app image
 
 Some examples for different schemes and URLs:
 
@@ -260,7 +267,7 @@ Some examples for different schemes and URLs:
 The algorithm first ensures that the prefix of the AC Name matches the prefix-match and then if there is a match it will request the equivalent of:
 
 ```
-curl $(echo "$urltmpl" | sed "s/{name}/$appname/")
+curl $(echo "$urltmpl" | sed -e "s/{name}/$appname/" -e "s/{os}/$os/" -e "s/{arch}/$arch/")
 ```
 
 In our example above this would be:
@@ -274,25 +281,27 @@ keys: https://example.com/pubkeys.gpg
 This mechanism is only used for discovery of contents URLs.
 Anything implementing this spec should enforce any signing rules set in place by the operator and ensure the app manifest provided by the fetched app fileset image are all prefixed from the same domain.
 
-Discovery URLs that require interpolation are RFC 6570 URI templates.
+Discovery URLs that require interpolation are [RFC6570](https://tools.ietf.org/html/rfc6570) URI templates.
 
 Inspired by: https://golang.org/cmd/go/#hdr-Remote_import_paths
 
 ## App Container Metadata Service
 
 For a variety of reasons, it is desirable to not write files to the filesystem in order to run a container:
-* Config-drives make assumptions about filesystems
 * Secrets can be kept outside of the container (such as the identity endpoint specified below)
 * Writing files leads to assumptions like a libc environment attempting parse `/etc/hosts`
 * The container can be run on top of a cryptographically secured read-only filesystem
 * Metadata is a proven system for virtual machines
 
+config-drives are one means of providing metadata to containers/virtual machines, but make assumptions about filesystems which are not appropriate for all environments.
+Hence, the app container specification defines an HTTP-based metadata for providing metadata to containers.
+
 ### Metadata Server
 
-The ACE must provide a Metadata server on the address given to the container via AC_METADATA_URL.
-By convention the default will be http://169.254.169.254.
+The ACE must provide a Metadata server on the address given to the container via the `AC_METADATA_URL` environment variable.
+By convention, the default address will be `http://169.254.169.254`.
 
-Clients querying any of these endpoints must specify the Metadata-Flavor: AppContainer header.
+Clients querying any of these endpoints must specify the `Metadata-Flavor: AppContainer` header.
 
 ### Container Metadata
 
