@@ -95,7 +95,7 @@ Example application container image builder: **TODO** link to actool
 
 ### App Manifest
 
-The [app manifest](#heading=h.y4wfi6t6yhu3) is a JSON file that includes all of the details to execute a main process from the rootfs.
+The [app manifest](#app-manifest-schema) is a JSON file that includes all of the details to execute a main process from the rootfs.
 Execution details include mount points that should exist, the user, the command args, default cgroup settings and more.
 The manifest also defines binaries to execute in response to lifecycle events of the main process such as *pre-start* and *post-stop*.
 
@@ -107,6 +107,24 @@ Image Format TODO
 * Define the lifecycle of the container as all exit or first to exit
 * Define security requirements for a container. In particular is any isolation of users required between containers? What user does each application run under and can this be root (i.e. "real" root in the host).
 * Define how apps are supposed to communicate; can they/do they ‘see’ each other (a section in the apps perspective would help)?
+
+### Fileset Images
+
+An app container image MAY contain a second optional manifest, the [FileSet manifest](#fileset-manifest), to describe how to assemble the final rootfs from a collection of other images. 
+Such an image may not contain an app manifest, in which case they are simply a "fileset".
+
+```
+/fileset
+/rootfs
+/rootfs/usr/bin/data-downloader
+/rootfs/usr/bin/reduce-worker
+```
+
+As an example, you might have an app that needs special certificates layered into its filesystem.
+In this case, you can reference the name "example.com/trusted-certificate-authority-1.0.0" as a dependency in the fileset manifest.
+The dependencies are applied in order and each fileset can overwrite files from the previous fileset.
+Optionally, filesets can be applied to a subtree, such as `/etc/ssl` for the trusted-certificate-authority-1.0.0.
+
 
 ## App Container Executor
 
@@ -140,7 +158,7 @@ These details are orthogonal to the runtime environment.
 
 A container executes one or more apps with shared PID namespace, network namespace, mount namespace, IPC namespace and UTS namespace.
 Each app will start pivoted (i.e. chrooted) into its own unique read-write rootfs before execution. The definition of the container is a list of apps that should be launched together.
-This is codified in a [Container Runtime Manifest](#heading=h.j03f37q4hupc).
+This is codified in a [Container Runtime Manifest](#container-runtime-manifest-schema).
 
 This example container will use a set of three apps:
 
@@ -328,22 +346,6 @@ Examples:
 The AC Name Type is used as the primary key for a number of fields in the schemas below.
 The schema validator will ensure that the keys conform to these constraints.
 
-## AC Filesets
-
-The "app container image" MAY contain a second optional manifest to describe how to assemble the final rootfs from a collection of other images. 
-These other images may not contain an app manifest, in which case they are simply a "fileset".
-
-```
-/fileset
-/rootfs
-/rootfs/usr/bin/data-downloader
-/rootfs/usr/bin/reduce-worker
-```
-
-As an example, you might have an app that needs special certificates layered into its filesystem.
-In this case, you can reference the name "example.com/trusted-certificate-authority-1.0.0" as a dependency in the fileset manifest.
-The dependencies are applied in order and each fileset can overwrite files from the previous fileset.
-Optionally, filesets can be applied to a subtree, such as `/etc/ssl` for the trusted-certificate-authority-1.0.0.
 
 ## Manifest Schemas
 
@@ -442,9 +444,9 @@ JSON Schema for the App Image Manifest
 * **environment** the app’s preferred environment variables (map of freeform strings) (ACE can append)
 * **mountPoints** are the locations where a container is expecting external data to mounted. The name indicates an executor-defined label to look up a mount point, and the path stipulates where it should actually be mounted inside the rootfs. The key is restricted to the AC Name Type formatting.
 * **ports** are the protocols and port numbers that the container will be listening on once started. The key is restricted to the AC Name formatting. This information is primarily informational to help the user find ports that are not well known. It could also optionally be used to limit the inbound connections to the container via firewall rules to only ports that are explicitly exposed.
-    * **socketActivated** if this is set to true then the application expects to be [socket activated](http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html) on these ports. The ACE must pass file descriptors using the [socket activation protocol](http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html)[ ](http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html)that are listening on these ports when starting this container. If multiple apps in the same container are using socket activation then the ACE must match the sockets to the correct apps using getsockopt() and getsockname().
-* **isolators** is a list of well-known and optional isolation steps that should be applied to the app. **name** is restricted to the AC Name formatting and **val** can be a freeform string. Any isolators specified in the App Manifest can be overridden at runtime via the Container Runtime Manifest. The executor can either ignore isolator keys it does not understand or error. In practice this means there might be certain isolators (for example, an AppArmor policy) that an executor doesn't understand so it will simply skip that entry.
-* **annotations** key/value store that can be used by systems outside of the ACE (ACE can override). The key is restricted to the [AC Name](https://docs.google.com/a/coreos.com/document/d/1qaUwBhKnWSdkPtw2-NhoN4XIyiz0Nd3_xsh_u-71fR0/edit#heading=h.5538mwoeejrw) formatting. If you are defining new annotations, please consider submitting them to the specification. If you intend for your field to remain special to your application please be a good citizen and prefix an appropriate namespace to your key names. Recognized annotations include:
+    * **socketActivated** if this is set to true then the application expects to be [socket activated](http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html) on these ports. The ACE must pass file descriptors using the [socket activation protocol](http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html) that are listening on these ports when starting this container. If multiple apps in the same container are using socket activation then the ACE must match the sockets to the correct apps using getsockopt() and getsockname().
+* **isolators** is a list of well-known and optional isolation steps that should be applied to the app. **name** is restricted to the [AC Name](#ac-name-type) formatting and **val** can be a freeform string. Any isolators specified in the App Manifest can be overridden at runtime via the Container Runtime Manifest. The executor can either ignore isolator keys it does not understand or error. In practice this means there might be certain isolators (for example, an AppArmor policy) that an executor doesn't understand so it will simply skip that entry.
+* **annotations** key/value store that can be used by systems outside of the ACE (ACE can override). The key is restricted to the [AC Name](#ac-name-type) formatting. If you are defining new annotations, please consider submitting them to the specification. If you intend for your field to remain special to your application please be a good citizen and prefix an appropriate namespace to your key names. Recognized annotations include:
     * **created** is the date on which this container was built (string, must be in [RFC3339](https://www.ietf.org/rfc/rfc3339.txt) format)
     * **authors** contact details of the people or organization responsible for the containers (list of strings)
     * **homepage** URL to find more information on the container (string, must be a URL with scheme HTTP or HTTPS)
