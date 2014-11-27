@@ -6,6 +6,8 @@ Rocket is a cli for running App Containers. The goal of rocket is to be a compos
 
 [Read more about Rocket in the launch announcement](https://coreos.com/blog/rocket). 
 
+![Rocket Logo](rocket-horizontal-color.png)
+
 ## Trying out Rocket
 
 `rkt` is currently supported on amd64 Linux. We recommend booting up a fresh virtual machine to test out rocket. 
