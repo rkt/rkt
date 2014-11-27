@@ -4,7 +4,7 @@ import "fmt"
 
 var (
 	cmdStatus = &Command{
-		Name:    "fetch",
+		Name:    "status",
 		Summary: "Check the status of a rkt job",
 		Usage:   "UUID",
 		Run:     runStatus,
