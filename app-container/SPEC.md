@@ -10,7 +10,7 @@ The "App Container" defines an image format, image discovery mechanism and execu
 
 To achieve these goals this specification is split out into a number of smaller sections.
 
-1. The **[App Container Image](#app-conatiner-image)** defines: how files are assembled together into a single image, verified on download and placed onto disk to be run.
+1. The **[App Container Image](#app-container-image)** defines: how files are assembled together into a single image, verified on download and placed onto disk to be run.
 
 2. The **[App Container Executor](#app-container-executor)** defines: how an app container image on disk is run and the environment it is run inside including cgroups, namespaces and networking.
 
@@ -31,17 +31,15 @@ So, it will make an HTTPS request to example.com and using the <meta> tags there
 	https://storage-mirror.example.com/reduce-worker-register-1.0.0.aci
 	https://storage-mirror.example.com/reduce-worker-1.0.0.aci
 
-The executor downloads these two "fileset images" and puts them into its local on-disk cache.
-Then the executor extracts two fresh copies of these filesets to create instances of the "on-disk app format" and reads the two app manifests to figure out what binaries will need to executed.
-It finds that the register app has a main entry point at /usr/bin/register and the worker has one at /usr/bin/reduce-worker.
+The executor downloads these two images and puts them into its local on-disk cache. 
+Then the executor extracts two fresh copies of the imgaes to create instances of the "on-disk app format" and reads the two app manifests to figure out what binaries will need to be executed. 
 
-Based on user input the executor now sets up the necessary cgroups, network interfaces, etc and forks the register and reduce-worker processes in their shared namespaces inside of the container.
+Based on user input the executor now sets up the necessary cgroups, network interfaces, etc and forks the `register` and `reduce-worker` processes in their shared namespaces inside the container.
 
-At some point the container will get some notification that it needs to stop.
-The executor will send SIGTERM to the processes and after they have exited the postStop event handlers for each app will run.
-That will end the life of the container.
+At some point, the container will get some notification that it needs to stop. 
+The executor will send `SIGTERM` to the processes and after they have exited the `post-stop` event handlers for each app will run.
 
-Now, lets dive into the pieces that took us from two URLs to a running container on our system.
+Now, let's dive into the pieces that took us from two URLs to a running container on our system.
 
 ## App Container Image
 
@@ -66,9 +64,8 @@ It includes a *rootfs* with all of the files that will exist in the root of the 
 The ACI archive format aims for flexibility and relies on very boring technologies: HTTP, gpg, tar and gzip.
 This set of formats makes it easy to build, host and secure a container using technologies that are battle tested.
 
-Images achives MUST be a tar formatted file.
-The image may be optionally compressed with gzip, bzip2 or xz. After compression images may also be encrypted with AES symmetric encryption.
-Simple and standard UNIX commands can take the on-disk layout and transform it into a signed aci:
+Images archives MUST be a tar formatted file. 
+The image may be optionally compressed with gzip, bzip2 or xz. After compression images may also be encrypted with AES symmetric encryption. 
 
 ```
 tar cvvf reduce-worker.tar app rootfs
@@ -82,23 +79,25 @@ Optional encryption:
 gpg --output reduce-worker.aci --digest-algo sha256 --cipher-algo AES256 --symmetric reduce-worker.aci
 ```
 
-All files in the fileset must maintain all properties of their original fileset image including: timestamps, Unix modes and xattrs.
+All files in the image must maintain all of their original properties including: timestamps, Unix modes and xattrs.
 
 An image is addressed and verified against the hash of its uncompressed tar file.
-The default digest format is sha256 but all hash IDs in this format are prefixed by the algorithm used (e.g. sha256-a83...).
+The default digest format is sha256, but all hash IDs in this format are prefixed by the algorithm used (e.g. sha256-a83...).
 
+```
 echo sha256-$(sha256sum reduce-worker.tar |awk ‘{print $1}’)
+```
 
-**Note**: that the key distribution mechanism is not defined here.
+**Note**: the key distribution mechanism is not defined here. 
 Implementations of the app container spec will need to provide a mechanism for users to configure the list of signing keys to trust or use the key discovery described in "App Container Image Discovery".
 
-Example container builder for deterministic Go transport containers: **TODO** link to actool
+Example application container image builder: **TODO** link to actool
 
 ### App Manifest
 
 The [app manifest](#heading=h.y4wfi6t6yhu3) is a JSON file that includes all of the details to execute a main process from the rootfs.
 Execution details include mount points that should exist, the user, the command args, default cgroup settings and more.
-The manifest also defines binaries to execute in response to lifecycle events of the main process such as *preStart* and *postStop*.
+The manifest also defines binaries to execute in response to lifecycle events of the main process such as *pre-start* and *post-stop*.
 
 Image Format TODO
 
@@ -125,8 +124,8 @@ The "*executor*" perspective consists of the steps that the container executor m
 
 #### Filesystem Setup
 
-Every execution of an app container should start from a clean copy of the app fileset.
-The simplest implementation will take a app fileset image and extract it into a new directory:
+Every execution of an app container should start from a clean copy of the app fileset. 
+The simplest implementation will take an application container image and extract it into a new directory:
 
 ```
 cd $(mktemp -d -t temp.XXXX)
@@ -143,19 +142,19 @@ A container executes one or more apps with shared PID namespace, network namespa
 Each app will start pivoted (i.e. chrooted) into its own unique read-write rootfs before execution. The definition of the container is a list of apps that should be launched together.
 This is codified in a [Container Runtime Manifest](#heading=h.j03f37q4hupc).
 
-This example container will use a set of three apps with the given names and manifest hashes:
+This example container will use a set of three apps:
 
-```
-example.com/reduce-worker-1.0.0		sha256-277205b3ae3eb3a8e042a62ae46934b470e431ac
-example.com/worker-backup-1.0.0		sha256-3e86b59982e49066c5d813af1c2e2579cbf573de
-example.com/reduce-worker-register-1.0.0	sha256-86298e1fdb95ec9a45b5935504e26ec29b8feffa
-```
+| Name | Image hash |
+|-----------------------------------------------|-------------------------------------------------|
+| example.com/reduce-worker-1.0.0 | sha256-277205b3ae3eb3a8e042a62ae46934b470e431ac |
+| example.com/worker-backup-1.0.0 | sha256-3e86b59982e49066c5d813af1c2e2579cbf573de |
+| example.com/reduce-worker-register-1.0.0 | sha256-86298e1fdb95ec9a45b5935504e26ec29b8feffa |
 
 #### Volume Setup
 
 Volumes that are specified in the Container Runtime Manifest are mounted into each of the apps via a bind mount.
-For example say that the worker-backup and reduce-worker both have a MountPoint named "work".
-Then the container manager will bind mount the host's /opt/tenant1/database directory into the Path of each of the matching "work" MountPoints of the two containers.
+For example say that the worker-backup and reduce-worker both have a MountPoint named "work". 
+In this case, the container executor will bind mount the host's `/opt/tenant1/database` directory into the Path of each of the matching "work" MountPoints of the two containers.
 
 #### Network Setup
 
@@ -164,7 +163,7 @@ The network interface should be configured with an IPv4/IPv6 address that is rea
 
 #### Logging
 
-Apps should log to stdout and stderr. The container manager is responsible for capturing and persisting the output.
+Apps should log to stdout and stderr. The container executor is responsible for capturing and persisting the output.
 
 If the application detects other logging options, such as the /run/systemd/system/journal socket, it may optionally upgrade to using those mechanisms.
 Note that logging mechanisms other than stdout and stderr are not required by this specification (or tested by the the compliance tests).
@@ -269,6 +268,10 @@ For a variety of reasons, it is desirable to not write files to the filesystem i
 * Config-drives make assumptions about filesystems
 * Secrets can be kept outside of the container (such as the identity endpoint specified below)
 * Writing files leads to assumptions like a libc environment attempting parse /etc/hosts
+
+* Writing files leads to assumptions like a libc environment attempting parse `/etc/hosts`
+
+>>>>>>> c89bcdc53906... appc: schema cleanup
 * The container can be run on top of a cryptographically secured read-only filesystem
 * Metadata is a proven system for virtual machines
 
@@ -293,7 +296,7 @@ Retrievable at `http://169.254.169.254/acMetadata/v1/container`
 
 ### App Metadata
 
-Every running process will be able to introspect its App Name via the AC_APP_NAME environment variable.
+Every running process will be able to introspect its App Name via the `AC_APP_NAME` environment variable. 
 This is necessary to query for the correct endpoint metadata.
 
 Retrievable at `http://169.254.169.254/acMetadata/v1/apps/${ac_app_name}/`
@@ -333,8 +336,8 @@ The schema validator will ensure that the keys conform to these constraints.
 
 ## AC Filesets
 
-The "app container image" MAY contain a second optional manifest to describe how to assemble the final rootfs from a collection of other images.
-These other images may not container an app manifest in which case they are simply a "fileset".
+The "app container image" MAY contain a second optional manifest to describe how to assemble the final rootfs from a collection of other images. 
+These other images may not contain an app manifest, in which case they are simply a "fileset".
 
 ```
 /fileset
@@ -343,14 +346,12 @@ These other images may not container an app manifest in which case they are simp
 /rootfs/usr/bin/reduce-worker
 ```
 
-As an example you might have an that needs special certificates layered into its filesystem.
-In this case you can reference the name "example.com/trusted-certificate-authority-1.0.0" as a dependency in the fileset manifest.
-The dependencies are applied in order and each fileset can clobber files from the previous fileset.
-Optionally, filesets can be applied to a subtree, such as `/etc/ssl` for the trusted-cretificate-authority-1.0.0.
+As an example, you might have an app that needs special certificates layered into its filesystem.
+In this case, you can reference the name "example.com/trusted-certificate-authority-1.0.0" as a dependency in the fileset manifest.
+The dependencies are applied in order and each fileset can overwrite files from the previous fileset.
+Optionally, filesets can be applied to a subtree, such as `/etc/ssl` for the trusted-certificate-authority-1.0.0.
 
 ## Manifest Schemas
-
-
 
 ### App Manifest Schema
 
