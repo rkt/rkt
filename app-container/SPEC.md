@@ -10,7 +10,7 @@ The "App Container" defines an image format, image discovery mechanism and execu
 
 To achieve these goals this specification is split out into a number of smaller sections. 
 
-1. The **[App Image Format](#app-image-formats)** defines: how the files are assembled together for transport, verified on download and placed onto disk to be run.
+1. The **[App Container Image](#app-conatiner-image)** defines: how files are assembled together into a single image, verified on download and placed onto disk to be run.
 
 2. The **[App Container Executor](#app-container-executor)** defines: how an app container image on disk is run and the environment it is run inside including cgroups, namespaces and networking.
 
@@ -18,15 +18,6 @@ To achieve these goals this specification is split out into a number of smaller 
 
 3. The **[App Container Image Discovery](#app-container-image-discovery)** defines: how to take a name like example.com/reduce-worker-1.0.0 and translate that into a downloadable image.
 
-## Glossary of Terms
-
-* **App** a single process that is executed inside of its own root filesystem as part of the app container.
-
-* **App Container** a group of "app" processes running inside of a shared set of namespaces and a cgroup.
-
-* **Fileset** a named set of files that can be used to back the root filesystem of an app or mounted by the container as a volume.
-
-* **Fileset Discovery** a process using app names as URL prefixes to find the Fileset images that need to be downloaded to assemble a copy of the fileset.
 
 ## Example Use Case
 
@@ -45,63 +36,49 @@ At some point the container will get some notification that it needs to stop. Th
 
 Now, lets dive into the pieces that took us from two URLs to a running container on our system.
 
-## Fileset Format
+## App Container Image
 
-A fileset is a JSON manifest and a set of files under a rootfs directory. The layout of a fileset looks something like:
+An *App Container Image* (ACI) contains all files and metadata needed to execute a given app. In some ways you can think of an ACI as equivalent to a static binary. This file layout must be followed for the app to be executed by an Executor.
+
+### Image Layout
+
+The on-disk layout of an app container is straightforward. It includes a *rootfs* with all of the files that will exist in the root of the app and an *app manifest* describing how to execute the app.
 
 ```
-/fileset
+/app
 /rootfs
 /rootfs/usr/bin/data-downloader
 /rootfs/usr/bin/reduce-worker
 ```
 
-The fileset can contain other JSON manifests, such as the app manifest described below, but it is sufficient to simply be a set of files and a [fileset manifest](#fileset manifest) describing them.
+### Image Archives
 
-### Fileset Images v1
+The ACI archive format aims for flexibility and relies on very boring technologies: HTTP, gpg, tar and gzip. This set of formats makes it easy to build, host and secure a container using technologies that are battle tested.
 
-The App Container specification prescribes a format for transporting fileset images that aims for flexibility and relies on very boring technologies: HTTP, gpg, tar and gzip. This set of formats makes it easy to build, host and secure a container using technologies that are battle tested.
-
-Fileset images v1 MUST be a tar file. The image may be optionally compressed with gzip, bzip2 or xz. After compression images may also be encrypted with AES symmetric encryption. Simple and standard UNIX commands can take a Runnable App Format and transform it into a signed Transport App Format image:
+Images achives MUST be a tar formatted file. The image may be optionally compressed with gzip, bzip2 or xz. After compression images may also be encrypted with AES symmetric encryption. Simple and standard UNIX commands can take the on-disk layout and transform it into a signed aci:
 
 ```
-tar cvvf reduce-worker.tar filset rootfs
+tar cvvf reduce-worker.tar app rootfs
 gpg --output reduce-worker.sig --detach-sig reduce-worker.tar
 gzip reduce-worker.tar -c > reduce-worker.aci
 ```
+
 Optional encryption:
 
 ```
-gpg --output reduce-worker.aci --cipher-algo AES256 --symmetric reduce-worker.aci
+gpg --output reduce-worker.aci --digest-algo sha256 --cipher-algo AES256 --symmetric reduce-worker.aci
 ```
 
 All files in the fileset must maintain all properties of their original fileset image including: timestamps, Unix modes and xattrs.
 
-An App Image is addressed and verified against the hash of its tar file.
+An image is addressed and verified against the hash of its uncompressed tar file.
+The default digest format is sha256 but all hash IDs in this format are prefixed by the algorithm used (e.g. sha256-a83...).
 
-ID=$(sha256sum reduce-worker.tar|awk ‘{print $1}’)
+echo sha256-$(sha256sum reduce-worker.tar |awk ‘{print $1}’)
 
-Example container builder for deterministic Go transport containers:
+**Note**: that the key distribution mechanism is not defined here. Implementations of the app container spec will need to provide a mechanism for users to configure the list of signing keys to trust or use the key discovery described in "App Container Image Discovery".
 
-[https://gist.github.com/philips/795349d056fea054abef](https://gist.github.com/philips/795349d056fea054abef)
-
-Note that the key distribution mechanism is not defined here. Implementations of the app container spec will need to provide a mechanism for users to configure the list of signing keys to trust.
-
-## App Image Formats
-
-An *app fileset* contains all files and metadata needed to execute a given app. In some ways you can think of an *app fileset* as equivalent to a static binary. This file layout must be followed for the app to be executed by an App Container Executor (ACE, pronounced "ace").
-
-### Filesystem Layout
-
-The on-disk format is straightforward, with a *rootfs* and a single *app manifest*.
-
-```
-/app
-/fileset
-/rootfs
-/rootfs/usr/bin/data-downloader
-/rootfs/usr/bin/reduce-worker
-```
+Example container builder for deterministic Go transport containers: **TODO** link to actool
 
 ### App Manifest
 
@@ -333,6 +310,20 @@ Examples:
 * sub-domain.example.com/org/product/release-1.0.0
 
 The AC Name Type is used as the primary key for a number of fields in the schemas below. The schema validator will ensure that the keys conform to these constraints.
+
+## AC Filesets
+
+The "app container image" MAY contain a second optional manifest to describe how to assemble the final rootfs from a collection of other images. These other images may not container an app manifest in which case they are simply a "fileset".
+
+```
+/fileset
+/rootfs
+/rootfs/usr/bin/data-downloader
+/rootfs/usr/bin/reduce-worker
+```
+
+As an example you might have an that needs special certificates layered into its filesystem. In this case you can reference the name "example.com/trusted-certificate-authority-1.0.0" as a dependency in the fileset manifest. The dependencies are applied in order and each fileset can clobber files from the previous fileset. Optionally, filesets can be applied to a subtree, such as `/etc/ssl` for the trusted-cretificate-authority-1.0.0.
+
 
 ## App Manifest Schema
 
