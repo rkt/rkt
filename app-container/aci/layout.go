@@ -1,7 +1,4 @@
-package raf
-
-// Package raf provides functionality to validate applications implementing the
-// Runnable App Format, by verifying an on-disk layout
+package aci
 
 /*
 
@@ -9,7 +6,7 @@ Filesystem Layout
 
 The on-disk format is straightforward, with a rootfs and an app manifest.
 
-/manifest
+/app
 /rootfs
 /rootfs/usr/bin/mysql
 /rootfs/....
@@ -34,12 +31,12 @@ var (
 	ErrNoAppManifest = errors.New("no app manifest found in layout")
 )
 
-// ValidateRAF takes a directory and validates that the layout of the directory
-// matches that expected by the Runnable App Format.
+// ValidateLayout takes a directory and validates that the layout of the directory
+// matches that expected by the Application Container Image format.
 // If any errors are encountered during the validation, it will abort and
 // return the first one.
-// TODO(jonboulle): work on tar streams instead of requiring this be on disk?
-func ValidateRAF(dir string) error {
+// TODO(jonboulle): work on tar streams instead of requiring this be on disk
+func ValidateLayout(dir string) error {
 	fi, err := os.Stat(dir)
 	if err != nil {
 		return fmt.Errorf("error accessing layout: %v", err)
@@ -56,7 +53,7 @@ func ValidateRAF(dir string) error {
 		name := f.Name()
 		fpath := filepath.Join(dir, name)
 		switch name {
-		case "manifest":
+		case "app":
 			manifest = fpath
 		case "rootfs":
 			rootfs = fpath
@@ -116,6 +113,7 @@ func validateRootfs(dir string, files map[string]types.File) error {
 }
 
 func validateFile(path string, file types.File) error {
-	// TODO(jonboulle): implement me..
+	// TODO(jonboulle): implement me
+	// validate that the file matches the expected from the tarball?
 	return nil
 }

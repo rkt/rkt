@@ -8,8 +8,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-
-	"github.com/coreos-inc/rkt/app-container/raf"
 )
 
 // ValidateTar checks that a given io.Reader, which should
@@ -27,5 +25,5 @@ func ValidateTar(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	return raf.ValidateRAF(dir)
+	return ValidateLayout(dir)
 }
