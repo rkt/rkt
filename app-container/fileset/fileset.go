@@ -3,8 +3,6 @@ package fileset
 import (
 	"archive/tar"
 	"bytes"
-	"errors"
-	"fmt"
 	"io"
 	"time"
 
@@ -68,61 +66,6 @@ func (aw *ArchiveWriter) Close() error {
 	err = aw.Writer.Close()
 	if err != nil {
 		return err
-	}
-	return nil
-}
-
-func filesEqual(a, b []string) error {
-	if len(a) != len(b) {
-		return errors.New("different file count")
-	}
-
-	for i := range a {
-		if a[i] != b[i] {
-			return fmt.Errorf("file mismatch %s != %s", a[i], b[i])
-		}
-	}
-
-	return nil
-}
-
-func ValidateArchive(tr *tar.Reader) error {
-	var flist []string
-	manifestOK := false
-	fsm := &schema.FileSetManifest{}
-	for {
-		hdr, err := tr.Next()
-		if err != nil {
-			switch {
-			case err == io.EOF && manifestOK:
-				err = filesEqual(fsm.Files, flist)
-				if err != nil {
-					return err
-				}
-				return nil
-			case !manifestOK:
-				return errors.New("fileset: missing fileset manifest")
-			default:
-				return err
-			}
-		}
-
-		flist = append(flist, hdr.Name)
-
-		switch hdr.Name {
-		case "fileset":
-			var b bytes.Buffer
-			_, err = io.Copy(&b, tr)
-			if err != nil {
-				return err
-			}
-			err = fsm.UnmarshalJSON(b.Bytes())
-			if err != nil {
-				return err
-			}
-			manifestOK = true
-		case "app":
-		}
 	}
 	return nil
 }

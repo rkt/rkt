@@ -27,6 +27,7 @@ import (
 	"github.com/coreos-inc/rkt/app-container/schema"
 	"github.com/coreos-inc/rkt/app-container/schema/types"
 	"github.com/coreos-inc/rkt/cas"
+	ptar "github.com/coreos-inc/rkt/pkg/tar"
 	"github.com/coreos-inc/rkt/rkt"
 
 	"github.com/coreos-inc/rkt/stage0/stage1_init"
@@ -196,7 +197,7 @@ func untarRootfs(r io.Reader, dir string) error {
 		return fmt.Errorf("error creating stage1 rootfs directory: %v", err)
 	}
 
-	if err := aci.ExtractTar(tr, dir); err != nil {
+	if err := ptar.ExtractTar(tr, dir); err != nil {
 		return fmt.Errorf("error extracting rootfs: %v", err)
 	}
 	return nil
@@ -283,7 +284,7 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 	if err != nil {
 		return nil, fmt.Errorf("error creating image directory: %v", err)
 	}
-	if err := aci.ExtractTar(tar.NewReader(bytes.NewReader(b)), ad); err != nil {
+	if err := ptar.ExtractTar(tar.NewReader(bytes.NewReader(b)), ad); err != nil {
 		return nil, fmt.Errorf("error extracting ACI: %v", err)
 	}
 

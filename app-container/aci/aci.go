@@ -5,22 +5,22 @@ package aci
 import (
 	"archive/tar"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
+
+	ptar "github.com/coreos-inc/rkt/pkg/tar"
 )
 
-// ValidateTar checks that a given io.Reader, which should represent a tar
-// file, contains a directory layout which matches the ACI spec
-func ValidateTar(r io.Reader) error {
+// ValidateTar checks that a given tar.Reader contains a directory layout which
+// matches the ACI spec
+func ValidateTar(tr *tar.Reader) error {
 	// TODO(jonboulle): do this in memory instead of writing out to disk? :/
 	dir, err := ioutil.TempDir("", "aci-validator")
 	if err != nil {
 		return fmt.Errorf("error creating tempdir for RAF validation: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	t := tar.NewReader(r)
-	err = ExtractTar(t, dir)
+	err = ptar.ExtractTar(tr, dir)
 	if err != nil {
 		return err
 	}

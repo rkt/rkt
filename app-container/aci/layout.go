@@ -14,9 +14,12 @@ The on-disk format is straightforward, with a rootfs and an app manifest.
 */
 
 import (
+	"archive/tar"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -77,6 +80,47 @@ func ValidateLayout(dir string) error {
 	return nil
 }
 
+func ValidateArchive(tr *tar.Reader) error {
+	var flist []string
+	manifestOK := false
+	fsm := &schema.FileSetManifest{}
+	for {
+		hdr, err := tr.Next()
+		if err != nil {
+			switch {
+			case err == io.EOF && manifestOK:
+				err = filesEqual(fsm.Files, flist)
+				if err != nil {
+					return err
+				}
+				return nil
+			case !manifestOK:
+				return errors.New("fileset: missing fileset manifest")
+			default:
+				return err
+			}
+		}
+
+		flist = append(flist, hdr.Name)
+
+		switch hdr.Name {
+		case "fileset":
+			var b bytes.Buffer
+			_, err = io.Copy(&b, tr)
+			if err != nil {
+				return err
+			}
+			err = fsm.UnmarshalJSON(b.Bytes())
+			if err != nil {
+				return err
+			}
+			manifestOK = true
+		case "app":
+		}
+	}
+	return nil
+}
+
 // validateAppManifest ensures that the file at the given path is a valid
 // AppManifest. It returns a map of all files described in the manifest.
 func validateAppManifest(fpath string) (map[string]types.File, error) {
@@ -115,5 +159,19 @@ func validateRootfs(dir string, files map[string]types.File) error {
 func validateFile(path string, file types.File) error {
 	// TODO(jonboulle): implement me
 	// validate that the file matches the expected from the tarball?
+	return nil
+}
+
+func filesEqual(a, b []string) error {
+	if len(a) != len(b) {
+		return errors.New("different file count")
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return fmt.Errorf("file mismatch %s != %s", a[i], b[i])
+		}
+	}
+
 	return nil
 }

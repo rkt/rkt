@@ -1,4 +1,4 @@
-package aci
+package tar
 
 import (
 	"archive/tar"
