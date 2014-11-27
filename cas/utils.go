@@ -1,4 +1,4 @@
-package downloadstore
+package cas
 
 import (
 	"crypto/sha256"
