@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	typeAppImage = "appimage"
-	typeManifest = "manifest"
+	typeAppImage    = "appimage"
+	typeImageLayout = "layout"
+	typeManifest    = "manifest"
 )
 
 var (
@@ -31,6 +32,7 @@ var (
 	}
 	types = []string{
 		typeAppImage,
+		typeImageLayout,
 		typeManifest,
 	}
 )
@@ -47,22 +49,50 @@ func runValidate(args []string) (exit int) {
 	}
 
 	for _, path := range args {
-		file, err := os.OpenFile(path, os.O_RDONLY, 0666)
+		vt := valType
+		fi, err := os.Stat(path)
 		if err != nil {
-			stderr("unable to open %s: %v", path, err)
+			stderr("unable to access %s: %v", path, err)
 			return 1
 		}
+		var fh *os.File
+		if fi.IsDir() {
+			switch vt {
+			case typeImageLayout:
+			case "":
+				vt = typeImageLayout
+			case typeManifest, typeAppImage:
+				stderr("%s is a directory (wrong --type?)", path)
+				return 1
+			default:
+				// should never happen
+				panic(fmt.Sprintf("unexpected type: %v", vt))
+			}
+		} else {
+			fh, err = os.Open(path)
+			if err != nil {
+				stderr("%s: unable to open: %v", path, err)
+				return 1
+			}
+		}
 
-		if valType == "" {
-			valType, err = detectValType(file)
+		if vt == "" {
+			vt, err = detectValType(fh)
 			if err != nil {
 				stderr("%s: error detecting file type: %v", path, err)
 				return 1
 			}
 		}
-		switch valType {
+		switch vt {
+		case typeImageLayout:
+			err = aci.ValidateLayout(path)
+			if err != nil {
+				stderr("%s: invalid image layout: %v", path, err)
+			} else if globalFlags.Debug {
+				stderr("%s: valid image layout", path)
+			}
 		case typeAppImage:
-			fr, err := maybeDecompress(file)
+			fr, err := maybeDecompress(fh)
 			if err != nil {
 				stderr("%s: error decompressing file: %v", path, err)
 				return 1
@@ -70,7 +100,7 @@ func runValidate(args []string) (exit int) {
 			tr := tar.NewReader(fr)
 			err = aci.ValidateArchive(tr)
 			// err = aci.ValidateTar(r)
-			file.Close()
+			fh.Close()
 			if err != nil {
 				stderr("%s: error validating: %v", path, err)
 				return 1
@@ -80,8 +110,8 @@ func runValidate(args []string) (exit int) {
 			}
 			continue
 		case typeManifest:
-			b, err := ioutil.ReadAll(file)
-			file.Close()
+			b, err := ioutil.ReadAll(fh)
+			fh.Close()
 			if err != nil {
 				stderr("%s: unable to read file %s", path, err)
 				return 1
