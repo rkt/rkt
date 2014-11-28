@@ -128,8 +128,8 @@ func runValidate(args []string) (exit int) {
 			case "ContainerRuntimeManifest":
 				m := schema.ContainerRuntimeManifest{}
 				err = m.UnmarshalJSON(b)
-			case "FileSetManifest":
-				m := schema.FileSetManifest{}
+			case "FilesetManifest":
+				m := schema.FilesetManifest{}
 				err = m.UnmarshalJSON(b)
 			default:
 				// Should not get here; schema.Kind unmarshal should fail

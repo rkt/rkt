@@ -21,7 +21,7 @@ func (a ACKind) String() string {
 func (a ACKind) assertValid() error {
 	s := a.String()
 	switch s {
-	case "AppManifest", "ContainerRuntimeManifest", "FileSetManifest":
+	case "AppManifest", "ContainerRuntimeManifest", "FilesetManifest":
 		return nil
 	case "":
 		return ErrNoACKind

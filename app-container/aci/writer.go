@@ -11,7 +11,7 @@ import (
 )
 
 // ArchiveWriter writes App Container Images. Users wanting to create an ACI or
-// FileSet ACI should create an ArchiveWriter and add files to it; the ACI will
+// Fileset ACI should create an ArchiveWriter and add files to it; the ACI will
 // be written to the underlying tar.Writer
 type ArchiveWriter interface {
 	AddFile(path string, hdr *tar.Header, r io.Reader) error
@@ -25,7 +25,7 @@ type appArchiveWriter struct {
 
 type fsArchiveWriter struct {
 	appArchiveWriter
-	fsm *schema.FileSetManifest
+	fsm *schema.FilesetManifest
 }
 
 // NewAppWriter creates a new ArchiveWriter which will generate an App
@@ -39,10 +39,10 @@ func NewAppWriter(am schema.AppManifest, w *tar.Writer) ArchiveWriter {
 	return aw
 }
 
-// NewFileSetWriter creates a new ArchiveWriter which will generate a FileSet
+// NewFilesetWriter creates a new ArchiveWriter which will generate a Fileset
 // ACI by the given name and write it to the given tar.Writer.
-func NewFileSetWriter(name string, w *tar.Writer) (ArchiveWriter, error) {
-	fsm, err := schema.NewFileSetManifest(name)
+func NewFilesetWriter(name string, w *tar.Writer) (ArchiveWriter, error) {
+	fsm, err := schema.NewFilesetManifest(name)
 	if err != nil {
 		return nil, err
 	}
