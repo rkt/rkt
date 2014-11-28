@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/coreos-inc/rkt/app-container/fileset"
+	"github.com/coreos-inc/rkt/app-container/aci"
 	"github.com/coreos-inc/rkt/app-container/schema"
 	"github.com/coreos-inc/rkt/pkg/tarheader"
 )
@@ -28,7 +28,7 @@ func init() {
 	cmdBuild.Flags.BoolVar(&buildOverwrite, "overwrite", false, "Overwrite target file if it already exists")
 }
 
-func buildWalker(root string, aw fileset.ArchiveWriter) filepath.WalkFunc {
+func buildWalker(root string, aw aci.ArchiveWriter) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
 		relpath, err := filepath.Rel(root, path)
 		if err != nil {
@@ -103,7 +103,7 @@ func runBuild(args []string) (exit int) {
 		return 1
 	}
 
-	aw, err := fileset.NewFileSetWriter(buildName, tar.NewWriter(fh))
+	aw, err := aci.NewFileSetWriter(buildName, tar.NewWriter(fh))
 	if err != nil {
 		stderr("build: Unable to create FileSetWriter: %v", err)
 	}
