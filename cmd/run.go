@@ -23,6 +23,8 @@ var (
 		Name:    "run",
 		Summary: "Run image(s) in an application container in rocket",
 		Usage:   "[--volume LABEL:SOURCE] IMAGE...",
+		Description: `IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
+They will be checked in that order and the first match will be used.`,
 		Run:     runRun,
 	}
 )
