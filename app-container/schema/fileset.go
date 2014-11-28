@@ -23,14 +23,19 @@ type Dependency struct {
 	Root string       `json:"root"`
 }
 
-func NewFileSetManifest(name string) *FileSetManifest {
-	return &FileSetManifest{
+func NewFileSetManifest(name string) (*FileSetManifest, error) {
+	n, err := types.NewACName(name)
+	if err != nil {
+		return nil, err
+	}
+	fsm := FileSetManifest{
 		ACVersion: AppContainerVersion,
 		ACKind:    "FileSetManifest",
 		OS:        "linux",
 		Arch:      "amd64",
-		Name:      types.ACName(name),
+		Name:      *n,
 	}
+	return &fsm, nil
 }
 
 type fileSetManifest FileSetManifest

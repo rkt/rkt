@@ -30,6 +30,9 @@ func (l ACName) Equals(o ACName) bool {
 // NewACName generates a new ACName from a string. If the given string is
 // not a valid ACName, nil and an error are returned.
 func NewACName(s string) (*ACName, error) {
+	if len(s) == 0 {
+		return nil, fmt.Errorf("ACName cannot be empty")
+	}
 	for _, c := range s {
 		if !strings.ContainsRune(valchars, c) {
 			msg := fmt.Sprintf("invalid char in ACName: %c", c)
