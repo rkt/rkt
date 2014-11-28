@@ -23,14 +23,14 @@ var (
 
 func fetchURL(img string, ds *cas.Store) (string, error) {
 	rem := cas.NewRemote(img, []string{})
-	err := ds.Get(rem)
-	if err != nil && rem.File == "" {
+	err := ds.ReadIndex(rem)
+	if err != nil && rem.Blob == "" {
 		rem, err = rem.Download(*ds)
 		if err != nil {
 			return "", fmt.Errorf("downloading: %v\n", err)
 		}
 	}
-	return rem.File, nil
+	return rem.Blob, nil
 }
 
 func runFetch(args []string) (exit int) {

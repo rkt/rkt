@@ -23,7 +23,7 @@ type Remote struct {
 	Name    string
 	Mirrors []string
 	ETag    string
-	File    string
+	Blob    string
 }
 
 func (r Remote) Marshal() []byte {
@@ -99,13 +99,13 @@ func (r Remote) Import(ds Store, orig io.Reader) (*Remote, error) {
 	}
 
 	key := fmt.Sprintf("sha256-%x", hash.Sum(nil))
-	err = ds.stores[objectType].WriteStream(key, dr, true)
+	err = ds.stores[blobType].WriteStream(key, dr, true)
 	if err != nil {
 		return nil, err
 	}
 
 	ds.stores[tmpType].Erase(r.Hash())
-	r.File = key
+	r.Blob = key
 	ds.stores[remoteType].Write(r.Hash(), r.Marshal())
 
 	return &r, nil

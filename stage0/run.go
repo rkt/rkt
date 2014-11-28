@@ -264,7 +264,7 @@ func unpackBuiltinRootfs(dir string) error {
 func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppManifest, error) {
 	log.Println("Loading image", img)
 
-	rs, err := cfg.Store.ObjectStream(img)
+	rs, err := cfg.Store.ReadStream(img)
 	if err != nil {
 		return nil, err
 	}
