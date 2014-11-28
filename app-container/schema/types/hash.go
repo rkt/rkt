@@ -1,6 +1,7 @@
 package types
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -68,4 +69,11 @@ func (h Hash) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(h.String())
+}
+
+func NewHashSHA256(b []byte) *Hash {
+	h := sha256.New()
+	h.Write(b)
+	nh, _ := NewHash(fmt.Sprintf("sha256-%x", h.Sum(nil)))
+	return nh
 }
