@@ -73,24 +73,12 @@ func decompress(rs io.Reader, typ aci.FileType) (io.Reader, error) {
 	return dr, nil
 }
 
-// TODO: add locking
-func (r Remote) Download(ds Store) (*Remote, error) {
+func (r Remote) Import(ds Store, orig io.Reader) (*Remote, error) {
 	var b bytes.Buffer
-
-	res, err := http.Get(r.Name)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	// TODO(jonboulle): handle http more robustly (redirects?)
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
-	}
 
 	// TODO(philips): use go routines to parallelize this pipeline and make
 	// the file type detection happen without a second stream
-	_, err = io.Copy(&b, res.Body)
+	_, err := io.Copy(&b, orig)
 	if err != nil {
 		return nil, err
 	}
@@ -148,4 +136,20 @@ func (r Remote) Download(ds Store) (*Remote, error) {
 	ds.stores[remoteType].Write(r.Hash(), r.Marshal())
 
 	return &r, nil
+}
+
+// TODO: add locking
+func (r Remote) Download(ds Store) (*Remote, error) {
+	res, err := http.Get(r.Name)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	// TODO(jonboulle): handle http more robustly (redirects?)
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
+	}
+
+	return r.Import(ds, res.Body)
 }
