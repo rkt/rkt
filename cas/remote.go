@@ -2,14 +2,11 @@ package cas
 
 import (
 	"bytes"
-	"compress/bzip2"
-	"compress/gzip"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 
 	"github.com/coreos-inc/rkt/app-container/aci"
 )
@@ -47,30 +44,6 @@ func (r Remote) Hash() string {
 
 func (r Remote) Type() int64 {
 	return remoteType
-}
-
-func decompress(rs io.Reader, typ aci.FileType) (io.Reader, error) {
-	var (
-		dr  io.Reader
-		err error
-	)
-	switch typ {
-	case aci.TypeGzip:
-		dr, err = gzip.NewReader(rs)
-		if err != nil {
-			return nil, err
-		}
-	case aci.TypeBzip2:
-		dr = bzip2.NewReader(rs)
-	case aci.TypeXz:
-		dr = aci.XzReader(rs)
-	case aci.TypeUnknown:
-		fmt.Fprintf(os.Stderr, "error: unknown image filetype\n")
-	default:
-		// should never happen
-		panic("no type returned from DetectFileType?")
-	}
-	return dr, nil
 }
 
 func (r Remote) Import(ds Store, orig io.Reader) (*Remote, error) {
