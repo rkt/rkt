@@ -1,14 +1,9 @@
 package cas
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-
-	"github.com/coreos-inc/rkt/app-container/aci"
 )
 
 func NewRemote(name string, mirrors []string) *Remote {
@@ -46,71 +41,6 @@ func (r Remote) Type() int64 {
 	return remoteType
 }
 
-func (r Remote) Import(ds Store, orig io.Reader) (*Remote, error) {
-	var b bytes.Buffer
-
-	// TODO(philips): use go routines to parallelize this pipeline and make
-	// the file type detection happen without a second stream
-	_, err := io.Copy(&b, orig)
-	if err != nil {
-		return nil, err
-	}
-	err = ds.stores[tmpType].WriteStream(r.Hash(), &b, true)
-	if err != nil {
-		return nil, err
-	}
-
-	// Detect the filetype
-	rs, err := ds.stores[tmpType].ReadStream(r.Hash(), false)
-	if err != nil {
-		return nil, err
-	}
-	defer rs.Close()
-	typ, err := aci.DetectFileType(rs)
-	if err != nil {
-		return nil, err
-	}
-	rs, err = ds.stores[tmpType].ReadStream(r.Hash(), false)
-	if err != nil {
-		return nil, err
-	}
-	defer rs.Close()
-
-	// Generate the hash of the decompressed tar
-	dr, err := decompress(rs, typ)
-	if err != nil {
-		return nil, err
-	}
-	hash := sha256.New()
-	_, err = io.Copy(hash, dr)
-	if err != nil {
-		return nil, err
-	}
-
-	// Store the decompressed tar
-	rs, err = ds.stores[tmpType].ReadStream(r.Hash(), false)
-	if err != nil {
-		return nil, err
-	}
-	defer rs.Close()
-	dr, err = decompress(rs, typ)
-	if err != nil {
-		return nil, err
-	}
-
-	key := fmt.Sprintf("sha256-%x", hash.Sum(nil))
-	err = ds.stores[blobType].WriteStream(key, dr, true)
-	if err != nil {
-		return nil, err
-	}
-
-	ds.stores[tmpType].Erase(r.Hash())
-	r.Blob = key
-	ds.stores[remoteType].Write(r.Hash(), r.Marshal())
-
-	return &r, nil
-}
-
 // TODO: add locking
 func (r Remote) Download(ds Store) (*Remote, error) {
 	res, err := http.Get(r.Name)
@@ -124,5 +54,13 @@ func (r Remote) Download(ds Store) (*Remote, error) {
 		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
 	}
 
-	return r.Import(ds, res.Body)
+	key, err := ds.WriteACI(r.Hash(), res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	r.Blob = key
+	ds.WriteIndex(&r)
+
+	return &r, nil
 }

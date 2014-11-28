@@ -1,10 +1,13 @@
 package cas
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"path/filepath"
 
+	"github.com/coreos-inc/rkt/app-container/aci"
 	"github.com/coreos-inc/rkt/Godeps/_workspace/src/github.com/peterbourgon/diskv"
 )
 
@@ -48,6 +51,71 @@ func (ds Store) ReadStream(key string) (io.ReadCloser, error) {
 func (ds Store) WriteStream(key string, r io.Reader) error {
 	return ds.stores[blobType].WriteStream(key, r, true)
 }
+
+func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
+	var b bytes.Buffer
+
+	// TODO(philips): use go routines to parallelize this pipeline and make
+	// the file type detection happen without a second stream
+	_, err := io.Copy(&b, orig)
+	if err != nil {
+		return "", err
+	}
+	err = ds.stores[tmpType].WriteStream(tmpKey, &b, true)
+	if err != nil {
+		return "", err
+	}
+
+	// Detect the filetype
+	rs, err := ds.stores[tmpType].ReadStream(tmpKey, false)
+	if err != nil {
+		return "", err
+	}
+	defer rs.Close()
+	typ, err := aci.DetectFileType(rs)
+	if err != nil {
+		return "", err
+	}
+	rs, err = ds.stores[tmpType].ReadStream(tmpKey, false)
+	if err != nil {
+		return "", err
+	}
+	defer rs.Close()
+
+	// Generate the hash of the decompressed tar
+	dr, err := decompress(rs, typ)
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.New()
+	_, err = io.Copy(hash, dr)
+	if err != nil {
+		return "", err
+	}
+
+	// Store the decompressed tar
+	rs, err = ds.stores[tmpType].ReadStream(tmpKey, false)
+	if err != nil {
+		return "", err
+	}
+	defer rs.Close()
+	dr, err = decompress(rs, typ)
+	if err != nil {
+		return "", err
+	}
+
+	key := fmt.Sprintf("sha256-%x", hash.Sum(nil))
+	err = ds.stores[blobType].WriteStream(key, dr, true)
+	if err != nil {
+		return "", err
+	}
+
+	ds.stores[tmpType].Erase(tmpKey)
+
+	return key, nil
+}
+
+
 
 type Index interface {
 	Hash() string
