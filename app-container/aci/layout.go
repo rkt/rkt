@@ -82,7 +82,7 @@ func ValidateLayout(dir string) error {
 func ValidateArchive(tr *tar.Reader) error {
 	var flist []string
 	manifestOK := false
-	fsm := &schema.FileSetManifest{}
+	fsm := &schema.FilesetManifest{}
 	for {
 		hdr, err := tr.Next()
 		if err != nil {

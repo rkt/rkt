@@ -7,7 +7,7 @@ import (
 	"github.com/coreos-inc/rkt/app-container/schema/types"
 )
 
-type FileSetManifest struct {
+type FilesetManifest struct {
 	ACVersion    types.SemVer `json:"acVersion"`
 	ACKind       types.ACKind `json:"acKind"`
 	Name         types.ACName `json:"name"`
@@ -23,14 +23,14 @@ type Dependency struct {
 	Root string       `json:"root"`
 }
 
-func NewFileSetManifest(name string) (*FileSetManifest, error) {
+func NewFilesetManifest(name string) (*FilesetManifest, error) {
 	n, err := types.NewACName(name)
 	if err != nil {
 		return nil, err
 	}
-	fsm := FileSetManifest{
+	fsm := FilesetManifest{
 		ACVersion: AppContainerVersion,
-		ACKind:    "FileSetManifest",
+		ACKind:    "FilesetManifest",
 		OS:        "linux",
 		Arch:      "amd64",
 		Name:      *n,
@@ -38,11 +38,11 @@ func NewFileSetManifest(name string) (*FileSetManifest, error) {
 	return &fsm, nil
 }
 
-type fileSetManifest FileSetManifest
+type fileSetManifest FilesetManifest
 
-func (fsm *FileSetManifest) assertValid() error {
-	if fsm.ACKind != "FileSetManifest" {
-		return types.ACKindError(`missing or bad ACKind (must be "FileSetManifest")`)
+func (fsm *FilesetManifest) assertValid() error {
+	if fsm.ACKind != "FilesetManifest" {
+		return types.ACKindError(`missing or bad ACKind (must be "FilesetManifest")`)
 	}
 	if fsm.OS != "linux" {
 		return errors.New(`missing or bad OS (must be "linux")`)
@@ -53,13 +53,13 @@ func (fsm *FileSetManifest) assertValid() error {
 	return nil
 }
 
-func (fsm *FileSetManifest) UnmarshalJSON(data []byte) error {
+func (fsm *FilesetManifest) UnmarshalJSON(data []byte) error {
 	f := fileSetManifest{}
 	err := json.Unmarshal(data, &f)
 	if err != nil {
 		return err
 	}
-	nfsm := FileSetManifest(f)
+	nfsm := FilesetManifest(f)
 	if err := nfsm.assertValid(); err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (fsm *FileSetManifest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (fsm FileSetManifest) MarshalJSON() ([]byte, error) {
+func (fsm FilesetManifest) MarshalJSON() ([]byte, error) {
 	if err := fsm.assertValid(); err != nil {
 		return nil, err
 	}

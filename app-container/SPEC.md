@@ -110,7 +110,7 @@ Image Format TODO
 
 ### Fileset Images
 
-An app container image MAY contain a second optional manifest, the [FileSet manifest](#fileset-manifest), to describe how to assemble the final rootfs from a collection of other images. 
+An app container image MAY contain a second optional manifest, the [Fileset manifest](#fileset-manifest), to describe how to assemble the final rootfs from a collection of other images. 
 Such an image may not contain an app manifest, in which case they are simply a "fileset".
 
 ```
@@ -533,12 +533,12 @@ JSON Schema for the App Image Manifest
 * **isolators** the list of isolators that will apply to all apps in this container (name is restricted to the AC Name formatting and the value can be a freeform string)
 * **annotations** arbitrary metadata the executor should make available to applications via the metadata service (key is restricted to the AC Name formatting and the value can be a freeform string)
 
-### FileSet Manifest
+### Fileset Manifest
 
 ```
 {
     "acVersion": "0.1.0",
-    "acKind": "FileSetManifest",
+    "acKind": "FilesetManifest",
     "name": "example.com/reduce-worker-0.4.0",
     "dependencies": [
         {
@@ -567,7 +567,7 @@ JSON Schema for the App Image Manifest
 ```
 
 * **acVersion** is required and represents the version of the schema spec (string, must be in [semver](http://semver.org/) format)
-* **acKind** is required and must be set to "FileSetManifest"
+* **acKind** is required and must be set to "FilesetManifest"
 * **dependencies** list of filesets that need to be placed down into the rootfs before the files from this fileset. The ordering is significant.
     * **hash** content hash of the fileset
     * **name** name of the app

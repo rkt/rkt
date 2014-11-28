@@ -12,22 +12,22 @@ import (
 )
 
 var (
-	buildFileSetName string
+	buildFilesetName string
 	buildAppManifest string
 	buildRootfs      bool
 	buildOverwrite   bool
 	cmdBuild         = &Command{
 		Name:        "build",
-		Description: "Build a FileSet ACI from the target directory",
-		Summary:     "Build a FileSet ACI from the target directory",
+		Description: "Build a Fileset ACI from the target directory",
+		Summary:     "Build a Fileset ACI from the target directory",
 		Usage:       "[--overwrite] --name=NAME DIRECTORY OUTPUT_FILE",
 		Run:         runBuild,
 	}
 )
 
 func init() {
-	cmdBuild.Flags.StringVar(&buildFileSetName, "fileset-name", "",
-		"Build a FileSet Image, by this name (e.g. example.com/reduce-worker)")
+	cmdBuild.Flags.StringVar(&buildFilesetName, "fileset-name", "",
+		"Build a Fileset Image, by this name (e.g. example.com/reduce-worker)")
 	cmdBuild.Flags.StringVar(&buildAppManifest, "app-manifest", "",
 		"Build an App Image with this App Manifest")
 	cmdBuild.Flags.BoolVar(&buildRootfs, "rootfs", true,
@@ -90,8 +90,8 @@ func runBuild(args []string) (exit int) {
 		return 1
 	}
 	switch {
-	case buildFileSetName != "" && buildAppManifest == "":
-	case buildFileSetName == "" && buildAppManifest != "":
+	case buildFilesetName != "" && buildAppManifest == "":
+	case buildFilesetName == "" && buildAppManifest != "":
 	default:
 		stderr("build: must specify either --fileset-name or --app-manifest")
 	}
@@ -120,10 +120,10 @@ func runBuild(args []string) (exit int) {
 	tr := tar.NewWriter(fh)
 
 	var aw aci.ArchiveWriter
-	if buildFileSetName != "" {
-		aw, err = aci.NewFileSetWriter(buildFileSetName, tr)
+	if buildFilesetName != "" {
+		aw, err = aci.NewFilesetWriter(buildFilesetName, tr)
 		if err != nil {
-			stderr("build: Unable to create FileSetWriter: %v", err)
+			stderr("build: Unable to create FilesetWriter: %v", err)
 			return 1
 		}
 	} else {
@@ -144,7 +144,7 @@ func runBuild(args []string) (exit int) {
 
 	err = aw.Close()
 	if err != nil {
-		stderr("build: Unable to close FileSet image %s: %v", tgt, err)
+		stderr("build: Unable to close Fileset image %s: %v", tgt, err)
 		return 1
 	}
 
