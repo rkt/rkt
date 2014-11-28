@@ -15,8 +15,8 @@ var (
 	buildOverwrite bool
 	cmdBuild       = &Command{
 		Name:        "build",
-		Description: "Build a fileset ACI from the target directory",
-		Summary:     "Build a fileset ACI from the target directory",
+		Description: "Build a FileSet ACI from the target directory",
+		Summary:     "Build a FileSet ACI from the target directory",
 		Usage:       "[--overwrite] --name=NAME DIRECTORY OUTPUT_FILE",
 		Run:         runBuild,
 	}
@@ -24,11 +24,11 @@ var (
 
 func init() {
 	cmdBuild.Flags.StringVar(&buildName, "name", "",
-		"Name of the fileset (e.g. example.com/reduce-worker)")
+		"Name of the FileSet (e.g. example.com/reduce-worker)")
 	cmdBuild.Flags.BoolVar(&buildOverwrite, "overwrite", false, "Overwrite target file if it already exists")
 }
 
-func buildWalker(root string, aw *fileset.ArchiveWriter) filepath.WalkFunc {
+func buildWalker(root string, aw fileset.ArchiveWriter) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
 		relpath, err := filepath.Rel(root, path)
 		if err != nil {
@@ -93,7 +93,7 @@ func runBuild(args []string) (exit int) {
 	if !buildOverwrite {
 		mode |= os.O_EXCL
 	}
-	afs, err := os.OpenFile(tgt, mode, 0655)
+	fh, err := os.OpenFile(tgt, mode, 0655)
 	if err != nil {
 		if os.IsExist(err) {
 			stderr("build: Target file exists (try --overwrite)")
@@ -103,13 +103,10 @@ func runBuild(args []string) (exit int) {
 		return 1
 	}
 
-	fsm, err := schema.NewFileSetManifest(buildName)
+	aw, err := fileset.NewFileSetWriter(buildName, tar.NewWriter(fh))
 	if err != nil {
-		stderr("build: Unable to create FileSet Manifest: %v", err)
-		return 1
+		stderr("build: Unable to create FileSetWriter: %v", err)
 	}
-	w := tar.NewWriter(afs)
-	aw := fileset.NewArchiveWriter(*fsm, w)
 	filepath.Walk(root, buildWalker(root, aw))
 
 	err = aw.Close()

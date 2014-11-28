@@ -3,28 +3,60 @@ package fileset
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/json"
 	"io"
 	"time"
 
 	"github.com/coreos-inc/rkt/app-container/schema"
 )
 
-// ArchiveWriter builds a fileset app container image
-type ArchiveWriter struct {
-	*tar.Writer
-	manifest *schema.FileSetManifest
+// ArchiveWriter writes App Container Images. Users wanting to create an ACI or
+// FileSet ACI should create an ArchiveWriter and add files to it; the ACI will
+// be written to the underlying tar.Writer
+type ArchiveWriter interface {
+	AddFile(path string, hdr *tar.Header, r io.Reader) error
+	Close() error
 }
 
-func NewArchiveWriter(fsm schema.FileSetManifest, w *tar.Writer) *ArchiveWriter {
-	aw := &ArchiveWriter{
+type appArchiveWriter struct {
+	*tar.Writer
+	am *schema.AppManifest
+}
+
+type fsArchiveWriter struct {
+	appArchiveWriter
+	fsm *schema.FileSetManifest
+}
+
+// NewAppWriter creates a new ArchiveWriter which will generate an App
+// Container Image based on the given manifest and write it to the given
+// tar.Writer
+func NewAppWriter(am schema.AppManifest, w *tar.Writer) ArchiveWriter {
+	aw := &appArchiveWriter{
 		w,
-		&fsm,
+		&am,
 	}
 	return aw
 }
 
-func (aw *ArchiveWriter) AddFile(path string, hdr *tar.Header, r io.Reader) error {
-	aw.manifest.Files = append(aw.manifest.Files, path)
+// NewFileSetWriter creates a new ArchiveWriter which will generate a FileSet
+// ACI by the given name and write it to the given tar.Writer.
+func NewFileSetWriter(name string, w *tar.Writer) (ArchiveWriter, error) {
+	fsm, err := schema.NewFileSetManifest(name)
+	if err != nil {
+		return nil, err
+	}
+	aw := &fsArchiveWriter{
+		appArchiveWriter{
+			w,
+			nil,
+		},
+		fsm,
+	}
+	return aw, nil
+}
+
+func (aw *appArchiveWriter) AddFile(path string, hdr *tar.Header, r io.Reader) error {
 	err := aw.Writer.WriteHeader(hdr)
 	if err != nil {
 		return err
@@ -40,16 +72,16 @@ func (aw *ArchiveWriter) AddFile(path string, hdr *tar.Header, r io.Reader) erro
 	return nil
 }
 
-func (aw *ArchiveWriter) Close() error {
-	aw.manifest.Files = append(aw.manifest.Files, "fileset")
-	out, err := aw.manifest.MarshalJSON()
-	if err != nil {
-		return err
-	}
-	buf := bytes.NewBuffer(out)
+func (aw *fsArchiveWriter) AddFile(path string, hdr *tar.Header, r io.Reader) error {
+	aw.fsm.Files = append(aw.fsm.Files, path)
+	return aw.appArchiveWriter.AddFile(path, hdr, r)
+}
+
+func (aw *appArchiveWriter) addFileNow(path string, contents []byte) error {
+	buf := bytes.NewBuffer(contents)
 	now := time.Now()
 	hdr := tar.Header{
-		Name:       "fileset",
+		Name:       path,
 		Mode:       0655,
 		Uid:        0,
 		Gid:        0,
@@ -60,13 +92,26 @@ func (aw *ArchiveWriter) Close() error {
 		Gname:      "root",
 		ChangeTime: now,
 	}
-	err = aw.AddFile("fileset", &hdr, buf)
+	return aw.AddFile(path, &hdr, buf)
+}
+
+func (aw *appArchiveWriter) addManifest(name string, m json.Marshaler) error {
+	out, err := m.MarshalJSON()
 	if err != nil {
 		return err
 	}
-	err = aw.Writer.Close()
-	if err != nil {
+	return aw.addFileNow(name, out)
+}
+
+func (aw *appArchiveWriter) Close() error {
+	if err := aw.addManifest("app", aw.am); err != nil {
 		return err
 	}
-	return nil
+	return aw.Writer.Close()
+}
+func (aw *fsArchiveWriter) Close() error {
+	if err := aw.addManifest("fileset", aw.fsm); err != nil {
+		return err
+	}
+	return aw.Writer.Close()
 }
