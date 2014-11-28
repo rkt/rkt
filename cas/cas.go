@@ -11,13 +11,13 @@ import (
 const (
 	remoteType int64 = iota
 	objectType
-	downloadType
+	tmpType
 )
 
 var otmap = [...]string{
 	"remote",
 	"object",
-	"download",
+	"tmp",
 }
 
 type Blob interface {

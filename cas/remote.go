@@ -55,13 +55,13 @@ func (r Remote) Import(ds Store, orig io.Reader) (*Remote, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = ds.stores[downloadType].WriteStream(r.Hash(), &b, true)
+	err = ds.stores[tmpType].WriteStream(r.Hash(), &b, true)
 	if err != nil {
 		return nil, err
 	}
 
 	// Detect the filetype
-	rs, err := ds.stores[downloadType].ReadStream(r.Hash(), false)
+	rs, err := ds.stores[tmpType].ReadStream(r.Hash(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (r Remote) Import(ds Store, orig io.Reader) (*Remote, error) {
 	if err != nil {
 		return nil, err
 	}
-	rs, err = ds.stores[downloadType].ReadStream(r.Hash(), false)
+	rs, err = ds.stores[tmpType].ReadStream(r.Hash(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (r Remote) Import(ds Store, orig io.Reader) (*Remote, error) {
 	}
 
 	// Store the decompressed tar
-	rs, err = ds.stores[downloadType].ReadStream(r.Hash(), false)
+	rs, err = ds.stores[tmpType].ReadStream(r.Hash(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (r Remote) Import(ds Store, orig io.Reader) (*Remote, error) {
 		return nil, err
 	}
 
-	ds.stores[downloadType].Erase(r.Hash())
+	ds.stores[tmpType].Erase(r.Hash())
 	r.File = key
 	ds.stores[remoteType].Write(r.Hash(), r.Marshal())
 
