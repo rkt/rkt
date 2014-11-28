@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -11,9 +12,11 @@ import (
 )
 
 var (
-	buildName      string
-	buildOverwrite bool
-	cmdBuild       = &Command{
+	buildFileSetName string
+	buildAppManifest string
+	buildRootfs      bool
+	buildOverwrite   bool
+	cmdBuild         = &Command{
 		Name:        "build",
 		Description: "Build a FileSet ACI from the target directory",
 		Summary:     "Build a FileSet ACI from the target directory",
@@ -23,16 +26,26 @@ var (
 )
 
 func init() {
-	cmdBuild.Flags.StringVar(&buildName, "name", "",
-		"Name of the FileSet (e.g. example.com/reduce-worker)")
+	cmdBuild.Flags.StringVar(&buildFileSetName, "fileset-name", "",
+		"Build a FileSet Image, by this name (e.g. example.com/reduce-worker)")
+	cmdBuild.Flags.StringVar(&buildAppManifest, "app-manifest", "",
+		"Build an App Image with this App Manifest")
+	cmdBuild.Flags.BoolVar(&buildRootfs, "rootfs", true,
+		"Whether the supplied directory is a rootfs. If false, it will be assume the supplied directory already contains a rootfs/ subdirectory.")
 	cmdBuild.Flags.BoolVar(&buildOverwrite, "overwrite", false, "Overwrite target file if it already exists")
 }
 
-func buildWalker(root string, aw aci.ArchiveWriter) filepath.WalkFunc {
+func buildWalker(root string, aw aci.ArchiveWriter, rootfs bool) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
 		relpath, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
+		}
+		if rootfs {
+			if relpath == "." {
+				relpath = ""
+			}
+			relpath = "rootfs/" + relpath
 		}
 		if relpath == "." {
 			return nil
@@ -76,9 +89,11 @@ func runBuild(args []string) (exit int) {
 		stderr("build: Must provide directory and output file")
 		return 1
 	}
-	if buildName == "" {
-		stderr("build: FileSet name cannot be empty")
-		return 1
+	switch {
+	case buildFileSetName != "" && buildAppManifest == "":
+	case buildFileSetName == "" && buildAppManifest != "":
+	default:
+		stderr("build: must specify either --fileset-name or --app-manifest")
 	}
 
 	root := args[0]
@@ -102,12 +117,30 @@ func runBuild(args []string) (exit int) {
 		}
 		return 1
 	}
+	tr := tar.NewWriter(fh)
 
-	aw, err := aci.NewFileSetWriter(buildName, tar.NewWriter(fh))
-	if err != nil {
-		stderr("build: Unable to create FileSetWriter: %v", err)
+	var aw aci.ArchiveWriter
+	if buildFileSetName != "" {
+		aw, err = aci.NewFileSetWriter(buildFileSetName, tr)
+		if err != nil {
+			stderr("build: Unable to create FileSetWriter: %v", err)
+			return 1
+		}
+	} else {
+		b, err := ioutil.ReadFile(buildAppManifest)
+		if err != nil {
+			stderr("build: Unable to read App Manifest: %v", err)
+			return 1
+		}
+		var am schema.AppManifest
+		if err := am.UnmarshalJSON(b); err != nil {
+			stderr("build: Unable to load App Manifest: %v", err)
+			return 1
+		}
+		aw = aci.NewAppWriter(am, tr)
 	}
-	filepath.Walk(root, buildWalker(root, aw))
+
+	filepath.Walk(root, buildWalker(root, aw, buildRootfs))
 
 	err = aw.Close()
 	if err != nil {
