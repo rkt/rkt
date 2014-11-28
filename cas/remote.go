@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/coreos-inc/rkt/app-container/schema/types"
 )
 
 func NewRemote(name string, mirrors []string) *Remote {
@@ -34,7 +36,7 @@ func (r *Remote) Unmarshal(data []byte) {
 }
 
 func (r Remote) Hash() string {
-	return sha256sum(r.Name)
+	return types.NewHashSHA256([]byte(r.Name)).String()
 }
 
 func (r Remote) Type() int64 {

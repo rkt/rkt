@@ -3,9 +3,7 @@ package cas
 import (
 	"compress/bzip2"
 	"compress/gzip"
-	"crypto/sha256"
 	"errors"
-	"fmt"
 	"io"
 	"net/url"
 	"strings"
@@ -22,12 +20,6 @@ func blockTransform(s string) []string {
 	pathSlice[0] = parts[0]
 	pathSlice[1] = parts[1][0:2]
 	return pathSlice
-}
-
-func sha256sum(s string) string {
-	h := sha256.New()
-	io.WriteString(h, s)
-	return fmt.Sprintf("sha256-%x", h.Sum(nil))
 }
 
 func parseAlways(s string) *url.URL {

@@ -43,6 +43,21 @@ func findImages(args []string, ds *cas.Store) (out []string, err error) {
 		if err == nil {
 			continue
 		}
+
+		// import the local file if it exists
+		file, err := os.Open(img)
+		if err == nil {
+			hash := types.NewHashSHA256([]byte(img)).String()
+			key, err := ds.WriteACI(hash, file)
+			file.Close()
+			if err != nil {
+				return nil, fmt.Errorf("%s: %v", img, err)
+			}
+			out[i] = key
+			continue
+		}
+
+		// download if it is a URL
 		u, err := url.Parse(img)
 		if err != nil {
 			return nil, fmt.Errorf("%s: not a valid URL or hash", img)
