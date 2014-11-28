@@ -25,9 +25,7 @@ type AppManifest struct {
 	MountPoints   []types.MountPoint   `json:"mountPoints"`
 	Ports         []types.Port         `json:"ports"`
 	Isolators     []types.Isolator     `json:"isolators"`
-	// TODO(jonboulle): whattodo about files?
-	Files       map[string]types.File `json:"files"`
-	Annotations types.Annotations     `json:"annotations"`
+	Annotations   types.Annotations    `json:"annotations"`
 }
 
 // appManifest is a model to facilitate extra validation during the
