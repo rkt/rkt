@@ -9,6 +9,7 @@ import (
 	"github.com/coreos-inc/rkt/app-container/schema"
 )
 
+// ArchiveWriter builds a fileset app container image
 type ArchiveWriter struct {
 	*tar.Writer
 	manifest *schema.FileSetManifest

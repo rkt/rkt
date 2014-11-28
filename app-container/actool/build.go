@@ -81,7 +81,8 @@ func runBuild(args []string) (exit int) {
 	tgt := args[1]
 	ext := filepath.Ext(tgt)
 	if ext != schema.ACIExtension {
-		stderr("fileset: Extension must be %s was %s", schema.ACIExtension, ext)
+		stderr("fileset: Extension must be %s (given %s)", schema.ACIExtension, ext)
+		return 1
 	}
 
 	fsm := schema.NewFileSetManifest(buildName)

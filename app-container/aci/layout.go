@@ -2,9 +2,9 @@ package aci
 
 /*
 
-Filesystem Layout
+Image Layout
 
-The on-disk format is straightforward, with a rootfs and an app manifest.
+The on-disk layout of an app container is straightforward. It includes a rootfs with all of the files that will exist in the root of the app and an app manifest describing how to execute the app.
 
 /app
 /rootfs
