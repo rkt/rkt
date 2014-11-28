@@ -24,6 +24,7 @@ func TestNewACName(t *testing.T) {
 
 func TestNewACNameBad(t *testing.T) {
 	tests := []string{
+		"",
 		"foo#",
 		"EXAMPLE.com",
 		"foo.com/BAR",

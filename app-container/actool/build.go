@@ -15,9 +15,9 @@ var (
 	buildOverwrite bool
 	cmdBuild       = &Command{
 		Name:        "build",
-		Description: "Build a fileset from the target directory",
-		Summary:     "Build a fileset from the target directory",
-		Usage:       "DIRECTORY",
+		Description: "Build a fileset ACI from the target directory",
+		Summary:     "Build a fileset ACI from the target directory",
+		Usage:       "[--overwrite] --name=NAME DIRECTORY OUTPUT_FILE",
 		Run:         runBuild,
 	}
 )
@@ -73,7 +73,11 @@ func buildWalker(root string, aw *fileset.ArchiveWriter) filepath.WalkFunc {
 
 func runBuild(args []string) (exit int) {
 	if len(args) != 2 {
-		stderr("build: Must provide directory and target fileset")
+		stderr("build: Must provide directory and output file")
+		return 1
+	}
+	if buildName == "" {
+		stderr("build: FileSet name cannot be empty")
 		return 1
 	}
 
@@ -81,11 +85,9 @@ func runBuild(args []string) (exit int) {
 	tgt := args[1]
 	ext := filepath.Ext(tgt)
 	if ext != schema.ACIExtension {
-		stderr("fileset: Extension must be %s (given %s)", schema.ACIExtension, ext)
+		stderr("build: Extension must be %s (given %s)", schema.ACIExtension, ext)
 		return 1
 	}
-
-	fsm := schema.NewFileSetManifest(buildName)
 
 	mode := os.O_CREATE | os.O_WRONLY
 	if !buildOverwrite {
@@ -94,10 +96,16 @@ func runBuild(args []string) (exit int) {
 	afs, err := os.OpenFile(tgt, mode, 0655)
 	if err != nil {
 		if os.IsExist(err) {
-			stderr("Target file exists (try --overwrite)")
+			stderr("build: Target file exists (try --overwrite)")
 		} else {
-			stderr("fileset: Unable to open target %s: %v", tgt, err)
+			stderr("build: Unable to open target %s: %v", tgt, err)
 		}
+		return 1
+	}
+
+	fsm, err := schema.NewFileSetManifest(buildName)
+	if err != nil {
+		stderr("build: Unable to create FileSet Manifest: %v", err)
 		return 1
 	}
 	w := tar.NewWriter(afs)
@@ -106,7 +114,7 @@ func runBuild(args []string) (exit int) {
 
 	err = aw.Close()
 	if err != nil {
-		stderr("fileset: Unable to close fileset %s: %v", tgt, err)
+		stderr("build: Unable to close FileSet image %s: %v", tgt, err)
 		return 1
 	}
 
