@@ -4,12 +4,24 @@ package aci
 
 Image Layout
 
-The on-disk layout of an app container is straightforward. It includes a rootfs with all of the files that will exist in the root of the app and an app manifest describing how to execute the app.
+The on-disk layout of an app container is straightforward.
+It includes a rootfs with all of the files that will exist in the root of the app and an app manifest describing how to execute the app.
+The layout must contain either an app manifest, an app manifest and a fileset manifest, or a fileset only.
+In the latter case, the layout/image is known as a "fileset image".
 
 /app
-/rootfs
+/rootfs/
 /rootfs/usr/bin/mysql
-/rootfs/....
+
+/app
+/fileset
+/rootfs/bin/httpd
+/rootfs/config
+
+
+/fileset
+/rootfs/
+/rootfs/bin/bash
 
 */
 
@@ -23,6 +35,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/coreos-inc/rkt/app-container/schema"
 )
@@ -44,35 +57,40 @@ func ValidateLayout(dir string) error {
 	if !fi.IsDir() {
 		return fmt.Errorf("given path %q is not a directory", dir)
 	}
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return fmt.Errorf("error reading directory: %v", err)
-	}
-	var rfs, am, fsm string
-	for _, f := range files {
-		name := f.Name()
-		fpath := filepath.Join(dir, name)
+	var flist []string
+	var amOK, fsmOK, rfsOK bool
+	var am, fsm io.Reader
+	walkLayout := func(fpath string, fi os.FileInfo, err error) error {
+		fpath = strings.TrimPrefix(fpath, dir)
+		name := filepath.Base(fpath)
 		switch name {
+		case ".":
 		case "app":
-			am = fpath
+			am, err = os.Open(fpath)
+			if err != nil {
+				return err
+			}
+			amOK = true
 		case "fileset":
-			fsm = fpath
+			fsm, err = os.Open(fpath)
+			if err != nil {
+				return err
+			}
+			fsmOK = true
 		case "rootfs":
-			rfs = fpath
+			if !fi.IsDir() {
+				return errors.New("rootfs is not a directory")
+			}
+			rfsOK = true
 		default:
-			return fmt.Errorf("unrecognized file path in layout: %q", fpath)
+			flist = append(flist, fpath)
 		}
+		return nil
 	}
-	if am == "" && fsm == "" {
-		return ErrNoManifest
-	}
-	if am != "" && rfs == "" {
-		return ErrNoRootFS
-	}
-	if err := validateAppManifest(am); err != nil {
+	if err := filepath.Walk(dir, walkLayout); err != nil {
 		return err
 	}
-	return nil
+	return validate(amOK, am, fsmOK, fsm, rfsOK, flist)
 }
 
 // ValidateLayout takes a *tar.Reader and validates that the layout of the
@@ -81,53 +99,90 @@ func ValidateLayout(dir string) error {
 // the validation, it will abort and return the first one.
 func ValidateArchive(tr *tar.Reader) error {
 	var flist []string
-	manifestOK := false
-	fsm := &schema.FilesetManifest{}
+	var amOK, fsmOK, rfsOK bool
+	var fsm, am bytes.Buffer
+Tar:
 	for {
 		hdr, err := tr.Next()
-		if err != nil {
-			switch {
-			case err == io.EOF && manifestOK:
-				err = filesEqual(fsm.Files, flist)
-				if err != nil {
-					return err
-				}
-				return nil
-			case !manifestOK:
-				return errors.New("fileset: missing fileset manifest")
-			default:
-				return err
-			}
+		switch {
+		case err == nil:
+		case err == io.EOF:
+			break Tar
+		default:
+			return err
 		}
-
-		flist = append(flist, hdr.Name)
-
 		switch hdr.Name {
 		case "fileset":
-			var b bytes.Buffer
-			_, err = io.Copy(&b, tr)
+			_, err := io.Copy(&fsm, tr)
 			if err != nil {
 				return err
 			}
-			err = fsm.UnmarshalJSON(b.Bytes())
-			if err != nil {
-				return err
-			}
-			manifestOK = true
+			fsmOK = true
 		case "app":
+			_, err := io.Copy(&am, tr)
+			if err != nil {
+				return err
+			}
+			amOK = true
+		case "rootfs/":
+			if !hdr.FileInfo().IsDir() {
+				return fmt.Errorf("rootfs is not a directory")
+			}
+			rfsOK = true
+		default:
+			flist = append(flist, hdr.Name)
 		}
+	}
+	return validate(amOK, &am, fsmOK, &fsm, rfsOK, flist)
+}
+
+// TODO(jonboulle): find a cleaner way to communicate instead of all these args.
+func validate(amOK bool, am io.Reader, fsmOK bool, fsm io.Reader, rfsOK bool, files []string) error {
+	if !amOK && !fsmOK {
+		return ErrNoManifest
+	}
+	if amOK {
+		if !rfsOK {
+			return ErrNoRootFS
+		}
+		b, err := ioutil.ReadAll(am)
+		if err != nil {
+			return fmt.Errorf("error reading app manifest: %v", err)
+		}
+		var a schema.AppManifest
+		if err := a.UnmarshalJSON(b); err != nil {
+			return fmt.Errorf("app manifest validation failed: %v", err)
+		}
+	}
+	var rfsfiles []string
+	for _, f := range files {
+		switch {
+		case strings.HasPrefix(f, "rootfs"):
+			rfsfiles = append(rfsfiles, strings.TrimPrefix(f, "rootfs"))
+		default:
+			return fmt.Errorf("unrecognized file path in layout: %q", f)
+		}
+	}
+	if fsmOK {
+		b, err := ioutil.ReadAll(fsm)
+		if err != nil {
+			return fmt.Errorf("error reading fileset manifest: %v", err)
+		}
+		var f schema.FilesetManifest
+		if err := f.UnmarshalJSON(b); err != nil {
+			return fmt.Errorf("fileset manifest validation failed: %v", err)
+		}
+		// TODO(jonboulle): this is not quite correct since it does not
+		// deal with dependent filesets. Maybe filesAreSuperset()?
+		return filesEqual(f.Files, rfsfiles)
 	}
 	return nil
 }
 
-// validateAppManifest ensures that the file at the given path is a valid
+// validateAppManifest ensures that the given io.Reader represents a valid
 // AppManifest.
-func validateAppManifest(fpath string) error {
-	f, err := os.Open(fpath)
-	if err != nil {
-		return fmt.Errorf("error opening app manifest: %v", err)
-	}
-	b, err := ioutil.ReadAll(f)
+func validateAppManifest(r io.Reader) error {
+	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return fmt.Errorf("error reading app manifest: %v", err)
 	}
@@ -138,9 +193,25 @@ func validateAppManifest(fpath string) error {
 	return nil
 }
 
+// validateFilesetManifest ensures that the given io.Reader represents a valid
+// FilesetManifest.
+func validateFilesetManifest(r io.Reader) error {
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return fmt.Errorf("error reading app manifest: %v", err)
+	}
+	var am schema.FilesetManifest
+	if err = json.Unmarshal(b, &am); err != nil {
+		return fmt.Errorf("error unmarshaling app manifest: %v", err)
+	}
+	return nil
+}
+
 func filesEqual(a, b []string) error {
-	if len(a) != len(b) {
-		return errors.New("different file count")
+	na := len(a)
+	nb := len(b)
+	if na != nb {
+		return fmt.Errorf("fileset has different filecount to rootfs (%d != %d)", na, nb)
 	}
 
 	for i := range a {
