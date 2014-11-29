@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/coreos-inc/rkt/app-container/schema"
@@ -73,7 +74,10 @@ func (aw *appArchiveWriter) AddFile(path string, hdr *tar.Header, r io.Reader) e
 }
 
 func (aw *fsArchiveWriter) AddFile(path string, hdr *tar.Header, r io.Reader) error {
-	aw.fsm.Files = append(aw.fsm.Files, path)
+	relpath := strings.TrimPrefix(path, "rootfs")
+	if relpath != "/" {
+		aw.fsm.Files = append(aw.fsm.Files, relpath)
+	}
 	return aw.appArchiveWriter.AddFile(path, hdr, r)
 }
 

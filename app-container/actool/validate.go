@@ -99,7 +99,6 @@ func runValidate(args []string) (exit int) {
 			}
 			tr := tar.NewReader(fr)
 			err = aci.ValidateArchive(tr)
-			// err = aci.ValidateTar(r)
 			fh.Close()
 			if err != nil {
 				stderr("%s: error validating: %v", path, err)
