@@ -6,8 +6,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
+
+type insecureLinkError error
 
 // ExtractTar extracts a tarball (from a tar.Reader) into the given directory
 func ExtractTar(tr *tar.Reader, dir string) error {
@@ -40,10 +43,18 @@ func ExtractTar(tr *tar.Reader, dir string) error {
 					return err
 				}
 			case typ == tar.TypeLink:
+				dest := filepath.Join(filepath.Dir(p), hdr.Linkname)
+				if !strings.HasPrefix(dest, dir) {
+					return insecureLinkError(fmt.Errorf("insecure link %q -> %q", p, hdr.Linkname))
+				}
 				if err := os.Link(hdr.Linkname, p); err != nil {
 					return err
 				}
 			case typ == tar.TypeSymlink:
+				dest := filepath.Join(filepath.Dir(p), hdr.Linkname)
+				if !strings.HasPrefix(dest, dir) {
+					return insecureLinkError(fmt.Errorf("insecure symlink %q -> %q", p, hdr.Linkname))
+				}
 				if err := os.Symlink(hdr.Linkname, p); err != nil {
 					return err
 				}
