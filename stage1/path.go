@@ -4,11 +4,11 @@ import (
 	"path/filepath"
 
 	"github.com/coreos/rocket/app-container/schema/types"
-	"github.com/coreos/rocket/rkt"
+	"github.com/coreos/rocket/path"
 )
 
 const (
-	servicesDir = rkt.Stage1Dir + "/usr/lib/systemd/system"
+	servicesDir = path.Stage1Dir + "/usr/lib/systemd/system"
 	wantsDir    = servicesDir + "/default.target.wants"
 )
 

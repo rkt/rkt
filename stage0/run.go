@@ -27,8 +27,9 @@ import (
 	"github.com/coreos/rocket/app-container/schema"
 	"github.com/coreos/rocket/app-container/schema/types"
 	"github.com/coreos/rocket/cas"
+	rktpath "github.com/coreos/rocket/path"
 	ptar "github.com/coreos/rocket/pkg/tar"
-	"github.com/coreos/rocket/rkt"
+	"github.com/coreos/rocket/version"
 
 	"github.com/coreos/rocket/stage0/stage1_init"
 	"github.com/coreos/rocket/stage0/stage1_rootfs"
@@ -74,11 +75,11 @@ func Setup(cfg Config) (string, error) {
 
 	log.Printf("Unpacking stage1 rootfs")
 	if cfg.Stage1Rootfs != "" {
-		if err = unpackRootfs(cfg.Stage1Rootfs, rkt.Stage1RootfsPath(dir)); err != nil {
+		if err = unpackRootfs(cfg.Stage1Rootfs, rktpath.Stage1RootfsPath(dir)); err != nil {
 			return "", fmt.Errorf("error unpacking rootfs: %v", err)
 		}
 	} else {
-		if err = unpackBuiltinRootfs(rkt.Stage1RootfsPath(dir)); err != nil {
+		if err = unpackBuiltinRootfs(rktpath.Stage1RootfsPath(dir)); err != nil {
 			return "", fmt.Errorf("error unpacking rootfs: %v", err)
 		}
 	}
@@ -117,7 +118,7 @@ func Setup(cfg Config) (string, error) {
 		Apps:   make(schema.AppList, 0),
 	}
 
-	v, err := types.NewSemVer(rkt.Version)
+	v, err := types.NewSemVer(version.Version)
 	if err != nil {
 		return "", fmt.Errorf("error creating version: %v", err)
 	}
@@ -166,7 +167,7 @@ func Setup(cfg Config) (string, error) {
 	}
 
 	log.Printf("Writing container manifest")
-	fn = rkt.ContainerManifestPath(dir)
+	fn = rktpath.ContainerManifestPath(dir)
 	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
 		return "", fmt.Errorf("error writing container manifest: %v", err)
 	}
@@ -279,7 +280,7 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 		return nil, fmt.Errorf("image hash does not match expected")
 	}
 
-	ad := rkt.AppImagePath(dir, h)
+	ad := rktpath.AppImagePath(dir, h)
 	err = os.MkdirAll(ad, 0776)
 	if err != nil {
 		return nil, fmt.Errorf("error creating image directory: %v", err)
@@ -293,7 +294,7 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 		return nil, fmt.Errorf("error creating tmp directory: %v", err)
 	}
 
-	mpath := rkt.AppManifestPath(dir, h)
+	mpath := rktpath.AppManifestPath(dir, h)
 	f, err := os.Open(mpath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening app manifest: %v", err)

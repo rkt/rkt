@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/coreos/rocket/rkt"
+	"github.com/coreos/rocket/version"
 )
 
 var (
@@ -108,7 +108,7 @@ func printGlobalUsage() {
 		commands,
 		getAllFlags(),
 		cliDescription,
-		rkt.Version,
+		version.Version,
 	})
 	out.Flush()
 }

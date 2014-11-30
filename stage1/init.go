@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/coreos/rocket/rkt"
+	"github.com/coreos/rocket/path"
 )
 
 const (
@@ -38,7 +38,7 @@ func main() {
 		os.MkdirAll("/run/systemd/system", 0755)
 	}
 
-	ex := filepath.Join(rkt.Stage1RootfsPath(c.Root), nspawnBin)
+	ex := filepath.Join(path.Stage1RootfsPath(c.Root), nspawnBin)
 	if _, err := os.Stat(ex); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed locating nspawn: %v\n", err)
 		os.Exit(3)
