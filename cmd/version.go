@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/coreos-inc/rkt/rkt"
+	"github.com/coreos/rocket/rkt"
 )
 
 var cmdVersion = &Command{

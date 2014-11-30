@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/coreos-inc/rkt/app-container/schema"
+	"github.com/coreos/rocket/app-container/schema"
 )
 
 var cmdVersion = &Command{

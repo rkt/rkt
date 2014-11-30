@@ -3,7 +3,7 @@ package schema
 import (
 	"encoding/json"
 
-	"github.com/coreos-inc/rkt/app-container/schema/types"
+	"github.com/coreos/rocket/app-container/schema/types"
 )
 
 type Kind struct {

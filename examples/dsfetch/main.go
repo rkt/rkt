@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/coreos-inc/rkt/downloadstore"
+	"github.com/coreos/rocket/downloadstore"
 )
 
 func main() {

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/coreos-inc/rkt/app-container/aci"
+	"github.com/coreos/rocket/app-container/aci"
 )
 
 // copy the default of git which is a two byte prefix. We will likely want to

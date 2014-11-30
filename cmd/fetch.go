@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/coreos-inc/rkt/cas"
+	"github.com/coreos/rocket/cas"
 )
 
 const (

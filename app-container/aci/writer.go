@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos-inc/rkt/app-container/schema"
+	"github.com/coreos/rocket/app-container/schema"
 )
 
 // ArchiveWriter writes App Container Images. Users wanting to create an ACI or

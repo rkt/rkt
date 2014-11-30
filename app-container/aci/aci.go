@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	ptar "github.com/coreos-inc/rkt/pkg/tar"
+	ptar "github.com/coreos/rocket/pkg/tar"
 )
 
 // ValidateTar checks that a given tar.Reader contains a directory layout which

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/coreos-inc/rkt/rkt"
+	"github.com/coreos/rocket/rkt"
 )
 
 const (

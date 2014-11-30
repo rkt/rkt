@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"path"
 
-	"github.com/coreos-inc/rkt/Godeps/_workspace/src/github.com/gorilla/context"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/gorilla/context"
 )
 
 // NewRouter returns a new router instance.

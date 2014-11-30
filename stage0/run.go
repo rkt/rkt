@@ -22,16 +22,16 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/coreos-inc/rkt/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
-	"github.com/coreos-inc/rkt/app-container/aci"
-	"github.com/coreos-inc/rkt/app-container/schema"
-	"github.com/coreos-inc/rkt/app-container/schema/types"
-	"github.com/coreos-inc/rkt/cas"
-	ptar "github.com/coreos-inc/rkt/pkg/tar"
-	"github.com/coreos-inc/rkt/rkt"
+	"github.com/coreos/rocket/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
+	"github.com/coreos/rocket/app-container/aci"
+	"github.com/coreos/rocket/app-container/schema"
+	"github.com/coreos/rocket/app-container/schema/types"
+	"github.com/coreos/rocket/cas"
+	ptar "github.com/coreos/rocket/pkg/tar"
+	"github.com/coreos/rocket/rkt"
 
-	"github.com/coreos-inc/rkt/stage0/stage1_init"
-	"github.com/coreos-inc/rkt/stage0/stage1_rootfs"
+	"github.com/coreos/rocket/stage0/stage1_init"
+	"github.com/coreos/rocket/stage0/stage1_rootfs"
 )
 
 const (

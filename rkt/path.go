@@ -8,7 +8,7 @@ package rkt
 import (
 	"path/filepath"
 
-	"github.com/coreos-inc/rkt/app-container/schema/types"
+	"github.com/coreos/rocket/app-container/schema/types"
 )
 
 const (

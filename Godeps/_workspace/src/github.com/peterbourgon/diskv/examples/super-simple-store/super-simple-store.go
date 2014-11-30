@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/coreos-inc/rkt/Godeps/_workspace/src/github.com/peterbourgon/diskv"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/peterbourgon/diskv"
 )
 
 func main() {

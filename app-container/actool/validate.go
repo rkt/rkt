@@ -11,8 +11,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/coreos-inc/rkt/app-container/aci"
-	"github.com/coreos-inc/rkt/app-container/schema"
+	"github.com/coreos/rocket/app-container/aci"
+	"github.com/coreos/rocket/app-container/schema"
 )
 
 const (

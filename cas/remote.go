@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/coreos-inc/rkt/app-container/schema/types"
+	"github.com/coreos/rocket/app-container/schema/types"
 )
 
 func NewRemote(name string, mirrors []string) *Remote {

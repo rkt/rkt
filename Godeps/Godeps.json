@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/coreos-inc/rkt",
+	"ImportPath": "github.com/coreos/rocket",
 	"GoVersion": "go1.3.1",
 	"Packages": [
 		"./..."

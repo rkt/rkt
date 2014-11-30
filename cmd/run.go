@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/coreos-inc/rkt/app-container/schema/types"
-	"github.com/coreos-inc/rkt/cas"
-	"github.com/coreos-inc/rkt/stage0"
+	"github.com/coreos/rocket/app-container/schema/types"
+	"github.com/coreos/rocket/cas"
+	"github.com/coreos/rocket/stage0"
 )
 
 var (

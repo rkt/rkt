@@ -37,7 +37,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/coreos-inc/rkt/app-container/schema"
+	"github.com/coreos/rocket/app-container/schema"
 )
 
 var (

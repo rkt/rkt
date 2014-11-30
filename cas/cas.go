@@ -7,8 +7,8 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/coreos-inc/rkt/app-container/aci"
-	"github.com/coreos-inc/rkt/Godeps/_workspace/src/github.com/peterbourgon/diskv"
+	"github.com/coreos/rocket/app-container/aci"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/peterbourgon/diskv"
 )
 
 // TODO(philips): use a database for the secondary indexes like remoteType and

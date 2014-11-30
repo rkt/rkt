@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/coreos-inc/rkt/rkt"
+	"github.com/coreos/rocket/rkt"
 )
 
 var (

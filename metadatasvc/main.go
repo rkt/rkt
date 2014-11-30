@@ -14,9 +14,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/coreos-inc/rkt/app-container/schema"
-	"github.com/coreos-inc/rkt/app-container/schema/types"
-	"github.com/coreos-inc/rkt/Godeps/_workspace/src/github.com/gorilla/mux"
+	"github.com/coreos/rocket/app-container/schema"
+	"github.com/coreos/rocket/app-container/schema/types"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/gorilla/mux"
 )
 
 type metadata struct {
