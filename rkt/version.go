@@ -1,3 +1,19 @@
-package rkt
+package main
 
-const Version = "0.0.1"
+import (
+	"fmt"
+
+	"github.com/coreos/rocket/version"
+)
+
+var cmdVersion = &Command{
+	Name:        "version",
+	Description: "Print the version and exit",
+	Summary:     "Print the version and exit",
+	Run:         runVersion,
+}
+
+func runVersion(args []string) (exit int) {
+	fmt.Printf("rkt version %s\n", version.Version)
+	return
+}

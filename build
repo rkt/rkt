@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
-ORG_PATH="github.com/coreos-inc"
-REPO_PATH="${ORG_PATH}/rkt"
+ORG_PATH="github.com/coreos"
+REPO_PATH="${ORG_PATH}/rocket"
 
 if [ ! -h gopath/src/${REPO_PATH} ]; then
 	mkdir -p gopath/src/${ORG_PATH}
@@ -43,7 +43,7 @@ fi
 
 
 echo "Building rkt (stage0)..."
-go build -o $GOBIN/rkt ${REPO_PATH}/cmd
+go build -o $GOBIN/rkt ${REPO_PATH}/rkt
 
 echo "Building metadatasvc..."
 go build -o $GOBIN/metadatasvc ${REPO_PATH}/metadatasvc

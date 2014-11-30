@@ -1,4 +1,4 @@
-package rkt
+package path
 
 //
 // Functions defining paths that are shared by different parts of rkt

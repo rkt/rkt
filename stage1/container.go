@@ -13,7 +13,7 @@ import (
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 	"github.com/coreos/rocket/app-container/schema"
 	"github.com/coreos/rocket/app-container/schema/types"
-	"github.com/coreos/rocket/rkt"
+	rktpath "github.com/coreos/rocket/path"
 )
 
 // Container encapsulates a ContainerRuntimeManifest and AppManifests
@@ -31,7 +31,7 @@ func LoadContainer(root string) (*Container, error) {
 		Apps: make(map[string]*schema.AppManifest),
 	}
 
-	buf, err := ioutil.ReadFile(rkt.ContainerManifestPath(c.Root))
+	buf, err := ioutil.ReadFile(rktpath.ContainerManifestPath(c.Root))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading container runtime manifest: %v", err)
 	}
@@ -43,7 +43,7 @@ func LoadContainer(root string) (*Container, error) {
 	c.Manifest = cm
 
 	for _, app := range c.Manifest.Apps {
-		ampath := rkt.AppManifestPath(c.Root, app.ImageID)
+		ampath := rktpath.AppManifestPath(c.Root, app.ImageID)
 		buf, err := ioutil.ReadFile(ampath)
 		if err != nil {
 			return nil, fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
@@ -74,7 +74,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 		&unit.UnitOption{"Unit", "OnFailure", "reaper.service"},
 		&unit.UnitOption{"Unit", "Wants", "exit-watcher.service"},
 		&unit.UnitOption{"Service", "Restart", "no"},
-		&unit.UnitOption{"Service", "RootDirectory", rkt.RelAppRootfsPath(id)},
+		&unit.UnitOption{"Service", "RootDirectory", rktpath.RelAppRootfsPath(id)},
 		&unit.UnitOption{"Service", "ExecStart", execStart},
 		&unit.UnitOption{"Service", "User", am.User},
 		&unit.UnitOption{"Service", "Group", am.Group},
@@ -171,7 +171,7 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest, id types.Hash) ([]st
 
 		opt[1] = vol.Source
 		opt[2] = ":"
-		opt[3] = filepath.Join(rkt.RelAppRootfsPath(id), mp.Path)
+		opt[3] = filepath.Join(rktpath.RelAppRootfsPath(id), mp.Path)
 
 		args = append(args, strings.Join(opt, ""))
 	}
@@ -184,7 +184,7 @@ func (c *Container) appToNspawnArgs(am *schema.AppManifest, id types.Hash) ([]st
 func (c *Container) ContainerToNspawnArgs() ([]string, error) {
 	args := []string{
 		"--uuid=" + c.Manifest.UUID.String(),
-		"--directory=" + rkt.Stage1RootfsPath(c.Root),
+		"--directory=" + rktpath.Stage1RootfsPath(c.Root),
 	}
 
 	for _, am := range c.Apps {

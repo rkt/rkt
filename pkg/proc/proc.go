@@ -1,4 +1,4 @@
-package rkt
+package proc
 
 import (
 	"bufio"
