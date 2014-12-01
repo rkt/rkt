@@ -9,7 +9,7 @@ import (
 )
 
 // Hash encodes a hash specified in a string of the form:
-//    "<type>:<value>"
+//    "<type>-<value>"
 // for example
 //    "sha256-06c733b1838136838e6d2d3e8fa5aea4c7905e92"
 // Valid types are currently "sha256"
