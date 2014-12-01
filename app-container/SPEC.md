@@ -555,13 +555,13 @@ JSON Schema for the App Image Manifest
             "hash": "sha256-...",
             "name": "example.com/trusted-certificate-authority-1.0.0",
             "root": "/etc/ca"
-        },
+        }
     ],
     "files": [
         "/etc/ca/example.com/crt",
         "/usr/bin/map-reduce-worker",
         "/opt/libs/reduce-toolkit.so",
-        "/etc/reduce-worker.conf",
+        "/etc/reduce-worker.conf"
     ]
 }
 ```
