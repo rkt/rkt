@@ -43,8 +43,9 @@ func init() {
 }
 
 func runValidate(args []string) (exit int) {
+	q := globalFlags.Quiet
 	if len(args) < 1 {
-		stderr("must pass one or more files")
+		stderr(q, "must pass one or more files")
 		return 1
 	}
 
@@ -52,7 +53,7 @@ func runValidate(args []string) (exit int) {
 		vt := valType
 		fi, err := os.Stat(path)
 		if err != nil {
-			stderr("unable to access %s: %v", path, err)
+			stderr(q, "unable to access %s: %v", path, err)
 			return 1
 		}
 		var fh *os.File
@@ -62,7 +63,7 @@ func runValidate(args []string) (exit int) {
 			case "":
 				vt = typeImageLayout
 			case typeManifest, typeAppImage:
-				stderr("%s is a directory (wrong --type?)", path)
+				stderr(q, "%s is a directory (wrong --type?)", path)
 				return 1
 			default:
 				// should never happen
@@ -71,7 +72,7 @@ func runValidate(args []string) (exit int) {
 		} else {
 			fh, err = os.Open(path)
 			if err != nil {
-				stderr("%s: unable to open: %v", path, err)
+				stderr(q, "%s: unable to open: %v", path, err)
 				return 1
 			}
 		}
@@ -79,7 +80,7 @@ func runValidate(args []string) (exit int) {
 		if vt == "" {
 			vt, err = detectValType(fh)
 			if err != nil {
-				stderr("%s: error detecting file type: %v", path, err)
+				stderr(q, "%s: error detecting file type: %v", path, err)
 				return 1
 			}
 		}
@@ -87,37 +88,36 @@ func runValidate(args []string) (exit int) {
 		case typeImageLayout:
 			err = aci.ValidateLayout(path)
 			if err != nil {
-				stderr("%s: invalid image layout: %v", path, err)
-			} else if globalFlags.Debug {
-				stderr("%s: valid image layout", path)
+				stderr(q, "%s: invalid image layout: %v", path, err)
+				exit = 1
+			} else {
+				stderr(q, "%s: valid image layout", path)
 			}
 		case typeAppImage:
 			fr, err := maybeDecompress(fh)
 			if err != nil {
-				stderr("%s: error decompressing file: %v", path, err)
+				stderr(q, "%s: error decompressing file: %v", path, err)
 				return 1
 			}
 			tr := tar.NewReader(fr)
 			err = aci.ValidateArchive(tr)
 			fh.Close()
 			if err != nil {
-				stderr("%s: error validating: %v", path, err)
-				return 1
+				stderr(q, "%s: error validating: %v", path, err)
+				exit = 1
+			} else {
+				stderr(q, "%s: valid app container image", path)
 			}
-			if globalFlags.Debug {
-				stderr("%s: valid app container image", path)
-			}
-			continue
 		case typeManifest:
 			b, err := ioutil.ReadAll(fh)
 			fh.Close()
 			if err != nil {
-				stderr("%s: unable to read file %s", path, err)
+				stderr(q, "%s: unable to read file %s", path, err)
 				return 1
 			}
 			k := schema.Kind{}
 			if err := k.UnmarshalJSON(b); err != nil {
-				stderr("error unmarshaling manifest: %v", err)
+				stderr(q, "%s: error unmarshaling manifest: %v", path, err)
 				return 1
 			}
 			switch k.ACKind {
@@ -135,12 +135,13 @@ func runValidate(args []string) (exit int) {
 				panic("bad ACKind")
 			}
 			if err != nil {
-				stderr("%s: invalid %s: %v", path, k.ACKind, err)
-			} else if globalFlags.Debug {
-				stderr("%s: valid %s", path, k.ACKind)
+				stderr(q, "%s: invalid %s: %v", path, k.ACKind, err)
+				exit = 1
+			} else {
+				stderr(q, "%s: valid %s", path, k.ACKind)
 			}
 		default:
-			stderr("%s: unable to detect filetype (try --type)", path)
+			stderr(q, "%s: unable to detect filetype (try --type)", path)
 			return 1
 		}
 	}

@@ -37,6 +37,9 @@ func init() {
 
 func buildWalker(root string, aw aci.ArchiveWriter, rootfs bool) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		relpath, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
@@ -85,22 +88,24 @@ func buildWalker(root string, aw aci.ArchiveWriter, rootfs bool) filepath.WalkFu
 }
 
 func runBuild(args []string) (exit int) {
+	q := globalFlags.Quiet
 	if len(args) != 2 {
-		stderr("build: Must provide directory and output file")
+		stderr(q, "build: Must provide directory and output file")
 		return 1
 	}
 	switch {
 	case buildFilesetName != "" && buildAppManifest == "":
 	case buildFilesetName == "" && buildAppManifest != "":
 	default:
-		stderr("build: must specify either --fileset-name or --app-manifest")
+		stderr(q, "build: must specify either --fileset-name or --app-manifest")
+		return 1
 	}
 
 	root := args[0]
 	tgt := args[1]
 	ext := filepath.Ext(tgt)
 	if ext != schema.ACIExtension {
-		stderr("build: Extension must be %s (given %s)", schema.ACIExtension, ext)
+		stderr(q, "build: Extension must be %s (given %s)", schema.ACIExtension, ext)
 		return 1
 	}
 
@@ -111,40 +116,51 @@ func runBuild(args []string) (exit int) {
 	fh, err := os.OpenFile(tgt, mode, 0655)
 	if err != nil {
 		if os.IsExist(err) {
-			stderr("build: Target file exists (try --overwrite)")
+			stderr(q, "build: Target file exists (try --overwrite)")
 		} else {
-			stderr("build: Unable to open target %s: %v", tgt, err)
+			stderr(q, "build: Unable to open target %s: %v", tgt, err)
 		}
 		return 1
 	}
+	defer func() {
+		if exit != 0 && !buildOverwrite {
+			fh.Close()
+			os.Remove(tgt)
+		}
+	}()
+
 	tr := tar.NewWriter(fh)
 
 	var aw aci.ArchiveWriter
 	if buildFilesetName != "" {
 		aw, err = aci.NewFilesetWriter(buildFilesetName, tr)
 		if err != nil {
-			stderr("build: Unable to create FilesetWriter: %v", err)
+			stderr(q, "build: Unable to create FilesetWriter: %v", err)
 			return 1
 		}
 	} else {
 		b, err := ioutil.ReadFile(buildAppManifest)
 		if err != nil {
-			stderr("build: Unable to read App Manifest: %v", err)
+			stderr(q, "build: Unable to read App Manifest: %v", err)
 			return 1
 		}
 		var am schema.AppManifest
 		if err := am.UnmarshalJSON(b); err != nil {
-			stderr("build: Unable to load App Manifest: %v", err)
+			stderr(q, "build: Unable to load App Manifest: %v", err)
 			return 1
 		}
 		aw = aci.NewAppWriter(am, tr)
 	}
 
-	filepath.Walk(root, buildWalker(root, aw, buildRootfs))
+	err = filepath.Walk(root, buildWalker(root, aw, buildRootfs))
+	if err != nil {
+		stderr(q, "build: Error walking rootfs: %v", err)
+		return 1
+	}
 
 	err = aw.Close()
 	if err != nil {
-		stderr("build: Unable to close Fileset image %s: %v", tgt, err)
+		stderr(q, "build: Unable to close Fileset image %s: %v", tgt, err)
 		return 1
 	}
 

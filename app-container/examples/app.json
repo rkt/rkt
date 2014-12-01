@@ -1,5 +1,4 @@
 {
-    "acVersion": "1.0.0",
     "acKind": "AppManifest",
     "name": "example.com/reduce-worker-1.0.0",
     "os": "linux",

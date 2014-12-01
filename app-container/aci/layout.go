@@ -61,8 +61,8 @@ func ValidateLayout(dir string) error {
 	var amOK, fsmOK, rfsOK bool
 	var am, fsm io.Reader
 	walkLayout := func(fpath string, fi os.FileInfo, err error) error {
-		fpath = strings.TrimPrefix(fpath, dir)
-		name := filepath.Base(fpath)
+		rpath := strings.TrimPrefix(fpath, dir)
+		name := filepath.Base(rpath)
 		switch name {
 		case ".":
 		case "app":
@@ -83,7 +83,7 @@ func ValidateLayout(dir string) error {
 			}
 			rfsOK = true
 		default:
-			flist = append(flist, fpath)
+			flist = append(flist, rpath)
 		}
 		return nil
 	}
