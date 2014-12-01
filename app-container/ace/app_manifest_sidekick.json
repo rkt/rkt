@@ -5,7 +5,7 @@
     "os": "linux",
     "arch": "amd64",
     "exec": [
-        "/ace_validator", "sidekick"
+        "/ace-validator", "sidekick"
     ],
     "user": "0",
     "group": "0",

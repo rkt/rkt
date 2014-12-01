@@ -78,8 +78,8 @@ func renderTemplate(tpl string, kvs ...string) string {
 	return tpl
 }
 
-func DiscoverEndpoints(app, ver, os, arch string, insecure bool) (*Endpoints, error) {
-	_, body, err := httpsOrHTTP(app, insecure)
+func DiscoverEndpoints(app App, insecure bool) (*Endpoints, error) {
+	_, body, err := httpsOrHTTP(app.Name.String(), insecure)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +87,13 @@ func DiscoverEndpoints(app, ver, os, arch string, insecure bool) (*Endpoints, er
 
 	meta := extractACMeta(body)
 
-	appver := app + "-" + ver
-	tplVars := []string{"{os}", os, "{arch}", arch, "{app-ver}", appver}
+	tplVars := []string{"{os}", app.Labels["os"], "{arch}", app.Labels["arch"],
+		"{name}", app.Name.String(), "{version}", app.Labels["version"]}
 
 	de := &Endpoints{}
 
 	for _, m := range meta {
-		if !strings.HasPrefix(appver, m.prefix) {
+		if !strings.HasPrefix(app.Name.String(), m.prefix) {
 			continue
 		}
 

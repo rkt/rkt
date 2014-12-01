@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,7 +24,7 @@ var (
 		Usage:   "[--volume LABEL:SOURCE] IMAGE...",
 		Description: `IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
 They will be checked in that order and the first match will be used.`,
-		Run:     runRun,
+		Run: runRun,
 	}
 )
 
@@ -36,6 +35,8 @@ func init() {
 	flagVolumes = volumeMap{}
 }
 
+// findImages will recognize a ACI hash and use that, import a local file, use
+// discovery or download an ACI directly.
 func findImages(args []string, ds *cas.Store) (out []string, err error) {
 	out = make([]string, len(args))
 	copy(out, args)
@@ -59,15 +60,7 @@ func findImages(args []string, ds *cas.Store) (out []string, err error) {
 			continue
 		}
 
-		// download if it is a URL
-		u, err := url.Parse(img)
-		if err != nil {
-			return nil, fmt.Errorf("%s: not a valid URL or hash", img)
-		}
-		if u.Scheme != "http" && u.Scheme != "https" {
-			return nil, fmt.Errorf("%s: rkt only supports http or https URLs", img)
-		}
-		hash, err := fetchURL(img, ds)
+		hash, err := fetchImage(img, ds)
 		if err != nil {
 			return nil, err
 		}

@@ -259,8 +259,8 @@ Then inspect the HTML returned for meta tags that have the following format:
 Some examples for different schemes and URLs:
 
 ```
-<meta name="ac-discovery" content="example.com https://storage.example.com/{os}/{arch}/{name}.{ext}?torrent">
-<meta name="ac-discovery" content="example.com hdfs://storage.example.com/{name}-{os}-{arch}.{ext}">
+<meta name="ac-discovery" content="example.com https://storage.example.com/{os}/{arch}/{name}-{version}.{ext}?torrent">
+<meta name="ac-discovery" content="example.com hdfs://storage.example.com/{name}-{version}-{os}-{arch}.{ext}">
 <meta name="ac-discovery-keys" content="example.com https://example.com/pubkeys.gpg">
 ```
 
