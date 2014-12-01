@@ -65,11 +65,17 @@ func (am *AppManifest) assertValid() error {
 	if am.ACKind != "AppManifest" {
 		return types.ACKindError(`missing or bad ACKind (must be "AppManifest")`)
 	}
+	if am.ACVersion.Empty() {
+		return errors.New(`acVersion must be set`)
+	}
 	if am.OS != "linux" {
 		return errors.New(`missing or bad OS (must be "linux")`)
 	}
 	if am.Arch != "amd64" {
 		return errors.New(`missing or bad Arch (must be "amd64")`)
+	}
+	if len(am.Exec) < 1 {
+		return errors.New(`Exec cannot be empty`)
 	}
 	// TODO(jonboulle): assert hashes is not empty?
 	return nil

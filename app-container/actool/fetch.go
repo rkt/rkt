@@ -21,16 +21,17 @@ func runFetch(args []string) (exit int) {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "discover: at least one name required")
 	}
+	q := globalFlags.Quiet
 
 	for _, name := range args {
 		labels, err := appFromString(name)
 		if err != nil {
-			stderr("%s: %s", name, err)
+			stderr(q, "%s: %s", name, err)
 			return 1
 		}
 		eps, err := discovery.DiscoverEndpoints(labels["name"], labels["ver"], labels["os"], labels["arch"], transportFlags.Insecure)
 		if err != nil {
-			stderr("error fetching %s: %s", name, err)
+			stderr(q, "error fetching %s: %s", name, err)
 			return 1
 		}
 		// TODO(philips): store the images..
