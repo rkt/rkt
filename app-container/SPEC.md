@@ -572,4 +572,4 @@ JSON Schema for the App Image Manifest
     * **hash** content hash of the fileset
     * **name** name of the app
     * **root** the place in this filesets hierarchy that the dependent rootfs should be placed
-* **files** ordered list of files that exist in this fileset. Ordering matters as it is the order items should be added to the tar file for hashing.
+* **files** whitelist of files that should exist on-disk for this fileset. This is only required if you have dependent filesets and want to remove files from those filesets before running the container.
