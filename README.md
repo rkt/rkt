@@ -21,7 +21,7 @@ cd rocket-0.1.0
 ./rkt help
 ```
 
-Keep in mind while running through the examples that rkt needs to be ran as root for most operations.
+Keep in mind while running through the examples that rkt needs to be run as root for most operations.
 
 ## Rocket basics
 
