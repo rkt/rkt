@@ -378,7 +378,7 @@ func logReq(h func(w http.ResponseWriter, r *http.Request)) func(w http.Response
 
 func main() {
 	if err := setupIPTables(); err != nil {
-		fmt.Fatal(err)
+		log.Fatal(err)
 	}
 
 	if err := initCrypto(); err != nil {
