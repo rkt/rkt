@@ -184,7 +184,7 @@ The network interface should be configured with an IPv4/IPv6 address that is rea
 Apps should log to stdout and stderr. The container executor is responsible for capturing and persisting the output.
 
 If the application detects other logging options, such as the /run/systemd/system/journal socket, it may optionally upgrade to using those mechanisms.
-Note that logging mechanisms other than stdout and stderr are not required by this specification (or tested by the the compliance tests).
+Note that logging mechanisms other than stdout and stderr are not required by this specification (or tested by the compliance tests).
 
 ### Apps Perspective
 
