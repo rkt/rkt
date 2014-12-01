@@ -15,9 +15,9 @@ Rocket is a cli for running App Containers. The goal of rocket is to be a compos
 To install the `rkt` binary:
 
 ```
-curl -L https://github.com/coreos/rocket/releases/download/v0.0.0/rocket-0.0.0.tar.gz -o rocket-0.0.0.tar.gz
-tar xzvf rocket-0.0.0.tar.gz
-cd rocket-0.0.0
+curl -L https://github.com/coreos/rocket/releases/download/v0.1.0/rocket-0.1.0.tar.gz -o rocket-0.1.0.tar.gz
+tar xzvf rocket-0.1.0.tar.gz
+cd rocket-0.1.0
 ./rkt help
 ```
 
@@ -30,28 +30,28 @@ Keep in mind while running through the examples that rkt needs to be ran as root
 Rocket uses content addressable storage (CAS) for storing an ACI on disk. In this example, the image is downloaded and added to the CAS. 
 
 ```
-$ rkt fetch https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace-validator-main.tar.gz
-sha256-f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8
+$ rkt fetch https://github.com/coreos/rocket/releases/download/v0.1.0/ace-validator-main.aci
+sha256-08699361d40a0728924ffe6fcd67dc933d7311cf8e6f403048c9271181b20e2e
 ```
 
 These files are now written to disk:
 
 ```
-$ find /var/lib/rkt/cas/object/
-/var/lib/rkt/cas/object/
-/var/lib/rkt/cas/object/sha256
-/var/lib/rkt/cas/object/sha256/f5
-/var/lib/rkt/cas/object/sha256/f5/sha256-f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8
+$ find /var/lib/rkt/cas/blob/
+/var/lib/rkt/cas/blob/
+/var/lib/rkt/cas/blob/sha256
+/var/lib/rkt/cas/blob/sha256/08
+/var/lib/rkt/cas/blob/sha256/08/sha256-08699361d40a0728924ffe6fcd67dc933d7311cf8e6f403048c9271181b20e2e
 ```
 
 Per the App Container [spec][spec] the sha256 is of the tarball, which is reproducable with other tools:
 
 ```
-$ wget https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace-validator-main.tar.gz
+$ wget https://github.com/coreos/rocket/releases/download/v0.1.0/ace-validator-main.aci
 ...
 $ gunzip ace-validator-main.tar.gz
 $ sha256sum ace-validator-main.tar
-f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8  ace-validator-main.tar
+08699361d40a0728924ffe6fcd67dc933d7311cf8e6f403048c9271181b20e2e ace-validator-main.tar
 ```
 
 ### Launching an ACI
@@ -59,7 +59,7 @@ f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8  ace-validator-
 To run an ACI, you can either use the sha256 hash, or the URL which you downloaded it from:
 
 ```
-$ rkt run https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace-validator-main.tar.gz
+$ rkt run https://github.com/coreos/rocket/releases/download/v0.1.0/ace-validator-main.aci
 ```
 
 rkt will do the appropriate etag checking on the URL to make sure it has the most up to date version of the image. 
@@ -67,10 +67,10 @@ rkt will do the appropriate etag checking on the URL to make sure it has the mos
 Or, you can explicitly choose an image to run based on the sha256:
 
 ```
-$ rkt run sha256-f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8
+$ rkt run sha256-08699361d40a0728924ffe6fcd67dc933d7311cf8e6f403048c9271181b20e2e
 ```
 
-These commands are interchangeable. 
+These commands are interchangeable.
 
 
 ## App Container basics
