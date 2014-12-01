@@ -32,7 +32,7 @@ So, it will make an HTTPS request to example.com and using the <meta> tags there
 	https://storage-mirror.example.com/reduce-worker-1.0.0.aci
 
 The executor downloads these two images and puts them into its local on-disk cache. 
-Then the executor extracts two fresh copies of the imgaes to create instances of the "on-disk app format" and reads the two app manifests to figure out what binaries will need to be executed. 
+Then the executor extracts two fresh copies of the images to create instances of the "on-disk app format" and reads the two app manifests to figure out what binaries will need to be executed. 
 
 Based on user input the executor now sets up the necessary cgroups, network interfaces, etc and forks the `register` and `reduce-worker` processes in their shared namespaces inside the container.
 
