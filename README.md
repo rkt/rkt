@@ -77,6 +77,13 @@ These commands are interchangeable.
 
 [App Container](app-container) is a [specification](app-container/SPEC.md) of an image format, runtime, and discovery protocol for running a container. We anticipate app container to be adopted by other runtimes outside of Rocket itself. Read more about it [here](app-container).
 
+To validate the `rkt` with the App Container [validation ACIs](app-container/README.md) run:
+
+```
+$ rkt run -volume database:/tmp \
+	https://github.com/coreos/rocket/releases/download/v0.1.0/ace-validator-main.aci \
+	https://github.com/coreos/rocket/releases/download/v0.1.0/ace-validator-sidekick.aci
+```
 
 ## Rocket internals
 
