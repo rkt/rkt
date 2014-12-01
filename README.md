@@ -2,7 +2,7 @@
 
 _Release early, release often: Rocket is currently a prototype and we are seeking your feedback via pull requests_
 
-Rocket is a cli for running App Containers. The goal of rocket is to be a composable, secure, and fast. 
+Rocket is a cli for running App Containers. The goal of rocket is to be composable, secure, and fast. 
 
 [Read more about Rocket in the launch announcement](https://coreos.com/blog/rocket). 
 
