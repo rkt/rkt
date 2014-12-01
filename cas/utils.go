@@ -42,6 +42,8 @@ func decompress(rs io.Reader, typ aci.FileType) (io.Reader, error) {
 		dr = bzip2.NewReader(rs)
 	case aci.TypeXz:
 		dr = aci.XzReader(rs)
+	case aci.TypeTar:
+		dr = rs
 	case aci.TypeUnknown:
 		return nil, errors.New("error: unknown image filetype")
 	default:
