@@ -24,12 +24,12 @@ func runFetch(args []string) (exit int) {
 	q := globalFlags.Quiet
 
 	for _, name := range args {
-		labels, err := appFromString(name)
+		app, err := discovery.NewAppFromString(name)
 		if err != nil {
 			stderr(q, "%s: %s", name, err)
 			return 1
 		}
-		eps, err := discovery.DiscoverEndpoints(labels["name"], labels["ver"], labels["os"], labels["arch"], transportFlags.Insecure)
+		eps, err := discovery.DiscoverEndpoints(*app, transportFlags.Insecure)
 		if err != nil {
 			stderr(q, "error fetching %s: %s", name, err)
 			return 1
