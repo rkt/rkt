@@ -378,11 +378,12 @@ func logReq(h func(w http.ResponseWriter, r *http.Request)) func(w http.Response
 
 func main() {
 	if err := setupIPTables(); err != nil {
-		fmt.Println(err)
-		return
+		fmt.Fatal(err)
 	}
 
-	log.Fatal(initCrypto())
+	if err := initCrypto(); err != nil {
+		log.Fatal(err)
+	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/containers/", logReq(handleRegisterContainer)).Methods("POST")
