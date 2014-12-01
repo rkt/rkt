@@ -69,7 +69,7 @@ func main() {
 		if c.Name == args[0] {
 			cmd = c
 			if err := c.Flags.Parse(args[1:]); err != nil {
-				fmt.Fprintf(os.Stderr, "%v", err)
+				fmt.Fprintf(os.Stderr, "%v\n", err)
 				os.Exit(2)
 			}
 			break
