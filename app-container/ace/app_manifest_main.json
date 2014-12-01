@@ -5,19 +5,19 @@
     "os": "linux",
     "arch": "amd64",
     "exec": [
-        "/ace_validator", "main"
+        "/ace-validator", "main"
     ],
     "eventHandlers": [
         {
             "name": "pre-start",
             "exec": [
-                "/ace_validator", "prestart"
+                "/ace-validator", "prestart"
             ]
         },
         {
             "name": "post-stop",
             "exec": [
-                "/ace_validator", "poststop"
+                "/ace-validator", "poststop"
             ]
         }
     ],

@@ -30,7 +30,7 @@ Keep in mind while running through the examples that rkt needs to be ran as root
 Rocket uses content addressable storage (CAS) for storing an ACI on disk. In this example, the image is downloaded and added to the CAS. 
 
 ```
-$ rkt fetch https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace_validator_main.tar.gz
+$ rkt fetch https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace-validator-main.tar.gz
 sha256-f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8
 ```
 
@@ -47,11 +47,11 @@ $ find /var/lib/rkt/cas/object/
 Per the App Container [spec][spec] the sha256 is of the tarball, which is reproducable with other tools:
 
 ```
-$ wget https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace_validator_main.tar.gz
+$ wget https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace-validator-main.tar.gz
 ...
-$ gunzip ace_validator_main.tar.gz
-$ sha256sum ace_validator_main.tar
-f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8  ace_validator_main.tar
+$ gunzip ace-validator-main.tar.gz
+$ sha256sum ace-validator-main.tar
+f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8  ace-validator-main.tar
 ```
 
 ### Launching an ACI
@@ -59,7 +59,7 @@ f59cb373728bd0f73674cc0b50286e56ba15bdd15a9e4ce8ccca18d0b6034ce8  ace_validator_
 To run an ACI, you can either use the sha256 hash, or the URL which you downloaded it from:
 
 ```
-$ rkt run https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace_validator_main.tar.gz
+$ rkt run https://storage-download.googleapis.com/users.developer.core-os.net/philips/validator/ace-validator-main.tar.gz
 ```
 
 rkt will do the appropriate etag checking on the URL to make sure it has the most up to date version of the image. 
