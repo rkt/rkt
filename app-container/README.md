@@ -85,7 +85,7 @@ $ tar xf my-app.aci app -O | python -m json.tool
 To validate one of the three manifest types in the specification, simply run `actool validate` against the file.
 
 ```
-$ actool ./app.json
+$ actool validate ./app.json
 ./app.json: valid AppManifest
 $ echo $?
 0
@@ -104,11 +104,11 @@ $ echo $?
 
 `actool` will automatically determine which type of manifest it is checking (by using the `acKind` field common to all manifests), so there is no need to specify which type of manifest is being validated:
 ```
-$ actool /tmp/my_fileset
+$ actool validate /tmp/my_fileset
 /tmp/my_fileset: valid FilesetManifest
 ```
 
-If a manifest fails validation, the first error encountered is returned, along with a non-zero exit status:
+If a manifest fails validation the first error encountered is returned along with a non-zero exit status:
 ```
 $ actool validate nover.json
 nover.json: invalid AppManifest: acVersion must be set
@@ -122,6 +122,9 @@ Validating ACIs or layouts is very similar to validating manifests: simply run t
 ```
 $ actool validate app.aci
 app.aci: valid app container image
+```
+
+```
 $ actool validate app_layout/
 app_layout/: valid image layout
 ```
@@ -135,7 +138,7 @@ hello.aci: valid app container image
 
 ### Validating App Container Executors (ACEs)
 
-The (`ace`)[ace/] package contains a simple go application, the _ACE validator_, which can be used to validate app container executors by checking certain expectations about the environment in which it is run: for example, that the appropriate environment variables and mount points are set up as defined in the specification.
+The [`ace`](ace/)] package contains a simple go application, the _ACE validator_, which can be used to validate app container executors by checking certain expectations about the environment in which it is run: for example, that the appropriate environment variables and mount points are set up as defined in the specification.
 
 To use the ACE validator, first compile it into an ACI using the supplied `build_aci` script:
 ```
