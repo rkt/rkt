@@ -270,23 +270,34 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 		return nil, err
 	}
 
-	// Sanity check: provided image name matches image ID
-	b, err := ioutil.ReadAll(rs)
-	if err != nil {
-		return nil, fmt.Errorf("error reading tarball: %v", err)
-	}
-	sum := sha256.Sum256(b)
-	if id := fmt.Sprintf("%x", sum); id != h.Val {
-		return nil, fmt.Errorf("image hash does not match expected")
-	}
-
 	ad := rktpath.AppImagePath(dir, h)
 	err = os.MkdirAll(ad, 0776)
 	if err != nil {
 		return nil, fmt.Errorf("error creating image directory: %v", err)
 	}
-	if err := ptar.ExtractTar(tar.NewReader(bytes.NewReader(b)), ad); err != nil {
+
+	// Sanity check: provided image name matches image ID
+	hash := sha256.New()
+	tr, tw := io.Pipe()
+	w := io.MultiWriter(hash, tw)
+
+	errc := make(chan error)
+	go func() {
+		errc <- ptar.ExtractTar(tar.NewReader(tr), ad)
+	}()
+	if _, err := io.Copy(w, rs); err != nil {
+		return nil, fmt.Errorf("error reading image: %v", err)
+	}
+
+	if err := <-errc; err != nil {
 		return nil, fmt.Errorf("error extracting ACI: %v", err)
+	}
+	sum := hash.Sum(nil)
+	if id := fmt.Sprintf("%x", sum); id != h.Val {
+		if err := os.RemoveAll(ad); err != nil {
+			fmt.Fprintf(os.Stderr, "error cleaning up directory: %v\n", err)
+		}
+		return nil, fmt.Errorf("image hash does not match expected")
 	}
 
 	err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
@@ -299,7 +310,7 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 	if err != nil {
 		return nil, fmt.Errorf("error opening app manifest: %v", err)
 	}
-	b, err = ioutil.ReadAll(f)
+	b, err := ioutil.ReadAll(f)
 	if err != nil {
 		return nil, fmt.Errorf("error reading app manifest: %v", err)
 	}
