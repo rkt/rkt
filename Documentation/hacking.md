@@ -11,7 +11,7 @@
 * Go 1.3+
   * jteeuwen/go-bindata
 
-Once the requirements have been meet you can build rocket by running the following commands:
+Once the requirements have been met you can build rocket by running the following commands:
 
 ```
 git clone https://github.com/coreos/rocket.git
