@@ -259,7 +259,7 @@ func unpackBuiltinRootfs(dir string) error {
 }
 
 // setupImage attempts to load the image by the given hash from the store,
-// verifies that the image matches the given hash and then extracts the image
+// verifies that the image matches the given hash and extracts the image
 // into a directory in the given dir.
 // It returns the AppManifest that the image contains
 func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppManifest, error) {
@@ -276,28 +276,18 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 		return nil, fmt.Errorf("error creating image directory: %v", err)
 	}
 
-	// Sanity check: provided image name matches image ID
 	hash := sha256.New()
-	tr, tw := io.Pipe()
-	w := io.MultiWriter(hash, tw)
+	r := io.TeeReader(rs, hash)
 
-	errc := make(chan error, 1)
-	go func() {
-		errc <- ptar.ExtractTar(tar.NewReader(tr), ad)
-	}()
-	if _, err := io.Copy(w, rs); err != nil {
-		return nil, fmt.Errorf("error reading image: %v", err)
-	}
-
-	if err := <-errc; err != nil {
+	if err := ptar.ExtractTar(tar.NewReader(r), ad); err != nil {
 		return nil, fmt.Errorf("error extracting ACI: %v", err)
 	}
-	sum := hash.Sum(nil)
-	if id := fmt.Sprintf("%x", sum); id != h.Val {
+
+	if id := fmt.Sprintf("%x", hash.Sum(nil)); id != h.Val {
 		if err := os.RemoveAll(ad); err != nil {
 			fmt.Fprintf(os.Stderr, "error cleaning up directory: %v\n", err)
 		}
-		return nil, fmt.Errorf("image hash does not match expected")
+		return nil, fmt.Errorf("image hash does not match expected (%v != %v)", id, h.Val)
 	}
 
 	err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
