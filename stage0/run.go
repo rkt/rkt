@@ -281,7 +281,7 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 	tr, tw := io.Pipe()
 	w := io.MultiWriter(hash, tw)
 
-	errc := make(chan error)
+	errc := make(chan error, 1)
 	go func() {
 		errc <- ptar.ExtractTar(tar.NewReader(tr), ad)
 	}()
