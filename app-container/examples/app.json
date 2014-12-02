@@ -1,6 +1,7 @@
 {
     "acKind": "AppManifest",
-    "name": "example.com/reduce-worker-1.0.0",
+    "name": "example.com/reduce-worker",
+    "version": "1.0.0",
     "os": "linux",
     "arch": "amd64",
     "exec": [

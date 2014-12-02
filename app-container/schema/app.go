@@ -15,6 +15,7 @@ type AppManifest struct {
 	ACVersion     types.SemVer         `json:"acVersion"`
 	ACKind        types.ACKind         `json:"acKind"`
 	Name          types.ACName         `json:"name"`
+	Version       types.SemVer         `json:"version"`
 	OS            string               `json:"os"`
 	Arch          string               `json:"arch"`
 	Exec          []string             `json:"exec"`
@@ -67,6 +68,12 @@ func (am *AppManifest) assertValid() error {
 	}
 	if am.ACVersion.Empty() {
 		return errors.New(`acVersion must be set`)
+	}
+	if am.Name.Empty() {
+		return errors.New(`name must be set`)
+	}
+	if am.Version.Empty() {
+		return errors.New(`version must be set`)
 	}
 	if am.OS != "linux" {
 		return errors.New(`missing or bad OS (must be "linux")`)

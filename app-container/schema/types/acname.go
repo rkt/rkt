@@ -18,13 +18,17 @@ const (
 // [1] http://tools.ietf.org/html/rfc1123#page-13
 type ACName string
 
-func (l ACName) String() string {
-	return string(l)
+func (n ACName) String() string {
+	return string(n)
 }
 
 // Equals checks whether a given ACName is equal to this one.
-func (l ACName) Equals(o ACName) bool {
-	return strings.ToLower(string(l)) == strings.ToLower(string(o))
+func (n ACName) Equals(o ACName) bool {
+	return strings.ToLower(string(n)) == strings.ToLower(string(o))
+}
+
+func (n ACName) Empty() bool {
+	return n.String() == ""
 }
 
 // NewACName generates a new ACName from a string. If the given string is
@@ -43,20 +47,20 @@ func NewACName(s string) (*ACName, error) {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface
-func (l *ACName) UnmarshalJSON(data []byte) error {
+func (n *ACName) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
-	nl, err := NewACName(s)
+	nn, err := NewACName(s)
 	if err != nil {
 		return err
 	}
-	*l = *nl
+	*n = *nn
 	return nil
 }
 
 // MarshalJSON implements the json.Marshaler interface
-func (l *ACName) MarshalJSON() ([]byte, error) {
-	return json.Marshal(l.String())
+func (n *ACName) MarshalJSON() ([]byte, error) {
+	return json.Marshal(n.String())
 }

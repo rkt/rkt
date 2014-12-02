@@ -230,19 +230,19 @@ App Container Image Discovery prescribes a discovery process to retrieve an imag
 ### Simple Discovery
 
 First, try to fetch the app container image by prepending `https://` and appending `.aci` and directly retrieving the resulting URL.
-For example, given the app name `example.com/reduce-worker-1.0.0`, try to retrieve:
+For example, given the app name `example.com/reduce-worker`, try to retrieve:
 
-    https://example.com/reduce-worker-1.0.0.aci
+    https://example.com/reduce-worker.aci
 
 If this fails, move on to meta discovery.
 If this succeeds, try fetching the signature using the `.sig` extension:
 
-    https://example.com/reduce-worker-1.0.0.sig
+    https://example.com/reduce-worker.sig
 
 ### Meta Discovery
 
 If simple discovery fails, then we use HTTPS+HTML meta tags to resolve an app name to a downloadable URL.
-For example, if the ACE is looking for `example.com/reduce-worker-1.0.0` it will request:
+For example, if the ACE is looking for `example.com/reduce-worker` it will request:
 
     https://example.com/reduce-worker?ac-discovery=1
 
@@ -267,7 +267,7 @@ Some examples for different schemes and URLs:
 The algorithm first ensures that the prefix of the AC Name matches the prefix-match and then if there is a match it will request the equivalent of:
 
 ```
-curl $(echo "$urltmpl" | sed -e "s/{name}/$appname/" -e "s/{os}/$os/" -e "s/{arch}/$arch/")
+curl $(echo "$urltmpl" | sed -e "s/{name}/$appname/" -e "s/{os}/$os/" -e "s/{arch}/$arch/" -e "s/{version}/$version/")
 ```
 
 In our example above this would be:
@@ -349,8 +349,8 @@ Examples:
 
 * database
 * example.com/database
-* example.com/ourapp-1.0.0
-* sub-domain.example.com/org/product/release-1.0.0
+* example.com/ourapp
+* sub-domain.example.com/org/product/release
 
 The AC Name Type is used as the primary key for a number of fields in the schemas below.
 The schema validator will ensure that the keys conform to these constraints.
@@ -366,7 +366,8 @@ JSON Schema for the App Image Manifest
 {
     "acVersion": "0.1.0",
     "acKind": "AppManifest",
-    "name": "example.com/reduce-worker-1.0.0",
+    "name": "example.com/reduce-worker",
+    "version": "1.0.0",
     "os": "linux",
     "arch": "amd64",
     "exec": [
@@ -442,10 +443,11 @@ JSON Schema for the App Image Manifest
 
 * **acVersion** is required and represents the version of the schema specification that the manifest implements (string, must be in [semver](http://semver.org/) format)
 * **acKind** is required and must be set to "AppManifest"
-* **name** should be unique for every build of an app. It will be used as a human readable index to the container image. The name is restricted to the AC Name formatting.
-* **os** is required (string; currently, the only supported value is "linux"). Together with “Arch”, this can be considered to describe the syscall ABI this image requires.
-* **arch** is required (string; currently, the only supported value is "amd64"). Together with “OS”, this can be considered to describe the syscall ABI this image requires.
-* **exec** the executable to launch and any flags (array of strings) (ACE can append or override)
+* **name** is required, and will be used as a human readable index to the container image. (string, restricted to the AC Name formatting)
+* **version** is required (string, must be in [semver](http://semver.org) format). When combined with "name", this should be unique for every build of an app.
+* **os** is required (string; currently, the only supported value is "linux"). Together with “arch”, this can be considered to describe the syscall ABI this image requires.
+* **arch** is required (string; currently, the only supported value is "amd64"). Together with “os”, this can be considered to describe the syscall ABI this image requires.
+* **exec** the executable to launch and any flags (array of strings, must be non-empty; ACE can append or override)
 * **user/group** are required, and indicate either the GID/UID or the username/group name the app should run as inside of the container (freeform string). If the user or group field begins with a "/" the owner and group of the file found at that absolute path is used as the GID/UID of the process.
 * **eventHandlers** are optional, and should be a list of eventHandler objects. eventHandlers allow the app to have several hooks based on lifecycle events. For example, you may want to execute a script before the main process starts up to download a dataset or backup onto the filesystem. An eventHandler is a simple object with two fields - an **exec** (array of strings, ACE can append or override), and a **name**, which should be one of:
     * **pre-start** - will be executed and must exit before the long running main **exec** binary is launched
