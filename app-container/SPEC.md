@@ -457,7 +457,7 @@ JSON Schema for the App Image Manifest
 * **isolators** is a list of well-known and optional isolation steps that should be applied to the app. **name** is restricted to the [AC Name](#ac-name-type) formatting and **val** can be a freeform string. Any isolators specified in the App Manifest can be overridden at runtime via the Container Runtime Manifest. The executor can either ignore isolator keys it does not understand or error. In practice this means there might be certain isolators (for example, an AppArmor policy) that an executor doesn't understand so it will simply skip that entry.
 * **annotations** key/value store that can be used by systems outside of the ACE (ACE can override). The key is restricted to the [AC Name](#ac-name-type) formatting. If you are defining new annotations, please consider submitting them to the specification. If you intend for your field to remain special to your application please be a good citizen and prefix an appropriate namespace to your key names. Recognized annotations include:
     * **created** is the date on which this container was built (string, must be in [RFC3339](https://www.ietf.org/rfc/rfc3339.txt) format)
-    * **authors** contact details of the people or organization responsible for the containers (list of strings)
+    * **authors** contact details of the people or organization responsible for the containers (freeform string)
     * **homepage** URL to find more information on the container (string, must be a URL with scheme HTTP or HTTPS)
     * **documentation** URL to get documentation on this container (string, must be a URL with scheme HTTP or HTTPS)
 
