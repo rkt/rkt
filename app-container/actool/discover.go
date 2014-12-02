@@ -27,18 +27,17 @@ func runDiscover(args []string) (exit int) {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "discover: at least one name required")
 	}
-	q := globalFlags.Quiet
 
 	for _, name := range args {
 		app, err := discovery.NewAppFromString(name)
 		if err != nil {
-			stderr(q, "%s: %s", name, err)
+			stderr("%s: %s", name, err)
 			return 1
 		}
 		eps, err := discovery.DiscoverEndpoints(*app, transportFlags.Insecure)
 
 		if err != nil {
-			stderr(q, "error fetching %s: %s", name, err)
+			stderr("error fetching %s: %s", name, err)
 			return 1
 		}
 		for _, list := range [][]string{eps.Sig, eps.ACI, eps.Keys} {

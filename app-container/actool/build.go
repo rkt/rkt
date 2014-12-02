@@ -89,16 +89,15 @@ func buildWalker(root string, aw aci.ArchiveWriter, rootfs bool) filepath.WalkFu
 }
 
 func runBuild(args []string) (exit int) {
-	q := globalFlags.Quiet
 	if len(args) != 2 {
-		stderr(q, "build: Must provide directory and output file")
+		stderr("build: Must provide directory and output file")
 		return 1
 	}
 	switch {
 	case buildFilesetName != "" && buildAppManifest == "":
 	case buildFilesetName == "" && buildAppManifest != "":
 	default:
-		stderr(q, "build: must specify either --fileset-name or --app-manifest")
+		stderr("build: must specify either --fileset-name or --app-manifest")
 		return 1
 	}
 
@@ -106,7 +105,7 @@ func runBuild(args []string) (exit int) {
 	tgt := args[1]
 	ext := filepath.Ext(tgt)
 	if ext != schema.ACIExtension {
-		stderr(q, "build: Extension must be %s (given %s)", schema.ACIExtension, ext)
+		stderr("build: Extension must be %s (given %s)", schema.ACIExtension, ext)
 		return 1
 	}
 
@@ -117,9 +116,9 @@ func runBuild(args []string) (exit int) {
 	fh, err := os.OpenFile(tgt, mode, 0655)
 	if err != nil {
 		if os.IsExist(err) {
-			stderr(q, "build: Target file exists (try --overwrite)")
+			stderr("build: Target file exists (try --overwrite)")
 		} else {
-			stderr(q, "build: Unable to open target %s: %v", tgt, err)
+			stderr("build: Unable to open target %s: %v", tgt, err)
 		}
 		return 1
 	}
@@ -140,18 +139,18 @@ func runBuild(args []string) (exit int) {
 	if buildFilesetName != "" {
 		aw, err = aci.NewFilesetWriter(buildFilesetName, tr)
 		if err != nil {
-			stderr(q, "build: Unable to create FilesetWriter: %v", err)
+			stderr("build: Unable to create FilesetWriter: %v", err)
 			return 1
 		}
 	} else {
 		b, err := ioutil.ReadFile(buildAppManifest)
 		if err != nil {
-			stderr(q, "build: Unable to read App Manifest: %v", err)
+			stderr("build: Unable to read App Manifest: %v", err)
 			return 1
 		}
 		var am schema.AppManifest
 		if err := am.UnmarshalJSON(b); err != nil {
-			stderr(q, "build: Unable to load App Manifest: %v", err)
+			stderr("build: Unable to load App Manifest: %v", err)
 			return 1
 		}
 		aw = aci.NewAppWriter(am, tr)
@@ -159,13 +158,13 @@ func runBuild(args []string) (exit int) {
 
 	err = filepath.Walk(root, buildWalker(root, aw, buildRootfs))
 	if err != nil {
-		stderr(q, "build: Error walking rootfs: %v", err)
+		stderr("build: Error walking rootfs: %v", err)
 		return 1
 	}
 
 	err = aw.Close()
 	if err != nil {
-		stderr(q, "build: Unable to close Fileset image %s: %v", tgt, err)
+		stderr("build: Unable to close Fileset image %s: %v", tgt, err)
 		return 1
 	}
 
