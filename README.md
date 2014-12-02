@@ -44,7 +44,7 @@ $ find /var/lib/rkt/cas/blob/
 /var/lib/rkt/cas/blob/sha256/70/sha256-701c24b2d275f0e291b807a464ae2390bcd8d7c5b4f2d7e47e6fd917cd5e5588
 ```
 
-Per the App Container [spec](app-container/SPEC.md#image-archives) the sha256 is of the tarball, which is reproducable with other tools:
+Per the App Container [spec](app-container/SPEC.md#image-archives) the SHA-256 is of the tarball, which is reproducible with other tools:
 
 ```
 $ wget https://github.com/coreos/etcd/releases/download/v0.5.0-alpha.4/etcd-v0.5.0-alpha.4-linux-amd64.aci
@@ -56,16 +56,16 @@ $ sha256sum etcd-v0.5.0-alpha.4-linux-amd64.tar
 
 ### Launching an ACI
 
-To run an ACI, you can either use the sha256 hash, or the URL which you downloaded it from:
+To run an ACI, you can either use the SHA-256 hash, or the URL which you downloaded it from:
 
 ```
 $ rkt run https://github.com/coreos/etcd/releases/download/v0.5.0-alpha.4/etcd-v0.5.0-alpha.4-linux-amd64.aci
 Press ^] three times to kill container.
 ```
 
-rkt will do the appropriate etag checking on the URL to make sure it has the most up to date version of the image.
+rkt will do the appropriate ETag checking on the URL to make sure it has the most up to date version of the image.
 
-Or, you can explicitly choose an image to run based on the sha256:
+Or, you can explicitly choose an image to run based on the SHA-256:
 
 ```
 $ rkt run sha256-701c24b2d275f0e291b807a464ae2390bcd8d7c5b4f2d7e47e6fd917cd5e5588
