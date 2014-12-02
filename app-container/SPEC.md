@@ -307,7 +307,7 @@ Clients querying any of these endpoints must specify the `Metadata-Flavor: AppCo
 
 Information about the container that this app is executing in.
 
-Retrievable at `http://169.254.169.255/acMetadata/v1/container`
+Retrievable at `http://$AC_METADATA_URL/acMetadata/v1/container`
 
 | Entry       | Description |
 |-------------|-------------|
@@ -320,7 +320,7 @@ Retrievable at `http://169.254.169.255/acMetadata/v1/container`
 Every running process will be able to introspect its App Name via the `AC_APP_NAME` environment variable. 
 This is necessary to query for the correct endpoint metadata.
 
-Retrievable at `http://169.254.169.255/acMetadata/v1/apps/${ac_app_name}/`
+Retrievable at `http://$AC_METADATA_URL/acMetadata/v1/apps/${ac_app_name}/`
 
 | Entry         | Description |
 |---------------|-------------|
