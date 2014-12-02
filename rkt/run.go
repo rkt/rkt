@@ -81,7 +81,7 @@ func runRun(args []string) (exit int) {
 		var err error
 		gdir, err = ioutil.TempDir("", "rkt")
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error creating temporary directory: %v", err)
+			fmt.Fprintf(os.Stderr, "error creating temporary directory: %v\n", err)
 			return 1
 		}
 	}
@@ -89,7 +89,7 @@ func runRun(args []string) (exit int) {
 	ds := cas.NewStore(globalFlags.Dir)
 	imgs, err := findImages(args, ds)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1
 	}
 

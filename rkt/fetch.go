@@ -75,7 +75,7 @@ func runFetch(args []string) (exit int) {
 	}
 	root := filepath.Join(globalFlags.Dir, imgDir)
 	if err := os.MkdirAll(root, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "fetch: error creating image directory: %v", err)
+		fmt.Fprintf(os.Stderr, "fetch: error creating image directory: %v\n", err)
 		return 1
 	}
 
@@ -84,7 +84,7 @@ func runFetch(args []string) (exit int) {
 	for _, img := range args {
 		hash, err := fetchImage(img, ds)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v", err)
+			fmt.Fprintf(os.Stderr, "%v\n", err)
 			return 1
 		}
 		fmt.Println(hash)
