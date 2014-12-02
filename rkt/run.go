@@ -37,34 +37,44 @@ func init() {
 
 // findImages will recognize a ACI hash and use that, import a local file, use
 // discovery or download an ACI directly.
-func findImages(args []string, ds *cas.Store) (out []string, err error) {
-	out = make([]string, len(args))
-	copy(out, args)
+func findImages(args []string, ds *cas.Store) (out []types.Hash, err error) {
+	out = make([]types.Hash, len(args))
 	for i, img := range args {
 		// check if it is a valid hash, if so let it pass through
-		_, err := types.NewHash(img)
+		h, err := types.NewHash(img)
 		if err == nil {
+			out[i] = *h
 			continue
 		}
 
 		// import the local file if it exists
 		file, err := os.Open(img)
 		if err == nil {
-			hash := types.NewHashSHA256([]byte(img)).String()
-			key, err := ds.WriteACI(hash, file)
+			tmp := types.NewHashSHA256([]byte(img)).String()
+			key, err := ds.WriteACI(tmp, file)
 			file.Close()
 			if err != nil {
 				return nil, fmt.Errorf("%s: %v", img, err)
 			}
-			out[i] = key
+			h, err := types.NewHash(key)
+			if err != nil {
+				// should never happen
+				panic(err)
+			}
+			out[i] = *h
 			continue
 		}
 
-		hash, err := fetchImage(img, ds)
+		key, err := fetchImage(img, ds)
 		if err != nil {
 			return nil, err
 		}
-		out[i] = hash
+		h, err = types.NewHash(key)
+		if err != nil {
+			// should never happen
+			panic(err)
+		}
+		out[i] = *h
 	}
 
 	return out, nil
