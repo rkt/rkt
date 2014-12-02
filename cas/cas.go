@@ -9,6 +9,7 @@ import (
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/peterbourgon/diskv"
 	"github.com/coreos/rocket/app-container/aci"
+	pkgio "github.com/coreos/rocket/pkg/io"
 )
 
 // TODO(philips): use a database for the secondary indexes like remoteType and
@@ -52,34 +53,10 @@ func (ds Store) WriteStream(key string, r io.Reader) error {
 	return ds.stores[blobType].WriteStream(key, r, true)
 }
 
-// limitedWriter is similar to io.LimitedReader; it writes to W but limits the
-// amount of data written to just N bytes. Each subsequent call to Write()
-// will return a nil error and a count of 0.
-type limitedWriter struct {
-	W io.ReadWriter
-	N int64
-}
-
-func (h *limitedWriter) Write(data []byte) (n int, err error) {
-	if h.N <= 0 {
-		return 0, nil
-	}
-	if int64(len(data)) > h.N {
-		data = data[0:h.N]
-	}
-	n, err = h.W.Write(data)
-	h.N -= int64(n)
-	return
-}
-
-func (h *limitedWriter) Read(p []byte) (n int, err error) {
-	return h.W.Read(p)
-}
-
 func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
 	// We initially write the ACI into the store using a temporary key,
 	// teeing a header so we can detect the filetype for decompression
-	hdr := &limitedWriter{
+	hdr := &pkgio.LimitedWriter{
 		W: &bytes.Buffer{},
 		N: 512,
 	}
