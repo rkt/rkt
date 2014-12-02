@@ -283,6 +283,11 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 		return nil, fmt.Errorf("error extracting ACI: %v", err)
 	}
 
+	// Tar does not necessarily read the complete file, so ensure we read the entirety into the hash
+	if _, err := io.Copy(ioutil.Discard, r); err != nil {
+		return nil, fmt.Errorf("error reading ACI: %v", err)
+	}
+
 	if id := fmt.Sprintf("%x", hash.Sum(nil)); id != h.Val {
 		if err := os.RemoveAll(ad); err != nil {
 			fmt.Fprintf(os.Stderr, "error cleaning up directory: %v\n", err)
