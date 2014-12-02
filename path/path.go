@@ -26,7 +26,7 @@ func ContainerManifestPath(root string) string {
 	return filepath.Join(root, "container")
 }
 
-// AppImagePath returns the path where an app image (i.e. RAF) is rooted (i.e.
+// AppImagePath returns the path where an app image (i.e. unpacked ACI) is rooted (i.e.
 // where its contents are extracted during stage0), based on the app image ID.
 func AppImagePath(root string, imageID types.Hash) string {
 	return filepath.Join(root, Stage1Dir, stage2Dir, imageID.String())
