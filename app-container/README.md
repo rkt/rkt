@@ -30,7 +30,6 @@ $ tar tvf ca-certs.aci
 drwxrwxr-x 1000/1000         0 2014-01-02 03:04 rootfs/
 drwxrwxr-x 1000/1000         0 2014-01-02 03:04 rootfs/certs/
 -rw-rw-r-- 1000/1000      3140 2014-01-02 03:04 rootfs/certs/ca-bundle.crt
--rw-rw-r-- 1000/1000      3140 2014-01-02 03:04 rootfs/certs/ca-bundle.crt
 -rw-rw-r-- 1000/1000      1581 2014-01-02 03:04 rootfs/certs/example.com.crt
 -rw-r-xr-x root/root       174 2014-01-02 03:04 fileset
 $ tar xf ca-certs.aci fileset -O | python -m json.tool
