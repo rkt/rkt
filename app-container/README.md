@@ -140,7 +140,7 @@ hello.aci: valid app container image
 
 ### Validating App Container Executors (ACEs)
 
-The [`ace`](ace/)] package contains a simple go application, the _ACE validator_, which can be used to validate app container executors by checking certain expectations about the environment in which it is run: for example, that the appropriate environment variables and mount points are set up as defined in the specification.
+The [`ace`](ace/) package contains a simple go application, the _ACE validator_, which can be used to validate app container executors by checking certain expectations about the environment in which it is run: for example, that the appropriate environment variables and mount points are set up as defined in the specification.
 
 To use the ACE validator, first compile it into an ACI using the supplied `build_aci` script:
 ```
