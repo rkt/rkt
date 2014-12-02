@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -122,14 +123,18 @@ func runBuild(args []string) (exit int) {
 		}
 		return 1
 	}
+
+	gw := gzip.NewWriter(fh)
+	tr := tar.NewWriter(gw)
+
 	defer func() {
+		tr.Close()
+		gw.Close()
+		fh.Close()
 		if exit != 0 && !buildOverwrite {
-			fh.Close()
 			os.Remove(tgt)
 		}
 	}()
-
-	tr := tar.NewWriter(fh)
 
 	var aw aci.ArchiveWriter
 	if buildFilesetName != "" {
