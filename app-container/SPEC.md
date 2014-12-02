@@ -195,7 +195,7 @@ Note that logging mechanisms other than stdout and stderr are not required by th
 * **USER, LOGNAME** username of the user executing this app
 * **HOME** home directory of the user
 * **SHELL** login shell of the user
-* **AC_APP_NAME** the entrypoint that this process was defined from
+* **AC_APP_NAME** name of the application (as defined in the app manifest)
 * **AC_METADATA_URL** URL that the metadata service for this container can be found
 
 ### Isolators
