@@ -49,7 +49,7 @@ Per the App Container [spec](app-container/SPEC.md#image-archives) the SHA-256 i
 ```
 $ wget https://github.com/coreos/etcd/releases/download/v0.5.0-alpha.4/etcd-v0.5.0-alpha.4-linux-amd64.aci
 ...
-$ gzip -dc etcd-v0.5.0-alpha.4-linux-amd64.aci
+$ gzip -dc etcd-v0.5.0-alpha.4-linux-amd64.aci > etcd-v0.5.0-alpha.4-linux-amd64.tar
 $ sha256sum etcd-v0.5.0-alpha.4-linux-amd64.tar
 701c24b2d275f0e291b807a464ae2390bcd8d7c5b4f2d7e47e6fd917cd5e5588  etcd-v0.5.0-alpha.4-linux-amd64.tar
 ```
