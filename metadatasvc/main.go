@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -14,9 +14,9 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/gorilla/mux"
 	"github.com/coreos/rocket/app-container/schema"
 	"github.com/coreos/rocket/app-container/schema/types"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/gorilla/mux"
 )
 
 type metadata struct {
@@ -27,7 +27,7 @@ type metadata struct {
 var (
 	metadataByIP  = make(map[string]*metadata)
 	metadataByUID = make(map[types.UUID]*metadata)
-	hmacKey       [sha1.Size]byte
+	hmacKey       [sha256.Size]byte
 )
 
 const (
@@ -283,7 +283,7 @@ func initCrypto() error {
 }
 
 func digest(r io.Reader) ([]byte, error) {
-	digest := sha1.New()
+	digest := sha256.New()
 	if _, err := io.Copy(digest, r); err != nil {
 		return nil, err
 	}
@@ -308,7 +308,7 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// HMAC(UID:digest)
-	h := hmac.New(sha1.New, hmacKey[:])
+	h := hmac.New(sha256.New, hmacKey[:])
 	h.Write(m.manifest.UUID[:])
 	h.Write(d)
 
@@ -336,10 +336,10 @@ func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	digest := sig[:sha1.Size]
-	sum := sig[sha1.Size:]
+	digest := sig[:sha256.Size]
+	sum := sig[sha256.Size:]
 
-	h := hmac.New(sha1.New, hmacKey[:])
+	h := hmac.New(sha256.New, hmacKey[:])
 	h.Write(uid[:])
 	h.Write(digest)
 
