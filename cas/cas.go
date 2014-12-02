@@ -7,8 +7,9 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/coreos/rocket/app-container/aci"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/peterbourgon/diskv"
+	"github.com/coreos/rocket/app-container/aci"
+	pkgio "github.com/coreos/rocket/pkg/io"
 )
 
 // TODO(philips): use a database for the secondary indexes like remoteType and
@@ -53,36 +54,32 @@ func (ds Store) WriteStream(key string, r io.Reader) error {
 }
 
 func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
-	var b bytes.Buffer
+	// We initially write the ACI into the store using a temporary key,
+	// teeing a header so we can detect the filetype for decompression
+	hdr := &bytes.Buffer{}
+	hw := &pkgio.LimitedWriter{
+		W: hdr,
+		N: 512,
+	}
+	tr := io.TeeReader(orig, hw)
 
-	// TODO(philips): use go routines to parallelize this pipeline and make
-	// the file type detection happen without a second stream
-	_, err := io.Copy(&b, orig)
+	err := ds.stores[tmpType].WriteStream(tmpKey, tr, true)
 	if err != nil {
 		return "", err
 	}
-	err = ds.stores[tmpType].WriteStream(tmpKey, &b, true)
+
+	// Now detect the filetype so we can choose the appropriate decompressor
+	typ, err := aci.DetectFileType(hdr)
 	if err != nil {
 		return "", err
 	}
-
-	// Detect the filetype
+	// Read the image back out of the store to generate the hash of the decompressed tar
 	rs, err := ds.stores[tmpType].ReadStream(tmpKey, false)
 	if err != nil {
 		return "", err
 	}
 	defer rs.Close()
-	typ, err := aci.DetectFileType(rs)
-	if err != nil {
-		return "", err
-	}
-	rs, err = ds.stores[tmpType].ReadStream(tmpKey, false)
-	if err != nil {
-		return "", err
-	}
-	defer rs.Close()
 
-	// Generate the hash of the decompressed tar
 	dr, err := decompress(rs, typ)
 	if err != nil {
 		return "", err
@@ -93,7 +90,7 @@ func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
 		return "", err
 	}
 
-	// Store the decompressed tar
+	// Store the decompressed tar using the hash as the real key
 	rs, err = ds.stores[tmpType].ReadStream(tmpKey, false)
 	if err != nil {
 		return "", err
@@ -114,8 +111,6 @@ func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
 
 	return key, nil
 }
-
-
 
 type Index interface {
 	Hash() string
