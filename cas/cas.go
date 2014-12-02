@@ -7,8 +7,8 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/coreos/rocket/app-container/aci"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/peterbourgon/diskv"
+	"github.com/coreos/rocket/app-container/aci"
 )
 
 // TODO(philips): use a database for the secondary indexes like remoteType and
@@ -52,37 +52,56 @@ func (ds Store) WriteStream(key string, r io.Reader) error {
 	return ds.stores[blobType].WriteStream(key, r, true)
 }
 
+// limitedWriter is similar to io.LimitedReader; it writes to W but limits the
+// amount of data written to just N bytes. Each subsequent call to Write()
+// will return a nil error and a count of 0.
+type limitedWriter struct {
+	W io.ReadWriter
+	N int64
+}
+
+func (h *limitedWriter) Write(data []byte) (n int, err error) {
+	if h.N <= 0 {
+		return 0, nil
+	}
+	if int64(len(data)) > h.N {
+		data = data[0:h.N]
+	}
+	n, err = h.W.Write(data)
+	h.N -= int64(n)
+	return
+}
+
+func (h *limitedWriter) Read(p []byte) (n int, err error) {
+	return h.W.Read(p)
+}
+
 func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
-	var b bytes.Buffer
+	// We initially write the ACI into the store using a temporary key,
+	// teeing a header so we can detect the filetype for decompression
+	hdr := &limitedWriter{
+		W: &bytes.Buffer{},
+		N: 512,
+	}
+	tr := io.TeeReader(orig, hdr)
 
-	// TODO(philips): use go routines to parallelize this pipeline and make
-	// the file type detection happen without a second stream
-	_, err := io.Copy(&b, orig)
+	err := ds.stores[tmpType].WriteStream(tmpKey, tr, true)
 	if err != nil {
 		return "", err
 	}
-	err = ds.stores[tmpType].WriteStream(tmpKey, &b, true)
+
+	// Now detect the filetype so we can choose the appropriate decompressor
+	typ, err := aci.DetectFileType(hdr.W)
 	if err != nil {
 		return "", err
 	}
-
-	// Detect the filetype
+	// Read the image back out of the store to generate the hash of the decompressed tar
 	rs, err := ds.stores[tmpType].ReadStream(tmpKey, false)
 	if err != nil {
 		return "", err
 	}
 	defer rs.Close()
-	typ, err := aci.DetectFileType(rs)
-	if err != nil {
-		return "", err
-	}
-	rs, err = ds.stores[tmpType].ReadStream(tmpKey, false)
-	if err != nil {
-		return "", err
-	}
-	defer rs.Close()
 
-	// Generate the hash of the decompressed tar
 	dr, err := decompress(rs, typ)
 	if err != nil {
 		return "", err
@@ -93,7 +112,7 @@ func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
 		return "", err
 	}
 
-	// Store the decompressed tar
+	// Store the decompressed tar using the hash as the real key
 	rs, err = ds.stores[tmpType].ReadStream(tmpKey, false)
 	if err != nil {
 		return "", err
@@ -114,8 +133,6 @@ func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
 
 	return key, nil
 }
-
-
 
 type Index interface {
 	Hash() string
