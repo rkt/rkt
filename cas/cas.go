@@ -56,9 +56,9 @@ func (ds Store) WriteStream(key string, r io.Reader) error {
 func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
 	// We initially write the ACI into the store using a temporary key,
 	// teeing a header so we can detect the filetype for decompression
-	hdr := &pkgio.LimitedWriter{
-		W: &bytes.Buffer{},
-		N: 512,
+	hdr := &pkgio.LimitedReadWriter{
+		RW: &bytes.Buffer{},
+		N:  512,
 	}
 	tr := io.TeeReader(orig, hdr)
 
@@ -68,7 +68,7 @@ func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
 	}
 
 	// Now detect the filetype so we can choose the appropriate decompressor
-	typ, err := aci.DetectFileType(hdr.W)
+	typ, err := aci.DetectFileType(hdr)
 	if err != nil {
 		return "", err
 	}
