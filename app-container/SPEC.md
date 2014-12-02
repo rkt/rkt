@@ -441,7 +441,7 @@ JSON Schema for the App Image Manifest
 ```
 
 * **acVersion** is required and represents the version of the schema specification that the manifest implements (string, must be in [semver](http://semver.org/) format)
-* **acKind** is required and must be set to "ImageManifest"
+* **acKind** is required and must be set to "AppManifest"
 * **name** should be unique for every build of an app. It will be used as a human readable index to the container image. The name is restricted to the AC Name formatting.
 * **os** is required (string; currently, the only supported value is "linux"). Together with “Arch”, this can be considered to describe the syscall ABI this image requires.
 * **arch** is required (string; currently, the only supported value is "amd64"). Together with “OS”, this can be considered to describe the syscall ABI this image requires.
