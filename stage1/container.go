@@ -107,8 +107,7 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 	}
 	defer file.Close()
 
-	_, err = io.Copy(file, unit.Serialize(opts))
-	if err != nil {
+	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
 		return fmt.Errorf("failed to write service file: %v", err)
 	}
 
