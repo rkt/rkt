@@ -131,7 +131,7 @@ where:
 - `container` is the container manifest file
 - `stage1` is a copy of the stage1 filesystem that is safe for read/write
 - `stage1/init` is the actual stage1 binary to be executed
-- `stage1/opt/stage2` are copies of the RAFs
+- `stage1/opt/stage2` are copies of the unpacked ACIs
 
 At this point the stage0 execs `/stage1/init` with the current working
 directory set to the root of the new filesystem.
