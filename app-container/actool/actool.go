@@ -19,7 +19,7 @@ var (
 	commands      []*Command
 	globalFlags   = struct {
 		Dir   string
-		Quiet bool
+		Debug bool
 		Help  bool
 	}{}
 	transportFlags = struct {
@@ -29,7 +29,7 @@ var (
 
 func init() {
 	globalFlagset.BoolVar(&globalFlags.Help, "help", false, "Print usage information and exit")
-	globalFlagset.BoolVar(&globalFlags.Quiet, "quiet", false, "Silence normal output")
+	globalFlagset.BoolVar(&globalFlags.Debug, "debug", false, "Print verbose (debug) output")
 }
 
 type Command struct {
@@ -96,9 +96,7 @@ func getFlags(flagset *flag.FlagSet) (flags []*flag.Flag) {
 	return
 }
 
-func stderr(quiet bool, format string, a ...interface{}) {
-	if !quiet {
-		out := fmt.Sprintf(format, a...)
-		fmt.Fprintln(os.Stderr, strings.TrimSuffix(out, "\n"))
-	}
+func stderr(format string, a ...interface{}) {
+	out := fmt.Sprintf(format, a...)
+	fmt.Fprintln(os.Stderr, strings.TrimSuffix(out, "\n"))
 }
