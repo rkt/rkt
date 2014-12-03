@@ -394,7 +394,7 @@ EOF
 chmod 755 "${ROOTDIR}/reaper.sh"
 
 # LD_PRELOAD shim to trick the sd_booted() "/run/systemd/system" check in systemd-nspawn
-gcc -shared -fPIC -x c -pipe -ldl -o ${ROOTDIR}/fakesdboot.so - <<'EOF'
+gcc -shared -fPIC -x c -pipe -Wl,--no-as-needed -ldl -o ${ROOTDIR}/fakesdboot.so - <<'EOF'
 #define _GNU_SOURCE
 #include <sys/types.h>
 #include <sys/stat.h>
