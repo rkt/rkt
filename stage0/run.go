@@ -224,6 +224,8 @@ func unpackRootfs(rfs string, dir string) error {
 		r = bzip2.NewReader(fh)
 	case aci.TypeXz:
 		r = aci.XzReader(fh)
+	case aci.TypeTar:
+		r = fh
 	case aci.TypeUnknown:
 		return fmt.Errorf("error: unknown image filetype")
 	default:
