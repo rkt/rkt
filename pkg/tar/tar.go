@@ -43,11 +43,11 @@ func ExtractTar(tr *tar.Reader, dir string) error {
 					return err
 				}
 			case typ == tar.TypeLink:
-				dest := filepath.Join(filepath.Dir(p), hdr.Linkname)
+				dest := filepath.Join(dir, hdr.Linkname)
 				if !strings.HasPrefix(dest, dir) {
 					return insecureLinkError(fmt.Errorf("insecure link %q -> %q", p, hdr.Linkname))
 				}
-				if err := os.Link(hdr.Linkname, p); err != nil {
+				if err := os.Link(dest, p); err != nil {
 					return err
 				}
 			case typ == tar.TypeSymlink:
