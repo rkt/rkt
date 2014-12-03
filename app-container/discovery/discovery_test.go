@@ -30,7 +30,15 @@ func fakeHTTPGet(filename string) func(uri string) (*http.Response, error) {
 func TestDiscoverEndpoints(t *testing.T) {
 	httpGet = fakeHTTPGet("myapp.html")
 
-	de, err := DiscoverEndpoints("example.com/myapp", "1.0.0", "linux", "amd64", true)
+	a := App{
+		Name: "example.com/myapp",
+		Labels: map[string]string{
+			"version": "1.0.0",
+			"os":      "linux",
+			"arch":    "amd64",
+		},
+	}
+	de, err := DiscoverEndpoints(a, true)
 	if err != nil {
 		t.Fatal(err)
 	}
