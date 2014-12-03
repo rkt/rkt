@@ -162,11 +162,11 @@ This is codified in a [Container Runtime Manifest](#container-runtime-manifest-s
 
 This example container will use a set of three apps:
 
-| Name | Image hash |
+| Name | Version | Image hash |
 |-----------------------------------------------|-------------------------------------------------|
-| example.com/reduce-worker-1.0.0 | sha256-277205b3ae3eb3a8e042a62ae46934b470e431ac |
-| example.com/worker-backup-1.0.0 | sha256-3e86b59982e49066c5d813af1c2e2579cbf573de |
-| example.com/reduce-worker-register-1.0.0 | sha256-86298e1fdb95ec9a45b5935504e26ec29b8feffa |
+| example.com/reduce-worker | 1.0.0 | sha256-277205b3ae3eb3a8e042a62ae46934b470e431ac |
+| example.com/worker-backup | 1.0.0 | sha256-3e86b59982e49066c5d813af1c2e2579cbf573de |
+| example.com/reduce-worker-register | 1.0.0 | sha256-86298e1fdb95ec9a45b5935504e26ec29b8feffa |
 
 #### Volume Setup
 
@@ -223,21 +223,24 @@ Additional isolators will be added to this specification over time.
 
 ## App Container Image Discovery
 
-An app name has a URL-like structure, for example `example.com/reduce-worker-1.0.0`.
+An app name has a URL-like structure, for example `example.com/reduce-worker`.
 However, there is no scheme on this app name so we can't directly resolve it to an app container image.
 App Container Image Discovery prescribes a discovery process to retrieve an image based on the app name
 
 ### Simple Discovery
 
-First, try to fetch the app container image by prepending `https://` and appending `.aci` and directly retrieving the resulting URL.
-For example, given the app name `example.com/reduce-worker`, try to retrieve:
+First, try to fetch the app container image by rendering the following template and directly retrieving the resulting URL:
 
-    https://example.com/reduce-worker.aci
+    https://{name}-{version}-{os}-{arch}.aci
+
+For example, given the app name `example.com/reduce-worker`, with version `1.0.0`, arch `amd64`, and os `linux`, try to retrieve:
+
+    https://example.com/reduce-worker-1.0.0-linux-amd64.aci
 
 If this fails, move on to meta discovery.
-If this succeeds, try fetching the signature using the `.sig` extension:
+If this succeeds, try fetching the signature using the same template but with a `.sig` extension:
 
-    https://example.com/reduce-worker.sig
+    https://example.com/reduce-worker-1.0.0-linux-amd64.sig
 
 ### Meta Discovery
 
@@ -253,8 +256,8 @@ Then inspect the HTML returned for meta tags that have the following format:
 <meta name="ac-discovery-pubkeys" content="prefix-match url">
 ```
 
-* ac-discovery should give a URL that can have `.aci` or `.sig` extensions appended to retrieve the app image or signature 
-* ac-discovery-pubkeys should give a URL that provides a set of public keys that can be used to verify the signature of the app image
+* `ac-discovery` should contain a URL template that can be rendered to retrieve the app image or signature 
+* `ac-discovery-pubkeys` should contain a URL that provides a set of public keys that can be used to verify the signature of the app image
 
 Some examples for different schemes and URLs:
 
@@ -267,8 +270,10 @@ Some examples for different schemes and URLs:
 The algorithm first ensures that the prefix of the AC Name matches the prefix-match and then if there is a match it will request the equivalent of:
 
 ```
-curl $(echo "$urltmpl" | sed -e "s/{name}/$appname/" -e "s/{os}/$os/" -e "s/{arch}/$arch/" -e "s/{version}/$version/")
+curl $(echo "$urltmpl" | sed -e "s/{name}/$appname/" -e "s/{version}/$version/ -e "s/{os}/$os/" -e "s/{arch}/$arch/" -e "s/{ext}/$ext/")
 ```
+
+where _appname_, _version_, _os_, and _arch_ are set to their respective values for the application, and _ext_ is either `aci` or `sig` for retrieving an app image or signature respectively.
 
 In our example above this would be:
 
@@ -352,6 +357,7 @@ Examples:
 * example.com/ourapp
 * sub-domain.example.com/org/product/release
 
+An AC Name Type cannot be an empty string.
 The AC Name Type is used as the primary key for a number of fields in the schemas below.
 The schema validator will ensure that the keys conform to these constraints.
 
@@ -444,7 +450,7 @@ JSON Schema for the App Image Manifest
 * **acVersion** is required and represents the version of the schema specification that the manifest implements (string, must be in [semver](http://semver.org/) format)
 * **acKind** is required and must be set to "AppManifest"
 * **name** is required, and will be used as a human readable index to the container image. (string, restricted to the AC Name formatting)
-* **version** is required (string, must be in [semver](http://semver.org) format). When combined with "name", this should be unique for every build of an app.
+* **version** is required (string, restricted to the AC Name formatting). When combined with "name", this should be unique for every build of an app.
 * **os** is required (string; currently, the only supported value is "linux"). Together with “arch”, this can be considered to describe the syscall ABI this image requires.
 * **arch** is required (string; currently, the only supported value is "amd64"). Together with “os”, this can be considered to describe the syscall ABI this image requires.
 * **exec** the executable to launch and any flags (array of strings, must be non-empty; ACE can append or override)
