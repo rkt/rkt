@@ -1,7 +1,8 @@
 {
     "acVersion": "1.0.0",
     "acKind": "AppManifest",
-    "name": "coreos.com/ace-validator-sidekick-1.0.0",
+    "name": "coreos.com/ace-validator-sidekick",
+    "version": "1.0.0",
     "os": "linux",
     "arch": "amd64",
     "exec": [
