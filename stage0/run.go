@@ -40,12 +40,12 @@ const (
 )
 
 type Config struct {
-	Store         *cas.Store
-	ContainersDir string // root directory for rocket containers
-	Stage1Init    string // binary to be execed as stage1
-	Stage1Rootfs  string // compressed bundle containing a rootfs for stage1
+	Store         *cas.Store // store containing all of the configured application images
+	ContainersDir string     // root directory for rocket containers
+	Stage1Init    string     // binary to be execed as stage1
+	Stage1Rootfs  string     // compressed bundle containing a rootfs for stage1
 	Debug         bool
-	Images        []string          // application images
+	Images        []types.Hash      // application images
 	Volumes       map[string]string // map of volumes that rocket can provide to applications
 }
 
@@ -125,11 +125,7 @@ func Setup(cfg Config) (string, error) {
 	cm.ACVersion = *v
 
 	for _, img := range cfg.Images {
-		h, err := types.NewHash(img)
-		if err != nil {
-			return "", fmt.Errorf("error: bad image hash %q: %v", img, err)
-		}
-		am, err := setupImage(cfg, img, *h, dir)
+		am, err := setupImage(cfg, img, dir)
 		if err != nil {
 			return "", fmt.Errorf("error setting up image %s: %v", img, err)
 		}
@@ -138,7 +134,7 @@ func Setup(cfg Config) (string, error) {
 		}
 		a := schema.App{
 			Name:        am.Name,
-			ImageID:     *h,
+			ImageID:     img,
 			Isolators:   am.Isolators,
 			Annotations: am.Annotations,
 		}
@@ -262,15 +258,15 @@ func unpackBuiltinRootfs(dir string) error {
 // verifies that the image matches the given hash and extracts the image
 // into a directory in the given dir.
 // It returns the AppManifest that the image contains
-func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppManifest, error) {
-	log.Println("Loading image", img)
+func setupImage(cfg Config, img types.Hash, dir string) (*schema.AppManifest, error) {
+	log.Println("Loading image", img.String())
 
-	rs, err := cfg.Store.ReadStream(img)
+	rs, err := cfg.Store.ReadStream(img.String())
 	if err != nil {
 		return nil, err
 	}
 
-	ad := rktpath.AppImagePath(dir, h)
+	ad := rktpath.AppImagePath(dir, img)
 	err = os.MkdirAll(ad, 0776)
 	if err != nil {
 		return nil, fmt.Errorf("error creating image directory: %v", err)
@@ -288,11 +284,11 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 		return nil, fmt.Errorf("error reading ACI: %v", err)
 	}
 
-	if id := fmt.Sprintf("%x", hash.Sum(nil)); id != h.Val {
+	if id := fmt.Sprintf("%x", hash.Sum(nil)); id != img.Val {
 		if err := os.RemoveAll(ad); err != nil {
 			fmt.Fprintf(os.Stderr, "error cleaning up directory: %v\n", err)
 		}
-		return nil, fmt.Errorf("image hash does not match expected (%v != %v)", id, h.Val)
+		return nil, fmt.Errorf("image hash does not match expected (%v != %v)", id, img.Val)
 	}
 
 	err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
@@ -300,7 +296,7 @@ func setupImage(cfg Config, img string, h types.Hash, dir string) (*schema.AppMa
 		return nil, fmt.Errorf("error creating tmp directory: %v", err)
 	}
 
-	mpath := rktpath.AppManifestPath(dir, h)
+	mpath := rktpath.AppManifestPath(dir, img)
 	f, err := os.Open(mpath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening app manifest: %v", err)
