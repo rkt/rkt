@@ -5,14 +5,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/coreos/rocket/app-container/schema/types"
 )
 
-func TestObjectStore(t *testing.T) {
+func TestBlobStore(t *testing.T) {
 	ds := NewStore(".")
 	for _, valueStr := range []string{
 		"I am a manually placed object",
 	} {
-		ds.stores[objectType].Write(sha256sum(valueStr), []byte(valueStr))
+		ds.stores[blobType].Write(types.NewHashSHA256([]byte(valueStr)).String(), []byte(valueStr))
 	}
 
 	ds.Dump(false)
