@@ -75,13 +75,12 @@ func Setup(cfg Config) (string, error) {
 
 	log.Printf("Unpacking stage1 rootfs")
 	if cfg.Stage1Rootfs != "" {
-		if err = unpackRootfs(cfg.Stage1Rootfs, rktpath.Stage1RootfsPath(dir)); err != nil {
-			return "", fmt.Errorf("error unpacking rootfs: %v", err)
-		}
+		err = unpackRootfs(cfg.Stage1Rootfs, rktpath.Stage1RootfsPath(dir))
 	} else {
-		if err = unpackBuiltinRootfs(rktpath.Stage1RootfsPath(dir)); err != nil {
-			return "", fmt.Errorf("error unpacking rootfs: %v", err)
-		}
+		err = unpackBuiltinRootfs(rktpath.Stage1RootfsPath(dir))
+	}
+	if err != nil {
+		return "", fmt.Errorf("error unpacking rootfs: %v", err)
 	}
 
 	log.Printf("Writing stage1 init")
@@ -231,12 +230,7 @@ func unpackRootfs(rfs string, dir string) error {
 		// should never happen
 		panic("no type returned from DetectFileType?")
 	}
-
-	if err := untarRootfs(r, dir); err != nil {
-		return fmt.Errorf("error untarring rootfs")
-	}
-
-	return nil
+	return untarRootfs(r, dir)
 }
 
 // unpackBuiltinRootfs unpacks the included stage1 rootfs into dir
@@ -246,12 +240,7 @@ func unpackBuiltinRootfs(dir string) error {
 		return fmt.Errorf("error accessing rootfs asset: %v", err)
 	}
 	buf := bytes.NewBuffer(b)
-
-	if err = untarRootfs(buf, dir); err != nil {
-		return fmt.Errorf("error untarring rootfs")
-	}
-
-	return nil
+	return untarRootfs(buf, dir)
 }
 
 // setupImage attempts to load the image by the given hash from the store,
