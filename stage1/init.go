@@ -1,6 +1,6 @@
 package main
 
-// this implements /init of stage1/host_nspawn-systemd
+// this implements /init of stage1/nspawn+systemd
 
 import (
 	"fmt"
@@ -14,6 +14,8 @@ import (
 const (
 	// Path to systemd-nspawn binary within the stage1 rootfs
 	nspawnBin = "/usr/bin/systemd-nspawn"
+	// Path to the interpreter within the stage1 rootfs
+	interpBin = "/usr/lib/ld-linux-x86-64.so.2"
 )
 
 func main() {
@@ -31,23 +33,11 @@ func main() {
 		os.Exit(2)
 	}
 
-	// TODO(philips): compile a static version of systemd-nspawn with this
-	// stupidity patched out
-	_, err = os.Stat("/run/systemd/system")
-	if os.IsNotExist(err) {
-		os.MkdirAll("/run/systemd/system", 0755)
-	}
-
-	ex := filepath.Join(path.Stage1RootfsPath(c.Root), nspawnBin)
-	if _, err := os.Stat(ex); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed locating nspawn: %v\n", err)
-		os.Exit(3)
-	}
-
 	args := []string{
-		ex,
+		filepath.Join(path.Stage1RootfsPath(c.Root), interpBin),
+		filepath.Join(path.Stage1RootfsPath(c.Root), nspawnBin),
 		"--boot",              // Launch systemd in the container
-		"--register", "false", // We cannot assume the host system is running a compatible systemd
+		"--register", "false", // We cannot assume the host system is running systemd
 	}
 
 	if !debug {
@@ -70,8 +60,10 @@ func main() {
 	}
 
 	env := os.Environ()
+	env = append(env, "LD_PRELOAD="+filepath.Join(path.Stage1RootfsPath(c.Root), "fakesdboot.so"))
+	env = append(env, "LD_LIBRARY_PATH="+filepath.Join(path.Stage1RootfsPath(c.Root), "usr/lib"))
 
-	if err := syscall.Exec(ex, args, env); err != nil {
+	if err := syscall.Exec(args[0], args, env); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute nspawn: %v\n", err)
 		os.Exit(5)
 	}

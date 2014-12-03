@@ -14,6 +14,7 @@ function req() {
 
 req cpio
 req curl
+req gcc
 req go-bindata
 req gpg
 req gzip
@@ -391,6 +392,39 @@ done
 ${SYSCTL} halt --force
 EOF
 chmod 755 "${ROOTDIR}/reaper.sh"
+
+# LD_PRELOAD shim to trick the sd_booted() "/run/systemd/system" check in systemd-nspawn
+gcc -shared -fPIC -x c -pipe -ldl -o ${ROOTDIR}/fakesdboot.so - <<'EOF'
+#define _GNU_SOURCE
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+#include <dlfcn.h>
+
+/* hack to make systemd-nspawn execute on non-sysd systems:
+ * intercept lstat() so lstat of /run/systemd/system always succeeds and returns a directory
+ */
+
+static int (*libc_lxstat)(int, const char *, struct stat *);
+
+static __attribute__((constructor)) void wrapper_init(void)
+{
+	libc_lxstat = dlsym(RTLD_NEXT, "__lxstat");
+}
+
+int __lxstat(int ver, const char *path, struct stat *stat)
+{
+	int ret = libc_lxstat(ver, path, stat);
+
+	if(ret == -1 && !strcmp(path, "/run/systemd/system/")) {
+		stat->st_mode = S_IFDIR;
+		ret = 0;
+	}
+
+	return ret;
+}
+EOF
 
 install -d "${ROOTDIR}/etc"
 echo "rocket" > "${ROOTDIR}/etc/os-release"
