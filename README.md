@@ -1,5 +1,7 @@
 # Rocket - App Container runtime
 
+[![Build Status](https://travis-ci.org/coreos/rocket.png?branch=master)](https://travis-ci.org/coreos/rocket)
+
 _Release early, release often: Rocket is currently a prototype and we are seeking your feedback via pull requests_
 
 Rocket is a cli for running App Containers. The goal of rocket is to be composable, secure, and fast.
