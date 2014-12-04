@@ -451,8 +451,8 @@ JSON Schema for the App Image Manifest
 * **acKind** is required and must be set to "AppManifest"
 * **name** is required, and will be used as a human readable index to the container image. (string, restricted to the AC Name formatting)
 * **version** is required (string, restricted to the AC Name formatting). When combined with "name", this should be unique for every build of an app.
-* **os** is required (string; currently, the only supported value is "linux"). Together with “arch”, this can be considered to describe the syscall ABI this image requires.
-* **arch** is required (string; currently, the only supported value is "amd64"). Together with “os”, this can be considered to describe the syscall ABI this image requires.
+* **os** is required (string; currently, the only supported value is "linux"). Together with "arch", this can be considered to describe the syscall ABI this image requires.
+* **arch** is required (string; currently, the only supported value is "amd64"). Together with "os", this can be considered to describe the syscall ABI this image requires.
 * **exec** the executable to launch and any flags (array of strings, must be non-empty; ACE can append or override)
 * **user/group** are required, and indicate either the GID/UID or the username/group name the app should run as inside of the container (freeform string). If the user or group field begins with a "/" the owner and group of the file found at that absolute path is used as the GID/UID of the process.
 * **eventHandlers** are optional, and should be a list of eventHandler objects. eventHandlers allow the app to have several hooks based on lifecycle events. For example, you may want to execute a script before the main process starts up to download a dataset or backup onto the filesystem. An eventHandler is a simple object with two fields - an **exec** (array of strings, ACE can append or override), and a **name**, which should be one of:
@@ -532,11 +532,11 @@ JSON Schema for the App Image Manifest
 * **uuid** an [RFC4122 UUID](http://www.ietf.org/rfc/rfc4122.txt) that represents this instance of the container (string, must be in [RFC4122](http://www.ietf.org/rfc/rfc4122.txt) format)
 * **apps** the list of apps that will execute inside of this container
     * **app** the name of the app (string, restricted to AC Name formatting)
-    * **imageID** the content hash of the image that this app will execute inside of (string, must be of the format "type-value", where “type” is “sha256” and value is the hex encoded string of the hash)
+    * **imageID** the content hash of the image that this app will execute inside of (string, must be of the format "type-value", where "type" is "sha256" and value is the hex encoded string of the hash)
     * **isolators** the list of isolators that should be applied to this app (key is restricted to the AC Name formatting and the value can be a freeform string)
     * **annotations** arbitrary metadata appended to the app (key is restricted to the AC Name formatting and the value can be a freeform string)
 * **volumes** the list of volumes which should be mounted into each application's filesystem
-    * **kind** string, currently either "empty" or “host” (bind mount)
+    * **kind** string, currently either "empty" or "host" (bind mount)
     * **fulfills** the MountPoints of the containers that this volume can fulfill (string, restricted to AC Name formatting)
 * **isolators** the list of isolators that will apply to all apps in this container (name is restricted to the AC Name formatting and the value can be a freeform string)
 * **annotations** arbitrary metadata the executor should make available to applications via the metadata service (key is restricted to the AC Name formatting and the value can be a freeform string)
