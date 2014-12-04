@@ -2,15 +2,24 @@ package cas
 
 import (
 	"encoding/base64"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/coreos/rocket/app-container/schema/types"
 )
 
+const tstprefix = "cas-test"
+
 func TestBlobStore(t *testing.T) {
-	ds := NewStore(".")
+	dir, err := ioutil.TempDir("", tstprefix)
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+	ds := NewStore(dir)
 	for _, valueStr := range []string{
 		"I am a manually placed object",
 	} {
@@ -21,6 +30,11 @@ func TestBlobStore(t *testing.T) {
 }
 
 func TestDownloading(t *testing.T) {
+	dir, err := ioutil.TempDir("", tstprefix)
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
 	// TODO(philips): construct a real tarball using go, this is a base64 tarball with an empty file
 	body, _ := base64.StdEncoding.DecodeString("H4sIAIWbdlQAA+3PPQrCQBiE4ZU0NnoDcTstv8T9OYaNF7AwGFAIJlqn9wba5Cp6EG9gbWtiII1oF0R4n2bYZVhm81WWq46JiDNG1+mdfaVEzblhrQ4jM7M2tE5ESxhZb5SWrofV9lm+3FVT0nWySdLsY6+qxfGXd5qf6Db/xPjYV8X5sFDB/dIbVBfX8jHfDn3ZNgofnG6jiZr+bCMAAAAAAAAAAAAAAAAA4N0T/slETwAoAAA=")
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +51,7 @@ func TestDownloading(t *testing.T) {
 		{Remote{ts.URL, []string{}, "12", "96609004016e9625763c7153b74120c309c8cb1bd794345bf6fa2e60ac001cd7"}, body, true},
 	}
 
-	ds := NewStore(".")
+	ds := NewStore(dir)
 
 	for _, tt := range tests {
 		_, err := ds.stores[remoteType].Read(tt.r.Hash())
