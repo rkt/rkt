@@ -16,8 +16,8 @@ const (
 )
 
 type App struct {
-	Name    types.ACName
-	Labels  map[string]string
+	Name   types.ACName
+	Labels map[string]string
 }
 
 func NewApp(name string, labels map[string]string) (*App, error) {
@@ -29,8 +29,8 @@ func NewApp(name string, labels map[string]string) (*App, error) {
 		return nil, err
 	}
 	return &App{
-		Name:    *acn,
-		Labels:  labels,
+		Name:   *acn,
+		Labels: labels,
 	}, nil
 }
 
@@ -41,8 +41,8 @@ func NewApp(name string, labels map[string]string) (*App, error) {
 // 	example.com/reduce-worker,channel=alpha,label=value
 func NewAppFromString(app string) (*App, error) {
 	var (
-		name string
-		labels        map[string]string
+		name   string
+		labels map[string]string
 	)
 
 	app = strings.Replace(app, ":", ",version=", -1)
