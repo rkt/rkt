@@ -85,7 +85,7 @@ An image is addressed and verified against the hash of its uncompressed tar file
 The default digest format is sha256, but all hash IDs in this format are prefixed by the algorithm used (e.g. sha256-a83...).
 
 ```
-echo sha256-$(sha256sum reduce-worker.tar |awk ‘{print $1}’)
+echo sha256-$(sha256sum reduce-worker.tar |awk '{print $1}')
 ```
 
 **Note**: the key distribution mechanism is not defined here. 
@@ -106,7 +106,7 @@ Image Format TODO
     * The refcounting plan for resources consumed by the ACE such as volumes
 * Define the lifecycle of the container as all exit or first to exit
 * Define security requirements for a container. In particular is any isolation of users required between containers? What user does each application run under and can this be root (i.e. "real" root in the host).
-* Define how apps are supposed to communicate; can they/do they ‘see’ each other (a section in the apps perspective would help)?
+* Define how apps are supposed to communicate; can they/do they 'see' each other (a section in the apps perspective would help)?
 
 ### Fileset Images
 
@@ -458,7 +458,7 @@ JSON Schema for the App Image Manifest
 * **eventHandlers** are optional, and should be a list of eventHandler objects. eventHandlers allow the app to have several hooks based on lifecycle events. For example, you may want to execute a script before the main process starts up to download a dataset or backup onto the filesystem. An eventHandler is a simple object with two fields - an **exec** (array of strings, ACE can append or override), and a **name**, which should be one of:
     * **pre-start** - will be executed and must exit before the long running main **exec** binary is launched
     * **post-stop** - if the main **exec** process is killed then this is ran. This can be used to cleanup resources in the case of clean application shutdown, but cannot be relied upon in the face of machine failure.stopped
-* **environment** the app’s preferred environment variables (map of freeform strings) (ACE can append)
+* **environment** the app's preferred environment variables (map of freeform strings) (ACE can append)
 * **mountPoints** are the locations where a container is expecting external data to mounted. The name indicates an executor-defined label to look up a mount point, and the path stipulates where it should actually be mounted inside the rootfs. The key is restricted to the AC Name Type formatting.
 * **ports** are the protocols and port numbers that the container will be listening on once started. The key is restricted to the AC Name formatting. This information is primarily informational to help the user find ports that are not well known. It could also optionally be used to limit the inbound connections to the container via firewall rules to only ports that are explicitly exposed.
     * **socketActivated** if this is set to true then the application expects to be [socket activated](http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html) on these ports. The ACE must pass file descriptors using the [socket activation protocol](http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html) that are listening on these ports when starting this container. If multiple apps in the same container are using socket activation then the ACE must match the sockets to the correct apps using getsockopt() and getsockname().
@@ -535,7 +535,7 @@ JSON Schema for the App Image Manifest
     * **imageID** the content hash of the image that this app will execute inside of (string, must be of the format "type-value", where “type” is “sha256” and value is the hex encoded string of the hash)
     * **isolators** the list of isolators that should be applied to this app (key is restricted to the AC Name formatting and the value can be a freeform string)
     * **annotations** arbitrary metadata appended to the app (key is restricted to the AC Name formatting and the value can be a freeform string)
-* **volumes** the list of volumes which should be mounted into each application’s filesystem
+* **volumes** the list of volumes which should be mounted into each application's filesystem
     * **kind** string, currently either "empty" or “host” (bind mount)
     * **fulfills** the MountPoints of the containers that this volume can fulfill (string, restricted to AC Name formatting)
 * **isolators** the list of isolators that will apply to all apps in this container (name is restricted to the AC Name formatting and the value can be a freeform string)
