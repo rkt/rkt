@@ -162,11 +162,11 @@ This is codified in a [Container Runtime Manifest](#container-runtime-manifest-s
 
 This example container will use a set of three apps:
 
-| Name | Version | Image hash |
-|-----------------------------------------------|-------------------------------------------------|
-| example.com/reduce-worker | 1.0.0 | sha256-277205b3ae3eb3a8e042a62ae46934b470e431ac |
-| example.com/worker-backup | 1.0.0 | sha256-3e86b59982e49066c5d813af1c2e2579cbf573de |
-| example.com/reduce-worker-register | 1.0.0 | sha256-86298e1fdb95ec9a45b5935504e26ec29b8feffa |
+| Name                               | Version | Image hash                                      |
+|------------------------------------|---------|-------------------------------------------------|
+| example.com/reduce-worker          | 1.0.0   | sha256-277205b3ae3eb3a8e042a62ae46934b470e431ac |
+| example.com/worker-backup          | 1.0.0   | sha256-3e86b59982e49066c5d813af1c2e2579cbf573de |
+| example.com/reduce-worker-register | 1.0.0   | sha256-86298e1fdb95ec9a45b5935504e26ec29b8feffa |
 
 #### Volume Setup
 
