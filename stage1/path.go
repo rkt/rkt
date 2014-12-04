@@ -8,34 +8,40 @@ import (
 )
 
 const (
-	servicesDir = path.Stage1Dir + "/usr/lib/systemd/system"
-	wantsDir    = servicesDir + "/default.target.wants"
+	unitsDir        = path.Stage1Dir + "/usr/lib/systemd/system"
+	defaultWantsDir = unitsDir + "/default.target.wants"
+	socketsWantsDir = unitsDir + "/sockets.target.wants"
 )
 
-// ServiceName returns a sanitized (escaped) systemd service name
-// for the given imageID
-func ServiceName(imageID types.Hash) string {
+// ServiceUnitName returns a systemd service unit name for the given imageID
+func ServiceUnitName(imageID types.Hash) string {
 	return imageID.String() + ".service"
 }
 
-// WantsPath returns the systemd "wants" directory in root
-func WantsPath(root string) string {
-	return filepath.Join(root, wantsDir)
+// ServiceUnitPath returns the path to the systemd service file for the given
+// imageID
+func ServiceUnitPath(root string, imageID types.Hash) string {
+	return filepath.Join(root, unitsDir, ServiceUnitName(imageID))
 }
 
-// ServicesPath returns the systemd "services" directory in root
-func ServicesPath(root string) string {
-	return filepath.Join(root, servicesDir)
-}
-
-// ServiceFilePath returns the path to the systemd service file
-// path for the given imageID
-func ServiceFilePath(root string, imageID types.Hash) string {
-	return filepath.Join(root, servicesDir, ServiceName(imageID))
-}
-
-// WantLinkPath returns the systemd "want" symlink path for the
+// ServiceWantPath returns the systemd default.target want symlink path for the
 // given imageID
-func WantLinkPath(root string, imageID types.Hash) string {
-	return filepath.Join(root, wantsDir, ServiceName(imageID))
+func ServiceWantPath(root string, imageID types.Hash) string {
+	return filepath.Join(filepath.Join(root, defaultWantsDir), ServiceUnitName(imageID))
+}
+
+// SocketUnitName returns a systemd socket unit name for the given imageID
+func SocketUnitName(imageID types.Hash) string {
+	return imageID.String() + ".socket"
+}
+
+// SocketUnitPath returns the path to the systemd socket file for the given imageID
+func SocketUnitPath(root string, imageID types.Hash) string {
+	return filepath.Join(root, unitsDir, SocketUnitName(imageID))
+}
+
+// SocketWantPath returns the systemd sockets.target.wants symlink path for the
+// given imageID
+func SocketWantPath(root string, imageID types.Hash) string {
+	return filepath.Join(filepath.Join(root, socketsWantsDir), SocketUnitName(imageID))
 }
