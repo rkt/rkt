@@ -8,6 +8,7 @@
   * cpio
   * squashfs-tools
   * realpath
+  * gpg
 * Go 1.3+
   * jteeuwen/go-bindata
 
