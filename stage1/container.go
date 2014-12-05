@@ -63,7 +63,7 @@ func LoadContainer(root string) (*Container, error) {
 	return c, nil
 }
 
-// appToSystemd transforms the provided app manifest into a systemd service unit
+// appToSystemd transforms the provided app manifest into systemd units
 func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 	name := am.Name.String()
 	execStart := strings.Join(am.Exec, " ")
@@ -101,17 +101,62 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 		opts = append(opts, &unit.UnitOption{"Service", "Environment", ee})
 	}
 
-	file, err := os.OpenFile(ServiceFilePath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
+	saPorts := []types.Port{}
+	for _, p := range am.Ports {
+		if p.SocketActivated {
+			saPorts = append(saPorts, p)
+		}
+	}
+
+	if len(saPorts) > 0 {
+		sockopts := []*unit.UnitOption{
+			&unit.UnitOption{"Unit", "Description", name + " socket-activated ports"},
+			&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
+			&unit.UnitOption{"Socket", "BindIPv6Only", "both"},
+			&unit.UnitOption{"Socket", "Service", ServiceUnitName(id)},
+		}
+
+		for _, sap := range saPorts {
+			var proto string
+			switch sap.Protocol {
+			case "tcp":
+				proto = "ListenStream"
+			case "udp":
+				proto = "ListenDatagram"
+			default:
+				return fmt.Errorf("unrecognized protocol: %v", sap.Protocol)
+			}
+			sockopts = append(sockopts, &unit.UnitOption{"Socket", proto, fmt.Sprintf("%v", sap.Port)})
+		}
+
+		file, err := os.OpenFile(SocketUnitPath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to create socket file: %v", err)
+		}
+		defer file.Close()
+
+		if _, err = io.Copy(file, unit.Serialize(sockopts)); err != nil {
+			return fmt.Errorf("failed to write socket unit file: %v", err)
+		}
+
+		if err = os.Symlink(path.Join("..", SocketUnitName(id)), SocketWantPath(c.Root, id)); err != nil {
+			return fmt.Errorf("failed to link socket want: %v", err)
+		}
+
+		opts = append(opts, &unit.UnitOption{"Unit", "Requires", SocketUnitName(id)})
+	}
+
+	file, err := os.OpenFile(ServiceUnitPath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to create service file: %v", err)
+		return fmt.Errorf("failed to create service unit file: %v", err)
 	}
 	defer file.Close()
 
 	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
-		return fmt.Errorf("failed to write service file: %v", err)
+		return fmt.Errorf("failed to write service unit file: %v", err)
 	}
 
-	if err = os.Symlink(path.Join("..", ServiceName(id)), WantLinkPath(c.Root, id)); err != nil {
+	if err = os.Symlink(path.Join("..", ServiceUnitName(id)), ServiceWantPath(c.Root, id)); err != nil {
 		return fmt.Errorf("failed to link service want: %v", err)
 	}
 
@@ -121,12 +166,6 @@ func (c *Container) appToSystemd(am *schema.AppManifest, id types.Hash) error {
 // ContainerToSystemd creates the appropriate systemd service unit files for
 // all the constituent apps of the Container
 func (c *Container) ContainerToSystemd() error {
-	if err := os.MkdirAll(ServicesPath(c.Root), 0640); err != nil {
-		return fmt.Errorf("failed to create services directory: %v", err)
-	}
-	if err := os.MkdirAll(WantsPath(c.Root), 0640); err != nil {
-		return fmt.Errorf("failed to create wants directory: %v", err)
-	}
 	for _, am := range c.Apps {
 		a := c.Manifest.Apps.Get(am.Name)
 		if a == nil {
