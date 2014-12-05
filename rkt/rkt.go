@@ -17,7 +17,7 @@ const (
 var (
 	globalFlagset = flag.NewFlagSet(cliName, flag.ExitOnError)
 	out           *tabwriter.Writer
-	commands      []*Command
+	commands      []*Command // Commands should register themselves by appending
 	globalFlags   = struct {
 		Dir   string
 		Debug bool
@@ -45,13 +45,6 @@ type Command struct {
 func init() {
 	out = new(tabwriter.Writer)
 	out.Init(os.Stdout, 0, 8, 1, '\t', 0)
-	commands = []*Command{
-		cmdHelp,
-		cmdFetch,
-		cmdStatus,
-		cmdRun,
-		cmdVersion,
-	}
 }
 
 func main() {

@@ -31,6 +31,7 @@ They will be checked in that order and the first match will be used.`,
 )
 
 func init() {
+	commands = append(commands, cmdRun)
 	cmdRun.Flags.StringVar(&flagStage1Init, "stage1-init", "", "path to stage1 binary override")
 	cmdRun.Flags.StringVar(&flagStage1Rootfs, "stage1-rootfs", "", "path to stage1 rootfs tarball override")
 	cmdRun.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")

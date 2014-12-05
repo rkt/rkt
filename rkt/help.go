@@ -37,6 +37,8 @@ var (
 )
 
 func init() {
+	commands = append(commands, cmdHelp)
+
 	globalUsageTemplate = template.Must(template.New("global_usage").Funcs(templFuncs).Parse(`
 NAME:
 {{printf "\t%s - %s" .Executable .Description}}
