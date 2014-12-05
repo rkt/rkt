@@ -2,4 +2,5 @@ bin/
 gopath/
 stage0/stage1_init/
 stage0/stage1_rootfs/
+stage1/cache
 */*.swp
