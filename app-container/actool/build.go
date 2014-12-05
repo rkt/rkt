@@ -113,7 +113,7 @@ func runBuild(args []string) (exit int) {
 	if !buildOverwrite {
 		mode |= os.O_EXCL
 	}
-	fh, err := os.OpenFile(tgt, mode, 0655)
+	fh, err := os.OpenFile(tgt, mode, 0644)
 	if err != nil {
 		if os.IsExist(err) {
 			stderr("build: Target file exists (try --overwrite)")

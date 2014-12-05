@@ -86,7 +86,7 @@ func (aw *appArchiveWriter) addFileNow(path string, contents []byte) error {
 	now := time.Now()
 	hdr := tar.Header{
 		Name:       path,
-		Mode:       0655,
+		Mode:       0644,
 		Uid:        0,
 		Gid:        0,
 		Size:       int64(buf.Len()),
