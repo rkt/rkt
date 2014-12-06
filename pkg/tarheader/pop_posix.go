@@ -18,11 +18,11 @@ func populateHeaderUnix(h *tar.Header, fi os.FileInfo, seen map[uint64]string) {
 	h.Uid = int(st.Uid)
 	h.Gid = int(st.Gid)
 	// If we have already seen this inode, generate a hardlink
-	p, ok := seen[st.Ino]
+	p, ok := seen[uint64(st.Ino)]
 	if ok {
 		h.Linkname = p
 		h.Typeflag = tar.TypeLink
 	} else {
-		seen[st.Ino] = h.Name
+		seen[uint64(st.Ino)] = h.Name
 	}
 }
