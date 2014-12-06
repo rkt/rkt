@@ -37,6 +37,8 @@ func init() {
 }
 
 func buildWalker(root string, aw aci.ArchiveWriter, rootfs bool) filepath.WalkFunc {
+	// cache of inode -> filepath, used to leverage hard links in the archive
+	inos := map[uint64]string{}
 	return func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -81,7 +83,12 @@ func buildWalker(root string, aw aci.ArchiveWriter, rootfs bool) filepath.WalkFu
 		// modify the Name field of the returned header to provide the
 		// full path name of the file.
 		hdr.Name = relpath
-		tarheader.Populate(hdr, info)
+		tarheader.Populate(hdr, info, inos)
+		// If the file is a hard link we don't need the contents
+		if hdr.Typeflag == tar.TypeLink {
+			hdr.Size = 0
+			file = nil
+		}
 		aw.AddFile(relpath, hdr, file)
 
 		return nil

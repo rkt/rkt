@@ -11,7 +11,7 @@ func init() {
 	populateHeaderStat = append(populateHeaderStat, populateHeaderCtime)
 }
 
-func populateHeaderCtime(h *tar.Header, fi os.FileInfo) {
+func populateHeaderCtime(h *tar.Header, fi os.FileInfo, _ map[uint64]string) {
 	st, ok := fi.Sys().(*syscall.Stat_t)
 	if !ok {
 		return
