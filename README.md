@@ -33,7 +33,7 @@ Rocket uses content addressable storage (CAS) for storing an ACI on disk. In thi
 
 ```
 $ rkt fetch https://github.com/coreos/etcd/releases/download/v0.5.0-alpha.4/etcd-v0.5.0-alpha.4-linux-amd64.aci
-sha256-701c24b2d275f0e291b807a464ae2390bcd8d7c5b4f2d7e47e6fd917cd5e5588
+sha256-f9215c18b86f406c7cec4c7b45fd8752b5bfd1a492507d647821c2ce593fbf31
 ```
 
 These files are now written to disk:
@@ -43,7 +43,7 @@ $ find /var/lib/rkt/cas/blob/
 /var/lib/rkt/cas/blob/
 /var/lib/rkt/cas/blob/sha256
 /var/lib/rkt/cas/blob/sha256/70
-/var/lib/rkt/cas/blob/sha256/70/sha256-701c24b2d275f0e291b807a464ae2390bcd8d7c5b4f2d7e47e6fd917cd5e5588
+/var/lib/rkt/cas/blob/sha256/70/sha256-f9215c18b86f406c7cec4c7b45fd8752b5bfd1a492507d647821c2ce593fbf31
 ```
 
 Per the App Container [spec](app-container/SPEC.md#image-archives) the SHA-256 is of the tarball, which is reproducible with other tools:
@@ -53,7 +53,7 @@ $ wget https://github.com/coreos/etcd/releases/download/v0.5.0-alpha.4/etcd-v0.5
 ...
 $ gzip -dc etcd-v0.5.0-alpha.4-linux-amd64.aci > etcd-v0.5.0-alpha.4-linux-amd64.tar
 $ sha256sum etcd-v0.5.0-alpha.4-linux-amd64.tar
-701c24b2d275f0e291b807a464ae2390bcd8d7c5b4f2d7e47e6fd917cd5e5588  etcd-v0.5.0-alpha.4-linux-amd64.tar
+f9215c18b86f406c7cec4c7b45fd8752b5bfd1a492507d647821c2ce593fbf31  etcd-v0.5.0-alpha.4-linux-amd64.tar
 ```
 
 ### Launching an ACI
@@ -70,7 +70,7 @@ rkt will do the appropriate ETag checking on the URL to make sure it has the mos
 Or, you can explicitly choose an image to run based on the SHA-256:
 
 ```
-$ rkt run sha256-701c24b2d275f0e291b807a464ae2390bcd8d7c5b4f2d7e47e6fd917cd5e5588
+$ rkt run sha256-f9215c18b86f406c7cec4c7b45fd8752b5bfd1a492507d647821c2ce593fbf31
 Press ^] three times to kill container.
 ```
 
