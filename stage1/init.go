@@ -1,3 +1,5 @@
+//+build linux
+
 package main
 
 // this implements /init of stage1/nspawn+systemd

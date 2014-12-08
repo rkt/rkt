@@ -1,3 +1,5 @@
+//+build linux
+
 package main
 
 import "fmt"
@@ -10,6 +12,10 @@ var (
 		Run:     runStatus,
 	}
 )
+
+func init() {
+	commands = append(commands, cmdStatus)
+}
 
 func runStatus(args []string) (exit int) {
 	fmt.Println("Not implemented.")

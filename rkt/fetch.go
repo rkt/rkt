@@ -23,6 +23,10 @@ var (
 	}
 )
 
+func init() {
+	commands = append(commands, cmdFetch)
+}
+
 func fetchURL(img string, ds *cas.Store) (string, error) {
 	rem := cas.NewRemote(img, []string{})
 	err := ds.ReadIndex(rem)

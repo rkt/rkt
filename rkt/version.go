@@ -13,6 +13,10 @@ var cmdVersion = &Command{
 	Run:         runVersion,
 }
 
+func init() {
+	commands = append(commands, cmdVersion)
+}
+
 func runVersion(args []string) (exit int) {
 	fmt.Printf("rkt version %s\n", version.Version)
 	return
