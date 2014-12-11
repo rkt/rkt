@@ -1,0 +1,174 @@
+// Copyright 2014 CoreOS, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//+build linux
+
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
+	rktpath "github.com/coreos/rocket/path"
+	"github.com/coreos/rocket/pkg/lock"
+	"github.com/coreos/rocket/stage0"
+)
+
+var (
+	cmdEnter = &Command{
+		Name:    cmdEnterName,
+		Summary: "Enter the namespaces of an app within a rkt container",
+		Usage:   "[--imageid IMAGEID] UUID [CMD [ARGS ...]]",
+		Run:     runEnter,
+	}
+	flagAppImageID types.Hash
+)
+
+const (
+	defaultCmd   = "/bin/bash"
+	cmdEnterName = "enter"
+)
+
+func init() {
+	commands = append(commands, cmdEnter)
+	cmdEnter.Flags.Var(&flagAppImageID, "imageid", "imageid of the app to enter within the specified container")
+}
+
+func runEnter(args []string) (exit int) {
+
+	if len(args) < 1 {
+		printCommandUsageByName(cmdEnterName)
+		return 1
+	}
+
+	containerUUID, err := types.NewUUID(args[0])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid UUID: %v\n", err)
+		return 1
+	}
+
+	cid := containerUUID.String()
+	cdir := filepath.Join(containersDir(), cid)
+
+	if err = pingContainer(cdir); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to query container %q: %v\n", cid, err)
+		return 1
+	}
+
+	imageID, err := getAppImageID(cdir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to determine image id: %v\n", err)
+		return 1
+	}
+
+	_, err = os.Stat(filepath.Join(rktpath.AppRootfsPath(cdir, *imageID)))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to access app rootfs: %v\n", err)
+		return 1
+	}
+
+	argv, err := getEnterArgv(cdir, imageID, args)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Enter failed: %v\n", err)
+		return 1
+	}
+
+	err = stage0.Enter(cdir, imageID, argv)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Enter failed: %v\n", err)
+		return 1
+	}
+	// not reached when stage0.Enter execs /enter
+	return 0
+}
+
+// getAppImageID returns the image id to enter
+// If one was supplied in the flags then it's simply returned
+// If the CRM contains a single image, that image's id is returned
+// If the CRM has multiple images, the ids and names are printed and an error is returned
+func getAppImageID(cdir string) (*types.Hash, error) {
+	if !flagAppImageID.Empty() {
+		return &flagAppImageID, nil
+	}
+
+	// figure out the image id, or show a list if multiple are present
+	b, err := ioutil.ReadFile(rktpath.ContainerManifestPath(cdir))
+	if err != nil {
+		return nil, fmt.Errorf("error reading container manifest: %v", err)
+	}
+
+	m := schema.ContainerRuntimeManifest{}
+	err = m.UnmarshalJSON(b)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load manifest: %v", err)
+	}
+
+	switch len(m.Apps) {
+	case 0:
+		return nil, fmt.Errorf("container contains zero apps")
+	case 1:
+		return &m.Apps[0].ImageID, nil
+	default:
+	}
+
+	fmt.Fprintf(os.Stderr, "Container contains multiple apps:\n")
+	for _, ra := range m.Apps {
+		fmt.Fprintf(os.Stderr, "\t%s: %s\n", types.ShortHash(ra.ImageID.String()), ra.Name.String())
+	}
+
+	return nil, fmt.Errorf("specify app using \"rkt enter --imageid ...\"")
+}
+
+// pingContainer checks to see if the container is running
+func pingContainer(cdir string) error {
+	l, err := lock.TrySharedLock(cdir)
+	switch err {
+	case nil:
+		l.Close()
+		return fmt.Errorf("inactive")
+	case lock.ErrNotExist:
+		return fmt.Errorf("nonexistent")
+	case lock.ErrPermission:
+		return fmt.Errorf("access denied: %v", err)
+	default:
+		return err
+	case lock.ErrLocked:
+	}
+
+	return nil
+}
+
+// getEnterArgv returns the argv to use for entering the container
+func getEnterArgv(cdir string, imageID *types.Hash, cmdArgs []string) ([]string, error) {
+	var argv []string
+	if len(cmdArgs) < 2 {
+		fmt.Printf("No command specified, assuming %q\n", defaultCmd)
+		argv = []string{defaultCmd}
+	} else {
+		argv = cmdArgs[1:]
+	}
+
+	// TODO(vc): LookPath() uses os.Stat() internally so symlinks can defeat this check
+	_, err := exec.LookPath(filepath.Join(rktpath.AppRootfsPath(cdir, *imageID), argv[0]))
+	if err != nil {
+		return nil, fmt.Errorf("command %q missing, giving up: %v", argv[0], err)
+	}
+
+	return argv, nil
+}
