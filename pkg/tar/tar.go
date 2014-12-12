@@ -17,6 +17,7 @@ package tar
 
 import (
 	"archive/tar"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,11 +25,14 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 )
 
 const DEFAULT_DIR_MODE os.FileMode = 0755
 
 type insecureLinkError error
+
+var ErrNotSupportedPlatform = errors.New("platform and architecture is not supported")
 
 // Map of paths that should be whitelisted. The paths should be relative to the
 // root of the tar file and should be cleaned (for example using filepath.Clean)
@@ -40,11 +44,14 @@ type PathWhitelistMap map[string]struct{}
 func ExtractTar(tr *tar.Reader, dir string, overwrite bool, pwl PathWhitelistMap) error {
 	um := syscall.Umask(0)
 	defer syscall.Umask(um)
+
+	dirhdrs := []*tar.Header{}
+Tar:
 	for {
 		hdr, err := tr.Next()
 		switch err {
 		case io.EOF:
-			return nil
+			break Tar
 		case nil:
 			if pwl != nil {
 				relpath := filepath.Clean(hdr.Name)
@@ -56,10 +63,23 @@ func ExtractTar(tr *tar.Reader, dir string, overwrite bool, pwl PathWhitelistMap
 			if err != nil {
 				return fmt.Errorf("error extracting tarball: %v", err)
 			}
+			if hdr.Typeflag == tar.TypeDir {
+				dirhdrs = append(dirhdrs, hdr)
+			}
 		default:
 			return fmt.Errorf("error extracting tarball: %v", err)
 		}
 	}
+
+	// Restore dirs atime and mtime. This has to be done after extracting
+	// as a file extraction will change its parent directory's times.
+	for _, hdr := range dirhdrs {
+		p := filepath.Join(dir, hdr.Name)
+		if err := syscall.UtimesNano(p, HdrToTimespec(hdr)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ExtractFile extracts the file described by hdr from the given tarball into
@@ -166,6 +186,20 @@ func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string, overwrite bool) er
 		}
 	}
 
+	// Restore entry atime and mtime.
+	// Use special function LUtimesNano not available on go's syscall package because we
+	// have to restore symlink's times and not the referenced file times.
+	ts := HdrToTimespec(hdr)
+	if hdr.Typeflag != tar.TypeSymlink {
+		if err := syscall.UtimesNano(p, ts); err != nil {
+			return err
+		}
+	} else {
+		if err := LUtimesNano(p, ts); err != nil && err != ErrNotSupportedPlatform {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -201,4 +235,17 @@ func ExtractFileFromTar(tr *tar.Reader, file string) ([]byte, error) {
 // makedev mimics glib's gnu_dev_makedev
 func makedev(major, minor int) int {
 	return (minor & 0xff) | (major & 0xfff << 8) | int((uint64(minor & ^0xff) << 12)) | int(uint64(major & ^0xfff)<<32)
+}
+
+func HdrToTimespec(hdr *tar.Header) []syscall.Timespec {
+	return []syscall.Timespec{timeToTimespec(hdr.AccessTime), timeToTimespec(hdr.ModTime)}
+}
+
+// TODO(sgotti) use UTIMES_OMIT on linux if Time.IsZero ?
+func timeToTimespec(time time.Time) (ts syscall.Timespec) {
+	nsec := int64(0)
+	if !time.IsZero() {
+		nsec = time.UnixNano()
+	}
+	return syscall.NsecToTimespec(nsec)
 }
