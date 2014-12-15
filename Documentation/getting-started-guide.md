@@ -75,7 +75,7 @@ Edit: manifest.json
 ### Validate the image manifest
 
 ```
-$ actool validate manifest.json
+$ actool -debug validate manifest.json
 manifest.json: valid ImageManifest
 ```
 
@@ -85,6 +85,12 @@ manifest.json: valid ImageManifest
 $ mkdir hello-layout/
 $ mkdir hello-layout/rootfs
 $ mkdir hello-layout/rootfs/bin
+```
+
+Copy the image manifest
+
+```
+$ cp manifest.json hello-layout/manifest
 ```
 
 Copy the hello binary
@@ -102,7 +108,7 @@ $ actool build hello-layout/ hello.aci
 ### Validate the application image
 
 ```
-$ actool validate hello.aci
+$ actool -debug validate hello.aci
 hello.aci: valid app container image
 ```
 
