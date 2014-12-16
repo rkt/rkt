@@ -230,7 +230,7 @@ func untarRootfs(r io.Reader, dir string) error {
 		return fmt.Errorf("error creating stage1 rootfs directory: %v", err)
 	}
 
-	if err := ptar.ExtractTar(tr, dir); err != nil {
+	if err := ptar.ExtractTar(tr, dir, nil); err != nil {
 		return fmt.Errorf("error extracting rootfs: %v", err)
 	}
 	return nil
@@ -304,7 +304,7 @@ func setupImage(cfg Config, img types.Hash, dir string) (*schema.ImageManifest, 
 	hash := sha512.New()
 	r := io.TeeReader(rs, hash)
 
-	if err := ptar.ExtractTar(tar.NewReader(r), ad); err != nil {
+	if err := ptar.ExtractTar(tar.NewReader(r), ad, nil); err != nil {
 		return nil, fmt.Errorf("error extracting ACI: %v", err)
 	}
 
