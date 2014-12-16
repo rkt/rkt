@@ -35,7 +35,8 @@ type PathWhitelistMap map[string]struct{}
 
 // ExtractTar extracts a tarball (from a tar.Reader) into the given directory
 // if pwl is not nil, only the paths in the map are extracted.
-func ExtractTar(tr *tar.Reader, dir string, pwl PathWhitelistMap) error {
+// If overwrite is true, existing files will be overwritten.
+func ExtractTar(tr *tar.Reader, dir string, overwrite bool, pwl PathWhitelistMap) error {
 	um := syscall.Umask(0)
 	defer syscall.Umask(um)
 	for {
@@ -50,7 +51,7 @@ func ExtractTar(tr *tar.Reader, dir string, pwl PathWhitelistMap) error {
 					continue
 				}
 			}
-			err = ExtractFile(tr, hdr, dir)
+			err = ExtractFile(tr, hdr, dir, overwrite)
 			if err != nil {
 				return fmt.Errorf("error extracting tarball: %v", err)
 			}
@@ -60,12 +61,30 @@ func ExtractTar(tr *tar.Reader, dir string, pwl PathWhitelistMap) error {
 	}
 }
 
-// ExtractFile extracts the file described by hdr fom the given tarball into
-// the provided directory
-func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string) error {
+// ExtractFile extracts the file described by hdr from the given tarball into
+// the provided directory.
+// If overwrite is true, existing files will be overwritten.
+func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string, overwrite bool) error {
 	p := filepath.Join(dir, hdr.Name)
 	fi := hdr.FileInfo()
 	typ := hdr.Typeflag
+	if overwrite {
+		info, err := os.Lstat(p)
+		switch {
+		case os.IsNotExist(err):
+		case err == nil:
+			// If the old and new paths are both dirs do nothing or
+			// RemoveAll will remove all dir's contents
+			if !info.IsDir() || typ != tar.TypeDir {
+				err := os.RemoveAll(p)
+				if err != nil {
+					return err
+				}
+			}
+		default:
+			return err
+		}
+	}
 
 	// Create parent dir if it doesn't exists
 	if err := os.MkdirAll(filepath.Dir(p), DEFAULT_DIR_MODE); err != nil {
@@ -73,9 +92,6 @@ func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string) error {
 	}
 	switch {
 	case typ == tar.TypeReg || typ == tar.TypeRegA:
-		if err := os.MkdirAll(filepath.Dir(p), DEFAULT_DIR_MODE); err != nil {
-			return err
-		}
 		f, err := os.OpenFile(p, os.O_CREATE|os.O_RDWR, fi.Mode())
 		if err != nil {
 			return err
