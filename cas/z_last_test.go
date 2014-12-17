@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 	"testing"
-	"time"
 )
 
 func interestingGoroutines() (gs []string) {
@@ -57,39 +56,4 @@ func TestGoroutinesRunning(t *testing.T) {
 			t.Logf("%d instances of:\n%s", count, stack)
 		}
 	}
-}
-
-func afterTest(t *testing.T) {
-	if testing.Short() {
-		return
-	}
-	var bad string
-	badSubstring := map[string]string{
-		// TODO: there might exist a bug in http package, which will leave
-		// readLoop without writeLoop after close all idle connections.
-		// comment this line until we have time to dig into it.
-		// ").readLoop(":                                  "a Transport",
-		").writeLoop(":                                 "a Transport",
-		"created by net/http/httptest.(*Server).Start": "an httptest.Server",
-		"timeoutHandler":                               "a TimeoutHandler",
-		"net.(*netFD).connect(":                        "a timing out dial",
-		").noteClientGone(":                            "a closenotifier sender",
-	}
-	var stacks string
-	for i := 0; i < 6; i++ {
-		bad = ""
-		stacks = strings.Join(interestingGoroutines(), "\n\n")
-		for substr, what := range badSubstring {
-			if strings.Contains(stacks, substr) {
-				bad = what
-			}
-		}
-		if bad == "" {
-			return
-		}
-		// Bad stuff found, but goroutines might just still be
-		// shutting down, so give it some time.
-		time.Sleep(50 * time.Millisecond)
-	}
-	t.Errorf("Test appears to have leaked %s:\n%s", bad, stacks)
 }
