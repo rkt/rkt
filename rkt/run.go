@@ -48,7 +48,7 @@ func findImages(args []string, ds *cas.Store) (out []types.Hash, err error) {
 		if err == nil {
 			fullKey, err := ds.ResolveKey(img)
 			if err != nil {
-				return nil, fmt.Errorf("Could not resolve key: %v", err)
+				return nil, fmt.Errorf("could not resolve key: %v", err)
 			}
 			h, err = types.NewHash(fullKey)
 			if err != nil {

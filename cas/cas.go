@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/appc/spec/aci"
@@ -23,6 +22,10 @@ const (
 	remoteType
 
 	defaultPathPerm os.FileMode = 0777
+
+	hashPrefix    = "sha512-"
+	lenHashPrefix = len(hashPrefix)
+	lenHash       = 128
 )
 
 var otmap = [...]string{
@@ -66,7 +69,7 @@ func (ds Store) tmpFile() (*os.File, error) {
 //
 // If the key is already of proper length, just returns the key.
 func (ds Store) ResolveKey(keyPrefix string) (string, error) {
-	if strings.HasPrefix(keyPrefix, "sha512-") && len(keyPrefix) == 128+7 {
+	if strings.HasPrefix(keyPrefix, hashPrefix) && len(keyPrefix) == lenHash+lenHashPrefix {
 		return keyPrefix, nil
 	}
 
@@ -74,14 +77,14 @@ func (ds Store) ResolveKey(keyPrefix string) (string, error) {
 	var key string
 	keyCount := 0
 	for key = range ds.stores[blobType].KeysPrefix(keyPrefix, cancel) {
-		keyCount += 1
+		keyCount++
 		if keyCount > 1 {
 			close(cancel)
-			runtime.Gosched() // allow walker to detect cancel
+			break
 		}
 	}
 	if keyCount != 1 {
-		return keyPrefix, fmt.Errorf("Ambiguous key: '%v'", keyPrefix)
+		return "", fmt.Errorf("ambiguous key: %q", keyPrefix)
 	}
 	return key, nil
 }

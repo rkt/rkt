@@ -1,6 +1,7 @@
 package cas
 
 import (
+	"bytes"
 	"encoding/base64"
 	"io/ioutil"
 	"net/http"
@@ -69,4 +70,54 @@ func TestDownloading(t *testing.T) {
 	}
 
 	ds.Dump(false)
+}
+
+func TestResolveKey(t *testing.T) {
+	dir, err := ioutil.TempDir("", tstprefix)
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+	ds := NewStore(dir)
+
+	// Set up store (use key == data for simplicity)
+	data := []*bytes.Buffer{
+		bytes.NewBufferString("sha512-1234567890"),
+		bytes.NewBufferString("sha512-abcdefghi"),
+		bytes.NewBufferString("sha512-abcjklmno"),
+		bytes.NewBufferString("sha512-abcpqwert"),
+	}
+	for _, d := range data {
+		if err := ds.WriteStream(d.String(), d); err != nil {
+			t.Fatalf("error writing to store: %v", err)
+		}
+	}
+
+	// Full key already - should just be returned untouched and without checking the store
+	fk := "sha512-67147019a5b56f5e2ee01e989a8aa4787f56b8445960be2d8678391cf111009bc0780f31001fd181a2b61507547aee4caa44cda4b8bdb238d0e4ba830069ed2c"
+	k, err := ds.ResolveKey(fk)
+	if k != fk {
+		t.Errorf("expected ResolveKey to return unaltered key, but got %q", k)
+	}
+	if err != nil {
+		t.Errorf("expected err=nil, got %v", err)
+	}
+
+	// Unambiguous prefix match
+	k, err = ds.ResolveKey("sha512-123")
+	if k != "sha512-1234567890" {
+		t.Errorf("expected %q, got %q", "sha512-1234567890", k)
+	}
+	if err != nil {
+		t.Errorf("expected err=nil, got %v", err)
+	}
+
+	// Ambiguous prefix match
+	k, err = ds.ResolveKey("sha512-abc")
+	if k != "" {
+		t.Errorf("expected %q, got %q", "", k)
+	}
+	if err == nil {
+		t.Errorf("expected non-nil error!")
+	}
 }
