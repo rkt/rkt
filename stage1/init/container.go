@@ -83,7 +83,8 @@ func LoadContainer(root string) (*Container, error) {
 func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error {
 	name := am.Name.String()
 	app := am.App
-	execStart := strings.Join(app.Exec, " ")
+	execWrap := []string{"/diagexec", rktpath.RelAppRootfsPath(id)}
+	execStart := strings.Join(append(execWrap, app.Exec...), " ")
 	opts := []*unit.UnitOption{
 		&unit.UnitOption{"Unit", "Description", name},
 		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
@@ -91,7 +92,6 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 		&unit.UnitOption{"Unit", "OnFailure", "reaper.service"},
 		&unit.UnitOption{"Unit", "Wants", "exit-watcher.service"},
 		&unit.UnitOption{"Service", "Restart", "no"},
-		&unit.UnitOption{"Service", "RootDirectory", rktpath.RelAppRootfsPath(id)},
 		&unit.UnitOption{"Service", "ExecStart", execStart},
 		&unit.UnitOption{"Service", "User", app.User},
 		&unit.UnitOption{"Service", "Group", app.Group},
@@ -107,7 +107,7 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 		default:
 			return fmt.Errorf("unrecognized eventHandler: %v", eh.Name)
 		}
-		exec := strings.Join(eh.Exec, " ")
+		exec := strings.Join(append(execWrap, eh.Exec...), " ")
 		opts = append(opts, &unit.UnitOption{"Service", typ, exec})
 	}
 
