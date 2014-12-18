@@ -74,6 +74,8 @@ Edit: manifest.json
 
 ### Validate the image manifest
 
+To validate the manifest, we can use `actool`, which is currently provided in [releases in the App Container repository](https://github.com/appc/spec/releases).
+
 ```
 $ actool -debug validate manifest.json
 manifest.json: valid ImageManifest
