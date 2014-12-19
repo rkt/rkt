@@ -29,7 +29,7 @@ static int lock_fd = -1;
 static __attribute__((constructor)) void wrapper_init(void)
 {
 	char *env;
-	if(env = getenv(ENV_LOCKFD))
+	if((env = getenv(ENV_LOCKFD)))
 		lock_fd = atoi(env);
 	libc_lxstat = dlsym(RTLD_NEXT, "__lxstat");
 	libc_close = dlsym(RTLD_NEXT, "close");
