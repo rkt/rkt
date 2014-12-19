@@ -15,10 +15,9 @@ eval $(go env)
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	echo "Building init (stage1)..."
-	go build -o $GOBIN/init ${REPO_PATH}/stage1
+	go build -o $GOBIN/init ${REPO_PATH}/stage1/init
 
-	S1BINS=${PWD}/stage0
-	S1INIT=${S1BINS}/stage1_init
+	S1INIT=${PWD}/stage0/stage1_init
 	if [ $GOBIN/init -nt $S1INIT/bin.go ]; then
 		echo "Packaging init (stage1)..."
 		TMP=$(mktemp -d -t rocket-XXXXXX)
@@ -27,14 +26,8 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		go-bindata -o $S1INIT/bin.go -pkg="stage1_init" -prefix=$TMP $TMP
 	fi
 
-	S1ROOTFS=${S1BINS}/stage1_rootfs
-	if [ stage1/mkrootfs.sh -nt $S1ROOTFS/bin.go ]; then
-		echo "Generating and packaging rootfs (stage1)..."
-		[ -d "${S1ROOTFS}" ] || mkdir -p "${S1ROOTFS}"
-		pushd stage1
-		OUTPUT=$S1ROOTFS/bin.go ./mkrootfs.sh
-		popd
-	fi
+	echo "Building rootfs (stage1)..."
+	make -C stage1/rootfs
 fi
 
 echo "Building rkt (stage0)..."

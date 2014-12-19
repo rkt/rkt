@@ -3,4 +3,12 @@ gopath/
 stage0/stage1_init/
 stage0/stage1_rootfs/
 stage1/cache/
+stage1/rootfs/usr/cache/
+stage1/rootfs/aggregate/s1rootfs/
+stage1/rootfs/shim/shim.so
+stage1/rootfs/usr/manifest.txt
+stage1/rootfs/usr/rootfs/
+stage1/rootfs/aggregate/s1rootfs.tar
+stage1/rootfs/usr/usr.done
+stage1/rootfs/usr/usr.squashfs
 *.sw[ponm]
