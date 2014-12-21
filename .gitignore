@@ -4,3 +4,4 @@ stage0/stage1_init/
 stage0/stage1_rootfs/
 stage1/cache/
 *.sw[ponm]
+.DS_Store
