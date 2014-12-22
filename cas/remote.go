@@ -79,7 +79,7 @@ func (r Remote) Download(ds Store) (*Remote, error) {
 		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
 	}
 
-	key, err := ds.WriteACI(r.Hash(), reader)
+	key, err := ds.WriteACI(reader)
 	if err != nil {
 		return nil, err
 	}

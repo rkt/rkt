@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/appc/spec/aci"
+
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/peterbourgon/diskv"
 )
 
@@ -23,17 +25,20 @@ const (
 
 	defaultPathPerm os.FileMode = 0777
 
-	hashPrefix    = "sha512-"
-	lenHashPrefix = len(hashPrefix)
-	lenHash       = 128
+	// To ameliorate excessively long paths, keys for the (blob)store use
+	// only the first half of a sha512 rather than the entire sum
+	hashPrefix = "sha512-"
+	lenHash    = sha512.Size       // raw byte size
+	lenHashKey = (lenHash / 2) * 2 // half length, in hex characters
+	lenKey     = len(hashPrefix) + lenHashKey
 )
 
 var otmap = [...]string{
 	"blob",
-	"remote",
-	"tmp",
+	"remote", // remote is a temporary secondary index
 }
 
+// Store encapsulates a content-addressable-storage for storing ACIs on disk.
 type Store struct {
 	base   string
 	stores []*diskv.Diskv
@@ -64,29 +69,35 @@ func (ds Store) tmpFile() (*os.File, error) {
 	return ioutil.TempFile(dir, "")
 }
 
-// ResolveKey resolves a key of prefixed format sha512-0c45e8c0ab2 to a full key
-// by using the cas store for resolution.
-//
-// If the key is already of proper length, just returns the key.
-func (ds Store) ResolveKey(keyPrefix string) (string, error) {
-	if strings.HasPrefix(keyPrefix, hashPrefix) && len(keyPrefix) == lenHash+lenHashPrefix {
-		return keyPrefix, nil
+// ResolveKey resolves a partial key (of format `sha512-0c45e8c0ab2`) to a full
+// key by considering the key a prefix and using the store for resolution.
+// If the key is already of the full key length, it returns the key unaltered.
+// If the key is longer than the full key length, it is first truncated.
+func (ds Store) ResolveKey(key string) (string, error) {
+	if len(key) > lenKey {
+		key = key[:lenKey]
+	}
+	if strings.HasPrefix(key, hashPrefix) && len(key) == lenKey {
+		return key, nil
 	}
 
 	cancel := make(chan struct{})
-	var key string
+	var k string
 	keyCount := 0
-	for key = range ds.stores[blobType].KeysPrefix(keyPrefix, cancel) {
+	for k = range ds.stores[blobType].KeysPrefix(key, cancel) {
 		keyCount++
 		if keyCount > 1 {
 			close(cancel)
 			break
 		}
 	}
-	if keyCount != 1 {
-		return "", fmt.Errorf("ambiguous key: %q", keyPrefix)
+	if keyCount == 0 {
+		return "", fmt.Errorf("no keys found")
 	}
-	return key, nil
+	if keyCount != 1 {
+		return "", fmt.Errorf("ambiguous key: %q", key)
+	}
+	return k, nil
 }
 
 func (ds Store) ReadStream(key string) (io.ReadCloser, error) {
@@ -97,43 +108,47 @@ func (ds Store) WriteStream(key string, r io.Reader) error {
 	return ds.stores[blobType].WriteStream(key, r, true)
 }
 
-func (ds Store) WriteACI(tmpKey string, orig io.Reader) (string, error) {
+// WriteACI takes an ACI encapsulated in an io.Reader, decompresses it if
+// necessary, and then stores it in the store under a key based on the image ID
+// (i.e. the hash of the uncompressed ACI)
+func (ds Store) WriteACI(r io.Reader) (string, error) {
 	// Peek at the first 512 bytes of the reader to detect filetype
-	br := bufio.NewReaderSize(orig, 512)
+	br := bufio.NewReaderSize(r, 512)
 	hd, err := br.Peek(512)
 	switch err {
 	case nil:
 	case io.EOF: // We may have still peeked enough to guess some types, so fall through
 	default:
-		return "", err
+		return "", fmt.Errorf("error reading image header: %v", err)
 	}
 	typ, err := aci.DetectFileType(bytes.NewBuffer(hd))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error detecting image type: %v", err)
 	}
 	dr, err := decompress(br, typ)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error decompressing image: %v", err)
 	}
 
-	// Write the uncompressed image (tar) to a temporary file on disk, and
+	// Write the decompressed image (tar) to a temporary file on disk, and
 	// tee so we can generate the hash
-	hash := sha512.New()
-	tr := io.TeeReader(dr, hash)
+	h := sha512.New()
+	tr := io.TeeReader(dr, h)
 	fh, err := ds.tmpFile()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error creating image: %v", err)
 	}
 	if _, err := io.Copy(fh, tr); err != nil {
-		return "", err
+		return "", fmt.Errorf("error copying image: %v", err)
 	}
-	fh.Close()
+	if err := fh.Close(); err != nil {
+		return "", fmt.Errorf("error closing image: %v", err)
+	}
 
-	// Import the decompressed tar to the store using the hash as the key
-	key := fmt.Sprintf("sha512-%x", hash.Sum(nil))
-	err = ds.stores[blobType].Import(fh.Name(), key, true)
-	if err != nil {
-		return "", err
+	// Import the uncompressed image into the store at the real key
+	key := HashToKey(h)
+	if err = ds.stores[blobType].Import(fh.Name(), key, true); err != nil {
+		return "", fmt.Errorf("error importing image: %v", err)
 	}
 
 	return key, nil
@@ -181,4 +196,15 @@ func (ds Store) Dump(hex bool) {
 		}
 		fmt.Printf("%d total keys\n", keyCount)
 	}
+}
+
+// HashToKey takes a hash.Hash (which currently _MUST_ represent a full SHA512),
+// calculates its sum, and returns a string which should be used as the key to
+// store the data matching the hash.
+func HashToKey(h hash.Hash) string {
+	s := h.Sum(nil)
+	if len(s) != lenHash {
+		panic(fmt.Sprintf("bad hash passed to hashToKey: %s", s))
+	}
+	return fmt.Sprintf("%s%x", hashPrefix, s)[0:lenKey]
 }

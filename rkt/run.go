@@ -62,8 +62,7 @@ func findImages(args []string, ds *cas.Store) (out []types.Hash, err error) {
 		// import the local file if it exists
 		file, err := os.Open(img)
 		if err == nil {
-			tmp := types.NewHashSHA512([]byte(img)).String()
-			key, err := ds.WriteACI(tmp, file)
+			key, err := ds.WriteACI(file)
 			file.Close()
 			if err != nil {
 				return nil, fmt.Errorf("%s: %v", img, err)
