@@ -39,7 +39,7 @@ func (r *Remote) Unmarshal(data []byte) {
 }
 
 func (r Remote) Hash() string {
-	return types.NewHashSHA256([]byte(r.Name)).String()
+	return types.NewHashSHA512([]byte(r.Name)).String()
 }
 
 func (r Remote) Type() int64 {
@@ -79,7 +79,7 @@ func (r Remote) Download(ds Store) (*Remote, error) {
 		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
 	}
 
-	key, err := ds.WriteACI(r.Hash(), reader)
+	key, err := ds.WriteACI(reader)
 	if err != nil {
 		return nil, err
 	}

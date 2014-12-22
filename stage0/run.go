@@ -14,7 +14,7 @@ import (
 	"bytes"
 	"compress/bzip2"
 	"compress/gzip"
-	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -48,8 +48,9 @@ type Config struct {
 	Stage1Init    string     // binary to be execed as stage1
 	Stage1Rootfs  string     // compressed bundle containing a rootfs for stage1
 	Debug         bool
-	Images        []types.Hash      // application images
-	Volumes       map[string]string // map of volumes that rocket can provide to applications
+	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
+	Images  []types.Hash      // application images
+	Volumes map[string]string // map of volumes that rocket can provide to applications
 }
 
 func init() {
@@ -266,15 +267,16 @@ func unpackBuiltinRootfs(dir string) error {
 }
 
 // setupImage attempts to load the image by the given hash from the store,
-// verifies that the image matches the given hash and extracts the image
-// into a directory in the given dir.
-// It returns the ImageManifest that the image contains
+// verifies that the image matches the hash, and extracts the image into a
+// directory in the given dir.
+// It returns the ImageManifest that the image contains.
+// TODO(jonboulle): tighten up the Hash type here; currently it is partially-populated (i.e. half-length sha512)
 func setupImage(cfg Config, img types.Hash, dir string) (*schema.ImageManifest, error) {
 	log.Println("Loading image", img.String())
 
 	rs, err := cfg.Store.ReadStream(img.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading stream: %v", err)
 	}
 
 	ad := rktpath.AppImagePath(dir, img)
@@ -283,7 +285,7 @@ func setupImage(cfg Config, img types.Hash, dir string) (*schema.ImageManifest, 
 		return nil, fmt.Errorf("error creating image directory: %v", err)
 	}
 
-	hash := sha256.New()
+	hash := sha512.New()
 	r := io.TeeReader(rs, hash)
 
 	if err := ptar.ExtractTar(tar.NewReader(r), ad); err != nil {
@@ -295,11 +297,12 @@ func setupImage(cfg Config, img types.Hash, dir string) (*schema.ImageManifest, 
 		return nil, fmt.Errorf("error reading ACI: %v", err)
 	}
 
-	if id := fmt.Sprintf("%x", hash.Sum(nil)); id != img.Val {
+	// TODO(jonboulle): clean this up, leaky abstraction with the store.
+	if g := cas.HashToKey(hash); g != img.String() {
 		if err := os.RemoveAll(ad); err != nil {
 			fmt.Fprintf(os.Stderr, "error cleaning up directory: %v\n", err)
 		}
-		return nil, fmt.Errorf("image hash does not match expected (%v != %v)", id, img.Val)
+		return nil, fmt.Errorf("image hash does not match expected (%v != %v)", g, img.String())
 	}
 
 	err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
