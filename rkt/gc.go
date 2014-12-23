@@ -43,15 +43,9 @@ func runGC(args []string) (exit int) {
 	}
 	for _, c := range cs {
 		cp := filepath.Join(containersDir(), c)
-		l, err := lock.NewLock(cp)
+		l, err := lock.TryExclusiveLock(cp)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to open lock, ignoring %q: %v\n", c, err)
-			continue
-		}
-
-		err = l.TryExclusiveLock()
-		if err != nil {
-			l.Close()
 			continue
 		}
 
@@ -113,13 +107,8 @@ func emptyGarbage(gracePeriod time.Duration) error {
 
 		expiration := time.Unix(st.Ctim.Unix()).Add(gracePeriod)
 		if time.Now().After(expiration) {
-			l, err := lock.NewLock(gp)
+			l, err := lock.ExclusiveLock(gp)
 			if err != nil {
-				continue
-			}
-			err = l.ExclusiveLock()
-			if err != nil {
-				l.Close()
 				continue
 			}
 			fmt.Printf("Garbage collecting container %q\n", dir.Name())

@@ -198,11 +198,7 @@ func Run(dir string, debug bool) {
 }
 
 func lockDir(dir string) error {
-	l, err := lock.NewLock(dir)
-	if err == nil {
-		err = l.TryExclusiveLock()
-	}
-
+	l, err := lock.TryExclusiveLock(dir)
 	if err != nil {
 		return fmt.Errorf("error acquiring lock on dir %q: %v", dir, err)
 	}
