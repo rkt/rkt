@@ -80,7 +80,7 @@ func Setup(cfg Config) (string, error) {
 
 	// Set up the container lock
 	if err := lockDir(dir); err != nil {
-		return "", fmt.Errorf("error locking directory: %v", err)
+		return "", err
 	}
 
 	log.Printf("Unpacking stage1 rootfs")
