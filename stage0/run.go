@@ -30,6 +30,7 @@ import (
 	"github.com/coreos/rocket/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
 	"github.com/coreos/rocket/cas"
 	rktpath "github.com/coreos/rocket/path"
+	"github.com/coreos/rocket/pkg/lock"
 	ptar "github.com/coreos/rocket/pkg/tar"
 	"github.com/coreos/rocket/version"
 
@@ -77,8 +78,9 @@ func Setup(cfg Config) (string, error) {
 		return "", fmt.Errorf("error creating directory: %v", err)
 	}
 
+	// Set up the container lock
 	if err := lockDir(dir); err != nil {
-		return "", fmt.Errorf("error locking directory: %v", err)
+		return "", err
 	}
 
 	log.Printf("Unpacking stage1 rootfs")
@@ -196,15 +198,15 @@ func Run(dir string, debug bool) {
 }
 
 func lockDir(dir string) error {
-	fd, err := syscall.Open(dir, syscall.O_DIRECTORY, 0)
+	l, err := lock.TryExclusiveLock(dir)
 	if err != nil {
-		return fmt.Errorf("error opening directory: %v", err)
-	}
-
-	if err := syscall.Flock(fd, syscall.LOCK_NB|syscall.LOCK_EX); err != nil {
 		return fmt.Errorf("error acquiring lock on dir %q: %v", dir, err)
 	}
-
+	// We need the fd number for stage1 and leave the file open / lock held til process exit
+	fd, err := l.Fd()
+	if err != nil {
+		panic(err)
+	}
 	return os.Setenv(envLockFd, fmt.Sprintf("%v", fd))
 }
 
