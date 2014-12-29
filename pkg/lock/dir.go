@@ -10,25 +10,31 @@ var (
 	ErrLocked = errors.New("directory already locked")
 )
 
-// DirLock represents a Directory with an active Lock.
-type DirLock interface {
-	// Close() closes the file representing the lock, implicitly unlocking.
-	Close() error
-	// Fd() returns the fd number for the file representing the lock
-	Fd() (int, error)
+type DirLock struct {
+	dir string
+	fd  int
+}
+
+// TryExclusiveLock takes an exclusive lock on a directory without blocking.
+// This is idempotent when the DirLock already represents an exclusive lock,
+// and tries promote a shared lock to exclusive atomically.
+// It will return ErrLocked if any lock is already held on the directory.
+func (l *DirLock) TryExclusiveLock() error {
+	err := syscall.Flock(l.fd, syscall.LOCK_EX|syscall.LOCK_NB)
+	if err == syscall.EWOULDBLOCK {
+		err = ErrLocked
+	}
+	return err
 }
 
 // TryExclusiveLock takes an exclusive lock on a directory without blocking.
 // It will return ErrLocked if any lock is already held on the directory.
-func TryExclusiveLock(dir string) (DirLock, error) {
-	l, err := newLock(dir)
+func TryExclusiveLock(dir string) (*DirLock, error) {
+	l, err := NewLock(dir)
 	if err != nil {
 		return nil, err
 	}
-	err = syscall.Flock(l.fd, syscall.LOCK_EX|syscall.LOCK_NB)
-	if err == syscall.EWOULDBLOCK {
-		err = ErrLocked
-	}
+	err = l.TryExclusiveLock()
 	if err != nil {
 		return nil, err
 	}
@@ -36,11 +42,19 @@ func TryExclusiveLock(dir string) (DirLock, error) {
 }
 
 // ExclusiveLock takes an exclusive lock on a directory.
+// This is idempotent when the DirLock already represents an exclusive lock,
+// and promotes a shared lock to exclusive atomically.
 // It will block if an exclusive lock is already held on the directory.
-func ExclusiveLock(dir string) (DirLock, error) {
-	l, err := newLock(dir)
+func (l *DirLock) ExclusiveLock() error {
+	return syscall.Flock(l.fd, syscall.LOCK_EX)
+}
+
+// ExclusiveLock takes an exclusive lock on a directory.
+// It will block if an exclusive lock is already held on the directory.
+func ExclusiveLock(dir string) (*DirLock, error) {
+	l, err := NewLock(dir)
 	if err == nil {
-		err = syscall.Flock(l.fd, syscall.LOCK_EX)
+		err = l.ExclusiveLock()
 	}
 	if err != nil {
 		return nil, err
@@ -49,16 +63,25 @@ func ExclusiveLock(dir string) (DirLock, error) {
 }
 
 // TrySharedLock takes a co-operative (shared) lock on a directory without blocking.
+// This is idempotent when the DirLock already represents a shared lock,
+// and tries demote an exclusive lock to shared atomically.
 // It will return ErrLocked if an exclusive lock already exists on the directory.
-func TrySharedLock(dir string) (DirLock, error) {
-	l, err := newLock(dir)
-	if err != nil {
-		return nil, err
-	}
-	err = syscall.Flock(l.fd, syscall.LOCK_SH|syscall.LOCK_NB)
+func (l *DirLock) TrySharedLock() error {
+	err := syscall.Flock(l.fd, syscall.LOCK_SH|syscall.LOCK_NB)
 	if err == syscall.EWOULDBLOCK {
 		err = ErrLocked
 	}
+	return err
+}
+
+// TrySharedLock takes a co-operative (shared) lock on a directory without blocking.
+// It will return ErrLocked if an exclusive lock already exists on the directory.
+func TrySharedLock(dir string) (*DirLock, error) {
+	l, err := NewLock(dir)
+	if err != nil {
+		return nil, err
+	}
+	err = l.TrySharedLock()
 	if err != nil {
 		return nil, err
 	}
@@ -66,26 +89,29 @@ func TrySharedLock(dir string) (DirLock, error) {
 }
 
 // SharedLock takes a co-operative (shared) lock on a directory.
+// This is idempotent when the DirLock already represents a shared lock,
+// and demotes an exclusive lock to shared atomically.
 // It will block if an exclusive lock is already held on the directory.
-func SharedLock(dir string) (DirLock, error) {
-	l, err := newLock(dir)
+func (l *DirLock) SharedLock() error {
+	return syscall.Flock(l.fd, syscall.LOCK_SH)
+}
+
+// SharedLock takes a co-operative (shared) lock on a directory.
+// It will block if an exclusive lock is already held on the directory.
+func SharedLock(dir string) (*DirLock, error) {
+	l, err := NewLock(dir)
 	if err != nil {
 		return nil, err
 	}
-	err = syscall.Flock(l.fd, syscall.LOCK_SH)
+	err = l.SharedLock()
 	if err != nil {
 		return nil, err
 	}
 	return l, nil
 }
 
-type lock struct {
-	dir string
-	fd  int
-}
-
 // Fd returns the lock's file descriptor
-func (l *lock) Fd() (int, error) {
+func (l *DirLock) Fd() (int, error) {
 	var err error
 	if l.fd == -1 {
 		err = errors.New("lock closed")
@@ -94,15 +120,15 @@ func (l *lock) Fd() (int, error) {
 }
 
 // Close closes the lock which implicitly unlocks it as well
-func (l *lock) Close() error {
+func (l *DirLock) Close() error {
 	fd := l.fd
 	l.fd = -1
 	return syscall.Close(fd)
 }
 
 // NewLock opens a new lock on a directory without acquisition
-func newLock(dir string) (*lock, error) {
-	l := &lock{dir: dir, fd: -1}
+func NewLock(dir string) (*DirLock, error) {
+	l := &DirLock{dir: dir, fd: -1}
 
 	// we can't use os.OpenFile as Go sets O_CLOEXEC
 	lfd, err := syscall.Open(l.dir, syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
