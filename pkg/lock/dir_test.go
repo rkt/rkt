@@ -30,7 +30,7 @@ func TestNewLock(t *testing.T) {
 		t.Fatalf("error creating newLock: %v", err)
 	}
 
-	l.Close()
+	err = l.Close()
 	if err != nil {
 		t.Fatalf("error unlocking lock: %v", err)
 	}
