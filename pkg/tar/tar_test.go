@@ -101,6 +101,7 @@ func TestExtractTarInsecureSymlink(t *testing.T) {
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
+		defer os.RemoveAll(tmpdir)
 		err = ExtractTar(tr, tmpdir)
 		if _, ok := err.(insecureLinkError); !ok {
 			t.Errorf("expected insecureSymlinkError error")
@@ -187,6 +188,7 @@ func TestExtractTarFolders(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
+	defer os.RemoveAll(tmpdir)
 	err = ExtractTar(tr, tmpdir)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
