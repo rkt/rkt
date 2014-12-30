@@ -37,7 +37,6 @@ func ExtractTar(tr *tar.Reader, dir string) error {
 			case typ == tar.TypeReg || typ == tar.TypeRegA:
 				f, err := os.OpenFile(p, os.O_CREATE|os.O_RDWR, fi.Mode())
 				if err != nil {
-					f.Close()
 					return err
 				}
 				_, err = io.Copy(f, tr)
@@ -55,8 +54,10 @@ func ExtractTar(tr *tar.Reader, dir string) error {
 					return err
 				}
 				if err := dir.Chmod(fi.Mode()); err != nil {
+					dir.Close()
 					return err
 				}
+				dir.Close()
 			case typ == tar.TypeLink:
 				dest := filepath.Join(dir, hdr.Linkname)
 				if !strings.HasPrefix(dest, dir) {
