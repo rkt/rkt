@@ -207,11 +207,15 @@ func TestExtractTarFolders(t *testing.T) {
 	}
 
 	dirInfo, err := os.Lstat(filepath.Join(tmpdir, "deep/folder"))
-	if dirInfo.Mode().Perm() != os.FileMode(0747) {
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	} else if dirInfo.Mode().Perm() != os.FileMode(0747) {
 		t.Errorf("unexpected dir mode: %s", dirInfo.Mode())
 	}
 	dirInfo, err = os.Lstat(filepath.Join(tmpdir, "deep/deep"))
-	if dirInfo.Mode().Perm() != os.FileMode(0747) {
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	} else if dirInfo.Mode().Perm() != os.FileMode(0747) {
 		t.Errorf("unexpected dir mode: %s", dirInfo.Mode())
 	}
 
