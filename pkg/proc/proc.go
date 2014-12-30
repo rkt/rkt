@@ -128,10 +128,10 @@ func LiveProcs(prefix string) (map[int][]string, error) {
 // sockets open on the system accessing any paths with the given prefix
 func unixSocketsWithPrefix(pre string) (map[string]string, error) {
 	fh, err := os.Open(unixSocks)
-	defer fh.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer fh.Close()
 	socks := make(map[string]string)
 	scanner := bufio.NewScanner(fh)
 	for scanner.Scan() {
