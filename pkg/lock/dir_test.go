@@ -28,7 +28,7 @@ func TestNewLock(t *testing.T) {
 	defer os.Remove(f.Name())
 	f.Close()
 
-	l, err := newLock(f.Name())
+	l, err := NewLock(f.Name())
 	if err == nil || l != nil {
 		t.Fatal("expected error creating lock on file")
 	}
@@ -39,9 +39,9 @@ func TestNewLock(t *testing.T) {
 	}
 	defer os.Remove(d)
 
-	l, err = newLock(d)
+	l, err = NewLock(d)
 	if err != nil {
-		t.Fatalf("error creating newLock: %v", err)
+		t.Fatalf("error creating NewLock: %v", err)
 	}
 
 	err = l.Close()
@@ -53,7 +53,7 @@ func TestNewLock(t *testing.T) {
 		t.Fatalf("error removing tmpdir: %v", err)
 	}
 
-	l, err = newLock(d)
+	l, err = NewLock(d)
 	if err == nil {
 		t.Fatalf("expected error creating lock on nonexistent path")
 	}
@@ -70,6 +70,12 @@ func TestExclusiveLock(t *testing.T) {
 	l, err := ExclusiveLock(dir)
 	if err != nil {
 		t.Fatalf("error creating lock: %v", err)
+	}
+
+	// reacquire the exclusive lock using the receiver interface
+	err = l.TryExclusiveLock()
+	if err != nil {
+		t.Fatalf("error reacquiring exclusive lock: %v", err)
 	}
 
 	// Now try another exclusive lock, should fail
@@ -102,6 +108,11 @@ func TestSharedLock(t *testing.T) {
 	l1, err := SharedLock(dir)
 	if err != nil {
 		t.Fatalf("error creating new shared lock: %v", err)
+	}
+
+	err = l1.TrySharedLock()
+	if err != nil {
+		t.Fatalf("error reacquiring shared lock: %v", err)
 	}
 
 	// Subsequent shared locks should succeed
