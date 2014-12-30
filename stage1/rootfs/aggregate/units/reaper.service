@@ -1,0 +1,7 @@
+[Unit]
+Description=Rocket apps reaper
+AllowIsolate=true
+DefaultDependencies=false
+
+[Service]
+ExecStart=/reaper.sh
