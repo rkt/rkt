@@ -204,7 +204,7 @@ func Run(dir string, debug bool) {
 	log.Printf("Execing %s", initPath)
 	args := []string{initPath}
 	if debug {
-		args = append(args, "debug")
+		args = append(args, "--debug")
 	}
 	if err := syscall.Exec(initPath, args, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
