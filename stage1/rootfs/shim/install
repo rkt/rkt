@@ -1,0 +1,2 @@
+install -m 0755 ../shim/shim.so "$ROOT"
+ln -s shim.so "$ROOT/fakesdboot.so"
