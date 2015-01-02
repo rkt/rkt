@@ -13,7 +13,8 @@
   * realpath
   * gpg
 * Go 1.3+
-  * jteeuwen/go-bindata
+  * github.com/jteeuwen/go-bindata
+  * github.com/appc/spec (not yet vendored as it's in a continuous improvement phase)
 
 Once the requirements have been met you can build rocket by running the following commands:
 
@@ -27,5 +28,5 @@ cd rocket; ./build
 Alternatively, you can build rocket in a docker container with the following command. Replace $SRC with the absolute path to your rocket source code:
 
 ```
-docker run -v $SRC:/opt/rocket -i -t google/golang /bin/bash -c "apt-get install -y cpio squashfs-tools realpath && cd /opt/rocket && go get github.com/jteeuwen/go-bindata/... && ./build"
+docker run -v $SRC:/opt/rocket -i -t google/golang /bin/bash -c "apt-get install -y cpio squashfs-tools realpath && cd /opt/rocket && go get github.com/jteeuwen/go-bindata/... && go get github.com/appc/spec/... && ./build"
 ```
