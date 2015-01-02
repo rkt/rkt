@@ -5,6 +5,9 @@
 ### Requirements
 
 * Linux 3.8+
+  * make
+  * gcc
+  * glibc development and static pieces (on Fedora/RHEL/Centos: glibc-devel and glibc-static packages, on Debian/Ubuntu libc6-dev package)
   * cpio
   * squashfs-tools
   * realpath
