@@ -10,7 +10,6 @@ $(SUBDIRS):
 	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 clean: $(SUBDIRS)
-	rm -Rf $(S1) $(S1TAR)
 
 test: $(SUBDIRS)
 
