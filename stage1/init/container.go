@@ -118,6 +118,10 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 		opts = append(opts, &unit.UnitOption{"Service", "Environment", ee})
 	}
 
+	if app.WorkingDirectory != "" {
+		opts = append(opts, &unit.UnitOption{"Service", "WorkingDirectory", app.WorkingDirectory})
+	}
+
 	saPorts := []types.Port{}
 	for _, p := range app.Ports {
 		if p.SocketActivated {
