@@ -79,22 +79,50 @@ func LoadContainer(root string) (*Container, error) {
 	return c, nil
 }
 
+// quoteExec returns an array of quoted strings appropriate for systemd execStart usage
+func quoteExec(exec []string) string {
+	if len(exec) == 0 {
+		// existing callers prefix {"/diagexec", "/app/root"} so this shouldn't occur.
+		panic("empty exec")
+	}
+
+	var qexec []string
+	qexec = append(qexec, exec[0])
+	// FIXME(vc): systemd gets angry if qexec[0] is quoted
+	// https://bugs.freedesktop.org/show_bug.cgi?id=86171
+
+	if len(exec) > 1 {
+		for _, arg := range exec[1:] {
+			escArg := strings.Replace(arg, `\`, `\\`, -1)
+			escArg = strings.Replace(escArg, `"`, `\"`, -1)
+			escArg = strings.Replace(escArg, `'`, `\'`, -1)
+			qexec = append(qexec, `"`+escArg+`"`)
+		}
+	}
+
+	return strings.Join(qexec, " ")
+}
+
+func newUnitOption(section, name, value string) *unit.UnitOption {
+	return &unit.UnitOption{Section: section, Name: name, Value: value}
+}
+
 // appToSystemd transforms the provided app manifest into systemd units
 func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error {
 	name := am.Name.String()
 	app := am.App
 	execWrap := []string{"/diagexec", rktpath.RelAppRootfsPath(id)}
-	execStart := strings.Join(append(execWrap, app.Exec...), " ")
+	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
-		&unit.UnitOption{"Unit", "Description", name},
-		&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
-		&unit.UnitOption{"Unit", "OnFailureJobMode", "isolate"},
-		&unit.UnitOption{"Unit", "OnFailure", "reaper.service"},
-		&unit.UnitOption{"Unit", "Wants", "exit-watcher.service"},
-		&unit.UnitOption{"Service", "Restart", "no"},
-		&unit.UnitOption{"Service", "ExecStart", execStart},
-		&unit.UnitOption{"Service", "User", app.User},
-		&unit.UnitOption{"Service", "Group", app.Group},
+		newUnitOption("Unit", "Description", name),
+		newUnitOption("Unit", "DefaultDependencies", "false"),
+		newUnitOption("Unit", "OnFailureJobMode", "isolate"),
+		newUnitOption("Unit", "OnFailure", "reaper.service"),
+		newUnitOption("Unit", "Wants", "exit-watcher.service"),
+		newUnitOption("Service", "Restart", "no"),
+		newUnitOption("Service", "ExecStart", execStart),
+		newUnitOption("Service", "User", app.User),
+		newUnitOption("Service", "Group", app.Group),
 	}
 
 	for _, eh := range app.EventHandlers {
@@ -107,15 +135,15 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 		default:
 			return fmt.Errorf("unrecognized eventHandler: %v", eh.Name)
 		}
-		exec := strings.Join(append(execWrap, eh.Exec...), " ")
-		opts = append(opts, &unit.UnitOption{"Service", typ, exec})
+		exec := quoteExec(append(execWrap, eh.Exec...))
+		opts = append(opts, newUnitOption("Service", typ, exec))
 	}
 
 	env := app.Environment
 	env["AC_APP_NAME"] = name
 	for ek, ev := range env {
 		ee := fmt.Sprintf(`"%s=%s"`, ek, ev)
-		opts = append(opts, &unit.UnitOption{"Service", "Environment", ee})
+		opts = append(opts, newUnitOption("Service", "Environment", ee))
 	}
 
 	saPorts := []types.Port{}
@@ -127,10 +155,10 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 
 	if len(saPorts) > 0 {
 		sockopts := []*unit.UnitOption{
-			&unit.UnitOption{"Unit", "Description", name + " socket-activated ports"},
-			&unit.UnitOption{"Unit", "DefaultDependencies", "false"},
-			&unit.UnitOption{"Socket", "BindIPv6Only", "both"},
-			&unit.UnitOption{"Socket", "Service", ServiceUnitName(id)},
+			newUnitOption("Unit", "Description", name+" socket-activated ports"),
+			newUnitOption("Unit", "DefaultDependencies", "false"),
+			newUnitOption("Socket", "BindIPv6Only", "both"),
+			newUnitOption("Socket", "Service", ServiceUnitName(id)),
 		}
 
 		for _, sap := range saPorts {
@@ -143,7 +171,7 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 			default:
 				return fmt.Errorf("unrecognized protocol: %v", sap.Protocol)
 			}
-			sockopts = append(sockopts, &unit.UnitOption{"Socket", proto, fmt.Sprintf("%v", sap.Port)})
+			sockopts = append(sockopts, newUnitOption("Socket", proto, fmt.Sprintf("%v", sap.Port)))
 		}
 
 		file, err := os.OpenFile(SocketUnitPath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
@@ -160,7 +188,7 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 			return fmt.Errorf("failed to link socket want: %v", err)
 		}
 
-		opts = append(opts, &unit.UnitOption{"Unit", "Requires", SocketUnitName(id)})
+		opts = append(opts, newUnitOption("Unit", "Requires", SocketUnitName(id)))
 	}
 
 	file, err := os.OpenFile(ServiceUnitPath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
