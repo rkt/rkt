@@ -55,6 +55,8 @@ Edit: manifest.json
         }
     ],
     "app": {
+        "user": "root",
+        "group": "root",
         "exec": [
             "/bin/hello"
         ],
