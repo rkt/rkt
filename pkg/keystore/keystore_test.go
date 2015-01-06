@@ -36,16 +36,14 @@ import (
 	"github.com/coreos/rocket/pkg/keystore/keystoretest"
 )
 
-func testKeyStoreConfig() (*Config, error) {
-	tempDir, err := ioutil.TempDir("", "keystore-test")
-	if err != nil {
-		return nil, err
-	}
+const tstprefix = "keystore-test"
+
+func testKeyStoreConfig(dir string) (*Config, error) {
 	c := &Config{
-		RootPath:         path.Join(tempDir, "/etc/rkt/trustedkeys/root.d"),
-		SystemRootPath:   path.Join(tempDir, "/usr/lib/rkt/trustedkeys/root.d"),
-		PrefixPath:       path.Join(tempDir, "/etc/rkt/trustedkeys/prefix.d"),
-		SystemPrefixPath: path.Join(tempDir, "/usr/lib/rkt/trustedkeys/prefix.d"),
+		RootPath:         path.Join(dir, "/etc/rkt/trustedkeys/root.d"),
+		SystemRootPath:   path.Join(dir, "/usr/lib/rkt/trustedkeys/root.d"),
+		PrefixPath:       path.Join(dir, "/etc/rkt/trustedkeys/prefix.d"),
+		SystemPrefixPath: path.Join(dir, "/usr/lib/rkt/trustedkeys/prefix.d"),
 	}
 	for _, path := range []string{c.RootPath, c.SystemRootPath, c.PrefixPath, c.SystemPrefixPath} {
 		if err := os.MkdirAll(path, 0755); err != nil {
@@ -55,24 +53,20 @@ func testKeyStoreConfig() (*Config, error) {
 	return c, nil
 }
 
-func removeKeyStore(c *Config) error {
-	for _, path := range []string{c.RootPath, c.SystemRootPath, c.PrefixPath, c.SystemPrefixPath} {
-		if err := os.RemoveAll(path); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func TestStoreTrustedKey(t *testing.T) {
+	dir, err := ioutil.TempDir("", tstprefix)
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+
 	armoredPublicKey := keystoretest.KeyMap["example.com"].ArmoredPublicKey
 	fingerprint := keystoretest.KeyMap["example.com"].Fingerprint
 
-	keyStoreConfig, err := testKeyStoreConfig()
+	keyStoreConfig, err := testKeyStoreConfig(dir)
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-	defer removeKeyStore(keyStoreConfig)
 
 	ks := New(keyStoreConfig)
 
@@ -142,11 +136,16 @@ func TestCheckSignature(t *testing.T) {
 		"acme.com",
 	}
 
-	keyStoreConfig, err := testKeyStoreConfig()
+	dir, err := ioutil.TempDir("", tstprefix)
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	keyStoreConfig, err := testKeyStoreConfig(dir)
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-	defer removeKeyStore(keyStoreConfig)
 
 	ks := New(keyStoreConfig)
 	for _, key := range trustedPrefixKeys {
