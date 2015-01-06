@@ -21,7 +21,9 @@ import (
 )
 
 var (
-	ErrLocked = errors.New("directory already locked")
+	ErrLocked     = errors.New("directory already locked")
+	ErrNotExist   = errors.New("directory does not exist")
+	ErrPermission = errors.New("permission denied")
 )
 
 type DirLock struct {
@@ -147,6 +149,11 @@ func NewLock(dir string) (*DirLock, error) {
 	// we can't use os.OpenFile as Go sets O_CLOEXEC
 	lfd, err := syscall.Open(l.dir, syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
 	if err != nil {
+		if err == syscall.ENOENT {
+			err = ErrNotExist
+		} else if err == syscall.EACCES {
+			err = ErrPermission
+		}
 		return nil, err
 	}
 	l.fd = lfd
