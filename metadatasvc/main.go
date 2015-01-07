@@ -164,12 +164,12 @@ func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) f
 	}
 }
 
-func appGet(h func(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.ImageManifest)) func(http.ResponseWriter, *http.Request) {
+func appGet(h func(w http.ResponseWriter, r *http.Request, m *metadata, _ *schema.ImageManifest)) func(http.ResponseWriter, *http.Request) {
 	return containerGet(func(w http.ResponseWriter, r *http.Request, m *metadata) {
 		appname := mux.Vars(r)["app"]
 
-		if am, ok := m.apps[appname]; ok {
-			h(w, r, m, am)
+		if im, ok := m.apps[appname]; ok {
+			h(w, r, m, im)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "App (%v) not found", appname)
@@ -190,11 +190,11 @@ func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, m *metada
 	k, err := types.NewACName(mux.Vars(r)["name"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Container annotation is not a valid AC Label")
+		fmt.Fprintf(w, "Container annotation is not a valid AC Name")
 		return
 	}
 
-	v, ok := m.manifest.Annotations[*k]
+	v, ok := m.manifest.Annotations.Get(k.String())
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Container annotation (%v) not found", k)
@@ -223,42 +223,42 @@ func handleContainerUID(w http.ResponseWriter, r *http.Request, m *metadata) {
 	w.Write([]byte(uid))
 }
 
-func mergeAppAnnotations(am *schema.ImageManifest, cm *schema.ContainerRuntimeManifest) types.Annotations {
-	merged := make(types.Annotations)
+func mergeAppAnnotations(im *schema.ImageManifest, cm *schema.ContainerRuntimeManifest) types.Annotations {
+	merged := types.Annotations{}
 
-	for k, v := range am.Annotations {
-		merged[k] = v
+	for _, annot := range im.Annotations {
+		merged.Set(annot.Name, annot.Value)
 	}
 
-	if app := cm.Apps.Get(am.Name); app != nil {
-		for k, v := range app.Annotations {
-			merged[k] = v
+	if app := cm.Apps.Get(im.Name); app != nil {
+		for _, annot := range app.Annotations {
+			merged.Set(annot.Name, annot.Value)
 		}
 	}
 
 	return merged
 }
 
-func handleAppAnnotations(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.ImageManifest) {
+func handleAppAnnotations(w http.ResponseWriter, r *http.Request, m *metadata, im *schema.ImageManifest) {
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
-	for k, _ := range mergeAppAnnotations(am, &m.manifest) {
-		fmt.Fprintln(w, k)
+	for _, annot := range mergeAppAnnotations(im, &m.manifest) {
+		fmt.Fprintln(w, string(annot.Name))
 	}
 }
 
-func handleAppAnnotation(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.ImageManifest) {
+func handleAppAnnotation(w http.ResponseWriter, r *http.Request, m *metadata, im *schema.ImageManifest) {
 	k, err := types.NewACName(mux.Vars(r)["name"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "App annotation is not a valid AC Label")
+		fmt.Fprintf(w, "App annotation is not a valid AC Name")
 		return
 	}
 
-	merged := mergeAppAnnotations(am, &m.manifest)
+	merged := mergeAppAnnotations(im, &m.manifest)
 
-	v, ok := merged[*k]
+	v, ok := merged.Get(k.String())
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "App annotation (%v) not found", k)
@@ -270,19 +270,19 @@ func handleAppAnnotation(w http.ResponseWriter, r *http.Request, m *metadata, am
 	w.Write([]byte(v))
 }
 
-func handleImageManifest(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.ImageManifest) {
+func handleImageManifest(w http.ResponseWriter, r *http.Request, m *metadata, im *schema.ImageManifest) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	if err := json.NewEncoder(w).Encode(*am); err != nil {
+	if err := json.NewEncoder(w).Encode(*im); err != nil {
 		fmt.Println(err)
 	}
 }
 
-func handleAppID(w http.ResponseWriter, r *http.Request, m *metadata, am *schema.ImageManifest) {
+func handleAppID(w http.ResponseWriter, r *http.Request, m *metadata, im *schema.ImageManifest) {
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	a := m.manifest.Apps.Get(am.Name)
+	a := m.manifest.Apps.Get(im.Name)
 	if a == nil {
 		panic("could not find app in manifest!")
 	}
