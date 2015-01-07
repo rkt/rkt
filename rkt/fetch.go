@@ -42,51 +42,6 @@ func init() {
 	commands = append(commands, cmdFetch)
 }
 
-func fetchURL(img string, ds *cas.Store) (string, error) {
-	rem := cas.NewRemote(img, []string{})
-	err := ds.ReadIndex(rem)
-	if err != nil && rem.Blob == "" {
-		rem, err = rem.Download(*ds)
-		if err != nil {
-			return "", fmt.Errorf("downloading: %v\n", err)
-		}
-	}
-	return rem.Blob, nil
-}
-
-// fetchImage will take an image as either a URL or a name string and import it
-// into the store if found.
-func fetchImage(img string, ds *cas.Store) (string, error) {
-	// discover if it isn't a URL
-	u, err := url.Parse(img)
-	if err == nil && u.Scheme == "" {
-		app, err := discovery.NewAppFromString(img)
-		if globalFlags.Debug && err != nil {
-			fmt.Printf("discovery: %s\n", err)
-		}
-		if err == nil {
-			ep, err := discovery.DiscoverEndpoints(*app, true)
-			if err != nil {
-				return "", err
-			}
-			// TODO(philips): use all available mirrors
-			if globalFlags.Debug {
-				fmt.Printf("fetch: trying %v\n", ep.ACI)
-			}
-			img = ep.ACI[0]
-			u, err = url.Parse(img)
-		}
-	}
-
-	if err != nil { // download if it isn't a URL
-		return "", fmt.Errorf("%s: not a valid URL or hash", img)
-	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", fmt.Errorf("%s: rkt only supports http or https URLs", img)
-	}
-	return fetchURL(img, ds)
-}
-
 func runFetch(args []string) (exit int) {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "fetch: Must provide at least one image\n")
@@ -111,4 +66,72 @@ func runFetch(args []string) (exit int) {
 	}
 
 	return
+}
+
+// fetchImage will take an image as either a URL or a name string and import it
+// into the store if found.
+func fetchImage(img string, ds *cas.Store) (string, error) {
+	var u *url.URL
+	var err error
+	if app := newDiscoveryApp(img); app != nil {
+		fmt.Printf("rkt: starting to discover app img %s\n", img)
+		u, err = discover(app)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		u, err = url.Parse(img)
+	}
+	if err != nil {
+		return "", fmt.Errorf("not a valid URL (%s)", img)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", fmt.Errorf("rkt only supports http or https URLs (%s)", img)
+	}
+	return fetchURL(img, ds)
+}
+
+func fetchURL(img string, ds *cas.Store) (string, error) {
+	fmt.Printf("rkt: starting to fetch img from %s\n", img)
+	rem := cas.NewRemote(img, []string{})
+	err := ds.ReadIndex(rem)
+	if err != nil && rem.Blob == "" {
+		rem, err = rem.Download(*ds)
+		if err != nil {
+			return "", fmt.Errorf("fetch: %v\n", err)
+		}
+	}
+	return rem.Blob, nil
+}
+
+func discover(app *discovery.App) (*url.URL, error) {
+	ep, err := discovery.DiscoverEndpoints(*app, true)
+	if err != nil {
+		return nil, fmt.Errorf("discovery: %v", err)
+	}
+	// TODO(philips): use all available mirrors
+	if globalFlags.Debug {
+		fmt.Printf("discovery: trying %v\n", ep.ACI[0])
+	}
+	imgurl := ep.ACI[0]
+	u, err := url.Parse(imgurl)
+	if err != nil {
+		return nil, fmt.Errorf("discovery: fetched img URL (%s) is invalid (%v)", imgurl, err)
+	}
+	return u, nil
+}
+
+// newDiscoveryApp creates a discovery app if the given img is an app name and
+// has a URL-like structure, for example example.com/reduce-worker.
+// Or it returns nil.
+func newDiscoveryApp(img string) *discovery.App {
+	app, err := discovery.NewAppFromString(img)
+	if err != nil {
+		return nil
+	}
+	u, err := url.Parse(app.Name.String())
+	if err == nil && u.Scheme == "" {
+		return app
+	}
+	return nil
 }
