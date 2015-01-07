@@ -175,10 +175,6 @@ function cache_url() {
 }
 
 CACHED_IMG="cache/pxe.img"
-USRFS="usr.squashfs"
-ROOTDIR="rootfs"
-USR="rootfs/usr"
-FILELIST="manifest.txt"
 
 # cache pxe image
 cache_url "${CACHED_IMG}" "${IMG_URL}" "${GPG_KEY}" "${GPG_LONG_ID}"
