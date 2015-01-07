@@ -94,21 +94,11 @@ func runHelp(args []string) (exit int) {
 		return
 	}
 
-	var cmd *Command
-
-	for _, c := range commands {
-		if c.Name == args[0] {
-			cmd = c
-			break
-		}
-	}
-
-	if cmd == nil {
-		fmt.Fprintf(os.Stderr, "Unrecognized command: %s\n", args[0])
+	if err := printCommandUsageByName(args[0]); err != nil {
+		printGlobalUsage()
+		fmt.Fprintf(os.Stderr, "\nHelp error: %v\n", err)
 		return 1
 	}
-
-	printCommandUsage(cmd)
 	return
 }
 
@@ -140,4 +130,23 @@ func printCommandUsage(cmd *Command) {
 		getFlags(&cmd.Flags),
 	})
 	out.Flush()
+}
+
+func printCommandUsageByName(name string) error {
+	var cmd *Command
+
+	for _, c := range commands {
+		if c.Name == name {
+			cmd = c
+			break
+		}
+	}
+
+	if cmd == nil {
+		return fmt.Errorf("unrecognized command: %s", name)
+	}
+
+	printCommandUsage(cmd)
+
+	return nil
 }
