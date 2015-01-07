@@ -31,7 +31,7 @@ const (
 
 // ServiceUnitName returns a systemd service unit name for the given imageID
 func ServiceUnitName(imageID types.Hash) string {
-	return imageID.String() + ".service"
+	return types.ShortHash(imageID.String()) + ".service"
 }
 
 // ServiceUnitPath returns the path to the systemd service file for the given
