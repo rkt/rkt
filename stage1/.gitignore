@@ -1,0 +1,12 @@
+cache/
+rootfs/aggregate/install.d/
+!rootfs/aggregate/install.d/99misc
+rootfs/aggregate/s1rootfs.tar
+rootfs/aggregate/s1rootfs/
+rootfs/diagexec/diagexec
+rootfs/shim/shim.so
+rootfs/usr/cache/
+rootfs/usr/manifest.txt
+rootfs/usr/rootfs/
+rootfs/usr/usr.done
+rootfs/usr/usr.squashfs
