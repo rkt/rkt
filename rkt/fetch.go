@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/appc/spec/discovery"
 	"github.com/appc/spec/schema/types"
@@ -27,6 +28,9 @@ import (
 
 const (
 	imgDir = "images"
+
+	defaultOS   = runtime.GOOS
+	defaultArch = runtime.GOARCH
 )
 
 var (
@@ -88,12 +92,12 @@ func fetchImage(img string, ds *cas.Store) (string, error) {
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return "", fmt.Errorf("rkt only supports http or https URLs (%s)", img)
 	}
-	return fetchURL(img, ds)
+	return fetchURL(u.String(), ds)
 }
 
-func fetchURL(img string, ds *cas.Store) (string, error) {
-	fmt.Printf("rkt: starting to fetch img from %s\n", img)
-	rem := cas.NewRemote(img, []string{})
+func fetchURL(u string, ds *cas.Store) (string, error) {
+	fmt.Printf("rkt: starting to fetch img from %s\n", u)
+	rem := cas.NewRemote(u, []string{})
 	err := ds.ReadIndex(rem)
 	if err != nil && rem.Blob == "" {
 		rem, err = rem.Download(*ds)
@@ -130,8 +134,14 @@ func newDiscoveryApp(img string) *discovery.App {
 		return nil
 	}
 	u, err := url.Parse(app.Name.String())
-	if err == nil && u.Scheme == "" {
-		return app
+	if err != nil || u.Scheme != "" {
+		return nil
 	}
-	return nil
+	if _, ok := app.Labels["arch"]; !ok {
+		app.Labels["arch"] = defaultArch
+	}
+	if _, ok := app.Labels["os"]; !ok {
+		app.Labels["os"] = defaultOS
+	}
+	return app
 }
