@@ -81,7 +81,7 @@ func fetchImage(img string, ds *cas.Store) (string, error) {
 		fmt.Printf("rkt: starting to discover app img %s\n", img)
 		u, err = discover(app)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("fetch: %v", err)
 		}
 	} else {
 		u, err = url.Parse(img)
@@ -102,7 +102,7 @@ func fetchURL(u string, ds *cas.Store) (string, error) {
 	if err != nil && rem.Blob == "" {
 		rem, err = rem.Download(*ds)
 		if err != nil {
-			return "", fmt.Errorf("fetch: %v\n", err)
+			return "", err
 		}
 	}
 	return rem.Blob, nil
