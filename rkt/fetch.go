@@ -75,16 +75,15 @@ func runFetch(args []string) (exit int) {
 // fetchImage will take an image as either a URL or a name string and import it
 // into the store if found.
 func fetchImage(img string, ds *cas.Store) (string, error) {
-	var u *url.URL
-	var err error
-	if app := newDiscoveryApp(img); app != nil {
-		fmt.Printf("rkt: starting to discover app img %s\n", img)
-		u, err = discover(app)
-		if err != nil {
-			return "", fmt.Errorf("fetch: %v", err)
+	u, err := url.Parse(img)
+	if err == nil && u.Scheme == "" {
+		if app := newDiscoveryApp(img); app != nil {
+			fmt.Printf("rkt: starting to discover app img %s\n", img)
+			u, err = discover(app)
+			if err != nil {
+				return "", err
+			}
 		}
-	} else {
-		u, err = url.Parse(img)
 	}
 	if err != nil {
 		return "", fmt.Errorf("not a valid URL (%s)", img)
