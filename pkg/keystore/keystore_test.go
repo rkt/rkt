@@ -22,53 +22,31 @@
 //   * cd keystore/keystoretest
 //   * go run keygen.go
 //   * check in the results
+
 package keystore
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
 	"github.com/coreos/rocket/pkg/keystore/keystoretest"
+
+	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
 )
 
-const tstprefix = "keystore-test"
-
-func testKeyStoreConfig(dir string) (*Config, error) {
-	c := &Config{
-		RootPath:         path.Join(dir, "/etc/rkt/trustedkeys/root.d"),
-		SystemRootPath:   path.Join(dir, "/usr/lib/rkt/trustedkeys/root.d"),
-		PrefixPath:       path.Join(dir, "/etc/rkt/trustedkeys/prefix.d"),
-		SystemPrefixPath: path.Join(dir, "/usr/lib/rkt/trustedkeys/prefix.d"),
-	}
-	for _, path := range []string{c.RootPath, c.SystemRootPath, c.PrefixPath, c.SystemPrefixPath} {
-		if err := os.MkdirAll(path, 0755); err != nil {
-			return nil, err
-		}
-	}
-	return c, nil
-}
-
 func TestStoreTrustedKey(t *testing.T) {
-	dir, err := ioutil.TempDir("", tstprefix)
-	if err != nil {
-		t.Fatalf("error creating tempdir: %v", err)
-	}
-	defer os.RemoveAll(dir)
-
-	armoredPublicKey := keystoretest.KeyMap["example.com"].ArmoredPublicKey
-	fingerprint := keystoretest.KeyMap["example.com"].Fingerprint
-
-	keyStoreConfig, err := testKeyStoreConfig(dir)
+	ks, ksPath, err := NewTestKeystore()
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
+	defer os.RemoveAll(ksPath)
 
-	ks := New(keyStoreConfig)
+	armoredPublicKey := keystoretest.KeyMap["example.com"].ArmoredPublicKey
+	fingerprint := keystoretest.KeyMap["example.com"].Fingerprint
 
 	output, err := ks.StoreTrustedKeyPrefix("example.com/foo", bytes.NewBufferString(armoredPublicKey))
 	if err != nil {
@@ -136,18 +114,12 @@ func TestCheckSignature(t *testing.T) {
 		"acme.com",
 	}
 
-	dir, err := ioutil.TempDir("", tstprefix)
-	if err != nil {
-		t.Fatalf("error creating tempdir: %v", err)
-	}
-	defer os.RemoveAll(dir)
-
-	keyStoreConfig, err := testKeyStoreConfig(dir)
+	ks, ksPath, err := NewTestKeystore()
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
+	defer os.RemoveAll(ksPath)
 
-	ks := New(keyStoreConfig)
 	for _, key := range trustedPrefixKeys {
 		if _, err := ks.StoreTrustedKeyPrefix(key, bytes.NewBufferString(keystoretest.KeyMap[key].ArmoredPublicKey)); err != nil {
 			t.Fatalf("unexpected error %v", err)
@@ -196,8 +168,9 @@ func TestCheckSignature(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected error %v", err)
 			}
-			if signer.PrimaryKey.KeyIdString() != key.Fingerprint {
-				t.Errorf("expected fingerprint == %v, got %v", key.Fingerprint, signer.PrimaryKey.KeyIdString())
+			fingerprint := fmt.Sprintf("%x", signer.PrimaryKey.Fingerprint)
+			if fingerprint != key.Fingerprint {
+				t.Errorf("expected fingerprint == %v, got %v", key.Fingerprint, fingerprint)
 			}
 			continue
 		}

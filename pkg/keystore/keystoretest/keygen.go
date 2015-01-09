@@ -93,9 +93,10 @@ func main() {
 		}
 		w1.Close()
 
+		fingerprint := fmt.Sprintf("%x", entity.PrimaryKey.Fingerprint)
 		key := Key{
 			Name:              name,
-			Fingerprint:       entity.PrimaryKey.KeyIdString(),
+			Fingerprint:       fingerprint,
 			ArmoredPublicKey:  publicKeyBuf.String(),
 			ArmoredPrivateKey: privateKeyBuf.String(),
 		}

@@ -34,9 +34,10 @@ var (
 	out           *tabwriter.Writer
 	commands      []*Command // Commands should register themselves by appending
 	globalFlags   = struct {
-		Dir   string
-		Debug bool
-		Help  bool
+		Dir                string
+		Debug              bool
+		Help               bool
+		InsecureSkipVerify bool
 	}{}
 )
 
@@ -44,6 +45,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.Help, "help", false, "Print usage information and exit")
 	globalFlagset.BoolVar(&globalFlags.Debug, "debug", false, "Print out more debug information to stderr")
 	globalFlagset.StringVar(&globalFlags.Dir, "dir", defaultDataDir, "rocket data directory")
+	globalFlagset.BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip image verification")
 }
 
 type Command struct {

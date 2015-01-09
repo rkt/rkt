@@ -46,6 +46,9 @@ type Keystore struct {
 
 // New returns a new Keystore based on config.
 func New(config *Config) *Keystore {
+	if config == nil {
+		config = defaultConfig
+	}
 	return &Keystore{config}
 }
 
@@ -77,7 +80,7 @@ func checkSignature(ks *Keystore, prefix string, signed, signature io.Reader) (*
 	}
 	keyring, err := ks.loadKeyring(acname.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("keystore: error loading keyring %v", err)
 	}
 	return openpgp.CheckArmoredDetachedSignature(keyring, signed, signature)
 }
@@ -139,7 +142,7 @@ func storeTrustedKey(dir string, r io.Reader) (string, error) {
 		return "", err
 	}
 	pubKey := entityList[0].PrimaryKey
-	trustedKeyPath := path.Join(dir, pubKey.KeyIdString())
+	trustedKeyPath := path.Join(dir, fingerprintToFilename(pubKey.Fingerprint))
 	if err := ioutil.WriteFile(trustedKeyPath, pubkeyBytes, 0644); err != nil {
 		return "", err
 	}
@@ -159,7 +162,8 @@ func entityFromFile(path string) (*openpgp.Entity, error) {
 	if len(entityList) < 1 {
 		return nil, errors.New("missing opengpg entity")
 	}
-	if entityList[0].PrimaryKey.KeyIdString() != filepath.Base(trustedKey.Name()) {
+	fingerprint := fingerprintToFilename(entityList[0].PrimaryKey.Fingerprint)
+	if fingerprint != filepath.Base(trustedKey.Name()) {
 		return nil, fmt.Errorf("fingerprint mismatch")
 	}
 	return entityList[0], nil
@@ -208,7 +212,7 @@ func (ks *Keystore) loadKeyring(prefix string) (openpgp.KeyRing, error) {
 			if err != nil {
 				return err
 			}
-			trustedKeys[entity.PrimaryKey.KeyIdString()] = entity
+			trustedKeys[fingerprintToFilename(entity.PrimaryKey.Fingerprint)] = entity
 			return nil
 		})
 		if err != nil {
@@ -220,4 +224,30 @@ func (ks *Keystore) loadKeyring(prefix string) (openpgp.KeyRing, error) {
 		keyring = append(keyring, v)
 	}
 	return keyring, nil
+}
+
+func fingerprintToFilename(fp [20]byte) string {
+	return fmt.Sprintf("%x", fp)
+}
+
+// NewTestKeystore creates a new KeyStore backed by a temp directory.
+// NewTestKeystore returns a KeyStore, the path to the temp directory, and
+// an error if any.
+func NewTestKeystore() (*Keystore, string, error) {
+	dir, err := ioutil.TempDir("", "keystore-test")
+	if err != nil {
+		return nil, "", err
+	}
+	c := &Config{
+		RootPath:         path.Join(dir, "/etc/rkt/trustedkeys/root.d"),
+		SystemRootPath:   path.Join(dir, "/usr/lib/rkt/trustedkeys/root.d"),
+		PrefixPath:       path.Join(dir, "/etc/rkt/trustedkeys/prefix.d"),
+		SystemPrefixPath: path.Join(dir, "/usr/lib/rkt/trustedkeys/prefix.d"),
+	}
+	for _, path := range []string{c.RootPath, c.SystemRootPath, c.PrefixPath, c.SystemPrefixPath} {
+		if err := os.MkdirAll(path, 0755); err != nil {
+			return nil, "", err
+		}
+	}
+	return New(c), dir, nil
 }

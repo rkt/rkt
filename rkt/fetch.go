@@ -19,10 +19,13 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"strings"
+
+	"github.com/coreos/rocket/cas"
+	"github.com/coreos/rocket/pkg/keystore"
 
 	"github.com/appc/spec/discovery"
 	"github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/cas"
 )
 
 const (
@@ -50,9 +53,10 @@ func runFetch(args []string) (exit int) {
 	}
 
 	ds := cas.NewStore(globalFlags.Dir)
+	ks := keystore.New(nil)
 
 	for _, img := range args {
-		hash, err := fetchImage(img, ds)
+		hash, err := fetchImage(img, ds, ks)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			return 1
@@ -66,15 +70,16 @@ func runFetch(args []string) (exit int) {
 
 // fetchImage will take an image as either a URL or a name string and import it
 // into the store if found.
-func fetchImage(img string, ds *cas.Store) (string, error) {
+func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
 	u, err := url.Parse(img)
 	if err == nil && u.Scheme == "" {
 		if app := newDiscoveryApp(img); app != nil {
 			fmt.Printf("rkt: starting to discover app img %s\n", img)
-			u, err = discover(app)
+			ep, err := discovery.DiscoverEndpoints(*app, true)
 			if err != nil {
 				return "", err
 			}
+			return fetchImageFromEndpoints(ep, ds, ks)
 		}
 	}
 	if err != nil {
@@ -83,15 +88,39 @@ func fetchImage(img string, ds *cas.Store) (string, error) {
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return "", fmt.Errorf("rkt only supports http or https URLs (%s)", img)
 	}
-	return fetchURL(u.String(), ds)
+	return fetchImageFromURL(u.String(), ds, ks)
 }
 
-func fetchURL(u string, ds *cas.Store) (string, error) {
-	fmt.Printf("rkt: starting to fetch img from %s\n", u)
-	rem := cas.NewRemote(u, []string{})
+func fetchImageFromEndpoints(ep *discovery.Endpoints, ds *cas.Store, ks *keystore.Keystore) (string, error) {
+	rem := cas.NewRemote(ep.ACI[0], ep.Sig[0])
+	return downloadImage(rem, ds, ks)
+}
+
+func fetchImageFromURL(imgurl string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
+	rem := cas.NewRemote(imgurl, sigURLFromImgURL(imgurl))
+	return downloadImage(rem, ds, ks)
+}
+
+func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (string, error) {
+	fmt.Printf("rkt: starting to fetch img from %s\n", rem.ACIURL)
+	if globalFlags.InsecureSkipVerify {
+		fmt.Printf("rkt: warning: signature verification has been disabled\n")
+	}
 	err := ds.ReadIndex(rem)
 	if err != nil && rem.Blob == "" {
-		rem, err = rem.Download(*ds)
+		entity, aciFile, err := rem.Download(*ds, ks)
+		if err != nil {
+			return "", err
+		}
+		defer os.Remove(aciFile.Name())
+
+		if !globalFlags.InsecureSkipVerify {
+			fmt.Println("rkt: signature verified signed by: ")
+			for _, v := range entity.Identities {
+				fmt.Printf("  %s\n", v.Name)
+			}
+		}
+		rem, err = rem.Store(*ds, aciFile)
 		if err != nil {
 			return "", err
 		}
@@ -99,21 +128,20 @@ func fetchURL(u string, ds *cas.Store) (string, error) {
 	return rem.Blob, nil
 }
 
-func discover(app *discovery.App) (*url.URL, error) {
-	ep, err := discovery.DiscoverEndpoints(*app, true)
+func validateURL(s string) error {
+	u, err := url.Parse(s)
 	if err != nil {
-		return nil, fmt.Errorf("discovery: %v", err)
+		return fmt.Errorf("discovery: fetched URL (%s) is invalid (%v)", s, err)
 	}
-	// TODO(philips): use all available mirrors
-	if globalFlags.Debug {
-		fmt.Printf("discovery: trying %v\n", ep.ACI[0])
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("rkt only supports http or https URLs (%s)", s)
 	}
-	imgurl := ep.ACI[0]
-	u, err := url.Parse(imgurl)
-	if err != nil {
-		return nil, fmt.Errorf("discovery: fetched img URL (%s) is invalid (%v)", imgurl, err)
-	}
-	return u, nil
+	return nil
+}
+
+func sigURLFromImgURL(imgurl string) string {
+	s := strings.TrimSuffix(imgurl, ".aci")
+	return s + ".sig"
 }
 
 // newDiscoveryApp creates a discovery app if the given img is an app name and

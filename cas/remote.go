@@ -17,27 +17,33 @@ package cas
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/coreos/rocket/pkg/keystore"
+
+	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
+	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
 
-func NewRemote(name string, mirrors []string) *Remote {
-	// TODO: don't assume the name is a mirror?
-	r := &Remote{}
-	r.Name = name
-	r.Mirrors = []string{name}
+func NewRemote(aciurl, sigurl string) *Remote {
+	r := &Remote{
+		ACIURL: aciurl,
+		SigURL: sigurl,
+	}
 	return r
 }
 
 type Remote struct {
-	Name    string
-	Mirrors []string
-	ETag    string
-	Blob    string
+	ACIURL string
+	SigURL string
+	ETag   string
+	Blob   string
 }
 
 func (r Remote) Marshal() []byte {
@@ -53,16 +59,69 @@ func (r *Remote) Unmarshal(data []byte) {
 }
 
 func (r Remote) Hash() string {
-	return types.NewHashSHA512([]byte(r.Name)).String()
+	return types.NewHashSHA512([]byte(r.ACIURL)).String()
 }
 
 func (r Remote) Type() int64 {
 	return remoteType
 }
 
+// Download downloads and verifies the remote ACI.
+// If Keystore is nil signature verification will be skipped.
+// Download returns the signer, an *os.File representing the ACI, and an error if any.
+// err will be nil if the ACI downloads successfully and the ACI is verified.
+func (r Remote) Download(ds Store, ks *keystore.Keystore) (*openpgp.Entity, *os.File, error) {
+	var entity *openpgp.Entity
+	var err error
+	acif, err := downloadACI(ds, r.ACIURL)
+	if err != nil {
+		return nil, acif, fmt.Errorf("error downloading the aci image: %v", err)
+	}
+
+	if ks != nil {
+		sigTempFile, err := downloadSignatureFile(r.SigURL)
+		if err != nil {
+			return nil, acif, fmt.Errorf("error downloading the signature file: %v", err)
+		}
+		defer sigTempFile.Close()
+		defer os.Remove(sigTempFile.Name())
+
+		manifest, err := aci.ManifestFromImage(acif)
+		if err != nil {
+			return nil, acif, err
+		}
+
+		if _, err := acif.Seek(0, 0); err != nil {
+			return nil, acif, err
+		}
+		if _, err := sigTempFile.Seek(0, 0); err != nil {
+			return nil, acif, err
+		}
+		if entity, err = ks.CheckSignature(manifest.Name.String(), acif, sigTempFile); err != nil {
+			return nil, acif, err
+		}
+	}
+
+	if _, err := acif.Seek(0, 0); err != nil {
+		return nil, acif, err
+	}
+	return entity, acif, nil
+}
+
 // TODO: add locking
-func (r Remote) Download(ds Store) (*Remote, error) {
-	res, err := http.Get(r.Name)
+// Store stores the ACI represented by r in the target data store.
+func (r Remote) Store(ds Store, aci io.Reader) (*Remote, error) {
+	key, err := ds.WriteACI(aci)
+	if err != nil {
+		return nil, err
+	}
+	r.Blob = key
+	ds.WriteIndex(&r)
+	return &r, nil
+}
+
+func downloadACI(ds Store, aciurl string) (*os.File, error) {
+	res, err := http.Get(aciurl)
 	if err != nil {
 		return nil, err
 	}
@@ -93,13 +152,49 @@ func (r Remote) Download(ds Store) (*Remote, error) {
 		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
 	}
 
-	key, err := ds.WriteACI(reader)
+	aciTempFile, err := ds.tmpFile()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error downloading aci: %v", err)
 	}
 
-	r.Blob = key
-	ds.WriteIndex(&r)
+	if _, err := io.Copy(aciTempFile, reader); err != nil {
+		aciTempFile.Close()
+		os.Remove(aciTempFile.Name())
+		return nil, fmt.Errorf("error copying temp aci: %v", err)
+	}
+	if err := aciTempFile.Sync(); err != nil {
+		aciTempFile.Close()
+		os.Remove(aciTempFile.Name())
+		return nil, fmt.Errorf("error writing temp aci: %v", err)
+	}
+	return aciTempFile, nil
+}
 
-	return &r, nil
+func downloadSignatureFile(sigurl string) (*os.File, error) {
+	sig, err := ioutil.TempFile("", "")
+	if err != nil {
+		return nil, fmt.Errorf("error downloading signature: %v", err)
+	}
+	res, err := http.Get(sigurl)
+	if err != nil {
+		return nil, fmt.Errorf("error downloading signature: %v", err)
+	}
+	defer res.Body.Close()
+
+	// TODO(jonboulle): handle http more robustly (redirects?)
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
+	}
+
+	if _, err := io.Copy(sig, res.Body); err != nil {
+		sig.Close()
+		os.Remove(sig.Name())
+		return nil, fmt.Errorf("error copying signature: %v", err)
+	}
+	if err := sig.Sync(); err != nil {
+		sig.Close()
+		os.Remove(sig.Name())
+		return nil, fmt.Errorf("error writing signature: %v", err)
+	}
+	return sig, nil
 }
