@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"runtime"
 
 	"github.com/appc/spec/discovery"
@@ -27,8 +26,6 @@ import (
 )
 
 const (
-	imgDir = "images"
-
 	defaultOS   = runtime.GOOS
 	defaultArch = runtime.GOARCH
 )
@@ -49,11 +46,6 @@ func init() {
 func runFetch(args []string) (exit int) {
 	if len(args) < 1 {
 		fmt.Fprintf(os.Stderr, "fetch: Must provide at least one image\n")
-		return 1
-	}
-	root := filepath.Join(globalFlags.Dir, imgDir)
-	if err := os.MkdirAll(root, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "fetch: error creating image directory: %v\n", err)
 		return 1
 	}
 
