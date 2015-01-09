@@ -1,33 +1,28 @@
 package network
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 
-	"github.com/coreos/rocket/network/util"
+	"github.com/coreos/rocket/networking/util"
 )
-
-const RktNetPath = "/etc/rkt-net.conf.d"
-const DefaultIPNet = "172.16.28.0/24"
 
 type Net struct {
 	util.Net
 	args string
 }
 
-var defaultNet Net
+const RktNetPath = "/etc/rkt-net.conf.d"
+const DefaultIPNet = "172.16.28.0/24"
 
-func init() {
-	defaultNet = Net{
-		Net: util.Net{
-			Name: "default",
-			Type: "veth",
-		},
-		args: fmt.Sprintf("default,iprange=%v", DefaultIPNet),
-	}
+var defaultNet = Net{
+	Net: util.Net{
+		Name: "default",
+		Type: "veth",
+	},
+	args: "default,iprange=" + DefaultIPNet,
 }
 
 func LoadNets() ([]Net, error) {
@@ -59,5 +54,4 @@ func LoadNets() ([]Net, error) {
 
 	nets = append(nets, defaultNet)
 
-	return nets, nil
-}
+	return nets, nil }

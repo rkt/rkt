@@ -9,10 +9,11 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
-	"github.com/coreos/rocket/network/ipam"
-	"github.com/coreos/rocket/network/util"
+	"github.com/coreos/rocket/networking/ipam"
+	"github.com/coreos/rocket/networking/util"
 )
 
 func init() {
@@ -35,7 +36,12 @@ func argsHasDefault(args string) bool {
 func cmdAdd(contID, netns, netConf, ifName, args string) error {
 	var hostVethName string
 
-	ipn, gw, err := ipam.AllocIP(contID, netConf, ifName, args)
+	cid, err := types.NewUUID(contID)
+	if err != nil {
+		return fmt.Errorf("Error parsing ContainerID: %v", err)
+	}
+
+	ipn, gw, err := ipam.AllocIP(*cid, netConf, ifName, args)
 	if err != nil {
 		return err
 	}

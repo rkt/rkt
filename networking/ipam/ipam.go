@@ -11,7 +11,9 @@ import (
 	"net"
 	"strings"
 
-	"github.com/coreos/rocket/network/util"
+	"github.com/appc/spec/schema/types"
+
+	"github.com/coreos/rocket/networking/util"
 )
 
 type options struct {
@@ -89,7 +91,7 @@ func parseArgs(args string) (*options, error) {
 	return opts, nil
 }
 
-func AllocIP(contID, netConf, ifName, args string) (*net.IPNet, net.IP, error) {
+func AllocIP(contID types.UUID, netConf, ifName, args string) (*net.IPNet, net.IP, error) {
 	opts, err := parseArgs(args)
 	if err != nil {
 		return nil, nil, err
@@ -129,6 +131,6 @@ func AllocIP(contID, netConf, ifName, args string) (*net.IPNet, net.IP, error) {
 	}
 }
 
-func DeallocIP(contID, netConf, ifName string, ipn *net.IPNet) error {
+func DeallocIP(contID types.UUID, netConf, ifName string, ipn *net.IPNet) error {
 	return nil
 }

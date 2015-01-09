@@ -11,7 +11,7 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
-	"github.com/coreos/rocket/network/util"
+	"github.com/coreos/rocket/networking/util"
 )
 
 const (
@@ -25,7 +25,7 @@ type activeNet struct {
 	ipn    *net.IPNet
 }
 
-type Network struct {
+type Networking struct {
 	MetadataIP net.IP
 
 	contID     types.UUID
@@ -36,9 +36,9 @@ type Network struct {
 	plugins    map[string]*NetPlugin
 }
 
-func Setup(contID types.UUID) (*Network, error) {
+func Setup(contID types.UUID) (*Networking, error) {
 	var err error
-	n := Network{contID: contID}
+	n := Networking{contID: contID}
 
 	defer func() {
 		// cleanup on error
@@ -82,7 +82,7 @@ func Setup(contID types.UUID) (*Network, error) {
 	return &n, nil
 }
 
-func (n *Network) Teardown() {
+func (n *Networking) Teardown() {
 	// teardown everything in reverse order of setup.
 	// this is called during error case as well so not
 	// everything maybe setup.
@@ -128,11 +128,11 @@ func basicNetNS() (hostNS, contNS *os.File, err error) {
 }
 
 
-func (n *Network) EnterHostNS() error {
+func (n *Networking) EnterHostNS() error {
 	return util.SetNS(n.hostNS, syscall.CLONE_NEWNET)
 }
 
-func (n *Network) EnterContNS() error {
+func (n *Networking) EnterContNS() error {
 	return util.SetNS(n.contNS, syscall.CLONE_NEWNET)
 }
 
@@ -144,7 +144,7 @@ func setupNets(contID types.UUID, netns string, plugins map[string]*NetPlugin, n
 	for i, nt := range nets {
 		plugin, ok := plugins[nt.Type]
 		if !ok {
-			err = fmt.Errorf("could not find network plugin %q\n", nt.Type)
+			err = fmt.Errorf("could not find network plugin %q", nt.Type)
 			break
 		}
 
@@ -155,9 +155,9 @@ func setupNets(contID types.UUID, netns string, plugins map[string]*NetPlugin, n
 
 		log.Printf("Executing net-plugin %v", nt.Type)
 
-		an.ipn, err = plugin.Add(&nt, contID.String(), netns, nt.args, an.ifName)
+		an.ipn, err = plugin.Add(&nt, contID, netns, nt.args, an.ifName)
 		if err != nil {
-			err = fmt.Errorf("error adding network %q: %v\n", nt.Name, err)
+			err = fmt.Errorf("error adding network %q: %v", nt.Name, err)
 			break
 		}
 
@@ -179,7 +179,7 @@ func teardownNets(contID types.UUID, netns string, plugins map[string]*NetPlugin
 		nt := nets[i]
 		plugin := plugins[nt.Type]
 
-		err := plugin.Del(&nt.Net, contID.String(), netns, nt.args, nt.ifName)
+		err := plugin.Del(&nt.Net, contID, netns, nt.args, nt.ifName)
 		if err != nil {
 			log.Printf("Error deleting %q: %v", nt.Name, err)
 		}

@@ -37,7 +37,7 @@ echo "Building metadatasvc..."
 go build -o $GOBIN/metadatasvc ${REPO_PATH}/metadatasvc
 
 echo "Building network plugins"
-for d in network/plugins/*; do
+for d in networking/plugins/*; do
 	plugin=$(basename $d)
 	echo "  " $plugin
 	go build -o $GOBIN/$plugin ${REPO_PATH}/$d

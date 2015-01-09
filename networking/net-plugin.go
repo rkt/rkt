@@ -12,7 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/coreos/rocket/network/util"
+	"github.com/appc/spec/schema/types"
+
+	"github.com/coreos/rocket/networking/util"
 )
 
 type NetPlugin struct {
@@ -60,7 +62,7 @@ func LoadNetPlugins() (map[string]*NetPlugin, error) {
 		npPath := filepath.Join(RktNetPluginsPath, dent.Name())
 		np, err := LoadNetPlugin(npPath)
 		if err != nil {
-			log.Printf("Loading %v: %v", npPath, err)
+			log.Printf("Error loading %v: %v", npPath, err)
 			continue
 		}
 
@@ -70,17 +72,17 @@ func LoadNetPlugins() (map[string]*NetPlugin, error) {
 	return plugins, nil
 }
 
-func (np *NetPlugin) Add(n *Net, contID, netns, args, ifName string) (*net.IPNet, error) {
+func (np *NetPlugin) Add(n *Net, contID types.UUID, netns, args, ifName string) (*net.IPNet, error) {
 	switch {
 	case np.Endpoint != "":
-		return nil, execHTTP(np.Endpoint, "add", n.Name, contID, netns, n.Filename, args, ifName)
+		return nil, execHTTP(np.Endpoint, "add", n.Name, contID.String(), netns, n.Filename, args, ifName)
 
 	default:
 		if len(np.Command.Add) == 0 {
 			return nil, fmt.Errorf("plugin does not define command.add")
 		}
 
-		output, err := execCmd(np.Command.Add, n.Name, contID, netns, n.Filename, args, ifName)
+		output, err := execCmd(np.Command.Add, n.Name, contID.String(), netns, n.Filename, args, ifName)
 		if err != nil {
 			return nil, err
 		}
@@ -91,17 +93,17 @@ func (np *NetPlugin) Add(n *Net, contID, netns, args, ifName string) (*net.IPNet
 	}
 }
 
-func (np *NetPlugin) Del(n *Net, contID, netns, args, ifName string) error {
+func (np *NetPlugin) Del(n *Net, contID types.UUID, netns, args, ifName string) error {
 	switch {
 	case np.Endpoint != "":
-		return execHTTP(np.Endpoint, "del", n.Name, contID, netns, n.Filename, args, ifName)
+		return execHTTP(np.Endpoint, "del", n.Name, contID.String(), netns, n.Filename, args, ifName)
 
 	default:
 		if len(np.Command.Del) == 0 {
 			return fmt.Errorf("plugin does not define command.del")
 		}
 
-		_, err := execCmd(np.Command.Del, n.Name, contID, netns, n.Filename, args, ifName)
+		_, err := execCmd(np.Command.Del, n.Name, contID.String(), netns, n.Filename, args, ifName)
 		return err
 	}
 }
@@ -121,8 +123,8 @@ func execCmd(cmd []string, netName, contID, netns, confFile, args, ifName string
 	replaceAll(cmd, "{cont-id}", contID)
 	replaceAll(cmd, "{netns}", netns)
 	replaceAll(cmd, "{conf-file}", confFile)
-	replaceAll(cmd, "{args}", args)
 	replaceAll(cmd, "{if-name}", ifName)
+	replaceAll(cmd, "{args}", args)
 
 	stdout := &bytes.Buffer{}
 
