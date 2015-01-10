@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 	exe = argv[2];
 	pexit_if(chroot(root) == -1, "Chroot failed");
 	pexit_if(chdir("/") == -1, "Chdir failed");
-	pexit_if(execv(exe, &argv[2]) == -1 &&
+	pexit_if(execvp(exe, &argv[2]) == -1 &&
 		 errno != ENOENT && errno != EACCES,
 		 "Exec of \"%s\" failed", exe);
 	diag(exe);
