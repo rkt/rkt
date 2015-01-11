@@ -29,8 +29,13 @@ const DEFAULT_DIR_MODE os.FileMode = 0755
 
 type insecureLinkError error
 
+// Map of paths that should be whitelisted. The paths should be relative to the
+// root of the tar file and should be cleaned (for example using filepath.Clean)
+type PathWhitelistMap map[string]struct{}
+
 // ExtractTar extracts a tarball (from a tar.Reader) into the given directory
-func ExtractTar(tr *tar.Reader, dir string) error {
+// if pwl is not nil, only the paths in the map are extracted.
+func ExtractTar(tr *tar.Reader, dir string, pwl PathWhitelistMap) error {
 	um := syscall.Umask(0)
 	defer syscall.Umask(um)
 	for {
@@ -39,6 +44,12 @@ func ExtractTar(tr *tar.Reader, dir string) error {
 		case io.EOF:
 			return nil
 		case nil:
+			if pwl != nil {
+				relpath := filepath.Clean(hdr.Name)
+				if _, ok := pwl[relpath]; !ok {
+					continue
+				}
+			}
 			err = ExtractFile(tr, hdr, dir)
 			if err != nil {
 				return fmt.Errorf("error extracting tarball: %v", err)
