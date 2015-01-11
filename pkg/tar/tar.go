@@ -49,7 +49,8 @@ func ExtractTar(tr *tar.Reader, dir string) error {
 	}
 }
 
-// Extract the file provided by hdr
+// ExtractFile extracts the file described by hdr fom the given tarball into
+// the provided directory
 func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string) error {
 	p := filepath.Join(dir, hdr.Name)
 	fi := hdr.FileInfo()
@@ -123,8 +124,8 @@ func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string) error {
 	return nil
 }
 
-// ExtractFileFromTar extracta a regular file from tr and returns the
-// contents.
+// ExtractFileFromTar extracts a regular file from the given tar, returning its
+// contents as a byte slice
 func ExtractFileFromTar(tr *tar.Reader, file string) ([]byte, error) {
 	for {
 		hdr, err := tr.Next()
