@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -120,7 +121,35 @@ func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string) error {
 	}
 
 	return nil
+}
 
+// ExtractFileFromTar extracta a regular file from tr and returns the
+// contents.
+func ExtractFileFromTar(tr *tar.Reader, file string) ([]byte, error) {
+	for {
+		hdr, err := tr.Next()
+		switch err {
+		case io.EOF:
+			return nil, fmt.Errorf("file not found")
+		case nil:
+			if filepath.Clean(hdr.Name) != filepath.Clean(file) {
+				continue
+			}
+			switch hdr.Typeflag {
+			case tar.TypeReg:
+			case tar.TypeRegA:
+			default:
+				return nil, fmt.Errorf("requested file not a regular file")
+			}
+			buf, err := ioutil.ReadAll(tr)
+			if err != nil {
+				return nil, fmt.Errorf("error extracting tarball: %v", err)
+			}
+			return buf, nil
+		default:
+			return nil, fmt.Errorf("error extracting tarball: %v", err)
+		}
+	}
 }
 
 // makedev mimics glib's gnu_dev_makedev

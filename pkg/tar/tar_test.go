@@ -220,5 +220,67 @@ func TestExtractTarFolders(t *testing.T) {
 	} else if dirInfo.Mode().Perm() != os.FileMode(0747) {
 		t.Errorf("unexpected dir mode: %s", dirInfo.Mode())
 	}
+}
 
+func TestExtractTarFileToBuf(t *testing.T) {
+	entries := []*testTarEntry{
+		{
+			header: &tar.Header{
+				Name:     "folder/",
+				Typeflag: tar.TypeDir,
+				Mode:     int64(0747),
+			},
+		},
+		{
+			contents: "foo",
+			header: &tar.Header{
+				Name: "folder/foo.txt",
+				Size: 3,
+			},
+		},
+		{
+			contents: "bar",
+			header: &tar.Header{
+				Name: "folder/bar.txt",
+				Size: 3,
+			},
+		},
+		{
+			header: &tar.Header{
+				Name:     "folder/symlink.txt",
+				Typeflag: tar.TypeSymlink,
+				Linkname: "folder/foo.txt",
+			},
+		},
+	}
+	testTarPath, err := newTestTar(entries)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer os.Remove(testTarPath)
+	containerTar, err := os.Open(testTarPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	tr := tar.NewReader(containerTar)
+	buf, err := ExtractFileFromTar(tr, "folder/foo.txt")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if string(buf) != "foo" {
+		t.Errorf("unexpected contents, wanted: %s, got: %s", "foo", buf)
+	}
+	containerTar.Close()
+
+	containerTar, err = os.Open(testTarPath)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	tr = tar.NewReader(containerTar)
+	buf, err = ExtractFileFromTar(tr, "folder/symlink.txt")
+	if err == nil {
+		t.Errorf("expected error")
+	}
+	containerTar.Close()
 }
