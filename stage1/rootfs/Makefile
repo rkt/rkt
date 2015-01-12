@@ -1,4 +1,4 @@
-_SUBDIRS=usr shim diagexec
+_SUBDIRS=usr shim diagexec enter
 SUBDIRS=$(_SUBDIRS) aggregate
 export CFLAGS=-Wall -Os
 
