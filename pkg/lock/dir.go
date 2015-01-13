@@ -126,6 +126,11 @@ func SharedLock(dir string) (*DirLock, error) {
 	return l, nil
 }
 
+// Unlock unlocks the lock
+func (l *DirLock) Unlock() error {
+	return syscall.Flock(l.fd, syscall.LOCK_UN)
+}
+
 // Fd returns the lock's file descriptor
 func (l *DirLock) Fd() (int, error) {
 	var err error
