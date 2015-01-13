@@ -21,7 +21,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"syscall"
 
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
@@ -52,7 +51,7 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 
 	cid, err := types.NewUUID(contID)
 	if err != nil {
-		return fmt.Errorf("Error parsing ContainerID: %v", err)
+		return fmt.Errorf("error parsing ContainerID: %v", err)
 	}
 
 	ipn, gw, err := ipam.AllocIP(*cid, netConf, ifName, args)
@@ -98,26 +97,9 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 }
 
 func cmdDel(contID, netns, netConf, ifName, args string) error {
-	// switch to the container namespace
-	contNS, err := os.Open(netns)
-	if err != nil {
-		return fmt.Errorf("Failed to open %v: %v", netns, err)
-	}
-
-	if err = util.SetNS(contNS, syscall.CLONE_NEWNET); err != nil {
-		return fmt.Errorf("Error switching to ns %v: %v", netns, err)
-	}
-
-	iface, err := netlink.LinkByName(ifName)
-	if err != nil {
-		return fmt.Errorf("Failed to lookup %q: %v", ifName, err)
-	}
-
-	if err = netlink.LinkDel(iface); err != nil {
-		return fmt.Errorf("Failed to delete %q: %v", ifName, err)
-	}
-
-	return nil
+	return util.WithNetNSPath(netns, func(hostNS *os.File) error {
+		return util.DelLinkByName(ifName)
+	})
 }
 
 func usage() int {
@@ -144,7 +126,7 @@ func main() {
 	}
 
 	if err != nil {
-		log.Print(err)
+		log.Printf("%v: %v", os.Args[1], err)
 		os.Exit(1)
 	}
 }

@@ -1,17 +1,17 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
 	"runtime"
 	"syscall"
 
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
+	"github.com/coreos/rocket/networking/ipam"
 	"github.com/coreos/rocket/networking/util"
 )
 
@@ -97,96 +97,86 @@ func ensureBridge(brName string, ipn *net.IPNet) (*netlink.Bridge, error) {
 	return br, nil
 }
 
-func loadConf(path string) (*Net, error) {
-	conf, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
+func setupVeth(contID types.UUID, netns string, br *netlink.Bridge, ipn *net.IPNet, ifName string) error {
+	var hostVethName string
 
-	n := &Net{
-		BrName: defaultBrName,
-	}
-
-	err = json.Unmarshal(conf, n)
-	if err != nil {
-		return nil, err
-	}
-
-	return n, nil
-}
-
-func parseCIDR(s string) (*net.IPNet, error) {
-	ip, ipn, err := net.ParseCIDR(s)
-	if err != nil {
-		return nil, err
-	}
-
-	ipn.IP = ip
-	return ipn, nil
-}
-
-func cmdAdd(contID, netns, netConf, ifName string) error {
-	conf, err := loadConf(netConf)
-	if err != nil {
-		return fmt.Errorf("Failed to load %q: %v", netConf, err)
-	}
-
-	// create bridge if necessary
-	var ipn *net.IPNet
-	if conf.IsGW && conf.IPAlloc.Type == "static" {
-		ipn, err = parseCIDR(conf.IPAlloc.Subnet)
+	err := util.WithNetNSPath(netns, func(hostNS *os.File) error {
+		// create the veth pair in the container and move host end into host netns
+		hostVeth, _, err := util.SetupVeth(contID.String(), ifName, ipn, hostNS)
 		if err != nil {
-			return fmt.Errorf("Error parsing ipAlloc.Subnet: %v", err)
+			return err
 		}
-	}
-	br, err := ensureBridge(conf.BrName, ipn)
+
+		hostVethName = hostVeth.Attrs().Name
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("Failed to create bridge %q: %v", conf.BrName, err)
-	}
-
-	// save a handle to current (host) network namespace
-	thisNS, err := os.Open("/proc/self/ns/net")
-	if err != nil {
-		return fmt.Errorf("Failed to open /proc/self/ns/net: %v", err)
-	}
-
-	// switch to the container namespace
-	contNS, err := os.Open(netns)
-	if err != nil {
-		return fmt.Errorf("Failed to open %v: %v", netns, err)
-	}
-
-	if err = util.SetNS(contNS, syscall.CLONE_NEWNET); err != nil {
-		return fmt.Errorf("Error switching to ns %v: %v", netns, err)
-	}
-
-	// create the veth pair in the container and move host end into host netns
-	hostVeth, _, err := util.SetupVeth(contID, ifName, nil, thisNS)
-	if err != nil {
-		return fmt.Errorf("Error: %v", err)
-	}
-
-	// switch back to host netns and plug the host veth end into the bridge
-	if err = util.SetNS(thisNS, syscall.CLONE_NEWNET); err != nil {
-		return fmt.Errorf("Error switching to host netns: %v", err)
+		return err
 	}
 
 	// need to lookup hostVeth again as its index has changed during ns move
-	hostVeth, err = netlink.LinkByName(hostVeth.Attrs().Name)
+	hostVeth, err := netlink.LinkByName(hostVethName)
 	if err != nil {
-		return fmt.Errorf("Failed to lookup %q: %v", hostVeth.Attrs().Name, err)
+		return fmt.Errorf("failed to lookup %q: %v", hostVethName, err)
 	}
 
+	// connect host veth end to the bridge
 	if err = netlink.LinkSetMaster(hostVeth, br); err != nil {
-		return fmt.Errorf("Failed to connect %q to bridge %q: %v", hostVeth.Attrs().Name, conf.BrName, err)
+		return fmt.Errorf("failed to connect %q to bridge: %v", hostVethName, br.Attrs().Name, err)
+	}
+
+	return nil
+}
+
+func cmdAdd(contID, netns, netConf, ifName string) error {
+	cid, err := types.NewUUID(contID)
+	if err != nil {
+		return fmt.Errorf("error parsing ContainerID: %v", err)
+	}
+
+	conf := Net{
+		BrName: defaultBrName,
+	}
+	if err := util.LoadNet(netConf, &conf); err != nil {
+		return fmt.Errorf("failed to load %q: %v", netConf, err)
+	}
+
+	ipn, gw, err := ipam.AllocIP(*cid, netConf, ifName, "")
+	if err != nil {
+		return err
+	}
+
+	var gwn *net.IPNet
+	if conf.IsGW && gw != nil {
+		gwn = &net.IPNet{
+			IP:   gw,
+			Mask: ipn.Mask,
+		}
+	}
+
+	// create bridge if necessary
+	br, err := ensureBridge(conf.BrName, gwn)
+	if err != nil {
+		return fmt.Errorf("failed to create bridge %q: %v", conf.BrName, err)
+	}
+
+	if err = setupVeth(*cid, netns, br, ipn, ifName); err != nil {
+		return err
+	}
+
+	// print to stdout the assigned IP for rkt
+	// TODO(eyakubovich): this will need to be JSON per latest proposal
+	if _, err = fmt.Print(ipn.String()); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func cmdDel(contID, netns, netConf, ifName string) error {
-	// TODO
-	return nil
+	return util.WithNetNSPath(netns, func(hostNS *os.File) error {
+		return util.DelLinkByName(ifName)
+	})
 }
 
 func usage() int {
@@ -213,7 +203,7 @@ func main() {
 	}
 
 	if err != nil {
-		log.Print(err)
+		log.Printf("%v: %v", os.Args[1], err)
 		os.Exit(1)
 	}
 }
