@@ -140,9 +140,11 @@ func TestSharedLock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error closing lock: %v", err)
 	}
-	err = l3.Close()
+
+	// Only unlock one of them
+	err = l3.Unlock()
 	if err != nil {
-		t.Fatalf("error closing lock: %v", err)
+		t.Fatalf("error unlocking lock: %v", err)
 	}
 
 	// Now try an exclusive lock, should succeed
