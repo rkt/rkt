@@ -4,6 +4,7 @@ rootfs/aggregate/install.d/
 rootfs/aggregate/s1rootfs.tar
 rootfs/aggregate/s1rootfs/
 rootfs/diagexec/diagexec
+rootfs/enter/enter
 rootfs/shim/shim.so
 rootfs/usr/cache/
 rootfs/usr/manifest.txt
