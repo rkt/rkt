@@ -33,13 +33,21 @@ const (
 	nspawnBin = "/usr/bin/systemd-nspawn"
 	// Path to the interpreter within the stage1 rootfs
 	interpBin = "/usr/lib/ld-linux-x86-64.so.2"
+	// Path to the localtime file/symlink in host
+	localtimePath = "/etc/localtime"
 )
 
 // mirrorLocalZoneInfo tries to reproduce the /etc/localtime target in stage1/ to satisfy systemd-nspawn
 func mirrorLocalZoneInfo(root string) {
-	zif, err := os.Readlink("/etc/localtime")
+	zif, err := os.Readlink(localtimePath)
 	if err != nil {
 		return
+	}
+
+	// On some systems /etc/localtime is a relative symlink, make it absolute
+	if !filepath.IsAbs(zif) {
+		zif = filepath.Join(filepath.Dir(localtimePath), zif)
+		zif = filepath.Clean(zif)
 	}
 
 	src, err := os.Open(zif)
