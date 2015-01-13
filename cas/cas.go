@@ -74,7 +74,6 @@ func NewStore(base string) *Store {
 	return ds
 }
 
-// tmpFile creates a temporary file in $basepath/tmp
 func (ds Store) tmpFile() (*os.File, error) {
 	dir := filepath.Join(ds.base, "tmp")
 	if err := os.MkdirAll(dir, defaultPathPerm); err != nil {

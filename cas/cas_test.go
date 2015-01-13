@@ -62,8 +62,8 @@ func TestDownloading(t *testing.T) {
 		body []byte
 		hit  bool
 	}{
-		{Remote{ts.URL, []string{}, "12", "96609004016e9625763c7153b74120c309c8cb1bd794345bf6fa2e60ac001cd7"}, body, false},
-		{Remote{ts.URL, []string{}, "12", "96609004016e9625763c7153b74120c309c8cb1bd794345bf6fa2e60ac001cd7"}, body, true},
+		{Remote{ts.URL, "", "12", "96609004016e9625763c7153b74120c309c8cb1bd794345bf6fa2e60ac001cd7"}, body, false},
+		{Remote{ts.URL, "", "12", "96609004016e9625763c7153b74120c309c8cb1bd794345bf6fa2e60ac001cd7"}, body, true},
 	}
 
 	ds := NewStore(dir)
@@ -77,7 +77,13 @@ func TestDownloading(t *testing.T) {
 			panic("expected a hit got a miss")
 		}
 		ds.stores[remoteType].Write(tt.r.Hash(), tt.r.Marshal())
-		_, err = tt.r.Download(*ds)
+		_, aciFile, err := tt.r.Download(*ds, nil)
+		if err != nil {
+			t.Fatalf("error downloading aci: %v", err)
+		}
+		defer os.Remove(aciFile.Name())
+
+		_, err = tt.r.Store(*ds, aciFile)
 		if err != nil {
 			panic(err)
 		}

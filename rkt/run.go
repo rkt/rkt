@@ -26,6 +26,7 @@ import (
 
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/cas"
+	"github.com/coreos/rocket/pkg/keystore"
 	"github.com/coreos/rocket/stage0"
 )
 
@@ -53,7 +54,7 @@ func init() {
 
 // findImages will recognize a ACI hash and use that, import a local file, use
 // discovery or download an ACI directly.
-func findImages(args []string, ds *cas.Store) (out []types.Hash, err error) {
+func findImages(args []string, ds *cas.Store, ks *keystore.Keystore) (out []types.Hash, err error) {
 	out = make([]types.Hash, len(args))
 	for i, img := range args {
 		// check if it is a valid hash, if so let it pass through
@@ -89,7 +90,7 @@ func findImages(args []string, ds *cas.Store) (out []types.Hash, err error) {
 			continue
 		}
 
-		key, err := fetchImage(img, ds)
+		key, err := fetchImage(img, ds, ks)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +121,8 @@ func runRun(args []string) (exit int) {
 	}
 
 	ds := cas.NewStore(globalFlags.Dir)
-	imgs, err := findImages(args, ds)
+	ks := keystore.New(nil)
+	imgs, err := findImages(args, ds, ks)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 1

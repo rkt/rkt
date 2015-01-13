@@ -1,8 +1,22 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
+	"text/template"
+
+	"github.com/coreos/rocket/cas"
+	"github.com/coreos/rocket/pkg/keystore"
+	"github.com/coreos/rocket/pkg/keystore/keystoretest"
+	"github.com/coreos/rocket/pkg/util"
 
 	"github.com/appc/spec/discovery"
 )
@@ -82,6 +96,89 @@ func TestNewDiscoveryApp(t *testing.T) {
 		g := newDiscoveryApp(tt.in)
 		if !reflect.DeepEqual(g, tt.w) {
 			t.Errorf("#%d: got %v, want %v", i, g, tt.w)
+		}
+	}
+}
+
+var metaTemplate = template.Must(template.New("name").Parse(`<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="ac-discovery" content="{{.PrefixMatch}} {{.ACITemplateURL}}">
+    <meta name="ac-discovery-pubkeys" content="{{.PrefixMatch}} {{.PubkeysURL}}">
+  <head>
+<html>
+`))
+
+func TestFetchImage(t *testing.T) {
+	dir, err := ioutil.TempDir("", "fetch-image")
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+	ds := cas.NewStore(dir)
+	defer ds.Dump(false)
+
+	ks, ksPath, err := keystore.NewTestKeystore()
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
+	defer os.RemoveAll(ksPath)
+
+	key := keystoretest.KeyMap["example.com/app"]
+	if _, err := ks.StoreTrustedKeyPrefix("example.com/app", bytes.NewBufferString(key.ArmoredPublicKey)); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	aci, err := util.NewACI("example.com/app")
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	// Rewind the ACI
+	if _, err := aci.Seek(0, 0); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	sig, err := util.NewDetachedSignature(key.ArmoredPrivateKey, aci)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	// Rewind the ACI.
+	if _, err := aci.Seek(0, 0); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch filepath.Ext(r.URL.Path) {
+		case ".aci":
+			io.Copy(w, aci)
+			return
+		case ".sig":
+			io.Copy(w, sig)
+			return
+		}
+	}))
+	defer ts.Close()
+	_, err = fetchImage(fmt.Sprintf("%s/app.aci", ts.URL), ds, ks)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+}
+
+func TestSigURLFromImgURL(t *testing.T) {
+	tests := []struct {
+		in, out string
+	}{
+		{
+			"http://localhost/aci-latest-linux-amd64.aci",
+			"http://localhost/aci-latest-linux-amd64.sig",
+		},
+	}
+	for i, tt := range tests {
+		out := sigURLFromImgURL(tt.in)
+		if out != tt.out {
+			t.Errorf("#%d: got %v, want %v", i, out, tt.out)
 		}
 	}
 }
