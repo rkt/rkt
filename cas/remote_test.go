@@ -19,7 +19,7 @@ func TestNewRemote(t *testing.T) {
 
 	// Create our first Remote, and simulate Store() to create index
 	na := NewRemote(u1, "")
-	na.Blob = data
+	na.BlobKey = data
 	ds.WriteIndex(na)
 
 	// Create a new remote w the same parameters, reading from index should be fine
@@ -28,8 +28,8 @@ func TestNewRemote(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error reading index: %v", err)
 	}
-	if nb.Blob != data {
-		t.Fatalf("bad data returned from store: got %v, want %v", nb.Blob, data)
+	if nb.BlobKey != data {
+		t.Fatalf("bad data returned from store: got %v, want %v", nb.BlobKey, data)
 	}
 
 	// Create a new remote with a different URI
@@ -40,7 +40,7 @@ func TestNewRemote(t *testing.T) {
 		t.Errorf("unexpected nil error reading index")
 	}
 	// Remote shouldn't be populated
-	if nc.Blob != "" {
-		t.Errorf("unexpected blob: got %v", nc.Blob)
+	if nc.BlobKey != "" {
+		t.Errorf("unexpected blob: got %v", nc.BlobKey)
 	}
 }
