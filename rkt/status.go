@@ -20,11 +20,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"syscall"
 
 	"github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/pkg/lock"
 )
 
 var (
@@ -59,74 +57,34 @@ func runStatus(args []string) (exit int) {
 		return 1
 	}
 
-	l, exited, err := getContainerLockAndState(containerUUID)
+	ch, err := getContainer(containerUUID.String())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to access container: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to get container handle: %v\n", err)
 		return 1
 	}
-	defer l.Close()
+	defer ch.Close()
+
+	if flagWait {
+		if err := ch.containerWaitExited(); err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to wait for container: %v\n", err)
+			return 1
+		}
+	}
 
 	// There's a window between opening the container directory and lock acquisition where gc rename could occur,
 	// perform all subsequent opens relative to the opened container directory lock fd
-	cfd, err := l.Fd()
+	cfd, err := ch.Fd()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to get lock fd: %v\n", err)
 		return 1
 	}
 
-	if err = printStatusAt(cfd, exited); err != nil {
+	if err = printStatusAt(cfd, ch.isExited); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to print status: %v\n", err)
 		return 1
 	}
 
 	return 0
-}
-
-// getContainerLockAndState opens the container directory in the form of a lock.DirLock,
-// returning the lock and wether the container has already exited or not.
-func getContainerLockAndState(containerUUID *types.UUID) (l *lock.DirLock, isExited bool, err error) {
-	cid := containerUUID.String()
-	isGarbage := false
-
-	cp := filepath.Join(containersDir(), cid)
-	l, err = lock.NewLock(cp)
-	if err == lock.ErrNotExist {
-		// Fallback to garbage/$cid if containers/$cid is missing, "rkt gc" renames exited containers to garbage/$cid.
-		isGarbage = true
-		cp = filepath.Join(garbageDir(), cid)
-		l, err = lock.NewLock(cp)
-	}
-
-	if err != nil {
-		if err == lock.ErrNotExist {
-			err = fmt.Errorf("container %v not found", cid)
-		} else {
-			err = fmt.Errorf("error opening lock: %v", err)
-		}
-		return
-	}
-
-	isExited = true
-	if flagWait && !isGarbage {
-		err = l.SharedLock()
-	} else {
-		err = l.TrySharedLock()
-		if err == lock.ErrLocked {
-			if isGarbage {
-				// Container is exited and being deleted, we can't reliably query its status, it's effectively gone.
-				err = fmt.Errorf("unable to query status: %q is being removed", cid)
-				return
-			}
-			isExited = false
-			err = nil
-		}
-	}
-
-	if err != nil {
-		err = fmt.Errorf("error acquiring lock: %v", err)
-	}
-
-	return
 }
 
 // printStatusAt prints the container's pid and per-app status codes
