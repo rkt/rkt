@@ -121,7 +121,7 @@ func runRun(args []string) (exit int) {
 	}
 
 	ds := cas.NewStore(globalFlags.Dir)
-	ks := keystore.New(nil)
+	ks := getKeystore()
 	imgs, err := findImages(args, ds, ks)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
