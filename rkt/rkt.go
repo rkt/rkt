@@ -20,6 +20,8 @@ import (
 	"os"
 	"path/filepath"
 	"text/tabwriter"
+
+	"github.com/coreos/rocket/pkg/keystore"
 )
 
 const (
@@ -112,4 +114,11 @@ func containersDir() string {
 
 func garbageDir() string {
 	return filepath.Join(globalFlags.Dir, "garbage")
+}
+
+func getKeystore() *keystore.Keystore {
+	if globalFlags.InsecureSkipVerify {
+		return nil
+	}
+	return keystore.New(nil)
 }

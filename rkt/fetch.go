@@ -53,8 +53,7 @@ func runFetch(args []string) (exit int) {
 	}
 
 	ds := cas.NewStore(globalFlags.Dir)
-	ks := keystore.New(nil)
-
+	ks := getKeystore()
 	for _, img := range args {
 		hash, err := fetchImage(img, ds, ks)
 		if err != nil {
