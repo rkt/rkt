@@ -107,7 +107,7 @@ func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (strin
 		fmt.Printf("rkt: warning: signature verification has been disabled\n")
 	}
 	err := ds.ReadIndex(rem)
-	if err != nil && rem.Blob == "" {
+	if err != nil && rem.BlobKey == "" {
 		entity, aciFile, err := rem.Download(*ds, ks)
 		if err != nil {
 			return "", err
@@ -125,7 +125,7 @@ func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (strin
 			return "", err
 		}
 	}
-	return rem.Blob, nil
+	return rem.BlobKey, nil
 }
 
 func validateURL(s string) error {

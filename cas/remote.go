@@ -43,7 +43,8 @@ type Remote struct {
 	ACIURL string
 	SigURL string
 	ETag   string
-	Blob   string
+	// The key in the blob store under which the ACI has been saved.
+	BlobKey string
 }
 
 func (r Remote) Marshal() []byte {
@@ -115,7 +116,7 @@ func (r Remote) Store(ds Store, aci io.Reader) (*Remote, error) {
 	if err != nil {
 		return nil, err
 	}
-	r.Blob = key
+	r.BlobKey = key
 	ds.WriteIndex(&r)
 	return &r, nil
 }
