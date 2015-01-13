@@ -101,8 +101,6 @@ func (np *NetPlugin) Add(n *Net, contID types.UUID, netns, args, ifName string) 
 			return nil, err
 		}
 
-		fmt.Printf("plugin's output %q\n", output)
-
 		return util.ParseCIDR(output)
 	}
 }
