@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-	"text/template"
 
 	"github.com/coreos/rocket/cas"
 	"github.com/coreos/rocket/pkg/keystore"
@@ -99,16 +98,6 @@ func TestNewDiscoveryApp(t *testing.T) {
 		}
 	}
 }
-
-var metaTemplate = template.Must(template.New("name").Parse(`<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="ac-discovery" content="{{.PrefixMatch}} {{.ACITemplateURL}}">
-    <meta name="ac-discovery-pubkeys" content="{{.PrefixMatch}} {{.PubkeysURL}}">
-  <head>
-<html>
-`))
 
 func TestFetchImage(t *testing.T) {
 	dir, err := ioutil.TempDir("", "fetch-image")
