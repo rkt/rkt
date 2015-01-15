@@ -136,7 +136,10 @@ func stage1() int {
 	env = append(env, "LD_LIBRARY_PATH="+filepath.Join(path.Stage1RootfsPath(c.Root), "usr/lib"))
 
 	if privNet {
-		n, err := networking.Setup(c.Manifest.UUID)
+		// careful not to make another local err variable.
+		// cmd.Run sets the one from parent scope
+		var n *networking.Networking
+		n, err = networking.Setup(c.Manifest.UUID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to setup network: %v\n", err)
 			return 6
@@ -149,6 +152,7 @@ func stage1() int {
 		}
 
 		cmd := exec.Cmd{
+			Path:   args[0],
 			Args:   args,
 			Stdin:  os.Stdin,
 			Stdout: os.Stdout,

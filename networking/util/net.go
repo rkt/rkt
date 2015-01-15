@@ -27,7 +27,7 @@ type Net struct {
 	IPAlloc  struct {
 		Type   string `json:"type,omitempty"`
 		Subnet string `json:"subnet,omitempty"`
-	}
+	}               `json:"ipAlloc"`
 }
 
 func LoadNet(path string, n interface{}) error {

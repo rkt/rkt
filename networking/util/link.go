@@ -79,3 +79,16 @@ func SetupVeth(entropy, contVethName string, ipn *net.IPNet, hostNS *os.File) (h
 
 	return
 }
+
+func DelLinkByName(ifName string) error {
+	iface, err := netlink.LinkByName(ifName)
+	if err != nil {
+		return fmt.Errorf("Failed to lookup %q: %v", ifName, err)
+	}
+
+	if err = netlink.LinkDel(iface); err != nil {
+		return fmt.Errorf("Failed to delete %q: %v", ifName, err)
+	}
+
+	return nil
+}
