@@ -15,10 +15,11 @@
 package networking
 
 import (
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
+	"sort"
 
 	"github.com/coreos/rocket/networking/util"
 )
@@ -29,17 +30,8 @@ type Net struct {
 }
 
 const RktNetPath = "/etc/rkt-net.conf.d"
-const DefaultIPNet = "172.16.28.0/24"
 
-var defaultNet = Net{
-	Net: util.Net{
-		Name: "default",
-		Type: "veth",
-	},
-	args: "default,iprange=" + DefaultIPNet,
-}
-
-func LoadNets() ([]Net, error) {
+func listFiles(dir string) ([]string, error) {
 	dirents, err := ioutil.ReadDir(RktNetPath)
 	switch {
 	case err == nil:
@@ -49,23 +41,37 @@ func LoadNets() ([]Net, error) {
 		return nil, err
 	}
 
-	var nets []Net
-
+	files := []string{}
 	for _, dent := range dirents {
 		if dent.IsDir() {
 			continue
 		}
 
-		nf := path.Join(RktNetPath, dent.Name())
+		files = append(files, dent.Name())
+	}
+
+	return files, nil
+}
+
+func LoadNets() ([]Net, error) {
+	files, err := listFiles(RktNetPath)
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Strings(files)
+
+	nets := make([]Net, 0, len(files))
+
+	for _, filename := range files {
+		filepath := path.Join(RktNetPath, filename)
 		n := Net{}
-		if err := util.LoadNet(nf, &n); err != nil {
-			log.Printf("Error loading %v: %v", nf, err)
-			continue
+		if err := util.LoadNet(filepath, &n); err != nil {
+			return nil, fmt.Errorf("error loading %v: %v", filepath, err)
 		}
 
 		nets = append(nets, n)
 	}
 
-	nets = append(nets, defaultNet)
-
-	return nets, nil }
+	return nets, nil
+}
