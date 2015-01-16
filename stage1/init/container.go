@@ -82,7 +82,7 @@ func LoadContainer(root string) (*Container, error) {
 // quoteExec returns an array of quoted strings appropriate for systemd execStart usage
 func quoteExec(exec []string) string {
 	if len(exec) == 0 {
-		// existing callers prefix {"/diagexec", "/app/root"} so this shouldn't occur.
+		// existing callers prefix {"/diagexec", "/app/root", "/work/dir"} so this shouldn't occur.
 		panic("empty exec")
 	}
 
@@ -111,7 +111,13 @@ func newUnitOption(section, name, value string) *unit.UnitOption {
 func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error {
 	name := am.Name.String()
 	app := am.App
-	execWrap := []string{"/diagexec", rktpath.RelAppRootfsPath(id)}
+
+	workDir := "/"
+	if app.WorkingDirectory != "" {
+		workDir = app.WorkingDirectory
+	}
+
+	execWrap := []string{"/diagexec", rktpath.RelAppRootfsPath(id), workDir}
 	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
 		newUnitOption("Unit", "Description", name),
@@ -144,10 +150,6 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 	for ek, ev := range env {
 		ee := fmt.Sprintf(`"%s=%s"`, ek, ev)
 		opts = append(opts, newUnitOption("Service", "Environment", ee))
-	}
-
-	if app.WorkingDirectory != "" {
-		opts = append(opts, newUnitOption("Service", "WorkingDirectory", app.WorkingDirectory))
 	}
 
 	saPorts := []types.Port{}
