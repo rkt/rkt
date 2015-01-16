@@ -139,14 +139,15 @@ static void diag(const char *exe)
 
 int main(int argc, char *argv[])
 {
-	const char *root, *exe;
-	exit_if(argc < 3,
-		"Usage: %s /path/to/root /to/exec [args ...]", argv[0]);
+	const char *root, *cwd, *exe;
+	exit_if(argc < 4,
+		"Usage: %s /path/to/root /work/directory /to/exec [args ...]", argv[0]);
 	root = argv[1];
-	exe = argv[2];
-	pexit_if(chroot(root) == -1, "Chroot failed");
-	pexit_if(chdir("/") == -1, "Chdir failed");
-	pexit_if(execvp(exe, &argv[2]) == -1 &&
+	cwd = argv[2];
+	exe = argv[3];
+	pexit_if(chroot(root) == -1, "Chroot \"%s\" failed", root);
+	pexit_if(chdir(cwd) == -1, "Chdir \"%s\" failed", cwd);
+	pexit_if(execvp(exe, &argv[3]) == -1 &&
 		 errno != ENOENT && errno != EACCES,
 		 "Exec of \"%s\" failed", exe);
 	diag(exe);
