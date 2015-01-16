@@ -147,7 +147,7 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 	}
 
 	if app.WorkingDirectory != "" {
-		opts = append(opts, &unit.UnitOption{"Service", "WorkingDirectory", app.WorkingDirectory})
+		opts = append(opts, newUnitOption("Service", "WorkingDirectory", app.WorkingDirectory))
 	}
 
 	saPorts := []types.Port{}
