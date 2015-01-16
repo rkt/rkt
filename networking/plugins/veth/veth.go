@@ -20,7 +20,6 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"strings"
 
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
@@ -36,22 +35,17 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func argsHasDefault(args string) bool {
-	argv := strings.Split(args, ",")
-	for _, a := range argv {
-		if a == "default" {
-			return true
-		}
-	}
-	return false
-}
-
 func cmdAdd(contID, netns, netConf, ifName, args string) error {
 	var hostVethName string
 
 	cid, err := types.NewUUID(contID)
 	if err != nil {
 		return fmt.Errorf("error parsing ContainerID: %v", err)
+	}
+
+	conf := util.Net{}
+	if err := util.LoadNet(netConf, &conf); err != nil {
+		return fmt.Errorf("failed to load %q: %v", netConf, err)
 	}
 
 	ipn, gw, err := ipam.AllocIP(*cid, netConf, ifName, args)
@@ -67,9 +61,14 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 			return err
 		}
 
-		if argsHasDefault(args) {
-			if err = util.AddDefaultRoute(gw, contVeth); err != nil {
-				return fmt.Errorf("failed to add default route: %v", err)
+		for _, r := range conf.Routes {
+			dst, err := util.ParseCIDR(r)
+			if err != nil {
+				return err
+			}
+
+			if err = util.AddRoute(dst, gw, contVeth); err != nil {
+				return fmt.Errorf("failed to add route %q: %v", dst, err)
 			}
 		}
 
@@ -83,7 +82,6 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 		return fmt.Errorf("failed to lookup %q: %v", hostVeth.Attrs().Name, err)
 	}
 
-
 	// On the host we route traffic for the allocated IP to the container
 	ipn.Mask = net.CIDRMask(32, 32)
 
@@ -91,7 +89,7 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 		return fmt.Errorf("failed to add route on host: %v", err)
 	}
 
-	os.Stdout.Write([]byte(ipn.String()))
+	fmt.Print(ipn.String())
 
 	return nil
 }
