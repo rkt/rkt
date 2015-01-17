@@ -2,6 +2,7 @@ package cas
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -15,6 +16,7 @@ func TestNewRemote(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(dir)
 	ds := NewStore(dir)
 
 	// Create our first Remote, and simulate Store() to create index

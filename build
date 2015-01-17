@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -eu
 
 ORG_PATH="github.com/coreos"
 REPO_PATH="${ORG_PATH}/rocket"
@@ -24,6 +24,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		[ -d $S1INIT ] || mkdir -p $S1INIT
 		cp $GOBIN/init $TMP/s1init
 		go-bindata -o $S1INIT/bin.go -pkg="stage1_init" -prefix=$TMP $TMP
+		rm -Rf "${TMP}"
 	fi
 
 	echo "Building rootfs (stage1)..."
