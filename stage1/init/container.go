@@ -265,6 +265,18 @@ func (c *Container) appToNspawnArgs(am *schema.ImageManifest, id types.Hash) ([]
 		args = append(args, strings.Join(opt, ""))
 	}
 
+	for _, i := range am.App.Isolators {
+		switch i.Name {
+		case "private-network":
+			if i.Val == "true" {
+				args = append(args, "--private-network")
+			}
+		case "capabilities/bounding-set":
+			capList := strings.Join(strings.Split(i.Val, " "), ",")
+			args = append(args, "--capability="+capList)
+		}
+	}
+
 	return args, nil
 }
 
