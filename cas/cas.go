@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/appc/spec/aci"
 
@@ -84,14 +83,10 @@ func (ds Store) tmpFile() (*os.File, error) {
 
 // ResolveKey resolves a partial key (of format `sha512-0c45e8c0ab2`) to a full
 // key by considering the key a prefix and using the store for resolution.
-// If the key is already of the full key length, it returns the key unaltered.
 // If the key is longer than the full key length, it is first truncated.
 func (ds Store) ResolveKey(key string) (string, error) {
 	if len(key) > lenKey {
 		key = key[:lenKey]
-	}
-	if strings.HasPrefix(key, hashPrefix) && len(key) == lenKey {
-		return key, nil
 	}
 
 	cancel := make(chan struct{})
@@ -216,8 +211,13 @@ func (ds Store) Dump(hex bool) {
 // store the data matching the hash.
 func HashToKey(h hash.Hash) string {
 	s := h.Sum(nil)
-	if len(s) != lenHash {
-		panic(fmt.Sprintf("bad hash passed to hashToKey: %s", s))
+	return keyToString(s)
+}
+
+// keyToString takes a key and returns a shortened and prefixed hexadecimal string version
+func keyToString(k []byte) string {
+	if len(k) != lenHash {
+		panic(fmt.Sprintf("bad hash passed to hashToKey: %x", k))
 	}
-	return fmt.Sprintf("%s%x", hashPrefix, s)[0:lenKey]
+	return fmt.Sprintf("%s%x", hashPrefix, k)[0:lenKey]
 }

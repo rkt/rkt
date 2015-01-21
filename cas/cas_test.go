@@ -17,6 +17,7 @@ package cas
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/hex"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -131,12 +132,19 @@ func TestResolveKey(t *testing.T) {
 	defer os.RemoveAll(dir)
 	ds := NewStore(dir)
 
+	// Return a hash key buffer from a hex string
+	str2key := func(s string) *bytes.Buffer {
+		k, _ := hex.DecodeString(s)
+		return bytes.NewBufferString(keyToString(k))
+	}
+
 	// Set up store (use key == data for simplicity)
 	data := []*bytes.Buffer{
-		bytes.NewBufferString("sha512-1234567890"),
-		bytes.NewBufferString("sha512-abcdefghi"),
-		bytes.NewBufferString("sha512-abcjklmno"),
-		bytes.NewBufferString("sha512-abcpqwert"),
+		str2key("12345678900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		str2key("abcdefabc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		str2key("abcabcabc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		str2key("abc01234500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		str2key("67147019a5b56f5e2ee01e989a8aa4787f56b8445960be2d8678391cf111009bc0780f31001fd181a2b61507547aee4caa44cda4b8bdb238d0e4ba830069ed2c"),
 	}
 	for _, d := range data {
 		if err := ds.WriteStream(d.String(), d); err != nil {
@@ -159,8 +167,8 @@ func TestResolveKey(t *testing.T) {
 
 	// Unambiguous prefix match
 	k, err := ds.ResolveKey("sha512-123")
-	if k != "sha512-1234567890" {
-		t.Errorf("expected %q, got %q", "sha512-1234567890", k)
+	if k != "sha512-1234567890000000000000000000000000000000000000000000000000000000" {
+		t.Errorf("expected %q, got %q", "sha512-1234567890000000000000000000000000000000000000000000000000000000", k)
 	}
 	if err != nil {
 		t.Errorf("expected err=nil, got %v", err)
