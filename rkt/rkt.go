@@ -48,7 +48,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.Help, "help", false, "Print usage information and exit")
 	globalFlagset.BoolVar(&globalFlags.Debug, "debug", false, "Print out more debug information to stderr")
 	globalFlagset.StringVar(&globalFlags.Dir, "dir", defaultDataDir, "rocket data directory")
-	globalFlagset.BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip image verification")
+	globalFlagset.BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip image or key verification")
 }
 
 type Command struct {
