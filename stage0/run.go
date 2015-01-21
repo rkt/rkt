@@ -81,6 +81,10 @@ func Setup(cfg Config) (string, error) {
 		log.SetOutput(os.Stderr)
 	}
 
+	if err := os.MkdirAll(cfg.ContainersDir, 0700); err != nil {
+		return "", fmt.Errorf("error creating containers directory: %v", err)
+	}
+
 	// Create a unique directory for this container
 	cuuid, dir, err := makeUniqueContainer(cfg.ContainersDir)
 	if err != nil {
@@ -220,6 +224,11 @@ func Run(cfg Config, dir string) {
 	}
 }
 
+// makeUniqueContainer creates a subdirectory (representing a container)
+// within the given parent directory. On success, it returns a UUID
+// representing the created container and the full path to the new directory.
+// The UUID is guaranteed to be unique within the parent directory.
+// The parent directory MUST exist and be writeable.
 func makeUniqueContainer(pdir string) (*types.UUID, string, error) {
 	// Arbitrary limit so we don't spin forever
 	for i := 0; i <= 100; i++ {
