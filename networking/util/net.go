@@ -22,13 +22,13 @@ import (
 
 type Net struct {
 	Filename string
-	Name     string   `json:"name,omitempty"`
-	Type     string   `json:"type,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Type     string `json:"type,omitempty"`
 	IPAlloc  struct {
 		Type   string `json:"type,omitempty"`
 		Subnet string `json:"subnet,omitempty"`
-	}                 `json:"ipAlloc,omitempty"`
-	Routes   []string `json:"routes,omitempty"`
+	} `json:"ipAlloc,omitempty"`
+	Routes []string `json:"routes,omitempty"`
 }
 
 func LoadNet(path string, n interface{}) error {

@@ -36,7 +36,7 @@ func init() {
 }
 
 func cmdAdd(contID, netns, netConf, ifName, args string) error {
-	var hostVethName string
+	var hostVethName, contIPNet string
 
 	cid, err := types.NewUUID(contID)
 	if err != nil {
@@ -48,13 +48,20 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 		return fmt.Errorf("failed to load %q: %v", netConf, err)
 	}
 
-	ipn, gw, err := ipam.AllocIP(*cid, netConf, ifName, args)
+	ips, err := ipam.AllocPtP(*cid, netConf, ifName, args)
 	if err != nil {
 		return err
 	}
 
+	hostIP, contIP := ips[0], ips[1]
+
 	err = util.WithNetNSPath(netns, func(hostNS *os.File) error {
 		entropy := contID + ifName
+
+		ipn := &net.IPNet{
+			IP:   contIP,
+			Mask: net.CIDRMask(31, 32),
+		}
 
 		hostVeth, contVeth, err := util.SetupVeth(entropy, ifName, ipn, hostNS)
 		if err != nil {
@@ -64,32 +71,44 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 		for _, r := range conf.Routes {
 			dst, err := util.ParseCIDR(r)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse route %q: %v", r, err)
 			}
 
-			if err = util.AddRoute(dst, gw, contVeth); err != nil {
+			if err = util.AddRoute(dst, hostIP, contVeth); err != nil {
 				return fmt.Errorf("failed to add route %q: %v", dst, err)
 			}
 		}
 
 		hostVethName = hostVeth.Attrs().Name
-		return err
-	})
+		contIPNet = ipn.String()
 
-	// hostVeth moved namespaces and will have a new ifindex
-	hostVeth, err := netlink.LinkByName(hostVethName)
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("failed to lookup %q: %v", hostVeth.Attrs().Name, err)
+		return err
 	}
 
-	// On the host we route traffic for the allocated IP to the container
-	ipn.Mask = net.CIDRMask(32, 32)
+	// hostVeth moved namespaces and may have a new ifindex
+	hostVeth, err := netlink.LinkByName(hostVethName)
+	if err != nil {
+		return fmt.Errorf("failed to lookup %q: %v", hostVethName, err)
+	}
 
-	if err = util.AddRoute(ipn, nil, hostVeth); err != nil {
+	ipn := &net.IPNet{
+		IP:   hostIP,
+		Mask: net.CIDRMask(31, 32),
+	}
+	addr := &netlink.Addr{ipn, ""}
+	if err = netlink.AddrAdd(hostVeth, addr); err != nil {
+		return fmt.Errorf("failed to add IP addr to veth: %v", err)
+	}
+
+	// dst happens to be the same as IP/net of host veth
+	if err = util.AddHostRoute(ipn, nil, hostVeth); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("failed to add route on host: %v", err)
 	}
 
-	fmt.Print(ipn.String())
+	fmt.Print(contIPNet)
 
 	return nil
 }

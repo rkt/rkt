@@ -50,12 +50,14 @@ func WithNetNSPath(nspath string, f func(*os.File) error) error {
 	if err != nil {
 		return fmt.Errorf("Failed to open /proc/self/ns/net: %v", err)
 	}
+	defer thisNS.Close()
 
 	// switch to the container namespace
 	ns, err := os.Open(nspath)
 	if err != nil {
 		return fmt.Errorf("Failed to open %v: %v", nspath, err)
 	}
+	defer ns.Close()
 
 	if err = SetNS(ns, syscall.CLONE_NEWNET); err != nil {
 		return fmt.Errorf("Error switching to ns %v: %v", nspath, err)
@@ -66,9 +68,5 @@ func WithNetNSPath(nspath string, f func(*os.File) error) error {
 	}
 
 	// switch back
-	if err = SetNS(thisNS, syscall.CLONE_NEWNET); err != nil {
-		return err
-	}
-
-	return nil
+	return SetNS(thisNS, syscall.CLONE_NEWNET)
 }

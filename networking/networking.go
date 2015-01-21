@@ -30,7 +30,7 @@ import (
 
 const (
 	ifnamePattern = "eth%d"
-	selfNetNS = "/proc/self/ns/net"
+	selfNetNS     = "/proc/self/ns/net"
 )
 
 type activeNet struct {
@@ -141,7 +141,6 @@ func basicNetNS() (hostNS, contNS *os.File, err error) {
 	return
 }
 
-
 func (n *Networking) EnterHostNS() error {
 	return util.SetNS(n.hostNS, syscall.CLONE_NEWNET)
 }
@@ -163,7 +162,7 @@ func setupNets(contID types.UUID, netns string, plugins map[string]*NetPlugin, n
 		}
 
 		an := activeNet{
-			Net: nt,
+			Net:    nt,
 			ifName: fmt.Sprintf(ifnamePattern, i),
 		}
 
