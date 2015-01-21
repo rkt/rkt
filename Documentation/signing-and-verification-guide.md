@@ -242,7 +242,7 @@ Remove white spaces and convert to lowercase:
 
 ```
 $ echo "B346 E31D E7E3 C6F9 D1D4  603F 4DFB 61BF 26EF 7A14" | \
-  tr -d "[:space:]" | tr '[:upper:][:lower:]' '[:lower:][:upper:]'
+  tr -d "[:space:]" | tr '[:upper:]' '[:lower:]'
 ```
 ```
 b346e31de7e3c6f9d1d4603f4dfb61bf26ef7a14
