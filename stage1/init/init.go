@@ -139,7 +139,7 @@ func stage1() int {
 		// careful not to make another local err variable.
 		// cmd.Run sets the one from parent scope
 		var n *networking.Networking
-		n, err = networking.Setup(c.Manifest.UUID)
+		n, err = networking.Setup(root, c.Manifest.UUID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to setup network: %v\n", err)
 			return 6

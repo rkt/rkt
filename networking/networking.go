@@ -39,8 +39,18 @@ type activeNet struct {
 	ipn    *net.IPNet
 }
 
+// "base" struct that's populated from the beginning
+// describing the environment in which the container
+// is running in
+type containerEnv struct {
+	rktRoot    string
+	contID     types.UUID
+}
+
 // Networking describes the networking details of a container.
 type Networking struct {
+	containerEnv
+
 	MetadataIP net.IP
 
 	contID     types.UUID
@@ -48,13 +58,17 @@ type Networking struct {
 	contNS     *os.File
 	contNSPath string
 	nets       []activeNet
-	plugins    map[string]*NetPlugin
 }
 
 // Setup produces a Networking object for a given container ID.
-func Setup(contID types.UUID) (*Networking, error) {
+func Setup(rktRoot string, contID types.UUID) (*Networking, error) {
 	var err error
-	n := Networking{contID: contID}
+	n := Networking{
+		containerEnv: containerEnv{
+			rktRoot: rktRoot,
+			contID: contID,
+		},
+	}
 
 	defer func() {
 		// cleanup on error
@@ -74,22 +88,25 @@ func Setup(contID types.UUID) (*Networking, error) {
 	}
 	n.contNSPath = filepath.Join(contNSPath, "net")
 
-	n.plugins, err = LoadNetPlugins()
 	if err != nil {
 		return nil, fmt.Errorf("error loading plugin definitions: %v", err)
 	}
 
-	nets, err := LoadNets()
+	nets, err := n.loadNets()
 	if err != nil {
 		return nil, fmt.Errorf("error loading network definitions: %v", err)
 	}
 
 	err = withNetNS(n.contNS, n.hostNS, func() error {
-		n.nets, err = setupNets(contID, n.contNSPath, n.plugins, nets)
+		n.nets, err = n.setupNets(n.contNSPath, nets)
 		return err
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	if len(n.nets) == 0 {
+		return nil, fmt.Errorf("no nets successfully setup")
 	}
 
 	// last net is the default
@@ -115,7 +132,7 @@ func (n *Networking) Teardown() {
 		return
 	}
 
-	teardownNets(n.contID, n.contNSPath, n.plugins, n.nets)
+	n.teardownNets(n.contNSPath, n.nets)
 
 	if n.contNSPath == "" {
 		return
@@ -154,18 +171,12 @@ func (n *Networking) EnterContNS() error {
 	return util.SetNS(n.contNS, syscall.CLONE_NEWNET)
 }
 
-func setupNets(contID types.UUID, netns string, plugins map[string]*NetPlugin, nets []Net) ([]activeNet, error) {
+func (e *containerEnv) setupNets(netns string, nets []Net) ([]activeNet, error) {
 	var err error
 
 	active := []activeNet{}
 
 	for i, nt := range nets {
-		plugin, ok := plugins[nt.Type]
-		if !ok {
-			err = fmt.Errorf("could not find network plugin %q", nt.Type)
-			break
-		}
-
 		an := activeNet{
 			Net:    nt,
 			ifName: fmt.Sprintf(ifnamePattern, i),
@@ -173,7 +184,7 @@ func setupNets(contID types.UUID, netns string, plugins map[string]*NetPlugin, n
 
 		log.Printf("Executing net-plugin %v", nt.Type)
 
-		an.ipn, err = plugin.Add(&nt, contID, netns, nt.args, an.ifName)
+		an.ipn, err = e.netPluginAdd(&nt, netns, nt.args, an.ifName)
 		if err != nil {
 			err = fmt.Errorf("error adding network %q: %v", nt.Name, err)
 			break
@@ -185,19 +196,17 @@ func setupNets(contID types.UUID, netns string, plugins map[string]*NetPlugin, n
 	log.Print("Done executing net plugins")
 
 	if err != nil {
-		teardownNets(contID, netns, plugins, active)
+		e.teardownNets(netns, active)
 		return nil, err
 	}
 
 	return active, nil
 }
 
-func teardownNets(contID types.UUID, netns string, plugins map[string]*NetPlugin, nets []activeNet) {
+func (e *containerEnv) teardownNets(netns string, nets []activeNet) {
 	for i := len(nets) - 1; i >= 0; i-- {
 		nt := nets[i]
-		plugin := plugins[nt.Type]
-
-		err := plugin.Del(&nt.Net, contID, netns, nt.args, nt.ifName)
+		err := e.netPluginDel(&nt.Net, netns, nt.args, nt.ifName)
 		if err != nil {
 			log.Printf("Error deleting %q: %v", nt.Name, err)
 		}

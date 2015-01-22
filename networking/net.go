@@ -22,6 +22,7 @@ import (
 	"sort"
 
 	"github.com/coreos/rocket/networking/util"
+	rktpath "github.com/coreos/rocket/path"
 )
 
 // Net encodes a network plugin.
@@ -30,11 +31,13 @@ type Net struct {
 	args string
 }
 
-// RktNetPath is the absolute path of rkt-net.conf.d.
-const RktNetPath = "/etc/rkt-net.conf.d"
+// Absolute path where users place their net configs
+const UserNetPath = "/etc/rkt/net.d"
+// Default net path relative to stage1 root
+const DefaultNetPath = "etc/rkt/net.d/99-default.conf"
 
 func listFiles(dir string) ([]string, error) {
-	dirents, err := ioutil.ReadDir(RktNetPath)
+	dirents, err := ioutil.ReadDir(dir)
 	switch {
 	case err == nil:
 	case os.IsNotExist(err):
@@ -55,9 +58,8 @@ func listFiles(dir string) ([]string, error) {
 	return files, nil
 }
 
-// LoadNets produces a collection of NetPlugins loaded from RktNetPluginsPath.
-func LoadNets() ([]Net, error) {
-	files, err := listFiles(RktNetPath)
+func loadUserNets() ([]Net, error) {
+	files, err := listFiles(UserNetPath)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +69,7 @@ func LoadNets() ([]Net, error) {
 	nets := make([]Net, 0, len(files))
 
 	for _, filename := range files {
-		filepath := path.Join(RktNetPath, filename)
+		filepath := path.Join(UserNetPath, filename)
 		n := Net{}
 		if err := util.LoadNet(filepath, &n); err != nil {
 			return nil, fmt.Errorf("error loading %v: %v", filepath, err)
@@ -77,4 +79,20 @@ func LoadNets() ([]Net, error) {
 	}
 
 	return nets, nil
+}
+
+// Loads nets specified by user and default one from stage1
+func (e *containerEnv) loadNets() ([]Net, error) {
+	nets, err := loadUserNets()
+	if err != nil {
+		return nil, err
+	}
+
+	defPath := path.Join(rktpath.Stage1RootfsPath(e.rktRoot), DefaultNetPath)
+	defNet := Net{}
+	if err := util.LoadNet(defPath, &defNet); err != nil {
+		return nil, fmt.Errorf("error loading net: %v", err)
+	}
+
+	return append(nets, defNet), nil
 }
