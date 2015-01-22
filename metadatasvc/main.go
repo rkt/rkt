@@ -193,7 +193,7 @@ func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, m *metad
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
-	for k, _ := range m.manifest.Annotations {
+	for k := range m.manifest.Annotations {
 		fmt.Fprintln(w, k)
 	}
 }
