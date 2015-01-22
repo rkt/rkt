@@ -51,16 +51,28 @@ const (
 )
 
 func setupIPTables() error {
-	args := []string{"-t", "nat", "-A", "PREROUTING",
-		"-p", "tcp", "-d", metaIP, "--dport", metaPort,
-		"-j", "REDIRECT", "--to-port", myPort}
-
-	return exec.Command("iptables", args...).Run()
+	return exec.Command(
+		"iptables",
+		"-t", "nat",
+		"-A", "PREROUTING",
+		"-p", "tcp",
+		"-d", metaIP,
+		"--dport", metaPort,
+		"-j", "REDIRECT",
+		"--to-port", myPort,
+	).Run()
 }
 
 func antiSpoof(brPort, ipAddr string) error {
-	args := []string{"-t", "filter", "-I", "INPUT", "-i", brPort, "-p", "IPV4", "!", "--ip-source", ipAddr, "-j", "DROP"}
-	return exec.Command("ebtables", args...).Run()
+	return exec.Command(
+		"ebtables",
+		"-t", "filter",
+		"-I", "INPUT",
+		"-i", brPort,
+		"-p", "IPV4",
+		"!", "--ip-source", ipAddr,
+		"-j", "DROP",
+	).Run()
 }
 
 func queryValue(u *url.URL, key string) string {
@@ -150,7 +162,7 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) func(http.ResponseWriter, *http.Request) {
+func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		remoteIP := strings.Split(r.RemoteAddr, ":")[0]
 		m, ok := metadataByIP[remoteIP]
@@ -164,7 +176,7 @@ func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) f
 	}
 }
 
-func appGet(h func(w http.ResponseWriter, r *http.Request, m *metadata, _ *schema.ImageManifest)) func(http.ResponseWriter, *http.Request) {
+func appGet(h func(w http.ResponseWriter, r *http.Request, m *metadata, _ *schema.ImageManifest)) http.HandlerFunc {
 	return containerGet(func(w http.ResponseWriter, r *http.Request, m *metadata) {
 		appname := mux.Vars(r)["app"]
 
@@ -181,7 +193,7 @@ func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, m *metad
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
-	for k, _ := range m.manifest.Annotations {
+	for k := range m.manifest.Annotations {
 		fmt.Fprintln(w, k)
 	}
 }
@@ -382,7 +394,7 @@ func (r *httpResp) WriteHeader(status int) {
 	r.writer.WriteHeader(status)
 }
 
-func logReq(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+func logReq(h func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := &httpResp{w, 0}
 		h(resp, r)

@@ -24,11 +24,13 @@ import (
 	"github.com/coreos/rocket/networking/util"
 )
 
+// Net encodes a network plugin.
 type Net struct {
 	util.Net
 	args string
 }
 
+// RktNetPath is the absolute path of rkt-net.conf.d.
 const RktNetPath = "/etc/rkt-net.conf.d"
 
 func listFiles(dir string) ([]string, error) {
@@ -53,6 +55,7 @@ func listFiles(dir string) ([]string, error) {
 	return files, nil
 }
 
+// LoadNets produces a collection of NetPlugins loaded from RktNetPluginsPath.
 func LoadNets() ([]Net, error) {
 	files, err := listFiles(RktNetPath)
 	if err != nil {
