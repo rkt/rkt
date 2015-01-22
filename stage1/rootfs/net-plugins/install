@@ -1,0 +1,3 @@
+DST="$ROOT/usr/lib/rkt/plugins/net"
+mkdir -p $DST
+install -m 0755 ../net-plugins/bin/* $DST

@@ -30,35 +30,6 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func usage() int {
-	fmt.Fprintln(os.Stderr, "USAGE: add|del CONTAINER-ID NETNS NET-CONF IF-NAME")
-	return 1
-}
-
-func main() {
-	if len(os.Args) != 6 {
-		os.Exit(usage())
-	}
-
-	var err error
-
-	switch os.Args[1] {
-	case "add":
-		err = cmdAdd(os.Args[2], os.Args[3], os.Args[4], os.Args[5])
-
-	case "del":
-		err = cmdDel(os.Args[2], os.Args[3], os.Args[4], os.Args[5])
-
-	default:
-		os.Exit(usage())
-	}
-
-	if err != nil {
-		log.Printf("%v: %v", os.Args[1], err)
-		os.Exit(1)
-	}
-}
-
 func ensureBridgeAddr(br *netlink.Bridge, ipn *net.IPNet) error {
 	addrs, err := netlink.AddrList(br, syscall.AF_INET)
 	if err != nil && err != syscall.ENOENT {
@@ -206,4 +177,38 @@ func cmdDel(contID, netns, netConf, ifName string) error {
 	return util.WithNetNSPath(netns, func(hostNS *os.File) error {
 		return util.DelLinkByName(ifName)
 	})
+}
+
+func main() {
+	var err error
+
+	cmd := os.Getenv("RKT_NETPLUGIN_COMMAND")
+	contID := os.Getenv("RKT_NETPLUGIN_CONTID")
+	netns := os.Getenv("RKT_NETPLUGIN_NETNS")
+	ifName := os.Getenv("RKT_NETPLUGIN_IFNAME")
+	netConf := os.Getenv("RKT_NETPLUGIN_NETCONF")
+
+	if cmd == "" || contID == "" || netns == "" || ifName == "" || netConf == "" {
+		log.Printf("Required env variable missing")
+		log.Print("Env: ", os.Environ())
+		os.Exit(1)
+	}
+
+	switch cmd {
+	case "ADD":
+		err = cmdAdd(contID, netns, netConf, ifName)
+
+	case "DEL":
+		err = cmdDel(contID, netns, netConf, ifName)
+
+	default:
+		log.Printf("Unknown RKT_NETPLUGIN_COMMAND: %v", cmd)
+		os.Exit(1)
+	}
+
+	if err != nil {
+		log.Printf("%v: %v", os.Args[1], err)
+		os.Exit(1)
+	}
+
 }

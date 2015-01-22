@@ -16,140 +16,87 @@ package networking
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/appc/spec/schema/types"
-
 	"github.com/coreos/rocket/networking/util"
+	rktpath "github.com/coreos/rocket/path"
 )
 
-// NetPlugin encodes a networking plugin.
-type NetPlugin struct {
-	Name     string `json:"name,omitempty"`
-	Endpoint string `json:"endpoint,omitempty"`
-	Command  struct {
-		Add []string `json:"add,omitempty"`
-		Del []string `json:"del,omitempty"`
-	}
-}
+// TODO(eyakubovich): make this configurable in rkt.conf
+const UserNetPluginsPath = "/usr/lib/rkt/plugins/net"
+const BuiltinNetPluginsPath = "usr/lib/rkt/plugins/net"
 
-// RktNetPluginsPath is the absolute path of rkt-net-plugins.conf.d.
-const RktNetPluginsPath = "/etc/rkt-net-plugins.conf.d"
-
-// LoadNetPlugin loads a JSON-encoded NetPlugin from the filesystem.
-func LoadNetPlugin(path string) (*NetPlugin, error) {
-	c, err := ioutil.ReadFile(path)
+func (e *containerEnv) netPluginAdd(n *Net, netns, args, ifName string) (*net.IPNet, error) {
+	output, err := e.execNetPlugin("ADD", n, netns, args, ifName)
 	if err != nil {
 		return nil, err
 	}
 
-	np := &NetPlugin{}
-	if err = json.Unmarshal(c, np); err != nil {
-		return nil, err
-	}
-
-	return np, nil
+	return util.ParseCIDR(output)
 }
 
-// LoadNetPlugins produces a collection of NetPlugins loaded from
-// RktNetPluginsPath.
-func LoadNetPlugins() (map[string]*NetPlugin, error) {
-	plugins := make(map[string]*NetPlugin)
+func (e *containerEnv) netPluginDel(n *Net, netns, args, ifName string) error {
+	_, err := e.execNetPlugin("DEL", n, netns, args, ifName)
+	return err
+}
 
-	dirents, err := ioutil.ReadDir(RktNetPluginsPath)
-	switch {
-	case err == nil:
-	case os.IsNotExist(err):
-		return plugins, nil
-	default:
-		return nil, err
+func (e *containerEnv) findNetPlugin(plugin string) string {
+	// try 3rd-party path first
+	paths := []string{
+		UserNetPluginsPath,
+		filepath.Join(rktpath.Stage1RootfsPath(e.rktRoot), BuiltinNetPluginsPath),
 	}
 
-	for _, dent := range dirents {
-		if dent.IsDir() {
-			continue
+	for _, p := range paths {
+		fullname := filepath.Join(p, plugin)
+		if fi, err := os.Stat(fullname); err == nil && fi.Mode().IsRegular() {
+			return fullname
 		}
-
-		npPath := filepath.Join(RktNetPluginsPath, dent.Name())
-		np, err := LoadNetPlugin(npPath)
-		if err != nil {
-			log.Printf("Error loading %v: %v", npPath, err)
-			continue
-		}
-
-		plugins[np.Name] = np
 	}
 
-	return plugins, nil
+	return ""
 }
 
-// Add invokes the plugin's add command, if defined.
-func (np *NetPlugin) Add(n *Net, contID types.UUID, netns, args, ifName string) (*net.IPNet, error) {
-	switch {
-	case np.Endpoint != "":
-		return nil, execHTTP(np.Endpoint, "add", n.Name, contID.String(), netns, n.Filename, args, ifName)
+func envVars(vars [][2]string) []string {
+	env := []string{}
 
-	default:
-		if len(np.Command.Add) == 0 {
-			return nil, fmt.Errorf("plugin does not define command.add")
-		}
-
-		output, err := execCmd(np.Command.Add, n.Name, contID.String(), netns, n.Filename, args, ifName)
-		if err != nil {
-			return nil, err
-		}
-
-		return util.ParseCIDR(output)
+	for _, kv := range vars {
+		env = append(env, strings.Join(kv[:], "="))
 	}
+
+	return env
 }
 
-// Del invokes the plugin's del command, if defined.
-func (np *NetPlugin) Del(n *Net, contID types.UUID, netns, args, ifName string) error {
-	switch {
-	case np.Endpoint != "":
-		return execHTTP(np.Endpoint, "del", n.Name, contID.String(), netns, n.Filename, args, ifName)
-
-	default:
-		if len(np.Command.Del) == 0 {
-			return fmt.Errorf("plugin does not define command.del")
-		}
-
-		_, err := execCmd(np.Command.Del, n.Name, contID.String(), netns, n.Filename, args, ifName)
-		return err
+func (e *containerEnv) execNetPlugin(cmd string, n *Net, netns, args, ifName string) (string, error) {
+	pluginPath := e.findNetPlugin(n.Type)
+	if pluginPath == "" {
+		return "", fmt.Errorf("Could not find plugin %q", n.Type)
 	}
-}
 
-func execHTTP(ep, cmd, netName, contID, netns, confFile, args, ifName string) error {
-	return fmt.Errorf("not implemented")
-}
-
-func replaceAll(xs []string, what, with string) {
-	for i, x := range xs {
-		xs[i] = strings.Replace(x, what, with, -1)
+	vars := [][2]string{
+		{ "RKT_NETPLUGIN_COMMAND", cmd },
+		{ "RKT_NETPLUGIN_CONTID", e.contID.String() },
+		{ "RKT_NETPLUGIN_NETNS", netns },
+		{ "RKT_NETPLUGIN_ARGS", args },
+		{ "RKT_NETPLUGIN_IFNAME", ifName },
+		{ "RKT_NETPLUGIN_NETNAME", n.Name },
+		{ "RKT_NETPLUGIN_NETCONF", n.Filename },
 	}
-}
-
-func execCmd(cmd []string, netName, contID, netns, confFile, args, ifName string) (string, error) {
-	replaceAll(cmd, "{net-name}", netName)
-	replaceAll(cmd, "{cont-id}", contID)
-	replaceAll(cmd, "{netns}", netns)
-	replaceAll(cmd, "{conf-file}", confFile)
-	replaceAll(cmd, "{if-name}", ifName)
-	replaceAll(cmd, "{args}", args)
 
 	stdout := &bytes.Buffer{}
 
-	c := exec.Command(cmd[0], cmd[1:]...)
-	c.Stdout = stdout
-	c.Stderr = os.Stderr
+	c := exec.Cmd{
+		Path: pluginPath,
+		Args: []string{pluginPath},
+		Env: envVars(vars),
+		Stdout: stdout,
+		Stderr: os.Stderr,
+	}
 	if err := c.Run(); err != nil {
 		return "", err
 	}

@@ -13,9 +13,23 @@ export GOPATH=${GOPATH}:${PWD}/gopath
 
 eval $(go env)
 
+echo "Building network plugins"
+for d in networking/plugins/*; do
+	plugin=$(basename $d)
+	echo "  " $plugin
+	go install ${REPO_PATH}/$d
+done
+
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	echo "Building init (stage1)..."
 	go build -o $GOBIN/init ${REPO_PATH}/stage1/init
+
+	echo "Copying network plugins to stage1"
+	mkdir -p stage1/rootfs/net-plugins/bin
+	for d in networking/plugins/*; do
+		plugin=$(basename $d)
+		ln -sf ${GOBIN}/$plugin stage1/rootfs/net-plugins/bin
+	done
 
 	S1INIT=${PWD}/stage0/stage1_init
 	if [ $GOBIN/init -nt $S1INIT/bin.go ]; then
@@ -37,9 +51,3 @@ go build -o $GOBIN/rkt ${REPO_PATH}/rkt
 echo "Building metadatasvc..."
 go build -o $GOBIN/metadatasvc ${REPO_PATH}/metadatasvc
 
-echo "Building network plugins"
-for d in networking/plugins/*; do
-	plugin=$(basename $d)
-	echo "  " $plugin
-	go build -o $GOBIN/$plugin ${REPO_PATH}/$d
-done
