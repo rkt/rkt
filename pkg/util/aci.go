@@ -40,6 +40,7 @@ func NewACI(dir string, manifest string, entries []*ACIEntry) (*os.File, error) 
 	if err != nil {
 		return nil, err
 	}
+	defer os.Remove(tf.Name())
 
 	tw := tar.NewWriter(tf)
 	aw := aci.NewImageWriter(im, tw)
