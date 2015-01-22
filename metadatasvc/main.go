@@ -415,7 +415,7 @@ func main() {
 	r.HandleFunc("/containers/", logReq(handleRegisterContainer)).Methods("POST")
 	r.HandleFunc("/containers/{uid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
 
-	acRtr := r.Headers("Metadata-Flavor", "AppContainer header").
+	acRtr := r.Headers("Metadata-Flavor", "AppContainer").
 		PathPrefix("/acMetadata/v1").Subrouter()
 
 	mr := acRtr.Methods("GET").Subrouter()
