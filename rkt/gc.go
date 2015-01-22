@@ -91,7 +91,7 @@ func getContainers() ([]string, error) {
 	var cs []string
 	for _, dir := range ls {
 		if !dir.IsDir() {
-			fmt.Fprintf(os.Stderr, "Unrecognized file: %q, ignoring", dir)
+			fmt.Fprintf(os.Stderr, "Unrecognized file: %q, ignoring\n", dir)
 			continue
 		}
 		cs = append(cs, dir.Name())
@@ -114,7 +114,7 @@ func emptyGarbage(gracePeriod time.Duration) error {
 		err := syscall.Lstat(gp, st)
 		if err != nil {
 			if err != syscall.ENOENT {
-				fmt.Fprintf(os.Stderr, "Unable to stat %q, ignoring: %v", gp, err)
+				fmt.Fprintf(os.Stderr, "Unable to stat %q, ignoring: %v\n", gp, err)
 			}
 			continue
 		}
