@@ -34,3 +34,11 @@ func AddRoute(ipn *net.IPNet, gw net.IP, dev netlink.Link) error {
 	})
 }
 
+func AddHostRoute(ipn *net.IPNet, gw net.IP, dev netlink.Link) error {
+	return netlink.RouteAdd(&netlink.Route{
+		LinkIndex: dev.Attrs().Index,
+		Scope:     netlink.SCOPE_HOST,
+		Dst:       ipn,
+		Gw:        gw,
+	})
+}

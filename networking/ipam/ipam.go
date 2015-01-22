@@ -44,7 +44,7 @@ func ipAdd(ip net.IP, val uint) net.IP {
 	return net.IP(nip)
 }
 
-func allocIP(ipn *net.IPNet) (*net.IPNet, error) {
+func allocIP(ipn *net.IPNet) (net.IP, error) {
 	ones, bits := ipn.Mask.Size()
 	zeros := bits - ones
 	rng := (1 << uint(zeros)) - 2 // (reduce for gw, bcast)
@@ -55,11 +55,7 @@ func allocIP(ipn *net.IPNet) (*net.IPNet, error) {
 	}
 
 	offset := uint(n.Uint64() + 1)
-
-	return &net.IPNet{
-		IP: ipAdd(ipn.IP, offset),
-		Mask: ipn.Mask,
-	}, nil
+	return ipAdd(ipn.IP, offset), nil
 }
 
 func deallocIP(ip net.IP) error {
@@ -112,11 +108,15 @@ func AllocIP(contID types.UUID, netConf, ifName, args string) (*net.IPNet, net.I
 	}
 
 	if opts.ipRange != nil {
-		ipn, err := allocIP(opts.ipRange)
+		ip, err := allocIP(opts.ipRange)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error allocating IP in %v: %v", ipn, err)
+			return nil, nil, fmt.Errorf("error allocating IP in %v: %v", opts.ipRange, err)
 		}
-		return ipn, nil, nil
+
+		return &net.IPNet{
+			IP:   ip,
+			Mask: opts.ipRange.Mask,
+		}, nil, nil
 	}
 
 	n := util.Net{}
@@ -126,23 +126,40 @@ func AllocIP(contID types.UUID, netConf, ifName, args string) (*net.IPNet, net.I
 
 	switch n.IPAlloc.Type {
 	case "static":
-		_, ipn, err := net.ParseCIDR(n.IPAlloc.Subnet)
+		_, rng, err := net.ParseCIDR(n.IPAlloc.Subnet)
 		if err != nil {
 			// TODO: cleanup
 			return nil, nil, fmt.Errorf("error parsing %q conf: ipAlloc.Subnet: %v")
 		}
 
-		ipn, err = allocIP(ipn)
+		ip, err := allocIP(rng)
 		if err != nil {
 			// TODO: cleanup
-			return nil, nil, fmt.Errorf("error allocating IP in %v: %v", ipn, err)
+			return nil, nil, fmt.Errorf("error allocating IP in %v: %v", rng, err)
 		}
 
-		return ipn, nil, nil
+		return &net.IPNet{
+			IP:   ip,
+			Mask: rng.Mask,
+		}, nil, nil
 
 	default:
 		return nil, nil, fmt.Errorf("unsupported IP allocation type")
 	}
+}
+
+// allocates a /31 for point-to-point links
+func AllocPtP(contID types.UUID, netConf, ifName, args string) ([2]net.IP, error) {
+	ipn, _, err := AllocIP(contID, netConf, ifName, args)
+	if err != nil {
+		return [2]net.IP{nil, nil}, err
+	}
+
+	mask := net.CIDRMask(31, 32)
+	first := ipn.IP.Mask(mask)
+	second := ipAdd(first, 1)
+
+	return [2]net.IP{first, second}, nil
 }
 
 func DeallocIP(contID types.UUID, netConf, ifName string, ipn *net.IPNet) error {

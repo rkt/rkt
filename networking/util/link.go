@@ -45,16 +45,18 @@ func hash(s string) string {
 }
 
 // Should be in container netns
+// TODO(eyakubovich): get rid of entropy and ask kernel to pick name via pattern
 func SetupVeth(entropy, contVethName string, ipn *net.IPNet, hostNS *os.File) (hostVeth, contVeth netlink.Link, err error) {
-	hostVethName := "rk" + hash(entropy)[:6]
+	// NetworkManager (recent versions) will ignore veth devices that start with "veth"
+	hostVethName := "veth" + hash(entropy)[:4]
 	hostVeth, err = makeVeth(hostVethName, contVethName)
 	if err != nil {
 		err = fmt.Errorf("failed to make veth pair: %v", err)
 		return
 	}
 
-	if err = netlink.LinkSetNsFd(hostVeth, int(hostNS.Fd())); err != nil {
-		err = fmt.Errorf("failed to move veth to root netns: %v", err)
+	if err = netlink.LinkSetUp(hostVeth); err != nil {
+		err = fmt.Errorf("failed to set %q up: %v", hostVethName, err)
 		return
 	}
 
@@ -65,7 +67,7 @@ func SetupVeth(entropy, contVethName string, ipn *net.IPNet, hostNS *os.File) (h
 	}
 
 	if err = netlink.LinkSetUp(contVeth); err != nil {
-		err = fmt.Errorf("failed to set eth0 up: %v", err)
+		err = fmt.Errorf("failed to set %q up: %v", contVethName, err)
 		return
 	}
 
@@ -75,6 +77,11 @@ func SetupVeth(entropy, contVethName string, ipn *net.IPNet, hostNS *os.File) (h
 			err = fmt.Errorf("failed to add IP addr to veth: %v", err)
 			return
 		}
+	}
+
+	if err = netlink.LinkSetNsFd(hostVeth, int(hostNS.Fd())); err != nil {
+		err = fmt.Errorf("failed to move veth to host netns: %v", err)
+		return
 	}
 
 	return
