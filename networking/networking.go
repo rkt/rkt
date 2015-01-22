@@ -39,6 +39,7 @@ type activeNet struct {
 	ipn    *net.IPNet
 }
 
+// Networking describes the networking details of a container.
 type Networking struct {
 	MetadataIP net.IP
 
@@ -50,6 +51,7 @@ type Networking struct {
 	plugins    map[string]*NetPlugin
 }
 
+// Setup produces a Networking object for a given container ID.
 func Setup(contID types.UUID) (*Networking, error) {
 	var err error
 	n := Networking{contID: contID}
@@ -96,12 +98,13 @@ func Setup(contID types.UUID) (*Networking, error) {
 	return &n, nil
 }
 
+// Teardown cleans up a produced Networking object.
 func (n *Networking) Teardown() {
-	// teardown everything in reverse order of setup.
-	// this is called during error case as well so not
-	// everything maybe setup.
-	// N.B. better to keep going in case of errors to get as much
-	// cleaned up as possible
+	// Teardown everything in reverse order of setup.
+	// This is called during error cases as well, so
+	// not everything may be setup.
+	// N.B. better to keep going in case of errors
+	// to get as much cleaned up as possible.
 
 	if n.contNS == nil || n.hostNS == nil {
 		return
@@ -119,7 +122,7 @@ func (n *Networking) Teardown() {
 	}
 
 	if err := syscall.Unmount(n.contNSPath, 0); err != nil {
-		log.Print("Error unmounting %q: %v", n.contNSPath, err)
+		log.Printf("Error unmounting %q: %v", n.contNSPath, err)
 	}
 }
 
@@ -141,10 +144,12 @@ func basicNetNS() (hostNS, contNS *os.File, err error) {
 	return
 }
 
+// EnterHostNS moves into the host's network namespace.
 func (n *Networking) EnterHostNS() error {
 	return util.SetNS(n.hostNS, syscall.CLONE_NEWNET)
 }
 
+// EnterContNS moves into the container's network namespace.
 func (n *Networking) EnterContNS() error {
 	return util.SetNS(n.contNS, syscall.CLONE_NEWNET)
 }

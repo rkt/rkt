@@ -44,7 +44,8 @@ func hash(s string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-// Should be in container netns
+// SetupVeth sets up a virtual ethernet link.
+// Should be in container netns.
 // TODO(eyakubovich): get rid of entropy and ask kernel to pick name via pattern
 func SetupVeth(entropy, contVethName string, ipn *net.IPNet, hostNS *os.File) (hostVeth, contVeth netlink.Link, err error) {
 	// NetworkManager (recent versions) will ignore veth devices that start with "veth"
@@ -72,7 +73,7 @@ func SetupVeth(entropy, contVethName string, ipn *net.IPNet, hostNS *os.File) (h
 	}
 
 	if ipn != nil {
-		addr := &netlink.Addr{ipn, ""}
+		addr := &netlink.Addr{IPNet: ipn, Label: ""}
 		if err = netlink.AddrAdd(contVeth, addr); err != nil {
 			err = fmt.Errorf("failed to add IP addr to veth: %v", err)
 			return
@@ -87,6 +88,7 @@ func SetupVeth(entropy, contVethName string, ipn *net.IPNet, hostNS *os.File) (h
 	return
 }
 
+// DelLinkByName removes an interface link.
 func DelLinkByName(ifName string) error {
 	iface, err := netlink.LinkByName(ifName)
 	if err != nil {

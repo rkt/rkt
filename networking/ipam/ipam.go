@@ -101,6 +101,7 @@ func parseArgs(args string) (*options, error) {
 	return opts, nil
 }
 
+// AllocIP allocates an IP in a given range.
 func AllocIP(contID types.UUID, netConf, ifName, args string) (*net.IPNet, net.IP, error) {
 	opts, err := parseArgs(args)
 	if err != nil {
@@ -129,7 +130,7 @@ func AllocIP(contID types.UUID, netConf, ifName, args string) (*net.IPNet, net.I
 		_, rng, err := net.ParseCIDR(n.IPAlloc.Subnet)
 		if err != nil {
 			// TODO: cleanup
-			return nil, nil, fmt.Errorf("error parsing %q conf: ipAlloc.Subnet: %v")
+			return nil, nil, fmt.Errorf("error parsing %q conf: ipAlloc.Subnet: %v", netConf, err)
 		}
 
 		ip, err := allocIP(rng)
@@ -148,7 +149,7 @@ func AllocIP(contID types.UUID, netConf, ifName, args string) (*net.IPNet, net.I
 	}
 }
 
-// allocates a /31 for point-to-point links
+// AllocPtP allocates a /31 for point-to-point links.
 func AllocPtP(contID types.UUID, netConf, ifName, args string) ([2]net.IP, error) {
 	ipn, _, err := AllocIP(contID, netConf, ifName, args)
 	if err != nil {
@@ -162,6 +163,7 @@ func AllocPtP(contID types.UUID, netConf, ifName, args string) ([2]net.IP, error
 	return [2]net.IP{first, second}, nil
 }
 
+// DeallocIP is a no-op.
 func DeallocIP(contID types.UUID, netConf, ifName string, ipn *net.IPNet) error {
 	return nil
 }

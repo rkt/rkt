@@ -18,6 +18,7 @@ import (
 	"net"
 )
 
+// ParseCIDR invokes net.ParseCIDR.
 func ParseCIDR(s string) (*net.IPNet, error) {
 	ip, ipn, err := net.ParseCIDR(s)
 	if err != nil {

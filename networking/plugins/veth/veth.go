@@ -35,6 +35,35 @@ func init() {
 	runtime.LockOSThread()
 }
 
+func usage() int {
+	fmt.Fprintln(os.Stderr, "USAGE: add|del CONTAINER-ID NETNS NET-CONF IF-NAME ARGS")
+	return 1
+}
+
+func main() {
+	if len(os.Args) != 7 {
+		os.Exit(usage())
+	}
+
+	var err error
+
+	switch os.Args[1] {
+	case "add":
+		err = cmdAdd(os.Args[2], os.Args[3], os.Args[4], os.Args[5], os.Args[6])
+
+	case "del":
+		err = cmdDel(os.Args[2], os.Args[3], os.Args[4], os.Args[5], os.Args[6])
+
+	default:
+		os.Exit(usage())
+	}
+
+	if err != nil {
+		log.Printf("%v: %v", os.Args[1], err)
+		os.Exit(1)
+	}
+}
+
 func cmdAdd(contID, netns, netConf, ifName, args string) error {
 	var hostVethName, contIPNet string
 
@@ -98,7 +127,7 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 		IP:   hostIP,
 		Mask: net.CIDRMask(31, 32),
 	}
-	addr := &netlink.Addr{ipn, ""}
+	addr := &netlink.Addr{IPNet: ipn, Label: ""}
 	if err = netlink.AddrAdd(hostVeth, addr); err != nil {
 		return fmt.Errorf("failed to add IP addr to veth: %v", err)
 	}
@@ -117,33 +146,4 @@ func cmdDel(contID, netns, netConf, ifName, args string) error {
 	return util.WithNetNSPath(netns, func(hostNS *os.File) error {
 		return util.DelLinkByName(ifName)
 	})
-}
-
-func usage() int {
-	fmt.Fprintln(os.Stderr, "USAGE: add|del CONTAINER-ID NETNS NET-CONF IF-NAME ARGS")
-	return 1
-}
-
-func main() {
-	if len(os.Args) != 7 {
-		os.Exit(usage())
-	}
-
-	var err error
-
-	switch os.Args[1] {
-	case "add":
-		err = cmdAdd(os.Args[2], os.Args[3], os.Args[4], os.Args[5], os.Args[6])
-
-	case "del":
-		err = cmdDel(os.Args[2], os.Args[3], os.Args[4], os.Args[5], os.Args[6])
-
-	default:
-		os.Exit(usage())
-	}
-
-	if err != nil {
-		log.Printf("%v: %v", os.Args[1], err)
-		os.Exit(1)
-	}
 }

@@ -27,6 +27,7 @@ var setNsMap = map[string]uintptr{
 	"arm":   374,
 }
 
+// SetNS sets the network namespace on a target file.
 func SetNS(f *os.File, flags uintptr) error {
 	if runtime.GOOS != "linux" {
 		return fmt.Errorf("unsupported OS: %s", runtime.GOOS)
@@ -36,6 +37,7 @@ func SetNS(f *os.File, flags uintptr) error {
 	if !ok {
 		return fmt.Errorf("unsupported arch: %s", runtime.GOARCH)
 	}
+
 	_, _, err := syscall.RawSyscall(trap, f.Fd(), flags, 0)
 	if err != 0 {
 		return err
@@ -44,6 +46,8 @@ func SetNS(f *os.File, flags uintptr) error {
 	return nil
 }
 
+// WithNetNSPath executes the passed closure under the given network
+// namespace, restoring the original namespace afterwards.
 func WithNetNSPath(nspath string, f func(*os.File) error) error {
 	// save a handle to current (host) network namespace
 	thisNS, err := os.Open("/proc/self/ns/net")

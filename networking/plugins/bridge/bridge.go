@@ -17,7 +17,7 @@ import (
 
 const defaultBrName = "rkt0"
 
-type Net struct {
+type netConf struct {
 	util.Net
 	BrName string `json:"brName"`
 	IsGW   bool   `json:"isGW"`
@@ -28,6 +28,35 @@ func init() {
 	// since namespace ops (unshare, setns) are done for a single thread, we
 	// must ensure that the goroutine does not jump from OS thread to thread
 	runtime.LockOSThread()
+}
+
+func usage() int {
+	fmt.Fprintln(os.Stderr, "USAGE: add|del CONTAINER-ID NETNS NET-CONF IF-NAME")
+	return 1
+}
+
+func main() {
+	if len(os.Args) != 6 {
+		os.Exit(usage())
+	}
+
+	var err error
+
+	switch os.Args[1] {
+	case "add":
+		err = cmdAdd(os.Args[2], os.Args[3], os.Args[4], os.Args[5])
+
+	case "del":
+		err = cmdDel(os.Args[2], os.Args[3], os.Args[4], os.Args[5])
+
+	default:
+		os.Exit(usage())
+	}
+
+	if err != nil {
+		log.Printf("%v: %v", os.Args[1], err)
+		os.Exit(1)
+	}
 }
 
 func ensureBridgeAddr(br *netlink.Bridge, ipn *net.IPNet) error {
@@ -48,7 +77,7 @@ func ensureBridgeAddr(br *netlink.Bridge, ipn *net.IPNet) error {
 		return fmt.Errorf("%q already has an IP address different from %v", br.Name, ipn.String())
 	}
 
-	addr := &netlink.Addr{ipn, ""}
+	addr := &netlink.Addr{IPNet: ipn, Label: ""}
 	if err := netlink.AddrAdd(br, addr); err != nil {
 		return fmt.Errorf("could not add IP address to %q: %v", br.Name, err)
 	}
@@ -122,26 +151,26 @@ func setupVeth(contID types.UUID, netns string, br *netlink.Bridge, ipn *net.IPN
 
 	// connect host veth end to the bridge
 	if err = netlink.LinkSetMaster(hostVeth, br); err != nil {
-		return fmt.Errorf("failed to connect %q to bridge: %v", hostVethName, br.Attrs().Name, err)
+		return fmt.Errorf("failed to connect %q to bridge %v: %v", hostVethName, br.Attrs().Name, err)
 	}
 
 	return nil
 }
 
-func cmdAdd(contID, netns, netConf, ifName string) error {
+func cmdAdd(contID, netns, netCfg, ifName string) error {
 	cid, err := types.NewUUID(contID)
 	if err != nil {
 		return fmt.Errorf("error parsing ContainerID: %v", err)
 	}
 
-	conf := Net{
+	conf := netConf{
 		BrName: defaultBrName,
 	}
-	if err := util.LoadNet(netConf, &conf); err != nil {
-		return fmt.Errorf("failed to load %q: %v", netConf, err)
+	if err := util.LoadNet(netCfg, &conf); err != nil {
+		return fmt.Errorf("failed to load %q: %v", netCfg, err)
 	}
 
-	ipn, gw, err := ipam.AllocIP(*cid, netConf, ifName, "")
+	ipn, gw, err := ipam.AllocIP(*cid, netCfg, ifName, "")
 	if err != nil {
 		return err
 	}
@@ -177,33 +206,4 @@ func cmdDel(contID, netns, netConf, ifName string) error {
 	return util.WithNetNSPath(netns, func(hostNS *os.File) error {
 		return util.DelLinkByName(ifName)
 	})
-}
-
-func usage() int {
-	fmt.Fprintln(os.Stderr, "USAGE: add|del CONTAINER-ID NETNS NET-CONF IF-NAME")
-	return 1
-}
-
-func main() {
-	if len(os.Args) != 6 {
-		os.Exit(usage())
-	}
-
-	var err error
-
-	switch os.Args[1] {
-	case "add":
-		err = cmdAdd(os.Args[2], os.Args[3], os.Args[4], os.Args[5])
-
-	case "del":
-		err = cmdDel(os.Args[2], os.Args[3], os.Args[4], os.Args[5])
-
-	default:
-		os.Exit(usage())
-	}
-
-	if err != nil {
-		log.Printf("%v: %v", os.Args[1], err)
-		os.Exit(1)
-	}
 }

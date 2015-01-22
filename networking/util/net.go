@@ -20,6 +20,7 @@ import (
 	"reflect"
 )
 
+// Net describes a network.
 type Net struct {
 	Filename string
 	Name     string `json:"name,omitempty"`
@@ -31,6 +32,7 @@ type Net struct {
 	Routes []string `json:"routes,omitempty"`
 }
 
+// LoadNet loads a JSON-encoded Net from the filesystem.
 func LoadNet(path string, n interface{}) error {
 	c, err := ioutil.ReadFile(path)
 	if err != nil {

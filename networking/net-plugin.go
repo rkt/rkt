@@ -31,6 +31,7 @@ import (
 	"github.com/coreos/rocket/networking/util"
 )
 
+// NetPlugin encodes a networking plugin.
 type NetPlugin struct {
 	Name     string `json:"name,omitempty"`
 	Endpoint string `json:"endpoint,omitempty"`
@@ -40,8 +41,10 @@ type NetPlugin struct {
 	}
 }
 
+// RktNetPluginsPath is the absolute path of rkt-net-plugins.conf.d.
 const RktNetPluginsPath = "/etc/rkt-net-plugins.conf.d"
 
+// LoadNetPlugin loads a JSON-encoded NetPlugin from the filesystem.
 func LoadNetPlugin(path string) (*NetPlugin, error) {
 	c, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -56,6 +59,8 @@ func LoadNetPlugin(path string) (*NetPlugin, error) {
 	return np, nil
 }
 
+// LoadNetPlugins produces a collection of NetPlugins loaded from
+// RktNetPluginsPath.
 func LoadNetPlugins() (map[string]*NetPlugin, error) {
 	plugins := make(map[string]*NetPlugin)
 
@@ -86,6 +91,7 @@ func LoadNetPlugins() (map[string]*NetPlugin, error) {
 	return plugins, nil
 }
 
+// Add invokes the plugin's add command, if defined.
 func (np *NetPlugin) Add(n *Net, contID types.UUID, netns, args, ifName string) (*net.IPNet, error) {
 	switch {
 	case np.Endpoint != "":
@@ -105,6 +111,7 @@ func (np *NetPlugin) Add(n *Net, contID types.UUID, netns, args, ifName string) 
 	}
 }
 
+// Del invokes the plugin's del command, if defined.
 func (np *NetPlugin) Del(n *Net, contID types.UUID, netns, args, ifName string) error {
 	switch {
 	case np.Endpoint != "":
