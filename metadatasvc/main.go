@@ -162,7 +162,7 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) func(http.ResponseWriter, *http.Request) {
+func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		remoteIP := strings.Split(r.RemoteAddr, ":")[0]
 		m, ok := metadataByIP[remoteIP]
@@ -176,7 +176,7 @@ func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) f
 	}
 }
 
-func appGet(h func(w http.ResponseWriter, r *http.Request, m *metadata, _ *schema.ImageManifest)) func(http.ResponseWriter, *http.Request) {
+func appGet(h func(w http.ResponseWriter, r *http.Request, m *metadata, _ *schema.ImageManifest)) http.HandlerFunc {
 	return containerGet(func(w http.ResponseWriter, r *http.Request, m *metadata) {
 		appname := mux.Vars(r)["app"]
 
@@ -394,7 +394,7 @@ func (r *httpResp) WriteHeader(status int) {
 	r.writer.WriteHeader(status)
 }
 
-func logReq(h func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+func logReq(h func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := &httpResp{w, 0}
 		h(resp, r)
