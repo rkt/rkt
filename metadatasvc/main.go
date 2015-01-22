@@ -51,16 +51,28 @@ const (
 )
 
 func setupIPTables() error {
-	args := []string{"-t", "nat", "-A", "PREROUTING",
-		"-p", "tcp", "-d", metaIP, "--dport", metaPort,
-		"-j", "REDIRECT", "--to-port", myPort}
-
-	return exec.Command("iptables", args...).Run()
+	return exec.Command(
+		"iptables",
+		"-t", "nat",
+		"-A", "PREROUTING",
+		"-p", "tcp",
+		"-d", metaIP,
+		"--dport", metaPort,
+		"-j", "REDIRECT",
+		"--to-port", myPort,
+	).Run()
 }
 
 func antiSpoof(brPort, ipAddr string) error {
-	args := []string{"-t", "filter", "-I", "INPUT", "-i", brPort, "-p", "IPV4", "!", "--ip-source", ipAddr, "-j", "DROP"}
-	return exec.Command("ebtables", args...).Run()
+	return exec.Command(
+		"ebtables",
+		"-t", "filter",
+		"-I", "INPUT",
+		"-i", brPort,
+		"-p", "IPV4",
+		"!", "--ip-source", ipAddr,
+		"-j", "DROP",
+	).Run()
 }
 
 func queryValue(u *url.URL, key string) string {
