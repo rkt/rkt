@@ -34,6 +34,7 @@ var (
 	flagStage1Init   string
 	flagStage1Rootfs string
 	flagVolumes      volumeMap
+	flagPrivateNet   bool
 	cmdRun           = &Command{
 		Name:    "run",
 		Summary: "Run image(s) in an application container in rocket",
@@ -49,6 +50,7 @@ func init() {
 	cmdRun.Flags.StringVar(&flagStage1Init, "stage1-init", "", "path to stage1 binary override")
 	cmdRun.Flags.StringVar(&flagStage1Rootfs, "stage1-rootfs", "", "path to stage1 rootfs tarball override")
 	cmdRun.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
+	cmdRun.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
 	flagVolumes = volumeMap{}
 }
 
@@ -136,13 +138,14 @@ func runRun(args []string) (exit int) {
 		Stage1Rootfs:  flagStage1Rootfs,
 		Images:        imgs,
 		Volumes:       flagVolumes,
+		PrivateNet:    flagPrivateNet,
 	}
 	cdir, err := stage0.Setup(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "run: error setting up stage0: %v\n", err)
 		return 1
 	}
-	stage0.Run(cdir, cfg.Debug) // execs, never returns
+	stage0.Run(cfg, cdir) // execs, never returns
 	return 1
 }
 

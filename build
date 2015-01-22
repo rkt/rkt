@@ -24,7 +24,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	echo "Building init (stage1)..."
 	go build -o $GOBIN/init ${REPO_PATH}/stage1/init
 
-	echo "Copying network plugins to stage1"
+	# symlink plugin binaries into stage1 rootfs
 	mkdir -p stage1/rootfs/net-plugins/bin
 	for d in networking/plugins/*; do
 		plugin=$(basename $d)
