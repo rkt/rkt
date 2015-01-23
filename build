@@ -9,7 +9,7 @@ if [ ! -h gopath/src/${REPO_PATH} ]; then
 fi
 
 export GOBIN=${PWD}/bin
-export GOPATH=${GOPATH}:${PWD}/gopath
+export GOPATH=${GOPATH:-}:${PWD}/gopath
 
 eval $(go env)
 
