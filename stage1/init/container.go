@@ -148,11 +148,11 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 	}
 
 	env := app.Environment
-	env["AC_APP_NAME"] = name
-	env["AC_METADATA_URL"] = c.MetadataSvcURL
+	env.Set("AC_APP_NAME", name)
+	env.Set("AC_METADATA_URL", c.MetadataSvcURL)
 
-	for ek, ev := range env {
-		ee := fmt.Sprintf(`"%s=%s"`, ek, ev)
+	for _, e := range env {
+		ee := fmt.Sprintf(`"%s=%s"`, e.Name, e.Value)
 		opts = append(opts, newUnitOption("Service", "Environment", ee))
 	}
 
