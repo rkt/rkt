@@ -73,7 +73,7 @@ func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore) (string, error
 	u, err := url.Parse(img)
 	if err == nil && u.Scheme == "" {
 		if app := newDiscoveryApp(img); app != nil {
-			fmt.Printf("rkt: starting to discover app img %s\n", img)
+			fmt.Printf("rkt: searching for app image %s\n", img)
 			ep, err := discovery.DiscoverEndpoints(*app, true)
 			if err != nil {
 				return "", err
@@ -101,7 +101,7 @@ func fetchImageFromURL(imgurl string, ds *cas.Store, ks *keystore.Keystore) (str
 }
 
 func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (string, error) {
-	fmt.Printf("rkt: starting to fetch img from %s\n", rem.ACIURL)
+	fmt.Printf("rkt: fetching image from %s\n", rem.ACIURL)
 	if globalFlags.InsecureSkipVerify {
 		fmt.Printf("rkt: warning: signature verification has been disabled\n")
 	}
@@ -114,7 +114,7 @@ func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (strin
 		defer os.Remove(aciFile.Name())
 
 		if !globalFlags.InsecureSkipVerify {
-			fmt.Println("rkt: signature verified signed by: ")
+			fmt.Println("rkt: signature verified: ")
 			for _, v := range entity.Identities {
 				fmt.Printf("  %s\n", v.Name)
 			}
