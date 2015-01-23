@@ -80,6 +80,7 @@ func (r Remote) Download(ds Store, ks *keystore.Keystore) (*openpgp.Entity, *os.
 	}
 
 	if ks != nil {
+		fmt.Printf("Downloading signature from %v\n", r.SigURL)
 		sigTempFile, err := downloadSignatureFile(r.SigURL)
 		if err != nil {
 			return nil, acif, fmt.Errorf("error downloading the signature file: %v", err)
