@@ -79,21 +79,21 @@ func (e *containerEnv) execNetPlugin(cmd string, n *Net, netns, args, ifName str
 	}
 
 	vars := [][2]string{
-		{ "RKT_NETPLUGIN_COMMAND", cmd },
-		{ "RKT_NETPLUGIN_CONTID", e.contID.String() },
-		{ "RKT_NETPLUGIN_NETNS", netns },
-		{ "RKT_NETPLUGIN_ARGS", args },
-		{ "RKT_NETPLUGIN_IFNAME", ifName },
-		{ "RKT_NETPLUGIN_NETNAME", n.Name },
-		{ "RKT_NETPLUGIN_NETCONF", n.Filename },
+		{"RKT_NETPLUGIN_COMMAND", cmd},
+		{"RKT_NETPLUGIN_CONTID", e.contID.String()},
+		{"RKT_NETPLUGIN_NETNS", netns},
+		{"RKT_NETPLUGIN_ARGS", args},
+		{"RKT_NETPLUGIN_IFNAME", ifName},
+		{"RKT_NETPLUGIN_NETNAME", n.Name},
+		{"RKT_NETPLUGIN_NETCONF", n.Filename},
 	}
 
 	stdout := &bytes.Buffer{}
 
 	c := exec.Cmd{
-		Path: pluginPath,
-		Args: []string{pluginPath},
-		Env: envVars(vars),
+		Path:   pluginPath,
+		Args:   []string{pluginPath},
+		Env:    envVars(vars),
 		Stdout: stdout,
 		Stderr: os.Stderr,
 	}

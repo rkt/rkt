@@ -31,11 +31,12 @@ import (
 )
 
 var (
-	flagStage1Init   string
-	flagStage1Rootfs string
-	flagVolumes      volumeMap
-	flagPrivateNet   bool
-	cmdRun           = &Command{
+	flagStage1Init       string
+	flagStage1Rootfs     string
+	flagVolumes          volumeMap
+	flagPrivateNet       bool
+	flagSpawnMetadataSvc bool
+	cmdRun               = &Command{
 		Name:    "run",
 		Summary: "Run image(s) in an application container in rocket",
 		Usage:   "[--volume LABEL:SOURCE] IMAGE...",
@@ -51,6 +52,7 @@ func init() {
 	cmdRun.Flags.StringVar(&flagStage1Rootfs, "stage1-rootfs", "", "path to stage1 rootfs tarball override")
 	cmdRun.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	cmdRun.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
+	cmdRun.Flags.BoolVar(&flagSpawnMetadataSvc, "spawn-metadata-svc", false, "launch metadata svc if not running")
 	flagVolumes = volumeMap{}
 }
 
@@ -131,14 +133,15 @@ func runRun(args []string) (exit int) {
 	}
 
 	cfg := stage0.Config{
-		Store:         ds,
-		ContainersDir: containersDir(),
-		Debug:         globalFlags.Debug,
-		Stage1Init:    flagStage1Init,
-		Stage1Rootfs:  flagStage1Rootfs,
-		Images:        imgs,
-		Volumes:       flagVolumes,
-		PrivateNet:    flagPrivateNet,
+		Store:            ds,
+		ContainersDir:    containersDir(),
+		Debug:            globalFlags.Debug,
+		Stage1Init:       flagStage1Init,
+		Stage1Rootfs:     flagStage1Rootfs,
+		Images:           imgs,
+		Volumes:          flagVolumes,
+		PrivateNet:       flagPrivateNet,
+		SpawnMetadataSvc: flagSpawnMetadataSvc,
 	}
 	cdir, err := stage0.Setup(cfg)
 	if err != nil {

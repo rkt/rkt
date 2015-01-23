@@ -64,9 +64,10 @@ type Config struct {
 	Stage1Rootfs  string     // compressed bundle containing a rootfs for stage1
 	Debug         bool
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
-	Images     []types.Hash      // application images
-	Volumes    map[string]string // map of volumes that rocket can provide to applications
-	PrivateNet bool              // container should have its own network stack
+	Images           []types.Hash      // application images
+	Volumes          map[string]string // map of volumes that rocket can provide to applications
+	PrivateNet       bool              // container should have its own network stack
+	SpawnMetadataSvc bool              // launch metadata service
 }
 
 func init() {
@@ -76,10 +77,6 @@ func init() {
 // Setup sets up a filesystem for a container based on the given config.
 // The directory containing the filesystem is returned, and any error encountered.
 func Setup(cfg Config) (string, error) {
-	if cfg.Debug {
-		log.SetOutput(os.Stderr)
-	}
-
 	cuuid, err := types.NewUUID(uuid.New())
 	if err != nil {
 		return "", fmt.Errorf("error creating UID: %v", err)
@@ -206,6 +203,17 @@ func Run(cfg Config, dir string) {
 	args := []string{initPath}
 	if cfg.Debug {
 		args = append(args, "--debug")
+	}
+	if cfg.SpawnMetadataSvc {
+		rktExe, err := os.Readlink("/proc/self/exe")
+		if err != nil {
+			log.Fatalf("failed to readlink /proc/self/exe: %v", err)
+		}
+		dbgFlag := ""
+		if cfg.Debug {
+			dbgFlag = " --debug"
+		}
+		args = append(args, fmt.Sprintf("--metadata-svc=%s%s metadatasvc --no-idle", rktExe, dbgFlag))
 	}
 	if cfg.PrivateNet {
 		args = append(args, "--private-net")

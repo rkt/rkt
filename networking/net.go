@@ -33,6 +33,7 @@ type Net struct {
 
 // Absolute path where users place their net configs
 const UserNetPath = "/etc/rkt/net.d"
+
 // Default net path relative to stage1 root
 const DefaultNetPath = "etc/rkt/net.d/99-default.conf"
 

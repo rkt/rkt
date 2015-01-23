@@ -34,9 +34,11 @@ import (
 
 // Container encapsulates a ContainerRuntimeManifest and ImageManifests
 type Container struct {
-	Root     string // root directory where the container will be located
-	Manifest *schema.ContainerRuntimeManifest
-	Apps     map[string]*schema.ImageManifest
+	Root           string // root directory where the container will be located
+	Manifest       *schema.ContainerRuntimeManifest
+	Apps           map[string]*schema.ImageManifest
+	MetadataSvcURL string
+	Networks       []string
 }
 
 // LoadContainer loads a Container Runtime Manifest (as prepared by stage0) and
@@ -147,6 +149,8 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 
 	env := app.Environment
 	env["AC_APP_NAME"] = name
+	env["AC_METADATA_URL"] = c.MetadataSvcURL
+
 	for ek, ev := range env {
 		ee := fmt.Sprintf(`"%s=%s"`, ek, ev)
 		opts = append(opts, newUnitOption("Service", "Environment", ee))
@@ -267,10 +271,6 @@ func (c *Container) appToNspawnArgs(am *schema.ImageManifest, id types.Hash) ([]
 
 	for _, i := range am.App.Isolators {
 		switch i.Name {
-		case "private-network":
-			if i.Val == "true" {
-				args = append(args, "--private-network")
-			}
 		case "capabilities/bounding-set":
 			capList := strings.Join(strings.Split(i.Val, " "), ",")
 			args = append(args, "--capability="+capList)
