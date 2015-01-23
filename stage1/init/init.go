@@ -22,12 +22,16 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 
+	"github.com/coreos/rocket/metadata"
 	"github.com/coreos/rocket/networking"
 	"github.com/coreos/rocket/path"
 )
@@ -76,13 +80,15 @@ func mirrorLocalZoneInfo(root string) {
 }
 
 var (
-	debug   bool
-	privNet bool
+	debug       bool
+	metadataSvc string
+	privNet     bool
 )
 
 func init() {
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
 	flag.BoolVar(&privNet, "private-net", false, "Setup private network (WIP!)")
+	flag.StringVar(&metadataSvc, "metadata-svc", "", "Launch specified metadata svc")
 
 	// this ensures that main runs only on main thread (thread group leader).
 	// since namespace ops (unshare, setns) are done for a single thread, we
@@ -99,6 +105,7 @@ func stage1() int {
 	}
 
 	mirrorLocalZoneInfo(c.Root)
+	c.MetadataSvcURL = metadata.SvcPubURL()
 
 	if err = c.ContainerToSystemd(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
@@ -135,6 +142,13 @@ func stage1() int {
 	env = append(env, "LD_PRELOAD="+filepath.Join(path.Stage1RootfsPath(c.Root), "fakesdboot.so"))
 	env = append(env, "LD_LIBRARY_PATH="+filepath.Join(path.Stage1RootfsPath(c.Root), "usr/lib"))
 
+	if metadataSvc != "" {
+		if err = launchMetadataSvc(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to launch metadata svc: %v\n", err)
+			return 6
+		}
+	}
+
 	if privNet {
 		// careful not to make another local err variable.
 		// cmd.Run sets the one from parent scope
@@ -150,6 +164,12 @@ func stage1() int {
 			fmt.Fprintf(os.Stderr, "Failed to switch to container netns: %v\n", err)
 			return 6
 		}
+
+		if err = registerContainer(c, n.MetadataIP); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to register container: %v\n", err)
+			return 6
+		}
+		defer unregisterContainer(c)
 
 		cmd := exec.Cmd{
 			Path:   args[0],
@@ -170,6 +190,41 @@ func stage1() int {
 	}
 
 	return 0
+}
+
+func launchMetadataSvc() error {
+	log.Print("Launching metadatasvc: ", metadataSvc)
+
+	// use socket activation protocol to avoid race-condition of
+	// service becoming ready
+	// TODO(eyakubovich): remove hard-coded port
+	l, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: metadata.SvcPrvPort})
+	if err != nil {
+		if err.(*net.OpError).Err.(*os.SyscallError).Err == syscall.EADDRINUSE {
+			// assume metadatasvc is already running
+			return nil
+		}
+		return err
+	}
+
+	defer l.Close()
+
+	lf, err := l.File()
+	if err != nil {
+		return err
+	}
+
+	// parse metadataSvc into exe and args
+	args := strings.Split(metadataSvc, " ")
+	cmd := exec.Cmd{
+		Path:       args[0],
+		Args:       args,
+		Env:        append(os.Environ(), "LISTEN_FDS=1"),
+		ExtraFiles: []*os.File{lf},
+		Stdout:     os.Stdout,
+		Stderr:     os.Stderr,
+	}
+	return cmd.Start()
 }
 
 func main() {

@@ -23,55 +23,69 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/gorilla/mux"
+
+	"github.com/coreos/rocket/metadata"
 )
 
-type metadata struct {
+var (
+	cmdMetadataSvc = &Command{
+		Name:    "metadatasvc",
+		Summary: "Run metadata service",
+		Usage:   "[--src-addr CIDR] [--listen-port PORT] [--no-idle]",
+		Run:     runMetadataSvc,
+	}
+)
+
+type container struct {
 	manifest schema.ContainerRuntimeManifest
 	apps     map[string]*schema.ImageManifest
+	ip       string
 }
 
 var (
-	metadataByIP  = make(map[string]*metadata)
-	metadataByUID = make(map[types.UUID]*metadata)
-	hmacKey       [sha256.Size]byte
+	containerByIP  = make(map[string]*container)
+	containerByUID = make(map[types.UUID]*container)
+	hmacKey        [sha256.Size]byte
+
+	flagListenPort int
+	flagSrcAddrs   string
+	flagNoIdle     bool
+
+	exitCh chan bool
 )
 
 const (
-	myPort   = "4444"
-	metaIP   = "169.254.169.255"
-	metaPort = "80"
+	listenFdsStart = 3
 )
 
-func setupIPTables() error {
+func init() {
+	commands = append(commands, cmdMetadataSvc)
+	cmdMetadataSvc.Flags.StringVar(&flagSrcAddrs, "src-addr", "0.0.0.0/0", "source address/range for iptables")
+	cmdMetadataSvc.Flags.IntVar(&flagListenPort, "listen-port", metadata.SvcPrvPort, "listen port")
+	cmdMetadataSvc.Flags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last container is unregistered")
+}
+
+func modifyIPTables(action, port string) error {
 	return exec.Command(
 		"iptables",
 		"-t", "nat",
-		"-A", "PREROUTING",
+		action, "PREROUTING",
 		"-p", "tcp",
-		"-d", metaIP,
-		"--dport", metaPort,
+		"-d", metadata.SvcIP,
+		"--dport", strconv.Itoa(metadata.SvcPubPort),
 		"-j", "REDIRECT",
-		"--to-port", myPort,
-	).Run()
-}
-
-func antiSpoof(brPort, ipAddr string) error {
-	return exec.Command(
-		"ebtables",
-		"-t", "filter",
-		"-I", "INPUT",
-		"-i", brPort,
-		"-p", "IPV4",
-		"!", "--ip-source", ipAddr,
-		"-j", "DROP",
+		"--to-port", port,
 	).Run()
 }
 
@@ -84,51 +98,70 @@ func queryValue(u *url.URL, key string) string {
 }
 
 func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	remoteIP := strings.Split(r.RemoteAddr, ":")[0]
-	if _, ok := metadataByIP[remoteIP]; ok {
+	if _, ok := containerByIP[remoteIP]; ok {
 		// not allowed from container IP
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	containerIP := queryValue(r.URL, "container_ip")
+	containerIP := queryValue(r.URL, "ip")
 	if containerIP == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Print(w, "container_ip missing")
-		return
-	}
-	containerBrPort := queryValue(r.URL, "container_brport")
-	if containerBrPort == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Print(w, "container_brport missing")
+		fmt.Fprint(w, "ip missing")
 		return
 	}
 
-	m := &metadata{
+	c := &container{
 		apps: make(map[string]*schema.ImageManifest),
+		ip:   containerIP,
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&m.manifest); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&c.manifest); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "JSON-decoding failed: %v", err)
 		return
 	}
 
-	if err := antiSpoof(containerBrPort, containerIP); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "failed to set anti-spoofing: %v", err)
-		return
-	}
-
-	metadataByIP[containerIP] = m
-	metadataByUID[m.manifest.UUID] = m
+	containerByIP[containerIP] = c
+	containerByUID[c.manifest.UUID] = c
 
 	w.WriteHeader(http.StatusOK)
 }
 
+func handleUnregisterContainer(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	uid, err := types.NewUUID(mux.Vars(r)["uid"])
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "UUID is missing or malformed: %v", err)
+		return
+	}
+
+	c, ok := containerByUID[*uid]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "Container with given UUID not found")
+		return
+	}
+
+	delete(containerByUID, *uid)
+	delete(containerByIP, c.ip)
+	w.WriteHeader(http.StatusOK)
+
+	if flagNoIdle && len(containerByUID) == 0 {
+		exitCh <- true
+	}
+}
+
 func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	remoteIP := strings.Split(r.RemoteAddr, ":")[0]
-	if _, ok := metadataByIP[remoteIP]; ok {
+	if _, ok := containerByIP[remoteIP]; ok {
 		// not allowed from container IP
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -141,7 +174,7 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, ok := metadataByUID[*uid]
+	c, ok := containerByUID[*uid]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, "Container with given UUID not found")
@@ -157,31 +190,31 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.apps[an] = app
+	c.apps[an] = app
 
 	w.WriteHeader(http.StatusOK)
 }
 
-func containerGet(h func(w http.ResponseWriter, r *http.Request, m *metadata)) http.HandlerFunc {
+func containerGet(h func(w http.ResponseWriter, r *http.Request, c *container)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		remoteIP := strings.Split(r.RemoteAddr, ":")[0]
-		m, ok := metadataByIP[remoteIP]
+		c, ok := containerByIP[remoteIP]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "metadata by remoteIP (%v) not found", remoteIP)
+			fmt.Fprintf(w, "container by remoteIP (%v) not found", remoteIP)
 			return
 		}
 
-		h(w, r, m)
+		h(w, r, c)
 	}
 }
 
-func appGet(h func(w http.ResponseWriter, r *http.Request, m *metadata, _ *schema.ImageManifest)) http.HandlerFunc {
-	return containerGet(func(w http.ResponseWriter, r *http.Request, m *metadata) {
+func appGet(h func(w http.ResponseWriter, r *http.Request, c *container, _ *schema.ImageManifest)) http.HandlerFunc {
+	return containerGet(func(w http.ResponseWriter, r *http.Request, c *container) {
 		appname := mux.Vars(r)["app"]
 
-		if im, ok := m.apps[appname]; ok {
-			h(w, r, m, im)
+		if im, ok := c.apps[appname]; ok {
+			h(w, r, c, im)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "App (%v) not found", appname)
@@ -189,16 +222,20 @@ func appGet(h func(w http.ResponseWriter, r *http.Request, m *metadata, _ *schem
 	})
 }
 
-func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, m *metadata) {
+func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, c *container) {
+	defer r.Body.Close()
+
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
-	for k := range m.manifest.Annotations {
+	for k := range c.manifest.Annotations {
 		fmt.Fprintln(w, k)
 	}
 }
 
-func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, m *metadata) {
+func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, c *container) {
+	defer r.Body.Close()
+
 	k, err := types.NewACName(mux.Vars(r)["name"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -206,7 +243,7 @@ func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, m *metada
 		return
 	}
 
-	v, ok := m.manifest.Annotations.Get(k.String())
+	v, ok := c.manifest.Annotations.Get(k.String())
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Container annotation (%v) not found", k)
@@ -218,17 +255,21 @@ func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, m *metada
 	w.Write([]byte(v))
 }
 
-func handleContainerManifest(w http.ResponseWriter, r *http.Request, m *metadata) {
+func handleContainerManifest(w http.ResponseWriter, r *http.Request, c *container) {
+	defer r.Body.Close()
+
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	if err := json.NewEncoder(w).Encode(m.manifest); err != nil {
-		fmt.Println(err)
+	if err := json.NewEncoder(w).Encode(c.manifest); err != nil {
+		log.Print(err)
 	}
 }
 
-func handleContainerUID(w http.ResponseWriter, r *http.Request, m *metadata) {
-	uid := m.manifest.UUID.String()
+func handleContainerUID(w http.ResponseWriter, r *http.Request, c *container) {
+	defer r.Body.Close()
+
+	uid := c.manifest.UUID.String()
 
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
@@ -251,16 +292,20 @@ func mergeAppAnnotations(im *schema.ImageManifest, cm *schema.ContainerRuntimeMa
 	return merged
 }
 
-func handleAppAnnotations(w http.ResponseWriter, r *http.Request, m *metadata, im *schema.ImageManifest) {
+func handleAppAnnotations(w http.ResponseWriter, r *http.Request, c *container, im *schema.ImageManifest) {
+	defer r.Body.Close()
+
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
-	for _, annot := range mergeAppAnnotations(im, &m.manifest) {
+	for _, annot := range mergeAppAnnotations(im, &c.manifest) {
 		fmt.Fprintln(w, string(annot.Name))
 	}
 }
 
-func handleAppAnnotation(w http.ResponseWriter, r *http.Request, m *metadata, im *schema.ImageManifest) {
+func handleAppAnnotation(w http.ResponseWriter, r *http.Request, c *container, im *schema.ImageManifest) {
+	defer r.Body.Close()
+
 	k, err := types.NewACName(mux.Vars(r)["name"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -268,7 +313,7 @@ func handleAppAnnotation(w http.ResponseWriter, r *http.Request, m *metadata, im
 		return
 	}
 
-	merged := mergeAppAnnotations(im, &m.manifest)
+	merged := mergeAppAnnotations(im, &c.manifest)
 
 	v, ok := merged.Get(k.String())
 	if !ok {
@@ -282,19 +327,23 @@ func handleAppAnnotation(w http.ResponseWriter, r *http.Request, m *metadata, im
 	w.Write([]byte(v))
 }
 
-func handleImageManifest(w http.ResponseWriter, r *http.Request, m *metadata, im *schema.ImageManifest) {
+func handleImageManifest(w http.ResponseWriter, r *http.Request, c *container, im *schema.ImageManifest) {
+	defer r.Body.Close()
+
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(*im); err != nil {
-		fmt.Println(err)
+		log.Print(err)
 	}
 }
 
-func handleAppID(w http.ResponseWriter, r *http.Request, m *metadata, im *schema.ImageManifest) {
+func handleAppID(w http.ResponseWriter, r *http.Request, c *container, im *schema.ImageManifest) {
+	defer r.Body.Close()
+
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	a := m.manifest.Apps.Get(im.Name)
+	a := c.manifest.Apps.Get(im.Name)
 	if a == nil {
 		panic("could not find app in manifest!")
 	}
@@ -317,8 +366,10 @@ func digest(r io.Reader) ([]byte, error) {
 }
 
 func handleContainerSign(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	remoteIP := strings.Split(r.RemoteAddr, ":")[0]
-	m, ok := metadataByIP[remoteIP]
+	c, ok := containerByIP[remoteIP]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Metadata by remoteIP (%v) not found", remoteIP)
@@ -335,7 +386,7 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 
 	// HMAC(UID:digest)
 	h := hmac.New(sha256.New, hmacKey[:])
-	h.Write(m.manifest.UUID[:])
+	h.Write(c.manifest.UUID[:])
 	h.Write(d)
 
 	// Send back digest:HMAC as the signature
@@ -348,6 +399,8 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	uid, err := types.NewUUID(r.FormValue("uid"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -398,21 +451,14 @@ func logReq(h func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := &httpResp{w, 0}
 		h(resp, r)
-		fmt.Printf("%v %v - %v\n", r.Method, r.RequestURI, resp.status)
+		log.Printf("%v %v - %v", r.Method, r.RequestURI, resp.status)
 	}
 }
 
-func main() {
-	if err := setupIPTables(); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := initCrypto(); err != nil {
-		log.Fatal(err)
-	}
-
+func makeHandlers() http.Handler {
 	r := mux.NewRouter()
 	r.HandleFunc("/containers/", logReq(handleRegisterContainer)).Methods("POST")
+	r.HandleFunc("/containers/{uid}", logReq(handleUnregisterContainer)).Methods("DELETE")
 	r.HandleFunc("/containers/{uid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
 
 	acRtr := r.Headers("Metadata-Flavor", "AppContainer").
@@ -433,5 +479,83 @@ func main() {
 	acRtr.HandleFunc("/container/hmac/sign", logReq(handleContainerSign)).Methods("POST")
 	acRtr.HandleFunc("/container/hmac/verify", logReq(handleContainerVerify)).Methods("POST")
 
-	log.Fatal(http.ListenAndServe(":4444", r))
+	return r
+}
+
+func getListener() (net.Listener, error) {
+	s := os.Getenv("LISTEN_FDS")
+	if s != "" {
+		// socket activated
+		lfds, err := strconv.ParseInt(s, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing LISTEN_FDS env var: %v", err)
+		}
+		if lfds < 1 {
+			return nil, fmt.Errorf("LISTEN_FDS < 1")
+		}
+
+		return net.FileListener(os.NewFile(uintptr(listenFdsStart), "listen"))
+	} else {
+		return net.Listen("tcp4", fmt.Sprintf(":%v", flagListenPort))
+	}
+}
+
+func cleanup(port string) {
+	if err := modifyIPTables("-D", port); err != nil {
+		log.Printf("Error cleaning up iptables: %v", err)
+	}
+}
+
+func runMetadataSvc(args []string) (exit int) {
+	log.Print("Metadatasvc starting...")
+
+	l, err := getListener()
+	if err != nil {
+		log.Printf("Error getting listener: %v", err)
+		return
+	}
+
+	initCrypto()
+
+	port := strings.Split(l.Addr().String(), ":")[1]
+
+	if flagNoIdle {
+		// TODO(eyakubovich): this is very racy
+		// It's possible for last container to get unregistered
+		// and svc gets flagged to shutdown. Then another container
+		// starts to launch, sees that port is in use and doesn't
+		// start metadata svc only for this one to exit a moment later.
+		// However, --no-idle is meant for demos and having a single
+		// container spawn up (via --spawn-metadata-svc). The design
+		// of metadata svc is also likely to change as we convert it
+		// to be backed by persistent storage.
+		exitCh = make(chan bool, 1)
+		// wait for signal and exit
+		go func() {
+			<-exitCh
+			cleanup(port)
+			os.Exit(0)
+		}()
+	}
+
+	if err := modifyIPTables("-A", port); err != nil {
+		log.Printf("Error setting up iptables: %v", err)
+		return 1
+	}
+
+	srv := http.Server{
+		Handler: makeHandlers(),
+	}
+
+	log.Print("Metadatasvc running...")
+
+	if err = srv.Serve(l); err != nil {
+		log.Printf("Error serving HTTP: %v", err)
+		exit = 1
+	}
+
+	cleanup(port)
+	log.Print("Metadatasvc exiting...")
+
+	return
 }

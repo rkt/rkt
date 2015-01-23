@@ -43,8 +43,8 @@ type activeNet struct {
 // describing the environment in which the container
 // is running in
 type containerEnv struct {
-	rktRoot    string
-	contID     types.UUID
+	rktRoot string
+	contID  types.UUID
 }
 
 // Networking describes the networking details of a container.
@@ -66,7 +66,7 @@ func Setup(rktRoot string, contID types.UUID) (*Networking, error) {
 	n := Networking{
 		containerEnv: containerEnv{
 			rktRoot: rktRoot,
-			contID: contID,
+			contID:  contID,
 		},
 	}
 

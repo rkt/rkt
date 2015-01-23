@@ -125,7 +125,7 @@ func main() {
 	cmd := os.Getenv("RKT_NETPLUGIN_COMMAND")
 	contID := os.Getenv("RKT_NETPLUGIN_CONTID")
 	netns := os.Getenv("RKT_NETPLUGIN_NETNS")
-	args :=	os.Getenv("RKT_NETPLUGIN_ARGS")
+	args := os.Getenv("RKT_NETPLUGIN_ARGS")
 	ifName := os.Getenv("RKT_NETPLUGIN_IFNAME")
 	netConf := os.Getenv("RKT_NETPLUGIN_NETCONF")
 

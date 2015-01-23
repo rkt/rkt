@@ -17,6 +17,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"text/tabwriter"
@@ -93,6 +94,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Run '%v help' for usage.\n", cliName)
 		os.Exit(2)
 	}
+
+	if globalFlags.Debug {
+		log.SetOutput(os.Stderr)
+	}
+
 	os.Exit(cmd.Run(cmd.Flags.Args()))
 }
 
