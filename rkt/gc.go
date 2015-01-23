@@ -57,7 +57,9 @@ func runGC(args []string) (exit int) {
 	}
 	for _, c := range cs {
 		cp := filepath.Join(containersDir(), c)
-		l, err := lock.TryExclusiveLock(cp)
+		// XXX: Note this isn't serializing anything, the rename is atomic and things like `rkt status` may occur simultaneously.
+		//      Care has been taken in the implementation of `rkt status` to be immune to the concurrent rename.
+		l, err := lock.TrySharedLock(cp)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to open lock, ignoring %q: %v\n", c, err)
 			continue
