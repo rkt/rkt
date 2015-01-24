@@ -55,7 +55,7 @@ func NewACI(dir string, manifest string, entries []*ACIEntry) (*os.File, error) 
 			}
 		}
 		sr := strings.NewReader(entry.Contents)
-		if err := aw.AddFile("", entry.Header, sr); err != nil {
+		if err := aw.AddFile(entry.Header, sr); err != nil {
 			return nil, err
 		}
 	}
