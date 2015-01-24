@@ -37,7 +37,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		TMP=$(mktemp -d -t rocket-XXXXXX)
 		[ -d $S1INIT ] || mkdir -p $S1INIT
 		cp $GOBIN/init $TMP/s1init
-		go-bindata -o $S1INIT/bin.go -pkg="stage1_init" -prefix=$TMP $TMP
+		go-bindata -nomemcopy=true -o $S1INIT/bin.go -pkg="stage1_init" -prefix=$TMP $TMP
 		rm -Rf "${TMP}"
 	fi
 
