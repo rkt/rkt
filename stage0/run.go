@@ -77,16 +77,17 @@ func init() {
 // Setup sets up a filesystem for a container based on the given config.
 // The directory containing the filesystem is returned, and any error encountered.
 func Setup(cfg Config) (string, error) {
-	cuuid, err := types.NewUUID(uuid.New())
-	if err != nil {
-		return "", fmt.Errorf("error creating UID: %v", err)
+	if cfg.Debug {
+		log.SetOutput(os.Stderr)
 	}
 
-	// TODO(jonboulle): collision detection/mitigation
-	// Create a directory for this container
-	dir := filepath.Join(cfg.ContainersDir, cuuid.String())
+	if err := os.MkdirAll(cfg.ContainersDir, 0700); err != nil {
+		return "", fmt.Errorf("error creating containers directory: %v", err)
+	}
 
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	// Create a unique directory for this container
+	cuuid, dir, err := makeUniqueContainer(cfg.ContainersDir)
+	if err != nil {
 		return "", fmt.Errorf("error creating directory: %v", err)
 	}
 
@@ -221,6 +222,34 @@ func Run(cfg Config, dir string) {
 	if err := syscall.Exec(initPath, args, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
 	}
+}
+
+// makeUniqueContainer creates a subdirectory (representing a container)
+// within the given parent directory. On success, it returns a UUID
+// representing the created container and the full path to the new directory.
+// The UUID is guaranteed to be unique within the parent directory.
+// The parent directory MUST exist and be writeable.
+func makeUniqueContainer(pdir string) (*types.UUID, string, error) {
+	// Arbitrary limit so we don't spin forever
+	for i := 0; i <= 100; i++ {
+		cuuid, err := types.NewUUID(uuid.New())
+		if err != nil {
+			// Should never happen
+			return nil, "", fmt.Errorf("error creating UUID: %v", err)
+		}
+
+		dir := filepath.Join(pdir, cuuid.String())
+		err = os.Mkdir(dir, 0700)
+		switch {
+		case err == nil:
+			return cuuid, dir, nil
+		case os.IsExist(err):
+			continue
+		case err != nil:
+			return nil, "", err
+		}
+	}
+	return nil, "", fmt.Errorf("couldn't find unique directory!")
 }
 
 func lockDir(dir string) error {
