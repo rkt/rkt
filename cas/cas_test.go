@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/pkg/util"
+	"github.com/coreos/rocket/pkg/aci"
 )
 
 const tstprefix = "cas-test"
@@ -59,7 +59,7 @@ func TestDownloading(t *testing.T) {
 			"name": "example.com/test01"
 		}`
 
-	entries := []*util.ACIEntry{
+	entries := []*aci.ACIEntry{
 		// An empty file
 		{
 			Contents: "hello",
@@ -70,7 +70,7 @@ func TestDownloading(t *testing.T) {
 		},
 	}
 
-	aci, err := util.NewACI(dir, imj, entries)
+	aci, err := aci.NewACI(dir, imj, entries)
 	if err != nil {
 		t.Fatalf("error creating test tar: %v", err)
 	}

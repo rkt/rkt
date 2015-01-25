@@ -1,3 +1,17 @@
+// Copyright 2014 CoreOS, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -13,9 +27,9 @@ import (
 	"testing"
 
 	"github.com/coreos/rocket/cas"
+	"github.com/coreos/rocket/pkg/aci"
 	"github.com/coreos/rocket/pkg/keystore"
 	"github.com/coreos/rocket/pkg/keystore/keystoretest"
-	"github.com/coreos/rocket/pkg/util"
 
 	"github.com/appc/spec/discovery"
 )
@@ -118,31 +132,31 @@ func TestFetchImage(t *testing.T) {
 	if _, err := ks.StoreTrustedKeyPrefix("example.com/app", bytes.NewBufferString(key.ArmoredPublicKey)); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	aci, err := util.NewBasicACI(dir, "example.com/app")
-	defer aci.Close()
+	a, err := aci.NewBasicACI(dir, "example.com/app")
+	defer a.Close()
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	// Rewind the ACI
-	if _, err := aci.Seek(0, 0); err != nil {
+	if _, err := a.Seek(0, 0); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
-	sig, err := util.NewDetachedSignature(key.ArmoredPrivateKey, aci)
+	sig, err := aci.NewDetachedSignature(key.ArmoredPrivateKey, a)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	// Rewind the ACI.
-	if _, err := aci.Seek(0, 0); err != nil {
+	if _, err := a.Seek(0, 0); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch filepath.Ext(r.URL.Path) {
 		case ".aci":
-			io.Copy(w, aci)
+			io.Copy(w, a)
 			return
 		case ".sig":
 			io.Copy(w, sig)

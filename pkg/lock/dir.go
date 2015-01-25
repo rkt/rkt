@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package lock implements simple locking primitives on a
+// directory using flock
 package lock
 
-// Package lock implements simple locking primitives on a directory using flock
 import (
 	"errors"
 	"syscall"
@@ -26,6 +27,7 @@ var (
 	ErrPermission = errors.New("permission denied")
 )
 
+// DirLock represents a lock on a directory
 type DirLock struct {
 	dir string
 	fd  int
@@ -131,7 +133,7 @@ func (l *DirLock) Unlock() error {
 	return syscall.Flock(l.fd, syscall.LOCK_UN)
 }
 
-// Fd returns the lock's file descriptor
+// Fd returns the lock's file descriptor, or an error if the lock is closed
 func (l *DirLock) Fd() (int, error) {
 	var err error
 	if l.fd == -1 {
