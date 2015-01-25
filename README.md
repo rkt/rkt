@@ -31,14 +31,14 @@ Keep in mind while running through the examples that right now `rkt` needs to be
 
 Rocket uses content addressable storage (CAS) for storing an ACI on disk. In this example, the image is downloaded and added to the CAS.
 
-(Note that since Rocket verifies signatures by default, you will need to first [trust](https://github.com/coreos/rocket/blob/master/Documentation/signing-and-verification-guide.md#establishing-trust) the [CoreOS public key](https://coreos.com/dist/pubkeys/aci-pubkeys.gpg) used to sign the image.)
+(Note that since Rocket verifies signatures by default, you will need to first [trust](https://github.com/coreos/rocket/blob/master/Documentation/signing-and-verification-guide.md#establishing-trust) the [CoreOS public key](https://coreos.com/dist/pubkeys/aci-pubkeys.gpg) used to sign the image. Detailed step-by-step for the signing procedure [is here](Documentation/getting-started-ubuntu-trusty.md#trust-the-coreos-signing-key).)
 
 ```
 [~/rocket-v0.2.0]$ sudo ./rkt fetch https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci
 Downloading aci: [===============================              ] 2.49 MB/3.58 MB
 Downloading signature from https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.sig
-rkt: signature verified: 
+rkt: signature verified:
   CoreOS ACI Builder <release@coreos.com>
   sha512-fcdf12587358af6ebe69b5338a05df67
 ```
@@ -59,7 +59,7 @@ Per the [App Container Specification](https://github.com/appc/spec/blob/master/S
 [~]$ wget https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci
 ...
 [~]$ $ gzip -dc etcd-v2.0.0-rc.1-linux-amd64.aci > etcd-v2.0.0-rc.1-linux-amd64.tar
-[~]$ sha512sum etcd-v2.0.0-rc.1-linux-amd64.tar 
+[~]$ sha512sum etcd-v2.0.0-rc.1-linux-amd64.tar
 fcdf12587358af6ebe69b5338a05df673ab7c95539f4cac09b0ceb4ea9b1233922700bdbafd5b6783e129d3f5e9d17bc7f0a07912b8a0a8c0ff7bf732a3f0acf  etcd-v2.0.0-rc.1-linux-amd64.tar
 ```
 
