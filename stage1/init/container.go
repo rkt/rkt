@@ -29,7 +29,7 @@ import (
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
-	rktpath "github.com/coreos/rocket/path"
+	"github.com/coreos/rocket/common"
 )
 
 // Container encapsulates a ContainerRuntimeManifest and ImageManifests
@@ -49,7 +49,7 @@ func LoadContainer(root string) (*Container, error) {
 		Apps: make(map[string]*schema.ImageManifest),
 	}
 
-	buf, err := ioutil.ReadFile(rktpath.ContainerManifestPath(c.Root))
+	buf, err := ioutil.ReadFile(common.ContainerManifestPath(c.Root))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading container runtime manifest: %v", err)
 	}
@@ -61,7 +61,7 @@ func LoadContainer(root string) (*Container, error) {
 	c.Manifest = cm
 
 	for _, app := range c.Manifest.Apps {
-		ampath := rktpath.ImageManifestPath(c.Root, app.ImageID)
+		ampath := common.ImageManifestPath(c.Root, app.ImageID)
 		buf, err := ioutil.ReadFile(ampath)
 		if err != nil {
 			return nil, fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
@@ -119,7 +119,7 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 		workDir = app.WorkingDirectory
 	}
 
-	execWrap := []string{"/diagexec", rktpath.RelAppRootfsPath(id), workDir}
+	execWrap := []string{"/diagexec", common.RelAppRootfsPath(id), workDir}
 	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
 		newUnitOption("Unit", "Description", name),
@@ -264,7 +264,7 @@ func (c *Container) appToNspawnArgs(am *schema.ImageManifest, id types.Hash) ([]
 
 		opt[1] = vol.Source
 		opt[2] = ":"
-		opt[3] = filepath.Join(rktpath.RelAppRootfsPath(id), mp.Path)
+		opt[3] = filepath.Join(common.RelAppRootfsPath(id), mp.Path)
 
 		args = append(args, strings.Join(opt, ""))
 	}
@@ -285,7 +285,7 @@ func (c *Container) appToNspawnArgs(am *schema.ImageManifest, id types.Hash) ([]
 func (c *Container) ContainerToNspawnArgs() ([]string, error) {
 	args := []string{
 		"--uuid=" + c.Manifest.UUID.String(),
-		"--directory=" + rktpath.Stage1RootfsPath(c.Root),
+		"--directory=" + common.Stage1RootfsPath(c.Root),
 	}
 
 	for _, am := range c.Apps {
