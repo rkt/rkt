@@ -43,7 +43,7 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
 	"github.com/coreos/rocket/cas"
-	rktpath "github.com/coreos/rocket/path"
+	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/pkg/lock"
 	ptar "github.com/coreos/rocket/pkg/tar"
 	"github.com/coreos/rocket/version"
@@ -98,9 +98,9 @@ func Setup(cfg Config) (string, error) {
 
 	log.Printf("Unpacking stage1 rootfs")
 	if cfg.Stage1Rootfs != "" {
-		err = unpackRootfs(cfg.Stage1Rootfs, rktpath.Stage1RootfsPath(dir))
+		err = unpackRootfs(cfg.Stage1Rootfs, common.Stage1RootfsPath(dir))
 	} else {
-		err = unpackBuiltinRootfs(rktpath.Stage1RootfsPath(dir))
+		err = unpackBuiltinRootfs(common.Stage1RootfsPath(dir))
 	}
 	if err != nil {
 		return "", fmt.Errorf("error unpacking rootfs: %v", err)
@@ -185,7 +185,7 @@ func Setup(cfg Config) (string, error) {
 	}
 
 	log.Printf("Writing container manifest")
-	fn = rktpath.ContainerManifestPath(dir)
+	fn = common.ContainerManifestPath(dir)
 	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
 		return "", fmt.Errorf("error writing container manifest: %v", err)
 	}
@@ -336,7 +336,7 @@ func setupImage(cfg Config, img types.Hash, dir string) (*schema.ImageManifest, 
 		return nil, fmt.Errorf("error reading stream: %v", err)
 	}
 
-	ad := rktpath.AppImagePath(dir, img)
+	ad := common.AppImagePath(dir, img)
 	err = os.MkdirAll(ad, 0776)
 	if err != nil {
 		return nil, fmt.Errorf("error creating image directory: %v", err)
@@ -367,7 +367,7 @@ func setupImage(cfg Config, img types.Hash, dir string) (*schema.ImageManifest, 
 		return nil, fmt.Errorf("error creating tmp directory: %v", err)
 	}
 
-	mpath := rktpath.ImageManifestPath(dir, img)
+	mpath := common.ImageManifestPath(dir, img)
 	f, err := os.Open(mpath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening app manifest: %v", err)

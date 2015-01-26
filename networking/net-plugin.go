@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/networking/util"
-	rktpath "github.com/coreos/rocket/path"
 )
 
 // TODO(eyakubovich): make this configurable in rkt.conf
@@ -49,7 +49,7 @@ func (e *containerEnv) findNetPlugin(plugin string) string {
 	// try 3rd-party path first
 	paths := []string{
 		UserNetPluginsPath,
-		filepath.Join(rktpath.Stage1RootfsPath(e.rktRoot), BuiltinNetPluginsPath),
+		filepath.Join(common.Stage1RootfsPath(e.rktRoot), BuiltinNetPluginsPath),
 	}
 
 	for _, p := range paths {

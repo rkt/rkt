@@ -21,8 +21,8 @@ import (
 	"path"
 	"sort"
 
+	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/networking/util"
-	rktpath "github.com/coreos/rocket/path"
 )
 
 // Net encodes a network plugin.
@@ -89,7 +89,7 @@ func (e *containerEnv) loadNets() ([]Net, error) {
 		return nil, err
 	}
 
-	defPath := path.Join(rktpath.Stage1RootfsPath(e.rktRoot), DefaultNetPath)
+	defPath := path.Join(common.Stage1RootfsPath(e.rktRoot), DefaultNetPath)
 	defNet := Net{}
 	if err := util.LoadNet(defPath, &defNet); err != nil {
 		return nil, fmt.Errorf("error loading net: %v", err)

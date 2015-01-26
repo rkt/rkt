@@ -34,8 +34,7 @@ import (
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/gorilla/mux"
-
-	"github.com/coreos/rocket/metadata"
+	"github.com/coreos/rocket/common"
 )
 
 var (
@@ -72,7 +71,7 @@ const (
 func init() {
 	commands = append(commands, cmdMetadataSvc)
 	cmdMetadataSvc.Flags.StringVar(&flagSrcAddrs, "src-addr", "0.0.0.0/0", "source address/range for iptables")
-	cmdMetadataSvc.Flags.IntVar(&flagListenPort, "listen-port", metadata.SvcPrvPort, "listen port")
+	cmdMetadataSvc.Flags.IntVar(&flagListenPort, "listen-port", common.MetadataSvcPrvPort, "listen port")
 	cmdMetadataSvc.Flags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last container is unregistered")
 }
 
@@ -82,8 +81,8 @@ func modifyIPTables(action, port string) error {
 		"-t", "nat",
 		action, "PREROUTING",
 		"-p", "tcp",
-		"-d", metadata.SvcIP,
-		"--dport", strconv.Itoa(metadata.SvcPubPort),
+		"-d", common.MetadataSvcIP,
+		"--dport", strconv.Itoa(common.MetadataSvcPubPort),
 		"-j", "REDIRECT",
 		"--to-port", port,
 	).Run()

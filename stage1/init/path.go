@@ -20,11 +20,11 @@ import (
 	"path/filepath"
 
 	"github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/path"
+	"github.com/coreos/rocket/common"
 )
 
 const (
-	unitsDir        = path.Stage1Dir + "/usr/lib/systemd/system"
+	unitsDir        = common.Stage1Dir + "/usr/lib/systemd/system"
 	defaultWantsDir = unitsDir + "/default.target.wants"
 	socketsWantsDir = unitsDir + "/sockets.target.wants"
 )

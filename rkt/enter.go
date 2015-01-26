@@ -25,7 +25,7 @@ import (
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
-	rktpath "github.com/coreos/rocket/path"
+	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/pkg/lock"
 	"github.com/coreos/rocket/stage0"
 )
@@ -77,7 +77,7 @@ func runEnter(args []string) (exit int) {
 		return 1
 	}
 
-	_, err = os.Stat(filepath.Join(rktpath.AppRootfsPath(cdir, *imageID)))
+	_, err = os.Stat(filepath.Join(common.AppRootfsPath(cdir, *imageID)))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to access app rootfs: %v\n", err)
 		return 1
@@ -108,7 +108,7 @@ func getAppImageID(cdir string) (*types.Hash, error) {
 	}
 
 	// figure out the image id, or show a list if multiple are present
-	b, err := ioutil.ReadFile(rktpath.ContainerManifestPath(cdir))
+	b, err := ioutil.ReadFile(common.ContainerManifestPath(cdir))
 	if err != nil {
 		return nil, fmt.Errorf("error reading container manifest: %v", err)
 	}
@@ -165,7 +165,7 @@ func getEnterArgv(cdir string, imageID *types.Hash, cmdArgs []string) ([]string,
 	}
 
 	// TODO(vc): LookPath() uses os.Stat() internally so symlinks can defeat this check
-	_, err := exec.LookPath(filepath.Join(rktpath.AppRootfsPath(cdir, *imageID), argv[0]))
+	_, err := exec.LookPath(filepath.Join(common.AppRootfsPath(cdir, *imageID), argv[0]))
 	if err != nil {
 		return nil, fmt.Errorf("command %q missing, giving up: %v", argv[0], err)
 	}

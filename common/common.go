@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package path
-
-//
-// Functions defining paths that are shared by different parts of rkt
-// (e.g. stage0 and stage1)
-//
+// Package common defines values shared by different parts
+// of rkt (e.g. stage0 and stage1)
+package common
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/appc/spec/aci"
@@ -29,6 +27,10 @@ import (
 const (
 	Stage1Dir = "/stage1"
 	stage2Dir = "/opt/stage2"
+
+	MetadataSvcIP      = "169.254.169.255"
+	MetadataSvcPubPort = 80
+	MetadataSvcPrvPort = 2375
 )
 
 // Stage1RootfsPath returns the directory in root containing the rootfs for stage1
@@ -69,4 +71,14 @@ func RelAppRootfsPath(imageID types.Hash) string {
 // id should be the app image ID.
 func ImageManifestPath(root string, imageID types.Hash) string {
 	return filepath.Join(AppImagePath(root, imageID), aci.ManifestFile)
+}
+
+// MetadataSvcPrivateURL returns the private URL used to host the metadata service
+func MetadataSvcPrivateURL() string {
+	return fmt.Sprintf("http://127.0.0.1:%v", MetadataSvcPrvPort)
+}
+
+// MetadataSvcPublicURL returns the public URL used to host the metadata service
+func MetadataSvcPublicURL() string {
+	return fmt.Sprintf("http://%v:%v", MetadataSvcIP, MetadataSvcPubPort)
 }

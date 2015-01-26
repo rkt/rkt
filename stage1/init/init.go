@@ -31,9 +31,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/coreos/rocket/metadata"
+	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/networking"
-	"github.com/coreos/rocket/path"
 )
 
 const (
@@ -64,7 +63,7 @@ func mirrorLocalZoneInfo(root string) {
 	}
 	defer src.Close()
 
-	destp := filepath.Join(path.Stage1RootfsPath(root), zif)
+	destp := filepath.Join(common.Stage1RootfsPath(root), zif)
 
 	if err = os.MkdirAll(filepath.Dir(destp), 0755); err != nil {
 		return
@@ -105,7 +104,7 @@ func stage1() int {
 	}
 
 	mirrorLocalZoneInfo(c.Root)
-	c.MetadataSvcURL = metadata.SvcPubURL()
+	c.MetadataSvcURL = common.MetadataSvcPublicURL()
 
 	if err = c.ContainerToSystemd(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
@@ -113,8 +112,8 @@ func stage1() int {
 	}
 
 	args := []string{
-		filepath.Join(path.Stage1RootfsPath(c.Root), interpBin),
-		filepath.Join(path.Stage1RootfsPath(c.Root), nspawnBin),
+		filepath.Join(common.Stage1RootfsPath(c.Root), interpBin),
+		filepath.Join(common.Stage1RootfsPath(c.Root), nspawnBin),
 		"--boot",              // Launch systemd in the container
 		"--register", "false", // We cannot assume the host system is running systemd
 	}
@@ -139,8 +138,8 @@ func stage1() int {
 	}
 
 	env := os.Environ()
-	env = append(env, "LD_PRELOAD="+filepath.Join(path.Stage1RootfsPath(c.Root), "fakesdboot.so"))
-	env = append(env, "LD_LIBRARY_PATH="+filepath.Join(path.Stage1RootfsPath(c.Root), "usr/lib"))
+	env = append(env, "LD_PRELOAD="+filepath.Join(common.Stage1RootfsPath(c.Root), "fakesdboot.so"))
+	env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(c.Root), "usr/lib"))
 
 	if metadataSvc != "" {
 		if err = launchMetadataSvc(); err != nil {
@@ -198,7 +197,7 @@ func launchMetadataSvc() error {
 	// use socket activation protocol to avoid race-condition of
 	// service becoming ready
 	// TODO(eyakubovich): remove hard-coded port
-	l, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: metadata.SvcPrvPort})
+	l, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: common.MetadataSvcPrvPort})
 	if err != nil {
 		if err.(*net.OpError).Err.(*os.SyscallError).Err == syscall.EADDRINUSE {
 			// assume metadatasvc is already running
