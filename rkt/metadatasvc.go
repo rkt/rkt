@@ -46,15 +46,15 @@ var (
 	}
 )
 
-type container struct {
+type mdsContainer struct {
 	manifest schema.ContainerRuntimeManifest
 	apps     map[string]*schema.ImageManifest
 	ip       string
 }
 
 var (
-	containerByIP  = make(map[string]*container)
-	containerByUID = make(map[types.UUID]*container)
+	containerByIP  = make(map[string]*mdsContainer)
+	containerByUID = make(map[types.UUID]*mdsContainer)
 	hmacKey        [sha256.Size]byte
 
 	flagListenPort int
@@ -113,7 +113,7 @@ func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := &container{
+	c := &mdsContainer{
 		apps: make(map[string]*schema.ImageManifest),
 		ip:   containerIP,
 	}
@@ -194,7 +194,7 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func containerGet(h func(w http.ResponseWriter, r *http.Request, c *container)) http.HandlerFunc {
+func containerGet(h func(w http.ResponseWriter, r *http.Request, c *mdsContainer)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		remoteIP := strings.Split(r.RemoteAddr, ":")[0]
 		c, ok := containerByIP[remoteIP]
@@ -208,8 +208,8 @@ func containerGet(h func(w http.ResponseWriter, r *http.Request, c *container)) 
 	}
 }
 
-func appGet(h func(w http.ResponseWriter, r *http.Request, c *container, _ *schema.ImageManifest)) http.HandlerFunc {
-	return containerGet(func(w http.ResponseWriter, r *http.Request, c *container) {
+func appGet(h func(w http.ResponseWriter, r *http.Request, c *mdsContainer, _ *schema.ImageManifest)) http.HandlerFunc {
+	return containerGet(func(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
 		appname := mux.Vars(r)["app"]
 
 		if im, ok := c.apps[appname]; ok {
@@ -221,7 +221,7 @@ func appGet(h func(w http.ResponseWriter, r *http.Request, c *container, _ *sche
 	})
 }
 
-func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, c *container) {
+func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "text/plain")
@@ -232,7 +232,7 @@ func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, c *conta
 	}
 }
 
-func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, c *container) {
+func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
 	defer r.Body.Close()
 
 	k, err := types.NewACName(mux.Vars(r)["name"])
@@ -254,7 +254,7 @@ func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, c *contai
 	w.Write([]byte(v))
 }
 
-func handleContainerManifest(w http.ResponseWriter, r *http.Request, c *container) {
+func handleContainerManifest(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "application/json")
@@ -265,7 +265,7 @@ func handleContainerManifest(w http.ResponseWriter, r *http.Request, c *containe
 	}
 }
 
-func handleContainerUID(w http.ResponseWriter, r *http.Request, c *container) {
+func handleContainerUID(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
 	defer r.Body.Close()
 
 	uid := c.manifest.UUID.String()
@@ -291,7 +291,7 @@ func mergeAppAnnotations(im *schema.ImageManifest, cm *schema.ContainerRuntimeMa
 	return merged
 }
 
-func handleAppAnnotations(w http.ResponseWriter, r *http.Request, c *container, im *schema.ImageManifest) {
+func handleAppAnnotations(w http.ResponseWriter, r *http.Request, c *mdsContainer, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "text/plain")
@@ -302,7 +302,7 @@ func handleAppAnnotations(w http.ResponseWriter, r *http.Request, c *container, 
 	}
 }
 
-func handleAppAnnotation(w http.ResponseWriter, r *http.Request, c *container, im *schema.ImageManifest) {
+func handleAppAnnotation(w http.ResponseWriter, r *http.Request, c *mdsContainer, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
 	k, err := types.NewACName(mux.Vars(r)["name"])
@@ -326,7 +326,7 @@ func handleAppAnnotation(w http.ResponseWriter, r *http.Request, c *container, i
 	w.Write([]byte(v))
 }
 
-func handleImageManifest(w http.ResponseWriter, r *http.Request, c *container, im *schema.ImageManifest) {
+func handleImageManifest(w http.ResponseWriter, r *http.Request, c *mdsContainer, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "application/json")
@@ -337,7 +337,7 @@ func handleImageManifest(w http.ResponseWriter, r *http.Request, c *container, i
 	}
 }
 
-func handleAppID(w http.ResponseWriter, r *http.Request, c *container, im *schema.ImageManifest) {
+func handleAppID(w http.ResponseWriter, r *http.Request, c *mdsContainer, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "text/plain")
