@@ -39,29 +39,6 @@ $ ipmanager -c 1e8df09a-756f-4f3d-9f0f-3000e46598e7
 }
 ```
 
-#### Using the HTTP interface
-
-Start ipmanager in daemon mode.
-
-```
-$ ipmanager -s
-```
-```
-2015/01/18 18:02:35 starting ipmanager...
-```
-
-Request a new IP address using cURL:
-
-```
-curl http://127.0.0.1:8080/default -d '{"containerID": "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"}'
-```
-
-```
-{
-    "ip": "203.0.113.1/24"
-}
-```
-
 ## Backends
 
 By default ipmanager stores IP allocations on the local filesystem using the IP address as the file name and the container ID as contents. For example:
