@@ -38,8 +38,8 @@ type Config struct {
 	SystemPrefixPath string
 }
 
-// A Keystore represents a repository of trusted keys which can be used to verify
-// ACI images.
+// A Keystore represents a repository of trusted public keys which can be
+// used to verify PGP signatures.
 type Keystore struct {
 	*Config
 }

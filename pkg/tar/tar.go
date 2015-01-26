@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package tar contains helper functions for working with tar files
 package tar
 
 import (
@@ -86,7 +87,7 @@ func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string, overwrite bool) er
 		}
 	}
 
-	// Create parent dir if it doesn't exists
+	// Create parent dir if it doesn't exist
 	if err := os.MkdirAll(filepath.Dir(p), DEFAULT_DIR_MODE); err != nil {
 		return err
 	}
