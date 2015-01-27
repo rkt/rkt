@@ -38,20 +38,20 @@ Edit: manifest.json
 ```
 {
     "acKind": "ImageManifest",
-    "acVersion": "0.1.1",
+    "acVersion": "0.2.0",
     "name": "coreos.com/hello",
     "labels": [
         {
             "name": "version",
-            "val": "1.0.0"
+            "value": "1.0.0"
         },
         {
             "name": "arch",
-            "val": "amd64"
+            "value": "amd64"
         },
         {
             "name": "os",
-            "val": "linux"
+            "value": "linux"
         }
     ],
     "app": {
@@ -68,9 +68,12 @@ Edit: manifest.json
         }
         ]
     },
-    "annotations": {
-        "authors": "Kelsey Hightower <kelsey.hightower@gmail.com>"
-    }
+    "annotations": [
+        {
+	    "name": "authors",
+	    "value": "Kelsey Hightower <kelsey.hightower@gmail.com>"
+	}
+    ]
 }
 ```
 
