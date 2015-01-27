@@ -1,8 +1,7 @@
 cache/
 rootfs/aggregate/install.d/
 !rootfs/aggregate/install.d/99misc
-rootfs/aggregate/s1rootfs.tar
-rootfs/aggregate/s1rootfs/
+rootfs/aggregate/stage1/
 rootfs/diagexec/diagexec
 rootfs/enter/enter
 rootfs/shim/shim.so

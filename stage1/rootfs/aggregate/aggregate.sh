@@ -2,7 +2,7 @@
 
 # aggregate everything into a single rootfs tree
 
-ROOT=s1rootfs
+ROOT=stage1/rootfs
 
 # always start over
 [ -e "$ROOT" ] && rm -Rf "$ROOT"

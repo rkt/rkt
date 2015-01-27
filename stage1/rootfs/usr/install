@@ -1,1 +1,2 @@
-cp -a ../usr/rootfs "$ROOT"
+mkdir -p "$ROOT"
+cp -a ../usr/rootfs/. "$ROOT"

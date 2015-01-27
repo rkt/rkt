@@ -34,7 +34,7 @@ var (
 )
 
 const (
-	statusDir     = "stage1/rkt/status"
+	statusDir     = "stage1/rootfs/rkt/status"
 	cmdStatusName = "status"
 )
 
