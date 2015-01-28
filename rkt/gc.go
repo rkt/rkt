@@ -16,13 +16,9 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"syscall"
 	"time"
-
-	"github.com/coreos/rocket/pkg/lock"
 )
 
 const (
@@ -50,89 +46,60 @@ func runGC(args []string) (exit int) {
 		return 1
 	}
 
-	cs, err := getContainers()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to get containers list: %v\n", err)
+	if err := renameExited(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to rename exited containers: %v\n", err)
 		return 1
-	}
-	for _, c := range cs {
-		cp := filepath.Join(containersDir(), c)
-		// XXX: Note this isn't serializing anything, the rename is atomic and things like `rkt status` may occur simultaneously.
-		//      Care has been taken in the implementation of `rkt status` to be immune to the concurrent rename.
-		l, err := lock.TrySharedLock(cp)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to open lock, ignoring %q: %v\n", c, err)
-			continue
-		}
-
-		fmt.Printf("Moving container %q to garbage\n", c)
-		err = os.Rename(cp, filepath.Join(garbageDir(), c))
-		if err != nil {
-			fmt.Println(err)
-		}
-		l.Close()
 	}
 
 	// clean up anything old in the garbage dir
-	err = emptyGarbage(flagGracePeriod)
-	if err != nil {
-		fmt.Println(err)
+	if err := emptyGarbage(flagGracePeriod); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to empty garbage: %v\n", err)
 		return 1
 	}
 
 	return
 }
 
-// getContainers returns a slice representing the containers in the given rocket directory
-func getContainers() ([]string, error) {
-	cdir := containersDir()
-	ls, err := ioutil.ReadDir(cdir)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read containers directory: %v", err)
-	}
-	var cs []string
-	for _, dir := range ls {
-		if !dir.IsDir() {
-			fmt.Fprintf(os.Stderr, "Unrecognized file: %q, ignoring\n", dir)
-			continue
+// renameExited renames exited containers to the garbage directory
+func renameExited() error {
+	if err := walkContainers(includeContainersDir, func(c *container) {
+		if c.isExited {
+			fmt.Printf("Moving container %q to garbage\n", c.uuid)
+			if err := os.Rename(c.containersPath(), c.garbagePath()); err != nil && err != os.ErrNotExist {
+				fmt.Fprintf(os.Stderr, "Rename error: %v\n", err)
+			}
 		}
-		cs = append(cs, dir.Name())
+	}); err != nil {
+		return err
 	}
-	return cs, nil
+
+	return nil
 }
 
 // emptyGarbage discards sufficiently aged containers from garbageDir()
 func emptyGarbage(gracePeriod time.Duration) error {
-	g := garbageDir()
-
-	ls, err := ioutil.ReadDir(g)
-	if err != nil {
-		return err
-	}
-
-	for _, dir := range ls {
-		gp := filepath.Join(g, dir.Name())
+	if err := walkContainers(includeGarbageDir, func(c *container) {
+		gp := c.path()
 		st := &syscall.Stat_t{}
-		err := syscall.Lstat(gp, st)
-		if err != nil {
+		if err := syscall.Lstat(gp, st); err != nil {
 			if err != syscall.ENOENT {
 				fmt.Fprintf(os.Stderr, "Unable to stat %q, ignoring: %v\n", gp, err)
 			}
-			continue
+			return
 		}
 
-		expiration := time.Unix(st.Ctim.Unix()).Add(gracePeriod)
-		if time.Now().After(expiration) {
-			l, err := lock.ExclusiveLock(gp)
-			if err != nil {
-				continue
+		if expiration := time.Unix(st.Ctim.Unix()).Add(gracePeriod); time.Now().After(expiration) {
+			if err := c.ExclusiveLock(); err != nil {
+				return
 			}
-			fmt.Printf("Garbage collecting container %q\n", dir.Name())
-			if err = os.RemoveAll(gp); err != nil {
-				fmt.Fprintf(os.Stderr, "Unable to remove container %q: %v\n", dir.Name(), err)
+			fmt.Printf("Garbage collecting container %q\n", c.uuid)
+			if err := os.RemoveAll(gp); err != nil {
+				fmt.Fprintf(os.Stderr, "Unable to remove container %q: %v\n", c.uuid, err)
 			}
-			l.Close()
 		}
+	}); err != nil {
+		return err
 	}
+
 	return nil
 }

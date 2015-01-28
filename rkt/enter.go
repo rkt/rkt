@@ -26,7 +26,6 @@ import (
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/common"
-	"github.com/coreos/rocket/pkg/lock"
 	"github.com/coreos/rocket/stage0"
 )
 
@@ -64,33 +63,36 @@ func runEnter(args []string) (exit int) {
 	}
 
 	cid := containerUUID.String()
-	cdir := filepath.Join(containersDir(), cid)
+	c, err := getContainer(cid)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to open container %q: %v\n", cid, err)
+		return 1
+	}
+	defer c.Close()
 
-	if err = pingContainer(cdir); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to query container %q: %v\n", cid, err)
+	if c.isExited {
+		fmt.Fprintf(os.Stderr, "Cannot enter exited container\n")
 		return 1
 	}
 
-	imageID, err := getAppImageID(cdir)
+	imageID, err := getAppImageID(c)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to determine image id: %v\n", err)
 		return 1
 	}
 
-	_, err = os.Stat(filepath.Join(common.AppRootfsPath(cdir, *imageID)))
-	if err != nil {
+	if _, err = os.Stat(filepath.Join(common.AppRootfsPath(c.path(), *imageID))); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to access app rootfs: %v\n", err)
 		return 1
 	}
 
-	argv, err := getEnterArgv(cdir, imageID, args)
+	argv, err := getEnterArgv(c, imageID, args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Enter failed: %v\n", err)
 		return 1
 	}
 
-	err = stage0.Enter(cdir, imageID, argv)
-	if err != nil {
+	if err = stage0.Enter(c.path(), imageID, argv); err != nil {
 		fmt.Fprintf(os.Stderr, "Enter failed: %v\n", err)
 		return 1
 	}
@@ -102,20 +104,19 @@ func runEnter(args []string) (exit int) {
 // If one was supplied in the flags then it's simply returned
 // If the CRM contains a single image, that image's id is returned
 // If the CRM has multiple images, the ids and names are printed and an error is returned
-func getAppImageID(cdir string) (*types.Hash, error) {
+func getAppImageID(c *container) (*types.Hash, error) {
 	if !flagAppImageID.Empty() {
 		return &flagAppImageID, nil
 	}
 
 	// figure out the image id, or show a list if multiple are present
-	b, err := ioutil.ReadFile(common.ContainerManifestPath(cdir))
+	b, err := ioutil.ReadFile(common.ContainerManifestPath(c.path()))
 	if err != nil {
 		return nil, fmt.Errorf("error reading container manifest: %v", err)
 	}
 
 	m := schema.ContainerRuntimeManifest{}
-	err = m.UnmarshalJSON(b)
-	if err != nil {
+	if err = m.UnmarshalJSON(b); err != nil {
 		return nil, fmt.Errorf("unable to load manifest: %v", err)
 	}
 
@@ -135,27 +136,8 @@ func getAppImageID(cdir string) (*types.Hash, error) {
 	return nil, fmt.Errorf("specify app using \"rkt enter --imageid ...\"")
 }
 
-// pingContainer checks to see if the container is running
-func pingContainer(cdir string) error {
-	l, err := lock.TrySharedLock(cdir)
-	switch err {
-	case nil:
-		l.Close()
-		return fmt.Errorf("inactive")
-	case lock.ErrNotExist:
-		return fmt.Errorf("nonexistent")
-	case lock.ErrPermission:
-		return fmt.Errorf("access denied: %v", err)
-	default:
-		return err
-	case lock.ErrLocked:
-	}
-
-	return nil
-}
-
 // getEnterArgv returns the argv to use for entering the container
-func getEnterArgv(cdir string, imageID *types.Hash, cmdArgs []string) ([]string, error) {
+func getEnterArgv(c *container, imageID *types.Hash, cmdArgs []string) ([]string, error) {
 	var argv []string
 	if len(cmdArgs) < 2 {
 		fmt.Printf("No command specified, assuming %q\n", defaultCmd)
@@ -165,8 +147,7 @@ func getEnterArgv(cdir string, imageID *types.Hash, cmdArgs []string) ([]string,
 	}
 
 	// TODO(vc): LookPath() uses os.Stat() internally so symlinks can defeat this check
-	_, err := exec.LookPath(filepath.Join(common.AppRootfsPath(cdir, *imageID), argv[0]))
-	if err != nil {
+	if _, err := exec.LookPath(filepath.Join(common.AppRootfsPath(c.path(), *imageID), argv[0])); err != nil {
 		return nil, fmt.Errorf("command %q missing, giving up: %v", argv[0], err)
 	}
 
