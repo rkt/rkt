@@ -17,11 +17,10 @@ package main
 import (
 	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -55,7 +54,7 @@ type mdsContainer struct {
 var (
 	containerByIP  = make(map[string]*mdsContainer)
 	containerByUID = make(map[types.UUID]*mdsContainer)
-	hmacKey        [sha256.Size]byte
+	hmacKey        [sha512.Size]byte
 
 	flagListenPort int
 	flagSrcAddrs   string
@@ -356,14 +355,6 @@ func initCrypto() error {
 	return nil
 }
 
-func digest(r io.Reader) ([]byte, error) {
-	digest := sha256.New()
-	if _, err := io.Copy(digest, r); err != nil {
-		return nil, err
-	}
-	return digest.Sum(nil), nil
-}
-
 func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
@@ -375,24 +366,22 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// compute message digest
-	d, err := digest(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Digest computation failed: %v", err)
+	content := r.FormValue("content")
+	if content == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "content form value not found")
 		return
 	}
 
-	// HMAC(UID:digest)
-	h := hmac.New(sha256.New, hmacKey[:])
+	// HMAC(UID:content)
+	h := hmac.New(sha512.New, hmacKey[:])
 	h.Write(c.manifest.UUID[:])
-	h.Write(d)
+	h.Write([]byte(content))
 
-	// Send back digest:HMAC as the signature
+	// Send back HMAC as the signature
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 	enc := base64.NewEncoder(base64.StdEncoding, w)
-	enc.Write(d)
 	enc.Write(h.Sum(nil))
 	enc.Close()
 }
@@ -407,6 +396,13 @@ func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	content := r.FormValue("content")
+	if content == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "content field missing")
+		return
+	}
+
 	sig, err := base64.StdEncoding.DecodeString(r.FormValue("signature"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -414,14 +410,11 @@ func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	digest := sig[:sha256.Size]
-	sum := sig[sha256.Size:]
-
-	h := hmac.New(sha256.New, hmacKey[:])
+	h := hmac.New(sha512.New, hmacKey[:])
 	h.Write(uid[:])
-	h.Write(digest)
+	h.Write([]byte(content))
 
-	if hmac.Equal(sum, h.Sum(nil)) {
+	if hmac.Equal(sig, h.Sum(nil)) {
 		w.WriteHeader(http.StatusOK)
 	} else {
 		w.WriteHeader(http.StatusForbidden)
