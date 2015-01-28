@@ -154,6 +154,9 @@ func Setup(cfg Config) (string, error) {
 		if cm.Apps.Get(am.Name) != nil {
 			return "", fmt.Errorf("error: multiple apps with name %s", am.Name)
 		}
+		if am.App == nil {
+			return "", fmt.Errorf("error: image %s has no app section", img)
+		}
 		a := schema.RuntimeApp{
 			Name:        am.Name,
 			ImageID:     img,
