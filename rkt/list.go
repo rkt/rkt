@@ -18,7 +18,12 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+
+	"github.com/appc/spec/schema"
+	common "github.com/coreos/rocket/common"
 )
 
 var (
@@ -38,10 +43,25 @@ func init() {
 
 func runList(args []string) (exit int) {
 	if !flagNoLegend {
-		fmt.Printf("UUID                                 STATE\n")
+		fmt.Fprintf(out, "UUID\tACI\tSTATE\n")
 	}
 
 	if err := walkContainers(includeContainersDir|includeGarbageDir, func(c *container) {
+		cdir := filepath.Join(containersDir(), c.uuid)
+		manifFile, err := ioutil.ReadFile(common.ContainerManifestPath(cdir))
+
+		m := schema.ContainerRuntimeManifest{}
+		err = m.UnmarshalJSON(manifFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to load manifest: %v", err)
+			return
+		}
+
+		if len(m.Apps) == 0 {
+			fmt.Fprint(os.Stderr, "Container contains zero apps")
+			return
+		}
+
 		state := "active"
 		if c.isDeleting {
 			state = "deleting"
@@ -49,11 +69,15 @@ func runList(args []string) (exit int) {
 			state = "inactive"
 		}
 
-		fmt.Printf("%s %s\n", c.uuid, state)
+		fmt.Fprintf(out, "%s\t%s\t%s\n", c.uuid, m.Apps[0].Name.String(), state)
+		for i := 1; i < len(m.Apps); i++ {
+			fmt.Fprintf(out, "\t%s\n", m.Apps[i].Name.String())
+		}
 	}); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get container handles: %v\n", err)
 		return 1
 	}
 
+	out.Flush()
 	return 0
 }
