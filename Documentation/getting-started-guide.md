@@ -27,11 +27,18 @@ func main() {
 Next we need to build our application. We are going to statically link our app
 so we can ship an App Container Image with no external dependencies.
 
+With Go 1.3:
 ```
-$ CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags '-w' .
+$ CGO_ENABLED=0 GOOS=linux go build -o hello -a -tags netgo -ldflags '-w' .
 ```
 
-## Create the application manifest
+or, on [Go 1.4](https://github.com/golang/go/issues/9344#issuecomment-69944514):
+
+```
+$ CGO_ENABLED=0 GOOS=linux go build -o hello -a -installsuffix cgo .
+```
+
+## Create the image manifest
 
 Edit: manifest.json
 

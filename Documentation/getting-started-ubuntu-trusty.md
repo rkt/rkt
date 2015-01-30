@@ -1,6 +1,6 @@
 # Getting Started with Rocket on Ubuntu Trusty
 
-The following guide will show you how to build and run the sample [etcd aci](https://github.com/coreos/etcd/releases/download/v0.5.0-alpha.4/etcd-v0.5.0-alpha.4-linux-amd64.aci) on the standard vagrantcloud.com [box for ubuntu trusty](https://vagrantcloud.com/ubuntu/boxes/trusty64).
+The following guide will show you how to build and run the sample [etcd aci](https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci) on the standard vagrantcloud.com [box for ubuntu trusty](https://vagrantcloud.com/ubuntu/boxes/trusty64).
 
 
 ## Download and start an Ubuntu Trusty box
@@ -76,7 +76,6 @@ Now try running the container and you should see output like this:
 ```
 ./rkt run https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci
-/etc/localtime is not a symlink, not updating container timezone.
 2015/01/25 04:56:34 no data-dir provided, using default data-dir ./default.etcd
 2015/01/25 04:56:34 etcd: listening for peers on http://localhost:2380
 2015/01/25 04:56:34 etcd: listening for peers on http://localhost:7001
@@ -105,4 +104,4 @@ rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0
 Press ^] three times to kill container
 ```
 
-You are now running etcd inside of a rocket container on Ubuntu Trusty.
+You are now running etcd inside of a Rocket container on Ubuntu Trusty.
