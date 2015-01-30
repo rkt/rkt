@@ -205,8 +205,8 @@ func listContainersFromDir(cdir string) ([]string, error) {
 	return cs, nil
 }
 
-// containerWaitExited waits for a container to exit.
-func (c *container) containerWaitExited() error {
+// waitExited waits for a container to exit.
+func (c *container) waitExited() error {
 	if !c.isExited {
 		if err := c.SharedLock(); err != nil {
 			return err

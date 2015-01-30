@@ -63,7 +63,7 @@ func runStatus(args []string) (exit int) {
 	defer ch.Close()
 
 	if flagWait {
-		if err := ch.containerWaitExited(); err != nil {
+		if err := ch.waitExited(); err != nil {
 			fmt.Fprintf(os.Stderr, "Unable to wait for container: %v\n", err)
 			return 1
 		}
