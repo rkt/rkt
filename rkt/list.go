@@ -18,9 +18,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/appc/spec/schema"
 	common "github.com/coreos/rocket/common"
@@ -47,18 +45,21 @@ func runList(args []string) (exit int) {
 	}
 
 	if err := walkContainers(includeContainersDir|includeGarbageDir, func(c *container) {
-		cdir := filepath.Join(containersDir(), c.uuid)
-		manifFile, err := ioutil.ReadFile(common.ContainerManifestPath(cdir))
+		manifFile, err := c.readFile(common.ContainerManifestPath(""))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to read manifest: %v\n", err)
+			return
+		}
 
 		m := schema.ContainerRuntimeManifest{}
 		err = m.UnmarshalJSON(manifFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to load manifest: %v", err)
+			fmt.Fprintf(os.Stderr, "Unable to load manifest: %v\n", err)
 			return
 		}
 
 		if len(m.Apps) == 0 {
-			fmt.Fprint(os.Stderr, "Container contains zero apps")
+			fmt.Fprint(os.Stderr, "Container contains zero apps\n")
 			return
 		}
 
