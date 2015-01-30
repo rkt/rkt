@@ -41,7 +41,7 @@ func init() {
 
 func runList(args []string) (exit int) {
 	if !flagNoLegend {
-		fmt.Fprintf(out, "UUID\tACI\tSTATE\n")
+		fmt.Fprintf(tabOut, "UUID\tACI\tSTATE\n")
 	}
 
 	if err := walkContainers(includeContainersDir|includeGarbageDir, func(c *container) {
@@ -70,15 +70,15 @@ func runList(args []string) (exit int) {
 			state = "inactive"
 		}
 
-		fmt.Fprintf(out, "%s\t%s\t%s\n", c.uuid, m.Apps[0].Name.String(), state)
+		fmt.Fprintf(tabOut, "%s\t%s\t%s\n", c.uuid, m.Apps[0].Name.String(), state)
 		for i := 1; i < len(m.Apps); i++ {
-			fmt.Fprintf(out, "\t%s\n", m.Apps[i].Name.String())
+			fmt.Fprintf(tabOut, "\t%s\n", m.Apps[i].Name.String())
 		}
 	}); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get container handles: %v\n", err)
 		return 1
 	}
 
-	out.Flush()
+	tabOut.Flush()
 	return 0
 }

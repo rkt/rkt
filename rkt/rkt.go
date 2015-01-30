@@ -34,7 +34,7 @@ const (
 
 var (
 	globalFlagset = flag.NewFlagSet(cliName, flag.ExitOnError)
-	out           *tabwriter.Writer
+	tabOut        *tabwriter.Writer
 	commands      []*Command // Commands should register themselves by appending
 	globalFlags   = struct {
 		Dir                string
@@ -63,8 +63,8 @@ type Command struct {
 }
 
 func init() {
-	out = new(tabwriter.Writer)
-	out.Init(os.Stdout, 0, 8, 1, '\t', 0)
+	tabOut = new(tabwriter.Writer)
+	tabOut.Init(os.Stdout, 0, 8, 1, '\t', 0)
 }
 
 func main() {

@@ -103,7 +103,7 @@ func runHelp(args []string) (exit int) {
 }
 
 func printGlobalUsage() {
-	globalUsageTemplate.Execute(out, struct {
+	globalUsageTemplate.Execute(tabOut, struct {
 		Executable  string
 		Commands    []*Command
 		Flags       []*flag.Flag
@@ -116,11 +116,11 @@ func printGlobalUsage() {
 		cliDescription,
 		version.Version,
 	})
-	out.Flush()
+	tabOut.Flush()
 }
 
 func printCommandUsage(cmd *Command) {
-	commandUsageTemplate.Execute(out, struct {
+	commandUsageTemplate.Execute(tabOut, struct {
 		Executable string
 		Cmd        *Command
 		CmdFlags   []*flag.Flag
@@ -129,7 +129,7 @@ func printCommandUsage(cmd *Command) {
 		cmd,
 		getFlags(&cmd.Flags),
 	})
-	out.Flush()
+	tabOut.Flush()
 }
 
 func printCommandUsageByName(name string) error {
