@@ -19,13 +19,11 @@ package stage0
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 
 	"github.com/appc/spec/schema/types"
-)
-
-const (
-	enterPath = "stage1/enter"
+	"github.com/coreos/rocket/common"
 )
 
 // Enter enters the container by exec()ing the stage1's /enter similar to /init
@@ -33,15 +31,20 @@ const (
 // imageID and command are supplied to /enter on argv followed by any arguments
 func Enter(cdir string, imageID *types.Hash, cmdline []string) error {
 	if err := os.Chdir(cdir); err != nil {
-		return fmt.Errorf("failed changing to dir: %v", err)
+		return fmt.Errorf("error changing to dir: %v", err)
 	}
 
 	id := types.ShortHash(imageID.String())
 
-	argv := []string{enterPath}
+	ep, err := getStage1Entrypoint(cdir, enterEntrypoint)
+	if err != nil {
+		return fmt.Errorf("error determining entrypoint: %v", err)
+	}
+
+	argv := []string{filepath.Join(common.Stage1RootfsPath(cdir), ep)}
 	argv = append(argv, id)
 	argv = append(argv, cmdline...)
-	if err := syscall.Exec(enterPath, argv, os.Environ()); err != nil {
+	if err := syscall.Exec(argv[0], argv, os.Environ()); err != nil {
 		return fmt.Errorf("error execing enter: %v", err)
 	}
 

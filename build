@@ -20,9 +20,12 @@ for d in networking/plugins/*; do
 	go install ${REPO_PATH}/$d
 done
 
+echo "Building rkt (stage0)..."
+go build -o $GOBIN/rkt ${REPO_PATH}/rkt
+
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	echo "Building init (stage1)..."
-	go build -o $GOBIN/init ${REPO_PATH}/stage1/init
+	go install ${REPO_PATH}/stage1/init
 
 	# symlink plugin binaries into stage1 rootfs
 	mkdir -p stage1/rootfs/net-plugins/bin
@@ -31,19 +34,10 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		ln -sf ${GOBIN}/$plugin stage1/rootfs/net-plugins/bin
 	done
 
-	S1INIT=${PWD}/stage0/stage1_init
-	if [ $GOBIN/init -nt $S1INIT/bin.go ]; then
-		echo "Packaging init (stage1)..."
-		TMP=$(mktemp -d -t rocket-XXXXXX)
-		[ -d $S1INIT ] || mkdir -p $S1INIT
-		cp $GOBIN/init $TMP/s1init
-		go-bindata -nomemcopy=true -o $S1INIT/bin.go -pkg="stage1_init" -prefix=$TMP $TMP
-		rm -Rf "${TMP}"
-	fi
+	# symlink init into stage1 rootfs
+	mkdir -p stage1/rootfs/init/bin
+	ln -sf ${GOBIN}/init stage1/rootfs/init/bin
 
 	echo "Building rootfs (stage1)..."
 	make -C stage1/rootfs
 fi
-
-echo "Building rkt (stage0)..."
-go build -o $GOBIN/rkt ${REPO_PATH}/rkt

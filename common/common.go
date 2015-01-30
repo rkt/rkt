@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	Stage1Dir = "/stage1"
+	stage1Dir = "/stage1"
 	stage2Dir = "/opt/stage2"
 
 	MetadataSvcIP      = "169.254.169.255"
@@ -33,9 +33,20 @@ const (
 	MetadataSvcPrvPort = 2375
 )
 
-// Stage1RootfsPath returns the directory in root containing the rootfs for stage1
+// Stage1ImagePath returns the path where the stage1 app image (unpacked ACI) is rooted,
+// (i.e. where its contents are extracted during stage0).
+func Stage1ImagePath(root string) string {
+	return filepath.Join(root, stage1Dir)
+}
+
+// Stage1RootfsPath returns the path to the stage1 rootfs
 func Stage1RootfsPath(root string) string {
-	return filepath.Join(root, Stage1Dir)
+	return filepath.Join(Stage1ImagePath(root), aci.RootfsDir)
+}
+
+// Stage1ManifestPath returns the path to the stage1's manifest file inside the expanded ACI.
+func Stage1ManifestPath(root string) string {
+	return filepath.Join(Stage1ImagePath(root), aci.ManifestFile)
 }
 
 // ContainerManifestPath returns the path in root to the Container Runtime Manifest
@@ -46,7 +57,7 @@ func ContainerManifestPath(root string) string {
 // AppImagePath returns the path where an app image (i.e. unpacked ACI) is rooted (i.e.
 // where its contents are extracted during stage0), based on the app image ID.
 func AppImagePath(root string, imageID types.Hash) string {
-	return filepath.Join(root, Stage1Dir, stage2Dir, types.ShortHash(imageID.String()))
+	return filepath.Join(Stage1RootfsPath(root), stage2Dir, types.ShortHash(imageID.String()))
 }
 
 // AppRootfsPath returns the path to an app's rootfs.

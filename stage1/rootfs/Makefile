@@ -1,4 +1,4 @@
-_SUBDIRS=usr shim diagexec enter net-plugins net
+_SUBDIRS=usr shim diagexec enter net-plugins net init
 SUBDIRS=$(_SUBDIRS) aggregate
 export CFLAGS=-Wall -Os
 

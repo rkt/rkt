@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/appc/spec/schema/types"
@@ -30,8 +31,7 @@ import (
 )
 
 var (
-	flagStage1Init       string
-	flagStage1Rootfs     string
+	flagStage1Image      string
 	flagVolumes          volumeList
 	flagPrivateNet       bool
 	flagSpawnMetadataSvc bool
@@ -47,65 +47,81 @@ They will be checked in that order and the first match will be used.`,
 
 func init() {
 	commands = append(commands, cmdRun)
-	cmdRun.Flags.StringVar(&flagStage1Init, "stage1-init", "", "path to stage1 binary override")
-	cmdRun.Flags.StringVar(&flagStage1Rootfs, "stage1-rootfs", "", "path to stage1 rootfs tarball override")
+
+	// try discover the directory rkt is running from, assume the default stage1.aci is stored alongside it.
+	defaultStage1Image := ""
+	exePath, err := os.Readlink("/proc/self/exe")
+	if err == nil {
+		defaultStage1Image = filepath.Join(filepath.Dir(exePath), "stage1.aci")
+	}
+
+	cmdRun.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, "image to use as stage1")
 	cmdRun.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	cmdRun.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
 	cmdRun.Flags.BoolVar(&flagSpawnMetadataSvc, "spawn-metadata-svc", false, "launch metadata svc if not running")
 	flagVolumes = volumeList{}
 }
 
-// findImages will recognize a ACI hash and use that, import a local file, use
-// discovery or download an ACI directly.
+// findImages uses findImage to attain a list of image hashes
 func findImages(args []string, ds *cas.Store, ks *keystore.Keystore) (out []types.Hash, err error) {
 	out = make([]types.Hash, len(args))
 	for i, img := range args {
-		// check if it is a valid hash, if so let it pass through
-		h, err := types.NewHash(img)
-		if err == nil {
-			fullKey, err := ds.ResolveKey(img)
-			if err != nil {
-				return nil, fmt.Errorf("could not resolve key: %v", err)
-			}
-			h, err = types.NewHash(fullKey)
-			if err != nil {
-				// should never happen
-				panic(err)
-			}
-			out[i] = *h
-			continue
-		}
-
-		// import the local file if it exists
-		file, err := os.Open(img)
-		if err == nil {
-			key, err := ds.WriteACI(file)
-			file.Close()
-			if err != nil {
-				return nil, fmt.Errorf("%s: %v", img, err)
-			}
-			h, err := types.NewHash(key)
-			if err != nil {
-				// should never happen
-				panic(err)
-			}
-			out[i] = *h
-			continue
-		}
-
-		key, err := fetchImage(img, ds, ks)
+		h, err := findImage(img, ds, ks)
 		if err != nil {
 			return nil, err
-		}
-		h, err = types.NewHash(key)
-		if err != nil {
-			// should never happen
-			panic(err)
 		}
 		out[i] = *h
 	}
 
 	return out, nil
+}
+
+// findImage will recognize a ACI hash and use that, import a local file, use
+// discovery or download an ACI directly.
+func findImage(img string, ds *cas.Store, ks *keystore.Keystore) (*types.Hash, error) {
+	// check if it is a valid hash, if so let it pass through
+	h, err := types.NewHash(img)
+	if err == nil {
+		fullKey, err := ds.ResolveKey(img)
+		if err != nil {
+			return nil, fmt.Errorf("could not resolve key: %v", err)
+		}
+		h, err = types.NewHash(fullKey)
+		if err != nil {
+			// should never happen
+			panic(err)
+		}
+		return h, nil
+	}
+
+	// import the local file if it exists
+	file, err := os.Open(img)
+	if err == nil {
+		key, err := ds.WriteACI(file)
+		file.Close()
+		if err != nil {
+			return nil, fmt.Errorf("%s: %v", img, err)
+		}
+		h, err := types.NewHash(key)
+		if err != nil {
+			// should never happen
+			panic(err)
+		}
+		return h, nil
+	}
+
+	// try fetching remotely
+	key, err := fetchImage(img, ds, ks)
+	if err != nil {
+		return nil, err
+	}
+	h, err = types.NewHash(key)
+	if err != nil {
+		// should never happen
+		panic(err)
+	}
+
+	return h, nil
 }
 
 func runRun(args []string) (exit int) {
@@ -125,6 +141,13 @@ func runRun(args []string) (exit int) {
 
 	ds := cas.NewStore(globalFlags.Dir)
 	ks := getKeystore()
+
+	s1img, err := findImage(flagStage1Image, ds, ks)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error finding stage1 image %q: %v\n", flagStage1Image, err)
+		return 1
+	}
+
 	imgs, err := findImages(args, ds, ks)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -135,8 +158,7 @@ func runRun(args []string) (exit int) {
 		Store:            ds,
 		ContainersDir:    containersDir(),
 		Debug:            globalFlags.Debug,
-		Stage1Init:       flagStage1Init,
-		Stage1Rootfs:     flagStage1Rootfs,
+		Stage1Image:      *s1img,
 		Images:           imgs,
 		Volumes:          []types.Volume(flagVolumes),
 		PrivateNet:       flagPrivateNet,

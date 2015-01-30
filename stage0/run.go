@@ -25,9 +25,6 @@ package stage0
 
 import (
 	"archive/tar"
-	"bytes"
-	"compress/bzip2"
-	"compress/gzip"
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
@@ -38,7 +35,6 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
@@ -47,21 +43,16 @@ import (
 	"github.com/coreos/rocket/pkg/lock"
 	ptar "github.com/coreos/rocket/pkg/tar"
 	"github.com/coreos/rocket/version"
-
-	"github.com/coreos/rocket/stage0/stage1_init"
-	"github.com/coreos/rocket/stage0/stage1_rootfs"
 )
 
 const (
-	initPath  = "stage1/init"
 	envLockFd = "RKT_LOCK_FD"
 )
 
 type Config struct {
 	Store         *cas.Store // store containing all of the configured application images
 	ContainersDir string     // root directory for rocket containers
-	Stage1Init    string     // binary to be execed as stage1
-	Stage1Rootfs  string     // compressed bundle containing a rootfs for stage1
+	Stage1Image   types.Hash // stage1 image containing usable /init and /enter entrypoints
 	Debug         bool
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
 	Images           []types.Hash   // application images
@@ -96,42 +87,10 @@ func Setup(cfg Config) (string, error) {
 		return "", err
 	}
 
-	log.Printf("Unpacking stage1 rootfs")
-	if cfg.Stage1Rootfs != "" {
-		err = unpackRootfs(cfg.Stage1Rootfs, common.Stage1RootfsPath(dir))
-	} else {
-		err = unpackBuiltinRootfs(common.Stage1RootfsPath(dir))
+	log.Printf("Preparing stage1")
+	if err := setupStage1Image(cfg, cfg.Stage1Image, dir); err != nil {
+		return "", fmt.Errorf("error preparing stage1: %v", err)
 	}
-	if err != nil {
-		return "", fmt.Errorf("error unpacking rootfs: %v", err)
-	}
-
-	log.Printf("Writing stage1 init")
-	var in io.Reader
-	if cfg.Stage1Init != "" {
-		in, err = os.Open(cfg.Stage1Init)
-		if err != nil {
-			return "", fmt.Errorf("error loading stage1 init binary: %v", err)
-		}
-	} else {
-		init_bin, err := stage1_init.Asset("s1init")
-		if err != nil {
-			return "", fmt.Errorf("error accessing stage1 init bindata: %v", err)
-		}
-		in = bytes.NewBuffer(init_bin)
-	}
-	fn := filepath.Join(dir, initPath)
-	out, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY, 0555)
-	if err != nil {
-		return "", fmt.Errorf("error opening stage1 init for writing: %v", err)
-	}
-	if _, err := io.Copy(out, in); err != nil {
-		return "", fmt.Errorf("error writing stage1 init: %v", err)
-	}
-	if err := out.Close(); err != nil {
-		return "", fmt.Errorf("error closing stage1 init: %v", err)
-	}
-
 	log.Printf("Wrote filesystem to %s\n", dir)
 
 	cm := schema.ContainerRuntimeManifest{
@@ -147,7 +106,7 @@ func Setup(cfg Config) (string, error) {
 	cm.ACVersion = *v
 
 	for _, img := range cfg.Images {
-		am, err := setupImage(cfg, img, dir)
+		am, err := setupAppImage(cfg, img, dir)
 		if err != nil {
 			return "", fmt.Errorf("error setting up image %s: %v", img, err)
 		}
@@ -176,7 +135,7 @@ func Setup(cfg Config) (string, error) {
 	}
 
 	log.Printf("Writing container manifest")
-	fn = common.ContainerManifestPath(dir)
+	fn := common.ContainerManifestPath(dir)
 	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
 		return "", fmt.Errorf("error writing container manifest: %v", err)
 	}
@@ -191,8 +150,13 @@ func Run(cfg Config, dir string) {
 		log.Fatalf("failed changing to dir: %v", err)
 	}
 
-	log.Printf("Execing %s", initPath)
-	args := []string{initPath}
+	ep, err := getStage1Entrypoint(dir, initEntrypoint)
+	if err != nil {
+		log.Fatalf("error determining init entrypoint: %v", err)
+	}
+	log.Printf("Execing %s", ep)
+
+	args := []string{filepath.Join(common.Stage1RootfsPath(dir), ep)}
 	if cfg.Debug {
 		args = append(args, "--debug")
 	}
@@ -210,7 +174,7 @@ func Run(cfg Config, dir string) {
 	if cfg.PrivateNet {
 		args = append(args, "--private-net")
 	}
-	if err := syscall.Exec(initPath, args, os.Environ()); err != nil {
+	if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
 	}
 }
@@ -256,101 +220,22 @@ func lockDir(dir string) error {
 	return os.Setenv(envLockFd, fmt.Sprintf("%v", fd))
 }
 
-func untarRootfs(r io.Reader, dir string) error {
-	tr := tar.NewReader(r)
-	if err := os.MkdirAll(dir, 0776); err != nil {
-		return fmt.Errorf("error creating stage1 rootfs directory: %v", err)
-	}
-
-	if err := ptar.ExtractTar(tr, dir, false, nil); err != nil {
-		return fmt.Errorf("error extracting rootfs: %v", err)
-	}
-	return nil
-}
-
-// unpackRootfs unpacks a stage1 rootfs (compressed file, pointed to by rfs)
-// into dir, returning any error encountered
-func unpackRootfs(rfs string, dir string) error {
-	fh, err := os.Open(rfs)
-	if err != nil {
-		return fmt.Errorf("error opening stage1 rootfs: %v", err)
-	}
-	typ, err := aci.DetectFileType(fh)
-	if err != nil {
-		return fmt.Errorf("error detecting image type: %v", err)
-	}
-	if _, err := fh.Seek(0, 0); err != nil {
-		return fmt.Errorf("error seeking image: %v", err)
-	}
-	var r io.Reader
-	switch typ {
-	case aci.TypeGzip:
-		r, err = gzip.NewReader(fh)
-		if err != nil {
-			return fmt.Errorf("error reading gzip: %v", err)
-		}
-	case aci.TypeBzip2:
-		r = bzip2.NewReader(fh)
-	case aci.TypeXz:
-		r = aci.XzReader(fh)
-	case aci.TypeTar:
-		r = fh
-	case aci.TypeUnknown:
-		return fmt.Errorf("error: unknown image filetype")
-	default:
-		// should never happen
-		panic("no type returned from DetectFileType?")
-	}
-	return untarRootfs(r, dir)
-}
-
-// unpackBuiltinRootfs unpacks the included stage1 rootfs into dir
-func unpackBuiltinRootfs(dir string) error {
-	b, err := stage1_rootfs.Asset("s1rootfs.tar")
-	if err != nil {
-		return fmt.Errorf("error accessing rootfs asset: %v", err)
-	}
-	buf := bytes.NewBuffer(b)
-	return untarRootfs(buf, dir)
-}
-
-// setupImage attempts to load the image by the given hash from the store,
+// setupAppImage attempts to load the app image by the given hash from the store,
 // verifies that the image matches the hash, and extracts the image into a
 // directory in the given dir.
 // It returns the ImageManifest that the image contains.
 // TODO(jonboulle): tighten up the Hash type here; currently it is partially-populated (i.e. half-length sha512)
-func setupImage(cfg Config, img types.Hash, dir string) (*schema.ImageManifest, error) {
+func setupAppImage(cfg Config, img types.Hash, cdir string) (*schema.ImageManifest, error) {
 	log.Println("Loading image", img.String())
 
-	rs, err := cfg.Store.ReadStream(img.String())
-	if err != nil {
-		return nil, fmt.Errorf("error reading stream: %v", err)
-	}
-
-	ad := common.AppImagePath(dir, img)
-	err = os.MkdirAll(ad, 0776)
+	ad := common.AppImagePath(cdir, img)
+	err := os.MkdirAll(ad, 0776)
 	if err != nil {
 		return nil, fmt.Errorf("error creating image directory: %v", err)
 	}
 
-	hash := sha512.New()
-	r := io.TeeReader(rs, hash)
-
-	if err := ptar.ExtractTar(tar.NewReader(r), ad, false, nil); err != nil {
-		return nil, fmt.Errorf("error extracting ACI: %v", err)
-	}
-
-	// Tar does not necessarily read the complete file, so ensure we read the entirety into the hash
-	if _, err := io.Copy(ioutil.Discard, r); err != nil {
-		return nil, fmt.Errorf("error reading ACI: %v", err)
-	}
-
-	// TODO(jonboulle): clean this up, leaky abstraction with the store.
-	if g := cas.HashToKey(hash); g != img.String() {
-		if err := os.RemoveAll(ad); err != nil {
-			fmt.Fprintf(os.Stderr, "error cleaning up directory: %v\n", err)
-		}
-		return nil, fmt.Errorf("image hash does not match expected (%v != %v)", g, img.String())
+	if err := expandImage(cfg, img, ad); err != nil {
+		return nil, fmt.Errorf("error expanding app image: %v", err)
 	}
 
 	err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
@@ -358,12 +243,7 @@ func setupImage(cfg Config, img types.Hash, dir string) (*schema.ImageManifest, 
 		return nil, fmt.Errorf("error creating tmp directory: %v", err)
 	}
 
-	mpath := common.ImageManifestPath(dir, img)
-	f, err := os.Open(mpath)
-	if err != nil {
-		return nil, fmt.Errorf("error opening app manifest: %v", err)
-	}
-	b, err := ioutil.ReadAll(f)
+	b, err := ioutil.ReadFile(common.ImageManifestPath(cdir, img))
 	if err != nil {
 		return nil, fmt.Errorf("error reading app manifest: %v", err)
 	}
@@ -371,5 +251,46 @@ func setupImage(cfg Config, img types.Hash, dir string) (*schema.ImageManifest, 
 	if err := json.Unmarshal(b, &am); err != nil {
 		return nil, fmt.Errorf("error unmarshaling app manifest: %v", err)
 	}
+
 	return &am, nil
+}
+
+// setupStage1Image attempts to expand the image by the given hash as the stage1
+func setupStage1Image(cfg Config, img types.Hash, cdir string) error {
+	s1 := common.Stage1ImagePath(cdir)
+	if err := os.MkdirAll(s1, 0755); err != nil {
+		return fmt.Errorf("error creating stage1 directory: %v", err)
+	}
+	if err := expandImage(cfg, img, s1); err != nil {
+		return fmt.Errorf("error expanding stage1 image: %v", err)
+	}
+	return nil
+}
+
+// expandImage attempts to load the image by the given hash from the store,
+// verifies that the image matches the hash, and extracts the image at the specified destination.
+func expandImage(cfg Config, img types.Hash, dest string) error {
+	rs, err := cfg.Store.ReadStream(img.String())
+	if err != nil {
+		return fmt.Errorf("error reading stream: %v", err)
+	}
+
+	hash := sha512.New()
+	r := io.TeeReader(rs, hash)
+
+	if err := ptar.ExtractTar(tar.NewReader(r), dest, false, nil); err != nil {
+		return fmt.Errorf("error extracting ACI: %v", err)
+	}
+
+	// Tar does not necessarily read the complete file, so ensure we read the entirety into the hash
+	if _, err := io.Copy(ioutil.Discard, r); err != nil {
+		return fmt.Errorf("error reading ACI: %v", err)
+	}
+
+	// TODO(jonboulle): clean this up, leaky abstraction with the store.
+	if g := cas.HashToKey(hash); g != img.String() {
+		return fmt.Errorf("image hash does not match expected (%v != %v)", g, img.String())
+	}
+
+	return nil
 }

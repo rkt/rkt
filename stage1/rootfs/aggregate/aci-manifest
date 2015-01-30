@@ -1,0 +1,29 @@
+{
+    "acKind": "ImageManifest",
+    "acVersion": "0.2.0",
+    "name": "coreos.com/rocket/stage1",
+    "labels": [
+        {
+            "name": "version",
+            "value": "0.0.1"
+        },
+        {
+            "name": "arch",
+            "value": "amd64"
+        },
+        {
+            "name": "os",
+            "value": "linux"
+        }
+    ],
+    "annotations": [
+        {
+            "name": "coreos.com/rocket/stage1/init",
+            "value": "/init"
+        },
+        {
+            "name": "coreos.com/rocket/stage1/enter",
+            "value": "/enter"
+        }
+    ]
+}
