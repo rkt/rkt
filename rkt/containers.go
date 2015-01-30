@@ -215,3 +215,19 @@ func (c *container) containerWaitExited() error {
 	}
 	return nil
 }
+
+// readFile reads an entire file from a container's directory
+func (c *container) readFile(path string) ([]byte, error) {
+	cfd, err := c.Fd()
+	if err != nil {
+		return nil, err
+	}
+	fd, err := syscall.Openat(cfd, path, syscall.O_RDONLY, 0)
+	if err != nil {
+		return nil, err
+	}
+	f := os.NewFile(uintptr(fd), path)
+	defer f.Close()
+
+	return ioutil.ReadAll(f)
+}
