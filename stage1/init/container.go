@@ -243,9 +243,9 @@ func (c *Container) appToNspawnArgs(am *schema.ImageManifest, id types.Hash) ([]
 
 	vols := make(map[types.ACName]types.Volume)
 
-	// TODO(philips): this is implcitly creating a mapping from MountPoint
+	// TODO(philips): this is implicitly creating a mapping from MountPoint
 	// to volumes. This is a nice convenience for users but we will need to
-	// introduce a --mount flag so they can control which mountPoint map to
+	// introduce a --mount flag so they can control which mountPoint maps to
 	// which volume.
 
 	for _, v := range c.Manifest.Volumes {

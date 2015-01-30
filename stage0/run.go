@@ -65,7 +65,7 @@ type Config struct {
 	Debug         bool
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
 	Images           []types.Hash   // application images
-	Volumes          []types.Volume // map of volumes that rocket can provide to applications
+	Volumes          []types.Volume // list of volumes that rocket can provide to applications
 	PrivateNet       bool           // container should have its own network stack
 	SpawnMetadataSvc bool           // launch metadata service
 }
