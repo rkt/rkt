@@ -18,9 +18,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"syscall"
 
 	"github.com/appc/spec/schema/types"
 )
@@ -71,15 +69,7 @@ func runStatus(args []string) (exit int) {
 		}
 	}
 
-	// There's a window between opening the container directory and lock acquisition where gc rename could occur,
-	// perform all subsequent opens relative to the opened container directory lock fd
-	cfd, err := ch.Fd()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to get lock fd: %v\n", err)
-		return 1
-	}
-
-	if err = printStatusAt(cfd, ch.isExited); err != nil {
+	if err = printStatus(ch); err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to print status: %v\n", err)
 		return 1
 	}
@@ -87,67 +77,21 @@ func runStatus(args []string) (exit int) {
 	return 0
 }
 
-// printStatusAt prints the container's pid and per-app status codes
-func printStatusAt(cdirfd int, exited bool) error {
-	pid, err := getIntFromFileAt(cdirfd, "pid")
+// printStatus prints the container's pid and per-app status codes
+func printStatus(ch *container) error {
+	pid, err := ch.getPID()
 	if err != nil {
 		return err
 	}
 
-	stats, err := getStatusesAt(cdirfd)
+	stats, err := ch.getStatuses()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("pid=%d\nexited=%t\n", pid, exited)
+	fmt.Printf("pid=%d\nexited=%t\n", pid, ch.isExited)
 	for app, stat := range stats {
 		fmt.Printf("%s=%d\n", app, stat)
 	}
 	return nil
-}
-
-// getStatusesAt returns a map of imageId:status codes for the given container
-func getStatusesAt(cdirfd int) (map[string]int, error) {
-	sdirfd, err := syscall.Openat(cdirfd, statusDir, syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open status directory: %v", err)
-	}
-	sdir := os.NewFile(uintptr(sdirfd), statusDir)
-	defer sdir.Close()
-
-	ls, err := sdir.Readdirnames(0)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read status directory: %v", err)
-	}
-
-	stats := make(map[string]int)
-	for _, name := range ls {
-		s, err := getIntFromFileAt(sdirfd, name)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to get status of app %q: %v\n", name, err)
-			continue
-		}
-		stats[name] = s
-	}
-
-	return stats, err
-}
-
-// getIntFromFileAt reads an integer string from the named file
-func getIntFromFileAt(dirfd int, path string) (i int, err error) {
-	fd, err := syscall.Openat(dirfd, path, syscall.O_RDONLY, 0)
-	if err != nil {
-		return
-	}
-	f := os.NewFile(uintptr(fd), path)
-	defer f.Close()
-
-	buf, err := ioutil.ReadAll(f)
-	if err != nil {
-		return
-	}
-
-	_, err = fmt.Sscanf(string(buf), "%d", &i)
-
-	return
 }

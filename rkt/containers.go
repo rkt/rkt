@@ -218,16 +218,66 @@ func (c *container) containerWaitExited() error {
 
 // readFile reads an entire file from a container's directory
 func (c *container) readFile(path string) ([]byte, error) {
-	cfd, err := c.Fd()
+	f, err := c.openFile(path, syscall.O_RDONLY)
 	if err != nil {
 		return nil, err
 	}
-	fd, err := syscall.Openat(cfd, path, syscall.O_RDONLY, 0)
-	if err != nil {
-		return nil, err
-	}
-	f := os.NewFile(uintptr(fd), path)
 	defer f.Close()
 
 	return ioutil.ReadAll(f)
+}
+
+// readIntFromFile reads an int from a file in a container's directory
+func (c *container) readIntFromFile(path string) (i int, err error) {
+	b, err := c.readFile(path)
+	if err != nil {
+		return
+	}
+	_, err = fmt.Sscanf(string(b), "%d", &i)
+	return
+}
+
+// openFile opens a file from a container's directory returning a file descriptor
+func (c *container) openFile(path string, flags int) (*os.File, error) {
+	cdirfd, err := c.Fd()
+	if err != nil {
+		return nil, err
+	}
+
+	fd, err := syscall.Openat(cdirfd, path, flags, 0)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open status directory: %v", err)
+	}
+
+	return os.NewFile(uintptr(fd), path), nil
+}
+
+// getPID returns the pid of the container
+func (c *container) getPID() (int, error) {
+	return c.readIntFromFile("pid")
+}
+
+// getStatuses returns a map of the statuses of the container
+func (c *container) getStatuses() (map[string]int, error) {
+	sdir, err := c.openFile(statusDir, syscall.O_RDONLY|syscall.O_DIRECTORY)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open status directory: %v", err)
+	}
+	defer sdir.Close()
+
+	ls, err := sdir.Readdirnames(0)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read status directory: %v", err)
+	}
+
+	stats := make(map[string]int)
+	for _, name := range ls {
+		s, err := c.readIntFromFile(filepath.Join(statusDir, name))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to get status of app %q: %v\n", name, err)
+			continue
+		}
+		stats[name] = s
+	}
+	return stats, nil
 }
