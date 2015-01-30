@@ -1,6 +1,6 @@
 # Hacking Guide
 
-## Building rocket
+## Building Rocket
 
 ### Requirements
 
@@ -15,7 +15,7 @@
 * Go 1.3+
   * github.com/appc/spec (not yet vendored as it's in a continuous improvement phase)
 
-Once the requirements have been met you can build rocket by running the following commands:
+Once the requirements have been met you can build Rocket by running the following commands:
 
 ```
 git clone https://github.com/coreos/rocket.git

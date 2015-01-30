@@ -1,0 +1,71 @@
+# Rocket architecture
+
+## Overview
+
+Rocket consists only of a command-line tool, `rkt`, and does not have a daemon. This architecture allows Rocket to be updated in-place without affecting containers which are currently running. It also means that levels of privilege can be separated out between different operations.
+
+All state in Rocket is communicated via the filesystem. Facilities like file-locking are used to ensure co-operation and mutual exclusion between concurrent invocations of the `rkt` command.
+
+## Stages
+
+Execution with Rocket is divided into several distinct stages.
+
+### Stage 0
+
+The first stage is the actual `rkt` binary itself. When running a container, this binary is responsible for performing a number of initial preparatory tasks:
+- Fetching the specified ACIs, including the stage 1 ACI of --stage1-image if specified.
+- Generating a Container UUID
+- Generating a Container Runtime Manifest
+- Creating a filesystem for the container
+- Setting up stage 1 and stage 2 directories in the filesystem
+- Unpacking the stage 1 ACI into the container filesystem
+- Unpacking the ACIs and copying each app into the stage2 directories
+
+Given a run command such as:
+
+```
+$ sudo rkt run \
+	sha512-8a30f14877cd8065939e3912542a17d1a5fd9b4c \
+	sha512-abcd29837d89389s9d0898ds908ds890df890908
+```
+
+a container manifest compliant with the ACE spec will be generated, and the filesystem created by stage0 should be:
+
+```
+/container
+/stage1
+/stage1/manifest
+/stage1/rootfs/init
+/stage1/rootfs/opt
+/stage1/rootfs/opt/stage2/sha512-648db489d57363b29f1597d4312b2129
+/stage1/rootfs/opt/stage2/sha512-0c45e8c0ab2b3cdb9ec6649073d5c6c4
+```
+
+where:
+- `container` is the container manifest file
+- `stage1` is a copy of the stage1 ACI that is safe for read/write
+- `stage1/manifest` is the manifest of the stage1 ACI
+- `stage1/rootfs` is the rootfs of the stage1 ACI
+- `stage1/rootfs/init` is the actual stage1 binary to be executed (this path may vary according to the `coreos.com/rocket/stage1/init` Annotation of the stage1 ACI)
+- `stage1/rootfs/opt/stage2` are copies of the unpacked ACIs
+
+At this point the stage0 execs `/stage1/rootfs/init` with the current working directory set to the root of the new filesystem.
+
+### Stage 1
+
+The next stage is a binary that the user trusts to set up cgroups, execute processes, and perform other operations as root on the host. This stage has the responsibility of taking the execution group filesystem that was created by stage 0 and creating the necessary cgroups, namespaces and mounts to launch the execution group:
+
+- Generate systemd unit files from the Image and Container Runtime Manifests. The Image Manifest defines the default `exec` specifications of each application; the Container Runtime Manifest defines the ordering of the units, as well as any `exec` overrides.
+- (containing, respectively, the exec specifications of each container and the ordering given by the user)
+- Set up any external volumes (undefined at this point)
+- nspawn attaching to the bridge and launch the execution group systemd
+- Launch the root systemd
+- Have the root systemd
+
+This process is slightly different for the qemu-kvm stage1 but a similar workflow starting at `exec()`'ing kvm instead of an nspawn.
+
+### Stage 2
+
+The final stage is executing the actual application. The responsibilities of the stage2 include:
+
+- Launch the init process described in the Application Manifest
