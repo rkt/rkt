@@ -56,9 +56,9 @@ func runEnter(args []string) (exit int) {
 		return 1
 	}
 
-	containerUUID, err := types.NewUUID(args[0])
+	containerUUID, err := resolveUUID(args[0])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid UUID: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to resolve UUID: %v\n", err)
 		return 1
 	}
 
