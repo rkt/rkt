@@ -149,6 +149,13 @@ func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string, overwrite bool) er
 		return fmt.Errorf("unsupported type: %v", typ)
 	}
 
+	// TODO(sgotti). lchown(2) says that, depending on the linux kernel
+	// version, chown can change the file mode also if executed as root.
+	// To be sure, Should we call os.Chmod after it?
+	if err := os.Lchown(p, hdr.Uid, hdr.Gid); err != nil {
+		return err
+	}
+
 	return nil
 }
 

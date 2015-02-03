@@ -45,6 +45,9 @@ func newTestTar(entries []*testTarEntry) (string, error) {
 				entry.header.Mode = 0644
 			}
 		}
+		// Add calling user uid and gid or tests will fail
+		entry.header.Uid = os.Getuid()
+		entry.header.Gid = os.Getgid()
 		if err := tw.WriteHeader(entry.header); err != nil {
 			return "", err
 		}
