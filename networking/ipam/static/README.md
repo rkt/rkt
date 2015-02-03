@@ -1,6 +1,6 @@
-# ipmanager
+# static IP address manager
 
-ipmanager allocates static IPv4 and IPv6 addresses for containers.
+static IPAM allocates static IPv4 and IPv6 addresses for containers.
 
 ## Usage
 
@@ -20,7 +20,10 @@ Given the following network configuration:
 #### Using the command line interface
 
 ```
-$ ipmanager -c f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+$ export RKT_NETPLUGIN_COMMAND=ADD
+$ export RKT_NETPLUGIN_CONTID=f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+$ export RKT_NETPLUGIN_NETCONF=/etc/rkt/net.d/default.conf
+$ ./static
 ```
 
 ```
@@ -29,29 +32,19 @@ $ ipmanager -c f81d4fae-7dec-11d0-a765-00a0c91e6bf6
 }
 ```
 
-```
-$ ipmanager -c 1e8df09a-756f-4f3d-9f0f-3000e46598e7
-```
-
-```
-{
-    "ip": "203.0.113.2/24"
-}
-```
-
 ## Backends
 
 By default ipmanager stores IP allocations on the local filesystem using the IP address as the file name and the container ID as contents. For example:
 
 ```
-$ ls /var/lib/ipmanager/networks/default
+$ ls /var/lib/rkt/networks/default
 ```
 ```
 203.0.113.1	203.0.113.2
 ```
 
 ```
-$ cat /var/lib/ipmanager/networks/default/203.0.113.1
+$ cat /var/lib/rkt/networks/default/203.0.113.1
 ```
 ```
 f81d4fae-7dec-11d0-a765-00a0c91e6bf6
@@ -68,13 +61,8 @@ f81d4fae-7dec-11d0-a765-00a0c91e6bf6
 	"subnet": "3ffe:ffff:0:01ff::/64",
 	"range-start": "3ffe:ffff:0:01ff::0010",
 	"range-end": "3ffe:ffff:0:01ff::0020",
-	"routers": [
+	"routes": [
 		"3ffe:ffff:0:01ff::1/64"
-	],
-	"domain-name": "example.com",
-	"domain-name-servers": [
-		"2001:4860:4860::8888",
-        "2001:4860:4860::8844"
 	]
 }
 ```
@@ -87,13 +75,8 @@ f81d4fae-7dec-11d0-a765-00a0c91e6bf6
     "subnet": "203.0.113.1/24",
     "range-start": "203.0.113.10",
     "range-end": "203.0.113.20",
-    "routers": [
-        "203.0.113.1"
-    ],
-    "domain-name": "example.com",
-    "domain-name-servers": [
-        "8.8.8.8",
-        "8.8.4.4"
+    "routes": [
+        "203.0.113.0/24"
     ]
 }
 ```

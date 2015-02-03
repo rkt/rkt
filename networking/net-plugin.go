@@ -16,6 +16,7 @@ package networking
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -24,20 +25,25 @@ import (
 	"strings"
 
 	"github.com/coreos/rocket/common"
-	"github.com/coreos/rocket/networking/util"
+	rktnet "github.com/coreos/rocket/networking/net"
 )
 
 // TODO(eyakubovich): make this configurable in rkt.conf
 const UserNetPluginsPath = "/usr/lib/rkt/plugins/net"
 const BuiltinNetPluginsPath = "usr/lib/rkt/plugins/net"
 
-func (e *containerEnv) netPluginAdd(n *Net, netns, args, ifName string) (*net.IPNet, error) {
+func (e *containerEnv) netPluginAdd(n *Net, netns, args, ifName string) (net.IP, error) {
 	output, err := e.execNetPlugin("ADD", n, netns, args, ifName)
 	if err != nil {
 		return nil, err
 	}
 
-	return util.ParseCIDR(output)
+	ifConf := rktnet.IfConfig{}
+	if err = json.Unmarshal(output, &ifConf); err != nil {
+		return nil, fmt.Errorf("error parsing %q output: %v", n.Name, err)
+	}
+
+	return ifConf.IP, nil
 }
 
 func (e *containerEnv) netPluginDel(n *Net, netns, args, ifName string) error {
@@ -45,14 +51,16 @@ func (e *containerEnv) netPluginDel(n *Net, netns, args, ifName string) error {
 	return err
 }
 
-func (e *containerEnv) findNetPlugin(plugin string) string {
+func (e *containerEnv) pluginPaths() []string {
 	// try 3rd-party path first
-	paths := []string{
+	return []string{
 		UserNetPluginsPath,
 		filepath.Join(common.Stage1RootfsPath(e.rktRoot), BuiltinNetPluginsPath),
 	}
+}
 
-	for _, p := range paths {
+func (e *containerEnv) findNetPlugin(plugin string) string {
+	for _, p := range e.pluginPaths() {
 		fullname := filepath.Join(p, plugin)
 		if fi, err := os.Stat(fullname); err == nil && fi.Mode().IsRegular() {
 			return fullname
@@ -72,10 +80,10 @@ func envVars(vars [][2]string) []string {
 	return env
 }
 
-func (e *containerEnv) execNetPlugin(cmd string, n *Net, netns, args, ifName string) (string, error) {
+func (e *containerEnv) execNetPlugin(cmd string, n *Net, netns, args, ifName string) ([]byte, error) {
 	pluginPath := e.findNetPlugin(n.Type)
 	if pluginPath == "" {
-		return "", fmt.Errorf("Could not find plugin %q", n.Type)
+		return nil, fmt.Errorf("Could not find plugin %q", n.Type)
 	}
 
 	vars := [][2]string{
@@ -86,6 +94,7 @@ func (e *containerEnv) execNetPlugin(cmd string, n *Net, netns, args, ifName str
 		{"RKT_NETPLUGIN_IFNAME", ifName},
 		{"RKT_NETPLUGIN_NETNAME", n.Name},
 		{"RKT_NETPLUGIN_NETCONF", n.Filename},
+		{"RKT_NETPLUGIN_IPAMPATH", strings.Join(e.pluginPaths(), ":")},
 	}
 
 	stdout := &bytes.Buffer{}
@@ -98,8 +107,8 @@ func (e *containerEnv) execNetPlugin(cmd string, n *Net, netns, args, ifName str
 		Stderr: os.Stderr,
 	}
 	if err := c.Run(); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return stdout.String(), nil
+	return stdout.Bytes(), nil
 }

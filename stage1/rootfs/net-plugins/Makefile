@@ -1,4 +1,4 @@
-PLUGINS=bin/veth bin/bridge
+PLUGINS=bin/veth bin/bridge bin/static
 
 ../aggregate/install.d/30net-plugins: Makefile install $(PLUGINS)
 	@cp install ../aggregate/install.d/30net-plugins

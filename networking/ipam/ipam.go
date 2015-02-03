@@ -1,169 +1,138 @@
-// Copyright 2015 CoreOS, Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package ipam
 
-// ATTN: This is mostly throw away code. It'll be replaced
-// by proper ip mgt plugins.
-
 import (
-	"crypto/rand"
-	"encoding/binary"
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"math/big"
 	"net"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
-	"github.com/appc/spec/schema/types"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
 	"github.com/coreos/rocket/networking/util"
 )
 
-type options struct {
-	ipRange *net.IPNet
-	ip      net.IP
+// L3 config value for interface
+type IPConfig struct {
+	IP      *net.IPNet
+	Gateway net.IP
+	Routes  []net.IPNet
 }
 
-func ipAdd(ip net.IP, val uint) net.IP {
-	n := binary.BigEndian.Uint32(ip.To4())
-	n += uint32(val)
-
-	nip := make([]byte, 4)
-	binary.BigEndian.PutUint32(nip, n)
-	return net.IP(nip)
+type ipConfig struct {
+	IP      string   `json:"ip"`
+	Gateway string   `json:"gateway,omitempty"`
+	Routes  []string `json:"routes,omitempty"`
 }
 
-func allocIP(ipn *net.IPNet) (net.IP, error) {
-	ones, bits := ipn.Mask.Size()
-	zeros := bits - ones
-	rng := (1 << uint(zeros)) - 2 // (reduce for gw, bcast)
-
-	n, err := rand.Int(rand.Reader, big.NewInt(int64(rng)))
-	if err != nil {
-		return nil, err
+func (c *IPConfig) UnmarshalJSON(data []byte) error {
+	ipc := ipConfig{}
+	if err := json.Unmarshal(data, &ipc); err != nil {
+		return err
 	}
 
-	offset := uint(n.Uint64() + 1)
-	return ipAdd(ipn.IP, offset), nil
-}
+	ip, err := util.ParseCIDR(ipc.IP)
+	if err != nil {
+		return err
+	}
 
-func deallocIP(ip net.IP) error {
+	var gw net.IP
+	if ipc.Gateway != "" {
+		if gw = net.ParseIP(ipc.Gateway); gw == nil {
+			return fmt.Errorf("error parsing Gateway")
+		}
+	}
+
+	routes := []net.IPNet{}
+
+	for _, r := range ipc.Routes {
+		dst, err := util.ParseCIDR(r)
+		if err != nil {
+			return err
+		}
+
+		routes = append(routes, *dst)
+	}
+
+	c.IP = ip
+	c.Gateway = gw
+	c.Routes = routes
+
 	return nil
 }
 
-func splitArg(arg string) (k, v string) {
-	parts := strings.SplitN(arg, "=", 2)
-
-	switch len(parts) {
-	case 1:
-		k = parts[0]
-	case 2:
-		k, v = parts[0], parts[1]
+func (c *IPConfig) MarshalJSON() ([]byte, error) {
+	ipc := ipConfig{
+		IP: c.IP.String(),
 	}
 
-	return
+	if c.Gateway != nil {
+		ipc.Gateway = c.Gateway.String()
+	}
+
+	for _, dst := range c.Routes {
+		ipc.Routes = append(ipc.Routes, dst.String())
+	}
+
+	return json.Marshal(ipc)
 }
 
-func parseArgs(args string) (*options, error) {
-	argv := strings.Split(args, ",")
+func findIPAMPlugin(plugin string) string {
+	// try 3rd-party path first
+	paths := strings.Split(os.Getenv("RKT_NETPLUGIN_IPAMPATH"), ":")
 
-	var err error
-	opts := &options{}
-
-	for _, arg := range argv {
-		k, v := splitArg(arg)
-		switch k {
-		case "iprange":
-			opts.ipRange, err = util.ParseCIDR(v)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse iprange arg (%q): %v", v, err)
-			}
-
-		case "ip":
-			opts.ip = net.ParseIP(v)
-			if opts.ip == nil {
-				return nil, fmt.Errorf("failed to parse ip arg (%q)", v)
-			}
+	for _, p := range paths {
+		fullname := filepath.Join(p, plugin)
+		if fi, err := os.Stat(fullname); err == nil && fi.Mode().IsRegular() {
+			return fullname
 		}
 	}
 
-	return opts, nil
+	return ""
 }
 
-// AllocIP allocates an IP in a given range.
-func AllocIP(contID types.UUID, netConf, ifName, args string) (*net.IPNet, net.IP, error) {
-	opts, err := parseArgs(args)
+func ExecPlugin(plugin string) (*IPConfig, error) {
+	pluginPath := findIPAMPlugin(plugin)
+	if pluginPath == "" {
+		return nil, fmt.Errorf("could not find %q plugin", plugin)
+	}
+
+	stdout := &bytes.Buffer{}
+
+	c := exec.Cmd{
+		Path:   pluginPath,
+		Args:   []string{pluginPath},
+		Stdout: stdout,
+		Stderr: os.Stderr,
+	}
+	if err := c.Run(); err != nil {
+		return nil, err
+	}
+
+	ipConf := &IPConfig{}
+	err := json.Unmarshal(stdout.Bytes(), ipConf)
+	return ipConf, err
+}
+
+func ApplyIPConfig(ifName string, ipConf *IPConfig) error {
+	link, err := netlink.LinkByName(ifName)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	if opts.ipRange != nil {
-		ip, err := allocIP(opts.ipRange)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error allocating IP in %v: %v", opts.ipRange, err)
+	addr := &netlink.Addr{IPNet: ipConf.IP, Label: ""}
+	if err = netlink.AddrAdd(link, addr); err != nil {
+		return fmt.Errorf("failed to add IP addr to %q: %v", ifName, err)
+	}
+
+	for _, dst := range ipConf.Routes {
+		if err = util.AddRoute(&dst, ipConf.Gateway, link); err != nil {
+			return err
 		}
-
-		return &net.IPNet{
-			IP:   ip,
-			Mask: opts.ipRange.Mask,
-		}, nil, nil
 	}
 
-	n := util.Net{}
-	if err := util.LoadNet(netConf, &n); err != nil {
-		return nil, nil, err
-	}
-
-	switch n.IPAlloc.Type {
-	case "static":
-		_, rng, err := net.ParseCIDR(n.IPAlloc.Subnet)
-		if err != nil {
-			// TODO: cleanup
-			return nil, nil, fmt.Errorf("error parsing %q conf: ipAlloc.Subnet: %v", netConf, err)
-		}
-
-		ip, err := allocIP(rng)
-		if err != nil {
-			// TODO: cleanup
-			return nil, nil, fmt.Errorf("error allocating IP in %v: %v", rng, err)
-		}
-
-		return &net.IPNet{
-			IP:   ip,
-			Mask: rng.Mask,
-		}, nil, nil
-
-	default:
-		return nil, nil, fmt.Errorf("unsupported IP allocation type")
-	}
-}
-
-// AllocPtP allocates a /31 for point-to-point links.
-func AllocPtP(contID types.UUID, netConf, ifName, args string) ([2]net.IP, error) {
-	ipn, _, err := AllocIP(contID, netConf, ifName, args)
-	if err != nil {
-		return [2]net.IP{nil, nil}, err
-	}
-
-	mask := net.CIDRMask(31, 32)
-	first := ipn.IP.Mask(mask)
-	second := ipAdd(first, 1)
-
-	return [2]net.IP{first, second}, nil
-}
-
-// DeallocIP is a no-op.
-func DeallocIP(contID types.UUID, netConf, ifName string, ipn *net.IPNet) error {
 	return nil
 }

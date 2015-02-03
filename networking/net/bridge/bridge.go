@@ -26,13 +26,14 @@ import (
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
 	"github.com/coreos/rocket/networking/ipam"
+	rktnet "github.com/coreos/rocket/networking/net"
 	"github.com/coreos/rocket/networking/util"
 )
 
 const defaultBrName = "rkt0"
 
-type netConf struct {
-	util.Net
+type Net struct {
+	rktnet.Net
 	BrName string `json:"brName"`
 	IsGW   bool   `json:"isGW"`
 }
@@ -111,13 +112,17 @@ func ensureBridge(brName string, ipn *net.IPNet) (*netlink.Bridge, error) {
 	return br, nil
 }
 
-func setupVeth(contID types.UUID, netns string, br *netlink.Bridge, ipn *net.IPNet, ifName string) error {
+func setupVeth(contID types.UUID, netns string, br *netlink.Bridge, ifName string, ipConf *ipam.IPConfig) error {
 	var hostVethName string
 
 	err := util.WithNetNSPath(netns, func(hostNS *os.File) error {
 		// create the veth pair in the container and move host end into host netns
-		hostVeth, _, err := util.SetupVeth(contID.String(), ifName, ipn, hostNS)
+		hostVeth, _, err := util.SetupVeth(contID.String(), ifName, nil, hostNS)
 		if err != nil {
+			return err
+		}
+
+		if err = ipam.ApplyIPConfig(ifName, ipConf); err != nil {
 			return err
 		}
 
@@ -142,49 +147,67 @@ func setupVeth(contID types.UUID, netns string, br *netlink.Bridge, ipn *net.IPN
 	return nil
 }
 
-func cmdAdd(contID, netns, netCfg, ifName string) error {
+func calcGatewayIP(ipn *net.IPNet) net.IP {
+	nid := ipn.IP.Mask(ipn.Mask)
+	return util.NextIP(nid)
+}
+
+func setupBridge(n *Net, ipamConf *ipam.IPConfig) (*netlink.Bridge, error) {
+	var gwn *net.IPNet
+	if n.IsGW {
+		gw := net.IP{}
+		if ipamConf.Gateway != nil {
+			gw = ipamConf.Gateway
+		} else {
+			gw = calcGatewayIP(ipamConf.IP)
+		}
+
+		gwn = &net.IPNet{
+			IP:   gw,
+			Mask: ipamConf.IP.Mask,
+		}
+	}
+
+	// create bridge if necessary
+	br, err := ensureBridge(n.BrName, gwn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bridge %q: %v", n.BrName, err)
+	}
+
+	return br, nil
+}
+
+func cmdAdd(contID, netns, netConf, ifName string) error {
 	cid, err := types.NewUUID(contID)
 	if err != nil {
 		return fmt.Errorf("error parsing ContainerID: %v", err)
 	}
 
-	conf := netConf{
+	n := &Net{
 		BrName: defaultBrName,
 	}
-	if err := util.LoadNet(netCfg, &conf); err != nil {
-		return fmt.Errorf("failed to load %q: %v", netCfg, err)
+	if err := rktnet.LoadNet(netConf, n); err != nil {
+		return fmt.Errorf("failed to load %q: %v", netConf, err)
 	}
 
-	ipn, gw, err := ipam.AllocIP(*cid, netCfg, ifName, "")
+	// run the IPAM plugin and get back the config to apply
+	ipConf, err := ipam.ExecPlugin(n.Net.IPAM.Type)
 	if err != nil {
 		return err
 	}
 
-	var gwn *net.IPNet
-	if conf.IsGW && gw != nil {
-		gwn = &net.IPNet{
-			IP:   gw,
-			Mask: ipn.Mask,
-		}
-	}
-
-	// create bridge if necessary
-	br, err := ensureBridge(conf.BrName, gwn)
+	br, err := setupBridge(n, ipConf)
 	if err != nil {
-		return fmt.Errorf("failed to create bridge %q: %v", conf.BrName, err)
-	}
-
-	if err = setupVeth(*cid, netns, br, ipn, ifName); err != nil {
 		return err
 	}
 
-	// print to stdout the assigned IP for rkt
-	// TODO(eyakubovich): this will need to be JSON per latest proposal
-	if _, err = fmt.Print(ipn.String()); err != nil {
+	if err = setupVeth(*cid, netns, br, ifName, ipConf); err != nil {
 		return err
 	}
 
-	return nil
+	return rktnet.PrintIfConfig(&rktnet.IfConfig{
+		IP: ipConf.IP.IP,
+	})
 }
 
 func cmdDel(contID, netns, netConf, ifName string) error {
@@ -221,8 +244,7 @@ func main() {
 	}
 
 	if err != nil {
-		log.Printf("%v: %v", os.Args[1], err)
+		log.Printf("%v: %v", cmd, err)
 		os.Exit(1)
 	}
-
 }
