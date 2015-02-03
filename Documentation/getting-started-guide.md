@@ -33,9 +33,16 @@ $ CGO_ENABLED=0 GOOS=linux go build -o hello -a -tags netgo -ldflags '-w' .
 ```
 
 or, on [Go 1.4](https://github.com/golang/go/issues/9344#issuecomment-69944514):
-
 ```
 $ CGO_ENABLED=0 GOOS=linux go build -o hello -a -installsuffix cgo .
+```
+
+Before proceeding, verify that the produced binary is statically linked:
+```
+$ file hello
+hello: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, not stripped
+$ ldd hello
+	not a dynamic executable
 ```
 
 ## Create the image manifest
