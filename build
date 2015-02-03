@@ -14,10 +14,12 @@ export GOPATH=${GOPATH:-}:${PWD}/gopath
 eval $(go env)
 
 echo "Building network plugins"
-for d in networking/plugins/*; do
-	plugin=$(basename $d)
-	echo "  " $plugin
-	go install ${REPO_PATH}/$d
+for d in networking/net/* networking/ipam/*; do
+	if [ -d $d ]; then
+		plugin=$(basename $d)
+		echo "  " $plugin
+		go install ${REPO_PATH}/$d
+	fi
 done
 
 echo "Building rkt (stage0)..."
@@ -29,9 +31,13 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
 	# symlink plugin binaries into stage1 rootfs
 	mkdir -p stage1/rootfs/net-plugins/bin
-	for d in networking/plugins/*; do
-		plugin=$(basename $d)
-		ln -sf ${GOBIN}/$plugin stage1/rootfs/net-plugins/bin
+	# make sure the bin dir doesn't have old links
+	rm -f stage1/rootfs/net-plugins/bin/*
+	for d in networking/net/* networking/ipam/*; do
+		if [ -d $d ]; then
+			plugin=$(basename $d)
+			ln -sf ${GOBIN}/$plugin stage1/rootfs/net-plugins/bin
+		fi
 	done
 
 	# symlink init into stage1 rootfs

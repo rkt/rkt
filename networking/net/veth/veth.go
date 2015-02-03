@@ -21,10 +21,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
 	"github.com/coreos/rocket/networking/ipam"
+	rktnet "github.com/coreos/rocket/networking/net"
 	"github.com/coreos/rocket/networking/util"
 )
 
@@ -36,51 +36,33 @@ func init() {
 }
 
 func cmdAdd(contID, netns, netConf, ifName, args string) error {
-	var hostVethName, contIPNet string
+	var hostVethName string
 
-	cid, err := types.NewUUID(contID)
-	if err != nil {
-		return fmt.Errorf("error parsing ContainerID: %v", err)
-	}
-
-	conf := util.Net{}
-	if err := util.LoadNet(netConf, &conf); err != nil {
+	conf := rktnet.Net{}
+	if err := rktnet.LoadNet(netConf, &conf); err != nil {
 		return fmt.Errorf("failed to load %q: %v", netConf, err)
 	}
 
-	ips, err := ipam.AllocPtP(*cid, netConf, ifName, args)
+	// run the IPAM plugin and get back the config to apply
+	ipConf, err := ipam.ExecPlugin(conf.IPAM.Type)
 	if err != nil {
 		return err
 	}
 
-	hostIP, contIP := ips[0], ips[1]
-
 	err = util.WithNetNSPath(netns, func(hostNS *os.File) error {
 		entropy := contID + ifName
 
-		ipn := &net.IPNet{
-			IP:   contIP,
-			Mask: net.CIDRMask(31, 32),
-		}
-
-		hostVeth, contVeth, err := util.SetupVeth(entropy, ifName, ipn, hostNS)
+		hostVeth, _, err := util.SetupVeth(entropy, ifName, nil, hostNS)
 		if err != nil {
 			return err
 		}
 
-		for _, r := range conf.Routes {
-			dst, err := util.ParseCIDR(r)
-			if err != nil {
-				return fmt.Errorf("failed to parse route %q: %v", r, err)
-			}
-
-			if err = util.AddRoute(dst, hostIP, contVeth); err != nil {
-				return fmt.Errorf("failed to add route %q: %v", dst, err)
-			}
+		err = ipam.ApplyIPConfig(ifName, ipConf)
+		if err != nil {
+			return err
 		}
 
 		hostVethName = hostVeth.Attrs().Name
-		contIPNet = ipn.String()
 
 		return nil
 	})
@@ -95,7 +77,7 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 	}
 
 	ipn := &net.IPNet{
-		IP:   hostIP,
+		IP:   ipConf.Gateway,
 		Mask: net.CIDRMask(31, 32),
 	}
 	addr := &netlink.Addr{IPNet: ipn, Label: ""}
@@ -108,9 +90,9 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 		return fmt.Errorf("failed to add route on host: %v", err)
 	}
 
-	fmt.Print(contIPNet)
-
-	return nil
+	return rktnet.PrintIfConfig(&rktnet.IfConfig{
+		IP: ipConf.IP.IP,
+	})
 }
 
 func cmdDel(contID, netns, netConf, ifName, args string) error {
@@ -148,7 +130,7 @@ func main() {
 	}
 
 	if err != nil {
-		log.Printf("%v: %v", os.Args[1], err)
+		log.Printf("%v: %v", cmd, err)
 		os.Exit(1)
 	}
 }

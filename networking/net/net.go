@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package net
 
 import (
 	"encoding/json"
 	"io/ioutil"
+	gonet "net"
+	"os"
 	"reflect"
 )
 
@@ -25,11 +27,9 @@ type Net struct {
 	Filename string
 	Name     string `json:"name,omitempty"`
 	Type     string `json:"type,omitempty"`
-	IPAlloc  struct {
-		Type   string `json:"type,omitempty"`
-		Subnet string `json:"subnet,omitempty"`
-	} `json:"ipAlloc,omitempty"`
-	Routes []string `json:"routes,omitempty"`
+	IPAM     struct {
+		Type string `json:"type,omitempty"`
+	} `json:"ipam,omitempty"`
 }
 
 // LoadNet loads a JSON-encoded Net from the filesystem.
@@ -57,4 +57,19 @@ func LoadNet(path string, n interface{}) error {
 	}
 
 	return nil
+}
+
+// this is what net plugin returns to rkt
+type IfConfig struct {
+	IP  gonet.IP `json:"ip,omitempty"`
+	IP6 gonet.IP `json:"ip6,omitempty"`
+}
+
+func PrintIfConfig(conf *IfConfig) error {
+	data, err := json.MarshalIndent(conf, "", "    ")
+	if err != nil {
+		return err
+	}
+	_, err = os.Stdout.Write(data)
+	return err
 }

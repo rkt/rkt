@@ -22,12 +22,12 @@ import (
 	"sort"
 
 	"github.com/coreos/rocket/common"
-	"github.com/coreos/rocket/networking/util"
+	rktnet "github.com/coreos/rocket/networking/net"
 )
 
 // Net encodes a network plugin.
 type Net struct {
-	util.Net
+	rktnet.Net
 	args string
 }
 
@@ -72,7 +72,7 @@ func loadUserNets() ([]Net, error) {
 	for _, filename := range files {
 		filepath := path.Join(UserNetPath, filename)
 		n := Net{}
-		if err := util.LoadNet(filepath, &n); err != nil {
+		if err := rktnet.LoadNet(filepath, &n); err != nil {
 			return nil, fmt.Errorf("error loading %v: %v", filepath, err)
 		}
 
@@ -91,7 +91,7 @@ func (e *containerEnv) loadNets() ([]Net, error) {
 
 	defPath := path.Join(common.Stage1RootfsPath(e.rktRoot), DefaultNetPath)
 	defNet := Net{}
-	if err := util.LoadNet(defPath, &defNet); err != nil {
+	if err := rktnet.LoadNet(defPath, &defNet); err != nil {
 		return nil, fmt.Errorf("error loading net: %v", err)
 	}
 
