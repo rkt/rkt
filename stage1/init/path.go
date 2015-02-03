@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	envDir          = "/rkt/env" // TODO(vc): perhaps this doesn't belong in /rkt?
 	unitsDir        = "/usr/lib/systemd/system"
 	defaultWantsDir = unitsDir + "/default.target.wants"
 	socketsWantsDir = unitsDir + "/sockets.target.wants"
@@ -38,6 +39,17 @@ func ServiceUnitName(imageID types.Hash) string {
 // imageID
 func ServiceUnitPath(root string, imageID types.Hash) string {
 	return filepath.Join(common.Stage1RootfsPath(root), unitsDir, ServiceUnitName(imageID))
+}
+
+// RelEnvFilePath returns the path to the environment file for the given imageID
+// relative to the container's root
+func RelEnvFilePath(imageID types.Hash) string {
+	return filepath.Join(envDir, types.ShortHash(imageID.String()))
+}
+
+// EnvFilePath returns the path to the environment file for the given imageID
+func EnvFilePath(root string, imageID types.Hash) string {
+	return filepath.Join(common.Stage1RootfsPath(root), RelEnvFilePath(imageID))
 }
 
 // ServiceWantPath returns the systemd default.target want symlink path for the

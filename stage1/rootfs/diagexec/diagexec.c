@@ -40,25 +40,33 @@ static int exit_err;
 #define MAX_DIAG_DEPTH 10
 #define MIN(_a, _b) (((_a) < (_b)) ? (_a) : (_b))
 
+static void map_file(const char *path, int prot, int flags, struct stat *st, void **map)
+{
+	int fd;
+
+	pexit_if((fd = open(path, O_RDONLY)) == -1,
+		"Unable to open \"%s\"", path);
+	pexit_if(fstat(fd, st) == -1,
+		"Cannot stat \"%s\"", path);
+	exit_if(!S_ISREG(st->st_mode), "\"%s\" is not a regular file", path);
+	pexit_if(!(*map = mmap(NULL, st->st_size, prot, flags, fd, 0)),
+		"Mmap of \"%s\" failed", path);
+	pexit_if(close(fd) == -1,
+		"Close of %i [%s] failed", fd, path);
+}
+
 static void diag(const char *exe)
 {
 	static const uint8_t	elf[] = {0x7f, 'E', 'L', 'F'};
 	static const uint8_t	shebang[] = {'#','!'};
 	static int		diag_depth;
-	int			fd;
 	struct stat		st;
 	const uint8_t		*mm;
 	const char		*itrp = NULL;
 
-	pexit_if((fd = open(exe, O_RDONLY)) == -1,
-		"Unable to open \"%s\"", exe);
-	pexit_if(fstat(fd, &st) == -1,
-		"Cannot stat \"%s\"", exe);
-	exit_if(!S_ISREG(st.st_mode), "\"%s\" is not a regular file", exe);
+	map_file(exe, PROT_READ, MAP_SHARED, &st, (void **)&mm);
 	exit_if(!((S_IXUSR|S_IXGRP|S_IXOTH) & st.st_mode),
 		"\"%s\" is not executable", exe)
-	pexit_if(!(mm = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0)),
-		"Mmap of \"%s\" failed", exe);
 
 	if(st.st_size >= sizeof(shebang) &&
 	   !memcmp(mm, shebang, sizeof(shebang))) {
@@ -137,17 +145,62 @@ static void diag(const char *exe)
 	diag(itrp);
 }
 
+/* Read environment from env and make it our own. */
+/* The environment file must exist, may be empty, and is expected to be of the format:
+ * key=value\0key=value\0...
+ */
+static void load_env(const char *env)
+{
+	struct stat		st;
+	char			*map, *k, *v;
+	typeof(st.st_size)	i;
+
+	map_file(env, PROT_READ|PROT_WRITE, MAP_PRIVATE, &st, (void **)&map);
+
+	pexit_if(clearenv() != 0,
+		"Unable to clear environment");
+
+	if(!st.st_size)
+		return;
+
+	map[st.st_size - 1] = '\0'; /* ensure the mapping is null-terminated */
+
+	for(i = 0; i < st.st_size;) {
+		k = &map[i];
+		i += strlen(k) + 1;
+		exit_if((v = strchr(k, '=')) == NULL,
+			"Malformed environment entry: \"%s\"", k);
+		/* a private writable map is used permitting s/=/\0/ */
+		*v = '\0';
+		v++;
+		pexit_if(setenv(k, v, 1) == -1,
+			"Unable to set env variable: \"%s\"=\"%s\"", k, v);
+	}
+}
+
 int main(int argc, char *argv[])
 {
-	const char *root, *cwd, *exe;
-	exit_if(argc < 4,
-		"Usage: %s /path/to/root /work/directory /to/exec [args ...]", argv[0]);
+	const char *root, *cwd, *env, *exe;
+	exit_if(argc < 5,
+		"Usage: %s /path/to/root /work/directory /env/file /to/exec [args ...]", argv[0]);
+
 	root = argv[1];
 	cwd = argv[2];
-	exe = argv[3];
+	env = argv[3];
+	exe = argv[4];
+
+	load_env(env);
+
 	pexit_if(chroot(root) == -1, "Chroot \"%s\" failed", root);
 	pexit_if(chdir(cwd) == -1, "Chdir \"%s\" failed", cwd);
-	pexit_if(execvp(exe, &argv[3]) == -1 &&
+
+	/* XXX(vc): note that since execvp() is happening post-chroot, the
+	 * app's environment settings correctly affect the PATH search.
+	 * This is why execvpe() isn't being used, we manipulate the environment
+	 * manually then let it potentially affect execvp().  execvpe() simply
+	 * passes the environment to execve() _after_ performing the search, not
+	 * what we want here. */
+	pexit_if(execvp(exe, &argv[4]) == -1 &&
 		 errno != ENOENT && errno != EACCES,
 		 "Exec of \"%s\" failed", exe);
 	diag(exe);

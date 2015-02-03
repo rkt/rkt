@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -84,7 +85,7 @@ func LoadContainer(root string) (*Container, error) {
 // quoteExec returns an array of quoted strings appropriate for systemd execStart usage
 func quoteExec(exec []string) string {
 	if len(exec) == 0 {
-		// existing callers prefix {"/diagexec", "/app/root", "/work/dir"} so this shouldn't occur.
+		// existing callers prefix {"/diagexec", "/app/root", "/work/dir", "/env/file"} so this shouldn't occur.
 		panic("empty exec")
 	}
 
@@ -119,7 +120,15 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 		workDir = app.WorkingDirectory
 	}
 
-	execWrap := []string{"/diagexec", common.RelAppRootfsPath(id), workDir}
+	env := app.Environment
+	env.Set("AC_APP_NAME", name)
+	env.Set("AC_METADATA_URL", c.MetadataSvcURL)
+
+	if err := c.writeEnvFile(env, id); err != nil {
+		return fmt.Errorf("unable to write environment file: %v", err)
+	}
+
+	execWrap := []string{"/diagexec", common.RelAppRootfsPath(id), workDir, RelEnvFilePath(id)}
 	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
 		newUnitOption("Unit", "Description", name),
@@ -145,15 +154,6 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 		}
 		exec := quoteExec(append(execWrap, eh.Exec...))
 		opts = append(opts, newUnitOption("Service", typ, exec))
-	}
-
-	env := app.Environment
-	env.Set("AC_APP_NAME", name)
-	env.Set("AC_METADATA_URL", c.MetadataSvcURL)
-
-	for _, e := range env {
-		ee := fmt.Sprintf(`"%s=%s"`, e.Name, e.Value)
-		opts = append(opts, newUnitOption("Service", "Environment", ee))
 	}
 
 	saPorts := []types.Port{}
@@ -216,6 +216,15 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 	}
 
 	return nil
+}
+
+// writeEnvFile creates an environment file for given app id
+func (c *Container) writeEnvFile(env types.Environment, id types.Hash) error {
+	ef := bytes.Buffer{}
+	for _, e := range env {
+		fmt.Fprintf(&ef, "%s=%s\000", e.Name, e.Value)
+	}
+	return ioutil.WriteFile(EnvFilePath(c.Root, id), ef.Bytes(), 0640)
 }
 
 // ContainerToSystemd creates the appropriate systemd service unit files for
