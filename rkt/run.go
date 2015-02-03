@@ -55,18 +55,18 @@ func init() {
 		defaultStage1Image = filepath.Join(filepath.Dir(exePath), "stage1.aci")
 	}
 
-	cmdRun.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, "image to use as stage1")
+	cmdRun.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, "image to use as stage1, local paths and http/https urls are supported")
 	cmdRun.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	cmdRun.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
 	cmdRun.Flags.BoolVar(&flagSpawnMetadataSvc, "spawn-metadata-svc", false, "launch metadata svc if not running")
 	flagVolumes = volumeList{}
 }
 
-// findImages uses findImage to attain a list of image hashes
+// findImages uses findImage to attain a list of image hashes using discovery if necessary
 func findImages(args []string, ds *cas.Store, ks *keystore.Keystore) (out []types.Hash, err error) {
 	out = make([]types.Hash, len(args))
 	for i, img := range args {
-		h, err := findImage(img, ds, ks)
+		h, err := findImage(img, ds, ks, true)
 		if err != nil {
 			return nil, err
 		}
@@ -78,7 +78,7 @@ func findImages(args []string, ds *cas.Store, ks *keystore.Keystore) (out []type
 
 // findImage will recognize a ACI hash and use that, import a local file, use
 // discovery or download an ACI directly.
-func findImage(img string, ds *cas.Store, ks *keystore.Keystore) (*types.Hash, error) {
+func findImage(img string, ds *cas.Store, ks *keystore.Keystore, discover bool) (*types.Hash, error) {
 	// check if it is a valid hash, if so let it pass through
 	h, err := types.NewHash(img)
 	if err == nil {
@@ -111,7 +111,7 @@ func findImage(img string, ds *cas.Store, ks *keystore.Keystore) (*types.Hash, e
 	}
 
 	// try fetching remotely
-	key, err := fetchImage(img, ds, ks)
+	key, err := fetchImage(img, ds, ks, discover)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func runRun(args []string) (exit int) {
 	ds := cas.NewStore(globalFlags.Dir)
 	ks := getKeystore()
 
-	s1img, err := findImage(flagStage1Image, ds, ks)
+	s1img, err := findImage(flagStage1Image, ds, ks, false)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error finding stage1 image %q: %v\n", flagStage1Image, err)
 		return 1

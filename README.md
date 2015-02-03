@@ -110,12 +110,12 @@ Execution with Rocket is divided into a number of distinct stages. The motivatio
 ### Stage 0
 
 The first step of the process, stage 0, is the actual `rkt` binary itself. This binary is in charge of doing a number of initial preparatory tasks:
+- Fetching the specified ACIs, including the stage 1 ACI of --stage1-image if specified.
 - Generating a Container UUID
 - Generating a Container Runtime Manifest
 - Creating a filesystem for the container
 - Setting up stage 1 and stage 2 directories in the filesystem
-- Copying the stage1 binary into the container filesystem
-- Fetching the specified ACIs
+- Unpacking the stage 1 ACI into the container filesystem
 - Unpacking the ACIs and copying each app into the stage2 directories
 
 Given a run command such as:
@@ -131,19 +131,22 @@ a container manifest compliant with the ACE spec will be generated, and the file
 ```
 /container
 /stage1
-/stage1/init
-/stage1/opt
-/stage1/opt/stage2/sha512-648db489d57363b29f1597d4312b212928a48e9a7ee2baec7a237629cce5a6744632d047708c9486dec6b105b8a2d298b622daa5654c1b21af36bfc9534417d7
-/stage1/opt/stage2/sha512-0c45e8c0ab2b3cdb9ec6649073d5c6c43f4f1ed9ebd97b2ebfc2290c21ee88ae63bff32c23690f7c96b666ffc353f38c3f2977c4f019176b12c74f9683e91141
+/stage1/manifest
+/stage1/rootfs/init
+/stage1/rootfs/opt
+/stage1/rootfs/opt/stage2/sha512-648db489d57363b29f1597d4312b2129
+/stage1/rootfs/opt/stage2/sha512-0c45e8c0ab2b3cdb9ec6649073d5c6c4
 ```
 
 where:
 - `container` is the container manifest file
-- `stage1` is a copy of the stage1 filesystem that is safe for read/write
-- `stage1/init` is the actual stage1 binary to be executed
-- `stage1/opt/stage2` are copies of the unpacked ACIs
+- `stage1` is a copy of the stage1 ACI that is safe for read/write
+- `stage1/manifest` is the manifest of the stage1 ACI
+- `stage1/rootfs` is the rootfs of the stage1 ACI
+- `stage1/rootfs/init` is the actual stage1 binary to be executed (this path may vary according to the `coreos.com/rocket/stage1/init` Annotation of the stage1 ACI)
+- `stage1/rootfs/opt/stage2` are copies of the unpacked ACIs
 
-At this point the stage0 execs `/stage1/init` with the current working directory set to the root of the new filesystem.
+At this point the stage0 execs `/stage1/rootfs/init` with the current working directory set to the root of the new filesystem.
 
 ### Stage 1
 
