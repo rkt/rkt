@@ -44,7 +44,7 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 	}
 
 	// run the IPAM plugin and get back the config to apply
-	ipConf, err := ipam.ExecPlugin(conf.IPAM.Type)
+	ipConf, err := ipam.ExecPluginAdd(conf.IPAM.Type)
 	if err != nil {
 		return err
 	}
@@ -96,9 +96,19 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 }
 
 func cmdDel(contID, netns, netConf, ifName, args string) error {
-	return util.WithNetNSPath(netns, func(hostNS *os.File) error {
+	conf := rktnet.Net{}
+	if err := rktnet.LoadNet(netConf, &conf); err != nil {
+		return fmt.Errorf("failed to load %q: %v", netConf, err)
+	}
+
+	err := util.WithNetNSPath(netns, func(hostNS *os.File) error {
 		return util.DelLinkByName(ifName)
 	})
+	if err != nil {
+		return err
+	}
+
+	return ipam.ExecPluginDel(conf.IPAM.Type)
 }
 
 func main() {
