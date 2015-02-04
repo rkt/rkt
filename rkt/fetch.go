@@ -55,7 +55,7 @@ func runFetch(args []string) (exit int) {
 	ds := cas.NewStore(globalFlags.Dir)
 	ks := getKeystore()
 	for _, img := range args {
-		hash, err := fetchImage(img, ds, ks)
+		hash, err := fetchImage(img, ds, ks, true)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			return 1
@@ -68,10 +68,10 @@ func runFetch(args []string) (exit int) {
 }
 
 // fetchImage will take an image as either a URL or a name string and import it
-// into the store if found.
-func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
+// into the store if found.  If discover is true meta-discovery is enabled.
+func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore, discover bool) (string, error) {
 	u, err := url.Parse(img)
-	if err == nil && u.Scheme == "" {
+	if err == nil && discover && u.Scheme == "" {
 		if app := newDiscoveryApp(img); app != nil {
 			fmt.Printf("rkt: searching for app image %s\n", img)
 			ep, err := discovery.DiscoverEndpoints(*app, true)
