@@ -11,6 +11,31 @@
 			"Rev": "7dda39b2e7d5e265014674c5af696ba4186679e9"
 		},
 		{
+			"ImportPath": "github.com/appc/spec/aci",
+			"Comment": "v0.2.0-44-g2fee340e9314",
+			"Rev": "2fee340e9314b9f0f53cbf0e929d158a09930a5f"
+		},
+		{
+			"ImportPath": "github.com/appc/spec/actool",
+			"Comment": "v0.2.0-44-g2fee340e9314",
+			"Rev": "2fee340e9314b9f0f53cbf0e929d158a09930a5f"
+		},
+		{
+			"ImportPath": "github.com/appc/spec/discovery",
+			"Comment": "v0.2.0-44-g2fee340e9314",
+			"Rev": "2fee340e9314b9f0f53cbf0e929d158a09930a5f"
+		},
+		{
+			"ImportPath": "github.com/appc/spec/pkg/tarheader",
+			"Comment": "v0.2.0-44-g2fee340e9314",
+			"Rev": "2fee340e9314b9f0f53cbf0e929d158a09930a5f"
+		},
+		{
+			"ImportPath": "github.com/appc/spec/schema",
+			"Comment": "v0.2.0-44-g2fee340e9314",
+			"Rev": "2fee340e9314b9f0f53cbf0e929d158a09930a5f"
+		},
+		{
 			"ImportPath": "github.com/coreos/go-semver/semver",
 			"Rev": "6fe83ccda8fb9b7549c9ab4ba47f47858bc950aa"
 		},
@@ -50,6 +75,10 @@
 		{
 			"ImportPath": "golang.org/x/crypto/openpgp",
 			"Rev": "a7ead6ddf06233883deca151dffaef2effbf498f"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
 		}
 	]
 }
