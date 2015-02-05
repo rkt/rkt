@@ -31,7 +31,9 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 
@@ -145,6 +147,13 @@ func Setup(cfg Config) (string, error) {
 // Run actually runs the container by exec()ing the stage1 init inside
 // the container filesystem.
 func Run(cfg Config, dir string) {
+	if cfg.SpawnMetadataSvc {
+		log.Print("Launching metadata svc")
+		if err := launchMetadataSvc(cfg.Debug); err != nil {
+			log.Printf("Failed to launch metadata svc: %v", err)
+		}
+	}
+
 	log.Printf("Pivoting to filesystem %s", dir)
 	if err := os.Chdir(dir); err != nil {
 		log.Fatalf("failed changing to dir: %v", err)
@@ -159,17 +168,6 @@ func Run(cfg Config, dir string) {
 	args := []string{filepath.Join(common.Stage1RootfsPath(dir), ep)}
 	if cfg.Debug {
 		args = append(args, "--debug")
-	}
-	if cfg.SpawnMetadataSvc {
-		rktExe, err := os.Readlink("/proc/self/exe")
-		if err != nil {
-			log.Fatalf("failed to readlink /proc/self/exe: %v", err)
-		}
-		dbgFlag := ""
-		if cfg.Debug {
-			dbgFlag = " --debug"
-		}
-		args = append(args, fmt.Sprintf("--metadata-svc=%s%s metadatasvc --no-idle", rktExe, dbgFlag))
 	}
 	if cfg.PrivateNet {
 		args = append(args, "--private-net")
@@ -293,4 +291,40 @@ func expandImage(cfg Config, img types.Hash, dest string) error {
 	}
 
 	return nil
+}
+
+func launchMetadataSvc(debug bool) error {
+	// use socket activation protocol to avoid race-condition of
+	// service becoming ready
+	l, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: common.MetadataSvcPrvPort})
+	if err != nil {
+		if err.(*net.OpError).Err.(*os.SyscallError).Err == syscall.EADDRINUSE {
+			// assume metadatasvc is already running
+			return nil
+		}
+		return err
+	}
+
+	defer l.Close()
+
+	lf, err := l.File()
+	if err != nil {
+		return err
+	}
+
+	args := []string{"/proc/self/exe"}
+	if debug {
+		args = append(args, "--debug")
+	}
+	args = append(args, "metadatasvc", "--no-idle")
+
+	cmd := exec.Cmd{
+		Path:       args[0],
+		Args:       args,
+		Env:        append(os.Environ(), "LISTEN_FDS=1"),
+		ExtraFiles: []*os.File{lf},
+		Stdout:     os.Stdout,
+		Stderr:     os.Stderr,
+	}
+	return cmd.Start()
 }
