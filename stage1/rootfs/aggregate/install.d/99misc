@@ -17,3 +17,6 @@ install -d "$ROOT/opt/stage2"
 
 # dir for result code files
 install -d "$ROOT/rkt/status"
+
+# dir for env files
+install -d "$ROOT/rkt/env"

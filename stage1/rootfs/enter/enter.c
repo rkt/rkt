@@ -89,23 +89,29 @@ int main(int argc, char *argv[])
 		"unable to fork");
 
 	if(child == 0) {
-		char		path[PATH_MAX];
+		char		root[PATH_MAX];
+		char		env[PATH_MAX];
 		char		*args[argc + 2];
 		int		i;
 
 		/* Child goes on to execute /diagexec */
 
-		exit_if(snprintf(path, sizeof(path),
-				 "/opt/stage2/%s/rootfs", argv[1]) == sizeof(path),
-			"path overflow");
+		exit_if(snprintf(root, sizeof(root),
+				 "/opt/stage2/%s/rootfs", argv[1]) == sizeof(root),
+			"root path overflow");
+
+		exit_if(snprintf(env, sizeof(env),
+				 "/rkt/env/%s", argv[1]) == sizeof(env),
+			"env path overflow");
 
 		args[0] = "/diagexec";
-		args[1] = path;
+		args[1] = root;
 		args[2] = "/";	/* TODO(vc): plumb this into app.WorkingDirectory */
+		args[3] = env;
 		for(i = 2; i < argc; i++) {
-			args[i + 1] = argv[i];
+			args[i + 2] = argv[i];
 		}
-		args[i + 1] = NULL;
+		args[i + 2] = NULL;
 
 		exit_if(execv(args[0], args) == -1,
 			"exec failed");
