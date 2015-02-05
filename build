@@ -9,7 +9,7 @@ if [ ! -h gopath/src/${REPO_PATH} ]; then
 fi
 
 export GOBIN=${PWD}/bin
-export GOPATH=${GOPATH:-}:${PWD}/gopath
+export GOPATH=${PWD}/gopath
 
 eval $(go env)
 
@@ -26,6 +26,10 @@ echo "Building rkt (stage0)..."
 go build -o $GOBIN/rkt ${REPO_PATH}/rkt
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
+	echo "Building actool..."
+	go build -o ${GOBIN}/actool github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/actool
+	export ACTOOL=${GOBIN}/actool
+
 	echo "Building init (stage1)..."
 	go install ${REPO_PATH}/stage1/init
 
