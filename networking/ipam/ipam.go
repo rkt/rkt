@@ -94,7 +94,13 @@ func findIPAMPlugin(plugin string) string {
 	return ""
 }
 
-func ExecPlugin(plugin string) (*IPConfig, error) {
+// Executes IPAM plugin, assuming RKT_NETPLUGIN_COMMAND == ADD.
+// Parses and returns resulting IPConfig
+func ExecPluginAdd(plugin string) (*IPConfig, error) {
+	if os.Getenv("RKT_NETPLUGIN_COMMAND") != "ADD" {
+		return nil, fmt.Errorf("RKT_NETPLUGIN_COMMAND is not ADD")
+	}
+
 	pluginPath := findIPAMPlugin(plugin)
 	if pluginPath == "" {
 		return nil, fmt.Errorf("could not find %q plugin", plugin)
@@ -115,6 +121,25 @@ func ExecPlugin(plugin string) (*IPConfig, error) {
 	ipConf := &IPConfig{}
 	err := json.Unmarshal(stdout.Bytes(), ipConf)
 	return ipConf, err
+}
+
+// Executes IPAM plugin, assuming RKT_NETPLUGIN_COMMAND == DEL.
+func ExecPluginDel(plugin string) error {
+	if os.Getenv("RKT_NETPLUGIN_COMMAND") != "DEL" {
+		return fmt.Errorf("RKT_NETPLUGIN_COMMAND is not DEL")
+	}
+
+	pluginPath := findIPAMPlugin(plugin)
+	if pluginPath == "" {
+		return fmt.Errorf("could not find %q plugin", plugin)
+	}
+
+	c := exec.Cmd{
+		Path:   pluginPath,
+		Args:   []string{pluginPath},
+		Stderr: os.Stderr,
+	}
+	return c.Run()
 }
 
 func ApplyIPConfig(ifName string, ipConf *IPConfig) error {

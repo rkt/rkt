@@ -45,6 +45,16 @@ func init() {
 	runtime.LockOSThread()
 }
 
+func loadConf(path string) (*Net, error) {
+	n := &Net{
+		BrName: defaultBrName,
+	}
+	if err := rktnet.LoadNet(path, n); err != nil {
+		return nil, fmt.Errorf("failed to load %q: %v", path, err)
+	}
+	return n, nil
+}
+
 func ensureBridgeAddr(br *netlink.Bridge, ipn *net.IPNet) error {
 	addrs, err := netlink.AddrList(br, syscall.AF_INET)
 	if err != nil && err != syscall.ENOENT {
@@ -183,15 +193,13 @@ func cmdAdd(contID, netns, netConf, ifName string) error {
 		return fmt.Errorf("error parsing ContainerID: %v", err)
 	}
 
-	n := &Net{
-		BrName: defaultBrName,
-	}
-	if err := rktnet.LoadNet(netConf, n); err != nil {
-		return fmt.Errorf("failed to load %q: %v", netConf, err)
+	n, err := loadConf(netConf)
+	if err != nil {
+		return err
 	}
 
 	// run the IPAM plugin and get back the config to apply
-	ipConf, err := ipam.ExecPlugin(n.Net.IPAM.Type)
+	ipConf, err := ipam.ExecPluginAdd(n.Net.IPAM.Type)
 	if err != nil {
 		return err
 	}
@@ -211,9 +219,19 @@ func cmdAdd(contID, netns, netConf, ifName string) error {
 }
 
 func cmdDel(contID, netns, netConf, ifName string) error {
-	return util.WithNetNSPath(netns, func(hostNS *os.File) error {
+	n, err := loadConf(netConf)
+	if err != nil {
+		return err
+	}
+
+	err = util.WithNetNSPath(netns, func(hostNS *os.File) error {
 		return util.DelLinkByName(ifName)
 	})
+	if err != nil {
+		return err
+	}
+
+	return ipam.ExecPluginDel(n.Net.IPAM.Type)
 }
 
 func main() {

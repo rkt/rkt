@@ -182,7 +182,7 @@ func (e *containerEnv) setupNets(netns string, nets []Net) ([]activeNet, error) 
 			ifName: fmt.Sprintf(ifnamePattern, i),
 		}
 
-		log.Printf("Executing net-plugin %v", nt.Type)
+		log.Printf("Setup: executing net-plugin %v", nt.Type)
 
 		an.ip, err = e.netPluginAdd(&nt, netns, nt.args, an.ifName)
 		if err != nil {
@@ -192,8 +192,6 @@ func (e *containerEnv) setupNets(netns string, nets []Net) ([]activeNet, error) 
 
 		active = append(active, an)
 	}
-
-	log.Print("Done executing net plugins")
 
 	if err != nil {
 		e.teardownNets(netns, active)
@@ -206,6 +204,8 @@ func (e *containerEnv) setupNets(netns string, nets []Net) ([]activeNet, error) 
 func (e *containerEnv) teardownNets(netns string, nets []activeNet) {
 	for i := len(nets) - 1; i >= 0; i-- {
 		nt := nets[i]
+
+		log.Printf("Teardown: executing net-plugin %v", nt.Type)
 		err := e.netPluginDel(&nt.Net, netns, nt.args, nt.ifName)
 		if err != nil {
 			log.Printf("Error deleting %q: %v", nt.Name, err)

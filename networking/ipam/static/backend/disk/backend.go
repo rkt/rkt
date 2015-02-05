@@ -58,21 +58,20 @@ func (s *Store) Release(ip net.IP) error {
 	return os.Remove(filepath.Join(s.dataDir, ip.String()))
 }
 
+// N.B. This function eats errors to be tolerant and
+// release as much as possible
 func (s *Store) ReleaseByContainerID(id string) error {
 	err := filepath.Walk(s.dataDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() && path != s.dataDir {
+		if err != nil || info.IsDir() {
 			return nil
 		}
 		data, err := ioutil.ReadFile(path)
 		if err != nil {
-			return err
+			return nil
 		}
 		if string(data) == id {
 			if err := os.Remove(path); err != nil {
-				return err
+				return nil
 			}
 		}
 		return nil
