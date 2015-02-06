@@ -44,7 +44,7 @@ Trusting "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg" for prefix "coreos.co
 Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190"
 ```
 
-Detailed step-by-step for the signing procedure [is here](Documentation/getting-started-ubuntu-trusty.md#trust-the-coreos-signing-key).)
+A detailed step-by-step for the signing procedure [is here](Documentation/getting-started-ubuntu-trusty.md#trust-the-coreos-signing-key).
 
 Now that we've trusted the CoreOS public key, we can fetch the ACI:
 
@@ -65,8 +65,8 @@ These files are now written to disk:
 [~]$ find /var/lib/rkt/cas/blob/
 /var/lib/rkt/cas/blob/
 /var/lib/rkt/cas/blob/sha512
-/var/lib/rkt/cas/blob/sha512/fc
-/var/lib/rkt/cas/blob/sha512/fc/sha512-fcdf12587358af6ebe69b5338a05df673ab7c95539f4cac09b0ceb4ea9b12339
+/var/lib/rkt/cas/blob/sha512/fa
+/var/lib/rkt/cas/blob/sha512/fa/sha512-fa1cb92dc276b0f9bedf87981e61ecde93cc16432d2441f23aa006a42bb873df
 ```
 
 Per the [App Container Specification](https://github.com/appc/spec/blob/master/SPEC.md#image-archives), the SHA-512 hash is of the tarball and can be reproduced with other tools:
