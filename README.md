@@ -49,13 +49,14 @@ Detailed step-by-step for the signing procedure [is here](Documentation/getting-
 Now that we've trusted the CoreOS public key, we can fetch the ACI:
 
 ```
-$ rkt fetch https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci
-rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci
-Downloading aci: [===============================              ] 2.49 MB/3.58 MB
-Downloading signature from https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.sig
-rkt: signature verified:
+$ sudo rkt fetch coreos.com/etcd:v2.0.0
+rkt: searching for app image coreos.com/etcd:v2.0.0
+rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
+Downloading aci: [==========================================   ] 3.47 MB/3.7 MB
+Downloading signature from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.sig
+rkt: signature verified: 
   CoreOS ACI Builder <release@coreos.com>
-  sha512-fcdf12587358af6ebe69b5338a05df67
+sha512-fa1cb92dc276b0f9bedf87981e61ecde
 ```
 
 These files are now written to disk:
@@ -71,11 +72,11 @@ These files are now written to disk:
 Per the [App Container Specification](https://github.com/appc/spec/blob/master/SPEC.md#image-archives), the SHA-512 hash is of the tarball and can be reproduced with other tools:
 
 ```
-[~]$ wget https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci
+$ wget https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 ...
-[~]$ $ gzip -dc etcd-v2.0.0-rc.1-linux-amd64.aci > etcd-v2.0.0-rc.1-linux-amd64.tar
-[~]$ sha512sum etcd-v2.0.0-rc.1-linux-amd64.tar
-fcdf12587358af6ebe69b5338a05df673ab7c95539f4cac09b0ceb4ea9b1233922700bdbafd5b6783e129d3f5e9d17bc7f0a07912b8a0a8c0ff7bf732a3f0acf  etcd-v2.0.0-rc.1-linux-amd64.tar
+$ gzip -dc etcd-v2.0.0-linux-amd64.aci > etcd-v2.0.0-linux-amd64.tar
+$ sha512sum etcd-v2.0.0-linux-amd64.tar
+fa1cb92dc276b0f9bedf87981e61ecde93cc16432d2441f23aa006a42bb873dfc67480dafb0dfb33b91fd848e138268f71e1f32b55e197cdc2d874ae8da01bbe  etcd-v2.0.0-linux-amd64.tar
 ```
 
 ### Launching an ACI
