@@ -85,14 +85,14 @@ An ACI can be run by pointing `rkt` at either the ACI's hash or URL.
 
 ```
 # Example of running via ACI hash
-$ sudo ./rkt run sha512-fcdf12587358af6ebe69b5338a05df67
+$ sudo rkt run sha512-fa1cb92dc276b0f9bedf87981e61ecde
 ...
 Press ^] three times to kill container
 ```
 
 ```
 # Example of running via ACI URL
-$ sudo ./rkt run https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci
+$ sudo rkt run https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 ...
 Press ^] three times to kill container
 ```
