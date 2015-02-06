@@ -180,7 +180,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 
 	for i, tt := range tests {
 		httpGet = tt.get
-		de, err := DiscoverEndpoints(tt.app, true)
+		de, _, err := DiscoverEndpoints(tt.app, true)
 		if err != nil && !tt.expectDiscoverySuccess {
 			continue
 		}
