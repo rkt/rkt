@@ -31,7 +31,22 @@ Keep in mind while running through the examples that right now `rkt` needs to be
 
 Rocket uses content addressable storage (CAS) for storing an ACI on disk. In this example, the image is downloaded and added to the CAS.
 
-(Note that since Rocket verifies signatures by default, you will need to first [trust](https://github.com/coreos/rocket/blob/master/Documentation/signing-and-verification-guide.md#establishing-trust) the [CoreOS public key](https://coreos.com/dist/pubkeys/aci-pubkeys.gpg) used to sign the image. Detailed step-by-step for the signing procedure [is here](Documentation/getting-started-ubuntu-trusty.md#trust-the-coreos-signing-key).)
+Since Rocket verifies signatures by default, you will need to first [trust](https://github.com/coreos/rocket/blob/master/Documentation/signing-and-verification-guide.md#establishing-trust) the [CoreOS public key](https://coreos.com/dist/pubkeys/aci-pubkeys.gpg) used to sign the image:
+
+```
+$ rkt trust --prefix coreos.com/etcd
+Prefix: "coreos.com/etcd"
+Key: "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg"
+GPG key fingerprint is: 8B86 DE38 890D DB72 9186  7B02 5210 BD88 8818 2190
+  CoreOS ACI Builder <release@coreos.com>
+Are you sure you want to trust this key (yes/no)? yes
+Trusting "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg" for prefix "coreos.com/etcd".
+Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190"
+```
+
+Detailed step-by-step for the signing procedure [is here](Documentation/getting-started-ubuntu-trusty.md#trust-the-coreos-signing-key).)
+
+How that we've trusted the CoreOS public key, we can fetch the ACI:
 
 ```
 [~/rocket-v0.2.0]$ sudo ./rkt fetch https://github.com/coreos/etcd/releases/download/v2.0.0-rc.1/etcd-v2.0.0-rc.1-linux-amd64.aci
