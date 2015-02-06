@@ -24,10 +24,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/coreos/rocket/pkg/keystore"
 
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
@@ -44,6 +46,8 @@ func NewRemote(aciurl, sigurl string) *Remote {
 
 type Remote struct {
 	ACIURL string
+	// Currently must be either empty or "docker"
+	Scheme string
 	SigURL string
 	ETag   string
 	// The key in the blob store under which the ACI has been saved.
@@ -77,6 +81,27 @@ func (r Remote) Type() int64 {
 func (r Remote) Download(ds Store, ks *keystore.Keystore) (*openpgp.Entity, *os.File, error) {
 	var entity *openpgp.Entity
 	var err error
+	if r.Scheme == "docker" {
+		registryURL := strings.TrimPrefix(r.ACIURL, "docker://")
+
+		tmpDir, err := ds.tmpDir()
+		if err != nil {
+			return nil, nil, fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
+		}
+
+		acis, err := docker2aci.Convert(registryURL, true, tmpDir)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error converting docker image to ACI: %v", err)
+		}
+
+		aciFile, err := os.Open(acis[0])
+		if err != nil {
+			return nil, nil, fmt.Errorf("error opening squashed ACI file: %v", err)
+		}
+
+		return nil, aciFile, nil
+	}
+
 	acif, err := downloadACI(ds, r.ACIURL)
 	if err != nil {
 		return nil, acif, fmt.Errorf("error downloading the aci image: %v", err)

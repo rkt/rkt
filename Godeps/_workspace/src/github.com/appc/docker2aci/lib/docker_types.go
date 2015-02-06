@@ -1,0 +1,51 @@
+package docker2aci
+
+import "time"
+
+// DockerImageData stores the JSON structure of a Docker image.
+// Taken and adapted from upstream Docker.
+type DockerImageData struct {
+	ID              string             `json:"id"`
+	Parent          string             `json:"parent,omitempty"`
+	Comment         string             `json:"comment,omitempty"`
+	Created         time.Time          `json:"created"`
+	Container       string             `json:"container,omitempty"`
+	ContainerConfig DockerImageConfig  `json:"container_config,omitempty"`
+	DockerVersion   string             `json:"docker_version,omitempty"`
+	Author          string             `json:"author,omitempty"`
+	Config          *DockerImageConfig `json:"config,omitempty"`
+	Architecture    string             `json:"architecture,omitempty"`
+	OS              string             `json:"os,omitempty"`
+	Checksum        string             `json:"checksum"`
+}
+
+// Note: the Config structure should hold only portable information about the container.
+// Here, "portable" means "independent from the host we are running on".
+// Non-portable information *should* appear in HostConfig.
+// Taken and adapted from upstream Docker.
+type DockerImageConfig struct {
+	Hostname        string
+	Domainname      string
+	User            string
+	Memory          int64  // Memory limit (in bytes)
+	MemorySwap      int64  // Total memory usage (memory + swap); set `-1' to disable swap
+	CpuShares       int64  // CPU shares (relative weight vs. other containers)
+	Cpuset          string // Cpuset 0-2, 0,1
+	AttachStdin     bool
+	AttachStdout    bool
+	AttachStderr    bool
+	PortSpecs       []string // Deprecated - Can be in the format of 8080/tcp
+	ExposedPorts    map[string]struct{}
+	Tty             bool // Attach standard streams to a tty, including stdin if it is not closed.
+	OpenStdin       bool // Open stdin
+	StdinOnce       bool // If true, close stdin after the 1 attached client disconnects.
+	Env             []string
+	Cmd             []string
+	Image           string // Name of the image as it was passed by the operator (eg. could be symbolic)
+	Volumes         map[string]struct{}
+	WorkingDir      string
+	Entrypoint      []string
+	NetworkDisabled bool
+	MacAddress      string
+	OnBuild         []string
+}

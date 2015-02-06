@@ -94,8 +94,8 @@ func TestDownloading(t *testing.T) {
 		hit  bool
 	}{
 		// The Blob entry isn't used
-		{Remote{ts.URL, "", "12", ""}, body, false},
-		{Remote{ts.URL, "", "12", ""}, body, true},
+		{Remote{ts.URL, "", "", "12", ""}, body, false},
+		{Remote{ts.URL, "", "", "12", ""}, body, true},
 	}
 
 	ds := NewStore(dir)

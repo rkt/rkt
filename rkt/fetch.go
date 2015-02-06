@@ -91,10 +91,12 @@ func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore, discover bool)
 	if err != nil {
 		return "", fmt.Errorf("not a valid URL (%s)", img)
 	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", fmt.Errorf("rkt only supports http or https URLs (%s)", img)
+	switch u.Scheme {
+	case "http", "https", "docker":
+	default:
+		return "", fmt.Errorf("rkt only supports http, https or docker URLs (%s)", img)
 	}
-	return fetchImageFromURL(u.String(), ds, ks)
+	return fetchImageFromURL(u.String(), u.Scheme, ds, ks)
 }
 
 func fetchImageFromEndpoints(ep *discovery.Endpoints, ds *cas.Store, ks *keystore.Keystore) (string, error) {
@@ -102,8 +104,9 @@ func fetchImageFromEndpoints(ep *discovery.Endpoints, ds *cas.Store, ks *keystor
 	return downloadImage(rem, ds, ks)
 }
 
-func fetchImageFromURL(imgurl string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
+func fetchImageFromURL(imgurl string, scheme string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
 	rem := cas.NewRemote(imgurl, sigURLFromImgURL(imgurl))
+	rem.Scheme = scheme
 	return downloadImage(rem, ds, ks)
 }
 
@@ -111,6 +114,9 @@ func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (strin
 	stdout("rkt: fetching image from %s", rem.ACIURL)
 	if globalFlags.InsecureSkipVerify {
 		stdout("rkt: warning: signature verification has been disabled")
+	}
+	if rem.Scheme == "docker" {
+		fmt.Printf("rkt: warning: signature verification for docker images is not supported\n")
 	}
 	err := ds.ReadIndex(rem)
 	if err != nil && rem.BlobKey == "" {
@@ -120,7 +126,7 @@ func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (strin
 		}
 		defer os.Remove(aciFile.Name())
 
-		if !globalFlags.InsecureSkipVerify {
+		if entity != nil && !globalFlags.InsecureSkipVerify {
 			fmt.Println("rkt: signature verified: ")
 			for _, v := range entity.Identities {
 				stdout("  %s", v.Name)
