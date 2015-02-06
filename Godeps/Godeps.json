@@ -12,32 +12,28 @@
 		},
 		{
 			"ImportPath": "github.com/appc/spec/aci",
-			"Comment": "v0.2.0-44-g2fee340e9314",
-			"Rev": "2fee340e9314b9f0f53cbf0e929d158a09930a5f"
+			"Comment": "v0.3.0-2-g4c3cbeae4798",
+			"Rev": "4c3cbeae47980d073828dd263a8c982667855f06"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/actool",
-			"Comment": "v0.2.0-44-g2fee340e9314",
-			"Rev": "2fee340e9314b9f0f53cbf0e929d158a09930a5f"
+			"Comment": "v0.3.0-2-g4c3cbeae4798",
+			"Rev": "4c3cbeae47980d073828dd263a8c982667855f06"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/discovery",
-			"Comment": "v0.2.0-44-g2fee340e9314",
-			"Rev": "2fee340e9314b9f0f53cbf0e929d158a09930a5f"
+			"Comment": "v0.3.0-2-g4c3cbeae4798",
+			"Rev": "4c3cbeae47980d073828dd263a8c982667855f06"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/tarheader",
-			"Comment": "v0.2.0-44-g2fee340e9314",
-			"Rev": "2fee340e9314b9f0f53cbf0e929d158a09930a5f"
+			"Comment": "v0.3.0-2-g4c3cbeae4798",
+			"Rev": "4c3cbeae47980d073828dd263a8c982667855f06"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema",
-			"Comment": "v0.2.0-44-g2fee340e9314",
-			"Rev": "2fee340e9314b9f0f53cbf0e929d158a09930a5f"
-		},
-		{
-			"ImportPath": "github.com/coreos/go-iptables/iptables",
-			"Rev": "6c2d35e85727473f4d6a479c39650b548aa35f16"
+			"Comment": "v0.3.0-2-g4c3cbeae4798",
+			"Rev": "4c3cbeae47980d073828dd263a8c982667855f06"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-semver/semver",

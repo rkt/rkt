@@ -14,7 +14,7 @@ func newTestACI() (*os.File, error) {
 		return nil, err
 	}
 
-	manifestBody := `{"acKind":"ImageManifest","acVersion":"0.2.0","name":"example.com/app"}`
+	manifestBody := `{"acKind":"ImageManifest","acVersion":"0.3.0","name":"example.com/app"}`
 
 	gw := gzip.NewWriter(tf)
 	tw := tar.NewWriter(gw)
