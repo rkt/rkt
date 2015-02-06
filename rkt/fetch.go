@@ -48,7 +48,7 @@ func init() {
 
 func runFetch(args []string) (exit int) {
 	if len(args) < 1 {
-		fmt.Fprintf(os.Stderr, "fetch: Must provide at least one image\n")
+		stderr("fetch: Must provide at least one image")
 		return 1
 	}
 
@@ -57,7 +57,7 @@ func runFetch(args []string) (exit int) {
 	for _, img := range args {
 		hash, err := fetchImage(img, ds, ks, true)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
+			stderr("%v", err)
 			return 1
 		}
 		shortHash := types.ShortHash(hash)
@@ -73,12 +73,12 @@ func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore, discover bool)
 	u, err := url.Parse(img)
 	if err == nil && discover && u.Scheme == "" {
 		if app := newDiscoveryApp(img); app != nil {
-			fmt.Printf("rkt: searching for app image %s\n", img)
+			stdout("rkt: searching for app image %s", img)
 			ep, attempts, err := discovery.DiscoverEndpoints(*app, true)
 
 			if globalFlags.Debug {
 				for _, a := range attempts {
-					fmt.Fprintf(os.Stderr, "meta tag 'ac-discovery' not found on %s: %v\n", a.Prefix, a.Error)
+					stderr("meta tag 'ac-discovery' not found on %s: %v", a.Prefix, a.Error)
 				}
 			}
 
@@ -108,9 +108,9 @@ func fetchImageFromURL(imgurl string, ds *cas.Store, ks *keystore.Keystore) (str
 }
 
 func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (string, error) {
-	fmt.Printf("rkt: fetching image from %s\n", rem.ACIURL)
+	stdout("rkt: fetching image from %s", rem.ACIURL)
 	if globalFlags.InsecureSkipVerify {
-		fmt.Printf("rkt: warning: signature verification has been disabled\n")
+		stdout("rkt: warning: signature verification has been disabled")
 	}
 	err := ds.ReadIndex(rem)
 	if err != nil && rem.BlobKey == "" {
@@ -123,7 +123,7 @@ func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (strin
 		if !globalFlags.InsecureSkipVerify {
 			fmt.Println("rkt: signature verified: ")
 			for _, v := range entity.Identities {
-				fmt.Printf("  %s\n", v.Name)
+				stdout("  %s", v.Name)
 			}
 		}
 		rem, err = rem.Store(*ds, aciFile)
