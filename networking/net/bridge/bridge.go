@@ -34,8 +34,8 @@ const defaultBrName = "rkt0"
 
 type Net struct {
 	rktnet.Net
-	BrName string `json:"brName"`
-	IsGW   bool   `json:"isGW"`
+	BrName string `json:"bridgeName"`
+	IsGW   bool   `json:"isGateway"`
 }
 
 func init() {
@@ -162,19 +162,12 @@ func calcGatewayIP(ipn *net.IPNet) net.IP {
 	return util.NextIP(nid)
 }
 
-func setupBridge(n *Net, ipamConf *ipam.IPConfig) (*netlink.Bridge, error) {
+func setupBridge(n *Net, ipConf *ipam.IPConfig) (*netlink.Bridge, error) {
 	var gwn *net.IPNet
 	if n.IsGW {
-		gw := net.IP{}
-		if ipamConf.Gateway != nil {
-			gw = ipamConf.Gateway
-		} else {
-			gw = calcGatewayIP(ipamConf.IP)
-		}
-
 		gwn = &net.IPNet{
-			IP:   gw,
-			Mask: ipamConf.IP.Mask,
+			IP:   ipConf.Gateway,
+			Mask: ipConf.IP.Mask,
 		}
 	}
 
@@ -202,6 +195,10 @@ func cmdAdd(contID, netns, netConf, ifName string) error {
 	ipConf, err := ipam.ExecPluginAdd(n.Net.IPAM.Type)
 	if err != nil {
 		return err
+	}
+
+	if ipConf.Gateway == nil && n.IsGW {
+		ipConf.Gateway = calcGatewayIP(ipConf.IP)
 	}
 
 	br, err := setupBridge(n, ipConf)
