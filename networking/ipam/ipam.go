@@ -155,7 +155,10 @@ func ApplyIPConfig(ifName string, ipConf *IPConfig) error {
 
 	for _, dst := range ipConf.Routes {
 		if err = util.AddRoute(&dst, ipConf.Gateway, link); err != nil {
-			return err
+			// we skip over duplicate routes as we assume the first one wins
+			if !os.IsExist(err) {
+				return fmt.Errorf("failed to add route '%v via %v dev %v': %v", dst.String(), ipConf.Gateway, ifName, err)
+			}
 		}
 	}
 
