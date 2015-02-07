@@ -125,14 +125,41 @@ func (r Remote) Store(ds Store, aci io.Reader) (*Remote, error) {
 	return &r, nil
 }
 
+// downloadACI gets the aci specified at aciurl
 func downloadACI(ds Store, aciurl string) (*os.File, error) {
-	res, err := http.Get(aciurl)
+	return downloadHTTP(aciurl, "ACI", ds.tmpFile)
+}
+
+// downloadSignatureFile gets the signature specified at sigurl
+func downloadSignatureFile(sigurl string) (*os.File, error) {
+	getTemp := func() (*os.File, error) {
+		return ioutil.TempFile("", "")
+	}
+
+	return downloadHTTP(sigurl, "signature", getTemp)
+}
+
+// downloadHTTP retrieves url, creating a temp file using getTempFile
+// file:// http:// and https:// urls supported
+func downloadHTTP(url, label string, getTempFile func() (*os.File, error)) (*os.File, error) {
+	tmp, err := getTempFile()
+	if err != nil {
+		return nil, fmt.Errorf("error downloading %s: %v", label, err)
+	}
+	defer func() {
+		if err != nil {
+			os.Remove(tmp.Name())
+			tmp.Close()
+		}
+	}()
+
+	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
 
-	prefix := "Downloading aci"
+	prefix := "Downloading " + label
 	fmtBytesSize := 18
 	barSize := int64(80 - len(prefix) - fmtBytesSize)
 	bar := ioprogress.DrawTextFormatBar(barSize)
@@ -157,49 +184,13 @@ func downloadACI(ds Store, aciurl string) (*os.File, error) {
 		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
 	}
 
-	aciTempFile, err := ds.tmpFile()
-	if err != nil {
-		return nil, fmt.Errorf("error downloading aci: %v", err)
+	if _, err := io.Copy(tmp, reader); err != nil {
+		return nil, fmt.Errorf("error copying %s: %v", label, err)
 	}
 
-	if _, err := io.Copy(aciTempFile, reader); err != nil {
-		aciTempFile.Close()
-		os.Remove(aciTempFile.Name())
-		return nil, fmt.Errorf("error copying temp aci: %v", err)
-	}
-	if err := aciTempFile.Sync(); err != nil {
-		aciTempFile.Close()
-		os.Remove(aciTempFile.Name())
-		return nil, fmt.Errorf("error writing temp aci: %v", err)
-	}
-	return aciTempFile, nil
-}
-
-func downloadSignatureFile(sigurl string) (*os.File, error) {
-	sig, err := ioutil.TempFile("", "")
-	if err != nil {
-		return nil, fmt.Errorf("error downloading signature: %v", err)
-	}
-	res, err := http.Get(sigurl)
-	if err != nil {
-		return nil, fmt.Errorf("error downloading signature: %v", err)
-	}
-	defer res.Body.Close()
-
-	// TODO(jonboulle): handle http more robustly (redirects?)
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
+	if err := tmp.Sync(); err != nil {
+		return nil, fmt.Errorf("error writing %s: %v", label, err)
 	}
 
-	if _, err := io.Copy(sig, res.Body); err != nil {
-		sig.Close()
-		os.Remove(sig.Name())
-		return nil, fmt.Errorf("error copying signature: %v", err)
-	}
-	if err := sig.Sync(); err != nil {
-		sig.Close()
-		os.Remove(sig.Name())
-		return nil, fmt.Errorf("error writing signature: %v", err)
-	}
-	return sig, nil
+	return tmp, nil
 }
