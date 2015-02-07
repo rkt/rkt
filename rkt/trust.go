@@ -147,6 +147,10 @@ func getPubKeyLocations(prefix string, args []string) ([]string, error) {
 		return nil, fmt.Errorf("--prefix meta discovery error: %v", err)
 	}
 
+	if len(kls) == 0 {
+		return nil, fmt.Errorf("meta discovery on %s resulted in no keys", prefix)
+	}
+
 	return kls, nil
 }
 
