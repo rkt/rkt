@@ -44,8 +44,14 @@ The easiest way to trust a key is through meta discovery. Rocket will find and d
 And use it to download the public key and present it to you for approval:
 
 ```
-[insert output]
-
+$ rkt trust --prefix coreos.com/etcd
+Prefix: "coreos.com/etcd"
+Key: "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg"
+GPG key fingerprint is: 8B86 DE38 890D DB72 9186  7B02 5210 BD88 8818 2190
+  CoreOS ACI Builder <release@coreos.com>
+Are you sure you want to trust this key (yes/no)? yes
+Trusting "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg" for prefix "coreos.com/etcd".
+Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190"
 ```
 
 If Rocket can't find a key using meta discovery, an error will be printed:
