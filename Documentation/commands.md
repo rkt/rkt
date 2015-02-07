@@ -30,7 +30,7 @@ $rkt trust --prefix coreos.com/etcd
 To trust a key for an entire root domain, you must use the `--root` flag.
 
 ```
-$rkt trust --root --prefix coreos.com
+$rkt trust --root coreos.com
 ```
 
 #### Trust a Key Using Meta Discovery
