@@ -80,6 +80,7 @@ Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.
 
 Trusted public keys can be pre-populated by placing them in the appropriate location on disk for the desired prefix.
 
+_Depends on https://github.com/coreos/rocket/issues/500_
 ```
 $ ls -l /etc/rkt/trustedkeys/
 [insert example of root key vs prefixed key]
