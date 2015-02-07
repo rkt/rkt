@@ -136,8 +136,6 @@ sha512-fa1cb92dc276b0f9bedf87981e61ecde
 
 Rocket can run ACIs based on name, hash, local file on disk or URL. If an ACI hasn't been cached on disk, Rocket will attempt to find and download it.
 
-By default, signatures are checked before an ACI will be run &mdash; be sure to trust the appropriate key before running.
-
 ### rkt run
 
 ```
@@ -207,7 +205,7 @@ Work in progress. Please contribute!
 
 ### rkt gc
 
-Rocket has built-in garbage collection that is designed to be run periodically from a timer or cron job. Containers older than the grace period are marked and cleaned up during a subsequent garbage collection pass. [Read more about the container lifecycle][gc-docs].
+Rocket has a built-in garbage collection command that is designed to be run periodically from a timer or cron job. Containers older than the grace period are marked and cleaned up during a subsequent garbage collection pass. [Read more about the container lifecycle][gc-docs].
 
 [gc-docs]: container-lifecycle.md#garbage-collection
 
@@ -216,4 +214,13 @@ $ rkt gc --grace-period=30m0s
 Moving container "21b1cb32-c156-4d26-82ae-eda1ab60f595" to garbage
 Moving container "5dd42e9c-7413-49a9-9113-c2a8327d08ab" to garbage
 Moving container "f07a4070-79a9-4db0-ae65-a090c9c393a3" to garbage
+```
+
+On the next pass, the containers are removed:
+
+```
+$ rkt gc
+Garbage collecting container "21b1cb32-c156-4d26-82ae-eda1ab60f595"
+Garbage collecting container "5dd42e9c-7413-49a9-9113-c2a8327d08ab"
+Garbage collecting container "f07a4070-79a9-4db0-ae65-a090c9c393a3"
 ```
