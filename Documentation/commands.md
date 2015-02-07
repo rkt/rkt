@@ -134,14 +134,54 @@ sha512-fa1cb92dc276b0f9bedf87981e61ecde
 
 ## Running Containers
 
-Work in progress. Please contribute!
+Rocket can run ACIs based on name, hash, local file on disk or URL. If an ACI hasn't been cached on disk, Rocket will attempt to find and download it.
+
+By default, signatures are checked before an ACI will be run &mdash; be sure to trust the appropriate key before running.
 
 ### rkt run
 
- - command examples
- - if not found locally, will be fetched
- - example of failed validation
- - how to disable verification
+```
+# Run by name
+$ sudo rkt run coreos.com/etcd:v2.0.0
+```
+
+```
+# Run by hash
+$ sudo rkt run sha512-fa1cb92dc276b0f9bedf87981e61ecde
+```
+
+```
+# Run by ACI address
+$ sudo rkt run https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
+```
+
+#### Disable Signature Verification
+
+If desired, `-insecure-skip-verify` can be used to disable this security check:
+
+```
+$ sudo rkt -insecure-skip-verify run coreos.com/etcd:v2.0.0
+rkt: searching for app image coreos.com/etcd:v2.0.0
+rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
+rkt: warning: signature verification has been disabled
+...
+```
+
+#### Mount Volumes into a Container
+
+Work in progress. Please contribute!
+
+#### Customize Networking
+
+Work in progress. Please contribute!
+
+#### Use a Custom Stage 1
+
+Work in progress. Please contribute!
+
+#### Run a Container in the Background
+
+Work in progress. Please contribute!
 
 ### rkt status
 
@@ -163,4 +203,13 @@ Work in progress. Please contribute!
 
 ### rkt gc
 
-Work in progress. Please contribute!
+Rocket has built-in garbage collection that is designed to be run periodically from a timer or cron job. Containers older than the grace period are marked and cleaned up during a subsequent garbage collection pass. [Read more about the container lifecycle][gc-docs].
+
+[gc-docs]: container-lifecycle.md#garbage-collection
+
+```
+$ rkt gc --grace-period=30m0s
+Moving container "21b1cb32-c156-4d26-82ae-eda1ab60f595" to garbage
+Moving container "5dd42e9c-7413-49a9-9113-c2a8327d08ab" to garbage
+Moving container "f07a4070-79a9-4db0-ae65-a090c9c393a3" to garbage
+```
