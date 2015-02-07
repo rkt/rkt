@@ -155,6 +155,10 @@ $ sudo rkt run sha512-fa1cb92dc276b0f9bedf87981e61ecde
 $ sudo rkt run https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 ```
 
+_TODO: Exit codes_
+_TODO: Environment variables_
+_TODO: Logging_
+
 #### Disable Signature Verification
 
 If desired, `-insecure-skip-verify` can be used to disable this security check:
