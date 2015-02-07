@@ -92,12 +92,32 @@ func SetupVeth(entropy, contVethName string, ipn *net.IPNet, hostNS *os.File) (h
 func DelLinkByName(ifName string) error {
 	iface, err := netlink.LinkByName(ifName)
 	if err != nil {
-		return fmt.Errorf("Failed to lookup %q: %v", ifName, err)
+		return fmt.Errorf("failed to lookup %q: %v", ifName, err)
 	}
 
 	if err = netlink.LinkDel(iface); err != nil {
-		return fmt.Errorf("Failed to delete %q: %v", ifName, err)
+		return fmt.Errorf("failed to delete %q: %v", ifName, err)
 	}
 
 	return nil
+}
+
+// DelLinkByNameAddr remove an interface returns its IP address
+// of the specified family
+func DelLinkByNameAddr(ifName string, family int) (*net.IPNet, error) {
+	iface, err := netlink.LinkByName(ifName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup %q: %v", ifName, err)
+	}
+
+	addrs, err := netlink.AddrList(iface, family)
+	if err != nil || len(addrs) == 0 {
+		return nil, fmt.Errorf("failed to get IP addresses for %q: %v", ifName, err)
+	}
+
+	if err = netlink.LinkDel(iface); err != nil {
+		return nil, fmt.Errorf("failed to delete %q: %v", ifName, err)
+	}
+
+	return addrs[0].IPNet, nil
 }

@@ -36,6 +36,7 @@ type Net struct {
 	rktnet.Net
 	BrName string `json:"bridgeName"`
 	IsGW   bool   `json:"isGateway"`
+	IPMasq bool   `json:"ipMasq"`
 }
 
 func init() {
@@ -210,9 +211,23 @@ func cmdAdd(contID, netns, netConf, ifName string) error {
 		return err
 	}
 
+	if n.IPMasq {
+		chain := "RKT-" + n.Name
+		if err = util.SetupIPMasq(network(ipConf.IP), chain); err != nil {
+			return err
+		}
+	}
+
 	return rktnet.PrintIfConfig(&rktnet.IfConfig{
 		IP: ipConf.IP.IP,
 	})
+}
+
+func network(ipn *net.IPNet) *net.IPNet {
+	return &net.IPNet{
+		IP:   ipn.IP.Mask(ipn.Mask),
+		Mask: ipn.Mask,
+	}
 }
 
 func cmdDel(contID, netns, netConf, ifName string) error {

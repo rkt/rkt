@@ -71,7 +71,7 @@ func (e *containerEnv) findNetPlugin(plugin string) string {
 }
 
 func envVars(vars [][2]string) []string {
-	env := []string{}
+	env := os.Environ()
 
 	for _, kv := range vars {
 		env = append(env, strings.Join(kv[:], "="))

@@ -36,6 +36,10 @@
 			"Rev": "4c3cbeae47980d073828dd263a8c982667855f06"
 		},
 		{
+			"ImportPath": "github.com/coreos/go-iptables/iptables",
+			"Rev": "83dfad0f13fd7310fb3c1cb8563248d8d604b95b"
+		},
+		{
 			"ImportPath": "github.com/coreos/go-semver/semver",
 			"Rev": "6fe83ccda8fb9b7549c9ab4ba47f47858bc950aa"
 		},
