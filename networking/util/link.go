@@ -23,11 +23,12 @@ import (
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
 )
 
-func makeVeth(name, peer string) (netlink.Link, error) {
+func makeVeth(name, peer string, mtu int) (netlink.Link, error) {
 	veth := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:  name,
 			Flags: net.FlagUp,
+			MTU:   mtu,
 		},
 		PeerName: peer,
 	}
@@ -47,10 +48,10 @@ func hash(s string) string {
 // SetupVeth sets up a virtual ethernet link.
 // Should be in container netns.
 // TODO(eyakubovich): get rid of entropy and ask kernel to pick name via pattern
-func SetupVeth(entropy, contVethName string, ipn *net.IPNet, hostNS *os.File) (hostVeth, contVeth netlink.Link, err error) {
+func SetupVeth(entropy, contVethName string, mtu int, hostNS *os.File) (hostVeth, contVeth netlink.Link, err error) {
 	// NetworkManager (recent versions) will ignore veth devices that start with "veth"
 	hostVethName := "veth" + hash(entropy)[:4]
-	hostVeth, err = makeVeth(hostVethName, contVethName)
+	hostVeth, err = makeVeth(hostVethName, contVethName, mtu)
 	if err != nil {
 		err = fmt.Errorf("failed to make veth pair: %v", err)
 		return
@@ -70,14 +71,6 @@ func SetupVeth(entropy, contVethName string, ipn *net.IPNet, hostNS *os.File) (h
 	if err = netlink.LinkSetUp(contVeth); err != nil {
 		err = fmt.Errorf("failed to set %q up: %v", contVethName, err)
 		return
-	}
-
-	if ipn != nil {
-		addr := &netlink.Addr{IPNet: ipn, Label: ""}
-		if err = netlink.AddrAdd(contVeth, addr); err != nil {
-			err = fmt.Errorf("failed to add IP addr to veth: %v", err)
-			return
-		}
 	}
 
 	if err = netlink.LinkSetNsFd(hostVeth, int(hostNS.Fd())); err != nil {

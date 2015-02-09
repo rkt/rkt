@@ -38,14 +38,15 @@ func init() {
 type Net struct {
 	rktnet.Net
 	IPMasq bool `json:"ipMasq"`
+	MTU    int  `json:"mtu"`
 }
 
-func setupContVeth(contID, netns, ifName string, ipConf *ipam.IPConfig) (string, error) {
+func setupContVeth(contID, netns, ifName string, mtu int, ipConf *ipam.IPConfig) (string, error) {
 	var hostVethName string
 	err := util.WithNetNSPath(netns, func(hostNS *os.File) error {
 		entropy := contID + ifName
 
-		hostVeth, _, err := util.SetupVeth(entropy, ifName, nil, hostNS)
+		hostVeth, _, err := util.SetupVeth(entropy, ifName, mtu, hostNS)
 		if err != nil {
 			return err
 		}
@@ -99,7 +100,7 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 		return err
 	}
 
-	hostVethName, err := setupContVeth(contID, netns, ifName, ipConf)
+	hostVethName, err := setupContVeth(contID, netns, ifName, conf.MTU, ipConf)
 	if err != nil {
 		return err
 	}

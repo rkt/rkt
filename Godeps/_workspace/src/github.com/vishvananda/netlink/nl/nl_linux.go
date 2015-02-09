@@ -248,6 +248,9 @@ done:
 				continue
 			}
 			res = append(res, m.Data)
+			if m.Header.Flags&syscall.NLM_F_MULTI == 0 {
+				break done
+			}
 		}
 	}
 	return res, nil

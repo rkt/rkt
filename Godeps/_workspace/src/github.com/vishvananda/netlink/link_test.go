@@ -1,6 +1,8 @@
 package netlink
 
 import (
+	"bytes"
+	"net"
 	"testing"
 
 	"github.com/vishvananda/netns"
@@ -51,6 +53,9 @@ func testLinkAddDel(t *testing.T, link Link) {
 	if veth, ok := link.(*Veth); ok {
 		if veth.TxQLen != testTxQLen {
 			t.Fatalf("TxQLen is %d, should be %d", veth.TxQLen, testTxQLen)
+		}
+		if rBase.MTU != base.MTU {
+			t.Fatalf("MTU is %d, should be %d", rBase.MTU, base.MTU)
 		}
 
 		if veth.PeerName != "" {
@@ -156,7 +161,7 @@ func TestLinkAddDelBridge(t *testing.T) {
 	tearDown := setUpNetlinkTest(t)
 	defer tearDown()
 
-	testLinkAddDel(t, &Bridge{LinkAttrs{Name: "foo"}})
+	testLinkAddDel(t, &Bridge{LinkAttrs{Name: "foo", MTU: 1400}})
 }
 
 func TestLinkAddDelVlan(t *testing.T) {
@@ -195,7 +200,7 @@ func TestLinkAddDelVeth(t *testing.T) {
 	tearDown := setUpNetlinkTest(t)
 	defer tearDown()
 
-	testLinkAddDel(t, &Veth{LinkAttrs{Name: "foo", TxQLen: testTxQLen}, "bar"})
+	testLinkAddDel(t, &Veth{LinkAttrs{Name: "foo", TxQLen: testTxQLen, MTU: 1400}, "bar"})
 }
 
 func TestLinkAddDelBridgeMaster(t *testing.T) {
@@ -397,5 +402,63 @@ func TestLinkByIndex(t *testing.T) {
 	_, err = LinkByIndex(dummy.Attrs().Index)
 	if err == nil {
 		t.Fatalf("LinkByIndex(%v) found deleted link", err)
+	}
+}
+
+func TestLinkSet(t *testing.T) {
+	tearDown := setUpNetlinkTest(t)
+	defer tearDown()
+
+	iface := &Dummy{LinkAttrs{Name: "foo"}}
+	if err := LinkAdd(iface); err != nil {
+		t.Fatal(err)
+	}
+
+	link, err := LinkByName("foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = LinkSetName(link, "bar")
+	if err != nil {
+		t.Fatalf("Could not change interface name: %v", err)
+	}
+
+	link, err = LinkByName("bar")
+	if err != nil {
+		t.Fatalf("Interface name not changed: %v", err)
+	}
+
+	err = LinkSetMTU(link, 1400)
+	if err != nil {
+		t.Fatalf("Could not set MTU: %v", err)
+	}
+
+	link, err = LinkByName("bar")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if link.Attrs().MTU != 1400 {
+		t.Fatal("MTU not changed!")
+	}
+
+	addr, err := net.ParseMAC("00:12:34:56:78:AB")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = LinkSetHardwareAddr(link, addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	link, err = LinkByName("bar")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(link.Attrs().HardwareAddr, addr) {
+		t.Fatalf("hardware address not changed!")
 	}
 }

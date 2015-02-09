@@ -80,6 +80,48 @@ func LinkSetMTU(link Link, mtu int) error {
 	return err
 }
 
+// LinkSetName sets the name of the link device.
+// Equivalent to: `ip link set $link name $name`
+func LinkSetName(link Link, name string) error {
+	base := link.Attrs()
+	ensureIndex(base)
+	req := nl.NewNetlinkRequest(syscall.RTM_SETLINK, syscall.NLM_F_ACK)
+
+	msg := nl.NewIfInfomsg(syscall.AF_UNSPEC)
+	msg.Type = syscall.RTM_SETLINK
+	msg.Flags = syscall.NLM_F_REQUEST
+	msg.Index = int32(base.Index)
+	msg.Change = nl.DEFAULT_CHANGE
+	req.AddData(msg)
+
+	data := nl.NewRtAttr(syscall.IFLA_IFNAME, []byte(name))
+	req.AddData(data)
+
+	_, err := req.Execute(syscall.NETLINK_ROUTE, 0)
+	return err
+}
+
+// LinkSetHardwareAddr sets the hardware address of the link device.
+// Equivalent to: `ip link set $link address $hwaddr`
+func LinkSetHardwareAddr(link Link, hwaddr net.HardwareAddr) error {
+	base := link.Attrs()
+	ensureIndex(base)
+	req := nl.NewNetlinkRequest(syscall.RTM_SETLINK, syscall.NLM_F_ACK)
+
+	msg := nl.NewIfInfomsg(syscall.AF_UNSPEC)
+	msg.Type = syscall.RTM_SETLINK
+	msg.Flags = syscall.NLM_F_REQUEST
+	msg.Index = int32(base.Index)
+	msg.Change = nl.DEFAULT_CHANGE
+	req.AddData(msg)
+
+	data := nl.NewRtAttr(syscall.IFLA_ADDRESS, []byte(hwaddr))
+	req.AddData(data)
+
+	_, err := req.Execute(syscall.NETLINK_ROUTE, 0)
+	return err
+}
+
 // LinkSetMaster sets the master of the link device.
 // Equivalent to: `ip link set $link master $master`
 func LinkSetMaster(link Link, master *Bridge) error {
@@ -263,6 +305,11 @@ func LinkAdd(link Link) error {
 	nameData := nl.NewRtAttr(syscall.IFLA_IFNAME, nl.ZeroTerminated(base.Name))
 	req.AddData(nameData)
 
+	if base.MTU > 0 {
+		mtu := nl.NewRtAttr(syscall.IFLA_MTU, nl.Uint32Attr(uint32(base.MTU)))
+		req.AddData(mtu)
+	}
+
 	linkInfo := nl.NewRtAttr(syscall.IFLA_LINKINFO, nil)
 	nl.NewRtAttrChild(linkInfo, nl.IFLA_INFO_KIND, nl.NonZeroTerminated(link.Type()))
 
@@ -279,6 +326,9 @@ func LinkAdd(link Link) error {
 		nl.NewIfInfomsgChild(peer, syscall.AF_UNSPEC)
 		nl.NewRtAttrChild(peer, syscall.IFLA_IFNAME, nl.ZeroTerminated(veth.PeerName))
 		nl.NewRtAttrChild(peer, syscall.IFLA_TXQLEN, nl.Uint32Attr(base.TxQLen))
+		if base.MTU > 0 {
+			nl.NewRtAttrChild(peer, syscall.IFLA_MTU, nl.Uint32Attr(uint32(base.MTU)))
+		}
 	} else if vxlan, ok := link.(*Vxlan); ok {
 		addVxlanAttrs(vxlan, linkInfo)
 	}

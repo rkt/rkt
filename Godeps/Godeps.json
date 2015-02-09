@@ -70,7 +70,7 @@
 		},
 		{
 			"ImportPath": "github.com/vishvananda/netlink",
-			"Rev": "7f10b9c2b83cfebb282b60999505e8a72e1231a0"
+			"Rev": "a59b20a4021ab57ec6a89a4ad5fccfaede1fee77"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/cast5",
