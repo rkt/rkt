@@ -37,6 +37,7 @@ type Net struct {
 	BrName string `json:"bridgeName"`
 	IsGW   bool   `json:"isGateway"`
 	IPMasq bool   `json:"ipMasq"`
+	MTU    int    `json:"mtu"`
 }
 
 func init() {
@@ -93,10 +94,11 @@ func bridgeByName(name string) (*netlink.Bridge, error) {
 	return br, nil
 }
 
-func ensureBridge(brName string, ipn *net.IPNet) (*netlink.Bridge, error) {
+func ensureBridge(brName string, mtu int, ipn *net.IPNet) (*netlink.Bridge, error) {
 	br := &netlink.Bridge{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: brName,
+			MTU:  mtu,
 		},
 	}
 
@@ -123,12 +125,12 @@ func ensureBridge(brName string, ipn *net.IPNet) (*netlink.Bridge, error) {
 	return br, nil
 }
 
-func setupVeth(contID types.UUID, netns string, br *netlink.Bridge, ifName string, ipConf *ipam.IPConfig) error {
+func setupVeth(contID types.UUID, netns string, br *netlink.Bridge, ifName string, mtu int, ipConf *ipam.IPConfig) error {
 	var hostVethName string
 
 	err := util.WithNetNSPath(netns, func(hostNS *os.File) error {
 		// create the veth pair in the container and move host end into host netns
-		hostVeth, _, err := util.SetupVeth(contID.String(), ifName, nil, hostNS)
+		hostVeth, _, err := util.SetupVeth(contID.String(), ifName, mtu, hostNS)
 		if err != nil {
 			return err
 		}
@@ -173,7 +175,7 @@ func setupBridge(n *Net, ipConf *ipam.IPConfig) (*netlink.Bridge, error) {
 	}
 
 	// create bridge if necessary
-	br, err := ensureBridge(n.BrName, gwn)
+	br, err := ensureBridge(n.BrName, n.MTU, gwn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bridge %q: %v", n.BrName, err)
 	}
@@ -207,7 +209,7 @@ func cmdAdd(contID, netns, netConf, ifName string) error {
 		return err
 	}
 
-	if err = setupVeth(*cid, netns, br, ifName, ipConf); err != nil {
+	if err = setupVeth(*cid, netns, br, ifName, n.MTU, ipConf); err != nil {
 		return err
 	}
 

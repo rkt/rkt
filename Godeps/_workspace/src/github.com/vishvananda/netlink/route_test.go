@@ -34,7 +34,17 @@ func TestRouteAddDel(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(routes) != 1 {
-		t.Fatal("Link not removed properly")
+		t.Fatal("Link not added properly")
+	}
+
+	dstIP := net.ParseIP("192.168.0.42")
+	routeToDstIP, err := RouteGet(dstIP)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(routeToDstIP) == 0 {
+		t.Fatal("Default route not present")
 	}
 
 	err = RouteDel(&route)
