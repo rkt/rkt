@@ -159,7 +159,7 @@ func Run(cfg Config, dir string) {
 		log.Fatalf("failed changing to dir: %v", err)
 	}
 
-	ep, err := getStage1Entrypoint(dir, initEntrypoint)
+	ep, err := getStage1Entrypoint(dir, runEntrypoint)
 	if err != nil {
 		log.Fatalf("error determining init entrypoint: %v", err)
 	}
