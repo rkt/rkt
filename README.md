@@ -17,9 +17,9 @@ Rocket is a CLI for running App Containers. The goal of rocket is to be composab
 To install the `rkt` binary, grab the release directly from GitHub:
 
 ```
-wget https://github.com/coreos/rocket/releases/download/v0.2.0/rocket-v0.2.0.tar.gz
-tar xzvf rocket-v0.2.0.tar.gz
-cd rocket-v0.2.0
+wget https://github.com/coreos/rocket/releases/download/v0.3.1/rocket-v0.3.1.tar.gz
+tar xzvf rocket-v0.3.1.tar.gz
+cd rocket-v0.3.1
 ./rkt help
 ```
 
