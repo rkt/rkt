@@ -205,7 +205,7 @@ Work in progress. Please contribute!
 
 ### rkt gc
 
-Rocket has a built-in garbage collection command that is designed to be run periodically from a timer or cron job. Containers older than the grace period are marked and cleaned up during a subsequent garbage collection pass. [Read more about the container lifecycle][gc-docs].
+Rocket has a built-in garbage collection command that is designed to be run periodically from a timer or cron job. Stopped containers are moved to the garbage and cleaned up during a subsequent garbage collection pass. Each `gc` pass removes any containers remaining in the garbage past the grace period. [Read more about the container lifecycle][gc-docs].
 
 [gc-docs]: container-lifecycle.md#garbage-collection
 
@@ -219,7 +219,7 @@ Moving container "f07a4070-79a9-4db0-ae65-a090c9c393a3" to garbage
 On the next pass, the containers are removed:
 
 ```
-$ rkt gc
+$ rkt gc --grace-period=30m0s
 Garbage collecting container "21b1cb32-c156-4d26-82ae-eda1ab60f595"
 Garbage collecting container "5dd42e9c-7413-49a9-9113-c2a8327d08ab"
 Garbage collecting container "f07a4070-79a9-4db0-ae65-a090c9c393a3"
