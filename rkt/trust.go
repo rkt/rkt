@@ -37,7 +37,7 @@ var (
 	cmdTrust = &Command{
 		Name:    cmdTrustName,
 		Summary: "Trust a key for image verification",
-		Usage:   "[--prefix PREFIX] [--root] [PUBKEY ...]",
+		Usage:   "[--prefix PREFIX] [--insecure-allow-http] [--root] [PUBKEY ...]",
 		Description: `Adds keys to the local keystore for use in verifying signed images.
 PUBKEY may be either a local file or URL,
 PREFIX scopes the applicability of PUBKEY to image names sharing PREFIX.
@@ -45,8 +45,9 @@ Meta discovery of PUBKEY at PREFIX will be attempted if no PUBKEY is specified.
 --root must be specified to add keys with no prefix.`,
 		Run: runTrust,
 	}
-	flagPrefix string
-	flagRoot   bool
+	flagPrefix    string
+	flagRoot      bool
+	flagAllowHTTP bool
 )
 
 const (
@@ -57,6 +58,7 @@ func init() {
 	commands = append(commands, cmdTrust)
 	cmdTrust.Flags.StringVar(&flagPrefix, "prefix", "", "prefix to limit trust to")
 	cmdTrust.Flags.BoolVar(&flagRoot, "root", false, "add root key without a prefix")
+	cmdTrust.Flags.BoolVar(&flagAllowHTTP, "insecure-allow-http", false, "allow HTTP use for key discovery and/or retrieval")
 }
 
 func runTrust(args []string) (exit int) {
@@ -161,7 +163,7 @@ func metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 		return nil, err
 	}
 
-	ep, attempts, err := discovery.DiscoverPublicKeys(*app, true)
+	ep, attempts, err := discovery.DiscoverPublicKeys(*app, flagAllowHTTP)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +187,12 @@ func getPubKey(location string) (*os.File, error) {
 	switch u.Scheme {
 	case "":
 		return os.Open(location)
-	case "http", "https":
+	case "http":
+		if !flagAllowHTTP {
+			return nil, fmt.Errorf("--insecure-allow-http required for http URLs")
+		}
+		fallthrough
+	case "https":
 		return downloadKey(u.String())
 	}
 
