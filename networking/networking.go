@@ -16,6 +16,7 @@ package networking
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -171,18 +172,30 @@ func (n *Networking) EnterContNS() error {
 	return util.SetNS(n.contNS, syscall.CLONE_NEWNET)
 }
 
+func (e *containerEnv) netDir() string {
+	return filepath.Join(e.rktRoot, "net")
+}
+
 func (e *containerEnv) setupNets(netns string, nets []Net) ([]activeNet, error) {
-	var err error
+	err := os.MkdirAll(e.netDir(), 0755)
+	if err != nil {
+		return nil, err
+	}
 
 	active := []activeNet{}
 
 	for i, nt := range nets {
+		log.Printf("Setup: executing net-plugin %v", nt.Type)
+
 		an := activeNet{
 			Net:    nt,
 			ifName: fmt.Sprintf(ifnamePattern, i),
 		}
 
-		log.Printf("Setup: executing net-plugin %v", nt.Type)
+		if an.Filename, err = copyFileToDir(nt.Filename, e.netDir()); err != nil {
+			err = fmt.Errorf("error copying %q to %q: %v", nt.Filename, e.netDir(), err)
+			break
+		}
 
 		an.ip, err = e.netPluginAdd(&nt, netns, nt.args, an.ifName)
 		if err != nil {
@@ -206,9 +219,16 @@ func (e *containerEnv) teardownNets(netns string, nets []activeNet) {
 		nt := nets[i]
 
 		log.Printf("Teardown: executing net-plugin %v", nt.Type)
+
 		err := e.netPluginDel(&nt.Net, netns, nt.args, nt.ifName)
 		if err != nil {
 			log.Printf("Error deleting %q: %v", nt.Name, err)
+		}
+
+		// Delete the conf file to signal that the network was
+		// torn down (or at least attempted to)
+		if err = os.Remove(nt.Filename); err != nil {
+			log.Printf("Error deleting %q: %v", nt.Filename, err)
 		}
 	}
 }
@@ -284,4 +304,23 @@ func bindMountFile(src, dstDir, dstFile string) error {
 	f.Close()
 
 	return syscall.Mount(src, dst, "none", syscall.MS_BIND, "")
+}
+
+func copyFileToDir(src, dstdir string) (string, error) {
+	dst := filepath.Join(dstdir, filepath.Base(src))
+
+	s, err := os.Open(src)
+	if err != nil {
+		return "", err
+	}
+	defer s.Close()
+
+	d, err := os.Create(dst)
+	if err != nil {
+		return "", err
+	}
+	defer d.Close()
+
+	_, err = io.Copy(d, s)
+	return dst, err
 }
