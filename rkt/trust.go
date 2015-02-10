@@ -74,6 +74,10 @@ func runTrust(args []string) (exit int) {
 		return 1
 	}
 
+	// if the user included a scheme with the prefix, discard it
+	flagPrefix = strings.TrimPrefix(flagPrefix, "http://")
+	flagPrefix = strings.TrimPrefix(flagPrefix, "https://")
+
 	pkls, err := getPubKeyLocations(flagPrefix, args)
 	if err != nil {
 		stderr("Error determining key location: %v", err)
