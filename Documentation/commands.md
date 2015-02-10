@@ -30,7 +30,7 @@ $rkt trust --prefix coreos.com/etcd
 To trust a key for an entire root domain, you must use the `--root` flag.
 
 ```
-$rkt trust --root --prefix coreos.com
+$rkt trust --root coreos.com
 ```
 
 #### Trust a Key Using Meta Discovery
@@ -44,8 +44,14 @@ The easiest way to trust a key is through meta discovery. Rocket will find and d
 And use it to download the public key and present it to you for approval:
 
 ```
-[insert output]
-
+$ rkt trust --prefix coreos.com/etcd
+Prefix: "coreos.com/etcd"
+Key: "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg"
+GPG key fingerprint is: 8B86 DE38 890D DB72 9186  7B02 5210 BD88 8818 2190
+  CoreOS ACI Builder <release@coreos.com>
+Are you sure you want to trust this key (yes/no)? yes
+Trusting "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg" for prefix "coreos.com/etcd".
+Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190"
 ```
 
 If Rocket can't find a key using meta discovery, an error will be printed:
@@ -74,6 +80,7 @@ Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.
 
 Trusted public keys can be pre-populated by placing them in the appropriate location on disk for the desired prefix.
 
+_Depends on https://github.com/coreos/rocket/issues/500_
 ```
 $ ls -l /etc/rkt/trustedkeys/
 [insert example of root key vs prefixed key]
@@ -127,14 +134,56 @@ sha512-fa1cb92dc276b0f9bedf87981e61ecde
 
 ## Running Containers
 
-Work in progress. Please contribute!
+Rocket can run ACIs based on name, hash, local file on disk or URL. If an ACI hasn't been cached on disk, Rocket will attempt to find and download it.
 
 ### rkt run
 
- - command examples
- - if not found locally, will be fetched
- - example of failed validation
- - how to disable verification
+```
+# Run by name
+$ sudo rkt run coreos.com/etcd:v2.0.0
+```
+
+```
+# Run by hash
+$ sudo rkt run sha512-fa1cb92dc276b0f9bedf87981e61ecde
+```
+
+```
+# Run by ACI address
+$ sudo rkt run https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
+```
+
+_TODO: Exit codes_
+_TODO: Environment variables_
+_TODO: Logging_
+
+#### Disable Signature Verification
+
+If desired, `-insecure-skip-verify` can be used to disable this security check:
+
+```
+$ sudo rkt -insecure-skip-verify run coreos.com/etcd:v2.0.0
+rkt: searching for app image coreos.com/etcd:v2.0.0
+rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
+rkt: warning: signature verification has been disabled
+...
+```
+
+#### Mount Volumes into a Container
+
+Work in progress. Please contribute!
+
+#### Customize Networking
+
+Work in progress. Please contribute!
+
+#### Use a Custom Stage 1
+
+Work in progress. Please contribute!
+
+#### Run a Container in the Background
+
+Work in progress. Please contribute!
 
 ### rkt status
 
@@ -156,4 +205,22 @@ Work in progress. Please contribute!
 
 ### rkt gc
 
-Work in progress. Please contribute!
+Rocket has a built-in garbage collection command that is designed to be run periodically from a timer or cron job. Stopped containers are moved to the garbage and cleaned up during a subsequent garbage collection pass. Each `gc` pass removes any containers remaining in the garbage past the grace period. [Read more about the container lifecycle][gc-docs].
+
+[gc-docs]: container-lifecycle.md#garbage-collection
+
+```
+$ rkt gc --grace-period=30m0s
+Moving container "21b1cb32-c156-4d26-82ae-eda1ab60f595" to garbage
+Moving container "5dd42e9c-7413-49a9-9113-c2a8327d08ab" to garbage
+Moving container "f07a4070-79a9-4db0-ae65-a090c9c393a3" to garbage
+```
+
+On the next pass, the containers are removed:
+
+```
+$ rkt gc --grace-period=30m0s
+Garbage collecting container "21b1cb32-c156-4d26-82ae-eda1ab60f595"
+Garbage collecting container "5dd42e9c-7413-49a9-9113-c2a8327d08ab"
+Garbage collecting container "f07a4070-79a9-4db0-ae65-a090c9c393a3"
+```
