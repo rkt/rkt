@@ -171,7 +171,52 @@ rkt: warning: signature verification has been disabled
 
 #### Mount Volumes into a Container
 
-Work in progress. Please contribute!
+Volumes are defined in each ACI and are referenced by name. Volumes can be exposed from the host into the container (`host`) or initialized as empty storage to be accessed locally within the container (`empty` pending [rkt #378][rkt #378]). Each volume can be selectively mounted into each application at differing mount points or not mounted into specific apps at all.
+
+[rkt #378]: https://github.com/coreos/rocket/issues/378
+
+For `host` volumes, the `--volume` flag allows you to specify each mount, its type and the location on the host. The volume is then mounted into each app running to the container based on information defined in the ACI manifest.
+
+For example, let's say we want to read data from the host directory `/opt/tenant1/work` to power a MapReduce-syle worker. We'll call this volume `work`. Our ACI manifest specifies that `work` is mounted read-only from the host, and is mounted at `work` and `backup` into two apps but not into the third. Here's an appreviated version of the ACI manifest: 
+
+```
+"apps": [{
+  "app": "example.com/reduce-worker-1.0.0",
+  "mounts": [
+       {"volume": "work", "mountPoint": "work"}
+  ]
+  ...
+},
+{
+  "app": "example.com/worker-backup-1.0.0",
+  "mounts": [
+       {"volume": "work", "mountPoint": "backup"}
+  ]
+  ...
+},
+{
+  "app": "example.com/reduce-worker-register-1.0.0",
+  ...
+}],
+"volumes": [
+  {
+    "name": "work",
+    "kind": "host",
+    "source": "/opt/tenant1/work",
+    "readOnly": true
+  }
+],
+...
+```
+
+The corresponding `rkt run` looks like:
+
+```
+sudo ./rkt run --volume bind:/opt/tenant1/database \
+  example.com/reduce-worker-1.0.0 \
+  example.com/worker-backup-1.0.0 \
+  example.com/reduce-worker-register-1.0.0
+```
 
 #### Customize Networking
 
