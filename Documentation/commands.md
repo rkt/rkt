@@ -212,7 +212,7 @@ For example, let's say we want to read data from the host directory `/opt/tenant
 The corresponding `rkt run` looks like:
 
 ```
-sudo ./rkt run --volume bind:/opt/tenant1/database \
+sudo ./rkt run --volume work,kind=host,source=/opt/tenant1/work \
   example.com/reduce-worker-1.0.0 \
   example.com/worker-backup-1.0.0 \
   example.com/reduce-worker-register-1.0.0
