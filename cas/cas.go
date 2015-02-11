@@ -74,11 +74,19 @@ func NewStore(base string) *Store {
 }
 
 func (ds Store) tmpFile() (*os.File, error) {
-	dir := filepath.Join(ds.base, "tmp")
-	if err := os.MkdirAll(dir, defaultPathPerm); err != nil {
+	dir, err := ds.tmpDir()
+	if err != nil {
 		return nil, err
 	}
 	return ioutil.TempFile(dir, "")
+}
+
+func (ds Store) tmpDir() (string, error) {
+	dir := filepath.Join(ds.base, "tmp")
+	if err := os.MkdirAll(dir, defaultPathPerm); err != nil {
+		return "", err
+	}
+	return dir, nil
 }
 
 // ResolveKey resolves a partial key (of format `sha512-0c45e8c0ab2`) to a full
