@@ -82,7 +82,12 @@ func checkSignature(ks *Keystore, prefix string, signed, signature io.Reader) (*
 	if err != nil {
 		return nil, fmt.Errorf("keystore: error loading keyring %v", err)
 	}
-	return openpgp.CheckArmoredDetachedSignature(keyring, signed, signature)
+	entities, err := openpgp.CheckArmoredDetachedSignature(keyring, signed, signature)
+	if err == io.EOF {
+		// otherwise, the client failure is just "EOF", which is not helpful
+		return nil, fmt.Errorf("keystore: no signatures found")
+	}
+	return entities, err
 }
 
 // DeleteTrustedKeyPrefix deletes the prefix trusted key identified by fingerprint.
