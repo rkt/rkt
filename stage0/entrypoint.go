@@ -27,7 +27,7 @@ import (
 
 const (
 	enterEntrypoint = "coreos.com/rocket/stage1/enter"
-	initEntrypoint  = "coreos.com/rocket/stage1/init"
+	runEntrypoint   = "coreos.com/rocket/stage1/run"
 )
 
 // getEntrypoint retrieves the named entrypoint from the stage1 manifest for a given container

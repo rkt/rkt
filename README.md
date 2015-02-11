@@ -159,7 +159,7 @@ where:
 - `stage1` is a copy of the stage1 ACI that is safe for read/write
 - `stage1/manifest` is the manifest of the stage1 ACI
 - `stage1/rootfs` is the rootfs of the stage1 ACI
-- `stage1/rootfs/init` is the actual stage1 binary to be executed (this path may vary according to the `coreos.com/rocket/stage1/init` Annotation of the stage1 ACI)
+- `stage1/rootfs/init` is the actual stage1 binary to be executed (this path may vary according to the `coreos.com/rocket/stage1/run` Annotation of the stage1 ACI)
 - `stage1/rootfs/opt/stage2` are copies of the unpacked ACIs
 
 At this point the stage0 execs `/stage1/rootfs/init` with the current working directory set to the root of the new filesystem.

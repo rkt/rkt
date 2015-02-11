@@ -18,7 +18,7 @@
     ],
     "annotations": [
         {
-            "name": "coreos.com/rocket/stage1/init",
+            "name": "coreos.com/rocket/stage1/run",
             "value": "/init"
         },
         {
