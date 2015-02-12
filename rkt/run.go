@@ -31,6 +31,8 @@ import (
 )
 
 var (
+	defaultStage1Image string // either set by linker, or guessed in init()
+
 	flagStage1Image      string
 	flagVolumes          volumeList
 	flagPrivateNet       bool
@@ -48,14 +50,15 @@ They will be checked in that order and the first match will be used.`,
 func init() {
 	commands = append(commands, cmdRun)
 
-	// try discover the directory rkt is running from, assume the default stage1.aci is stored alongside it.
-	defaultStage1Image := ""
-	exePath, err := os.Readlink("/proc/self/exe")
-	if err == nil {
-		defaultStage1Image = filepath.Join(filepath.Dir(exePath), "stage1.aci")
+	// if not set by linker, try discover the directory rkt is running
+	// from, and assume the default stage1.aci is stored alongside it.
+	if defaultStage1Image == "" {
+		if exePath, err := os.Readlink("/proc/self/exe"); err == nil {
+			defaultStage1Image = filepath.Join(filepath.Dir(exePath), "stage1.aci")
+		}
 	}
 
-	cmdRun.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. By default, Rocket will look for a file called "stage1.aci" in the same directory as rkt itself`)
+	cmdRun.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, Rocket will look for a file called "stage1.aci" in the same directory as rkt itself`)
 	cmdRun.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	cmdRun.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
 	cmdRun.Flags.BoolVar(&flagSpawnMetadataSvc, "spawn-metadata-svc", false, "launch metadata svc if not running")
