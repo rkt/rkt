@@ -417,15 +417,21 @@ func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*s
 	genManifest.Labels = labels
 
 	if dockerConfig != nil {
-		var exec types.Exec
-		if len(dockerConfig.Cmd) > 0 {
-			exec = types.Exec(dockerConfig.Cmd)
-		} else if len(dockerConfig.Entrypoint) > 0 {
-			exec = types.Exec(dockerConfig.Entrypoint)
-		}
+		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
 		if exec != nil {
 			user, group := parseDockerUser(dockerConfig.User)
-			app := &types.App{Exec: exec, User: user, Group: group}
+			var env types.Environment
+			for _, v := range dockerConfig.Env {
+				parts := strings.SplitN(v, "=", 2)
+				env.Set(parts[0], parts[1])
+			}
+			app := &types.App{
+				Exec:             exec,
+				User:             user,
+				Group:            group,
+				Environment:      env,
+				WorkingDirectory: dockerConfig.WorkingDir,
+			}
 			genManifest.App = app
 		}
 	}
@@ -445,6 +451,20 @@ func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*s
 	}
 
 	return genManifest, nil
+}
+
+func getExecCommand(entrypoint []string, cmd []string) types.Exec {
+	var command []string
+	if entrypoint == nil && cmd == nil {
+		return nil
+	}
+	command = append(entrypoint, cmd...)
+	// non-absolute paths are not allowed, fallback to "/bin/sh -c command"
+	if !filepath.IsAbs(command[0]) {
+		command_prefix := []string{"/bin/sh", "-c"}
+		command = append(command_prefix, strings.Join(command, " "))
+	}
+	return command
 }
 
 func parseDockerUser(dockerUser string) (string, string) {
@@ -495,7 +515,7 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 			return nil
 		}
 		if t.Header.Typeflag == tar.TypeLink {
-			t.Header.Linkname = path.Join("rootfs" + t.Linkname())
+			t.Header.Linkname = path.Join("rootfs", t.Linkname())
 		}
 
 		if err := trw.WriteHeader(t.Header); err != nil {
@@ -524,7 +544,9 @@ func addMinimalACIStructure(tarWriter *tar.Writer, manifest schema.ImageManifest
 		return err
 	}
 
-	writeManifest(tarWriter, manifest)
+	if err := writeManifest(tarWriter, manifest); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -734,8 +756,12 @@ func mergeManifests(manifests []schema.ImageManifest) schema.ImageManifest {
 		manifest.Labels = append(manifest.Labels[:layerIndex], manifest.Labels[layerIndex+1:]...)
 	}
 
+	// strip layerID:
+	// myregistry.com/organization/app-name-85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281
+	// myregistry.com/organization/app-name
+	n := strings.LastIndex(manifest.Name.String(), "-")
 	// this can't fail because the old name is legal
-	nameWithoutLayerID, _ := types.NewACName(strings.Split(manifest.Name.String(), "-")[0])
+	nameWithoutLayerID, _ := types.NewACName(manifest.Name.String()[:n])
 
 	manifest.Name = *nameWithoutLayerID
 
