@@ -76,9 +76,12 @@ func runTrust(args []string) (exit int) {
 		return 1
 	}
 
-	// if the user included a scheme with the prefix, discard it
-	flagPrefix = strings.TrimPrefix(flagPrefix, "http://")
-	flagPrefix = strings.TrimPrefix(flagPrefix, "https://")
+	// if the user included a scheme with the prefix, error on it
+	u, err := url.Parse(flagPrefix)
+	if err == nil && u.Scheme != "" {
+		stderr("--prefix must not contain a URL scheme, omit %s://", u.Scheme)
+		return 1
+	}
 
 	pkls, err := getPubKeyLocations(flagPrefix, args)
 	if err != nil {
