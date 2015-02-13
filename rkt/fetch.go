@@ -114,9 +114,8 @@ func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (strin
 	stdout("rkt: fetching image from %s", rem.ACIURL)
 	if globalFlags.InsecureSkipVerify {
 		stdout("rkt: warning: signature verification has been disabled")
-	}
-	if rem.Scheme == "docker" {
-		fmt.Printf("rkt: warning: signature verification for docker images is not supported\n")
+	} else if rem.Scheme == "docker" {
+		return "", fmt.Errorf("signature verification for docker images is not supported (try --insecure-skip-verify)")
 	}
 	err := ds.ReadIndex(rem)
 	if err != nil && rem.BlobKey == "" {
