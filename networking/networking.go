@@ -89,10 +89,6 @@ func Setup(rktRoot string, contID types.UUID) (*Networking, error) {
 	}
 	n.contNSPath = filepath.Join(contNSPath, "net")
 
-	if err != nil {
-		return nil, fmt.Errorf("error loading plugin definitions: %v", err)
-	}
-
 	nets, err := n.loadNets()
 	if err != nil {
 		return nil, fmt.Errorf("error loading network definitions: %v", err)
