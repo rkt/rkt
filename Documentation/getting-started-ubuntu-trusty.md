@@ -16,9 +16,9 @@ vagrant up --provider virtualbox
 vagrant ssh
 sudo su
 
-wget https://github.com/coreos/rocket/releases/download/v0.2.0/rocket-v0.2.0.tar.gz
-tar xzvf rocket-v0.2.0.tar.gz
-cd rocket-v0.2.0
+wget https://github.com/coreos/rocket/releases/download/v0.3.1/rocket-v0.3.1.tar.gz
+tar xzvf rocket-v0.3.1.tar.gz
+cd rocket-v0.3.1
 ./rkt help
 ```
 ## Trust the CoreOS signing key
