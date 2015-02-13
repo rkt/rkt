@@ -250,6 +250,10 @@ func withNetNS(curNS, tgtNS *os.File, f func() error) error {
 	}
 
 	if err := f(); err != nil {
+		// Attempt to revert the net ns in a known state
+		if err := util.SetNS(curNS, syscall.CLONE_NEWNET); err != nil {
+			log.Printf("Cannot revert the net namespace: %v", err)
+		}
 		return err
 	}
 
