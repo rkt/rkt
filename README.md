@@ -45,7 +45,7 @@ Trusting "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg" for prefix "coreos.co
 Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190"
 ```
 
-A detailed step-by-step for the signing procedure [is here](Documentation/getting-started-ubuntu-trusty.md#trust-the-coreos-signing-key).
+A detailed, step-by-step guide for the signing procedure [is here](Documentation/getting-started-ubuntu-trusty.md#trust-the-coreos-signing-key).
 
 Now that we've trusted the CoreOS public key, we can fetch the ACI:
 
