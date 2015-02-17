@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha512"
+	"database/sql"
 	"fmt"
 	"hash"
 	"io"
@@ -34,7 +35,6 @@ import (
 // appType. This is OK for now though.
 const (
 	blobType int64 = iota
-	remoteType
 
 	defaultPathPerm os.FileMode = 0777
 
@@ -46,31 +46,71 @@ const (
 	lenKey     = len(hashPrefix) + lenHashKey
 )
 
-var otmap = [...]string{
+var diskvStores = [...]string{
 	"blob",
-	"remote", // remote is a temporary secondary index
 }
 
 // Store encapsulates a content-addressable-storage for storing ACIs on disk.
 type Store struct {
 	base   string
 	stores []*diskv.Diskv
+	db     *DB
 }
 
-func NewStore(base string) *Store {
+func NewStore(base string) (*Store, error) {
 	ds := &Store{
 		base:   base,
-		stores: make([]*diskv.Diskv, len(otmap)),
+		stores: make([]*diskv.Diskv, len(diskvStores)),
 	}
 
-	for i, p := range otmap {
+	for i, p := range diskvStores {
 		ds.stores[i] = diskv.New(diskv.Options{
 			BasePath:  filepath.Join(base, "cas", p),
 			Transform: blockTransform,
 		})
 	}
+	db, err := NewDB(filepath.Join(base, "cas", "db"))
+	if err != nil {
+		return nil, err
+	}
+	ds.db = db
 
-	return ds
+	// Execute db create statements, this is done everytime NewStore is
+	// called so they should use the "IF NOT EXISTS" statements.
+	fn := func(tx *sql.Tx) error {
+		ok, err := dbIsPopulated(tx)
+		if err != nil {
+			return err
+		}
+		// populate the db
+		if !ok {
+			for _, stmt := range dbCreateStmts {
+				_, err = tx.Exec(stmt)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		// if db is populated check its version
+		version, err := getDBVersion(tx)
+		if err != nil {
+			return err
+		}
+		if version < dbVersion {
+			// TODO(sgotti) execute migration functions
+			return fmt.Errorf("Current cas db version: %d lesser than the current rkt expected version: %d", version, dbVersion)
+		}
+		if version > dbVersion {
+			return fmt.Errorf("Current cas db version: %d greater than the current rkt expected version: %d", version, dbVersion)
+		}
+		return nil
+	}
+
+	if err = db.Do(fn); err != nil {
+		return nil, err
+	}
+
+	return ds, nil
 }
 
 func (ds Store) tmpFile() (*os.File, error) {
@@ -170,26 +210,25 @@ func (ds Store) WriteACI(r io.Reader) (string, error) {
 	return key, nil
 }
 
-type Index interface {
-	Hash() string
-	Marshal() []byte
-	Unmarshal([]byte)
-	Type() int64
-}
-
-func (ds Store) WriteIndex(i Index) {
-	ds.stores[i.Type()].Write(i.Hash(), i.Marshal())
-}
-
-func (ds Store) ReadIndex(i Index) error {
-	buf, err := ds.stores[i.Type()].Read(i.Hash())
-	if err != nil {
+// GetRemote tries to retrieve a remote with the given ACIURL. found will be
+// false if remote doesn't exist.
+func (ds Store) GetRemote(aciURL string) (*Remote, bool, error) {
+	var remote *Remote
+	found := false
+	err := ds.db.Do(func(tx *sql.Tx) error {
+		var err error
+		remote, found, err = GetRemote(tx, aciURL)
 		return err
-	}
+	})
+	return remote, found, err
+}
 
-	i.Unmarshal(buf)
-
-	return nil
+// WriteRemote adds or updates the provided Remote.
+func (ds Store) WriteRemote(remote *Remote) error {
+	err := ds.db.Do(func(tx *sql.Tx) error {
+		return WriteRemote(tx, remote)
+	})
+	return err
 }
 
 func (ds Store) Dump(hex bool) {
