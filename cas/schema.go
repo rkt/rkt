@@ -1,0 +1,76 @@
+package cas
+
+import (
+	"database/sql"
+	"fmt"
+)
+
+const (
+	// Incremental db version at the current code revision.
+	dbVersion = 0
+)
+
+// Statement to run when creating a db. If db already exists migration statements should be executed
+var dbCreateStmts = [...]string{
+	// version table
+	"CREATE TABLE IF NOT EXISTS version (version int);",
+	fmt.Sprintf("INSERT INTO version VALUES (%d)", dbVersion),
+}
+
+// dbIsPopulated checks if the db is already populated (at any version) verifing if the "version" table exists
+func dbIsPopulated(tx *sql.Tx) (bool, error) {
+	rows, err := tx.Query("SELECT Name FROM __Table where Name == $1", "version")
+	if err != nil {
+		return false, err
+	}
+	count := 0
+	for rows.Next() {
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+// getDBVersion retrieves the current db version
+func getDBVersion(tx *sql.Tx) (int, error) {
+	var version int
+	rows, err := tx.Query("SELECT version FROM version")
+	if err != nil {
+		return -1, err
+	}
+	found := false
+	for rows.Next() {
+		if err := rows.Scan(&version); err != nil {
+			return -1, err
+		}
+		found = true
+		break
+	}
+	if err := rows.Err(); err != nil {
+		return -1, err
+	}
+	if !found {
+		return -1, fmt.Errorf("db version table empty")
+	}
+	return version, nil
+}
+
+// updateDBVersion updates the db version
+func updateDBVersion(tx *sql.Tx, version int) error {
+	// ql doesn't have an INSERT OR UPDATE function so
+	// it's faster to remove and reinsert the row
+	_, err := tx.Exec("DELETE FROM version")
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("INSERT INTO version VALUES ($1)", version)
+	if err != nil {
+		return err
+	}
+	return nil
+}
