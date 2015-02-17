@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"hash"
 	"io"
@@ -35,6 +36,7 @@ import (
 // appType. This is OK for now though.
 const (
 	blobType int64 = iota
+	imageManifestType
 
 	defaultPathPerm os.FileMode = 0777
 
@@ -48,6 +50,7 @@ const (
 
 var diskvStores = [...]string{
 	"blob",
+	"imageManifest",
 }
 
 // Store encapsulates a content-addressable-storage for storing ACIs on disk.
@@ -197,6 +200,10 @@ func (ds Store) WriteACI(r io.Reader) (string, error) {
 	if _, err := io.Copy(fh, tr); err != nil {
 		return "", fmt.Errorf("error copying image: %v", err)
 	}
+	im, err := aci.ManifestFromImage(fh)
+	if err != nil {
+		return "", fmt.Errorf("error extracting image manifest: %v", err)
+	}
 	if err := fh.Close(); err != nil {
 		return "", fmt.Errorf("error closing image: %v", err)
 	}
@@ -205,6 +212,15 @@ func (ds Store) WriteACI(r io.Reader) (string, error) {
 	key := HashToKey(h)
 	if err = ds.stores[blobType].Import(fh.Name(), key, true); err != nil {
 		return "", fmt.Errorf("error importing image: %v", err)
+	}
+
+	// Save the imagemanifest using the same key used for the image
+	imj, err := json.Marshal(im)
+	if err != nil {
+		return "", fmt.Errorf("error marshalling image manifest: %v", err)
+	}
+	if err = ds.stores[imageManifestType].Write(key, imj); err != nil {
+		return "", fmt.Errorf("error importing image manifest: %v", err)
 	}
 
 	return key, nil
