@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/sha512"
+	"database/sql"
 	"fmt"
 	"hash"
 	"io"
@@ -46,7 +47,7 @@ const (
 	lenKey     = len(hashPrefix) + lenHashKey
 )
 
-var otmap = [...]string{
+var diskvStores = [...]string{
 	"blob",
 	"remote", // remote is a temporary secondary index
 }
@@ -55,22 +56,63 @@ var otmap = [...]string{
 type Store struct {
 	base   string
 	stores []*diskv.Diskv
+	db     *DB
 }
 
-func NewStore(base string) *Store {
+func NewStore(base string) (*Store, error) {
 	ds := &Store{
 		base:   base,
-		stores: make([]*diskv.Diskv, len(otmap)),
+		stores: make([]*diskv.Diskv, len(diskvStores)),
 	}
 
-	for i, p := range otmap {
+	for i, p := range diskvStores {
 		ds.stores[i] = diskv.New(diskv.Options{
 			BasePath:  filepath.Join(base, "cas", p),
 			Transform: blockTransform,
 		})
 	}
+	db, err := NewDB(filepath.Join(base, "cas", "db"))
+	if err != nil {
+		return nil, err
+	}
+	ds.db = db
 
-	return ds
+	// Execute db create statements, this is done everytime NewStore is
+	// called so they should use the "IF NOT EXISTS" statements.
+	fn := func(tx *sql.Tx) error {
+		ok, err := dbIsPopulated(tx)
+		if err != nil {
+			return err
+		}
+		// populate the db
+		if !ok {
+			for _, stmt := range dbCreateStmts {
+				_, err = tx.Exec(stmt)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		// if db is populated check its version
+		version, err := getDBVersion(tx)
+		if err != nil {
+			return err
+		}
+		if version < dbVersion {
+			// TODO(sgotti) execute migration functions
+			return fmt.Errorf("Current cas db version: %d lesser than the current rkt expected version: %d", version, dbVersion)
+		}
+		if version > dbVersion {
+			return fmt.Errorf("Current cas db version: %d greater than the current rkt expected version: %d", version, dbVersion)
+		}
+		return nil
+	}
+
+	if err = db.Do(fn); err != nil {
+		return nil, err
+	}
+
+	return ds, nil
 }
 
 func (ds Store) tmpFile() (*os.File, error) {

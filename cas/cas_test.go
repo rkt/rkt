@@ -36,7 +36,10 @@ func TestBlobStore(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds := NewStore(dir)
+	ds, err := NewStore(dir)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	for _, valueStr := range []string{
 		"I am a manually placed object",
 	} {
@@ -98,7 +101,10 @@ func TestDownloading(t *testing.T) {
 		{Remote{ts.URL, "", "", "12", ""}, body, true},
 	}
 
-	ds := NewStore(dir)
+	ds, err := NewStore(dir)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
 	for _, tt := range tests {
 		_, err := ds.stores[remoteType].Read(tt.r.Hash())
@@ -130,7 +136,10 @@ func TestResolveKey(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds := NewStore(dir)
+	ds, err := NewStore(dir)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
 	// Return a hash key buffer from a hex string
 	str2key := func(s string) *bytes.Buffer {

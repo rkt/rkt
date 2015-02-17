@@ -31,7 +31,10 @@ func TestNewRemote(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
-	ds := NewStore(dir)
+	ds, err := NewStore(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Create our first Remote, and simulate Store() to create index
 	na := NewRemote(u1, "")

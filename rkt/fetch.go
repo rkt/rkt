@@ -52,8 +52,13 @@ func runFetch(args []string) (exit int) {
 		return 1
 	}
 
-	ds := cas.NewStore(globalFlags.Dir)
+	ds, err := cas.NewStore(globalFlags.Dir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "fetch: cannot open store: %v\n", err)
+		return 1
+	}
 	ks := getKeystore()
+
 	for _, img := range args {
 		hash, err := fetchImage(img, ds, ks, true)
 		if err != nil {
