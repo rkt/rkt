@@ -35,7 +35,6 @@ import (
 // appType. This is OK for now though.
 const (
 	blobType int64 = iota
-	remoteType
 
 	defaultPathPerm os.FileMode = 0777
 
@@ -49,7 +48,6 @@ const (
 
 var diskvStores = [...]string{
 	"blob",
-	"remote", // remote is a temporary secondary index
 }
 
 // Store encapsulates a content-addressable-storage for storing ACIs on disk.
@@ -212,26 +210,25 @@ func (ds Store) WriteACI(r io.Reader) (string, error) {
 	return key, nil
 }
 
-type Index interface {
-	Hash() string
-	Marshal() []byte
-	Unmarshal([]byte)
-	Type() int64
-}
-
-func (ds Store) WriteIndex(i Index) {
-	ds.stores[i.Type()].Write(i.Hash(), i.Marshal())
-}
-
-func (ds Store) ReadIndex(i Index) error {
-	buf, err := ds.stores[i.Type()].Read(i.Hash())
-	if err != nil {
+// GetRemote tries to retrieve a remote with the given ACIURL. found will be
+// false if remote doesn't exist.
+func (ds Store) GetRemote(aciURL string) (*Remote, bool, error) {
+	var remote *Remote
+	found := false
+	err := ds.db.Do(func(tx *sql.Tx) error {
+		var err error
+		remote, found, err = GetRemote(tx, aciURL)
 		return err
-	}
+	})
+	return remote, found, err
+}
 
-	i.Unmarshal(buf)
-
-	return nil
+// WriteRemote adds or updates the provided Remote.
+func (ds Store) WriteRemote(remote *Remote) error {
+	err := ds.db.Do(func(tx *sql.Tx) error {
+		return WriteRemote(tx, remote)
+	})
+	return err
 }
 
 func (ds Store) Dump(hex bool) {

@@ -18,11 +18,12 @@
 package cas
 
 import (
-	"encoding/json"
+	"database/sql"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -31,7 +32,7 @@ import (
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
 	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
@@ -46,32 +47,10 @@ func NewRemote(aciurl, sigurl string) *Remote {
 
 type Remote struct {
 	ACIURL string
-	// Currently must be either empty or "docker"
-	Scheme string
 	SigURL string
 	ETag   string
 	// The key in the blob store under which the ACI has been saved.
 	BlobKey string
-}
-
-func (r Remote) Marshal() []byte {
-	m, _ := json.Marshal(r)
-	return m
-}
-
-func (r *Remote) Unmarshal(data []byte) {
-	err := json.Unmarshal(data, r)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (r Remote) Hash() string {
-	return types.NewHashSHA512([]byte(r.ACIURL)).String()
-}
-
-func (r Remote) Type() int64 {
-	return remoteType
 }
 
 // Download downloads and verifies the remote ACI.
@@ -80,8 +59,11 @@ func (r Remote) Type() int64 {
 // err will be nil if the ACI downloads successfully and the ACI is verified.
 func (r Remote) Download(ds Store, ks *keystore.Keystore) (*openpgp.Entity, *os.File, error) {
 	var entity *openpgp.Entity
-	var err error
-	if r.Scheme == "docker" {
+	u, err := url.Parse(r.ACIURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error parsing ACI url: %v", err)
+	}
+	if u.Scheme == "docker" {
 		registryURL := strings.TrimPrefix(r.ACIURL, "docker://")
 
 		tmpDir, err := ds.tmpDir()
@@ -146,7 +128,10 @@ func (r Remote) Store(ds Store, aci io.Reader) (*Remote, error) {
 		return nil, err
 	}
 	r.BlobKey = key
-	ds.WriteIndex(&r)
+	err = ds.WriteRemote(&r)
+	if err != nil {
+		return nil, err
+	}
 	return &r, nil
 }
 
@@ -218,4 +203,40 @@ func downloadHTTP(url, label string, getTempFile func() (*os.File, error)) (*os.
 	}
 
 	return tmp, nil
+}
+
+// GetRemote tries to retrieve a remote with the given aciURL. found will be
+// false if remote doesn't exist.
+func GetRemote(tx *sql.Tx, aciURL string) (remote *Remote, found bool, err error) {
+	remote = &Remote{}
+	rows, err := tx.Query("SELECT sigurl, etag, blobkey FROM remote WHERE aciurl == $1", aciURL)
+	if err != nil {
+		return nil, false, err
+	}
+	for rows.Next() {
+		found = true
+		if err := rows.Scan(&remote.SigURL, &remote.ETag, &remote.BlobKey); err != nil {
+			return nil, false, err
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+
+	return remote, found, err
+}
+
+// WriteRemote adds or updates the provided Remote.
+func WriteRemote(tx *sql.Tx, remote *Remote) error {
+	// ql doesn't have an INSERT OR UPDATE function so
+	// it's faster to remove and reinsert the row
+	_, err := tx.Exec("DELETE FROM remote WHERE aciurl == $1", remote.ACIURL)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("INSERT INTO remote VALUES ($1, $2, $3, $4)", remote.ACIURL, remote.SigURL, remote.ETag, remote.BlobKey)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -105,25 +105,26 @@ func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore, discover bool)
 }
 
 func fetchImageFromEndpoints(ep *discovery.Endpoints, ds *cas.Store, ks *keystore.Keystore) (string, error) {
-	rem := cas.NewRemote(ep.ACIEndpoints[0].ACI, ep.ACIEndpoints[0].Sig)
-	return downloadImage(rem, ds, ks)
+	return downloadImage(ep.ACIEndpoints[0].ACI, ep.ACIEndpoints[0].Sig, "", ds, ks)
 }
 
 func fetchImageFromURL(imgurl string, scheme string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
-	rem := cas.NewRemote(imgurl, sigURLFromImgURL(imgurl))
-	rem.Scheme = scheme
-	return downloadImage(rem, ds, ks)
+	return downloadImage(imgurl, sigURLFromImgURL(imgurl), scheme, ds, ks)
 }
 
-func downloadImage(rem *cas.Remote, ds *cas.Store, ks *keystore.Keystore) (string, error) {
-	stdout("rkt: fetching image from %s", rem.ACIURL)
+func downloadImage(aciURL string, sigURL string, scheme string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
+	stdout("rkt: fetching image from %s", aciURL)
 	if globalFlags.InsecureSkipVerify {
 		stdout("rkt: warning: signature verification has been disabled")
-	} else if rem.Scheme == "docker" {
+	} else if scheme == "docker" {
 		return "", fmt.Errorf("signature verification for docker images is not supported (try --insecure-skip-verify)")
 	}
-	err := ds.ReadIndex(rem)
-	if err != nil && rem.BlobKey == "" {
+	rem, ok, err := ds.GetRemote(aciURL)
+	if err != nil {
+		return "", err
+	}
+	if !ok {
+		rem = cas.NewRemote(aciURL, sigURL)
 		entity, aciFile, err := rem.Download(*ds, ks)
 		if err != nil {
 			return "", err
