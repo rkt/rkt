@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/peterbourgon/diskv"
 )
@@ -245,6 +246,19 @@ func (ds Store) WriteRemote(remote *Remote) error {
 		return WriteRemote(tx, remote)
 	})
 	return err
+}
+
+// Get the ImageManifest with the specified key.
+func (ds Store) GetImageManifest(key string) (*schema.ImageManifest, error) {
+	imj, err := ds.stores[imageManifestType].Read(key)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving image manifest: %v", err)
+	}
+	var im *schema.ImageManifest
+	if err = json.Unmarshal(imj, &im); err != nil {
+		return nil, fmt.Errorf("error unmarshalling image manifest: %v", err)
+	}
+	return im, nil
 }
 
 func (ds Store) Dump(hex bool) {
