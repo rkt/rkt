@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"runtime"
@@ -183,13 +182,8 @@ func setupBridge(n *Net, ipConf *ipam.IPConfig) (*netlink.Bridge, error) {
 	return br, nil
 }
 
-func cmdAdd(contID, netns, netConf, ifName string) error {
-	cid, err := types.NewUUID(contID)
-	if err != nil {
-		return fmt.Errorf("error parsing ContainerID: %v", err)
-	}
-
-	n, err := loadConf(netConf)
+func cmdAdd(args *util.CmdArgs) error {
+	n, err := loadConf(args.NetConf)
 	if err != nil {
 		return err
 	}
@@ -209,7 +203,7 @@ func cmdAdd(contID, netns, netConf, ifName string) error {
 		return err
 	}
 
-	if err = setupVeth(*cid, netns, br, ifName, n.MTU, ipConf); err != nil {
+	if err = setupVeth(args.ContID, args.Netns, br, args.IfName, n.MTU, ipConf); err != nil {
 		return err
 	}
 
@@ -232,14 +226,14 @@ func network(ipn *net.IPNet) *net.IPNet {
 	}
 }
 
-func cmdDel(contID, netns, netConf, ifName string) error {
-	n, err := loadConf(netConf)
+func cmdDel(args *util.CmdArgs) error {
+	n, err := loadConf(args.NetConf)
 	if err != nil {
 		return err
 	}
 
-	err = util.WithNetNSPath(netns, func(hostNS *os.File) error {
-		return util.DelLinkByName(ifName)
+	err = util.WithNetNSPath(args.Netns, func(hostNS *os.File) error {
+		return util.DelLinkByName(args.IfName)
 	})
 	if err != nil {
 		return err
@@ -249,34 +243,5 @@ func cmdDel(contID, netns, netConf, ifName string) error {
 }
 
 func main() {
-	var err error
-
-	cmd := os.Getenv("RKT_NETPLUGIN_COMMAND")
-	contID := os.Getenv("RKT_NETPLUGIN_CONTID")
-	netns := os.Getenv("RKT_NETPLUGIN_NETNS")
-	ifName := os.Getenv("RKT_NETPLUGIN_IFNAME")
-	netConf := os.Getenv("RKT_NETPLUGIN_NETCONF")
-
-	if cmd == "" || contID == "" || netns == "" || ifName == "" || netConf == "" {
-		log.Printf("Required env variable missing")
-		log.Print("Env: ", os.Environ())
-		os.Exit(1)
-	}
-
-	switch cmd {
-	case "ADD":
-		err = cmdAdd(contID, netns, netConf, ifName)
-
-	case "DEL":
-		err = cmdDel(contID, netns, netConf, ifName)
-
-	default:
-		log.Printf("Unknown RKT_NETPLUGIN_COMMAND: %v", cmd)
-		os.Exit(1)
-	}
-
-	if err != nil {
-		log.Printf("%v: %v", cmd, err)
-		os.Exit(1)
-	}
+	util.PluginMain(cmdAdd, cmdDel)
 }
