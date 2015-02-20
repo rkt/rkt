@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
@@ -79,8 +80,6 @@ func NewStore(base string) (*Store, error) {
 	}
 	ds.db = db
 
-	// Execute db create statements, this is done everytime NewStore is
-	// called so they should use the "IF NOT EXISTS" statements.
 	fn := func(tx *sql.Tx) error {
 		ok, err := dbIsPopulated(tx)
 		if err != nil {
@@ -224,6 +223,17 @@ func (ds Store) WriteACI(r io.Reader) (string, error) {
 		return "", fmt.Errorf("error importing image manifest: %v", err)
 	}
 
+	// Save aciinfo
+	if err = ds.db.Do(func(tx *sql.Tx) error {
+		aciinfo := &ACIInfo{
+			BlobKey:    key,
+			AppName:    im.Name.String(),
+			ImportTime: time.Now(),
+		}
+		return WriteACIInfo(tx, aciinfo)
+	}); err != nil {
+		return "", fmt.Errorf("error writing ACI Info: %v", err)
+	}
 	return key, nil
 }
 

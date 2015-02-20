@@ -16,9 +16,14 @@ var dbCreateStmts = [...]string{
 	"CREATE TABLE IF NOT EXISTS version (version int);",
 	fmt.Sprintf("INSERT INTO version VALUES (%d)", dbVersion),
 
-	// remote Table. The primary key is "aciurl".
+	// remote table. The primary key is "aciurl".
 	"CREATE TABLE IF NOT EXISTS remote (aciurl string, sigurl string, etag string, blobkey string);",
 	"CREATE UNIQUE INDEX IF NOT EXISTS aciurlidx ON remote (aciurl)",
+
+	// aciinfo table. The primary key is "blobkey" and it matches the key used to save that aci in the blob store
+	"CREATE TABLE IF NOT EXISTS aciinfo (blobkey string, appname string, importtime time, latest bool);",
+	"CREATE UNIQUE INDEX IF NOT EXISTS blobkeyidx ON aciinfo (blobkey)",
+	"CREATE INDEX IF NOT EXISTS appnameidx ON aciinfo (appname)",
 }
 
 // dbIsPopulated checks if the db is already populated (at any version) verifing if the "version" table exists
