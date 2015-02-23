@@ -18,6 +18,7 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/common"
@@ -56,6 +57,16 @@ func EnvFilePath(root string, imageID types.Hash) string {
 // given imageID
 func ServiceWantPath(root string, imageID types.Hash) string {
 	return filepath.Join(common.Stage1RootfsPath(root), defaultWantsDir, ServiceUnitName(imageID))
+}
+
+// InstantiatedPrepareAppUnitName returns the systemd service unit name for prepare-app
+// instantiated for the given root
+func InstantiatedPrepareAppUnitName(imageID types.Hash) string {
+	// Naming respecting escaping rules, see systemd.unit(5) and systemd-escape(1)
+	escaped_root := common.RelAppRootfsPath(imageID)
+	escaped_root = strings.Replace(escaped_root, "-", "\\x2d", -1)
+	escaped_root = strings.Replace(escaped_root, "/", "-", -1)
+	return "prepare-app@" + escaped_root + ".service"
 }
 
 // SocketUnitName returns a systemd socket unit name for the given imageID

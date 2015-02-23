@@ -1,0 +1,12 @@
+[Unit]
+Description=Prepare minimum environment for chrooted applications
+DefaultDependencies=false
+OnFailureJobMode=fail
+
+[Service]
+Type=oneshot
+Restart=no
+ExecStart=/prepare-app %I
+User=0
+Group=0
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_OVERRIDE
