@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"runtime"
@@ -88,10 +87,10 @@ func setupHostVeth(vethName string, ipConf *ipam.IPConfig) error {
 	return nil
 }
 
-func cmdAdd(contID, netns, netConf, ifName, args string) error {
+func cmdAdd(args *util.CmdArgs) error {
 	conf := Net{}
-	if err := rktnet.LoadNet(netConf, &conf); err != nil {
-		return fmt.Errorf("failed to load %q: %v", netConf, err)
+	if err := rktnet.LoadNet(args.NetConf, &conf); err != nil {
+		return fmt.Errorf("failed to load %q: %v", args.NetConf, err)
 	}
 
 	// run the IPAM plugin and get back the config to apply
@@ -100,7 +99,7 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 		return err
 	}
 
-	hostVethName, err := setupContVeth(contID, netns, ifName, conf.MTU, ipConf)
+	hostVethName, err := setupContVeth(args.ContID.String(), args.Netns, args.IfName, conf.MTU, ipConf)
 	if err != nil {
 		return err
 	}
@@ -110,7 +109,7 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 	}
 
 	if conf.IPMasq {
-		chain := fmt.Sprintf("RKT-%s-%s", conf.Name, contID[:8])
+		chain := fmt.Sprintf("RKT-%s-%s", conf.Name, args.ContID.String()[:8])
 		if err = util.SetupIPMasq(ipConf.IP, chain); err != nil {
 			return err
 		}
@@ -121,16 +120,16 @@ func cmdAdd(contID, netns, netConf, ifName, args string) error {
 	})
 }
 
-func cmdDel(contID, netns, netConf, ifName, args string) error {
+func cmdDel(args *util.CmdArgs) error {
 	conf := Net{}
-	if err := rktnet.LoadNet(netConf, &conf); err != nil {
-		return fmt.Errorf("failed to load %q: %v", netConf, err)
+	if err := rktnet.LoadNet(args.NetConf, &conf); err != nil {
+		return fmt.Errorf("failed to load %q: %v", args.NetConf, err)
 	}
 
 	var ipn *net.IPNet
-	err := util.WithNetNSPath(netns, func(hostNS *os.File) error {
+	err := util.WithNetNSPath(args.Netns, func(hostNS *os.File) error {
 		var err error
-		ipn, err = util.DelLinkByNameAddr(ifName, netlink.FAMILY_V4)
+		ipn, err = util.DelLinkByNameAddr(args.IfName, netlink.FAMILY_V4)
 		return err
 	})
 	if err != nil {
@@ -138,7 +137,7 @@ func cmdDel(contID, netns, netConf, ifName, args string) error {
 	}
 
 	if conf.IPMasq {
-		chain := fmt.Sprintf("RKT-%s-%s", conf.Name, contID[:8])
+		chain := fmt.Sprintf("RKT-%s-%s", conf.Name, args.ContID.String()[:8])
 		if err = util.TeardownIPMasq(ipn, chain); err != nil {
 			return err
 		}
@@ -148,35 +147,5 @@ func cmdDel(contID, netns, netConf, ifName, args string) error {
 }
 
 func main() {
-	var err error
-
-	cmd := os.Getenv("RKT_NETPLUGIN_COMMAND")
-	contID := os.Getenv("RKT_NETPLUGIN_CONTID")
-	netns := os.Getenv("RKT_NETPLUGIN_NETNS")
-	args := os.Getenv("RKT_NETPLUGIN_ARGS")
-	ifName := os.Getenv("RKT_NETPLUGIN_IFNAME")
-	netConf := os.Getenv("RKT_NETPLUGIN_NETCONF")
-
-	if cmd == "" || contID == "" || netns == "" || ifName == "" || netConf == "" {
-		log.Printf("Required env variable missing")
-		log.Print("Env: ", os.Environ())
-		os.Exit(1)
-	}
-
-	switch cmd {
-	case "ADD":
-		err = cmdAdd(contID, netns, netConf, ifName, args)
-
-	case "DEL":
-		err = cmdDel(contID, netns, netConf, ifName, args)
-
-	default:
-		log.Printf("Unknown RKT_NETPLUGIN_COMMAND: %v", cmd)
-		os.Exit(1)
-	}
-
-	if err != nil {
-		log.Printf("%v: %v", cmd, err)
-		os.Exit(1)
-	}
+	util.PluginMain(cmdAdd, cmdDel)
 }

@@ -2,77 +2,75 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
+	"errors"
 	"os"
 
 	"github.com/coreos/rocket/networking/ipam"
 	"github.com/coreos/rocket/networking/ipam/static/backend/disk"
+	"github.com/coreos/rocket/networking/util"
 )
 
 func main() {
-	cmd, containerID, netConf := lookupParams()
+	util.PluginMain(cmdAdd, cmdDel)
+}
 
-	ipamConf, err := NewIPAMConfig(netConf)
+func cmdAdd(args *util.CmdArgs) error {
+	ipamConf, err := NewIPAMConfig(args.NetConf)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	store, err := disk.New(ipamConf.Name)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer store.Close()
 
 	allocator, err := NewIPAllocator(ipamConf, store)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	switch cmd {
-	case "ADD":
-		cmdAdd(allocator, containerID, ipamConf.Type)
-
-	case "DEL":
-		allocator.Release(containerID)
-	}
-}
-
-func lookupParams() (cmd, containerID, netConf string) {
-	names := []string{"RKT_NETPLUGIN_COMMAND", "RKT_NETPLUGIN_CONTID", "RKT_NETPLUGIN_NETCONF"}
-	values := make([]string, len(names))
-
-	for i, n := range names {
-		values[i] = os.Getenv(n)
-		if values[i] == "" {
-			log.Fatalf("%q environment variable is misssing", n)
-		}
-	}
-
-	cmd, containerID, netConf = values[0], values[1], values[2]
-	return
-}
-
-func cmdAdd(allocator *IPAllocator, containerID, plugin string) {
 	var ipConf *ipam.IPConfig
-	var err error
 
-	switch plugin {
+	switch ipamConf.Type {
 	case "static":
-		ipConf, err = allocator.Get(containerID)
+		ipConf, err = allocator.Get(args.ContID.String())
 	case "static-ptp":
-		ipConf, err = allocator.GetPtP(containerID)
+		ipConf, err = allocator.GetPtP(args.ContID.String())
 	default:
-		log.Fatal("Unsupported IPAM plugin type")
+		return errors.New("Unsupported IPAM plugin type")
 	}
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	data, err := json.MarshalIndent(ipConf, "", "    ")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	fmt.Println(string(data))
+
+	_, err = os.Stdout.Write(data)
+	return err
+}
+
+func cmdDel(args *util.CmdArgs) error {
+	ipamConf, err := NewIPAMConfig(args.NetConf)
+	if err != nil {
+		return err
+	}
+
+	store, err := disk.New(ipamConf.Name)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+
+	allocator, err := NewIPAllocator(ipamConf, store)
+	if err != nil {
+		return err
+	}
+
+	return allocator.Release(args.ContID.String())
 }
