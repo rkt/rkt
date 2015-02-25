@@ -33,7 +33,7 @@ const defaultBrName = "rkt0"
 
 type Net struct {
 	rktnet.Net
-	BrName string `json:"bridgeName"`
+	BrName string `json:"bridge"`
 	IsGW   bool   `json:"isGateway"`
 	IPMasq bool   `json:"ipMasq"`
 	MTU    int    `json:"mtu"`
