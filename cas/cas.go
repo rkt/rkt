@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
@@ -48,6 +49,7 @@ const (
 	lenHash    = sha512.Size       // raw byte size
 	lenHashKey = (lenHash / 2) * 2 // half length, in hex characters
 	lenKey     = len(hashPrefix) + lenHashKey
+	minlenKey  = len(hashPrefix) + 2 // at least sha512-aa
 )
 
 var diskvStores = [...]string{
@@ -136,6 +138,12 @@ func (ds Store) tmpDir() (string, error) {
 // key by considering the key a prefix and using the store for resolution.
 // If the key is longer than the full key length, it is first truncated.
 func (ds Store) ResolveKey(key string) (string, error) {
+	if !strings.HasPrefix(key, hashPrefix) {
+		return "", fmt.Errorf("wrong key prefix")
+	}
+	if len(key) < minlenKey {
+		return "", fmt.Errorf("key too short")
+	}
 	if len(key) > lenKey {
 		key = key[:lenKey]
 	}
