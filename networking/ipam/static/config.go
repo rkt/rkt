@@ -12,8 +12,8 @@ var defaultConfigDir = "/etc/rkt/ipam.d"
 type IPAMConfig struct {
 	Name       string
 	Type       string   `json:"type"`
-	RangeStart string   `json:"range-start"`
-	RangeEnd   string   `json:"range-end"`
+	RangeStart string   `json:"rangeStart"`
+	RangeEnd   string   `json:"rangeEnd"`
 	Subnet     string   `json:"subnet"`
 	Gateway    string   `json:"gateway"`
 	Routes     []string `json:"routes"`
