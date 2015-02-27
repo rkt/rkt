@@ -1,0 +1,76 @@
+## Host (default) mode
+
+By default, `rkt run` will start the pod with host networking. This means that the apps within the pod will share the network stack and the interfaces with the host machine. Since metadata service uses the container IP for indentity, rkt will _not_ register the container with the metadata service in this mode.
+
+## Private networking mode
+
+If `rkt run` is started with `--private-net`, the pod will be executed with its own network stack. By default, Rocket will create a loopback device and a veth device. The veth pair creates a point-to-point link between the container and the host. Rocket will allocate an IPv4 /31 (2 IP addresses) out of 172.16.28.0/24 and assign one IP to each end of the veth pair. It will additionally set a route for metadata service (169.254.169.255/32) and default route in the container namespace. Finally, it will enable IP masquerading on the host to NAT the egress traffic.
+
+## Setting up additonal networks
+
+In addition to the default network (veth) described in the previous section, Rocket pods can be configured to join additional networks. Each additional network will result in an new interface being setup in the pod. The type of network interface, IP, routes, etc is controlled via a configuration file residing in `/etc/rkt/net.d` directory. The network configuration files are executed in lexicographically sorted order. Each file consists of a JSON dictionary as shown below:
+
+```/etc/rkt/net.d/10-containers.conf
+{
+	"name": "containers",
+	"type": "bridge",
+	"ipam": {
+		"type": "static",
+		"subnet": "10.1.0.0/16"
+	}
+}
+```
+
+This configuration file defines a linux-bridge based network on 10.1.0.0/16 subnet. The following fields apply to all configuration files. Additional fields are specified for various types.
+
+- **name** (string): An arbitrary label for the network. By convention the conf file is labeled with a leading ordinal, dash, network name, and .conf extension.
+- **type** (string): The type of network/interface to create. The type actually names a network plugin with Rocket bundled with few built-in ones.
+- **ipam** (dict): IP Address Management -- controls the settings related to IP address assignment, gateway, and routes.
+
+## Built-in network types
+
+### veth
+veth is the probably the simplest type of networking and is used to set up default network. It creates a virtual ethernet pair (akin to a pipe) and places one end into container and the other on the host. It is expected to be used with IPAM type that will allocate a /31 for both ends of the veth (such as static-ptp). `veth` specific configuration fields are:
+
+- **mtu** (integer): the size of the MTU in bytes.
+- **ipMasq** (boolean): whether to setup IP masquerading on the host.
+
+### bridge
+Like the veth type, `bridge` will also create a veth pair and place one end into the container. However the host end of the veth will be plugged into a linux-bridge. The configuration file specifies the bridge name and if the bridge does not exist, it will be created. The bridge can optionally be setup to act as the gateway for the network. `bridge` specific configuration fields are:
+- **bridge** (string): the name of the bridge to create and/or plug into. Defaults to `rkt0`.
+- **isGateway** (boolean): whether the bridge should be assigned an IP and act as a gateway.
+- **mtu** (integer): the size of the MTU in bytes for bridge and veths.
+- **ipMasq** (boolean): whether to setup IP masquerading on the host.
+
+### Coming soon
+- [macvlan](https://github.com/coreos/rocket/issues/478)
+- [ipvlan](https://github.com/coreos/rocket/issues/479)
+
+## IP Address Management
+The policy for IP address allocation, associated gateway and routes is separately configurable via the `ipam` section of the configuration file. Rocket currently ships with one type of IPAM (static) but DHCP is in the works. Like the network types, IPAM types can be implemented by third-parties via plugins.
+
+### static
+Static type allocates IPs out of specified network range, much like a DHCP server would. The difference is that while DHCP uses a central server, this type uses a static configuration. Consider the following conf:
+
+```/etc/rkt/net.d/10-containers.conf
+{
+	"name": "containers",
+	"type": "bridge",
+	"bridge": "rkt1",
+	"ipam": {
+		"type": "static",
+		"subnet": "10.1.0.0/16",
+	}
+}
+```
+
+This configuration instructs Rocket to create `rkt1` Linux bridge and plugs pods into it via veths. Since the subnet is defined as `10.1.0.0/16`, Rocket will assign individual IPs out of that range. The first pod will be assigned 10.1.0.2/16, next one 10.1.0.3/16, etc (it reserves 10.1.0.1/16 for gateway). Additional configuration fields:
+
+- **subnet** (string): Subnet in CIDR notation for the network.
+- **rangeStart** (string): First IP address from which to start allocating IPs. Defaults to second IP in `subnet` range.
+- **rangeEnd** (string): Last IP address in the allocatable range. Defaults to last IP in `subnet` range.
+- **gateway** (string): The IP address of the gateway in this subnet.
+- **routes** (list of strings): List of IP routes in CIDR notation. The routes get added to container namespace with next-hop set to the gateway of the network.
+
+### dhcp
+[Coming soon](https://github.com/coreos/rocket/issues/558)
