@@ -110,7 +110,7 @@ func stderr(format string, a ...interface{}) {
 
 func stdout(format string, a ...interface{}) {
 	out := fmt.Sprintf(format, a...)
-	fmt.Fprintln(os.Stderr, strings.TrimSuffix(out, "\n"))
+	fmt.Fprintln(os.Stdout, strings.TrimSuffix(out, "\n"))
 }
 
 func getAllFlags() (flags []*flag.Flag) {
