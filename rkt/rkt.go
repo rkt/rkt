@@ -125,12 +125,34 @@ func getFlags(flagset *flag.FlagSet) (flags []*flag.Flag) {
 	return
 }
 
-func containersDir() string {
-	return filepath.Join(globalFlags.Dir, "containers")
+// where container directories are created and locked before moving to prepared
+func embryoDir() string {
+	return filepath.Join(globalFlags.Dir, "containers", "embryo")
 }
 
+// where container trees reside during (locked) and after failing to complete preparation (unlocked)
+func prepareDir() string {
+	return filepath.Join(globalFlags.Dir, "containers", "prepare")
+}
+
+// where container trees reside upon successful preparation
+func preparedDir() string {
+	return filepath.Join(globalFlags.Dir, "containers", "prepared")
+}
+
+// where container trees reside once run
+func runDir() string {
+	return filepath.Join(globalFlags.Dir, "containers", "run")
+}
+
+// where container trees reside once exited & marked as garbage by a gc pass
+func exitedGarbageDir() string {
+	return filepath.Join(globalFlags.Dir, "containers", "exited-garbage")
+}
+
+// where never-executed container trees reside once marked as garbage by a gc pass (failed prepares, expired prepareds)
 func garbageDir() string {
-	return filepath.Join(globalFlags.Dir, "garbage")
+	return filepath.Join(globalFlags.Dir, "containers", "garbage")
 }
 
 func getKeystore() *keystore.Keystore {

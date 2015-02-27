@@ -70,8 +70,8 @@ func runEnter(args []string) (exit int) {
 	}
 	defer c.Close()
 
-	if c.isExited {
-		stderr("Cannot enter exited container")
+	if !c.isRunning() {
+		stderr("Container %q isn't currently running", cid)
 		return 1
 	}
 
