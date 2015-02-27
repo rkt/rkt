@@ -195,6 +195,26 @@ func TestResolveKey(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected non-nil error!")
 	}
+
+	// wrong key prefix
+	k, err = ds.ResolveKey("badprefix-1")
+	expectedErr := "wrong key prefix"
+	if err == nil {
+		t.Errorf("expected non-nil error!")
+	}
+	if err.Error() != expectedErr {
+		t.Errorf("expected err=%q, got %q", expectedErr, err)
+	}
+
+	// key too short
+	k, err = ds.ResolveKey("sha512-1")
+	expectedErr = "key too short"
+	if err == nil {
+		t.Errorf("expected non-nil error!")
+	}
+	if err.Error() != expectedErr {
+		t.Errorf("expected err=%q, got %q", expectedErr, err)
+	}
 }
 
 func TestGetImageManifest(t *testing.T) {
