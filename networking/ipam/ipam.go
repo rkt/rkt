@@ -145,7 +145,11 @@ func ExecPluginDel(plugin string) error {
 func ApplyIPConfig(ifName string, ipConf *IPConfig) error {
 	link, err := netlink.LinkByName(ifName)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to lookup %q: %v", ifName, err)
+	}
+
+	if err := netlink.LinkSetUp(link); err != nil {
+		return fmt.Errorf("failed too set %q UP: %v", ifName, err)
 	}
 
 	addr := &netlink.Addr{IPNet: ipConf.IP, Label: ""}

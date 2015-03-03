@@ -50,3 +50,10 @@ func ipToInt(ip net.IP) *big.Int {
 func intToIP(i *big.Int) net.IP {
 	return net.IP(i.Bytes())
 }
+
+func Network(ipn *net.IPNet) *net.IPNet {
+	return &net.IPNet{
+		IP:   ipn.IP.Mask(ipn.Mask),
+		Mask: ipn.Mask,
+	}
+}
