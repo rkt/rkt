@@ -76,13 +76,15 @@ func mirrorLocalZoneInfo(root string) {
 }
 
 var (
-	debug   bool
-	privNet bool
+	debug       bool
+	privNet     bool
+	interactive bool
 )
 
 func init() {
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
 	flag.BoolVar(&privNet, "private-net", false, "Setup private network (WIP!)")
+	flag.BoolVar(&interactive, "interactive", false, "The container is interactive")
 
 	// this ensures that main runs only on main thread (thread group leader).
 	// since namespace ops (unshare, setns) are done for a single thread, we
@@ -101,7 +103,7 @@ func stage1() int {
 	mirrorLocalZoneInfo(c.Root)
 	c.MetadataServiceURL = common.MetadataServicePublicURL()
 
-	if err = c.ContainerToSystemd(); err != nil {
+	if err = c.ContainerToSystemd(interactive); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
 		return 2
 	}

@@ -39,6 +39,7 @@ var (
 	flagSpawnMetadataService bool
 	flagInheritEnv           bool
 	flagExplicitEnv          envMap
+	flagInteractive          bool
 	cmdRun                   = &Command{
 		Name:    "run",
 		Summary: "Run image(s) in an application container in rocket",
@@ -70,6 +71,7 @@ func init() {
 	cmdRun.Flags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
 	cmdRun.Flags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	cmdRun.Flags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
+	cmdRun.Flags.BoolVar(&flagInteractive, "interactive", false, "the container is interactive")
 	flagVolumes = volumeList{}
 }
 
@@ -174,6 +176,10 @@ func parseAppArgs(args []string) ([][]string, []string, error) {
 }
 
 func runRun(args []string) (exit int) {
+	if flagInteractive && len(args) > 1 {
+		stderr("run: interactive option only supports one image")
+		return 1
+	}
 	if globalFlags.Dir == "" {
 		log.Printf("dir unset - using temporary directory")
 		var err error
@@ -263,6 +269,7 @@ func runRun(args []string) (exit int) {
 		PrivateNet:           flagPrivateNet,
 		SpawnMetadataService: flagSpawnMetadataService,
 		LockFd:               lfd,
+		Interactive:          flagInteractive,
 	}
 	stage0.Run(rcfg, c.path()) // execs, never returns
 

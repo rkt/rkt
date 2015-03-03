@@ -54,10 +54,15 @@ func ContainerManifestPath(root string) string {
 	return filepath.Join(root, "container")
 }
 
+// AppImagesPath returns the path where the app images live
+func AppImagesPath(root string) string {
+	return filepath.Join(Stage1RootfsPath(root), stage2Dir)
+}
+
 // AppImagePath returns the path where an app image (i.e. unpacked ACI) is rooted (i.e.
 // where its contents are extracted during stage0), based on the app image ID.
 func AppImagePath(root string, imageID types.Hash) string {
-	return filepath.Join(Stage1RootfsPath(root), stage2Dir, types.ShortHash(imageID.String()))
+	return filepath.Join(AppImagesPath(root), types.ShortHash(imageID.String()))
 }
 
 // AppRootfsPath returns the path to an app's rootfs.
