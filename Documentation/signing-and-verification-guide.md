@@ -9,8 +9,8 @@ hello-0.0.1-linux-amd64.aci
 * [Signing ACIs](#signing-acis)
 * [Distributing Images via Meta Discovery](#distributing-images-via-meta-discovery)
 * [Verifying Images with Rocket](#verifying-images-with-rocket)
-  * [Establishing Trust](#establishing-trust)
-  * [Example Usage](#example-usage)
+* [Establishing Trust](#establishing-trust)
+* [Example Usage](#example-usage)
 
 ## Signing ACIs
 
@@ -22,8 +22,10 @@ Create a file named `gpg-batch`
 
 ```
 %echo Generating a default key
-Key-Type: default
-Subkey-Type: default
+Key-Type: RSA 
+Key-Length: 2048
+Subkey-Type: RSA 
+Subkey-Length: 2048
 Name-Real: Kelsey Hightower
 Name-Comment: ACI signing key
 Name-Email: kelsey.hightower@coreos.com
@@ -103,8 +105,7 @@ gpg> quit
 ```
 $ gpg --no-default-keyring --armor \
 --secret-keyring ./rocket.sec --keyring ./rocket.pub \
---output pubkeys.gpg \
---export "<kelsey.hightower@coreos.com>"
+--export kelsey.hightower@coreos.com > pubkeys.gpg
 ```
 
 ### Signing the ACI
