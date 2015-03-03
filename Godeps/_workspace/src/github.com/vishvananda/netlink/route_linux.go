@@ -25,7 +25,7 @@ func RouteDel(route *Route) error {
 }
 
 func routeHandle(route *Route, req *nl.NetlinkRequest) error {
-	if route.Dst.IP == nil && route.Src == nil && route.Gw == nil {
+	if (route.Dst == nil || route.Dst.IP == nil) && route.Src == nil && route.Gw == nil {
 		return fmt.Errorf("one of Dst.IP, Src, or Gw must not be nil")
 	}
 
@@ -34,7 +34,7 @@ func routeHandle(route *Route, req *nl.NetlinkRequest) error {
 	family := -1
 	var rtAttrs []*nl.RtAttr
 
-	if route.Dst.IP != nil {
+	if route.Dst != nil && route.Dst.IP != nil {
 		dstLen, _ := route.Dst.Mask.Size()
 		msg.Dst_len = uint8(dstLen)
 		dstFamily := nl.GetIPFamily(route.Dst.IP)
