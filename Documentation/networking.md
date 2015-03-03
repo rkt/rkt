@@ -42,8 +42,14 @@ Like the veth type, `bridge` will also create a veth pair and place one end into
 - **mtu** (integer): the size of the MTU in bytes for bridge and veths.
 - **ipMasq** (boolean): whether to setup IP masquerading on the host.
 
+### macvlan
+macvlan "clones" a real interface by assigning a made up MAC address to the "cloned" interface. The real and macvlan interfaces share the same physical device but have distinct MAC and IP addresses. With multiple macvlan interfaces sharing the same device, it behaves similarly to a bridge. Since macvlan interface has its own MAC and is located on the same link segment as the host, it makes it especially a good choice for using the DHCP server to acquire an IP address. With the IP address allocated by the real network infrastructure, this makes the container IP routable in the same way as the host IP. `macvlan` specific configuration fields are:
+- **master** (string): the name of host interface to "clone". This field is required.
+- **mode** (string): One of "bridge", "private", "vepa", or "passthru". This controls how traffic is handled between different macvlan interfaces on the same host. See (this guide)[http://www.pocketnix.org/posts/Linux%20Networking:%20MAC%20VLANs%20and%20Virtual%20Ethernets] for discussion of modes. Defaults to "bridge".
+- **mtu** (integer): the size of the MTU in bytes for bridge and veths. Defaults to MTU of the master device.
+- **ipMasq** (boolean): whether to setup IP masquerading on the host. Defaults to false.
+
 ### Coming soon
-- [macvlan](https://github.com/coreos/rocket/issues/478)
 - [ipvlan](https://github.com/coreos/rocket/issues/479)
 
 ## IP Address Management

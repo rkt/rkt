@@ -209,7 +209,7 @@ func cmdAdd(args *util.CmdArgs) error {
 
 	if n.IPMasq {
 		chain := "RKT-" + n.Name
-		if err = util.SetupIPMasq(network(ipConf.IP), chain); err != nil {
+		if err = util.SetupIPMasq(util.Network(ipConf.IP), chain); err != nil {
 			return err
 		}
 	}
@@ -217,13 +217,6 @@ func cmdAdd(args *util.CmdArgs) error {
 	return rktnet.PrintIfConfig(&rktnet.IfConfig{
 		IP: ipConf.IP.IP,
 	})
-}
-
-func network(ipn *net.IPNet) *net.IPNet {
-	return &net.IPNet{
-		IP:   ipn.IP.Mask(ipn.Mask),
-		Mask: ipn.Mask,
-	}
 }
 
 func cmdDel(args *util.CmdArgs) error {

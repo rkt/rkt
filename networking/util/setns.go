@@ -49,13 +49,6 @@ func SetNS(f *os.File, flags uintptr) error {
 // WithNetNSPath executes the passed closure under the given network
 // namespace, restoring the original namespace afterwards.
 func WithNetNSPath(nspath string, f func(*os.File) error) error {
-	// save a handle to current (host) network namespace
-	thisNS, err := os.Open("/proc/self/ns/net")
-	if err != nil {
-		return fmt.Errorf("Failed to open /proc/self/ns/net: %v", err)
-	}
-	defer thisNS.Close()
-
 	// switch to the container namespace
 	ns, err := os.Open(nspath)
 	if err != nil {
@@ -63,8 +56,21 @@ func WithNetNSPath(nspath string, f func(*os.File) error) error {
 	}
 	defer ns.Close()
 
+	return WithNetNS(ns, f)
+}
+
+// WithNetNS executes the passed closure under the given network
+// namespace, restoring the original namespace afterwards.
+func WithNetNS(ns *os.File, f func(*os.File) error) error {
+	// save a handle to current (host) network namespace
+	thisNS, err := os.Open("/proc/self/ns/net")
+	if err != nil {
+		return fmt.Errorf("Failed to open /proc/self/ns/net: %v", err)
+	}
+	defer thisNS.Close()
+
 	if err = SetNS(ns, syscall.CLONE_NEWNET); err != nil {
-		return fmt.Errorf("Error switching to ns %v: %v", nspath, err)
+		return fmt.Errorf("Error switching to ns %v: %v", ns.Name(), err)
 	}
 
 	if err = f(thisNS); err != nil {

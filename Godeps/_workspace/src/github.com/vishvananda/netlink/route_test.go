@@ -61,3 +61,24 @@ func TestRouteAddDel(t *testing.T) {
 	}
 
 }
+
+func TestRouteAddIncomplete(t *testing.T) {
+	tearDown := setUpNetlinkTest(t)
+	defer tearDown()
+
+	// get loopback interface
+	link, err := LinkByName("lo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// bring the interface up
+	if err = LinkSetUp(link); err != nil {
+		t.Fatal(err)
+	}
+
+	route := Route{LinkIndex: link.Attrs().Index}
+	if err := RouteAdd(&route); err == nil {
+		t.Fatal("Adding incomplete route should fail")
+	}
+}
