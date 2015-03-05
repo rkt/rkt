@@ -232,14 +232,14 @@ func runRun(args []string) (exit int) {
 	}
 
 	cfg := stage0.CommonConfig{
-		Store: ds,
-		Debug: globalFlags.Debug,
+		Store:       ds,
+		Stage1Image: *s1img,
+		Images:      imgs,
+		Debug:       globalFlags.Debug,
 	}
 
 	pcfg := stage0.PrepareConfig{
 		CommonConfig: cfg,
-		Stage1Image:  *s1img,
-		Images:       imgs,
 		ExecAppends:  appArgs,
 		Volumes:      []types.Volume(flagVolumes),
 		InheritEnv:   flagInheritEnv,

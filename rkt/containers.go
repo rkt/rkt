@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -676,6 +677,39 @@ func (c *container) getState() string {
 // getPID returns the pid of the container.
 func (c *container) getPID() (int, error) {
 	return c.readIntFromFile("pid")
+}
+
+// getStage1Hash returns the hash of the stage1 image used in this container
+func (c *container) getStage1Hash() (*types.Hash, error) {
+	s1IDb, err := c.readFile(common.Stage1IDFilename)
+	if err != nil {
+		return nil, err
+	}
+	s1img, err := types.NewHash(string(s1IDb))
+	if err != nil {
+		return nil, err
+	}
+
+	return s1img, nil
+}
+
+// getAppsHashes returns a list of the app hashes in the container
+func (c *container) getAppsHashes() ([]types.Hash, error) {
+	crmb, err := c.readFile("container")
+	if err != nil {
+		return nil, err
+	}
+	var crm *schema.ContainerRuntimeManifest
+	if err = json.Unmarshal(crmb, &crm); err != nil {
+		return nil, err
+	}
+
+	var imgs []types.Hash
+	for _, app := range crm.Apps {
+		imgs = append(imgs, app.Image.ID)
+	}
+
+	return imgs, nil
 }
 
 // getDirNames returns the list of names from a container's directory

@@ -24,6 +24,7 @@ package stage0
 //
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -31,7 +32,9 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -44,16 +47,18 @@ import (
 	"github.com/coreos/rocket/version"
 )
 
+const (
+	overlayFilename = "overlay-prepared"
+)
+
 // configuration parameters required by Prepare
 type PrepareConfig struct {
 	CommonConfig
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
-	Stage1Image types.Hash     // stage1 image containing usable /init and /enter entrypoints
-	Images      []types.Hash   // application images
 	ExecAppends [][]string     // appendages to each image's app.exec lines (empty when none, length should match length of Images)
-	Volumes     []types.Volume // list of volumes that rocket can provide to applications
 	InheritEnv  bool           // inherit parent environment into apps
 	ExplicitEnv []string       // always set these environment variables for all the apps
+	Volumes     []types.Volume // list of volumes that rocket can provide to applications
 }
 
 // configuration parameters needed by Run
@@ -67,13 +72,20 @@ type RunConfig struct {
 
 // configuration shared by both Run and Prepare
 type CommonConfig struct {
-	Store         *cas.Store // store containing all of the configured application images
-	ContainersDir string     // root directory for rocket containers
+	Store         *cas.Store   // store containing all of the configured application images
+	Stage1Image   types.Hash   // stage1 image containing usable /init and /enter entrypoints
+	Images        []types.Hash // application images
+	ContainersDir string       // root directory for rocket containers
 	Debug         bool
 }
 
 func init() {
 	log.SetOutput(ioutil.Discard)
+
+	// this ensures that main runs only on main thread (thread group leader).
+	// since namespace ops (unshare, setns) are done for a single thread, we
+	// must ensure that the goroutine does not jump from OS thread to thread
+	runtime.LockOSThread()
 }
 
 // MergeEnvs amends appEnv setting variables in setEnv before setting anything new from os.Environ if inheritEnv = true
@@ -94,17 +106,18 @@ func MergeEnvs(appEnv *types.Environment, inheritEnv bool, setEnv []string) {
 	}
 }
 
-// Prepare sets up a filesystem for a container based on the given config.
+// Prepare sets up a container based on the given config.
 func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	if cfg.Debug {
 		log.SetOutput(os.Stderr)
 	}
 
+	useOverlay := supportsOverlay()
+
 	log.Printf("Preparing stage1")
-	if err := setupStage1Image(cfg, cfg.Stage1Image, dir); err != nil {
+	if err := prepareStage1Image(cfg, cfg.Stage1Image, dir, useOverlay); err != nil {
 		return fmt.Errorf("error preparing stage1: %v", err)
 	}
-	log.Printf("Wrote filesystem to %s\n", dir)
 
 	cm := schema.ContainerRuntimeManifest{
 		ACKind: "ContainerRuntimeManifest",
@@ -119,7 +132,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	cm.ACVersion = *v
 
 	for i, img := range cfg.Images {
-		am, err := setupAppImage(cfg, img, dir)
+		am, err := prepareAppImage(cfg, img, dir, useOverlay)
 		if err != nil {
 			return fmt.Errorf("error setting up image %s: %v", img, err)
 		}
@@ -167,12 +180,99 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
 		return fmt.Errorf("error writing container manifest: %v", err)
 	}
+
+	fn = path.Join(dir, common.Stage1IDFilename)
+	if err := ioutil.WriteFile(fn, []byte(cfg.Stage1Image.String()), 0700); err != nil {
+		return fmt.Errorf("error writing stage1 ID: %v", err)
+	}
+
+	if useOverlay {
+		// mark the container as prepared with overlay
+		f, err := os.Create(filepath.Join(dir, overlayFilename))
+		if err != nil {
+			return fmt.Errorf("error writing overlay marker file: %v", err)
+		}
+		defer f.Close()
+	}
+
 	return nil
 }
 
-// Run actually runs the prepared container by exec()ing the stage1 init inside
-// the container filesystem.
+func supportsOverlay() bool {
+	exec.Command("modprobe", "overlay").Run()
+
+	f, err := os.Open("/proc/filesystems")
+	if err != nil {
+		fmt.Println("error opening /proc/filesystems")
+		return false
+	}
+	defer f.Close()
+
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		if s.Text() == "nodev\toverlay" {
+			return true
+		}
+	}
+	return false
+}
+
+func preparedWithOverlay(dir string) (bool, error) {
+	_, err := os.Stat(filepath.Join(dir, overlayFilename))
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	if !supportsOverlay() {
+		return false, fmt.Errorf("the container was prepared with overlay but overlay is not supported")
+	}
+
+	return true, nil
+}
+
+// Run mounts the right overlay filesystems and actually runs the prepared
+// container by exec()ing the stage1 init inside the container filesystem.
 func Run(cfg RunConfig, dir string) {
+	useOverlay, err := preparedWithOverlay(dir)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
+	if useOverlay {
+		// create a separate mount namespace so the overlay mounts are
+		// unmounted when exiting the container
+		if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
+			log.Fatalf("error unsharing: %v", err)
+		}
+
+		// we recursively make / a "shared and slave" so mount events from the
+		// new namespace don't propagate to the host namespace but mount events
+		// from the host propagate to the new namespace and are forwarded to
+		// its peer group
+		// See https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
+		if err := syscall.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SLAVE, ""); err != nil {
+			log.Fatalf("error making / a slave mount: %v", err)
+		}
+		if err := syscall.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SHARED, ""); err != nil {
+			log.Fatalf("error making / a shared and slave mount: %v", err)
+		}
+	}
+
+	log.Printf("Setting up stage1")
+	if err := setupStage1Image(cfg, cfg.Stage1Image, dir, useOverlay); err != nil {
+		log.Fatalf("error setting up stage1: %v", err)
+	}
+	log.Printf("Wrote filesystem to %s\n", dir)
+
+	for _, img := range cfg.Images {
+		if err := setupAppImage(cfg, img, dir, useOverlay); err != nil {
+			log.Fatalf("error setting up app image: %v", err)
+		}
+	}
+
 	if err := os.Setenv(common.EnvLockFd, fmt.Sprintf("%v", cfg.LockFd)); err != nil {
 		log.Fatalf("setting lock fd environment: %v", err)
 	}
@@ -216,45 +316,153 @@ func Run(cfg RunConfig, dir string) {
 	}
 }
 
-// setupAppImage attempts to load the app image by the given hash from the store,
-// verifies that the image matches the hash, and extracts the image into a
-// directory in the given dir.
-// It returns the ImageManifest that the image contains.
+// prepareAppImage renders and verifies the tree cache of the app image that
+// corresponds to the given hash.
+// When useOverlay is false, it attempts to render and expand the app image
 // TODO(jonboulle): tighten up the Hash type here; currently it is partially-populated (i.e. half-length sha512)
-func setupAppImage(cfg PrepareConfig, img types.Hash, cdir string) (*schema.ImageManifest, error) {
+func prepareAppImage(cfg PrepareConfig, img types.Hash, cdir string, useOverlay bool) (*schema.ImageManifest, error) {
 	log.Println("Loading image", img.String())
 
-	ad := common.AppImagePath(cdir, img)
-	err := os.MkdirAll(ad, 0776)
+	if useOverlay {
+		if err := cfg.Store.RenderTreeStore(img.String(), false); err != nil {
+			return nil, fmt.Errorf("error rendering tree image: %v", err)
+		}
+		if err := cfg.Store.CheckTreeStore(img.String()); err != nil {
+			log.Printf("Warning: tree cache is in a bad state. Rebuilding...")
+			if err := cfg.Store.RenderTreeStore(img.String(), true); err != nil {
+				return nil, fmt.Errorf("error rendering tree image: %v", err)
+			}
+		}
+	} else {
+		ad := common.AppImagePath(cdir, img)
+		err := os.MkdirAll(ad, 0776)
+		if err != nil {
+			return nil, fmt.Errorf("error creating image directory: %v", err)
+		}
+
+		if err := aci.RenderACIWithImageID(img, ad, cfg.Store); err != nil {
+			return nil, fmt.Errorf("error rendering ACI: %v", err)
+		}
+	}
+
+	am, err := cfg.Store.GetImageManifest(img.String())
 	if err != nil {
-		return nil, fmt.Errorf("error creating image directory: %v", err)
+		return nil, fmt.Errorf("error getting the manifest: %v", err)
 	}
 
-	if err := aci.RenderACIWithImageID(img, ad, cfg.Store); err != nil {
-		return nil, fmt.Errorf("error rendering app image: %v", err)
-	}
-
-	b, err := ioutil.ReadFile(common.ImageManifestPath(cdir, img))
-	if err != nil {
-		return nil, fmt.Errorf("error reading app manifest: %v", err)
-	}
-	var am schema.ImageManifest
-	if err := json.Unmarshal(b, &am); err != nil {
-		return nil, fmt.Errorf("error unmarshaling app manifest: %v", err)
-	}
-
-	return &am, nil
+	return am, nil
 }
 
-// setupStage1Image attempts to expand the image by the given hash as the stage1
-func setupStage1Image(cfg PrepareConfig, img types.Hash, cdir string) error {
+// setupAppImage mounts the overlay filesystem for the app image that
+// corresponds to the given hash. Then, it creates the tmp directory.
+// When useOverlay is false it just creates the tmp directory for this app.
+func setupAppImage(cfg RunConfig, img types.Hash, cdir string, useOverlay bool) error {
+	ad := common.AppImagePath(cdir, img)
+	if useOverlay {
+		err := os.MkdirAll(ad, 0776)
+		if err != nil {
+			return fmt.Errorf("error creating image directory: %v", err)
+		}
+
+		if err := overlayRender(cfg, img, cdir, ad); err != nil {
+			return fmt.Errorf("error rendering overlay filesystem: %v", err)
+		}
+	}
+
+	err := os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
+	if err != nil {
+		return fmt.Errorf("error creating tmp directory: %v", err)
+	}
+
+	return nil
+}
+
+// prepareStage1Image renders and verifies tree cache of the given hash
+// when using overlay.
+// When useOverlay is false, it attempts to render and expand the stage1.
+func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverlay bool) error {
 	s1 := common.Stage1ImagePath(cdir)
 	if err := os.MkdirAll(s1, 0755); err != nil {
 		return fmt.Errorf("error creating stage1 directory: %v", err)
 	}
-	if err := aci.RenderACIWithImageID(img, s1, cfg.Store); err != nil {
-		return fmt.Errorf("error rendering stage1 ACI: %v", err)
+
+	if useOverlay {
+		if err := cfg.Store.RenderTreeStore(img.String(), false); err != nil {
+			return fmt.Errorf("error rendering tree image: %v", err)
+		}
+		if err := cfg.Store.CheckTreeStore(img.String()); err != nil {
+			log.Printf("Warning: tree cache is in a bad state. Rebuilding...")
+			if err := cfg.Store.RenderTreeStore(img.String(), true); err != nil {
+				return fmt.Errorf("error rendering tree image: %v", err)
+			}
+		}
+	} else {
+		if err := aci.RenderACIWithImageID(img, s1, cfg.Store); err != nil {
+			return fmt.Errorf("error rendering ACI: %v", err)
+		}
 	}
+	return nil
+}
+
+// setupStage1Image mounts the overlay filesystem for stage1.
+// When useOverlay is false it is a noop
+func setupStage1Image(cfg RunConfig, img types.Hash, cdir string, useOverlay bool) error {
+	if useOverlay {
+		s1 := common.Stage1ImagePath(cdir)
+		if err := overlayRender(cfg, img, cdir, s1); err != nil {
+			return fmt.Errorf("error rendering overlay filesystem: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// overlayRender renders the image that corresponds to the given hash using the
+// overlay filesystem.
+// It writes the manifest in the specified directory and mounts an overlay
+// filesystem from the cached tree of the image as rootfs.
+func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string) error {
+	manifest, err := cfg.Store.GetImageManifest(img.String())
+	if err != nil {
+		return err
+	}
+
+	mb, err := json.Marshal(manifest)
+	if err != nil {
+		return fmt.Errorf("error marshalling image manifest: %v", err)
+	}
+
+	log.Printf("Writing image manifest")
+	if err := ioutil.WriteFile(filepath.Join(dest, "manifest"), mb, 0700); err != nil {
+		return fmt.Errorf("error writing container manifest: %v", err)
+	}
+
+	destRootfs := path.Join(dest, "rootfs")
+	if err := os.MkdirAll(destRootfs, 0755); err != nil {
+		return err
+	}
+
+	cachedTreePath := cfg.Store.GetTreeStoreRootFS(img.String())
+
+	overlayDir := path.Join(cdir, "overlay", img.String())
+	if err := os.MkdirAll(overlayDir, 0700); err != nil {
+		return err
+	}
+
+	upperDir := path.Join(overlayDir, "upper")
+	if err := os.MkdirAll(upperDir, 0700); err != nil {
+		return err
+	}
+	workDir := path.Join(overlayDir, "work")
+	if err := os.MkdirAll(workDir, 0700); err != nil {
+		return err
+	}
+
+	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", cachedTreePath, upperDir, workDir)
+	if err := syscall.Mount("overlay", destRootfs, "overlay", 0, opts); err != nil {
+		return fmt.Errorf("error mounting: %v", err)
+	}
+
 	return nil
 }
 

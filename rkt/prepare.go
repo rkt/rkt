@@ -112,15 +112,15 @@ func runPrepare(args []string) (exit int) {
 
 	pcfg := stage0.PrepareConfig{
 		CommonConfig: stage0.CommonConfig{
-			Store: ds,
-			Debug: globalFlags.Debug,
+			Store:       ds,
+			Debug:       globalFlags.Debug,
+			Stage1Image: *s1img,
+			Images:      imgs,
 		},
-		Stage1Image: *s1img,
-		Images:      imgs,
 		ExecAppends: appArgs,
-		Volumes:     []types.Volume(flagVolumes),
 		InheritEnv:  flagInheritEnv,
 		ExplicitEnv: flagExplicitEnv.Strings(),
+		Volumes:     []types.Volume(flagVolumes),
 	}
 
 	if err = stage0.Prepare(pcfg, c.path(), c.uuid); err != nil {
