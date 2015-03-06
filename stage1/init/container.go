@@ -201,6 +201,9 @@ func (c *Container) appToSystemd(am *schema.ImageManifest, id types.Hash) error 
 		opts = append(opts, newUnitOption("Unit", "Requires", SocketUnitName(id)))
 	}
 
+	opts = append(opts, newUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(id)))
+	opts = append(opts, newUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(id)))
+
 	file, err := os.OpenFile(ServiceUnitPath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create service unit file: %v", err)
