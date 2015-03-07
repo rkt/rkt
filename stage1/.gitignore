@@ -4,6 +4,7 @@ rootfs/aggregate/install.d/
 rootfs/aggregate/stage1/
 rootfs/diagexec/diagexec
 rootfs/enter/enter
+rootfs/prepare-app/prepare-app
 rootfs/shim/shim.so
 rootfs/usr/cache/
 rootfs/usr/manifest.txt
