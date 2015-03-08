@@ -42,18 +42,24 @@ func init() {
 }
 
 func runGC(args []string) (exit int) {
-	if err := os.MkdirAll(garbageDir(), 0755); err != nil {
-		stderr("Unable to create garbage dir: %v", err)
-		return 1
-	}
-
 	if err := renameExited(); err != nil {
 		stderr("Failed to rename exited containers: %v", err)
 		return 1
 	}
 
-	// clean up anything old in the garbage dir
-	if err := emptyGarbage(flagGracePeriod); err != nil {
+	if err := renameAborted(); err != nil {
+		stderr("Failed to rename aborted containers: %v", err)
+		return 1
+	}
+
+	// TODO(vc): rename abandoned successfully prepared containers to garbageDir() after a grace period
+
+	if err := emptyExitedGarbage(flagGracePeriod); err != nil {
+		stderr("Failed to empty exitedGarbage: %v", err)
+		return 1
+	}
+
+	if err := emptyGarbage(); err != nil {
 		stderr("Failed to empty garbage: %v", err)
 		return 1
 	}
@@ -61,12 +67,12 @@ func runGC(args []string) (exit int) {
 	return
 }
 
-// renameExited renames exited containers to the garbage directory
+// renameExited renames exited containers to the exitedGarbage directory
 func renameExited() error {
-	if err := walkContainers(includeContainersDir, func(c *container) {
+	if err := walkContainers(includeRunDir, func(c *container) {
 		if c.isExited {
 			stdout("Moving container %q to garbage", c.uuid)
-			if err := os.Rename(c.containersPath(), c.garbagePath()); err != nil && err != os.ErrNotExist {
+			if err := c.xToExitedGarbage(); err != nil && err != os.ErrNotExist {
 				stderr("Rename error: %v", err)
 			}
 		}
@@ -77,9 +83,9 @@ func renameExited() error {
 	return nil
 }
 
-// emptyGarbage discards sufficiently aged containers from garbageDir()
-func emptyGarbage(gracePeriod time.Duration) error {
-	if err := walkContainers(includeGarbageDir, func(c *container) {
+// emptyExitedGarbage discards sufficiently aged containers from exitedGarbageDir()
+func emptyExitedGarbage(gracePeriod time.Duration) error {
+	if err := walkContainers(includeExitedGarbageDir, func(c *container) {
 		gp := c.path()
 		st := &syscall.Stat_t{}
 		if err := syscall.Lstat(gp, st); err != nil {
@@ -97,6 +103,38 @@ func emptyGarbage(gracePeriod time.Duration) error {
 			if err := os.RemoveAll(gp); err != nil {
 				stderr("Unable to remove container %q: %v", c.uuid, err)
 			}
+		}
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// renameAborted renames failed prepares to the garbage directory
+func renameAborted() error {
+	if err := walkContainers(includePrepareDir, func(c *container) {
+		if c.isAbortedPrepare {
+			stdout("Moving failed prepare %q to garbage", c.uuid)
+			if err := c.xToGarbage(); err != nil && err != os.ErrNotExist {
+				stderr("Rename error: %v", err)
+			}
+		}
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// emptyGarbage discards everything from garbageDir()
+func emptyGarbage() error {
+	if err := walkContainers(includeGarbageDir, func(c *container) {
+		if err := c.ExclusiveLock(); err != nil {
+			return
+		}
+		stdout("Garbage collecting container %q", c.uuid)
+		if err := os.RemoveAll(c.path()); err != nil {
+			stderr("Unable to remove container %q: %v", c.uuid, err)
 		}
 	}); err != nil {
 		return err

@@ -94,24 +94,7 @@ func TestWalkContainers(t *testing.T) {
 				expected: true,
 			},
 		},
-		{ // faked rename race, same uuid as both garbage and non-garbage, only expect the garbage
-			{ // exited
-				uuid:     "f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2",
-				exited:   true,
-				garbage:  false,
-				deleting: false,
-
-				expected: false,
-			},
-			{ // garbage
-				uuid:     "f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2",
-				exited:   true,
-				garbage:  true,
-				deleting: false,
-
-				expected: true,
-			},
-		},
+		// TODO(vc): update to test new prepared/prepare-failed/non-exited-garbage states..
 	}
 
 	for _, tt := range tests {
@@ -123,11 +106,8 @@ func TestWalkContainers(t *testing.T) {
 		defer os.RemoveAll(d)
 
 		globalFlags.Dir = d
-		if err := os.MkdirAll(containersDir(), 0700); err != nil {
-			t.Fatalf("error creating container directory: %v", err)
-		}
-		if err := os.MkdirAll(garbageDir(), 0700); err != nil {
-			t.Fatalf("error creating garbage directory: %v", err)
+		if err := initContainers(); err != nil {
+			t.Fatalf("error initializing containers: %v", err)
 		}
 
 		var (
@@ -141,11 +121,11 @@ func TestWalkContainers(t *testing.T) {
 		for _, ct := range tt {
 			var cp string
 			if ct.garbage {
-				cp = filepath.Join(garbageDir(), ct.uuid)
-				included |= includeGarbageDir
+				cp = filepath.Join(exitedGarbageDir(), ct.uuid)
+				included |= includeExitedGarbageDir
 			} else {
-				cp = filepath.Join(containersDir(), ct.uuid)
-				included |= includeContainersDir
+				cp = filepath.Join(runDir(), ct.uuid)
+				included |= includeRunDir
 			}
 
 			if err := os.MkdirAll(cp, 0700); err != nil {
@@ -169,10 +149,10 @@ func TestWalkContainers(t *testing.T) {
 		if err := walkContainers(included, func(ch *container) {
 			n_walked++
 			for _, ct := range tt {
-				if ch.uuid == ct.uuid &&
-					ch.isGarbage == ct.garbage &&
+				if ch.uuid.String() == ct.uuid &&
+					ch.isExitedGarbage == ct.garbage &&
 					ch.isExited == ct.exited &&
-					ch.isDeleting == ct.deleting {
+					ch.isExitedDeleting == ct.deleting {
 
 					ct.n_matched++
 					if ct.n_matched > 1 {
