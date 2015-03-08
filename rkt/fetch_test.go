@@ -146,7 +146,7 @@ func TestFetchImage(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
-	sig, err := aci.NewDetachedSignature(key.ArmoredPrivateKey, a)
+	asc, err := aci.NewDetachedSignature(key.ArmoredPrivateKey, a)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -161,9 +161,11 @@ func TestFetchImage(t *testing.T) {
 		case ".aci":
 			io.Copy(w, a)
 			return
-		case ".sig":
-			io.Copy(w, sig)
+		case ".asc":
+			io.Copy(w, asc)
 			return
+		default:
+			t.Fatalf("unknown extension %v", r.URL.Path)
 		}
 	}))
 	defer ts.Close()
@@ -179,11 +181,11 @@ func TestSigURLFromImgURL(t *testing.T) {
 	}{
 		{
 			"http://localhost/aci-latest-linux-amd64.aci",
-			"http://localhost/aci-latest-linux-amd64.sig",
+			"http://localhost/aci-latest-linux-amd64.aci.asc",
 		},
 	}
 	for i, tt := range tests {
-		out := sigURLFromImgURL(tt.in)
+		out := ascURLFromImgURL(tt.in)
 		if out != tt.out {
 			t.Errorf("#%d: got %v, want %v", i, out, tt.out)
 		}
