@@ -144,18 +144,22 @@ func parseAppArgs(args []string) ([][]string, []string, error) {
 	inAppArgs := false
 	for _, a := range args {
 		if inAppArgs {
-			if a == "---" {
+			switch a {
+			case "---":
 				// conclude this app's args
 				inAppArgs = false
-			} else {
+			default:
 				// keep appending to this app's args
 				appArgs[len(appArgs)-1] = append(appArgs[len(appArgs)-1], a)
 			}
 		} else {
-			if a == "--" {
+			switch a {
+			case "--":
 				// begin app's args, TODO(vc): this could be made more strict/police if deemed necessary
 				inAppArgs = true
-			} else {
+			case "---":
+				// ignore triple dashes since they aren't images
+			default:
 				// this is something else, append it to images
 				// TODO(vc): for now these basically have to be images, but it should be possible to reenter cmdRun.flags.Parse()
 				images = append(images, a)
