@@ -138,6 +138,10 @@ Rocket can run ACIs based on name, hash, local file on disk or URL. If an ACI ha
 
 ### rkt run
 
+#### Image Addressing
+
+Images can be ran by either their name, their hash or an explicit transport address.
+
 ```
 # Run by name
 $ sudo rkt run coreos.com/etcd:v2.0.0
@@ -153,8 +157,31 @@ $ sudo rkt run sha512-fa1cb92dc276b0f9bedf87981e61ecde
 $ sudo rkt run https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 ```
 
+#### Passing Arguments
+
+To pass additional arguments to images use the pattern of `image1 -- [image1 flags] --- image2 -- [image2 flags]`.
+For example:
+
+```
+$ sudo rkt run example.com/worker -- --loglevel verbose --- example.com/syncer -- --interval 30s
+```
+
+#### Inheriting Environment Variables
+
+To inherit environment variables from the parent use the `--inherit-environment` flag.
+
+The inheritance precedence is as follows with the last item replacing previous environment entries:
+
+- Parent environment
+- App image environment
+
+```
+$ export EXAMPLE_ENV=hello
+$ sudo rkt run --inherit-environment example.com/env-printer
+EXAMPLE_ENV=hello
+```
+
 _TODO: Exit codes_
-_TODO: Environment variables_
 _TODO: Logging_
 
 #### Disable Signature Verification
