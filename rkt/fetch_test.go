@@ -93,9 +93,9 @@ func TestNewDiscoveryApp(t *testing.T) {
 		},
 		// combinations
 		{
-			"one.two/:three,os=four,foo=five,arch=six",
+			"one.two/appname:three,os=four,foo=five,arch=six",
 			&discovery.App{
-				Name: "one.two/",
+				Name: "one.two/appname",
 				Labels: map[string]string{
 					"version": "three",
 					"os":      "four",
