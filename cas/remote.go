@@ -84,20 +84,23 @@ func (r Remote) Download(ds Store, ks *keystore.Keystore) (*openpgp.Entity, *os.
 		return nil, aciFile, nil
 	}
 
+	var sigTempFile *os.File
+	if ks != nil {
+		fmt.Printf("Downloading signature from %v\n", r.SigURL)
+		sigTempFile, err = downloadSignatureFile(r.SigURL)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error downloading the signature file: %v", err)
+		}
+		defer sigTempFile.Close()
+		defer os.Remove(sigTempFile.Name())
+	}
+
 	acif, err := downloadACI(ds, r.ACIURL)
 	if err != nil {
 		return nil, acif, fmt.Errorf("error downloading the aci image: %v", err)
 	}
 
 	if ks != nil {
-		fmt.Printf("Downloading signature from %v\n", r.SigURL)
-		sigTempFile, err := downloadSignatureFile(r.SigURL)
-		if err != nil {
-			return nil, acif, fmt.Errorf("error downloading the signature file: %v", err)
-		}
-		defer sigTempFile.Close()
-		defer os.Remove(sigTempFile.Name())
-
 		manifest, err := aci.ManifestFromImage(acif)
 		if err != nil {
 			return nil, acif, err
