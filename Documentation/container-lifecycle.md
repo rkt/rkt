@@ -15,22 +15,23 @@ At this time there are four distinct phases of a container's life which involve 
 
 Each of these phases involves an exclusive lock on a given container's directory.  As an exclusive lock by itself cannot express both the phase and process-bound activity within that phase, we combine the lock with the container's directory location to represent the whole picture:
 
-							locked			unlocked
-							exclusively
-
-* Prepare:		"$var/prepare/$uuid"		preparing		prepare-failed
-* Run:			"$var/run/$uuid"		running			exited
-* ExitedGarbage:	"$var/exited-garbage/$uuid"	exited+deleting		exited+gc-marked
-* Garbage:		"$var/garbage/$uuid"		prepare-failed+deleting	prepare-failed+gc-marked
+| Phase         | Directory                   | Locked exclusively      | Unlocked                 |
+|---------------|-----------------------------|-------------------------|--------------------------|
+| Prepare       | "$var/prepare/$uuid"        | preparing               | prepare-failed           |
+| Run           | "$var/run/$uuid"            | running                 | exited                   |
+| ExitedGarbage | "$var/exited-garbage/$uuid" | exited+deleting         | exited+gc-marked         |
+| Garbage       | "$var/garbage/$uuid"        | prepare-failed+deleting | prepare-failed+gc-marked |
 
 To prevent the period between first creating a container's directory and acquiring its lock from appearing as prepare-failed in the Prepare phase, and to provide a phase for prepared containers where they may dwell and the lock may be acquired prior to entering the Run phase, two additional directories are employed where locks have no meaning:
 
-* Embryo:		"$var/embryo/$uuid"		 -			 -
-* Prepare:		"$var/prepare/$uuid"		preparing		prepare-failed
-* Prepared:		"$var/prepared/$uuid"		 -			 -
-* Run:			"$var/run/$uuid"		running			exited
-* ExitedGarbage:	"$var/exited-garbage/$uuid"	exited+deleting		exited+gc-marked
-* Prepare-failed:	"$var/garbage/$uuid"		prepare-failed+deleting	prepare-failed+gc-marked
+| Phase           | Directory                   | Locked exclusively      | Unlocked                 |
+|-----------------|-----------------------------|-------------------------|--------------------------|
+| Embryo          | "$var/embryo/$uuid"         | -                       | -                        |
+| Prepare         | "$var/prepare/$uuid"        | preparing               | prepare-failed           |
+| Prepared        | "$var/prepared/$uuid"       | -                       | -                        |
+| Run             | "$var/run/$uuid"            | running                 | exited                   |
+| ExitedGarbage   | "$var/exited-garbage/$uuid" | exited+deleting         | exited+gc-marked         |
+| Prepare-failed  | "$var/garbage/$uuid"        | prepare-failed+deleting | prepare-failed+gc-marked |
 
 These phases, their function, and how they proceed through their respective states is explained in more detail below.
 
