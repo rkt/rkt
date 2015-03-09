@@ -180,7 +180,7 @@ func (ds Store) WriteStream(key string, r io.Reader) error {
 // (i.e. the hash of the uncompressed ACI)
 func (ds Store) WriteACI(r io.Reader) (string, error) {
 	// Peek at the first 512 bytes of the reader to detect filetype
-	br := bufio.NewReaderSize(r, 512)
+	br := bufio.NewReaderSize(r, 32768)
 	hd, err := br.Peek(512)
 	switch err {
 	case nil:
