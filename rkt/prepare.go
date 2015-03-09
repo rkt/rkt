@@ -69,7 +69,7 @@ func runPrepare(args []string) (exit int) {
 
 	ds, err := cas.NewStore(globalFlags.Dir)
 	if err != nil {
-		stderr("prepare: cannot open store: %v")
+		stderr("prepare: cannot open store: %v", err)
 		return 1
 	}
 	ks := getKeystore()
@@ -115,5 +115,5 @@ func runPrepare(args []string) (exit int) {
 	os.Stdout = origStdout // restore output in case of --quiet
 	stdout("%s", c.uuid.String())
 
-	return 1
+	return 0
 }
