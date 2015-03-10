@@ -23,15 +23,17 @@ import (
 )
 
 const (
-	defaultGracePeriod = 30 * time.Minute
+	defaultGracePeriod        = 30 * time.Minute
+	defaultPreparedExpiration = 24 * time.Hour
 )
 
 var (
-	flagGracePeriod time.Duration
-	cmdGC           = &Command{
+	flagGracePeriod        time.Duration
+	flagPreparedExpiration time.Duration
+	cmdGC                  = &Command{
 		Name:    "gc",
 		Summary: "Garbage-collect rkt containers no longer in use",
-		Usage:   "[--grace-period=duration]",
+		Usage:   "[--grace-period=duration] [--expire-prepared=duration]",
 		Run:     runGC,
 	}
 )
@@ -39,6 +41,7 @@ var (
 func init() {
 	commands = append(commands, cmdGC)
 	cmdGC.Flags.DurationVar(&flagGracePeriod, "grace-period", defaultGracePeriod, "duration to wait before discarding inactive containers from garbage")
+	cmdGC.Flags.DurationVar(&flagPreparedExpiration, "expire-prepared", defaultPreparedExpiration, "duration to wait before expiring prepared containers")
 }
 
 func runGC(args []string) (exit int) {
@@ -52,7 +55,10 @@ func runGC(args []string) (exit int) {
 		return 1
 	}
 
-	// TODO(vc): rename abandoned successfully prepared containers to garbageDir() after a grace period
+	if err := renameExpired(flagPreparedExpiration); err != nil {
+		stderr("Failed to rename expired prepared containers: %v", err)
+		return 1
+	}
 
 	if err := emptyExitedGarbage(flagGracePeriod); err != nil {
 		stderr("Failed to empty exitedGarbage: %v", err)
@@ -116,6 +122,30 @@ func renameAborted() error {
 	if err := walkContainers(includePrepareDir, func(c *container) {
 		if c.isAbortedPrepare {
 			stdout("Moving failed prepare %q to garbage", c.uuid)
+			if err := c.xToGarbage(); err != nil && err != os.ErrNotExist {
+				stderr("Rename error: %v", err)
+			}
+		}
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// renameExpired renames expired prepared containers to the garbage directory
+func renameExpired(preparedExpiration time.Duration) error {
+	if err := walkContainers(includePreparedDir, func(c *container) {
+		st := &syscall.Stat_t{}
+		cp := c.path()
+		if err := syscall.Lstat(cp, st); err != nil {
+			if err != syscall.ENOENT {
+				stderr("Unable to stat %q, ignoring: %v", cp, err)
+			}
+			return
+		}
+
+		if expiration := time.Unix(st.Ctim.Unix()).Add(preparedExpiration); time.Now().After(expiration) {
+			stdout("Moving expired prepared container %q to garbage", c.uuid)
 			if err := c.xToGarbage(); err != nil && err != os.ErrNotExist {
 				stderr("Rename error: %v", err)
 			}
