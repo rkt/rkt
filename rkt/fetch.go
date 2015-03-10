@@ -109,10 +109,10 @@ func fetchImageFromEndpoints(ep *discovery.Endpoints, ds *cas.Store, ks *keystor
 }
 
 func fetchImageFromURL(imgurl string, scheme string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
-	return downloadImage(imgurl, sigURLFromImgURL(imgurl), scheme, ds, ks)
+	return downloadImage(imgurl, ascURLFromImgURL(imgurl), scheme, ds, ks)
 }
 
-func downloadImage(aciURL string, sigURL string, scheme string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
+func downloadImage(aciURL string, ascURL string, scheme string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
 	stdout("rkt: fetching image from %s", aciURL)
 	if globalFlags.InsecureSkipVerify {
 		stdout("rkt: warning: signature verification has been disabled")
@@ -124,7 +124,7 @@ func downloadImage(aciURL string, sigURL string, scheme string, ds *cas.Store, k
 		return "", err
 	}
 	if !ok {
-		rem = cas.NewRemote(aciURL, sigURL)
+		rem = cas.NewRemote(aciURL, ascURL)
 		entity, aciFile, err := rem.Download(*ds, ks)
 		if err != nil {
 			return "", err
@@ -156,9 +156,9 @@ func validateURL(s string) error {
 	return nil
 }
 
-func sigURLFromImgURL(imgurl string) string {
+func ascURLFromImgURL(imgurl string) string {
 	s := strings.TrimSuffix(imgurl, ".aci")
-	return s + ".sig"
+	return s + ".aci.asc"
 }
 
 // newDiscoveryApp creates a discovery app if the given img is an app name and

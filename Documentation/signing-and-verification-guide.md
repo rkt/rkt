@@ -113,7 +113,7 @@ $ gpg --no-default-keyring --armor \
 ```
 $ gpg --no-default-keyring --armor \
 --secret-keyring ./rocket.sec --keyring ./rocket.pub \
---output hello-0.0.1-linux-amd64.sig \
+--output hello-0.0.1-linux-amd64.aci.asc \
 --detach-sig hello-0.0.1-linux-amd64.aci
 ```
 
@@ -122,7 +122,7 @@ $ gpg --no-default-keyring --armor \
 ```
 $ gpg --no-default-keyring \
 --secret-keyring ./rocket.sec --keyring ./rocket.pub \
---verify hello-0.0.1-linux-amd64.sig hello-0.0.1-linux-amd64.aci
+--verify hello-0.0.1-linux-amd64.aci.asc hello-0.0.1-linux-amd64.aci
 ```
 ```
 gpg: Signature made Fri Jan  9 05:01:49 2015 PST using RSA key ID 26EF7A14
@@ -132,7 +132,7 @@ gpg: Good signature from "Kelsey Hightower (ACI signing key) <kelsey.hightower@c
 At this point you should have the following three files:
 
 ```
-hello-0.0.1-linux-amd64.sig
+hello-0.0.1-linux-amd64.aci.asc
 hello-0.0.1-linux-amd64.aci
 pubkeys.gpg
 ```
@@ -155,7 +155,7 @@ Host an HTML page with the following meta tags:
 Serve the following files at the locations described in the meta tags:
 
 ```
-https://example.com/images/hello-0.0.1-linux-amd64.sig
+https://example.com/images/hello-0.0.1-linux-amd64.aci.asc
 https://example.com/images/hello-0.0.1-linux-amd64.aci
 https://example.com/pubkeys.gpg
 ```
@@ -174,7 +174,7 @@ results in rocket retrieving the following URIs:
 ```
 https://example.com/hello?ac-discovery=1
 https://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
-https://example.com/images/example.com/hello-0.0.1-linux-amd64.sig
+https://example.com/images/example.com/hello-0.0.1-linux-amd64.aci.asc
 ```
 
 The first response contains the template URL used to download the ACI image and detached signature file.
@@ -185,7 +185,7 @@ The first response contains the template URL used to download the ACI image and 
 
 Rocket populates the `{os}` and `{arch}` based on the current running system.
 The `{version}` will be taken from the tag given on the command line or "latest" if not supplied.
-The `{ext}` will be substituted appropriately depending on artifact being retrieved: .aci will be used for ACI images and .sig will be used for detached signatures.
+The `{ext}` will be substituted appropriately depending on artifact being retrieved: .aci will be used for ACI images and .aci.asc will be used for detached signatures.
 
 Once the ACI image has been downloaded rocket will extract the image's name from the image metadata. The image's name will be used to locate trusted public keys in the rocket keystore and perform signature validation.
 

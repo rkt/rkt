@@ -50,24 +50,24 @@ A detailed, step-by-step guide for the signing procedure [is here](Documentation
 Now that we've trusted the CoreOS public key, we can fetch the ACI:
 
 ```
-$ sudo rkt fetch coreos.com/etcd:v2.0.0
-rkt: searching for app image coreos.com/etcd:v2.0.0
-rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
+$ sudo rkt fetch coreos.com/etcd:v2.0.4
+rkt: searching for app image coreos.com/etcd:v2.0.4
+rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.4/etcd-v2.0.4-linux-amd64.aci
 Downloading aci: [==========================================   ] 3.47 MB/3.7 MB
-Downloading signature from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.sig
+Downloading signature from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.4-linux-amd64.aci.asc
 rkt: signature verified: 
   CoreOS ACI Builder <release@coreos.com>
-sha512-fa1cb92dc276b0f9bedf87981e61ecde
+sha512-1eba37d9b344b33d272181e176da111e
 ```
 
 These files are now written to disk:
 
 ```
-[~]$ find /var/lib/rkt/cas/blob/
+$ find /var/lib/rkt/cas/blob/
 /var/lib/rkt/cas/blob/
 /var/lib/rkt/cas/blob/sha512
-/var/lib/rkt/cas/blob/sha512/fa
-/var/lib/rkt/cas/blob/sha512/fa/sha512-fa1cb92dc276b0f9bedf87981e61ecde93cc16432d2441f23aa006a42bb873df
+/var/lib/rkt/cas/blob/sha512/1e
+/var/lib/rkt/cas/blob/sha512/1e/sha512-1eba37d9b344b33d272181e176da111ef2fdd4958b88ba4071e56db9ac07cf62
 ```
 
 Per the [App Container Specification](https://github.com/appc/spec/blob/master/SPEC.md#image-archives), the SHA-512 hash is of the tarball and can be reproduced with other tools:
@@ -77,7 +77,7 @@ $ wget https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux
 ...
 $ gzip -dc etcd-v2.0.0-linux-amd64.aci > etcd-v2.0.0-linux-amd64.tar
 $ sha512sum etcd-v2.0.0-linux-amd64.tar
-fa1cb92dc276b0f9bedf87981e61ecde93cc16432d2441f23aa006a42bb873dfc67480dafb0dfb33b91fd848e138268f71e1f32b55e197cdc2d874ae8da01bbe  etcd-v2.0.0-linux-amd64.tar
+1eba37d9b344b33d272181e176da111ef2fdd4958b88ba4071e56db9ac07cf62cce3daaee03ebd92dfbb596fe7879938374c671ae768cd927bab7b16c5e432e8  etcd-v2.0.4-linux-amd64.tar
 ```
 
 ### Launching an ACI
@@ -86,14 +86,14 @@ After it has been retrieved and stored locally, an ACI can be run by pointing `r
 
 ```
 # Example of running via ACI hash
-$ sudo rkt run sha512-fa1cb92dc276b0f9bedf87981e61ecde
+$ sudo rkt run sha512-1eba37d9b344b33d272181e176da111e
 ...
 Press ^] three times to kill container
 ```
 
 ```
 # Example of running via ACI URL
-$ sudo rkt run https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
+$ sudo rkt run https://github.com/coreos/etcd/releases/download/v2.0.4/etcd-v2.0.4-linux-amd64.aci
 ...
 Press ^] three times to kill container
 ```
