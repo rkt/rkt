@@ -24,11 +24,8 @@ package stage0
 //
 
 import (
-	"archive/tar"
-	"crypto/sha512"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -42,7 +39,7 @@ import (
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/cas"
 	"github.com/coreos/rocket/common"
-	ptar "github.com/coreos/rocket/pkg/tar"
+	"github.com/coreos/rocket/pkg/aci"
 	"github.com/coreos/rocket/version"
 )
 
@@ -266,28 +263,9 @@ func setupStage1Image(cfg PrepareConfig, img types.Hash, cdir string) error {
 // expandImage attempts to load the image by the given hash from the store,
 // verifies that the image matches the hash, and extracts the image at the specified destination.
 func expandImage(cfg PrepareConfig, img types.Hash, dest string) error {
-	rs, err := cfg.Store.ReadStream(img.String())
-	if err != nil {
-		return fmt.Errorf("error reading stream: %v", err)
+	if err := aci.RenderACIWithImageID(img, dest, cfg.Store); err != nil {
+		return fmt.Errorf("error rendering ACI: %v", err)
 	}
-
-	hash := sha512.New()
-	r := io.TeeReader(rs, hash)
-
-	if err := ptar.ExtractTar(tar.NewReader(r), dest, false, nil); err != nil {
-		return fmt.Errorf("error extracting ACI: %v", err)
-	}
-
-	// Tar does not necessarily read the complete file, so ensure we read the entirety into the hash
-	if _, err := io.Copy(ioutil.Discard, r); err != nil {
-		return fmt.Errorf("error reading ACI: %v", err)
-	}
-
-	// TODO(jonboulle): clean this up, leaky abstraction with the store.
-	if g := cfg.Store.HashToKey(hash); g != img.String() {
-		return fmt.Errorf("image hash does not match expected (%v != %v)", g, img.String())
-	}
-
 	return nil
 }
 
