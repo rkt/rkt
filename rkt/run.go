@@ -195,7 +195,7 @@ func runRun(args []string) (exit int) {
 
 	ds, err := cas.NewStore(globalFlags.Dir)
 	if err != nil {
-		stderr("run: cannot open store: %v")
+		stderr("run: cannot open store: %v", err)
 		return 1
 	}
 	ks := getKeystore()
