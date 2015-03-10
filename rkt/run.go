@@ -38,6 +38,7 @@ var (
 	flagPrivateNet           bool
 	flagSpawnMetadataService bool
 	flagInheritEnv           bool
+	flagExplicitEnv          envMap
 	cmdRun                   = &Command{
 		Name:    "run",
 		Summary: "Run image(s) in an application container in rocket",
@@ -67,7 +68,8 @@ func init() {
 	cmdRun.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	cmdRun.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
 	cmdRun.Flags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
-	cmdRun.Flags.BoolVar(&flagInheritEnv, "inherit-environment", false, "inherit all environment variables not set by apps")
+	cmdRun.Flags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
+	cmdRun.Flags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 	flagVolumes = volumeList{}
 }
 
@@ -235,6 +237,7 @@ func runRun(args []string) (exit int) {
 		ExecAppends:  appArgs,
 		Volumes:      []types.Volume(flagVolumes),
 		InheritEnv:   flagInheritEnv,
+		ExplicitEnv:  flagExplicitEnv.Strings(),
 	}
 	err = stage0.Prepare(pcfg, c.path(), c.uuid)
 	if err != nil {
@@ -286,4 +289,36 @@ func (vl *volumeList) String() string {
 		vs = append(vs, v.String())
 	}
 	return strings.Join(vs, " ")
+}
+
+// envMap implements the flag.Value interface to contain a set of name=value mappings
+type envMap struct {
+	mapping map[string]string
+}
+
+func (e *envMap) Set(s string) error {
+	if e.mapping == nil {
+		e.mapping = make(map[string]string)
+	}
+	pair := strings.SplitN(s, "=", 2)
+	if len(pair) != 2 {
+		return fmt.Errorf("environment variable must be specified as name=value")
+	}
+	if _, exists := e.mapping[pair[0]]; exists {
+		return fmt.Errorf("environment variable %q already set", pair[0])
+	}
+	e.mapping[pair[0]] = pair[1]
+	return nil
+}
+
+func (e *envMap) String() string {
+	return strings.Join(e.Strings(), "\n")
+}
+
+func (e *envMap) Strings() []string {
+	var env []string
+	for n, v := range e.mapping {
+		env = append(env, n+"="+v)
+	}
+	return env
 }

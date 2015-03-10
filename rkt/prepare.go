@@ -47,7 +47,8 @@ func init() {
 	cmdPrepare.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, Rocket will look for a file called "stage1.aci" in the same directory as rkt itself`)
 	cmdPrepare.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	cmdPrepare.Flags.BoolVar(&flagQuiet, "quiet", false, "suppress superfluous output on stdout, print only the UUID on success")
-	cmdPrepare.Flags.BoolVar(&flagInheritEnv, "inherit-environment", false, "inherit all environment variables not set by apps")
+	cmdPrepare.Flags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
+	cmdPrepare.Flags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 }
 
 func runPrepare(args []string) (exit int) {
@@ -119,6 +120,7 @@ func runPrepare(args []string) (exit int) {
 		ExecAppends: appArgs,
 		Volumes:     []types.Volume(flagVolumes),
 		InheritEnv:  flagInheritEnv,
+		ExplicitEnv: flagExplicitEnv.Strings(),
 	}
 
 	if err = stage0.Prepare(pcfg, c.path(), c.uuid); err != nil {

@@ -166,19 +166,25 @@ For example:
 $ sudo rkt run example.com/worker -- --loglevel verbose --- example.com/syncer -- --interval 30s
 ```
 
-#### Inheriting Environment Variables
+#### Influencing Environment Variables
 
-To inherit environment variables from the parent use the `--inherit-environment` flag.
+To inherit all environment variables from the parent use the `--inherit-env` flag.
 
-The inheritance precedence is as follows with the last item replacing previous environment entries:
+To explicitly set individual environment variables use the `--set-env` flag.
+
+The precedence is as follows with the last item replacing previous environment entries:
 
 - Parent environment
 - App image environment
+- Explicitly set environment
 
 ```
 $ export EXAMPLE_ENV=hello
-$ sudo rkt run --inherit-environment example.com/env-printer
+$ export EXAMPLE_OVERRIDE=under
+$ sudo rkt run --inherit-env --set-env FOO=bar --set-env EXAMPLE_OVERRIDE=over example.com/env-printer
 EXAMPLE_ENV=hello
+FOO=bar
+EXAMPLE_OVERRIDE=over
 ```
 
 _TODO: Exit codes_
