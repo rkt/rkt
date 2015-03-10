@@ -99,6 +99,7 @@ func quoteExec(exec []string) string {
 			escArg := strings.Replace(arg, `\`, `\\`, -1)
 			escArg = strings.Replace(escArg, `"`, `\"`, -1)
 			escArg = strings.Replace(escArg, `'`, `\'`, -1)
+			escArg = strings.Replace(escArg, `$`, `$$`, -1)
 			qexec = append(qexec, `"`+escArg+`"`)
 		}
 	}
