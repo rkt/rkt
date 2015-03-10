@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/coreos/rocket",
-	"GoVersion": "go1.4.1",
+	"GoVersion": "go1.4.2",
 	"Packages": [
 		"./..."
 	],
@@ -35,6 +35,11 @@
 		},
 		{
 			"ImportPath": "github.com/appc/spec/discovery",
+			"Comment": "v0.3.0-88-g480f581",
+			"Rev": "480f5812e40cb93dbc5270301092368952546bb1"
+		},
+		{
+			"ImportPath": "github.com/appc/spec/pkg/acirenderer",
 			"Comment": "v0.3.0-88-g480f581",
 			"Rev": "480f5812e40cb93dbc5270301092368952546bb1"
 		},
