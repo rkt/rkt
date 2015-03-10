@@ -17,6 +17,7 @@ package networking
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"sort"
@@ -59,6 +60,15 @@ func listFiles(dir string) ([]string, error) {
 	return files, nil
 }
 
+func netExists(nets []Net, name string) bool {
+	for _, n := range nets {
+		if n.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 func loadUserNets() ([]Net, error) {
 	files, err := listFiles(UserNetPath)
 	if err != nil {
@@ -76,6 +86,16 @@ func loadUserNets() ([]Net, error) {
 			return nil, fmt.Errorf("error loading %v: %v", filepath, err)
 		}
 
+		if n.Name == "default" {
+			log.Printf(`Overriding "default" network with %v`, filename)
+		}
+
+		if netExists(nets, n.Name) {
+			// "default" is slightly special
+			log.Printf("%q network already defined, ignoring %v", filename)
+			continue
+		}
+
 		nets = append(nets, n)
 	}
 
@@ -89,11 +109,14 @@ func (e *containerEnv) loadNets() ([]Net, error) {
 		return nil, err
 	}
 
-	defPath := path.Join(common.Stage1RootfsPath(e.rktRoot), DefaultNetPath)
-	defNet := Net{}
-	if err := rktnet.LoadNet(defPath, &defNet); err != nil {
-		return nil, fmt.Errorf("error loading net: %v", err)
+	if !netExists(nets, "default") {
+		defPath := path.Join(common.Stage1RootfsPath(e.rktRoot), DefaultNetPath)
+		defNet := Net{}
+		if err := rktnet.LoadNet(defPath, &defNet); err != nil {
+			return nil, fmt.Errorf("error loading net: %v", err)
+		}
+		nets = append(nets, defNet)
 	}
 
-	return append(nets, defNet), nil
+	return nets, nil
 }
