@@ -26,8 +26,7 @@ import (
 // matchUUID attempts to match the uuid specified as uuid against all containers present.
 // An array of matches is returned, which may be empty when nothing matches.
 func matchUUID(uuid string) ([]string, error) {
-	// TODO(vc): maybe switch this to use the uuidsDir instead (include embryos?)
-	ls, err := listContainers(includePreparedDir | includeRunDir | includeExitedGarbageDir)
+	ls, err := listContainers(includePrepareDir | includePreparedDir | includeRunDir | includeExitedGarbageDir)
 	if err != nil {
 		return nil, err
 	}
