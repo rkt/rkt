@@ -12,7 +12,7 @@ Note: because of the lack of the metadata service Rocket does not strictly imple
 
 ## Private networking mode
 
-For all of the private networking options the metadata service, launched via `rkt metadatasvc`, must be running.
+For all of the private networking options the metadata service, launched via `rkt metadata-service`, must be running.
 The service will listen on 0.0.0.0:2375 by default and provides the private networking containers the metadata services described in the App Container Spec.
 Ideally this metadata service is launched via your systems init system.
 

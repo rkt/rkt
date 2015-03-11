@@ -65,7 +65,7 @@ func registerApp(uuid, app string, r io.Reader) error {
 }
 
 func httpRequest(method, pth string, body io.Reader) error {
-	uri := common.MetadataSvcPrivateURL() + pth
+	uri := common.MetadataServicePrivateURL() + pth
 	req, err := http.NewRequest(method, uri, body)
 	if err != nil {
 		return err

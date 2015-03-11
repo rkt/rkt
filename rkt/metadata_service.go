@@ -37,11 +37,11 @@ import (
 )
 
 var (
-	cmdMetadataSvc = &Command{
-		Name:    "metadatasvc",
+	cmdMetadataService = &Command{
+		Name:    "metadata-service",
 		Summary: "Run metadata service",
 		Usage:   "[--src-addr CIDR] [--listen-port PORT] [--no-idle]",
-		Run:     runMetadataSvc,
+		Run:     runMetadataService,
 	}
 )
 
@@ -68,10 +68,10 @@ const (
 )
 
 func init() {
-	commands = append(commands, cmdMetadataSvc)
-	cmdMetadataSvc.Flags.StringVar(&flagSrcAddrs, "src-addr", "0.0.0.0/0", "source address/range for iptables")
-	cmdMetadataSvc.Flags.IntVar(&flagListenPort, "listen-port", common.MetadataSvcPrvPort, "listen port")
-	cmdMetadataSvc.Flags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last container is unregistered")
+	commands = append(commands, cmdMetadataService)
+	cmdMetadataService.Flags.StringVar(&flagSrcAddrs, "src-addr", "0.0.0.0/0", "source address/range for iptables")
+	cmdMetadataService.Flags.IntVar(&flagListenPort, "listen-port", common.MetadataServicePrvPort, "listen port")
+	cmdMetadataService.Flags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last container is unregistered")
 }
 
 func modifyIPTables(action, port string) error {
@@ -80,8 +80,8 @@ func modifyIPTables(action, port string) error {
 		"-t", "nat",
 		action, "PREROUTING",
 		"-p", "tcp",
-		"-d", common.MetadataSvcIP,
-		"--dport", strconv.Itoa(common.MetadataSvcPubPort),
+		"-d", common.MetadataServiceIP,
+		"--dport", strconv.Itoa(common.MetadataServicePubPort),
 		"-j", "REDIRECT",
 		"--to-port", port,
 	).Run()
@@ -498,8 +498,8 @@ func cleanup(port string) {
 	}
 }
 
-func runMetadataSvc(args []string) (exit int) {
-	log.Print("Metadatasvc starting...")
+func runMetadataService(args []string) (exit int) {
+	log.Print("Metadata service starting...")
 
 	l, err := getListener()
 	if err != nil {
@@ -539,7 +539,7 @@ func runMetadataSvc(args []string) (exit int) {
 		Handler: makeHandlers(),
 	}
 
-	log.Print("Metadatasvc running...")
+	log.Print("Metadata service running...")
 
 	if err = srv.Serve(l); err != nil {
 		log.Printf("Error serving HTTP: %v", err)
@@ -547,7 +547,7 @@ func runMetadataSvc(args []string) (exit int) {
 	}
 
 	cleanup(port)
-	log.Print("Metadatasvc exiting...")
+	log.Print("Metadata service exiting...")
 
 	return
 }

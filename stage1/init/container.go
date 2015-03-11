@@ -35,11 +35,11 @@ import (
 
 // Container encapsulates a ContainerRuntimeManifest and ImageManifests
 type Container struct {
-	Root           string // root directory where the container will be located
-	Manifest       *schema.ContainerRuntimeManifest
-	Apps           map[string]*schema.ImageManifest
-	MetadataSvcURL string
-	Networks       []string
+	Root               string // root directory where the container will be located
+	Manifest           *schema.ContainerRuntimeManifest
+	Apps               map[string]*schema.ImageManifest
+	MetadataServiceURL string
+	Networks           []string
 }
 
 // LoadContainer loads a Container Runtime Manifest (as prepared by stage0) and
@@ -127,7 +127,7 @@ func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest
 
 	env := app.Environment
 	env.Set("AC_APP_NAME", name)
-	env.Set("AC_METADATA_URL", c.MetadataSvcURL)
+	env.Set("AC_METADATA_URL", c.MetadataServiceURL)
 
 	if err := c.writeEnvFile(env, id); err != nil {
 		return fmt.Errorf("unable to write environment file: %v", err)

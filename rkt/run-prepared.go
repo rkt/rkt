@@ -42,7 +42,7 @@ var (
 func init() {
 	commands = append(commands, cmdRunPrepared)
 	cmdRunPrepared.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
-	cmdRunPrepared.Flags.BoolVar(&flagSpawnMetadataSvc, "spawn-metadata-svc", false, "launch metadata svc if not running")
+	cmdRunPrepared.Flags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
 }
 
 func runRunPrepared(args []string) (exit int) {
@@ -100,9 +100,9 @@ func runRunPrepared(args []string) (exit int) {
 			Store: ds,
 			Debug: globalFlags.Debug,
 		},
-		PrivateNet:       flagPrivateNet,
-		SpawnMetadataSvc: flagSpawnMetadataSvc,
-		LockFd:           lfd,
+		PrivateNet:           flagPrivateNet,
+		SpawnMetadataService: flagSpawnMetadataService,
+		LockFd:               lfd,
 	}
 	stage0.Run(rcfg, c.path()) // execs, never returns
 	return 1

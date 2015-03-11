@@ -33,12 +33,12 @@ import (
 var (
 	defaultStage1Image string // either set by linker, or guessed in init()
 
-	flagStage1Image      string
-	flagVolumes          volumeList
-	flagPrivateNet       bool
-	flagSpawnMetadataSvc bool
-	flagInheritEnv       bool
-	cmdRun               = &Command{
+	flagStage1Image          string
+	flagVolumes              volumeList
+	flagPrivateNet           bool
+	flagSpawnMetadataService bool
+	flagInheritEnv           bool
+	cmdRun                   = &Command{
 		Name:    "run",
 		Summary: "Run image(s) in an application container in rocket",
 		Usage:   "[--volume name,type=host...] IMAGE [-- image-args...[---]]...",
@@ -66,7 +66,7 @@ func init() {
 	cmdRun.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, Rocket will look for a file called "stage1.aci" in the same directory as rkt itself`)
 	cmdRun.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	cmdRun.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
-	cmdRun.Flags.BoolVar(&flagSpawnMetadataSvc, "spawn-metadata-svc", false, "launch metadata svc if not running")
+	cmdRun.Flags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
 	cmdRun.Flags.BoolVar(&flagInheritEnv, "inherit-environment", false, "inherit all environment variables not set by apps")
 	flagVolumes = volumeList{}
 }
@@ -256,10 +256,10 @@ func runRun(args []string) (exit int) {
 	}
 
 	rcfg := stage0.RunConfig{
-		CommonConfig:     cfg,
-		PrivateNet:       flagPrivateNet,
-		SpawnMetadataSvc: flagSpawnMetadataSvc,
-		LockFd:           lfd,
+		CommonConfig:         cfg,
+		PrivateNet:           flagPrivateNet,
+		SpawnMetadataService: flagSpawnMetadataService,
+		LockFd:               lfd,
 	}
 	stage0.Run(rcfg, c.path()) // execs, never returns
 

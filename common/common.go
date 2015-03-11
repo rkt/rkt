@@ -28,9 +28,9 @@ const (
 	stage1Dir = "/stage1"
 	stage2Dir = "/opt/stage2"
 
-	MetadataSvcIP      = "169.254.169.255"
-	MetadataSvcPubPort = 80
-	MetadataSvcPrvPort = 2375
+	MetadataServiceIP      = "169.254.169.255"
+	MetadataServicePubPort = 80
+	MetadataServicePrvPort = 2375
 )
 
 // Stage1ImagePath returns the path where the stage1 app image (unpacked ACI) is rooted,
@@ -84,12 +84,12 @@ func ImageManifestPath(root string, imageID types.Hash) string {
 	return filepath.Join(AppImagePath(root, imageID), aci.ManifestFile)
 }
 
-// MetadataSvcPrivateURL returns the private URL used to host the metadata service
-func MetadataSvcPrivateURL() string {
-	return fmt.Sprintf("http://127.0.0.1:%v", MetadataSvcPrvPort)
+// MetadataServicePrivateURL returns the private URL used to host the metadata service
+func MetadataServicePrivateURL() string {
+	return fmt.Sprintf("http://127.0.0.1:%v", MetadataServicePrvPort)
 }
 
-// MetadataSvcPublicURL returns the public URL used to host the metadata service
-func MetadataSvcPublicURL() string {
-	return fmt.Sprintf("http://%v:%v", MetadataSvcIP, MetadataSvcPubPort)
+// MetadataServicePublicURL returns the public URL used to host the metadata service
+func MetadataServicePublicURL() string {
+	return fmt.Sprintf("http://%v:%v", MetadataServiceIP, MetadataServicePubPort)
 }
