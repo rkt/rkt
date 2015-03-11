@@ -8,16 +8,14 @@ import (
 
 func TestIsolatorUnmarshal(t *testing.T) {
 	tests := []struct {
-		msg       string
-		werr      bool
-		werrvalid bool
+		msg  string
+		werr bool
 	}{
 		{
 			`{
 				"name": "os/linux/capabilities-retain-set",
 				"value": {"set": ["CAP_KILL"]}
 			}`,
-			false,
 			false,
 		},
 		{
@@ -26,14 +24,12 @@ func TestIsolatorUnmarshal(t *testing.T) {
 				"value": {"set": ["CAP_PONIES"]}
 			}`,
 			false,
-			false,
 		},
 		{
 			`{
 				"name": "os/linux/capabilities-retain-set",
 				"value": {"set": []}
 			}`,
-			false,
 			true,
 		},
 		{
@@ -42,7 +38,6 @@ func TestIsolatorUnmarshal(t *testing.T) {
 				"value": {"set": "CAP_PONIES"}
 			}`,
 			true,
-			true,
 		},
 		{
 			`{
@@ -50,14 +45,12 @@ func TestIsolatorUnmarshal(t *testing.T) {
 				"value": {"default": true, "limit": "1G"}
 			}`,
 			false,
-			false,
 		},
 		{
 			`{
 				"name": "resource/block-bandwidth",
 				"value": {"default": false, "limit": "1G"}
 			}`,
-			false,
 			true,
 		},
 		{
@@ -65,7 +58,6 @@ func TestIsolatorUnmarshal(t *testing.T) {
 				"name": "resource/block-bandwidth",
 				"value": {"request": "30G", "limit": "1G"}
 			}`,
-			false,
 			true,
 		},
 		{
@@ -74,14 +66,12 @@ func TestIsolatorUnmarshal(t *testing.T) {
 				"value": {"default": true, "limit": "1G"}
 			}`,
 			false,
-			false,
 		},
 		{
 			`{
 				"name": "resource/block-iops",
 				"value": {"default": false, "limit": "1G"}
 			}`,
-			false,
 			true,
 		},
 		{
@@ -89,7 +79,6 @@ func TestIsolatorUnmarshal(t *testing.T) {
 				"name": "resource/block-iops",
 				"value": {"request": "30G", "limit": "1G"}
 			}`,
-			false,
 			true,
 		},
 		{
@@ -98,7 +87,6 @@ func TestIsolatorUnmarshal(t *testing.T) {
 				"value": {"request": "30", "limit": "1"}
 			}`,
 			false,
-			false,
 		},
 		{
 			`{
@@ -106,14 +94,12 @@ func TestIsolatorUnmarshal(t *testing.T) {
 				"value": {"request": "1G", "limit": "2Gi"}
 			}`,
 			false,
-			false,
 		},
 		{
 			`{
 				"name": "resource/memory",
 				"value": {"default": true, "request": "1G", "limit": "2G"}
 			}`,
-			false,
 			true,
 		},
 		{
@@ -122,14 +108,12 @@ func TestIsolatorUnmarshal(t *testing.T) {
 				"value": {"default": true, "limit": "1G"}
 			}`,
 			false,
-			false,
 		},
 		{
 			`{
 				"name": "resource/network-bandwidth",
 				"value": {"default": false, "limit": "1G"}
 			}`,
-			false,
 			true,
 		},
 		{
@@ -137,7 +121,6 @@ func TestIsolatorUnmarshal(t *testing.T) {
 				"name": "resource/network-bandwidth",
 				"value": {"request": "30G", "limit": "1G"}
 			}`,
-			false,
 			true,
 		},
 	}
@@ -147,10 +130,6 @@ func TestIsolatorUnmarshal(t *testing.T) {
 		err := ii.UnmarshalJSON([]byte(tt.msg))
 		if gerr := (err != nil); gerr != tt.werr {
 			t.Errorf("#%d: gerr=%t, want %t (err=%v)", i, gerr, tt.werr, err)
-		}
-		err = ii.assertValid()
-		if gerrvalid := (err != nil); gerrvalid != tt.werrvalid {
-			t.Errorf("#%d: name=%v gerrvalid=%t, want %t (err=%v)", i, ii.Name, gerrvalid, tt.werrvalid, err)
 		}
 	}
 }
@@ -178,7 +157,7 @@ func TestIsolatorsGetByName(t *testing.T) {
 	`
 
 	tests := []struct {
-		name     string
+		name     ACName
 		wlimit   int64
 		wrequest int64
 		wset     []LinuxCapability
@@ -220,6 +199,38 @@ func TestIsolatorsGetByName(t *testing.T) {
 
 		default:
 			panic("unexecpected type")
+		}
+	}
+}
+
+func TestIsolatorUnrecognized(t *testing.T) {
+	msg := `
+		[{
+			"name": "resource/network-bandwidth",
+			"value": {"default": true, "limit": "1G"}
+		},
+		{
+			"name": "resource/network-ponies",
+			"value": 0
+		}]`
+
+	ex := Isolators{
+		{Name: "resource/network-ponies"},
+	}
+
+	is := Isolators{}
+	if err := json.Unmarshal([]byte(msg), &is); err != nil {
+		t.Fatalf("failed to unmarshal isolators: %v", err)
+	}
+
+	u := is.Unrecognized()
+	if len(u) != len(ex) {
+		t.Errorf("unrecognized isolator list is wrong len: want %v, got %v", len(ex), len(u))
+	}
+
+	for i, e := range ex {
+		if e.Name != u[i].Name {
+			t.Errorf("unrecognized isolator list mismatch: want %v, got %v", e.Name, u[i].Name)
 		}
 	}
 }
