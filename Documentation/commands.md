@@ -269,7 +269,7 @@ Work in progress. Please contribute!
 
 Work in progress. Please contribute!
 
-### rkt metadatasvc
+### rkt metadata-service
 
 Work in progress. Please contribute!
 

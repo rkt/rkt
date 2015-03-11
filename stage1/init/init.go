@@ -99,7 +99,7 @@ func stage1() int {
 	}
 
 	mirrorLocalZoneInfo(c.Root)
-	c.MetadataSvcURL = common.MetadataSvcPublicURL()
+	c.MetadataServiceURL = common.MetadataServicePublicURL()
 
 	if err = c.ContainerToSystemd(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)

@@ -64,9 +64,9 @@ type PrepareConfig struct {
 // configuration parameters needed by Run
 type RunConfig struct {
 	CommonConfig
-	PrivateNet       bool // container should have its own network stack
-	SpawnMetadataSvc bool // launch metadata service
-	LockFd           int  // lock file descriptor
+	PrivateNet           bool // container should have its own network stack
+	SpawnMetadataService bool // launch metadata service
+	LockFd               int  // lock file descriptor
 }
 
 // configuration shared by both Run and Prepare
@@ -180,9 +180,9 @@ func Run(cfg RunConfig, dir string) {
 		log.Fatalf("setting lock fd environment: %v", err)
 	}
 
-	if cfg.SpawnMetadataSvc {
+	if cfg.SpawnMetadataService {
 		log.Print("Launching metadata svc")
-		if err := launchMetadataSvc(cfg.Debug); err != nil {
+		if err := launchMetadataService(cfg.Debug); err != nil {
 			log.Printf("Failed to launch metadata svc: %v", err)
 		}
 	}
@@ -285,13 +285,13 @@ func expandImage(cfg PrepareConfig, img types.Hash, dest string) error {
 	return nil
 }
 
-func launchMetadataSvc(debug bool) error {
+func launchMetadataService(debug bool) error {
 	// use socket activation protocol to avoid race-condition of
 	// service becoming ready
-	l, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: common.MetadataSvcPrvPort})
+	l, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: common.MetadataServicePrvPort})
 	if err != nil {
 		if err.(*net.OpError).Err.(*os.SyscallError).Err == syscall.EADDRINUSE {
-			// assume metadatasvc is already running
+			// assume metadata-service is already running
 			return nil
 		}
 		return err
@@ -308,7 +308,7 @@ func launchMetadataSvc(debug bool) error {
 	if debug {
 		args = append(args, "--debug")
 	}
-	args = append(args, "metadatasvc", "--no-idle")
+	args = append(args, "metadata-service", "--no-idle")
 
 	cmd := exec.Cmd{
 		Path:       args[0],
