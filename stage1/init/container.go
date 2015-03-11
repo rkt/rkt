@@ -299,12 +299,11 @@ func (c *Container) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManif
 		switch v := i.Value().(type) {
 		case types.LinuxCapabilitiesSet:
 			var caps []string
-			var s types.LinuxCapabilitiesSet = v
 			// TODO: cleanup the API on LinuxCapabilitiesSet to give strings easily.
 			for _, c := range v.Set() {
 				caps = append(caps, string(c))
 			}
-			if s.Name() == types.LinuxCapabilitiesRetainSetName {
+			if i.Name == types.LinuxCapabilitiesRetainSetName {
 				capList := strings.Join(caps, ",")
 				args = append(args, "--capability="+capList)
 			}

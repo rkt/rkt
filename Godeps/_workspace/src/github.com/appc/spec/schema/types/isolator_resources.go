@@ -22,11 +22,11 @@ const (
 )
 
 func init() {
-	AddIsolatorValueConstructor(NewResourceBlockBandwidth)
-	AddIsolatorValueConstructor(NewResourceBlockIOPS)
-	AddIsolatorValueConstructor(NewResourceCPU)
-	AddIsolatorValueConstructor(NewResourceMemory)
-	AddIsolatorValueConstructor(NewResourceNetworkBandwidth)
+	AddIsolatorValueConstructor(ResourceBlockBandwidthName, NewResourceBlockBandwidth)
+	AddIsolatorValueConstructor(ResourceBlockIOPSName, NewResourceBlockIOPS)
+	AddIsolatorValueConstructor(ResourceCPUName, NewResourceCPU)
+	AddIsolatorValueConstructor(ResourceMemoryName, NewResourceMemory)
+	AddIsolatorValueConstructor(ResourceNetworkBandwidthName, NewResourceNetworkBandwidth)
 }
 
 func NewResourceBlockBandwidth() IsolatorValue {
@@ -93,10 +93,6 @@ func (r ResourceBlockBandwidth) AssertValid() error {
 	return nil
 }
 
-func (r ResourceBlockBandwidth) Name() string {
-	return ResourceBlockBandwidthName
-}
-
 type ResourceBlockIOPS struct {
 	ResourceBase
 }
@@ -111,10 +107,6 @@ func (r ResourceBlockIOPS) AssertValid() error {
 	return nil
 }
 
-func (r ResourceBlockIOPS) Name() string {
-	return ResourceBlockIOPSName
-}
-
 type ResourceCPU struct {
 	ResourceBase
 }
@@ -126,10 +118,6 @@ func (r ResourceCPU) AssertValid() error {
 	return nil
 }
 
-func (r ResourceCPU) Name() string {
-	return ResourceCPUName
-}
-
 type ResourceMemory struct {
 	ResourceBase
 }
@@ -139,10 +127,6 @@ func (r ResourceMemory) AssertValid() error {
 		return ErrDefaultTrue
 	}
 	return nil
-}
-
-func (r ResourceMemory) Name() string {
-	return ResourceMemoryName
 }
 
 type ResourceNetworkBandwidth struct {
@@ -157,8 +141,4 @@ func (r ResourceNetworkBandwidth) AssertValid() error {
 		return ErrRequestNonEmpty
 	}
 	return nil
-}
-
-func (r ResourceNetworkBandwidth) Name() string {
-	return ResourceNetworkBandwidthName
 }

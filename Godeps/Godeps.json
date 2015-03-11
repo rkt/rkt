@@ -25,33 +25,33 @@
 		},
 		{
 			"ImportPath": "github.com/appc/spec/aci",
-			"Comment": "v0.4.0",
-			"Rev": "9d3d227e4cc6f505763b10addac8afcbd162cfe2"
+			"Comment": "v0.4.0-10-g24650793e48a",
+			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/actool",
-			"Comment": "v0.4.0",
-			"Rev": "9d3d227e4cc6f505763b10addac8afcbd162cfe2"
+			"Comment": "v0.4.0-10-g24650793e48a",
+			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/discovery",
-			"Comment": "v0.4.0",
-			"Rev": "9d3d227e4cc6f505763b10addac8afcbd162cfe2"
+			"Comment": "v0.4.0-10-g24650793e48a",
+			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/acirenderer",
-			"Comment": "v0.4.0",
-			"Rev": "9d3d227e4cc6f505763b10addac8afcbd162cfe2"
+			"Comment": "v0.4.0-10-g24650793e48a",
+			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/tarheader",
-			"Comment": "v0.4.0",
-			"Rev": "9d3d227e4cc6f505763b10addac8afcbd162cfe2"
+			"Comment": "v0.4.0-10-g24650793e48a",
+			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema",
-			"Comment": "v0.4.0",
-			"Rev": "9d3d227e4cc6f505763b10addac8afcbd162cfe2"
+			"Comment": "v0.4.0-10-g24650793e48a",
+			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
 		},
 		{
 			"ImportPath": "github.com/camlistore/lock",

@@ -6,17 +6,16 @@ import (
 )
 
 const (
-	LinuxCapabilitiesRetainSetName string = "os/linux/capabilities-retain-set"
-	LinuxCapabilitiesRevokeSetName string = "os/linux/capabilities-revoke-set"
+	LinuxCapabilitiesRetainSetName = "os/linux/capabilities-retain-set"
+	LinuxCapabilitiesRevokeSetName = "os/linux/capabilities-revoke-set"
 )
 
 func init() {
-	AddIsolatorValueConstructor(NewLinuxCapabilitiesRetainSet)
-	AddIsolatorValueConstructor(NewLinuxCapabilitiesRevokeSet)
+	AddIsolatorValueConstructor(LinuxCapabilitiesRetainSetName, NewLinuxCapabilitiesRetainSet)
+	AddIsolatorValueConstructor(LinuxCapabilitiesRevokeSetName, NewLinuxCapabilitiesRevokeSet)
 }
 
 type LinuxCapabilitiesSet interface {
-	Name() string
 	Set() []LinuxCapability
 	AssertValid() error
 }
@@ -61,18 +60,10 @@ type LinuxCapabilitiesRetainSet struct {
 	linuxCapabilitiesSetBase
 }
 
-func (l LinuxCapabilitiesRetainSet) Name() string {
-	return LinuxCapabilitiesRetainSetName
-}
-
 func NewLinuxCapabilitiesRevokeSet() IsolatorValue {
 	return &LinuxCapabilitiesRevokeSet{}
 }
 
 type LinuxCapabilitiesRevokeSet struct {
 	linuxCapabilitiesSetBase
-}
-
-func (l LinuxCapabilitiesRevokeSet) Name() string {
-	return LinuxCapabilitiesRevokeSetName
 }
