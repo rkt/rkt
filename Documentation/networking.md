@@ -50,7 +50,7 @@ Additional fields are specified for various types.
 
 ### Built-in network types
 
-### veth
+#### veth
 
 veth is the probably the simplest type of networking and is used to set up default network. It creates a virtual ethernet pair (akin to a pipe) and places one end into container and the other on the host. It is expected to be used with IPAM type that will allocate a /31 for both ends of the veth (such as static-ptp). `veth` specific configuration fields are:
 
@@ -122,3 +122,9 @@ Additional configuration fields:
 ### dhcp
 
 [Coming soon](https://github.com/coreos/rocket/issues/558)
+
+### Overriding default network
+If a network has a name "default", it will override the default network added
+by Rocket. It is strongly recommended that such network also has type "veth" as
+it protects from the container spoofing its IP address and defeating identity
+management provided by the metadata service.
