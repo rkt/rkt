@@ -30,7 +30,7 @@ var (
 	cmdPrepare = &Command{
 		Name:    "prepare",
 		Summary: "Prepare to run image(s) in an application container in rocket",
-		Usage:   "[--volume name,type=host...] [--quiet] IMAGE [-- image-args...[---]]...",
+		Usage:   "[--volume name,kind=host,...] [--quiet] IMAGE [-- image-args...[---]]...",
 		Description: `Image should be a string referencing an image; either a hash, local file on disk, or URL.
 They will be checked in that order and the first match will be used.
 

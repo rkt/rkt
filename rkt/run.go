@@ -42,7 +42,7 @@ var (
 	cmdRun                   = &Command{
 		Name:    "run",
 		Summary: "Run image(s) in an application container in rocket",
-		Usage:   "[--volume name,type=host...] IMAGE [-- image-args...[---]]...",
+		Usage:   "[--volume name,kind=host,...] IMAGE [-- image-args...[---]]...",
 		Description: `IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
 They will be checked in that order and the first match will be used.
 
