@@ -90,7 +90,12 @@ func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore, discover bool)
 			if err != nil {
 				return "", err
 			}
-			return fetchImageFromEndpoints(ep, ds, ks)
+			latest := false
+			// No specified version label, mark it as latest
+			if _, ok := app.Labels["version"]; !ok {
+				latest = true
+			}
+			return fetchImageFromEndpoints(ep, ds, ks, latest)
 		}
 	}
 	if err != nil {
@@ -101,18 +106,18 @@ func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore, discover bool)
 	default:
 		return "", fmt.Errorf("rkt only supports http, https or docker URLs (%s)", img)
 	}
-	return fetchImageFromURL(u.String(), u.Scheme, ds, ks)
+	return fetchImageFromURL(u.String(), u.Scheme, ds, ks, false)
 }
 
-func fetchImageFromEndpoints(ep *discovery.Endpoints, ds *cas.Store, ks *keystore.Keystore) (string, error) {
-	return downloadImage(ep.ACIEndpoints[0].ACI, ep.ACIEndpoints[0].ASC, "", ds, ks)
+func fetchImageFromEndpoints(ep *discovery.Endpoints, ds *cas.Store, ks *keystore.Keystore, latest bool) (string, error) {
+	return downloadImage(ep.ACIEndpoints[0].ACI, ep.ACIEndpoints[0].ASC, "", ds, ks, latest)
 }
 
-func fetchImageFromURL(imgurl string, scheme string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
-	return downloadImage(imgurl, ascURLFromImgURL(imgurl), scheme, ds, ks)
+func fetchImageFromURL(imgurl string, scheme string, ds *cas.Store, ks *keystore.Keystore, latest bool) (string, error) {
+	return downloadImage(imgurl, ascURLFromImgURL(imgurl), scheme, ds, ks, latest)
 }
 
-func downloadImage(aciURL string, ascURL string, scheme string, ds *cas.Store, ks *keystore.Keystore) (string, error) {
+func downloadImage(aciURL string, ascURL string, scheme string, ds *cas.Store, ks *keystore.Keystore, latest bool) (string, error) {
 	stdout("rkt: fetching image from %s", aciURL)
 	if globalFlags.InsecureSkipVerify {
 		stdout("rkt: warning: signature verification has been disabled")
@@ -137,7 +142,7 @@ func downloadImage(aciURL string, ascURL string, scheme string, ds *cas.Store, k
 				stdout("  %s", v.Name)
 			}
 		}
-		rem, err = rem.Store(*ds, aciFile)
+		rem, err = rem.Store(*ds, aciFile, latest)
 		if err != nil {
 			return "", err
 		}

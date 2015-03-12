@@ -179,7 +179,9 @@ func (ds Store) WriteStream(key string, r io.Reader) error {
 // WriteACI takes an ACI encapsulated in an io.Reader, decompresses it if
 // necessary, and then stores it in the store under a key based on the image ID
 // (i.e. the hash of the uncompressed ACI)
-func (ds Store) WriteACI(r io.Reader) (string, error) {
+// latest defines if the aci has to be marked as the latest. For example an ACI
+// discovered without asking for a specific version (latest pattern).
+func (ds Store) WriteACI(r io.Reader, latest bool) (string, error) {
 	// Peek at the first 512 bytes of the reader to detect filetype
 	br := bufio.NewReaderSize(r, 32768)
 	hd, err := br.Peek(512)
@@ -238,6 +240,7 @@ func (ds Store) WriteACI(r io.Reader) (string, error) {
 			BlobKey:    key,
 			AppName:    im.Name.String(),
 			ImportTime: time.Now(),
+			Latest:     latest,
 		}
 		return WriteACIInfo(tx, aciinfo)
 	}); err != nil {

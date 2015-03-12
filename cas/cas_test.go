@@ -127,7 +127,7 @@ func TestDownloading(t *testing.T) {
 		}
 		defer os.Remove(aciFile.Name())
 
-		_, err = rem.Store(*ds, aciFile)
+		_, err = rem.Store(*ds, aciFile, false)
 		if err != nil {
 			panic(err)
 		}
@@ -253,7 +253,7 @@ func TestGetImageManifest(t *testing.T) {
 	if _, err := aci.Seek(0, 0); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	key, err := ds.WriteACI(aci)
+	key, err := ds.WriteACI(aci, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
