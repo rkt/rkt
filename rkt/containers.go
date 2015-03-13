@@ -27,6 +27,7 @@ import (
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/pkg/lock"
 )
 
@@ -662,15 +663,41 @@ func (c *container) getPID() (int, error) {
 	return c.readIntFromFile("pid")
 }
 
+// getDirNames returns the list of names from a container's directory
+func (c *container) getDirNames(path string) ([]string, error) {
+	dir, err := c.openFile(path, syscall.O_RDONLY|syscall.O_DIRECTORY)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open directory: %v", err)
+	}
+	defer dir.Close()
+
+	ld, err := dir.Readdirnames(0)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read directory: %v", err)
+	}
+
+	return ld, nil
+}
+
+// getAppCount returns the app count of a container. It can only be called on prepared containers.
+func (c *container) getAppCount() (int, error) {
+	if !c.isPrepared {
+		return -1, fmt.Errorf("error: only prepared containers can get their app count")
+	}
+
+	appsPath := common.AppImagesPath(".")
+
+	lapps, err := c.getDirNames(appsPath)
+	if err != nil {
+		return -1, fmt.Errorf("error getting the list of names from %q: %v", appsPath, err)
+	}
+
+	return len(lapps), nil
+}
+
 // getExitStatuses returns a map of the statuses of the container.
 func (c *container) getExitStatuses() (map[string]int, error) {
-	sdir, err := c.openFile(statusDir, syscall.O_RDONLY|syscall.O_DIRECTORY)
-	if err != nil {
-		return nil, fmt.Errorf("unable to open status directory: %v", err)
-	}
-	defer sdir.Close()
-
-	ls, err := sdir.Readdirnames(0)
+	ls, err := c.getDirNames(statusDir)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read status directory: %v", err)
 	}

@@ -43,6 +43,7 @@ func init() {
 	commands = append(commands, cmdRunPrepared)
 	cmdRunPrepared.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
 	cmdRunPrepared.Flags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
+	cmdRunPrepared.Flags.BoolVar(&flagInteractive, "interactive", false, "the container is interactive")
 }
 
 func runRunPrepared(args []string) (exit int) {
@@ -84,6 +85,18 @@ func runRunPrepared(args []string) (exit int) {
 		return 1
 	}
 
+	if flagInteractive {
+		ac, err := c.getAppCount()
+		if err != nil {
+			stderr("prepared-run: cannot get container's app count: %v", err)
+			return 1
+		}
+		if ac > 1 {
+			stderr("prepared-run: interactive option only supports containers with one app")
+			return 1
+		}
+	}
+
 	if err := c.xToRun(); err != nil {
 		stderr("prepared-run: cannot transition to run: %v", err)
 		return 1
@@ -103,6 +116,7 @@ func runRunPrepared(args []string) (exit int) {
 		PrivateNet:           flagPrivateNet,
 		SpawnMetadataService: flagSpawnMetadataService,
 		LockFd:               lfd,
+		Interactive:          flagInteractive,
 	}
 	stage0.Run(rcfg, c.path()) // execs, never returns
 	return 1

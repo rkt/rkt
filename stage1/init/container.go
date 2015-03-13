@@ -112,7 +112,7 @@ func newUnitOption(section, name, value string) *unit.UnitOption {
 }
 
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
-func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest) error {
+func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, interactive bool) error {
 	name := ra.Name.String()
 	id := ra.Image.ID
 	app := am.App
@@ -145,6 +145,12 @@ func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest
 		newUnitOption("Service", "ExecStart", execStart),
 		newUnitOption("Service", "User", app.User),
 		newUnitOption("Service", "Group", app.Group),
+	}
+
+	if interactive {
+		opts = append(opts, newUnitOption("Service", "StandardInput", "tty"))
+		opts = append(opts, newUnitOption("Service", "StandardOutput", "tty"))
+		opts = append(opts, newUnitOption("Service", "StandardError", "tty"))
 	}
 
 	for _, eh := range app.EventHandlers {
@@ -237,14 +243,14 @@ func (c *Container) writeEnvFile(env types.Environment, id types.Hash) error {
 
 // ContainerToSystemd creates the appropriate systemd service unit files for
 // all the constituent apps of the Container
-func (c *Container) ContainerToSystemd() error {
+func (c *Container) ContainerToSystemd(interactive bool) error {
 	for _, am := range c.Apps {
 		ra := c.Manifest.Apps.Get(am.Name)
 		if ra == nil {
 			// should never happen
 			panic("app not found in container manifest")
 		}
-		if err := c.appToSystemd(ra, am); err != nil {
+		if err := c.appToSystemd(ra, am, interactive); err != nil {
 			return fmt.Errorf("failed to transform app %q into systemd service: %v", am.Name, err)
 		}
 	}

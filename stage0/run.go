@@ -68,6 +68,7 @@ type RunConfig struct {
 	PrivateNet           bool // container should have its own network stack
 	SpawnMetadataService bool // launch metadata service
 	LockFd               int  // lock file descriptor
+	Interactive          bool // whether the container is interactive or not
 }
 
 // configuration shared by both Run and Prepare
@@ -206,6 +207,9 @@ func Run(cfg RunConfig, dir string) {
 	}
 	if cfg.PrivateNet {
 		args = append(args, "--private-net")
+	}
+	if cfg.Interactive {
+		args = append(args, "--interactive")
 	}
 	if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
