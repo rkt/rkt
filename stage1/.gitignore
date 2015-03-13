@@ -6,9 +6,9 @@ rootfs/diagexec/diagexec
 rootfs/enter/enter
 rootfs/prepare-app/prepare-app
 rootfs/shim/shim.so
-rootfs/usr/cache/
-rootfs/usr/manifest.txt
-rootfs/usr/rootfs/
-rootfs/usr/usr.done
-rootfs/usr/usr.squashfs
+rootfs/usr_from_coreos/cache/
+rootfs/usr_from_coreos/manifest.txt
+rootfs/usr_from_coreos/rootfs/
+rootfs/usr_from_coreos/usr.done
+rootfs/usr_from_coreos/usr.squashfs
 rootfs/waiter/waiter

@@ -1,4 +1,5 @@
-_SUBDIRS=usr waiter shim diagexec prepare-app enter net-plugins net init
+USR=usr_from_coreos
+_SUBDIRS=$(USR) waiter shim diagexec prepare-app enter net-plugins net init
 SUBDIRS=$(_SUBDIRS) aggregate
 export CFLAGS=-Wall -Os
 
