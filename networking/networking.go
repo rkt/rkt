@@ -83,11 +83,10 @@ func Setup(rktRoot string, contID types.UUID) (*Networking, error) {
 	}
 	// we're in contNS!
 
-	contNSPath := filepath.Join("/var/lib/rkt/containers", contID.String(), "ns")
-	if err = bindMountFile(selfNetNS, contNSPath, "net"); err != nil {
+	n.contNSPath = filepath.Join(rktRoot, "netns")
+	if err = bindMountFile(selfNetNS, n.contNSPath); err != nil {
 		return nil, err
 	}
-	n.contNSPath = filepath.Join(contNSPath, "net")
 
 	nets, err := n.loadNets()
 	if err != nil {
@@ -289,13 +288,7 @@ func loUp() error {
 	return nil
 }
 
-func bindMountFile(src, dstDir, dstFile string) error {
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		return err
-	}
-
-	dst := filepath.Join(dstDir, dstFile)
-
+func bindMountFile(src, dst string) error {
 	// mount point has to be an existing file
 	f, err := os.Create(dst)
 	if err != nil {
