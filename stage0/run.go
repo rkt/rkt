@@ -227,8 +227,8 @@ func setupAppImage(cfg PrepareConfig, img types.Hash, cdir string) (*schema.Imag
 		return nil, fmt.Errorf("error creating image directory: %v", err)
 	}
 
-	if err := expandImage(cfg, img, ad); err != nil {
-		return nil, fmt.Errorf("error expanding app image: %v", err)
+	if err := aci.RenderACIWithImageID(img, ad, cfg.Store); err != nil {
+		return nil, fmt.Errorf("error rendering app image: %v", err)
 	}
 
 	err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
@@ -254,17 +254,8 @@ func setupStage1Image(cfg PrepareConfig, img types.Hash, cdir string) error {
 	if err := os.MkdirAll(s1, 0755); err != nil {
 		return fmt.Errorf("error creating stage1 directory: %v", err)
 	}
-	if err := expandImage(cfg, img, s1); err != nil {
-		return fmt.Errorf("error expanding stage1 image: %v", err)
-	}
-	return nil
-}
-
-// expandImage attempts to load the image by the given hash from the store,
-// verifies that the image matches the hash, and extracts the image at the specified destination.
-func expandImage(cfg PrepareConfig, img types.Hash, dest string) error {
-	if err := aci.RenderACIWithImageID(img, dest, cfg.Store); err != nil {
-		return fmt.Errorf("error rendering ACI: %v", err)
+	if err := aci.RenderACIWithImageID(img, s1, cfg.Store); err != nil {
+		return fmt.Errorf("error rendering stage1 ACI: %v", err)
 	}
 	return nil
 }
