@@ -18,7 +18,9 @@ package common
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -27,6 +29,8 @@ import (
 const (
 	stage1Dir = "/stage1"
 	stage2Dir = "/opt/stage2"
+
+	EnvLockFd = "RKT_LOCK_FD"
 
 	MetadataServiceIP      = "169.254.169.255"
 	MetadataServicePubPort = 80
@@ -97,4 +101,15 @@ func MetadataServicePrivateURL() string {
 // MetadataServicePublicURL returns the public URL used to host the metadata service
 func MetadataServicePublicURL() string {
 	return fmt.Sprintf("http://%v:%v", MetadataServiceIP, MetadataServicePubPort)
+}
+
+func GetRktLockFD() (int, error) {
+	if v := os.Getenv(EnvLockFd); v != "" {
+		fd, err := strconv.ParseUint(v, 10, 32)
+		if err != nil {
+			return -1, err
+		}
+		return int(fd), nil
+	}
+	return -1, fmt.Errorf("%v env var is not set", EnvLockFd)
 }

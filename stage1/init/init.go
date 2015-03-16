@@ -30,6 +30,7 @@ import (
 
 	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/networking"
+	"github.com/coreos/rocket/pkg/sys"
 )
 
 const (
@@ -92,22 +93,7 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func stage1() int {
-	root := "."
-	c, err := LoadContainer(root)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load container: %v\n", err)
-		return 1
-	}
-
-	mirrorLocalZoneInfo(c.Root)
-	c.MetadataServiceURL = common.MetadataServicePublicURL()
-
-	if err = c.ContainerToSystemd(interactive); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
-		return 2
-	}
-
+func computeArgs(c *Container, debug bool) ([]string, error) {
 	args := []string{
 		filepath.Join(common.Stage1RootfsPath(c.Root), interpBin),
 		filepath.Join(common.Stage1RootfsPath(c.Root), nspawnBin),
@@ -121,8 +107,7 @@ func stage1() int {
 
 	nsargs, err := c.ContainerToNspawnArgs()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to generate nspawn args: %v\n", err)
-		return 4
+		return nil, fmt.Errorf("Failed to generate nspawn args: %v", err)
 	}
 	args = append(args, nsargs...)
 
@@ -134,9 +119,61 @@ func stage1() int {
 		args = append(args, "--show-status=0")   // silence systemd initialization status output
 	}
 
+	return args, nil
+}
+
+func computeEnv(c *Container) []string {
 	env := os.Environ()
 	env = append(env, "LD_PRELOAD="+filepath.Join(common.Stage1RootfsPath(c.Root), "fakesdboot.so"))
 	env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(c.Root), "usr/lib"))
+
+	return env
+}
+
+func withClearedCloExec(lfd int, f func() error) error {
+	err := sys.CloseOnExec(lfd, false)
+	if err != nil {
+		return err
+	}
+	defer sys.CloseOnExec(lfd, true)
+
+	return f()
+}
+
+func stage1() int {
+	root := "."
+	c, err := LoadContainer(root)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load container: %v\n", err)
+		return 1
+	}
+
+	// set close-on-exec flag on RKT_LOCK_FD so it gets correctly closed when invoking
+	// network plugins
+	lfd, err := common.GetRktLockFD()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get rkt lock fd: %v\n", err)
+		return 1
+	}
+
+	if err := sys.CloseOnExec(lfd, true); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to set FD_CLOEXEC on rkt lock: %v\n", err)
+		return 1
+	}
+
+	mirrorLocalZoneInfo(c.Root)
+	c.MetadataServiceURL = common.MetadataServicePublicURL()
+
+	if err = c.ContainerToSystemd(interactive); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
+		return 2
+	}
+
+	args, err := computeArgs(c, debug)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+	env := computeEnv(c)
 
 	if privNet {
 		// careful not to make another local err variable.
@@ -168,9 +205,11 @@ func stage1() int {
 			Stderr: os.Stderr,
 			Env:    env,
 		}
-		err = cmd.Run()
+		err = withClearedCloExec(lfd, cmd.Run)
 	} else {
-		err = syscall.Exec(args[0], args, env)
+		err = withClearedCloExec(lfd, func() error {
+			return syscall.Exec(args[0], args, env)
+		})
 	}
 
 	if err != nil {

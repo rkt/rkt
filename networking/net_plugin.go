@@ -106,6 +106,7 @@ func (e *containerEnv) execNetPlugin(cmd string, n *Net, netns, args, ifName str
 		Stdout: stdout,
 		Stderr: os.Stderr,
 	}
+
 	if err := c.Run(); err != nil {
 		return nil, err
 	}
