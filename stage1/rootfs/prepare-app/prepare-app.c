@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
 	static const char *dirs[] = {
 		"dev",
 		"dev/net",
+		"dev/shm",
 		"proc",
 		"sys",
 		NULL
@@ -62,16 +63,16 @@ int main(int argc, char *argv[])
 
 	root = argv[1];
 
-	rootfd = open(root, O_DIRECTORY | O_CLOEXEC);
-	pexit_if(rootfd < 0,
-		"Failed to open directory \"%s\"", root);
-
 	/* Make stage2's root a mount point. Chrooting an application in a
 	 * directory which is not a mount point is not nice because the
 	 * application would not be able to remount "/" it as private mount.
 	 * This allows Docker to run inside Rocket. */
 	pexit_if(mount(root, root, "bind", MS_BIND, NULL) == -1,
 			"Make / a mount point failed");
+
+	rootfd = open(root, O_DIRECTORY | O_CLOEXEC);
+	pexit_if(rootfd < 0,
+		"Failed to open directory \"%s\"", root);
 
 	/* First, create the directories */
 	for (i = 0; dirs[i]; i++) {
@@ -121,15 +122,23 @@ int main(int argc, char *argv[])
 				"Mounting \"%s\" on \"%s\" failed", from, to);
 	}
 
+	/* /proc */
 	exit_if(snprintf(to, sizeof(to), "%s/proc", root) >= sizeof(to),
 		"Path too long: \"%s\"", to);
 	pexit_if(mount("/proc", to, "bind", MS_BIND, NULL) == -1,
 			"Mounting /proc on \"%s\" failed", to);
 
+	/* /sys */
 	exit_if(snprintf(to, sizeof(to), "%s/sys", root) >= sizeof(to),
 		"Path too long: \"%s\"", to);
 	pexit_if(mount("/sys", to, "bind", MS_BIND, NULL) == -1,
 			"Mounting /sys on \"%s\" failed", to);
+
+	/* /dev/shm */
+	exit_if(snprintf(to, sizeof(to), "%s/dev/shm", root) >= sizeof(to),
+		"Path too long: \"%s\"", to);
+	pexit_if(mount("/dev/shm", to, "bind", MS_BIND, NULL) == -1,
+			"Mounting /dev/shm on \"%s\" failed", to);
 
 	return EXIT_SUCCESS;
 }
