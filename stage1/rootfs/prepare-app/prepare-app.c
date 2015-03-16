@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
 		"dev",
 		"dev/net",
 		"proc",
+		"sys",
 		NULL
 	};
 	static const char *devnodes[] = {
@@ -117,5 +118,11 @@ int main(int argc, char *argv[])
 		"Path too long: \"%s\"", to);
 	pexit_if(mount("/proc", to, "bind", MS_BIND, NULL) == -1,
 			"Mounting /proc on \"%s\" failed", to);
+
+	exit_if(snprintf(to, sizeof(to), "%s/sys", root) >= sizeof(to),
+		"Path too long: \"%s\"", to);
+	pexit_if(mount("/sys", to, "bind", MS_BIND, NULL) == -1,
+			"Mounting /sys on \"%s\" failed", to);
+
 	return EXIT_SUCCESS;
 }
