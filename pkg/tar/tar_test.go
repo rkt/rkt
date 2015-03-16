@@ -21,7 +21,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
+	"time"
 )
 
 type testTarEntry struct {
@@ -641,4 +643,90 @@ func TestExtractTarOverwrite(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
+}
+
+func TestExtractTarTimes(t *testing.T) {
+
+	// Do not set ns as tar has second precision
+	time1 := time.Unix(100000, 0)
+	time2 := time.Unix(200000, 0)
+	time3 := time.Unix(300000, 0)
+	entries := []*testTarEntry{
+		{
+			header: &tar.Header{
+				Name:     "folder/",
+				Typeflag: tar.TypeDir,
+				Mode:     int64(0747),
+				ModTime:  time1,
+			},
+		},
+		{
+			contents: "foo",
+			header: &tar.Header{
+				Name:    "folder/foo.txt",
+				Size:    3,
+				ModTime: time2,
+			},
+		},
+		{
+			header: &tar.Header{
+				Name:     "folder/symlink.txt",
+				Typeflag: tar.TypeSymlink,
+				Linkname: "folder/foo.txt",
+				ModTime:  time3,
+			},
+		},
+	}
+
+	testTarPath, err := newTestTar(entries)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	defer os.Remove(testTarPath)
+	containerTar, err := os.Open(testTarPath)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	tr := tar.NewReader(containerTar)
+	tmpdir, err := ioutil.TempDir("", "rocket-temp-dir")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	os.RemoveAll(tmpdir)
+	err = os.MkdirAll(tmpdir, 0755)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	err = ExtractTar(tr, tmpdir, false, nil)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	err = checkTime(filepath.Join(tmpdir, "folder/"), time1)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	err = checkTime(filepath.Join(tmpdir, "folder/foo.txt"), time2)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	//Check only (by now) on linux
+	if runtime.GOOS == "linux" {
+		err = checkTime(filepath.Join(tmpdir, "folder/symlink.txt"), time3)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+}
+
+func checkTime(path string, time time.Time) error {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+
+	if info.ModTime() != time {
+		return fmt.Errorf("%s: info.ModTime: %s, different from expected time: %s", path, info.ModTime(), time)
+	}
+	return nil
 }
