@@ -19,12 +19,11 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rocket/cas"
 	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/stage0"
 )
@@ -81,18 +80,28 @@ func runEnter(args []string) (exit int) {
 		return 1
 	}
 
-	if _, err = os.Stat(filepath.Join(common.AppRootfsPath(c.path(), *imageID))); err != nil {
-		stderr("Unable to access app rootfs: %v", err)
-		return 1
-	}
-
 	argv, err := getEnterArgv(c, imageID, args)
 	if err != nil {
 		stderr("Enter failed: %v", err)
 		return 1
 	}
 
-	if err = stage0.Enter(c.path(), imageID, argv); err != nil {
+	ds, err := cas.NewStore(globalFlags.Dir)
+	if err != nil {
+		stderr("Cannot open store: %v", err)
+		return 1
+	}
+
+	stage1ID, err := c.getStage1Hash()
+	if err != nil {
+		stderr("Error getting stage1 hash")
+		return 1
+	}
+
+	stage1RootFS := ds.GetTreeStoreRootFS(stage1ID.String())
+	enterPath := filepath.Join(stage1RootFS, cmdEnterName)
+
+	if err = stage0.Enter(c.path(), imageID, enterPath, argv); err != nil {
 		stderr("Enter failed: %v", err)
 		return 1
 	}
@@ -144,11 +153,6 @@ func getEnterArgv(c *container, imageID *types.Hash, cmdArgs []string) ([]string
 		argv = []string{defaultCmd}
 	} else {
 		argv = cmdArgs[1:]
-	}
-
-	// TODO(vc): LookPath() uses os.Stat() internally so symlinks can defeat this check
-	if _, err := exec.LookPath(filepath.Join(common.AppRootfsPath(c.path(), *imageID), argv[0])); err != nil {
-		return nil, fmt.Errorf("command %q missing, giving up: %v", argv[0], err)
 	}
 
 	return argv, nil
