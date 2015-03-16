@@ -28,6 +28,7 @@ import (
 	"github.com/coreos/rocket/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/common"
+	"github.com/coreos/rocket/networking/netinfo"
 	"github.com/coreos/rocket/pkg/lock"
 )
 
@@ -36,7 +37,8 @@ import (
 type container struct {
 	*lock.DirLock
 	uuid        *types.UUID
-	createdByMe bool // true if we're the creator of this container (only the creator can xToPrepare or xToRun directly from preparing)
+	createdByMe bool              // true if we're the creator of this container (only the creator can xToPrepare or xToRun directly from preparing)
+	nets        []netinfo.NetInfo // list of networks (name, IP, iface) this container is using
 
 	isEmbryo         bool // directory starts as embryo before entering preparing state, serves as stage for acquiring lock before rename to prepare/.
 	isPreparing      bool // when locked at containers/prepare/$uuid the container is actively being prepared
@@ -247,6 +249,18 @@ func getContainer(uuid string) (*container, error) {
 	}
 
 	c.DirLock = l
+
+	if c.isRunning() {
+		cfd, err := c.Fd()
+		if err != nil {
+			return nil, fmt.Errorf("error acquiring container %v dir fd: %v", uuid, err)
+		}
+		c.nets, err = netinfo.LoadAt(cfd)
+		// ENOENT is ok -- assume running without --private-net
+		if err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("error opening container %v netinfo: %v", uuid, err)
+		}
+	}
 
 	return c, nil
 }
