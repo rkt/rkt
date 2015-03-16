@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/networking/netinfo"
@@ -699,14 +700,17 @@ func (c *container) getAppCount() (int, error) {
 		return -1, fmt.Errorf("error: only prepared containers can get their app count")
 	}
 
-	appsPath := common.AppImagesPath(".")
-
-	lapps, err := c.getDirNames(appsPath)
+	b, err := ioutil.ReadFile(common.ContainerManifestPath(c.path()))
 	if err != nil {
-		return -1, fmt.Errorf("error getting the list of names from %q: %v", appsPath, err)
+		return -1, fmt.Errorf("error reading container manifest: %v", err)
 	}
 
-	return len(lapps), nil
+	m := schema.ContainerRuntimeManifest{}
+	if err = m.UnmarshalJSON(b); err != nil {
+		return -1, fmt.Errorf("unable to load manifest: %v", err)
+	}
+
+	return len(m.Apps), nil
 }
 
 // getExitStatuses returns a map of the statuses of the container.
