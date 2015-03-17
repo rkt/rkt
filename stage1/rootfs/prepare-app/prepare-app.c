@@ -34,10 +34,16 @@ static int exit_err;
 
 int main(int argc, char *argv[])
 {
+	static const char *unlink_paths[] = {
+		"dev/shm",
+		NULL
+	};
 	static const char *dirs[] = {
 		"dev",
 		"dev/net",
+		"dev/shm",
 		"proc",
+		"sys",
 		NULL
 	};
 	static const char *devnodes[] = {
@@ -61,15 +67,33 @@ int main(int argc, char *argv[])
 
 	root = argv[1];
 
+	/* Make stage2's root a mount point. Chrooting an application in a
+	 * directory which is not a mount point is not nice because the
+	 * application would not be able to remount "/" it as private mount.
+	 * This allows Docker to run inside Rocket. */
+	pexit_if(mount(root, root, "bind", MS_BIND, NULL) == -1,
+			"Make / a mount point failed");
+
 	rootfd = open(root, O_DIRECTORY | O_CLOEXEC);
 	pexit_if(rootfd < 0,
 		"Failed to open directory \"%s\"", root);
 
-	/* First, create the directories */
+	/* Some images have annoying symlinks that are resolved as dangling
+	 * links before the chroot in stage1. E.g. "/dev/shm" -> "/run/shm"
+	 * Just remove the symlinks.
+         */
+	for (i = 0; unlink_paths[i]; i++) {
+		pexit_if(unlinkat(rootfd, unlink_paths[i], 0) != 0
+			 && errno != ENOENT && errno != EISDIR,
+			 "Failed to unlink \"%s\"", unlink_paths[i])
+	}
+
+	/* Create the directories */
 	for (i = 0; dirs[i]; i++) {
 		pexit_if(mkdirat(rootfd, dirs[i], 0755) == -1 && errno != EEXIST,
 			"Failed to create directory \"%s/%s\"", root, dirs[i]);
 	}
+
 	close(rootfd);
 
 	/* systemd-nspawn already creates few /dev entries in the container
@@ -113,9 +137,23 @@ int main(int argc, char *argv[])
 				"Mounting \"%s\" on \"%s\" failed", from, to);
 	}
 
+	/* /proc */
 	exit_if(snprintf(to, sizeof(to), "%s/proc", root) >= sizeof(to),
 		"Path too long: \"%s\"", to);
 	pexit_if(mount("/proc", to, "bind", MS_BIND, NULL) == -1,
 			"Mounting /proc on \"%s\" failed", to);
+
+	/* /sys */
+	exit_if(snprintf(to, sizeof(to), "%s/sys", root) >= sizeof(to),
+		"Path too long: \"%s\"", to);
+	pexit_if(mount("/sys", to, "bind", MS_BIND, NULL) == -1,
+			"Mounting /sys on \"%s\" failed", to);
+
+	/* /dev/shm */
+	exit_if(snprintf(to, sizeof(to), "%s/dev/shm", root) >= sizeof(to),
+		"Path too long: \"%s\"", to);
+	pexit_if(mount("/dev/shm", to, "bind", MS_BIND, NULL) == -1,
+			"Mounting /dev/shm on \"%s\" failed", to);
+
 	return EXIT_SUCCESS;
 }
