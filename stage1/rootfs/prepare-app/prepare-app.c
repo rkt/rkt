@@ -34,6 +34,10 @@ static int exit_err;
 
 int main(int argc, char *argv[])
 {
+	static const char *unlink_paths[] = {
+		"dev/shm",
+		NULL
+	};
 	static const char *dirs[] = {
 		"dev",
 		"dev/net",
@@ -74,11 +78,22 @@ int main(int argc, char *argv[])
 	pexit_if(rootfd < 0,
 		"Failed to open directory \"%s\"", root);
 
-	/* First, create the directories */
+	/* Some images have annoying symlinks that are resolved as dangling
+	 * links before the chroot in stage1. E.g. "/dev/shm" -> "/run/shm"
+	 * Just remove the symlinks.
+         */
+	for (i = 0; unlink_paths[i]; i++) {
+		pexit_if(unlinkat(rootfd, unlink_paths[i], 0) != 0
+			 && errno != ENOENT && errno != EISDIR,
+			 "Failed to unlink \"%s\"", unlink_paths[i])
+	}
+
+	/* Create the directories */
 	for (i = 0; dirs[i]; i++) {
 		pexit_if(mkdirat(rootfd, dirs[i], 0755) == -1 && errno != EEXIST,
 			"Failed to create directory \"%s/%s\"", root, dirs[i]);
 	}
+
 	close(rootfd);
 
 	/* systemd-nspawn already creates few /dev entries in the container
