@@ -1,3 +1,17 @@
+// Copyright 2015 CoreOS, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Package docker2aci implements a simple library for converting docker images to
 // App Container Images (ACIs).
 package docker2aci
@@ -18,6 +32,7 @@ import (
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/docker2aci/tarball"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/pkg/acirenderer"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
@@ -69,26 +84,28 @@ func Convert(dockerURL string, squash bool, outputDir string) ([]string, error) 
 		defer os.RemoveAll(layersOutputDir)
 	}
 
+	conversionStore := NewConversionStore()
+
+	var images acirenderer.Images
 	var aciLayerPaths []string
-	for i := len(ancestry) - 1; i >= 0; i-- {
-		layerID := ancestry[i]
-		aciPath, err := buildACI(layerID, repoData, parsedURL, layersOutputDir)
+	for i, layerID := range ancestry {
+		aciPath, manifest, err := buildACI(layerID, repoData, parsedURL, layersOutputDir)
 		if err != nil {
 			return nil, fmt.Errorf("error building layer: %v\n", err)
 		}
 
+		key, err := conversionStore.WriteACI(aciPath)
+		if err != nil {
+			return nil, fmt.Errorf("error inserting in the conversion store: %v\n", err)
+		}
+
+		images = append(images, acirenderer.Image{Im: manifest, Key: key, Level: uint16(i)})
 		aciLayerPaths = append(aciLayerPaths, aciPath)
 	}
 
 	if squash {
-		squashedFilename := strings.Replace(parsedURL.ImageName, "/", "-", -1)
-		if parsedURL.Tag != "" {
-			squashedFilename += "-" + parsedURL.Tag
-		}
-		squashedFilename += ".aci"
-		squashedImagePath := path.Join(outputDir, squashedFilename)
-
-		if err := SquashLayers(aciLayerPaths, squashedImagePath); err != nil {
+		squashedImagePath, err := SquashLayers(images, conversionStore, *parsedURL, outputDir)
+		if err != nil {
 			return nil, fmt.Errorf("error squashing image: %v\n", err)
 		}
 		aciLayerPaths = []string{squashedImagePath}
@@ -225,10 +242,10 @@ func getAncestry(imgID, registry string, repoData *RepoData) ([]string, error) {
 	return ancestry, nil
 }
 
-func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, outputDir string) (string, error) {
+func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, outputDir string) (string, *schema.ImageManifest, error) {
 	tmpDir, err := ioutil.TempDir("", "docker2aci-")
 	if err != nil {
-		return "", fmt.Errorf("error creating dir: %v", err)
+		return "", nil, fmt.Errorf("error creating dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
@@ -236,40 +253,40 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, ou
 	layerRootfs := filepath.Join(layerDest, "rootfs")
 	err = os.MkdirAll(layerRootfs, 0700)
 	if err != nil {
-		return "", fmt.Errorf("error creating dir: %s", layerRootfs)
+		return "", nil, fmt.Errorf("error creating dir: %s", layerRootfs)
 	}
 
 	j, size, err := getRemoteImageJSON(layerID, repoData.Endpoints[0], repoData)
 	if err != nil {
-		return "", fmt.Errorf("error getting image json: %v", err)
+		return "", nil, fmt.Errorf("error getting image json: %v", err)
 	}
 
 	layerData := DockerImageData{}
 	if err := json.Unmarshal(j, &layerData); err != nil {
-		return "", fmt.Errorf("error unmarshaling layer data: %v", err)
+		return "", nil, fmt.Errorf("error unmarshaling layer data: %v", err)
 	}
 
 	layer, err := getRemoteLayer(layerID, repoData.Endpoints[0], repoData, int64(size))
 	if err != nil {
-		return "", fmt.Errorf("error getting the remote layer: %v", err)
+		return "", nil, fmt.Errorf("error getting the remote layer: %v", err)
 	}
 	defer layer.Close()
 
 	layerFile, err := ioutil.TempFile(tmpDir, "dockerlayer-")
 	if err != nil {
-		return "", fmt.Errorf("error creating layer: %v", err)
+		return "", nil, fmt.Errorf("error creating layer: %v", err)
 	}
 
 	_, err = io.Copy(layerFile, layer)
 	if err != nil {
-		return "", fmt.Errorf("error getting layer: %v", err)
+		return "", nil, fmt.Errorf("error getting layer: %v", err)
 	}
 
 	layerFile.Sync()
 
 	manifest, err := generateManifest(layerData, dockerURL)
 	if err != nil {
-		return "", fmt.Errorf("error generating the manifest: %v", err)
+		return "", nil, fmt.Errorf("error generating the manifest: %v", err)
 	}
 
 	imageName := strings.Replace(dockerURL.ImageName, "/", "-", -1)
@@ -288,14 +305,14 @@ func buildACI(layerID string, repoData *RepoData, dockerURL *ParsedDockerURL, ou
 	aciPath = path.Join(outputDir, aciPath)
 
 	if err := writeACI(layerFile, *manifest, aciPath); err != nil {
-		return "", fmt.Errorf("error writing ACI: %v", err)
+		return "", nil, fmt.Errorf("error writing ACI: %v", err)
 	}
 
 	if err := validateACI(aciPath); err != nil {
-		return "", fmt.Errorf("invalid aci generated: %v", err)
+		return "", nil, fmt.Errorf("invalid aci generated: %v", err)
 	}
 
-	return aciPath, nil
+	return aciPath, manifest, nil
 }
 
 func validateACI(aciPath string) error {
@@ -382,6 +399,10 @@ func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*s
 	genManifest := &schema.ImageManifest{}
 
 	appURL := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.ID
+	appURL, err := types.SanitizeACName(appURL)
+	if err != nil {
+		return nil, err
+	}
 	name, err := types.NewACName(appURL)
 	if err != nil {
 		return nil, err
@@ -439,7 +460,10 @@ func generateManifest(layerData DockerImageData, dockerURL *ParsedDockerURL) (*s
 	if layerData.Parent != "" {
 		var dependencies types.Dependencies
 		parentAppNameString := dockerURL.IndexURL + "/" + dockerURL.ImageName + "-" + layerData.Parent
-
+		parentAppNameString, err := types.SanitizeACName(parentAppNameString)
+		if err != nil {
+			return nil, err
+		}
 		parentAppName, err := types.NewACName(parentAppNameString)
 		if err != nil {
 			return nil, err
@@ -460,9 +484,10 @@ func getExecCommand(entrypoint []string, cmd []string) types.Exec {
 	}
 	command = append(entrypoint, cmd...)
 	// non-absolute paths are not allowed, fallback to "/bin/sh -c command"
-	if !filepath.IsAbs(command[0]) {
+	if len(command) > 0 && !filepath.IsAbs(command[0]) {
 		command_prefix := []string{"/bin/sh", "-c"}
-		command = append(command_prefix, strings.Join(command, " "))
+		quoted_command := quote(command)
+		command = append(command_prefix, strings.Join(quoted_command, " "))
 	}
 	return command
 }
@@ -504,8 +529,7 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 		return fmt.Errorf("error writing rootfs entry: %v", err)
 	}
 
-	// Write files in rootfs/
-	if err = tarball.Walk(*reader, func(t *tarball.TarFile) error {
+	convWalker := func(t *tarball.TarFile) error {
 		name := t.Name()
 		if name == "./" {
 			return nil
@@ -526,7 +550,10 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 		}
 
 		return nil
-	}); err != nil {
+	}
+
+	// Write files in rootfs/
+	if err := tarball.Walk(*reader, convWalker); err != nil {
 		return err
 	}
 
@@ -534,6 +561,18 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, output string)
 }
 
 func addMinimalACIStructure(tarWriter *tar.Writer, manifest schema.ImageManifest) error {
+	if err := writeRootfsDir(tarWriter); err != nil {
+		return err
+	}
+
+	if err := writeManifest(tarWriter, manifest); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func writeRootfsDir(tarWriter *tar.Writer) error {
 	hdr := getGenericTarHeader()
 	hdr.Name = "rootfs"
 	hdr.Mode = 0755
@@ -541,10 +580,6 @@ func addMinimalACIStructure(tarWriter *tar.Writer, manifest schema.ImageManifest
 	hdr.Typeflag = tar.TypeDir
 
 	if err := tarWriter.WriteHeader(hdr); err != nil {
-		return err
-	}
-
-	if err := writeManifest(tarWriter, manifest); err != nil {
 		return err
 	}
 
@@ -589,112 +624,97 @@ func writeManifest(outputWriter *tar.Writer, manifest schema.ImageManifest) erro
 
 // SquashLayers receives a list of ACI layer file names ordered from base image
 // to application image and squashes them into one ACI
-func SquashLayers(layers []string, squashedImagePath string) error {
-	manifests, err := getManifests(layers)
+func SquashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistry, parsedDockerURL ParsedDockerURL, outputDir string) (string, error) {
+	renderedACI, err := acirenderer.GetRenderedACIFromList(images, aciRegistry)
 	if err != nil {
-		return err
+		return "", fmt.Errorf("error rendering squashed image: %v\n", err)
+	}
+	manifests, err := getManifests(renderedACI, aciRegistry)
+	if err != nil {
+		return "", fmt.Errorf("error getting manifests: %v", err)
 	}
 
-	fileMap, err := getFilesToLayersMap(layers)
-	if err != nil {
-		return err
-	}
+	squashedFilename := getSquashedFilename(parsedDockerURL)
+	squashedImagePath := path.Join(outputDir, squashedFilename)
 
 	squashedImageFile, err := os.Create(squashedImagePath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer squashedImageFile.Close()
 
-	if err := writeSquashedImage(squashedImageFile, layers, fileMap, manifests); err != nil {
-		return err
+	if err := writeSquashedImage(squashedImageFile, renderedACI, aciRegistry, manifests); err != nil {
+		return "", fmt.Errorf("error writing squashed image: %v", err)
 	}
 
 	if err := validateACI(squashedImagePath); err != nil {
-		return err
+		return "", fmt.Errorf("error validating image: %v", err)
 	}
 
-	return nil
+	return squashedImagePath, nil
 }
 
-func getManifests(layers []string) ([]schema.ImageManifest, error) {
+func getSquashedFilename(parsedDockerURL ParsedDockerURL) string {
+	squashedFilename := strings.Replace(parsedDockerURL.ImageName, "/", "-", -1)
+	if parsedDockerURL.Tag != "" {
+		squashedFilename += "-" + parsedDockerURL.Tag
+	}
+	squashedFilename += ".aci"
+
+	return squashedFilename
+}
+
+func getManifests(renderedACI acirenderer.RenderedACI, aciRegistry acirenderer.ACIRegistry) ([]schema.ImageManifest, error) {
 	var manifests []schema.ImageManifest
 
-	for _, aciPath := range layers {
-		currentFile, err := os.Open(aciPath)
+	for _, aci := range renderedACI {
+		im, err := aciRegistry.GetImageManifest(aci.Key)
 		if err != nil {
 			return nil, err
 		}
-		defer currentFile.Close()
-
-		manifestCur, err := aci.ManifestFromImage(currentFile)
-		if err != nil {
-			return nil, err
-		}
-		if _, err := currentFile.Seek(0, os.SEEK_SET); err != nil {
-			return nil, err
-		}
-
-		manifests = append(manifests, *manifestCur)
+		manifests = append(manifests, *im)
 	}
 
 	return manifests, nil
 }
 
-func getFilesToLayersMap(layers []string) (map[string]string, error) {
-	var err error
-	fileMap := make(map[string]string)
-	for _, aciPath := range layers {
-		fileMap, err = gatherFilesToLayersMap(fileMap, aciPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return fileMap, nil
-}
-
-// gatherFilesToLayersMap accumulates a map associationg each file of the final
-// image with the layer it comes from. It should be called starting from the
-// base layer so that the order of files in the squashed layer is preserved
-// and, if a file is present several times, the last layer is taken into
-// account.
-func gatherFilesToLayersMap(fileMap map[string]string, currentPath string) (map[string]string, error) {
-	currentFile, err := os.Open(currentPath)
-	if err != nil {
-		return nil, err
-	}
-	defer currentFile.Close()
-
-	reader, err := aci.NewCompressedTarReader(currentFile)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = tarball.Walk(*reader, func(t *tarball.TarFile) error {
-		if t.Name() == "manifest" {
-			return nil
-		}
-
-		fileMap[t.Name()] = currentPath
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return fileMap, nil
-}
-
-func writeSquashedImage(outputFile *os.File, layers []string, fileMap map[string]string, manifests []schema.ImageManifest) error {
+func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI, aciProvider acirenderer.ACIProvider, manifests []schema.ImageManifest) error {
 	outputWriter := tar.NewWriter(outputFile)
 	defer outputWriter.Close()
 
-	var err error
-	for _, aciPath := range layers {
-		outputWriter, err = reduceACIs(outputWriter, fileMap, aciPath)
+	for _, aciFile := range renderedACI {
+		rs, err := aciProvider.ReadStream(aciFile.Key)
 		if err != nil {
 			return err
 		}
+		defer rs.Close()
+
+		squashWalker := func(t *tarball.TarFile) error {
+			cleanName := filepath.Clean(t.Name())
+
+			if _, ok := aciFile.FileMap[cleanName]; ok {
+				// we generate and add the squashed manifest later
+				if cleanName == "manifest" {
+					return nil
+				}
+				if err := outputWriter.WriteHeader(t.Header); err != nil {
+					return fmt.Errorf("error writing header: %v", err)
+				}
+				if _, err := io.Copy(outputWriter, t.TarStream); err != nil {
+					return fmt.Errorf("error copying file into the tar out: %v", err)
+				}
+			}
+			return nil
+		}
+
+		tr := tar.NewReader(rs)
+		if err := tarball.Walk(*tr, squashWalker); err != nil {
+			return err
+		}
+	}
+
+	if err := writeRootfsDir(outputWriter); err != nil {
+		return err
 	}
 
 	finalManifest := mergeManifests(manifests)
@@ -706,42 +726,9 @@ func writeSquashedImage(outputFile *os.File, layers []string, fileMap map[string
 	return nil
 }
 
-func reduceACIs(outputWriter *tar.Writer, fileMap map[string]string, currentPath string) (*tar.Writer, error) {
-	currentFile, err := os.Open(currentPath)
-	if err != nil {
-		return nil, err
-	}
-	defer currentFile.Close()
-
-	reader, err := aci.NewCompressedTarReader(currentFile)
-	if err != nil {
-		return nil, err
-	}
-	if err = tarball.Walk(*reader, func(t *tarball.TarFile) error {
-		if t.Name() == "manifest" {
-			return nil
-		}
-
-		if fileMap[t.Name()] == currentPath {
-			if err := outputWriter.WriteHeader(t.Header); err != nil {
-				return fmt.Errorf("Error writing header: %v", err)
-			}
-			if _, err := io.Copy(outputWriter, t.TarStream); err != nil {
-				return fmt.Errorf("Error copying file into the tar out: %v", err)
-			}
-		}
-
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-
-	return outputWriter, nil
-}
-
 func mergeManifests(manifests []schema.ImageManifest) schema.ImageManifest {
-	// FIXME(iaguis) we take last layer's manifest as the final manifest for now
-	manifest := manifests[len(manifests)-1]
+	// FIXME(iaguis) we take app layer's manifest as the final manifest for now
+	manifest := manifests[0]
 
 	manifest.Dependencies = nil
 
@@ -756,16 +743,21 @@ func mergeManifests(manifests []schema.ImageManifest) schema.ImageManifest {
 		manifest.Labels = append(manifest.Labels[:layerIndex], manifest.Labels[layerIndex+1:]...)
 	}
 
-	// strip layerID:
-	// myregistry.com/organization/app-name-85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281
-	// myregistry.com/organization/app-name
-	n := strings.LastIndex(manifest.Name.String(), "-")
 	// this can't fail because the old name is legal
-	nameWithoutLayerID, _ := types.NewACName(manifest.Name.String()[:n])
+	nameWithoutLayerID, _ := types.NewACName(stripLayerID(manifest.Name.String()))
 
 	manifest.Name = *nameWithoutLayerID
 
 	return manifest
+}
+
+// striplayerID strips the layer ID from an app name:
+//
+// myregistry.com/organization/app-name-85738f8f9a7f1b04b5329c590ebcb9e425925c6d0984089c43a022de4f19c281
+// myregistry.com/organization/app-name
+func stripLayerID(layerName string) string {
+	n := strings.LastIndex(layerName, "-")
+	return layerName[:n]
 }
 
 func setAuthToken(req *http.Request, token []string) {
