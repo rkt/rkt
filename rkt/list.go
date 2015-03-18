@@ -18,9 +18,11 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
 	common "github.com/coreos/rocket/common"
+	"github.com/coreos/rocket/networking/netinfo"
 )
 
 var (
@@ -40,7 +42,7 @@ func init() {
 
 func runList(args []string) (exit int) {
 	if !flagNoLegend {
-		fmt.Fprintf(tabOut, "UUID\tACI\tSTATE\n")
+		fmt.Fprintf(tabOut, "UUID\tACI\tSTATE\tNETWORKS\n")
 	}
 
 	if err := walkContainers(includeMostDirs, func(c *container) {
@@ -68,7 +70,7 @@ func runList(args []string) (exit int) {
 			app_zero = m.Apps[0].Name.String()
 		}
 
-		fmt.Fprintf(tabOut, "%s\t%s\t%s\n", c.uuid, app_zero, c.getState())
+		fmt.Fprintf(tabOut, "%s\t%s\t%s\t%s\n", c.uuid, app_zero, c.getState(), fmtNets(c.nets))
 		for i := 1; i < len(m.Apps); i++ {
 			fmt.Fprintf(tabOut, "\t%s\n", m.Apps[i].Name.String())
 		}
@@ -79,4 +81,13 @@ func runList(args []string) (exit int) {
 
 	tabOut.Flush()
 	return 0
+}
+
+func fmtNets(nis []netinfo.NetInfo) string {
+	parts := []string{}
+	for _, ni := range nis {
+		// there will be IPv6 support soon so distinguish between v4 and v6
+		parts = append(parts, fmt.Sprintf("%v:ip4=%v", ni.NetName, ni.IP))
+	}
+	return strings.Join(parts, ", ")
 }

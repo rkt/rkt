@@ -74,6 +74,10 @@ func runStatus(args []string) (exit int) {
 func printStatus(c *container) error {
 	stdout("state=%s", c.getState())
 
+	if c.isRunning() {
+		stdout("networks=%s", fmtNets(c.nets))
+	}
+
 	if !c.isEmbryo && !c.isPreparing && !c.isPrepared && !c.isAbortedPrepare && !c.isGarbage && !c.isGone {
 		pid, err := c.getPID()
 		if err != nil {

@@ -26,6 +26,7 @@ import (
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
+	"github.com/coreos/rocket/networking/netinfo"
 	"github.com/coreos/rocket/networking/util"
 )
 
@@ -103,6 +104,10 @@ func Setup(rktRoot string, contID types.UUID) (*Networking, error) {
 
 	if len(n.nets) == 0 {
 		return nil, fmt.Errorf("no nets successfully setup")
+	}
+
+	if err = n.saveNetInfo(); err != nil {
+		return nil, err
 	}
 
 	// last net is the default
@@ -226,6 +231,22 @@ func (e *containerEnv) teardownNets(netns string, nets []activeNet) {
 			log.Printf("Error deleting %q: %v", nt.Filename, err)
 		}
 	}
+}
+
+// saveNetInfo writes out the info about active nets
+// for "rkt list" and friends to display
+func (e *Networking) saveNetInfo() error {
+	nis := []netinfo.NetInfo{}
+	for _, n := range e.nets {
+		ni := netinfo.NetInfo{
+			NetName: n.Name,
+			IfName:  n.ifName,
+			IP:      n.ip.String(),
+		}
+		nis = append(nis, ni)
+	}
+
+	return netinfo.Save(e.rktRoot, nis)
 }
 
 func newNetNS() (hostNS, childNS *os.File, err error) {
