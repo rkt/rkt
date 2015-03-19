@@ -70,8 +70,11 @@ int main(int argc, char *argv[])
 	/* Make stage2's root a mount point. Chrooting an application in a
 	 * directory which is not a mount point is not nice because the
 	 * application would not be able to remount "/" it as private mount.
-	 * This allows Docker to run inside Rocket. */
-	pexit_if(mount(root, root, "bind", MS_BIND, NULL) == -1,
+	 * This allows Docker to run inside Rocket.
+	 * The recursive flag is to preserve volumes mounted previously by
+	 * systemd-nspawn via "rkt run -volume".
+	 * */
+	pexit_if(mount(root, root, "bind", MS_BIND | MS_REC, NULL) == -1,
 			"Make / a mount point failed");
 
 	rootfd = open(root, O_DIRECTORY | O_CLOEXEC);
