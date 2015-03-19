@@ -231,11 +231,6 @@ func setupAppImage(cfg PrepareConfig, img types.Hash, cdir string) (*schema.Imag
 		return nil, fmt.Errorf("error rendering app image: %v", err)
 	}
 
-	err = os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
-	if err != nil {
-		return nil, fmt.Errorf("error creating tmp directory: %v", err)
-	}
-
 	b, err := ioutil.ReadFile(common.ImageManifestPath(cdir, img))
 	if err != nil {
 		return nil, fmt.Errorf("error reading app manifest: %v", err)
