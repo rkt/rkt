@@ -32,19 +32,30 @@ static int exit_err;
 #define pexit_if(_cond, _fmt, _args...)				\
 	exit_if(_cond, _fmt ": %s", ##_args, strerror(errno))
 
+#define nelems(_array) \
+	(sizeof(_array) / sizeof(_array[0]))
+
+typedef struct _dir_op_t {
+	const char	*name;
+	mode_t		mode;
+} dir_op_t;
+
+#define dir(_name, _mode) \
+	{ .name = _name, .mode = _mode }
+
 int main(int argc, char *argv[])
 {
 	static const char *unlink_paths[] = {
 		"dev/shm",
 		NULL
 	};
-	static const char *dirs[] = {
-		"dev",
-		"dev/net",
-		"dev/shm",
-		"proc",
-		"sys",
-		NULL
+	static const dir_op_t dirs[] = {
+		dir("dev",	0755),
+		dir("dev/net",	0755),
+		dir("dev/shm",	0755),
+		dir("proc",	0755),
+		dir("sys",	0755),
+		dir("tmp",	01777),
 	};
 	static const char *devnodes[] = {
 		"/dev/null",
@@ -92,9 +103,12 @@ int main(int argc, char *argv[])
 	}
 
 	/* Create the directories */
-	for (i = 0; dirs[i]; i++) {
-		pexit_if(mkdirat(rootfd, dirs[i], 0755) == -1 && errno != EEXIST,
-			"Failed to create directory \"%s/%s\"", root, dirs[i]);
+	umask(0);
+	for (i = 0; i < nelems(dirs); i++) {
+		const dir_op_t *d = &dirs[i];
+		pexit_if(mkdirat(rootfd, d->name, d->mode) == -1 &&
+			 errno != EEXIST,
+			"Failed to create directory \"%s/%s\"", root, d->name);
 	}
 
 	close(rootfd);
