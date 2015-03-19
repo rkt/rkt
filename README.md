@@ -18,9 +18,9 @@ The CLI for Rocket is called `rkt`, and is currently supported on amd64 Linux. A
 To install the `rkt` binary, grab the latest release directly from GitHub:
 
 ```
-wget https://github.com/coreos/rocket/releases/download/v0.4.1/rocket-v0.4.1.tar.gz
-tar xzvf rocket-v0.4.1.tar.gz
-cd rocket-v0.4.1
+wget https://github.com/coreos/rocket/releases/download/v0.4.2/rocket-v0.4.2.tar.gz
+tar xzvf rocket-v0.4.2.tar.gz
+cd rocket-v0.4.2
 ./rkt help
 ```
 
