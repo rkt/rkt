@@ -3,8 +3,8 @@
 set -xe
 export DEBIAN_FRONTEND=noninteractive
 
-ROCKET_VERSION=0.3.2
-APP_SPEC_VERSION=0.3.0
+ROCKET_VERSION=0.4.2
+APP_SPEC_VERSION=0.4.1
 
 if ! [ -d app-spec ]; then
   echo "Install actool ${APP_SPEC_VERSION}"
