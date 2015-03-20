@@ -40,11 +40,8 @@ import (
 	"github.com/coreos/rocket/cas"
 	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/pkg/aci"
+	"github.com/coreos/rocket/pkg/sys"
 	"github.com/coreos/rocket/version"
-)
-
-const (
-	envLockFd = "RKT_LOCK_FD"
 )
 
 // configuration parameters required by Prepare
@@ -176,7 +173,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 // Run actually runs the prepared container by exec()ing the stage1 init inside
 // the container filesystem.
 func Run(cfg RunConfig, dir string) {
-	if err := os.Setenv(envLockFd, fmt.Sprintf("%v", cfg.LockFd)); err != nil {
+	if err := os.Setenv(common.EnvLockFd, fmt.Sprintf("%v", cfg.LockFd)); err != nil {
 		log.Fatalf("setting lock fd environment: %v", err)
 	}
 
@@ -208,6 +205,12 @@ func Run(cfg RunConfig, dir string) {
 	if cfg.Interactive {
 		args = append(args, "--interactive")
 	}
+
+	// make sure the lock fd stays open across exec
+	if err := sys.CloseOnExec(cfg.LockFd, false); err != nil {
+		log.Fatalf("error clearing FD_CLOEXEC on lock fd")
+	}
+
 	if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
 	}
@@ -288,5 +291,6 @@ func launchMetadataService(debug bool) error {
 		Stdout:     os.Stdout,
 		Stderr:     os.Stderr,
 	}
+
 	return cmd.Start()
 }

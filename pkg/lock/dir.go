@@ -153,8 +153,7 @@ func (l *DirLock) Close() error {
 func NewLock(dir string) (*DirLock, error) {
 	l := &DirLock{dir: dir, fd: -1}
 
-	// we can't use os.OpenFile as Go sets O_CLOEXEC
-	lfd, err := syscall.Open(l.dir, syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
+	lfd, err := syscall.Open(l.dir, syscall.O_RDONLY|syscall.O_DIRECTORY|syscall.O_CLOEXEC, 0)
 	if err != nil {
 		if err == syscall.ENOENT {
 			err = ErrNotExist
