@@ -3,7 +3,6 @@
 set -xe
 export DEBIAN_FRONTEND=noninteractive
 
-ROCKET_VERSION=0.4.2
 APP_SPEC_VERSION=0.4.1
 
 if ! [ -d app-spec ]; then
@@ -17,21 +16,10 @@ if ! [ -d app-spec ]; then
   popd
 fi
 
-if ! [ -d rocket ]; then
-  echo "Install rocket ${ROCKET_VERSION}"
-  mkdir rocket
+pushd /vagrant
+./build
 
-  # install deps
-  which unsquashfs || sudo apt-get install -y squashfs-tools
-
-  # grab rocket
-  wget -q -O rocket.tar.gz https://github.com/coreos/rocket/archive/v${ROCKET_VERSION}.tar.gz
-  tar xzvf rocket.tar.gz -C rocket --strip-components=1
-
-  # build/install rocket
-  pushd rocket
-  ./build
-  sudo cp -v bin/* /usr/local/bin
-  popd
-fi
-
+cat << EOF | sudo tee /etc/profile.d/99rkt.sh
+  export PATH=$PWD/bin:\$PATH
+  export GOPATH=$PWD/gopath:\$GOPATH
+EOF

@@ -11,7 +11,5 @@ Vagrant.configure('2') do |config|
     config.vm.provision :shell, :privileged => false, :path => "scripts/vagrant/install-go.sh"
 
     # Install Rocket
-    # FIXME: changing the versions recorded in this file and re-run "vagrant provision" wont
-    #        upgrade your VM instance. you need to destroy and start from scratch
     config.vm.provision :shell, :privileged => false, :path => "scripts/vagrant/install-rocket.sh"
 end

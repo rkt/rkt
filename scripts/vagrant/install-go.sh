@@ -17,7 +17,7 @@ if ! [ -e $prefix/go ]; then
 fi
 
 # setup user environment variables
-echo "export GOROOT=$prefix/go" |sudo tee /etc/profile.d/go.sh
+echo "export GOROOT=$prefix/go" |sudo tee /etc/profile.d/01go.sh
 cat << 'EOF' |sudo tee -a /etc/profile.d/go.sh
 
 export GOPATH=$HOME/.gopath
