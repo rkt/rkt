@@ -18,12 +18,14 @@ package aci
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
@@ -35,10 +37,76 @@ type ACIEntry struct {
 	Contents string
 }
 
+type imageArchiveWriter struct {
+	*tar.Writer
+	am *schema.ImageManifest
+}
+
+// NewImageWriter creates a new ArchiveWriter which will generate an App
+// Container Image based on the given manifest and write it to the given
+// tar.Writer
+// TODO(sgotti) this is a copy of appc/spec/aci.imageArchiveWriter with
+// addFileNow changed to create the file with the current user. needed for
+// testing as non root user.
+func NewImageWriter(am schema.ImageManifest, w *tar.Writer) aci.ArchiveWriter {
+	aw := &imageArchiveWriter{
+		w,
+		&am,
+	}
+	return aw
+}
+
+func (aw *imageArchiveWriter) AddFile(hdr *tar.Header, r io.Reader) error {
+	err := aw.Writer.WriteHeader(hdr)
+	if err != nil {
+		return err
+	}
+
+	if r != nil {
+		_, err := io.Copy(aw.Writer, r)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (aw *imageArchiveWriter) addFileNow(path string, contents []byte) error {
+	buf := bytes.NewBuffer(contents)
+	now := time.Now()
+	hdr := tar.Header{
+		Name:       path,
+		Mode:       0644,
+		Uid:        os.Getuid(),
+		Gid:        os.Getgid(),
+		Size:       int64(buf.Len()),
+		ModTime:    now,
+		Typeflag:   tar.TypeReg,
+		ChangeTime: now,
+	}
+	return aw.AddFile(&hdr, buf)
+}
+
+func (aw *imageArchiveWriter) addManifest(name string, m json.Marshaler) error {
+	out, err := m.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	return aw.addFileNow(name, out)
+}
+
+func (aw *imageArchiveWriter) Close() error {
+	if err := aw.addManifest(aci.ManifestFile, aw.am); err != nil {
+		return err
+	}
+	return aw.Writer.Close()
+}
+
 // NewBasicACI creates a new ACI in the given directory with the given name.
 // Used for testing.
 func NewBasicACI(dir string, name string) (*os.File, error) {
-	manifest := fmt.Sprintf(`{"acKind":"ImageManifest","acVersion":"0.1.1","name":"%s"}`, name)
+	manifest := fmt.Sprintf(`{"acKind":"ImageManifest","acVersion":"0.4.1","name":"%s"}`, name)
 	return NewACI(dir, manifest, nil)
 }
 
@@ -58,7 +126,7 @@ func NewACI(dir string, manifest string, entries []*ACIEntry) (*os.File, error) 
 	defer os.Remove(tf.Name())
 
 	tw := tar.NewWriter(tf)
-	aw := aci.NewImageWriter(im, tw)
+	aw := NewImageWriter(im, tw)
 
 	for _, entry := range entries {
 		// Add default mode
@@ -69,6 +137,9 @@ func NewACI(dir string, manifest string, entries []*ACIEntry) (*os.File, error) 
 				entry.Header.Mode = 0644
 			}
 		}
+		// Add calling user uid and gid or tests will fail
+		entry.Header.Uid = os.Getuid()
+		entry.Header.Gid = os.Getgid()
 		sr := strings.NewReader(entry.Contents)
 		if err := aw.AddFile(entry.Header, sr); err != nil {
 			return nil, err
