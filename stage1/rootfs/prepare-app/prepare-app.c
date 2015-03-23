@@ -47,6 +47,7 @@ int main(int argc, char *argv[])
 {
 	static const char *unlink_paths[] = {
 		"dev/shm",
+		"dev/ptmx",
 		NULL
 	};
 	static const dir_op_t dirs[] = {
