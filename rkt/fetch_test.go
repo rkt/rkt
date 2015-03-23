@@ -15,6 +15,7 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
 	"fmt"
 	"io"
@@ -111,6 +112,95 @@ func TestNewDiscoveryApp(t *testing.T) {
 			t.Errorf("#%d: got %v, want %v", i, g, tt.w)
 		}
 	}
+}
+
+func TestDownloading(t *testing.T) {
+	dir, err := ioutil.TempDir("", "download-image")
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	imj := `{
+			"acKind": "ImageManifest",
+			"acVersion": "0.4.0",
+			"name": "example.com/test01"
+		}`
+
+	entries := []*aci.ACIEntry{
+		// An empty file
+		{
+			Contents: "hello",
+			Header: &tar.Header{
+				Name: "rootfs/file01.txt",
+				Size: 5,
+			},
+		},
+	}
+
+	aci, err := aci.NewACI(dir, imj, entries)
+	if err != nil {
+		t.Fatalf("error creating test tar: %v", err)
+	}
+
+	// Rewind the ACI
+	if _, err := aci.Seek(0, 0); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	body, err := ioutil.ReadAll(aci)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(body)
+	}))
+	defer ts.Close()
+
+	tests := []struct {
+		ACIURL string
+		SigURL string
+		body   []byte
+		hit    bool
+	}{
+		{ts.URL, "", body, false},
+		{ts.URL, "", body, true},
+	}
+
+	ds, err := cas.NewStore(dir)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	for _, tt := range tests {
+		_, ok, err := ds.GetRemote(tt.ACIURL)
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		if tt.hit == false && ok {
+			t.Fatalf("expected miss got a hit")
+		}
+		if tt.hit == true && !ok {
+			t.Fatalf("expected a hit got a miss")
+		}
+		_, aciFile, err := download(tt.ACIURL, tt.SigURL, ds, nil)
+		if err != nil {
+			t.Fatalf("error downloading aci: %v", err)
+		}
+		defer os.Remove(aciFile.Name())
+
+		key, err := ds.WriteACI(aciFile, false)
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		rem := cas.NewRemote(tt.ACIURL, tt.SigURL)
+		rem.BlobKey = key
+		err = ds.WriteRemote(rem)
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+	}
+
+	ds.Dump(false)
 }
 
 func TestFetchImage(t *testing.T) {
