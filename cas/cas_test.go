@@ -20,6 +20,7 @@ import (
 	"encoding/hex"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -329,4 +330,123 @@ func TestGetAci(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestTreeStore(t *testing.T) {
+	dir, err := ioutil.TempDir("", tstprefix)
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+	ds, err := NewStore(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	imj := `
+		{
+		    "acKind": "ImageManifest",
+		    "acVersion": "0.4.1",
+		    "name": "example.com/test01"
+		}
+	`
+
+	entries := []*aci.ACIEntry{
+		// An empty dir
+		{
+			Header: &tar.Header{
+				Name:     "rootfs/a",
+				Typeflag: tar.TypeDir,
+			},
+		},
+		{
+			Contents: "hello",
+			Header: &tar.Header{
+				Name: "hello.txt",
+				Size: 5,
+			},
+		},
+		{
+			Header: &tar.Header{
+				Name:     "rootfs/link.txt",
+				Linkname: "rootfs/hello.txt",
+				Typeflag: tar.TypeSymlink,
+			},
+		},
+		// dangling symlink
+		{
+			Header: &tar.Header{
+				Name:     "rootfs/link2.txt",
+				Linkname: "rootfs/missingfile.txt",
+				Typeflag: tar.TypeSymlink,
+			},
+		},
+		{
+			Header: &tar.Header{
+				Name:     "rootfs/fifo",
+				Typeflag: tar.TypeFifo,
+			},
+		},
+	}
+	aci, err := aci.NewACI(dir, imj, entries)
+	if err != nil {
+		t.Fatalf("error creating test tar: %v", err)
+	}
+	defer aci.Close()
+
+	// Rewind the ACI
+	if _, err := aci.Seek(0, 0); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	// Import the new ACI
+	key, err := ds.WriteACI(aci, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Ask the store to render the treestore
+	err = ds.RenderTreeStore(key, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify image Hash. Should be the same.
+	err = ds.CheckTreeStore(key)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Change a file permission
+	rootfs := ds.GetTreeStoreRootFS(key)
+	err = os.Chmod(filepath.Join(rootfs, "a"), 0600)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify image Hash. Should be different
+	err = ds.CheckTreeStore(key)
+	if err == nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// rebuild the tree
+	err = ds.RenderTreeStore(key, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Add a file
+	rootfs = ds.GetTreeStoreRootFS(key)
+	err = ioutil.WriteFile(filepath.Join(rootfs, "newfile"), []byte("newfile"), 0644)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify image Hash. Should be different
+	err = ds.CheckTreeStore(key)
+	if err == nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 }
