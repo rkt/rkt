@@ -68,6 +68,12 @@ int main(int argc, char *argv[])
 		"/dev/console",
 		NULL
 	};
+	static const char *bind_dirs[] = {
+		"/proc",
+		"/sys",
+		"/dev/shm",
+		NULL
+	};
 	const char *root;
 	int rootfd;
 	char to[4096];
@@ -154,23 +160,15 @@ int main(int argc, char *argv[])
 				"Mounting \"%s\" on \"%s\" failed", from, to);
 	}
 
-	/* /proc */
-	exit_if(snprintf(to, sizeof(to), "%s/proc", root) >= sizeof(to),
-		"Path too long: \"%s\"", to);
-	pexit_if(mount("/proc", to, "bind", MS_BIND, NULL) == -1,
-			"Mounting /proc on \"%s\" failed", to);
+	/* Bind mount directories */
+	for (i = 0; bind_dirs[i]; i++) {
+		const char *from = bind_dirs[i];
 
-	/* /sys */
-	exit_if(snprintf(to, sizeof(to), "%s/sys", root) >= sizeof(to),
-		"Path too long: \"%s\"", to);
-	pexit_if(mount("/sys", to, "bind", MS_BIND, NULL) == -1,
-			"Mounting /sys on \"%s\" failed", to);
-
-	/* /dev/shm */
-	exit_if(snprintf(to, sizeof(to), "%s/dev/shm", root) >= sizeof(to),
-		"Path too long: \"%s\"", to);
-	pexit_if(mount("/dev/shm", to, "bind", MS_BIND, NULL) == -1,
-			"Mounting /dev/shm on \"%s\" failed", to);
+		exit_if(snprintf(to, sizeof(to), "%s/%s", root, from) >= sizeof(to),
+			"Path too long: \"%s\"", to);
+		pexit_if(mount(from, to, "bind", MS_BIND, NULL) == -1,
+				"Mounting \"%s\" on \"%s\" failed", from, to);
+	}
 
 	return EXIT_SUCCESS;
 }
