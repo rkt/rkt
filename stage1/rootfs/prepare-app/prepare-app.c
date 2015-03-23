@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
 		dir("proc",	0755),
 		dir("sys",	0755),
 		dir("tmp",	01777),
+		dir("dev/pts",	0755),
 	};
 	static const char *devnodes[] = {
 		"/dev/null",
@@ -72,6 +73,7 @@ int main(int argc, char *argv[])
 		"/proc",
 		"/sys",
 		"/dev/shm",
+		"/dev/pts",
 		NULL
 	};
 	const char *root;
@@ -169,6 +171,12 @@ int main(int argc, char *argv[])
 		pexit_if(mount(from, to, "bind", MS_BIND, NULL) == -1,
 				"Mounting \"%s\" on \"%s\" failed", from, to);
 	}
+
+	/* /dev/ptmx -> /dev/pts/ptmx */
+	exit_if(snprintf(to, sizeof(to), "%s/dev/ptmx", root) >= sizeof(to),
+		"Path too long: \"%s\"", to);
+	pexit_if(symlink("/dev/pts/ptmx", to) == -1,
+		"Failed to create /dev/ptmx symlink");
 
 	return EXIT_SUCCESS;
 }
