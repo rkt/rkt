@@ -43,6 +43,7 @@ const (
 	imageManifestType
 
 	defaultPathPerm os.FileMode = 0777
+	defaultFilePerm os.FileMode = 0660
 
 	// To ameliorate excessively long paths, keys for the (blob)store use
 	// only the first half of a sha512 rather than the entire sum
@@ -60,9 +61,10 @@ var diskvStores = [...]string{
 
 // Store encapsulates a content-addressable-storage for storing ACIs on disk.
 type Store struct {
-	base   string
-	stores []*diskv.Diskv
-	db     *DB
+	base      string
+	stores    []*diskv.Diskv
+	db        *DB
+	treestore *TreeStore
 }
 
 func NewStore(base string) (*Store, error) {
@@ -115,6 +117,8 @@ func NewStore(base string) (*Store, error) {
 	if err = db.Do(fn); err != nil {
 		return nil, err
 	}
+
+	ds.treestore = &TreeStore{path: filepath.Join(base, "cas", "tree")}
 
 	return ds, nil
 }
@@ -247,7 +251,55 @@ func (ds Store) WriteACI(r io.Reader, latest bool) (string, error) {
 	}); err != nil {
 		return "", fmt.Errorf("error writing ACI Info: %v", err)
 	}
+
+	// The treestore for this ACI is not written here as ACIs downloaded as
+	// dependencies of another ACI will be exploded also if never directly used.
+	// Users of treestore should call ds.RenderTreeStore before using it.
+
 	return key, nil
+}
+
+// RenderTreeStore renders a treestore for the given image key if it's not
+// already fully rendered.
+// Users of treestore should call ds.RenderTreeStore before using it to ensure
+// that the treestore is completely rendered.
+func (ds Store) RenderTreeStore(key string, rebuild bool) error {
+	if !rebuild {
+		rendered, err := ds.treestore.IsRendered(key)
+		if err != nil {
+			return fmt.Errorf("cannot determine if tree is already rendered: %v", err)
+		}
+		if rendered {
+			return nil
+		}
+	}
+	// Firstly remove a possible partial treestore if existing.
+	// This is needed as a previous ACI removal operation could have failed
+	// cleaning the tree store leaving some stale files.
+	err := ds.treestore.Remove(key)
+	if err != nil {
+		return err
+	}
+	err = ds.treestore.Write(key, &ds)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetTreeStorePath returns the absolute path of the treestore for the specified key.
+// It doesn't ensure that the path exists and is fully rendered. This should
+// be done calling IsRendered()
+func (ds Store) GetTreeStorePath(key string) string {
+	return ds.treestore.GetPath(key)
+}
+
+// GetTreeStoreRootFS returns the absolute path of the rootfs in the treestore
+// for specified key.
+// It doesn't ensure that the rootfs exists and is fully rendered. This should
+// be done calling IsRendered()
+func (ds Store) GetTreeStoreRootFS(key string) string {
+	return ds.treestore.GetRootFS(key)
 }
 
 // GetRemote tries to retrieve a remote with the given ACIURL. found will be
@@ -380,6 +432,10 @@ func (ds Store) Dump(hex bool) {
 // calculates its sum, and returns a string which should be used as the key to
 // store the data matching the hash.
 func (ds Store) HashToKey(h hash.Hash) string {
+	return hashToKey(h)
+}
+
+func hashToKey(h hash.Hash) string {
 	s := h.Sum(nil)
 	return keyToString(s)
 }
