@@ -16,21 +16,32 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/coreos/rocket/cas"
 	"github.com/coreos/rocket/pkg/keystore"
 
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
+	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
 
 const (
 	defaultOS   = runtime.GOOS
 	defaultArch = runtime.GOARCH
+
+	defaultPathPerm os.FileMode = 0777
 )
 
 var (
@@ -129,8 +140,7 @@ func downloadImage(aciURL string, ascURL string, scheme string, ds *cas.Store, k
 		return "", err
 	}
 	if !ok {
-		rem = cas.NewRemote(aciURL, ascURL)
-		entity, aciFile, err := rem.Download(*ds, ks)
+		entity, aciFile, err := download(aciURL, ascURL, ds, ks)
 		if err != nil {
 			return "", err
 		}
@@ -142,12 +152,159 @@ func downloadImage(aciURL string, ascURL string, scheme string, ds *cas.Store, k
 				stdout("  %s", v.Name)
 			}
 		}
-		rem, err = rem.Store(*ds, aciFile, latest)
+		key, err := ds.WriteACI(aciFile, latest)
 		if err != nil {
 			return "", err
 		}
+		rem = cas.NewRemote(aciURL, ascURL)
+		rem.BlobKey = key
+		err = ds.WriteRemote(rem)
+		if err != nil {
+			return "", err
+		}
+
 	}
 	return rem.BlobKey, nil
+}
+
+// download downloads and verifies the remote ACI.
+// If Keystore is nil signature verification will be skipped.
+// Download returns the signer, an *os.File representing the ACI, and an error if any.
+// err will be nil if the ACI downloads successfully and the ACI is verified.
+func download(aciURL string, ascURL string, ds *cas.Store, ks *keystore.Keystore) (*openpgp.Entity, *os.File, error) {
+	var entity *openpgp.Entity
+	u, err := url.Parse(aciURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error parsing ACI url: %v", err)
+	}
+	if u.Scheme == "docker" {
+		registryURL := strings.TrimPrefix(aciURL, "docker://")
+
+		tmpDir, err := tmpDir()
+		if err != nil {
+			return nil, nil, fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
+		}
+
+		acis, err := docker2aci.Convert(registryURL, true, tmpDir)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error converting docker image to ACI: %v", err)
+		}
+
+		aciFile, err := os.Open(acis[0])
+		if err != nil {
+			return nil, nil, fmt.Errorf("error opening squashed ACI file: %v", err)
+		}
+
+		return nil, aciFile, nil
+	}
+
+	var sigTempFile *os.File
+	if ks != nil {
+		stdout("Downloading signature from %v\n", ascURL)
+		sigTempFile, err = downloadSignatureFile(ascURL)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error downloading the signature file: %v", err)
+		}
+		defer sigTempFile.Close()
+		defer os.Remove(sigTempFile.Name())
+	}
+
+	acif, err := downloadACI(ds, aciURL)
+	if err != nil {
+		return nil, acif, fmt.Errorf("error downloading the aci image: %v", err)
+	}
+
+	if ks != nil {
+		manifest, err := aci.ManifestFromImage(acif)
+		if err != nil {
+			return nil, acif, err
+		}
+
+		if _, err := acif.Seek(0, 0); err != nil {
+			return nil, acif, err
+		}
+		if _, err := sigTempFile.Seek(0, 0); err != nil {
+			return nil, acif, err
+		}
+		if entity, err = ks.CheckSignature(manifest.Name.String(), acif, sigTempFile); err != nil {
+			return nil, acif, err
+		}
+	}
+
+	if _, err := acif.Seek(0, 0); err != nil {
+		return nil, acif, err
+	}
+	return entity, acif, nil
+}
+
+// downloadACI gets the aci specified at aciurl
+func downloadACI(ds *cas.Store, aciurl string) (*os.File, error) {
+	return downloadHTTP(aciurl, "ACI", tmpFile)
+}
+
+// downloadSignatureFile gets the signature specified at sigurl
+func downloadSignatureFile(sigurl string) (*os.File, error) {
+	getTemp := func() (*os.File, error) {
+		return ioutil.TempFile("", "")
+	}
+
+	return downloadHTTP(sigurl, "signature", getTemp)
+}
+
+// downloadHTTP retrieves url, creating a temp file using getTempFile
+// file:// http:// and https:// urls supported
+func downloadHTTP(url, label string, getTempFile func() (*os.File, error)) (*os.File, error) {
+	tmp, err := getTempFile()
+	if err != nil {
+		return nil, fmt.Errorf("error downloading %s: %v", label, err)
+	}
+	defer func() {
+		if err != nil {
+			os.Remove(tmp.Name())
+			tmp.Close()
+		}
+	}()
+
+	res, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	prefix := "Downloading " + label
+	fmtBytesSize := 18
+	barSize := int64(80 - len(prefix) - fmtBytesSize)
+	bar := ioprogress.DrawTextFormatBar(barSize)
+	fmtfunc := func(progress, total int64) string {
+		return fmt.Sprintf(
+			"%s: %s %s",
+			prefix,
+			bar(progress, total),
+			ioprogress.DrawTextFormatBytes(progress, total),
+		)
+	}
+
+	reader := &ioprogress.Reader{
+		Reader:       res.Body,
+		Size:         res.ContentLength,
+		DrawFunc:     ioprogress.DrawTerminalf(os.Stdout, fmtfunc),
+		DrawInterval: time.Second,
+	}
+
+	// TODO(jonboulle): handle http more robustly (redirects?)
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
+	}
+
+	if _, err := io.Copy(tmp, reader); err != nil {
+		return nil, fmt.Errorf("error copying %s: %v", label, err)
+	}
+
+	if err := tmp.Sync(); err != nil {
+		return nil, fmt.Errorf("error writing %s: %v", label, err)
+	}
+
+	return tmp, nil
 }
 
 func validateURL(s string) error {
@@ -185,4 +342,20 @@ func newDiscoveryApp(img string) *discovery.App {
 		app.Labels["os"] = defaultOS
 	}
 	return app
+}
+
+func tmpFile() (*os.File, error) {
+	dir, err := tmpDir()
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.TempFile(dir, "")
+}
+
+func tmpDir() (string, error) {
+	dir := filepath.Join(globalFlags.Dir, "tmp")
+	if err := os.MkdirAll(dir, defaultPathPerm); err != nil {
+		return "", err
+	}
+	return dir, nil
 }
