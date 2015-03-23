@@ -168,8 +168,9 @@ func entityFromFile(path string) (*openpgp.Entity, error) {
 		return nil, errors.New("missing opengpg entity")
 	}
 	fingerprint := fingerprintToFilename(entityList[0].PrimaryKey.Fingerprint)
-	if fingerprint != filepath.Base(trustedKey.Name()) {
-		return nil, fmt.Errorf("fingerprint mismatch")
+	keyFile := filepath.Base(trustedKey.Name())
+	if fingerprint != keyFile {
+		return nil, fmt.Errorf("fingerprint mismatch: %q:%q", keyFile, fingerprint)
 	}
 	return entityList[0], nil
 }
