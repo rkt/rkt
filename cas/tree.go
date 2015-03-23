@@ -1,10 +1,18 @@
 package cas
 
 import (
+	"archive/tar"
+	"crypto/sha512"
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 
+	specaci "github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/pkg/tarheader"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/pkg/aci"
 )
@@ -37,6 +45,14 @@ func (ts *TreeStore) Write(key string, ds *Store) error {
 	err = aci.RenderACIWithImageID(*imageID, treepath, ds)
 	if err != nil {
 		return fmt.Errorf("treestore: cannot render aci: %v", err)
+	}
+	hash, err := ts.Hash(key)
+	if err != nil {
+		return fmt.Errorf("treestore: cannot calculate tree hash: %v", err)
+	}
+	err = ioutil.WriteFile(filepath.Join(treepath, hashfilename), []byte(hash), 0644)
+	if err != nil {
+		return fmt.Errorf("treestore: cannot write hash file: %v", err)
 	}
 	// before creating the "rendered" flag file we need to ensure that all data is fsynced
 	err = filepath.Walk(treepath, func(path string, info os.FileInfo, err error) error {
@@ -143,4 +159,196 @@ func (ts *TreeStore) GetPath(key string) string {
 // be done calling IsRendered()
 func (ts *TreeStore) GetRootFS(key string) string {
 	return filepath.Join(ts.GetPath(key), "rootfs")
+}
+
+// TreeStore calculates an hash of the rendered ACI. It uses the same functions
+// used to create a tar but instead of writing the full archive is just
+// computes the sha512 sum of the file infos and contents.
+func (ts *TreeStore) Hash(key string) (string, error) {
+	treepath := filepath.Join(ts.path, key)
+
+	hash := sha512.New()
+	iw := NewHashWriter(hash)
+	err := filepath.Walk(treepath, buildWalker(treepath, iw))
+	if err != nil {
+		return "", fmt.Errorf("treestore: error walking rootfs: %v", err)
+	}
+
+	hashstring := hashToKey(hash)
+
+	return hashstring, nil
+}
+
+// Check calculates the actual rendered ACI's hash and verifies that it matches
+// the saved value.
+func (ts *TreeStore) Check(key string) error {
+	treepath := filepath.Join(ts.path, key)
+	hash, err := ioutil.ReadFile(filepath.Join(treepath, hashfilename))
+	if err != nil {
+		return fmt.Errorf("treestore: cannot read hash file: %v", err)
+	}
+	curhash, err := ts.Hash(key)
+	if err != nil {
+		return fmt.Errorf("treestore: cannot calculate tree hash: %v", err)
+	}
+	if curhash != string(hash) {
+		return fmt.Errorf("treestore: wrong tree hash: %s, expected: %s", curhash, hash)
+	}
+	return nil
+}
+
+type xattr struct {
+	Name  string
+	Value string
+}
+
+// Like tar Header but, to keep json output reproducible:
+// * Xattrs as a slice
+// * Skip Uname and Gname
+// TODO. Should ModTime/AccessTime/ChangeTime be saved? For validation its
+// probably enough to hash the file contents and the other infos and avoid
+// problems due to them changing.
+// TODO(sgotti) Is it possible that json output will change between go
+// versions? Use another or our own Marshaller?
+type fileInfo struct {
+	Name     string // name of header file entry
+	Mode     int64  // permission and mode bits
+	Uid      int    // user id of owner
+	Gid      int    // group id of owner
+	Size     int64  // length in bytes
+	Typeflag byte   // type of header entry
+	Linkname string // target name of link
+	Devmajor int64  // major number of character or block device
+	Devminor int64  // minor number of character or block device
+	Xattrs   []xattr
+}
+
+func FileInfoFromHeader(hdr *tar.Header) *fileInfo {
+	fi := &fileInfo{
+		Name:     hdr.Name,
+		Mode:     hdr.Mode,
+		Uid:      hdr.Uid,
+		Gid:      hdr.Gid,
+		Size:     hdr.Size,
+		Typeflag: hdr.Typeflag,
+		Linkname: hdr.Linkname,
+		Devmajor: hdr.Devmajor,
+		Devminor: hdr.Devminor,
+	}
+	keys := make([]string, len(hdr.Xattrs))
+	for k := range hdr.Xattrs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	xattrs := make([]xattr, 0)
+	for _, k := range keys {
+		xattrs = append(xattrs, xattr{Name: k, Value: hdr.Xattrs[k]})
+	}
+	fi.Xattrs = xattrs
+	return fi
+}
+
+// TODO(sgotti) this func is copied from appcs/spec/aci/build.go but also
+// removes the hashfile and the renderedfile. Find a way to reuse it.
+func buildWalker(root string, aw specaci.ArchiveWriter) filepath.WalkFunc {
+	// cache of inode -> filepath, used to leverage hard links in the archive
+	inos := map[uint64]string{}
+	return func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		relpath, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		if relpath == "." {
+			return nil
+		}
+		if relpath == specaci.ManifestFile || relpath == hashfilename || relpath == renderedfilename {
+			// ignore; this will be written by the archive writer
+			// TODO(jonboulle): does this make sense? maybe just remove from archivewriter?
+			return nil
+		}
+
+		link := ""
+		var r io.Reader
+		switch info.Mode() & os.ModeType {
+		case os.ModeSocket:
+			return nil
+		case os.ModeNamedPipe:
+		case os.ModeCharDevice:
+		case os.ModeDevice:
+		case os.ModeDir:
+		case os.ModeSymlink:
+			target, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+			link = target
+		default:
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			r = file
+		}
+
+		hdr, err := tar.FileInfoHeader(info, link)
+		if err != nil {
+			panic(err)
+		}
+		// Because os.FileInfo's Name method returns only the base
+		// name of the file it describes, it may be necessary to
+		// modify the Name field of the returned header to provide the
+		// full path name of the file.
+		hdr.Name = relpath
+		tarheader.Populate(hdr, info, inos)
+		// If the file is a hard link to a file we've already seen, we
+		// don't need the contents
+		if hdr.Typeflag == tar.TypeLink {
+			hdr.Size = 0
+			r = nil
+		}
+
+		if err := aw.AddFile(hdr, r); err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+type imageHashWriter struct {
+	io.Writer
+}
+
+func NewHashWriter(w io.Writer) specaci.ArchiveWriter {
+	return &imageHashWriter{w}
+}
+
+func (aw *imageHashWriter) AddFile(hdr *tar.Header, r io.Reader) error {
+	// Write the json encoding of the FileInfo struct
+	hdrj, err := json.Marshal(FileInfoFromHeader(hdr))
+	if err != nil {
+		return err
+	}
+	_, err = aw.Writer.Write(hdrj)
+	if err != nil {
+		return err
+	}
+
+	if r != nil {
+		// Write the file data
+		_, err := io.Copy(aw.Writer, r)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (aw *imageHashWriter) Close() error {
+	return nil
 }

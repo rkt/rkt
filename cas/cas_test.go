@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -497,4 +498,43 @@ func TestTreeStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
+	// Verify image Hash. Should be the same.
+	err = ds.CheckTreeStore(key)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Change a file permission
+	rootfs := ds.GetTreeStoreRootFS(key)
+	err = os.Chmod(filepath.Join(rootfs, "a"), 0600)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify image Hash. Should be different
+	err = ds.CheckTreeStore(key)
+	if err == nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// rebuild the tree
+	err = ds.RenderTreeStore(key, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Add a file
+	rootfs = ds.GetTreeStoreRootFS(key)
+	err = ioutil.WriteFile(filepath.Join(rootfs, "newfile"), []byte("newfile"), 0644)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify image Hash. Should be different
+	err = ds.CheckTreeStore(key)
+	if err == nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 }

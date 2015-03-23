@@ -287,6 +287,11 @@ func (ds Store) RenderTreeStore(key string, rebuild bool) error {
 	return nil
 }
 
+// CheckTreeStore verifies the treestore consistency for the specified key.
+func (ds Store) CheckTreeStore(key string) error {
+	return ds.treestore.Check(key)
+}
+
 // GetTreeStorePath returns the absolute path of the treestore for the specified key.
 // It doesn't ensure that the path exists and is fully rendered. This should
 // be done calling IsRendered()

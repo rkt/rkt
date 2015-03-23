@@ -95,6 +95,12 @@ func TestTreeStoreWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
+	// Verify image Hash. Should be the same.
+	err = ds.treestore.Check(key)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 }
 
 func TestTreeStoreRemove(t *testing.T) {
