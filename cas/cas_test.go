@@ -15,6 +15,7 @@
 package cas
 
 import (
+	"archive/tar"
 	"bytes"
 	"database/sql"
 	"encoding/hex"
