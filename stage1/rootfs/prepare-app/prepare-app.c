@@ -47,6 +47,7 @@ int main(int argc, char *argv[])
 {
 	static const char *unlink_paths[] = {
 		"dev/shm",
+		"dev/ptmx",
 		NULL
 	};
 	static const dir_op_t dirs[] = {
@@ -56,6 +57,7 @@ int main(int argc, char *argv[])
 		dir("proc",	0755),
 		dir("sys",	0755),
 		dir("tmp",	01777),
+		dir("dev/pts",	0755),
 	};
 	static const char *devnodes[] = {
 		"/dev/null",
@@ -66,6 +68,13 @@ int main(int argc, char *argv[])
 		"/dev/tty",
 		"/dev/net/tun",
 		"/dev/console",
+		NULL
+	};
+	static const char *bind_dirs[] = {
+		"/proc",
+		"/sys",
+		"/dev/shm",
+		"/dev/pts",
 		NULL
 	};
 	const char *root;
@@ -154,23 +163,21 @@ int main(int argc, char *argv[])
 				"Mounting \"%s\" on \"%s\" failed", from, to);
 	}
 
-	/* /proc */
-	exit_if(snprintf(to, sizeof(to), "%s/proc", root) >= sizeof(to),
-		"Path too long: \"%s\"", to);
-	pexit_if(mount("/proc", to, "bind", MS_BIND, NULL) == -1,
-			"Mounting /proc on \"%s\" failed", to);
+	/* Bind mount directories */
+	for (i = 0; bind_dirs[i]; i++) {
+		const char *from = bind_dirs[i];
 
-	/* /sys */
-	exit_if(snprintf(to, sizeof(to), "%s/sys", root) >= sizeof(to),
-		"Path too long: \"%s\"", to);
-	pexit_if(mount("/sys", to, "bind", MS_BIND, NULL) == -1,
-			"Mounting /sys on \"%s\" failed", to);
+		exit_if(snprintf(to, sizeof(to), "%s/%s", root, from) >= sizeof(to),
+			"Path too long: \"%s\"", to);
+		pexit_if(mount(from, to, "bind", MS_BIND, NULL) == -1,
+				"Mounting \"%s\" on \"%s\" failed", from, to);
+	}
 
-	/* /dev/shm */
-	exit_if(snprintf(to, sizeof(to), "%s/dev/shm", root) >= sizeof(to),
+	/* /dev/ptmx -> /dev/pts/ptmx */
+	exit_if(snprintf(to, sizeof(to), "%s/dev/ptmx", root) >= sizeof(to),
 		"Path too long: \"%s\"", to);
-	pexit_if(mount("/dev/shm", to, "bind", MS_BIND, NULL) == -1,
-			"Mounting /dev/shm on \"%s\" failed", to);
+	pexit_if(symlink("/dev/pts/ptmx", to) == -1,
+		"Failed to create /dev/ptmx symlink");
 
 	return EXIT_SUCCESS;
 }
