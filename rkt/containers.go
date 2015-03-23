@@ -37,7 +37,7 @@ import (
 // see Documentation/container-lifecycle.md for some explanation
 
 type container struct {
-	*lock.DirLock
+	*lock.FileLock
 	uuid        *types.UUID
 	createdByMe bool              // true if we're the creator of this container (only the creator can xToPrepare or xToRun directly from preparing)
 	nets        []netinfo.NetInfo // list of networks (name, IP, iface) this container is using
@@ -150,7 +150,7 @@ func newContainer() (*container, error) {
 		return nil, err
 	}
 
-	c.DirLock, err = lock.NewLock(c.embryoPath())
+	c.FileLock, err = lock.NewLock(c.embryoPath(), lock.Dir)
 	if err != nil {
 		os.Remove(c.embryoPath())
 		return nil, err
@@ -184,27 +184,27 @@ func getContainer(uuid string) (*container, error) {
 	c.uuid = u
 
 	// we try open the container in all possible directories, in the same order the states occur
-	l, err := lock.NewLock(c.embryoPath())
+	l, err := lock.NewLock(c.embryoPath(), lock.Dir)
 	if err == nil {
 		c.isEmbryo = true
 	} else if err == lock.ErrNotExist {
-		l, err = lock.NewLock(c.preparePath())
+		l, err = lock.NewLock(c.preparePath(), lock.Dir)
 		if err == nil {
 			// treat as aborted prepare until lock is tested
 			c.isAbortedPrepare = true
 		} else if err == lock.ErrNotExist {
-			l, err = lock.NewLock(c.preparedPath())
+			l, err = lock.NewLock(c.preparedPath(), lock.Dir)
 			if err == nil {
 				c.isPrepared = true
 			} else if err == lock.ErrNotExist {
-				l, err = lock.NewLock(c.runPath())
+				l, err = lock.NewLock(c.runPath(), lock.Dir)
 				if err == nil {
 					// treat as exited until lock is tested
 					c.isExited = true
 				} else if err == lock.ErrNotExist {
-					l, err = lock.NewLock(c.exitedGarbagePath())
+					l, err = lock.NewLock(c.exitedGarbagePath(), lock.Dir)
 					if err == lock.ErrNotExist {
-						l, err = lock.NewLock(c.garbagePath())
+						l, err = lock.NewLock(c.garbagePath(), lock.Dir)
 						if err == nil {
 							c.isGarbage = true
 						} else {
@@ -250,7 +250,7 @@ func getContainer(uuid string) (*container, error) {
 		}
 	}
 
-	c.DirLock = l
+	c.FileLock = l
 
 	if c.isRunning() {
 		cfd, err := c.Fd()
@@ -504,7 +504,7 @@ func listContainersFromDir(cdir string) ([]string, error) {
 }
 
 // refreshState() updates the cached members of c to reflect current reality
-// assumes c.DirLock is currently unlocked, and always returns with it unlocked.
+// assumes c.FileLock is currently unlocked, and always returns with it unlocked.
 func (c *container) refreshState() error {
 	//  TODO(vc): this overlaps substantially with newContainer(), could probably unify.
 	c.isEmbryo = false
