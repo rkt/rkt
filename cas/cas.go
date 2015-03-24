@@ -177,10 +177,6 @@ func (ds Store) ReadStream(key string) (io.ReadCloser, error) {
 	return ds.stores[blobType].ReadStream(key, false)
 }
 
-func (ds Store) WriteStream(key string, r io.Reader) error {
-	return ds.stores[blobType].WriteStream(key, r, true)
-}
-
 // WriteACI takes an ACI encapsulated in an io.Reader, decompresses it if
 // necessary, and then stores it in the store under a key based on the image ID
 // (i.e. the hash of the uncompressed ACI)
