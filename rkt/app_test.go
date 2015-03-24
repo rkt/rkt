@@ -26,14 +26,14 @@ func TestParseAppArgs(t *testing.T) {
 	tests := []struct {
 		in     string
 		images []string
-		flags  [][]string
+		args   [][]string
 		werr   bool
 	}{
 		{
 			"example.com/foo example.com/bar -- --help --- example.com/baz -- --verbose",
 			[]string{"example.com/foo", "example.com/bar", "example.com/baz"},
 			[][]string{
-				[]string{},
+				nil,
 				[]string{"--help"},
 				[]string{"--verbose"},
 			},
@@ -43,9 +43,9 @@ func TestParseAppArgs(t *testing.T) {
 			"example.com/foo --- example.com/bar --- example.com/baz ---",
 			[]string{"example.com/foo", "example.com/bar", "example.com/baz"},
 			[][]string{
-				[]string{},
-				[]string{},
-				[]string{},
+				nil,
+				nil,
+				nil,
 			},
 			false,
 		},
@@ -53,21 +53,23 @@ func TestParseAppArgs(t *testing.T) {
 			"example.com/foo example.com/bar example.com/baz",
 			[]string{"example.com/foo", "example.com/bar", "example.com/baz"},
 			[][]string{
-				[]string{},
-				[]string{},
-				[]string{},
+				nil,
+				nil,
+				nil,
 			},
 			false,
 		},
 	}
 
 	for i, tt := range tests {
-		gf, gi, err := parseAppArgs(strings.Split(tt.in, " "), flags)
+		err := Apps.parse(strings.Split(tt.in, " "), flags)
+		ga := Apps.getArgs()
+		gi := Apps.getImages()
 		if gerr := (err != nil); gerr != tt.werr {
 			t.Errorf("#%d: err==%v, want errstate %t", i, err, tt.werr)
 		}
-		if !reflect.DeepEqual(gf, tt.flags) {
-			t.Errorf("#%d: got flags %v, want flags %v", i, gf, tt.flags)
+		if !reflect.DeepEqual(ga, tt.args) {
+			t.Errorf("#%d: got args %v, want args %v", i, ga, tt.args)
 		}
 		if !reflect.DeepEqual(gi, tt.images) {
 			t.Errorf("#%d: got images %v, want images %v", i, gi, tt.images)

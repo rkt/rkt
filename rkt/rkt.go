@@ -53,11 +53,12 @@ func init() {
 }
 
 type Command struct {
-	Name        string        // Name of the Command and the string to use to invoke it
-	Summary     string        // One-sentence summary of what the Command does
-	Usage       string        // Usage options/arguments
-	Description string        // Detailed description of command
-	Flags       *flag.FlagSet // Set of flags associated with this command
+	Name                 string        // Name of the Command and the string to use to invoke it
+	Summary              string        // One-sentence summary of what the Command does
+	Usage                string        // Usage options/arguments
+	Description          string        // Detailed description of command
+	Flags                *flag.FlagSet // Set of flags associated with this command
+	WantsFlagsTerminator bool          // Include the potential "--" flags terminator in args for Run
 
 	Run func(args []string) int // Run a command with the given arguments, return exit status
 
@@ -77,12 +78,13 @@ func main() {
 	}
 
 	var cmd *Command
+	subArgs := args[1:]
 
 	// determine which Command should be run
 	for _, c := range commands {
 		if c.Name == args[0] {
 			cmd = c
-			if err := c.Flags.Parse(args[1:]); err != nil {
+			if err := c.Flags.Parse(subArgs); err != nil {
 				stderr("%v", err)
 				os.Exit(2)
 			}
@@ -100,7 +102,14 @@ func main() {
 		log.SetOutput(os.Stderr)
 	}
 
-	os.Exit(cmd.Run(cmd.Flags.Args()))
+	// XXX(vc): Flags.Args() stops parsing at "--" but swallows it in doing so.
+	// This interferes with parseApps() so we detect that here and reclaim "--",
+	// passing it to the subcommand with the rest of the arguments.
+	subArgsConsumed := len(subArgs) - cmd.Flags.NArg()
+	if cmd.WantsFlagsTerminator && subArgsConsumed > 0 && subArgs[subArgsConsumed-1] == "--" {
+		subArgsConsumed--
+	}
+	os.Exit(cmd.Run(subArgs[subArgsConsumed:]))
 }
 
 func stderr(format string, a ...interface{}) {
