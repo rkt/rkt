@@ -17,13 +17,19 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"path"
+	"time"
 
 	"github.com/coreos/rocket/common"
 )
+
+const retryCount = 3
+
+var retryPause = time.Second
 
 func registerContainer(c *Container, ip net.IP) error {
 	uuid := c.UUID.String()
@@ -66,23 +72,41 @@ func registerApp(uuid, app string, r io.Reader) error {
 }
 
 func httpRequest(method, pth string, body io.Reader) error {
-	uri := common.MetadataServicePrivateURL() + pth
-	req, err := http.NewRequest(method, uri, body)
-	if err != nil {
-		return err
+	uri := "http://unixsock" + pth
+
+	t := &http.Transport{
+		Dial: func(_, _ string) (net.Conn, error) {
+			return net.Dial("unix", common.MetadataServiceRegSock)
+		},
 	}
 
-	cli := http.Client{}
+	var err error
+	for i := 0; i < retryCount; i++ {
+		var req *http.Request
+		req, err = http.NewRequest(method, uri, body)
+		if err != nil {
+			return err
+		}
 
-	resp, err := cli.Do(req)
-	if err != nil {
-		return err
+		cli := http.Client{Transport: t}
+
+		var resp *http.Response
+		resp, err = cli.Do(req)
+		switch {
+		case err == nil:
+			defer resp.Body.Close()
+
+			if resp.StatusCode != 200 {
+				return fmt.Errorf("%v %v returned %v", method, pth, resp.StatusCode)
+			}
+
+			return nil
+
+		default:
+			log.Print(err)
+			time.Sleep(retryPause)
+		}
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("%v %v returned %v", method, pth, resp.StatusCode)
-	}
-
-	return nil
+	return err
 }

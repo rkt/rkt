@@ -37,6 +37,7 @@ const (
 	MetadataServiceIP      = "169.254.169.255"
 	MetadataServicePubPort = 80
 	MetadataServicePrvPort = 2375
+	MetadataServiceRegSock = "/run/rkt/metadata-svc.sock"
 )
 
 // Stage1ImagePath returns the path where the stage1 app image (unpacked ACI) is rooted,
@@ -93,11 +94,6 @@ func RelAppRootfsPath(imageID types.Hash) string {
 // id should be the app image ID.
 func ImageManifestPath(root string, imageID types.Hash) string {
 	return filepath.Join(AppImagePath(root, imageID), aci.ManifestFile)
-}
-
-// MetadataServicePrivateURL returns the private URL used to host the metadata service
-func MetadataServicePrivateURL() string {
-	return fmt.Sprintf("http://127.0.0.1:%v", MetadataServicePrvPort)
 }
 
 // MetadataServicePublicURL returns the public URL used to host the metadata service
