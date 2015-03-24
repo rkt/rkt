@@ -93,12 +93,35 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func computeArgs(c *Container, debug bool) ([]string, error) {
-	args := []string{
-		filepath.Join(common.Stage1RootfsPath(c.Root), interpBin),
-		filepath.Join(common.Stage1RootfsPath(c.Root), nspawnBin),
-		"--boot",              // Launch systemd in the container
-		"--register", "false", // We cannot assume the host system is running systemd
+// getArgsEnv returns the nspawn args and env according to the usr used
+func getArgsEnv(c *Container, debug bool) ([]string, []string, error) {
+	args := []string{}
+	env := os.Environ()
+
+	flavor, err := os.Readlink(filepath.Join(common.Stage1RootfsPath(c.Root), "flavor"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to determine stage1 flavor: %v", err)
+	}
+
+	switch flavor {
+	case "coreos":
+		// when running the coreos-derived stage1 with unpatched systemd-nspawn we need some ld-linux hackery
+		args = append(args, filepath.Join(common.Stage1RootfsPath(c.Root), interpBin))
+		args = append(args, filepath.Join(common.Stage1RootfsPath(c.Root), nspawnBin))
+		args = append(args, "--boot")              // Launch systemd in the container
+		args = append(args, "--register", "false") // We cannot assume the host system is running systemd
+		// TODO(vc): we should leave registration enabled if systemd is running on the host,
+		// but it needs to be sufficiently new systemd or registration will fail.
+
+		env = append(env, "LD_PRELOAD="+filepath.Join(common.Stage1RootfsPath(c.Root), "fakesdboot.so"))
+		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(c.Root), "usr/lib"))
+
+	case "src":
+		args = append(args, filepath.Join(common.Stage1RootfsPath(c.Root), nspawnBin))
+		args = append(args, "--boot") // Launch systemd in the container
+
+	default:
+		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
 	}
 
 	if !debug {
@@ -107,7 +130,7 @@ func computeArgs(c *Container, debug bool) ([]string, error) {
 
 	nsargs, err := c.ContainerToNspawnArgs()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to generate nspawn args: %v", err)
+		return nil, nil, fmt.Errorf("Failed to generate nspawn args: %v", err)
 	}
 	args = append(args, nsargs...)
 
@@ -119,15 +142,7 @@ func computeArgs(c *Container, debug bool) ([]string, error) {
 		args = append(args, "--show-status=0")   // silence systemd initialization status output
 	}
 
-	return args, nil
-}
-
-func computeEnv(c *Container) []string {
-	env := os.Environ()
-	env = append(env, "LD_PRELOAD="+filepath.Join(common.Stage1RootfsPath(c.Root), "fakesdboot.so"))
-	env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(c.Root), "usr/lib"))
-
-	return env
+	return args, env, nil
 }
 
 func withClearedCloExec(lfd int, f func() error) error {
@@ -169,11 +184,11 @@ func stage1() int {
 		return 2
 	}
 
-	args, err := computeArgs(c, debug)
+	args, env, err := getArgsEnv(c, debug)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintf(os.Stderr, "Failed to get execution parameters: %v\n", err)
+		return 3
 	}
-	env := computeEnv(c)
 
 	if privNet {
 		// careful not to make another local err variable.

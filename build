@@ -13,6 +13,17 @@ export GOPATH=${PWD}/gopath
 
 eval $(go env)
 
+# set default stage1 usr style and validate potential override
+RKT_STAGE1_USR_FROM="${RKT_STAGE1_USR_FROM:-coreos}"
+case "${RKT_STAGE1_USR_FROM}" in
+	coreos|src)
+		;;
+	*)
+		echo "RKT_STAGE1_USR_FROM=${RKT_STAGE1_USR_FROM} unsupported"
+		exit 255
+esac
+export RKT_STAGE1_USR_FROM
+
 echo "Building rkt (stage0)..."
 go build -o ${GOBIN}/rkt \
 	${RKT_STAGE1_IMAGE:+-ldflags "-X main.defaultStage1Image '${RKT_STAGE1_IMAGE}'"} \
@@ -50,6 +61,8 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	mkdir -p stage1/rootfs/init/bin
 	ln -sf ${GOBIN}/init stage1/rootfs/init/bin
 
-	echo "Building rootfs (stage1)..."
-	make -C stage1/rootfs
+	JOBS=1
+	which lscpu >&/dev/null && JOBS=$(lscpu --parse=CPU | grep -c ^[^#])
+	echo "Building rootfs (stage1) using ${JOBS} CPUs..."
+	make -C stage1/rootfs -j ${JOBS}
 fi

@@ -4,5 +4,5 @@ StopWhenUnneeded=true
 DefaultDependencies=false
 
 [Service]
-ExecStart=/usr/bin/sleep 9999999999d
+ExecStart=/waiter
 ExecStopPost=/usr/bin/systemctl isolate reaper.service

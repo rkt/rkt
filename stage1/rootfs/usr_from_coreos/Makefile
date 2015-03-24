@@ -3,7 +3,7 @@
 
 usr.done: Makefile mkbase.sh cache/pxe.img manifest.d/* install
 	@./mkbase.sh && touch usr.done
-	@cp install ../aggregate/install.d/00usr
+	@cp -f install ../aggregate/install.d/00usr
 
 cache/pxe.img: Makefile cache.sh
 	@./cache.sh
