@@ -101,6 +101,11 @@ func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore, discover bool)
 			if err != nil {
 				return "", err
 			}
+
+			if len(ep.ACIEndpoints) == 0 {
+				return "", fmt.Errorf("no endpoints discovered")
+			}
+
 			latest := false
 			// No specified version label, mark it as latest
 			if _, ok := app.Labels["version"]; !ok {
