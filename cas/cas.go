@@ -36,8 +36,6 @@ import (
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/peterbourgon/diskv"
 )
 
-// TODO(philips): use a database for the secondary indexes like remoteType and
-// appType. This is OK for now though.
 const (
 	blobType int64 = iota
 	imageManifestType
