@@ -335,7 +335,7 @@ func prepareAppImage(cfg PrepareConfig, img types.Hash, cdir string, useOverlay 
 		}
 	} else {
 		ad := common.AppImagePath(cdir, img)
-		err := os.MkdirAll(ad, 0776)
+		err := os.MkdirAll(ad, 0755)
 		if err != nil {
 			return nil, fmt.Errorf("error creating image directory: %v", err)
 		}
