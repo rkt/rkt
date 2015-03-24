@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"log"
 
-	//"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/cas"
 	"github.com/coreos/rocket/stage0"
 )
@@ -108,10 +107,24 @@ func runRunPrepared(args []string) (exit int) {
 		return 1
 	}
 
+	s1img, err := c.getStage1Hash()
+	if err != nil {
+		stderr("prepared-run: unable to get stage1 Hash: %v", err)
+		return 1
+	}
+
+	imgs, err := c.getAppsHashes()
+	if err != nil {
+		stderr("prepared-run: unable to get apps hashes: %v", err)
+		return 1
+	}
+
 	rcfg := stage0.RunConfig{
 		CommonConfig: stage0.CommonConfig{
-			Store: ds,
-			Debug: globalFlags.Debug,
+			Store:       ds,
+			Stage1Image: *s1img,
+			Images:      imgs,
+			Debug:       globalFlags.Debug,
 		},
 		PrivateNet:           flagPrivateNet,
 		SpawnMetadataService: flagSpawnMetadataService,

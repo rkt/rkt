@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/networking/netinfo"
@@ -677,6 +679,39 @@ func (c *container) getPID() (int, error) {
 	return c.readIntFromFile("pid")
 }
 
+// getStage1Hash returns the hash of the stage1 image used in this container
+func (c *container) getStage1Hash() (*types.Hash, error) {
+	s1IDb, err := c.readFile(common.Stage1IDFilename)
+	if err != nil {
+		return nil, err
+	}
+	s1img, err := types.NewHash(string(s1IDb))
+	if err != nil {
+		return nil, err
+	}
+
+	return s1img, nil
+}
+
+// getAppsHashes returns a list of the app hashes in the container
+func (c *container) getAppsHashes() ([]types.Hash, error) {
+	crmb, err := c.readFile("container")
+	if err != nil {
+		return nil, err
+	}
+	var crm *schema.ContainerRuntimeManifest
+	if err = json.Unmarshal(crmb, &crm); err != nil {
+		return nil, err
+	}
+
+	var imgs []types.Hash
+	for _, app := range crm.Apps {
+		imgs = append(imgs, app.Image.ID)
+	}
+
+	return imgs, nil
+}
+
 // getDirNames returns the list of names from a container's directory
 func (c *container) getDirNames(path string) ([]string, error) {
 	dir, err := c.openFile(path, syscall.O_RDONLY|syscall.O_DIRECTORY)
@@ -699,14 +734,17 @@ func (c *container) getAppCount() (int, error) {
 		return -1, fmt.Errorf("error: only prepared containers can get their app count")
 	}
 
-	appsPath := common.AppImagesPath(".")
-
-	lapps, err := c.getDirNames(appsPath)
+	b, err := ioutil.ReadFile(common.ContainerManifestPath(c.path()))
 	if err != nil {
-		return -1, fmt.Errorf("error getting the list of names from %q: %v", appsPath, err)
+		return -1, fmt.Errorf("error reading container manifest: %v", err)
 	}
 
-	return len(lapps), nil
+	m := schema.ContainerRuntimeManifest{}
+	if err = m.UnmarshalJSON(b); err != nil {
+		return -1, fmt.Errorf("unable to load manifest: %v", err)
+	}
+
+	return len(m.Apps), nil
 }
 
 // getExitStatuses returns a map of the statuses of the container.
