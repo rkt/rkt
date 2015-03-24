@@ -15,16 +15,21 @@
 package main
 
 import (
+	"flag"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/version"
 )
 
-var cmdVersion = &Command{
-	Name:        "version",
-	Description: "Print the version and exit",
-	Summary:     "Print the version and exit",
-	Run:         runVersion,
-}
+var (
+	cmdVersion = &Command{
+		Name:        "version",
+		Description: "Print the version and exit",
+		Summary:     "Print the version and exit",
+		Run:         runVersion,
+		Flags:       &versionFlags,
+	}
+	versionFlags flag.FlagSet
+)
 
 func init() {
 	commands = append(commands, cmdVersion)

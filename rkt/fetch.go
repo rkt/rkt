@@ -15,6 +15,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -47,7 +48,9 @@ var (
 		Summary: "Fetch image(s) and store them in the local cache",
 		Usage:   "IMAGE_URL...",
 		Run:     runFetch,
+		Flags:   &fetchFlags,
 	}
+	fetchFlags flag.FlagSet
 )
 
 func init() {

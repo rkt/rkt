@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -46,6 +47,7 @@ var (
 		Summary: "Run metadata service",
 		Usage:   "[--src-addr CIDR] [--listen-port PORT] [--no-idle]",
 		Run:     runMetadataService,
+		Flags:   &metadataServiceFlags,
 	}
 )
 
@@ -55,8 +57,9 @@ var (
 	errPodNotFound = errors.New("pod not found")
 	errAppNotFound = errors.New("app not found")
 
-	flagListenPort int
-	flagNoIdle     bool
+	flagListenPort       int
+	flagNoIdle           bool
+	metadataServiceFlags flag.FlagSet
 
 	exitCh = make(chan os.Signal, 1)
 )
@@ -67,8 +70,8 @@ const (
 
 func init() {
 	commands = append(commands, cmdMetadataService)
-	cmdMetadataService.Flags.IntVar(&flagListenPort, "listen-port", common.MetadataServicePort, "listen port")
-	cmdMetadataService.Flags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last pod is unregistered")
+	metadataServiceFlags.IntVar(&flagListenPort, "listen-port", common.MetadataServicePort, "listen port")
+	metadataServiceFlags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last pod is unregistered")
 }
 
 type mdsPod struct {

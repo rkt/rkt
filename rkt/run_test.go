@@ -15,12 +15,14 @@
 package main
 
 import (
+	"flag"
 	"reflect"
 	"strings"
 	"testing"
 )
 
 func TestParseAppArgs(t *testing.T) {
+	flags := flag.NewFlagSet("test", flag.ExitOnError)
 	tests := []struct {
 		in     string
 		images []string
@@ -60,7 +62,7 @@ func TestParseAppArgs(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		gf, gi, err := parseAppArgs(strings.Split(tt.in, " "))
+		gf, gi, err := parseAppArgs(strings.Split(tt.in, " "), flags)
 		if gerr := (err != nil); gerr != tt.werr {
 			t.Errorf("#%d: err==%v, want errstate %t", i, err, tt.werr)
 		}
