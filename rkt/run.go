@@ -114,14 +114,13 @@ func runRun(args []string) (exit int) {
 		return 1
 	}
 
-	s1img, err := findImage(flagStage1Image, ds, nil, false)
+	s1img, err := findImage(flagStage1Image, "", ds, nil, false)
 	if err != nil {
 		stderr("Error finding stage1 image %q: %v", flagStage1Image, err)
 		return 1
 	}
 
-	ks := getKeystore()
-	if err := Apps.findImages(ds, ks); err != nil {
+	if err := Apps.findImages(ds, getKeystore()); err != nil {
 		stderr("%v", err)
 		return 1
 	}
