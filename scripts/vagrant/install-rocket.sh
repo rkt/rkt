@@ -16,6 +16,8 @@ if ! [ -d app-spec ]; then
   popd
 fi
 
+which unsquash || sudo apt-get install -y squashfs-tools
+
 pushd /vagrant
 ./build
 
