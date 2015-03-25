@@ -15,13 +15,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
+	"syscall"
 	"time"
 
 	"github.com/coreos/rocket/common"
@@ -30,6 +33,11 @@ import (
 const retryCount = 3
 
 var retryPause = time.Second
+
+var errUnreachable = errors.New(`could not reach the metadata service.
+Make sure metadata service is currently running.
+For more information on running metadata service,
+see https://github.com/coreos/rocket/blob/master/Documentation/metadata-service.md`)
 
 func registerContainer(c *Container, ip net.IP) error {
 	uuid := c.UUID.String()
@@ -105,6 +113,14 @@ func httpRequest(method, pth string, body io.Reader) error {
 		default:
 			log.Print(err)
 			time.Sleep(retryPause)
+		}
+	}
+
+	if urlErr, ok := err.(*url.Error); ok {
+		if opErr, ok := urlErr.Err.(*net.OpError); ok {
+			if opErr.Err == syscall.ENOENT || opErr.Err == syscall.ENOTSOCK {
+				return errUnreachable
+			}
 		}
 	}
 
