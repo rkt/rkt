@@ -46,7 +46,7 @@ var (
 )
 
 type mdsContainer struct {
-	manifest schema.ContainerRuntimeManifest
+	manifest schema.PodManifest
 	apps     map[string]*schema.ImageManifest
 	ip       string
 }
@@ -253,7 +253,7 @@ func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, c *mdsCon
 	w.Write([]byte(v))
 }
 
-func handleContainerManifest(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
+func handlePodManifest(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "application/json")
@@ -274,7 +274,7 @@ func handleContainerUID(w http.ResponseWriter, r *http.Request, c *mdsContainer)
 	w.Write([]byte(uid))
 }
 
-func mergeAppAnnotations(im *schema.ImageManifest, cm *schema.ContainerRuntimeManifest) types.Annotations {
+func mergeAppAnnotations(im *schema.ImageManifest, cm *schema.PodManifest) types.Annotations {
 	merged := types.Annotations{}
 
 	for _, annot := range im.Annotations {
@@ -449,9 +449,9 @@ func logReq(h func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 
 func makeHandlers() http.Handler {
 	r := mux.NewRouter()
-	r.HandleFunc("/containers/", logReq(handleRegisterContainer)).Methods("POST")
-	r.HandleFunc("/containers/{uid}", logReq(handleUnregisterContainer)).Methods("DELETE")
-	r.HandleFunc("/containers/{uid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
+	r.HandleFunc("/pods/", logReq(handleRegisterContainer)).Methods("POST")
+	r.HandleFunc("/pods/{uid}", logReq(handleUnregisterContainer)).Methods("DELETE")
+	r.HandleFunc("/pods/{uid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
 
 	acRtr := r.Headers("Metadata-Flavor", "AppContainer").
 		PathPrefix("/acMetadata/v1").Subrouter()
@@ -460,7 +460,7 @@ func makeHandlers() http.Handler {
 
 	mr.HandleFunc("/container/annotations/", logReq(containerGet(handleContainerAnnotations)))
 	mr.HandleFunc("/container/annotations/{name}", logReq(containerGet(handleContainerAnnotation)))
-	mr.HandleFunc("/container/manifest", logReq(containerGet(handleContainerManifest)))
+	mr.HandleFunc("/container/manifest", logReq(containerGet(handlePodManifest)))
 	mr.HandleFunc("/container/uid", logReq(containerGet(handleContainerUID)))
 
 	mr.HandleFunc("/apps/{app:.*}/annotations/", logReq(appGet(handleAppAnnotations)))

@@ -43,14 +43,14 @@ type container struct {
 	nets        []netinfo.NetInfo // list of networks (name, IP, iface) this container is using
 
 	isEmbryo         bool // directory starts as embryo before entering preparing state, serves as stage for acquiring lock before rename to prepare/.
-	isPreparing      bool // when locked at containers/prepare/$uuid the container is actively being prepared
-	isAbortedPrepare bool // when unlocked at containers/prepare/$uuid the container never finished preparing
-	isPrepared       bool // when at containers/prepared/$uuid the container is prepared, serves as stage for acquiring lock before rename to run/.
-	isExited         bool // when locked at containers/run/$uuid the container is running, when unlocked it's exited.
-	isExitedGarbage  bool // when unlocked at containers/exited-garbage/$uuid the container is exited and is garbage
-	isExitedDeleting bool // when locked at containers/exited-garbage/$uuid the container is exited, garbage, and is being actively deleted
-	isGarbage        bool // when unlocked at containers/garbage/$uuid the container is garbage that never ran
-	isDeleting       bool // when locked at containers/garbage/$uuid the container is garbage that never ran, and is being actively deleted
+	isPreparing      bool // when locked at pods/prepare/$uuid the container is actively being prepared
+	isAbortedPrepare bool // when unlocked at pods/prepare/$uuid the container never finished preparing
+	isPrepared       bool // when at pods/prepared/$uuid the container is prepared, serves as stage for acquiring lock before rename to run/.
+	isExited         bool // when locked at pods/run/$uuid the container is running, when unlocked it's exited.
+	isExitedGarbage  bool // when unlocked at pods/exited-garbage/$uuid the container is exited and is garbage
+	isExitedDeleting bool // when locked at pods/exited-garbage/$uuid the container is exited, garbage, and is being actively deleted
+	isGarbage        bool // when unlocked at pods/garbage/$uuid the container is garbage that never ran
+	isDeleting       bool // when locked at pods/garbage/$uuid the container is garbage that never ran, and is being actively deleted
 	isGone           bool // when a container no longer can be located at its uuid anywhere XXX: only set by refreshState()
 }
 
@@ -162,7 +162,7 @@ func newContainer() (*container, error) {
 	}
 
 	// At this point we we have:
-	// /var/lib/rkt/containers/prepare/$uuid << exclusively locked to indicate "preparing"
+	// /var/lib/rkt/pods/prepare/$uuid << exclusively locked to indicate "preparing"
 
 	return c, nil
 }
@@ -695,17 +695,17 @@ func (c *container) getStage1Hash() (*types.Hash, error) {
 
 // getAppsHashes returns a list of the app hashes in the container
 func (c *container) getAppsHashes() ([]types.Hash, error) {
-	crmb, err := c.readFile("container")
+	pmb, err := c.readFile("pod")
 	if err != nil {
 		return nil, err
 	}
-	var crm *schema.ContainerRuntimeManifest
-	if err = json.Unmarshal(crmb, &crm); err != nil {
+	var pm *schema.PodManifest
+	if err = json.Unmarshal(pmb, &pm); err != nil {
 		return nil, err
 	}
 
 	var imgs []types.Hash
-	for _, app := range crm.Apps {
+	for _, app := range pm.Apps {
 		imgs = append(imgs, app.Image.ID)
 	}
 
@@ -734,12 +734,12 @@ func (c *container) getAppCount() (int, error) {
 		return -1, fmt.Errorf("error: only prepared containers can get their app count")
 	}
 
-	b, err := ioutil.ReadFile(common.ContainerManifestPath(c.path()))
+	b, err := ioutil.ReadFile(common.PodManifestPath(c.path()))
 	if err != nil {
 		return -1, fmt.Errorf("error reading container manifest: %v", err)
 	}
 
-	m := schema.ContainerRuntimeManifest{}
+	m := schema.PodManifest{}
 	if err = m.UnmarshalJSON(b); err != nil {
 		return -1, fmt.Errorf("unable to load manifest: %v", err)
 	}

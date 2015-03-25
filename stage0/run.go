@@ -64,19 +64,19 @@ type PrepareConfig struct {
 // configuration parameters needed by Run
 type RunConfig struct {
 	CommonConfig
-	PrivateNet           bool // container should have its own network stack
+	PrivateNet           bool // pod should have its own network stack
 	SpawnMetadataService bool // launch metadata service
 	LockFd               int  // lock file descriptor
-	Interactive          bool // whether the container is interactive or not
+	Interactive          bool // whether the pod is interactive or not
 }
 
 // configuration shared by both Run and Prepare
 type CommonConfig struct {
-	Store         *cas.Store   // store containing all of the configured application images
-	Stage1Image   types.Hash   // stage1 image containing usable /init and /enter entrypoints
-	Images        []types.Hash // application images
-	ContainersDir string       // root directory for rocket containers
-	Debug         bool
+	Store       *cas.Store   // store containing all of the configured application images
+	Stage1Image types.Hash   // stage1 image containing usable /init and /enter entrypoints
+	Images      []types.Hash // application images
+	PodsDir     string       // root directory for rocket pods
+	Debug       bool
 }
 
 func init() {
@@ -106,7 +106,7 @@ func MergeEnvs(appEnv *types.Environment, inheritEnv bool, setEnv []string) {
 	}
 }
 
-// Prepare sets up a container based on the given config.
+// Prepare sets up a pod based on the given config.
 func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	if cfg.Debug {
 		log.SetOutput(os.Stderr)
@@ -119,9 +119,8 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		return fmt.Errorf("error preparing stage1: %v", err)
 	}
 
-	cm := schema.ContainerRuntimeManifest{
-		ACKind: "ContainerRuntimeManifest",
-		UUID:   *uuid, // TODO(vc): later appc spec omits uuid from the crm, this is a temp hack.
+	cm := schema.PodManifest{
+		ACKind: "PodManifest",
 		Apps:   make(schema.AppList, 0),
 	}
 
@@ -146,7 +145,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 			// TODO(vc): leverage RuntimeApp.Name for disambiguating the apps
 			Name: am.Name,
 			Image: schema.RuntimeImage{
-				Name: am.Name,
+				Name: &am.Name,
 				ID:   img,
 			},
 			Annotations: am.Annotations,
@@ -172,13 +171,13 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 
 	cdoc, err := json.Marshal(cm)
 	if err != nil {
-		return fmt.Errorf("error marshalling container manifest: %v", err)
+		return fmt.Errorf("error marshalling pod manifest: %v", err)
 	}
 
-	log.Printf("Writing container manifest")
-	fn := common.ContainerManifestPath(dir)
+	log.Printf("Writing pod manifest")
+	fn := common.PodManifestPath(dir)
 	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
-		return fmt.Errorf("error writing container manifest: %v", err)
+		return fmt.Errorf("error writing pod manifest: %v", err)
 	}
 
 	fn = path.Join(dir, common.Stage1IDFilename)
@@ -187,7 +186,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	}
 
 	if useOverlay {
-		// mark the container as prepared with overlay
+		// mark the pod as prepared with overlay
 		f, err := os.Create(filepath.Join(dir, overlayFilename))
 		if err != nil {
 			return fmt.Errorf("error writing overlay marker file: %v", err)
@@ -227,14 +226,14 @@ func preparedWithOverlay(dir string) (bool, error) {
 	}
 
 	if !supportsOverlay() {
-		return false, fmt.Errorf("the container was prepared with overlay but overlay is not supported")
+		return false, fmt.Errorf("the pod was prepared with overlay but overlay is not supported")
 	}
 
 	return true, nil
 }
 
 // Run mounts the right overlay filesystems and actually runs the prepared
-// container by exec()ing the stage1 init inside the container filesystem.
+// pod by exec()ing the stage1 init inside the pod filesystem.
 func Run(cfg RunConfig, dir string) {
 	useOverlay, err := preparedWithOverlay(dir)
 	if err != nil {
@@ -243,7 +242,7 @@ func Run(cfg RunConfig, dir string) {
 
 	if useOverlay {
 		// create a separate mount namespace so the overlay mounts are
-		// unmounted when exiting the container
+		// unmounted when exiting the pod
 		if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
 			log.Fatalf("error unsharing: %v", err)
 		}
@@ -434,7 +433,7 @@ func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string) erro
 
 	log.Printf("Writing image manifest")
 	if err := ioutil.WriteFile(filepath.Join(dest, "manifest"), mb, 0700); err != nil {
-		return fmt.Errorf("error writing container manifest: %v", err)
+		return fmt.Errorf("error writing pod manifest: %v", err)
 	}
 
 	destRootfs := path.Join(dest, "rootfs")

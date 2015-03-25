@@ -54,8 +54,8 @@ func Stage1ManifestPath(root string) string {
 	return filepath.Join(Stage1ImagePath(root), aci.ManifestFile)
 }
 
-// ContainerManifestPath returns the path in root to the Container Runtime Manifest
-func ContainerManifestPath(root string) string {
+// PodManifestPath returns the path in root to the Pod Manifest
+func PodManifestPath(root string) string {
 	return filepath.Join(root, "container")
 }
 
