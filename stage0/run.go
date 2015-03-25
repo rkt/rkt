@@ -47,10 +47,6 @@ import (
 	"github.com/coreos/rocket/version"
 )
 
-const (
-	overlayFilename = "overlay-prepared"
-)
-
 // configuration parameters required by Prepare
 type PrepareConfig struct {
 	CommonConfig
@@ -187,7 +183,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 
 	if useOverlay {
 		// mark the pod as prepared with overlay
-		f, err := os.Create(filepath.Join(dir, overlayFilename))
+		f, err := os.Create(filepath.Join(dir, common.OverlayPreparedFilename))
 		if err != nil {
 			return fmt.Errorf("error writing overlay marker file: %v", err)
 		}
@@ -217,7 +213,7 @@ func supportsOverlay() bool {
 }
 
 func preparedWithOverlay(dir string) (bool, error) {
-	_, err := os.Stat(filepath.Join(dir, overlayFilename))
+	_, err := os.Stat(filepath.Join(dir, common.OverlayPreparedFilename))
 	if os.IsNotExist(err) {
 		return false, nil
 	}
