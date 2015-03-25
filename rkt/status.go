@@ -27,8 +27,9 @@ var (
 )
 
 const (
-	statusDir     = "stage1/rootfs/rkt/status"
-	cmdStatusName = "status"
+	overlayStatusDirTemplate = "overlay/%s/upper/rkt/status"
+	regularStatusDir         = "stage1/rootfs/rkt/status"
+	cmdStatusName            = "status"
 )
 
 func init() {

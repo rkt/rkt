@@ -747,8 +747,31 @@ func (c *container) getAppCount() (int, error) {
 	return len(m.Apps), nil
 }
 
+func (c *container) getStatusDir() (string, error) {
+	_, err := c.openFile(common.OverlayPreparedFilename, syscall.O_RDONLY)
+	if err == nil {
+		// the container uses overlay. Since the mount is in another mount
+		// namespace (or gone), return the status directory from the overlay
+		// upper layer
+		stage1Hash, err := c.getStage1Hash()
+		if err != nil {
+			return "", err
+		}
+		overlayStatusDir := fmt.Sprintf(overlayStatusDirTemplate, stage1Hash.String())
+
+		return overlayStatusDir, nil
+	}
+
+	// not using overlay, return the regular status directory
+	return regularStatusDir, nil
+}
+
 // getExitStatuses returns a map of the statuses of the container.
 func (c *container) getExitStatuses() (map[string]int, error) {
+	statusDir, err := c.getStatusDir()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get status directory: %v", err)
+	}
 	ls, err := c.getDirNames(statusDir)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read status directory: %v", err)
