@@ -123,8 +123,8 @@ func runValidate(args []string) (exit int) {
 			case "ImageManifest":
 				m := schema.ImageManifest{}
 				err = m.UnmarshalJSON(b)
-			case "ContainerRuntimeManifest":
-				m := schema.ContainerRuntimeManifest{}
+			case "PodManifest":
+				m := schema.PodManifest{}
 				err = m.UnmarshalJSON(b)
 			default:
 				// Should not get here; schema.Kind unmarshal should fail

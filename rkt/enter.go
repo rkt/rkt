@@ -111,20 +111,20 @@ func runEnter(args []string) (exit int) {
 
 // getAppImageID returns the image id to enter
 // If one was supplied in the flags then it's simply returned
-// If the CRM contains a single image, that image's id is returned
-// If the CRM has multiple images, the ids and names are printed and an error is returned
+// If the PM contains a single image, that image's id is returned
+// If the PM has multiple images, the ids and names are printed and an error is returned
 func getAppImageID(c *container) (*types.Hash, error) {
 	if !flagAppImageID.Empty() {
 		return &flagAppImageID, nil
 	}
 
 	// figure out the image id, or show a list if multiple are present
-	b, err := ioutil.ReadFile(common.ContainerManifestPath(c.path()))
+	b, err := ioutil.ReadFile(common.PodManifestPath(c.path()))
 	if err != nil {
 		return nil, fmt.Errorf("error reading container manifest: %v", err)
 	}
 
-	m := schema.ContainerRuntimeManifest{}
+	m := schema.PodManifest{}
 	if err = m.UnmarshalJSON(b); err != nil {
 		return nil, fmt.Errorf("unable to load manifest: %v", err)
 	}

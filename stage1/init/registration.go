@@ -26,13 +26,13 @@ import (
 )
 
 func registerContainer(c *Container, ip net.IP) error {
-	cmf, err := os.Open(common.ContainerManifestPath(c.Root))
+	cmf, err := os.Open(common.PodManifestPath(c.Root))
 	if err != nil {
 		return fmt.Errorf("failed opening runtime manifest: %v", err)
 	}
 	defer cmf.Close()
 
-	pth := fmt.Sprintf("/containers/?ip=%v", ip.To4().String())
+	pth := fmt.Sprintf("/pods/?ip=%v", ip.To4().String())
 	if err := httpRequest("POST", pth, cmf); err != nil {
 		return fmt.Errorf("failed to register container with metadata svc: %v", err)
 	}

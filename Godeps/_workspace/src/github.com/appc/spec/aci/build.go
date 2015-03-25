@@ -35,6 +35,9 @@ func BuildWalker(root string, aw ArchiveWriter) filepath.WalkFunc {
 		link := ""
 		var r io.Reader
 		switch info.Mode() & os.ModeType {
+		case os.ModeSocket:
+			return nil
+		case os.ModeNamedPipe:
 		case os.ModeCharDevice:
 		case os.ModeDevice:
 		case os.ModeDir:

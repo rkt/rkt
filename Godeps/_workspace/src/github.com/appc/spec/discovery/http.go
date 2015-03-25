@@ -21,6 +21,7 @@ var (
 
 func init() {
 	t := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
 		Dial: func(n, a string) (net.Conn, error) {
 			return net.DialTimeout(n, a, defaultDialTimeout)
 		},

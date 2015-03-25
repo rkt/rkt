@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/coreos/rocket",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.4.1",
 	"Packages": [
 		"./..."
 	],
@@ -25,33 +25,33 @@
 		},
 		{
 			"ImportPath": "github.com/appc/spec/aci",
-			"Comment": "v0.4.0-10-g24650793e48a",
-			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
+			"Comment": "v0.5.0",
+			"Rev": "cffea391f209199b873af3f8a71a98ac658f073e"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/actool",
-			"Comment": "v0.4.0-10-g24650793e48a",
-			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
+			"Comment": "v0.5.0",
+			"Rev": "cffea391f209199b873af3f8a71a98ac658f073e"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/discovery",
-			"Comment": "v0.4.0-10-g24650793e48a",
-			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
+			"Comment": "v0.5.0",
+			"Rev": "cffea391f209199b873af3f8a71a98ac658f073e"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/acirenderer",
-			"Comment": "v0.4.0-10-g24650793e48a",
-			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
+			"Comment": "v0.5.0",
+			"Rev": "cffea391f209199b873af3f8a71a98ac658f073e"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/tarheader",
-			"Comment": "v0.4.0-10-g24650793e48a",
-			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
+			"Comment": "v0.5.0",
+			"Rev": "cffea391f209199b873af3f8a71a98ac658f073e"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema",
-			"Comment": "v0.4.0-10-g24650793e48a",
-			"Rev": "24650793e48a5a7fd04bf680e25c5ae192e4241d"
+			"Comment": "v0.5.0",
+			"Rev": "cffea391f209199b873af3f8a71a98ac658f073e"
 		},
 		{
 			"ImportPath": "github.com/camlistore/lock",

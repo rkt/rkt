@@ -48,12 +48,12 @@ func runList(args []string) (exit int) {
 	}
 
 	if err := walkContainers(includeMostDirs, func(c *container) {
-		m := schema.ContainerRuntimeManifest{}
+		m := schema.PodManifest{}
 		app_zero := ""
 
 		if !c.isPreparing && !c.isAbortedPrepare && !c.isExitedDeleting {
 			// TODO(vc): we should really hold a shared lock here to prevent gc of the container
-			manifFile, err := c.readFile(common.ContainerManifestPath(""))
+			manifFile, err := c.readFile(common.PodManifestPath(""))
 			if err != nil {
 				stderr("Unable to read manifest: %v", err)
 				return

@@ -2,7 +2,7 @@
 // manifests in the App Container Specification. The manifests are canonically
 // represented in their respective structs:
 //   - `ImageManifest`
-//   - `ContainerRuntimeManifest`
+//   - `PodManifest`
 //
 // Validation is performed through serialization: if a blob of JSON data will
 // unmarshal to one of the *Manifests, it is considered a valid implementation

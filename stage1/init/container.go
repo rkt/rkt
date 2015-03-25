@@ -33,16 +33,16 @@ import (
 	"github.com/coreos/rocket/common"
 )
 
-// Container encapsulates a ContainerRuntimeManifest and ImageManifests
+// Container encapsulates a PodManifest and ImageManifests
 type Container struct {
 	Root               string // root directory where the container will be located
-	Manifest           *schema.ContainerRuntimeManifest
+	Manifest           *schema.PodManifest
 	Apps               map[string]*schema.ImageManifest
 	MetadataServiceURL string
 	Networks           []string
 }
 
-// LoadContainer loads a Container Runtime Manifest (as prepared by stage0) and
+// LoadContainer loads a Pod Manifest (as prepared by stage0) and
 // its associated Application Manifests, under $root/stage1/opt/stage1/$apphash
 func LoadContainer(root string) (*Container, error) {
 	c := &Container{
@@ -50,14 +50,14 @@ func LoadContainer(root string) (*Container, error) {
 		Apps: make(map[string]*schema.ImageManifest),
 	}
 
-	buf, err := ioutil.ReadFile(common.ContainerManifestPath(c.Root))
+	buf, err := ioutil.ReadFile(common.PodManifestPath(c.Root))
 	if err != nil {
-		return nil, fmt.Errorf("failed reading container runtime manifest: %v", err)
+		return nil, fmt.Errorf("failed reading pod manifest: %v", err)
 	}
 
-	cm := &schema.ContainerRuntimeManifest{}
+	cm := &schema.PodManifest{}
 	if err := json.Unmarshal(buf, cm); err != nil {
-		return nil, fmt.Errorf("failed unmarshalling container runtime manifest: %v", err)
+		return nil, fmt.Errorf("failed unmarshalling pod manifest: %v", err)
 	}
 	c.Manifest = cm
 

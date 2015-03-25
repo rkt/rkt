@@ -14,8 +14,8 @@ Execution with Rocket is divided into several distinct stages.
 
 The first stage is the actual `rkt` binary itself. When running a container, this binary is responsible for performing a number of initial preparatory tasks:
 - Fetching the specified ACIs, including the stage 1 ACI of --stage1-image if specified.
-- Generating a Container UUID
-- Generating a Container Runtime Manifest
+- Generating a Pod UUID
+- Generating a Pod Manifest
 - Creating a filesystem for the container
 - Setting up stage 1 and stage 2 directories in the filesystem
 - Unpacking the stage 1 ACI into the container filesystem
@@ -55,7 +55,7 @@ At this point the stage0 execs `/stage1/rootfs/init` with the current working di
 
 The next stage is a binary that the user trusts to set up cgroups, execute processes, and perform other operations as root on the host. This stage has the responsibility of taking the execution group filesystem that was created by stage 0 and creating the necessary cgroups, namespaces and mounts to launch the execution group:
 
-- Generate systemd unit files from the Image and Container Runtime Manifests. The Image Manifest defines the default `exec` specifications of each application; the Container Runtime Manifest defines the ordering of the units, as well as any `exec` overrides.
+- Generate systemd unit files from the Image and Pod Manifests. The Image Manifest defines the default `exec` specifications of each application; the Pod Manifest defines the ordering of the units, as well as any `exec` overrides.
 - (containing, respectively, the exec specifications of each container and the ordering given by the user)
 - Set up any external volumes (undefined at this point)
 - nspawn attaching to the bridge and launch the execution group systemd
