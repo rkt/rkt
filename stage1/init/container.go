@@ -288,7 +288,14 @@ func (c *Container) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManif
 		}
 		opt := make([]string, 4)
 
-		if mp.ReadOnly {
+		// If the readonly flag in the pod manifest is not nil,
+		// then use it to override the readonly flag in the image manifest.
+		readOnly := mp.ReadOnly
+		if vol.ReadOnly != nil {
+			readOnly = *vol.ReadOnly
+		}
+
+		if readOnly {
 			opt[0] = "--bind-ro="
 		} else {
 			opt[0] = "--bind="
