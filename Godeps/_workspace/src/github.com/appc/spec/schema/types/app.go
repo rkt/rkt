@@ -16,7 +16,7 @@ type App struct {
 	Environment      Environment    `json:"environment,omitempty"`
 	MountPoints      []MountPoint   `json:"mountPoints,omitempty"`
 	Ports            []Port         `json:"ports,omitempty"`
-	Isolators        []Isolator     `json:"isolators,omitempty"`
+	Isolators        Isolators      `json:"isolators,omitempty"`
 }
 
 // app is a model to facilitate extra validation during the

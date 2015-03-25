@@ -6,6 +6,8 @@ import (
 )
 
 func TestVolumeFromString(t *testing.T) {
+	trueVar := true
+	falseVar := false
 	tests := []struct {
 		s string
 		v Volume
@@ -16,7 +18,16 @@ func TestVolumeFromString(t *testing.T) {
 				Name:     "foobar",
 				Kind:     "host",
 				Source:   "/tmp",
-				ReadOnly: false,
+				ReadOnly: nil,
+			},
+		},
+		{
+			"foobar,kind=host,source=/tmp,readOnly=false",
+			Volume{
+				Name:     "foobar",
+				Kind:     "host",
+				Source:   "/tmp",
+				ReadOnly: &falseVar,
 			},
 		},
 		{
@@ -25,14 +36,15 @@ func TestVolumeFromString(t *testing.T) {
 				Name:     "foobar",
 				Kind:     "host",
 				Source:   "/tmp",
-				ReadOnly: true,
+				ReadOnly: &trueVar,
 			},
 		},
 		{
 			"foobar,kind=empty",
 			Volume{
-				Name: "foobar",
-				Kind: "empty",
+				Name:     "foobar",
+				Kind:     "empty",
+				ReadOnly: nil,
 			},
 		},
 		{
@@ -40,7 +52,7 @@ func TestVolumeFromString(t *testing.T) {
 			Volume{
 				Name:     "foobar",
 				Kind:     "empty",
-				ReadOnly: true,
+				ReadOnly: &trueVar,
 			},
 		},
 	}

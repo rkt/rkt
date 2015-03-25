@@ -6,3 +6,8 @@ type Port struct {
 	Port            uint   `json:"port"`
 	SocketActivated bool   `json:"socketActivated"`
 }
+
+type ExposedPort struct {
+	Name     ACName `json:"name"`
+	HostPort uint   `json:"hostPort"`
+}
