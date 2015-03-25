@@ -13,7 +13,6 @@ const PodManifestKind = types.ACKind("PodManifest")
 type PodManifest struct {
 	ACVersion   types.SemVer        `json:"acVersion"`
 	ACKind      types.ACKind        `json:"acKind"`
-	UUID        types.UUID          `json:"uuid"`
 	Apps        AppList             `json:"apps"`
 	Volumes     []types.Volume      `json:"volumes"`
 	Isolators   []types.Isolator    `json:"isolators"`

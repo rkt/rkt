@@ -74,6 +74,7 @@ type RunConfig struct {
 type CommonConfig struct {
 	Store       *cas.Store   // store containing all of the configured application images
 	Stage1Image types.Hash   // stage1 image containing usable /init and /enter entrypoints
+	UUID        *types.UUID  // UUID of the pod
 	Images      []types.Hash // application images
 	PodsDir     string       // root directory for rocket pods
 	Debug       bool
@@ -304,6 +305,7 @@ func Run(cfg RunConfig, dir string) {
 	if cfg.Interactive {
 		args = append(args, "--interactive")
 	}
+	args = append(args, cfg.UUID.String())
 
 	// make sure the lock fd stays open across exec
 	if err := sys.CloseOnExec(cfg.LockFd, false); err != nil {
