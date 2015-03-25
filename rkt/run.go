@@ -78,6 +78,7 @@ func init() {
 	runFlags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	runFlags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 	runFlags.BoolVar(&flagInteractive, "interactive", false, "run pod interactively")
+	runFlags.Var((*appAsc)(&Apps), "signature", "local signature file to use in validating the preceding image")
 	flagVolumes = volumeList{}
 }
 
