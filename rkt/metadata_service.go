@@ -20,6 +20,7 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -30,6 +31,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
@@ -47,17 +49,11 @@ var (
 	}
 )
 
-type mdsContainer struct {
-	uuid     types.UUID
-	manifest schema.PodManifest
-	apps     map[string]*schema.ImageManifest
-	ip       string
-}
-
 var (
-	containerByIP  = make(map[string]*mdsContainer)
-	containerByUID = make(map[types.UUID]*mdsContainer)
 	hmacKey        [sha512.Size]byte
+	pods           = newPodStore()
+	errPodNotFound = errors.New("pod not found")
+	errAppNotFound = errors.New("app not found")
 
 	flagListenPort int
 	flagNoIdle     bool
@@ -75,6 +71,109 @@ func init() {
 	cmdMetadataService.Flags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last container is unregistered")
 }
 
+type mdsPod struct {
+	uuid     types.UUID
+	ip       string
+	manifest *schema.PodManifest
+	apps     map[string]*schema.ImageManifest
+}
+
+type podStore struct {
+	byIP   map[string]*mdsPod
+	byUUID map[types.UUID]*mdsPod
+	mutex  sync.Mutex
+}
+
+func newPodStore() *podStore {
+	return &podStore{
+		byIP:   make(map[string]*mdsPod),
+		byUUID: make(map[types.UUID]*mdsPod),
+	}
+}
+
+func (ps *podStore) addPod(u *types.UUID, ip string, manifest *schema.PodManifest) {
+	ps.mutex.Lock()
+	defer ps.mutex.Unlock()
+
+	p := &mdsPod{
+		uuid:     *u,
+		ip:       ip,
+		manifest: manifest,
+		apps:     make(map[string]*schema.ImageManifest),
+	}
+
+	ps.byUUID[*u] = p
+	ps.byIP[ip] = p
+}
+
+func (ps *podStore) addApp(u *types.UUID, app string, manifest *schema.ImageManifest) error {
+	ps.mutex.Lock()
+	defer ps.mutex.Unlock()
+
+	p, ok := ps.byUUID[*u]
+	if !ok {
+		return errPodNotFound
+	}
+
+	p.apps[app] = manifest
+
+	return nil
+}
+
+func (ps *podStore) remove(u *types.UUID) (bool, error) {
+	ps.mutex.Lock()
+	defer ps.mutex.Unlock()
+
+	p, ok := ps.byUUID[*u]
+	if !ok {
+		return false, errPodNotFound
+	}
+
+	delete(ps.byUUID, *u)
+	delete(ps.byIP, p.ip)
+
+	return len(ps.byUUID) == 0, nil
+}
+
+func (ps *podStore) getUUID(ip string) (*types.UUID, error) {
+	ps.mutex.Lock()
+	defer ps.mutex.Unlock()
+
+	p, ok := ps.byIP[ip]
+	if !ok {
+		return nil, errPodNotFound
+	}
+	return &p.uuid, nil
+}
+
+func (ps *podStore) getPodManifest(ip string) (*schema.PodManifest, error) {
+	ps.mutex.Lock()
+	defer ps.mutex.Unlock()
+
+	p, ok := ps.byIP[ip]
+	if !ok {
+		return nil, errPodNotFound
+	}
+	return p.manifest, nil
+}
+
+func (ps *podStore) getManifests(ip, an string) (*schema.PodManifest, *schema.ImageManifest, error) {
+	ps.mutex.Lock()
+	defer ps.mutex.Unlock()
+
+	p, ok := ps.byIP[ip]
+	if !ok {
+		return nil, nil, errPodNotFound
+	}
+
+	im, ok := p.apps[an]
+	if !ok {
+		return nil, nil, errAppNotFound
+	}
+
+	return p.manifest, im, nil
+}
+
 func queryValue(u *url.URL, key string) string {
 	vals, ok := u.Query()[key]
 	if !ok || len(vals) != 1 {
@@ -88,31 +187,27 @@ func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 
 	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "UUID is missing or malformed: %v", err)
 		return
 	}
 
-	containerIP := queryValue(r.URL, "ip")
-	if containerIP == "" {
+	ip := queryValue(r.URL, "ip")
+	if ip == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "ip missing")
 		return
 	}
 
-	c := &mdsContainer{
-		apps: make(map[string]*schema.ImageManifest),
-		ip:   containerIP,
-	}
+	pm := &schema.PodManifest{}
 
-	if err := json.NewDecoder(r.Body).Decode(&c.manifest); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(pm); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "JSON-decoding failed: %v", err)
 		return
 	}
 
-	containerByIP[containerIP] = c
-	containerByUID[*uuid] = c
+	pods.addPod(uuid, ip, pm)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -122,23 +217,21 @@ func handleUnregisterContainer(w http.ResponseWriter, r *http.Request) {
 
 	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "UUID is missing or malformed: %v", err)
 		return
 	}
 
-	c, ok := containerByUID[*uuid]
-	if !ok {
+	lastOne, err := pods.remove(uuid)
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, "Container with given UUID not found")
+		fmt.Fprint(w, err)
 		return
 	}
 
-	delete(containerByUID, *uuid)
-	delete(containerByIP, c.ip)
 	w.WriteHeader(http.StatusOK)
 
-	if flagNoIdle && len(containerByUID) == 0 {
+	if flagNoIdle && lastOne {
 		// TODO(eyakubovich): this is very racy
 		// It's possible for last container to get unregistered
 		// and svc gets flagged to shutdown. Then another container
@@ -158,71 +251,84 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 
 	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "UUID is missing or mulformed: %v", err)
 		return
 	}
 
-	c, ok := containerByUID[*uuid]
-	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprint(w, "Container with given UUID not found")
+	an := mux.Vars(r)["app"]
+	if an == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "app missing")
 		return
 	}
 
-	an := mux.Vars(r)["app"]
-
-	app := &schema.ImageManifest{}
-	if err := json.NewDecoder(r.Body).Decode(&app); err != nil {
+	im := &schema.ImageManifest{}
+	if err := json.NewDecoder(r.Body).Decode(im); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "JSON-decoding failed: %v", err)
 		return
 	}
 
-	c.apps[an] = app
+	err = pods.addApp(uuid, an, im)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "Pod with given UUID not found")
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
 
-func containerGet(h func(w http.ResponseWriter, r *http.Request, c *mdsContainer)) http.HandlerFunc {
+func podGet(h func(http.ResponseWriter, *http.Request, *schema.PodManifest)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		remoteIP := strings.Split(r.RemoteAddr, ":")[0]
-		c, ok := containerByIP[remoteIP]
-		if !ok {
+		ip := strings.Split(r.RemoteAddr, ":")[0]
+
+		pm, err := pods.getPodManifest(ip)
+		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "container by remoteIP (%v) not found", remoteIP)
+			fmt.Fprintln(w, err)
 			return
 		}
 
-		h(w, r, c)
+		h(w, r, pm)
 	}
 }
 
-func appGet(h func(w http.ResponseWriter, r *http.Request, c *mdsContainer, _ *schema.ImageManifest)) http.HandlerFunc {
-	return containerGet(func(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
-		appname := mux.Vars(r)["app"]
+func appGet(h func(http.ResponseWriter, *http.Request, *schema.PodManifest, *schema.ImageManifest)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ip := strings.Split(r.RemoteAddr, ":")[0]
 
-		if im, ok := c.apps[appname]; ok {
-			h(w, r, c, im)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, "App (%v) not found", appname)
+		an := mux.Vars(r)["app"]
+		if an == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "app missing")
+			return
 		}
-	})
+
+		pm, im, err := pods.getManifests(ip, an)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintln(w, err)
+			return
+		}
+
+		h(w, r, pm, im)
+	}
 }
 
-func handleContainerAnnotations(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
+func handlePodAnnotations(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
-	for k := range c.manifest.Annotations {
+	for k := range pm.Annotations {
 		fmt.Fprintln(w, k)
 	}
 }
 
-func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
+func handlePodAnnotation(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest) {
 	defer r.Body.Close()
 
 	k, err := types.NewACName(mux.Vars(r)["name"])
@@ -232,7 +338,7 @@ func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, c *mdsCon
 		return
 	}
 
-	v, ok := c.manifest.Annotations.Get(k.String())
+	v, ok := pm.Annotations.Get(k.String())
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Container annotation (%v) not found", k)
@@ -244,25 +350,32 @@ func handleContainerAnnotation(w http.ResponseWriter, r *http.Request, c *mdsCon
 	w.Write([]byte(v))
 }
 
-func handlePodManifest(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
+func handlePodManifest(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	if err := json.NewEncoder(w).Encode(c.manifest); err != nil {
+	if err := json.NewEncoder(w).Encode(pm); err != nil {
 		log.Print(err)
 	}
 }
 
-func handleContainerUUID(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
+func handlePodUUID(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	uuid := c.uuid.String()
+	ip := strings.Split(r.RemoteAddr, ":")[0]
+
+	uuid, err := pods.getUUID(ip)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintln(w, err)
+		return
+	}
 
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(uuid))
+	w.Write([]byte(uuid.String()))
 }
 
 func mergeAppAnnotations(im *schema.ImageManifest, cm *schema.PodManifest) types.Annotations {
@@ -281,18 +394,18 @@ func mergeAppAnnotations(im *schema.ImageManifest, cm *schema.PodManifest) types
 	return merged
 }
 
-func handleAppAnnotations(w http.ResponseWriter, r *http.Request, c *mdsContainer, im *schema.ImageManifest) {
+func handleAppAnnotations(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
-	for _, annot := range mergeAppAnnotations(im, &c.manifest) {
+	for _, annot := range mergeAppAnnotations(im, pm) {
 		fmt.Fprintln(w, string(annot.Name))
 	}
 }
 
-func handleAppAnnotation(w http.ResponseWriter, r *http.Request, c *mdsContainer, im *schema.ImageManifest) {
+func handleAppAnnotation(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
 	k, err := types.NewACName(mux.Vars(r)["name"])
@@ -302,7 +415,7 @@ func handleAppAnnotation(w http.ResponseWriter, r *http.Request, c *mdsContainer
 		return
 	}
 
-	merged := mergeAppAnnotations(im, &c.manifest)
+	merged := mergeAppAnnotations(im, pm)
 
 	v, ok := merged.Get(k.String())
 	if !ok {
@@ -316,7 +429,7 @@ func handleAppAnnotation(w http.ResponseWriter, r *http.Request, c *mdsContainer
 	w.Write([]byte(v))
 }
 
-func handleImageManifest(w http.ResponseWriter, r *http.Request, c *mdsContainer, im *schema.ImageManifest) {
+func handleImageManifest(w http.ResponseWriter, r *http.Request, _ *schema.PodManifest, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "application/json")
@@ -327,12 +440,12 @@ func handleImageManifest(w http.ResponseWriter, r *http.Request, c *mdsContainer
 	}
 }
 
-func handleAppID(w http.ResponseWriter, r *http.Request, c *mdsContainer, im *schema.ImageManifest) {
+func handleAppID(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	a := c.manifest.Apps.Get(im.Name)
+	a := pm.Apps.Get(im.Name)
 	if a == nil {
 		panic("could not find app in manifest!")
 	}
@@ -349,11 +462,12 @@ func initCrypto() error {
 func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	remoteIP := strings.Split(r.RemoteAddr, ":")[0]
-	c, ok := containerByIP[remoteIP]
-	if !ok {
+	ip := strings.Split(r.RemoteAddr, ":")[0]
+
+	uuid, err := pods.getUUID(ip)
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Metadata by remoteIP (%v) not found", remoteIP)
+		fmt.Fprintln(w, err)
 		return
 	}
 
@@ -366,7 +480,7 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 
 	// HMAC(UID:content)
 	h := hmac.New(sha512.New, hmacKey[:])
-	h.Write(c.uuid[:])
+	h.Write((*uuid)[:])
 	h.Write([]byte(content))
 
 	// Send back HMAC as the signature
@@ -380,7 +494,7 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	uid, err := types.NewUUID(r.FormValue("uid"))
+	uuid, err := types.NewUUID(r.FormValue("uid"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "uid field missing or malformed: %v", err)
@@ -402,7 +516,7 @@ func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h := hmac.New(sha512.New, hmacKey[:])
-	h.Write(uid[:])
+	h.Write((*uuid)[:])
 	h.Write([]byte(content))
 
 	if hmac.Equal(sig, h.Sum(nil)) {
@@ -484,10 +598,10 @@ func runPublicServer(l net.Listener) {
 
 	mr := r.Methods("GET").Subrouter()
 
-	mr.HandleFunc("/pod/annotations/", logReq(containerGet(handleContainerAnnotations)))
-	mr.HandleFunc("/pod/annotations/{name}", logReq(containerGet(handleContainerAnnotation)))
-	mr.HandleFunc("/pod/manifest", logReq(containerGet(handlePodManifest)))
-	mr.HandleFunc("/pod/uuid", logReq(containerGet(handleContainerUUID)))
+	mr.HandleFunc("/pod/annotations/", logReq(podGet(handlePodAnnotations)))
+	mr.HandleFunc("/pod/annotations/{name}", logReq(podGet(handlePodAnnotation)))
+	mr.HandleFunc("/pod/manifest", logReq(podGet(handlePodManifest)))
+	mr.HandleFunc("/pod/uuid", logReq(handlePodUUID))
 
 	mr.HandleFunc("/apps/{app:.*}/annotations/", logReq(appGet(handleAppAnnotations)))
 	mr.HandleFunc("/apps/{app:.*}/annotations/{name}", logReq(appGet(handleAppAnnotation)))
