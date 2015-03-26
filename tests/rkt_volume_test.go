@@ -35,12 +35,11 @@ var volTests = []struct {
 	},
 	// Check that we can read files from a volume (both ro and rw)
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_RW_READ_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RW_READ_FILE^"`,
 		`<<<host>>>`,
 	},
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_RO_READ_FILE^"`,
-		`<<<host>>>`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1^VOL_RO_READ_FILE^"`,
 	},
 	// Check that we can write to files in the ACI
 	{
@@ -49,16 +48,16 @@ var volTests = []struct {
 	},
 	// Check that we can write files to a volume (both ro and rw)
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=2 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_RW_WRITE_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=2 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RW_WRITE_FILE^"`,
 		`<<<2>>>`,
 	},
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=3 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_RO_WRITE_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=3 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_WRITE_FILE^"`,
 		`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
 	},
 	// Check that the volume still contain the file previously written
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_RO_READ_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
 		`<<<2>>>`,
 	},
 }

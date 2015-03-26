@@ -58,6 +58,8 @@ func init() {
 	cmdPrepare.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
 	cmdPrepare.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--quiet' and '--no-overlay' will have effects")
 	cmdPrepare.Flags().Var((*appExec)(&rktApps), "exec", "override the exec command for the preceding image")
+	prepareFlags.Var((*appsVolume)(&rktApps), "volume", "volumes to make available in the pod")
+	prepareFlags.Var((*appMount)(&rktApps), "mount", "mount point binding a volume to a path within an app")
 
 	// Disable interspersed flags to stop parsing after the first non flag
 	// argument. This is need to permit to correctly handle
@@ -163,7 +165,6 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	if len(flagPodManifest) > 0 {
 		pcfg.PodManifest = flagPodManifest
 	} else {
-		pcfg.Volumes = []types.Volume(flagVolumes)
 		pcfg.Ports = []types.ExposedPort(flagPorts)
 		pcfg.InheritEnv = flagInheritEnv
 		pcfg.ExplicitEnv = flagExplicitEnv.Strings()

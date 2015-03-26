@@ -69,7 +69,6 @@ type PrepareConfig struct {
 	Apps         *apps.Apps          // apps to prepare
 	InheritEnv   bool                // inherit parent environment into apps
 	ExplicitEnv  []string            // always set these environment variables for all the apps
-	Volumes      []types.Volume      // list of volumes that rkt can provide to applications
 	Ports        []types.ExposedPort // list of ports that rkt will expose on the host
 	UseOverlay   bool                // prepare pod with overlay fs
 	PodManifest  string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
@@ -145,6 +144,14 @@ func imageNameToAppName(name types.ACIdentifier) (*types.ACName, error) {
 	return types.MustACName(sn), nil
 }
 
+// MergeMounts combines the global and per-app mount slices
+func MergeMounts(mounts []schema.Mount, appMounts []schema.Mount) []schema.Mount {
+	ml := mounts
+	ml = append(ml, appMounts...)
+	// TODO(vc): deduplicate mountpoint collisions? (prioritize appMounts?)
+	return ml
+}
+
 // generatePodManifest creates the pod manifest from the command line input.
 // It returns the pod manifest as []byte on success.
 // This is invoked if no pod manifest is specified at the command line.
@@ -189,6 +196,7 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 				ID:   img,
 			},
 			Annotations: am.Annotations,
+			Mounts:      MergeMounts(cfg.Apps.Mounts, app.Mounts),
 		}
 
 		if execOverride := app.Exec; execOverride != "" {
@@ -217,7 +225,7 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 
 	// TODO(jonboulle): check that app mountpoint expectations are
 	// satisfied here, rather than waiting for stage1
-	pm.Volumes = cfg.Volumes
+	pm.Volumes = cfg.Apps.Volumes
 	pm.Ports = cfg.Ports
 
 	pmb, err := json.Marshal(pm)

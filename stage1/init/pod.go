@@ -484,11 +484,6 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 
 	vols := make(map[types.ACName]types.Volume)
 
-	// TODO(philips): this is implicitly creating a mapping from MountPoint
-	// to volumes. This is a nice convenience for users but we will need to
-	// introduce a --mount flag so they can control which mountPoint maps to
-	// which volume.
-
 	sharedVolPath := common.SharedVolumesPath(p.Root)
 	if err := os.MkdirAll(sharedVolPath, sharedVolPerm); err != nil {
 		return nil, fmt.Errorf("could not create shared volumes directory: %v", err)
@@ -496,6 +491,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	if err := os.Chmod(sharedVolPath, sharedVolPerm); err != nil {
 		return nil, fmt.Errorf("could not change permissions of %q: %v", sharedVolPath, err)
 	}
+	// Here we bind the volumes to the mountpoints via runtime mounts (--mount)
 	for _, v := range p.Manifest.Volumes {
 		vols[v.Name] = v
 		if v.Kind == "empty" {
@@ -505,8 +501,16 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 		}
 	}
 
+	mnts := make(map[types.ACName]types.ACName)
+	for _, m := range ra.Mounts {
+		mnts[m.MountPoint] = m.Volume
+	}
+
 	for _, mp := range app.MountPoints {
-		key := mp.Name
+		key, ok := mnts[mp.Name]
+		if !ok {
+			return nil, fmt.Errorf("no mount for mountpoint %q in app %q", mp.Name, name)
+		}
 		vol, ok := vols[key]
 		if !ok {
 			catCmd := fmt.Sprintf("sudo rkt image cat-manifest --pretty-print %v", id)
@@ -515,10 +519,10 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 				volumeCmd += fmt.Sprintf("--volume %s,kind=host,source=/some/path ", mp.Name)
 			}
 
-			return nil, fmt.Errorf("no volume for mountpoint %q in app %q.\n"+
+			return nil, fmt.Errorf("no volume for mountpoint %q:%q in app %q.\n"+
 				"You can inspect the volumes with:\n\t%v\n"+
 				"App %q requires the following volumes:\n\t%v",
-				key, appName, catCmd, appName, volumeCmd)
+				mp.Name, key, appName, catCmd, appName, volumeCmd)
 		}
 		opt := make([]string, 4)
 
