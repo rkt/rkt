@@ -1,0 +1,13 @@
+[Unit]
+Description=Rocket metadata service socket
+PartOf=rkt-metadata.service
+
+[Socket]
+ListenStream=/run/rkt/metadata-svc.sock
+SocketMode=0660
+SocketUser=root
+SocketGroup=root
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target
