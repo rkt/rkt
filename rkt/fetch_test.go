@@ -33,6 +33,7 @@ import (
 	"github.com/coreos/rocket/pkg/keystore/keystoretest"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/discovery"
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 func TestNewDiscoveryApp(t *testing.T) {
@@ -51,7 +52,7 @@ func TestNewDiscoveryApp(t *testing.T) {
 			"foo.com/bar",
 			&discovery.App{
 				Name: "foo.com/bar",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"arch": defaultArch,
 					"os":   defaultOS,
 				},
@@ -62,7 +63,7 @@ func TestNewDiscoveryApp(t *testing.T) {
 			"www.abc.xyz/my/app,os=freebsd,arch=i386",
 			&discovery.App{
 				Name: "www.abc.xyz/my/app",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"arch": "i386",
 					"os":   "freebsd",
 				},
@@ -73,7 +74,7 @@ func TestNewDiscoveryApp(t *testing.T) {
 			"yes.com/no:v1.2.3",
 			&discovery.App{
 				Name: "yes.com/no",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"version": "v1.2.3",
 					"arch":    defaultArch,
 					"os":      defaultOS,
@@ -85,7 +86,7 @@ func TestNewDiscoveryApp(t *testing.T) {
 			"example.com/foo/haha,val=one",
 			&discovery.App{
 				Name: "example.com/foo/haha",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"val":  "one",
 					"arch": defaultArch,
 					"os":   defaultOS,
@@ -97,7 +98,7 @@ func TestNewDiscoveryApp(t *testing.T) {
 			"one.two/appname:three,os=four,foo=five,arch=six",
 			&discovery.App{
 				Name: "one.two/appname",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"version": "three",
 					"os":      "four",
 					"foo":     "five",

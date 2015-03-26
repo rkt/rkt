@@ -3,6 +3,8 @@ package discovery
 import (
 	"reflect"
 	"testing"
+
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 func TestNewAppFromString(t *testing.T) {
@@ -17,7 +19,7 @@ func TestNewAppFromString(t *testing.T) {
 
 			&App{
 				Name: "example.com/reduce-worker",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"version": "1.0.0",
 				},
 			},
@@ -28,7 +30,7 @@ func TestNewAppFromString(t *testing.T) {
 
 			&App{
 				Name: "example.com/reduce-worker",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"channel": "alpha",
 					"label":   "value",
 				},
