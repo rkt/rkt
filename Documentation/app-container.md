@@ -12,8 +12,8 @@ To validate that `rkt` successfully implements the ACE part of the spec, use the
 
 ```
 $ sudo rkt --insecure-skip-verify run --volume database,kind=host,source=/tmp
-	https://github.com/appc/spec/releases/download/v0.4.1/ace-validator-main.aci
-	https://github.com/appc/spec/releases/download/v0.4.1/ace-validator-sidekick.aci
+	https://github.com/appc/spec/releases/download/v0.5.1/ace-validator-main.aci
+	https://github.com/appc/spec/releases/download/v0.5.1/ace-validator-sidekick.aci
 ```
 
 [appc-repo]: https://github.com/appc/spec/
