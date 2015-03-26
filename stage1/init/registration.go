@@ -26,18 +26,19 @@ import (
 )
 
 func registerContainer(c *Container, ip net.IP) error {
+	uuid := c.UUID.String()
+
 	cmf, err := os.Open(common.PodManifestPath(c.Root))
 	if err != nil {
 		return fmt.Errorf("failed opening runtime manifest: %v", err)
 	}
 	defer cmf.Close()
 
-	pth := fmt.Sprintf("/pods/?ip=%v", ip.To4().String())
-	if err := httpRequest("POST", pth, cmf); err != nil {
+	pth := fmt.Sprintf("/pods/%v?ip=%v", uuid, ip.To4().String())
+	if err := httpRequest("PUT", pth, cmf); err != nil {
 		return fmt.Errorf("failed to register container with metadata svc: %v", err)
 	}
 
-	uid := c.Manifest.UUID.String()
 	for _, app := range c.Manifest.Apps {
 		ampath := common.ImageManifestPath(c.Root, app.Image.ID)
 		amf, err := os.Open(ampath)
@@ -46,7 +47,7 @@ func registerContainer(c *Container, ip net.IP) error {
 		}
 		defer amf.Close()
 
-		if err := registerApp(uid, app.Name.String(), amf); err != nil {
+		if err := registerApp(uuid, app.Name.String(), amf); err != nil {
 			fmt.Errorf("failed to register app with metadata svc: %v", err)
 		}
 	}
@@ -55,12 +56,12 @@ func registerContainer(c *Container, ip net.IP) error {
 }
 
 func unregisterContainer(c *Container) error {
-	pth := path.Join("/containers", c.Manifest.UUID.String())
+	pth := path.Join("/pods", c.UUID.String())
 	return httpRequest("DELETE", pth, nil)
 }
 
 func registerApp(uuid, app string, r io.Reader) error {
-	pth := path.Join("/containers", uuid, app)
+	pth := path.Join("/pods", uuid, app)
 	return httpRequest("PUT", pth, r)
 }
 

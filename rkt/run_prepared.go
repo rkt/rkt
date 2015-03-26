@@ -123,6 +123,7 @@ func runRunPrepared(args []string) (exit int) {
 		CommonConfig: stage0.CommonConfig{
 			Store:       ds,
 			Stage1Image: *s1img,
+			UUID:        c.uuid,
 			Images:      imgs,
 			Debug:       globalFlags.Debug,
 		},

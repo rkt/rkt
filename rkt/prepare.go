@@ -115,6 +115,7 @@ func runPrepare(args []string) (exit int) {
 			Store:       ds,
 			Debug:       globalFlags.Debug,
 			Stage1Image: *s1img,
+			UUID:        c.uuid,
 			Images:      imgs,
 		},
 		ExecAppends: appArgs,

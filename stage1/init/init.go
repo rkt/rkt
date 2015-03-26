@@ -28,6 +28,8 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+
 	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/networking"
 	"github.com/coreos/rocket/pkg/sys"
@@ -156,8 +158,14 @@ func withClearedCloExec(lfd int, f func() error) error {
 }
 
 func stage1() int {
+	uuid, err := types.NewUUID(flag.Arg(0))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "UUID is missing or malformed")
+		return 1
+	}
+
 	root := "."
-	c, err := LoadContainer(root)
+	c, err := LoadContainer(root, uuid)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load container: %v\n", err)
 		return 1
@@ -194,7 +202,7 @@ func stage1() int {
 		// careful not to make another local err variable.
 		// cmd.Run sets the one from parent scope
 		var n *networking.Networking
-		n, err = networking.Setup(root, c.Manifest.UUID)
+		n, err = networking.Setup(root, c.UUID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to setup network: %v\n", err)
 			return 6

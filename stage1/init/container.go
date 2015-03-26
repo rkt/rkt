@@ -36,6 +36,7 @@ import (
 // Container encapsulates a PodManifest and ImageManifests
 type Container struct {
 	Root               string // root directory where the container will be located
+	UUID               types.UUID
 	Manifest           *schema.PodManifest
 	Apps               map[string]*schema.ImageManifest
 	MetadataServiceURL string
@@ -44,9 +45,10 @@ type Container struct {
 
 // LoadContainer loads a Pod Manifest (as prepared by stage0) and
 // its associated Application Manifests, under $root/stage1/opt/stage1/$apphash
-func LoadContainer(root string) (*Container, error) {
+func LoadContainer(root string, uuid *types.UUID) (*Container, error) {
 	c := &Container{
 		Root: root,
+		UUID: *uuid,
 		Apps: make(map[string]*schema.ImageManifest),
 	}
 
@@ -330,7 +332,7 @@ func (c *Container) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManif
 // argument list ready to be executed
 func (c *Container) ContainerToNspawnArgs() ([]string, error) {
 	args := []string{
-		"--uuid=" + c.Manifest.UUID.String(),
+		"--uuid=" + c.UUID.String(),
 		"--directory=" + common.Stage1RootfsPath(c.Root),
 	}
 

@@ -46,6 +46,7 @@ var (
 )
 
 type mdsContainer struct {
+	uuid     types.UUID
 	manifest schema.PodManifest
 	apps     map[string]*schema.ImageManifest
 	ip       string
@@ -105,6 +106,13 @@ func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "UUID is missing or malformed: %v", err)
+		return
+	}
+
 	containerIP := queryValue(r.URL, "ip")
 	if containerIP == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -124,7 +132,7 @@ func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	containerByIP[containerIP] = c
-	containerByUID[c.manifest.UUID] = c
+	containerByUID[*uuid] = c
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -132,21 +140,21 @@ func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 func handleUnregisterContainer(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	uid, err := types.NewUUID(mux.Vars(r)["uid"])
+	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "UUID is missing or malformed: %v", err)
 		return
 	}
 
-	c, ok := containerByUID[*uid]
+	c, ok := containerByUID[*uuid]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, "Container with given UUID not found")
 		return
 	}
 
-	delete(containerByUID, *uid)
+	delete(containerByUID, *uuid)
 	delete(containerByIP, c.ip)
 	w.WriteHeader(http.StatusOK)
 
@@ -165,14 +173,14 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uid, err := types.NewUUID(mux.Vars(r)["uid"])
+	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "UUID is missing or mulformed: %v", err)
 		return
 	}
 
-	c, ok := containerByUID[*uid]
+	c, ok := containerByUID[*uuid]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, "Container with given UUID not found")
@@ -264,14 +272,14 @@ func handlePodManifest(w http.ResponseWriter, r *http.Request, c *mdsContainer) 
 	}
 }
 
-func handleContainerUID(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
+func handleContainerUUID(w http.ResponseWriter, r *http.Request, c *mdsContainer) {
 	defer r.Body.Close()
 
-	uid := c.manifest.UUID.String()
+	uuid := c.uuid.String()
 
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(uid))
+	w.Write([]byte(uuid))
 }
 
 func mergeAppAnnotations(im *schema.ImageManifest, cm *schema.PodManifest) types.Annotations {
@@ -375,7 +383,7 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 
 	// HMAC(UID:content)
 	h := hmac.New(sha512.New, hmacKey[:])
-	h.Write(c.manifest.UUID[:])
+	h.Write(c.uuid[:])
 	h.Write([]byte(content))
 
 	// Send back HMAC as the signature
@@ -449,27 +457,27 @@ func logReq(h func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 
 func makeHandlers() http.Handler {
 	r := mux.NewRouter()
-	r.HandleFunc("/pods/", logReq(handleRegisterContainer)).Methods("POST")
-	r.HandleFunc("/pods/{uid}", logReq(handleUnregisterContainer)).Methods("DELETE")
-	r.HandleFunc("/pods/{uid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
+	r.HandleFunc("/pods/{uuid}", logReq(handleRegisterContainer)).Methods("PUT")
+	r.HandleFunc("/pods/{uuid}", logReq(handleUnregisterContainer)).Methods("DELETE")
+	r.HandleFunc("/pods/{uuid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
 
 	acRtr := r.Headers("Metadata-Flavor", "AppContainer").
 		PathPrefix("/acMetadata/v1").Subrouter()
 
 	mr := acRtr.Methods("GET").Subrouter()
 
-	mr.HandleFunc("/container/annotations/", logReq(containerGet(handleContainerAnnotations)))
-	mr.HandleFunc("/container/annotations/{name}", logReq(containerGet(handleContainerAnnotation)))
-	mr.HandleFunc("/container/manifest", logReq(containerGet(handlePodManifest)))
-	mr.HandleFunc("/container/uid", logReq(containerGet(handleContainerUID)))
+	mr.HandleFunc("/pod/annotations/", logReq(containerGet(handleContainerAnnotations)))
+	mr.HandleFunc("/pod/annotations/{name}", logReq(containerGet(handleContainerAnnotation)))
+	mr.HandleFunc("/pod/manifest", logReq(containerGet(handlePodManifest)))
+	mr.HandleFunc("/pod/uuid", logReq(containerGet(handleContainerUUID)))
 
 	mr.HandleFunc("/apps/{app:.*}/annotations/", logReq(appGet(handleAppAnnotations)))
 	mr.HandleFunc("/apps/{app:.*}/annotations/{name}", logReq(appGet(handleAppAnnotation)))
 	mr.HandleFunc("/apps/{app:.*}/image/manifest", logReq(appGet(handleImageManifest)))
 	mr.HandleFunc("/apps/{app:.*}/image/id", logReq(appGet(handleAppID)))
 
-	acRtr.HandleFunc("/container/hmac/sign", logReq(handleContainerSign)).Methods("POST")
-	acRtr.HandleFunc("/container/hmac/verify", logReq(handleContainerVerify)).Methods("POST")
+	acRtr.HandleFunc("/pod/hmac/sign", logReq(handleContainerSign)).Methods("POST")
+	acRtr.HandleFunc("/pod/hmac/verify", logReq(handleContainerVerify)).Methods("POST")
 
 	return r
 }
