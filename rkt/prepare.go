@@ -114,13 +114,12 @@ func runPrepare(args []string) (exit int) {
 			Debug:       globalFlags.Debug,
 			Stage1Image: *s1img,
 			UUID:        p.uuid,
-			Images:      rktApps.GetImageIDs(),
 		},
-		ExecAppends: rktApps.GetArgs(),
 		Volumes:     []types.Volume(flagVolumes),
 		InheritEnv:  flagInheritEnv,
 		ExplicitEnv: flagExplicitEnv.Strings(),
 		UseOverlay:  !flagNoOverlay && common.SupportsOverlay(),
+		Apps:        &rktApps,
 	}
 
 	if err = stage0.Prepare(pcfg, p.path(), p.uuid); err != nil {

@@ -135,13 +135,12 @@ func runRun(args []string) (exit int) {
 		Store:       ds,
 		Stage1Image: *s1img,
 		UUID:        p.uuid,
-		Images:      rktApps.GetImageIDs(),
 		Debug:       globalFlags.Debug,
 	}
 
 	pcfg := stage0.PrepareConfig{
 		CommonConfig: cfg,
-		ExecAppends:  rktApps.GetArgs(),
+		Apps:         &rktApps,
 		Volumes:      []types.Volume(flagVolumes),
 		InheritEnv:   flagInheritEnv,
 		ExplicitEnv:  flagExplicitEnv.Strings(),
@@ -172,6 +171,7 @@ func runRun(args []string) (exit int) {
 		SpawnMetadataService: flagSpawnMetadataService,
 		LockFd:               lfd,
 		Interactive:          flagInteractive,
+		Images:               rktApps.GetImageIDs(),
 	}
 	stage0.Run(rcfg, p.path()) // execs, never returns
 

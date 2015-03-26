@@ -127,13 +127,13 @@ func runRunPrepared(args []string) (exit int) {
 			Store:       ds,
 			Stage1Image: *s1img,
 			UUID:        p.uuid,
-			Images:      imgs,
 			Debug:       globalFlags.Debug,
 		},
 		PrivateNet:           flagPrivateNet,
 		SpawnMetadataService: flagSpawnMetadataService,
 		LockFd:               lfd,
 		Interactive:          flagInteractive,
+		Images:               imgs,
 	}
 	stage0.Run(rcfg, p.path()) // execs, never returns
 	return 1
