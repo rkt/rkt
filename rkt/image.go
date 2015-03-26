@@ -21,20 +21,20 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/cas"
+	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
 )
 
 // findImages uses findImage to attain a list of image hashes using discovery if necessary
-func (al *rktApps) findImages(ds *cas.Store, ks *keystore.Keystore) error {
-	for _, app := range al.apps {
-		h, err := findImage(app.image, app.asc, ds, ks, true)
+func findImages(al *apps.Apps, ds *cas.Store, ks *keystore.Keystore) error {
+	return al.Walk(func(app *apps.App) error {
+		h, err := findImage(app.Image, app.Asc, ds, ks, true)
 		if err != nil {
 			return err
 		}
-		app.imageID = *h
-	}
-
-	return nil
+		app.ImageID = *h
+		return nil
+	})
 }
 
 // findImage will recognize a ACI hash and use that, import a local file, use

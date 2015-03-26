@@ -20,71 +20,18 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/common/apps"
 )
 
 var (
-	Apps rktApps // global apps
+	rktApps apps.Apps // global used by run/prepare for representing the apps expressed via the cli
 )
-
-type rktApp struct {
-	image string   // the image reference as supplied by the user on the cli
-	args  []string // any arguments the user supplied for this app
-	asc   string   // signature file override for image verification (if fetching occurs)
-
-	imageID types.Hash // resolved image identifier
-}
-
-// this needs to be a struct for the type defines like appAsc to work correctly with receivers
-type rktApps struct {
-	apps []rktApp
-}
-
-// reset creates a new slice for al.apps, needed by tests
-func (al *rktApps) reset() {
-	al.apps = make([]rktApp, 0)
-}
-
-// count returns the number of apps in al
-func (al *rktApps) count() int {
-	return len(al.apps)
-}
-
-// create creates a new app in al and returns a pointer to it
-func (al *rktApps) create(img string) {
-	al.apps = append(al.apps, rktApp{image: img})
-}
-
-// last returns a pointer to the top app in al
-func (al *rktApps) last() *rktApp {
-	if len(al.apps) == 0 {
-		return nil
-	} else {
-		return &al.apps[len(al.apps)-1]
-	}
-}
-
-// appendArg appends another argument onto the app
-func (a *rktApp) appendArg(arg string) {
-	a.args = append(a.args, arg)
-}
-
-// sets the ascii-armored signature file path for the app
-func (a *rktApp) setAsc(asc string) {
-	a.asc = asc
-}
-
-// gets the ascii-armored signature file path for the app
-func (a *rktApp) getAsc() string {
-	return a.asc
-}
 
 // parseApps looks through the args for support of per-app argument lists delimited with "--" and "---".
 // Between per-app argument lists flags.Parse() is called using the supplied FlagSet.
 // Anything not consumed by flags.Parse() and not found to be a per-app argument list is treated as an image.
-func (al *rktApps) parse(args []string, flags *flag.FlagSet) error {
-	al.reset()
-	nAppsLastAppArgs := al.count()
+func parseApps(al *apps.Apps, args []string, flags *flag.FlagSet) error {
+	nAppsLastAppArgs := al.Count()
 
 	// valid args here may either be:
 	// not-"--"; flags handled by *flags or an image specifier
@@ -101,7 +48,8 @@ func (al *rktApps) parse(args []string, flags *flag.FlagSet) error {
 				inAppArgs = false
 			default:
 				// keep appending to this app's args
-				al.last().appendArg(a)
+				app := al.Last()
+				app.Args = append(app.Args, a)
 			}
 		} else {
 			switch a {
@@ -110,13 +58,13 @@ func (al *rktApps) parse(args []string, flags *flag.FlagSet) error {
 				inAppArgs = true
 
 				// catch some likely mistakes
-				if nAppsLastAppArgs == al.count() {
-					if al.count() == 0 {
+				if nAppsLastAppArgs == al.Count() {
+					if al.Count() == 0 {
 						return fmt.Errorf("an image is required before any app arguments")
 					}
 					return fmt.Errorf("only one set of app arguments allowed per image")
 				}
-				nAppsLastAppArgs = al.count()
+				nAppsLastAppArgs = al.Count()
 			case "---":
 				// ignore triple dashes since they aren't images
 				// TODO(vc): I don't think ignoring this is appropriate, probably should error; it implies malformed argv.
@@ -139,7 +87,7 @@ func (al *rktApps) parse(args []string, flags *flag.FlagSet) error {
 					i += nInterFlags - 1 // - 1 because of i++
 				} else {
 					// flags.Parse() didn't want this arg, treat as image
-					al.create(a)
+					al.Create(a)
 				}
 			}
 		}
@@ -148,65 +96,30 @@ func (al *rktApps) parse(args []string, flags *flag.FlagSet) error {
 	return nil
 }
 
-// these convenience functions just return typed lists containing just the named member
-// TODO(vc): these probably go away when we just pass rktApps to stage0
-
-// getImages returns a list of the images in al, one per app.
-// The order reflects the app order in al.
-func (al *rktApps) getImages() []string {
-	il := []string{}
-	for _, a := range al.apps {
-		il = append(il, a.image)
-	}
-	return il
-}
-
-// getArgs returns a list of lists of arguments in al, one list of args per app.
-// The order reflects the app order in al.
-func (al *rktApps) getArgs() [][]string {
-	aal := [][]string{}
-	for _, a := range al.apps {
-		aal = append(aal, a.args)
-	}
-	return aal
-}
-
-// getImageIDs returns a list of the imageIDs in al, one per app.
-// The order reflects the app order in al.
-func (al *rktApps) getImageIDs() []types.Hash {
-	hl := []types.Hash{}
-	for _, a := range al.apps {
-		hl = append(hl, a.imageID)
-	}
-	return hl
-}
-
 // Value interface implementations for the various per-app fields we provide flags for
 
 // appAsc is for aci --signature overrides
-type appAsc rktApps
+type appAsc apps.Apps
 
 func (al *appAsc) Set(s string) error {
-	app := (*rktApps)(al).last()
+	app := (*apps.Apps)(al).Last()
 	if app == nil {
 		return fmt.Errorf("--signature must follow an image")
 	}
-
-	if app.getAsc() != "" {
+	if app.Asc != "" {
 		return fmt.Errorf("--signature specified multiple times for the same image")
 	}
-
-	app.setAsc(s)
+	app.Asc = s
 
 	return nil
 }
 
 func (al *appAsc) String() string {
-	app := (*rktApps)(al).last()
+	app := (*apps.Apps)(al).Last()
 	if app == nil {
 		return ""
 	}
-	return app.getAsc()
+	return app.Asc
 }
 
 // TODO(vc): --mount, --set-env, etc.

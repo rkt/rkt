@@ -67,12 +67,12 @@ func runPrepare(args []string) (exit int) {
 		}
 	}
 
-	if err = Apps.parse(args, &prepareFlags); err != nil {
+	if err = parseApps(&rktApps, args, &prepareFlags); err != nil {
 		stderr("prepare: error parsing app image arguments: %v", err)
 		return 1
 	}
 
-	if Apps.count() < 1 {
+	if rktApps.Count() < 1 {
 		stderr("prepare: Must provide at least one image")
 		return 1
 	}
@@ -97,7 +97,7 @@ func runPrepare(args []string) (exit int) {
 		return 1
 	}
 
-	if err := Apps.findImages(ds, getKeystore()); err != nil {
+	if err := findImages(&rktApps, ds, getKeystore()); err != nil {
 		stderr("%v", err)
 		return 1
 	}
@@ -114,9 +114,9 @@ func runPrepare(args []string) (exit int) {
 			Debug:       globalFlags.Debug,
 			Stage1Image: *s1img,
 			UUID:        p.uuid,
-			Images:      Apps.getImageIDs(),
+			Images:      rktApps.GetImageIDs(),
 		},
-		ExecAppends: Apps.getArgs(),
+		ExecAppends: rktApps.GetArgs(),
 		Volumes:     []types.Volume(flagVolumes),
 		InheritEnv:  flagInheritEnv,
 		ExplicitEnv: flagExplicitEnv.Strings(),

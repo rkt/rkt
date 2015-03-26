@@ -62,9 +62,10 @@ func TestParseAppArgs(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		err := Apps.parse(strings.Split(tt.in, " "), flags)
-		ga := Apps.getArgs()
-		gi := Apps.getImages()
+		rktApps.Reset()
+		err := parseApps(&rktApps, strings.Split(tt.in, " "), flags)
+		ga := rktApps.GetArgs()
+		gi := rktApps.GetImages()
 		if gerr := (err != nil); gerr != tt.werr {
 			t.Errorf("#%d: err==%v, want errstate %t", i, err, tt.werr)
 		}

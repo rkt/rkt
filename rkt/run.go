@@ -78,7 +78,7 @@ func init() {
 	runFlags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	runFlags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 	runFlags.BoolVar(&flagInteractive, "interactive", false, "run pod interactively")
-	runFlags.Var((*appAsc)(&Apps), "signature", "local signature file to use in validating the preceding image")
+	runFlags.Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 	flagVolumes = volumeList{}
 }
 
@@ -97,13 +97,13 @@ func runRun(args []string) (exit int) {
 		}
 	}
 
-	err := Apps.parse(args, &runFlags)
+	err := parseApps(&rktApps, args, &runFlags)
 	if err != nil {
 		stderr("run: error parsing app image arguments: %v", err)
 		return 1
 	}
 
-	if Apps.count() < 1 {
+	if rktApps.Count() < 1 {
 		stderr("run: must provide at least one image")
 		return 1
 	}
@@ -120,7 +120,7 @@ func runRun(args []string) (exit int) {
 		return 1
 	}
 
-	if err := Apps.findImages(ds, getKeystore()); err != nil {
+	if err := findImages(&rktApps, ds, getKeystore()); err != nil {
 		stderr("%v", err)
 		return 1
 	}
@@ -135,13 +135,13 @@ func runRun(args []string) (exit int) {
 		Store:       ds,
 		Stage1Image: *s1img,
 		UUID:        p.uuid,
-		Images:      Apps.getImageIDs(),
+		Images:      rktApps.GetImageIDs(),
 		Debug:       globalFlags.Debug,
 	}
 
 	pcfg := stage0.PrepareConfig{
 		CommonConfig: cfg,
-		ExecAppends:  Apps.getArgs(),
+		ExecAppends:  rktApps.GetArgs(),
 		Volumes:      []types.Volume(flagVolumes),
 		InheritEnv:   flagInheritEnv,
 		ExplicitEnv:  flagExplicitEnv.Strings(),
