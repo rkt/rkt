@@ -91,3 +91,14 @@ func (l Labels) Get(name string) (val string, ok bool) {
 	}
 	return "", false
 }
+
+func LabelsFromMap(labelsMap map[ACName]string) (Labels, error) {
+	labels := Labels{}
+	for n, v := range labelsMap {
+		labels = append(labels, Label{Name: n, Value: v})
+	}
+	if err := labels.assertValid(); err != nil {
+		return nil, err
+	}
+	return labels, nil
+}

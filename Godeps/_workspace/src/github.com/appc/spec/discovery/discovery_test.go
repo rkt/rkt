@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"testing"
+
+	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 func fakeHTTPGet(filename string, failures int) func(uri string) (*http.Response, error) {
@@ -65,7 +67,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			true,
 			App{
 				Name: "example.com/myapp",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"version": "1.0.0",
 					"os":      "linux",
 					"arch":    "amd64",
@@ -88,7 +90,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			true,
 			App{
 				Name: "example.com/myapp/foobar",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"version": "1.0.0",
 					"os":      "linux",
 					"arch":    "amd64",
@@ -111,7 +113,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			false,
 			App{
 				Name: "example.com/myapp/foobar/bazzer",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"version": "1.0.0",
 					"os":      "linux",
 					"arch":    "amd64",
@@ -128,7 +130,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			true,
 			App{
 				Name: "example.com/myapp",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"version": "1.0.0",
 				},
 			},
@@ -147,7 +149,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			false,
 			App{
 				Name:   "example.com/myapp",
-				Labels: map[string]string{},
+				Labels: map[types.ACName]string{},
 			},
 			[]ACIEndpoint{
 				ACIEndpoint{
@@ -163,7 +165,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			false,
 			App{
 				Name: "example.com/myapp",
-				Labels: map[string]string{
+				Labels: map[types.ACName]string{
 					"name":    "labelcalledname",
 					"version": "1.0.0",
 				},

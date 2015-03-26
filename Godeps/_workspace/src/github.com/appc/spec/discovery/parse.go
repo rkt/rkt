@@ -10,12 +10,12 @@ import (
 
 type App struct {
 	Name   types.ACName
-	Labels map[string]string
+	Labels map[types.ACName]string
 }
 
-func NewApp(name string, labels map[string]string) (*App, error) {
+func NewApp(name string, labels map[types.ACName]string) (*App, error) {
 	if labels == nil {
-		labels = make(map[string]string, 0)
+		labels = make(map[types.ACName]string, 0)
 	}
 	acn, err := types.NewACName(name)
 	if err != nil {
@@ -35,7 +35,7 @@ func NewApp(name string, labels map[string]string) (*App, error) {
 func NewAppFromString(app string) (*App, error) {
 	var (
 		name   string
-		labels map[string]string
+		labels map[types.ACName]string
 	)
 
 	app = strings.Replace(app, ":", ",version=", -1)
@@ -44,7 +44,7 @@ func NewAppFromString(app string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	labels = make(map[string]string, 0)
+	labels = make(map[types.ACName]string, 0)
 	for key, val := range v {
 		if len(val) > 1 {
 			return nil, fmt.Errorf("label %s with multiple values %q", key, val)
@@ -53,7 +53,11 @@ func NewAppFromString(app string) (*App, error) {
 			name = val[0]
 			continue
 		}
-		labels[key] = val[0]
+		labelName, err := types.NewACName(key)
+		if err != nil {
+			return nil, err
+		}
+		labels[*labelName] = val[0]
 	}
 	a, err := NewApp(name, labels)
 	if err != nil {
