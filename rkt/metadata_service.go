@@ -27,8 +27,11 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -61,7 +64,7 @@ var (
 	flagSrcAddrs   string
 	flagNoIdle     bool
 
-	exitCh chan bool
+	exitCh = make(chan os.Signal, 1)
 )
 
 const (
@@ -75,7 +78,7 @@ func init() {
 	cmdMetadataService.Flags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last container is unregistered")
 }
 
-func modifyIPTables(action, port string) error {
+func modifyIPTables(action string) error {
 	return exec.Command(
 		"iptables",
 		"-t", "nat",
@@ -84,7 +87,7 @@ func modifyIPTables(action, port string) error {
 		"-d", common.MetadataServiceIP,
 		"--dport", strconv.Itoa(common.MetadataServicePubPort),
 		"-j", "REDIRECT",
-		"--to-port", port,
+		"--to-port", strconv.Itoa(flagListenPort),
 	).Run()
 }
 
@@ -98,13 +101,6 @@ func queryValue(u *url.URL, key string) string {
 
 func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-
-	remoteIP := strings.Split(r.RemoteAddr, ":")[0]
-	if _, ok := containerByIP[remoteIP]; ok {
-		// not allowed from container IP
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
 
 	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
 	if err != nil {
@@ -159,19 +155,22 @@ func handleUnregisterContainer(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if flagNoIdle && len(containerByUID) == 0 {
-		exitCh <- true
+		// TODO(eyakubovich): this is very racy
+		// It's possible for last container to get unregistered
+		// and svc gets flagged to shutdown. Then another container
+		// starts to launch, sees that port is in use and doesn't
+		// start metadata svc only for this one to exit a moment later.
+		// However, --no-idle is meant for demos and having a single
+		// container spawn up (via --spawn-metadata-svc). The design
+		// of metadata svc is also likely to change as we convert it
+		// to be backed by persistent storage.
+		// wait for signal and exit
+		close(exitCh)
 	}
 }
 
 func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-
-	remoteIP := strings.Split(r.RemoteAddr, ":")[0]
-	if _, ok := containerByIP[remoteIP]; ok {
-		// not allowed from container IP
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
 
 	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
 	if err != nil {
@@ -358,7 +357,7 @@ func handleAppID(w http.ResponseWriter, r *http.Request, c *mdsContainer, im *sc
 
 func initCrypto() error {
 	if n, err := rand.Reader.Read(hmacKey[:]); err != nil || n != len(hmacKey) {
-		return fmt.Errorf("failed to generate HMAC Key")
+		return fmt.Errorf("Failed to generate HMAC Key")
 	}
 	return nil
 }
@@ -455,34 +454,8 @@ func logReq(h func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 	}
 }
 
-func makeHandlers() http.Handler {
-	r := mux.NewRouter()
-	r.HandleFunc("/pods/{uuid}", logReq(handleRegisterContainer)).Methods("PUT")
-	r.HandleFunc("/pods/{uuid}", logReq(handleUnregisterContainer)).Methods("DELETE")
-	r.HandleFunc("/pods/{uuid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
-
-	acRtr := r.Headers("Metadata-Flavor", "AppContainer").
-		PathPrefix("/acMetadata/v1").Subrouter()
-
-	mr := acRtr.Methods("GET").Subrouter()
-
-	mr.HandleFunc("/pod/annotations/", logReq(containerGet(handleContainerAnnotations)))
-	mr.HandleFunc("/pod/annotations/{name}", logReq(containerGet(handleContainerAnnotation)))
-	mr.HandleFunc("/pod/manifest", logReq(containerGet(handlePodManifest)))
-	mr.HandleFunc("/pod/uuid", logReq(containerGet(handleContainerUUID)))
-
-	mr.HandleFunc("/apps/{app:.*}/annotations/", logReq(appGet(handleAppAnnotations)))
-	mr.HandleFunc("/apps/{app:.*}/annotations/{name}", logReq(appGet(handleAppAnnotation)))
-	mr.HandleFunc("/apps/{app:.*}/image/manifest", logReq(appGet(handleImageManifest)))
-	mr.HandleFunc("/apps/{app:.*}/image/id", logReq(appGet(handleAppID)))
-
-	acRtr.HandleFunc("/pod/hmac/sign", logReq(handleContainerSign)).Methods("POST")
-	acRtr.HandleFunc("/pod/hmac/verify", logReq(handleContainerVerify)).Methods("POST")
-
-	return r
-}
-
-func getListener() (net.Listener, error) {
+// unixListener returns the listener used for registrations (over unix sock)
+func unixListener() (net.Listener, error) {
 	s := os.Getenv("LISTEN_FDS")
 	if s != "" {
 		// socket activated
@@ -496,65 +469,92 @@ func getListener() (net.Listener, error) {
 
 		return net.FileListener(os.NewFile(uintptr(listenFdsStart), "listen"))
 	} else {
-		return net.Listen("tcp4", fmt.Sprintf(":%v", flagListenPort))
+		dir := filepath.Dir(common.MetadataServiceRegSock)
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to create %v: %v", dir, err)
+		}
+
+		return net.ListenUnix("unix", &net.UnixAddr{
+			Net:  "unix",
+			Name: common.MetadataServiceRegSock,
+		})
 	}
 }
 
-func cleanup(port string) {
-	if err := modifyIPTables("-D", port); err != nil {
-		log.Printf("Error cleaning up iptables: %v", err)
+func runRegistrationServer(l net.Listener) {
+	r := mux.NewRouter()
+	r.HandleFunc("/pods/{uuid}", logReq(handleRegisterContainer)).Methods("PUT")
+	r.HandleFunc("/pods/{uuid}", logReq(handleUnregisterContainer)).Methods("DELETE")
+	r.HandleFunc("/pods/{uuid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
+
+	if err := http.Serve(l, r); err != nil {
+		stderr("Error serving registration HTTP: %v", err)
 	}
+	close(exitCh)
+}
+
+func runPublicServer(l net.Listener) {
+	r := mux.NewRouter().Headers("Metadata-Flavor", "AppContainer").
+		PathPrefix("/acMetadata/v1").Subrouter()
+
+	mr := r.Methods("GET").Subrouter()
+
+	mr.HandleFunc("/pod/annotations/", logReq(containerGet(handleContainerAnnotations)))
+	mr.HandleFunc("/pod/annotations/{name}", logReq(containerGet(handleContainerAnnotation)))
+	mr.HandleFunc("/pod/manifest", logReq(containerGet(handlePodManifest)))
+	mr.HandleFunc("/pod/uuid", logReq(containerGet(handleContainerUUID)))
+
+	mr.HandleFunc("/apps/{app:.*}/annotations/", logReq(appGet(handleAppAnnotations)))
+	mr.HandleFunc("/apps/{app:.*}/annotations/{name}", logReq(appGet(handleAppAnnotation)))
+	mr.HandleFunc("/apps/{app:.*}/image/manifest", logReq(appGet(handleImageManifest)))
+	mr.HandleFunc("/apps/{app:.*}/image/id", logReq(appGet(handleAppID)))
+
+	r.HandleFunc("/pod/hmac/sign", logReq(handleContainerSign)).Methods("POST")
+	r.HandleFunc("/pod/hmac/verify", logReq(handleContainerVerify)).Methods("POST")
+
+	if err := http.Serve(l, r); err != nil {
+		stderr("Error serving container HTTP: %v", err)
+	}
+	close(exitCh)
 }
 
 func runMetadataService(args []string) (exit int) {
 	log.Print("Metadata service starting...")
 
-	l, err := getListener()
+	unixl, err := unixListener()
 	if err != nil {
-		log.Printf("Error getting listener: %v", err)
-		return
+		stderr(err.Error())
+		return 1
 	}
+	defer unixl.Close()
 
-	initCrypto()
-
-	port := strings.Split(l.Addr().String(), ":")[1]
-
-	if flagNoIdle {
-		// TODO(eyakubovich): this is very racy
-		// It's possible for last container to get unregistered
-		// and svc gets flagged to shutdown. Then another container
-		// starts to launch, sees that port is in use and doesn't
-		// start metadata svc only for this one to exit a moment later.
-		// However, --no-idle is meant for demos and having a single
-		// container spawn up (via --spawn-metadata-svc). The design
-		// of metadata svc is also likely to change as we convert it
-		// to be backed by persistent storage.
-		exitCh = make(chan bool, 1)
-		// wait for signal and exit
-		go func() {
-			<-exitCh
-			cleanup(port)
-			os.Exit(0)
-		}()
+	tcpl, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: flagListenPort})
+	if err != nil {
+		stderr("Error listening on port %v: %v", flagListenPort, err)
+		return 1
 	}
+	defer tcpl.Close()
 
-	if err := modifyIPTables("-A", port); err != nil {
-		log.Printf("Error setting up iptables: %v", err)
+	if err := initCrypto(); err != nil {
+		stderr(err.Error())
 		return 1
 	}
 
-	srv := http.Server{
-		Handler: makeHandlers(),
+	if err := modifyIPTables("-A"); err != nil {
+		stderr("Error setting up iptables: %v", err)
+		return 1
 	}
+	defer modifyIPTables("-D")
+
+	go runRegistrationServer(unixl)
+	go runPublicServer(tcpl)
 
 	log.Print("Metadata service running...")
 
-	if err = srv.Serve(l); err != nil {
-		log.Printf("Error serving HTTP: %v", err)
-		exit = 1
-	}
+	signal.Notify(exitCh, syscall.SIGINT, syscall.SIGTERM)
+	<-exitCh
 
-	cleanup(port)
 	log.Print("Metadata service exiting...")
 
 	return

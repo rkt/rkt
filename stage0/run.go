@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -464,37 +463,23 @@ func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string) erro
 }
 
 func launchMetadataService(debug bool) error {
-	// use socket activation protocol to avoid race-condition of
-	// service becoming ready
-	l, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: common.MetadataServicePrvPort})
+	// readlink so arg[0] displays useful info
+	exe, err := os.Readlink("/proc/self/exe")
 	if err != nil {
-		if err.(*net.OpError).Err.(*os.SyscallError).Err == syscall.EADDRINUSE {
-			// assume metadata-service is already running
-			return nil
-		}
-		return err
+		return fmt.Errorf("error reading /proc/self/exe link: %v", err)
 	}
 
-	defer l.Close()
-
-	lf, err := l.File()
-	if err != nil {
-		return err
-	}
-
-	args := []string{"/proc/self/exe"}
+	args := []string{exe}
 	if debug {
 		args = append(args, "--debug")
 	}
 	args = append(args, "metadata-service", "--no-idle")
 
 	cmd := exec.Cmd{
-		Path:       args[0],
-		Args:       args,
-		Env:        append(os.Environ(), "LISTEN_FDS=1"),
-		ExtraFiles: []*os.File{lf},
-		Stdout:     os.Stdout,
-		Stderr:     os.Stderr,
+		Path:   exe,
+		Args:   args,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
 	}
 
 	return cmd.Start()
