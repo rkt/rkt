@@ -442,16 +442,16 @@ func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string) erro
 	cachedTreePath := cfg.Store.GetTreeStoreRootFS(img.String())
 
 	overlayDir := path.Join(cdir, "overlay", img.String())
-	if err := os.MkdirAll(overlayDir, 0700); err != nil {
+	if err := os.MkdirAll(overlayDir, 0755); err != nil {
 		return err
 	}
 
 	upperDir := path.Join(overlayDir, "upper")
-	if err := os.MkdirAll(upperDir, 0700); err != nil {
+	if err := os.MkdirAll(upperDir, 0755); err != nil {
 		return err
 	}
 	workDir := path.Join(overlayDir, "work")
-	if err := os.MkdirAll(workDir, 0700); err != nil {
+	if err := os.MkdirAll(workDir, 0755); err != nil {
 		return err
 	}
 
