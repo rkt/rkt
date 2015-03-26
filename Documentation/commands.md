@@ -257,7 +257,7 @@ The default networking configuration for Rocket is "host networking". This means
 
 ##### Private Networking
 
-Another common configuration, "private networking", means the pod will be executed with its own network stack. This is similar to how other container tools work. The metadata service (launched via `rkt metadata-service`) must be running to use private networking.
+Another common configuration, "private networking", means the pod will be executed with its own network stack. This is similar to how other container tools work. The [metadata service](metadata-service.md) (launched via `rkt metadata-service`) must be running to use private networking.
 
 By default, Rocket private networking will create a loopback device and a veth device. The veth pair creates a point-to-point link between the container and the host. Rocket will allocate an IPv4 /31 (2 IP addresses) out of 172.16.28.0/24 and assign one IP to each end of the veth pair. It will additionally set a route for metadata service (169.254.169.255/32) and default route in the container namespace. Finally, it will enable IP masquerading on the host to NAT the egress traffic.
 
