@@ -57,7 +57,7 @@ func Stage1ManifestPath(root string) string {
 
 // PodManifestPath returns the path in root to the Pod Manifest
 func PodManifestPath(root string) string {
-	return filepath.Join(root, "container")
+	return filepath.Join(root, "pod")
 }
 
 // AppImagesPath returns the path where the app images live
