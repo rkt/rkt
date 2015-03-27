@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/rocket/pkg/lock"
+
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -59,25 +61,41 @@ var diskvStores = [...]string{
 
 // Store encapsulates a content-addressable-storage for storing ACIs on disk.
 type Store struct {
-	base      string
-	stores    []*diskv.Diskv
-	db        *DB
-	treestore *TreeStore
+	base             string
+	stores           []*diskv.Diskv
+	db               *DB
+	treestore        *TreeStore
+	imageLockDir     string
+	treeStoreLockDir string
 }
 
 func NewStore(base string) (*Store, error) {
+	casDir := filepath.Join(base, "cas")
+
 	ds := &Store{
 		base:   base,
 		stores: make([]*diskv.Diskv, len(diskvStores)),
 	}
 
+	ds.imageLockDir = filepath.Join(casDir, "imagelocks")
+	err := os.MkdirAll(ds.imageLockDir, defaultPathPerm)
+	if err != nil {
+		return nil, err
+	}
+
+	ds.treeStoreLockDir = filepath.Join(casDir, "treestorelocks")
+	err = os.MkdirAll(ds.treeStoreLockDir, defaultPathPerm)
+	if err != nil {
+		return nil, err
+	}
+
 	for i, p := range diskvStores {
 		ds.stores[i] = diskv.New(diskv.Options{
-			BasePath:  filepath.Join(base, "cas", p),
+			BasePath:  filepath.Join(casDir, p),
 			Transform: blockTransform,
 		})
 	}
-	db, err := NewDB(filepath.Join(base, "cas", "db"))
+	db, err := NewDB(filepath.Join(casDir, "db"))
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +190,16 @@ func (ds Store) ResolveKey(key string) (string, error) {
 }
 
 func (ds Store) ReadStream(key string) (io.ReadCloser, error) {
+	key, err := ds.ResolveKey(key)
+	if err != nil {
+		return nil, fmt.Errorf("error resolving key: %v", err)
+	}
+	keyLock, err := lock.SharedKeyLock(ds.imageLockDir, key)
+	if err != nil {
+		return nil, fmt.Errorf("error locking image: %v", err)
+	}
+	defer keyLock.Close()
+
 	return ds.stores[blobType].ReadStream(key, false)
 }
 
@@ -220,6 +248,12 @@ func (ds Store) WriteACI(r io.Reader, latest bool) (string, error) {
 
 	// Import the uncompressed image into the store at the real key
 	key := ds.HashToKey(h)
+	keyLock, err := lock.ExclusiveKeyLock(ds.imageLockDir, key)
+	if err != nil {
+		return "", fmt.Errorf("error locking image: %v", err)
+	}
+	defer keyLock.Close()
+
 	if err = ds.stores[blobType].Import(fh.Name(), key, true); err != nil {
 		return "", fmt.Errorf("error importing image: %v", err)
 	}
@@ -258,6 +292,16 @@ func (ds Store) WriteACI(r io.Reader, latest bool) (string, error) {
 // Users of treestore should call ds.RenderTreeStore before using it to ensure
 // that the treestore is completely rendered.
 func (ds Store) RenderTreeStore(key string, rebuild bool) error {
+	// this lock references the treestore dir for the specified key. This
+	// is different from a lock on an image key as internally
+	// treestore.Write calls the acirenderer functions that use GetACI and
+	// GetImageManifest which are taking the image(s) lock.
+	treeStoreKeyLock, err := lock.ExclusiveKeyLock(ds.treeStoreLockDir, key)
+	if err != nil {
+		return fmt.Errorf("error locking tree store: %v", err)
+	}
+	defer treeStoreKeyLock.Close()
+
 	if !rebuild {
 		rendered, err := ds.treestore.IsRendered(key)
 		if err != nil {
@@ -270,7 +314,7 @@ func (ds Store) RenderTreeStore(key string, rebuild bool) error {
 	// Firstly remove a possible partial treestore if existing.
 	// This is needed as a previous ACI removal operation could have failed
 	// cleaning the tree store leaving some stale files.
-	err := ds.treestore.Remove(key)
+	err = ds.treestore.Remove(key)
 	if err != nil {
 		return err
 	}
@@ -283,6 +327,12 @@ func (ds Store) RenderTreeStore(key string, rebuild bool) error {
 
 // CheckTreeStore verifies the treestore consistency for the specified key.
 func (ds Store) CheckTreeStore(key string) error {
+	treeStoreKeyLock, err := lock.SharedKeyLock(ds.treeStoreLockDir, key)
+	if err != nil {
+		return fmt.Errorf("error locking tree store: %v", err)
+	}
+	defer treeStoreKeyLock.Close()
+
 	return ds.treestore.Check(key)
 }
 
@@ -324,6 +374,16 @@ func (ds Store) WriteRemote(remote *Remote) error {
 
 // Get the ImageManifest with the specified key.
 func (ds Store) GetImageManifest(key string) (*schema.ImageManifest, error) {
+	key, err := ds.ResolveKey(key)
+	if err != nil {
+		return nil, fmt.Errorf("error resolving key: %v", err)
+	}
+	keyLock, err := lock.SharedKeyLock(ds.imageLockDir, key)
+	if err != nil {
+		return nil, fmt.Errorf("error locking image: %v", err)
+	}
+	defer keyLock.Close()
+
 	imj, err := ds.stores[imageManifestType].Read(key)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving image manifest: %v", err)
