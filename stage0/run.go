@@ -382,17 +382,17 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 		return fmt.Errorf("error creating stage1 directory: %v", err)
 	}
 
-	if useOverlay {
-		if err := cfg.Store.RenderTreeStore(img.String(), false); err != nil {
+	if err := cfg.Store.RenderTreeStore(img.String(), false); err != nil {
+		return fmt.Errorf("error rendering tree image: %v", err)
+	}
+	if err := cfg.Store.CheckTreeStore(img.String()); err != nil {
+		log.Printf("Warning: tree cache is in a bad state. Rebuilding...")
+		if err := cfg.Store.RenderTreeStore(img.String(), true); err != nil {
 			return fmt.Errorf("error rendering tree image: %v", err)
 		}
-		if err := cfg.Store.CheckTreeStore(img.String()); err != nil {
-			log.Printf("Warning: tree cache is in a bad state. Rebuilding...")
-			if err := cfg.Store.RenderTreeStore(img.String(), true); err != nil {
-				return fmt.Errorf("error rendering tree image: %v", err)
-			}
-		}
-	} else {
+	}
+
+	if !useOverlay {
 		if err := aci.RenderACIWithImageID(img, s1, cfg.Store); err != nil {
 			return fmt.Errorf("error rendering ACI: %v", err)
 		}
