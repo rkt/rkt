@@ -27,6 +27,7 @@ import (
 const (
 	rocketGroup   = "rocket"
 	groupFilePath = "/etc/group"
+	casDbPerm     = os.FileMode(0664)
 )
 
 var (
@@ -133,8 +134,8 @@ func lookupGid(groupName string) (gid int, err error) {
 	return group.Gid, nil
 }
 
-func setDirPermissions(path string, uid int, gid int, perm os.FileMode) error {
-	if err := os.Chown(path, 0, gid); err != nil {
+func setPermissions(path string, uid int, gid int, perm os.FileMode) error {
+	if err := os.Chown(path, uid, gid); err != nil {
 		return fmt.Errorf("error setting %q directory group: %v", path, err)
 	}
 
@@ -153,9 +154,51 @@ func createDirStructure(gid int) error {
 			return fmt.Errorf("error creating %q directory: %v", path, err)
 		}
 
-		if err := setDirPermissions(path, 0, gid, perm); err != nil {
+		if err := setPermissions(path, 0, gid, perm); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func setCasDirPermissions(casPath string, gid int, perm os.FileMode) error {
+	casWalker := func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.Mode().IsDir() {
+			if err := setPermissions(path, 0, gid, perm); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	if err := filepath.Walk(casPath, casWalker); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setCasDbFilesPermissions(casDbPath string, gid int, perm os.FileMode) error {
+	casDbWalker := func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.Mode().IsRegular() {
+			if err := setPermissions(path, 0, gid, perm); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	if err := filepath.Walk(casDbPath, casDbWalker); err != nil {
+		return err
 	}
 
 	return nil
@@ -168,9 +211,21 @@ func runInstall(args []string) (exit int) {
 		return 1
 	}
 
-	err = createDirStructure(gid)
-	if err != nil {
+	if err := createDirStructure(gid); err != nil {
 		stderr("install: error creating Rocket directory structure: %v", err)
+		return 1
+	}
+
+	casDirPerm := dirs["cas"]
+	casPath := filepath.Join(globalFlags.Dir, "cas")
+	if err := setCasDirPermissions(casPath, gid, casDirPerm); err != nil {
+		stderr("install: error setting cas permissions: %v", err)
+		return 1
+	}
+
+	casDbPath := filepath.Join(casPath, "db")
+	if err := setCasDbFilesPermissions(casDbPath, gid, casDbPerm); err != nil {
+		stderr("install: error setting cas db permissions: %v", err)
 		return 1
 	}
 
