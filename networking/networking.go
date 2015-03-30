@@ -39,6 +39,7 @@ type activeNet struct {
 	Net
 	ifName string
 	ip     net.IP
+	hostIP net.IP // kludge for default network
 }
 
 // "base" struct that's populated from the beginning
@@ -54,6 +55,7 @@ type Networking struct {
 	containerEnv
 
 	MetadataIP net.IP
+	HostIP     net.IP
 
 	contID     types.UUID
 	hostNS     *os.File
@@ -112,6 +114,7 @@ func Setup(rktRoot string, contID types.UUID) (*Networking, error) {
 
 	// last net is the default
 	n.MetadataIP = n.nets[len(n.nets)-1].ip
+	n.HostIP = n.nets[len(n.nets)-1].hostIP
 
 	return &n, nil
 }
@@ -197,7 +200,7 @@ func (e *containerEnv) setupNets(netns string, nets []Net) ([]activeNet, error) 
 			break
 		}
 
-		an.ip, err = e.netPluginAdd(&nt, netns, nt.args, an.ifName)
+		an.ip, an.hostIP, err = e.netPluginAdd(&nt, netns, nt.args, an.ifName)
 		if err != nil {
 			err = fmt.Errorf("error adding network %q: %v", nt.Name, err)
 			break

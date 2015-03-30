@@ -26,7 +26,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -61,7 +60,6 @@ var (
 	hmacKey        [sha512.Size]byte
 
 	flagListenPort int
-	flagSrcAddrs   string
 	flagNoIdle     bool
 
 	exitCh = make(chan os.Signal, 1)
@@ -73,22 +71,8 @@ const (
 
 func init() {
 	commands = append(commands, cmdMetadataService)
-	cmdMetadataService.Flags.StringVar(&flagSrcAddrs, "src-addr", "0.0.0.0/0", "source address/range for iptables")
-	cmdMetadataService.Flags.IntVar(&flagListenPort, "listen-port", common.MetadataServicePrvPort, "listen port")
+	cmdMetadataService.Flags.IntVar(&flagListenPort, "listen-port", common.MetadataServicePort, "listen port")
 	cmdMetadataService.Flags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last container is unregistered")
-}
-
-func modifyIPTables(action string) error {
-	return exec.Command(
-		"iptables",
-		"-t", "nat",
-		action, "PREROUTING",
-		"-p", "tcp",
-		"-d", common.MetadataServiceIP,
-		"--dport", strconv.Itoa(common.MetadataServicePubPort),
-		"-j", "REDIRECT",
-		"--to-port", strconv.Itoa(flagListenPort),
-	).Run()
 }
 
 func queryValue(u *url.URL, key string) string {
@@ -540,12 +524,6 @@ func runMetadataService(args []string) (exit int) {
 		stderr(err.Error())
 		return 1
 	}
-
-	if err := modifyIPTables("-A"); err != nil {
-		stderr("Error setting up iptables: %v", err)
-		return 1
-	}
-	defer modifyIPTables("-D")
 
 	go runRegistrationServer(unixl)
 	go runPublicServer(tcpl)

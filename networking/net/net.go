@@ -63,6 +63,10 @@ func LoadNet(path string, n interface{}) error {
 type IfConfig struct {
 	IP  gonet.IP `json:"ip,omitempty"`
 	IP6 gonet.IP `json:"ip6,omitempty"`
+
+	// these are "extensions" and only meaningful for default net
+	HostIP  gonet.IP `json:"hostIP,omitempty"`
+	HostIP6 gonet.IP `json:"hostIP6,omitempty"`
 }
 
 func PrintIfConfig(conf *IfConfig) error {

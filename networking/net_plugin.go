@@ -32,18 +32,18 @@ import (
 const UserNetPluginsPath = "/usr/lib/rkt/plugins/net"
 const BuiltinNetPluginsPath = "usr/lib/rkt/plugins/net"
 
-func (e *containerEnv) netPluginAdd(n *Net, netns, args, ifName string) (net.IP, error) {
+func (e *containerEnv) netPluginAdd(n *Net, netns, args, ifName string) (ip, hostIP net.IP, err error) {
 	output, err := e.execNetPlugin("ADD", n, netns, args, ifName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	ifConf := rktnet.IfConfig{}
 	if err = json.Unmarshal(output, &ifConf); err != nil {
-		return nil, fmt.Errorf("error parsing %q output: %v", n.Name, err)
+		return nil, nil, fmt.Errorf("error parsing %q output: %v", n.Name, err)
 	}
 
-	return ifConf.IP, nil
+	return ifConf.IP, ifConf.HostIP, nil
 }
 
 func (e *containerEnv) netPluginDel(n *Net, netns, args, ifName string) error {
