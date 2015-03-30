@@ -43,6 +43,16 @@ type Container struct {
 	Networks           []string
 }
 
+var (
+	defaultEnv = map[string]string{
+		"PATH":    "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		"SHELL":   "/bin/sh",
+		"USER":    "root",
+		"LOGNAME": "root",
+		"HOME":    "/root",
+	}
+)
+
 // LoadContainer loads a Pod Manifest (as prepared by stage0) and
 // its associated Application Manifests, under $root/stage1/opt/stage1/$apphash
 func LoadContainer(root string, uuid *types.UUID) (*Container, error) {
@@ -235,8 +245,17 @@ func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest
 }
 
 // writeEnvFile creates an environment file for given app id
+// the minimum required environment variables by the appc spec will be set to sensible
+// defaults here if they're not provided by env.
 func (c *Container) writeEnvFile(env types.Environment, id types.Hash) error {
 	ef := bytes.Buffer{}
+
+	for dk, dv := range defaultEnv {
+		if _, exists := env.Get(dk); !exists {
+			fmt.Fprintf(&ef, "%s=%s\000", dk, dv)
+		}
+	}
+
 	for _, e := range env {
 		fmt.Fprintf(&ef, "%s=%s\000", e.Name, e.Value)
 	}
