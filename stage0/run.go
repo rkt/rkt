@@ -24,7 +24,6 @@ package stage0
 //
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -54,6 +53,7 @@ type PrepareConfig struct {
 	InheritEnv  bool           // inherit parent environment into apps
 	ExplicitEnv []string       // always set these environment variables for all the apps
 	Volumes     []types.Volume // list of volumes that rocket can provide to applications
+	UseOverlay  bool           // prepare container with overlay fs
 }
 
 // configuration parameters needed by Run
@@ -108,10 +108,8 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		log.SetOutput(os.Stderr)
 	}
 
-	useOverlay := supportsOverlay()
-
 	log.Printf("Preparing stage1")
-	if err := prepareStage1Image(cfg, cfg.Stage1Image, dir, useOverlay); err != nil {
+	if err := prepareStage1Image(cfg, cfg.Stage1Image, dir, cfg.UseOverlay); err != nil {
 		return fmt.Errorf("error preparing stage1: %v", err)
 	}
 
@@ -127,7 +125,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	cm.ACVersion = *v
 
 	for i, img := range cfg.Images {
-		am, err := prepareAppImage(cfg, img, dir, useOverlay)
+		am, err := prepareAppImage(cfg, img, dir, cfg.UseOverlay)
 		if err != nil {
 			return fmt.Errorf("error setting up image %s: %v", img, err)
 		}
@@ -181,7 +179,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		return fmt.Errorf("error writing stage1 ID: %v", err)
 	}
 
-	if useOverlay {
+	if cfg.UseOverlay {
 		// mark the pod as prepared with overlay
 		f, err := os.Create(filepath.Join(dir, common.OverlayPreparedFilename))
 		if err != nil {
@@ -193,25 +191,6 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	return nil
 }
 
-func supportsOverlay() bool {
-	exec.Command("modprobe", "overlay").Run()
-
-	f, err := os.Open("/proc/filesystems")
-	if err != nil {
-		fmt.Println("error opening /proc/filesystems")
-		return false
-	}
-	defer f.Close()
-
-	s := bufio.NewScanner(f)
-	for s.Scan() {
-		if s.Text() == "nodev\toverlay" {
-			return true
-		}
-	}
-	return false
-}
-
 func preparedWithOverlay(dir string) (bool, error) {
 	_, err := os.Stat(filepath.Join(dir, common.OverlayPreparedFilename))
 	if os.IsNotExist(err) {
@@ -221,7 +200,7 @@ func preparedWithOverlay(dir string) (bool, error) {
 		return false, err
 	}
 
-	if !supportsOverlay() {
+	if !common.SupportsOverlay() {
 		return false, fmt.Errorf("the pod was prepared with overlay but overlay is not supported")
 	}
 

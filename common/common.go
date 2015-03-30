@@ -17,8 +17,10 @@
 package common
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 
@@ -110,4 +112,24 @@ func GetRktLockFD() (int, error) {
 		return int(fd), nil
 	}
 	return -1, fmt.Errorf("%v env var is not set", EnvLockFd)
+}
+
+// SupportsOverlay returns whether the system supports overlay filesystem
+func SupportsOverlay() bool {
+	exec.Command("modprobe", "overlay").Run()
+
+	f, err := os.Open("/proc/filesystems")
+	if err != nil {
+		fmt.Println("error opening /proc/filesystems")
+		return false
+	}
+	defer f.Close()
+
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		if s.Text() == "nodev\toverlay" {
+			return true
+		}
+	}
+	return false
 }

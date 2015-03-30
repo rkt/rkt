@@ -23,6 +23,7 @@ import (
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/cas"
+	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/stage0"
 )
 
@@ -48,6 +49,7 @@ func init() {
 	cmdPrepare.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
 	cmdPrepare.Flags.BoolVar(&flagQuiet, "quiet", false, "suppress superfluous output on stdout, print only the UUID on success")
 	cmdPrepare.Flags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
+	cmdPrepare.Flags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	cmdPrepare.Flags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 }
 
@@ -122,6 +124,7 @@ func runPrepare(args []string) (exit int) {
 		InheritEnv:  flagInheritEnv,
 		ExplicitEnv: flagExplicitEnv.Strings(),
 		Volumes:     []types.Volume(flagVolumes),
+		UseOverlay:  !flagNoOverlay && common.SupportsOverlay(),
 	}
 
 	if err = stage0.Prepare(pcfg, c.path(), c.uuid); err != nil {

@@ -26,6 +26,7 @@ import (
 
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/cas"
+	"github.com/coreos/rocket/common"
 	"github.com/coreos/rocket/pkg/keystore"
 	"github.com/coreos/rocket/stage0"
 )
@@ -40,6 +41,7 @@ var (
 	flagInheritEnv           bool
 	flagExplicitEnv          envMap
 	flagInteractive          bool
+	flagNoOverlay            bool
 	cmdRun                   = &Command{
 		Name:    "run",
 		Summary: "Run image(s) in an application container in rocket",
@@ -70,6 +72,7 @@ func init() {
 	cmdRun.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
 	cmdRun.Flags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
 	cmdRun.Flags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
+	cmdRun.Flags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	cmdRun.Flags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 	cmdRun.Flags.BoolVar(&flagInteractive, "interactive", false, "the container is interactive")
 	flagVolumes = volumeList{}
@@ -245,6 +248,7 @@ func runRun(args []string) (exit int) {
 		Volumes:      []types.Volume(flagVolumes),
 		InheritEnv:   flagInheritEnv,
 		ExplicitEnv:  flagExplicitEnv.Strings(),
+		UseOverlay:   !flagNoOverlay && common.SupportsOverlay(),
 	}
 	err = stage0.Prepare(pcfg, c.path(), c.uuid)
 	if err != nil {
