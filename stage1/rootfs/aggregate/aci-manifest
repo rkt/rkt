@@ -1,6 +1,6 @@
 {
     "acKind": "ImageManifest",
-    "acVersion": "0.2.0",
+    "acVersion": "0.5.1",
     "name": "coreos.com/rocket/stage1",
     "labels": [
         {
