@@ -132,6 +132,23 @@ rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0
 sha512-fa1cb92dc276b0f9bedf87981e61ecde
 ```
 
+#### Fetch from a Docker registry
+
+If you want to run an existing Docker image, you can fetch from a Docker registry. Rocket will download and convert the image to ACI.
+
+```
+$ rkt -insecure-skip-verify fetch docker://busybox
+rkt: fetching image from docker://busybox
+rkt: warning: signature verification has been disabled
+Downloading layer: 4986bf8c15363d1c5d15512d5266f8777bfba4974ac56e3270e7760f6f0a8125
+Downloading layer: ea13149945cb6b1e746bf28032f02e9b5a793523481a0a18645fc77ad53c4ea2
+Downloading layer: df7546f9f060a2268024c8a230d8639878585defcc1bc6f79d2728a13957871b
+Downloading layer: 511136ea3c5a64f264b78b5433614aec563103b4d4702f3ba7d4d2698e22c158
+sha512-c4010045aec65aefa74770ef2bb648d9
+```
+
+Docker images do not support signature verification.
+
 ## Running Containers
 
 Rocket can run ACIs based on name, hash, local file on disk or URL. If an ACI hasn't been cached on disk, Rocket will attempt to find and download it.
@@ -140,7 +157,7 @@ Rocket can run ACIs based on name, hash, local file on disk or URL. If an ACI ha
 
 #### Image Addressing
 
-Images can be ran by either their name, their hash or an explicit transport address.
+Images can be run by either their name, their hash, an explicit transport address, or a Docker registry URL.
 
 ```
 # Run by name
@@ -155,6 +172,11 @@ $ sudo rkt run sha512-fa1cb92dc276b0f9bedf87981e61ecde
 ```
 # Run by ACI address
 $ sudo rkt run https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
+```
+
+```
+# Run by Docker registry
+$ sudo rkt run docker://quay.io/coreos/etcd:v2.0.0
 ```
 
 #### Passing Arguments
