@@ -17,24 +17,21 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/coreos/rocket/cas"
-	"github.com/coreos/rocket/pkg/keystore"
-
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
+	docker2aci "github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
 	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	"github.com/coreos/rocket/cas"
+	"github.com/coreos/rocket/pkg/keystore"
 )
 
 const (
@@ -172,9 +169,9 @@ func downloadImage(aciURL string, ascURL string, scheme string, ds *cas.Store, k
 	return rem.BlobKey, nil
 }
 
-// download downloads and verifies the remote ACI.
+// download downloads and verifies the remote ACI from the given aciURL.
 // If Keystore is nil signature verification will be skipped.
-// Download returns the signer, an *os.File representing the ACI, and an error if any.
+// download returns the signer, an *os.File representing the ACI, and an error if any.
 // err will be nil if the ACI downloads successfully and the ACI is verified.
 func download(aciURL string, ascURL string, ds *cas.Store, ks *keystore.Keystore) (*openpgp.Entity, *os.File, error) {
 	var entity *openpgp.Entity
@@ -185,7 +182,7 @@ func download(aciURL string, ascURL string, ds *cas.Store, ks *keystore.Keystore
 	if u.Scheme == "docker" {
 		registryURL := strings.TrimPrefix(aciURL, "docker://")
 
-		tmpDir, err := tmpDir()
+		tmpDir, err := ds.TmpDir()
 		if err != nil {
 			return nil, nil, fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
 		}
@@ -206,17 +203,25 @@ func download(aciURL string, ascURL string, ds *cas.Store, ks *keystore.Keystore
 	var sigTempFile *os.File
 	if ks != nil {
 		stdout("Downloading signature from %v\n", ascURL)
-		sigTempFile, err = downloadSignatureFile(ascURL)
+		sigTempFile, err = ds.TmpFile()
 		if err != nil {
 			return nil, nil, fmt.Errorf("error downloading the signature file: %v", err)
 		}
 		defer sigTempFile.Close()
 		defer os.Remove(sigTempFile.Name())
+		err = downloadSignatureFile(ascURL, sigTempFile)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error downloading the signature file: %v", err)
+		}
 	}
 
-	acif, err := downloadACI(ds, aciURL)
+	acif, err := ds.TmpFile()
 	if err != nil {
-		return nil, acif, fmt.Errorf("error downloading the aci image: %v", err)
+		return nil, acif, fmt.Errorf("error setting up temporary file: %v", err)
+	}
+	err = downloadACI(aciURL, acif)
+	if err != nil {
+		return nil, acif, fmt.Errorf("error downloading ACI: %v", err)
 	}
 
 	if ks != nil {
@@ -226,10 +231,10 @@ func download(aciURL string, ascURL string, ds *cas.Store, ks *keystore.Keystore
 		}
 
 		if _, err := acif.Seek(0, 0); err != nil {
-			return nil, acif, err
+			return nil, acif, fmt.Errorf("error seeking ACI file: %v", err)
 		}
 		if _, err := sigTempFile.Seek(0, 0); err != nil {
-			return nil, acif, err
+			return nil, acif, fmt.Errorf("error seeking signature file: %v", err)
 		}
 		if entity, err = ks.CheckSignature(manifest.Name.String(), acif, sigTempFile); err != nil {
 			return nil, acif, err
@@ -242,37 +247,27 @@ func download(aciURL string, ascURL string, ds *cas.Store, ks *keystore.Keystore
 	return entity, acif, nil
 }
 
+type writeSyncer interface {
+	io.Writer
+	Sync() error
+}
+
 // downloadACI gets the aci specified at aciurl
-func downloadACI(ds *cas.Store, aciurl string) (*os.File, error) {
-	return downloadHTTP(aciurl, "ACI", tmpFile)
+func downloadACI(aciurl string, out writeSyncer) error {
+	return downloadHTTP(aciurl, "ACI", out)
 }
 
 // downloadSignatureFile gets the signature specified at sigurl
-func downloadSignatureFile(sigurl string) (*os.File, error) {
-	getTemp := func() (*os.File, error) {
-		return ioutil.TempFile("", "")
-	}
-
-	return downloadHTTP(sigurl, "signature", getTemp)
+func downloadSignatureFile(sigurl string, out writeSyncer) error {
+	return downloadHTTP(sigurl, "signature", out)
 }
 
 // downloadHTTP retrieves url, creating a temp file using getTempFile
 // file:// http:// and https:// urls supported
-func downloadHTTP(url, label string, getTempFile func() (*os.File, error)) (*os.File, error) {
-	tmp, err := getTempFile()
-	if err != nil {
-		return nil, fmt.Errorf("error downloading %s: %v", label, err)
-	}
-	defer func() {
-		if err != nil {
-			os.Remove(tmp.Name())
-			tmp.Close()
-		}
-	}()
-
+func downloadHTTP(url, label string, out writeSyncer) error {
 	res, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer res.Body.Close()
 
@@ -298,18 +293,18 @@ func downloadHTTP(url, label string, getTempFile func() (*os.File, error)) (*os.
 
 	// TODO(jonboulle): handle http more robustly (redirects?)
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
+		return fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
 	}
 
-	if _, err := io.Copy(tmp, reader); err != nil {
-		return nil, fmt.Errorf("error copying %s: %v", label, err)
+	if _, err := io.Copy(out, reader); err != nil {
+		return fmt.Errorf("error copying %s: %v", label, err)
 	}
 
-	if err := tmp.Sync(); err != nil {
-		return nil, fmt.Errorf("error writing %s: %v", label, err)
+	if err := out.Sync(); err != nil {
+		return fmt.Errorf("error writing %s: %v", label, err)
 	}
 
-	return tmp, nil
+	return nil
 }
 
 func validateURL(s string) error {
@@ -347,20 +342,4 @@ func newDiscoveryApp(img string) *discovery.App {
 		app.Labels["os"] = defaultOS
 	}
 	return app
-}
-
-func tmpFile() (*os.File, error) {
-	dir, err := tmpDir()
-	if err != nil {
-		return nil, err
-	}
-	return ioutil.TempFile(dir, "")
-}
-
-func tmpDir() (string, error) {
-	dir := filepath.Join(globalFlags.Dir, "tmp")
-	if err := os.MkdirAll(dir, defaultPathPerm); err != nil {
-		return "", err
-	}
-	return dir, nil
 }

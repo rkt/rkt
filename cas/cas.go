@@ -139,15 +139,19 @@ func NewStore(base string) (*Store, error) {
 	return ds, nil
 }
 
-func (ds Store) tmpFile() (*os.File, error) {
-	dir, err := ds.tmpDir()
+// TmpFile returns an *os.File local to the same filesystem as the Store, or
+// any error encountered
+func (ds Store) TmpFile() (*os.File, error) {
+	dir, err := ds.TmpDir()
 	if err != nil {
 		return nil, err
 	}
 	return ioutil.TempFile(dir, "")
 }
 
-func (ds Store) tmpDir() (string, error) {
+// TmpDir creates and returns dir local to the same filesystem as the Store,
+// or any error encountered
+func (ds Store) TmpDir() (string, error) {
 	dir := filepath.Join(ds.base, "tmp")
 	if err := os.MkdirAll(dir, defaultPathPerm); err != nil {
 		return "", err
@@ -231,7 +235,7 @@ func (ds Store) WriteACI(r io.Reader, latest bool) (string, error) {
 	// tee so we can generate the hash
 	h := sha512.New()
 	tr := io.TeeReader(dr, h)
-	fh, err := ds.tmpFile()
+	fh, err := ds.TmpFile()
 	if err != nil {
 		return "", fmt.Errorf("error creating image: %v", err)
 	}
