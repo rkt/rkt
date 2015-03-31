@@ -23,6 +23,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -51,6 +52,7 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 	runFlags                 flag.FlagSet
 	flagStage1Image          string
 	flagVolumes              volumeList
+	flagPorts                portList
 	flagPrivateNet           bool
 	flagSpawnMetadataService bool
 	flagInheritEnv           bool
@@ -72,6 +74,7 @@ func init() {
 
 	runFlags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
 	runFlags.Var(&flagVolumes, "volume", "volumes to mount into the pod")
+	runFlags.Var(&flagPorts, "port", "ports to expose on the host (requires --private-net)")
 	runFlags.BoolVar(&flagPrivateNet, "private-net", false, "give pod a private network")
 	runFlags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
 	runFlags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
@@ -80,6 +83,7 @@ func init() {
 	runFlags.BoolVar(&flagInteractive, "interactive", false, "run pod interactively")
 	runFlags.Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 	flagVolumes = volumeList{}
+	flagPorts = portList{}
 }
 
 func runRun(args []string) (exit int) {
@@ -87,6 +91,12 @@ func runRun(args []string) (exit int) {
 		stderr("run: interactive option only supports one image")
 		return 1
 	}
+
+	if len(flagPorts) > 0 && !flagPrivateNet {
+		stderr("--port flag requires --private-net")
+		return 1
+	}
+
 	if globalFlags.Dir == "" {
 		log.Printf("dir unset - using temporary directory")
 		var err error
@@ -142,6 +152,7 @@ func runRun(args []string) (exit int) {
 		CommonConfig: cfg,
 		Apps:         &rktApps,
 		Volumes:      []types.Volume(flagVolumes),
+		Ports:        []types.ExposedPort(flagPorts),
 		InheritEnv:   flagInheritEnv,
 		ExplicitEnv:  flagExplicitEnv.Strings(),
 		UseOverlay:   !flagNoOverlay && common.SupportsOverlay(),
@@ -198,6 +209,43 @@ func (vl *volumeList) String() string {
 		vs = append(vs, v.String())
 	}
 	return strings.Join(vs, " ")
+}
+
+// portList implements the flag.Value interface to contain a set of mappings
+// from port name --> host port
+type portList []types.ExposedPort
+
+func (pl *portList) Set(s string) error {
+	parts := strings.SplitN(s, ":", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("%q is not in name:port format", s)
+	}
+
+	name, err := types.NewACName(parts[0])
+	if err != nil {
+		return fmt.Errorf("%q is not a valid port name: %v", parts[0], err)
+	}
+
+	port, err := strconv.ParseUint(parts[1], 10, 16)
+	if err != nil {
+		return fmt.Errorf("%q is not a valid port number", parts[1])
+	}
+
+	p := types.ExposedPort{
+		Name:     *name,
+		HostPort: uint(port),
+	}
+
+	*pl = append(*pl, p)
+	return nil
+}
+
+func (pl *portList) String() string {
+	var ps []string
+	for _, p := range []types.ExposedPort(*pl) {
+		ps = append(ps, fmt.Sprintf("%v:%v", p.Name, p.HostPort))
+	}
+	return strings.Join(ps, " ")
 }
 
 // envMap implements the flag.Value interface to contain a set of name=value mappings

@@ -123,6 +123,28 @@ Additional configuration fields:
 
 [Coming soon](https://github.com/coreos/rkt/issues/558)
 
+## Exposing container ports on the host
+Apps declare their public ports in the image manifest file.
+A user can expose some or all of these ports to the host when running a pod.
+Doing so allows services inside the pods to be reachable through the host's IP address.
+
+The example below demonstrates an image manifest snippet declaring a single port:
+```
+"ports": [
+	{
+		"name": "http",
+		"port": 80,
+		"protocol": "tcp"
+	}
+]
+```
+
+The pod's TCP port 80 can be mapped to an arbitrary port on the host during rkt invocation:
+```
+$ rkt run --private-net --port=http:8888 myapp.aci
+````
+Now, any traffic arriving on host's TCP port 8888 will be forwarded to the pod on port 80.
+
 ### Overriding default network
 If a network has a name "default", it will override the default network added
 by rkt. It is strongly recommended that such network also has type "veth" as

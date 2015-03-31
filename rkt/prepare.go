@@ -51,6 +51,7 @@ func init() {
 	commands = append(commands, cmdPrepare)
 	prepareFlags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
 	prepareFlags.Var(&flagVolumes, "volume", "volumes to mount into the pod")
+	prepareFlags.Var(&flagPorts, "port", "ports to expose on the host (requires --private-net)")
 	prepareFlags.BoolVar(&flagQuiet, "quiet", false, "suppress superfluous output on stdout, print only the UUID on success")
 	prepareFlags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	prepareFlags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
@@ -116,6 +117,7 @@ func runPrepare(args []string) (exit int) {
 			UUID:        p.uuid,
 		},
 		Volumes:     []types.Volume(flagVolumes),
+		Ports:       []types.ExposedPort(flagPorts),
 		InheritEnv:  flagInheritEnv,
 		ExplicitEnv: flagExplicitEnv.Strings(),
 		UseOverlay:  !flagNoOverlay && common.SupportsOverlay(),

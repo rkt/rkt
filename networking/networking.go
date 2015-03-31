@@ -50,6 +50,14 @@ type podEnv struct {
 	podID   types.UUID
 }
 
+// ForwardedPort describes a port that will be
+// forwarded (mapped) from the host to the pod
+type ForwardedPort struct {
+	Protocol string
+	HostPort uint
+	PodPort  uint
+}
+
 // Networking describes the networking details of a pod.
 type Networking struct {
 	podEnv
@@ -65,7 +73,7 @@ type Networking struct {
 }
 
 // Setup produces a Networking object for a given pod ID.
-func Setup(rktRoot string, podID types.UUID) (*Networking, error) {
+func Setup(rktRoot string, podID types.UUID, fps []ForwardedPort) (*Networking, error) {
 	var err error
 	n := Networking{
 		podEnv: podEnv{
@@ -98,23 +106,27 @@ func Setup(rktRoot string, podID types.UUID) (*Networking, error) {
 
 	err = withNetNS(n.podNS, n.hostNS, func() error {
 		n.nets, err = n.setupNets(n.podNSPath, nets)
-		return err
+		if err != nil {
+			return err
+		}
+
+		if len(n.nets) == 0 {
+			return fmt.Errorf("no nets successfully configured")
+		}
+
+		// last net is the default
+		n.MetadataIP = n.nets[len(n.nets)-1].ip
+		n.HostIP = n.nets[len(n.nets)-1].hostIP
+
+		return n.forwardPorts(fps, n.MetadataIP)
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if len(n.nets) == 0 {
-		return nil, fmt.Errorf("no nets successfully setup")
-	}
-
 	if err = n.saveNetInfo(); err != nil {
 		return nil, err
 	}
-
-	// last net is the default
-	n.MetadataIP = n.nets[len(n.nets)-1].ip
-	n.HostIP = n.nets[len(n.nets)-1].hostIP
 
 	return &n, nil
 }
@@ -134,6 +146,10 @@ func (n *Networking) Teardown() {
 	if err := n.EnterHostNS(); err != nil {
 		log.Print(err)
 		return
+	}
+
+	if err := n.unforwardPorts(); err != nil {
+		log.Printf("Error removing forwarded ports: %v", err)
 	}
 
 	n.teardownNets(n.podNSPath, n.nets)
