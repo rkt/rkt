@@ -9,7 +9,7 @@ Rocket is a CLI for running app containers, and an implementation of the [App Co
 
 [Read more about Rocket in the launch announcement](https://coreos.com/blog/rocket).
 
-![Rocket Logo](logos/rocket-horizontal-color.png)
+![Rocket Logo](logos/rkt-horizontal-color.png)
 
 ## Trying out Rocket
 
