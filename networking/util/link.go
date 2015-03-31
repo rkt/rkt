@@ -46,12 +46,12 @@ func hash(s string) string {
 }
 
 // SetupVeth sets up a virtual ethernet link.
-// Should be in container netns.
+// Should be in pod netns.
 // TODO(eyakubovich): get rid of entropy and ask kernel to pick name via pattern
-func SetupVeth(entropy, contVethName string, mtu int, hostNS *os.File) (hostVeth, contVeth netlink.Link, err error) {
+func SetupVeth(entropy, podVethName string, mtu int, hostNS *os.File) (hostVeth, podVeth netlink.Link, err error) {
 	// NetworkManager (recent versions) will ignore veth devices that start with "veth"
 	hostVethName := "veth" + hash(entropy)[:4]
-	hostVeth, err = makeVeth(hostVethName, contVethName, mtu)
+	hostVeth, err = makeVeth(hostVethName, podVethName, mtu)
 	if err != nil {
 		err = fmt.Errorf("failed to make veth pair: %v", err)
 		return
@@ -62,14 +62,14 @@ func SetupVeth(entropy, contVethName string, mtu int, hostNS *os.File) (hostVeth
 		return
 	}
 
-	contVeth, err = netlink.LinkByName(contVethName)
+	podVeth, err = netlink.LinkByName(podVethName)
 	if err != nil {
-		err = fmt.Errorf("failed to lookup %q: %v", contVethName, err)
+		err = fmt.Errorf("failed to lookup %q: %v", podVethName, err)
 		return
 	}
 
-	if err = netlink.LinkSetUp(contVeth); err != nil {
-		err = fmt.Errorf("failed to set %q up: %v", contVethName, err)
+	if err = netlink.LinkSetUp(podVeth); err != nil {
+		err = fmt.Errorf("failed to set %q up: %v", podVethName, err)
 		return
 	}
 

@@ -33,9 +33,9 @@ import (
 	"github.com/coreos/rocket/common"
 )
 
-// Container encapsulates a PodManifest and ImageManifests
-type Container struct {
-	Root               string // root directory where the container will be located
+// Pod encapsulates a PodManifest and ImageManifests
+type Pod struct {
+	Root               string // root directory where the pod will be located
 	UUID               types.UUID
 	Manifest           *schema.PodManifest
 	Apps               map[string]*schema.ImageManifest
@@ -53,28 +53,28 @@ var (
 	}
 )
 
-// LoadContainer loads a Pod Manifest (as prepared by stage0) and
+// LoadPod loads a Pod Manifest (as prepared by stage0) and
 // its associated Application Manifests, under $root/stage1/opt/stage1/$apphash
-func LoadContainer(root string, uuid *types.UUID) (*Container, error) {
-	c := &Container{
+func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
+	p := &Pod{
 		Root: root,
 		UUID: *uuid,
 		Apps: make(map[string]*schema.ImageManifest),
 	}
 
-	buf, err := ioutil.ReadFile(common.PodManifestPath(c.Root))
+	buf, err := ioutil.ReadFile(common.PodManifestPath(p.Root))
 	if err != nil {
 		return nil, fmt.Errorf("failed reading pod manifest: %v", err)
 	}
 
-	cm := &schema.PodManifest{}
-	if err := json.Unmarshal(buf, cm); err != nil {
+	pm := &schema.PodManifest{}
+	if err := json.Unmarshal(buf, pm); err != nil {
 		return nil, fmt.Errorf("failed unmarshalling pod manifest: %v", err)
 	}
-	c.Manifest = cm
+	p.Manifest = pm
 
-	for _, app := range c.Manifest.Apps {
-		ampath := common.ImageManifestPath(c.Root, app.Image.ID)
+	for _, app := range p.Manifest.Apps {
+		ampath := common.ImageManifestPath(p.Root, app.Image.ID)
 		buf, err := ioutil.ReadFile(ampath)
 		if err != nil {
 			return nil, fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
@@ -85,13 +85,13 @@ func LoadContainer(root string, uuid *types.UUID) (*Container, error) {
 			return nil, fmt.Errorf("failed unmarshalling app manifest %q: %v", ampath, err)
 		}
 		name := am.Name.String()
-		if _, ok := c.Apps[name]; ok {
+		if _, ok := p.Apps[name]; ok {
 			return nil, fmt.Errorf("got multiple definitions for app: %s", name)
 		}
-		c.Apps[name] = am
+		p.Apps[name] = am
 	}
 
-	return c, nil
+	return p, nil
 }
 
 // quoteExec returns an array of quoted strings appropriate for systemd execStart usage
@@ -124,7 +124,7 @@ func newUnitOption(section, name, value string) *unit.UnitOption {
 }
 
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
-func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, interactive bool) error {
+func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, interactive bool) error {
 	name := ra.Name.String()
 	id := ra.Image.ID
 	app := am.App
@@ -139,9 +139,9 @@ func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest
 
 	env := app.Environment
 	env.Set("AC_APP_NAME", name)
-	env.Set("AC_METADATA_URL", c.MetadataServiceURL)
+	env.Set("AC_METADATA_URL", p.MetadataServiceURL)
 
-	if err := c.writeEnvFile(env, id); err != nil {
+	if err := p.writeEnvFile(env, id); err != nil {
 		return fmt.Errorf("unable to write environment file: %v", err)
 	}
 
@@ -207,7 +207,7 @@ func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest
 			sockopts = append(sockopts, newUnitOption("Socket", proto, fmt.Sprintf("%v", sap.Port)))
 		}
 
-		file, err := os.OpenFile(SocketUnitPath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
+		file, err := os.OpenFile(SocketUnitPath(p.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
 			return fmt.Errorf("failed to create socket file: %v", err)
 		}
@@ -217,7 +217,7 @@ func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest
 			return fmt.Errorf("failed to write socket unit file: %v", err)
 		}
 
-		if err = os.Symlink(path.Join("..", SocketUnitName(id)), SocketWantPath(c.Root, id)); err != nil {
+		if err = os.Symlink(path.Join("..", SocketUnitName(id)), SocketWantPath(p.Root, id)); err != nil {
 			return fmt.Errorf("failed to link socket want: %v", err)
 		}
 
@@ -227,7 +227,7 @@ func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest
 	opts = append(opts, newUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(id)))
 	opts = append(opts, newUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(id)))
 
-	file, err := os.OpenFile(ServiceUnitPath(c.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(ServiceUnitPath(p.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create service unit file: %v", err)
 	}
@@ -237,7 +237,7 @@ func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest
 		return fmt.Errorf("failed to write service unit file: %v", err)
 	}
 
-	if err = os.Symlink(path.Join("..", ServiceUnitName(id)), ServiceWantPath(c.Root, id)); err != nil {
+	if err = os.Symlink(path.Join("..", ServiceUnitName(id)), ServiceWantPath(p.Root, id)); err != nil {
 		return fmt.Errorf("failed to link service want: %v", err)
 	}
 
@@ -247,7 +247,7 @@ func (c *Container) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest
 // writeEnvFile creates an environment file for given app id
 // the minimum required environment variables by the appc spec will be set to sensible
 // defaults here if they're not provided by env.
-func (c *Container) writeEnvFile(env types.Environment, id types.Hash) error {
+func (p *Pod) writeEnvFile(env types.Environment, id types.Hash) error {
 	ef := bytes.Buffer{}
 
 	for dk, dv := range defaultEnv {
@@ -259,19 +259,19 @@ func (c *Container) writeEnvFile(env types.Environment, id types.Hash) error {
 	for _, e := range env {
 		fmt.Fprintf(&ef, "%s=%s\000", e.Name, e.Value)
 	}
-	return ioutil.WriteFile(EnvFilePath(c.Root, id), ef.Bytes(), 0640)
+	return ioutil.WriteFile(EnvFilePath(p.Root, id), ef.Bytes(), 0640)
 }
 
-// ContainerToSystemd creates the appropriate systemd service unit files for
-// all the constituent apps of the Container
-func (c *Container) ContainerToSystemd(interactive bool) error {
-	for _, am := range c.Apps {
-		ra := c.Manifest.Apps.Get(am.Name)
+// PodToSystemd creates the appropriate systemd service unit files for
+// all the constituent apps of the Pod
+func (p *Pod) PodToSystemd(interactive bool) error {
+	for _, am := range p.Apps {
+		ra := p.Manifest.Apps.Get(am.Name)
 		if ra == nil {
 			// should never happen
-			panic("app not found in container manifest")
+			panic("app not found in pod manifest")
 		}
-		if err := c.appToSystemd(ra, am, interactive); err != nil {
+		if err := p.appToSystemd(ra, am, interactive); err != nil {
 			return fmt.Errorf("failed to transform app %q into systemd service: %v", am.Name, err)
 		}
 	}
@@ -281,7 +281,7 @@ func (c *Container) ContainerToSystemd(interactive bool) error {
 
 // appToNspawnArgs transforms the given app manifest, with the given associated
 // app image id, into a subset of applicable systemd-nspawn argument
-func (c *Container) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManifest) ([]string, error) {
+func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManifest) ([]string, error) {
 	args := []string{}
 	name := ra.Name.String()
 	id := ra.Image.ID
@@ -297,7 +297,7 @@ func (c *Container) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManif
 	// introduce a --mount flag so they can control which mountPoint maps to
 	// which volume.
 
-	for _, v := range c.Manifest.Volumes {
+	for _, v := range p.Manifest.Volumes {
 		vols[v.Name] = v
 	}
 
@@ -347,20 +347,20 @@ func (c *Container) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManif
 	return args, nil
 }
 
-// ContainerToNspawnArgs renders a prepared Container as a systemd-nspawn
+// PodToNspawnArgs renders a prepared Pod as a systemd-nspawn
 // argument list ready to be executed
-func (c *Container) ContainerToNspawnArgs() ([]string, error) {
+func (p *Pod) PodToNspawnArgs() ([]string, error) {
 	args := []string{
-		"--uuid=" + c.UUID.String(),
-		"--directory=" + common.Stage1RootfsPath(c.Root),
+		"--uuid=" + p.UUID.String(),
+		"--directory=" + common.Stage1RootfsPath(p.Root),
 	}
 
-	for _, am := range c.Apps {
-		ra := c.Manifest.Apps.Get(am.Name)
+	for _, am := range p.Apps {
+		ra := p.Manifest.Apps.Get(am.Name)
 		if ra == nil {
-			panic("could not find app in container manifest!")
+			panic("could not find app in pod manifest!")
 		}
-		aa, err := c.appToNspawnArgs(ra, am)
+		aa, err := p.appToNspawnArgs(ra, am)
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct args for app %q: %v", am.Name, err)
 		}

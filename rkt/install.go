@@ -40,10 +40,10 @@ var (
 
 	// dirs relative to globalFlags.Dir
 	dirs = map[string]os.FileMode{
-		".":          os.FileMode(0755),
-		"cas":        os.FileMode(0775),
-		"tmp":        os.FileMode(0775),
-		"containers": os.FileMode(0700),
+		".":    os.FileMode(0755),
+		"cas":  os.FileMode(0775),
+		"tmp":  os.FileMode(0775),
+		"pods": os.FileMode(0700),
 	}
 )
 

@@ -157,12 +157,12 @@ func (a *IPAllocator) GetPtP(id string) (*ipam.IPConfig, error) {
 	return alloc, nil
 }
 
-// Releases all IPs allocated for the container with given ID
+// Releases all IPs allocated for the pod with given ID
 func (a *IPAllocator) Release(id string) error {
 	a.store.Lock()
 	defer a.store.Unlock()
 
-	return a.store.ReleaseByContainerID(id)
+	return a.store.ReleaseByPodID(id)
 }
 
 func (a *IPAllocator) nextIP() net.IP {

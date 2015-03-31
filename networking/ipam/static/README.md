@@ -1,6 +1,6 @@
 # static IP address manager
 
-static IPAM allocates static IPv4 and IPv6 addresses for containers.
+static IPAM allocates static IPv4 and IPv6 addresses for pods.
 
 ## Usage
 
@@ -21,7 +21,7 @@ Given the following network configuration:
 
 ```
 $ export RKT_NETPLUGIN_COMMAND=ADD
-$ export RKT_NETPLUGIN_CONTID=f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+$ export RKT_NETPLUGIN_PODID=f81d4fae-7dec-11d0-a765-00a0c91e6bf6
 $ export RKT_NETPLUGIN_NETCONF=/etc/rkt/net.d/default.conf
 $ ./static
 ```
@@ -34,7 +34,7 @@ $ ./static
 
 ## Backends
 
-By default ipmanager stores IP allocations on the local filesystem using the IP address as the file name and the container ID as contents. For example:
+By default ipmanager stores IP allocations on the local filesystem using the IP address as the file name and the pod ID as contents. For example:
 
 ```
 $ ls /var/lib/rkt/networks/default

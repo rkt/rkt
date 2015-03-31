@@ -87,7 +87,7 @@ var (
 func init() {
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
 	flag.BoolVar(&privNet, "private-net", false, "Setup private network (WIP!)")
-	flag.BoolVar(&interactive, "interactive", false, "The container is interactive")
+	flag.BoolVar(&interactive, "interactive", false, "The pod is interactive")
 
 	// this ensures that main runs only on main thread (thread group leader).
 	// since namespace ops (unshare, setns) are done for a single thread, we
@@ -96,11 +96,11 @@ func init() {
 }
 
 // getArgsEnv returns the nspawn args and env according to the usr used
-func getArgsEnv(c *Container, debug bool) ([]string, []string, error) {
+func getArgsEnv(p *Pod, debug bool) ([]string, []string, error) {
 	args := []string{}
 	env := os.Environ()
 
-	flavor, err := os.Readlink(filepath.Join(common.Stage1RootfsPath(c.Root), "flavor"))
+	flavor, err := os.Readlink(filepath.Join(common.Stage1RootfsPath(p.Root), "flavor"))
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to determine stage1 flavor: %v", err)
 	}
@@ -108,19 +108,19 @@ func getArgsEnv(c *Container, debug bool) ([]string, []string, error) {
 	switch flavor {
 	case "coreos":
 		// when running the coreos-derived stage1 with unpatched systemd-nspawn we need some ld-linux hackery
-		args = append(args, filepath.Join(common.Stage1RootfsPath(c.Root), interpBin))
-		args = append(args, filepath.Join(common.Stage1RootfsPath(c.Root), nspawnBin))
-		args = append(args, "--boot")              // Launch systemd in the container
+		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), interpBin))
+		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
+		args = append(args, "--boot")              // Launch systemd in the pod
 		args = append(args, "--register", "false") // We cannot assume the host system is running systemd
 		// TODO(vc): we should leave registration enabled if systemd is running on the host,
 		// but it needs to be sufficiently new systemd or registration will fail.
 
-		env = append(env, "LD_PRELOAD="+filepath.Join(common.Stage1RootfsPath(c.Root), "fakesdboot.so"))
-		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(c.Root), "usr/lib"))
+		env = append(env, "LD_PRELOAD="+filepath.Join(common.Stage1RootfsPath(p.Root), "fakesdboot.so"))
+		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib"))
 
 	case "src":
-		args = append(args, filepath.Join(common.Stage1RootfsPath(c.Root), nspawnBin))
-		args = append(args, "--boot") // Launch systemd in the container
+		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
+		args = append(args, "--boot") // Launch systemd in the pod
 
 	default:
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
@@ -130,7 +130,7 @@ func getArgsEnv(c *Container, debug bool) ([]string, []string, error) {
 		args = append(args, "--quiet") // silence most nspawn output (log_warning is currently not covered by this)
 	}
 
-	nsargs, err := c.ContainerToNspawnArgs()
+	nsargs, err := p.PodToNspawnArgs()
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to generate nspawn args: %v", err)
 	}
@@ -140,7 +140,7 @@ func getArgsEnv(c *Container, debug bool) ([]string, []string, error) {
 	args = append(args, "--")
 	args = append(args, "--default-standard-output=tty") // redirect all service logs straight to tty
 	if !debug {
-		args = append(args, "--log-target=null") // silence systemd output inside container
+		args = append(args, "--log-target=null") // silence systemd output inside pod
 		args = append(args, "--show-status=0")   // silence systemd initialization status output
 	}
 
@@ -165,9 +165,9 @@ func stage1() int {
 	}
 
 	root := "."
-	c, err := LoadContainer(root, uuid)
+	p, err := LoadPod(root, uuid)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load container: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to load pod: %v\n", err)
 		return 1
 	}
 
@@ -184,36 +184,36 @@ func stage1() int {
 		return 1
 	}
 
-	mirrorLocalZoneInfo(c.Root)
+	mirrorLocalZoneInfo(p.Root)
 
 	if privNet {
-		n, err := networking.Setup(root, c.UUID)
+		n, err := networking.Setup(root, p.UUID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to setup network: %v\n", err)
 			return 6
 		}
 		defer n.Teardown()
 
-		c.MetadataServiceURL = common.MetadataServicePublicURL(n.HostIP)
+		p.MetadataServiceURL = common.MetadataServicePublicURL(n.HostIP)
 
-		if err = n.EnterContNS(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to switch to container netns: %v\n", err)
+		if err = n.EnterPodNS(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to switch to pod netns: %v\n", err)
 			return 6
 		}
 
-		if err = registerContainer(c, n.MetadataIP); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to register container: %v\n", err)
+		if err = registerPod(p, n.MetadataIP); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to register pod: %v\n", err)
 			return 6
 		}
-		defer unregisterContainer(c)
+		defer unregisterPod(p)
 	}
 
-	if err = c.ContainerToSystemd(interactive); err != nil {
+	if err = p.PodToSystemd(interactive); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
 		return 2
 	}
 
-	args, env, err := getArgsEnv(c, debug)
+	args, env, err := getArgsEnv(p, debug)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get execution parameters: %v\n", err)
 		return 3

@@ -4,7 +4,7 @@
 
 Rocket implements the two runtime components of the specification: the [Application Container Executor (ACE)][appc-ace] and the [Metadata Service][appc-meta].
 
-It also leverages schema and code from the upstream [appc/spec][appc-spec] repo to manipulate ACIs, work with manifests, and perform image discovery.
+It also leverages schema and code from the upstream [appc/spec][appc-spec] repo to manipulate ACIs, work with image and pod manifests, and perform image discovery.
 
 ## Validating Rocket
 

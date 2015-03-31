@@ -39,10 +39,10 @@ Make sure metadata service is currently running.
 For more information on running metadata service,
 see https://github.com/coreos/rocket/blob/master/Documentation/metadata-service.md`)
 
-func registerContainer(c *Container, ip net.IP) error {
-	uuid := c.UUID.String()
+func registerPod(p *Pod, ip net.IP) error {
+	uuid := p.UUID.String()
 
-	cmf, err := os.Open(common.PodManifestPath(c.Root))
+	cmf, err := os.Open(common.PodManifestPath(p.Root))
 	if err != nil {
 		return fmt.Errorf("failed opening runtime manifest: %v", err)
 	}
@@ -50,11 +50,11 @@ func registerContainer(c *Container, ip net.IP) error {
 
 	pth := fmt.Sprintf("/pods/%v?ip=%v", uuid, ip.To4().String())
 	if err := httpRequest("PUT", pth, cmf); err != nil {
-		return fmt.Errorf("failed to register container with metadata svc: %v", err)
+		return fmt.Errorf("failed to register pod with metadata svc: %v", err)
 	}
 
-	for _, app := range c.Manifest.Apps {
-		ampath := common.ImageManifestPath(c.Root, app.Image.ID)
+	for _, app := range p.Manifest.Apps {
+		ampath := common.ImageManifestPath(p.Root, app.Image.ID)
 		amf, err := os.Open(ampath)
 		if err != nil {
 			fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
@@ -69,8 +69,8 @@ func registerContainer(c *Container, ip net.IP) error {
 	return nil
 }
 
-func unregisterContainer(c *Container) error {
-	pth := path.Join("/pods", c.UUID.String())
+func unregisterPod(p *Pod) error {
+	pth := path.Join("/pods", p.UUID.String())
 	return httpRequest("DELETE", pth, nil)
 }
 

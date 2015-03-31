@@ -19,7 +19,7 @@ package main
 var (
 	cmdStatus = &Command{
 		Name:    cmdStatusName,
-		Summary: "Check the status of a rkt container",
+		Summary: "Check the status of a rkt pod",
 		Usage:   "[--wait] UUID",
 		Run:     runStatus,
 	}
@@ -34,7 +34,7 @@ const (
 
 func init() {
 	commands = append(commands, cmdStatus)
-	cmdStatus.Flags.BoolVar(&flagWait, "wait", false, "toggle waiting for the container to exit")
+	cmdStatus.Flags.BoolVar(&flagWait, "wait", false, "toggle waiting for the pod to exit")
 }
 
 func runStatus(args []string) (exit int) {
@@ -43,27 +43,27 @@ func runStatus(args []string) (exit int) {
 		return 1
 	}
 
-	containerUUID, err := resolveUUID(args[0])
+	podUUID, err := resolveUUID(args[0])
 	if err != nil {
 		stderr("Unable to resolve UUID: %v", err)
 		return 1
 	}
 
-	c, err := getContainer(containerUUID.String())
+	p, err := getPod(podUUID.String())
 	if err != nil {
-		stderr("Unable to get container: %v", err)
+		stderr("Unable to get pod: %v", err)
 		return 1
 	}
-	defer c.Close()
+	defer p.Close()
 
 	if flagWait {
-		if err := c.waitExited(); err != nil {
-			stderr("Unable to wait for container: %v", err)
+		if err := p.waitExited(); err != nil {
+			stderr("Unable to wait for pod: %v", err)
 			return 1
 		}
 	}
 
-	if err = printStatus(c); err != nil {
+	if err = printStatus(p); err != nil {
 		stderr("Unable to print status: %v", err)
 		return 1
 	}
@@ -71,26 +71,26 @@ func runStatus(args []string) (exit int) {
 	return 0
 }
 
-// printStatus prints the container's pid and per-app status codes
-func printStatus(c *container) error {
-	stdout("state=%s", c.getState())
+// printStatus prints the pod's pid and per-app status codes
+func printStatus(p *pod) error {
+	stdout("state=%s", p.getState())
 
-	if c.isRunning() {
-		stdout("networks=%s", fmtNets(c.nets))
+	if p.isRunning() {
+		stdout("networks=%s", fmtNets(p.nets))
 	}
 
-	if !c.isEmbryo && !c.isPreparing && !c.isPrepared && !c.isAbortedPrepare && !c.isGarbage && !c.isGone {
-		pid, err := c.getPID()
+	if !p.isEmbryo && !p.isPreparing && !p.isPrepared && !p.isAbortedPrepare && !p.isGarbage && !p.isGone {
+		pid, err := p.getPID()
 		if err != nil {
 			return err
 		}
 
-		stats, err := c.getExitStatuses()
+		stats, err := p.getExitStatuses()
 		if err != nil {
 			return err
 		}
 
-		stdout("pid=%d\nexited=%t", pid, c.isExited)
+		stdout("pid=%d\nexited=%t", pid, p.isExited)
 		for app, stat := range stats {
 			stdout("%s=%d", app, stat)
 		}
