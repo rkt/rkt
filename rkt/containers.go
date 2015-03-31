@@ -54,6 +54,18 @@ type container struct {
 	isGone           bool // when a container no longer can be located at its uuid anywhere XXX: only set by refreshState()
 }
 
+// Exported state. See Documentation/container-lifecycle.md for some explanation
+const (
+	Embryo         = "embryo"
+	Preparing      = "preparing"
+	AbortedPrepare = "aborted prepare"
+	Prepared       = "prepared"
+	Running        = "running"
+	Deleting       = "deleting" // This covers container.isExitedDeleting and container.isDeleting.
+	Exited         = "exited"   // This covers container.isExited and container.isExitedGarbage.
+	Garbage        = "garbage"
+)
+
 type includeMask byte
 
 const (
@@ -653,22 +665,22 @@ func (c *container) openFile(path string, flags int) (*os.File, error) {
 
 // getState returns the current state of the container
 func (c *container) getState() string {
-	state := "running"
+	state := Running
 
 	if c.isEmbryo {
-		state = "embryo"
+		state = Embryo
 	} else if c.isPreparing {
-		state = "preparing"
+		state = Preparing
 	} else if c.isAbortedPrepare {
-		state = "aborted prepare"
+		state = AbortedPrepare
 	} else if c.isPrepared {
-		state = "prepared"
+		state = Prepared
 	} else if c.isExitedDeleting || c.isDeleting {
-		state = "deleting"
-	} else if c.isExited { // this covers c.isExitedGarbage
-		state = "exited"
+		state = Deleting
+	} else if c.isExited || c.isExitedGarbage { // c.isExited covers c.isExitedGarbage.
+		state = Exited
 	} else if c.isGarbage {
-		state = "garbage"
+		state = Garbage
 	}
 
 	return state
