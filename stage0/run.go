@@ -55,6 +55,7 @@ type PrepareConfig struct {
 	Volumes     []types.Volume      // list of volumes that rkt can provide to applications
 	Ports       []types.ExposedPort // list of ports that rkt will expose on the host
 	UseOverlay  bool                // prepare pod with overlay fs
+	PodManifest string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
 }
 
 // configuration parameters needed by Run
@@ -100,23 +101,20 @@ func MergeEnvs(appEnv *types.Environment, inheritEnv bool, setEnv []string) {
 	}
 }
 
-// Prepare sets up a pod based on the given config.
-func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
-	log.Printf("Preparing stage1")
-	if err := prepareStage1Image(cfg, cfg.Stage1Image, dir, cfg.UseOverlay); err != nil {
-		return fmt.Errorf("error preparing stage1: %v", err)
-	}
-
-	cm := schema.PodManifest{
+// generatePodManifest creates the pod manifest from the command line input.
+// It returns the pod manifest as []byte on success.
+// This is invoked if no pod manifest is specified at the command line.
+func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
+	pm := schema.PodManifest{
 		ACKind: "PodManifest",
 		Apps:   make(schema.AppList, 0),
 	}
 
 	v, err := types.NewSemVer(version.Version)
 	if err != nil {
-		return fmt.Errorf("error creating version: %v", err)
+		return nil, fmt.Errorf("error creating version: %v", err)
 	}
-	cm.ACVersion = *v
+	pm.ACVersion = *v
 
 	if err := cfg.Apps.Walk(func(app *apps.App) error {
 		img := app.ImageID
@@ -124,7 +122,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		if err != nil {
 			return fmt.Errorf("error setting up image %s: %v", img, err)
 		}
-		if cm.Apps.Get(am.Name) != nil {
+		if pm.Apps.Get(am.Name) != nil {
 			return fmt.Errorf("error: multiple apps with name %s", am.Name)
 		}
 		if am.App == nil {
@@ -151,25 +149,80 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 			}
 			MergeEnvs(&ra.App.Environment, cfg.InheritEnv, cfg.ExplicitEnv)
 		}
-		cm.Apps = append(cm.Apps, ra)
+		pm.Apps = append(pm.Apps, ra)
 		return nil
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	// TODO(jonboulle): check that app mountpoint expectations are
 	// satisfied here, rather than waiting for stage1
-	cm.Volumes = cfg.Volumes
-	cm.Ports = cfg.Ports
+	pm.Volumes = cfg.Volumes
+	pm.Ports = cfg.Ports
 
-	cdoc, err := json.Marshal(cm)
+	pmb, err := json.Marshal(pm)
 	if err != nil {
-		return fmt.Errorf("error marshalling pod manifest: %v", err)
+		return nil, fmt.Errorf("error marshalling pod manifest: %v", err)
+	}
+	return pmb, nil
+}
+
+// validatePodManifest reads the user-specified pod manifest, prepares the app images
+// and validates the pod manifest. If the pod manifest passes validation, it returns
+// the manifest as []byte.
+// TODO(yifan): More validation in the future.
+func validatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
+	pmb, err := ioutil.ReadFile(cfg.PodManifest)
+	if err != nil {
+		return nil, fmt.Errorf("error reading pod manifest: %v", err)
+	}
+	var pm schema.PodManifest
+	if err := json.Unmarshal(pmb, &pm); err != nil {
+		return nil, fmt.Errorf("error unmarshaling pod manifest: %v", err)
+	}
+
+	appNames := make(map[types.ACName]struct{})
+	for _, app := range pm.Apps {
+		img := app.Image
+		am, err := prepareAppImage(cfg, img.ID, dir, cfg.UseOverlay)
+		if err != nil {
+			return nil, fmt.Errorf("error setting up image %s: %v", img, err)
+		}
+		if _, ok := appNames[app.Name]; ok {
+			return nil, fmt.Errorf("error: multiple apps with name %s", app.Name)
+		}
+		appNames[app.Name] = struct{}{}
+		if !app.Name.Equals(am.Name) {
+			return nil, fmt.Errorf("error: image has a different name from the app (%q vs %q)", am.Name, app.Name)
+		}
+		if am.App == nil {
+			return nil, fmt.Errorf("error: image %s has no app section", img)
+		}
+	}
+	return pmb, nil
+}
+
+// Prepare sets up a pod based on the given config.
+func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
+	log.Printf("Preparing stage1")
+	if err := prepareStage1Image(cfg, cfg.Stage1Image, dir, cfg.UseOverlay); err != nil {
+		return fmt.Errorf("error preparing stage1: %v", err)
+	}
+
+	var pmb []byte
+	var err error
+	if len(cfg.PodManifest) > 0 {
+		pmb, err = validatePodManifest(cfg, dir)
+	} else {
+		pmb, err = generatePodManifest(cfg, dir)
+	}
+	if err != nil {
+		return err
 	}
 
 	log.Printf("Writing pod manifest")
 	fn := common.PodManifestPath(dir)
-	if err := ioutil.WriteFile(fn, cdoc, 0700); err != nil {
+	if err := ioutil.WriteFile(fn, pmb, 0700); err != nil {
 		return fmt.Errorf("error writing pod manifest: %v", err)
 	}
 

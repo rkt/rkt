@@ -59,6 +59,7 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 	flagInteractive bool
 	flagNoOverlay   bool
 	flagLocal       bool
+	flagPodManifest string
 )
 
 func init() {
@@ -82,6 +83,7 @@ func init() {
 	runFlags.BoolVar(&flagInteractive, "interactive", false, "run pod interactively")
 	runFlags.Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 	runFlags.BoolVar(&flagLocal, "local", false, "use only local images (do not discover or download from remote URLs)")
+	runFlags.StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--private-net', '--no-overlay' and '--interactive' will have effects")
 	flagVolumes = volumeList{}
 	flagPorts = portList{}
 }
@@ -89,6 +91,11 @@ func init() {
 func runRun(args []string) (exit int) {
 	if len(flagPorts) > 0 && !flagPrivateNet {
 		stderr("--port flag requires --private-net")
+		return 1
+	}
+
+	if len(flagPodManifest) > 0 && (len(flagVolumes) > 0 || len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagLocal) {
+		stderr("conflicting flags set with --pod-manifest (see --help)")
 		return 1
 	}
 
@@ -113,8 +120,8 @@ func runRun(args []string) (exit int) {
 		return 1
 	}
 
-	if rktApps.Count() < 1 {
-		stderr("run: must provide at least one image")
+	if rktApps.Count() < 1 && len(flagPodManifest) == 0 {
+		stderr("run: must provide at least one image or specify the pod manifest")
 		return 1
 	}
 
@@ -166,13 +173,19 @@ func runRun(args []string) (exit int) {
 
 	pcfg := stage0.PrepareConfig{
 		CommonConfig: cfg,
-		Apps:         &rktApps,
-		Volumes:      []types.Volume(flagVolumes),
-		Ports:        []types.ExposedPort(flagPorts),
-		InheritEnv:   flagInheritEnv,
-		ExplicitEnv:  flagExplicitEnv.Strings(),
 		UseOverlay:   !flagNoOverlay && common.SupportsOverlay(),
 	}
+
+	if len(flagPodManifest) > 0 {
+		pcfg.PodManifest = flagPodManifest
+	} else {
+		pcfg.Volumes = []types.Volume(flagVolumes)
+		pcfg.Ports = []types.ExposedPort(flagPorts)
+		pcfg.InheritEnv = flagInheritEnv
+		pcfg.ExplicitEnv = flagExplicitEnv.Strings()
+		pcfg.Apps = &rktApps
+	}
+
 	err = stage0.Prepare(pcfg, p.path(), p.uuid)
 	if err != nil {
 		stderr("run: error setting up stage0: %v", err)
@@ -281,6 +294,10 @@ func (e *envMap) Set(s string) error {
 	}
 	e.mapping[pair[0]] = pair[1]
 	return nil
+}
+
+func (e *envMap) IsEmpty() bool {
+	return len(e.mapping) == 0
 }
 
 func (e *envMap) String() string {
