@@ -19,6 +19,7 @@ package common
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,9 +37,7 @@ const (
 	Stage1IDFilename        = "stage1ID"
 	OverlayPreparedFilename = "overlay-prepared"
 
-	MetadataServiceIP      = "169.254.169.255"
-	MetadataServicePubPort = 80
-	MetadataServicePrvPort = 2375
+	MetadataServicePort    = 2375
 	MetadataServiceRegSock = "/run/rkt/metadata-svc.sock"
 )
 
@@ -99,8 +98,8 @@ func ImageManifestPath(root string, imageID types.Hash) string {
 }
 
 // MetadataServicePublicURL returns the public URL used to host the metadata service
-func MetadataServicePublicURL() string {
-	return fmt.Sprintf("http://%v:%v", MetadataServiceIP, MetadataServicePubPort)
+func MetadataServicePublicURL(ip net.IP) string {
+	return fmt.Sprintf("http://%v:%v", ip, MetadataServicePort)
 }
 
 func GetRktLockFD() (int, error) {

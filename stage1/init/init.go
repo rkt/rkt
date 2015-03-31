@@ -185,7 +185,28 @@ func stage1() int {
 	}
 
 	mirrorLocalZoneInfo(c.Root)
-	c.MetadataServiceURL = common.MetadataServicePublicURL()
+
+	if privNet {
+		n, err := networking.Setup(root, c.UUID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to setup network: %v\n", err)
+			return 6
+		}
+		defer n.Teardown()
+
+		c.MetadataServiceURL = common.MetadataServicePublicURL(n.HostIP)
+
+		if err = n.EnterContNS(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to switch to container netns: %v\n", err)
+			return 6
+		}
+
+		if err = registerContainer(c, n.MetadataIP); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to register container: %v\n", err)
+			return 6
+		}
+		defer unregisterContainer(c)
+	}
 
 	if err = c.ContainerToSystemd(interactive); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
@@ -198,28 +219,9 @@ func stage1() int {
 		return 3
 	}
 
+	var execFn func() error
+
 	if privNet {
-		// careful not to make another local err variable.
-		// cmd.Run sets the one from parent scope
-		var n *networking.Networking
-		n, err = networking.Setup(root, c.UUID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to setup network: %v\n", err)
-			return 6
-		}
-		defer n.Teardown()
-
-		if err = n.EnterContNS(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to switch to container netns: %v\n", err)
-			return 6
-		}
-
-		if err = registerContainer(c, n.MetadataIP); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to register container: %v\n", err)
-			return 6
-		}
-		defer unregisterContainer(c)
-
 		cmd := exec.Cmd{
 			Path:   args[0],
 			Args:   args,
@@ -228,13 +230,14 @@ func stage1() int {
 			Stderr: os.Stderr,
 			Env:    env,
 		}
-		err = withClearedCloExec(lfd, cmd.Run)
+		execFn = cmd.Run
 	} else {
-		err = withClearedCloExec(lfd, func() error {
+		execFn = func() error {
 			return syscall.Exec(args[0], args, env)
-		})
+		}
 	}
 
+	err = withClearedCloExec(lfd, execFn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute nspawn: %v\n", err)
 		return 5

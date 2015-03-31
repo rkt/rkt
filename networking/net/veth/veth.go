@@ -116,7 +116,8 @@ func cmdAdd(args *util.CmdArgs) error {
 	}
 
 	return rktnet.PrintIfConfig(&rktnet.IfConfig{
-		IP: ipConf.IP.IP,
+		IP:     ipConf.IP.IP,
+		HostIP: ipConf.Gateway,
 	})
 }
 
