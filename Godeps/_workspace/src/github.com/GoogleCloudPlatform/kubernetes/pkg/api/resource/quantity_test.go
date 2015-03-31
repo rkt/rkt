@@ -21,8 +21,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/spf13/pflag"
-	"github.com/coreos/rocket/Godeps/_workspace/src/speter.net/go/exp/math/dec/inf"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
+	"github.com/coreos/rkt/Godeps/_workspace/src/speter.net/go/exp/math/dec/inf"
 	fuzz "github.com/google/gofuzz"
 )
 

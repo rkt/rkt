@@ -16,7 +16,7 @@ package falloc
 
 import (
 	"bytes"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/fileutil/storage"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/fileutil/storage"
 	"sync"
 )
 

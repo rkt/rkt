@@ -21,16 +21,16 @@ import (
 	"log"
 	"os"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/cas"
-	"github.com/coreos/rocket/common"
-	"github.com/coreos/rocket/stage0"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/cas"
+	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/stage0"
 )
 
 var (
 	cmdPrepare = &Command{
 		Name:    "prepare",
-		Summary: "Prepare to run image(s) in a pod in rocket",
+		Summary: "Prepare to run image(s) in a pod in rkt",
 		Usage:   "[--volume name,kind=host,...] [--quiet] IMAGE [-- image-args...[---]]...",
 		Description: `Image should be a string referencing an image; either a hash, local file on disk, or URL.
 They will be checked in that order and the first match will be used.
@@ -45,7 +45,7 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 
 func init() {
 	commands = append(commands, cmdPrepare)
-	cmdPrepare.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, Rocket will look for a file called "stage1.aci" in the same directory as rkt itself`)
+	cmdPrepare.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
 	cmdPrepare.Flags.Var(&flagVolumes, "volume", "volumes to mount into the pod")
 	cmdPrepare.Flags.BoolVar(&flagQuiet, "quiet", false, "suppress superfluous output on stdout, print only the UUID on success")
 	cmdPrepare.Flags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")

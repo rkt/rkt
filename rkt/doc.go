@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package rkt (main) implements the command line interface to rocket
+// Package rkt (main) implements the command line interface to rkt
 package main

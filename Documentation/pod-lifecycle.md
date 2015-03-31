@@ -1,8 +1,8 @@
-# Life-cycle of a pod in rocket
+# Life-cycle of a pod in rkt
 
 Throughout this document `$var` is used to refer to the directory `/var/lib/rkt/pods`, and `$uuid` refers to a pod's UUID e.g. "076292e6-54c4-4cc8-9fa7-679c5f7dcfd3".
 
-Due to rocket's lack of a management daemon process, a combination of advisory file locking and atomically changing (via rename(2)) directory locations is used to represent and transition the basic pod states.
+Due to rkt's lack of a management daemon process, a combination of advisory file locking and atomically changing (via rename(2)) directory locations is used to represent and transition the basic pod states.
 
 At times where a state must be reliably coupled to an executing process, that process is executed with an open file descriptor possessing an exclusive advisory lock on the respective pod's directory.  Should that process exit for any reason, its open file descriptors will automatically be closed by the kernel, implicitly unlocking the pod's directory in the process.  By attempting to acquire a shared non-blocking advisory lock on a pod directory we're able to poll for these process-bound states, additionally by employing a blocking acquisition mode we may reliably synchronize indirectly with the exit of such processes, effectively providing us with a wake-up event the moment such a state transitions.  For more information on advisory locks see the flock(2) man page.
 
@@ -65,7 +65,7 @@ Should #Prepare fail or be interrupted, `$var/prepare/$uuid` will be left in an 
 
 `rkt run` and `rkt run-prepared` both arrive here with the pod at `$var/run/$uuid` while holding the exclusive lock.
 
-The pod is then excuted while holding this lock.  It is required that the stage 1 `coreos.com/rocket/stage1/run` entrypoint keep the file descriptor representing the exclusive lock open for the lifetime of the pod's process.  All this requires is that the stage 1 implementation not close the inherited file descriptor.  This is facilitated by supplying stage 1 its number in the RKT_LOCK_FD environment variable.
+The pod is then excuted while holding this lock.  It is required that the stage 1 `coreos.com/rkt/stage1/run` entrypoint keep the file descriptor representing the exclusive lock open for the lifetime of the pod's process.  All this requires is that the stage 1 implementation not close the inherited file descriptor.  This is facilitated by supplying stage 1 its number in the RKT_LOCK_FD environment variable.
 
 What follows applies equally to `rkt run` and `rkt run-prepared`.
 

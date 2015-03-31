@@ -1,7 +1,7 @@
 {
     "acKind": "ImageManifest",
     "acVersion": "0.5.2",
-    "name": "coreos.com/rocket/stage1",
+    "name": "coreos.com/rkt/stage1",
     "labels": [
         {
             "name": "version",
@@ -18,11 +18,11 @@
     ],
     "annotations": [
         {
-            "name": "coreos.com/rocket/stage1/run",
+            "name": "coreos.com/rkt/stage1/run",
             "value": "/init"
         },
         {
-            "name": "coreos.com/rocket/stage1/enter",
+            "name": "coreos.com/rkt/stage1/enter",
             "value": "/enter"
         }
     ]

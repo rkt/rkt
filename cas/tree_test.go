@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coreos/rocket/pkg/aci"
+	"github.com/coreos/rkt/pkg/aci"
 )
 
 func treeStoreDSWriteACI(dir string, ds *Store) (string, error) {

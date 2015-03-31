@@ -21,7 +21,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
 
 // A KeyDetails represents an openpgp.Entity and its key details.

@@ -1,5 +1,5 @@
 [Unit]
-Description=Rocket apps reaper
+Description=rkt apps reaper
 AllowIsolate=true
 DefaultDependencies=false
 

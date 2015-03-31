@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 func fakeHTTPGet(filename string, failures int) func(uri string) (*http.Response, error) {

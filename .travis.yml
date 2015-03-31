@@ -1,4 +1,4 @@
-# Configures Rocket tests at Travis CI (https://travis-ci.org).
+# Configures rkt tests at Travis CI (https://travis-ci.org).
 
 language: go
 

@@ -6,7 +6,7 @@ package packet
 
 import (
 	"bytes"
-	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
+	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
 	"io"
 	"io/ioutil"
 )

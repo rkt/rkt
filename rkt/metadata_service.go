@@ -34,10 +34,10 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/gorilla/mux"
-	"github.com/coreos/rocket/common"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/gorilla/mux"
+	"github.com/coreos/rkt/common"
 )
 
 var (

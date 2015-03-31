@@ -1,6 +1,6 @@
 #!/bin/bash -e
 #
-# Run all rocket tests
+# Run all rkt tests
 # ./test
 # ./test -v
 #

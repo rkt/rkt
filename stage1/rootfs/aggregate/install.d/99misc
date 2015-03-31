@@ -11,7 +11,7 @@ install -m 0644 units/sockets.target "$ROOT/usr/lib/systemd/system"
 install -m 0755 scripts/reaper.sh "$ROOT"
 
 install -d "$ROOT/etc"
-echo "rocket" > "$ROOT/etc/os-release"
+echo "rkt" > "$ROOT/etc/os-release"
 
 # parent dir for the stage2 bind mounts
 install -d "$ROOT/opt/stage2"

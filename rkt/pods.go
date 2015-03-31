@@ -26,12 +26,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/common"
-	"github.com/coreos/rocket/networking/netinfo"
-	"github.com/coreos/rocket/pkg/lock"
+	"github.com/coreos/rkt/Godeps/_workspace/src/code.google.com/p/go-uuid/uuid"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/networking/netinfo"
+	"github.com/coreos/rkt/pkg/lock"
 )
 
 // see Documentation/pod-lifecycle.md for some explanation

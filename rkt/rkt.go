@@ -23,12 +23,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/coreos/rocket/pkg/keystore"
+	"github.com/coreos/rkt/pkg/keystore"
 )
 
 const (
 	cliName        = "rkt"
-	cliDescription = "rocket, the application container runner"
+	cliDescription = "rkt, the application container runner"
 
 	defaultDataDir = "/var/lib/rkt"
 )
@@ -48,7 +48,7 @@ var (
 func init() {
 	globalFlagset.BoolVar(&globalFlags.Help, "help", false, "Print usage information and exit")
 	globalFlagset.BoolVar(&globalFlags.Debug, "debug", false, "Print out more debug information to stderr")
-	globalFlagset.StringVar(&globalFlags.Dir, "dir", defaultDataDir, "rocket data directory")
+	globalFlagset.StringVar(&globalFlags.Dir, "dir", defaultDataDir, "rkt data directory")
 	globalFlagset.BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip image or key verification")
 }
 

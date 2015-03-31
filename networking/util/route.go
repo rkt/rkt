@@ -17,7 +17,7 @@ package util
 import (
 	"net"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 )
 
 // AddDefaultRoute sets the default route on the given gateway.

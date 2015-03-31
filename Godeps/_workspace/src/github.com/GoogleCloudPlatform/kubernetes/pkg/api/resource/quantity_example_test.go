@@ -19,7 +19,7 @@ package resource_test
 import (
 	"fmt"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/GoogleCloudPlatform/kubernetes/pkg/api/resource"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/GoogleCloudPlatform/kubernetes/pkg/api/resource"
 )
 
 func ExampleFormat() {

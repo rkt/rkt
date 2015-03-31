@@ -28,11 +28,11 @@ import (
 	"runtime"
 	"syscall"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 
-	"github.com/coreos/rocket/common"
-	"github.com/coreos/rocket/networking"
-	"github.com/coreos/rocket/pkg/sys"
+	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/networking"
+	"github.com/coreos/rkt/pkg/sys"
 )
 
 const (

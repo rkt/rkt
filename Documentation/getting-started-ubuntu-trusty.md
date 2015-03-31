@@ -1,4 +1,4 @@
-# Getting Started with Rocket on Ubuntu Trusty
+# Getting Started with rkt on Ubuntu Trusty
 
 The following guide will show you how to build and run the sample [etcd aci](https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci) on the standard vagrantcloud.com [box for ubuntu trusty](https://vagrantcloud.com/ubuntu/boxes/trusty64).
 
@@ -10,20 +10,20 @@ vagrant init ubuntu/trusty64
 vagrant up --provider virtualbox
 ```
 
-## SSH into the VM, Install Rocket and Download the ACI
+## SSH into the VM, Install rkt and Download the ACI
 
 ```
 vagrant ssh
 sudo su
 
-wget https://github.com/coreos/rocket/releases/download/v0.3.1/rocket-v0.3.1.tar.gz
-tar xzvf rocket-v0.3.1.tar.gz
-cd rocket-v0.3.1
+wget https://github.com/coreos/rkt/releases/download/v0.3.1/rkt-v0.3.1.tar.gz
+tar xzvf rkt-v0.3.1.tar.gz
+cd rkt-v0.3.1
 ./rkt help
 ```
 ## Trust the CoreOS signing key
 
-This shows how to trust the CoreOS signing key with the procedure outlined in [Signing and Verification Guide](https://github.com/coreos/rocket/blob/master/Documentation/signing-and-verification-guide.md)
+This shows how to trust the CoreOS signing key with the procedure outlined in [Signing and Verification Guide](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md)
 
 Download the public key
 `curl -O https://coreos.com/dist/pubkeys/aci-pubkeys.gpg`
@@ -104,4 +104,4 @@ rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0
 Press ^] three times to kill container
 ```
 
-You are now running etcd inside of a Rocket pod on Ubuntu Trusty.
+You are now running etcd inside of a rkt pod on Ubuntu Trusty.

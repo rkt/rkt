@@ -1,14 +1,14 @@
-# Rocket architecture
+# rkt architecture
 
 ## Overview
 
-Rocket consists only of a command-line tool, `rkt`, and does not have a daemon. This architecture allows Rocket to be updated in-place without affecting application containers which are currently running. It also means that levels of privilege can be separated out between different operations.
+rkt consists only of a command-line tool, `rkt`, and does not have a daemon. This architecture allows rkt to be updated in-place without affecting application containers which are currently running. It also means that levels of privilege can be separated out between different operations.
 
-All state in Rocket is communicated via the filesystem. Facilities like file-locking are used to ensure co-operation and mutual exclusion between concurrent invocations of the `rkt` command.
+All state in rkt is communicated via the filesystem. Facilities like file-locking are used to ensure co-operation and mutual exclusion between concurrent invocations of the `rkt` command.
 
 ## Stages
 
-Execution with Rocket is divided into several distinct stages.
+Execution with rkt is divided into several distinct stages.
 
 ### Stage 0
 
@@ -46,7 +46,7 @@ where:
 - `stage1` is a copy of the stage1 ACI that is safe for read/write
 - `stage1/manifest` is the manifest of the stage1 ACI
 - `stage1/rootfs` is the rootfs of the stage1 ACI
-- `stage1/rootfs/init` is the actual stage1 binary to be executed (this path may vary according to the `coreos.com/rocket/stage1/init` Annotation of the stage1 ACI)
+- `stage1/rootfs/init` is the actual stage1 binary to be executed (this path may vary according to the `coreos.com/rkt/stage1/init` Annotation of the stage1 ACI)
 - `stage1/rootfs/opt/stage2` are copies of the unpacked ACIs
 
 At this point the stage0 execs `/stage1/rootfs/init` with the current working directory set to the root of the new filesystem.

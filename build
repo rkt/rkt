@@ -1,7 +1,7 @@
 #!/bin/bash -eu
 
 ORG_PATH="github.com/coreos"
-REPO_PATH="${ORG_PATH}/rocket"
+REPO_PATH="${ORG_PATH}/rkt"
 
 if [ ! -h gopath/src/${REPO_PATH} ]; then
 	mkdir -p gopath/src/${ORG_PATH}
@@ -40,7 +40,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	done
 
 	echo "Building actool..."
-	go build -o ${GOBIN}/actool github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/actool
+	go build -o ${GOBIN}/actool github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/actool
 	export ACTOOL=${GOBIN}/actool
 
 	echo "Building init (stage1)..."

@@ -21,11 +21,11 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/cas"
-	"github.com/coreos/rocket/common"
-	"github.com/coreos/rocket/stage0"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/cas"
+	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/stage0"
 )
 
 var (

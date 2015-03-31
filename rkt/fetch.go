@@ -24,14 +24,14 @@ import (
 	"strings"
 	"time"
 
-	docker2aci "github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/aci"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/discovery"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
-	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
-	"github.com/coreos/rocket/cas"
-	"github.com/coreos/rocket/pkg/keystore"
+	docker2aci "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
+	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	"github.com/coreos/rkt/cas"
+	"github.com/coreos/rkt/pkg/keystore"
 )
 
 const (

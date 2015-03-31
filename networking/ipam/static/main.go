@@ -5,9 +5,9 @@ import (
 	"errors"
 	"os"
 
-	"github.com/coreos/rocket/networking/ipam"
-	"github.com/coreos/rocket/networking/ipam/static/backend/disk"
-	"github.com/coreos/rocket/networking/util"
+	"github.com/coreos/rkt/networking/ipam"
+	"github.com/coreos/rkt/networking/ipam/static/backend/disk"
+	"github.com/coreos/rkt/networking/util"
 )
 
 func main() {

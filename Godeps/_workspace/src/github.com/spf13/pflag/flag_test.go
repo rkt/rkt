@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/coreos/rocket/Godeps/_workspace/src/github.com/spf13/pflag"
+	. "github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
 )
 
 var (

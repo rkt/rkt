@@ -1,7 +1,7 @@
-# Getting Started with Rocket
+# Getting Started with rkt
 
 The following guide will show you how to build and run a self-contained Go app using
-rocket, the reference implementation of the [App Container Specification](https://github.com/appc/spec).
+rkt, the reference implementation of the [App Container Specification](https://github.com/appc/spec).
 
 ## Create a hello go application
 

@@ -21,7 +21,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 // Enter enters the pod/app by exec()ing the stage1's /enter similar to /init

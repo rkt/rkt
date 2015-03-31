@@ -14,7 +14,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/mathutil"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/mathutil"
 )
 
 var _ Filer = &truncFiler{}

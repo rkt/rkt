@@ -10,6 +10,6 @@ Vagrant.configure('2') do |config|
     # install Build Dependencies (GOLANG)
     config.vm.provision :shell, :privileged => false, :path => "scripts/vagrant/install-go.sh"
 
-    # Install Rocket
-    config.vm.provision :shell, :privileged => false, :path => "scripts/vagrant/install-rocket.sh"
+    # Install rkt
+    config.vm.provision :shell, :privileged => false, :path => "scripts/vagrant/install-rkt.sh"
 end

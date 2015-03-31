@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	rktnet "github.com/coreos/rocket/networking/net"
+	rktnet "github.com/coreos/rkt/networking/net"
 )
 
 var defaultConfigDir = "/etc/rkt/ipam.d"

@@ -33,9 +33,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/coreos/rocket/pkg/keystore/keystoretest"
+	"github.com/coreos/rkt/pkg/keystore/keystoretest"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
+	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
 )
 
 func TestStoreTrustedKey(t *testing.T) {

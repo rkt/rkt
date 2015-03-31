@@ -8,7 +8,7 @@ By default, `rkt run` will start the pod with host networking.
 This means that the apps within the pod will share the network stack and the interfaces with the host machine.
 Since the metadata service uses the pod IP for identity, rkt will _not_ register the pod with the metadata service in this mode.
 
-Note: because of the lack of the metadata service Rocket does not strictly implement the app container specification in host mode.
+Note: because of the lack of the metadata service rkt does not strictly implement the app container specification in host mode.
 
 ## Private networking mode
 
@@ -17,14 +17,14 @@ The service will listen on 0.0.0.0:2375 by default and provides the private netw
 Ideally this metadata service is launched via your systems init system.
 
 If `rkt run` is started with `--private-net`, the pod will be executed with its own network stack.
-By default, Rocket will create a loopback device and a veth device. The veth pair creates a point-to-point link between the pod and the host.
-Rocket will allocate an IPv4 /31 (2 IP addresses) out of 172.16.28.0/24 and assign one IP to each end of the veth pair.
+By default, rkt will create a loopback device and a veth device. The veth pair creates a point-to-point link between the pod and the host.
+rkt will allocate an IPv4 /31 (2 IP addresses) out of 172.16.28.0/24 and assign one IP to each end of the veth pair.
 It will additionally set a route for metadata service (169.254.169.255/32) and default route in the pod namespace.
 Finally, it will enable IP masquerading on the host to NAT the egress traffic.
 
 ### Setting up additional networks
 
-In addition to the default network (veth) described in the previous section, Rocket pods can be configured to join additional networks.
+In addition to the default network (veth) described in the previous section, rkt pods can be configured to join additional networks.
 Each additional network will result in an new interface being setup in the pod.
 The type of network interface, IP, routes, etc is controlled via a configuration file residing in `/etc/rkt/net.d` directory.
 The network configuration files are executed in lexicographically sorted order. Each file consists of a JSON dictionary as shown below:
@@ -45,7 +45,7 @@ The following fields apply to all configuration files.
 Additional fields are specified for various types.
 
 - **name** (string): An arbitrary label for the network. By convention the conf file is labeled with a leading ordinal, dash, network name, and .conf extension.
-- **type** (string): The type of network/interface to create. The type actually names a network plugin with Rocket bundled with few built-in ones.
+- **type** (string): The type of network/interface to create. The type actually names a network plugin with rkt bundled with few built-in ones.
 - **ipam** (dict): IP Address Management -- controls the settings related to IP address assignment, gateway, and routes.
 
 ### Built-in network types
@@ -83,12 +83,12 @@ With the IP address allocated by the real network infrastructure, this makes the
 
 #### ipvlan
 
-- [Coming soon](https://github.com/coreos/rocket/issues/479)
+- [Coming soon](https://github.com/coreos/rkt/issues/479)
 
 ## IP Address Management
 
 The policy for IP address allocation, associated gateway and routes is separately configurable via the `ipam` section of the configuration file.
-Rocket currently ships with one type of IPAM (static) but DHCP is in the works. Like the network types, IPAM types can be implemented by third-parties via plugins.
+rkt currently ships with one type of IPAM (static) but DHCP is in the works. Like the network types, IPAM types can be implemented by third-parties via plugins.
 
 ### static
 
@@ -108,8 +108,8 @@ Consider the following conf:
 }
 ```
 
-This configuration instructs Rocket to create `rkt1` Linux bridge and plugs pods into it via veths.
-Since the subnet is defined as `10.1.0.0/16`, Rocket will assign individual IPs out of that range.
+This configuration instructs rkt to create `rkt1` Linux bridge and plugs pods into it via veths.
+Since the subnet is defined as `10.1.0.0/16`, rkt will assign individual IPs out of that range.
 The first pod will be assigned 10.1.0.2/16, next one 10.1.0.3/16, etc (it reserves 10.1.0.1/16 for gateway).
 Additional configuration fields:
 
@@ -121,10 +121,10 @@ Additional configuration fields:
 
 ### dhcp
 
-[Coming soon](https://github.com/coreos/rocket/issues/558)
+[Coming soon](https://github.com/coreos/rkt/issues/558)
 
 ### Overriding default network
 If a network has a name "default", it will override the default network added
-by Rocket. It is strongly recommended that such network also has type "veth" as
+by rkt. It is strongly recommended that such network also has type "veth" as
 it protects from the pod spoofing its IP address and defeating identity
 management provided by the metadata service.

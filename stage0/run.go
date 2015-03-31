@@ -17,9 +17,9 @@
 package stage0
 
 //
-// Rocket is a reference implementation of the app container specification.
+// rkt is a reference implementation of the app container specification.
 //
-// Execution on Rocket is divided into a number of stages, and the `rkt`
+// Execution on rkt is divided into a number of stages, and the `rkt`
 // binary implements the first stage (stage 0)
 //
 
@@ -36,13 +36,13 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/cas"
-	"github.com/coreos/rocket/common"
-	"github.com/coreos/rocket/pkg/aci"
-	"github.com/coreos/rocket/pkg/sys"
-	"github.com/coreos/rocket/version"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/cas"
+	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/version"
 )
 
 // configuration parameters required by Prepare
@@ -52,7 +52,7 @@ type PrepareConfig struct {
 	ExecAppends [][]string     // appendages to each image's app.exec lines (empty when none, length should match length of Images)
 	InheritEnv  bool           // inherit parent environment into apps
 	ExplicitEnv []string       // always set these environment variables for all the apps
-	Volumes     []types.Volume // list of volumes that rocket can provide to applications
+	Volumes     []types.Volume // list of volumes that rkt can provide to applications
 	UseOverlay  bool           // prepare pod with overlay fs
 }
 
@@ -71,7 +71,7 @@ type CommonConfig struct {
 	Stage1Image types.Hash   // stage1 image containing usable /init and /enter entrypoints
 	UUID        *types.UUID  // UUID of the pod
 	Images      []types.Hash // application images
-	PodsDir     string       // root directory for rocket pods
+	PodsDir     string       // root directory for rkt pods
 	Debug       bool
 }
 
