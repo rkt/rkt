@@ -49,7 +49,7 @@ func SetNS(f *os.File, flags uintptr) error {
 // WithNetNSPath executes the passed closure under the given network
 // namespace, restoring the original namespace afterwards.
 func WithNetNSPath(nspath string, f func(*os.File) error) error {
-	// switch to the container namespace
+	// switch to the pod namespace
 	ns, err := os.Open(nspath)
 	if err != nil {
 		return fmt.Errorf("Failed to open %v: %v", nspath, err)

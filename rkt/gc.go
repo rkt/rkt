@@ -32,7 +32,7 @@ var (
 	flagPreparedExpiration time.Duration
 	cmdGC                  = &Command{
 		Name:    "gc",
-		Summary: "Garbage-collect rkt containers no longer in use",
+		Summary: "Garbage-collect rkt pods no longer in use",
 		Usage:   "[--grace-period=duration] [--expire-prepared=duration]",
 		Run:     runGC,
 	}
@@ -40,23 +40,23 @@ var (
 
 func init() {
 	commands = append(commands, cmdGC)
-	cmdGC.Flags.DurationVar(&flagGracePeriod, "grace-period", defaultGracePeriod, "duration to wait before discarding inactive containers from garbage")
-	cmdGC.Flags.DurationVar(&flagPreparedExpiration, "expire-prepared", defaultPreparedExpiration, "duration to wait before expiring prepared containers")
+	cmdGC.Flags.DurationVar(&flagGracePeriod, "grace-period", defaultGracePeriod, "duration to wait before discarding inactive pods from garbage")
+	cmdGC.Flags.DurationVar(&flagPreparedExpiration, "expire-prepared", defaultPreparedExpiration, "duration to wait before expiring prepared pods")
 }
 
 func runGC(args []string) (exit int) {
 	if err := renameExited(); err != nil {
-		stderr("Failed to rename exited containers: %v", err)
+		stderr("Failed to rename exited pods: %v", err)
 		return 1
 	}
 
 	if err := renameAborted(); err != nil {
-		stderr("Failed to rename aborted containers: %v", err)
+		stderr("Failed to rename aborted pods: %v", err)
 		return 1
 	}
 
 	if err := renameExpired(flagPreparedExpiration); err != nil {
-		stderr("Failed to rename expired prepared containers: %v", err)
+		stderr("Failed to rename expired prepared pods: %v", err)
 		return 1
 	}
 
@@ -73,12 +73,12 @@ func runGC(args []string) (exit int) {
 	return
 }
 
-// renameExited renames exited containers to the exitedGarbage directory
+// renameExited renames exited pods to the exitedGarbage directory
 func renameExited() error {
-	if err := walkContainers(includeRunDir, func(c *container) {
-		if c.isExited {
-			stdout("Moving container %q to garbage", c.uuid)
-			if err := c.xToExitedGarbage(); err != nil && err != os.ErrNotExist {
+	if err := walkPods(includeRunDir, func(p *pod) {
+		if p.isExited {
+			stdout("Moving pod %q to garbage", p.uuid)
+			if err := p.xToExitedGarbage(); err != nil && err != os.ErrNotExist {
 				stderr("Rename error: %v", err)
 			}
 		}
@@ -89,10 +89,10 @@ func renameExited() error {
 	return nil
 }
 
-// emptyExitedGarbage discards sufficiently aged containers from exitedGarbageDir()
+// emptyExitedGarbage discards sufficiently aged pods from exitedGarbageDir()
 func emptyExitedGarbage(gracePeriod time.Duration) error {
-	if err := walkContainers(includeExitedGarbageDir, func(c *container) {
-		gp := c.path()
+	if err := walkPods(includeExitedGarbageDir, func(p *pod) {
+		gp := p.path()
 		st := &syscall.Stat_t{}
 		if err := syscall.Lstat(gp, st); err != nil {
 			if err != syscall.ENOENT {
@@ -102,12 +102,12 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 		}
 
 		if expiration := time.Unix(st.Ctim.Unix()).Add(gracePeriod); time.Now().After(expiration) {
-			if err := c.ExclusiveLock(); err != nil {
+			if err := p.ExclusiveLock(); err != nil {
 				return
 			}
-			stdout("Garbage collecting container %q", c.uuid)
+			stdout("Garbage collecting pod %q", p.uuid)
 			if err := os.RemoveAll(gp); err != nil {
-				stderr("Unable to remove container %q: %v", c.uuid, err)
+				stderr("Unable to remove pod %q: %v", p.uuid, err)
 			}
 		}
 	}); err != nil {
@@ -119,10 +119,10 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 
 // renameAborted renames failed prepares to the garbage directory
 func renameAborted() error {
-	if err := walkContainers(includePrepareDir, func(c *container) {
-		if c.isAbortedPrepare {
-			stdout("Moving failed prepare %q to garbage", c.uuid)
-			if err := c.xToGarbage(); err != nil && err != os.ErrNotExist {
+	if err := walkPods(includePrepareDir, func(p *pod) {
+		if p.isAbortedPrepare {
+			stdout("Moving failed prepare %q to garbage", p.uuid)
+			if err := p.xToGarbage(); err != nil && err != os.ErrNotExist {
 				stderr("Rename error: %v", err)
 			}
 		}
@@ -132,21 +132,21 @@ func renameAborted() error {
 	return nil
 }
 
-// renameExpired renames expired prepared containers to the garbage directory
+// renameExpired renames expired prepared pods to the garbage directory
 func renameExpired(preparedExpiration time.Duration) error {
-	if err := walkContainers(includePreparedDir, func(c *container) {
+	if err := walkPods(includePreparedDir, func(p *pod) {
 		st := &syscall.Stat_t{}
-		cp := c.path()
-		if err := syscall.Lstat(cp, st); err != nil {
+		pp := p.path()
+		if err := syscall.Lstat(pp, st); err != nil {
 			if err != syscall.ENOENT {
-				stderr("Unable to stat %q, ignoring: %v", cp, err)
+				stderr("Unable to stat %q, ignoring: %v", pp, err)
 			}
 			return
 		}
 
 		if expiration := time.Unix(st.Ctim.Unix()).Add(preparedExpiration); time.Now().After(expiration) {
-			stdout("Moving expired prepared container %q to garbage", c.uuid)
-			if err := c.xToGarbage(); err != nil && err != os.ErrNotExist {
+			stdout("Moving expired prepared pod %q to garbage", p.uuid)
+			if err := p.xToGarbage(); err != nil && err != os.ErrNotExist {
 				stderr("Rename error: %v", err)
 			}
 		}
@@ -158,13 +158,13 @@ func renameExpired(preparedExpiration time.Duration) error {
 
 // emptyGarbage discards everything from garbageDir()
 func emptyGarbage() error {
-	if err := walkContainers(includeGarbageDir, func(c *container) {
-		if err := c.ExclusiveLock(); err != nil {
+	if err := walkPods(includeGarbageDir, func(p *pod) {
+		if err := p.ExclusiveLock(); err != nil {
 			return
 		}
-		stdout("Garbage collecting container %q", c.uuid)
-		if err := os.RemoveAll(c.path()); err != nil {
-			stderr("Unable to remove container %q: %v", c.uuid, err)
+		stdout("Garbage collecting pod %q", p.uuid)
+		if err := os.RemoveAll(p.path()); err != nil {
+			stderr("Unable to remove pod %q: %v", p.uuid, err)
 		}
 	}); err != nil {
 		return err

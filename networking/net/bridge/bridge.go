@@ -124,12 +124,12 @@ func ensureBridge(brName string, mtu int, ipn *net.IPNet) (*netlink.Bridge, erro
 	return br, nil
 }
 
-func setupVeth(contID types.UUID, netns string, br *netlink.Bridge, ifName string, mtu int, ipConf *ipam.IPConfig) error {
+func setupVeth(podID types.UUID, netns string, br *netlink.Bridge, ifName string, mtu int, ipConf *ipam.IPConfig) error {
 	var hostVethName string
 
 	err := util.WithNetNSPath(netns, func(hostNS *os.File) error {
-		// create the veth pair in the container and move host end into host netns
-		hostVeth, _, err := util.SetupVeth(contID.String(), ifName, mtu, hostNS)
+		// create the veth pair in the pod and move host end into host netns
+		hostVeth, _, err := util.SetupVeth(podID.String(), ifName, mtu, hostNS)
 		if err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func cmdAdd(args *util.CmdArgs) error {
 		return err
 	}
 
-	if err = setupVeth(args.ContID, args.Netns, br, args.IfName, n.MTU, ipConf); err != nil {
+	if err = setupVeth(args.PodID, args.Netns, br, args.IfName, n.MTU, ipConf); err != nil {
 		return err
 	}
 

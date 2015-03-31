@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 	exit_if(argc < 3,
 		"Usage: %s imageid cmd [args...]", argv[0])
 
-	/* We start in the container root, where "pid" should be. */
+	/* We start in the pod root, where "pid" should be. */
 	exit_if((fp = fopen("pid", "r")) == NULL,
 		"unable to open pid file");
 	exit_if(fscanf(fp, "%i", &pid) != 1,
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 	ns(CLONE_NEWNS,	  "ns/mnt");
 
 	exit_if(fchdir(root_fd) < 0,
-		"unable to chdir to container root");
+		"unable to chdir to pod root");
 	exit_if(chroot(".") < 0,
 		"unable to chroot");
 	exit_if(close(root_fd) == -1,

@@ -40,10 +40,10 @@ type Net struct {
 	MTU    int  `json:"mtu"`
 }
 
-func setupContVeth(contID, netns, ifName string, mtu int, ipConf *ipam.IPConfig) (string, error) {
+func setupPodVeth(podID, netns, ifName string, mtu int, ipConf *ipam.IPConfig) (string, error) {
 	var hostVethName string
 	err := util.WithNetNSPath(netns, func(hostNS *os.File) error {
-		entropy := contID + ifName
+		entropy := podID + ifName
 
 		hostVeth, _, err := util.SetupVeth(entropy, ifName, mtu, hostNS)
 		if err != nil {
@@ -99,7 +99,7 @@ func cmdAdd(args *util.CmdArgs) error {
 		return err
 	}
 
-	hostVethName, err := setupContVeth(args.ContID.String(), args.Netns, args.IfName, conf.MTU, ipConf)
+	hostVethName, err := setupPodVeth(args.PodID.String(), args.Netns, args.IfName, conf.MTU, ipConf)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func cmdAdd(args *util.CmdArgs) error {
 	}
 
 	if conf.IPMasq {
-		chain := fmt.Sprintf("RKT-%s-%s", conf.Name, args.ContID.String()[:8])
+		chain := fmt.Sprintf("RKT-%s-%s", conf.Name, args.PodID.String()[:8])
 		if err = util.SetupIPMasq(ipConf.IP, chain); err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func cmdDel(args *util.CmdArgs) error {
 	}
 
 	if conf.IPMasq {
-		chain := fmt.Sprintf("RKT-%s-%s", conf.Name, args.ContID.String()[:8])
+		chain := fmt.Sprintf("RKT-%s-%s", conf.Name, args.PodID.String()[:8])
 		if err = util.TeardownIPMasq(ipn, chain); err != nil {
 			return err
 		}

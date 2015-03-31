@@ -125,34 +125,34 @@ func getFlags(flagset *flag.FlagSet) (flags []*flag.Flag) {
 	return
 }
 
-// where container directories are created and locked before moving to prepared
+// where pod directories are created and locked before moving to prepared
 func embryoDir() string {
-	return filepath.Join(globalFlags.Dir, "containers", "embryo")
+	return filepath.Join(globalFlags.Dir, "pods", "embryo")
 }
 
-// where container trees reside during (locked) and after failing to complete preparation (unlocked)
+// where pod trees reside during (locked) and after failing to complete preparation (unlocked)
 func prepareDir() string {
-	return filepath.Join(globalFlags.Dir, "containers", "prepare")
+	return filepath.Join(globalFlags.Dir, "pods", "prepare")
 }
 
-// where container trees reside upon successful preparation
+// where pod trees reside upon successful preparation
 func preparedDir() string {
-	return filepath.Join(globalFlags.Dir, "containers", "prepared")
+	return filepath.Join(globalFlags.Dir, "pods", "prepared")
 }
 
-// where container trees reside once run
+// where pod trees reside once run
 func runDir() string {
-	return filepath.Join(globalFlags.Dir, "containers", "run")
+	return filepath.Join(globalFlags.Dir, "pods", "run")
 }
 
-// where container trees reside once exited & marked as garbage by a gc pass
+// where pod trees reside once exited & marked as garbage by a gc pass
 func exitedGarbageDir() string {
-	return filepath.Join(globalFlags.Dir, "containers", "exited-garbage")
+	return filepath.Join(globalFlags.Dir, "pods", "exited-garbage")
 }
 
-// where never-executed container trees reside once marked as garbage by a gc pass (failed prepares, expired prepareds)
+// where never-executed pod trees reside once marked as garbage by a gc pass (failed prepares, expired prepareds)
 func garbageDir() string {
-	return filepath.Join(globalFlags.Dir, "containers", "garbage")
+	return filepath.Join(globalFlags.Dir, "pods", "garbage")
 }
 
 func getKeystore() *keystore.Keystore {

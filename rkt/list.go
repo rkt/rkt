@@ -28,7 +28,7 @@ import (
 var (
 	cmdList = &Command{
 		Name:    "list",
-		Summary: "List containers",
+		Summary: "List pods",
 		Usage:   "",
 		Run:     runList,
 	}
@@ -47,13 +47,13 @@ func runList(args []string) (exit int) {
 		fmt.Fprintf(tabOut, "UUID\tACI\tSTATE\tNETWORKS\n")
 	}
 
-	if err := walkContainers(includeMostDirs, func(c *container) {
+	if err := walkPods(includeMostDirs, func(p *pod) {
 		m := schema.PodManifest{}
 		app_zero := ""
 
-		if !c.isPreparing && !c.isAbortedPrepare && !c.isExitedDeleting {
-			// TODO(vc): we should really hold a shared lock here to prevent gc of the container
-			manifFile, err := c.readFile(common.PodManifestPath(""))
+		if !p.isPreparing && !p.isAbortedPrepare && !p.isExitedDeleting {
+			// TODO(vc): we should really hold a shared lock here to prevent gc of the pod
+			manifFile, err := p.readFile(common.PodManifestPath(""))
 			if err != nil {
 				stderr("Unable to read manifest: %v", err)
 				return
@@ -66,7 +66,7 @@ func runList(args []string) (exit int) {
 			}
 
 			if len(m.Apps) == 0 {
-				stderr("Container contains zero apps")
+				stderr("Pod contains zero apps")
 				return
 			}
 			app_zero = m.Apps[0].Name.String()
@@ -74,17 +74,17 @@ func runList(args []string) (exit int) {
 
 		uuid := ""
 		if flagFullOutput {
-			uuid = c.uuid.String()
+			uuid = p.uuid.String()
 		} else {
-			uuid = c.uuid.String()[:8]
+			uuid = p.uuid.String()[:8]
 		}
 
-		fmt.Fprintf(tabOut, "%s\t%s\t%s\t%s\n", uuid, app_zero, c.getState(), fmtNets(c.nets))
+		fmt.Fprintf(tabOut, "%s\t%s\t%s\t%s\n", uuid, app_zero, p.getState(), fmtNets(p.nets))
 		for i := 1; i < len(m.Apps); i++ {
 			fmt.Fprintf(tabOut, "\t%s\n", m.Apps[i].Name.String())
 		}
 	}); err != nil {
-		stderr("Failed to get container handles: %v", err)
+		stderr("Failed to get pod handles: %v", err)
 		return 1
 	}
 

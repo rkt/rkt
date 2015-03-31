@@ -310,7 +310,7 @@ rkt: warning: signature verification has been disabled
 
 #### Download and verify an ACI
 
-Using the fetch subcommand you can download and verify an ACI without immediately running a container.
+Using the fetch subcommand you can download and verify an ACI without immediately running a pod.
 This can be useful to precache ACIs on a large number of hosts:
 
 ```

@@ -71,7 +71,7 @@ sha512-fcdf12587358af6ebe69b5338a05df67
 
 ## Run the ACI
 
-Now try running the container and you should see output like this:
+Now try running the ACI and you should see output like this:
 
 ```
 ./rkt run https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
@@ -104,4 +104,4 @@ rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0
 Press ^] three times to kill container
 ```
 
-You are now running etcd inside of a Rocket container on Ubuntu Trusty.
+You are now running etcd inside of a Rocket pod on Ubuntu Trusty.

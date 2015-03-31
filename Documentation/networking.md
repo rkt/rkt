@@ -6,7 +6,7 @@
 
 By default, `rkt run` will start the pod with host networking.
 This means that the apps within the pod will share the network stack and the interfaces with the host machine.
-Since the metadata service uses the container IP for identity, rkt will _not_ register the container with the metadata service in this mode.
+Since the metadata service uses the pod IP for identity, rkt will _not_ register the pod with the metadata service in this mode.
 
 Note: because of the lack of the metadata service Rocket does not strictly implement the app container specification in host mode.
 
@@ -17,9 +17,9 @@ The service will listen on 0.0.0.0:2375 by default and provides the private netw
 Ideally this metadata service is launched via your systems init system.
 
 If `rkt run` is started with `--private-net`, the pod will be executed with its own network stack.
-By default, Rocket will create a loopback device and a veth device. The veth pair creates a point-to-point link between the container and the host.
+By default, Rocket will create a loopback device and a veth device. The veth pair creates a point-to-point link between the pod and the host.
 Rocket will allocate an IPv4 /31 (2 IP addresses) out of 172.16.28.0/24 and assign one IP to each end of the veth pair.
-It will additionally set a route for metadata service (169.254.169.255/32) and default route in the container namespace.
+It will additionally set a route for metadata service (169.254.169.255/32) and default route in the pod namespace.
 Finally, it will enable IP masquerading on the host to NAT the egress traffic.
 
 ### Setting up additional networks
@@ -52,14 +52,14 @@ Additional fields are specified for various types.
 
 #### veth
 
-veth is the probably the simplest type of networking and is used to set up default network. It creates a virtual ethernet pair (akin to a pipe) and places one end into container and the other on the host. It is expected to be used with IPAM type that will allocate a /31 for both ends of the veth (such as static-ptp). `veth` specific configuration fields are:
+veth is the probably the simplest type of networking and is used to set up default network. It creates a virtual ethernet pair (akin to a pipe) and places one end into pod and the other on the host. It is expected to be used with IPAM type that will allocate a /31 for both ends of the veth (such as static-ptp). `veth` specific configuration fields are:
 
 - **mtu** (integer): the size of the MTU in bytes.
 - **ipMasq** (boolean): whether to setup IP masquerading on the host.
 
 ##### bridge
 
-Like the veth type, `bridge` will also create a veth pair and place one end into the container. However the host end of the veth will be plugged into a linux-bridge.
+Like the veth type, `bridge` will also create a veth pair and place one end into the pod. However the host end of the veth will be plugged into a linux-bridge.
 The configuration file specifies the bridge name and if the bridge does not exist, it will be created.
 The bridge can optionally be setup to act as the gateway for the network. `bridge` specific configuration fields are:
 
@@ -74,7 +74,7 @@ macvlan "clones" a real interface by assigning a made up MAC address to the "clo
 The real and macvlan interfaces share the same physical device but have distinct MAC and IP addresses.
 With multiple macvlan interfaces sharing the same device, it behaves similarly to a bridge.
 Since macvlan interface has its own MAC and is located on the same link segment as the host, it makes it especially a good choice for using the DHCP server to acquire an IP address.
-With the IP address allocated by the real network infrastructure, this makes the container IP routable in the same way as the host IP. `macvlan` specific configuration fields are:
+With the IP address allocated by the real network infrastructure, this makes the pod IP routable in the same way as the host IP. `macvlan` specific configuration fields are:
 
 - **master** (string): the name of host interface to "clone". This field is required.
 - **mode** (string): One of "bridge", "private", "vepa", or "passthru". This controls how traffic is handled between different macvlan interfaces on the same host. See (this guide)[http://www.pocketnix.org/posts/Linux%20Networking:%20MAC%20VLANs%20and%20Virtual%20Ethernets] for discussion of modes. Defaults to "bridge".
@@ -117,7 +117,7 @@ Additional configuration fields:
 - **rangeStart** (string): First IP address from which to start allocating IPs. Defaults to second IP in `subnet` range.
 - **rangeEnd** (string): Last IP address in the allocatable range. Defaults to last IP in `subnet` range.
 - **gateway** (string): The IP address of the gateway in this subnet.
-- **routes** (list of strings): List of IP routes in CIDR notation. The routes get added to container namespace with next-hop set to the gateway of the network.
+- **routes** (list of strings): List of IP routes in CIDR notation. The routes get added to pod namespace with next-hop set to the gateway of the network.
 
 ### dhcp
 
@@ -126,5 +126,5 @@ Additional configuration fields:
 ### Overriding default network
 If a network has a name "default", it will override the default network added
 by Rocket. It is strongly recommended that such network also has type "veth" as
-it protects from the container spoofing its IP address and defeating identity
+it protects from the pod spoofing its IP address and defeating identity
 management provided by the metadata service.

@@ -8,5 +8,5 @@ type Store interface {
 	Close() error
 	Reserve(id string, ip net.IP) (bool, error)
 	Release(ip net.IP) error
-	ReleaseByContainerID(id string) error
+	ReleaseByPodID(id string) error
 }

@@ -23,25 +23,25 @@ import (
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
-// matchUUID attempts to match the uuid specified as uuid against all containers present.
+// matchUUID attempts to match the uuid specified as uuid against all pods present.
 // An array of matches is returned, which may be empty when nothing matches.
 func matchUUID(uuid string) ([]string, error) {
-	ls, err := listContainers(includePrepareDir | includePreparedDir | includeRunDir | includeExitedGarbageDir)
+	ls, err := listPods(includePrepareDir | includePreparedDir | includeRunDir | includeExitedGarbageDir)
 	if err != nil {
 		return nil, err
 	}
 
 	var matches []string
-	for _, c := range ls {
-		if strings.HasPrefix(c, uuid) {
-			matches = append(matches, c)
+	for _, p := range ls {
+		if strings.HasPrefix(p, uuid) {
+			matches = append(matches, p)
 		}
 	}
 
 	return matches, nil
 }
 
-// resolveUUID attempts to resolve the uuid specified as uuid against all containers present.
+// resolveUUID attempts to resolve the uuid specified as uuid against all pods present.
 // An unambiguously matched uuid or nil is returned.
 func resolveUUID(uuid string) (*types.UUID, error) {
 	uuid = strings.ToLower(uuid)

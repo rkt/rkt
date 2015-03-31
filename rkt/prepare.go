@@ -30,7 +30,7 @@ import (
 var (
 	cmdPrepare = &Command{
 		Name:    "prepare",
-		Summary: "Prepare to run image(s) in an application container in rocket",
+		Summary: "Prepare to run image(s) in a pod in rocket",
 		Usage:   "[--volume name,kind=host,...] [--quiet] IMAGE [-- image-args...[---]]...",
 		Description: `Image should be a string referencing an image; either a hash, local file on disk, or URL.
 They will be checked in that order and the first match will be used.
@@ -46,7 +46,7 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 func init() {
 	commands = append(commands, cmdPrepare)
 	cmdPrepare.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, Rocket will look for a file called "stage1.aci" in the same directory as rkt itself`)
-	cmdPrepare.Flags.Var(&flagVolumes, "volume", "volumes to mount into the shared container environment")
+	cmdPrepare.Flags.Var(&flagVolumes, "volume", "volumes to mount into the pod")
 	cmdPrepare.Flags.BoolVar(&flagQuiet, "quiet", false, "suppress superfluous output on stdout, print only the UUID on success")
 	cmdPrepare.Flags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	cmdPrepare.Flags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
@@ -106,9 +106,9 @@ func runPrepare(args []string) (exit int) {
 		return 1
 	}
 
-	c, err := newContainer()
+	p, err := newPod()
 	if err != nil {
-		stderr("prepare: error creating new container: %v", err)
+		stderr("prepare: error creating new pod: %v", err)
 		return 1
 	}
 
@@ -117,7 +117,7 @@ func runPrepare(args []string) (exit int) {
 			Store:       ds,
 			Debug:       globalFlags.Debug,
 			Stage1Image: *s1img,
-			UUID:        c.uuid,
+			UUID:        p.uuid,
 			Images:      imgs,
 		},
 		ExecAppends: appArgs,
@@ -127,18 +127,18 @@ func runPrepare(args []string) (exit int) {
 		UseOverlay:  !flagNoOverlay && common.SupportsOverlay(),
 	}
 
-	if err = stage0.Prepare(pcfg, c.path(), c.uuid); err != nil {
+	if err = stage0.Prepare(pcfg, p.path(), p.uuid); err != nil {
 		stderr("prepare: error setting up stage0: %v", err)
 		return 1
 	}
 
-	if err := c.xToPrepared(); err != nil {
+	if err := p.xToPrepared(); err != nil {
 		stderr("prepare: error transitioning to prepared: %v", err)
 		return 1
 	}
 
 	os.Stdout = origStdout // restore output in case of --quiet
-	stdout("%s", c.uuid.String())
+	stdout("%s", p.uuid.String())
 
 	return 0
 }

@@ -43,7 +43,7 @@ func ServiceUnitPath(root string, imageID types.Hash) string {
 }
 
 // RelEnvFilePath returns the path to the environment file for the given imageID
-// relative to the container's root
+// relative to the pod's root
 func RelEnvFilePath(imageID types.Hash) string {
 	return filepath.Join(envDir, types.ShortHash(imageID.String()))
 }

@@ -53,7 +53,7 @@ type PrepareConfig struct {
 	InheritEnv  bool           // inherit parent environment into apps
 	ExplicitEnv []string       // always set these environment variables for all the apps
 	Volumes     []types.Volume // list of volumes that rocket can provide to applications
-	UseOverlay  bool           // prepare container with overlay fs
+	UseOverlay  bool           // prepare pod with overlay fs
 }
 
 // configuration parameters needed by Run

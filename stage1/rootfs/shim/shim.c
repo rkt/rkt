@@ -28,7 +28,7 @@
 /* hack to make systemd-nspawn execute on non-sysd systems:
  * - intercept lstat() so lstat of /run/systemd/system always succeeds and returns a directory
  * - intercept close() to prevent nspawn closing the rkt lock, set it to CLOEXEC instead
- * - intercept syscall(SYS_clone) to record the container's pid
+ * - intercept syscall(SYS_clone) to record the pod's pid
  */
 
 #define ENV_LOCKFD	"RKT_LOCK_FD"
@@ -88,7 +88,7 @@ long syscall(long number, ...)
 
 	if(ret > 0) {
 		int fd;
-		/* in parent; try record the container's pid */
+		/* in parent; try record the pod's pid */
 		if((fd = open(PIDFILE_TMP, O_CREAT|O_WRONLY|O_SYNC, 0640)) != -1) {
 			int	len;
 			char	buf[20];

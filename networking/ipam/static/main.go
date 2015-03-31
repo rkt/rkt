@@ -35,9 +35,9 @@ func cmdAdd(args *util.CmdArgs) error {
 
 	switch ipamConf.Type {
 	case "static":
-		ipConf, err = allocator.Get(args.ContID.String())
+		ipConf, err = allocator.Get(args.PodID.String())
 	case "static-ptp":
-		ipConf, err = allocator.GetPtP(args.ContID.String())
+		ipConf, err = allocator.GetPtP(args.PodID.String())
 	default:
 		return errors.New("Unsupported IPAM plugin type")
 	}
@@ -72,5 +72,5 @@ func cmdDel(args *util.CmdArgs) error {
 		return err
 	}
 
-	return allocator.Release(args.ContID.String())
+	return allocator.Release(args.PodID.String())
 }

@@ -22,7 +22,7 @@ import (
 )
 
 type CmdArgs struct {
-	ContID   types.UUID
+	PodID    types.UUID
 	Netns    string
 	IfName   string
 	NetConf  string
@@ -31,14 +31,14 @@ type CmdArgs struct {
 }
 
 func PluginMain(cmdAdd, cmdDel func(_ *CmdArgs) error) {
-	var cmd, contID, netns, ifName, netConf, netName, ipamPath string
+	var cmd, podID, netns, ifName, netConf, netName, ipamPath string
 
 	vars := []struct {
 		name string
 		val  *string
 	}{
 		{"RKT_NETPLUGIN_COMMAND", &cmd},
-		{"RKT_NETPLUGIN_CONTID", &contID},
+		{"RKT_NETPLUGIN_PODID", &podID},
 		{"RKT_NETPLUGIN_NETNS", &netns},
 		{"RKT_NETPLUGIN_IFNAME", &ifName},
 		{"RKT_NETPLUGIN_NETCONF", &netConf},
@@ -59,14 +59,14 @@ func PluginMain(cmdAdd, cmdDel func(_ *CmdArgs) error) {
 		os.Exit(1)
 	}
 
-	cid, err := types.NewUUID(contID)
+	pid, err := types.NewUUID(podID)
 	if err != nil {
-		log.Print("Error parsing Container ID (%v): %v", contID, err)
+		log.Print("Error parsing Pod ID (%v): %v", podID, err)
 		os.Exit(1)
 	}
 
 	args := &CmdArgs{
-		ContID:   *cid,
+		PodID:    *pid,
 		Netns:    netns,
 		IfName:   ifName,
 		NetConf:  netConf,

@@ -31,7 +31,7 @@ const (
 var (
 	cmdRunPrepared = &Command{
 		Name:        cmdRunPreparedName,
-		Summary:     "Run a prepared application container in rocket",
+		Summary:     "Run a prepared application pod in rocket",
 		Usage:       "UUID",
 		Description: "UUID must have been acquired via `rkt prepare`",
 		Run:         runRunPrepared,
@@ -40,9 +40,9 @@ var (
 
 func init() {
 	commands = append(commands, cmdRunPrepared)
-	cmdRunPrepared.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give container a private network")
+	cmdRunPrepared.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give pod a private network")
 	cmdRunPrepared.Flags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
-	cmdRunPrepared.Flags.BoolVar(&flagInteractive, "interactive", false, "the container is interactive")
+	cmdRunPrepared.Flags.BoolVar(&flagInteractive, "interactive", false, "the pod is interactive")
 }
 
 func runRunPrepared(args []string) (exit int) {
@@ -51,7 +51,7 @@ func runRunPrepared(args []string) (exit int) {
 		return 1
 	}
 
-	containerUUID, err := resolveUUID(args[0])
+	podUUID, err := resolveUUID(args[0])
 	if err != nil {
 		stderr("Unable to resolve UUID: %v", err)
 		return 1
@@ -73,47 +73,47 @@ func runRunPrepared(args []string) (exit int) {
 		return 1
 	}
 
-	c, err := getContainer(containerUUID.String())
+	p, err := getPod(podUUID.String())
 	if err != nil {
-		stderr("prepared-run: cannot get container: %v", err)
+		stderr("prepared-run: cannot get pod: %v", err)
 		return 1
 	}
 
-	if !c.isPrepared {
-		stderr("prepared-run: container %q is not prepared", containerUUID.String())
+	if !p.isPrepared {
+		stderr("prepared-run: pod %q is not prepared", podUUID.String())
 		return 1
 	}
 
 	if flagInteractive {
-		ac, err := c.getAppCount()
+		ac, err := p.getAppCount()
 		if err != nil {
-			stderr("prepared-run: cannot get container's app count: %v", err)
+			stderr("prepared-run: cannot get pod's app count: %v", err)
 			return 1
 		}
 		if ac > 1 {
-			stderr("prepared-run: interactive option only supports containers with one app")
+			stderr("prepared-run: interactive option only supports pods with one app")
 			return 1
 		}
 	}
 
-	if err := c.xToRun(); err != nil {
+	if err := p.xToRun(); err != nil {
 		stderr("prepared-run: cannot transition to run: %v", err)
 		return 1
 	}
 
-	lfd, err := c.Fd()
+	lfd, err := p.Fd()
 	if err != nil {
 		stderr("prepared-run: unable to get lock fd: %v", err)
 		return 1
 	}
 
-	s1img, err := c.getStage1Hash()
+	s1img, err := p.getStage1Hash()
 	if err != nil {
 		stderr("prepared-run: unable to get stage1 Hash: %v", err)
 		return 1
 	}
 
-	imgs, err := c.getAppsHashes()
+	imgs, err := p.getAppsHashes()
 	if err != nil {
 		stderr("prepared-run: unable to get apps hashes: %v", err)
 		return 1
@@ -123,7 +123,7 @@ func runRunPrepared(args []string) (exit int) {
 		CommonConfig: stage0.CommonConfig{
 			Store:       ds,
 			Stage1Image: *s1img,
-			UUID:        c.uuid,
+			UUID:        p.uuid,
 			Images:      imgs,
 			Debug:       globalFlags.Debug,
 		},
@@ -132,6 +132,6 @@ func runRunPrepared(args []string) (exit int) {
 		LockFd:               lfd,
 		Interactive:          flagInteractive,
 	}
-	stage0.Run(rcfg, c.path()) // execs, never returns
+	stage0.Run(rcfg, p.path()) // execs, never returns
 	return 1
 }

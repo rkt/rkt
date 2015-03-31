@@ -68,7 +68,7 @@ const (
 func init() {
 	commands = append(commands, cmdMetadataService)
 	cmdMetadataService.Flags.IntVar(&flagListenPort, "listen-port", common.MetadataServicePort, "listen port")
-	cmdMetadataService.Flags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last container is unregistered")
+	cmdMetadataService.Flags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last pod is unregistered")
 }
 
 type mdsPod struct {
@@ -182,7 +182,7 @@ func queryValue(u *url.URL, key string) string {
 	return vals[0]
 }
 
-func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
+func handleRegisterPod(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
@@ -212,7 +212,7 @@ func handleRegisterContainer(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func handleUnregisterContainer(w http.ResponseWriter, r *http.Request) {
+func handleUnregisterPod(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
@@ -233,12 +233,12 @@ func handleUnregisterContainer(w http.ResponseWriter, r *http.Request) {
 
 	if flagNoIdle && lastOne {
 		// TODO(eyakubovich): this is very racy
-		// It's possible for last container to get unregistered
-		// and svc gets flagged to shutdown. Then another container
+		// It's possible for last pod to get unregistered
+		// and svc gets flagged to shutdown. Then another pod
 		// starts to launch, sees that port is in use and doesn't
 		// start metadata svc only for this one to exit a moment later.
 		// However, --no-idle is meant for demos and having a single
-		// container spawn up (via --spawn-metadata-svc). The design
+		// pod spawn up (via --spawn-metadata-svc). The design
 		// of metadata svc is also likely to change as we convert it
 		// to be backed by persistent storage.
 		// wait for signal and exit
@@ -334,14 +334,14 @@ func handlePodAnnotation(w http.ResponseWriter, r *http.Request, pm *schema.PodM
 	k, err := types.NewACName(mux.Vars(r)["name"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Container annotation is not a valid AC Name")
+		fmt.Fprintf(w, "Pod annotation is not a valid AC Name")
 		return
 	}
 
 	v, ok := pm.Annotations.Get(k.String())
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Container annotation (%v) not found", k)
+		fmt.Fprintf(w, "Pod annotation (%v) not found", k)
 		return
 	}
 
@@ -459,7 +459,7 @@ func initCrypto() error {
 	return nil
 }
 
-func handleContainerSign(w http.ResponseWriter, r *http.Request) {
+func handlePodSign(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	ip := strings.Split(r.RemoteAddr, ":")[0]
@@ -491,7 +491,7 @@ func handleContainerSign(w http.ResponseWriter, r *http.Request) {
 	enc.Close()
 }
 
-func handleContainerVerify(w http.ResponseWriter, r *http.Request) {
+func handlePodVerify(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	uuid, err := types.NewUUID(r.FormValue("uid"))
@@ -582,8 +582,8 @@ func unixListener() (net.Listener, error) {
 
 func runRegistrationServer(l net.Listener) {
 	r := mux.NewRouter()
-	r.HandleFunc("/pods/{uuid}", logReq(handleRegisterContainer)).Methods("PUT")
-	r.HandleFunc("/pods/{uuid}", logReq(handleUnregisterContainer)).Methods("DELETE")
+	r.HandleFunc("/pods/{uuid}", logReq(handleRegisterPod)).Methods("PUT")
+	r.HandleFunc("/pods/{uuid}", logReq(handleUnregisterPod)).Methods("DELETE")
 	r.HandleFunc("/pods/{uuid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
 
 	if err := http.Serve(l, r); err != nil {
@@ -608,11 +608,11 @@ func runPublicServer(l net.Listener) {
 	mr.HandleFunc("/apps/{app:.*}/image/manifest", logReq(appGet(handleImageManifest)))
 	mr.HandleFunc("/apps/{app:.*}/image/id", logReq(appGet(handleAppID)))
 
-	r.HandleFunc("/pod/hmac/sign", logReq(handleContainerSign)).Methods("POST")
-	r.HandleFunc("/pod/hmac/verify", logReq(handleContainerVerify)).Methods("POST")
+	r.HandleFunc("/pod/hmac/sign", logReq(handlePodSign)).Methods("POST")
+	r.HandleFunc("/pod/hmac/verify", logReq(handlePodVerify)).Methods("POST")
 
 	if err := http.Serve(l, r); err != nil {
-		stderr("Error serving container HTTP: %v", err)
+		stderr("Error serving pod HTTP: %v", err)
 	}
 	close(exitCh)
 }

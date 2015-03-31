@@ -30,11 +30,11 @@ const (
 	runEntrypoint   = "coreos.com/rocket/stage1/run"
 )
 
-// getEntrypoint retrieves the named entrypoint from the stage1 manifest for a given container
+// getEntrypoint retrieves the named entrypoint from the stage1 manifest for a given pod
 func getStage1Entrypoint(cdir string, entrypoint string) (string, error) {
 	b, err := ioutil.ReadFile(common.Stage1ManifestPath(cdir))
 	if err != nil {
-		return "", fmt.Errorf("error reading container manifest: %v", err)
+		return "", fmt.Errorf("error reading pod manifest: %v", err)
 	}
 
 	s1m := schema.ImageManifest{}

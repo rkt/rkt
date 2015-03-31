@@ -43,34 +43,34 @@ type activeNet struct {
 }
 
 // "base" struct that's populated from the beginning
-// describing the environment in which the container
+// describing the environment in which the pod
 // is running in
-type containerEnv struct {
+type podEnv struct {
 	rktRoot string
-	contID  types.UUID
+	podID   types.UUID
 }
 
-// Networking describes the networking details of a container.
+// Networking describes the networking details of a pod.
 type Networking struct {
-	containerEnv
+	podEnv
 
 	MetadataIP net.IP
 	HostIP     net.IP
 
-	contID     types.UUID
-	hostNS     *os.File
-	contNS     *os.File
-	contNSPath string
-	nets       []activeNet
+	podID     types.UUID
+	hostNS    *os.File
+	podNS     *os.File
+	podNSPath string
+	nets      []activeNet
 }
 
-// Setup produces a Networking object for a given container ID.
-func Setup(rktRoot string, contID types.UUID) (*Networking, error) {
+// Setup produces a Networking object for a given pod ID.
+func Setup(rktRoot string, podID types.UUID) (*Networking, error) {
 	var err error
 	n := Networking{
-		containerEnv: containerEnv{
+		podEnv: podEnv{
 			rktRoot: rktRoot,
-			contID:  contID,
+			podID:   podID,
 		},
 	}
 
@@ -81,13 +81,13 @@ func Setup(rktRoot string, contID types.UUID) (*Networking, error) {
 		}
 	}()
 
-	if n.hostNS, n.contNS, err = basicNetNS(); err != nil {
+	if n.hostNS, n.podNS, err = basicNetNS(); err != nil {
 		return nil, err
 	}
-	// we're in contNS!
+	// we're in podNS!
 
-	n.contNSPath = filepath.Join(rktRoot, "netns")
-	if err = bindMountFile(selfNetNS, n.contNSPath); err != nil {
+	n.podNSPath = filepath.Join(rktRoot, "netns")
+	if err = bindMountFile(selfNetNS, n.podNSPath); err != nil {
 		return nil, err
 	}
 
@@ -96,8 +96,8 @@ func Setup(rktRoot string, contID types.UUID) (*Networking, error) {
 		return nil, fmt.Errorf("error loading network definitions: %v", err)
 	}
 
-	err = withNetNS(n.contNS, n.hostNS, func() error {
-		n.nets, err = n.setupNets(n.contNSPath, nets)
+	err = withNetNS(n.podNS, n.hostNS, func() error {
+		n.nets, err = n.setupNets(n.podNSPath, nets)
 		return err
 	})
 	if err != nil {
@@ -127,7 +127,7 @@ func (n *Networking) Teardown() {
 	// N.B. better to keep going in case of errors
 	// to get as much cleaned up as possible.
 
-	if n.contNS == nil || n.hostNS == nil {
+	if n.podNS == nil || n.hostNS == nil {
 		return
 	}
 
@@ -136,29 +136,29 @@ func (n *Networking) Teardown() {
 		return
 	}
 
-	n.teardownNets(n.contNSPath, n.nets)
+	n.teardownNets(n.podNSPath, n.nets)
 
-	if n.contNSPath == "" {
+	if n.podNSPath == "" {
 		return
 	}
 
-	if err := syscall.Unmount(n.contNSPath, 0); err != nil {
-		log.Printf("Error unmounting %q: %v", n.contNSPath, err)
+	if err := syscall.Unmount(n.podNSPath, 0); err != nil {
+		log.Printf("Error unmounting %q: %v", n.podNSPath, err)
 	}
 }
 
 // sets up new netns with just lo
-func basicNetNS() (hostNS, contNS *os.File, err error) {
-	hostNS, contNS, err = newNetNS()
+func basicNetNS() (hostNS, podNS *os.File, err error) {
+	hostNS, podNS, err = newNetNS()
 	if err != nil {
 		err = fmt.Errorf("failed to create new netns: %v", err)
 		return
 	}
-	// we're in contNS!!
+	// we're in podNS!!
 
 	if err = loUp(); err != nil {
 		hostNS.Close()
-		contNS.Close()
+		podNS.Close()
 		return nil, nil, err
 	}
 
@@ -170,16 +170,16 @@ func (n *Networking) EnterHostNS() error {
 	return util.SetNS(n.hostNS, syscall.CLONE_NEWNET)
 }
 
-// EnterContNS moves into the container's network namespace.
-func (n *Networking) EnterContNS() error {
-	return util.SetNS(n.contNS, syscall.CLONE_NEWNET)
+// EnterPodNS moves into the pod's network namespace.
+func (n *Networking) EnterPodNS() error {
+	return util.SetNS(n.podNS, syscall.CLONE_NEWNET)
 }
 
-func (e *containerEnv) netDir() string {
+func (e *podEnv) netDir() string {
 	return filepath.Join(e.rktRoot, "net")
 }
 
-func (e *containerEnv) setupNets(netns string, nets []Net) ([]activeNet, error) {
+func (e *podEnv) setupNets(netns string, nets []Net) ([]activeNet, error) {
 	err := os.MkdirAll(e.netDir(), 0755)
 	if err != nil {
 		return nil, err
@@ -217,7 +217,7 @@ func (e *containerEnv) setupNets(netns string, nets []Net) ([]activeNet, error) 
 	return active, nil
 }
 
-func (e *containerEnv) teardownNets(netns string, nets []activeNet) {
+func (e *podEnv) teardownNets(netns string, nets []activeNet) {
 	for i := len(nets) - 1; i >= 0; i-- {
 		nt := nets[i]
 

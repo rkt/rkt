@@ -31,7 +31,7 @@ import (
 var (
 	cmdEnter = &Command{
 		Name:    cmdEnterName,
-		Summary: "Enter the namespaces of an app within a rkt container",
+		Summary: "Enter the namespaces of an app within a rkt pod",
 		Usage:   "[--imageid IMAGEID] UUID [CMD [ARGS ...]]",
 		Run:     runEnter,
 	}
@@ -45,7 +45,7 @@ const (
 
 func init() {
 	commands = append(commands, cmdEnter)
-	cmdEnter.Flags.Var(&flagAppImageID, "imageid", "imageid of the app to enter within the specified container")
+	cmdEnter.Flags.Var(&flagAppImageID, "imageid", "imageid of the app to enter within the specified pod")
 }
 
 func runEnter(args []string) (exit int) {
@@ -55,32 +55,32 @@ func runEnter(args []string) (exit int) {
 		return 1
 	}
 
-	containerUUID, err := resolveUUID(args[0])
+	podUUID, err := resolveUUID(args[0])
 	if err != nil {
 		stderr("Unable to resolve UUID: %v", err)
 		return 1
 	}
 
-	cid := containerUUID.String()
-	c, err := getContainer(cid)
+	pid := podUUID.String()
+	p, err := getPod(pid)
 	if err != nil {
-		stderr("Failed to open container %q: %v", cid, err)
+		stderr("Failed to open pod %q: %v", pid, err)
 		return 1
 	}
-	defer c.Close()
+	defer p.Close()
 
-	if !c.isRunning() {
-		stderr("Container %q isn't currently running", cid)
+	if !p.isRunning() {
+		stderr("Pod %q isn't currently running", pid)
 		return 1
 	}
 
-	imageID, err := getAppImageID(c)
+	imageID, err := getAppImageID(p)
 	if err != nil {
 		stderr("Unable to determine image id: %v", err)
 		return 1
 	}
 
-	argv, err := getEnterArgv(c, imageID, args)
+	argv, err := getEnterArgv(p, imageID, args)
 	if err != nil {
 		stderr("Enter failed: %v", err)
 		return 1
@@ -92,7 +92,7 @@ func runEnter(args []string) (exit int) {
 		return 1
 	}
 
-	stage1ID, err := c.getStage1Hash()
+	stage1ID, err := p.getStage1Hash()
 	if err != nil {
 		stderr("Error getting stage1 hash")
 		return 1
@@ -101,7 +101,7 @@ func runEnter(args []string) (exit int) {
 	stage1RootFS := ds.GetTreeStoreRootFS(stage1ID.String())
 	enterPath := filepath.Join(stage1RootFS, cmdEnterName)
 
-	if err = stage0.Enter(c.path(), imageID, enterPath, argv); err != nil {
+	if err = stage0.Enter(p.path(), imageID, enterPath, argv); err != nil {
 		stderr("Enter failed: %v", err)
 		return 1
 	}
@@ -113,15 +113,15 @@ func runEnter(args []string) (exit int) {
 // If one was supplied in the flags then it's simply returned
 // If the PM contains a single image, that image's id is returned
 // If the PM has multiple images, the ids and names are printed and an error is returned
-func getAppImageID(c *container) (*types.Hash, error) {
+func getAppImageID(p *pod) (*types.Hash, error) {
 	if !flagAppImageID.Empty() {
 		return &flagAppImageID, nil
 	}
 
 	// figure out the image id, or show a list if multiple are present
-	b, err := ioutil.ReadFile(common.PodManifestPath(c.path()))
+	b, err := ioutil.ReadFile(common.PodManifestPath(p.path()))
 	if err != nil {
-		return nil, fmt.Errorf("error reading container manifest: %v", err)
+		return nil, fmt.Errorf("error reading pod manifest: %v", err)
 	}
 
 	m := schema.PodManifest{}
@@ -131,13 +131,13 @@ func getAppImageID(c *container) (*types.Hash, error) {
 
 	switch len(m.Apps) {
 	case 0:
-		return nil, fmt.Errorf("container contains zero apps")
+		return nil, fmt.Errorf("pod contains zero apps")
 	case 1:
 		return &m.Apps[0].Image.ID, nil
 	default:
 	}
 
-	stderr("Container contains multiple apps:")
+	stderr("Pod contains multiple apps:")
 	for _, ra := range m.Apps {
 		stderr("\t%s: %s", types.ShortHash(ra.Image.ID.String()), ra.Name.String())
 	}
@@ -145,8 +145,8 @@ func getAppImageID(c *container) (*types.Hash, error) {
 	return nil, fmt.Errorf("specify app using \"rkt enter --imageid ...\"")
 }
 
-// getEnterArgv returns the argv to use for entering the container
-func getEnterArgv(c *container, imageID *types.Hash, cmdArgs []string) ([]string, error) {
+// getEnterArgv returns the argv to use for entering the pod
+func getEnterArgv(p *pod, imageID *types.Hash, cmdArgs []string) ([]string, error) {
 	var argv []string
 	if len(cmdArgs) < 2 {
 		stdout("No command specified, assuming %q", defaultCmd)

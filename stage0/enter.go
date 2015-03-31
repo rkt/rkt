@@ -24,8 +24,8 @@ import (
 	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
-// Enter enters the container by exec()ing the stage1's /enter similar to /init
-// /enter can expect to have its CWD set to the container root.
+// Enter enters the pod/app by exec()ing the stage1's /enter similar to /init
+// /enter can expect to have its CWD set to the app root.
 // imageID and command are supplied to /enter on argv followed by any arguments.
 // enterPath is the path of the enter binary
 func Enter(cdir string, imageID *types.Hash, enterPath string, cmdline []string) error {

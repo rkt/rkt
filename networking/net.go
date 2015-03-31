@@ -103,7 +103,7 @@ func loadUserNets() ([]Net, error) {
 }
 
 // Loads nets specified by user and default one from stage1
-func (e *containerEnv) loadNets() ([]Net, error) {
+func (e *podEnv) loadNets() ([]Net, error) {
 	nets, err := loadUserNets()
 	if err != nil {
 		return nil, err

@@ -9,7 +9,7 @@ import (
 	"github.com/coreos/rocket/pkg/lock"
 )
 
-func TestWalkContainers(t *testing.T) {
+func TestWalkPods(t *testing.T) {
 	tests := [][]*struct {
 		uuid      string
 		exited    bool
@@ -20,7 +20,7 @@ func TestWalkContainers(t *testing.T) {
 	}{
 		{ // nothing
 		},
-		{ // single executing container
+		{ // single executing pod
 			{
 				uuid:     "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 				exited:   false,
@@ -30,7 +30,7 @@ func TestWalkContainers(t *testing.T) {
 				expected: true,
 			},
 		},
-		{ // single exited container
+		{ // single exited pod
 			{
 				uuid:     "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
 				exited:   true,
@@ -40,7 +40,7 @@ func TestWalkContainers(t *testing.T) {
 				expected: true,
 			},
 		},
-		{ // single garbage container
+		{ // single garbage pod
 			{
 				uuid:     "cccccccc-cccc-cccc-cccc-cccccccccccc",
 				exited:   true,
@@ -50,7 +50,7 @@ func TestWalkContainers(t *testing.T) {
 				expected: true,
 			},
 		},
-		{ // single deleting container
+		{ // single deleting pod
 			{
 				uuid:     "dddddddd-dddd-dddd-dddd-dddddddddddd",
 				exited:   true,
@@ -106,8 +106,8 @@ func TestWalkContainers(t *testing.T) {
 		defer os.RemoveAll(d)
 
 		globalFlags.Dir = d
-		if err := initContainers(); err != nil {
-			t.Fatalf("error initializing containers: %v", err)
+		if err := initPods(); err != nil {
+			t.Fatalf("error initializing pods: %v", err)
 		}
 
 		var (
@@ -117,7 +117,7 @@ func TestWalkContainers(t *testing.T) {
 			included   includeMask
 		)
 
-		// create the container dirs as specified by the test
+		// create the pod dirs as specified by the test
 		for _, ct := range tt {
 			var cp string
 			if ct.garbage {
@@ -129,13 +129,13 @@ func TestWalkContainers(t *testing.T) {
 			}
 
 			if err := os.MkdirAll(cp, 0700); err != nil {
-				t.Fatalf("error creating container directory: %v", err)
+				t.Fatalf("error creating pod directory: %v", err)
 			}
 
-			if !ct.exited || ct.deleting { // acquire lock to simulate running and deleting containers
+			if !ct.exited || ct.deleting { // acquire lock to simulate running and deleting pods
 				l, err := lock.ExclusiveLock(cp, lock.Dir)
 				if err != nil {
-					t.Fatalf("error locking container: %v", err)
+					t.Fatalf("error locking pod: %v", err)
 				}
 				defer l.Close()
 			}
@@ -146,7 +146,7 @@ func TestWalkContainers(t *testing.T) {
 		}
 
 		// match what walk provided against the set in the test
-		if err := walkContainers(included, func(ch *container) {
+		if err := walkPods(included, func(ch *pod) {
 			n_walked++
 			for _, ct := range tt {
 				if ch.uuid.String() == ct.uuid &&
@@ -156,13 +156,13 @@ func TestWalkContainers(t *testing.T) {
 
 					ct.n_matched++
 					if ct.n_matched > 1 {
-						t.Errorf("no containers should match multiple times")
+						t.Errorf("no pods should match multiple times")
 					}
 					n_matched++
 				}
 			}
 		}); err != nil {
-			t.Fatalf("error walking containers: %v", err)
+			t.Fatalf("error walking pods: %v", err)
 		}
 
 		if n_expected != n_matched {
@@ -171,11 +171,11 @@ func TestWalkContainers(t *testing.T) {
 
 		for _, ct := range tt {
 			if ct.expected && ct.n_matched == 0 {
-				t.Errorf("container %q expected but not matched", ct.uuid)
+				t.Errorf("pod %q expected but not matched", ct.uuid)
 			}
 
 			if !ct.expected && ct.n_matched != 0 {
-				t.Errorf("container %q matched but not expected", ct.uuid)
+				t.Errorf("pod %q matched but not expected", ct.uuid)
 			}
 		}
 	}
