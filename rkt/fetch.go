@@ -205,7 +205,7 @@ func download(aciURL string, ascURL string, ds *cas.Store, ks *keystore.Keystore
 		stdout("Downloading signature from %v\n", ascURL)
 		sigTempFile, err = ds.TmpFile()
 		if err != nil {
-			return nil, nil, fmt.Errorf("error downloading the signature file: %v", err)
+			return nil, nil, fmt.Errorf("error setting up temporary file: %v", err)
 		}
 		defer sigTempFile.Close()
 		defer os.Remove(sigTempFile.Name())
