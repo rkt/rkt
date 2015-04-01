@@ -8,13 +8,13 @@ hello-0.0.1-linux-amd64.aci
 
 * [Signing ACIs](#signing-acis)
 * [Distributing Images via Meta Discovery](#distributing-images-via-meta-discovery)
-* [Verifying Images with Rocket](#verifying-images-with-rocket)
+* [Verifying Images with rkt](#verifying-images-with-rkt)
 * [Establishing Trust](#establishing-trust)
 * [Example Usage](#example-usage)
 
 ## Signing ACIs
 
-By default rocket requires ACIs to be signed using a gpg detached signature. The following steps will walk you through the creation of a gpg keypair suitable for signing an ACI. If you have an existing gpg signing key skip to the [Signing the ACI](signing-the-aci) step.  
+By default rkt requires ACIs to be signed using a gpg detached signature. The following steps will walk you through the creation of a gpg keypair suitable for signing an ACI. If you have an existing gpg signing key skip to the [Signing the ACI](signing-the-aci) step.  
 
 ### Generate a gpg signing key
 
@@ -30,9 +30,9 @@ Name-Real: Kelsey Hightower
 Name-Comment: ACI signing key
 Name-Email: kelsey.hightower@coreos.com
 Expire-Date: 0
-Passphrase: rocket
-%pubring rocket.pub
-%secring rocket.sec
+Passphrase: rkt
+%pubring rkt.pub
+%secring rkt.sec
 %commit
 %echo done
 ```
@@ -46,10 +46,10 @@ $ gpg --batch --gen-key gpg-batch
 #### List the keys
 
 ```
-$ gpg --no-default-keyring --secret-keyring ./rocket.sec --keyring ./rocket.pub --list-keys
+$ gpg --no-default-keyring --secret-keyring ./rkt.sec --keyring ./rkt.pub --list-keys
 ```
 ```
-./rocket.pub
+./rkt.pub
 ------------
 pub   2048R/26EF7A14 2015-01-09
 uid       [ unknown] Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
@@ -65,7 +65,7 @@ gpg: WARNING: This key is not certified with a trusted signature!
 Since we know exactly where this key came from let's trust it:
 
 ```
-$ gpg --no-default-keyring --secret-keyring ./rocket.sec --keyring ./rocket.pub --edit-key 26EF7A14 trust
+$ gpg --no-default-keyring --secret-keyring ./rkt.sec --keyring ./rkt.pub --edit-key 26EF7A14 trust
 gpg (GnuPG/MacGPG2) 2.0.22; Copyright (C) 2013 Free Software Foundation, Inc.
 This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
@@ -104,7 +104,7 @@ gpg> quit
 
 ```
 $ gpg --no-default-keyring --armor \
---secret-keyring ./rocket.sec --keyring ./rocket.pub \
+--secret-keyring ./rkt.sec --keyring ./rkt.pub \
 --export kelsey.hightower@coreos.com > pubkeys.gpg
 ```
 
@@ -112,7 +112,7 @@ $ gpg --no-default-keyring --armor \
 
 ```
 $ gpg --no-default-keyring --armor \
---secret-keyring ./rocket.sec --keyring ./rocket.pub \
+--secret-keyring ./rkt.sec --keyring ./rkt.pub \
 --output hello-0.0.1-linux-amd64.aci.asc \
 --detach-sig hello-0.0.1-linux-amd64.aci
 ```
@@ -121,7 +121,7 @@ $ gpg --no-default-keyring --armor \
 
 ```
 $ gpg --no-default-keyring \
---secret-keyring ./rocket.sec --keyring ./rocket.pub \
+--secret-keyring ./rkt.sec --keyring ./rkt.pub \
 --verify hello-0.0.1-linux-amd64.aci.asc hello-0.0.1-linux-amd64.aci
 ```
 ```
@@ -160,16 +160,16 @@ https://example.com/images/hello-0.0.1-linux-amd64.aci
 https://example.com/pubkeys.gpg
 ```
 
-### Rocket Integration
+### rkt Integration
 
-Lets walk through the steps rocket takes when fetching images using Meta Discovery.
-The following rocket command:
+Lets walk through the steps rkt takes when fetching images using Meta Discovery.
+The following rkt command:
 
 ```
 $ rkt run example.com/hello:0.0.1
 ```
 
-results in rocket retrieving the following URIs:
+results in rkt retrieving the following URIs:
 
 ```
 https://example.com/hello?ac-discovery=1
@@ -183,18 +183,18 @@ The first response contains the template URL used to download the ACI image and 
 <meta name="ac-discovery" content="example.com/hello https://example.com/images/{name}-{version}-{os}-{arch}.{ext}">
 ```
 
-Rocket populates the `{os}` and `{arch}` based on the current running system.
+rkt populates the `{os}` and `{arch}` based on the current running system.
 The `{version}` will be taken from the tag given on the command line or "latest" if not supplied.
 The `{ext}` will be substituted appropriately depending on artifact being retrieved: .aci will be used for ACI images and .aci.asc will be used for detached signatures.
 
-Once the ACI image has been downloaded rocket will extract the image's name from the image metadata. The image's name will be used to locate trusted public keys in the rocket keystore and perform signature validation.
+Once the ACI image has been downloaded rkt will extract the image's name from the image metadata. The image's name will be used to locate trusted public keys in the rkt keystore and perform signature validation.
 
-## Verifying Images with Rocket
+## Verifying Images with rkt
 
 ### Establishing Trust
 
-By default rocket does not trust any signing keys. Trust is established by storing public keys in the rocket keystore.
-The following directories make up the default rocket keystore layout:
+By default rkt does not trust any signing keys. Trust is established by storing public keys in the rkt keystore.
+The following directories make up the default rkt keystore layout:
 
 ```
 /etc/rkt/trustedkeys/root.d
@@ -270,14 +270,14 @@ If you would like to trust a public key for any image store the public key in on
 $ sudo rkt -h
 Usage of rkt:
   -debug=false: Print out more debug information to stderr
-  -dir="/var/lib/rkt": rocket data directory
+  -dir="/var/lib/rkt": rkt data directory
   -help=false: Print usage information and exit
   -insecure-skip-verify=false: skip image verification
 ```
 
 #### Download, verify and run an ACI
 
-By default rocket will attempt to download the ACI detached signature and verify the image:
+By default rkt will attempt to download the ACI detached signature and verify the image:
 
 ```
 $ sudo rkt run example.com/hello:0.0.1
@@ -302,7 +302,7 @@ Downloading aci: [=                                            ] 32.8 KB/1.26 MB
 ^]^]Container stage1 terminated by signal KILL.
 ```
 
-Notice when the `-insecure-skip-verify` flag is used, rocket will print the following warning:
+Notice when the `-insecure-skip-verify` flag is used, rkt will print the following warning:
 
 ```
 rkt: warning: signature verification has been disabled

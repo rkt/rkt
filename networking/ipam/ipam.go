@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
-	"github.com/coreos/rocket/networking/util"
+	"github.com/coreos/rkt/networking/util"
 )
 
 // L3 config value for interface

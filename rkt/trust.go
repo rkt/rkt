@@ -14,7 +14,7 @@
 
 //+build linux
 
-// implements https://github.com/coreos/rocket/issues/367
+// implements https://github.com/coreos/rkt/issues/367
 
 package main
 
@@ -28,9 +28,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/discovery"
-	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
-	"github.com/coreos/rocket/pkg/keystore"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
+	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	"github.com/coreos/rkt/pkg/keystore"
 )
 
 var (

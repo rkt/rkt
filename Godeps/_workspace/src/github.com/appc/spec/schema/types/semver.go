@@ -3,7 +3,7 @@ package types
 import (
 	"encoding/json"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/coreos/go-semver/semver"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-semver/semver"
 )
 
 var (

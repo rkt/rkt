@@ -20,8 +20,8 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/coreos/rocket/cas"
-	"github.com/coreos/rocket/stage0"
+	"github.com/coreos/rkt/cas"
+	"github.com/coreos/rkt/stage0"
 )
 
 const (
@@ -31,7 +31,7 @@ const (
 var (
 	cmdRunPrepared = &Command{
 		Name:        cmdRunPreparedName,
-		Summary:     "Run a prepared application pod in rocket",
+		Summary:     "Run a prepared application pod in rkt",
 		Usage:       "UUID",
 		Description: "UUID must have been acquired via `rkt prepare`",
 		Run:         runRunPrepared,

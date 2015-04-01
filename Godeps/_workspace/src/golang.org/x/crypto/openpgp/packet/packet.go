@@ -11,8 +11,8 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/des"
-	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/cast5"
-	"github.com/coreos/rocket/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
+	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/cast5"
+	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
 	"io"
 	"math/big"
 )

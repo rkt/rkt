@@ -22,8 +22,8 @@ import (
 	"path"
 	"sort"
 
-	"github.com/coreos/rocket/common"
-	rktnet "github.com/coreos/rocket/networking/net"
+	"github.com/coreos/rkt/common"
+	rktnet "github.com/coreos/rkt/networking/net"
 )
 
 // Net encodes a network plugin.

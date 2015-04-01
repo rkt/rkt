@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/coreos/rocket/pkg/lock"
+	"github.com/coreos/rkt/pkg/lock"
 )
 
 func TestWalkPods(t *testing.T) {

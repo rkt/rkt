@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/strutil"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/strutil"
 )
 
 // NOTE: all rset implementations must be safe for concurrent use by multiple

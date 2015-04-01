@@ -59,7 +59,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/ql"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/ql"
 )
 
 func str(data []interface{}) string {

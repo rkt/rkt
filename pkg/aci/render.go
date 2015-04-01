@@ -4,9 +4,9 @@ import (
 	"archive/tar"
 	"fmt"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/pkg/acirenderer"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	ptar "github.com/coreos/rocket/pkg/tar"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/acirenderer"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	ptar "github.com/coreos/rkt/pkg/tar"
 )
 
 // Given an imageID, start with the matching image available in the store,

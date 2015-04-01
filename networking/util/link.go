@@ -20,7 +20,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 )
 
 func makeVeth(name, peer string, mtu int) (netlink.Link, error) {

@@ -4,7 +4,7 @@ Stage1 ACI implementor's guide
 Background
 ----------
 
-Rocket's execution of pods is divided roughly into three separate stages:
+rkt's execution of pods is divided roughly into three separate stages:
 
 0. Stage 0: discovering, fetching, verifying, storing, and compositing of both application (stage 2) and stage 1 images for execution.
 1. Stage 1: execution of the stage 1 image from within the composite image prepared by stage 0.
@@ -23,20 +23,20 @@ Stage 2 is the destination application images and stage 1 is the vehicle for get
 Entrypoints
 -----------
 
-### `rkt run` => "coreos.com/rocket/stage1/run"
+### `rkt run` => "coreos.com/rkt/stage1/run"
 
 0. rkt prepares the pod's stage 1 and stage 2 images and Pod Manifest under "/var/lib/rkt/pods/$uuid", acquiring an exclusive advisory lock on the directory.
 1. chdirs to "/var/lib/rkt/pods/$uuid"
-2. resolves the "coreos.com/rocket/stage1/run" entrypoint via Annotations found within "/var/lib/rkt/pods/$uuid/stage1/manifest"
+2. resolves the "coreos.com/rkt/stage1/run" entrypoint via Annotations found within "/var/lib/rkt/pods/$uuid/stage1/manifest"
 3. executes the resolved entrypoint relative to "/var/lib/rkt/pods/$uuid/stage1/rootfs"
 
 It is the responsibility of this entrypoint to consume the Pod Manifest and execute the constituent apps in the appropriate environments as specified by the Pod Manifest.
 
 The environment variable "RKT_LOCK_FD" contains the file descriptor number of the open directory handle for "/var/lib/rkt/pods/$uuid".  It is necessary that stage 1 leave this file descriptor open and in its locked state for the duration of the `rkt run`.
 
-In the bundled rocket stage 1 which includes systemd-nspawn and systemd, the entrypoint is a static Go program found at "/init" within the stage 1 ACI rootfs.  The majority of its execution entails generating a systemd-nspawn argument list and writing systemd unit files for the constituent apps before executing systemd-nspawn.  Systemd-nspawn then boots the stage 1 systemd with the just-written unit files for launching the contained apps.  The "/init" program is essentially a Pod Manifest to systemd-nspawn + systemd.service translator.
+In the bundled rkt stage 1 which includes systemd-nspawn and systemd, the entrypoint is a static Go program found at "/init" within the stage 1 ACI rootfs.  The majority of its execution entails generating a systemd-nspawn argument list and writing systemd unit files for the constituent apps before executing systemd-nspawn.  Systemd-nspawn then boots the stage 1 systemd with the just-written unit files for launching the contained apps.  The "/init" program is essentially a Pod Manifest to systemd-nspawn + systemd.service translator.
 
-An alternative stage 1 could forego systemd-nspawn and systemd altogether, or retain these and introduce something like novm or qemu-kvm for greater isolation by first starting a VM.  All that is required is an executable at the place indicated by the "coreos.com/rocket/stage1/run" entrypoint which knows how to apply the Pod Manifest and prepared ACI file-systems to good effect.
+An alternative stage 1 could forego systemd-nspawn and systemd altogether, or retain these and introduce something like novm or qemu-kvm for greater isolation by first starting a VM.  All that is required is an executable at the place indicated by the "coreos.com/rkt/stage1/run" entrypoint which knows how to apply the Pod Manifest and prepared ACI file-systems to good effect.
 
 
 #### Arguments
@@ -44,16 +44,16 @@ An alternative stage 1 could forego systemd-nspawn and systemd altogether, or re
 * --private-net to trigger the creation of a private network
 
 
-### `rkt enter` => "coreos.com/rocket/stage1/enter"
+### `rkt enter` => "coreos.com/rkt/stage1/enter"
 
 0. rkt verifies the pod and image to enter are valid and running
 1. chdirs to "/var/lib/rkt/pods/$uuid"
-2. resolves the "coreos.com/rocket/stage1/enter" entrypoint via Annotations found within "/var/lib/rkt/pods/$uuid/stage1/manifest"
+2. resolves the "coreos.com/rkt/stage1/enter" entrypoint via Annotations found within "/var/lib/rkt/pods/$uuid/stage1/manifest"
 3. executes the resolved entrypoint relative to "/var/lib/rkt/pods/$uuid/stage1/rootfs"
 
-In the bundled rocket stage 1 the entrypoint is a statically-linked C program found at "/enter" within the stage 1 ACI rootfs.  This program enters the namespaces of the systemd-nspawn container's PID 1 before executing the "/diagexec" program which then chroots into the specific application's rootfs loading the application's environment variables as well.
+In the bundled rkt stage 1 the entrypoint is a statically-linked C program found at "/enter" within the stage 1 ACI rootfs.  This program enters the namespaces of the systemd-nspawn container's PID 1 before executing the "/diagexec" program which then chroots into the specific application's rootfs loading the application's environment variables as well.
 
-An alternative stage 1 would need to do whatever is appropriate for entering the application's environment created by its own "coreos.com/rocket/stage1/run" entrypoint.
+An alternative stage 1 would need to do whatever is appropriate for entering the application's environment created by its own "coreos.com/rkt/stage1/run" entrypoint.
 
 #### Arguments
 
@@ -72,7 +72,7 @@ Examples
 {
     "acKind": "ImageManifest",
     "acVersion": "0.2.0",
-    "name": "foo.com/rocket/stage1",
+    "name": "foo.com/rkt/stage1",
     "labels": [
         {   
             "name": "version",
@@ -89,11 +89,11 @@ Examples
     ],
     "annotations": [
         {   
-            "name": "coreos.com/rocket/stage1/run",
+            "name": "coreos.com/rkt/stage1/run",
             "value": "/ex/run"
         },
         {   
-            "name": "coreos.com/rocket/stage1/enter",
+            "name": "coreos.com/rkt/stage1/enter",
             "value": "/ex/enter"
         }
     ]

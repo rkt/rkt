@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 	/* Make stage2's root a mount point. Chrooting an application in a
 	 * directory which is not a mount point is not nice because the
 	 * application would not be able to remount "/" it as private mount.
-	 * This allows Docker to run inside Rocket.
+	 * This allows Docker to run inside rkt.
 	 * The recursive flag is to preserve volumes mounted previously by
 	 * systemd-nspawn via "rkt run -volume".
 	 * */

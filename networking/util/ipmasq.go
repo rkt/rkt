@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/coreos/go-iptables/iptables"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-iptables/iptables"
 )
 
 // Installs iptables rules to masquerade traffic

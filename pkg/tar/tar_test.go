@@ -201,7 +201,7 @@ func TestExtractTarInsecureSymlink(t *testing.T) {
 			t.Errorf("unexpected error: %v", err)
 		}
 		tr := tar.NewReader(containerTar)
-		tmpdir, err := ioutil.TempDir("", "rocket-temp-dir")
+		tmpdir, err := ioutil.TempDir("", "rkt-temp-dir")
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
@@ -288,7 +288,7 @@ func TestExtractTarFolders(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	tr := tar.NewReader(containerTar)
-	tmpdir, err := ioutil.TempDir("", "rocket-temp-dir")
+	tmpdir, err := ioutil.TempDir("", "rkt-temp-dir")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -435,7 +435,7 @@ func TestExtractTarPWL(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	tr := tar.NewReader(containerTar)
-	tmpdir, err := ioutil.TempDir("", "rocket-temp-dir")
+	tmpdir, err := ioutil.TempDir("", "rkt-temp-dir")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -457,7 +457,7 @@ func TestExtractTarPWL(t *testing.T) {
 }
 
 func TestExtractTarOverwrite(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "rocket-temp-dir")
+	tmpdir, err := ioutil.TempDir("", "rkt-temp-dir")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -688,7 +688,7 @@ func TestExtractTarTimes(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	tr := tar.NewReader(containerTar)
-	tmpdir, err := ioutil.TempDir("", "rocket-temp-dir")
+	tmpdir, err := ioutil.TempDir("", "rkt-temp-dir")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}

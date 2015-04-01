@@ -23,11 +23,11 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/vishvananda/netlink"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
-	"github.com/coreos/rocket/networking/netinfo"
-	"github.com/coreos/rocket/networking/util"
+	"github.com/coreos/rkt/networking/netinfo"
+	"github.com/coreos/rkt/networking/util"
 )
 
 const (

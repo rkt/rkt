@@ -24,7 +24,7 @@ In order to avoid exposing host IP to the pods, the metadata service installs an
 For non-production use, it is often convenient to launch the metadata service inline with running a pod.
 `rkt run` accepts a `--spawn-metadata-svc` command line argument to launch the metadata service prior to running a pod.
 When started in this fashion, the metadata service will exit when there are no more pods registered with it.
-Please note that it is strongly recommended to only use this mode when experimenting with Rocket on command line.
+Please note that it is strongly recommended to only use this mode when experimenting with rkt on command line.
 
 ## Using the metadata service
 See [App Container specification](https://github.com/appc/spec/blob/master/SPEC.md#app-container-metadata-service) for more information about the metadata service including a list of supported endpoints and their usage.

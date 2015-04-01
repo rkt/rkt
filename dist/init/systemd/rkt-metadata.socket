@@ -1,5 +1,5 @@
 [Unit]
-Description=Rocket metadata service socket
+Description=rkt metadata service socket
 PartOf=rkt-metadata.service
 
 [Socket]

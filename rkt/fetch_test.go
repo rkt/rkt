@@ -27,13 +27,13 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/coreos/rocket/cas"
-	"github.com/coreos/rocket/pkg/aci"
-	"github.com/coreos/rocket/pkg/keystore"
-	"github.com/coreos/rocket/pkg/keystore/keystoretest"
+	"github.com/coreos/rkt/cas"
+	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/keystore"
+	"github.com/coreos/rkt/pkg/keystore/keystoretest"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/discovery"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 func TestNewDiscoveryApp(t *testing.T) {

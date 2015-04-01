@@ -3,7 +3,7 @@ package acirenderer
 import (
 	"container/list"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 // CreateDepListFromImageID returns the flat dependency tree of the image with

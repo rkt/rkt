@@ -9,8 +9,8 @@ package falloc
 // Pull test dependencies too.
 // Enables easy 'go test X' after 'go get X'
 import (
-	_ "github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/fileutil"
-	_ "github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/fileutil/storage"
+	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/fileutil"
+	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/fileutil/storage"
 
-	_ "github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/mathutil"
+	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/mathutil"
 )

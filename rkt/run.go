@@ -24,11 +24,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rocket/cas"
-	"github.com/coreos/rocket/common"
-	"github.com/coreos/rocket/pkg/keystore"
-	"github.com/coreos/rocket/stage0"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/cas"
+	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/keystore"
+	"github.com/coreos/rkt/stage0"
 )
 
 var (
@@ -44,7 +44,7 @@ var (
 	flagNoOverlay            bool
 	cmdRun                   = &Command{
 		Name:    "run",
-		Summary: "Run image(s) in a pod in rocket",
+		Summary: "Run image(s) in a pod in rkt",
 		Usage:   "[--volume name,kind=host,...] IMAGE [-- image-args...[---]]...",
 		Description: `IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
 They will be checked in that order and the first match will be used.
@@ -67,7 +67,7 @@ func init() {
 		}
 	}
 
-	cmdRun.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, Rocket will look for a file called "stage1.aci" in the same directory as rkt itself`)
+	cmdRun.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
 	cmdRun.Flags.Var(&flagVolumes, "volume", "volumes to mount into the pod")
 	cmdRun.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give pod a private network")
 	cmdRun.Flags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")

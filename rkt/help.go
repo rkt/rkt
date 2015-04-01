@@ -20,7 +20,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/coreos/rocket/version"
+	"github.com/coreos/rkt/version"
 )
 
 var (

@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/appc/spec/schema"
-	common "github.com/coreos/rocket/common"
-	"github.com/coreos/rocket/networking/netinfo"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	common "github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/networking/netinfo"
 )
 
 var (

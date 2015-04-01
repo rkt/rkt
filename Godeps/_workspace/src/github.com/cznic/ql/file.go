@@ -20,9 +20,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/camlistore/lock"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/exp/lldb"
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/mathutil"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/camlistore/lock"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/exp/lldb"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/mathutil"
 )
 
 const (

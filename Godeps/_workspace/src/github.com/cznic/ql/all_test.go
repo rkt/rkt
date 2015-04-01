@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/strutil"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/strutil"
 )
 
 // Note: All benchmarks report MB/s equal to record/s.

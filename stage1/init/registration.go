@@ -27,7 +27,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coreos/rocket/common"
+	"github.com/coreos/rkt/common"
 )
 
 const retryCount = 3
@@ -37,7 +37,7 @@ var retryPause = time.Second
 var errUnreachable = errors.New(`could not reach the metadata service.
 Make sure metadata service is currently running.
 For more information on running metadata service,
-see https://github.com/coreos/rocket/blob/master/Documentation/metadata-service.md`)
+see https://github.com/coreos/rkt/blob/master/Documentation/metadata-service.md`)
 
 func registerPod(p *Pod, ip net.IP) error {
 	uuid := p.UUID.String()

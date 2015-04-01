@@ -20,9 +20,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/coreos/rocket/pkg/lock"
+	"github.com/coreos/rkt/pkg/lock"
 
-	_ "github.com/coreos/rocket/Godeps/_workspace/src/github.com/cznic/ql/driver"
+	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/ql/driver"
 )
 
 const (

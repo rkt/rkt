@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	rocketGroup   = "rocket"
+	rktGroup      = "rkt"
 	groupFilePath = "/etc/group"
 	casDbPerm     = os.FileMode(0664)
 )
@@ -33,7 +33,7 @@ const (
 var (
 	cmdInstall = &Command{
 		Name:    "install",
-		Summary: "Set up Rocket data directories with correct permissions",
+		Summary: "Set up rkt data directories with correct permissions",
 		Usage:   "",
 		Run:     runInstall,
 	}
@@ -205,14 +205,14 @@ func setCasDbFilesPermissions(casDbPath string, gid int, perm os.FileMode) error
 }
 
 func runInstall(args []string) (exit int) {
-	gid, err := lookupGid(rocketGroup)
+	gid, err := lookupGid(rktGroup)
 	if err != nil {
-		stderr("install: error looking up rocket gid: %v", err)
+		stderr("install: error looking up rkt gid: %v", err)
 		return 1
 	}
 
 	if err := createDirStructure(gid); err != nil {
-		stderr("install: error creating Rocket directory structure: %v", err)
+		stderr("install: error creating rkt directory structure: %v", err)
 		return 1
 	}
 
@@ -229,7 +229,7 @@ func runInstall(args []string) (exit int) {
 		return 1
 	}
 
-	fmt.Println("Rocket directory structure successfully created.")
+	fmt.Println("rkt directory structure successfully created.")
 
 	return 0
 }
