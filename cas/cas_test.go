@@ -155,7 +155,7 @@ func TestGetImageManifest(t *testing.T) {
 
 	imj := `{
 			"acKind": "ImageManifest",
-			"acVersion": "0.5.2",
+			"acVersion": "0.5.3",
 			"name": "example.com/test01"
 		}`
 
@@ -347,7 +347,7 @@ func TestTreeStore(t *testing.T) {
 	imj := `
 		{
 		    "acKind": "ImageManifest",
-		    "acVersion": "0.5.2",
+		    "acVersion": "0.5.3",
 		    "name": "example.com/test01"
 		}
 	`
