@@ -24,6 +24,8 @@ cd rkt-v0.5.3
 ./rkt help
 ```
 
+For Mac (and other Vagrant) users we have set up a `Vagrantfile` : Clone this repo and make sure you have [Vagrant](https://www.vagrantup.com/) installed. `vagrant up` starts up a Linux box and installs via some scripts `rkt` and `actool`. With a subsequent `vagrant ssh` you are ready to go.
+
 Keep in mind while running through the examples that right now `rkt` needs to be run as root for most operations.
 
 ## rkt basics
