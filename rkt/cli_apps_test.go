@@ -63,7 +63,7 @@ func TestParseAppArgs(t *testing.T) {
 
 	for i, tt := range tests {
 		rktApps.Reset()
-		err := parseApps(&rktApps, strings.Split(tt.in, " "), flags)
+		err := parseApps(&rktApps, strings.Split(tt.in, " "), flags, true)
 		ga := rktApps.GetArgs()
 		gi := rktApps.GetImages()
 		if gerr := (err != nil); gerr != tt.werr {

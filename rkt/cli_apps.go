@@ -30,7 +30,8 @@ var (
 // parseApps looks through the args for support of per-app argument lists delimited with "--" and "---".
 // Between per-app argument lists flags.Parse() is called using the supplied FlagSet.
 // Anything not consumed by flags.Parse() and not found to be a per-app argument list is treated as an image.
-func parseApps(al *apps.Apps, args []string, flags *flag.FlagSet) error {
+// allowAppArgs controls whether "--" prefixed per-app arguments will be accepted or not.
+func parseApps(al *apps.Apps, args []string, flags *flag.FlagSet, allowAppArgs bool) error {
 	nAppsLastAppArgs := al.Count()
 
 	// valid args here may either be:
@@ -54,6 +55,9 @@ func parseApps(al *apps.Apps, args []string, flags *flag.FlagSet) error {
 		} else {
 			switch a {
 			case "--":
+				if !allowAppArgs {
+					return fmt.Errorf("app arguments unsupported")
+				}
 				// begin app's args
 				inAppArgs = true
 

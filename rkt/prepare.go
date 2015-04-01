@@ -67,7 +67,7 @@ func runPrepare(args []string) (exit int) {
 		}
 	}
 
-	if err = parseApps(&rktApps, args, &prepareFlags); err != nil {
+	if err = parseApps(&rktApps, args, &prepareFlags, true); err != nil {
 		stderr("prepare: error parsing app image arguments: %v", err)
 		return 1
 	}

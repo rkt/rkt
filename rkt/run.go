@@ -97,7 +97,7 @@ func runRun(args []string) (exit int) {
 		}
 	}
 
-	err := parseApps(&rktApps, args, &runFlags)
+	err := parseApps(&rktApps, args, &runFlags, true)
 	if err != nil {
 		stderr("run: error parsing app image arguments: %v", err)
 		return 1

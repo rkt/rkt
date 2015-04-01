@@ -33,6 +33,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 	"github.com/coreos/rkt/cas"
+	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
 )
 
@@ -45,40 +46,50 @@ const (
 
 var (
 	cmdFetch = &Command{
-		Name:    "fetch",
-		Summary: "Fetch image(s) and store them in the local cache",
-		Usage:   "IMAGE_URL...",
-		Run:     runFetch,
-		Flags:   &fetchFlags,
+		Name:                 "fetch",
+		Summary:              "Fetch image(s) and store them in the local cache",
+		Usage:                "IMAGE_URL...",
+		Run:                  runFetch,
+		Flags:                &fetchFlags,
+		WantsFlagsTerminator: true,
 	}
 	fetchFlags flag.FlagSet
 )
 
 func init() {
 	commands = append(commands, cmdFetch)
+	fetchFlags.Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 }
 
 func runFetch(args []string) (exit int) {
-	if len(args) < 1 {
-		stderr("fetch: Must provide at least one image")
+	if err := parseApps(&rktApps, args, &fetchFlags, false); err != nil {
+		stderr("fetch: unable to parse arguments: %v", err)
+		return 1
+	}
+	if rktApps.Count() < 1 {
+		stderr("fetch: must provide at least one image")
 		return 1
 	}
 
 	ds, err := cas.NewStore(globalFlags.Dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "fetch: cannot open store: %v\n", err)
+		stderr("fetch: cannot open store: %v", err)
 		return 1
 	}
 	ks := getKeystore()
 
-	for _, img := range args {
-		hash, err := fetchImage(img, "" /* TODO(vc): wire to --signature */, ds, ks, true)
+	err = rktApps.Walk(func(app *apps.App) error {
+		hash, err := fetchImage(app.Image, app.Asc, ds, ks, true)
 		if err != nil {
-			stderr("%v", err)
-			return 1
+			return err
 		}
 		shortHash := types.ShortHash(hash)
 		fmt.Println(shortHash)
+		return nil
+	})
+	if err != nil {
+		stderr("%v", err)
+		return 1
 	}
 
 	return
