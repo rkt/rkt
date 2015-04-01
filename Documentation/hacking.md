@@ -13,7 +13,6 @@
   * realpath
   * gpg
 * Go 1.3+
-  * github.com/appc/spec (not yet vendored as it's in a continuous improvement phase)
 
 Once the requirements have been met you can build rkt by running the following commands:
 
@@ -24,7 +23,7 @@ cd rkt; ./build
 
 ### With Docker
 
-Alternatively, you can build rkt in a docker container with the following command. Replace $SRC with the absolute path to your rkt source code:
+Alternatively, you can build rkt in a Docker container with the following command. Replace $SRC with the absolute path to your rkt source code:
 
 ```
 $ sudo docker run -v $SRC:/opt/rkt -i -t golang:1.3 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath && cd /opt/rkt && go get github.com/appc/spec/... && ./build"
