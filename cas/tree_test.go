@@ -13,7 +13,7 @@ func treeStoreDSWriteACI(dir string, ds *Store) (string, error) {
 	imj := `
 		{
 		    "acKind": "ImageManifest",
-		    "acVersion": "0.5.2",
+		    "acVersion": "0.5.3",
 		    "name": "example.com/test01"
 		}
 	`

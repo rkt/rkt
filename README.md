@@ -18,9 +18,9 @@ The CLI for rkt is called `rkt`, and is currently supported on amd64 Linux. A mo
 To install the `rkt` binary, grab the latest release directly from GitHub:
 
 ```
-wget https://github.com/coreos/rkt/releases/download/v0.5.2/rkt-v0.5.2.tar.gz
-tar xzvf rkt-v0.5.2.tar.gz
-cd rkt-v0.5.2
+wget https://github.com/coreos/rkt/releases/download/v0.5.3/rkt-v0.5.3.tar.gz
+tar xzvf rkt-v0.5.3.tar.gz
+cd rkt-v0.5.3
 ./rkt help
 ```
 
