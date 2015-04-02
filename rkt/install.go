@@ -16,6 +16,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -36,7 +37,9 @@ var (
 		Summary: "Set up rkt data directories with correct permissions",
 		Usage:   "",
 		Run:     runInstall,
+		Flags:   &installFlags,
 	}
+	installFlags flag.FlagSet
 
 	// dirs relative to globalFlags.Dir
 	dirs = map[string]os.FileMode{

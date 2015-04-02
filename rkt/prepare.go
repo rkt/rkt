@@ -17,6 +17,7 @@
 package main
 
 import (
+	"flag"
 	"io/ioutil"
 	"log"
 	"os"
@@ -38,19 +39,22 @@ They will be checked in that order and the first match will be used.
 An "--" may be used to inhibit rkt prepare's parsing of subsequent arguments,
 which will instead be appended to the preceding image app's exec arguments.
 End the image arguments with a lone "---" to resume argument parsing.`,
-		Run: runPrepare,
+		Run:                  runPrepare,
+		Flags:                &prepareFlags,
+		WantsFlagsTerminator: true,
 	}
-	flagQuiet bool
+	prepareFlags flag.FlagSet
+	flagQuiet    bool
 )
 
 func init() {
 	commands = append(commands, cmdPrepare)
-	cmdPrepare.Flags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
-	cmdPrepare.Flags.Var(&flagVolumes, "volume", "volumes to mount into the pod")
-	cmdPrepare.Flags.BoolVar(&flagQuiet, "quiet", false, "suppress superfluous output on stdout, print only the UUID on success")
-	cmdPrepare.Flags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
-	cmdPrepare.Flags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
-	cmdPrepare.Flags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
+	prepareFlags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
+	prepareFlags.Var(&flagVolumes, "volume", "volumes to mount into the pod")
+	prepareFlags.BoolVar(&flagQuiet, "quiet", false, "suppress superfluous output on stdout, print only the UUID on success")
+	prepareFlags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
+	prepareFlags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
+	prepareFlags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 }
 
 func runPrepare(args []string) (exit int) {
@@ -63,13 +67,12 @@ func runPrepare(args []string) (exit int) {
 		}
 	}
 
-	appArgs, images, err := parseAppArgs(args)
-	if err != nil {
-		stderr("prepare: error parsing app image arguments")
+	if err = parseApps(&rktApps, args, &prepareFlags, true); err != nil {
+		stderr("prepare: error parsing app image arguments: %v", err)
 		return 1
 	}
 
-	if len(images) < 1 {
+	if rktApps.Count() < 1 {
 		stderr("prepare: Must provide at least one image")
 		return 1
 	}
@@ -87,22 +90,15 @@ func runPrepare(args []string) (exit int) {
 		stderr("prepare: cannot open store: %v", err)
 		return 1
 	}
-	ks := getKeystore()
 
-	s1img, err := findImage(flagStage1Image, ds, ks, false)
+	s1img, err := findImage(flagStage1Image, "", ds, nil, false)
 	if err != nil {
 		stderr("prepare: finding stage1 image %q: %v", flagStage1Image, err)
 		return 1
 	}
 
-	imgs, err := findImages(images, ds, ks)
-	if err != nil {
+	if err := findImages(&rktApps, ds, getKeystore()); err != nil {
 		stderr("%v", err)
-		return 1
-	}
-
-	if len(imgs) != len(appArgs) {
-		stderr("Unexpected mismatch of app args and app images")
 		return 1
 	}
 
@@ -118,13 +114,12 @@ func runPrepare(args []string) (exit int) {
 			Debug:       globalFlags.Debug,
 			Stage1Image: *s1img,
 			UUID:        p.uuid,
-			Images:      imgs,
 		},
-		ExecAppends: appArgs,
+		Volumes:     []types.Volume(flagVolumes),
 		InheritEnv:  flagInheritEnv,
 		ExplicitEnv: flagExplicitEnv.Strings(),
-		Volumes:     []types.Volume(flagVolumes),
 		UseOverlay:  !flagNoOverlay && common.SupportsOverlay(),
+		Apps:        &rktApps,
 	}
 
 	if err = stage0.Prepare(pcfg, p.path(), p.uuid); err != nil {

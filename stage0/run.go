@@ -40,6 +40,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/cas"
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/version"
@@ -49,7 +50,7 @@ import (
 type PrepareConfig struct {
 	CommonConfig
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
-	ExecAppends [][]string     // appendages to each image's app.exec lines (empty when none, length should match length of Images)
+	Apps        *apps.Apps     // apps to prepare
 	InheritEnv  bool           // inherit parent environment into apps
 	ExplicitEnv []string       // always set these environment variables for all the apps
 	Volumes     []types.Volume // list of volumes that rkt can provide to applications
@@ -59,19 +60,19 @@ type PrepareConfig struct {
 // configuration parameters needed by Run
 type RunConfig struct {
 	CommonConfig
-	PrivateNet           bool // pod should have its own network stack
-	SpawnMetadataService bool // launch metadata service
-	LockFd               int  // lock file descriptor
-	Interactive          bool // whether the pod is interactive or not
+	PrivateNet           bool         // pod should have its own network stack
+	SpawnMetadataService bool         // launch metadata service
+	LockFd               int          // lock file descriptor
+	Interactive          bool         // whether the pod is interactive or not
+	Images               []types.Hash // application images (prepare gets them via Apps)
 }
 
 // configuration shared by both Run and Prepare
 type CommonConfig struct {
-	Store       *cas.Store   // store containing all of the configured application images
-	Stage1Image types.Hash   // stage1 image containing usable /init and /enter entrypoints
-	UUID        *types.UUID  // UUID of the pod
-	Images      []types.Hash // application images
-	PodsDir     string       // root directory for rkt pods
+	Store       *cas.Store  // store containing all of the configured application images
+	Stage1Image types.Hash  // stage1 image containing usable /init and /enter entrypoints
+	UUID        *types.UUID // UUID of the pod
+	PodsDir     string      // root directory for rocket pods
 	Debug       bool
 }
 
@@ -124,7 +125,8 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	}
 	cm.ACVersion = *v
 
-	for i, img := range cfg.Images {
+	if err := cfg.Apps.Walk(func(app *apps.App) error {
+		img := app.ImageID
 		am, err := prepareAppImage(cfg, img, dir, cfg.UseOverlay)
 		if err != nil {
 			return fmt.Errorf("error setting up image %s: %v", img, err)
@@ -135,7 +137,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		if am.App == nil {
 			return fmt.Errorf("error: image %s has no app section", img)
 		}
-		a := schema.RuntimeApp{
+		ra := schema.RuntimeApp{
 			// TODO(vc): leverage RuntimeApp.Name for disambiguating the apps
 			Name: am.Name,
 			Image: schema.RuntimeImage{
@@ -145,18 +147,21 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 			Annotations: am.Annotations,
 		}
 
-		if len(cfg.ExecAppends[i]) > 0 {
-			a.App = am.App
-			a.App.Exec = append(a.App.Exec, cfg.ExecAppends[i]...)
+		if execAppends := app.Args; execAppends != nil {
+			ra.App = am.App
+			ra.App.Exec = append(ra.App.Exec, execAppends...)
 		}
 
 		if cfg.InheritEnv || len(cfg.ExplicitEnv) > 0 {
-			if a.App == nil {
-				a.App = am.App
+			if ra.App == nil {
+				ra.App = am.App
 			}
-			MergeEnvs(&a.App.Environment, cfg.InheritEnv, cfg.ExplicitEnv)
+			MergeEnvs(&ra.App.Environment, cfg.InheritEnv, cfg.ExplicitEnv)
 		}
-		cm.Apps = append(cm.Apps, a)
+		cm.Apps = append(cm.Apps, ra)
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	// TODO(jonboulle): check that app mountpoint expectations are

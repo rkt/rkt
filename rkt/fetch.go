@@ -15,11 +15,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -31,6 +33,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 	"github.com/coreos/rkt/cas"
+	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
 )
 
@@ -43,38 +46,50 @@ const (
 
 var (
 	cmdFetch = &Command{
-		Name:    "fetch",
-		Summary: "Fetch image(s) and store them in the local cache",
-		Usage:   "IMAGE_URL...",
-		Run:     runFetch,
+		Name:                 "fetch",
+		Summary:              "Fetch image(s) and store them in the local cache",
+		Usage:                "IMAGE_URL...",
+		Run:                  runFetch,
+		Flags:                &fetchFlags,
+		WantsFlagsTerminator: true,
 	}
+	fetchFlags flag.FlagSet
 )
 
 func init() {
 	commands = append(commands, cmdFetch)
+	fetchFlags.Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 }
 
 func runFetch(args []string) (exit int) {
-	if len(args) < 1 {
-		stderr("fetch: Must provide at least one image")
+	if err := parseApps(&rktApps, args, &fetchFlags, false); err != nil {
+		stderr("fetch: unable to parse arguments: %v", err)
+		return 1
+	}
+	if rktApps.Count() < 1 {
+		stderr("fetch: must provide at least one image")
 		return 1
 	}
 
 	ds, err := cas.NewStore(globalFlags.Dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "fetch: cannot open store: %v\n", err)
+		stderr("fetch: cannot open store: %v", err)
 		return 1
 	}
 	ks := getKeystore()
 
-	for _, img := range args {
-		hash, err := fetchImage(img, ds, ks, true)
+	err = rktApps.Walk(func(app *apps.App) error {
+		hash, err := fetchImage(app.Image, app.Asc, ds, ks, true)
 		if err != nil {
-			stderr("%v", err)
-			return 1
+			return err
 		}
 		shortHash := types.ShortHash(hash)
 		fmt.Println(shortHash)
+		return nil
+	})
+	if err != nil {
+		stderr("%v", err)
+		return 1
 	}
 
 	return
@@ -82,9 +97,39 @@ func runFetch(args []string) (exit int) {
 
 // fetchImage will take an image as either a URL or a name string and import it
 // into the store if found.  If discover is true meta-discovery is enabled.
-func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore, discover bool) (string, error) {
+// If asc is not "", it must exist as a local file and will be used as the
+// signature file for verification, unless verification is disabled.
+func fetchImage(img string, asc string, ds *cas.Store, ks *keystore.Keystore, discover bool) (string, error) {
+	var (
+		ascFile *os.File
+		err     error
+	)
+	if asc != "" && ks != nil {
+		ascFile, err = os.Open(asc)
+		if err != nil {
+			return "", fmt.Errorf("unable to open signature file: %v", err)
+		}
+		defer ascFile.Close()
+	}
+
 	u, err := url.Parse(img)
-	if err == nil && discover && u.Scheme == "" {
+	if err != nil {
+		return "", fmt.Errorf("not a valid image reference (%s)", img)
+	}
+
+	// if img refers to a local file, ensure the scheme is file:// and make the url path absolute
+	_, err = os.Stat(u.Path)
+	if err == nil {
+		u.Path, err = filepath.Abs(u.Path)
+		if err != nil {
+			return "", fmt.Errorf("unable to get abs path: %v", err)
+		}
+		u.Scheme = "file"
+	} else if !os.IsNotExist(err) {
+		return "", fmt.Errorf("unable to access %q: %v", img, err)
+	}
+
+	if discover && u.Scheme == "" {
 		if app := newDiscoveryApp(img); app != nil {
 			stdout("rkt: searching for app image %s", img)
 			ep, attempts, err := discovery.DiscoverEndpoints(*app, true)
@@ -108,45 +153,53 @@ func fetchImage(img string, ds *cas.Store, ks *keystore.Keystore, discover bool)
 			if _, ok := app.Labels["version"]; !ok {
 				latest = true
 			}
-			return fetchImageFromEndpoints(ep, ds, ks, latest)
+			return fetchImageFromEndpoints(ep, ascFile, ds, ks, latest)
 		}
 	}
-	if err != nil {
-		return "", fmt.Errorf("not a valid URL (%s)", img)
-	}
+
 	switch u.Scheme {
-	case "http", "https", "docker":
+	case "http", "https", "docker", "file":
 	default:
 		return "", fmt.Errorf("rkt only supports http, https or docker URLs (%s)", img)
 	}
-	return fetchImageFromURL(u.String(), u.Scheme, ds, ks, false)
+	return fetchImageFromURL(u.String(), u.Scheme, ascFile, ds, ks, false)
 }
 
-func fetchImageFromEndpoints(ep *discovery.Endpoints, ds *cas.Store, ks *keystore.Keystore, latest bool) (string, error) {
-	return downloadImage(ep.ACIEndpoints[0].ACI, ep.ACIEndpoints[0].ASC, "", ds, ks, latest)
+func fetchImageFromEndpoints(ep *discovery.Endpoints, ascFile *os.File, ds *cas.Store, ks *keystore.Keystore, latest bool) (string, error) {
+	return fetchImageFrom(ep.ACIEndpoints[0].ACI, ep.ACIEndpoints[0].ASC, "", ascFile, ds, ks, latest)
 }
 
-func fetchImageFromURL(imgurl string, scheme string, ds *cas.Store, ks *keystore.Keystore, latest bool) (string, error) {
-	return downloadImage(imgurl, ascURLFromImgURL(imgurl), scheme, ds, ks, latest)
+func fetchImageFromURL(imgurl string, scheme string, ascFile *os.File, ds *cas.Store, ks *keystore.Keystore, latest bool) (string, error) {
+	return fetchImageFrom(imgurl, ascURLFromImgURL(imgurl), scheme, ascFile, ds, ks, latest)
 }
 
-func downloadImage(aciURL string, ascURL string, scheme string, ds *cas.Store, ks *keystore.Keystore, latest bool) (string, error) {
-	stdout("rkt: fetching image from %s", aciURL)
+func fetchImageFrom(aciURL string, ascURL string, scheme string, ascFile *os.File, ds *cas.Store, ks *keystore.Keystore, latest bool) (string, error) {
+	if scheme != "file" || globalFlags.Debug {
+		stdout("rkt: fetching image from %s", aciURL)
+	}
+
 	if globalFlags.InsecureSkipVerify {
-		stdout("rkt: warning: signature verification has been disabled")
+		if ks != nil {
+			stdout("rkt: warning: signature verification has been disabled")
+		}
 	} else if scheme == "docker" {
 		return "", fmt.Errorf("signature verification for docker images is not supported (try --insecure-skip-verify)")
 	}
+	var key string
 	rem, ok, err := ds.GetRemote(aciURL)
-	if err != nil {
+	if err == nil {
+		key = rem.BlobKey
+	} else {
 		return "", err
 	}
 	if !ok {
-		entity, aciFile, err := download(aciURL, ascURL, ds, ks)
+		entity, aciFile, err := fetch(aciURL, ascURL, ascFile, ds, ks)
 		if err != nil {
 			return "", err
 		}
-		defer os.Remove(aciFile.Name())
+		if scheme != "file" {
+			defer os.Remove(aciFile.Name())
+		}
 
 		if entity != nil && !globalFlags.InsecureSkipVerify {
 			fmt.Println("rkt: signature verified: ")
@@ -154,26 +207,29 @@ func downloadImage(aciURL string, ascURL string, scheme string, ds *cas.Store, k
 				stdout("  %s", v.Name)
 			}
 		}
-		key, err := ds.WriteACI(aciFile, latest)
-		if err != nil {
-			return "", err
-		}
-		rem = cas.NewRemote(aciURL, ascURL)
-		rem.BlobKey = key
-		err = ds.WriteRemote(rem)
+		key, err = ds.WriteACI(aciFile, latest)
 		if err != nil {
 			return "", err
 		}
 
+		if scheme != "file" {
+			rem = cas.NewRemote(aciURL, ascURL)
+			rem.BlobKey = key
+			err = ds.WriteRemote(rem)
+			if err != nil {
+				return "", err
+			}
+		}
 	}
-	return rem.BlobKey, nil
+	return key, nil
 }
 
-// download downloads and verifies the remote ACI from the given aciURL.
-// If Keystore is nil signature verification will be skipped.
-// download returns the signer, an *os.File representing the ACI, and an error if any.
-// err will be nil if the ACI downloads successfully and the ACI is verified.
-func download(aciURL string, ascURL string, ds *cas.Store, ks *keystore.Keystore) (*openpgp.Entity, *os.File, error) {
+// fetch opens/downloads and verifies the remote ACI.
+// If ascFile is not nil, it will be used as the signature file and ascURL will be ignored.
+// If Keystore is nil signature verification will be skipped, regardless of ascFile.
+// fetch returns the signer, an *os.File representing the ACI, and an error if any.
+// err will be nil if the ACI fetches successfully and the ACI is verified.
+func fetch(aciURL string, ascURL string, ascFile *os.File, ds *cas.Store, ks *keystore.Keystore) (*openpgp.Entity, *os.File, error) {
 	var entity *openpgp.Entity
 	u, err := url.Parse(aciURL)
 	if err != nil {
@@ -200,51 +256,69 @@ func download(aciURL string, ascURL string, ds *cas.Store, ks *keystore.Keystore
 		return nil, aciFile, nil
 	}
 
-	var sigTempFile *os.File
+	if ks != nil && ascFile == nil {
+		u, err := url.Parse(ascURL)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error parsing ASC url: %v", err)
+		}
+		if u.Scheme == "file" {
+			ascFile, err = os.Open(u.Path)
+			if err != nil {
+				return nil, nil, fmt.Errorf("error opening signature file: %v", err)
+			}
+		} else {
+			stdout("Downloading signature from %v\n", ascURL)
+			ascFile, err = ds.TmpFile()
+			if err != nil {
+				return nil, nil, fmt.Errorf("error setting up temporary file: %v", err)
+			}
+			if err = downloadSignatureFile(ascURL, ascFile); err != nil {
+				return nil, nil, fmt.Errorf("error downloading the signature file: %v", err)
+			}
+			defer os.Remove(ascFile.Name())
+		}
+		defer ascFile.Close()
+	}
+
+	var aciFile *os.File
+	if u.Scheme == "file" {
+		aciFile, err = os.Open(u.Path)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error opening ACI file: %v", err)
+		}
+	} else {
+		aciFile, err = ds.TmpFile()
+		if err != nil {
+			return nil, aciFile, fmt.Errorf("error setting up temporary file: %v", err)
+		}
+		defer os.Remove(aciFile.Name())
+
+		if err = downloadACI(aciURL, aciFile); err != nil {
+			return nil, nil, fmt.Errorf("error downloading ACI: %v", err)
+		}
+	}
+
 	if ks != nil {
-		stdout("Downloading signature from %v\n", ascURL)
-		sigTempFile, err = ds.TmpFile()
+		manifest, err := aci.ManifestFromImage(aciFile)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error setting up temporary file: %v", err)
+			return nil, aciFile, err
 		}
-		defer sigTempFile.Close()
-		defer os.Remove(sigTempFile.Name())
-		err = downloadSignatureFile(ascURL, sigTempFile)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error downloading the signature file: %v", err)
+
+		if _, err := aciFile.Seek(0, 0); err != nil {
+			return nil, aciFile, fmt.Errorf("error seeking ACI file: %v", err)
+		}
+		if _, err := ascFile.Seek(0, 0); err != nil {
+			return nil, aciFile, fmt.Errorf("error seeking signature file: %v", err)
+		}
+		if entity, err = ks.CheckSignature(manifest.Name.String(), aciFile, ascFile); err != nil {
+			return nil, aciFile, err
 		}
 	}
 
-	acif, err := ds.TmpFile()
-	if err != nil {
-		return nil, acif, fmt.Errorf("error setting up temporary file: %v", err)
+	if _, err := aciFile.Seek(0, 0); err != nil {
+		return nil, aciFile, fmt.Errorf("error seeking ACI file: %v", err)
 	}
-	err = downloadACI(aciURL, acif)
-	if err != nil {
-		return nil, acif, fmt.Errorf("error downloading ACI: %v", err)
-	}
-
-	if ks != nil {
-		manifest, err := aci.ManifestFromImage(acif)
-		if err != nil {
-			return nil, acif, err
-		}
-
-		if _, err := acif.Seek(0, 0); err != nil {
-			return nil, acif, fmt.Errorf("error seeking ACI file: %v", err)
-		}
-		if _, err := sigTempFile.Seek(0, 0); err != nil {
-			return nil, acif, fmt.Errorf("error seeking signature file: %v", err)
-		}
-		if entity, err = ks.CheckSignature(manifest.Name.String(), acif, sigTempFile); err != nil {
-			return nil, acif, err
-		}
-	}
-
-	if _, err := acif.Seek(0, 0); err != nil {
-		return nil, acif, err
-	}
-	return entity, acif, nil
+	return entity, aciFile, nil
 }
 
 type writeSyncer interface {

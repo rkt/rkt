@@ -17,6 +17,7 @@
 package main
 
 import (
+	"flag"
 	"io/ioutil"
 	"log"
 
@@ -35,14 +36,16 @@ var (
 		Usage:       "UUID",
 		Description: "UUID must have been acquired via `rkt prepare`",
 		Run:         runRunPrepared,
+		Flags:       &runPreparedFlags,
 	}
+	runPreparedFlags flag.FlagSet
 )
 
 func init() {
 	commands = append(commands, cmdRunPrepared)
-	cmdRunPrepared.Flags.BoolVar(&flagPrivateNet, "private-net", false, "give pod a private network")
-	cmdRunPrepared.Flags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
-	cmdRunPrepared.Flags.BoolVar(&flagInteractive, "interactive", false, "the pod is interactive")
+	runPreparedFlags.BoolVar(&flagPrivateNet, "private-net", false, "give pod a private network")
+	runPreparedFlags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
+	runPreparedFlags.BoolVar(&flagInteractive, "interactive", false, "the pod is interactive")
 }
 
 func runRunPrepared(args []string) (exit int) {
@@ -124,13 +127,13 @@ func runRunPrepared(args []string) (exit int) {
 			Store:       ds,
 			Stage1Image: *s1img,
 			UUID:        p.uuid,
-			Images:      imgs,
 			Debug:       globalFlags.Debug,
 		},
 		PrivateNet:           flagPrivateNet,
 		SpawnMetadataService: flagSpawnMetadataService,
 		LockFd:               lfd,
 		Interactive:          flagInteractive,
+		Images:               imgs,
 	}
 	stage0.Run(rcfg, p.path()) // execs, never returns
 	return 1
