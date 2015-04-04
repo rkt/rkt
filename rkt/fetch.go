@@ -381,17 +381,6 @@ func downloadHTTP(url, label string, out writeSyncer) error {
 	return nil
 }
 
-func validateURL(s string) error {
-	u, err := url.Parse(s)
-	if err != nil {
-		return fmt.Errorf("discovery: fetched URL (%s) is invalid (%v)", s, err)
-	}
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return fmt.Errorf("rkt only supports http or https URLs (%s)", s)
-	}
-	return nil
-}
-
 func ascURLFromImgURL(imgurl string) string {
 	s := strings.TrimSuffix(imgurl, ".aci")
 	return s + ".aci.asc"
