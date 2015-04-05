@@ -34,12 +34,14 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
+	"github.com/coreos/rkt/rkt/config"
 	"github.com/coreos/rkt/store"
 )
 
 type imageActionData struct {
 	ds                 *store.Store
 	ks                 *keystore.Keystore
+	headers            map[string]config.Headerer
 	insecureSkipVerify bool
 	debug              bool
 }
@@ -342,8 +344,25 @@ func (f *fetcher) downloadSignatureFile(sigurl string, out writeSyncer) error {
 
 // downloadHTTP retrieves url, creating a temp file using getTempFile
 // file:// http:// and https:// urls supported
-func (f *fetcher) downloadHTTP(url, label string, out writeSyncer) error {
-	res, err := http.Get(url)
+func (f *fetcher) downloadHTTP(aUrl, label string, out writeSyncer) error {
+	req, err := http.NewRequest("GET", aUrl, nil)
+	if err != nil {
+		return err
+	}
+	u, err := url.Parse(aUrl)
+	if err != nil {
+		return err
+	}
+	options := make(http.Header)
+	if hostOpts, ok := f.headers[u.Host]; ok {
+		options = hostOpts.Header()
+	}
+	for k, v := range options {
+		for _, e := range v {
+			req.Header.Add(k, e)
+		}
+	}
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
