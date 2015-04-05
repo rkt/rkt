@@ -65,9 +65,17 @@ func runFetch(args []string) (exit int) {
 		return 1
 	}
 	ks := getKeystore()
+	ft := &fetcher{
+		imageActionData: imageActionData{
+			ds:                 ds,
+			ks:                 ks,
+			insecureSkipVerify: globalFlags.InsecureSkipVerify,
+			debug:              globalFlags.Debug,
+		},
+	}
 
 	err = rktApps.Walk(func(app *apps.App) error {
-		hash, err := fetchImage(app.Image, app.Asc, ds, ks, true)
+		hash, err := ft.fetchImage(app.Image, app.Asc, true)
 		if err != nil {
 			return err
 		}
