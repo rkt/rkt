@@ -17,6 +17,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -354,15 +355,25 @@ func (f *fetcher) downloadHTTP(aUrl, label string, out writeSyncer) error {
 		return err
 	}
 	options := make(http.Header)
-	if hostOpts, ok := f.headers[u.Host]; ok {
-		options = hostOpts.Header()
+	// Send credentials only over secure channel
+	if u.Scheme == "https" {
+		if hostOpts, ok := f.headers[u.Host]; ok {
+			options = hostOpts.Header()
+		}
 	}
 	for k, v := range options {
 		for _, e := range v {
 			req.Header.Add(k, e)
 		}
 	}
-	res, err := http.DefaultClient.Do(req)
+	transport := http.DefaultTransport
+	if f.insecureSkipVerify {
+		transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
+	client := &http.Client{Transport: transport}
+	res, err := client.Do(req)
 	if err != nil {
 		return err
 	}
