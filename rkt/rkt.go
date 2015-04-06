@@ -17,6 +17,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -98,8 +99,8 @@ func main() {
 		os.Exit(2)
 	}
 
-	if globalFlags.Debug {
-		log.SetOutput(os.Stderr)
+	if !globalFlags.Debug {
+		log.SetOutput(ioutil.Discard)
 	}
 
 	// XXX(vc): Flags.Args() stops parsing at "--" but swallows it in doing so.
