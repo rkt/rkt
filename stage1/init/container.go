@@ -352,6 +352,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManifest) (
 func (p *Pod) PodToNspawnArgs() ([]string, error) {
 	args := []string{
 		"--uuid=" + p.UUID.String(),
+		"--machine=" + "rkt-" + p.UUID.String(),
 		"--directory=" + common.Stage1RootfsPath(p.Root),
 	}
 
