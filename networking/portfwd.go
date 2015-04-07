@@ -78,22 +78,23 @@ func (e *podEnv) unforwardPorts() error {
 
 	rule := e.portFwdRuleSpec(chain)
 
+	// There's no clean way now to test if a chain exists or
+	// even if a rule exists if the chain is not present.
+	// So we swallow the errors for now :(
+	// TODO(eyakubovich): move to using libiptc for iptable
+	// manipulation
+
 	// outside traffic hitting this hot
-	if err = ipt.Delete("nat", "PREROUTING", rule...); err != nil {
-		return err
-	}
+	ipt.Delete("nat", "PREROUTING", rule...)
 
 	// traffic originating on this host
-	if err = ipt.Delete("nat", "OUTPUT", rule...); err != nil {
-		return err
-	}
+	ipt.Delete("nat", "OUTPUT", rule...)
 
 	// there should be no references, delete the chain
-	if err = ipt.ClearChain("nat", chain); err != nil {
-		return err
-	}
+	ipt.ClearChain("nat", chain)
+	ipt.DeleteChain("nat", chain)
 
-	return ipt.DeleteChain("nat", chain)
+	return nil
 }
 
 func (e *podEnv) portFwdChain() string {
