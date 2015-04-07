@@ -57,6 +57,11 @@ type serverHandler struct {
 
 func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch h.auth {
+	case "deny":
+		if _, ok := r.Header[http.CanonicalHeaderKey("Authorization")]; ok {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	case "none":
 		// no auth to do.
 	case "basic":
@@ -263,17 +268,28 @@ func TestDownloading(t *testing.T) {
 		t:    t,
 		auth: "bearer",
 	}
+	denyServer := &serverHandler{
+		body: body,
+		t:    t,
+		auth: "deny",
+	}
 	noAuthTS := httptest.NewTLSServer(noauthServer)
 	defer noAuthTS.Close()
 	basicTS := httptest.NewTLSServer(basicServer)
 	defer basicTS.Close()
 	oauthTS := httptest.NewTLSServer(oauthServer)
 	defer oauthTS.Close()
+	denyAuthTS := httptest.NewServer(denyServer)
 	noAuth := http.Header{}
 	// YmFyOmJheg== is base64(bar:baz)
 	basicAuth := http.Header{"Authorization": {"Basic YmFyOmJheg=="}}
 	bearerAuth := http.Header{"Authorization": {"Bearer sometoken"}}
-
+	urlToName := map[string]string{
+		noAuthTS.URL:   "no auth",
+		basicTS.URL:    "basic",
+		oauthTS.URL:    "oauth",
+		denyAuthTS.URL: "deny auth",
+	}
 	tests := []struct {
 		ACIURL   string
 		SigURL   string
@@ -284,6 +300,8 @@ func TestDownloading(t *testing.T) {
 	}{
 		{noAuthTS.URL, "", body, false, noAuth, false},
 		{noAuthTS.URL, "", body, true, noAuth, false},
+		{noAuthTS.URL, "", body, true, bearerAuth, false},
+		{noAuthTS.URL, "", body, true, basicAuth, false},
 
 		{basicTS.URL, "", body, false, noAuth, true},
 		{basicTS.URL, "", body, false, bearerAuth, true},
@@ -292,6 +310,10 @@ func TestDownloading(t *testing.T) {
 		{oauthTS.URL, "", body, false, noAuth, true},
 		{oauthTS.URL, "", body, false, basicAuth, true},
 		{oauthTS.URL, "", body, false, bearerAuth, false},
+
+		{denyAuthTS.URL, "", body, false, basicAuth, false},
+		{denyAuthTS.URL, "", body, true, bearerAuth, false},
+		{denyAuthTS.URL, "", body, true, noAuth, false},
 	}
 
 	ds, err := store.NewStore(dir)
@@ -329,10 +351,10 @@ func TestDownloading(t *testing.T) {
 			defer os.Remove(aciFile.Name())
 		}
 		if err != nil && !tt.authFail {
-			t.Fatalf("expected download to succeed, it failed: %v", err)
+			t.Fatalf("expected download to succeed, it failed: %v (server: %q, headers: `%v`)", err, urlToName[tt.ACIURL], tt.options)
 		}
 		if err == nil && tt.authFail {
-			t.Fatalf("expected download to fail, it succeeded: %v", err)
+			t.Fatalf("expected download to fail, it succeeded (server: %q, headers: `%v`)", urlToName[tt.ACIURL], tt.options)
 		}
 		if err != nil {
 			continue
