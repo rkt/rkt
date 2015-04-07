@@ -43,7 +43,7 @@ func tmpConfigFile(prefix string) (*os.File, error) {
 	return nil, fmt.Errorf("Failed to get tmpfile after %d tries", tries)
 }
 
-func TestConfig(t *testing.T) {
+func TestAuthConfigFormat(t *testing.T) {
 	tests := []struct {
 		contents string
 		expected map[string]http.Header
@@ -101,7 +101,7 @@ func TestConfig(t *testing.T) {
 	}
 }
 
-func TestConfigMerge(t *testing.T) {
+func TestConfigLoading(t *testing.T) {
 	dir, err := ioutil.TempDir("", tstprefix)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create temporary directory: %v", err))
