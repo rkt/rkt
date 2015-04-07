@@ -50,11 +50,12 @@ import (
 type PrepareConfig struct {
 	CommonConfig
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
-	Apps        *apps.Apps     // apps to prepare
-	InheritEnv  bool           // inherit parent environment into apps
-	ExplicitEnv []string       // always set these environment variables for all the apps
-	Volumes     []types.Volume // list of volumes that rkt can provide to applications
-	UseOverlay  bool           // prepare pod with overlay fs
+	Apps        *apps.Apps          // apps to prepare
+	InheritEnv  bool                // inherit parent environment into apps
+	ExplicitEnv []string            // always set these environment variables for all the apps
+	Volumes     []types.Volume      // list of volumes that rkt can provide to applications
+	Ports       []types.ExposedPort // list of ports that rkt will expose on the host
+	UseOverlay  bool                // prepare pod with overlay fs
 }
 
 // configuration parameters needed by Run
@@ -167,6 +168,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	// TODO(jonboulle): check that app mountpoint expectations are
 	// satisfied here, rather than waiting for stage1
 	cm.Volumes = cfg.Volumes
+	cm.Ports = cfg.Ports
 
 	cdoc, err := json.Marshal(cm)
 	if err != nil {

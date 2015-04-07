@@ -86,7 +86,7 @@ var (
 
 func init() {
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
-	flag.BoolVar(&privNet, "private-net", false, "Setup private network (WIP!)")
+	flag.BoolVar(&privNet, "private-net", false, "Setup private network")
 	flag.BoolVar(&interactive, "interactive", false, "The pod is interactive")
 
 	// this ensures that main runs only on main thread (thread group leader).
@@ -157,6 +157,40 @@ func withClearedCloExec(lfd int, f func() error) error {
 	return f()
 }
 
+func forwardedPorts(pod *Pod) ([]networking.ForwardedPort, error) {
+	fps := []networking.ForwardedPort{}
+
+	for _, ep := range pod.Manifest.Ports {
+		n := ""
+		fp := networking.ForwardedPort{}
+
+		for an, a := range pod.Apps {
+			for _, p := range a.App.Ports {
+				if p.Name == ep.Name {
+					if n == "" {
+						fp.Protocol = p.Protocol
+						fp.HostPort = ep.HostPort
+						fp.PodPort = p.Port
+						n = an
+					} else {
+						return nil, fmt.Errorf("Ambiguous exposed port in PodManifest: %q and %q both define port %q", n, an, p.Name)
+					}
+				}
+			}
+		}
+
+		if n == "" {
+			return nil, fmt.Errorf("Port name %q is not defined by any apps", ep.Name)
+		}
+
+		fps = append(fps, fp)
+	}
+
+	// TODO(eyakubovich): validate that there're no conflicts
+
+	return fps, nil
+}
+
 func stage1() int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
@@ -187,7 +221,13 @@ func stage1() int {
 	mirrorLocalZoneInfo(p.Root)
 
 	if privNet {
-		n, err := networking.Setup(root, p.UUID)
+		fps, err := forwardedPorts(p)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			return 6
+		}
+
+		n, err := networking.Setup(root, p.UUID, fps)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to setup network: %v\n", err)
 			return 6
