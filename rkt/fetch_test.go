@@ -27,10 +27,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/coreos/rkt/cas"
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/pkg/keystore/keystoretest"
+	"github.com/coreos/rkt/store"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -167,7 +167,7 @@ func TestDownloading(t *testing.T) {
 		{ts.URL, "", body, true},
 	}
 
-	ds, err := cas.NewStore(dir)
+	ds, err := store.NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -198,7 +198,7 @@ func TestDownloading(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
-		rem := cas.NewRemote(tt.ACIURL, tt.SigURL)
+		rem := store.NewRemote(tt.ACIURL, tt.SigURL)
 		rem.BlobKey = key
 		err = ds.WriteRemote(rem)
 		if err != nil {
@@ -215,7 +215,7 @@ func TestFetchImage(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := cas.NewStore(dir)
+	ds, err := store.NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}

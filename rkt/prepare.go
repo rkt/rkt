@@ -23,9 +23,9 @@ import (
 	"os"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/cas"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
+	"github.com/coreos/rkt/store"
 )
 
 var (
@@ -86,7 +86,7 @@ func runPrepare(args []string) (exit int) {
 		}
 	}
 
-	ds, err := cas.NewStore(globalFlags.Dir)
+	ds, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
 		stderr("prepare: cannot open store: %v", err)
 		return 1

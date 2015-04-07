@@ -21,8 +21,8 @@ import (
 	"runtime"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/cas"
 	"github.com/coreos/rkt/common/apps"
+	"github.com/coreos/rkt/store"
 )
 
 const (
@@ -59,7 +59,7 @@ func runFetch(args []string) (exit int) {
 		return 1
 	}
 
-	ds, err := cas.NewStore(globalFlags.Dir)
+	ds, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
 		stderr("fetch: cannot open store: %v", err)
 		return 1

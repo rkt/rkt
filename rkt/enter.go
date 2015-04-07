@@ -24,9 +24,9 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/cas"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
+	"github.com/coreos/rkt/store"
 )
 
 var (
@@ -89,7 +89,7 @@ func runEnter(args []string) (exit int) {
 		return 1
 	}
 
-	ds, err := cas.NewStore(globalFlags.Dir)
+	ds, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
 		stderr("Cannot open store: %v", err)
 		return 1
