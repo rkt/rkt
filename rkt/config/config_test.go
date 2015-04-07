@@ -15,7 +15,9 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -97,4 +99,106 @@ func TestConfig(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestConfigMerge(t *testing.T) {
+	dir, err := ioutil.TempDir("", tstprefix)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create temporary directory: %v", err))
+	}
+	defer os.RemoveAll(dir)
+	vendorAuth := filepath.Join("vendor", "auth.d")
+	vendorIgnored := filepath.Join(vendorAuth, "ignoreddir")
+	customAuth := filepath.Join("custom", "auth.d")
+	customIgnored := filepath.Join(customAuth, "ignoreddir")
+	dirs := []string{
+		"vendor",
+		vendorAuth,
+		vendorIgnored,
+		"custom",
+		customAuth,
+		customIgnored,
+	}
+	for _, d := range dirs {
+		cd := filepath.Join(dir, d)
+		if err := os.Mkdir(cd, 0700); err != nil {
+			panic(fmt.Sprintf("Failed to create configuration directory %q: %v", cd, err))
+		}
+	}
+	files := []struct {
+		path   string
+		domain string
+		user   string
+		pass   string
+	}{
+		{filepath.Join(dir, vendorAuth, "endocode.json"), "endocode.com", "vendor_user1", "vendor_password1"},
+		{filepath.Join(dir, vendorAuth, "coreos.json"), "coreos.com", "vendor_user2", "vendor_password2"},
+		{filepath.Join(dir, vendorAuth, "ignoredfile"), "example1.com", "ignored_user1", "ignored_password1"},
+		{filepath.Join(dir, vendorIgnored, "ignoredfile"), "example2.com", "ignored_user2", "ignored_password2"},
+		{filepath.Join(dir, vendorIgnored, "ignoredanyway.json"), "example3.com", "ignored_user3", "ignored_password3"},
+		{filepath.Join(dir, customAuth, "endocode.json"), "endocode.com", "custom_user1", "custom_password1"},
+		{filepath.Join(dir, customAuth, "tectonic.json"), "tectonic.com", "custom_user2", "custom_password2"},
+		{filepath.Join(dir, customAuth, "ignoredfile"), "example4.com", "ignored_user4", "ignored_password4"},
+		{filepath.Join(dir, customIgnored, "ignoredfile"), "example5.com", "ignored_user5", "ignored_password5"},
+		{filepath.Join(dir, customIgnored, "ignoredanyway.json"), "example6.com", "ignored_user6", "ignored_password6"},
+	}
+	for _, f := range files {
+		if err := writeBasicConfig(f.path, f.domain, f.user, f.pass); err != nil {
+			panic(fmt.Sprintf("Failed to write configuration file: %v", err))
+		}
+	}
+	cfg, err := GetConfigFrom(filepath.Join(dir, "vendor"), filepath.Join(dir, "custom"))
+	if err != nil {
+		panic(fmt.Sprintf("Failed to get configuration: %v", err))
+	}
+	result := make(map[string]http.Header)
+	for d, h := range cfg.AuthPerHost {
+		result[d] = h.Header()
+	}
+	expected := map[string]http.Header{
+		"endocode.com": http.Header{
+			// custom_user1:custom_password1
+			authHeader: []string{"Basic Y3VzdG9tX3VzZXIxOmN1c3RvbV9wYXNzd29yZDE="},
+		},
+		"coreos.com": http.Header{
+			// vendor_user2:vendor_password2
+			authHeader: []string{"Basic dmVuZG9yX3VzZXIyOnZlbmRvcl9wYXNzd29yZDI="},
+		},
+		"tectonic.com": http.Header{
+			// custom_user2:custom_password2
+			authHeader: []string{"Basic Y3VzdG9tX3VzZXIyOmN1c3RvbV9wYXNzd29yZDI="},
+		},
+	}
+	if !reflect.DeepEqual(result, expected) {
+		t.Error("Got unexpected results\nResult:\n", result, "\n\nExpected:\n", expected)
+	}
+}
+
+func writeBasicConfig(path, domain, user, pass string) error {
+	type basicv1creds struct {
+		User     string `json:"user"`
+		Password string `json:"password"`
+	}
+	type basicv1 struct {
+		RktVersion  string       `json:"rktVersion"`
+		RktKind     string       `json:"rktKind"`
+		Domains     []string     `json:"domains"`
+		Type        string       `json:"type"`
+		Credentials basicv1creds `json:"credentials"`
+	}
+	config := &basicv1{
+		RktVersion: "v1",
+		RktKind:    "auth",
+		Domains:    []string{domain},
+		Type:       "basic",
+		Credentials: basicv1creds{
+			User:     user,
+			Password: pass,
+		},
+	}
+	raw, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(path, raw, 0600)
 }

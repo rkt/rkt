@@ -81,24 +81,32 @@ func toArray(s map[string]struct{}) []string {
 }
 
 func GetConfig() (*Config, error) {
-	configDirs := []string{
-		"/etc/rkt",
-		"/usr/lib/rkt",
-	}
+	return GetConfigFrom("/usr/lib/rkt", "/etc/rkt")
+}
+
+func GetConfigFrom(vendor, custom string) (*Config, error) {
 	cfg := newConfig()
-	for _, cd := range configDirs {
-		subcfg := newConfig()
-		if valid, err := validDir(cd); err != nil {
-			return nil, err
-		} else if !valid {
-			continue
-		}
-		if err := readConfigDir(subcfg, cd); err != nil {
+	for _, cd := range []string{vendor, custom} {
+		subcfg, err := GetConfigFromDir(cd)
+		if err != nil {
 			return nil, err
 		}
 		mergeConfigs(cfg, subcfg)
 	}
 	return cfg, nil
+}
+
+func GetConfigFromDir(dir string) (*Config, error) {
+	subcfg := newConfig()
+	if valid, err := validDir(dir); err != nil {
+		return nil, err
+	} else if !valid {
+		return subcfg, nil
+	}
+	if err := readConfigDir(subcfg, dir); err != nil {
+		return nil, err
+	}
+	return subcfg, nil
 }
 
 func newConfig() *Config {
