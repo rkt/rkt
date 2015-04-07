@@ -44,6 +44,7 @@ type oauthV1 struct {
 
 func init() {
 	addParser("auth", "v1", &authV1JsonParser{})
+	registerSubDir("auth.d", []string{"auth"})
 }
 
 type BasicAuthHeaderer struct {

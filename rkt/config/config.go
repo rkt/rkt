@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -37,6 +38,9 @@ type configParser interface {
 }
 
 var (
+	// configSubDirs is a map saying what kinds of configuration
+	// (values) are acceptable in a config subdirectory (key)
+	configSubDirs  = make(map[string][]string)
 	parsersForKind = make(map[string]map[string]configParser)
 )
 
@@ -48,6 +52,32 @@ func addParser(kind, version string, parser configParser) {
 		parsersForKind[kind] = make(map[string]configParser)
 	}
 	parsersForKind[kind][version] = parser
+}
+
+func registerSubDir(dir string, kinds []string) {
+	if len(kinds) == 0 {
+		panic("kinds array cannot be empty when registering config subdir")
+	}
+	allKinds := toArray(toSet(append(configSubDirs[dir], kinds...)))
+	sort.Strings(allKinds)
+	configSubDirs[dir] = allKinds
+}
+
+func toSet(a []string) map[string]struct{} {
+	s := make(map[string]struct{})
+	for _, v := range a {
+		s[v] = struct{}{}
+	}
+	return s
+}
+
+func toArray(s map[string]struct{}) []string {
+	a := make([]string, len(s))
+	for k := range s {
+		a = append(a, k)
+	}
+	sort.Strings(a)
+	return a
 }
 
 func GetConfig() (*Config, error) {
@@ -78,10 +108,7 @@ func newConfig() *Config {
 }
 
 func readConfigDir(config *Config, dir string) error {
-	configSubdirs := map[string][]string{
-		"auth.d": []string{"auth"},
-	}
-	for csd, kinds := range configSubdirs {
+	for csd, kinds := range configSubDirs {
 		d := filepath.Join(dir, csd)
 		if valid, err := validDir(d); err != nil {
 			return err
