@@ -114,13 +114,21 @@ func runRun(args []string) (exit int) {
 		return 1
 	}
 
-	s1img, err := findImage(flagStage1Image, "", ds, nil, false)
+	fn := &finder{
+		imageActionData: imageActionData{
+			ds:                 ds,
+			insecureSkipVerify: globalFlags.InsecureSkipVerify,
+			debug:              globalFlags.Debug,
+		},
+	}
+	s1img, err := fn.findImage(flagStage1Image, "", false)
 	if err != nil {
 		stderr("Error finding stage1 image %q: %v", flagStage1Image, err)
 		return 1
 	}
 
-	if err := findImages(&rktApps, ds, getKeystore()); err != nil {
+	fn.ks = getKeystore()
+	if err := fn.findImages(&rktApps); err != nil {
 		stderr("%v", err)
 		return 1
 	}
