@@ -22,6 +22,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common/apps"
+	"github.com/coreos/rkt/rkt/config"
 	"github.com/coreos/rkt/store"
 )
 
@@ -65,10 +66,16 @@ func runFetch(args []string) (exit int) {
 		return 1
 	}
 	ks := getKeystore()
+	config, err := config.GetConfig()
+	if err != nil {
+		stderr("fetch: cannot get configuration: %v", err)
+		return 1
+	}
 	ft := &fetcher{
 		imageActionData: imageActionData{
 			ds:                 ds,
 			ks:                 ks,
+			headers:            config.AuthPerHost,
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
 		},

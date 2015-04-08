@@ -17,24 +17,125 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/pkg/keystore/keystoretest"
+	"github.com/coreos/rkt/rkt/config"
 	"github.com/coreos/rkt/store"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
+
+type httpError struct {
+	code    int
+	message string
+}
+
+func (e *httpError) Error() string {
+	return fmt.Sprintf("%d: %s", e.code, e.message)
+}
+
+type serverHandler struct {
+	body []byte
+	t    *testing.T
+	auth string
+}
+
+func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch h.auth {
+	case "deny":
+		if _, ok := r.Header[http.CanonicalHeaderKey("Authorization")]; ok {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	case "none":
+		// no auth to do.
+	case "basic":
+		payload, httpErr := getAuthPayload(r, "Basic")
+		if httpErr != nil {
+			w.WriteHeader(httpErr.code)
+			return
+		}
+		creds, err := base64.StdEncoding.DecodeString(string(payload))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		parts := strings.Split(string(creds), ":")
+		if len(parts) != 2 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		user := parts[0]
+		password := parts[1]
+		if user != "bar" || password != "baz" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	case "bearer":
+		payload, httpErr := getAuthPayload(r, "Bearer")
+		if httpErr != nil {
+			w.WriteHeader(httpErr.code)
+			return
+		}
+		if payload != "sometoken" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	default:
+		panic("bug in test")
+	}
+	w.Write(h.body)
+}
+
+func getAuthPayload(r *http.Request, authType string) (string, *httpError) {
+	auth := r.Header.Get("Authorization")
+	if auth == "" {
+		err := &httpError{
+			code:    http.StatusUnauthorized,
+			message: "No auth",
+		}
+		return "", err
+	}
+	parts := strings.Split(auth, " ")
+	if len(parts) != 2 {
+		err := &httpError{
+			code:    http.StatusBadRequest,
+			message: "Malformed auth",
+		}
+		return "", err
+	}
+	if parts[0] != authType {
+		err := &httpError{
+			code:    http.StatusUnauthorized,
+			message: "Wrong auth",
+		}
+		return "", err
+	}
+	return parts[1], nil
+}
+
+type testHeaderer struct {
+	h http.Header
+}
+
+func (h *testHeaderer) Header() http.Header {
+	return h.h
+}
 
 func TestNewDiscoveryApp(t *testing.T) {
 	tests := []struct {
@@ -152,19 +253,65 @@ func TestDownloading(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(body)
-	}))
-	defer ts.Close()
-
+	noauthServer := &serverHandler{
+		body: body,
+		t:    t,
+		auth: "none",
+	}
+	basicServer := &serverHandler{
+		body: body,
+		t:    t,
+		auth: "basic",
+	}
+	oauthServer := &serverHandler{
+		body: body,
+		t:    t,
+		auth: "bearer",
+	}
+	denyServer := &serverHandler{
+		body: body,
+		t:    t,
+		auth: "deny",
+	}
+	noAuthTS := httptest.NewTLSServer(noauthServer)
+	defer noAuthTS.Close()
+	basicTS := httptest.NewTLSServer(basicServer)
+	defer basicTS.Close()
+	oauthTS := httptest.NewTLSServer(oauthServer)
+	defer oauthTS.Close()
+	denyAuthTS := httptest.NewServer(denyServer)
+	noAuth := http.Header{}
+	// YmFyOmJheg== is base64(bar:baz)
+	basicAuth := http.Header{"Authorization": {"Basic YmFyOmJheg=="}}
+	bearerAuth := http.Header{"Authorization": {"Bearer sometoken"}}
+	urlToName := map[string]string{
+		noAuthTS.URL:   "no auth",
+		basicTS.URL:    "basic",
+		oauthTS.URL:    "oauth",
+		denyAuthTS.URL: "deny auth",
+	}
 	tests := []struct {
-		ACIURL string
-		SigURL string
-		body   []byte
-		hit    bool
+		ACIURL   string
+		hit      bool
+		options  http.Header
+		authFail bool
 	}{
-		{ts.URL, "", body, false},
-		{ts.URL, "", body, true},
+		{noAuthTS.URL, false, noAuth, false},
+		{noAuthTS.URL, true, noAuth, false},
+		{noAuthTS.URL, true, bearerAuth, false},
+		{noAuthTS.URL, true, basicAuth, false},
+
+		{basicTS.URL, false, noAuth, true},
+		{basicTS.URL, false, bearerAuth, true},
+		{basicTS.URL, false, basicAuth, false},
+
+		{oauthTS.URL, false, noAuth, true},
+		{oauthTS.URL, false, basicAuth, true},
+		{oauthTS.URL, false, bearerAuth, false},
+
+		{denyAuthTS.URL, false, basicAuth, false},
+		{denyAuthTS.URL, true, bearerAuth, false},
+		{denyAuthTS.URL, true, noAuth, false},
 	}
 
 	ds, err := store.NewStore(dir)
@@ -183,22 +330,39 @@ func TestDownloading(t *testing.T) {
 		if tt.hit == true && !ok {
 			t.Fatalf("expected a hit got a miss")
 		}
+		parsed, err := url.Parse(tt.ACIURL)
+		if err != nil {
+			panic(fmt.Sprintf("Invalid url from test server: %s", tt.ACIURL))
+		}
+		headers := map[string]config.Headerer{
+			parsed.Host: &testHeaderer{tt.options},
+		}
 		ft := &fetcher{
 			imageActionData: imageActionData{
-				ds: ds,
+				ds:                 ds,
+				headers:            headers,
+				insecureSkipVerify: true,
 			},
 		}
-		_, aciFile, err := ft.fetch(tt.ACIURL, tt.SigURL, nil)
-		if err != nil {
-			t.Fatalf("error fetching aci: %v", err)
+		_, aciFile, err := ft.fetch(tt.ACIURL, "", nil)
+		if err == nil {
+			defer os.Remove(aciFile.Name())
 		}
-		defer os.Remove(aciFile.Name())
+		if err != nil && !tt.authFail {
+			t.Fatalf("expected download to succeed, it failed: %v (server: %q, headers: `%v`)", err, urlToName[tt.ACIURL], tt.options)
+		}
+		if err == nil && tt.authFail {
+			t.Fatalf("expected download to fail, it succeeded (server: %q, headers: `%v`)", urlToName[tt.ACIURL], tt.options)
+		}
+		if err != nil {
+			continue
+		}
 
 		key, err := ds.WriteACI(aciFile, false)
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
-		rem := store.NewRemote(tt.ACIURL, tt.SigURL)
+		rem := store.NewRemote(tt.ACIURL, "")
 		rem.BlobKey = key
 		err = ds.WriteRemote(rem)
 		if err != nil {

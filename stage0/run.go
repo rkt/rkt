@@ -71,7 +71,7 @@ type CommonConfig struct {
 	Store       *store.Store // store containing all of the configured application images
 	Stage1Image types.Hash   // stage1 image containing usable /init and /enter entrypoints
 	UUID        *types.UUID  // UUID of the pod
-	PodsDir     string       // root directory for rocket pods
+	PodsDir     string       // root directory for rkt pods
 	Debug       bool
 }
 

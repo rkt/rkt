@@ -17,6 +17,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -34,12 +35,14 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
+	"github.com/coreos/rkt/rkt/config"
 	"github.com/coreos/rkt/store"
 )
 
 type imageActionData struct {
 	ds                 *store.Store
 	ks                 *keystore.Keystore
+	headers            map[string]config.Headerer
 	insecureSkipVerify bool
 	debug              bool
 }
@@ -343,7 +346,30 @@ func (f *fetcher) downloadSignatureFile(sigurl string, out writeSyncer) error {
 // downloadHTTP retrieves url, creating a temp file using getTempFile
 // file:// http:// and https:// urls supported
 func (f *fetcher) downloadHTTP(url, label string, out writeSyncer) error {
-	res, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	options := make(http.Header)
+	// Send credentials only over secure channel
+	if req.URL.Scheme == "https" {
+		if hostOpts, ok := f.headers[req.URL.Host]; ok {
+			options = hostOpts.Header()
+		}
+	}
+	for k, v := range options {
+		for _, e := range v {
+			req.Header.Add(k, e)
+		}
+	}
+	transport := http.DefaultTransport
+	if f.insecureSkipVerify {
+		transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
+	client := &http.Client{Transport: transport}
+	res, err := client.Do(req)
 	if err != nil {
 		return err
 	}
