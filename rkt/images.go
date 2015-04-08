@@ -345,19 +345,15 @@ func (f *fetcher) downloadSignatureFile(sigurl string, out writeSyncer) error {
 
 // downloadHTTP retrieves url, creating a temp file using getTempFile
 // file:// http:// and https:// urls supported
-func (f *fetcher) downloadHTTP(aUrl, label string, out writeSyncer) error {
-	req, err := http.NewRequest("GET", aUrl, nil)
-	if err != nil {
-		return err
-	}
-	u, err := url.Parse(aUrl)
+func (f *fetcher) downloadHTTP(url, label string, out writeSyncer) error {
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
 	options := make(http.Header)
 	// Send credentials only over secure channel
-	if u.Scheme == "https" {
-		if hostOpts, ok := f.headers[u.Host]; ok {
+	if req.URL.Scheme == "https" {
+		if hostOpts, ok := f.headers[req.URL.Host]; ok {
 			options = hostOpts.Header()
 		}
 	}
