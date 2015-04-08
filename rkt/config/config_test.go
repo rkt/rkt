@@ -27,6 +27,9 @@ import (
 
 const tstprefix = "config-test"
 
+// tmpConfigFile is based on ioutil.Tempfile. The differences are that
+// this function is simpler (no reseeding and whatnot) and, most
+// importantly, it returns a file with ".json" extension.
 func tmpConfigFile(prefix string) (*os.File, error) {
 	dir := os.TempDir()
 	idx := 0
