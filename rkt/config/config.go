@@ -98,7 +98,6 @@ func toArray(s map[string]struct{}) []string {
 	for k := range s {
 		a = append(a, k)
 	}
-	sort.Strings(a)
 	return a
 }
 
