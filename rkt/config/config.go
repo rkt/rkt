@@ -25,10 +25,14 @@ import (
 	"strings"
 )
 
+// Headerer is an interface for getting additional HTTP headers to use
+// when downloading data (images, signatures).
 type Headerer interface {
 	Header() http.Header
 }
 
+// Config is a single place where configuration for rkt frontend needs
+// resides.
 type Config struct {
 	AuthPerHost map[string]Headerer
 }
@@ -80,10 +84,16 @@ func toArray(s map[string]struct{}) []string {
 	return a
 }
 
+// GetConfig gets the Config instance with configuration taken from
+// default vendor path overridden with configuration from default
+// custom path.
 func GetConfig() (*Config, error) {
 	return GetConfigFrom("/usr/lib/rkt", "/etc/rkt")
 }
 
+// GetConfigFrom gets the Config instance with configuration taken from
+// given vendor path overridden with configuration from given custom
+// path.
 func GetConfigFrom(vendor, custom string) (*Config, error) {
 	cfg := newConfig()
 	for _, cd := range []string{vendor, custom} {
@@ -96,6 +106,8 @@ func GetConfigFrom(vendor, custom string) (*Config, error) {
 	return cfg, nil
 }
 
+// GetConfigFromDir gets the Config instance with configuration taken
+// from given directory.
 func GetConfigFromDir(dir string) (*Config, error) {
 	subcfg := newConfig()
 	if valid, err := validDir(dir); err != nil {
