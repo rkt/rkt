@@ -44,7 +44,6 @@ var (
 func init() {
 	commands = append(commands, cmdRunPrepared)
 	runPreparedFlags.BoolVar(&flagPrivateNet, "private-net", false, "give pod a private network")
-	runPreparedFlags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
 	runPreparedFlags.BoolVar(&flagInteractive, "interactive", false, "the pod is interactive")
 }
 
@@ -129,11 +128,10 @@ func runRunPrepared(args []string) (exit int) {
 			UUID:        p.uuid,
 			Debug:       globalFlags.Debug,
 		},
-		PrivateNet:           flagPrivateNet,
-		SpawnMetadataService: flagSpawnMetadataService,
-		LockFd:               lfd,
-		Interactive:          flagInteractive,
-		Images:               imgs,
+		PrivateNet:  flagPrivateNet,
+		LockFd:      lfd,
+		Interactive: flagInteractive,
+		Images:      imgs,
 	}
 	stage0.Run(rcfg, p.path()) // execs, never returns
 	return 1

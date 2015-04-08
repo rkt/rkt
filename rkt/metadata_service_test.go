@@ -107,15 +107,12 @@ func TestPodStoreGetManifests(t *testing.T) {
 func TestPodStoreRemove(t *testing.T) {
 	ps, uuid, _, _ := setupPodStoreTest(t)
 
-	last, err := ps.remove(uuid)
+	err := ps.remove(uuid)
 	if err != nil {
 		t.Errorf("remove failed with %v", err)
 	}
-	if !last {
-		t.Error("remove of last item returned last=false")
-	}
 
-	if _, err := ps.remove(uuid); err != errPodNotFound {
+	if err := ps.remove(uuid); err != errPodNotFound {
 		t.Errorf("remove with unknown pod returned %v", err)
 	}
 }
