@@ -49,16 +49,15 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 		Flags:                &runFlags,
 		WantsFlagsTerminator: true,
 	}
-	runFlags                 flag.FlagSet
-	flagStage1Image          string
-	flagVolumes              volumeList
-	flagPorts                portList
-	flagPrivateNet           bool
-	flagSpawnMetadataService bool
-	flagInheritEnv           bool
-	flagExplicitEnv          envMap
-	flagInteractive          bool
-	flagNoOverlay            bool
+	runFlags        flag.FlagSet
+	flagStage1Image string
+	flagVolumes     volumeList
+	flagPorts       portList
+	flagPrivateNet  bool
+	flagInheritEnv  bool
+	flagExplicitEnv envMap
+	flagInteractive bool
+	flagNoOverlay   bool
 )
 
 func init() {
@@ -76,7 +75,6 @@ func init() {
 	runFlags.Var(&flagVolumes, "volume", "volumes to mount into the pod")
 	runFlags.Var(&flagPorts, "port", "ports to expose on the host (requires --private-net)")
 	runFlags.BoolVar(&flagPrivateNet, "private-net", false, "give pod a private network")
-	runFlags.BoolVar(&flagSpawnMetadataService, "spawn-metadata-svc", false, "launch metadata svc if not running")
 	runFlags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	runFlags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	runFlags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
@@ -185,12 +183,11 @@ func runRun(args []string) (exit int) {
 	}
 
 	rcfg := stage0.RunConfig{
-		CommonConfig:         cfg,
-		PrivateNet:           flagPrivateNet,
-		SpawnMetadataService: flagSpawnMetadataService,
-		LockFd:               lfd,
-		Interactive:          flagInteractive,
-		Images:               rktApps.GetImageIDs(),
+		CommonConfig: cfg,
+		PrivateNet:   flagPrivateNet,
+		LockFd:       lfd,
+		Interactive:  flagInteractive,
+		Images:       rktApps.GetImageIDs(),
 	}
 	stage0.Run(rcfg, p.path()) // execs, never returns
 

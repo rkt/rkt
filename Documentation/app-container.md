@@ -11,8 +11,9 @@ It also leverages schema and code from the upstream [appc/spec][appc-spec] repo 
 To validate that `rkt` successfully implements the ACE part of the spec, use the App Container [validation ACIs][appc-readme]:
 
 ```
+$ sudo rkt metadata-service &  # Make sure metadata service is running
 $ sudo rkt --insecure-skip-verify run \
-	--private-net --spawn-metadata-svc \
+	--private-net \
 	--volume database,kind=host,source=/tmp \
 	https://github.com/appc/spec/releases/download/v0.5.1/ace-validator-main.aci \
 	https://github.com/appc/spec/releases/download/v0.5.1/ace-validator-sidekick.aci

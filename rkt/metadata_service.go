@@ -58,7 +58,6 @@ var (
 	errAppNotFound = errors.New("app not found")
 
 	flagListenPort       int
-	flagNoIdle           bool
 	metadataServiceFlags flag.FlagSet
 
 	exitCh = make(chan os.Signal, 1)
@@ -71,7 +70,6 @@ const (
 func init() {
 	commands = append(commands, cmdMetadataService)
 	metadataServiceFlags.IntVar(&flagListenPort, "listen-port", common.MetadataServicePort, "listen port")
-	metadataServiceFlags.BoolVar(&flagNoIdle, "no-idle", false, "exit when last pod is unregistered")
 }
 
 type mdsPod struct {
@@ -123,19 +121,19 @@ func (ps *podStore) addApp(u *types.UUID, app string, manifest *schema.ImageMani
 	return nil
 }
 
-func (ps *podStore) remove(u *types.UUID) (bool, error) {
+func (ps *podStore) remove(u *types.UUID) error {
 	ps.mutex.Lock()
 	defer ps.mutex.Unlock()
 
 	p, ok := ps.byUUID[*u]
 	if !ok {
-		return false, errPodNotFound
+		return errPodNotFound
 	}
 
 	delete(ps.byUUID, *u)
 	delete(ps.byIP, p.ip)
 
-	return len(ps.byUUID) == 0, nil
+	return nil
 }
 
 func (ps *podStore) getUUID(ip string) (*types.UUID, error) {
@@ -225,28 +223,13 @@ func handleUnregisterPod(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lastOne, err := pods.remove(uuid)
-	if err != nil {
+	if err := pods.remove(uuid); err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, err)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-
-	if flagNoIdle && lastOne {
-		// TODO(eyakubovich): this is very racy
-		// It's possible for last pod to get unregistered
-		// and svc gets flagged to shutdown. Then another pod
-		// starts to launch, sees that port is in use and doesn't
-		// start metadata svc only for this one to exit a moment later.
-		// However, --no-idle is meant for demos and having a single
-		// pod spawn up (via --spawn-metadata-svc). The design
-		// of metadata svc is also likely to change as we convert it
-		// to be backed by persistent storage.
-		// wait for signal and exit
-		close(exitCh)
-	}
 }
 
 func handleRegisterApp(w http.ResponseWriter, r *http.Request) {

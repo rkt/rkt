@@ -29,7 +29,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -61,11 +60,10 @@ type PrepareConfig struct {
 // configuration parameters needed by Run
 type RunConfig struct {
 	CommonConfig
-	PrivateNet           bool         // pod should have its own network stack
-	SpawnMetadataService bool         // launch metadata service
-	LockFd               int          // lock file descriptor
-	Interactive          bool         // whether the pod is interactive or not
-	Images               []types.Hash // application images (prepare gets them via Apps)
+	PrivateNet  bool         // pod should have its own network stack
+	LockFd      int          // lock file descriptor
+	Interactive bool         // whether the pod is interactive or not
+	Images      []types.Hash // application images (prepare gets them via Apps)
 }
 
 // configuration shared by both Run and Prepare
@@ -252,13 +250,6 @@ func Run(cfg RunConfig, dir string) {
 		log.Fatalf("setting lock fd environment: %v", err)
 	}
 
-	if cfg.SpawnMetadataService {
-		log.Print("Launching metadata svc")
-		if err := launchMetadataService(cfg.Debug); err != nil {
-			log.Printf("Failed to launch metadata svc: %v", err)
-		}
-	}
-
 	log.Printf("Pivoting to filesystem %s", dir)
 	if err := os.Chdir(dir); err != nil {
 		log.Fatalf("failed changing to dir: %v", err)
@@ -440,27 +431,4 @@ func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string) erro
 	}
 
 	return nil
-}
-
-func launchMetadataService(debug bool) error {
-	// readlink so arg[0] displays useful info
-	exe, err := os.Readlink("/proc/self/exe")
-	if err != nil {
-		return fmt.Errorf("error reading /proc/self/exe link: %v", err)
-	}
-
-	args := []string{exe}
-	if debug {
-		args = append(args, "--debug")
-	}
-	args = append(args, "metadata-service", "--no-idle")
-
-	cmd := exec.Cmd{
-		Path:   exe,
-		Args:   args,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-
-	return cmd.Start()
 }
