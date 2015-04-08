@@ -158,7 +158,7 @@ func validDir(path string) (bool, error) {
 		return false, err
 	}
 	if !fi.IsDir() {
-		return false, fmt.Errorf("Expected %q to be a directory", path)
+		return false, fmt.Errorf("expected %q to be a directory", path)
 	}
 	return true, nil
 }
@@ -217,10 +217,10 @@ func parseConfigFile(config *Config, path string, kinds []string) error {
 		return err
 	}
 	if len(header.RktKind) == 0 {
-		return fmt.Errorf("No rktKind specified in %q", path)
+		return fmt.Errorf("no rktKind specified in %q", path)
 	}
 	if len(header.RktVersion) == 0 {
-		return fmt.Errorf("No rktVersion specified in %q", path)
+		return fmt.Errorf("no rktVersion specified in %q", path)
 	}
 	kindOk := false
 	for _, kind := range kinds {
@@ -233,14 +233,14 @@ func parseConfigFile(config *Config, path string, kinds []string) error {
 		dir := filepath.Dir(path)
 		base := filepath.Base(path)
 		kindsStr := strings.Join(kinds, `", "`)
-		return fmt.Errorf("The configuration directory %q expects to have configuration files of kinds %q, but %q has kind of %q", dir, kindsStr, base, header.RktKind)
+		return fmt.Errorf("the configuration directory %q expects to have configuration files of kinds %q, but %q has kind of %q", dir, kindsStr, base, header.RktKind)
 	}
 	parser, err := getParser(header.RktKind, header.RktVersion)
 	if err != nil {
 		return err
 	}
 	if err := parser.parse(config, raw); err != nil {
-		return fmt.Errorf("Failed to parse %q: %v", path, err)
+		return fmt.Errorf("failed to parse %q: %v", path, err)
 	}
 	return nil
 }
@@ -248,11 +248,11 @@ func parseConfigFile(config *Config, path string, kinds []string) error {
 func getParser(kind, version string) (configParser, error) {
 	parsers, ok := parsersForKind[kind]
 	if !ok {
-		return nil, fmt.Errorf("No parser available for configuration of kind %q", kind)
+		return nil, fmt.Errorf("no parser available for configuration of kind %q", kind)
 	}
 	parser, ok := parsers[version]
 	if !ok {
-		return nil, fmt.Errorf("No parser available for configuration of kind %q and version %q", kind, version)
+		return nil, fmt.Errorf("no parser available for configuration of kind %q and version %q", kind, version)
 	}
 	return parser, nil
 }

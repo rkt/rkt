@@ -95,7 +95,7 @@ func runPrepare(args []string) (exit int) {
 
 	config, err := config.GetConfig()
 	if err != nil {
-		stderr("cannot get configuration: %v\n", err)
+		stderr("prepare: cannot get configuration: %v", err)
 		return 1
 	}
 	fn := &finder{

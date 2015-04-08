@@ -78,10 +78,10 @@ func (p *authV1JsonParser) parse(config *Config, raw []byte) error {
 		return err
 	}
 	if len(auth.Domains) == 0 {
-		return fmt.Errorf("No domains specified")
+		return fmt.Errorf("no domains specified")
 	}
 	if len(auth.Type) == 0 {
-		return fmt.Errorf("No auth type specified")
+		return fmt.Errorf("no auth type specified")
 	}
 	var (
 		err      error
@@ -93,7 +93,7 @@ func (p *authV1JsonParser) parse(config *Config, raw []byte) error {
 	case "oauth":
 		headerer, err = p.getOAuthV1Headerer(config, auth.Credentials)
 	default:
-		err = fmt.Errorf("Unknown auth type: %q", auth.Type)
+		err = fmt.Errorf("unknown auth type: %q", auth.Type)
 	}
 	if err != nil {
 		return err
@@ -113,10 +113,10 @@ func (p *authV1JsonParser) getBasicV1Headerer(config *Config, raw json.RawMessag
 		return nil, err
 	}
 	if len(basic.User) == 0 {
-		return nil, fmt.Errorf("User not specified")
+		return nil, fmt.Errorf("user not specified")
 	}
 	if len(basic.Password) == 0 {
-		return nil, fmt.Errorf("Password not specified")
+		return nil, fmt.Errorf("password not specified")
 	}
 	return &basicAuthHeaderer{
 		user:     basic.User,
@@ -130,7 +130,7 @@ func (p *authV1JsonParser) getOAuthV1Headerer(config *Config, raw json.RawMessag
 		return nil, err
 	}
 	if len(oauth.Token) == 0 {
-		return nil, fmt.Errorf("No oauth bearer token specified")
+		return nil, fmt.Errorf("no oauth bearer token specified")
 	}
 	return &oAuthBearerTokenHeaderer{
 		token: oauth.Token,

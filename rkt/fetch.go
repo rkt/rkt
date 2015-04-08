@@ -68,7 +68,7 @@ func runFetch(args []string) (exit int) {
 	ks := getKeystore()
 	config, err := config.GetConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "fetch: cannot get configuration: %v\n", err)
+		stderr("fetch: cannot get configuration: %v", err)
 		return 1
 	}
 	ft := &fetcher{
