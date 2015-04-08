@@ -78,8 +78,6 @@ type CommonConfig struct {
 }
 
 func init() {
-	log.SetOutput(ioutil.Discard)
-
 	// this ensures that main runs only on main thread (thread group leader).
 	// since namespace ops (unshare, setns) are done for a single thread, we
 	// must ensure that the goroutine does not jump from OS thread to thread
@@ -106,10 +104,6 @@ func MergeEnvs(appEnv *types.Environment, inheritEnv bool, setEnv []string) {
 
 // Prepare sets up a pod based on the given config.
 func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
-	if cfg.Debug {
-		log.SetOutput(os.Stderr)
-	}
-
 	log.Printf("Preparing stage1")
 	if err := prepareStage1Image(cfg, cfg.Stage1Image, dir, cfg.UseOverlay); err != nil {
 		return fmt.Errorf("error preparing stage1: %v", err)

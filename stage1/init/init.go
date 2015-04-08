@@ -22,6 +22,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -288,6 +290,11 @@ func stage1() int {
 
 func main() {
 	flag.Parse()
+
+	if !debug {
+		log.SetOutput(ioutil.Discard)
+	}
+
 	// move code into stage1() helper so defered fns get run
 	os.Exit(stage1())
 }
