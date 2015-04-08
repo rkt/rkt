@@ -48,6 +48,12 @@ var (
 	parsersForKind = make(map[string]map[string]configParser)
 )
 
+// Default paths for vendor and custom configuration
+const (
+	DefaultVendorPath = "/usr/lib/rkt"
+	DefaultCustomPath = "/etc/rkt"
+)
+
 func addParser(kind, version string, parser configParser) {
 	if _, err := getParser(kind, version); err == nil {
 		panic(fmt.Sprintf("A parser for kind %q and version %q already exist", kind, version))
@@ -85,10 +91,10 @@ func toArray(s map[string]struct{}) []string {
 }
 
 // GetConfig gets the Config instance with configuration taken from
-// default vendor path overridden with configuration from default
-// custom path.
+// default vendor path (see DefaultVendorPath) overridden with
+// configuration from default custom path (see DefaultCustomPath).
 func GetConfig() (*Config, error) {
-	return GetConfigFrom("/usr/lib/rkt", "/etc/rkt")
+	return GetConfigFrom(DefaultVendorPath, DefaultCustomPath)
 }
 
 // GetConfigFrom gets the Config instance with configuration taken from
