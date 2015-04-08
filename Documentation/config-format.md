@@ -1,6 +1,6 @@
-# Rocket Configuration File
+# rkt configuration
 
-Rocket reads configuration files with "json" extension residing in
+rkt reads configuration files with "json" extension residing in
 /usr/lib/rkt/auth.d and /etc/rkt/auth.d/. From the filename you can
 see it is just a JSON file. Please see an example below.
 
