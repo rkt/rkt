@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cas
+package store
 
 import (
 	"archive/tar"
@@ -29,7 +29,7 @@ import (
 	"github.com/coreos/rkt/pkg/aci"
 )
 
-const tstprefix = "cas-test"
+const tstprefix = "store-test"
 
 func TestBlobStore(t *testing.T) {
 	dir, err := ioutil.TempDir("", tstprefix)

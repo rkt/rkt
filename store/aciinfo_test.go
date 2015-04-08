@@ -1,4 +1,4 @@
-package cas
+package store
 
 import (
 	"database/sql"

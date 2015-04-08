@@ -32,13 +32,13 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
-	"github.com/coreos/rkt/cas"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
+	"github.com/coreos/rkt/store"
 )
 
 type imageActionData struct {
-	ds                 *cas.Store
+	ds                 *store.Store
 	ks                 *keystore.Keystore
 	insecureSkipVerify bool
 	debug              bool
@@ -217,7 +217,7 @@ func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File
 		}
 
 		if scheme != "file" {
-			rem = cas.NewRemote(aciURL, ascURL)
+			rem = store.NewRemote(aciURL, ascURL)
 			rem.BlobKey = key
 			err = f.ds.WriteRemote(rem)
 			if err != nil {

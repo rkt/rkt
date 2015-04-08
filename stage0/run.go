@@ -38,11 +38,11 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/cas"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
 )
 
@@ -70,10 +70,10 @@ type RunConfig struct {
 
 // configuration shared by both Run and Prepare
 type CommonConfig struct {
-	Store       *cas.Store  // store containing all of the configured application images
-	Stage1Image types.Hash  // stage1 image containing usable /init and /enter entrypoints
-	UUID        *types.UUID // UUID of the pod
-	PodsDir     string      // root directory for rocket pods
+	Store       *store.Store // store containing all of the configured application images
+	Stage1Image types.Hash   // stage1 image containing usable /init and /enter entrypoints
+	UUID        *types.UUID  // UUID of the pod
+	PodsDir     string       // root directory for rocket pods
 	Debug       bool
 }
 

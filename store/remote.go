@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package cas implements a content-addressable-store on disk.
+// Package store implements a content-addressable-store on disk.
 // It leverages the `diskv` package to store items in a simple
 // key-value blob store: https://github.com/peterbourgon/diskv
-package cas
+package store
 
 import "database/sql"
 
