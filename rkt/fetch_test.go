@@ -292,28 +292,26 @@ func TestDownloading(t *testing.T) {
 	}
 	tests := []struct {
 		ACIURL   string
-		SigURL   string
-		body     []byte
 		hit      bool
 		options  http.Header
 		authFail bool
 	}{
-		{noAuthTS.URL, "", body, false, noAuth, false},
-		{noAuthTS.URL, "", body, true, noAuth, false},
-		{noAuthTS.URL, "", body, true, bearerAuth, false},
-		{noAuthTS.URL, "", body, true, basicAuth, false},
+		{noAuthTS.URL, false, noAuth, false},
+		{noAuthTS.URL, true, noAuth, false},
+		{noAuthTS.URL, true, bearerAuth, false},
+		{noAuthTS.URL, true, basicAuth, false},
 
-		{basicTS.URL, "", body, false, noAuth, true},
-		{basicTS.URL, "", body, false, bearerAuth, true},
-		{basicTS.URL, "", body, false, basicAuth, false},
+		{basicTS.URL, false, noAuth, true},
+		{basicTS.URL, false, bearerAuth, true},
+		{basicTS.URL, false, basicAuth, false},
 
-		{oauthTS.URL, "", body, false, noAuth, true},
-		{oauthTS.URL, "", body, false, basicAuth, true},
-		{oauthTS.URL, "", body, false, bearerAuth, false},
+		{oauthTS.URL, false, noAuth, true},
+		{oauthTS.URL, false, basicAuth, true},
+		{oauthTS.URL, false, bearerAuth, false},
 
-		{denyAuthTS.URL, "", body, false, basicAuth, false},
-		{denyAuthTS.URL, "", body, true, bearerAuth, false},
-		{denyAuthTS.URL, "", body, true, noAuth, false},
+		{denyAuthTS.URL, false, basicAuth, false},
+		{denyAuthTS.URL, true, bearerAuth, false},
+		{denyAuthTS.URL, true, noAuth, false},
 	}
 
 	ds, err := store.NewStore(dir)
@@ -346,7 +344,7 @@ func TestDownloading(t *testing.T) {
 				insecureSkipVerify: true,
 			},
 		}
-		_, aciFile, err := ft.fetch(tt.ACIURL, tt.SigURL, nil)
+		_, aciFile, err := ft.fetch(tt.ACIURL, "", nil)
 		if err == nil {
 			defer os.Remove(aciFile.Name())
 		}
@@ -364,7 +362,7 @@ func TestDownloading(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
-		rem := store.NewRemote(tt.ACIURL, tt.SigURL)
+		rem := store.NewRemote(tt.ACIURL, "")
 		rem.BlobKey = key
 		err = ds.WriteRemote(rem)
 		if err != nil {
