@@ -47,12 +47,12 @@ func init() {
 	registerSubDir("auth.d", []string{"auth"})
 }
 
-type BasicAuthHeaderer struct {
+type basicAuthHeaderer struct {
 	user     string
 	password string
 }
 
-func (h *BasicAuthHeaderer) Header() http.Header {
+func (h *basicAuthHeaderer) Header() http.Header {
 	headers := make(http.Header)
 	creds := []byte(fmt.Sprintf("%s:%s", h.user, h.password))
 	encodedCreds := base64.StdEncoding.EncodeToString(creds)
@@ -61,11 +61,11 @@ func (h *BasicAuthHeaderer) Header() http.Header {
 	return headers
 }
 
-type OAuthBearerTokenHeaderer struct {
+type oAuthBearerTokenHeaderer struct {
 	token string
 }
 
-func (h *OAuthBearerTokenHeaderer) Header() http.Header {
+func (h *oAuthBearerTokenHeaderer) Header() http.Header {
 	headers := make(http.Header)
 	headers.Add(authHeader, "Bearer "+h.token)
 
@@ -118,7 +118,7 @@ func (p *authV1JsonParser) getBasicV1Headerer(config *Config, raw json.RawMessag
 	if len(basic.Password) == 0 {
 		return nil, fmt.Errorf("Password not specified")
 	}
-	return &BasicAuthHeaderer{
+	return &basicAuthHeaderer{
 		user:     basic.User,
 		password: basic.Password,
 	}, nil
@@ -132,7 +132,7 @@ func (p *authV1JsonParser) getOAuthV1Headerer(config *Config, raw json.RawMessag
 	if len(oauth.Token) == 0 {
 		return nil, fmt.Errorf("No oauth bearer token specified")
 	}
-	return &OAuthBearerTokenHeaderer{
+	return &oAuthBearerTokenHeaderer{
 		token: oauth.Token,
 	}, nil
 }
