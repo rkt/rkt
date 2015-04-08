@@ -55,6 +55,15 @@ const (
 )
 
 func addParser(kind, version string, parser configParser) {
+	if len(kind) == 0 {
+		panic("empty kind string when registering a config parser")
+	}
+	if len(version) == 0 {
+		panic("empty version string when registering a config parser")
+	}
+	if parser == nil {
+		panic("trying to register a nil parser")
+	}
 	if _, err := getParser(kind, version); err == nil {
 		panic(fmt.Sprintf("A parser for kind %q and version %q already exist", kind, version))
 	}
@@ -65,6 +74,9 @@ func addParser(kind, version string, parser configParser) {
 }
 
 func registerSubDir(dir string, kinds []string) {
+	if len(dir) == 0 {
+		panic("trying to register empty config subdirectory")
+	}
 	if len(kinds) == 0 {
 		panic("kinds array cannot be empty when registering config subdir")
 	}
