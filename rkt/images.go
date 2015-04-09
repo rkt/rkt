@@ -49,6 +49,7 @@ type imageActionData struct {
 
 type finder struct {
 	imageActionData
+	local bool
 }
 
 // findImages uses findImage to attain a list of image hashes using discovery if necessary
@@ -84,6 +85,7 @@ func (f *finder) findImage(img string, asc string, discover bool) (*types.Hash, 
 	// try fetching the image, potentially remotely
 	ft := &fetcher{
 		imageActionData: f.imageActionData,
+		local:           f.local,
 	}
 	key, err := ft.fetchImage(img, asc, discover)
 	if err != nil {
@@ -100,6 +102,7 @@ func (f *finder) findImage(img string, asc string, discover bool) (*types.Hash, 
 
 type fetcher struct {
 	imageActionData
+	local bool
 }
 
 // fetchImage will take an image as either a URL or a name string and import it
@@ -137,6 +140,17 @@ func (f *fetcher) fetchImage(img string, asc string, discover bool) (string, err
 	}
 
 	if discover && u.Scheme == "" {
+		if f.local {
+			app, err := discovery.NewAppFromString(img)
+			if err != nil {
+				return "", err
+			}
+			labels, err := types.LabelsFromMap(app.Labels)
+			if err != nil {
+				return "", err
+			}
+			return f.ds.GetACI(app.Name, labels)
+		}
 		if app := newDiscoveryApp(img); app != nil {
 			stdout("rkt: searching for app image %s", img)
 			ep, attempts, err := discovery.DiscoverEndpoints(*app, true)
@@ -200,6 +214,9 @@ func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File
 		return "", err
 	}
 	if !ok {
+		if f.local && scheme != "file" {
+			return "", fmt.Errorf("url %s not available in local store", aciURL)
+		}
 		entity, aciFile, err := f.fetch(aciURL, ascURL, ascFile)
 		if err != nil {
 			return "", err

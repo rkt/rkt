@@ -57,6 +57,7 @@ func init() {
 	prepareFlags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	prepareFlags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	prepareFlags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
+	prepareFlags.BoolVar(&flagLocal, "local", false, "use only local images (do not discover or download from remote URLs)")
 }
 
 func runPrepare(args []string) (exit int) {
@@ -105,6 +106,7 @@ func runPrepare(args []string) (exit int) {
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
 		},
+		local: flagLocal,
 	}
 	s1img, err := fn.findImage(flagStage1Image, "", false)
 	if err != nil {
