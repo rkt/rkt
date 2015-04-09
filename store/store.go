@@ -61,10 +61,18 @@ var diskvStores = [...]string{
 
 // Store encapsulates a content-addressable-storage for storing ACIs on disk.
 type Store struct {
-	base             string
-	stores           []*diskv.Diskv
-	db               *DB
-	treestore        *TreeStore
+	base      string
+	stores    []*diskv.Diskv
+	db        *DB
+	treestore *TreeStore
+	// storeLock is a lock on the whole store. It's used for store migration. If
+	// a previous version of rkt is using the store and in the meantime a
+	// new version is installed and executed it will try migrate the store
+	// during NewStore. This means that the previous running rkt will fail
+	// or behave badly after the migration as it's expecting another db format.
+	// For this reason, before executing migration, an exclusive lock must
+	// be taken on the whole store.
+	storeLock        *lock.FileLock
 	imageLockDir     string
 	treeStoreLockDir string
 }
@@ -89,6 +97,12 @@ func NewStore(base string) (*Store, error) {
 		return nil, err
 	}
 
+	// Take a shared cas lock
+	ds.storeLock, err = lock.NewLock(casDir, lock.Dir)
+	if err != nil {
+		return nil, err
+	}
+
 	for i, p := range diskvStores {
 		ds.stores[i] = diskv.New(diskv.Options{
 			BasePath:  filepath.Join(casDir, p),
@@ -101,7 +115,11 @@ func NewStore(base string) (*Store, error) {
 	}
 	ds.db = db
 
+	ds.treestore = &TreeStore{path: filepath.Join(base, "cas", "tree")}
+
+	needsMigrate := false
 	fn := func(tx *sql.Tx) error {
+		var err error
 		ok, err := dbIsPopulated(tx)
 		if err != nil {
 			return err
@@ -114,6 +132,7 @@ func NewStore(base string) (*Store, error) {
 					return err
 				}
 			}
+			return nil
 		}
 		// if db is populated check its version
 		version, err := getDBVersion(tx)
@@ -121,20 +140,36 @@ func NewStore(base string) (*Store, error) {
 			return err
 		}
 		if version < dbVersion {
-			// TODO(sgotti) execute migration functions
-			return fmt.Errorf("Current cas db version: %d lesser than the current rkt expected version: %d", version, dbVersion)
+			needsMigrate = true
 		}
 		if version > dbVersion {
-			return fmt.Errorf("Current cas db version: %d greater than the current rkt expected version: %d", version, dbVersion)
+			return fmt.Errorf("Current store db version: %d greater than the current rkt expected version: %d", version, dbVersion)
 		}
 		return nil
 	}
-
 	if err = db.Do(fn); err != nil {
 		return nil, err
 	}
 
-	ds.treestore = &TreeStore{path: filepath.Join(base, "cas", "tree")}
+	// migration is done in another transaction as it must take an exclusive
+	// store lock. If, in the meantime, another process has already done the
+	// migration, between the previous db version check and the below
+	// migration code, the migration will do nothing as it'll start
+	// migration from the current version.
+	if needsMigrate {
+		// Take an exclusive store lock
+		err := ds.storeLock.ExclusiveLock()
+		if err != nil {
+			return nil, err
+		}
+		// TODO(sgotti) take a db backup (for debugging and last resort rollback?)
+		fn := func(tx *sql.Tx) error {
+			return migrate(tx, dbVersion)
+		}
+		if err = db.Do(fn); err != nil {
+			return nil, err
+		}
+	}
 
 	return ds, nil
 }

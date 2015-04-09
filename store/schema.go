@@ -7,10 +7,12 @@ import (
 
 const (
 	// Incremental db version at the current code revision.
-	dbVersion = 0
+	dbVersion = 1
 )
 
-// Statement to run when creating a db. If db already exists migration statements should be executed
+// Statement to run when creating a db. These are the statements to create the
+// db at the latest db version (dbVersion) provided by this rkt version.
+// If the db already exists migration statements should be executed
 var dbCreateStmts = [...]string{
 	// version table
 	"CREATE TABLE IF NOT EXISTS version (version int);",
