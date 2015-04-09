@@ -59,6 +59,7 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 	flagExplicitEnv envMap
 	flagInteractive bool
 	flagNoOverlay   bool
+	flagLocal       bool
 )
 
 func init() {
@@ -81,6 +82,7 @@ func init() {
 	runFlags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 	runFlags.BoolVar(&flagInteractive, "interactive", false, "run pod interactively")
 	runFlags.Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
+	runFlags.BoolVar(&flagLocal, "local", false, "use only local images (do not discover or download from remote URLs)")
 	flagVolumes = volumeList{}
 	flagPorts = portList{}
 }
@@ -135,6 +137,7 @@ func runRun(args []string) (exit int) {
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
 		},
+		local: flagLocal,
 	}
 	s1img, err := fn.findImage(flagStage1Image, "", false)
 	if err != nil {
