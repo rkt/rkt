@@ -24,6 +24,10 @@
         {
             "name": "coreos.com/rkt/stage1/enter",
             "value": "/enter"
+        },
+        {
+            "name": "coreos.com/rkt/stage1/gc",
+            "value": "/gc"
         }
     ]
 }
