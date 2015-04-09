@@ -103,19 +103,12 @@ func (db *DB) DoTx(fns ...txfunc) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-			return
-		}
-		tx.Commit()
-	}()
-
 	for _, fn := range fns {
 		if err := fn(tx); err != nil {
+			tx.Rollback()
 			return err
 		}
-
 	}
+	tx.Commit()
 	return nil
 }
