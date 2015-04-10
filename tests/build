@@ -1,0 +1,34 @@
+#!/bin/bash -e
+
+if [ ! -e ./image/manifest ] ; then
+	echo "Wrong directory"
+	exit 1
+fi
+
+# Fail if "rootfs" already exists. We delete it at the end.
+mkdir image/rootfs
+
+# Populate rootfs
+(cd inspect && go build)
+cp inspect/inspect image/rootfs/
+mkdir image/rootfs/dir{1,2}
+echo -n dir1 > image/rootfs/dir1/file
+echo -n dir2 > image/rootfs/dir2/file
+
+# Create base image
+../bin/actool build          --overwrite image rkt-inspect.aci
+
+# Create alternative images
+../bin/actool patch-manifest --overwrite --exec="/inspect --print-msg=Hello --exit-code=0"  rkt-inspect.aci rkt-inspect-exit0.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --print-msg=Hello --exit-code=20" rkt-inspect.aci rkt-inspect-exit20.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --print-env=VAR_FROM_MANIFEST"    rkt-inspect.aci rkt-inspect-print-var-from-manifest.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --print-env=VAR_OTHER"            rkt-inspect.aci rkt-inspect-print-var-other.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --read-file"                                                      rkt-inspect.aci rkt-inspect-read-file.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --write-file --read-file"                                         rkt-inspect.aci rkt-inspect-write-file.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --read-file"              --mounts=dir1,path=/dir1,readOnly=false rkt-inspect.aci rkt-inspect-vol-rw-read-file.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --write-file --read-file" --mounts=dir1,path=/dir1,readOnly=false rkt-inspect.aci rkt-inspect-vol-rw-write-file.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --read-file"              --mounts=dir1,path=/dir1,readOnly=true  rkt-inspect.aci rkt-inspect-vol-ro-read-file.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --write-file --read-file" --mounts=dir1,path=/dir1,readOnly=true  rkt-inspect.aci rkt-inspect-vol-ro-write-file.aci
+
+# Cleanup
+rm -rf image/rootfs
