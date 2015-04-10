@@ -31,7 +31,7 @@ RKT_STAGE1_USR_FROM=src
 
 ## CircleCI
 
-Ideally the tests will also run on [CircleCI](https://circleci.com), but there is currently a known issue because mknod is restricted - more info [here](https://github.com/coreos/rkt/issues/600#issuecomment-87655911)
+Ideally the tests will also run on [CircleCI](https://circleci.com), but there is currently a known issue because access to the cgroup filesystems is restricted - more info [here](https://github.com/coreos/rkt/issues/600#issuecomment-87655911)
 
 Assuming this can be resolved, the following configuration can be used:
 
