@@ -1,9 +1,29 @@
-spawn ../bin/rkt --debug --insecure-skip-verify  run ./rkt-inspect-env.aci
-expect "Hello"
-expect "MY_VARIABLE=manifest"
+# Check that the variable set from the manifest works
+spawn ../bin/rkt --debug --insecure-skip-verify run ./rkt-inspect-print-var-from-manifest.aci
+expect "VAR_FROM_MANIFEST=manifest"
 expect eof
 
-spawn ../bin/rkt --debug --insecure-skip-verify  run --set-env=MY_VARIABLE=cmdline ./rkt-inspect-env.aci
-expect "Hello"
-expect "MY_VARIABLE=cmdline"
+# Check that the variable set by --set-env works
+spawn ../bin/rkt --debug --insecure-skip-verify run --set-env=VAR_OTHER=setenv ./rkt-inspect-print-var-other.aci
+expect "VAR_OTHER=setenv"
+expect eof
+
+# Check that the --set-env overrides the variable from the manifest
+spawn ../bin/rkt --debug --insecure-skip-verify run --set-env=VAR_FROM_MANIFEST=setenv ./rkt-inspect-print-var-from-manifest.aci
+expect "VAR_FROM_MANIFEST=setenv"
+expect eof
+
+# Check that the --inherit-env=true works
+spawn /bin/sh -c "export VAR_OTHER=host ; ../bin/rkt --debug --insecure-skip-verify run --inherit-env=true ./rkt-inspect-print-var-other.aci"
+expect "VAR_OTHER=host"
+expect eof
+
+# Check that the --inherit-env=true is overrided by the manifest
+spawn /bin/sh -c "export VAR_FROM_MANIFEST=host ; ../bin/rkt --debug --insecure-skip-verify run --inherit-env=true ./rkt-inspect-print-var-from-manifest.aci"
+expect "VAR_FROM_MANIFEST=manifest"
+expect eof
+
+# Check that the --inherit-env=true is overrided by --set-env
+spawn /bin/sh -c "export VAR_OTHER=host ; ../bin/rkt --debug --insecure-skip-verify run --inherit-env=true --set-env=VAR_OTHER=setenv ./rkt-inspect-print-var-other.aci"
+expect "VAR_OTHER=setenv"
 expect eof

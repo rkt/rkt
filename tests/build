@@ -19,9 +19,10 @@ echo dir2 > image/rootfs/dir2/file
 ../bin/actool build          --overwrite image rkt-inspect.aci
 
 # Create alternative images
-../bin/actool patch-manifest --overwrite --exec="/inspect --print-msg=Hello --exit-code=0"  rkt-inspect.aci rkt-inspect-success.aci
-../bin/actool patch-manifest --overwrite --exec="/inspect --print-msg=Hello --exit-code=20" rkt-inspect.aci rkt-inspect-failure.aci
-../bin/actool patch-manifest --overwrite --exec="/inspect --print-msg=Hello --print-env=MY_VARIABLE" rkt-inspect.aci rkt-inspect-env.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --print-msg=Hello --exit-code=0"  rkt-inspect.aci rkt-inspect-exit0.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --print-msg=Hello --exit-code=20" rkt-inspect.aci rkt-inspect-exit20.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --print-env=VAR_FROM_MANIFEST"    rkt-inspect.aci rkt-inspect-print-var-from-manifest.aci
+../bin/actool patch-manifest --overwrite --exec="/inspect --print-env=VAR_OTHER"            rkt-inspect.aci rkt-inspect-print-var-other.aci
 
 # Cleanup
 rm -rf image/rootfs

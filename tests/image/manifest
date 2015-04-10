@@ -18,14 +18,14 @@
     ],
     "app": {
         "exec": [
-            "/inspect", "--print-msg=Hello", "--exit-code=20"
+            "/inspect"
         ],
         "user": "0",
         "group": "0",
         "workingDirectory": "/",
         "environment": [
             {
-                "name": "MY_VARIABLE",
+                "name": "VAR_FROM_MANIFEST",
                 "value": "manifest"
             }
         ],
