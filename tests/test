@@ -6,14 +6,14 @@ reset=`tput sgr0`
 
 run_test() {
 	EXPECT_SCRIPT=$1
-	NAME=$2
+	TEST_NAME=$2
 	LOG_FILE=${EXPECT_SCRIPT}.log
-	sudo expect -f $1 &> $LOG_FILE
+	sudo EXPECT_SCRIPT="${EXPECT_SCRIPT}" TEST_NAME="${TEST_NAME}" expect -f ${EXPECT_SCRIPT} &> $LOG_FILE
 	RC=$?
 	if [ $RC == 0 ] ; then
-		echo "${green} [OK] ${reset} $NAME"
+		echo "${green} [OK] ${reset} ${TEST_NAME}"
 	else
-		echo "${red} [FAIL] ${reset} $NAME"
+		echo "${red} [FAIL] ${reset} ${TEST_NAME}"
 		echo
 		cat $LOG_FILE
 		exit $RC
