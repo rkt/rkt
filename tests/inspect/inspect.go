@@ -17,16 +17,19 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 )
 
 var (
 	globalFlagset = flag.NewFlagSet("inspect", flag.ExitOnError)
 	globalFlags   = struct {
-		PrintMsg string
-		PrintEnv string
-		CheckCwd string
-		ExitCode int
+		PrintMsg  string
+		PrintEnv  string
+		CheckCwd  string
+		ExitCode  int
+		ReadFile  bool
+		WriteFile bool
 	}{}
 )
 
@@ -35,6 +38,8 @@ func init() {
 	globalFlagset.StringVar(&globalFlags.CheckCwd, "check-cwd", "", "Check if the current working directory is the one specified")
 	globalFlagset.StringVar(&globalFlags.PrintEnv, "print-env", "", "Print the specified environment variable")
 	globalFlagset.IntVar(&globalFlags.ExitCode, "exit-code", 0, "Return this exit code")
+	globalFlagset.BoolVar(&globalFlags.ReadFile, "read-file", false, "Print the content of the file $FILE")
+	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
 }
 
 func main() {
@@ -51,6 +56,29 @@ func main() {
 
 	if globalFlags.PrintEnv != "" {
 		fmt.Fprintf(os.Stdout, "%s=%s\n", globalFlags.PrintEnv, os.Getenv(globalFlags.PrintEnv))
+	}
+
+	if globalFlags.WriteFile {
+		fileName := os.Getenv("FILE")
+		err := ioutil.WriteFile(fileName, []byte(os.Getenv("CONTENT")), 0600)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot write to file %q: %v\n", fileName, err)
+			os.Exit(1)
+			return
+		}
+	}
+
+	if globalFlags.ReadFile {
+		fileName := os.Getenv("FILE")
+		dat, err := ioutil.ReadFile(fileName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot read file %q: %v\n", fileName, err)
+			os.Exit(1)
+			return
+		}
+		fmt.Print("<<<")
+		fmt.Print(string(dat))
+		fmt.Print(">>>\n")
 	}
 
 	if globalFlags.CheckCwd != "" {
