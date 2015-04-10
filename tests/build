@@ -5,12 +5,23 @@ if [ ! -e ./image/manifest ] ; then
 	exit 1
 fi
 
-(cd inspect && go build)
+# Fail if "rootfs" already exists. We delete it at the end.
+mkdir image/rootfs
 
-mkdir -p image/rootfs
+# Populate rootfs
+(cd inspect && go build)
 cp inspect/inspect image/rootfs/
+mkdir image/rootfs/dir{1,2}
+echo dir1 > image/rootfs/dir1/file
+echo dir2 > image/rootfs/dir2/file
+
+# Create base image
 ../bin/actool build          --overwrite image rkt-inspect.aci
+
+# Create alternative images
 ../bin/actool patch-manifest --overwrite --exec="/inspect --print-msg=Hello --exit-code=0"  rkt-inspect.aci rkt-inspect-success.aci
 ../bin/actool patch-manifest --overwrite --exec="/inspect --print-msg=Hello --exit-code=20" rkt-inspect.aci rkt-inspect-failure.aci
 ../bin/actool patch-manifest --overwrite --exec="/inspect --print-msg=Hello --print-env=MY_VARIABLE" rkt-inspect.aci rkt-inspect-env.aci
 
+# Cleanup
+rm -rf image/rootfs
