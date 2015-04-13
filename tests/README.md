@@ -1,7 +1,7 @@
 # rkt functional tests
 
 This directory contains a set of functional tests for rkt.
-The tests are oriented around [expect](http://en.wikipedia.org/wiki/Expect) scripts which spawn various `rkt run` commands and look for expected output.
+The tests use [gexpect](https://github.com/ThomasRooney/gexpect) to spawn various `rkt run` commands and look for expected output.
 
 ## Semaphore
 
