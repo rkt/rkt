@@ -16,6 +16,10 @@
 			"Rev": "53ec66caf4e952a1384ec93b9f0cde37616e4caf"
 		},
 		{
+			"ImportPath": "github.com/ThomasRooney/gexpect",
+			"Rev": "025428b8021ad3cef9602997658d9eca6c145d4e"
+		},
+		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
 			"Rev": "4e4333c116ee15c74ea06ec036c1bc4fad651628"
 		},
@@ -109,6 +113,15 @@
 		{
 			"ImportPath": "github.com/gorilla/mux",
 			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
+		},
+		{
+			"ImportPath": "github.com/kballard/go-shellquote",
+			"Rev": "e5c918b80c17694cbc49aab32a759f9a40067f5d"
+		},
+		{
+			"ImportPath": "github.com/kr/pty",
+			"Comment": "release.r56-25-g05017fc",
+			"Rev": "05017fcccf23c823bfdea560dcc958a136e54fb7"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/ioprogress",
