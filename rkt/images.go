@@ -267,7 +267,7 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 			return nil, nil, fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
 		}
 
-		acis, err := docker2aci.Convert(registryURL, true, tmpDir)
+		acis, err := docker2aci.Convert(registryURL, true, tmpDir, "", "")
 		if err != nil {
 			return nil, nil, fmt.Errorf("error converting docker image to ACI: %v", err)
 		}

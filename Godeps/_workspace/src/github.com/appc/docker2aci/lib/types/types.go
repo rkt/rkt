@@ -12,36 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package docker2aci
+package types
 
-import (
-	"fmt"
-	"path"
-	"strings"
-)
-
-func makeEndpointsList(headers []string) []string {
-	var endpoints []string
-
-	for _, ep := range headers {
-		endpointsList := strings.Split(ep, ",")
-		for _, endpointEl := range endpointsList {
-			endpoints = append(
-				endpoints,
-				// TODO(iaguis) discover if httpsOrHTTP
-				path.Join(strings.TrimSpace(endpointEl), "v1"))
-		}
-	}
-
-	return endpoints
-}
-
-func quote(l []string) []string {
-	var quoted []string
-
-	for _, s := range l {
-		quoted = append(quoted, fmt.Sprintf("%q", s))
-	}
-
-	return quoted
+type ParsedDockerURL struct {
+	IndexURL  string
+	ImageName string
+	Tag       string
 }

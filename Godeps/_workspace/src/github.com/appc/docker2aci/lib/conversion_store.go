@@ -1,6 +1,7 @@
 package docker2aci
 
 import (
+	"crypto/sha512"
 	"fmt"
 	"hash"
 	"io"
@@ -34,25 +35,31 @@ func NewConversionStore() *ConversionStore {
 }
 
 func (ms *ConversionStore) WriteACI(path string) (string, error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
 
-	imageID := types.NewHashSHA512(data)
+	cr, err := aci.NewCompressedReader(f)
+	if err != nil {
+		return "", err
+	}
+
+	h := sha512.New()
+	r := io.TeeReader(cr, h)
+
+	// read the file so we can get the hash
+	if _, err := io.Copy(ioutil.Discard, r); err != nil {
+		return "", fmt.Errorf("error reading ACI: %v", err)
+	}
 
 	im, err := aci.ManifestFromImage(f)
 	if err != nil {
 		return "", err
 	}
 
-	key := imageID.String()
+	key := ms.HashToKey(h)
 	ms.acis[key] = &aciInfo{path: path, key: key, ImageManifest: im}
 	return key, nil
 }
@@ -77,16 +84,21 @@ func (ms *ConversionStore) GetACI(name types.ACName, labels types.Labels) (strin
 }
 
 func (ms *ConversionStore) ReadStream(key string) (io.ReadCloser, error) {
-	aci, ok := ms.acis[key]
+	img, ok := ms.acis[key]
 	if !ok {
 		return nil, fmt.Errorf("stream for key: %s not found", key)
 	}
-	f, err := os.Open(aci.path)
+	f, err := os.Open(img.path)
 	if err != nil {
-		return nil, fmt.Errorf("error opening aci: %s", aci.path)
+		return nil, fmt.Errorf("error opening aci: %s", img.path)
 	}
 
-	return f, nil
+	tr, err := aci.NewCompressedReader(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return ioutil.NopCloser(tr), nil
 }
 
 func (ms *ConversionStore) ResolveKey(key string) (string, error) {
