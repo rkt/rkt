@@ -37,20 +37,20 @@ if [ -z "${IS_STATIC}" ]; then
     exit 1
 fi
 
-RKT_RUN_DIR="/var/lib/rkt/containers/run"
-CONTAINER_DIR="${RKT_RUN_DIR}/${UUID}"
+RKT_RUN_DIR="/var/lib/rkt/pods/run"
+POD_DIR="${RKT_RUN_DIR}/${UUID}"
 
 BUSYBOX_LINKS="ls cp cat mount vi awk chmod chown mv df ps rm tar top tr wc which ping"
 
 NSPAWN_PID=$(ps aux | grep "[u]uid=$UUID" | awk '{print $2}')
 
-sudo nsenter -m -t "${NSPAWN_PID}" cp ${BUSYBOX} ${CONTAINER_DIR}/stage1/rootfs/bin
-sudo nsenter -m -t "${NSPAWN_PID}" chmod +x "${CONTAINER_DIR}/stage1/rootfs/bin/busybox"
+sudo nsenter -m -t "${NSPAWN_PID}" cp ${BUSYBOX} ${POD_DIR}/stage1/rootfs/bin
+sudo nsenter -m -t "${NSPAWN_PID}" chmod +x "${POD_DIR}/stage1/rootfs/bin/busybox"
 
 for link in ${BUSYBOX_LINKS}; do
-    sudo nsenter -m -t "${NSPAWN_PID}" ln -sf busybox "${CONTAINER_DIR}/stage1/rootfs/bin/${link}"
+    sudo nsenter -m -t "${NSPAWN_PID}" ln -sf busybox "${POD_DIR}/stage1/rootfs/bin/${link}"
 done
 
-echo "Busybox installed. Use the following command to enter the repository:"
+echo "Busybox installed. Use the following command to enter pod's stage1:"
 SYSTEMD_PID=$(sudo cat "${RKT_RUN_DIR}/${UUID}/pid")
 echo sudo nsenter -m -u -i -p -t ${SYSTEMD_PID}
