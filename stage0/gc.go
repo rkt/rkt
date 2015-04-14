@@ -1,4 +1,4 @@
-// Copyright 2014 CoreOS, Inc.
+// Copyright 2015 CoreOS, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package stage0
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -48,9 +47,5 @@ func GC(pdir string, uuid *types.UUID, debug bool) error {
 		Stderr: os.Stderr,
 		Dir:    pdir,
 	}
-	if err := c.Run(); err != nil {
-		return fmt.Errorf("error running gc: %v", err)
-	}
-
-	return nil
+	return c.Run()
 }

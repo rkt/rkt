@@ -17,10 +17,60 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
+	"runtime"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+
+	"github.com/coreos/rkt/networking"
 )
 
+var (
+	debug bool
+)
+
+func init() {
+	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
+
+	// this ensures that main runs only on main thread (thread group leader).
+	// since namespace ops (unshare, setns) are done for a single thread, we
+	// must ensure that the goroutine does not jump from OS thread to thread
+	runtime.LockOSThread()
+}
+
 func main() {
-	fmt.Fprintln(os.Stderr, "Hello from stage1 GC")
+	flag.Parse()
+
+	if !debug {
+		log.SetOutput(ioutil.Discard)
+	}
+
+	podID, err := types.NewUUID(flag.Arg(0))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "UUID is missing or malformed")
+		os.Exit(1)
+	}
+
+	if err := gcNetworking(podID); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func gcNetworking(podID *types.UUID) error {
+	n, err := networking.Load(".", podID)
+	switch {
+	case err == nil:
+		n.Teardown()
+	case os.IsNotExist(err):
+		// probably ran without --private-net
+	default:
+		return fmt.Errorf("Failed loading networking state: %v", err)
+	}
+
+	return nil
 }
