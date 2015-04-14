@@ -88,11 +88,6 @@ func init() {
 }
 
 func runRun(args []string) (exit int) {
-	if flagInteractive && len(args) > 1 {
-		stderr("run: interactive option only supports one image")
-		return 1
-	}
-
 	if len(flagPorts) > 0 && !flagPrivateNet {
 		stderr("--port flag requires --private-net")
 		return 1
@@ -111,6 +106,11 @@ func runRun(args []string) (exit int) {
 	err := parseApps(&rktApps, args, &runFlags, true)
 	if err != nil {
 		stderr("run: error parsing app image arguments: %v", err)
+		return 1
+	}
+
+	if flagInteractive && rktApps.Count() > 1 {
+		stderr("run: interactive option only supports one image")
 		return 1
 	}
 
