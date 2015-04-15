@@ -32,6 +32,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/coreos/rkt/pkg/lock"
+	"github.com/coreos/rkt/pkg/sys"
 )
 
 // see Documentation/pod-lifecycle.md for some explanation
@@ -347,6 +348,15 @@ func (p *pod) xToPreparing() error {
 		return err
 	}
 
+	df, err := os.Open(prepareDir())
+	if err != nil {
+		return err
+	}
+	defer df.Close()
+	if err := df.Sync(); err != nil {
+		return err
+	}
+
 	p.isEmbryo = false
 	p.isPreparing = true
 
@@ -367,8 +377,16 @@ func (p *pod) xToPrepared() error {
 	if err := os.Rename(p.path(), p.preparedPath()); err != nil {
 		return err
 	}
-
 	if err := p.Unlock(); err != nil {
+		return err
+	}
+
+	df, err := os.Open(preparedDir())
+	if err != nil {
+		return err
+	}
+	defer df.Close()
+	if err := df.Sync(); err != nil {
 		return err
 	}
 
@@ -398,6 +416,15 @@ func (p *pod) xToRun() error {
 		return err
 	}
 
+	df, err := os.Open(runDir())
+	if err != nil {
+		return err
+	}
+	defer df.Close()
+	if err := df.Sync(); err != nil {
+		return err
+	}
+
 	p.isPreparing = false
 	p.isPrepared = false
 
@@ -415,6 +442,15 @@ func (p *pod) xToExitedGarbage() error {
 		return err
 	}
 
+	df, err := os.Open(exitedGarbageDir())
+	if err != nil {
+		return err
+	}
+	defer df.Close()
+	if err := df.Sync(); err != nil {
+		return err
+	}
+
 	p.isExitedGarbage = true
 
 	return nil
@@ -427,6 +463,15 @@ func (p *pod) xToGarbage() error {
 	}
 
 	if err := os.Rename(p.path(), p.garbagePath()); err != nil {
+		return err
+	}
+
+	df, err := os.Open(garbageDir())
+	if err != nil {
+		return err
+	}
+	defer df.Close()
+	if err := df.Sync(); err != nil {
 		return err
 	}
 
@@ -799,4 +844,17 @@ func (p *pod) getExitStatuses() (map[string]int, error) {
 		stats[name] = s
 	}
 	return stats, nil
+}
+
+// sync syncs the pod data. By now it calls a syncfs on the filesystem
+// containing the pod's directory.
+func (p *pod) sync() error {
+	cfd, err := p.Fd()
+	if err != nil {
+		return fmt.Errorf("error acquiring pod %v dir fd: %v", p.uuid.String(), err)
+	}
+	if err := sys.Syncfs(cfd); err != nil {
+		return fmt.Errorf("failed to sync pod %v data: %v", p.uuid.String(), err)
+	}
+	return nil
 }
