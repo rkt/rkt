@@ -88,6 +88,39 @@ func TestAuthConfigFormat(t *testing.T) {
 	}
 }
 
+func TestDockerAuthConfigFormat(t *testing.T) {
+	tests := []struct {
+		contents string
+		expected map[string]BasicCredentials
+		fail     bool
+	}{
+		{"bogus contents", nil, true},
+		{`{"bogus": {"foo": "bar"}}`, nil, true},
+		{`{"rktKind": "foo"}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "foo"}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1"}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": "foo"}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": []}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"]}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"], "credentials": {}}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"], "credentials": {"user": ""}}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"], "credentials": {"user": "bar"}}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"], "credentials": {"user": "bar", "password": ""}}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"], "credentials": {"user": "bar", "password": "baz"}}`, map[string]BasicCredentials{"coreos.com": BasicCredentials{User: "bar", Password: "baz"}}, false},
+	}
+	for _, tt := range tests {
+		cfg, err := getConfigFromContents(tt.contents, "dockerAuth")
+		if vErr := verifyFailure(tt.fail, tt.contents, err); vErr != nil {
+			t.Errorf("%v", vErr)
+		} else if !tt.fail {
+			result := cfg.DockerCredentialsPerIndex
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Error("Got unexpected results\nResult:\n", result, "\n\nExpected:\n", tt.expected)
+			}
+		}
+	}
+}
+
 func verifyFailure(shouldFail bool, contents string, err error) error {
 	var vErr error = nil
 	if err != nil {
