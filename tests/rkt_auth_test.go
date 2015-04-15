@@ -148,7 +148,7 @@ func subdirectories(t *testing.T, server *taas.Server) {
 
 // TODO (krnowak): Remove this when we will be able to specify
 // different custom and vendor configuration directories.
-const unsafeEnvVar = "DELETE_DATA_AND_CONFIG"
+const unsafeEnvVar = "RKT_ENABLE_DESTRUCTIVE_TESTS"
 
 func skipUnsafe(t *testing.T) {
 	if os.Getenv(unsafeEnvVar) != "1" {

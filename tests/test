@@ -13,5 +13,5 @@
 # To run only one test:
 #     $ cd tests && ./test -run=TestEnv
 
-sudo GOPATH="${PWD}/../gopath" DELETE_DATA_AND_CONFIG="$DELETE_DATA_AND_CONFIG" go test -v $*
+sudo GOPATH="${PWD}/../gopath" RKT_ENABLE_DESTRUCTIVE_TESTS="$RKT_ENABLE_DESTRUCTIVE_TESTS" go test -v $*
 
