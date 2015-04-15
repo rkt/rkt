@@ -59,6 +59,8 @@ fi
 if [ "$CI" == true ] ; then
 	if [ "${CIRCLECI}" == true -o "${SEMAPHORE}" == true ] ; then
 		echo "Checking functional tests..."
+		# Run destructive tests too
+		export DELETE_DATA_AND_CONFIG=1
 		(cd tests && ./test)
 	else
 		echo "Functional tests disabled."
