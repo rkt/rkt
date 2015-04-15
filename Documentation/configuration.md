@@ -44,7 +44,7 @@ be placed inside `auth.d` subdirectory (that is - in
 
 ##### Description and examples
 
-This version if `auth` configuration specifies three additional
+This version of `auth` configuration specifies three additional
 fields: `domains`, `type` and `credentials`.
 
 The `domains` field is an array of strings describing hosts for which
@@ -149,7 +149,8 @@ In `/etc/rkt/auth.d/specific-tectonic.json`:
 }
 ```
 
-The result is that when downloading data from `kubernetes.io` we still
-send `Authorization: Bearer common-token`, but when downloading from
-`coreos.com` - `Authorization: Basic Zm9vOmJhcg==`. And for
-`tectonic.com` - `Authorization: Bearer tectonic-token`.
+The result is that when downloading data from `kubernetes.io` `rkt`
+still sends `Authorization: Bearer common-token`, but when downloading
+from `coreos.com` - `Authorization: Basic Zm9vOmJhcg==` (`foo:bar`
+encoded in base64). And for `tectonic.com` - `Authorization: Bearer
+tectonic-token`.
