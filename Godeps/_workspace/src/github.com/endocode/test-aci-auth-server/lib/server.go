@@ -158,35 +158,23 @@ func (s *Server) Close() {
 }
 
 func NewServer(auth Type, msgCapacity int) (*Server, error) {
-	acTool, err := getTool("actool")
-	if err != nil {
-		return nil, err
-	}
-	goTool, err := getTool("go")
-	if err != nil {
-		return nil, err
-	}
-	return NewServerWithPaths(auth, msgCapacity, acTool, goTool)
-}
-
-func getTool(tool string) (string, error) {
-	toolPath, err := exec.LookPath(tool)
-	if err != nil {
-		return "", fmt.Errorf("failed to find %s in $PATH: $v", tool, err)
-	}
-	absToolPath, err := filepath.Abs(toolPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to get absolute path of %s: %v", tool, err)
-	}
-	return absToolPath, nil
+	return NewServerWithPaths(auth, msgCapacity, "actool", "go")
 }
 
 func NewServerWithPaths(auth Type, msgCapacity int, acTool, goTool string) (*Server, error) {
 	if !filepath.IsAbs(acTool) {
-		return nil, fmt.Errorf("path to actool has to be absolute (%s is not)", acTool)
+		absAcTool, err := getTool(acTool)
+		if err != nil {
+			return nil, err
+		}
+		acTool = absAcTool
 	}
 	if !filepath.IsAbs(goTool) {
-		return nil, fmt.Errorf("path to go has to be absolute (%s is not)", goTool)
+		absGoTool, err := getTool(goTool)
+		if err != nil {
+			return nil, err
+		}
+		goTool = absGoTool
 	}
 	stop := make(chan struct{})
 	msg := make(chan string, msgCapacity)
@@ -222,6 +210,18 @@ func NewServerWithPaths(auth Type, msgCapacity int, acTool, goTool string) (*Ser
 		panic("Woe is me!")
 	}
 	return server, nil
+}
+
+func getTool(tool string) (string, error) {
+	toolPath, err := exec.LookPath(tool)
+	if err != nil {
+		return "", fmt.Errorf("failed to find %s in $PATH: $v", tool, err)
+	}
+	absToolPath, err := filepath.Abs(toolPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to get absolute path of %s: %v", tool, err)
+	}
+	return absToolPath, nil
 }
 
 func sprintCreds(host, auth, creds string) string {
