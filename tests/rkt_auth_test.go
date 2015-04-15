@@ -33,63 +33,52 @@ func TestAuthSanity(t *testing.T) {
 	removeDataDir(t)
 	server := runServer(t, taas.None)
 	defer server.Close()
-	runRktBang(t, server.URL, "none1")
+	successfulRunRkt(t, server.URL, "none1")
+}
+
+const (
+	authSuccessfulDownload = "BANG!"
+	authFailedDownload = "error downloading ACI: bad HTTP status code: 401"
+)
+
+type genericAuthTest struct {
+	name          string
+	useServerConf bool
+	confDir       string
+	line          string
 }
 
 func TestAuthBasic(t *testing.T) {
-	skipDestructive(t)
-	removeDataDir(t)
-	defer removeAllConfig(t)
-	server := runServer(t, taas.Basic)
-	defer server.Close()
-	basicNoConfig(t, server)
-	basicWithCustomConfig(t, server)
-	basicWithVendorConfig(t, server)
-}
-
-func basicNoConfig(t *testing.T, server *taas.Server) {
-	removeAllConfig(t)
-	runRkt401(t, server.URL, "basic-no-config")
-}
-
-func basicWithCustomConfig(t *testing.T, server *taas.Server) {
-	removeAllConfig(t)
-	writeCustomConfig(t, "test.json", server.Conf)
-	runRktBang(t, server.URL, "basic-custom-config")
-}
-
-func basicWithVendorConfig(t *testing.T, server *taas.Server) {
-	removeAllConfig(t)
-	writeVendorConfig(t, "test.json", server.Conf)
-	runRktBang(t, server.URL, "basic-vendor-config")
+	tests := []genericAuthTest{
+		{"basic-no-config", false, "", authFailedDownload},
+		{"basic-custom-config", true, config.DefaultCustomPath, authSuccessfulDownload},
+		{"basic-vendor-config", true, config.DefaultVendorPath, authSuccessfulDownload},
+	}
+	testAuthGeneric(t, taas.Basic, tests)
 }
 
 func TestAuthOauth(t *testing.T) {
+	tests := []genericAuthTest{
+		{"oauth-no-config", false, "", authFailedDownload},
+		{"oauth-custom-config", true, config.DefaultCustomPath, authSuccessfulDownload},
+		{"oauth-vendor-config", true, config.DefaultVendorPath, authSuccessfulDownload},
+	}
+	testAuthGeneric(t, taas.Oauth, tests)
+}
+
+func testAuthGeneric(t *testing.T, auth taas.Type, tests []genericAuthTest) {
 	skipDestructive(t)
 	removeDataDir(t)
 	defer removeAllConfig(t)
-	server := runServer(t, taas.Oauth)
+	server := runServer(t, auth)
 	defer server.Close()
-	oauthNoConfig(t, server)
-	oauthCustomConfig(t, server)
-	oauthVendorConfig(t, server)
-}
-
-func oauthNoConfig(t *testing.T, server *taas.Server) {
-	removeAllConfig(t)
-	runRkt401(t, server.URL, "oauth1")
-}
-
-func oauthCustomConfig(t *testing.T, server *taas.Server) {
-	removeAllConfig(t)
-	writeCustomConfig(t, "test.json", server.Conf)
-	runRktBang(t, server.URL, "oauth-custom-config")
-}
-
-func oauthVendorConfig(t *testing.T, server *taas.Server) {
-	removeAllConfig(t)
-	writeVendorConfig(t, "test.json", server.Conf)
-	runRktBang(t, server.URL, "oauth-vendor-config")
+	for _, tt := range tests {
+		removeAllConfig(t)
+		if tt.useServerConf {
+			writeConfig(t, tt.confDir, "test.json", server.Conf)
+		}
+		expectedRunRkt(t, server.URL, tt.name, tt.line)
+	}
 }
 
 func TestAuthOverride(t *testing.T) {
@@ -98,24 +87,23 @@ func TestAuthOverride(t *testing.T) {
 	defer removeAllConfig(t)
 	server := runServer(t, taas.Oauth)
 	defer server.Close()
-	validVendorInvalidCustom(t, server)
-	invalidVendorValidCustom(t, server)
-}
-
-func validVendorInvalidCustom(t *testing.T, server *taas.Server) {
-	removeAllConfig(t)
-	writeVendorConfig(t, "test.json", server.Conf)
-	runRktBang(t, server.URL, "oauth-vvic-1")
-	writeCustomConfig(t, "test.json", getInvalidOAuthConfig(server.Conf))
-	runRkt401(t, server.URL, "oauth-vvic-2")
-}
-
-func invalidVendorValidCustom(t *testing.T, server *taas.Server) {
-	removeAllConfig(t)
-	writeVendorConfig(t, "test.json", getInvalidOAuthConfig(server.Conf))
-	runRkt401(t, server.URL, "oauth-ivvc-1")
-	writeCustomConfig(t, "test.json", server.Conf)
-	runRktBang(t, server.URL, "oauth-ivvc-2")
+	tests := []struct {
+		vendorConfig         string
+		customConfig         string
+		name                 string
+		resultBeforeOverride string
+		resultAfterOverride  string
+	}{
+		{server.Conf, getInvalidOAuthConfig(server.Conf), "oauth-vvic", authSuccessfulDownload, authFailedDownload},
+		{getInvalidOAuthConfig(server.Conf), server.Conf, "oauth-ivvc", authFailedDownload, authSuccessfulDownload},
+	}
+	for _, tt := range tests {
+		removeAllConfig(t)
+		writeVendorConfig(t, "test.json", tt.vendorConfig)
+		expectedRunRkt(t, server.URL, tt.name+"-1", tt.resultBeforeOverride)
+		writeCustomConfig(t, "test.json", tt.customConfig)
+		expectedRunRkt(t, server.URL, tt.name+"-2", tt.resultAfterOverride)
+	}
 }
 
 func TestAuthIgnore(t *testing.T) {
@@ -124,26 +112,26 @@ func TestAuthIgnore(t *testing.T) {
 	defer removeAllConfig(t)
 	server := runServer(t, taas.Oauth)
 	defer server.Close()
-	bogusFiles(t, server)
-	subdirectories(t, server)
+	testAuthIgnoreBogusFiles(t, server)
+	testAuthIgnoreSubdirectories(t, server)
 }
 
-func bogusFiles(t *testing.T, server *taas.Server) {
+func testAuthIgnoreBogusFiles(t *testing.T, server *taas.Server) {
 	removeAllConfig(t)
 	writeVendorConfig(t, "README", "This is vendor config")
 	writeCustomConfig(t, "README", "This is custom config")
 	writeVendorConfig(t, "test.notjson", server.Conf)
 	writeCustomConfig(t, "test.notjson", server.Conf)
-	runRkt401(t, server.URL, "oauth-bogus-files")
+	failedRunRkt(t, server.URL, "oauth-bogus-files")
 }
 
-func subdirectories(t *testing.T, server *taas.Server) {
+func testAuthIgnoreSubdirectories(t *testing.T, server *taas.Server) {
 	removeAllConfig(t)
 	customSubdir := filepath.Join(config.DefaultCustomPath, "subdir")
 	vendorSubdir := filepath.Join(config.DefaultVendorPath, "subdir")
 	writeConfig(t, customSubdir, "test.json", server.Conf)
 	writeConfig(t, vendorSubdir, "test.json", server.Conf)
-	runRkt401(t, server.URL, "oauth-subdirectories")
+	failedRunRkt(t, server.URL, "oauth-subdirectories")
 }
 
 func runServer(t *testing.T, auth taas.Type) *taas.Server {
@@ -187,46 +175,33 @@ func serverHandler(t *testing.T, server *taas.Server) {
 	}
 }
 
-func runRktBang(t *testing.T, host, dir string) {
-	child := runRkt(t, host, dir)
-	defer child.Wait()
-	expectBang(t, child)
+func successfulRunRkt(t *testing.T, host, dir string) {
+	expectedRunRkt(t, host, dir, authSuccessfulDownload)
 }
 
-func runRkt401(t *testing.T, host, dir string) {
+func failedRunRkt(t *testing.T, host, dir string) {
+	expectedRunRkt(t, host, dir, authFailedDownload)
+}
+
+func expectedRunRkt(t *testing.T, host, dir, line string) {
 	child := runRkt(t, host, dir)
 	defer child.Wait()
-	expect401(t, child)
+	if err := child.Expect(line); err != nil {
+		t.Fatalf("Didn't receive expected output %q", line)
+	}
 }
 
 // TODO (krnowak): Use --dir option when we also add
-// --vendor-config-dir and --custom-config-dir options.
+// --vendor-config-dir and --custom-config-dir options. Then we can
+// remove destructive tests checks.
 func runRkt(t *testing.T, host, dir string) *gexpect.ExpectSubprocess {
-	cmd := rktCmd(fmt.Sprintf(`run %s/%s/prog.aci`, host, dir))
+	cmd := fmt.Sprintf(`../bin/rkt --debug --insecure-skip-verify run %s/%s/prog.aci`, host, dir)
 	t.Logf("Running rkt: %s", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Failed to run rkt: %v", err)
 	}
 	return child
-}
-
-func rktCmd(rest string) string {
-	return fmt.Sprintf(`../bin/rkt --debug --insecure-skip-verify %s`, rest)
-}
-
-func expectBang(t *testing.T, child *gexpect.ExpectSubprocess) {
-	expectLine(t, child, "BANG!")
-}
-
-func expect401(t *testing.T, child *gexpect.ExpectSubprocess) {
-	expectLine(t, child, "error downloading ACI: bad HTTP status code: 401")
-}
-
-func expectLine(t *testing.T, child *gexpect.ExpectSubprocess, line string) {
-	if err := child.Expect(line); err != nil {
-		t.Fatalf("Didn't receive expected output %q", line)
-	}
 }
 
 func removeAllConfig(t *testing.T) {
