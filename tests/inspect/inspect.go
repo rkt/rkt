@@ -15,11 +15,14 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
+	"syscall"
+	"unsafe"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/syndtr/gocapability/capability"
 )
@@ -27,6 +30,8 @@ import (
 var (
 	globalFlagset = flag.NewFlagSet("inspect", flag.ExitOnError)
 	globalFlags   = struct {
+		ReadStdin    bool
+		CheckTty     bool
 		PrintMsg     string
 		PrintEnv     string
 		PrintCapsPid int
@@ -38,6 +43,8 @@ var (
 )
 
 func init() {
+	globalFlagset.BoolVar(&globalFlags.ReadStdin, "read-stdin", false, "Read a line from stdin")
+	globalFlagset.BoolVar(&globalFlags.CheckTty, "check-tty", false, "Check if stdin is a terminal")
 	globalFlagset.StringVar(&globalFlags.PrintMsg, "print-msg", "", "Print the message given as parameter")
 	globalFlagset.StringVar(&globalFlags.CheckCwd, "check-cwd", "", "Check if the current working directory is the one specified")
 	globalFlagset.StringVar(&globalFlags.PrintEnv, "print-env", "", "Print the specified environment variable")
@@ -53,6 +60,24 @@ func main() {
 	if len(args) > 0 {
 		fmt.Fprintln(os.Stderr, "Wrong parameters\n")
 		os.Exit(1)
+	}
+
+	if globalFlags.ReadStdin {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Printf("Enter text:\n")
+		text, _ := reader.ReadString('\n')
+		fmt.Printf("Received text: %s\n", text)
+	}
+
+	if globalFlags.CheckTty {
+		fd := int(os.Stdin.Fd())
+		var termios syscall.Termios
+		_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, uintptr(fd), syscall.TCGETS, uintptr(unsafe.Pointer(&termios)), 0, 0, 0)
+		if err == 0 {
+			fmt.Printf("stdin is a terminal\n")
+		} else {
+			fmt.Printf("stdin is not a terminal\n")
+		}
 	}
 
 	if globalFlags.PrintMsg != "" {
