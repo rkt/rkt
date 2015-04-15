@@ -73,26 +73,10 @@ func TestAuthConfigFormat(t *testing.T) {
 		{`{"rktKind": "auth", "rktVersion": "v1", "domains": ["coreos.com"], "type": "oauth", "credentials": {"token": "sometoken"}}`, map[string]http.Header{"coreos.com": {"Authorization": []string{"Bearer sometoken"}}}, false},
 	}
 	for _, tt := range tests {
-		f, err := tmpConfigFile(tstprefix)
-		if err != nil {
-			panic(fmt.Sprintf("Failed to create tmp config file: %v", err))
-		}
-		defer f.Close()
-		if _, err := f.Write([]byte(tt.contents)); err != nil {
-			panic(fmt.Sprintf("Writing config to file failed: %v", err))
-		}
-		fi, err := f.Stat()
-		if err != nil {
-			panic(fmt.Sprintf("Stating a tmp config file failed: %v", err))
-		}
-		cfg := newConfig()
-		if err := readFile(cfg, fi, f.Name(), []string{"auth"}); err != nil {
-			if !tt.fail {
-				t.Errorf("Expected test to succeed, failed unexpectedly (contents: `%s`)", tt.contents)
-			}
-		} else if tt.fail {
-			t.Errorf("Expected test to fail, succeeded unexpectedly (contents: `%s`)", tt.contents)
-		} else {
+		cfg, err := getConfigFromContents(tt.contents, "auth")
+		if vErr := verifyFailure(tt.fail, tt.contents, err); vErr != nil {
+			t.Errorf("%v", vErr)
+		} else if !tt.fail {
 			result := make(map[string]http.Header)
 			for k, v := range cfg.AuthPerHost {
 				result[k] = v.Header()
@@ -102,6 +86,35 @@ func TestAuthConfigFormat(t *testing.T) {
 			}
 		}
 	}
+}
+
+func verifyFailure(shouldFail bool, contents string, err error) error {
+	var vErr error = nil
+	if err != nil {
+		if !shouldFail {
+			vErr = fmt.Errorf("Expected test to succeed, failed unexpectedly (contents: `%s`): %v", contents, err)
+		}
+	} else if shouldFail {
+		vErr = fmt.Errorf("Expected test to fail, succeeded unexpectedly (contents: `%s`)", contents)
+	}
+	return vErr
+}
+
+func getConfigFromContents(contents, kind string) (*Config, error) {
+	f, err := tmpConfigFile(tstprefix)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create tmp config file: %v", err))
+	}
+	defer f.Close()
+	if _, err := f.Write([]byte(contents)); err != nil {
+		panic(fmt.Sprintf("Writing config to file failed: %v", err))
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		panic(fmt.Sprintf("Stating a tmp config file failed: %v", err))
+	}
+	cfg := newConfig()
+	return cfg, readFile(cfg, fi, f.Name(), []string{kind})
 }
 
 func TestConfigLoading(t *testing.T) {
