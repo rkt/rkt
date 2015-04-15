@@ -89,9 +89,9 @@ func (p *authV1JsonParser) parse(config *Config, raw []byte) error {
 	)
 	switch auth.Type {
 	case "basic":
-		headerer, err = p.getBasicV1Headerer(config, auth.Credentials)
+		headerer, err = p.getBasicV1Headerer(auth.Credentials)
 	case "oauth":
-		headerer, err = p.getOAuthV1Headerer(config, auth.Credentials)
+		headerer, err = p.getOAuthV1Headerer(auth.Credentials)
 	default:
 		err = fmt.Errorf("unknown auth type: %q", auth.Type)
 	}
@@ -107,7 +107,7 @@ func (p *authV1JsonParser) parse(config *Config, raw []byte) error {
 	return nil
 }
 
-func (p *authV1JsonParser) getBasicV1Headerer(config *Config, raw json.RawMessage) (Headerer, error) {
+func (p *authV1JsonParser) getBasicV1Headerer(raw json.RawMessage) (Headerer, error) {
 	var basic basicV1
 	if err := json.Unmarshal(raw, &basic); err != nil {
 		return nil, err
@@ -124,7 +124,7 @@ func (p *authV1JsonParser) getBasicV1Headerer(config *Config, raw json.RawMessag
 	}, nil
 }
 
-func (p *authV1JsonParser) getOAuthV1Headerer(config *Config, raw json.RawMessage) (Headerer, error) {
+func (p *authV1JsonParser) getOAuthV1Headerer(raw json.RawMessage) (Headerer, error) {
 	var oauth oauthV1
 	if err := json.Unmarshal(raw, &oauth); err != nil {
 		return nil, err
