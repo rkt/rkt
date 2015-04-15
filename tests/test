@@ -1,33 +1,4 @@
 #!/bin/bash
 
-red=`tput setaf 1`
-green=`tput setaf 2`
-reset=`tput sgr0`
+sudo GOPATH=$GOPATH go test -v
 
-run_test() {
-	EXPECT_SCRIPT=$1
-	TEST_NAME=$2
-	LOG_FILE=${EXPECT_SCRIPT}.log
-	sudo EXPECT_SCRIPT="${EXPECT_SCRIPT}" TEST_NAME="${TEST_NAME}" TMPDIR="${TMPDIR}" expect -f ${EXPECT_SCRIPT} &> $LOG_FILE
-	RC=$?
-	if [ $RC == 0 ] ; then
-		echo "${green} [OK] ${reset} ${TEST_NAME}"
-	else
-		echo "${red} [FAIL] ${reset} ${TEST_NAME}"
-		echo
-		cat $LOG_FILE
-		exit $RC
-	fi
-}
-
-TMPDIR=$(mktemp -d)
-echo -n host > $TMPDIR/file
-
-LIST=$*
-LIST=${LIST:-test-*.expect}
-for i in $LIST ; do
-	run_test $i $i
-done
-
-# Cleanup
-rm -rf $TMPDIR
