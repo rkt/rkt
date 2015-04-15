@@ -146,22 +146,6 @@ func subdirectories(t *testing.T, server *taas.Server) {
 	runRkt401(t, server.URL, "oauth-subdirectories")
 }
 
-// TODO (krnowak): Remove this when we will be able to specify
-// different custom and vendor configuration directories.
-const unsafeEnvVar = "RKT_ENABLE_DESTRUCTIVE_TESTS"
-
-func skipUnsafe(t *testing.T) {
-	if os.Getenv(unsafeEnvVar) != "1" {
-		t.Skipf("%s envvar is not specified or has value different than 1, skipping the test", unsafeEnvVar)
-	}
-}
-
-func removeDataDir(t *testing.T) {
-	if err := os.RemoveAll("/var/lib/rkt"); err != nil {
-		t.Fatalf("Failed to remove /var/lib/rkt: %v", err)
-	}
-}
-
 func runServer(t *testing.T, auth taas.Type) *taas.Server {
 	goTool := getAbs(t, "go")
 	acTool := getAbs(t, "../bin/actool")
