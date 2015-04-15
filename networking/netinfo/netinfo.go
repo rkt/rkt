@@ -16,6 +16,7 @@ package netinfo
 
 import (
 	"encoding/json"
+	"net"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -24,9 +25,11 @@ import (
 const filename = "net-info.json"
 
 type NetInfo struct {
-	NetName string `json:"netName"`
-	IfName  string `json:"ifName"`
-	IP      string `json:"ip"`
+	NetName  string `json:"netName"`
+	ConfPath string `json:"netConf"`
+	IfName   string `json:"ifName"`
+	IP       net.IP `json:"ip"`
+	Args     string `json:"args"`
 }
 
 func LoadAt(cdirfd int) ([]NetInfo, error) {

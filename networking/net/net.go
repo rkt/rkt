@@ -19,15 +19,13 @@ import (
 	"io/ioutil"
 	gonet "net"
 	"os"
-	"reflect"
 )
 
 // Net describes a network.
 type Net struct {
-	Filename string
-	Name     string `json:"name,omitempty"`
-	Type     string `json:"type,omitempty"`
-	IPAM     struct {
+	Name string `json:"name,omitempty"`
+	Type string `json:"type,omitempty"`
+	IPAM struct {
 		Type string `json:"type,omitempty"`
 	} `json:"ipam,omitempty"`
 }
@@ -39,24 +37,7 @@ func LoadNet(path string, n interface{}) error {
 		return err
 	}
 
-	if err = json.Unmarshal(c, n); err != nil {
-		return err
-	}
-
-	// populate n.Filename if exists
-	v := reflect.ValueOf(n)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-		if v.Kind() == reflect.Struct {
-			if fn := v.FieldByName("Filename"); fn.IsValid() {
-				if fn.Type().Kind() == reflect.String && fn.CanSet() {
-					fn.SetString(path)
-				}
-			}
-		}
-	}
-
-	return nil
+	return json.Unmarshal(c, n)
 }
 
 // this is what net plugin returns to rkt

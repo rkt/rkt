@@ -46,6 +46,9 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	echo "Building init (stage1)..."
 	go install ${REPO_PATH}/stage1/init
 
+	echo "Building gc (stage1)..."
+	go install ${REPO_PATH}/stage1/gc
+
 	# symlink plugin binaries into stage1 rootfs
 	mkdir -p stage1/rootfs/net-plugins/bin
 	# make sure the bin dir doesn't have old links
@@ -60,6 +63,10 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	# symlink init into stage1 rootfs
 	mkdir -p stage1/rootfs/init/bin
 	ln -sf ${GOBIN}/init stage1/rootfs/init/bin
+
+	# symlink gc into stage1 rootfs
+	mkdir -p stage1/rootfs/gc/bin
+	ln -sf ${GOBIN}/gc stage1/rootfs/gc/bin
 
 	JOBS=1
 	which lscpu >&/dev/null && JOBS=$(lscpu --parse=CPU | grep -c ^[^#])

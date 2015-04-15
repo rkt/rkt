@@ -236,14 +236,14 @@ func stage1() int {
 		}
 		defer n.Teardown()
 
-		p.MetadataServiceURL = common.MetadataServicePublicURL(n.HostIP)
-
-		if err = n.EnterPodNS(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to switch to pod netns: %v\n", err)
+		if err = n.Save(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to save networking state %v\n", err)
 			return 6
 		}
 
-		if err = registerPod(p, n.MetadataIP); err != nil {
+		p.MetadataServiceURL = common.MetadataServicePublicURL(n.GetDefaultHostIP())
+
+		if err = registerPod(p, n.GetDefaultIP()); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to register pod: %v\n", err)
 			return 6
 		}

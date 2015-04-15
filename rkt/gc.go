@@ -21,6 +21,8 @@ import (
 	"os"
 	"syscall"
 	"time"
+
+	"github.com/coreos/rkt/stage0"
 )
 
 const (
@@ -109,6 +111,12 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 				return
 			}
 			stdout("Garbage collecting pod %q", p.uuid)
+
+			// execute stage1's GC
+			if err := stage0.GC(p.path(), p.uuid, globalFlags.Debug); err != nil {
+				stderr("Stage1 GC of pod %q failed: %v", p.uuid, err)
+			}
+
 			if err := os.RemoveAll(gp); err != nil {
 				stderr("Unable to remove pod %q: %v", p.uuid, err)
 			}

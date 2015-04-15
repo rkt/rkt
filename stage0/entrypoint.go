@@ -28,9 +28,10 @@ import (
 const (
 	enterEntrypoint = "coreos.com/rkt/stage1/enter"
 	runEntrypoint   = "coreos.com/rkt/stage1/run"
+	gcEntrypoint    = "coreos.com/rkt/stage1/gc"
 )
 
-// getEntrypoint retrieves the named entrypoint from the stage1 manifest for a given pod
+// getStage1Entrypoint retrieves the named entrypoint from the stage1 manifest for a given pod
 func getStage1Entrypoint(cdir string, entrypoint string) (string, error) {
 	b, err := ioutil.ReadFile(common.Stage1ManifestPath(cdir))
 	if err != nil {

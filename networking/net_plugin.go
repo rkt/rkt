@@ -32,22 +32,22 @@ import (
 const UserNetPluginsPath = "/usr/lib/rkt/plugins/net"
 const BuiltinNetPluginsPath = "usr/lib/rkt/plugins/net"
 
-func (e *podEnv) netPluginAdd(n *Net, netns, args, ifName string) (ip, hostIP net.IP, err error) {
-	output, err := e.execNetPlugin("ADD", n, netns, args, ifName)
+func (e *podEnv) netPluginAdd(n *activeNet, netns string) (ip, hostIP net.IP, err error) {
+	output, err := e.execNetPlugin("ADD", n, netns)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	ifConf := rktnet.IfConfig{}
 	if err = json.Unmarshal(output, &ifConf); err != nil {
-		return nil, nil, fmt.Errorf("error parsing %q output: %v", n.Name, err)
+		return nil, nil, fmt.Errorf("error parsing %q output: %v", n.Conf.Name, err)
 	}
 
 	return ifConf.IP, ifConf.HostIP, nil
 }
 
-func (e *podEnv) netPluginDel(n *Net, netns, args, ifName string) error {
-	_, err := e.execNetPlugin("DEL", n, netns, args, ifName)
+func (e *podEnv) netPluginDel(n *activeNet, netns string) error {
+	_, err := e.execNetPlugin("DEL", n, netns)
 	return err
 }
 
@@ -80,20 +80,20 @@ func envVars(vars [][2]string) []string {
 	return env
 }
 
-func (e *podEnv) execNetPlugin(cmd string, n *Net, netns, args, ifName string) ([]byte, error) {
-	pluginPath := e.findNetPlugin(n.Type)
+func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) ([]byte, error) {
+	pluginPath := e.findNetPlugin(n.Conf.Type)
 	if pluginPath == "" {
-		return nil, fmt.Errorf("Could not find plugin %q", n.Type)
+		return nil, fmt.Errorf("Could not find plugin %q", n.Conf.Type)
 	}
 
 	vars := [][2]string{
 		{"RKT_NETPLUGIN_COMMAND", cmd},
 		{"RKT_NETPLUGIN_PODID", e.podID.String()},
 		{"RKT_NETPLUGIN_NETNS", netns},
-		{"RKT_NETPLUGIN_ARGS", args},
-		{"RKT_NETPLUGIN_IFNAME", ifName},
-		{"RKT_NETPLUGIN_NETNAME", n.Name},
-		{"RKT_NETPLUGIN_NETCONF", n.Filename},
+		{"RKT_NETPLUGIN_ARGS", n.Runtime.Args},
+		{"RKT_NETPLUGIN_IFNAME", n.Runtime.IfName},
+		{"RKT_NETPLUGIN_NETNAME", n.Conf.Name},
+		{"RKT_NETPLUGIN_NETCONF", n.Runtime.ConfPath},
 		{"RKT_NETPLUGIN_IPAMPATH", strings.Join(e.pluginPaths(), ":")},
 	}
 

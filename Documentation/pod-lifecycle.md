@@ -51,7 +51,7 @@ After preparation completes, while still holding the exclusive lock (the lock is
 
 `rkt run` transitions directly from #Prepare to #Run by renaming `$var/prepare/$uuid` to `$var/run/$uuid`, entirely skipping the #Prepared phase.
 
-Should #Prepare fail or be interrupted, `$var/prepare/$uuid` will be left in an unlocked state.  Any directory in `$var/prepare` in an unlocked state is considered a failed prepare.  `rkt gc` identifies failed prepares in need of cleanup by trying to acquire a shared lock on all directories in `$var/prepare`, renaming successfully locked directories to `$var/garbage` where they are then deleted.
+Should #Prepare fail or be interrupted, `$var/prepare/$uuid` will be left in an unlocked state.  Any directory in `$var/prepare` in an unlocked state is considered a failed prepare.  `rkt gc` identifies failed prepares in need of clean up by trying to acquire a shared lock on all directories in `$var/prepare`, renaming successfully locked directories to `$var/garbage` where they are then deleted.
 
 ## Prepared
 
@@ -91,7 +91,7 @@ Marked exited pods dwell in the `$var/exited-garbage` directory for a grace peri
 
 A side-effect of the rename operation responsible for moving a pod from `$var/run` to `$var/exited-garbage` is an update to the pod directory's change time.  The sweep operation takes advantage of this in honoring the necessary grace period before discarding exited pods.  This grace period currently defaults to 30 minutes, and may be explicitly specified using the `--grace-period duration` flag with `rkt gc`.  Note that this grace period begins from the time a pod was marked by `rkt gc`, not when the pod exited.  A pod becomes eligible for marking upon exit, but will not become marked until a subsequent `rkt gc` is performed.
 
-The change times of all directories found in `$var/exited-garbage` are compared against the current time.  Directories having sufficiently old change times are locked exclusively and recursively deleted.  If a lock acquisition fails, the directory is skipped.  Failed exclusive lock acquisitions may occur if the garbage pod is currently being accessed via `rkt status`, or deleted by a concurrent `rkt gc`, for example.  The skipped pods will be revisited on a subsequent `rkt gc` invocation's sweep pass.
+The change times of all directories found in `$var/exited-garbage` are compared against the current time.  Directories having sufficiently old change times are locked exclusively and cleaned up.  If a lock acquisition fails, the directory is skipped.  Failed exclusive lock acquisitions may occur if the garbage pod is currently being accessed via `rkt status`, or deleted by a concurrent `rkt gc`, for example.  The skipped pods will be revisited on a subsequent `rkt gc` invocation's sweep pass.  During the cleanup, the pod's stage1 gc entry point is first executed.  This gives the stage1 a chance to clean up anything related to the environment shared between containers. The default stage1 uses the gc entrypoint to clean up the private networking artifacts.  After the completion of the gc entrypoint, the pod directory is recursively deleted.
 
 ## Pulse
 

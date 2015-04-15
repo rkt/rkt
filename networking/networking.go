@@ -16,16 +16,15 @@ package networking
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
-	"path/filepath"
 	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
+	rktnet "github.com/coreos/rkt/networking/net"
 	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/coreos/rkt/networking/util"
 )
@@ -34,21 +33,6 @@ const (
 	ifnamePattern = "eth%d"
 	selfNetNS     = "/proc/self/ns/net"
 )
-
-type activeNet struct {
-	Net
-	ifName string
-	ip     net.IP
-	hostIP net.IP // kludge for default network
-}
-
-// "base" struct that's populated from the beginning
-// describing the environment in which the pod
-// is running in
-type podEnv struct {
-	rktRoot string
-	podID   types.UUID
-}
 
 // ForwardedPort describes a port that will be
 // forwarded (mapped) from the host to the pod
@@ -62,19 +46,14 @@ type ForwardedPort struct {
 type Networking struct {
 	podEnv
 
-	MetadataIP net.IP
-	HostIP     net.IP
-
-	podID     types.UUID
-	hostNS    *os.File
-	podNS     *os.File
-	podNSPath string
-	nets      []activeNet
+	hostNS *os.File
+	nets   []activeNet
 }
 
-// Setup produces a Networking object for a given pod ID.
+// Setup creates a new networking namespace and executes network
+// plugins to setup private networking. It returns in the new pod
+// namespace
 func Setup(rktRoot string, podID types.UUID, fps []ForwardedPort) (*Networking, error) {
-	var err error
 	n := Networking{
 		podEnv: podEnv{
 			rktRoot: rktRoot,
@@ -82,69 +61,115 @@ func Setup(rktRoot string, podID types.UUID, fps []ForwardedPort) (*Networking, 
 		},
 	}
 
-	defer func() {
-		// cleanup on error
-		if err != nil {
-			n.Teardown()
-		}
-	}()
-
-	if n.hostNS, n.podNS, err = basicNetNS(); err != nil {
+	hostNS, podNS, err := basicNetNS()
+	if err != nil {
 		return nil, err
 	}
 	// we're in podNS!
+	n.hostNS = hostNS
 
-	n.podNSPath = filepath.Join(rktRoot, "netns")
-	if err = bindMountFile(selfNetNS, n.podNSPath); err != nil {
+	nspath := n.podNSPath()
+
+	if err = bindMountFile(selfNetNS, nspath); err != nil {
 		return nil, err
 	}
 
-	nets, err := n.loadNets()
+	defer func() {
+		if err != nil {
+			if err := syscall.Unmount(nspath, 0); err != nil {
+				log.Printf("Error unmounting %q: %v", nspath, err)
+			}
+		}
+	}()
+
+	n.nets, err = n.loadNets()
 	if err != nil {
 		return nil, fmt.Errorf("error loading network definitions: %v", err)
 	}
 
-	err = withNetNS(n.podNS, n.hostNS, func() error {
-		n.nets, err = n.setupNets(n.podNSPath, nets)
-		if err != nil {
+	err = withNetNS(podNS, hostNS, func() error {
+		if err := n.setupNets(n.nets); err != nil {
 			return err
 		}
-
-		if len(n.nets) == 0 {
-			return fmt.Errorf("no nets successfully configured")
-		}
-
-		// last net is the default
-		n.MetadataIP = n.nets[len(n.nets)-1].ip
-		n.HostIP = n.nets[len(n.nets)-1].hostIP
-
-		return n.forwardPorts(fps, n.MetadataIP)
+		return n.forwardPorts(fps, n.GetDefaultIP())
 	})
 	if err != nil {
-		return nil, err
-	}
-
-	if err = n.saveNetInfo(); err != nil {
 		return nil, err
 	}
 
 	return &n, nil
 }
 
+// Load creates the Networking object from saved state.
+// Assumes the current netns is that of the host.
+func Load(rktRoot string, podID *types.UUID) (*Networking, error) {
+	// the current directory is pod root
+	pdirfd, err := syscall.Open(rktRoot, syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to open pod root directory (%v): %v", rktRoot, err)
+	}
+	defer syscall.Close(pdirfd)
+
+	nis, err := netinfo.LoadAt(pdirfd)
+	if err != nil {
+		return nil, err
+	}
+
+	hostNS, err := os.Open(selfNetNS)
+	if err != nil {
+		return nil, err
+	}
+
+	nets := []activeNet{}
+	for _, ni := range nis {
+		conf := &rktnet.Net{}
+		if err := rktnet.LoadNet(ni.ConfPath, conf); err != nil {
+			if !os.IsNotExist(err) {
+				log.Printf("Error loading %q: %v; ignoring", ni.ConfPath, err)
+			}
+			continue
+		}
+
+		// make a copy of ni to make it a unique object as it's saved via ptr
+		rti := ni
+		nets = append(nets, activeNet{
+			Conf:    conf,
+			Runtime: &rti,
+		})
+	}
+
+	return &Networking{
+		podEnv: podEnv{
+			rktRoot: rktRoot,
+			podID:   *podID,
+		},
+		hostNS: hostNS,
+		nets:   nets,
+	}, nil
+}
+
+func (n *Networking) GetDefaultIP() net.IP {
+	if len(n.nets) == 0 {
+		return nil
+	}
+	return n.nets[len(n.nets)-1].Runtime.IP
+}
+
+func (n *Networking) GetDefaultHostIP() net.IP {
+	if len(n.nets) == 0 {
+		return nil
+	}
+	return n.nets[len(n.nets)-1].hostIP
+}
+
 // Teardown cleans up a produced Networking object.
 func (n *Networking) Teardown() {
 	// Teardown everything in reverse order of setup.
-	// This is called during error cases as well, so
-	// not everything may be setup.
-	// N.B. better to keep going in case of errors
-	// to get as much cleaned up as possible.
+	// This should be indempotent -- be tolerant of
+	// missing stuff
 
-	if n.podNS == nil || n.hostNS == nil {
-		return
-	}
-
-	if err := n.EnterHostNS(); err != nil {
-		log.Print(err)
+	if err := n.enterHostNS(); err != nil {
+		log.Printf("Error switching to host netns: %v", err)
 		return
 	}
 
@@ -152,14 +177,13 @@ func (n *Networking) Teardown() {
 		log.Printf("Error removing forwarded ports: %v", err)
 	}
 
-	n.teardownNets(n.podNSPath, n.nets)
+	n.teardownNets(n.nets)
 
-	if n.podNSPath == "" {
-		return
-	}
-
-	if err := syscall.Unmount(n.podNSPath, 0); err != nil {
-		log.Printf("Error unmounting %q: %v", n.podNSPath, err)
+	if err := syscall.Unmount(n.podNSPath(), 0); err != nil {
+		// if already unmounted, umount(2) returns EINVAL
+		if !os.IsNotExist(err) && err != syscall.EINVAL {
+			log.Printf("Error unmounting %q: %v", n.podNSPath(), err)
+		}
 	}
 }
 
@@ -181,88 +205,17 @@ func basicNetNS() (hostNS, podNS *os.File, err error) {
 	return
 }
 
-// EnterHostNS moves into the host's network namespace.
-func (n *Networking) EnterHostNS() error {
+// enterHostNS moves into the host's network namespace.
+func (n *Networking) enterHostNS() error {
 	return util.SetNS(n.hostNS, syscall.CLONE_NEWNET)
 }
 
-// EnterPodNS moves into the pod's network namespace.
-func (n *Networking) EnterPodNS() error {
-	return util.SetNS(n.podNS, syscall.CLONE_NEWNET)
-}
-
-func (e *podEnv) netDir() string {
-	return filepath.Join(e.rktRoot, "net")
-}
-
-func (e *podEnv) setupNets(netns string, nets []Net) ([]activeNet, error) {
-	err := os.MkdirAll(e.netDir(), 0755)
-	if err != nil {
-		return nil, err
-	}
-
-	active := []activeNet{}
-
-	for i, nt := range nets {
-		log.Printf("Setup: executing net-plugin %v", nt.Type)
-
-		an := activeNet{
-			Net:    nt,
-			ifName: fmt.Sprintf(ifnamePattern, i),
-		}
-
-		if an.Filename, err = copyFileToDir(nt.Filename, e.netDir()); err != nil {
-			err = fmt.Errorf("error copying %q to %q: %v", nt.Filename, e.netDir(), err)
-			break
-		}
-
-		an.ip, an.hostIP, err = e.netPluginAdd(&nt, netns, nt.args, an.ifName)
-		if err != nil {
-			err = fmt.Errorf("error adding network %q: %v", nt.Name, err)
-			break
-		}
-
-		active = append(active, an)
-	}
-
-	if err != nil {
-		e.teardownNets(netns, active)
-		return nil, err
-	}
-
-	return active, nil
-}
-
-func (e *podEnv) teardownNets(netns string, nets []activeNet) {
-	for i := len(nets) - 1; i >= 0; i-- {
-		nt := nets[i]
-
-		log.Printf("Teardown: executing net-plugin %v", nt.Type)
-
-		err := e.netPluginDel(&nt.Net, netns, nt.args, nt.ifName)
-		if err != nil {
-			log.Printf("Error deleting %q: %v", nt.Name, err)
-		}
-
-		// Delete the conf file to signal that the network was
-		// torn down (or at least attempted to)
-		if err = os.Remove(nt.Filename); err != nil {
-			log.Printf("Error deleting %q: %v", nt.Filename, err)
-		}
-	}
-}
-
-// saveNetInfo writes out the info about active nets
+// Save writes out the info about active nets
 // for "rkt list" and friends to display
-func (e *Networking) saveNetInfo() error {
+func (e *Networking) Save() error {
 	nis := []netinfo.NetInfo{}
 	for _, n := range e.nets {
-		ni := netinfo.NetInfo{
-			NetName: n.Name,
-			IfName:  n.ifName,
-			IP:      n.ip.String(),
-		}
-		nis = append(nis, ni)
+		nis = append(nis, *n.Runtime)
 	}
 
 	return netinfo.Save(e.rktRoot, nis)
@@ -337,23 +290,4 @@ func bindMountFile(src, dst string) error {
 	f.Close()
 
 	return syscall.Mount(src, dst, "none", syscall.MS_BIND, "")
-}
-
-func copyFileToDir(src, dstdir string) (string, error) {
-	dst := filepath.Join(dstdir, filepath.Base(src))
-
-	s, err := os.Open(src)
-	if err != nil {
-		return "", err
-	}
-	defer s.Close()
-
-	d, err := os.Create(dst)
-	if err != nil {
-		return "", err
-	}
-	defer d.Close()
-
-	_, err = io.Copy(d, s)
-	return dst, err
 }
