@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -135,27 +134,12 @@ func testAuthIgnoreSubdirectories(t *testing.T, server *taas.Server) {
 }
 
 func runServer(t *testing.T, auth taas.Type) *taas.Server {
-	goTool := getAbs(t, "go")
-	acTool := getAbs(t, "../bin/actool")
-	server, err := taas.NewServerWithPaths(auth, 20, acTool, goTool)
+	server, err := taas.NewServerWithPaths(auth, 20, "../bin/actool", "go")
 	if err != nil {
 		t.Fatalf("Could not start server: %v", err)
 	}
 	go serverHandler(t, server)
 	return server
-}
-
-func getAbs(t *testing.T, tool string) string {
-	baseTool := filepath.Base(tool)
-	pathTool, err := exec.LookPath(tool)
-	if err != nil {
-		t.Fatalf("Could not find %s, required to run server: %v", baseTool, err)
-	}
-	absTool, err := filepath.Abs(pathTool)
-	if err != nil {
-		t.Fatalf("Could not get absolute path of %s, required to run server: %v", baseTool, err)
-	}
-	return absTool
 }
 
 func serverHandler(t *testing.T, server *taas.Server) {
