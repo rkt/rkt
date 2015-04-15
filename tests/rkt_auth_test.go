@@ -29,7 +29,7 @@ import (
 )
 
 func TestAuthSanity(t *testing.T) {
-	skipUnsafe(t)
+	skipDestructive(t)
 	removeDataDir(t)
 	server := runServer(t, taas.None)
 	defer server.Close()
@@ -37,7 +37,7 @@ func TestAuthSanity(t *testing.T) {
 }
 
 func TestAuthBasic(t *testing.T) {
-	skipUnsafe(t)
+	skipDestructive(t)
 	removeDataDir(t)
 	defer removeAllConfig(t)
 	server := runServer(t, taas.Basic)
@@ -65,7 +65,7 @@ func basicWithVendorConfig(t *testing.T, server *taas.Server) {
 }
 
 func TestAuthOauth(t *testing.T) {
-	skipUnsafe(t)
+	skipDestructive(t)
 	removeDataDir(t)
 	defer removeAllConfig(t)
 	server := runServer(t, taas.Oauth)
@@ -93,7 +93,7 @@ func oauthVendorConfig(t *testing.T, server *taas.Server) {
 }
 
 func TestAuthOverride(t *testing.T) {
-	skipUnsafe(t)
+	skipDestructive(t)
 	removeDataDir(t)
 	defer removeAllConfig(t)
 	server := runServer(t, taas.Oauth)
@@ -119,7 +119,7 @@ func invalidVendorValidCustom(t *testing.T, server *taas.Server) {
 }
 
 func TestAuthIgnore(t *testing.T) {
-	skipUnsafe(t)
+	skipDestructive(t)
 	removeDataDir(t)
 	defer removeAllConfig(t)
 	server := runServer(t, taas.Oauth)

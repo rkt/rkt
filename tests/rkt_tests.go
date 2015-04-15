@@ -21,18 +21,25 @@ import (
 	"testing"
 )
 
-const unsafeEnvVar = "RKT_ENABLE_DESTRUCTIVE_TESTS"
+const enableDestructiveTestsEnvVar = "RKT_ENABLE_DESTRUCTIVE_TESTS"
 
-func skipUnsafe(t *testing.T) {
-	if v := os.Getenv(unsafeEnvVar); v != "1" {
-		t.Skipf("%s envvar is not specified or has value different than 1 (%s), skipping the test", unsafeEnvVar, v)
+func skipDestructive(t *testing.T) {
+	if !destructiveTestsEnabled() {
+		t.Skipf("%s envvar is not specified or has value different than 1, skipping the test", enableDestructiveTestsEnvVar)
 	}
 }
 
 func removeDataDir(t *testing.T) {
+	if !destructiveTestsEnabled() {
+		panic("Trying to remove datadir when destructive tests are disabled")
+	}
 	if err := os.RemoveAll("/var/lib/rkt"); err != nil {
 		t.Fatalf("Failed to remove /var/lib/rkt: %v", err)
 	}
+}
+
+func destructiveTestsEnabled() bool {
+	return os.Getenv(enableDestructiveTestsEnvVar) == "1"
 }
 
 func patchTestACI(newFileName string, args ...string) {
