@@ -42,9 +42,18 @@ type oauthV1 struct {
 	Token string `json:"token"`
 }
 
+type dockerAuthV1JsonParser struct{}
+
+type dockerAuthV1 struct {
+	Indices     []string `json:"indices"`
+	Credentials basicV1  `json:"credentials"`
+}
+
 func init() {
 	addParser("auth", "v1", &authV1JsonParser{})
-	registerSubDir("auth.d", []string{"auth"})
+	addParser("dockerAuth", "v1", &dockerAuthV1JsonParser{})
+	registerSubDir("auth.d", []string{"auth", "dockerAuth"})
+	registerSubDir("docker.d", []string{"dockerAuth"})
 }
 
 type basicAuthHeaderer struct {
@@ -112,11 +121,8 @@ func (p *authV1JsonParser) getBasicV1Headerer(raw json.RawMessage) (Headerer, er
 	if err := json.Unmarshal(raw, &basic); err != nil {
 		return nil, err
 	}
-	if len(basic.User) == 0 {
-		return nil, fmt.Errorf("user not specified")
-	}
-	if len(basic.Password) == 0 {
-		return nil, fmt.Errorf("password not specified")
+	if err := validateBasicV1(&basic); err != nil {
+		return nil, err
 	}
 	return &basicAuthHeaderer{
 		user:     basic.User,
@@ -135,4 +141,41 @@ func (p *authV1JsonParser) getOAuthV1Headerer(raw json.RawMessage) (Headerer, er
 	return &oAuthBearerTokenHeaderer{
 		token: oauth.Token,
 	}, nil
+}
+
+func (p *dockerAuthV1JsonParser) parse(config *Config, raw []byte) error {
+	var auth dockerAuthV1
+	if err := json.Unmarshal(raw, &auth); err != nil {
+		return err
+	}
+	if len(auth.Indices) == 0 {
+		return fmt.Errorf("no indices specified")
+	}
+	if err := validateBasicV1(&auth.Credentials); err != nil {
+		return err
+	}
+	basic := BasicCredentials{
+		User:     auth.Credentials.User,
+		Password: auth.Credentials.Password,
+	}
+	for _, index := range auth.Indices {
+		if _, ok := config.DockerCredentialsPerIndex[index]; ok {
+			return fmt.Errorf("credentials for docker index %q are already specified", index)
+		}
+		config.DockerCredentialsPerIndex[index] = basic
+	}
+	return nil
+}
+
+func validateBasicV1(basic *basicV1) error {
+	if basic == nil {
+		return fmt.Errorf("no credentials")
+	}
+	if len(basic.User) == 0 {
+		return fmt.Errorf("user not specified")
+	}
+	if len(basic.Password) == 0 {
+		return fmt.Errorf("password not specified")
+	}
+	return nil
 }
