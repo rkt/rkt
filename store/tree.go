@@ -10,11 +10,13 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"syscall"
 
 	specaci "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/tarheader"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/sys"
 )
 
 const (
@@ -55,25 +57,12 @@ func (ts *TreeStore) Write(key string, ds *Store) error {
 		return fmt.Errorf("treestore: cannot write hash file: %v", err)
 	}
 	// before creating the "rendered" flag file we need to ensure that all data is fsynced
-	err = filepath.Walk(treepath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.Mode().IsDir() && !info.Mode().IsRegular() {
-			return nil
-		}
-		f, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		err = f.Sync()
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	dfd, err := syscall.Open(treepath, syscall.O_RDONLY, 0)
 	if err != nil {
+		return err
+	}
+	defer syscall.Close(dfd)
+	if err := sys.Syncfs(dfd); err != nil {
 		return fmt.Errorf("treestore: failed to sync data: %v", err)
 	}
 	// Create rendered file
@@ -83,13 +72,7 @@ func (ts *TreeStore) Write(key string, ds *Store) error {
 	}
 	f.Close()
 
-	df, err := os.Open(treepath)
-	if err != nil {
-		return err
-	}
-	defer df.Close()
-	err = df.Sync()
-	if err != nil {
+	if err := syscall.Fsync(dfd); err != nil {
 		return fmt.Errorf("treestore: failed to sync tree store directory: %v", err)
 	}
 	return nil
