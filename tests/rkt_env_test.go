@@ -21,7 +21,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
 )
 
-var simpleTests = []struct {
+var envTests = []struct {
 	rktCmd string
 	expect string
 }{
@@ -57,7 +57,7 @@ func TestEnv(t *testing.T) {
 	patchTestACI("rkt-inspect-print-var-other.aci", "--exec=/inspect --print-env=VAR_OTHER")
 	defer os.Remove("rkt-inspect-print-var-other.aci")
 
-	for i, tt := range simpleTests {
+	for i, tt := range envTests {
 		t.Logf("Running test #%v: %v", i, tt.rktCmd)
 
 		child, err := gexpect.Spawn(tt.rktCmd)

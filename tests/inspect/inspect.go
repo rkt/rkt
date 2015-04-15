@@ -19,17 +19,21 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/syndtr/gocapability/capability"
 )
 
 var (
 	globalFlagset = flag.NewFlagSet("inspect", flag.ExitOnError)
 	globalFlags   = struct {
-		PrintMsg  string
-		PrintEnv  string
-		CheckCwd  string
-		ExitCode  int
-		ReadFile  bool
-		WriteFile bool
+		PrintMsg     string
+		PrintEnv     string
+		PrintCapsPid int
+		CheckCwd     string
+		ExitCode     int
+		ReadFile     bool
+		WriteFile    bool
 	}{}
 )
 
@@ -37,6 +41,7 @@ func init() {
 	globalFlagset.StringVar(&globalFlags.PrintMsg, "print-msg", "", "Print the message given as parameter")
 	globalFlagset.StringVar(&globalFlags.CheckCwd, "check-cwd", "", "Check if the current working directory is the one specified")
 	globalFlagset.StringVar(&globalFlags.PrintEnv, "print-env", "", "Print the specified environment variable")
+	globalFlagset.IntVar(&globalFlags.PrintCapsPid, "print-caps-pid", -1, "Print capabilities of the specified pid (or current process if pid=0)")
 	globalFlagset.IntVar(&globalFlags.ExitCode, "exit-code", 0, "Return this exit code")
 	globalFlagset.BoolVar(&globalFlags.ReadFile, "read-file", false, "Print the content of the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
@@ -56,6 +61,34 @@ func main() {
 
 	if globalFlags.PrintEnv != "" {
 		fmt.Fprintf(os.Stdout, "%s=%s\n", globalFlags.PrintEnv, os.Getenv(globalFlags.PrintEnv))
+	}
+
+	if globalFlags.PrintCapsPid >= 0 {
+		caps, err := capability.NewPid(globalFlags.PrintCapsPid)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot get caps: %v\n", err)
+			os.Exit(1)
+			return
+		}
+		fmt.Printf("Capability set: effective: %s\n", caps.StringCap(capability.EFFECTIVE))
+		fmt.Printf("Capability set: permitted: %s\n", caps.StringCap(capability.PERMITTED))
+		fmt.Printf("Capability set: inheritable: %s\n", caps.StringCap(capability.INHERITABLE))
+		fmt.Printf("Capability set: bounding: %s\n", caps.StringCap(capability.BOUNDING))
+
+		if capStr := os.Getenv("CAPABILITY"); capStr != "" {
+			capInt, err := strconv.Atoi(capStr)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Environment variable $CAPABILITY is not a valid capability number: %v\n", err)
+				os.Exit(1)
+				return
+			}
+			c := capability.Cap(capInt)
+			if caps.Get(capability.BOUNDING, c) {
+				fmt.Printf("%v=enabled", c.String())
+			} else {
+				fmt.Printf("%v=disabled", c.String())
+			}
+		}
 	}
 
 	if globalFlags.WriteFile {
