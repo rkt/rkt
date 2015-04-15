@@ -17,7 +17,7 @@
 package stage0
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,7 +32,7 @@ import (
 func GC(pdir string, uuid *types.UUID, debug bool) error {
 	ep, err := getStage1Entrypoint(pdir, gcEntrypoint)
 	if err != nil {
-		log.Fatalf("error determining gc entrypoint: %v", err)
+		return fmt.Errorf("error determining gc entrypoint: %v", err)
 	}
 
 	args := []string{filepath.Join(common.Stage1RootfsPath(pdir), ep)}

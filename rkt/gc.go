@@ -115,6 +115,7 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 			// execute stage1's GC
 			if err := stage0.GC(p.path(), p.uuid, globalFlags.Debug); err != nil {
 				stderr("Stage1 GC of pod %q failed: %v", p.uuid, err)
+				return
 			}
 
 			if err := os.RemoveAll(gp); err != nil {
