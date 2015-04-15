@@ -154,3 +154,105 @@ still sends `Authorization: Bearer common-token`, but when downloading
 from `coreos.com` - `Authorization: Basic Zm9vOmJhcg==` (`foo:bar`
 encoded in base64). And for `tectonic.com` - `Authorization: Bearer
 tectonic-token`.
+
+### rktKind: `dockerAuth`
+
+This kind of configuration is used to set up necessary credentials
+when downloading data from docker indices. The configuration files
+should be placed inside either `auth.d` or `docker.d` subdirectories
+(that is - in `/usr/lib/rkt/{auth.d,docker.d}` or in
+`/etc/rkt/{auth.d,docker.d}`).
+
+#### rktVersion: `v1`
+
+##### Description and examples
+
+This version of `dockerAuth` configuration specifies two additional
+fields: `indices` and `credentials`.
+
+The `indices` field is an array of strings describing docker indices
+for which following credentials should be used. A short list of
+popular docker indices is below. This field has to be specified and
+cannot be empty.
+
+`credentials` field holds the necessary data to authenticate against
+docker index. This field has to be specified and cannot be empty.
+
+Currently docker indices only support basic HTTP authentication, so
+`credentials` field has two subfields - `user` and `password`. These
+fields have to be specified and cannot be empty.
+
+Some popular docker indices:
+* index.docker.io (this is is used when no docker index is specified
+  in URL, like in `docker://redis`)
+* quay.io
+* gcr.io
+
+Example of dockerAuth config:
+```
+{
+	"rktKind": "dockerAuth",
+	"rktVersion": "v1",
+	"indices": ["index.docker.io", "quay.io"],
+	"credentials": {
+		"user": "foo",
+		"password": "bar"
+	}
+}
+```
+
+##### Overriding semantics
+
+Overriding is done for each index. That means that the user can
+override credentials used for each index. Example of vendor
+configuration:
+
+In `/usr/lib/rkt/docker.d/docker.json`:
+```
+{
+	"rktKind": "dockerAuth",
+	"rktVersion": "v1",
+	"indices": ["index.docker.io", "gcr.io", "quay.io"],
+	"credentials": {
+		"user": "foo",
+		"password": "bar"
+	}
+}
+```
+
+If only this configuration file were available to `rkt` then when
+downloading images from either `index.docker.io`, `gcr.io` or
+`quay.io`, `rkt` would use user `foo` and password `bar`.
+
+But with additional configuration like follows situation
+changes. Example of custom configuration:
+
+In `/etc/rkt/auth.d/specific-quay.json`:
+```
+{
+	"rktKind": "dockerAuth",
+	"rktVersion": "v1",
+	"indices": ["quay.io"],
+	"credentials": {
+		"user": "baz",
+		"password": "quux"
+	}
+}
+```
+In `/etc/rkt/auth.d/specific-gcr.json`:
+```
+{
+	"rktKind": "dockerAuth",
+	"rktVersion": "v1",
+	"domains": ["gcr.io"],
+	"credentials": {
+		"user": "goo",
+		"password": "gle"
+	}
+}
+```
+
+The result is that when downloading images from `index.docker.io` `rkt`
+still sends user `foo` and password `bar`, but when downloading
+from `quay.io` - user `baz` and password `quux`. And for
+`gcr.io` - user `goo` and password `gle`.
