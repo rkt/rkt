@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -102,9 +101,8 @@ func runEnter(args []string) (exit int) {
 	}
 
 	stage1RootFS := ds.GetTreeStoreRootFS(stage1ID.String())
-	enterPath := filepath.Join(stage1RootFS, cmdEnterName)
 
-	if err = stage0.Enter(p.path(), imageID, enterPath, argv); err != nil {
+	if err = stage0.Enter(p.path(), imageID, stage1RootFS, argv); err != nil {
 		stderr("Enter failed: %v", err)
 		return 1
 	}
