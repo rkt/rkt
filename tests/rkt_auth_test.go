@@ -32,11 +32,11 @@ func TestAuthSanity(t *testing.T) {
 	removeDataDir(t)
 	server := runServer(t, taas.None)
 	defer server.Close()
-	successfulRunRkt(t, server.URL, "none1")
+	successfulRunRkt(t, server.URL, "sanity")
 }
 
 const (
-	authSuccessfulDownload = "BANG!"
+	authSuccessfulDownload = "Authentication succeeded."
 	authFailedDownload = "error downloading ACI: bad HTTP status code: 401"
 )
 
@@ -44,7 +44,7 @@ type genericAuthTest struct {
 	name          string
 	useServerConf bool
 	confDir       string
-	line          string
+	expectedLine  string
 }
 
 func TestAuthBasic(t *testing.T) {
@@ -76,7 +76,7 @@ func testAuthGeneric(t *testing.T, auth taas.Type, tests []genericAuthTest) {
 		if tt.useServerConf {
 			writeConfig(t, tt.confDir, "test.json", server.Conf)
 		}
-		expectedRunRkt(t, server.URL, tt.name, tt.line)
+		expectedRunRkt(t, server.URL, tt.name, tt.expectedLine)
 	}
 }
 
@@ -93,8 +93,8 @@ func TestAuthOverride(t *testing.T) {
 		resultBeforeOverride string
 		resultAfterOverride  string
 	}{
-		{server.Conf, getInvalidOAuthConfig(server.Conf), "oauth-vvic", authSuccessfulDownload, authFailedDownload},
-		{getInvalidOAuthConfig(server.Conf), server.Conf, "oauth-ivvc", authFailedDownload, authSuccessfulDownload},
+		{server.Conf, getInvalidOAuthConfig(server.Conf), "valid-vendor-invalid-custom", authSuccessfulDownload, authFailedDownload},
+		{getInvalidOAuthConfig(server.Conf), server.Conf, "invalid-vendor-valid-custom", authFailedDownload, authSuccessfulDownload},
 	}
 	for _, tt := range tests {
 		removeAllConfig(t)
@@ -145,12 +145,6 @@ func runServer(t *testing.T, auth taas.Type) *taas.Server {
 func serverHandler(t *testing.T, server *taas.Server) {
 	for {
 		select {
-		case _, ok := <-server.Stop:
-			if ok {
-				t.Log("Closing server")
-				server.Close()
-			}
-			return
 		case msg, ok := <-server.Msg:
 			if ok {
 				t.Logf("server: %v", msg)
@@ -178,6 +172,11 @@ func expectedRunRkt(t *testing.T, host, dir, line string) {
 // TODO (krnowak): Use --dir option when we also add
 // --vendor-config-dir and --custom-config-dir options. Then we can
 // remove destructive tests checks.
+
+// runRkt tries to fetch and run a prog.aci from host within given
+// directory on host. Note that directory can be anything - it's
+// useful for ensuring that image name is unique and for descriptive
+// purposes.
 func runRkt(t *testing.T, host, dir string) *gexpect.ExpectSubprocess {
 	cmd := fmt.Sprintf(`../bin/rkt --debug --insecure-skip-verify run %s/%s/prog.aci`, host, dir)
 	t.Logf("Running rkt: %s", cmd)
