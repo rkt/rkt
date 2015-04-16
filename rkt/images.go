@@ -17,6 +17,7 @@
 package main
 
 import (
+	"container/list"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -50,7 +51,8 @@ type imageActionData struct {
 
 type finder struct {
 	imageActionData
-	local bool
+	local    bool
+	withDeps bool
 }
 
 // findImages uses findImage to attain a list of image hashes using discovery if necessary
@@ -87,6 +89,7 @@ func (f *finder) findImage(img string, asc string, discover bool) (*types.Hash, 
 	ft := &fetcher{
 		imageActionData: f.imageActionData,
 		local:           f.local,
+		withDeps:        f.withDeps,
 	}
 	key, err := ft.fetchImage(img, asc, discover)
 	if err != nil {
@@ -103,14 +106,84 @@ func (f *finder) findImage(img string, asc string, discover bool) (*types.Hash, 
 
 type fetcher struct {
 	imageActionData
-	local bool
+	local    bool
+	withDeps bool
 }
 
 // fetchImage will take an image as either a URL or a name string and import it
-// into the store if found.  If discover is true meta-discovery is enabled.
-// If asc is not "", it must exist as a local file and will be used as the
-// signature file for verification, unless verification is disabled.
+// into the store if found. If discover is true meta-discovery is enabled. If
+// asc is not "", it must exist as a local file and will be used
+// as the signature file for verification, unless verification is disabled.
+// If f.withDeps is true also image dependencies are fetched.
 func (f *fetcher) fetchImage(img string, asc string, discover bool) (string, error) {
+	if f.withDeps && !discover {
+		return "", fmt.Errorf("cannot fetch image's dependencies with discovery disabled")
+	}
+	hash, err := f.fetchSingleImage(img, asc, discover)
+	if err != nil {
+		return "", err
+	}
+	if f.withDeps {
+		err = f.fetchImageDeps(hash)
+		if err != nil {
+			return "", err
+		}
+	}
+	return hash, nil
+}
+
+func (f *fetcher) getImageDeps(hash string) (types.Dependencies, error) {
+	key, err := f.s.ResolveKey(hash)
+	if err != nil {
+		return nil, err
+	}
+	im, err := f.s.GetImageManifest(key)
+	if err != nil {
+		return nil, err
+	}
+	return im.Dependencies, nil
+}
+
+func (f *fetcher) addImageDeps(hash string, imgsl *list.List, seen map[string]struct{}) error {
+	dependencies, err := f.getImageDeps(hash)
+	if err != nil {
+		return err
+	}
+	for _, d := range dependencies {
+		app, err := discovery.NewApp(d.App.String(), d.Labels.ToMap())
+		if err != nil {
+			return err
+		}
+		imgsl.PushBack(app.String())
+		if _, ok := seen[app.String()]; ok {
+			return fmt.Errorf("dependency %s specified multiple times in the dependency tree for imageID: %s", app.String(), hash)
+		}
+		seen[app.String()] = struct{}{}
+	}
+	return nil
+}
+
+// fetchImageDeps will recursively fetch all the image dependencies
+func (f *fetcher) fetchImageDeps(hash string) error {
+	imgsl := list.New()
+	seen := map[string]struct{}{}
+	f.addImageDeps(hash, imgsl, seen)
+	for el := imgsl.Front(); el != nil; el = el.Next() {
+		img := el.Value.(string)
+		hash, err := f.fetchSingleImage(img, "", true)
+		if err != nil {
+			return err
+		}
+		f.addImageDeps(hash, imgsl, seen)
+	}
+	return nil
+}
+
+// fetchSingleImage will take an image as either a URL or a name string and
+// import it into the store if found.  If discover is true meta-discovery is
+// enabled.  If asc is not "", it must exist as a local file and will be used
+// as the signature file for verification, unless verification is disabled.
+func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (string, error) {
 	var (
 		ascFile *os.File
 		err     error

@@ -79,6 +79,7 @@ func runFetch(args []string) (exit int) {
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
 		},
+		withDeps: true,
 	}
 
 	err = rktApps.Walk(func(app *apps.App) error {

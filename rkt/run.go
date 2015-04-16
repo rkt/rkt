@@ -137,7 +137,8 @@ func runRun(args []string) (exit int) {
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
 		},
-		local: flagLocal,
+		local:    flagLocal,
+		withDeps: false,
 	}
 	s1img, err := fn.findImage(flagStage1Image, "", false)
 	if err != nil {
@@ -146,6 +147,7 @@ func runRun(args []string) (exit int) {
 	}
 
 	fn.ks = getKeystore()
+	fn.withDeps = true
 	if err := fn.findImages(&rktApps); err != nil {
 		stderr("%v", err)
 		return 1
