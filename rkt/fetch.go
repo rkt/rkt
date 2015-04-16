@@ -22,7 +22,6 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common/apps"
-	"github.com/coreos/rkt/rkt/config"
 	"github.com/coreos/rkt/store"
 )
 
@@ -66,7 +65,7 @@ func runFetch(args []string) (exit int) {
 		return 1
 	}
 	ks := getKeystore()
-	config, err := config.GetConfig()
+	config, err := getConfig()
 	if err != nil {
 		stderr("fetch: cannot get configuration: %v", err)
 		return 1
