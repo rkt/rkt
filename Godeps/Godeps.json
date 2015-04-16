@@ -108,7 +108,7 @@
 		},
 		{
 			"ImportPath": "github.com/endocode/test-aci-auth-server/lib",
-			"Rev": "30edb284bc3141e01b4dd38855aaa181cbd0b8f5"
+			"Rev": "db0b71f8d494b39de4857aef9326a5a4f3224d5f"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",

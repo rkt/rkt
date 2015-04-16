@@ -43,17 +43,10 @@ const (
 	testProgSrcStr = `
 package main
 
-import (
-	"fmt"
-	"time"
-)
+import "fmt"
 
 func main() {
-	for i := 3; i > 0; i -= 1 {
-		fmt.Println(i)
-		time.Sleep(time.Second)
-	}
-	fmt.Println("BANG!")
+	fmt.Println("Authentication succeeded.")
 }
 `
 )
