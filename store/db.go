@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	dbfilename = "ql.db"
+	DbFilename = "ql.db"
 )
 
 type DB struct {
@@ -53,7 +53,7 @@ func (db *DB) Open() error {
 	}
 	db.lock = dl
 
-	sqldb, err := sql.Open("ql", filepath.Join(db.dbdir, dbfilename))
+	sqldb, err := sql.Open("ql", filepath.Join(db.dbdir, DbFilename))
 	if err != nil {
 		dl.Close()
 		return err

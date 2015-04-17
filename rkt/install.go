@@ -16,6 +16,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha1"
 	"flag"
 	"fmt"
 	"io"
@@ -23,6 +24,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/coreos/rkt/store"
 )
 
 const (
@@ -43,10 +46,18 @@ var (
 
 	// dirs relative to globalFlags.Dir
 	dirs = map[string]os.FileMode{
-		".":    os.FileMode(0755),
-		"cas":  os.FileMode(0775),
-		"tmp":  os.FileMode(0775),
-		"pods": os.FileMode(0700),
+		".":                        os.FileMode(0755),
+		"tmp":                      os.FileMode(0775),
+		"pods":                     os.FileMode(0700),
+		"cas":                      os.FileMode(0775),
+		"cas/db":                   os.FileMode(0775),
+		"cas/imagelocks":           os.FileMode(0775),
+		"cas/blob":                 os.FileMode(0775),
+		"cas/blob/sha512":          os.FileMode(0775),
+		"cas/treestorelocks":       os.FileMode(0775),
+		"cas/tree":                 os.FileMode(0775),
+		"cas/imageManifest":        os.FileMode(0775),
+		"cas/imageManifest/sha512": os.FileMode(0775),
 	}
 )
 
@@ -137,6 +148,18 @@ func lookupGid(groupName string) (gid int, err error) {
 	return group.Gid, nil
 }
 
+func createFileWithPermissions(path string, uid int, gid int, perm os.FileMode) error {
+	_, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0666)
+	if err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+		// file exists
+	}
+
+	return setPermissions(path, uid, gid, perm)
+}
+
 func setPermissions(path string, uid int, gid int, perm os.FileMode) error {
 	if err := os.Chown(path, uid, gid); err != nil {
 		return fmt.Errorf("error setting %q directory group: %v", path, err)
@@ -207,6 +230,25 @@ func setCasDbFilesPermissions(casDbPath string, gid int, perm os.FileMode) error
 	return nil
 }
 
+func createDbFiles(casDbPath string, gid int, perm os.FileMode) error {
+	dbPath := filepath.Join(casDbPath, store.DbFilename)
+	if err := createFileWithPermissions(dbPath, 0, gid, perm); err != nil {
+		return fmt.Errorf("error creating %s: %v", dbPath, err)
+	}
+
+	// ql database uses a Write-Ahead Logging (WAL) file whose name is
+	// generated from the sha1 hash of the database name
+	h := sha1.New()
+	io.WriteString(h, store.DbFilename)
+	walFilename := fmt.Sprintf(".%x", h.Sum(nil))
+	walFilePath := filepath.Join(casDbPath, walFilename)
+	if err := createFileWithPermissions(walFilePath, 0, gid, perm); err != nil {
+		return fmt.Errorf("error creating %s: %v", walFilename, err)
+	}
+
+	return nil
+}
+
 func runInstall(args []string) (exit int) {
 	gid, err := lookupGid(rktGroup)
 	if err != nil {
@@ -232,6 +274,10 @@ func runInstall(args []string) (exit int) {
 		return 1
 	}
 
+	if err := createDbFiles(casDbPath, gid, casDbPerm); err != nil {
+		stderr("install: error creating db files: %v", err)
+		return 1
+	}
 	fmt.Println("rkt directory structure successfully created.")
 
 	return 0
