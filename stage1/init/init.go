@@ -123,7 +123,16 @@ func getArgsEnv(p *Pod, debug bool) ([]string, []string, error) {
 	case "src":
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
-
+		out, err := os.Getwd()
+		if err != nil {
+			return nil, nil, err
+		}
+		lfd, err := common.GetRktLockFD()
+		if err != nil {
+			return nil, nil, err
+		}
+		args = append(args, fmt.Sprintf("--pid-file=%v", filepath.Join(out, "pid")))
+		args = append(args, fmt.Sprintf("--keep-fd=%v", lfd))
 	default:
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
 	}
