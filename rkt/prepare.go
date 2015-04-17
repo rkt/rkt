@@ -146,6 +146,11 @@ func runPrepare(args []string) (exit int) {
 		return 1
 	}
 
+	if err := p.sync(); err != nil {
+		stderr("prepare: error syncing pod data: %v", err)
+		return 1
+	}
+
 	if err := p.xToPrepared(); err != nil {
 		stderr("prepare: error transitioning to prepared: %v", err)
 		return 1
