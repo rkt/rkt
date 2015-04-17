@@ -23,19 +23,18 @@ import (
 	"path/filepath"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-
-	"github.com/coreos/rkt/common"
 )
 
 // GC enters the pod by fork/exec()ing the stage1's /gc similar to /init.
 // /gc can expect to have its CWD set to the pod root.
-func GC(pdir string, uuid *types.UUID, debug bool) error {
+// stage1Path is the path of the stage1 rootfs
+func GC(pdir string, uuid *types.UUID, stage1Path string, debug bool) error {
 	ep, err := getStage1Entrypoint(pdir, gcEntrypoint)
 	if err != nil {
 		return fmt.Errorf("error determining gc entrypoint: %v", err)
 	}
 
-	args := []string{filepath.Join(common.Stage1RootfsPath(pdir), ep)}
+	args := []string{filepath.Join(stage1Path, ep)}
 	if debug {
 		args = append(args, "--debug")
 	}

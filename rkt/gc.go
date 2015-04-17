@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/coreos/rkt/stage0"
+	"github.com/coreos/rkt/store"
 )
 
 const (
@@ -112,8 +113,20 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 			}
 			stdout("Garbage collecting pod %q", p.uuid)
 
+			ds, err := store.NewStore(globalFlags.Dir)
+			if err != nil {
+				stderr("Cannot open store: %v", err)
+				return
+			}
+			stage1ID, err := p.getStage1Hash()
+			if err != nil {
+				stderr("Error getting stage1 hash")
+				return
+			}
+			stage1RootFS := ds.GetTreeStoreRootFS(stage1ID.String())
+
 			// execute stage1's GC
-			if err := stage0.GC(p.path(), p.uuid, globalFlags.Debug); err != nil {
+			if err := stage0.GC(p.path(), p.uuid, stage1RootFS, globalFlags.Debug); err != nil {
 				stderr("Stage1 GC of pod %q failed: %v", p.uuid, err)
 				return
 			}
