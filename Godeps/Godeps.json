@@ -140,6 +140,10 @@
 			"Rev": "370c3171201099fa6b466db45c8a032cbce33d8d"
 		},
 		{
+			"ImportPath": "github.com/syndtr/gocapability/capability",
+			"Rev": "8e4cdcb3c22b40d5e330ade0b68cb2e2a3cf6f98"
+		},
+		{
 			"ImportPath": "github.com/vishvananda/netlink",
 			"Rev": "ae3e7dba57271b4e976c4f91637861ee477135e2"
 		},
