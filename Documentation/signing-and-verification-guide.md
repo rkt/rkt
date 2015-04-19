@@ -162,7 +162,7 @@ https://example.com/pubkeys.gpg
 
 ### rkt Integration
 
-Lets walk through the steps rkt takes when fetching images using Meta Discovery.
+Let's walk through the steps rkt takes when fetching images using Meta Discovery.
 The following rkt command:
 
 ```
@@ -194,6 +194,8 @@ Once the ACI image has been downloaded rkt will extract the image's name from th
 ### Establishing Trust
 
 By default rkt does not trust any signing keys. Trust is established by storing public keys in the rkt keystore.
+This can be done using `rkt trust` or manually, using the procedures described in the next section.
+
 The following directories make up the default rkt keystore layout:
 
 ```
@@ -220,13 +222,37 @@ you can disable it by writing the following empty file:
 
 ### Trusting the example.com/hello key
 
-#### Download the public key
+As an example, let's look at how we can trust a key used to sign images of the prefix `example.com/hello`
+
+#### Using rkt trust
+
+The easiest way to trust a key is to use the `rkt trust` subcommand. In this case, we directly pass it the URI containing the public key we wish to trust:
+
+```
+$ rkt trust --prefix example.com/hello https://example.com/pubkeys.gpg
+Prefix: "example.com/hello"
+Key: "https://example.com/aci-pubkeys.gpg"
+GPG key fingerprint is: B346 E31D E7E3 C6F9 D1D4  603F 4DFB 61BF 26EF 7A14
+	Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
+	Are you sure you want to trust this key (yes/no)? yes
+	Trusting "https://example.com/aci-pubkeys.gpg" for prefix "example.com/hello".
+	Added key for prefix "example.com/hello" at "/etc/rkt/trustedkeys/prefix.d/example.com/hello/b346e31de7e3c6f9d1d4603f4dfb61bf26ef7a14"
+```
+
+Now the public key with fingerprint `b346e31de7e3c6f9d1d4603f4dfb61bf26ef7a14` will be trusted for all images with a name prefix of `example.com/hello`.
+
+#### Manually adding keys
+
+An alternative to using `rkt trust` is to manually trust keys by adding them to rkt's database.
+We do this by downloading the key, capturing its fingerprint, and storing it in the database using the fingerprint as filename
+
+##### Download the public key
 
 ```
 $ curl -O https://example.com/pubkeys.gpg
 ```
 
-#### Capture the public key fingerprint
+###### Capture the public key fingerprint
 
 ```
 $ gpg --no-default-keyring --fingerprint --keyring ./pubkeys.gpg kelsey.hightower@coreos.com
@@ -249,7 +275,7 @@ $ echo "B346 E31D E7E3 C6F9 D1D4  603F 4DFB 61BF 26EF 7A14" | \
 b346e31de7e3c6f9d1d4603f4dfb61bf26ef7a14
 ```
 
-#### Trust the key for the example.com/hello prefix
+##### Trust the key for the example.com/hello prefix
 
 ```
 mkdir -p /etc/rkt/trustedkeys/prefix.d/example.com/hello
@@ -257,7 +283,10 @@ mv pubkeys.gpg  /etc/rkt/trustedkeys/prefix.d/example.com/hello/b346e31de7e3c6f9
 ```
 
 Now the public key with fingerprint `b346e31de7e3c6f9d1d4603f4dfb61bf26ef7a14` will be trusted for all images with a name prefix of `example.com/hello`.
-If you would like to trust a public key for any image store the public key in one of the following directories:
+
+#### Trusting a key globally
+
+If you would like to trust a public key for _any_ image, store the public key in one of the following "root" directories:
 
 ```
 /etc/rkt/trustedkeys/root.d
@@ -265,15 +294,6 @@ If you would like to trust a public key for any image store the public key in on
 ```
 
 ### Example Usage
-
-```
-$ sudo rkt -h
-Usage of rkt:
-  -debug=false: Print out more debug information to stderr
-  -dir="/var/lib/rkt": rkt data directory
-  -help=false: Print usage information and exit
-  -insecure-skip-verify=false: skip image verification
-```
 
 #### Download, verify and run an ACI
 
