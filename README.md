@@ -17,7 +17,7 @@ For more on the background and motivation behind rkt, read the original [launch 
 
 ## App Container
 
-rkt is an implementation of the [App Container spec](Documentation/app-container.md). rkt's native image format (ACI) and execution environment (pods) are defined in the specification.
+rkt is an implementation of the [App Container spec](Documentation/app-container.md). rkt's native image format ([ACI](Documentation/app-container.md#ACI)) and runtime/execution environment ([pods](Documentation/app-container.md#pods)) are defined in the specification.
 
 ## Project status
 
