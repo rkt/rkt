@@ -1,6 +1,14 @@
 # Hacking Guide
 
+## Overview
+
+This guide contains instructions for those looking to hack on rkt.
+For more information on the rkt internals, see the [`devel`](devel/) documentation.
+
 ## Building rkt
+
+rkt should be able to be built on any modern Linux system.
+For the most part the codebase is self-contained (e.g. all dependencies are vendored), but assembly of the stage1 requires some other tools to be installed on the system.
 
 ### Requirements
 
@@ -18,12 +26,14 @@ Once the requirements have been met you can build rkt by running the following c
 
 ```
 git clone https://github.com/coreos/rkt.git
-cd rkt; ./build
+cd rkt
+./build
 ```
 
 ### With Docker
 
-Alternatively, you can build rkt in a Docker container with the following command. Replace $SRC with the absolute path to your rkt source code:
+Alternatively, you can build rkt in a Docker container with the following command.
+Replace $SRC with the absolute path to your rkt source code:
 
 ```
 $ sudo docker run -v $SRC:/opt/rkt -i -t golang:1.3 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath && cd /opt/rkt && go get github.com/appc/spec/... && ./build"
