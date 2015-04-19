@@ -4,13 +4,16 @@
 [![Build Status (Travis)](https://travis-ci.org/coreos/rkt.png?branch=master)](https://travis-ci.org/coreos/rkt)
 [![Build Status (SemaphoreCI)](https://semaphoreci.com/api/v1/projects/28468e19-4fd0-483e-9c29-6c8368661333/395211/badge.svg)](https://semaphoreci.com/coreos/rkt)
 
-_Release early, release often: rkt is currently a prototype and we are seeking your feedback via issues and pull requests_
-
-rkt (pronounced _"rock-it"_) is a CLI for running app containers, and an implementation of the [App Container Spec](Documentation/app-container.md). The goal of rkt is to be composable, secure, and fast.
-
-[Read more about rkt in the launch announcement](https://coreos.com/blog/rocket).
-
 ![rkt Logo](logos/rkt-horizontal-color.png)
+
+rkt (pronounced _"rock-it"_) is a CLI for running app containers, and an implementation of the [App Container Spec](Documentation/app-container.md). rkt is designed to be composable, secure, and fast.
+
+Some of rkt's key features and goals include:
+- First-class integration with init systems (systemd, upstart) and cluster orchestration tools (fleet, Kubernetes)
+- Compatibility with other container software (e.g. rkt can run [Docker images](Documentation/running-docker-images.md))
+- Modular and extensible architecture ([network configuration plugins](Documentation/networking.md), swappable execution engines based on systemd or QEMU/KVM)
+
+For more on the background and motivation behind rkt, read the original [launch announcement](https://coreos.com/blog/rocket).
 
 ## Trying out rkt
 

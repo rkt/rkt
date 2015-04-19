@@ -1,6 +1,6 @@
 ## App Container basics
 
-[App Container][appc-repo] is a [specification][appc-spec] of an image format, runtime, and discovery protocol for running applications in containers.
+[App Container][appc-repo] (appc) is a [specification][appc-spec] of an image format, runtime, and discovery protocol for running applications in containers.
 
 rkt implements the two runtime components of the specification: the [Application Container Executor (ACE)][appc-ace] and the [Metadata Service][appc-meta].
 
