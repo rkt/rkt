@@ -28,7 +28,6 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
-	"github.com/coreos/rkt/rkt/config"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 )
@@ -125,7 +124,7 @@ func runRun(args []string) (exit int) {
 		return 1
 	}
 
-	config, err := config.GetConfig()
+	config, err := getConfig()
 	if err != nil {
 		stderr("run: cannot get configuration: %v", err)
 		return 1
