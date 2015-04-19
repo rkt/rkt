@@ -108,15 +108,10 @@ $ mkdir hello-layout/rootfs
 $ mkdir hello-layout/rootfs/bin
 ```
 
-Copy the image manifest
+Copy the image manifest and `hello` binary into the layout:
 
 ```
 $ cp manifest.json hello-layout/manifest
-```
-
-Copy the hello binary
-
-```
 $ cp hello hello-layout/rootfs/bin/
 ```
 
