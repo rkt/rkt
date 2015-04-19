@@ -13,11 +13,11 @@ func TestWriteACIInfo(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := NewStore(dir)
+	s, err := NewStore(dir)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if err = ds.db.Do(func(tx *sql.Tx) error {
+	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo := &ACIInfo{
 			BlobKey: "key01",
 			AppName: "name01",
@@ -36,7 +36,7 @@ func TestWriteACIInfo(t *testing.T) {
 
 	aciinfos := []*ACIInfo{}
 	ok := false
-	if err = ds.db.Do(func(tx *sql.Tx) error {
+	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfos, ok, err = GetACIInfosWithAppName(tx, "name01")
 		return err
 	}); err != nil {
@@ -51,7 +51,7 @@ func TestWriteACIInfo(t *testing.T) {
 	}
 
 	// Add another ACIInfo for the same app name
-	if err = ds.db.Do(func(tx *sql.Tx) error {
+	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo := &ACIInfo{
 			BlobKey: "key02",
 			AppName: "name01",
@@ -63,7 +63,7 @@ func TestWriteACIInfo(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if err = ds.db.Do(func(tx *sql.Tx) error {
+	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfos, ok, err = GetACIInfosWithAppName(tx, "name01")
 		return err
 	}); err != nil {

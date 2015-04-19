@@ -9,7 +9,7 @@ import (
 	"github.com/coreos/rkt/pkg/aci"
 )
 
-func treeStoreDSWriteACI(dir string, ds *Store) (string, error) {
+func treeStoreWriteACI(dir string, s *Store) (string, error) {
 	imj := `
 		{
 		    "acKind": "ImageManifest",
@@ -67,7 +67,7 @@ func treeStoreDSWriteACI(dir string, ds *Store) (string, error) {
 	}
 
 	// Import the new ACI
-	key, err := ds.WriteACI(aci, false)
+	key, err := s.WriteACI(aci, false)
 	if err != nil {
 		return "", err
 	}
@@ -80,24 +80,24 @@ func TestTreeStoreWrite(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := NewStore(dir)
+	s, err := NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	key, err := treeStoreDSWriteACI(dir, ds)
+	key, err := treeStoreWriteACI(dir, s)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Ask the store to render the treestore
-	err = ds.treestore.Write(key, ds)
+	err = s.treestore.Write(key, s)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Verify image Hash. Should be the same.
-	err = ds.treestore.Check(key)
+	err = s.treestore.Check(key)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -109,29 +109,29 @@ func TestTreeStoreRemove(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := NewStore(dir)
+	s, err := NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	key, err := treeStoreDSWriteACI(dir, ds)
+	key, err := treeStoreWriteACI(dir, s)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Test non existent dir
-	err = ds.treestore.Remove(key)
+	err = s.treestore.Remove(key)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Test rendered tree
-	err = ds.treestore.Write(key, ds)
+	err = s.treestore.Write(key, s)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	err = ds.treestore.Remove(key)
+	err = s.treestore.Remove(key)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

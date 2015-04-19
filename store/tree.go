@@ -34,7 +34,7 @@ type TreeStore struct {
 // Write, to avoid having a rendered ACI with old stale files, requires that
 // the destination directory doesn't exist (usually Remove should be called
 // before Write)
-func (ts *TreeStore) Write(key string, ds *Store) error {
+func (ts *TreeStore) Write(key string, s *Store) error {
 	treepath := filepath.Join(ts.path, key)
 	fi, _ := os.Stat(treepath)
 	if fi != nil {
@@ -44,7 +44,7 @@ func (ts *TreeStore) Write(key string, ds *Store) error {
 	if err != nil {
 		return fmt.Errorf("treestore: cannot convert key to imageID: %v", err)
 	}
-	err = aci.RenderACIWithImageID(*imageID, treepath, ds)
+	err = aci.RenderACIWithImageID(*imageID, treepath, s)
 	if err != nil {
 		return fmt.Errorf("treestore: cannot render aci: %v", err)
 	}
