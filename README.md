@@ -6,7 +6,7 @@
 
 ![rkt Logo](logos/rkt-horizontal-color.png)
 
-rkt (pronounced _"rock-it"_) is a CLI for running app containers, and an implementation of the [App Container Spec](Documentation/app-container.md). rkt is designed to be composable, secure, and fast.
+rkt (pronounced _"rock-it"_) is a CLI for running app containers on Linux. rkt is designed to be composable, secure, and fast. 
 
 Some of rkt's key features and goals include:
 - First-class integration with init systems (systemd, upstart) and cluster orchestration tools (fleet, Kubernetes)
@@ -14,6 +14,14 @@ Some of rkt's key features and goals include:
 - Modular and extensible architecture ([network configuration plugins](Documentation/networking.md), swappable execution engines based on systemd or QEMU/KVM)
 
 For more on the background and motivation behind rkt, read the original [launch announcement](https://coreos.com/blog/rocket).
+
+## App Container
+
+rkt is an implementation of the [App Container spec](Documentation/app-container.md). rkt's native image format (ACI) and execution environment (pods) are defined in the specification.
+
+## Project status
+
+rkt is at an early stage and under active development. We do not recommend its use in production, but we encourage you to try out rkt and provide feedback via issues and pull requests.
 
 ## Trying out rkt
 
