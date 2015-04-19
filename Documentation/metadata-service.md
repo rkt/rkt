@@ -14,10 +14,11 @@ For systemd based distributions, it also supports the [systemd socket activation
 If using socket activation, keep the socket named /run/rkt/metadata-svc.sock as `rkt run` uses this name during registration.
 Please note that when started under socket activation, the metadata service will not remove the socket on exit.
 Use `RemoveOnStop` directive in .socket file to cleanup.
+`rkt-metadata.service` and `rkt-metadata.socket` are available in the `dist/init/systemd` directory of rkt project.
 
 In addition to listening on a Unix socket, the metadata service will also listen on a TCP port.
 When contacting the metadata service, the apps utilize this port.
-In order to avoid exposing host IP to the pods, the metadata service installs an iptables rule to redirect traffic destined for 169.254.169.255:80 to itself.
+The IP and port of the metadata service are passed by rkt to pods via AC_METADATA_URL environment variable.
 
 ## Using the metadata service
 See [App Container specification](https://github.com/appc/spec/blob/master/SPEC.md#app-container-metadata-service) for more information about the metadata service including a list of supported endpoints and their usage.
