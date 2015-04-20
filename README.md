@@ -23,11 +23,15 @@ rkt is an implementation of the [App Container spec](Documentation/app-container
 
 rkt is at an early stage and under active development. We do not recommend its use in production, but we encourage you to try out rkt and provide feedback via issues and pull requests.
 
+Check out the [roadmap](ROADMAP.md) for more details on the future of rkt.
+
 ## Trying out rkt
 
-The CLI for rkt is called `rkt`, and is currently supported on amd64 Linux. A modern kernel is required but there should be no other system dependencies. We recommend booting up a fresh virtual machine to test out rkt.
+### Using rkt on Linux
 
-To install the `rkt` binary, grab the latest release directly from GitHub:
+`rkt` consists of a single self-contained CLI, and is currently supported on amd64 Linux. A modern kernel is required but there should be no other system dependencies. We recommend booting up a fresh virtual machine to test out rkt.
+
+To download the `rkt` binary, simply grab the latest release directly from GitHub:
 
 ```
 wget https://github.com/coreos/rkt/releases/download/v0.5.3/rkt-v0.5.3.tar.gz
@@ -36,7 +40,15 @@ cd rkt-v0.5.3
 ./rkt help
 ```
 
-For Mac (and other Vagrant) users we have set up a `Vagrantfile` : Clone this repo and make sure you have [Vagrant](https://www.vagrantup.com/) installed. `vagrant up` starts up a Linux box and installs via some scripts `rkt` and `actool`. With a subsequent `vagrant ssh` you are ready to go.
+### Trying out rkt using Vagrant
+
+For Mac (and other Vagrant) users we have set up a `Vagrantfile`: clone this repository and make sure you have [Vagrant](https://www.vagrantup.com/) installed. `vagrant up` starts up a Linux box and installs via some scripts `rkt` and `actool`. With a subsequent `vagrant ssh` you are ready to go:
+```
+git clone https://github.com/coreos/rkt
+cd rkt
+vagrant up
+vagrant ssh
+```
 
 Keep in mind while running through the examples that right now `rkt` needs to be run as root for most operations.
 
@@ -44,9 +56,9 @@ Keep in mind while running through the examples that right now `rkt` needs to be
 
 ### Downloading an App Container Image (ACI)
 
-rkt uses content addressable storage (CAS) for storing an ACI on disk. In this example, the image is downloaded and added to the CAS.
+rkt uses content addressable storage (CAS) for storing an ACI on disk. In this example, the image is downloaded and added to the CAS. Downloading an image before running it is not strictly necessary (if it is not present, rkt will automatically retrieve it), but useful to illustrate how rkt works.
 
-Since rkt verifies signatures by default, you will need to first [trust](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md#establishing-trust) the [CoreOS public key](https://coreos.com/dist/pubkeys/aci-pubkeys.gpg) used to sign the image:
+Since rkt verifies signatures by default, you will need to first [trust](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md#establishing-trust) the [CoreOS public key](https://coreos.com/dist/pubkeys/aci-pubkeys.gpg) used to sign the image, using `rkt trust`:
 
 ```
 $ sudo rkt trust --prefix coreos.com/etcd
@@ -61,7 +73,7 @@ Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.
 
 A detailed, step-by-step guide for the signing procedure [is here](Documentation/getting-started-ubuntu-trusty.md#trust-the-coreos-signing-key).
 
-Now that we've trusted the CoreOS public key, we can fetch the ACI:
+Now that we've trusted the CoreOS public key, we can fetch the ACI using `rkt fetch`:
 
 ```
 $ sudo rkt fetch coreos.com/etcd:v2.0.4
@@ -74,7 +86,7 @@ rkt: signature verified:
 sha512-1eba37d9b344b33d272181e176da111e
 ```
 
-These files are now written to disk:
+For the curious, we can see the files written to disk in rkt's CAS:
 
 ```
 $ find /var/lib/rkt/cas/blob/
@@ -96,7 +108,14 @@ $ sha512sum etcd-v2.0.4-linux-amd64.tar
 
 ### Launching an ACI
 
-After it has been retrieved and stored locally, an ACI can be run by pointing `rkt` at either the ACI's hash or URL.
+After it has been retrieved and stored locally, an ACI can be run by pointing `rkt run` at either the original image reference (in this case, "coreos.com/etcd:v2.0.4"), the full URL of the ACI, or the ACI hash. Hence, the following three examples are equivalent:
+
+```
+# Example of running via ACI name:version
+$ sudo rkt run coreos.com/etcd:v2.0.4
+...
+Press ^] three times to kill container
+```
 
 ```
 # Example of running via ACI hash
@@ -126,4 +145,4 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details on submitting patches and the co
 
 - Mailing list: [rkt-dev](https://groups.google.com/forum/?hl=en#!forum/rkt-dev)
 - IRC: #[coreos](irc://irc.freenode.org:6667/#coreos) on freenode.org
-- Planning/Roadmap: [milestones](https://github.com/coreos/rkt/milestones)
+- Planning: [milestones](https://github.com/coreos/rkt/milestones)
