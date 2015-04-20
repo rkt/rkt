@@ -16,7 +16,7 @@ eval $(go env)
 # set default stage1 usr style and validate potential override
 RKT_STAGE1_USR_FROM="${RKT_STAGE1_USR_FROM:-coreos}"
 case "${RKT_STAGE1_USR_FROM}" in
-	coreos|src)
+	coreos|src|none)
 		;;
 	*)
 		echo "RKT_STAGE1_USR_FROM=${RKT_STAGE1_USR_FROM} unsupported"
@@ -70,10 +70,12 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	mkdir -p stage1/rootfs/gc/bin
 	ln -sf ${GOBIN}/gc stage1/rootfs/gc/bin
 
-	JOBS=1
-	which lscpu >&/dev/null && JOBS=$(lscpu --parse=CPU | grep -c ^[^#])
-	echo "Building rootfs (stage1) using ${JOBS} CPUs..."
-	make -C stage1/rootfs -j ${JOBS}
+	if [ "$RKT_STAGE1_USR_FROM" != "none" ] ; then
+		JOBS=1
+		which lscpu >&/dev/null && JOBS=$(lscpu --parse=CPU | grep -c ^[^#])
+		echo "Building rootfs (stage1) using ${JOBS} CPUs..."
+		make -C stage1/rootfs -j ${JOBS}
+	fi
 fi
 
 echo "Building functional tests..."
