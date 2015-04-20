@@ -45,7 +45,7 @@ type oauthV1 struct {
 type dockerAuthV1JsonParser struct{}
 
 type dockerAuthV1 struct {
-	Indices     []string `json:"indices"`
+	Registries  []string `json:"registries"`
 	Credentials basicV1  `json:"credentials"`
 }
 
@@ -147,8 +147,8 @@ func (p *dockerAuthV1JsonParser) parse(config *Config, raw []byte) error {
 	if err := json.Unmarshal(raw, &auth); err != nil {
 		return err
 	}
-	if len(auth.Indices) == 0 {
-		return fmt.Errorf("no indices specified")
+	if len(auth.Registries) == 0 {
+		return fmt.Errorf("no registries specified")
 	}
 	if err := validateBasicV1(&auth.Credentials); err != nil {
 		return err
@@ -157,11 +157,11 @@ func (p *dockerAuthV1JsonParser) parse(config *Config, raw []byte) error {
 		User:     auth.Credentials.User,
 		Password: auth.Credentials.Password,
 	}
-	for _, index := range auth.Indices {
-		if _, ok := config.DockerCredentialsPerIndex[index]; ok {
-			return fmt.Errorf("credentials for docker index %q are already specified", index)
+	for _, registry := range auth.Registries {
+		if _, ok := config.DockerCredentialsPerRegistry[registry]; ok {
+			return fmt.Errorf("credentials for docker registry %q are already specified", registry)
 		}
-		config.DockerCredentialsPerIndex[index] = basic
+		config.DockerCredentialsPerRegistry[registry] = basic
 	}
 	return nil
 }

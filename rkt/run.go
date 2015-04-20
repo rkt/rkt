@@ -134,7 +134,7 @@ func runRun(args []string) (exit int) {
 		imageActionData: imageActionData{
 			ds:                 ds,
 			headers:            config.AuthPerHost,
-			dockerAuth:         config.DockerCredentialsPerIndex,
+			dockerAuth:         config.DockerCredentialsPerRegistry,
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
 		},

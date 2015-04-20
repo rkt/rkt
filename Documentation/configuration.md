@@ -158,7 +158,7 @@ tectonic-token`.
 ### rktKind: `dockerAuth`
 
 This kind of configuration is used to set up necessary credentials
-when downloading data from docker indices. The configuration files
+when downloading data from docker registries. The configuration files
 should be placed inside `auth.d` subdirectory (that is - in
 `/usr/lib/rkt/auth.d` or in `/etc/rkt/auth.d`).
 
@@ -167,23 +167,23 @@ should be placed inside `auth.d` subdirectory (that is - in
 ##### Description and examples
 
 This version of `dockerAuth` configuration specifies two additional
-fields: `indices` and `credentials`.
+fields: `registries` and `credentials`.
 
-The `indices` field is an array of strings describing docker indices
-for which following credentials should be used. A short list of
-popular docker indices is below. This field has to be specified and
-cannot be empty.
+The `registries` field is an array of strings describing docker
+registries for which following credentials should be used. A short
+list of popular docker registries is below. This field has to be
+specified and cannot be empty.
 
 `credentials` field holds the necessary data to authenticate against
-docker index. This field has to be specified and cannot be empty.
+docker registry. This field has to be specified and cannot be empty.
 
-Currently docker indices only support basic HTTP authentication, so
+Currently docker registries only support basic HTTP authentication, so
 `credentials` field has two subfields - `user` and `password`. These
 fields have to be specified and cannot be empty.
 
-Some popular docker indices:
-* index.docker.io (this is is used when no docker index is specified
-  in URL, like in `docker://redis`)
+Some popular docker registries:
+* index.docker.io (this is is used when no docker registry is
+  specified in URL, like in `docker://redis`)
 * quay.io
 * gcr.io
 
@@ -192,7 +192,7 @@ Example of dockerAuth config:
 {
 	"rktKind": "dockerAuth",
 	"rktVersion": "v1",
-	"indices": ["index.docker.io", "quay.io"],
+	"registries": ["index.docker.io", "quay.io"],
 	"credentials": {
 		"user": "foo",
 		"password": "bar"
@@ -202,8 +202,8 @@ Example of dockerAuth config:
 
 ##### Overriding semantics
 
-Overriding is done for each index. That means that the user can
-override credentials used for each index. Example of vendor
+Overriding is done for each registry. That means that the user can
+override credentials used for each registry. Example of vendor
 configuration:
 
 In `/usr/lib/rkt/auth.d/docker.json`:
@@ -211,7 +211,7 @@ In `/usr/lib/rkt/auth.d/docker.json`:
 {
 	"rktKind": "dockerAuth",
 	"rktVersion": "v1",
-	"indices": ["index.docker.io", "gcr.io", "quay.io"],
+	"registries": ["index.docker.io", "gcr.io", "quay.io"],
 	"credentials": {
 		"user": "foo",
 		"password": "bar"
@@ -231,7 +231,7 @@ In `/etc/rkt/auth.d/specific-quay.json`:
 {
 	"rktKind": "dockerAuth",
 	"rktVersion": "v1",
-	"indices": ["quay.io"],
+	"registries": ["quay.io"],
 	"credentials": {
 		"user": "baz",
 		"password": "quux"

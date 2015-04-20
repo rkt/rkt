@@ -39,8 +39,8 @@ type BasicCredentials struct {
 // Config is a single place where configuration for rkt frontend needs
 // resides.
 type Config struct {
-	AuthPerHost               map[string]Headerer
-	DockerCredentialsPerIndex map[string]BasicCredentials
+	AuthPerHost                  map[string]Headerer
+	DockerCredentialsPerRegistry map[string]BasicCredentials
 }
 
 type configParser interface {
@@ -146,8 +146,8 @@ func GetConfigFromDir(dir string) (*Config, error) {
 
 func newConfig() *Config {
 	return &Config{
-		AuthPerHost:               make(map[string]Headerer),
-		DockerCredentialsPerIndex: make(map[string]BasicCredentials),
+		AuthPerHost:                  make(map[string]Headerer),
+		DockerCredentialsPerRegistry: make(map[string]BasicCredentials),
 	}
 }
 
@@ -279,7 +279,7 @@ func mergeConfigs(config *Config, subconfig *Config) {
 	for host, headerer := range subconfig.AuthPerHost {
 		config.AuthPerHost[host] = headerer
 	}
-	for index, creds := range subconfig.DockerCredentialsPerIndex {
-		config.DockerCredentialsPerIndex[index] = creds
+	for registry, creds := range subconfig.DockerCredentialsPerRegistry {
+		config.DockerCredentialsPerRegistry[registry] = creds
 	}
 }

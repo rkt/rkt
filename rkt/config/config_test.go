@@ -99,21 +99,21 @@ func TestDockerAuthConfigFormat(t *testing.T) {
 		{`{"rktKind": "foo"}`, nil, true},
 		{`{"rktKind": "dockerAuth", "rktVersion": "foo"}`, nil, true},
 		{`{"rktKind": "dockerAuth", "rktVersion": "v1"}`, nil, true},
-		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": "foo"}`, nil, true},
-		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": []}`, nil, true},
-		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"]}`, nil, true},
-		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"], "credentials": {}}`, nil, true},
-		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"], "credentials": {"user": ""}}`, nil, true},
-		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"], "credentials": {"user": "bar"}}`, nil, true},
-		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"], "credentials": {"user": "bar", "password": ""}}`, nil, true},
-		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "indices": ["coreos.com"], "credentials": {"user": "bar", "password": "baz"}}`, map[string]BasicCredentials{"coreos.com": BasicCredentials{User: "bar", Password: "baz"}}, false},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": "foo"}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": []}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"]}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"], "credentials": {}}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"], "credentials": {"user": ""}}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"], "credentials": {"user": "bar"}}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"], "credentials": {"user": "bar", "password": ""}}`, nil, true},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"], "credentials": {"user": "bar", "password": "baz"}}`, map[string]BasicCredentials{"coreos.com": BasicCredentials{User: "bar", Password: "baz"}}, false},
 	}
 	for _, tt := range tests {
 		cfg, err := getConfigFromContents(tt.contents, "dockerAuth")
 		if vErr := verifyFailure(tt.fail, tt.contents, err); vErr != nil {
 			t.Errorf("%v", vErr)
 		} else if !tt.fail {
-			result := cfg.DockerCredentialsPerIndex
+			result := cfg.DockerCredentialsPerRegistry
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Error("Got unexpected results\nResult:\n", result, "\n\nExpected:\n", tt.expected)
 			}
