@@ -113,7 +113,7 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 			}
 			stdout("Garbage collecting pod %q", p.uuid)
 
-			ds, err := store.NewStore(globalFlags.Dir)
+			s, err := store.NewStore(globalFlags.Dir)
 			if err != nil {
 				stderr("Cannot open store: %v", err)
 				return
@@ -123,7 +123,7 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 				stderr("Error getting stage1 hash")
 				return
 			}
-			stage1RootFS := ds.GetTreeStoreRootFS(stage1ID.String())
+			stage1RootFS := s.GetTreeStoreRootFS(stage1ID.String())
 
 			// execute stage1's GC
 			if err := stage0.GC(p.path(), p.uuid, stage1RootFS, globalFlags.Debug); err != nil {

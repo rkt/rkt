@@ -118,7 +118,7 @@ func runRun(args []string) (exit int) {
 		return 1
 	}
 
-	ds, err := store.NewStore(globalFlags.Dir)
+	s, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
 		stderr("run: cannot open store: %v", err)
 		return 1
@@ -131,7 +131,7 @@ func runRun(args []string) (exit int) {
 	}
 	fn := &finder{
 		imageActionData: imageActionData{
-			ds:                 ds,
+			s:                  s,
 			headers:            config.AuthPerHost,
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
@@ -157,7 +157,7 @@ func runRun(args []string) (exit int) {
 	}
 
 	cfg := stage0.CommonConfig{
-		Store:       ds,
+		Store:       s,
 		Stage1Image: *s1img,
 		UUID:        p.uuid,
 		Debug:       globalFlags.Debug,

@@ -40,7 +40,7 @@ import (
 )
 
 type imageActionData struct {
-	ds                 *store.Store
+	s                  *store.Store
 	ks                 *keystore.Keystore
 	headers            map[string]config.Headerer
 	insecureSkipVerify bool
@@ -70,7 +70,7 @@ func (f *finder) findImage(img string, asc string, discover bool) (*types.Hash, 
 	// check if it is a valid hash, if so let it pass through
 	h, err := types.NewHash(img)
 	if err == nil {
-		fullKey, err := f.ds.ResolveKey(img)
+		fullKey, err := f.s.ResolveKey(img)
 		if err != nil {
 			return nil, fmt.Errorf("could not resolve key: %v", err)
 		}
@@ -149,7 +149,7 @@ func (f *fetcher) fetchImage(img string, asc string, discover bool) (string, err
 			if err != nil {
 				return "", err
 			}
-			return f.ds.GetACI(app.Name, labels)
+			return f.s.GetACI(app.Name, labels)
 		}
 		if app := newDiscoveryApp(img); app != nil {
 			stdout("rkt: searching for app image %s", img)
@@ -207,7 +207,7 @@ func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File
 		return "", fmt.Errorf("signature verification for docker images is not supported (try --insecure-skip-verify)")
 	}
 	var key string
-	rem, ok, err := f.ds.GetRemote(aciURL)
+	rem, ok, err := f.s.GetRemote(aciURL)
 	if err == nil {
 		key = rem.BlobKey
 	} else {
@@ -231,7 +231,7 @@ func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File
 				stdout("  %s", v.Name)
 			}
 		}
-		key, err = f.ds.WriteACI(aciFile, latest)
+		key, err = f.s.WriteACI(aciFile, latest)
 		if err != nil {
 			return "", err
 		}
@@ -239,7 +239,7 @@ func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File
 		if scheme != "file" {
 			rem = store.NewRemote(aciURL, ascURL)
 			rem.BlobKey = key
-			err = f.ds.WriteRemote(rem)
+			err = f.s.WriteRemote(rem)
 			if err != nil {
 				return "", err
 			}
@@ -262,7 +262,7 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 	if u.Scheme == "docker" {
 		registryURL := strings.TrimPrefix(aciURL, "docker://")
 
-		tmpDir, err := f.ds.TmpDir()
+		tmpDir, err := f.s.TmpDir()
 		if err != nil {
 			return nil, nil, fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
 		}
@@ -292,7 +292,7 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 			}
 		} else {
 			stdout("Downloading signature from %v\n", ascURL)
-			ascFile, err = f.ds.TmpFile()
+			ascFile, err = f.s.TmpFile()
 			if err != nil {
 				return nil, nil, fmt.Errorf("error setting up temporary file: %v", err)
 			}
@@ -311,7 +311,7 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 			return nil, nil, fmt.Errorf("error opening ACI file: %v", err)
 		}
 	} else {
-		aciFile, err = f.ds.TmpFile()
+		aciFile, err = f.s.TmpFile()
 		if err != nil {
 			return nil, aciFile, fmt.Errorf("error setting up temporary file: %v", err)
 		}
