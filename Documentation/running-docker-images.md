@@ -11,7 +11,7 @@ Note that Docker images do not support signature verification, and hence it's ne
 As a simple example, let's run the latest `redis` container image from the default Docker registry:
 
 ```
-$ rkt --insecure-skip-verify fetch docker://redis
+$ rkt --insecure-skip-verify run docker://redis
 rkt: fetching image from docker://redis
 rkt: warning: signature verification has been disabled
 Downloading layer: 511136ea3c5a64f264b78b5433614aec563103b4d4702f3ba7d4d2698e22c158
