@@ -31,6 +31,8 @@ import (
 	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus/introspect"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking"
@@ -97,6 +99,40 @@ func init() {
 	runtime.LockOSThread()
 }
 
+// machinedRegister checks if nspawn should register the pod to machined
+func machinedRegister() bool {
+	// machined has a D-Bus interface following versioning guidelines, see:
+	// http://www.freedesktop.org/wiki/Software/systemd/machined/
+	// Therefore we can just check if the D-Bus method we need exists and we
+	// don't need to check the signature.
+	var found int
+
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		return false
+	}
+	node, err := introspect.Call(conn.Object("org.freedesktop.machine1", "/org/freedesktop/machine1"))
+	if err != nil {
+		return false
+	}
+	for _, iface := range node.Interfaces {
+		if iface.Name != "org.freedesktop.machine1.Manager" {
+			continue
+		}
+		// machined v215 supports methods "RegisterMachine" and "CreateMachine" called by nspawn v215.
+		// machined v216+ (since commit 5aa4bb) additionally supports methods "CreateMachineWithNetwork"
+		// and "RegisterMachineWithNetwork", called by nspawn v216+.
+		// TODO(alban): write checks for both versions in order to register on machined v215?
+		for _, method := range iface.Methods {
+			if method.Name == "CreateMachineWithNetwork" || method.Name == "RegisterMachineWithNetwork" {
+				found++
+			}
+		}
+		break
+	}
+	return found == 2
+}
+
 // getArgsEnv returns the nspawn args and env according to the usr used
 func getArgsEnv(p *Pod, debug bool) ([]string, []string, error) {
 	args := []string{}
@@ -112,10 +148,16 @@ func getArgsEnv(p *Pod, debug bool) ([]string, []string, error) {
 		// when running the coreos-derived stage1 with unpatched systemd-nspawn we need some ld-linux hackery
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), interpBin))
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
-		args = append(args, "--boot")              // Launch systemd in the pod
-		args = append(args, "--register", "false") // We cannot assume the host system is running systemd
-		// TODO(vc): we should leave registration enabled if systemd is running on the host,
-		// but it needs to be sufficiently new systemd or registration will fail.
+		args = append(args, "--boot") // Launch systemd in the pod
+
+		// Note: the coreos flavor uses systemd-nspawn v215 but machinedRegister()
+		// checks for the nspawn registration method used since v216. So we will
+		// not register when the host has systemd v215.
+		if machinedRegister() {
+			args = append(args, fmt.Sprintf("--register=true"))
+		} else {
+			args = append(args, fmt.Sprintf("--register=false"))
+		}
 
 		env = append(env, "LD_PRELOAD="+filepath.Join(common.Stage1RootfsPath(p.Root), "fakesdboot.so"))
 		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib"))
@@ -133,6 +175,11 @@ func getArgsEnv(p *Pod, debug bool) ([]string, []string, error) {
 		}
 		args = append(args, fmt.Sprintf("--pid-file=%v", filepath.Join(out, "pid")))
 		args = append(args, fmt.Sprintf("--keep-fd=%v", lfd))
+		if machinedRegister() {
+			args = append(args, fmt.Sprintf("--register=true"))
+		} else {
+			args = append(args, fmt.Sprintf("--register=false"))
+		}
 	default:
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
 	}
