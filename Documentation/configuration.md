@@ -159,9 +159,8 @@ tectonic-token`.
 
 This kind of configuration is used to set up necessary credentials
 when downloading data from docker indices. The configuration files
-should be placed inside either `auth.d` or `docker.d` subdirectories
-(that is - in `/usr/lib/rkt/{auth.d,docker.d}` or in
-`/etc/rkt/{auth.d,docker.d}`).
+should be placed inside `auth.d` subdirectory (that is - in
+`/usr/lib/rkt/auth.d` or in `/etc/rkt/auth.d`).
 
 #### rktVersion: `v1`
 
@@ -207,7 +206,7 @@ Overriding is done for each index. That means that the user can
 override credentials used for each index. Example of vendor
 configuration:
 
-In `/usr/lib/rkt/docker.d/docker.json`:
+In `/usr/lib/rkt/auth.d/docker.json`:
 ```
 {
 	"rktKind": "dockerAuth",

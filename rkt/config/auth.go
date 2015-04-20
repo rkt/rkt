@@ -53,7 +53,6 @@ func init() {
 	addParser("auth", "v1", &authV1JsonParser{})
 	addParser("dockerAuth", "v1", &dockerAuthV1JsonParser{})
 	registerSubDir("auth.d", []string{"auth", "dockerAuth"})
-	registerSubDir("docker.d", []string{"dockerAuth"})
 }
 
 type basicAuthHeaderer struct {
