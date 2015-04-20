@@ -23,8 +23,8 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
-	taas "github.com/coreos/rkt/Godeps/_workspace/src/github.com/endocode/test-aci-auth-server/lib"
 	"github.com/coreos/rkt/rkt/config"
+	taas "github.com/coreos/rkt/tests/test-auth-server/aci"
 )
 
 func TestAuthSanity(t *testing.T) {
@@ -37,7 +37,7 @@ func TestAuthSanity(t *testing.T) {
 
 const (
 	authSuccessfulDownload = "Authentication succeeded."
-	authFailedDownload = "error downloading ACI: bad HTTP status code: 401"
+	authFailedDownload     = "error downloading ACI: bad HTTP status code: 401"
 )
 
 type genericAuthTest struct {
