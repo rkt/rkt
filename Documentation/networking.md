@@ -29,7 +29,8 @@ Each additional network will result in an new interface being setup in the pod.
 The type of network interface, IP, routes, etc is controlled via a configuration file residing in `/etc/rkt/net.d` directory.
 The network configuration files are executed in lexicographically sorted order. Each file consists of a JSON dictionary as shown below:
 
-```/etc/rkt/net.d/10-containers.conf
+```sh
+$ cat /etc/rkt/net.d/10-containers.conf
 {
 	"name": "containers",
 	"type": "bridge",
@@ -57,7 +58,7 @@ veth is the probably the simplest type of networking and is used to set up defau
 - **mtu** (integer): the size of the MTU in bytes.
 - **ipMasq** (boolean): whether to setup IP masquerading on the host.
 
-##### bridge
+#### bridge
 
 Like the veth type, `bridge` will also create a veth pair and place one end into the pod. However the host end of the veth will be plugged into a linux-bridge.
 The configuration file specifies the bridge name and if the bridge does not exist, it will be created.
@@ -96,7 +97,8 @@ Static type allocates IPs out of specified network range, much like a DHCP serve
 The difference is that while DHCP uses a central server, this type uses a static configuration.
 Consider the following conf:
 
-```/etc/rkt/net.d/10-containers.conf
+```sh
+$ cat /etc/rkt/net.d/10-containers.conf
 {
 	"name": "containers",
 	"type": "bridge",
@@ -129,6 +131,7 @@ A user can expose some or all of these ports to the host when running a pod.
 Doing so allows services inside the pods to be reachable through the host's IP address.
 
 The example below demonstrates an image manifest snippet declaring a single port:
+
 ```
 "ports": [
 	{
@@ -140,9 +143,11 @@ The example below demonstrates an image manifest snippet declaring a single port
 ```
 
 The pod's TCP port 80 can be mapped to an arbitrary port on the host during rkt invocation:
+
 ```
 $ rkt run --private-net --port=http:8888 myapp.aci
 ````
+
 Now, any traffic arriving on host's TCP port 8888 will be forwarded to the pod on port 80.
 
 ### Overriding default network
