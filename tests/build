@@ -5,7 +5,8 @@ if [ ! -e ./image/manifest ] ; then
 	exit 1
 fi
 
-# Fail if "rootfs" already exists. We delete it at the end.
+# Fail if "rootfs" already contains something. We delete it at the end.
+[ -d image/rootfs ] && rmdir image/rootfs
 mkdir image/rootfs
 
 # Populate rootfs
