@@ -1,4 +1,17 @@
 #!/bin/bash
 
-sudo GOPATH=$GOPATH go test -v
+# This script is normally executed by ./test in the topdir source directory.
+# In this case, $GOPATH is already set.
+#
+# However, when developing a new functional test, it is useful to run the
+# tests manually without recompiling rkt. GOPATH is set to the same directory
+# as ./build in the topdir source directory does.
+#
+# To run all tests:
+#     $ cd tests && ./test
+#
+# To run only one test:
+#     $ cd tests && ./test -run=TestEnv
+
+sudo GOPATH="${PWD}/../gopath" go test -v $*
 
