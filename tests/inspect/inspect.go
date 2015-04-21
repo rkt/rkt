@@ -22,6 +22,7 @@ import (
 	"os"
 	"strconv"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/syndtr/gocapability/capability"
@@ -39,6 +40,7 @@ var (
 		ExitCode     int
 		ReadFile     bool
 		WriteFile    bool
+		Sleep        int
 	}{}
 )
 
@@ -52,6 +54,7 @@ func init() {
 	globalFlagset.IntVar(&globalFlags.ExitCode, "exit-code", 0, "Return this exit code")
 	globalFlagset.BoolVar(&globalFlags.ReadFile, "read-file", false, "Print the content of the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
+	globalFlagset.IntVar(&globalFlags.Sleep, "sleep", -1, "Sleep before exiting (in seconds)")
 }
 
 func main() {
@@ -149,6 +152,10 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Working directory: %q. Expected: %q.\n", wd, globalFlags.CheckCwd)
 			os.Exit(1)
 		}
+	}
+
+	if globalFlags.Sleep >= 0 {
+		time.Sleep(time.Duration(globalFlags.Sleep) * time.Second)
 	}
 
 	os.Exit(globalFlags.ExitCode)

@@ -11,6 +11,7 @@ if [ "${CI-}" == true ] ; then
 		sudo apt-get install -y coreutils # systemd needs a recent /bin/ln
 		sudo apt-get install -y gperf libcap-dev intltool # systemd deps
 		sudo apt-get install -y git # cloning a tag of systemd
+		sudo apt-get install -y gawk # used by TestEnv
 	fi
 
 	# https://circleci.com/
