@@ -1,0 +1,40 @@
+From 5bc5f0724a1df0458bd4b9f2d757cb46f5b0d27c Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 24 Apr 2015 17:28:06 +0200
+Subject: [PATCH 4/4] unit: don't add automatic dependencies on device units if
+ they aren't supported
+
+http://lists.freedesktop.org/archives/systemd-devel/2015-April/031187.html
+---
+ src/core/unit.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/unit.c b/src/core/unit.c
+index ee8e607..f69db0d 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -2828,14 +2828,18 @@ int unit_add_node_link(Unit *u, const char *what, bool wants) {
+ 
+         assert(u);
+ 
+-        if (!what)
+-                return 0;
+-
+         /* Adds in links to the device node that this unit is based on */
++        if (isempty(what))
++                return 0;
+ 
+         if (!is_device_path(what))
+                 return 0;
+ 
++        /* When device units aren't supported (such as in a
++         * container), don't create dependencies on them. */
++        if (unit_vtable[UNIT_DEVICE]->supported && !unit_vtable[UNIT_DEVICE]->supported(u->manager))
++                return 0;
++
+         e = unit_name_from_path(what, ".device");
+         if (!e)
+                 return -ENOMEM;
+-- 
+2.1.4
+
