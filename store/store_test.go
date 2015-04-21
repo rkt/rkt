@@ -37,17 +37,17 @@ func TestBlobStore(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := NewStore(dir)
+	s, err := NewStore(dir)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	for _, valueStr := range []string{
 		"I am a manually placed object",
 	} {
-		ds.stores[blobType].Write(types.NewHashSHA512([]byte(valueStr)).String(), []byte(valueStr))
+		s.stores[blobType].Write(types.NewHashSHA512([]byte(valueStr)).String(), []byte(valueStr))
 	}
 
-	ds.Dump(false)
+	s.Dump(false)
 }
 
 func TestResolveKey(t *testing.T) {
@@ -56,7 +56,7 @@ func TestResolveKey(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := NewStore(dir)
+	s, err := NewStore(dir)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestResolveKey(t *testing.T) {
 	}
 	for _, d := range data {
 		// Save aciinfo
-		err := ds.db.Do(func(tx *sql.Tx) error {
+		err := s.db.Do(func(tx *sql.Tx) error {
 			aciinfo := &ACIInfo{
 				BlobKey:    d.String(),
 				AppName:    "example.com/app",
@@ -94,7 +94,7 @@ func TestResolveKey(t *testing.T) {
 	fkl := "sha512-67147019a5b56f5e2ee01e989a8aa4787f56b8445960be2d8678391cf111009bc0780f31001fd181a2b61507547aee4caa44cda4b8bdb238d0e4ba830069ed2c"
 	fks := "sha512-67147019a5b56f5e2ee01e989a8aa4787f56b8445960be2d8678391cf111009b"
 	for _, k := range []string{fkl, fks} {
-		key, err := ds.ResolveKey(k)
+		key, err := s.ResolveKey(k)
 		if key != fks {
 			t.Errorf("expected ResolveKey to return unaltered short key, but got %q", key)
 		}
@@ -104,7 +104,7 @@ func TestResolveKey(t *testing.T) {
 	}
 
 	// Unambiguous prefix match
-	k, err := ds.ResolveKey("sha512-123")
+	k, err := s.ResolveKey("sha512-123")
 	if k != "sha512-1234567890000000000000000000000000000000000000000000000000000000" {
 		t.Errorf("expected %q, got %q", "sha512-1234567890000000000000000000000000000000000000000000000000000000", k)
 	}
@@ -113,7 +113,7 @@ func TestResolveKey(t *testing.T) {
 	}
 
 	// Ambiguous prefix match
-	k, err = ds.ResolveKey("sha512-abc")
+	k, err = s.ResolveKey("sha512-abc")
 	if k != "" {
 		t.Errorf("expected %q, got %q", "", k)
 	}
@@ -122,7 +122,7 @@ func TestResolveKey(t *testing.T) {
 	}
 
 	// wrong key prefix
-	k, err = ds.ResolveKey("badprefix-1")
+	k, err = s.ResolveKey("badprefix-1")
 	expectedErr := "wrong key prefix"
 	if err == nil {
 		t.Errorf("expected non-nil error!")
@@ -132,7 +132,7 @@ func TestResolveKey(t *testing.T) {
 	}
 
 	// key too short
-	k, err = ds.ResolveKey("sha512-1")
+	k, err = s.ResolveKey("sha512-1")
 	expectedErr = "key too short"
 	if err == nil {
 		t.Errorf("expected non-nil error!")
@@ -148,7 +148,7 @@ func TestGetImageManifest(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := NewStore(dir)
+	s, err := NewStore(dir)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -167,13 +167,13 @@ func TestGetImageManifest(t *testing.T) {
 	if _, err := aci.Seek(0, 0); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	key, err := ds.WriteACI(aci, false)
+	key, err := s.WriteACI(aci, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	wanted := "example.com/test01"
-	im, err := ds.GetImageManifest(key)
+	im, err := s.GetImageManifest(key)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestGetImageManifest(t *testing.T) {
 	}
 
 	// test unexistent key
-	im, err = ds.GetImageManifest("sha512-aaaaaaaaaaaaaaaaa")
+	im, err = s.GetImageManifest("sha512-aaaaaaaaaaaaaaaaa")
 	if err == nil {
 		t.Fatalf("expected non-nil error!")
 	}
@@ -205,7 +205,7 @@ func TestGetAci(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := NewStore(dir)
+	s, err := NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -307,7 +307,7 @@ func TestGetAci(t *testing.T) {
 				t.Fatalf("unexpected error %v", err)
 			}
 
-			key, err := ds.WriteACI(aci, ad.latest)
+			key, err := s.WriteACI(aci, ad.latest)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -315,7 +315,7 @@ func TestGetAci(t *testing.T) {
 		}
 
 		for _, test := range tt.tests {
-			key, err := ds.GetACI(test.name, test.labels)
+			key, err := s.GetACI(test.name, test.labels)
 			if test.expected == -1 {
 				if err == nil {
 					t.Fatalf("Expected no key for appName %s, got %s", test.name, key)
@@ -339,7 +339,7 @@ func TestTreeStore(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := NewStore(dir)
+	s, err := NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -401,51 +401,51 @@ func TestTreeStore(t *testing.T) {
 	}
 
 	// Import the new ACI
-	key, err := ds.WriteACI(aci, false)
+	key, err := s.WriteACI(aci, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Ask the store to render the treestore
-	err = ds.RenderTreeStore(key, false)
+	err = s.RenderTreeStore(key, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Verify image Hash. Should be the same.
-	err = ds.CheckTreeStore(key)
+	err = s.CheckTreeStore(key)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Change a file permission
-	rootfs := ds.GetTreeStoreRootFS(key)
+	rootfs := s.GetTreeStoreRootFS(key)
 	err = os.Chmod(filepath.Join(rootfs, "a"), 0600)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Verify image Hash. Should be different
-	err = ds.CheckTreeStore(key)
+	err = s.CheckTreeStore(key)
 	if err == nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// rebuild the tree
-	err = ds.RenderTreeStore(key, true)
+	err = s.RenderTreeStore(key, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Add a file
-	rootfs = ds.GetTreeStoreRootFS(key)
+	rootfs = s.GetTreeStoreRootFS(key)
 	err = ioutil.WriteFile(filepath.Join(rootfs, "newfile"), []byte("newfile"), 0644)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Verify image Hash. Should be different
-	err = ds.CheckTreeStore(key)
+	err = s.CheckTreeStore(key)
 	if err == nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

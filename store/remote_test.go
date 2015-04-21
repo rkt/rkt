@@ -31,7 +31,7 @@ func TestNewRemote(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := NewStore(dir)
+	s, err := NewStore(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,10 +39,10 @@ func TestNewRemote(t *testing.T) {
 	// Create our first Remote, and simulate Store() to create row in the table
 	na := NewRemote(u1, "")
 	na.BlobKey = data
-	ds.WriteRemote(na)
+	s.WriteRemote(na)
 
 	// Get a new remote w the same parameters, reading from table should be fine
-	nb, ok, err := ds.GetRemote(u1)
+	nb, ok, err := s.GetRemote(u1)
 	if err != nil {
 		t.Fatalf("unexpected error reading index: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestNewRemote(t *testing.T) {
 	}
 
 	// Get a remote with a different URI
-	nc, ok, err := ds.GetRemote(u2)
+	nc, ok, err := s.GetRemote(u2)
 	// Should get an error, since the URI shouldn't be present in the table
 	if ok {
 		t.Fatalf("unexpected index found")

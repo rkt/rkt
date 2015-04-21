@@ -59,7 +59,7 @@ func runFetch(args []string) (exit int) {
 		return 1
 	}
 
-	ds, err := store.NewStore(globalFlags.Dir)
+	s, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
 		stderr("fetch: cannot open store: %v", err)
 		return 1
@@ -72,7 +72,7 @@ func runFetch(args []string) (exit int) {
 	}
 	ft := &fetcher{
 		imageActionData: imageActionData{
-			ds:                 ds,
+			s:                  s,
 			ks:                 ks,
 			headers:            config.AuthPerHost,
 			dockerAuth:         config.DockerCredentialsPerRegistry,

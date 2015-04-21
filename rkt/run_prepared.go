@@ -69,7 +69,7 @@ func runRunPrepared(args []string) (exit int) {
 		}
 	}
 
-	ds, err := store.NewStore(globalFlags.Dir)
+	s, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
 		stderr("prepared-run: cannot open store: %v", err)
 		return 1
@@ -123,7 +123,7 @@ func runRunPrepared(args []string) (exit int) {
 
 	rcfg := stage0.RunConfig{
 		CommonConfig: stage0.CommonConfig{
-			Store:       ds,
+			Store:       s,
 			Stage1Image: *s1img,
 			UUID:        p.uuid,
 			Debug:       globalFlags.Debug,

@@ -87,7 +87,7 @@ func runPrepare(args []string) (exit int) {
 		}
 	}
 
-	ds, err := store.NewStore(globalFlags.Dir)
+	s, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
 		stderr("prepare: cannot open store: %v", err)
 		return 1
@@ -100,7 +100,7 @@ func runPrepare(args []string) (exit int) {
 	}
 	fn := &finder{
 		imageActionData: imageActionData{
-			ds:                 ds,
+			s:                  s,
 			headers:            config.AuthPerHost,
 			dockerAuth:         config.DockerCredentialsPerRegistry,
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
@@ -128,7 +128,7 @@ func runPrepare(args []string) (exit int) {
 
 	pcfg := stage0.PrepareConfig{
 		CommonConfig: stage0.CommonConfig{
-			Store:       ds,
+			Store:       s,
 			Debug:       globalFlags.Debug,
 			Stage1Image: *s1img,
 			UUID:        p.uuid,

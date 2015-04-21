@@ -314,13 +314,13 @@ func TestDownloading(t *testing.T) {
 		{denyAuthTS.URL, true, noAuth, false},
 	}
 
-	ds, err := store.NewStore(dir)
+	s, err := store.NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
 
 	for _, tt := range tests {
-		_, ok, err := ds.GetRemote(tt.ACIURL)
+		_, ok, err := s.GetRemote(tt.ACIURL)
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
@@ -339,7 +339,7 @@ func TestDownloading(t *testing.T) {
 		}
 		ft := &fetcher{
 			imageActionData: imageActionData{
-				ds:                 ds,
+				s:                  s,
 				headers:            headers,
 				insecureSkipVerify: true,
 			},
@@ -358,19 +358,19 @@ func TestDownloading(t *testing.T) {
 			continue
 		}
 
-		key, err := ds.WriteACI(aciFile, false)
+		key, err := s.WriteACI(aciFile, false)
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
 		rem := store.NewRemote(tt.ACIURL, "")
 		rem.BlobKey = key
-		err = ds.WriteRemote(rem)
+		err = s.WriteRemote(rem)
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
 		}
 	}
 
-	ds.Dump(false)
+	s.Dump(false)
 }
 
 func TestFetchImage(t *testing.T) {
@@ -379,11 +379,11 @@ func TestFetchImage(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := store.NewStore(dir)
+	s, err := store.NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	defer ds.Dump(false)
+	defer s.Dump(false)
 
 	ks, ksPath, err := keystore.NewTestKeystore()
 	if err != nil {
@@ -431,7 +431,7 @@ func TestFetchImage(t *testing.T) {
 	defer ts.Close()
 	ft := &fetcher{
 		imageActionData: imageActionData{
-			ds: ds,
+			s:  s,
 			ks: ks,
 		},
 	}

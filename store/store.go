@@ -80,31 +80,31 @@ type Store struct {
 func NewStore(base string) (*Store, error) {
 	casDir := filepath.Join(base, "cas")
 
-	ds := &Store{
+	s := &Store{
 		base:   base,
 		stores: make([]*diskv.Diskv, len(diskvStores)),
 	}
 
-	ds.imageLockDir = filepath.Join(casDir, "imagelocks")
-	err := os.MkdirAll(ds.imageLockDir, defaultPathPerm)
+	s.imageLockDir = filepath.Join(casDir, "imagelocks")
+	err := os.MkdirAll(s.imageLockDir, defaultPathPerm)
 	if err != nil {
 		return nil, err
 	}
 
-	ds.treeStoreLockDir = filepath.Join(casDir, "treestorelocks")
-	err = os.MkdirAll(ds.treeStoreLockDir, defaultPathPerm)
+	s.treeStoreLockDir = filepath.Join(casDir, "treestorelocks")
+	err = os.MkdirAll(s.treeStoreLockDir, defaultPathPerm)
 	if err != nil {
 		return nil, err
 	}
 
 	// Take a shared cas lock
-	ds.storeLock, err = lock.NewLock(casDir, lock.Dir)
+	s.storeLock, err = lock.NewLock(casDir, lock.Dir)
 	if err != nil {
 		return nil, err
 	}
 
 	for i, p := range diskvStores {
-		ds.stores[i] = diskv.New(diskv.Options{
+		s.stores[i] = diskv.New(diskv.Options{
 			BasePath:  filepath.Join(casDir, p),
 			Transform: blockTransform,
 		})
@@ -113,9 +113,9 @@ func NewStore(base string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	ds.db = db
+	s.db = db
 
-	ds.treestore = &TreeStore{path: filepath.Join(base, "cas", "tree")}
+	s.treestore = &TreeStore{path: filepath.Join(base, "cas", "tree")}
 
 	needsMigrate := false
 	fn := func(tx *sql.Tx) error {
@@ -158,7 +158,7 @@ func NewStore(base string) (*Store, error) {
 	// migration from the current version.
 	if needsMigrate {
 		// Take an exclusive store lock
-		err := ds.storeLock.ExclusiveLock()
+		err := s.storeLock.ExclusiveLock()
 		if err != nil {
 			return nil, err
 		}
@@ -171,13 +171,13 @@ func NewStore(base string) (*Store, error) {
 		}
 	}
 
-	return ds, nil
+	return s, nil
 }
 
 // TmpFile returns an *os.File local to the same filesystem as the Store, or
 // any error encountered
-func (ds Store) TmpFile() (*os.File, error) {
-	dir, err := ds.TmpDir()
+func (s Store) TmpFile() (*os.File, error) {
+	dir, err := s.TmpDir()
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +186,8 @@ func (ds Store) TmpFile() (*os.File, error) {
 
 // TmpDir creates and returns dir local to the same filesystem as the Store,
 // or any error encountered
-func (ds Store) TmpDir() (string, error) {
-	dir := filepath.Join(ds.base, "tmp")
+func (s Store) TmpDir() (string, error) {
+	dir := filepath.Join(s.base, "tmp")
 	if err := os.MkdirAll(dir, defaultPathPerm); err != nil {
 		return "", err
 	}
@@ -197,7 +197,7 @@ func (ds Store) TmpDir() (string, error) {
 // ResolveKey resolves a partial key (of format `sha512-0c45e8c0ab2`) to a full
 // key by considering the key a prefix and using the store for resolution.
 // If the key is longer than the full key length, it is first truncated.
-func (ds Store) ResolveKey(key string) (string, error) {
+func (s Store) ResolveKey(key string) (string, error) {
 	if !strings.HasPrefix(key, hashPrefix) {
 		return "", fmt.Errorf("wrong key prefix")
 	}
@@ -209,7 +209,7 @@ func (ds Store) ResolveKey(key string) (string, error) {
 	}
 
 	aciInfos := []*ACIInfo{}
-	err := ds.db.Do(func(tx *sql.Tx) error {
+	err := s.db.Do(func(tx *sql.Tx) error {
 		var err error
 		aciInfos, err = GetACIInfosWithKeyPrefix(tx, key)
 		return err
@@ -228,18 +228,18 @@ func (ds Store) ResolveKey(key string) (string, error) {
 	return aciInfos[0].BlobKey, nil
 }
 
-func (ds Store) ReadStream(key string) (io.ReadCloser, error) {
-	key, err := ds.ResolveKey(key)
+func (s Store) ReadStream(key string) (io.ReadCloser, error) {
+	key, err := s.ResolveKey(key)
 	if err != nil {
 		return nil, fmt.Errorf("error resolving key: %v", err)
 	}
-	keyLock, err := lock.SharedKeyLock(ds.imageLockDir, key)
+	keyLock, err := lock.SharedKeyLock(s.imageLockDir, key)
 	if err != nil {
 		return nil, fmt.Errorf("error locking image: %v", err)
 	}
 	defer keyLock.Close()
 
-	return ds.stores[blobType].ReadStream(key, false)
+	return s.stores[blobType].ReadStream(key, false)
 }
 
 // WriteACI takes an ACI encapsulated in an io.Reader, decompresses it if
@@ -247,7 +247,7 @@ func (ds Store) ReadStream(key string) (io.ReadCloser, error) {
 // (i.e. the hash of the uncompressed ACI)
 // latest defines if the aci has to be marked as the latest. For example an ACI
 // discovered without asking for a specific version (latest pattern).
-func (ds Store) WriteACI(r io.Reader, latest bool) (string, error) {
+func (s Store) WriteACI(r io.Reader, latest bool) (string, error) {
 	// Peek at the first 512 bytes of the reader to detect filetype
 	br := bufio.NewReaderSize(r, 32768)
 	hd, err := br.Peek(512)
@@ -270,7 +270,7 @@ func (ds Store) WriteACI(r io.Reader, latest bool) (string, error) {
 	// tee so we can generate the hash
 	h := sha512.New()
 	tr := io.TeeReader(dr, h)
-	fh, err := ds.TmpFile()
+	fh, err := s.TmpFile()
 	if err != nil {
 		return "", fmt.Errorf("error creating image: %v", err)
 	}
@@ -286,14 +286,14 @@ func (ds Store) WriteACI(r io.Reader, latest bool) (string, error) {
 	}
 
 	// Import the uncompressed image into the store at the real key
-	key := ds.HashToKey(h)
-	keyLock, err := lock.ExclusiveKeyLock(ds.imageLockDir, key)
+	key := s.HashToKey(h)
+	keyLock, err := lock.ExclusiveKeyLock(s.imageLockDir, key)
 	if err != nil {
 		return "", fmt.Errorf("error locking image: %v", err)
 	}
 	defer keyLock.Close()
 
-	if err = ds.stores[blobType].Import(fh.Name(), key, true); err != nil {
+	if err = s.stores[blobType].Import(fh.Name(), key, true); err != nil {
 		return "", fmt.Errorf("error importing image: %v", err)
 	}
 
@@ -302,12 +302,12 @@ func (ds Store) WriteACI(r io.Reader, latest bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error marshalling image manifest: %v", err)
 	}
-	if err = ds.stores[imageManifestType].Write(key, imj); err != nil {
+	if err = s.stores[imageManifestType].Write(key, imj); err != nil {
 		return "", fmt.Errorf("error importing image manifest: %v", err)
 	}
 
 	// Save aciinfo
-	if err = ds.db.Do(func(tx *sql.Tx) error {
+	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo := &ACIInfo{
 			BlobKey:    key,
 			AppName:    im.Name.String(),
@@ -321,28 +321,28 @@ func (ds Store) WriteACI(r io.Reader, latest bool) (string, error) {
 
 	// The treestore for this ACI is not written here as ACIs downloaded as
 	// dependencies of another ACI will be exploded also if never directly used.
-	// Users of treestore should call ds.RenderTreeStore before using it.
+	// Users of treestore should call s.RenderTreeStore before using it.
 
 	return key, nil
 }
 
 // RenderTreeStore renders a treestore for the given image key if it's not
 // already fully rendered.
-// Users of treestore should call ds.RenderTreeStore before using it to ensure
+// Users of treestore should call s.RenderTreeStore before using it to ensure
 // that the treestore is completely rendered.
-func (ds Store) RenderTreeStore(key string, rebuild bool) error {
+func (s Store) RenderTreeStore(key string, rebuild bool) error {
 	// this lock references the treestore dir for the specified key. This
 	// is different from a lock on an image key as internally
 	// treestore.Write calls the acirenderer functions that use GetACI and
 	// GetImageManifest which are taking the image(s) lock.
-	treeStoreKeyLock, err := lock.ExclusiveKeyLock(ds.treeStoreLockDir, key)
+	treeStoreKeyLock, err := lock.ExclusiveKeyLock(s.treeStoreLockDir, key)
 	if err != nil {
 		return fmt.Errorf("error locking tree store: %v", err)
 	}
 	defer treeStoreKeyLock.Close()
 
 	if !rebuild {
-		rendered, err := ds.treestore.IsRendered(key)
+		rendered, err := s.treestore.IsRendered(key)
 		if err != nil {
 			return fmt.Errorf("cannot determine if tree is already rendered: %v", err)
 		}
@@ -353,11 +353,11 @@ func (ds Store) RenderTreeStore(key string, rebuild bool) error {
 	// Firstly remove a possible partial treestore if existing.
 	// This is needed as a previous ACI removal operation could have failed
 	// cleaning the tree store leaving some stale files.
-	err = ds.treestore.Remove(key)
+	err = s.treestore.Remove(key)
 	if err != nil {
 		return err
 	}
-	err = ds.treestore.Write(key, &ds)
+	err = s.treestore.Write(key, &s)
 	if err != nil {
 		return err
 	}
@@ -365,37 +365,37 @@ func (ds Store) RenderTreeStore(key string, rebuild bool) error {
 }
 
 // CheckTreeStore verifies the treestore consistency for the specified key.
-func (ds Store) CheckTreeStore(key string) error {
-	treeStoreKeyLock, err := lock.SharedKeyLock(ds.treeStoreLockDir, key)
+func (s Store) CheckTreeStore(key string) error {
+	treeStoreKeyLock, err := lock.SharedKeyLock(s.treeStoreLockDir, key)
 	if err != nil {
 		return fmt.Errorf("error locking tree store: %v", err)
 	}
 	defer treeStoreKeyLock.Close()
 
-	return ds.treestore.Check(key)
+	return s.treestore.Check(key)
 }
 
 // GetTreeStorePath returns the absolute path of the treestore for the specified key.
 // It doesn't ensure that the path exists and is fully rendered. This should
 // be done calling IsRendered()
-func (ds Store) GetTreeStorePath(key string) string {
-	return ds.treestore.GetPath(key)
+func (s Store) GetTreeStorePath(key string) string {
+	return s.treestore.GetPath(key)
 }
 
 // GetTreeStoreRootFS returns the absolute path of the rootfs in the treestore
 // for specified key.
 // It doesn't ensure that the rootfs exists and is fully rendered. This should
 // be done calling IsRendered()
-func (ds Store) GetTreeStoreRootFS(key string) string {
-	return ds.treestore.GetRootFS(key)
+func (s Store) GetTreeStoreRootFS(key string) string {
+	return s.treestore.GetRootFS(key)
 }
 
 // GetRemote tries to retrieve a remote with the given ACIURL. found will be
 // false if remote doesn't exist.
-func (ds Store) GetRemote(aciURL string) (*Remote, bool, error) {
+func (s Store) GetRemote(aciURL string) (*Remote, bool, error) {
 	var remote *Remote
 	found := false
-	err := ds.db.Do(func(tx *sql.Tx) error {
+	err := s.db.Do(func(tx *sql.Tx) error {
 		var err error
 		remote, found, err = GetRemote(tx, aciURL)
 		return err
@@ -404,26 +404,26 @@ func (ds Store) GetRemote(aciURL string) (*Remote, bool, error) {
 }
 
 // WriteRemote adds or updates the provided Remote.
-func (ds Store) WriteRemote(remote *Remote) error {
-	err := ds.db.Do(func(tx *sql.Tx) error {
+func (s Store) WriteRemote(remote *Remote) error {
+	err := s.db.Do(func(tx *sql.Tx) error {
 		return WriteRemote(tx, remote)
 	})
 	return err
 }
 
 // Get the ImageManifest with the specified key.
-func (ds Store) GetImageManifest(key string) (*schema.ImageManifest, error) {
-	key, err := ds.ResolveKey(key)
+func (s Store) GetImageManifest(key string) (*schema.ImageManifest, error) {
+	key, err := s.ResolveKey(key)
 	if err != nil {
 		return nil, fmt.Errorf("error resolving key: %v", err)
 	}
-	keyLock, err := lock.SharedKeyLock(ds.imageLockDir, key)
+	keyLock, err := lock.SharedKeyLock(s.imageLockDir, key)
 	if err != nil {
 		return nil, fmt.Errorf("error locking image: %v", err)
 	}
 	defer keyLock.Close()
 
-	imj, err := ds.stores[imageManifestType].Read(key)
+	imj, err := s.stores[imageManifestType].Read(key)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving image manifest: %v", err)
 	}
@@ -440,7 +440,7 @@ func (ds Store) GetImageManifest(key string) (*schema.ImageManifest, error) {
 // last one imported in the store).
 // If no version label is requested, ACIs marked as latest in the ACIInfo are
 // preferred.
-func (ds Store) GetACI(name types.ACName, labels types.Labels) (string, error) {
+func (s Store) GetACI(name types.ACName, labels types.Labels) (string, error) {
 	var curaciinfo *ACIInfo
 	versionRequested := false
 	if _, ok := labels.Get("version"); ok {
@@ -448,7 +448,7 @@ func (ds Store) GetACI(name types.ACName, labels types.Labels) (string, error) {
 	}
 
 	var aciinfos []*ACIInfo
-	err := ds.db.Do(func(tx *sql.Tx) error {
+	err := s.db.Do(func(tx *sql.Tx) error {
 		var err error
 		aciinfos, _, err = GetACIInfosWithAppName(tx, name.String())
 		return err
@@ -459,7 +459,7 @@ func (ds Store) GetACI(name types.ACName, labels types.Labels) (string, error) {
 
 nextKey:
 	for _, aciinfo := range aciinfos {
-		im, err := ds.GetImageManifest(aciinfo.BlobKey)
+		im, err := s.GetImageManifest(aciinfo.BlobKey)
 		if err != nil {
 			return "", fmt.Errorf("error getting image manifest: %v", err)
 		}
@@ -504,8 +504,8 @@ nextKey:
 	return "", fmt.Errorf("aci not found")
 }
 
-func (ds Store) Dump(hex bool) {
-	for _, s := range ds.stores {
+func (s Store) Dump(hex bool) {
+	for _, s := range s.stores {
 		var keyCount int
 		for key := range s.Keys(nil) {
 			val, err := s.Read(key)
@@ -529,7 +529,7 @@ func (ds Store) Dump(hex bool) {
 // HashToKey takes a hash.Hash (which currently _MUST_ represent a full SHA512),
 // calculates its sum, and returns a string which should be used as the key to
 // store the data matching the hash.
-func (ds Store) HashToKey(h hash.Hash) string {
+func (s Store) HashToKey(h hash.Hash) string {
 	return hashToKey(h)
 }
 

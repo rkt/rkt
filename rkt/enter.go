@@ -88,7 +88,7 @@ func runEnter(args []string) (exit int) {
 		return 1
 	}
 
-	ds, err := store.NewStore(globalFlags.Dir)
+	s, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
 		stderr("Cannot open store: %v", err)
 		return 1
@@ -100,7 +100,7 @@ func runEnter(args []string) (exit int) {
 		return 1
 	}
 
-	stage1RootFS := ds.GetTreeStoreRootFS(stage1ID.String())
+	stage1RootFS := s.GetTreeStoreRootFS(stage1ID.String())
 
 	if err = stage0.Enter(p.path(), imageID, stage1RootFS, argv); err != nil {
 		stderr("Enter failed: %v", err)
