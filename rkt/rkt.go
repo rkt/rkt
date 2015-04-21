@@ -24,6 +24,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
 )
@@ -53,8 +54,8 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.Help, "help", false, "Print usage information and exit")
 	globalFlagset.BoolVar(&globalFlags.Debug, "debug", false, "Print out more debug information to stderr")
 	globalFlagset.StringVar(&globalFlags.Dir, "dir", defaultDataDir, "rkt data directory")
-	globalFlagset.StringVar(&globalFlags.VendorConfigDir, "vendor-config", config.DefaultVendorPath, "vendor configuration directory")
-	globalFlagset.StringVar(&globalFlags.CustomConfigDir, "custom-config", config.DefaultCustomPath, "custom configuration directory")
+	globalFlagset.StringVar(&globalFlags.VendorConfigDir, "vendor-config", common.DefaultSystemConfigDir, "vendor configuration directory")
+	globalFlagset.StringVar(&globalFlags.CustomConfigDir, "custom-config", common.DefaultCustomConfigDir, "custom configuration directory")
 	globalFlagset.BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip image or key verification")
 }
 

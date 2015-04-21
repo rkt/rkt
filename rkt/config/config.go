@@ -56,12 +56,6 @@ var (
 	parsersForKind = make(map[string]map[string]configParser)
 )
 
-// Default paths for vendor and custom configuration
-const (
-	DefaultVendorPath = common.DefaultSystemConfigDir
-	DefaultCustomPath = common.DefaultCustomConfigDir
-)
-
 func addParser(kind, version string, parser configParser) {
 	if len(kind) == 0 {
 		panic("empty kind string when registering a config parser")
@@ -110,10 +104,11 @@ func toArray(s map[string]struct{}) []string {
 }
 
 // GetConfig gets the Config instance with configuration taken from
-// default vendor path (see DefaultVendorPath) overridden with
-// configuration from default custom path (see DefaultCustomPath).
+// default vendor path (see common.DefaultSystemConfigDir) overridden
+// with configuration from default custom path (see
+// common.DefaultSystemConfigDir).
 func GetConfig() (*Config, error) {
-	return GetConfigFrom(DefaultVendorPath, DefaultCustomPath)
+	return GetConfigFrom(common.DefaultSystemConfigDir, common.DefaultCustomConfigDir)
 }
 
 // GetConfigFrom gets the Config instance with configuration taken from

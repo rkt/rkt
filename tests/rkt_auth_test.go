@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
-	"github.com/coreos/rkt/rkt/config"
+	"github.com/coreos/rkt/common"
 	taas "github.com/coreos/rkt/tests/test-auth-server/aci"
 )
 
@@ -50,8 +50,8 @@ type genericAuthTest struct {
 func TestAuthBasic(t *testing.T) {
 	tests := []genericAuthTest{
 		{"basic-no-config", false, "", authFailedDownload},
-		{"basic-custom-config", true, config.DefaultCustomPath, authSuccessfulDownload},
-		{"basic-vendor-config", true, config.DefaultVendorPath, authSuccessfulDownload},
+		{"basic-custom-config", true, common.DefaultCustomConfigDir, authSuccessfulDownload},
+		{"basic-vendor-config", true, common.DefaultSystemConfigDir, authSuccessfulDownload},
 	}
 	testAuthGeneric(t, taas.Basic, tests)
 }
@@ -59,8 +59,8 @@ func TestAuthBasic(t *testing.T) {
 func TestAuthOauth(t *testing.T) {
 	tests := []genericAuthTest{
 		{"oauth-no-config", false, "", authFailedDownload},
-		{"oauth-custom-config", true, config.DefaultCustomPath, authSuccessfulDownload},
-		{"oauth-vendor-config", true, config.DefaultVendorPath, authSuccessfulDownload},
+		{"oauth-custom-config", true, common.DefaultCustomConfigDir, authSuccessfulDownload},
+		{"oauth-vendor-config", true, common.DefaultSystemConfigDir, authSuccessfulDownload},
 	}
 	testAuthGeneric(t, taas.Oauth, tests)
 }
@@ -126,8 +126,8 @@ func testAuthIgnoreBogusFiles(t *testing.T, server *taas.Server) {
 
 func testAuthIgnoreSubdirectories(t *testing.T, server *taas.Server) {
 	removeAllConfig(t)
-	customSubdir := filepath.Join(config.DefaultCustomPath, "subdir")
-	vendorSubdir := filepath.Join(config.DefaultVendorPath, "subdir")
+	customSubdir := filepath.Join(common.DefaultCustomConfigDir, "subdir")
+	vendorSubdir := filepath.Join(common.DefaultSystemConfigDir, "subdir")
 	writeConfig(t, customSubdir, "test.json", server.Conf)
 	writeConfig(t, vendorSubdir, "test.json", server.Conf)
 	failedRunRkt(t, server.URL, "oauth-subdirectories")
@@ -189,8 +189,8 @@ func runRkt(t *testing.T, host, dir string) *gexpect.ExpectSubprocess {
 
 func removeAllConfig(t *testing.T) {
 	dirs := []string{
-		authDir(config.DefaultCustomPath),
-		authDir(config.DefaultVendorPath),
+		authDir(common.DefaultCustomConfigDir),
+		authDir(common.DefaultSystemConfigDir),
 	}
 	for _, p := range dirs {
 		if err := os.RemoveAll(p); err != nil {
@@ -203,11 +203,11 @@ func removeAllConfig(t *testing.T) {
 }
 
 func writeCustomConfig(t *testing.T, filename, contents string) {
-	writeConfig(t, config.DefaultCustomPath, filename, contents)
+	writeConfig(t, common.DefaultCustomConfigDir, filename, contents)
 }
 
 func writeVendorConfig(t *testing.T, filename, contents string) {
-	writeConfig(t, config.DefaultVendorPath, filename, contents)
+	writeConfig(t, common.DefaultSystemConfigDir, filename, contents)
 }
 
 func writeConfig(t *testing.T, baseDir, filename, contents string) {
