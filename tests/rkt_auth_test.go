@@ -48,9 +48,9 @@ const (
 )
 
 type genericAuthTest struct {
-	name          string
-	confDir       authConfDir
-	expectedLine  string
+	name         string
+	confDir      authConfDir
+	expectedLine string
 }
 
 func TestAuthBasic(t *testing.T) {

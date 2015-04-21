@@ -229,7 +229,7 @@ func NewServerWithPaths(auth Type, msgCapacity int, acTool, goTool string) (*Ser
 func getTool(tool string) (string, error) {
 	toolPath, err := exec.LookPath(tool)
 	if err != nil {
-		return "", fmt.Errorf("failed to find %s in $PATH: $v", tool, err)
+		return "", fmt.Errorf("failed to find %s in $PATH: %v", tool, err)
 	}
 	absToolPath, err := filepath.Abs(toolPath)
 	if err != nil {
