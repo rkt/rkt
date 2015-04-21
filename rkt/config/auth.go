@@ -42,9 +42,17 @@ type oauthV1 struct {
 	Token string `json:"token"`
 }
 
+type dockerAuthV1JsonParser struct{}
+
+type dockerAuthV1 struct {
+	Registries  []string `json:"registries"`
+	Credentials basicV1  `json:"credentials"`
+}
+
 func init() {
 	addParser("auth", "v1", &authV1JsonParser{})
-	registerSubDir("auth.d", []string{"auth"})
+	addParser("dockerAuth", "v1", &dockerAuthV1JsonParser{})
+	registerSubDir("auth.d", []string{"auth", "dockerAuth"})
 }
 
 type basicAuthHeaderer struct {
@@ -89,9 +97,9 @@ func (p *authV1JsonParser) parse(config *Config, raw []byte) error {
 	)
 	switch auth.Type {
 	case "basic":
-		headerer, err = p.getBasicV1Headerer(config, auth.Credentials)
+		headerer, err = p.getBasicV1Headerer(auth.Credentials)
 	case "oauth":
-		headerer, err = p.getOAuthV1Headerer(config, auth.Credentials)
+		headerer, err = p.getOAuthV1Headerer(auth.Credentials)
 	default:
 		err = fmt.Errorf("unknown auth type: %q", auth.Type)
 	}
@@ -107,16 +115,13 @@ func (p *authV1JsonParser) parse(config *Config, raw []byte) error {
 	return nil
 }
 
-func (p *authV1JsonParser) getBasicV1Headerer(config *Config, raw json.RawMessage) (Headerer, error) {
+func (p *authV1JsonParser) getBasicV1Headerer(raw json.RawMessage) (Headerer, error) {
 	var basic basicV1
 	if err := json.Unmarshal(raw, &basic); err != nil {
 		return nil, err
 	}
-	if len(basic.User) == 0 {
-		return nil, fmt.Errorf("user not specified")
-	}
-	if len(basic.Password) == 0 {
-		return nil, fmt.Errorf("password not specified")
+	if err := validateBasicV1(&basic); err != nil {
+		return nil, err
 	}
 	return &basicAuthHeaderer{
 		user:     basic.User,
@@ -124,7 +129,7 @@ func (p *authV1JsonParser) getBasicV1Headerer(config *Config, raw json.RawMessag
 	}, nil
 }
 
-func (p *authV1JsonParser) getOAuthV1Headerer(config *Config, raw json.RawMessage) (Headerer, error) {
+func (p *authV1JsonParser) getOAuthV1Headerer(raw json.RawMessage) (Headerer, error) {
 	var oauth oauthV1
 	if err := json.Unmarshal(raw, &oauth); err != nil {
 		return nil, err
@@ -135,4 +140,41 @@ func (p *authV1JsonParser) getOAuthV1Headerer(config *Config, raw json.RawMessag
 	return &oAuthBearerTokenHeaderer{
 		token: oauth.Token,
 	}, nil
+}
+
+func (p *dockerAuthV1JsonParser) parse(config *Config, raw []byte) error {
+	var auth dockerAuthV1
+	if err := json.Unmarshal(raw, &auth); err != nil {
+		return err
+	}
+	if len(auth.Registries) == 0 {
+		return fmt.Errorf("no registries specified")
+	}
+	if err := validateBasicV1(&auth.Credentials); err != nil {
+		return err
+	}
+	basic := BasicCredentials{
+		User:     auth.Credentials.User,
+		Password: auth.Credentials.Password,
+	}
+	for _, registry := range auth.Registries {
+		if _, ok := config.DockerCredentialsPerRegistry[registry]; ok {
+			return fmt.Errorf("credentials for docker registry %q are already specified", registry)
+		}
+		config.DockerCredentialsPerRegistry[registry] = basic
+	}
+	return nil
+}
+
+func validateBasicV1(basic *basicV1) error {
+	if basic == nil {
+		return fmt.Errorf("no credentials")
+	}
+	if len(basic.User) == 0 {
+		return fmt.Errorf("user not specified")
+	}
+	if len(basic.Password) == 0 {
+		return fmt.Errorf("password not specified")
+	}
+	return nil
 }

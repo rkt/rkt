@@ -43,6 +43,7 @@ type imageActionData struct {
 	ds                 *store.Store
 	ks                 *keystore.Keystore
 	headers            map[string]config.Headerer
+	dockerAuth         map[string]config.BasicCredentials
 	insecureSkipVerify bool
 	debug              bool
 }
@@ -267,7 +268,14 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 			return nil, nil, fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
 		}
 
-		acis, err := docker2aci.Convert(registryURL, true, tmpDir, "", "")
+		indexName := docker2aci.GetIndexName(registryURL)
+		user := ""
+		password := ""
+		if creds, ok := f.dockerAuth[indexName]; ok {
+			user = creds.User
+			password = creds.Password
+		}
+		acis, err := docker2aci.Convert(registryURL, true, tmpDir, user, password)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error converting docker image to ACI: %v", err)
 		}

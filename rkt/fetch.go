@@ -75,6 +75,7 @@ func runFetch(args []string) (exit int) {
 			ds:                 ds,
 			ks:                 ks,
 			headers:            config.AuthPerHost,
+			dockerAuth:         config.DockerCredentialsPerRegistry,
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
 		},
