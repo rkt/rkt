@@ -28,6 +28,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	"github.com/coreos/rkt/common"
 )
 
 // A Config structure is used to configure a Keystore.
@@ -52,12 +53,16 @@ func New(config *Config) *Keystore {
 	return &Keystore{config}
 }
 
-var defaultConfig = &Config{
-	RootPath:         "/etc/rkt/trustedkeys/root.d",
-	PrefixPath:       "/etc/rkt/trustedkeys/prefix.d",
-	SystemRootPath:   "/usr/lib/rkt/trustedkeys/root.d",
-	SystemPrefixPath: "/usr/lib/rkt/trustedkeys/prefix.d",
+func NewConfig(systemPath, customPath string) *Config {
+	return &Config{
+		RootPath:         filepath.Join(customPath, "trustedkeys", "root.d"),
+		PrefixPath:       filepath.Join(customPath, "trustedkeys", "prefix.d"),
+		SystemRootPath:   filepath.Join(systemPath, "trustedkeys", "root.d"),
+		SystemPrefixPath: filepath.Join(systemPath, "trustedkeys", "prefix.d"),
+	}
 }
+
+var defaultConfig = NewConfig(common.DefaultSystemConfigDir, common.DefaultCustomConfigDir)
 
 // CheckSignature is a convenience method for creating a Keystore with a default
 // configuration and invoking CheckSignature.
@@ -244,12 +249,9 @@ func NewTestKeystore() (*Keystore, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	c := &Config{
-		RootPath:         path.Join(dir, "/etc/rkt/trustedkeys/root.d"),
-		SystemRootPath:   path.Join(dir, "/usr/lib/rkt/trustedkeys/root.d"),
-		PrefixPath:       path.Join(dir, "/etc/rkt/trustedkeys/prefix.d"),
-		SystemPrefixPath: path.Join(dir, "/usr/lib/rkt/trustedkeys/prefix.d"),
-	}
+	systemDir := filepath.Join(dir, common.DefaultSystemConfigDir)
+	customDir := filepath.Join(dir, common.DefaultCustomConfigDir)
+	c := NewConfig(systemDir, customDir)
 	for _, path := range []string{c.RootPath, c.SystemRootPath, c.PrefixPath, c.SystemPrefixPath} {
 		if err := os.MkdirAll(path, 0755); err != nil {
 			return nil, "", err
