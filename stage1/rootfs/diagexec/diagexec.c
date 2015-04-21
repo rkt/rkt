@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -180,19 +181,29 @@ static void load_env(const char *env)
 
 int main(int argc, char *argv[])
 {
-	const char *root, *cwd, *env, *exe;
-	exit_if(argc < 5,
-		"Usage: %s /path/to/root /work/directory /env/file /to/exec [args ...]", argv[0]);
+	const char *root, *cwd, *env, *uid_str, *gid_str, *exe;
+	char **args;
+	uid_t uid;
+	gid_t gid;
+	exit_if(argc < 7,
+		"Usage: %s /path/to/root /work/directory /env/file uid gid /to/exec [args ...]", argv[0]);
 
 	root = argv[1];
 	cwd = argv[2];
 	env = argv[3];
-	exe = argv[4];
+	uid_str = argv[4];
+	uid = atoi(uid_str);
+	gid_str = argv[5];
+	gid = atoi(gid_str);
+	args = &argv[6];
+	exe = args[0];
 
 	load_env(env);
 
 	pexit_if(chroot(root) == -1, "Chroot \"%s\" failed", root);
 	pexit_if(chdir(cwd) == -1, "Chdir \"%s\" failed", cwd);
+	pexit_if(gid > 0 && setresgid(gid, gid, gid) == -1, "Setresgid \"%s\" failed", gid_str);
+	pexit_if(uid > 0 && setresuid(uid, uid, uid) == -1, "Setresuid \"%s\" failed", uid_str);
 
 	/* XXX(vc): note that since execvp() is happening post-chroot, the
 	 * app's environment settings correctly affect the PATH search.
@@ -200,7 +211,7 @@ int main(int argc, char *argv[])
 	 * manually then let it potentially affect execvp().  execvpe() simply
 	 * passes the environment to execve() _after_ performing the search, not
 	 * what we want here. */
-	pexit_if(execvp(exe, &argv[4]) == -1 &&
+	pexit_if(execvp(exe, args) == -1 &&
 		 errno != ENOENT && errno != EACCES,
 		 "Exec of \"%s\" failed", exe);
 	diag(exe);
