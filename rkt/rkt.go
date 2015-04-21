@@ -174,7 +174,8 @@ func getKeystore() *keystore.Keystore {
 	if globalFlags.InsecureSkipVerify {
 		return nil
 	}
-	return keystore.New(nil)
+	config := keystore.NewConfig(globalFlags.VendorConfigDir, globalFlags.CustomConfigDir)
+	return keystore.New(config)
 }
 
 func getConfig() (*config.Config, error) {
