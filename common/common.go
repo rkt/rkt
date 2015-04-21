@@ -39,6 +39,9 @@ const (
 
 	MetadataServicePort    = 2375
 	MetadataServiceRegSock = "/run/rkt/metadata-svc.sock"
+
+	DefaultCustomConfigDir = "/etc/rkt"
+	DefaultSystemConfigDir = "/usr/lib/rkt"
 )
 
 // Stage1ImagePath returns the path where the stage1 app image (unpacked ACI) is rooted,

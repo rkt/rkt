@@ -23,6 +23,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/coreos/rkt/common"
 )
 
 // Headerer is an interface for getting additional HTTP headers to use
@@ -56,8 +58,8 @@ var (
 
 // Default paths for vendor and custom configuration
 const (
-	DefaultVendorPath = "/usr/lib/rkt"
-	DefaultCustomPath = "/etc/rkt"
+	DefaultVendorPath = common.DefaultSystemConfigDir
+	DefaultCustomPath = common.DefaultCustomConfigDir
 )
 
 func addParser(kind, version string, parser configParser) {
