@@ -15,7 +15,7 @@ COVER=${COVER:-"-cover"}
 source ./build
 
 TESTABLE_AND_FORMATTABLE="pkg/keystore pkg/lock pkg/tar rkt rkt/config stage1/init store"
-FORMATTABLE="$TESTABLE_AND_FORMATTABLE common networking stage0/run.go version"
+FORMATTABLE="$TESTABLE_AND_FORMATTABLE common common/apps networking networking/netinfo pkg/aci pkg/keystore/keystoretest pkg/sys stage0 stage1 stage1/gc tests tests/inspect tests/test-auth-server tests/test-auth-server/aci version"
 
 # user has not provided PKG override
 if [ -z "$PKG" ]; then
@@ -47,8 +47,12 @@ if [ -n "${fmtRes}" ]; then
 	exit 255
 fi
 
+# split FMT into an array and prepend REPO_PATH to each local package for go vet
+split_vet=(${FMT// / })
+VET_TEST=${split_vet[@]/#/${REPO_PATH}/}
+
 echo "Checking govet..."
-vetRes=$(go vet $TEST)
+vetRes=$(go vet $VET_TEST)
 if [ -n "${vetRes}" ]; then
 	echo -e "govet checking failed:\n${vetRes}"
 	exit 255
