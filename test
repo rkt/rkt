@@ -14,8 +14,37 @@ COVER=${COVER:-"-cover"}
 
 source ./build
 
-TESTABLE_AND_FORMATTABLE="pkg/keystore pkg/lock pkg/tar rkt rkt/config stage1/init store"
-FORMATTABLE="$TESTABLE_AND_FORMATTABLE common common/apps networking networking/netinfo pkg/aci pkg/keystore/keystoretest pkg/sys stage0 stage1 stage1/gc tests tests/inspect tests/test-auth-server tests/test-auth-server/aci version"
+function find_dirs_with_suffixed_files
+{
+    # File suffix, can contain dots, asterisks and question marks -
+    # they will be escaped. Use of other metacharacters is at your own
+    # risk.
+    local suffix="$1"
+    # Escape question mark and asterisk metacharacters from suffix, so
+    # they are matched literally in find command.
+    local find_escaped_suffix=$(echo "${suffix}" | sed -e 's/\([?*]\)/\\\1/g')
+    # Escape dot and asterisk metacharacters from suffix, so they are
+    # matched literally in sed 's' command.
+    local sed_escaped_suffix=$(echo "${suffix}" | sed -e 's/\([.*]\)/\\\1/g')
+    # Variable 'exclude' is an POSIX ERE fragment to be put between
+    # '^(' and ')$'.
+    local exclude="$2"
+    # Find all files ending with given suffix, ...
+    find . -name '*'"${find_escaped_suffix}" |
+	# ... remove files with given suffix together with preceding slash, ...
+	sed -e 's/\/[[:alnum:]_]\+'"${sed_escaped_suffix}"'//g' |
+	# ... remove leading './', ...
+	sed -e 's/^\.\///g' |
+	# ... sort alphabetically, ...
+	sort |
+	# ... remove repeated directories, ...
+	uniq |
+	# ... and filter out given directories.
+	grep -vEe '^('"${exclude}"')$'
+}
+
+TESTABLE_AND_FORMATTABLE=$(find_dirs_with_suffixed_files '_test.go' 'Godeps/.*|tests')
+FORMATTABLE=$(find_dirs_with_suffixed_files '.go' 'Godeps/.*')
 
 # user has not provided PKG override
 if [ -z "$PKG" ]; then
