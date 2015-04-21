@@ -321,14 +321,14 @@ func (s Store) WriteACI(r io.Reader, latest bool) (string, error) {
 
 	// The treestore for this ACI is not written here as ACIs downloaded as
 	// dependencies of another ACI will be exploded also if never directly used.
-	// Users of treestore should call ds.RenderTreeStore before using it.
+	// Users of treestore should call s.RenderTreeStore before using it.
 
 	return key, nil
 }
 
 // RenderTreeStore renders a treestore for the given image key if it's not
 // already fully rendered.
-// Users of treestore should call ds.RenderTreeStore before using it to ensure
+// Users of treestore should call s.RenderTreeStore before using it to ensure
 // that the treestore is completely rendered.
 func (s Store) RenderTreeStore(key string, rebuild bool) error {
 	// this lock references the treestore dir for the specified key. This
