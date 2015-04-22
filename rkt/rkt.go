@@ -42,8 +42,8 @@ var (
 	commands      []*Command // Commands should register themselves by appending
 	globalFlags   = struct {
 		Dir                string
-		VendorConfigDir    string
-		CustomConfigDir    string
+		SystemConfigDir    string
+		LocalConfigDir     string
 		Debug              bool
 		Help               bool
 		InsecureSkipVerify bool
@@ -54,8 +54,8 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.Help, "help", false, "Print usage information and exit")
 	globalFlagset.BoolVar(&globalFlags.Debug, "debug", false, "Print out more debug information to stderr")
 	globalFlagset.StringVar(&globalFlags.Dir, "dir", defaultDataDir, "rkt data directory")
-	globalFlagset.StringVar(&globalFlags.VendorConfigDir, "vendor-config", common.DefaultSystemConfigDir, "vendor configuration directory")
-	globalFlagset.StringVar(&globalFlags.CustomConfigDir, "custom-config", common.DefaultCustomConfigDir, "custom configuration directory")
+	globalFlagset.StringVar(&globalFlags.SystemConfigDir, "system-config", common.DefaultSystemConfigDir, "system configuration directory")
+	globalFlagset.StringVar(&globalFlags.LocalConfigDir, "local-config", common.DefaultLocalConfigDir, "local configuration directory")
 	globalFlagset.BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip image or key verification")
 }
 
@@ -175,10 +175,10 @@ func getKeystore() *keystore.Keystore {
 	if globalFlags.InsecureSkipVerify {
 		return nil
 	}
-	config := keystore.NewConfig(globalFlags.VendorConfigDir, globalFlags.CustomConfigDir)
+	config := keystore.NewConfig(globalFlags.SystemConfigDir, globalFlags.LocalConfigDir)
 	return keystore.New(config)
 }
 
 func getConfig() (*config.Config, error) {
-	return config.GetConfigFrom(globalFlags.VendorConfigDir, globalFlags.CustomConfigDir)
+	return config.GetConfigFrom(globalFlags.SystemConfigDir, globalFlags.LocalConfigDir)
 }

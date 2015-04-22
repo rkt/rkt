@@ -40,7 +40,7 @@ const (
 	MetadataServicePort    = 2375
 	MetadataServiceRegSock = "/run/rkt/metadata-svc.sock"
 
-	DefaultCustomConfigDir = "/etc/rkt"
+	DefaultLocalConfigDir  = "/etc/rkt"
 	DefaultSystemConfigDir = "/usr/lib/rkt"
 )
 

@@ -104,19 +104,19 @@ func toArray(s map[string]struct{}) []string {
 }
 
 // GetConfig gets the Config instance with configuration taken from
-// default vendor path (see common.DefaultSystemConfigDir) overridden
-// with configuration from default custom path (see
-// common.DefaultSystemConfigDir).
+// default system path (see common.DefaultSystemConfigDir) overridden
+// with configuration from default local path (see
+// common.DefaultLocalConfigDir).
 func GetConfig() (*Config, error) {
-	return GetConfigFrom(common.DefaultSystemConfigDir, common.DefaultCustomConfigDir)
+	return GetConfigFrom(common.DefaultSystemConfigDir, common.DefaultLocalConfigDir)
 }
 
-// GetConfigFrom gets the Config instance with configuration taken from
-// given vendor path overridden with configuration from given custom
-// path.
-func GetConfigFrom(vendor, custom string) (*Config, error) {
+// GetConfigFrom gets the Config instance with configuration taken
+// from given system path overridden with configuration from given
+// local path.
+func GetConfigFrom(system, local string) (*Config, error) {
 	cfg := newConfig()
-	for _, cd := range []string{vendor, custom} {
+	for _, cd := range []string{system, local} {
 		subcfg, err := GetConfigFromDir(cd)
 		if err != nil {
 			return nil, err
