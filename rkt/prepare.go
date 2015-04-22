@@ -57,6 +57,7 @@ func init() {
 	prepareFlags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	prepareFlags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 	prepareFlags.BoolVar(&flagLocal, "local", false, "use only local images (do not discover or download from remote URLs)")
+	prepareFlags.StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--quiet' and '--no-overlay' will have effects")
 }
 
 func runPrepare(args []string) (exit int) {
@@ -69,15 +70,21 @@ func runPrepare(args []string) (exit int) {
 		}
 	}
 
+	if len(flagPodManifest) > 0 && (len(flagVolumes) > 0 || len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || flagLocal) {
+		stderr("prepare: conflicting flags set with --pod-manifest (see --help)")
+		return 1
+	}
+
 	if err = parseApps(&rktApps, args, &prepareFlags, true); err != nil {
 		stderr("prepare: error parsing app image arguments: %v", err)
 		return 1
 	}
 
-	if rktApps.Count() < 1 {
-		stderr("prepare: Must provide at least one image")
+	if rktApps.Count() < 1 && len(flagPodManifest) == 0 {
+		stderr("prepare: must provide at least one image or specify the pod manifest")
 		return 1
 	}
+
 	if globalFlags.Dir == "" {
 		log.Printf("dir unset - using temporary directory")
 		globalFlags.Dir, err = ioutil.TempDir("", "rkt")
@@ -126,19 +133,26 @@ func runPrepare(args []string) (exit int) {
 		return 1
 	}
 
+	cfg := stage0.CommonConfig{
+		Store:       s,
+		Stage1Image: *s1img,
+		UUID:        p.uuid,
+		Debug:       globalFlags.Debug,
+	}
+
 	pcfg := stage0.PrepareConfig{
-		CommonConfig: stage0.CommonConfig{
-			Store:       s,
-			Debug:       globalFlags.Debug,
-			Stage1Image: *s1img,
-			UUID:        p.uuid,
-		},
-		Volumes:     []types.Volume(flagVolumes),
-		Ports:       []types.ExposedPort(flagPorts),
-		InheritEnv:  flagInheritEnv,
-		ExplicitEnv: flagExplicitEnv.Strings(),
-		UseOverlay:  !flagNoOverlay && common.SupportsOverlay(),
-		Apps:        &rktApps,
+		CommonConfig: cfg,
+		UseOverlay:   !flagNoOverlay && common.SupportsOverlay(),
+	}
+
+	if len(flagPodManifest) > 0 {
+		pcfg.PodManifest = flagPodManifest
+	} else {
+		pcfg.Volumes = []types.Volume(flagVolumes)
+		pcfg.Ports = []types.ExposedPort(flagPorts)
+		pcfg.InheritEnv = flagInheritEnv
+		pcfg.ExplicitEnv = flagExplicitEnv.Strings()
+		pcfg.Apps = &rktApps
 	}
 
 	if err = stage0.Prepare(pcfg, p.path(), p.uuid); err != nil {
