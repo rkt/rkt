@@ -14,9 +14,9 @@ The credentials for `rktbot` are currently managed by CoreOS.
 Use the following build commands:
 
 ```
-./tests/install-deps.sh      # Setup
-./build                      # Setup
-./test                       # Thread #1
+./tests/install-deps.sh # Setup
+./build                 # Setup
+./test                  # Thread #1
 ```
 
 ### Platform
