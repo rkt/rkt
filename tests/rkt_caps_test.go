@@ -29,6 +29,7 @@ var capsTests = []struct {
 	capa                capability.Cap
 	capInStage1Expected bool
 	capInStage2Expected bool
+	nonrootCapExpected  bool
 }{
 	{
 		testName:            "Check we don't have CAP_NET_ADMIN without isolator",
@@ -36,6 +37,7 @@ var capsTests = []struct {
 		capa:                capability.CAP_NET_ADMIN,
 		capInStage1Expected: false,
 		capInStage2Expected: false,
+		nonrootCapExpected:  false,
 	},
 	{
 		testName:            "Check we have CAP_MKNOD without isolator",
@@ -43,6 +45,7 @@ var capsTests = []struct {
 		capa:                capability.CAP_MKNOD,
 		capInStage1Expected: true,
 		capInStage2Expected: true,
+		nonrootCapExpected:  true,
 	},
 	{
 		testName:            "Check we have CAP_NET_ADMIN with an isolator",
@@ -50,6 +53,7 @@ var capsTests = []struct {
 		capa:                capability.CAP_NET_ADMIN,
 		capInStage1Expected: true,
 		capInStage2Expected: true,
+		nonrootCapExpected:  true,
 	},
 	{
 		testName:            "Check we have CAP_NET_BIND_SERVICE with an isolator",
@@ -57,6 +61,7 @@ var capsTests = []struct {
 		capa:                capability.CAP_NET_BIND_SERVICE,
 		capInStage1Expected: true,
 		capInStage2Expected: true,
+		nonrootCapExpected:  true,
 	},
 	{
 		testName:            "Check we don't have CAP_NET_ADMIN with an isolator setting CAP_NET_BIND_SERVICE",
@@ -64,6 +69,7 @@ var capsTests = []struct {
 		capa:                capability.CAP_NET_ADMIN,
 		capInStage1Expected: false,
 		capInStage2Expected: false,
+		nonrootCapExpected:  false,
 	},
 }
 
@@ -71,14 +77,11 @@ func TestCaps(t *testing.T) {
 	for i, tt := range capsTests {
 		var stage1FileName = "rkt-inspect-print-caps-stage1.aci"
 		var stage2FileName = "rkt-inspect-print-caps-stage2.aci"
-		var stage1Args []string
-		var stage2Args []string
-		if tt.capIsolator == "" {
-			stage1Args = []string{"--exec=/inspect --print-caps-pid=1"}
-			stage2Args = []string{"--exec=/inspect --print-caps-pid=0"}
-		} else {
-			stage1Args = []string{"--capability=" + tt.capIsolator, "--exec=/inspect --print-caps-pid=1"}
-			stage2Args = []string{"--capability=" + tt.capIsolator, "--exec=/inspect --print-caps-pid=0"}
+		stage1Args := []string{"--exec=/inspect --print-caps-pid=1 --print-user"}
+		stage2Args := []string{"--exec=/inspect --print-caps-pid=0 --print-user"}
+		if tt.capIsolator != "" {
+			stage1Args = append(stage1Args, "--capability="+tt.capIsolator)
+			stage2Args = append(stage2Args, "--capability="+tt.capIsolator)
 		}
 		patchTestACI(stage1FileName, stage1Args...)
 		patchTestACI(stage2FileName, stage2Args...)
@@ -106,10 +109,58 @@ func TestCaps(t *testing.T) {
 				t.Fatalf("Expected %q but not found", expectedLine)
 			}
 
+			err = child.Expect("User: uid=0 euid=0 gid=0 egid=0")
+			if err != nil {
+				t.Fatalf("Expected user 0 but not found")
+			}
+
 			err = child.Wait()
 			if err != nil {
 				t.Fatalf("rkt didn't terminate correctly: %v", err)
 			}
+		}
+	}
+}
+
+func TestNonRootCaps(t *testing.T) {
+	for i, tt := range capsTests {
+		var fileName = "rkt-inspect-print-caps-nonroot.aci"
+		var args []string
+		args = []string{"--exec=/inspect --print-caps-pid=0 --print-user", "--user=9000", "--group=9000"}
+		if tt.capIsolator != "" {
+			args = append(args, "--capability="+tt.capIsolator)
+		}
+		patchTestACI(fileName, args...)
+		defer os.Remove(fileName)
+
+		t.Logf("Running test #%v: %v [non-root]", i, tt.testName)
+
+		cmd := fmt.Sprintf("../bin/rkt --debug --insecure-skip-verify run --set-env=CAPABILITY=%d ./%s", int(tt.capa), fileName)
+		t.Logf("Command: %v", cmd)
+		child, err := gexpect.Spawn(cmd)
+		if err != nil {
+			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
+		}
+
+		expectedLine := tt.capa.String()
+		if tt.nonrootCapExpected {
+			expectedLine += "=enabled"
+		} else {
+			expectedLine += "=disabled"
+		}
+		err = child.Expect(expectedLine)
+		if err != nil {
+			t.Fatalf("Expected %q but not found", expectedLine)
+		}
+
+		err = child.Expect("User: uid=9000 euid=9000 gid=9000 egid=9000")
+		if err != nil {
+			t.Fatalf("Expected user 9000 but not found")
+		}
+
+		err = child.Wait()
+		if err != nil {
+			t.Fatalf("rkt didn't terminate correctly: %v", err)
 		}
 	}
 }
