@@ -23,6 +23,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/coreos/rkt/common"
 )
 
 // Headerer is an interface for getting additional HTTP headers to use
@@ -52,12 +54,6 @@ var (
 	// (values) are acceptable in a config subdirectory (key)
 	configSubDirs  = make(map[string][]string)
 	parsersForKind = make(map[string]map[string]configParser)
-)
-
-// Default paths for vendor and custom configuration
-const (
-	DefaultVendorPath = "/usr/lib/rkt"
-	DefaultCustomPath = "/etc/rkt"
 )
 
 func addParser(kind, version string, parser configParser) {
@@ -108,18 +104,19 @@ func toArray(s map[string]struct{}) []string {
 }
 
 // GetConfig gets the Config instance with configuration taken from
-// default vendor path (see DefaultVendorPath) overridden with
-// configuration from default custom path (see DefaultCustomPath).
+// default system path (see common.DefaultSystemConfigDir) overridden
+// with configuration from default local path (see
+// common.DefaultLocalConfigDir).
 func GetConfig() (*Config, error) {
-	return GetConfigFrom(DefaultVendorPath, DefaultCustomPath)
+	return GetConfigFrom(common.DefaultSystemConfigDir, common.DefaultLocalConfigDir)
 }
 
-// GetConfigFrom gets the Config instance with configuration taken from
-// given vendor path overridden with configuration from given custom
-// path.
-func GetConfigFrom(vendor, custom string) (*Config, error) {
+// GetConfigFrom gets the Config instance with configuration taken
+// from given system path overridden with configuration from given
+// local path.
+func GetConfigFrom(system, local string) (*Config, error) {
 	cfg := newConfig()
-	for _, cd := range []string{vendor, custom} {
+	for _, cd := range []string{system, local} {
 		subcfg, err := GetConfigFromDir(cd)
 		if err != nil {
 			return nil, err

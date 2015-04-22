@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
-	"github.com/coreos/rkt/rkt/config"
+	"github.com/coreos/rkt/common"
 	taas "github.com/coreos/rkt/tests/test-auth-server/aci"
 )
 
@@ -50,8 +50,8 @@ type genericAuthTest struct {
 func TestAuthBasic(t *testing.T) {
 	tests := []genericAuthTest{
 		{"basic-no-config", false, "", authFailedDownload},
-		{"basic-custom-config", true, config.DefaultCustomPath, authSuccessfulDownload},
-		{"basic-vendor-config", true, config.DefaultVendorPath, authSuccessfulDownload},
+		{"basic-local-config", true, common.DefaultLocalConfigDir, authSuccessfulDownload},
+		{"basic-system-config", true, common.DefaultSystemConfigDir, authSuccessfulDownload},
 	}
 	testAuthGeneric(t, taas.Basic, tests)
 }
@@ -59,8 +59,8 @@ func TestAuthBasic(t *testing.T) {
 func TestAuthOauth(t *testing.T) {
 	tests := []genericAuthTest{
 		{"oauth-no-config", false, "", authFailedDownload},
-		{"oauth-custom-config", true, config.DefaultCustomPath, authSuccessfulDownload},
-		{"oauth-vendor-config", true, config.DefaultVendorPath, authSuccessfulDownload},
+		{"oauth-local-config", true, common.DefaultLocalConfigDir, authSuccessfulDownload},
+		{"oauth-system-config", true, common.DefaultSystemConfigDir, authSuccessfulDownload},
 	}
 	testAuthGeneric(t, taas.Oauth, tests)
 }
@@ -87,20 +87,20 @@ func TestAuthOverride(t *testing.T) {
 	server := runServer(t, taas.Oauth)
 	defer server.Close()
 	tests := []struct {
-		vendorConfig         string
-		customConfig         string
+		systemConfig         string
+		localConfig          string
 		name                 string
 		resultBeforeOverride string
 		resultAfterOverride  string
 	}{
-		{server.Conf, getInvalidOAuthConfig(server.Conf), "valid-vendor-invalid-custom", authSuccessfulDownload, authFailedDownload},
-		{getInvalidOAuthConfig(server.Conf), server.Conf, "invalid-vendor-valid-custom", authFailedDownload, authSuccessfulDownload},
+		{server.Conf, getInvalidOAuthConfig(server.Conf), "valid-system-invalid-local", authSuccessfulDownload, authFailedDownload},
+		{getInvalidOAuthConfig(server.Conf), server.Conf, "invalid-system-valid-local", authFailedDownload, authSuccessfulDownload},
 	}
 	for _, tt := range tests {
 		removeAllConfig(t)
-		writeVendorConfig(t, "test.json", tt.vendorConfig)
+		writeSystemConfig(t, "test.json", tt.systemConfig)
 		expectedRunRkt(t, server.URL, tt.name+"-1", tt.resultBeforeOverride)
-		writeCustomConfig(t, "test.json", tt.customConfig)
+		writeLocalConfig(t, "test.json", tt.localConfig)
 		expectedRunRkt(t, server.URL, tt.name+"-2", tt.resultAfterOverride)
 	}
 }
@@ -117,19 +117,19 @@ func TestAuthIgnore(t *testing.T) {
 
 func testAuthIgnoreBogusFiles(t *testing.T, server *taas.Server) {
 	removeAllConfig(t)
-	writeVendorConfig(t, "README", "This is vendor config")
-	writeCustomConfig(t, "README", "This is custom config")
-	writeVendorConfig(t, "test.notjson", server.Conf)
-	writeCustomConfig(t, "test.notjson", server.Conf)
+	writeSystemConfig(t, "README", "This is system config")
+	writeLocalConfig(t, "README", "This is local config")
+	writeSystemConfig(t, "test.notjson", server.Conf)
+	writeLocalConfig(t, "test.notjson", server.Conf)
 	failedRunRkt(t, server.URL, "oauth-bogus-files")
 }
 
 func testAuthIgnoreSubdirectories(t *testing.T, server *taas.Server) {
 	removeAllConfig(t)
-	customSubdir := filepath.Join(config.DefaultCustomPath, "subdir")
-	vendorSubdir := filepath.Join(config.DefaultVendorPath, "subdir")
-	writeConfig(t, customSubdir, "test.json", server.Conf)
-	writeConfig(t, vendorSubdir, "test.json", server.Conf)
+	localSubdir := filepath.Join(common.DefaultLocalConfigDir, "subdir")
+	systemSubdir := filepath.Join(common.DefaultSystemConfigDir, "subdir")
+	writeConfig(t, localSubdir, "test.json", server.Conf)
+	writeConfig(t, systemSubdir, "test.json", server.Conf)
 	failedRunRkt(t, server.URL, "oauth-subdirectories")
 }
 
@@ -170,7 +170,7 @@ func expectedRunRkt(t *testing.T, host, dir, line string) {
 }
 
 // TODO (krnowak): Use --dir option when we also add
-// --vendor-config-dir and --custom-config-dir options. Then we can
+// --system-config-dir and --local-config-dir options. Then we can
 // remove destructive tests checks.
 
 // runRkt tries to fetch and run a prog.aci from host within given
@@ -189,8 +189,8 @@ func runRkt(t *testing.T, host, dir string) *gexpect.ExpectSubprocess {
 
 func removeAllConfig(t *testing.T) {
 	dirs := []string{
-		authDir(config.DefaultCustomPath),
-		authDir(config.DefaultVendorPath),
+		authDir(common.DefaultLocalConfigDir),
+		authDir(common.DefaultSystemConfigDir),
 	}
 	for _, p := range dirs {
 		if err := os.RemoveAll(p); err != nil {
@@ -202,12 +202,12 @@ func removeAllConfig(t *testing.T) {
 	}
 }
 
-func writeCustomConfig(t *testing.T, filename, contents string) {
-	writeConfig(t, config.DefaultCustomPath, filename, contents)
+func writeLocalConfig(t *testing.T, filename, contents string) {
+	writeConfig(t, common.DefaultLocalConfigDir, filename, contents)
 }
 
-func writeVendorConfig(t *testing.T, filename, contents string) {
-	writeConfig(t, config.DefaultVendorPath, filename, contents)
+func writeSystemConfig(t *testing.T, filename, contents string) {
+	writeConfig(t, common.DefaultSystemConfigDir, filename, contents)
 }
 
 func writeConfig(t *testing.T, baseDir, filename, contents string) {

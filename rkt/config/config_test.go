@@ -156,17 +156,17 @@ func TestConfigLoading(t *testing.T) {
 		panic(fmt.Sprintf("Failed to create temporary directory: %v", err))
 	}
 	defer os.RemoveAll(dir)
-	vendorAuth := filepath.Join("vendor", "auth.d")
-	vendorIgnored := filepath.Join(vendorAuth, "ignoreddir")
-	customAuth := filepath.Join("custom", "auth.d")
-	customIgnored := filepath.Join(customAuth, "ignoreddir")
+	systemAuth := filepath.Join("system", "auth.d")
+	systemIgnored := filepath.Join(systemAuth, "ignoreddir")
+	localAuth := filepath.Join("local", "auth.d")
+	localIgnored := filepath.Join(localAuth, "ignoreddir")
 	dirs := []string{
-		"vendor",
-		vendorAuth,
-		vendorIgnored,
-		"custom",
-		customAuth,
-		customIgnored,
+		"system",
+		systemAuth,
+		systemIgnored,
+		"local",
+		localAuth,
+		localIgnored,
 	}
 	for _, d := range dirs {
 		cd := filepath.Join(dir, d)
@@ -180,23 +180,23 @@ func TestConfigLoading(t *testing.T) {
 		user   string
 		pass   string
 	}{
-		{filepath.Join(dir, vendorAuth, "endocode.json"), "endocode.com", "vendor_user1", "vendor_password1"},
-		{filepath.Join(dir, vendorAuth, "coreos.json"), "coreos.com", "vendor_user2", "vendor_password2"},
-		{filepath.Join(dir, vendorAuth, "ignoredfile"), "example1.com", "ignored_user1", "ignored_password1"},
-		{filepath.Join(dir, vendorIgnored, "ignoredfile"), "example2.com", "ignored_user2", "ignored_password2"},
-		{filepath.Join(dir, vendorIgnored, "ignoredanyway.json"), "example3.com", "ignored_user3", "ignored_password3"},
-		{filepath.Join(dir, customAuth, "endocode.json"), "endocode.com", "custom_user1", "custom_password1"},
-		{filepath.Join(dir, customAuth, "tectonic.json"), "tectonic.com", "custom_user2", "custom_password2"},
-		{filepath.Join(dir, customAuth, "ignoredfile"), "example4.com", "ignored_user4", "ignored_password4"},
-		{filepath.Join(dir, customIgnored, "ignoredfile"), "example5.com", "ignored_user5", "ignored_password5"},
-		{filepath.Join(dir, customIgnored, "ignoredanyway.json"), "example6.com", "ignored_user6", "ignored_password6"},
+		{filepath.Join(dir, systemAuth, "endocode.json"), "endocode.com", "system_user1", "system_password1"},
+		{filepath.Join(dir, systemAuth, "coreos.json"), "coreos.com", "system_user2", "system_password2"},
+		{filepath.Join(dir, systemAuth, "ignoredfile"), "example1.com", "ignored_user1", "ignored_password1"},
+		{filepath.Join(dir, systemIgnored, "ignoredfile"), "example2.com", "ignored_user2", "ignored_password2"},
+		{filepath.Join(dir, systemIgnored, "ignoredanyway.json"), "example3.com", "ignored_user3", "ignored_password3"},
+		{filepath.Join(dir, localAuth, "endocode.json"), "endocode.com", "local_user1", "local_password1"},
+		{filepath.Join(dir, localAuth, "tectonic.json"), "tectonic.com", "local_user2", "local_password2"},
+		{filepath.Join(dir, localAuth, "ignoredfile"), "example4.com", "ignored_user4", "ignored_password4"},
+		{filepath.Join(dir, localIgnored, "ignoredfile"), "example5.com", "ignored_user5", "ignored_password5"},
+		{filepath.Join(dir, localIgnored, "ignoredanyway.json"), "example6.com", "ignored_user6", "ignored_password6"},
 	}
 	for _, f := range files {
 		if err := writeBasicConfig(f.path, f.domain, f.user, f.pass); err != nil {
 			panic(fmt.Sprintf("Failed to write configuration file: %v", err))
 		}
 	}
-	cfg, err := GetConfigFrom(filepath.Join(dir, "vendor"), filepath.Join(dir, "custom"))
+	cfg, err := GetConfigFrom(filepath.Join(dir, "system"), filepath.Join(dir, "local"))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to get configuration: %v", err))
 	}
@@ -206,16 +206,16 @@ func TestConfigLoading(t *testing.T) {
 	}
 	expected := map[string]http.Header{
 		"endocode.com": http.Header{
-			// custom_user1:custom_password1
-			authHeader: []string{"Basic Y3VzdG9tX3VzZXIxOmN1c3RvbV9wYXNzd29yZDE="},
+			// local_user1:local_password1
+			authHeader: []string{"Basic bG9jYWxfdXNlcjE6bG9jYWxfcGFzc3dvcmQx"},
 		},
 		"coreos.com": http.Header{
-			// vendor_user2:vendor_password2
-			authHeader: []string{"Basic dmVuZG9yX3VzZXIyOnZlbmRvcl9wYXNzd29yZDI="},
+			// system_user2:system_password2
+			authHeader: []string{"Basic c3lzdGVtX3VzZXIyOnN5c3RlbV9wYXNzd29yZDI="},
 		},
 		"tectonic.com": http.Header{
-			// custom_user2:custom_password2
-			authHeader: []string{"Basic Y3VzdG9tX3VzZXIyOmN1c3RvbV9wYXNzd29yZDI="},
+			// local_user2:local_password2
+			authHeader: []string{"Basic bG9jYWxfdXNlcjI6bG9jYWxfcGFzc3dvcmQy"},
 		},
 	}
 	if !reflect.DeepEqual(result, expected) {

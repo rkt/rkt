@@ -28,12 +28,13 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	"github.com/coreos/rkt/common"
 )
 
 // A Config structure is used to configure a Keystore.
 type Config struct {
-	RootPath         string
-	PrefixPath       string
+	LocalRootPath    string
+	LocalPrefixPath  string
 	SystemRootPath   string
 	SystemPrefixPath string
 }
@@ -52,12 +53,16 @@ func New(config *Config) *Keystore {
 	return &Keystore{config}
 }
 
-var defaultConfig = &Config{
-	RootPath:         "/etc/rkt/trustedkeys/root.d",
-	PrefixPath:       "/etc/rkt/trustedkeys/prefix.d",
-	SystemRootPath:   "/usr/lib/rkt/trustedkeys/root.d",
-	SystemPrefixPath: "/usr/lib/rkt/trustedkeys/prefix.d",
+func NewConfig(systemPath, localPath string) *Config {
+	return &Config{
+		LocalRootPath:    filepath.Join(localPath, "trustedkeys", "root.d"),
+		LocalPrefixPath:  filepath.Join(localPath, "trustedkeys", "prefix.d"),
+		SystemRootPath:   filepath.Join(systemPath, "trustedkeys", "root.d"),
+		SystemPrefixPath: filepath.Join(systemPath, "trustedkeys", "prefix.d"),
+	}
 }
+
+var defaultConfig = NewConfig(common.DefaultSystemConfigDir, common.DefaultLocalConfigDir)
 
 // CheckSignature is a convenience method for creating a Keystore with a default
 // configuration and invoking CheckSignature.
@@ -96,7 +101,7 @@ func (ks *Keystore) DeleteTrustedKeyPrefix(prefix, fingerprint string) error {
 	if err != nil {
 		return err
 	}
-	return os.Remove(path.Join(ks.PrefixPath, acname.String(), fingerprint))
+	return os.Remove(path.Join(ks.LocalPrefixPath, acname.String(), fingerprint))
 }
 
 // MaskTrustedKeySystemPrefix masks the system prefix trusted key identified by fingerprint.
@@ -105,18 +110,18 @@ func (ks *Keystore) MaskTrustedKeySystemPrefix(prefix, fingerprint string) (stri
 	if err != nil {
 		return "", err
 	}
-	dst := path.Join(ks.PrefixPath, acname.String(), fingerprint)
+	dst := path.Join(ks.LocalPrefixPath, acname.String(), fingerprint)
 	return dst, ioutil.WriteFile(dst, []byte(""), 0644)
 }
 
 // DeleteTrustedKeyRoot deletes the root trusted key identified by fingerprint.
 func (ks *Keystore) DeleteTrustedKeyRoot(fingerprint string) error {
-	return os.Remove(path.Join(ks.RootPath, fingerprint))
+	return os.Remove(path.Join(ks.LocalRootPath, fingerprint))
 }
 
 // MaskTrustedKeySystemRoot masks the system root trusted key identified by fingerprint.
 func (ks *Keystore) MaskTrustedKeySystemRoot(fingerprint string) (string, error) {
-	dst := path.Join(ks.RootPath, fingerprint)
+	dst := path.Join(ks.LocalRootPath, fingerprint)
 	return dst, ioutil.WriteFile(dst, []byte(""), 0644)
 }
 
@@ -126,12 +131,12 @@ func (ks *Keystore) StoreTrustedKeyPrefix(prefix string, r io.Reader) (string, e
 	if err != nil {
 		return "", err
 	}
-	return storeTrustedKey(path.Join(ks.PrefixPath, acname.String()), r)
+	return storeTrustedKey(path.Join(ks.LocalPrefixPath, acname.String()), r)
 }
 
 // StoreTrustedKeyRoot stores the contents of public key r as a root trusted key.
 func (ks *Keystore) StoreTrustedKeyRoot(r io.Reader) (string, error) {
-	return storeTrustedKey(ks.RootPath, r)
+	return storeTrustedKey(ks.LocalRootPath, r)
 }
 
 func storeTrustedKey(dir string, r io.Reader) (string, error) {
@@ -189,9 +194,9 @@ func (ks *Keystore) loadKeyring(prefix string) (openpgp.KeyRing, error) {
 		fullPath string
 	}{
 		{ks.SystemRootPath, ks.SystemRootPath},
-		{ks.RootPath, ks.RootPath},
+		{ks.LocalRootPath, ks.LocalRootPath},
 		{path.Join(ks.SystemPrefixPath, prefixRoot), path.Join(ks.SystemPrefixPath, acname.String())},
-		{path.Join(ks.PrefixPath, prefixRoot), path.Join(ks.PrefixPath, acname.String())},
+		{path.Join(ks.LocalPrefixPath, prefixRoot), path.Join(ks.LocalPrefixPath, acname.String())},
 	}
 	for _, p := range paths {
 		err := filepath.Walk(p.root, func(path string, info os.FileInfo, err error) error {
@@ -244,13 +249,10 @@ func NewTestKeystore() (*Keystore, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	c := &Config{
-		RootPath:         path.Join(dir, "/etc/rkt/trustedkeys/root.d"),
-		SystemRootPath:   path.Join(dir, "/usr/lib/rkt/trustedkeys/root.d"),
-		PrefixPath:       path.Join(dir, "/etc/rkt/trustedkeys/prefix.d"),
-		SystemPrefixPath: path.Join(dir, "/usr/lib/rkt/trustedkeys/prefix.d"),
-	}
-	for _, path := range []string{c.RootPath, c.SystemRootPath, c.PrefixPath, c.SystemPrefixPath} {
+	systemDir := filepath.Join(dir, common.DefaultSystemConfigDir)
+	localDir := filepath.Join(dir, common.DefaultLocalConfigDir)
+	c := NewConfig(systemDir, localDir)
+	for _, path := range []string{c.LocalRootPath, c.SystemRootPath, c.LocalPrefixPath, c.SystemPrefixPath} {
 		if err := os.MkdirAll(path, 0755); err != nil {
 			return nil, "", err
 		}

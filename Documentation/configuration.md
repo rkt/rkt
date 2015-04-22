@@ -1,8 +1,8 @@
 # rkt configuration
 
-`rkt` reads configuration from two directories - vendor one and custom
-one. Vendor directory is by default `/usr/lib/rkt` and custom
-directory - `/etc/rkt`. `rkt` looks for configuration files inside
+`rkt` reads configuration from two directories - system one and local
+one. System directory is by default `/usr/lib/rkt` and local directory
+- `/etc/rkt`. `rkt` looks for configuration files inside
 subdirectories of those two. Inside them, it ignores everything but
 regular files with `.json` extension. This means - `rkt` does _not_
 search for the files by recursively going down the directory
@@ -26,8 +26,8 @@ file. That way older version of `rkt` can work with
 newer-but-compatible version of configuration files and newer versions
 of `rkt` can still work with older versions of configuration files.
 
-The configuration in vendor directory can be overridden by a
-configuration in custom directory. Semantics of configuration override
+The configuration in system directory can be overridden by a
+configuration in local directory. Semantics of configuration override
 are specific to the kind and the version of configuration file and are
 described below. Filenames are not playing any role in overriding.
 
@@ -100,7 +100,7 @@ be empty. Example:
 
 Overriding is done for each domain. That means that the user can
 override authentication type and/or credentials used for each
-domain. Example of vendor configuration:
+domain. Example of system configuration:
 
 In `/usr/lib/rkt/auth.d/coreos.json`:
 ```
@@ -121,7 +121,7 @@ downloading data from either `coreos.com`, `tectonic.com` or
 Bearer common-token`.
 
 But with additional configuration like follows situation
-changes. Example of custom configuration:
+changes. Example of local configuration:
 
 In `/etc/rkt/auth.d/specific-coreos.json`:
 ```
@@ -203,7 +203,7 @@ Example of dockerAuth config:
 ##### Overriding semantics
 
 Overriding is done for each registry. That means that the user can
-override credentials used for each registry. Example of vendor
+override credentials used for each registry. Example of system
 configuration:
 
 In `/usr/lib/rkt/auth.d/docker.json`:
@@ -224,7 +224,7 @@ downloading images from either `index.docker.io`, `gcr.io` or
 `quay.io`, `rkt` would use user `foo` and password `bar`.
 
 But with additional configuration like follows situation
-changes. Example of custom configuration:
+changes. Example of local configuration:
 
 In `/etc/rkt/auth.d/specific-quay.json`:
 ```
