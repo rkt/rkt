@@ -64,6 +64,7 @@ $ cd $GOPATH/src/github.com/coreos/rkt
 
 If, however, you instead prefer to manage your source code in directories like `~/src/rkt`, there's a problem: `godep` doesn't like symbolic links (which is what the rkt `build` script [uses to create a self-contained GOPATH](https://github.com/coreos/rkt/blob/master/build#L8)).
 Hence, you'll need to work around this with bind mounts, with something like the following:
+
 ```
 $ export GOPATH=/tmp/foo        # or any directory you please
 $ mkdir -p $GOPATH/src/github.com/coreos/rkt
@@ -90,6 +91,7 @@ But in _all three cases_, the procedure finishes with the [same save command](#s
 
 In this case you'll first need to retrieve the dependency you're working with into `GOPATH`.
 As a simple example, assuming we're adding `github.com/fizz/buzz`:
+
 ```
 $ go get -d github.com/fizz/buzz
 ```
@@ -129,6 +131,7 @@ Now, GOTO [saving](#saving-the-set-of-dependencies)
 
 Finally, here we are, the magic command, the holy grail, the ultimate conclusion of all `godep` operations.
 Provided you have followed the preceding instructions, regardless of whether you are adding/removing/modifying dependencies, this command will cast the necessary spells to solve all of your dependency worries:
+
 ```
 $ godep save -r ./...
 ```
