@@ -16,7 +16,7 @@ that pair. The currently supported kinds and versions are described below.
 These fields must be specified and cannot be empty.
 
 `rktKind` describes the type of the configuration. This is to avoid putting
-unrelated values into single monolitic file.
+unrelated values into single monolithic file.
 
 `rktVersion` allows configuration versioning for each kind of configuration. A
 new version should be introduced when doing some backward-incompatible changes:
