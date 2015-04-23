@@ -1,44 +1,44 @@
 # rkt configuration
 
-`rkt` reads configuration from two directories - system one and local
-one. System directory is by default `/usr/lib/rkt` and local directory
-- `/etc/rkt`. `rkt` looks for configuration files inside
-subdirectories of those two. Inside them, it ignores everything but
-regular files with `.json` extension. This means - `rkt` does _not_
-search for the files by recursively going down the directory
-tree. This also means that users are free to put some additional files
-there as a documentation.
+`rkt` reads configuration from two directories - a **system directory** and a
+**local directory**. The system directory defaults to `/usr/lib/rkt` and the
+local directory `/etc/rkt`, but both can be overridden via command-line flags.
+
+`rkt` looks for configuration files inside subdirectories of these two
+directories. It ignores everything but regular files with `.json` extension.
+This means `rkt` does _not_ search for the files by recursively going down
+the directory tree. This also means that users are free to put some additional
+files there (e.g. documentation).
 
 Every configuration file has two common fields: `rktKind` and
-`rktVersion`. Both are strings. Rest of the fields are specified by
-that pair. Currently supported kinds and versions are described
-below. These fields have to be specified and cannot be empty.
+`rktVersion`. Both are strings, and the rest of the fields are specified by
+that pair. The currently supported kinds and versions are described below.
+These fields must be specified and cannot be empty.
 
-Kind describes the type of the configuration. This is to avoid putting
+`rktKind` describes the type of the configuration. This is to avoid putting
 unrelated values into single monolitic file.
 
-Version allows configuration kind versioning. Please note that the new
-version should be introduced when doing some backward-incompatible
-changes. For example, when removing a field or incompatibly changing
-its semantics. When a new field is added, some default value should be
-specified for it, documented and used when the field is absent in
-file. That way older version of `rkt` can work with
-newer-but-compatible version of configuration files and newer versions
-of `rkt` can still work with older versions of configuration files.
+`rktVersion` allows configuration versioning. A new version should be
+introduced when doing some backward-incompatible changes: for example, when
+removing a field or incompatibly changing its semantics. When a new field is
+added, a default value should be specified for it, documented, and used when
+the field is absent in file. This way, an older version of `rkt` can work with
+newer-but-compatible versions of configuration files, and newer versions of
+`rkt` can still work with older versions of configuration files.
 
-The configuration in system directory can be overridden by a
-configuration in local directory. Semantics of configuration override
-are specific to the kind and the version of configuration file and are
-described below. Filenames are not playing any role in overriding.
+The configuration in the system directory can be overridden by configuration
+in the local directory. The semantics of configuration override are specific to
+the kind and version of the configuration file and are described below.
+Filenames do not play any role in overriding.
 
-## kinds
+## Configuration kinds
 
 ### rktKind: `auth`
 
 This kind of configuration is used to set up necessary credentials
 when downloading images and signatures. The configuration files should
-be placed inside `auth.d` subdirectory (that is - in
-`/usr/lib/rkt/auth.d` or in `/etc/rkt/auth.d`).
+be placed inside the `auth.d` subdirectory (e.g., in the case of the default
+system/local directories, in `/usr/lib/rkt/auth.d` or `/etc/rkt/auth.d`).
 
 #### rktVersion: `v1`
 
@@ -120,10 +120,11 @@ downloading data from either `coreos.com`, `tectonic.com` or
 `kubernetes.io`, `rkt` would send an HTTP header: `Authorization:
 Bearer common-token`.
 
-But with additional configuration like follows situation
-changes. Example of local configuration:
+But with additional configuration provided in the local configuration 
+directory, this can be overridden. For example, given the above system
+configuration and the following local configurations:
 
-In `/etc/rkt/auth.d/specific-coreos.json`:
+`/etc/rkt/auth.d/specific-coreos.json`:
 ```
 {
 	"rktKind": "auth",
@@ -136,7 +137,8 @@ In `/etc/rkt/auth.d/specific-coreos.json`:
 	}
 }
 ```
-In `/etc/rkt/auth.d/specific-tectonic.json`:
+
+`/etc/rkt/auth.d/specific-tectonic.json`:
 ```
 {
 	"rktKind": "auth",
@@ -149,18 +151,18 @@ In `/etc/rkt/auth.d/specific-tectonic.json`:
 }
 ```
 
-The result is that when downloading data from `kubernetes.io` `rkt`
+the result is that when downloading data from `kubernetes.io`, `rkt`
 still sends `Authorization: Bearer common-token`, but when downloading
-from `coreos.com` - `Authorization: Basic Zm9vOmJhcg==` (`foo:bar`
-encoded in base64). And for `tectonic.com` - `Authorization: Bearer
-tectonic-token`.
+from `coreos.com`, it sends `Authorization: Basic Zm9vOmJhcg==` (i.e 
+`foo:bar` encoded in base64). For `tectonic.com`, it will send
+`Authorization: Bearer tectonic-token`.
 
 ### rktKind: `dockerAuth`
 
 This kind of configuration is used to set up necessary credentials
 when downloading data from docker registries. The configuration files
-should be placed inside `auth.d` subdirectory (that is - in
-`/usr/lib/rkt/auth.d` or in `/etc/rkt/auth.d`).
+should be placed inside `auth.d` subdirectory (that is, in
+`/usr/lib/rkt/auth.d` or `/etc/rkt/auth.d`).
 
 #### rktVersion: `v1`
 
@@ -251,7 +253,7 @@ In `/etc/rkt/auth.d/specific-gcr.json`:
 }
 ```
 
-The result is that when downloading images from `index.docker.io` `rkt`
-still sends user `foo` and password `bar`, but when downloading
-from `quay.io` - user `baz` and password `quux`. And for
-`gcr.io` - user `goo` and password `gle`.
+The result is that when downloading images from `index.docker.io`, 
+`rkt` still sends user `foo` and password `bar`, but when downloading
+from `quay.io`, it uses user `baz` and password `quux`; and for
+`gcr.io` it will use user `goo` and password `gle`.
