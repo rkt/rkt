@@ -18,13 +18,13 @@ These fields must be specified and cannot be empty.
 `rktKind` describes the type of the configuration. This is to avoid putting
 unrelated values into single monolitic file.
 
-`rktVersion` allows configuration versioning. A new version should be
-introduced when doing some backward-incompatible changes: for example, when
-removing a field or incompatibly changing its semantics. When a new field is
-added, a default value should be specified for it, documented, and used when
-the field is absent in file. This way, an older version of `rkt` can work with
-newer-but-compatible versions of configuration files, and newer versions of
-`rkt` can still work with older versions of configuration files.
+`rktVersion` allows configuration versioning for each kind of configuration. A
+new version should be introduced when doing some backward-incompatible changes:
+for example, when removing a field or incompatibly changing its semantics. When
+a new field is added, a default value should be specified for it, documented,
+and used when the field is absent in file. This way, an older version of `rkt`
+can work with newer-but-compatible versions of configuration files, and newer
+versions of `rkt` can still work with older versions of configuration files.
 
 The configuration in the system directory can be overridden by configuration
 in the local directory. The semantics of configuration override are specific to
@@ -38,35 +38,33 @@ Filenames do not play any role in overriding.
 This kind of configuration is used to set up necessary credentials
 when downloading images and signatures. The configuration files should
 be placed inside the `auth.d` subdirectory (e.g., in the case of the default
-system/local directories, in `/usr/lib/rkt/auth.d` or `/etc/rkt/auth.d`).
+system/local directories, in `/usr/lib/rkt/auth.d` and/or `/etc/rkt/auth.d`).
 
 #### rktVersion: `v1`
 
 ##### Description and examples
 
-This version of `auth` configuration specifies three additional
-fields: `domains`, `type` and `credentials`.
+This version of `auth` configuration specifies three additional fields:
+`domains`, `type` and `credentials`.
 
-The `domains` field is an array of strings describing hosts for which
-following credentials should be used. By "host" we mean the host and
-the port in a URL as specified by RFC 3986. This field has to be
-specified and cannot be empty.
+The `domains` field is an array of strings describing hosts for which the
+following credentials should be used. Each entry must consist of a host/port
+combination in a URL as specified by RFC 3986. This field must be specified and
+cannot be empty.
 
-The `type` field describes the type of credentials to be sent. This
-field has to be specified and cannot be empty.
+The `type` field describes the type of credentials to be sent. This field must
+be specified and cannot be empty.
 
-`credentials` field is defined by the `type` field. It should hold all
-the data that are needed for successful authentication with given
-hosts.
+The `credentials` field is defined by the `type` field. It should hold all
+the data that are needed for successful authentication with the given hosts.
 
 This version of auth configuration supports two methods - basic HTTP
 authentication and OAuth Bearer Token.
 
-Basic HTTP authentication requires two things - a user and a
-password. To use this type, define `type` field as `basic` and
-`credentials` field as a map with two keys - `user` and
-`password`. These fields have to be specified and cannot be
-empty. Example:
+Basic HTTP authentication requires two things - a user and a password. To use
+this type, define `type` as `basic` and the `credentials` field as a map
+with two keys - `user` and `password`. These fields must be specified and
+cannot be empty. For example:
 ```
 {
 	"rktKind": "auth",
@@ -80,10 +78,9 @@ empty. Example:
 }
 ```
 
-OAuth Bearer Token authentication requires only a token. To use this
-type, define `type` field as `oauth` and `credentials` field as a map
-with only one key - `token`. This field has to be specified and cannot
-be empty. Example:
+OAuth Bearer Token authentication requires only a token. To use this type,
+define `type` as `oauth` and the `credentials` field as a map with only one
+key - `token`. This field must be specified and cannot be empty. For example:
 ```
 {
 	"rktKind": "auth",
@@ -96,13 +93,13 @@ be empty. Example:
 }
 ```
 
-##### Overriding semantics
+##### Override semantics
 
-Overriding is done for each domain. That means that the user can
-override authentication type and/or credentials used for each
-domain. Example of system configuration:
+Overriding is done for each domain. That means that the user can override
+authentication type and/or credentials used for each domain. As an example,
+consider this system configuration:
 
-In `/usr/lib/rkt/auth.d/coreos.json`:
+`/usr/lib/rkt/auth.d/coreos.json`:
 ```
 {
 	"rktKind": "auth",
@@ -115,12 +112,11 @@ In `/usr/lib/rkt/auth.d/coreos.json`:
 }
 ```
 
-If only this configuration file were available to `rkt` then when
-downloading data from either `coreos.com`, `tectonic.com` or
-`kubernetes.io`, `rkt` would send an HTTP header: `Authorization:
-Bearer common-token`.
+If only this configuration file is provided then when downloading data from
+either `coreos.com`, `tectonic.com` or `kubernetes.io`, `rkt` would send an
+HTTP header of: `Authorization: Bearer common-token`.
 
-But with additional configuration provided in the local configuration 
+But with additional configuration provided in the local configuration
 directory, this can be overridden. For example, given the above system
 configuration and the following local configurations:
 
@@ -151,45 +147,48 @@ configuration and the following local configurations:
 }
 ```
 
-the result is that when downloading data from `kubernetes.io`, `rkt`
-still sends `Authorization: Bearer common-token`, but when downloading
-from `coreos.com`, it sends `Authorization: Basic Zm9vOmJhcg==` (i.e 
-`foo:bar` encoded in base64). For `tectonic.com`, it will send
+The result is that when downloading data from `kubernetes.io`, `rkt` still
+sends `Authorization: Bearer common-token`, but when downloading from
+`coreos.com`, it sends `Authorization: Basic Zm9vOmJhcg==` (i.e. `foo:bar`
+encoded in base64). For `tectonic.com`, it will send 
 `Authorization: Bearer tectonic-token`.
+
+Note that _within_ a particular configuration directory (either system or
+local), it is a syntax error for the same domain to be defined in multiple
+files.
 
 ### rktKind: `dockerAuth`
 
-This kind of configuration is used to set up necessary credentials
-when downloading data from docker registries. The configuration files
-should be placed inside `auth.d` subdirectory (that is, in
-`/usr/lib/rkt/auth.d` or `/etc/rkt/auth.d`).
+This kind of configuration is used to set up necessary credentials when
+downloading data from Docker registries. The configuration files should be
+placed inside `auth.d` subdirectory (e.g. in `/usr/lib/rkt/auth.d` or
+`/etc/rkt/auth.d`).
 
 #### rktVersion: `v1`
 
 ##### Description and examples
 
-This version of `dockerAuth` configuration specifies two additional
-fields: `registries` and `credentials`.
+This version of `dockerAuth` configuration specifies two additional fields:
+`registries` and `credentials`.
 
-The `registries` field is an array of strings describing docker
-registries for which following credentials should be used. A short
-list of popular docker registries is below. This field has to be
-specified and cannot be empty.
+The `registries` field is an array of strings describing Docker registries for
+which the associated credentials should be used. A short list of popular Docker
+registries is below. This field must be specified and cannot be empty.
 
-`credentials` field holds the necessary data to authenticate against
-docker registry. This field has to be specified and cannot be empty.
+`credentials` field holds the necessary data to authenticate against the
+Docker registry. This field must be specified and cannot be empty.
 
-Currently docker registries only support basic HTTP authentication, so
+Currently, Docker registries only support basic HTTP authentication, so
 `credentials` field has two subfields - `user` and `password`. These
 fields have to be specified and cannot be empty.
 
-Some popular docker registries:
-* index.docker.io (this is is used when no docker registry is
-  specified in URL, like in `docker://redis`)
+Some popular Docker registries:
+* index.docker.io (this is used when no Docker registry is
+  specified in a reference on the rkt command line, as in `docker://redis`)
 * quay.io
 * gcr.io
 
-Example of dockerAuth config:
+Example `dockerAuth` configuration:
 ```
 {
 	"rktKind": "dockerAuth",
@@ -202,11 +201,10 @@ Example of dockerAuth config:
 }
 ```
 
-##### Overriding semantics
+##### Override semantics
 
-Overriding is done for each registry. That means that the user can
-override credentials used for each registry. Example of system
-configuration:
+Overriding is done for each registry. That means that the user can override
+credentials used for each registry. For example, given this system configuration:
 
 In `/usr/lib/rkt/auth.d/docker.json`:
 ```
@@ -221,14 +219,15 @@ In `/usr/lib/rkt/auth.d/docker.json`:
 }
 ```
 
-If only this configuration file were available to `rkt` then when
-downloading images from either `index.docker.io`, `gcr.io` or
-`quay.io`, `rkt` would use user `foo` and password `bar`.
+If only this configuration file is provided, then when downloading images from
+either `index.docker.io`, `gcr.io`, or `quay.io`, `rkt` would use user `foo` and
+password `bar`.
 
-But with additional configuration like follows situation
-changes. Example of local configuration:
+But with additional configuration provided in the local configuration
+directory, this can be overridden. For example, given the above system
+configuration and the following local configuration:
 
-In `/etc/rkt/auth.d/specific-quay.json`:
+`/etc/rkt/auth.d/specific-quay.json`:
 ```
 {
 	"rktKind": "dockerAuth",
@@ -240,7 +239,8 @@ In `/etc/rkt/auth.d/specific-quay.json`:
 	}
 }
 ```
-In `/etc/rkt/auth.d/specific-gcr.json`:
+
+`/etc/rkt/auth.d/specific-gcr.json`:
 ```
 {
 	"rktKind": "dockerAuth",
@@ -253,7 +253,11 @@ In `/etc/rkt/auth.d/specific-gcr.json`:
 }
 ```
 
-The result is that when downloading images from `index.docker.io`, 
-`rkt` still sends user `foo` and password `bar`, but when downloading
-from `quay.io`, it uses user `baz` and password `quux`; and for
-`gcr.io` it will use user `goo` and password `gle`.
+The result is that when downloading images from `index.docker.io`, `rkt` still
+sends user `foo` and password `bar`, but when downloading from `quay.io`, it
+uses user `baz` and password `quux`; and for `gcr.io` it will use user `goo`
+and password `gle`.
+
+Note that _within_ a particular configuration directory (either system or
+local), it is a syntax error for the same Docker registry to be defined in
+multiple files.
