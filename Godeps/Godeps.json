@@ -139,6 +139,11 @@
 			"Rev": "47331054e4f96186e3ff772877c0443909368a45"
 		},
 		{
+			"ImportPath": "github.com/godbus/dbus",
+			"Comment": "v2-3-g4160802",
+			"Rev": "41608027bdce7bfa8959d653a00b954591220e67"
+		},
+		{
 			"ImportPath": "github.com/gorilla/context",
 			"Rev": "50c25fb3b2b3b3cc724e9b6ac75fb44b3bccd0da"
 		},
