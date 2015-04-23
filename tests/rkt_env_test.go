@@ -31,37 +31,37 @@ var envTests = []struct {
 		`../bin/rkt --debug --insecure-skip-verify run ./rkt-inspect-print-var-from-manifest.aci`,
 		"VAR_FROM_MANIFEST=manifest",
 		`../bin/rkt --debug --insecure-skip-verify run ./rkt-inspect-sleep.aci`,
-		`/bin/sh -c "../bin/rkt --debug enter $(../bin/rkt list --full|grep running|gawk '{print $1}') /inspect --print-env=VAR_FROM_MANIFEST"`,
+		`/bin/sh -c "../bin/rkt --debug enter $(../bin/rkt list --full|grep running|awk '{print $1}') /inspect --print-env=VAR_FROM_MANIFEST"`,
 	},
 	{
 		`../bin/rkt --debug --insecure-skip-verify run --set-env=VAR_OTHER=setenv ./rkt-inspect-print-var-other.aci`,
 		"VAR_OTHER=setenv",
 		`../bin/rkt --debug --insecure-skip-verify run --set-env=VAR_OTHER=setenv ./rkt-inspect-sleep.aci`,
-		`/bin/sh -c "../bin/rkt --debug enter $(../bin/rkt list --full|grep running|gawk '{print $1}') /inspect --print-env=VAR_OTHER"`,
+		`/bin/sh -c "../bin/rkt --debug enter $(../bin/rkt list --full|grep running|awk '{print $1}') /inspect --print-env=VAR_OTHER"`,
 	},
 	{
 		`../bin/rkt --debug --insecure-skip-verify run --set-env=VAR_FROM_MANIFEST=setenv ./rkt-inspect-print-var-from-manifest.aci`,
 		"VAR_FROM_MANIFEST=setenv",
 		`../bin/rkt --debug --insecure-skip-verify run --set-env=VAR_FROM_MANIFEST=setenv ./rkt-inspect-sleep.aci`,
-		`/bin/sh -c "../bin/rkt --debug enter $(../bin/rkt list --full|grep running|gawk '{print $1}') /inspect --print-env=VAR_FROM_MANIFEST"`,
+		`/bin/sh -c "../bin/rkt --debug enter $(../bin/rkt list --full|grep running|awk '{print $1}') /inspect --print-env=VAR_FROM_MANIFEST"`,
 	},
 	{
 		`/bin/sh -c "export VAR_OTHER=host ; ../bin/rkt --debug --insecure-skip-verify run --inherit-env=true ./rkt-inspect-print-var-other.aci"`,
 		"VAR_OTHER=host",
 		`/bin/sh -c "export VAR_OTHER=host ; ../bin/rkt --debug --insecure-skip-verify run --inherit-env=true ./rkt-inspect-sleep.aci"`,
-		`/bin/sh -c "export VAR_OTHER=host ; ../bin/rkt --debug enter $(../bin/rkt list --full|grep running|gawk '{print $1}') /inspect --print-env=VAR_OTHER"`,
+		`/bin/sh -c "export VAR_OTHER=host ; ../bin/rkt --debug enter $(../bin/rkt list --full|grep running|awk '{print $1}') /inspect --print-env=VAR_OTHER"`,
 	},
 	{
 		`/bin/sh -c "export VAR_FROM_MANIFEST=host ; ../bin/rkt --debug --insecure-skip-verify run --inherit-env=true ./rkt-inspect-print-var-from-manifest.aci"`,
 		"VAR_FROM_MANIFEST=manifest",
 		`/bin/sh -c "export VAR_FROM_MANIFEST=host ; ../bin/rkt --debug --insecure-skip-verify run --inherit-env=true ./rkt-inspect-sleep.aci"`,
-		`/bin/sh -c "export VAR_FROM_MANIFEST=host ; ../bin/rkt --debug enter $(../bin/rkt list --full|grep running|gawk '{print $1}') /inspect --print-env=VAR_FROM_MANIFEST"`,
+		`/bin/sh -c "export VAR_FROM_MANIFEST=host ; ../bin/rkt --debug enter $(../bin/rkt list --full|grep running|awk '{print $1}') /inspect --print-env=VAR_FROM_MANIFEST"`,
 	},
 	{
 		`/bin/sh -c "export VAR_OTHER=host ; ../bin/rkt --debug --insecure-skip-verify run --inherit-env=true --set-env=VAR_OTHER=setenv ./rkt-inspect-print-var-other.aci"`,
 		"VAR_OTHER=setenv",
 		`/bin/sh -c "export VAR_OTHER=host ; ../bin/rkt --debug --insecure-skip-verify run --inherit-env=true --set-env=VAR_OTHER=setenv ./rkt-inspect-sleep.aci"`,
-		`/bin/sh -c "export VAR_OTHER=host ; ../bin/rkt --debug enter $(../bin/rkt list --full|grep running|gawk '{print $1}') /inspect --print-env=VAR_OTHER"`,
+		`/bin/sh -c "export VAR_OTHER=host ; ../bin/rkt --debug enter $(../bin/rkt list --full|grep running|awk '{print $1}') /inspect --print-env=VAR_OTHER"`,
 	},
 }
 
