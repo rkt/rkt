@@ -10,7 +10,8 @@ rkt is an implementation of the [App Container spec](https://github.com/appc/spe
 Until the specification reaches version 1.0, rkt's major/minor versions will trail that of the spec.
 
 ### rkt 0.5.4
-- Auth config repositories
+- Repository authentication support
+  - configuration framework 
 - Initial functional testing
 - rkt can run pods directly from PodManifests
  
@@ -19,7 +20,8 @@ Until the specification reaches version 1.0, rkt's major/minor versions will tra
  - inspect, extract, remove images
  - automatically fetch image dependencies
 - Further functional testing
-- better UX around trust
+- Better UX around trust
+- Per-app resource isolation
 
 ### rkt 0.7 (April/May)
 - Smarter image discovery: cache control and etag handling 
