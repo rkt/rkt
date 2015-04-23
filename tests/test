@@ -13,5 +13,10 @@
 # To run only one test:
 #     $ cd tests && ./test -run=TestEnv
 
-sudo GOPATH="${PWD}/../gopath" RKT_ENABLE_DESTRUCTIVE_TESTS="$RKT_ENABLE_DESTRUCTIVE_TESTS" go test -v $*
+# Sudo does not preserve $PATH. Use go from the user's $PATH instead of
+# root's $PATH. It is needed when a home-built go does not have the same
+# version as the system-wide installed go.
+GO=`which go`
+
+sudo GOPATH="${PWD}/../gopath" RKT_ENABLE_DESTRUCTIVE_TESTS="$RKT_ENABLE_DESTRUCTIVE_TESTS" GOROOT="$GOROOT" $GO test -v $*
 
