@@ -13,7 +13,7 @@ Until the specification reaches version 1.0, rkt's major/minor versions will tra
 - Auth config repositories
 - Initial functional testing
 - rkt can run pods directly from PodManifests
-- 
+ 
 ### rkt 0.6 (April)
 - Better UX around local image management with `rkt images`
  - inspect, extract, remove images
