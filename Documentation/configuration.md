@@ -65,6 +65,7 @@ Basic HTTP authentication requires two things - a user and a password. To use
 this type, define `type` as `basic` and the `credentials` field as a map
 with two keys - `user` and `password`. These fields must be specified and
 cannot be empty. For example:
+
 ```
 {
 	"rktKind": "auth",
@@ -81,6 +82,7 @@ cannot be empty. For example:
 OAuth Bearer Token authentication requires only a token. To use this type,
 define `type` as `oauth` and the `credentials` field as a map with only one
 key - `token`. This field must be specified and cannot be empty. For example:
+
 ```
 {
 	"rktKind": "auth",
@@ -100,6 +102,7 @@ authentication type and/or credentials used for each domain. As an example,
 consider this system configuration:
 
 `/usr/lib/rkt/auth.d/coreos.json`:
+
 ```
 {
 	"rktKind": "auth",
@@ -121,6 +124,7 @@ directory, this can be overridden. For example, given the above system
 configuration and the following local configurations:
 
 `/etc/rkt/auth.d/specific-coreos.json`:
+
 ```
 {
 	"rktKind": "auth",
@@ -135,6 +139,7 @@ configuration and the following local configurations:
 ```
 
 `/etc/rkt/auth.d/specific-tectonic.json`:
+
 ```
 {
 	"rktKind": "auth",
@@ -189,6 +194,7 @@ Some popular Docker registries:
 * gcr.io
 
 Example `dockerAuth` configuration:
+
 ```
 {
 	"rktKind": "dockerAuth",
@@ -207,6 +213,7 @@ Overriding is done for each registry. That means that the user can override
 credentials used for each registry. For example, given this system configuration:
 
 In `/usr/lib/rkt/auth.d/docker.json`:
+
 ```
 {
 	"rktKind": "dockerAuth",
@@ -228,6 +235,7 @@ directory, this can be overridden. For example, given the above system
 configuration and the following local configuration:
 
 `/etc/rkt/auth.d/specific-quay.json`:
+
 ```
 {
 	"rktKind": "dockerAuth",
@@ -241,6 +249,7 @@ configuration and the following local configuration:
 ```
 
 `/etc/rkt/auth.d/specific-gcr.json`:
+
 ```
 {
 	"rktKind": "dockerAuth",

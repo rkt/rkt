@@ -42,6 +42,7 @@ For more details on how signature verification works in rkt, see the [Signing an
 ## Fetch the ACI
 
 The simplest way to retrieve the etcd ACI is to use image discovery:
+
 ```
 ./rkt fetch coreos.com/etcd:v2.0.9 
 rkt: searching for app image coreos.com/etcd:v2.0.9
