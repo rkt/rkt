@@ -23,16 +23,15 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
-	"github.com/coreos/rkt/common"
 	taas "github.com/coreos/rkt/tests/test-auth-server/aci"
 )
 
 func TestAuthSanity(t *testing.T) {
-	skipDestructive(t)
-	removeDataDir(t)
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
 	server := runServer(t, taas.None)
 	defer server.Close()
-	successfulRunRkt(t, server.URL, "sanity")
+	expectedRunRkt(ctx, t, server.URL, "sanity", authSuccessfulDownload)
 }
 
 const (
@@ -50,8 +49,8 @@ type genericAuthTest struct {
 func TestAuthBasic(t *testing.T) {
 	tests := []genericAuthTest{
 		{"basic-no-config", false, "", authFailedDownload},
-		{"basic-local-config", true, common.DefaultLocalConfigDir, authSuccessfulDownload},
-		{"basic-system-config", true, common.DefaultSystemConfigDir, authSuccessfulDownload},
+		{"basic-local-config", true, "local", authSuccessfulDownload},
+		{"basic-system-config", true, "system", authSuccessfulDownload},
 	}
 	testAuthGeneric(t, taas.Basic, tests)
 }
@@ -59,31 +58,36 @@ func TestAuthBasic(t *testing.T) {
 func TestAuthOauth(t *testing.T) {
 	tests := []genericAuthTest{
 		{"oauth-no-config", false, "", authFailedDownload},
-		{"oauth-local-config", true, common.DefaultLocalConfigDir, authSuccessfulDownload},
-		{"oauth-system-config", true, common.DefaultSystemConfigDir, authSuccessfulDownload},
+		{"oauth-local-config", true, "local", authSuccessfulDownload},
+		{"oauth-system-config", true, "system", authSuccessfulDownload},
 	}
 	testAuthGeneric(t, taas.Oauth, tests)
 }
 
 func testAuthGeneric(t *testing.T, auth taas.Type, tests []genericAuthTest) {
-	skipDestructive(t)
-	removeDataDir(t)
-	defer removeAllConfig(t)
 	server := runServer(t, auth)
 	defer server.Close()
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
 	for _, tt := range tests {
-		removeAllConfig(t)
 		if tt.useServerConf {
-			writeConfig(t, tt.confDir, "test.json", server.Conf)
+			switch tt.confDir {
+			case "local":
+				writeConfig(t, ctx.localDir(), "test.json", server.Conf)
+			case "system":
+				writeConfig(t, ctx.systemDir(), "test.json", server.Conf)
+			default:
+				panic("Wrong config directory")
+			}
 		}
-		expectedRunRkt(t, server.URL, tt.name, tt.expectedLine)
+		expectedRunRkt(ctx, t, server.URL, tt.name, tt.expectedLine)
+		ctx.reset()
 	}
 }
 
 func TestAuthOverride(t *testing.T) {
-	skipDestructive(t)
-	removeDataDir(t)
-	defer removeAllConfig(t)
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
 	server := runServer(t, taas.Oauth)
 	defer server.Close()
 	tests := []struct {
@@ -97,18 +101,15 @@ func TestAuthOverride(t *testing.T) {
 		{getInvalidOAuthConfig(server.Conf), server.Conf, "invalid-system-valid-local", authFailedDownload, authSuccessfulDownload},
 	}
 	for _, tt := range tests {
-		removeAllConfig(t)
-		writeSystemConfig(t, "test.json", tt.systemConfig)
-		expectedRunRkt(t, server.URL, tt.name+"-1", tt.resultBeforeOverride)
-		writeLocalConfig(t, "test.json", tt.localConfig)
-		expectedRunRkt(t, server.URL, tt.name+"-2", tt.resultAfterOverride)
+		writeConfig(t, ctx.systemDir(), "test.json", tt.systemConfig)
+		expectedRunRkt(ctx, t, server.URL, tt.name+"-1", tt.resultBeforeOverride)
+		writeConfig(t, ctx.localDir(), "test.json", tt.localConfig)
+		expectedRunRkt(ctx, t, server.URL, tt.name+"-2", tt.resultAfterOverride)
+		ctx.reset()
 	}
 }
 
 func TestAuthIgnore(t *testing.T) {
-	skipDestructive(t)
-	removeDataDir(t)
-	defer removeAllConfig(t)
 	server := runServer(t, taas.Oauth)
 	defer server.Close()
 	testAuthIgnoreBogusFiles(t, server)
@@ -116,21 +117,23 @@ func TestAuthIgnore(t *testing.T) {
 }
 
 func testAuthIgnoreBogusFiles(t *testing.T, server *taas.Server) {
-	removeAllConfig(t)
-	writeSystemConfig(t, "README", "This is system config")
-	writeLocalConfig(t, "README", "This is local config")
-	writeSystemConfig(t, "test.notjson", server.Conf)
-	writeLocalConfig(t, "test.notjson", server.Conf)
-	failedRunRkt(t, server.URL, "oauth-bogus-files")
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+	writeConfig(t, ctx.systemDir(), "README", "This is system config")
+	writeConfig(t, ctx.localDir(), "README", "This is local config")
+	writeConfig(t, ctx.systemDir(), "test.notjson", server.Conf)
+	writeConfig(t, ctx.localDir(), "test.notjson", server.Conf)
+	expectedRunRkt(ctx, t, server.URL, "oauth-bogus-files", authFailedDownload)
 }
 
 func testAuthIgnoreSubdirectories(t *testing.T, server *taas.Server) {
-	removeAllConfig(t)
-	localSubdir := filepath.Join(common.DefaultLocalConfigDir, "subdir")
-	systemSubdir := filepath.Join(common.DefaultSystemConfigDir, "subdir")
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+	localSubdir := filepath.Join(ctx.localDir(), "subdir")
+	systemSubdir := filepath.Join(ctx.systemDir(), "subdir")
 	writeConfig(t, localSubdir, "test.json", server.Conf)
 	writeConfig(t, systemSubdir, "test.json", server.Conf)
-	failedRunRkt(t, server.URL, "oauth-subdirectories")
+	expectedRunRkt(ctx, t, server.URL, "oauth-subdirectories", authFailedDownload)
 }
 
 func runServer(t *testing.T, auth taas.Type) *taas.Server {
@@ -153,61 +156,21 @@ func serverHandler(t *testing.T, server *taas.Server) {
 	}
 }
 
-func successfulRunRkt(t *testing.T, host, dir string) {
-	expectedRunRkt(t, host, dir, authSuccessfulDownload)
-}
-
-func failedRunRkt(t *testing.T, host, dir string) {
-	expectedRunRkt(t, host, dir, authFailedDownload)
-}
-
-func expectedRunRkt(t *testing.T, host, dir, line string) {
-	child := runRkt(t, host, dir)
-	defer child.Wait()
-	if err := child.Expect(line); err != nil {
-		t.Fatalf("Didn't receive expected output %q", line)
-	}
-}
-
-// TODO (krnowak): Use --dir option when we also add
-// --system-config-dir and --local-config-dir options. Then we can
-// remove destructive tests checks.
-
-// runRkt tries to fetch and run a prog.aci from host within given
-// directory on host. Note that directory can be anything - it's
+// expectedRunRkt tries to fetch and run a prog.aci from host within
+// given directory on host. Note that directory can be anything - it's
 // useful for ensuring that image name is unique and for descriptive
 // purposes.
-func runRkt(t *testing.T, host, dir string) *gexpect.ExpectSubprocess {
-	cmd := fmt.Sprintf(`../bin/rkt --debug --insecure-skip-verify run %s/%s/prog.aci`, host, dir)
+func expectedRunRkt(ctx *rktRunCtx, t *testing.T, host, dir, line string) {
+	cmd := fmt.Sprintf(`%s --debug --insecure-skip-verify run %s/%s/prog.aci`, ctx.cmd(), host, dir)
 	t.Logf("Running rkt: %s", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Failed to run rkt: %v", err)
 	}
-	return child
-}
-
-func removeAllConfig(t *testing.T) {
-	dirs := []string{
-		authDir(common.DefaultLocalConfigDir),
-		authDir(common.DefaultSystemConfigDir),
+	defer child.Wait()
+	if err := child.Expect(line); err != nil {
+		t.Fatalf("Didn't receive expected output %q", line)
 	}
-	for _, p := range dirs {
-		if err := os.RemoveAll(p); err != nil {
-			t.Fatalf("Failed to remove config directory %q: %v", p, err)
-		}
-		if err := os.MkdirAll(p, 0755); err != nil {
-			t.Fatalf("Failed to create config directory %q: %v", p, err)
-		}
-	}
-}
-
-func writeLocalConfig(t *testing.T, filename, contents string) {
-	writeConfig(t, common.DefaultLocalConfigDir, filename, contents)
-}
-
-func writeSystemConfig(t *testing.T, filename, contents string) {
-	writeConfig(t, common.DefaultSystemConfigDir, filename, contents)
 }
 
 func writeConfig(t *testing.T, baseDir, filename, contents string) {
