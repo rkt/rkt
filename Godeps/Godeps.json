@@ -125,7 +125,7 @@
 		},
 		{
 			"ImportPath": "github.com/mitchellh/ioprogress",
-			"Rev": "b0a0b6773359ef5016d5ecc4522150e43a189a53"
+			"Rev": "c2b2845d63abaf335647a8b9c7437e6c11a2a613"
 		},
 		{
 			"ImportPath": "github.com/petar/GoLLRB/llrb",

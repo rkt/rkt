@@ -83,6 +83,7 @@ func (r *Reader) finishProgress() {
 	// Only output the final draw if we drawed prior
 	if !r.lastDraw.IsZero() {
 		f := r.drawFunc()
+		f(r.progress, r.Size)
 		f(-1, -1)
 
 		// Reset lastDraw so we don't finish again
