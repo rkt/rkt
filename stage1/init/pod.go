@@ -25,6 +25,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
@@ -145,7 +146,28 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, inte
 		return fmt.Errorf("unable to write environment file: %v", err)
 	}
 
-	execWrap := []string{"/diagexec", common.RelAppRootfsPath(id), workDir, RelEnvFilePath(id)}
+	// This is a partial implementation for app.User and app.Group:
+	// For now, only numeric ids (and the string "root") are supported.
+	var uid, gid int
+	var err error
+	if app.User == "root" {
+		uid = 0
+	} else {
+		uid, err = strconv.Atoi(app.User)
+		if err != nil {
+			return fmt.Errorf("non-numerical user id not supported yet")
+		}
+	}
+	if app.Group == "root" {
+		gid = 0
+	} else {
+		gid, err = strconv.Atoi(app.Group)
+		if err != nil {
+			return fmt.Errorf("non-numerical group id not supported yet")
+		}
+	}
+
+	execWrap := []string{"/diagexec", common.RelAppRootfsPath(id), workDir, RelEnvFilePath(id), strconv.Itoa(uid), strconv.Itoa(gid)}
 	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
 		newUnitOption("Unit", "Description", name),
@@ -155,8 +177,8 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, inte
 		newUnitOption("Unit", "Wants", "exit-watcher.service"),
 		newUnitOption("Service", "Restart", "no"),
 		newUnitOption("Service", "ExecStart", execStart),
-		newUnitOption("Service", "User", app.User),
-		newUnitOption("Service", "Group", app.Group),
+		newUnitOption("Service", "User", "0"),
+		newUnitOption("Service", "Group", "0"),
 	}
 
 	if interactive {

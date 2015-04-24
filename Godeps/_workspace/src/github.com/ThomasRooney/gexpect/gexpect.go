@@ -1,6 +1,7 @@
 package gexpect
 
 import (
+	"bytes"
 	"errors"
 	shell "github.com/coreos/rkt/Godeps/_workspace/src/github.com/kballard/go-shellquote"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/kr/pty"
@@ -11,9 +12,45 @@ import (
 	"time"
 )
 
+type buffer struct {
+	f *os.File
+	b bytes.Buffer
+}
+
+func (buf *buffer) Read(chunk []byte) (int, error) {
+	nread := 0
+	if buf.b.Len() > 0 {
+		n, err := buf.b.Read(chunk)
+		if err != nil {
+			return n, err
+		}
+		if n == len(chunk) {
+			return n, nil
+		}
+		nread = n
+	}
+	fn, err := buf.f.Read(chunk[nread:])
+	return fn + nread, err
+}
+
+func (buf *buffer) PutBack(chunk []byte) {
+	if len(chunk) == 0 {
+		return
+	}
+	if buf.b.Len() == 0 {
+		buf.b.Write(chunk)
+		return
+	}
+	d := make([]byte, 0, len(chunk)+buf.b.Len())
+	d = append(d, chunk...)
+	d = append(d, buf.b.Bytes()...)
+	buf.b.Reset()
+	buf.b.Write(d)
+}
+
 type ExpectSubprocess struct {
 	Cmd *exec.Cmd
-	f   *os.File
+	buf *buffer
 }
 
 func SpawnAtDirectory(command string, directory string) (*ExpectSubprocess, error) {
@@ -100,7 +137,7 @@ func (expect *ExpectSubprocess) ExpectRegex(regexSearchString string) (e error) 
 	chunk := make([]byte, size)
 
 	for {
-		n, err := expect.f.Read(chunk)
+		n, err := expect.buf.Read(chunk)
 
 		if err != nil {
 			return err
@@ -166,7 +203,7 @@ func (expect *ExpectSubprocess) Expect(searchString string) (e error) {
 	table := buildKMPTable(searchString)
 
 	for {
-		n, err := expect.f.Read(chunk)
+		n, err := expect.buf.Read(chunk)
 
 		if err != nil {
 			return err
@@ -176,6 +213,10 @@ func (expect *ExpectSubprocess) Expect(searchString string) (e error) {
 			if searchString[i] == chunk[m+i-offset] {
 				i += 1
 				if i == target {
+					unreadIndex := m + i - offset
+					if len(chunk) > unreadIndex {
+						expect.buf.PutBack(chunk[unreadIndex:])
+					}
 					return nil
 				}
 			} else {
@@ -191,20 +232,21 @@ func (expect *ExpectSubprocess) Expect(searchString string) (e error) {
 }
 
 func (expect *ExpectSubprocess) Send(command string) error {
-	_, err := io.WriteString(expect.f, command)
+	_, err := io.WriteString(expect.buf.f, command)
 	return err
 }
 
 func (expect *ExpectSubprocess) SendLine(command string) error {
-	_, err := io.WriteString(expect.f, command+"\r\n")
+	_, err := io.WriteString(expect.buf.f, command+"\r\n")
 	return err
 }
 
 func (expect *ExpectSubprocess) Interact() {
 	defer expect.Cmd.Wait()
-	go io.Copy(os.Stdout, expect.f)
-	go io.Copy(os.Stderr, expect.f)
-	go io.Copy(expect.f, os.Stdin)
+	io.Copy(os.Stdout, &expect.buf.b)
+	go io.Copy(os.Stdout, expect.buf.f)
+	go io.Copy(os.Stderr, expect.buf.f)
+	go io.Copy(expect.buf.f, os.Stdin)
 }
 
 func (expect *ExpectSubprocess) ReadUntil(delim byte) ([]byte, error) {
@@ -213,7 +255,7 @@ func (expect *ExpectSubprocess) ReadUntil(delim byte) ([]byte, error) {
 
 	for {
 
-		n, err := expect.f.Read(chunk)
+		n, err := expect.buf.Read(chunk)
 
 		if err != nil {
 			return join, err
@@ -221,6 +263,9 @@ func (expect *ExpectSubprocess) ReadUntil(delim byte) ([]byte, error) {
 
 		for i := 0; i < n; i++ {
 			if chunk[i] == delim {
+				if len(chunk) > i+1 {
+					expect.buf.PutBack(chunk[i+1:])
+				}
 				return join, nil
 			} else {
 				join = append(join, chunk[i])
@@ -246,7 +291,7 @@ func _start(expect *ExpectSubprocess) (*ExpectSubprocess, error) {
 	if err != nil {
 		return nil, err
 	}
-	expect.f = f
+	expect.buf.f = f
 
 	return expect, nil
 }
@@ -272,6 +317,7 @@ func _spawn(command string) (*ExpectSubprocess, error) {
 	} else {
 		wrapper.Cmd = exec.Command(path)
 	}
+	wrapper.buf = new(buffer)
 
 	return wrapper, nil
 }

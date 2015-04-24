@@ -19,6 +19,27 @@ func TestHelloWorld(*testing.T) {
 	log.Printf("Success\n")
 }
 
+func TestDoubleHelloWorld(*testing.T) {
+	log.Printf("Testing Double Hello World... ")
+	child, err := Spawn(`sh -c "echo Hello World ; echo Hello ; echo Hi"`)
+	if err != nil {
+		panic(err)
+	}
+	err = child.Expect("Hello World")
+	if err != nil {
+		panic(err)
+	}
+	err = child.Expect("Hello")
+	if err != nil {
+		panic(err)
+	}
+	err = child.Expect("Hi")
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("Success\n")
+}
+
 func TestHelloWorldFailureCase(*testing.T) {
 	log.Printf("Testing Hello World Failure case... ")
 	child, err := Spawn("echo \"Hello World\"")
@@ -84,39 +105,4 @@ func TestCommandStart(*testing.T) {
 	child.Start()
 	child.Expect("Hello World")
 	log.Printf("Success\n")
-}
-
-func TestExpectFtp(*testing.T) {
-	log.Printf("Testing Ftp... ")
-
-	child, err := Spawn("ftp ftp.openbsd.org")
-	if err != nil {
-		panic(err)
-	}
-	child.Expect("Name")
-	child.SendLine("anonymous")
-	child.Expect("Password")
-	child.SendLine("pexpect@sourceforge.net")
-	child.Expect("ftp> ")
-	child.SendLine("cd /pub/OpenBSD/3.7/packages/i386")
-	child.Expect("ftp> ")
-	child.SendLine("bin")
-	child.Expect("ftp> ")
-	child.SendLine("prompt")
-	child.Expect("ftp> ")
-	child.SendLine("pwd")
-	child.Expect("ftp> ")
-	log.Printf("Success\n")
-}
-
-func TestInteractPing(*testing.T) {
-	log.Printf("Testing Ping interact... \n")
-
-	child, err := Spawn("ping -c8 8.8.8.8")
-	if err != nil {
-		panic(err)
-	}
-	child.Interact()
-	log.Printf("Success\n")
-
 }

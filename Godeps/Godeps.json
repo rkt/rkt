@@ -17,7 +17,7 @@
 		},
 		{
 			"ImportPath": "github.com/ThomasRooney/gexpect",
-			"Rev": "025428b8021ad3cef9602997658d9eca6c145d4e"
+			"Rev": "3b60906367401d3dc2f9e5f3b5395184f8a2d75f"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",

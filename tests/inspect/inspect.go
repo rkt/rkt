@@ -36,6 +36,7 @@ var (
 		PrintMsg     string
 		PrintEnv     string
 		PrintCapsPid int
+		PrintUser    bool
 		CheckCwd     string
 		ExitCode     int
 		ReadFile     bool
@@ -51,6 +52,7 @@ func init() {
 	globalFlagset.StringVar(&globalFlags.CheckCwd, "check-cwd", "", "Check if the current working directory is the one specified")
 	globalFlagset.StringVar(&globalFlags.PrintEnv, "print-env", "", "Print the specified environment variable")
 	globalFlagset.IntVar(&globalFlags.PrintCapsPid, "print-caps-pid", -1, "Print capabilities of the specified pid (or current process if pid=0)")
+	globalFlagset.BoolVar(&globalFlags.PrintUser, "print-user", false, "Print uid and gid")
 	globalFlagset.IntVar(&globalFlags.ExitCode, "exit-code", 0, "Return this exit code")
 	globalFlagset.BoolVar(&globalFlags.ReadFile, "read-file", false, "Print the content of the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
@@ -112,11 +114,15 @@ func main() {
 			}
 			c := capability.Cap(capInt)
 			if caps.Get(capability.BOUNDING, c) {
-				fmt.Printf("%v=enabled", c.String())
+				fmt.Printf("%v=enabled\n", c.String())
 			} else {
-				fmt.Printf("%v=disabled", c.String())
+				fmt.Printf("%v=disabled\n", c.String())
 			}
 		}
+	}
+
+	if globalFlags.PrintUser {
+		fmt.Printf("User: uid=%d euid=%d gid=%d egid=%d\n", os.Getuid(), os.Geteuid(), os.Getgid(), os.Getegid())
 	}
 
 	if globalFlags.WriteFile {

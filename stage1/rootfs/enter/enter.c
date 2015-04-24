@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 	if(child == 0) {
 		char		root[PATH_MAX];
 		char		env[PATH_MAX];
-		char		*args[argc + 2];
+		char		*args[argc + 4];
 		int		i;
 
 		/* Child goes on to execute /diagexec */
@@ -108,10 +108,12 @@ int main(int argc, char *argv[])
 		args[1] = root;
 		args[2] = "/";	/* TODO(vc): plumb this into app.WorkingDirectory */
 		args[3] = env;
+		args[4] = "0"; /* uid */
+		args[5] = "0"; /* gid */
 		for(i = 2; i < argc; i++) {
-			args[i + 2] = argv[i];
+			args[i + 4] = argv[i];
 		}
-		args[i + 2] = NULL;
+		args[i + 4] = NULL;
 
 		exit_if(execv(args[0], args) == -1,
 			"exec failed");
