@@ -9,12 +9,6 @@ The [milestones defined in GitHub](https://github.com/coreos/rkt/milestones) rep
 rkt is an implementation of the [App Container spec](https://github.com/appc/spec), which is still under active development on an approximately similar timeframe.
 Until the specification reaches version 1.0, rkt's major/minor versions will trail that of the spec.
 
-### rkt 0.5.4
-- Repository authentication support
-  - configuration framework 
-- Initial functional testing
-- rkt can run pods directly from PodManifests
- 
 ### rkt 0.6 (April)
 - Better UX around local image management with `rkt images`
  - inspect, extract, remove images
@@ -34,6 +28,6 @@ Until the specification reaches version 1.0, rkt's major/minor versions will tra
 - rkt can retrieve images via BitTorrent
 
 ### rkt 1.0 (June)
-- Pod-level isolation, possibly using libcontainer
+- Pod-level isolation
 - IPv6 support
 - Proper CLI/subcommand framework
