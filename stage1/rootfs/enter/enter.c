@@ -13,33 +13,37 @@
 // limitations under the License.
 
 #define _GNU_SOURCE
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <sched.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 static int errornum;
-#define exit_if(_cond, _fmt, _args...)			\
-	errornum++;					\
-	if(_cond) {					\
-		fprintf(stderr, _fmt "\n", ##_args);	\
-		exit(errornum);				\
+#define exit_if(_cond, _fmt, _args...)				\
+	errornum++;						\
+	if(_cond) {						\
+		fprintf(stderr, _fmt "\n", ##_args);		\
+		exit(errornum);					\
 	}
+#define pexit_if(_cond, _fmt, _args...)				\
+	exit_if(_cond, _fmt ": %s", ##_args, strerror(errno))
 
 static int openpidfd(int pid, char *which) {
 	char	path[PATH_MAX];
 	int	fd;
 	exit_if(snprintf(path, sizeof(path),
 			 "/proc/%i/%s", pid, which) == sizeof(path),
-		"path overflow");
-	exit_if((fd = open(path, O_RDONLY|O_CLOEXEC)) == -1,
-		"unable to open \"%s\"", path);
+		"Path overflow");
+	pexit_if((fd = open(path, O_RDONLY|O_CLOEXEC)) == -1,
+		"Unable to open \"%s\"", path);
 	return fd;
 }
 
@@ -56,16 +60,16 @@ int main(int argc, char *argv[])
 		"Usage: %s imageid cmd [args...]", argv[0])
 
 	/* We start in the pod root, where "pid" should be. */
-	exit_if((fp = fopen("pid", "r")) == NULL,
-		"unable to open pid file");
-	exit_if(fscanf(fp, "%i", &pid) != 1,
-		"unable to read pid");
+	pexit_if((fp = fopen("pid", "r")) == NULL,
+		"Unable to open pid file");
+	pexit_if(fscanf(fp, "%i", &pid) != 1,
+		"Unable to read pid");
 	fclose(fp);
 	root_fd = openpidfd(pid, "root");
 
 #define ns(_typ, _nam)							\
 	fd = openpidfd(pid, _nam);					\
-	exit_if(setns(fd, _typ), "unable to enter " _nam " namespace");
+	pexit_if(setns(fd, _typ), "Unable to enter " _nam " namespace");
 
 #if 0
 	/* TODO(vc): Nspawn isn't employing CLONE_NEWUSER, disabled for now */
@@ -77,16 +81,16 @@ int main(int argc, char *argv[])
 	ns(CLONE_NEWPID,  "ns/pid");
 	ns(CLONE_NEWNS,	  "ns/mnt");
 
-	exit_if(fchdir(root_fd) < 0,
-		"unable to chdir to pod root");
-	exit_if(chroot(".") < 0,
-		"unable to chroot");
-	exit_if(close(root_fd) == -1,
-		"unable to close root_fd");
+	pexit_if(fchdir(root_fd) < 0,
+		"Unable to chdir to pod root");
+	pexit_if(chroot(".") < 0,
+		"Unable to chroot");
+	pexit_if(close(root_fd) == -1,
+		"Unable to close root_fd");
 
 	/* Fork is required to realize consequence of CLONE_NEWPID */
-	exit_if(((child = fork()) == -1),
-		"unable to fork");
+	pexit_if(((child = fork()) == -1),
+		"Unable to fork");
 
 	if(child == 0) {
 		char		root[PATH_MAX];
@@ -98,11 +102,11 @@ int main(int argc, char *argv[])
 
 		exit_if(snprintf(root, sizeof(root),
 				 "/opt/stage2/%s/rootfs", argv[1]) == sizeof(root),
-			"root path overflow");
+			"Root path overflow");
 
 		exit_if(snprintf(env, sizeof(env),
 				 "/rkt/env/%s", argv[1]) == sizeof(env),
-			"env path overflow");
+			"Env path overflow");
 
 		args[0] = "/diagexec";
 		args[1] = root;
@@ -115,8 +119,8 @@ int main(int argc, char *argv[])
 		}
 		args[i + 4] = NULL;
 
-		exit_if(execv(args[0], args) == -1,
-			"exec failed");
+		pexit_if(execv(args[0], args) == -1,
+			"Exec failed");
 	}
 
 	/* Wait for child, nsenter-like */
