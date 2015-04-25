@@ -16,7 +16,7 @@ If using socket activation, ensure the socket is named `/run/rkt/metadata-svc.so
 Please note that when started under socket activation, the metadata service will not remove the socket on exit.
 Use the `RemoveOnStop` directive in the relevant `.socket` file to clean up.
 
-Example systemd unit files for running the metadata service are available in [dist](dist/init/systemd)
+Example systemd unit files for running the metadata service are available in [dist](https://github.com/coreos/rkt/tree/master/dist/init/systemd)
 
 In addition to listening on a Unix socket, the metadata service will also listen on a TCP port.
 When contacting the metadata service, the apps utilize this port.
