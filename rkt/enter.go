@@ -76,6 +76,12 @@ func runEnter(args []string) (exit int) {
 		return 1
 	}
 
+	podPID, err := p.getPID()
+	if err != nil {
+		stderr("Unable to determine pid for pod %q: %v", pid, err)
+		return 1
+	}
+
 	imageID, err := getAppImageID(p)
 	if err != nil {
 		stderr("Unable to determine image id: %v", err)
@@ -102,7 +108,7 @@ func runEnter(args []string) (exit int) {
 
 	stage1RootFS := s.GetTreeStoreRootFS(stage1ID.String())
 
-	if err = stage0.Enter(p.path(), imageID, stage1RootFS, argv); err != nil {
+	if err = stage0.Enter(p.path(), podPID, imageID, stage1RootFS, argv); err != nil {
 		stderr("Enter failed: %v", err)
 		return 1
 	}

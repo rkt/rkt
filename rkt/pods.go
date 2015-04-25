@@ -732,8 +732,25 @@ func (p *pod) getState() string {
 }
 
 // getPID returns the pid of the pod.
-func (p *pod) getPID() (int, error) {
-	return p.readIntFromFile("pid")
+func (p *pod) getPID() (pid int, err error) {
+
+	// No do { } while() Golang, seriously?
+	for first := true; first || (os.IsNotExist(err) && p.isRunning()); first = false {
+		pid, err = p.readIntFromFile("pid")
+		if err == nil {
+			return
+		}
+
+		// There's a window between a pod transitioning to run and the pid file being created by stage1.
+		// The window shouldn't be large so we just delay and retry here.  If stage1 fails to reach the
+		// point of pid file creation, it will exit and p.isRunning() becomes false since we refreshState below.
+		time.Sleep(time.Millisecond * 100)
+
+		if err := p.refreshState(); err != nil {
+			return -1, err
+		}
+	}
+	return
 }
 
 // getStage1Hash returns the hash of the stage1 image used in this pod
