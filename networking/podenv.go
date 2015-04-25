@@ -15,6 +15,7 @@
 package networking
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,10 +26,10 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 
 	"github.com/coreos/rkt/common"
-	rktnet "github.com/coreos/rkt/networking/net"
 	"github.com/coreos/rkt/networking/netinfo"
 )
 
@@ -49,9 +50,10 @@ type podEnv struct {
 }
 
 type activeNet struct {
-	Conf    *rktnet.Net
-	Runtime *netinfo.NetInfo
-	hostIP  net.IP // kludge for default network
+	confBytes []byte
+	conf      *plugin.NetConf
+	runtime   *netinfo.NetInfo
+	hostIP    net.IP // kludge for default network
 }
 
 // Loads nets specified by user and default one from stage1
@@ -98,16 +100,16 @@ func (e *podEnv) setupNets(nets []activeNet) error {
 
 	n := activeNet{}
 	for i, n = range nets {
-		log.Printf("Setup: executing net-plugin %v", n.Conf.Type)
+		log.Printf("Setup: executing net-plugin %v", n.conf.Type)
 
-		n.Runtime.IfName = fmt.Sprintf(ifnamePattern, i)
-		if n.Runtime.ConfPath, err = copyFileToDir(n.Runtime.ConfPath, e.netDir()); err != nil {
-			return fmt.Errorf("error copying %q to %q: %v", n.Runtime.ConfPath, e.netDir(), err)
+		n.runtime.IfName = fmt.Sprintf(ifnamePattern, i)
+		if n.runtime.ConfPath, err = copyFileToDir(n.runtime.ConfPath, e.netDir()); err != nil {
+			return fmt.Errorf("error copying %q to %q: %v", n.runtime.ConfPath, e.netDir(), err)
 		}
 
-		n.Runtime.IP, n.hostIP, err = e.netPluginAdd(&n, nspath)
+		n.runtime.IP, n.hostIP, err = e.netPluginAdd(&n, nspath)
 		if err != nil {
-			return fmt.Errorf("error adding network %q: %v", n.Conf.Name, err)
+			return fmt.Errorf("error adding network %q: %v", n.conf.Name, err)
 		}
 	}
 
@@ -118,17 +120,17 @@ func (e *podEnv) teardownNets(nets []activeNet) {
 	nspath := e.podNSPath()
 
 	for i := len(nets) - 1; i >= 0; i-- {
-		log.Printf("Teardown: executing net-plugin %v", nets[i].Conf.Type)
+		log.Printf("Teardown: executing net-plugin %v", nets[i].conf.Type)
 
 		err := e.netPluginDel(&nets[i], nspath)
 		if err != nil {
-			log.Printf("Error deleting %q: %v", nets[i].Conf.Name, err)
+			log.Printf("Error deleting %q: %v", nets[i].conf.Name, err)
 		}
 
 		// Delete the conf file to signal that the network was
 		// torn down (or at least attempted to)
-		if err = os.Remove(nets[i].Runtime.ConfPath); err != nil {
-			log.Printf("Error deleting %q: %v", nets[i].Runtime.ConfPath, err)
+		if err = os.Remove(nets[i].runtime.ConfPath); err != nil {
+			log.Printf("Error deleting %q: %v", nets[i].runtime.ConfPath, err)
 		}
 	}
 }
@@ -157,7 +159,7 @@ func listFiles(dir string) ([]string, error) {
 
 func netExists(nets []activeNet, name string) bool {
 	for _, n := range nets {
-		if n.Conf.Name == name {
+		if n.conf.Name == name {
 			return true
 		}
 	}
@@ -165,14 +167,20 @@ func netExists(nets []activeNet, name string) bool {
 }
 
 func loadNet(filepath string) (*activeNet, error) {
-	n := &rktnet.Net{}
-	if err := rktnet.LoadNet(filepath, n); err != nil {
+	bytes, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	n := &plugin.NetConf{}
+	if err = json.Unmarshal(bytes, n); err != nil {
 		return nil, fmt.Errorf("error loading %v: %v", filepath, err)
 	}
 
 	return &activeNet{
-		Conf: n,
-		Runtime: &netinfo.NetInfo{
+		confBytes: bytes,
+		conf:      n,
+		runtime: &netinfo.NetInfo{
 			NetName:  n.Name,
 			ConfPath: filepath,
 		},
@@ -216,12 +224,12 @@ func loadUserNets() ([]activeNet, error) {
 		}
 
 		// "default" is slightly special
-		if n.Conf.Name == "default" {
+		if n.conf.Name == "default" {
 			log.Printf(`Overriding "default" network with %v`, filename)
 		}
 
-		if netExists(nets, n.Conf.Name) {
-			log.Printf("%q network already defined, ignoring %v", n.Conf.Name, filename)
+		if netExists(nets, n.conf.Name) {
+			log.Printf("%q network already defined, ignoring %v", n.conf.Name, filename)
 			continue
 		}
 

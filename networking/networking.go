@@ -21,12 +21,11 @@ import (
 	"os"
 	"syscall"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
-	rktnet "github.com/coreos/rkt/networking/net"
 	"github.com/coreos/rkt/networking/netinfo"
-	"github.com/coreos/rkt/networking/util"
 )
 
 const (
@@ -122,8 +121,8 @@ func Load(rktRoot string, podID *types.UUID) (*Networking, error) {
 
 	nets := []activeNet{}
 	for _, ni := range nis {
-		conf := &rktnet.Net{}
-		if err := rktnet.LoadNet(ni.ConfPath, conf); err != nil {
+		n, err := loadNet(ni.ConfPath)
+		if err != nil {
 			if !os.IsNotExist(err) {
 				log.Printf("Error loading %q: %v; ignoring", ni.ConfPath, err)
 			}
@@ -133,8 +132,8 @@ func Load(rktRoot string, podID *types.UUID) (*Networking, error) {
 		// make a copy of ni to make it a unique object as it's saved via ptr
 		rti := ni
 		nets = append(nets, activeNet{
-			Conf:    conf,
-			Runtime: &rti,
+			conf:    n.conf,
+			runtime: &rti,
 		})
 	}
 
@@ -152,7 +151,7 @@ func (n *Networking) GetDefaultIP() net.IP {
 	if len(n.nets) == 0 {
 		return nil
 	}
-	return n.nets[len(n.nets)-1].Runtime.IP
+	return n.nets[len(n.nets)-1].runtime.IP
 }
 
 func (n *Networking) GetDefaultHostIP() net.IP {
@@ -207,7 +206,7 @@ func basicNetNS() (hostNS, podNS *os.File, err error) {
 
 // enterHostNS moves into the host's network namespace.
 func (n *Networking) enterHostNS() error {
-	return util.SetNS(n.hostNS, syscall.CLONE_NEWNET)
+	return ns.SetNS(n.hostNS, syscall.CLONE_NEWNET)
 }
 
 // Save writes out the info about active nets
@@ -215,7 +214,7 @@ func (n *Networking) enterHostNS() error {
 func (e *Networking) Save() error {
 	nis := []netinfo.NetInfo{}
 	for _, n := range e.nets {
-		nis = append(nis, *n.Runtime)
+		nis = append(nis, *n.runtime)
 	}
 
 	return netinfo.Save(e.rktRoot, nis)
@@ -244,7 +243,7 @@ func newNetNS() (hostNS, childNS *os.File, err error) {
 
 	childNS, err = os.Open(selfNetNS)
 	if err != nil {
-		util.SetNS(hostNS, syscall.CLONE_NEWNET)
+		ns.SetNS(hostNS, syscall.CLONE_NEWNET)
 		return
 	}
 
@@ -253,19 +252,19 @@ func newNetNS() (hostNS, childNS *os.File, err error) {
 
 // execute f() in tgtNS
 func withNetNS(curNS, tgtNS *os.File, f func() error) error {
-	if err := util.SetNS(tgtNS, syscall.CLONE_NEWNET); err != nil {
+	if err := ns.SetNS(tgtNS, syscall.CLONE_NEWNET); err != nil {
 		return err
 	}
 
 	if err := f(); err != nil {
 		// Attempt to revert the net ns in a known state
-		if err := util.SetNS(curNS, syscall.CLONE_NEWNET); err != nil {
+		if err := ns.SetNS(curNS, syscall.CLONE_NEWNET); err != nil {
 			log.Printf("Cannot revert the net namespace: %v", err)
 		}
 		return err
 	}
 
-	return util.SetNS(curNS, syscall.CLONE_NEWNET)
+	return ns.SetNS(curNS, syscall.CLONE_NEWNET)
 }
 
 func loUp() error {
