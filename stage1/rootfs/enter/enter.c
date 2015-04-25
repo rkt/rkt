@@ -49,22 +49,16 @@ static int openpidfd(int pid, char *which) {
 
 int main(int argc, char *argv[])
 {
-	FILE	*fp;
 	int	fd;
 	int	pid;
 	pid_t	child;
 	int	status;
 	int	root_fd;
 
-	exit_if(argc < 3,
-		"Usage: %s imageid cmd [args...]", argv[0])
+	exit_if(argc < 4,
+		"Usage: %s pid imageid cmd [args...]", argv[0])
 
-	/* We start in the pod root, where "pid" should be. */
-	pexit_if((fp = fopen("pid", "r")) == NULL,
-		"Unable to open pid file");
-	pexit_if(fscanf(fp, "%i", &pid) != 1,
-		"Unable to read pid");
-	fclose(fp);
+	pid = atoi(argv[1]);
 	root_fd = openpidfd(pid, "root");
 
 #define ns(_typ, _nam)							\
@@ -92,20 +86,26 @@ int main(int argc, char *argv[])
 	pexit_if(((child = fork()) == -1),
 		"Unable to fork");
 
+/* some stuff make the argv->args copy less cryptic */
+#define ENTER_ARGV_FWD_OFFSET		3
+#define DIAGEXEC_ARGV_FWD_OFFSET	6
+#define args_fwd_idx(_idx) \
+	((_idx - ENTER_ARGV_FWD_OFFSET) + DIAGEXEC_ARGV_FWD_OFFSET)
+
 	if(child == 0) {
 		char		root[PATH_MAX];
 		char		env[PATH_MAX];
-		char		*args[argc + 4];
+		char		*args[args_fwd_idx(argc) + 1 /* NULL terminator */];
 		int		i;
 
 		/* Child goes on to execute /diagexec */
 
 		exit_if(snprintf(root, sizeof(root),
-				 "/opt/stage2/%s/rootfs", argv[1]) == sizeof(root),
+				 "/opt/stage2/%s/rootfs", argv[2]) == sizeof(root),
 			"Root path overflow");
 
 		exit_if(snprintf(env, sizeof(env),
-				 "/rkt/env/%s", argv[1]) == sizeof(env),
+				 "/rkt/env/%s", argv[2]) == sizeof(env),
 			"Env path overflow");
 
 		args[0] = "/diagexec";
@@ -114,10 +114,10 @@ int main(int argc, char *argv[])
 		args[3] = env;
 		args[4] = "0"; /* uid */
 		args[5] = "0"; /* gid */
-		for(i = 2; i < argc; i++) {
-			args[i + 4] = argv[i];
+		for(i = ENTER_ARGV_FWD_OFFSET; i < argc; i++) {
+			args[args_fwd_idx(i)] = argv[i];
 		}
-		args[i + 4] = NULL;
+		args[args_fwd_idx(i)] = NULL;
 
 		pexit_if(execv(args[0], args) == -1,
 			"Exec failed");
