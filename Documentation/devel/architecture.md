@@ -10,6 +10,8 @@ All state in rkt is communicated via the filesystem. Facilities like file-lockin
 
 Execution with rkt is divided into several distinct stages.
 
+_**NB** The goal is for the ABI between stages to be relatively fixed, but while rkt is still under heavy development this is still evolving. Until https://github.com/coreos/rkt/issues/572 is resolved, this should be considered in flux and the description below may not be authoritative._
+
 ### Stage 0
 
 The first stage is the actual `rkt` binary itself. When running a pod, this binary is responsible for performing a number of initial preparatory tasks:
@@ -68,4 +70,4 @@ This process is slightly different for the qemu-kvm stage1 but a similar workflo
 
 The final stage is executing the actual application. The responsibilities of the stage2 include:
 
-- Launch the init process described in the Application Manifest
+- Launch the init process described in the Image Manifest
