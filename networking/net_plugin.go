@@ -24,8 +24,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+
 	"github.com/coreos/rkt/common"
-	rktnet "github.com/coreos/rkt/networking/net"
 )
 
 // TODO(eyakubovich): make this configurable in rkt.conf
@@ -38,12 +39,16 @@ func (e *podEnv) netPluginAdd(n *activeNet, netns string) (ip, hostIP net.IP, er
 		return nil, nil, err
 	}
 
-	ifConf := rktnet.IfConfig{}
-	if err = json.Unmarshal(output, &ifConf); err != nil {
-		return nil, nil, fmt.Errorf("error parsing %q output: %v", n.Conf.Name, err)
+	pr := plugin.Result{}
+	if err = json.Unmarshal(output, &pr); err != nil {
+		return nil, nil, fmt.Errorf("error parsing %q result: %v", n.conf.Name, err)
 	}
 
-	return ifConf.IP, ifConf.HostIP, nil
+	if pr.IP4 == nil {
+		return nil, nil, fmt.Errorf("net-plugin returned no IPv4 configuration")
+	}
+
+	return pr.IP4.IP.IP, pr.IP4.Gateway, nil
 }
 
 func (e *podEnv) netPluginDel(n *activeNet, netns string) error {
@@ -81,28 +86,28 @@ func envVars(vars [][2]string) []string {
 }
 
 func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) ([]byte, error) {
-	pluginPath := e.findNetPlugin(n.Conf.Type)
+	pluginPath := e.findNetPlugin(n.conf.Type)
 	if pluginPath == "" {
-		return nil, fmt.Errorf("Could not find plugin %q", n.Conf.Type)
+		return nil, fmt.Errorf("Could not find plugin %q", n.conf.Type)
 	}
 
 	vars := [][2]string{
-		{"RKT_NETPLUGIN_COMMAND", cmd},
-		{"RKT_NETPLUGIN_PODID", e.podID.String()},
-		{"RKT_NETPLUGIN_NETNS", netns},
-		{"RKT_NETPLUGIN_ARGS", n.Runtime.Args},
-		{"RKT_NETPLUGIN_IFNAME", n.Runtime.IfName},
-		{"RKT_NETPLUGIN_NETNAME", n.Conf.Name},
-		{"RKT_NETPLUGIN_NETCONF", n.Runtime.ConfPath},
-		{"RKT_NETPLUGIN_IPAMPATH", strings.Join(e.pluginPaths(), ":")},
+		{"CNI_COMMAND", cmd},
+		{"CNI_PODID", e.podID.String()},
+		{"CNI_NETNS", netns},
+		{"CNI_ARGS", n.runtime.Args},
+		{"CNI_IFNAME", n.runtime.IfName},
+		{"CNI_PATH", strings.Join(e.pluginPaths(), ":")},
 	}
 
+	stdin := bytes.NewBuffer(n.confBytes)
 	stdout := &bytes.Buffer{}
 
 	c := exec.Cmd{
 		Path:   pluginPath,
 		Args:   []string{pluginPath},
 		Env:    envVars(vars),
+		Stdin:  stdin,
 		Stdout: stdout,
 		Stderr: os.Stderr,
 	}

@@ -20,6 +20,38 @@
 			"Rev": "3b60906367401d3dc2f9e5f3b5395184f8a2d75f"
 		},
 		{
+			"ImportPath": "github.com/appc/cni/pkg/ip",
+			"Rev": "88377fa3466eea30817b038c69ac06686e7655b7"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/pkg/ns",
+			"Rev": "88377fa3466eea30817b038c69ac06686e7655b7"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/pkg/plugin",
+			"Rev": "88377fa3466eea30817b038c69ac06686e7655b7"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/pkg/skel",
+			"Rev": "88377fa3466eea30817b038c69ac06686e7655b7"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local",
+			"Rev": "88377fa3466eea30817b038c69ac06686e7655b7"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/plugins/main/bridge",
+			"Rev": "88377fa3466eea30817b038c69ac06686e7655b7"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/plugins/main/macvlan",
+			"Rev": "88377fa3466eea30817b038c69ac06686e7655b7"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/plugins/main/veth",
+			"Rev": "88377fa3466eea30817b038c69ac06686e7655b7"
+		},
+		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
 			"Rev": "4e4333c116ee15c74ea06ec036c1bc4fad651628"
 		},

@@ -35,7 +35,7 @@ $ cat /etc/rkt/net.d/10-containers.conf
 	"name": "containers",
 	"type": "bridge",
 	"ipam": {
-		"type": "static",
+		"type": "host-local",
 		"subnet": "10.1.0.0/16"
 	}
 }
@@ -53,7 +53,7 @@ Additional fields are specified for various types.
 
 #### veth
 
-veth is the probably the simplest type of networking and is used to set up default network. It creates a virtual ethernet pair (akin to a pipe) and places one end into pod and the other on the host. It is expected to be used with IPAM type that will allocate a /31 for both ends of the veth (such as static-ptp). `veth` specific configuration fields are:
+veth is the probably the simplest type of networking and is used to set up default network. It creates a virtual ethernet pair (akin to a pipe) and places one end into pod and the other on the host. It is expected to be used with IPAM type that will allocate a /31 for both ends of the veth (such as host-local-ptp). `veth` specific configuration fields are:
 
 - **mtu** (integer): the size of the MTU in bytes.
 - **ipMasq** (boolean): whether to setup IP masquerading on the host.
@@ -89,11 +89,11 @@ With the IP address allocated by the real network infrastructure, this makes the
 ## IP Address Management
 
 The policy for IP address allocation, associated gateway and routes is separately configurable via the `ipam` section of the configuration file.
-rkt currently ships with one type of IPAM (static) but DHCP is in the works. Like the network types, IPAM types can be implemented by third-parties via plugins.
+rkt currently ships with one type of IPAM (host-local) but DHCP is in the works. Like the network types, IPAM types can be implemented by third-parties via plugins.
 
-### static
+### host-local
 
-Static type allocates IPs out of specified network range, much like a DHCP server would.
+host-local type allocates IPs out of specified network range, much like a DHCP server would.
 The difference is that while DHCP uses a central server, this type uses a static configuration.
 Consider the following conf:
 
@@ -104,7 +104,7 @@ $ cat /etc/rkt/net.d/10-containers.conf
 	"type": "bridge",
 	"bridge": "rkt1",
 	"ipam": {
-		"type": "static",
+		"type": "host-local",
 		"subnet": "10.1.0.0/16",
 	}
 }

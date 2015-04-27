@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package ip
 
 import (
 	"crypto/sha512"
@@ -39,19 +39,20 @@ func makeVeth(name, peer string, mtu int) (netlink.Link, error) {
 	return veth, nil
 }
 
-func hash(s string) string {
+// RandomVethName returns string "veth" with random prefix (hashed from entropy)
+func RandomVethName(entropy string) string {
 	h := sha512.New()
-	h.Write([]byte(s))
-	return fmt.Sprintf("%x", h.Sum(nil))
+	h.Write([]byte(entropy))
+	return fmt.Sprintf("veth%x", h.Sum(nil)[:5])
 }
 
 // SetupVeth sets up a virtual ethernet link.
-// Should be in pod netns.
+// Should be in container netns.
 // TODO(eyakubovich): get rid of entropy and ask kernel to pick name via pattern
-func SetupVeth(entropy, podVethName string, mtu int, hostNS *os.File) (hostVeth, podVeth netlink.Link, err error) {
+func SetupVeth(entropy, contVethName string, mtu int, hostNS *os.File) (hostVeth, contVeth netlink.Link, err error) {
 	// NetworkManager (recent versions) will ignore veth devices that start with "veth"
-	hostVethName := "veth" + hash(entropy)[:4]
-	hostVeth, err = makeVeth(hostVethName, podVethName, mtu)
+	hostVethName := RandomVethName(entropy)
+	hostVeth, err = makeVeth(hostVethName, contVethName, mtu)
 	if err != nil {
 		err = fmt.Errorf("failed to make veth pair: %v", err)
 		return
@@ -62,14 +63,14 @@ func SetupVeth(entropy, podVethName string, mtu int, hostNS *os.File) (hostVeth,
 		return
 	}
 
-	podVeth, err = netlink.LinkByName(podVethName)
+	contVeth, err = netlink.LinkByName(contVethName)
 	if err != nil {
-		err = fmt.Errorf("failed to lookup %q: %v", podVethName, err)
+		err = fmt.Errorf("failed to lookup %q: %v", contVethName, err)
 		return
 	}
 
-	if err = netlink.LinkSetUp(podVeth); err != nil {
-		err = fmt.Errorf("failed to set %q up: %v", podVethName, err)
+	if err = netlink.LinkSetUp(contVeth); err != nil {
+		err = fmt.Errorf("failed to set %q up: %v", contVethName, err)
 		return
 	}
 

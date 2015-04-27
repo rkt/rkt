@@ -15,24 +15,25 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"runtime"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
-
-	"github.com/coreos/rkt/networking/ipam"
-	rktnet "github.com/coreos/rkt/networking/net"
-	"github.com/coreos/rkt/networking/util"
 )
 
-const defaultBrName = "rkt0"
+const defaultBrName = "cni0"
 
-type Net struct {
-	rktnet.Net
+type NetConf struct {
+	plugin.NetConf
 	BrName string `json:"bridge"`
 	IsGW   bool   `json:"isGateway"`
 	IPMasq bool   `json:"ipMasq"`
@@ -46,12 +47,12 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func loadConf(path string) (*Net, error) {
-	n := &Net{
+func loadNetConf(bytes []byte) (*NetConf, error) {
+	n := &NetConf{
 		BrName: defaultBrName,
 	}
-	if err := rktnet.LoadNet(path, n); err != nil {
-		return nil, fmt.Errorf("failed to load %q: %v", path, err)
+	if err := json.Unmarshal(bytes, n); err != nil {
+		return nil, fmt.Errorf("failed to load netconf: %v", err)
 	}
 	return n, nil
 }
@@ -124,17 +125,17 @@ func ensureBridge(brName string, mtu int, ipn *net.IPNet) (*netlink.Bridge, erro
 	return br, nil
 }
 
-func setupVeth(podID types.UUID, netns string, br *netlink.Bridge, ifName string, mtu int, ipConf *ipam.IPConfig) error {
+func setupVeth(netns string, br *netlink.Bridge, ifName string, mtu int, pr *plugin.Result) error {
 	var hostVethName string
 
-	err := util.WithNetNSPath(netns, func(hostNS *os.File) error {
-		// create the veth pair in the pod and move host end into host netns
-		hostVeth, _, err := util.SetupVeth(podID.String(), ifName, mtu, hostNS)
+	err := ns.WithNetNSPath(netns, func(hostNS *os.File) error {
+		// create the veth pair in the container and move host end into host netns
+		hostVeth, _, err := ip.SetupVeth(netns, ifName, mtu, hostNS)
 		if err != nil {
 			return err
 		}
 
-		if err = ipam.ApplyIPConfig(ifName, ipConf); err != nil {
+		if err = plugin.ConfigureIface(ifName, pr); err != nil {
 			return err
 		}
 
@@ -161,10 +162,10 @@ func setupVeth(podID types.UUID, netns string, br *netlink.Bridge, ifName string
 
 func calcGatewayIP(ipn *net.IPNet) net.IP {
 	nid := ipn.IP.Mask(ipn.Mask)
-	return util.NextIP(nid)
+	return ip.NextIP(nid)
 }
 
-func setupBridge(n *Net, ipConf *ipam.IPConfig) (*netlink.Bridge, error) {
+func setupBridge(n *NetConf, ipConf *plugin.IPConfig) (*netlink.Bridge, error) {
 	var gwn *net.IPNet
 	if n.IsGW {
 		gwn = &net.IPNet{
@@ -182,59 +183,61 @@ func setupBridge(n *Net, ipConf *ipam.IPConfig) (*netlink.Bridge, error) {
 	return br, nil
 }
 
-func cmdAdd(args *util.CmdArgs) error {
-	n, err := loadConf(args.NetConf)
+func cmdAdd(args *skel.CmdArgs) error {
+	n, err := loadNetConf(args.StdinData)
 	if err != nil {
 		return err
 	}
 
 	// run the IPAM plugin and get back the config to apply
-	ipConf, err := ipam.ExecPluginAdd(n.Net.IPAM.Type)
+	result, err := plugin.ExecAdd(n.IPAM.Type, args.StdinData)
 	if err != nil {
 		return err
 	}
 
-	if ipConf.Gateway == nil && n.IsGW {
-		ipConf.Gateway = calcGatewayIP(ipConf.IP)
+	if result.IP4 == nil {
+		return errors.New("IPAM plugin returned missing IPv4 config")
 	}
 
-	br, err := setupBridge(n, ipConf)
+	if result.IP4.Gateway == nil && n.IsGW {
+		result.IP4.Gateway = calcGatewayIP(&result.IP4.IP)
+	}
+
+	br, err := setupBridge(n, result.IP4)
 	if err != nil {
 		return err
 	}
 
-	if err = setupVeth(args.PodID, args.Netns, br, args.IfName, n.MTU, ipConf); err != nil {
+	if err = setupVeth(args.Netns, br, args.IfName, n.MTU, result); err != nil {
 		return err
 	}
 
 	if n.IPMasq {
-		chain := "RKT-" + n.Name
-		if err = util.SetupIPMasq(util.Network(ipConf.IP), chain); err != nil {
+		chain := "CNI-" + n.Name
+		if err = ip.SetupIPMasq(ip.Network(&result.IP4.IP), chain); err != nil {
 			return err
 		}
 	}
 
-	return rktnet.PrintIfConfig(&rktnet.IfConfig{
-		IP: ipConf.IP.IP,
-	})
+	return plugin.PrintResult(result)
 }
 
-func cmdDel(args *util.CmdArgs) error {
-	n, err := loadConf(args.NetConf)
+func cmdDel(args *skel.CmdArgs) error {
+	n, err := loadNetConf(args.StdinData)
 	if err != nil {
 		return err
 	}
 
-	err = util.WithNetNSPath(args.Netns, func(hostNS *os.File) error {
-		return util.DelLinkByName(args.IfName)
+	err = ns.WithNetNSPath(args.Netns, func(hostNS *os.File) error {
+		return ip.DelLinkByName(args.IfName)
 	})
 	if err != nil {
 		return err
 	}
 
-	return ipam.ExecPluginDel(n.Net.IPAM.Type)
+	return plugin.ExecDel(n.IPAM.Type, args.StdinData)
 }
 
 func main() {
-	util.PluginMain(cmdAdd, cmdDel)
+	skel.PluginMain(cmdAdd, cmdDel)
 }

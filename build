@@ -31,7 +31,9 @@ go build -o ${GOBIN}/rkt \
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	echo "Building network plugins..."
-	for d in networking/net/* networking/ipam/*; do
+	cni_plugins="Godeps/_workspace/src/github.com/appc/cni/plugins/main/* "
+	cni_plugins="$cni_plugins Godeps/_workspace/src/github.com/appc/cni/plugins/ipam/* "
+	for d in $cni_plugins; do
 		if [ -d $d ]; then
 			plugin=$(basename $d)
 			echo "  " $plugin
@@ -53,7 +55,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	mkdir -p stage1/rootfs/net-plugins/bin
 	# make sure the bin dir doesn't have old links
 	rm -f stage1/rootfs/net-plugins/bin/*
-	for d in networking/net/* networking/ipam/*; do
+	for d in $cni_plugins; do
 		if [ -d $d ]; then
 			plugin=$(basename $d)
 			ln -sf ${GOBIN}/$plugin stage1/rootfs/net-plugins/bin

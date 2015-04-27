@@ -1,3 +1,17 @@
+// Copyright 2015 CoreOS, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package disk
 
 import (
@@ -5,14 +19,12 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-
-	"github.com/coreos/rkt/pkg/lock"
 )
 
-var defaultDataDir = "/var/lib/rkt/networks"
+var defaultDataDir = "/var/lib/cni/networks"
 
 type Store struct {
-	lock.FileLock
+	FileLock
 	dataDir string
 }
 
@@ -22,15 +34,11 @@ func New(network string) (*Store, error) {
 		return nil, err
 	}
 
-	lk, err := lock.NewLock(dir, lock.Dir)
+	lk, err := NewFileLock(dir)
 	if err != nil {
 		return nil, err
 	}
 	return &Store{*lk, dir}, nil
-}
-
-func (s *Store) Lock() error {
-	return s.ExclusiveLock()
 }
 
 func (s *Store) Reserve(id string, ip net.IP) (bool, error) {
@@ -60,7 +68,7 @@ func (s *Store) Release(ip net.IP) error {
 
 // N.B. This function eats errors to be tolerant and
 // release as much as possible
-func (s *Store) ReleaseByPodID(id string) error {
+func (s *Store) ReleaseByID(id string) error {
 	err := filepath.Walk(s.dataDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil

@@ -15,19 +15,21 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
-
-	"github.com/coreos/rkt/networking/ipam"
-	rktnet "github.com/coreos/rkt/networking/net"
-	"github.com/coreos/rkt/networking/util"
 )
 
-type Net struct {
-	rktnet.Net
+type NetConf struct {
+	plugin.NetConf
 	Master string `json:"master"`
 	Mode   string `json:"mode"`
 	IPMasq bool   `json:"ipMasq"`
@@ -41,10 +43,10 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func loadConf(path string) (*Net, error) {
-	n := &Net{}
-	if err := rktnet.LoadNet(path, n); err != nil {
-		return nil, fmt.Errorf("failed to load %q: %v", path, err)
+func loadConf(bytes []byte) (*NetConf, error) {
+	n := &NetConf{}
+	if err := json.Unmarshal(bytes, n); err != nil {
+		return nil, fmt.Errorf("failed to load netconf: %v", err)
 	}
 	if n.Master == "" {
 		return nil, fmt.Errorf(`"master" field is required. It specifies the host interface name to virtualize`)
@@ -69,7 +71,7 @@ func modeFromString(s string) (netlink.MacvlanMode, error) {
 	}
 }
 
-func createMacvlan(conf *Net, ifName string, netns *os.File) error {
+func createMacvlan(conf *NetConf, ifName string, netns *os.File) error {
 	mode, err := modeFromString(conf.Mode)
 	if err != nil {
 		return err
@@ -97,8 +99,8 @@ func createMacvlan(conf *Net, ifName string, netns *os.File) error {
 	return err
 }
 
-func cmdAdd(args *util.CmdArgs) error {
-	n, err := loadConf(args.NetConf)
+func cmdAdd(args *skel.CmdArgs) error {
+	n, err := loadConf(args.StdinData)
 	if err != nil {
 		return err
 	}
@@ -109,54 +111,55 @@ func cmdAdd(args *util.CmdArgs) error {
 	}
 	defer netns.Close()
 
-	tmpName := "veth" + args.PodID.String()[:4]
+	tmpName := ip.RandomVethName(args.Netns)
 	if err = createMacvlan(n, tmpName, netns); err != nil {
 		return err
 	}
 
 	// run the IPAM plugin and get back the config to apply
-	ipConf, err := ipam.ExecPluginAdd(n.Net.IPAM.Type)
+	result, err := plugin.ExecAdd(n.IPAM.Type, args.StdinData)
 	if err != nil {
 		return err
 	}
+	if result.IP4 == nil {
+		return errors.New("IPAM plugin returned missing IPv4 config")
+	}
 
-	err = util.WithNetNS(netns, func(_ *os.File) error {
+	err = ns.WithNetNS(netns, func(_ *os.File) error {
 		err := renameLink(tmpName, args.IfName)
 		if err != nil {
 			return fmt.Errorf("failed to rename macvlan to %q: %v", args.IfName, err)
 		}
 
-		return ipam.ApplyIPConfig(args.IfName, ipConf)
+		return plugin.ConfigureIface(args.IfName, result)
 	})
 	if err != nil {
 		return err
 	}
 
 	if n.IPMasq {
-		chain := "RKT-" + n.Name
-		if err = util.SetupIPMasq(util.Network(ipConf.IP), chain); err != nil {
+		chain := "CNI-" + n.Name
+		if err = ip.SetupIPMasq(ip.Network(&result.IP4.IP), chain); err != nil {
 			return err
 		}
 	}
 
-	return rktnet.PrintIfConfig(&rktnet.IfConfig{
-		IP: ipConf.IP.IP,
-	})
+	return plugin.PrintResult(result)
 }
 
-func cmdDel(args *util.CmdArgs) error {
-	n, err := loadConf(args.NetConf)
+func cmdDel(args *skel.CmdArgs) error {
+	n, err := loadConf(args.StdinData)
 	if err != nil {
 		return err
 	}
 
-	err = ipam.ExecPluginDel(n.Net.IPAM.Type)
+	err = plugin.ExecDel(n.IPAM.Type, args.StdinData)
 	if err != nil {
 		return err
 	}
 
-	return util.WithNetNSPath(args.Netns, func(hostNS *os.File) error {
-		return util.DelLinkByName(args.IfName)
+	return ns.WithNetNSPath(args.Netns, func(hostNS *os.File) error {
+		return ip.DelLinkByName(args.IfName)
 	})
 }
 
@@ -170,5 +173,5 @@ func renameLink(curName, newName string) error {
 }
 
 func main() {
-	util.PluginMain(cmdAdd, cmdDel)
+	skel.PluginMain(cmdAdd, cmdDel)
 }
