@@ -15,6 +15,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -25,8 +26,10 @@ import (
 func TestSuccess(t *testing.T) {
 	patchTestACI("rkt-inspect-exit0.aci", "--exec=/inspect --print-msg=Hello --exit-code=0")
 	defer os.Remove("rkt-inspect-exit0.aci")
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
 
-	child, err := gexpect.Spawn("../bin/rkt --debug --insecure-skip-verify run ./rkt-inspect-exit0.aci")
+	child, err := gexpect.Spawn(fmt.Sprintf("%s --debug --insecure-skip-verify run ./rkt-inspect-exit0.aci", ctx.cmd()))
 	if err != nil {
 		t.Fatalf("Cannot exec rkt")
 	}
@@ -55,8 +58,10 @@ func TestSuccess(t *testing.T) {
 func TestFailure(t *testing.T) {
 	patchTestACI("rkt-inspect-exit20.aci", "--exec=/inspect --print-msg=Hello --exit-code=20")
 	defer os.Remove("rkt-inspect-exit20.aci")
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
 
-	child, err := gexpect.Spawn("../bin/rkt --debug --insecure-skip-verify run ./rkt-inspect-exit20.aci")
+	child, err := gexpect.Spawn(fmt.Sprintf("%s --debug --insecure-skip-verify run ./rkt-inspect-exit20.aci", ctx.cmd()))
 	if err != nil {
 		t.Fatalf("Cannot exec rkt")
 	}
