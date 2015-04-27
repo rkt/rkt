@@ -39,27 +39,34 @@ const (
 	authFailedDownload     = "error downloading ACI: bad HTTP status code: 401"
 )
 
+type authConfDir int
+
+const (
+	authConfDirNone authConfDir = iota
+	authConfDirLocal
+	authConfDirSystem
+)
+
 type genericAuthTest struct {
 	name          string
-	useServerConf bool
-	confDir       string
+	confDir       authConfDir
 	expectedLine  string
 }
 
 func TestAuthBasic(t *testing.T) {
 	tests := []genericAuthTest{
-		{"basic-no-config", false, "", authFailedDownload},
-		{"basic-local-config", true, "local", authSuccessfulDownload},
-		{"basic-system-config", true, "system", authSuccessfulDownload},
+		{"basic-no-config", authConfDirNone, authFailedDownload},
+		{"basic-local-config", authConfDirLocal, authSuccessfulDownload},
+		{"basic-system-config", authConfDirSystem, authSuccessfulDownload},
 	}
 	testAuthGeneric(t, taas.Basic, tests)
 }
 
 func TestAuthOauth(t *testing.T) {
 	tests := []genericAuthTest{
-		{"oauth-no-config", false, "", authFailedDownload},
-		{"oauth-local-config", true, "local", authSuccessfulDownload},
-		{"oauth-system-config", true, "system", authSuccessfulDownload},
+		{"oauth-no-config", authConfDirNone, authFailedDownload},
+		{"oauth-local-config", authConfDirLocal, authSuccessfulDownload},
+		{"oauth-system-config", authConfDirSystem, authSuccessfulDownload},
 	}
 	testAuthGeneric(t, taas.Oauth, tests)
 }
@@ -70,15 +77,15 @@ func testAuthGeneric(t *testing.T, auth taas.Type, tests []genericAuthTest) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 	for _, tt := range tests {
-		if tt.useServerConf {
-			switch tt.confDir {
-			case "local":
-				writeConfig(t, ctx.localDir(), "test.json", server.Conf)
-			case "system":
-				writeConfig(t, ctx.systemDir(), "test.json", server.Conf)
-			default:
-				panic("Wrong config directory")
-			}
+		switch tt.confDir {
+		case authConfDirNone:
+			// no config to write
+		case authConfDirLocal:
+			writeConfig(t, ctx.localDir(), "test.json", server.Conf)
+		case authConfDirSystem:
+			writeConfig(t, ctx.systemDir(), "test.json", server.Conf)
+		default:
+			panic("Wrong config directory")
 		}
 		expectedRunRkt(ctx, t, server.URL, tt.name, tt.expectedLine)
 		ctx.reset()
