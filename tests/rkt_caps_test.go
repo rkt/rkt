@@ -125,6 +125,9 @@ func TestCaps(t *testing.T) {
 }
 
 func TestNonRootCaps(t *testing.T) {
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
 	for i, tt := range capsTests {
 		var fileName = "rkt-inspect-print-caps-nonroot.aci"
 		var args []string
@@ -137,7 +140,7 @@ func TestNonRootCaps(t *testing.T) {
 
 		t.Logf("Running test #%v: %v [non-root]", i, tt.testName)
 
-		cmd := fmt.Sprintf("../bin/rkt --debug --insecure-skip-verify run --set-env=CAPABILITY=%d ./%s", int(tt.capa), fileName)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --set-env=CAPABILITY=%d ./%s", ctx.cmd(), int(tt.capa), fileName)
 		t.Logf("Command: %v", cmd)
 		child, err := gexpect.Spawn(cmd)
 		if err != nil {
@@ -164,5 +167,6 @@ func TestNonRootCaps(t *testing.T) {
 		if err != nil {
 			t.Fatalf("rkt didn't terminate correctly: %v", err)
 		}
+		ctx.reset()
 	}
 }
