@@ -54,13 +54,12 @@ if [ -n "${vetRes}" ]; then
 	exit 255
 fi
 
-# Functional tests are more dangerous than unit tests: they use 'sudo' and access
-# /var/lib/rkt/ directly. Only run them inside well-known CI systems.
+# Functional tests may need manual intervention to run and are more
+# dangerous than unit tests: they use 'sudo'. Only run them inside
+# well-known CI systems.
 if [ "$CI" == true ] ; then
 	if [ "${CIRCLECI}" == true -o "${SEMAPHORE}" == true ] ; then
 		echo "Checking functional tests..."
-		# Run destructive tests too
-		export RKT_ENABLE_DESTRUCTIVE_TESTS=1
 		(cd tests && ./test)
 	else
 		echo "Functional tests disabled."

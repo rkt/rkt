@@ -20,20 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"testing"
 )
-
-const enableDestructiveTestsEnvVar = "RKT_ENABLE_DESTRUCTIVE_TESTS"
-
-func skipDestructive(t *testing.T) {
-	if !destructiveTestsEnabled() {
-		t.Skipf("%s envvar is not specified or has value different than 1, skipping the test", enableDestructiveTestsEnvVar)
-	}
-}
-
-func destructiveTestsEnabled() bool {
-	return os.Getenv(enableDestructiveTestsEnvVar) == "1"
-}
 
 // dirDesc structure manages one directory and provides an option for
 // rkt invocations
