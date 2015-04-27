@@ -36,11 +36,11 @@ var volTests = []struct {
 	},
 	// Check that we can read files from a volume (both ro and rw)
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --inherit-env=true --volume=dir1,kind=host,source=$TMPDIR ./rkt-inspect-vol-rw-read-file.aci"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ./rkt-inspect-vol-rw-read-file.aci"`,
 		`<<<host>>>`,
 	},
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --inherit-env=true --volume=dir1,kind=host,source=$TMPDIR ./rkt-inspect-vol-ro-read-file.aci"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ./rkt-inspect-vol-ro-read-file.aci"`,
 		`<<<host>>>`,
 	},
 	// Check that we can write to files in the ACI
@@ -50,16 +50,16 @@ var volTests = []struct {
 	},
 	// Check that we can write files to a volume (both ro and rw)
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=2 ; ^RKT_BIN^ --debug --insecure-skip-verify run --inherit-env=true --volume=dir1,kind=host,source=$TMPDIR ./rkt-inspect-vol-rw-write-file.aci"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=2 ; ^RKT_BIN^ --debug --insecure-skip-verify run --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ./rkt-inspect-vol-rw-write-file.aci"`,
 		`<<<2>>>`,
 	},
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=3 ; ^RKT_BIN^ --debug --insecure-skip-verify run --inherit-env=true --volume=dir1,kind=host,source=$TMPDIR ./rkt-inspect-vol-ro-write-file.aci"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=3 ; ^RKT_BIN^ --debug --insecure-skip-verify run --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ./rkt-inspect-vol-ro-write-file.aci"`,
 		`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
 	},
 	// Check that the volume still contain the file previously written
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --inherit-env=true --volume=dir1,kind=host,source=$TMPDIR ./rkt-inspect-vol-ro-read-file.aci"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ./rkt-inspect-vol-ro-read-file.aci"`,
 		`<<<2>>>`,
 	},
 }
@@ -93,7 +93,7 @@ func TestVolumes(t *testing.T) {
 	}
 
 	for i, tt := range volTests {
-		cmd := strings.Replace(tt.rktCmd, "$TMPDIR", tmpdir, -1)
+		cmd := strings.Replace(tt.rktCmd, "^TMPDIR^", tmpdir, -1)
 		cmd = strings.Replace(cmd, "^RKT_BIN^", ctx.cmd(), -1)
 
 		t.Logf("Running test #%v: %v", i, cmd)
