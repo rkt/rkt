@@ -74,6 +74,9 @@ var capsTests = []struct {
 }
 
 func TestCaps(t *testing.T) {
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
 	for i, tt := range capsTests {
 		var stage1FileName = "rkt-inspect-print-caps-stage1.aci"
 		var stage2FileName = "rkt-inspect-print-caps-stage2.aci"
@@ -87,8 +90,6 @@ func TestCaps(t *testing.T) {
 		patchTestACI(stage2FileName, stage2Args...)
 		defer os.Remove(stage1FileName)
 		defer os.Remove(stage2FileName)
-		ctx := newRktRunCtx()
-		defer ctx.cleanup()
 
 		for _, stage := range []int{1, 2} {
 			t.Logf("Running test #%v: %v [stage %v]", i, tt.testName, stage)
@@ -121,6 +122,7 @@ func TestCaps(t *testing.T) {
 				t.Fatalf("rkt didn't terminate correctly: %v", err)
 			}
 		}
+		ctx.reset()
 	}
 }
 
