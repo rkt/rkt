@@ -356,7 +356,7 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 			user = creds.User
 			password = creds.Password
 		}
-		acis, err := docker2aci.Convert(registryURL, true, tmpDir, user, password)
+		acis, err := docker2aci.Convert(registryURL, true, tmpDir, tmpDir, user, password)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error converting docker image to ACI: %v", err)
 		}
