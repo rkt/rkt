@@ -702,7 +702,7 @@ func (p *pod) openFile(path string, flags int) (*os.File, error) {
 
 	fd, err := syscall.Openat(cdirfd, path, flags, 0)
 	if err != nil {
-		return nil, fmt.Errorf("unable to open file: %v", err)
+		return nil, err
 	}
 
 	return os.NewFile(uintptr(fd), path), nil
