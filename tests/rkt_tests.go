@@ -149,6 +149,6 @@ func patchTestACI(newFileName string, args ...string) {
 
 	output, err := exec.Command("../bin/actool", allArgs...).CombinedOutput()
 	if err != nil {
-		panic(fmt.Sprintf("Cannot create ACI: %v: %v\n", err, output))
+		panic(fmt.Sprintf("Cannot create ACI: %v: %s\n", err, output))
 	}
 }
