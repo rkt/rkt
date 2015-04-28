@@ -15,6 +15,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -25,55 +26,58 @@ import (
 var interactiveTests = []struct {
 	testName     string
 	aciBuildArgs []string
-	rktCmd       string
+	rktArgs      string
 	say          string
 	expect       string
 }{
 	{
 		`Check tty without interactive`,
 		[]string{"--exec=/inspect --check-tty"},
-		`../bin/rkt --debug --insecure-skip-verify run rkt-inspect-interactive.aci`,
+		`--debug --insecure-skip-verify run rkt-inspect-interactive.aci`,
 		``,
 		`stdin is not a terminal`,
 	},
 	{
 		`Check tty without interactive (with parameter)`,
 		[]string{"--exec=/inspect"},
-		`../bin/rkt --debug --insecure-skip-verify run rkt-inspect-interactive.aci -- --check-tty`,
+		`--debug --insecure-skip-verify run rkt-inspect-interactive.aci -- --check-tty`,
 		``,
 		`stdin is not a terminal`,
 	},
 	{
 		`Check tty with interactive`,
 		[]string{"--exec=/inspect --check-tty"},
-		`../bin/rkt --debug --insecure-skip-verify run --interactive rkt-inspect-interactive.aci`,
+		`--debug --insecure-skip-verify run --interactive rkt-inspect-interactive.aci`,
 		``,
 		`stdin is a terminal`,
 	},
 	{
 		`Check tty with interactive (with parameter)`,
 		[]string{"--exec=/inspect"},
-		`../bin/rkt --debug --insecure-skip-verify run --interactive rkt-inspect-interactive.aci -- --check-tty`,
+		`--debug --insecure-skip-verify run --interactive rkt-inspect-interactive.aci -- --check-tty`,
 		``,
 		`stdin is a terminal`,
 	},
 	{
 		`Reading from stdin`,
 		[]string{"--exec=/inspect --read-stdin"},
-		`../bin/rkt --debug --insecure-skip-verify run --interactive rkt-inspect-interactive.aci`,
+		`--debug --insecure-skip-verify run --interactive rkt-inspect-interactive.aci`,
 		`Saluton`,
 		`Received text: Saluton`,
 	},
 	{
 		`Reading from stdin (with parameter)`,
 		[]string{"--exec=/inspect"},
-		`../bin/rkt --debug --insecure-skip-verify run --interactive rkt-inspect-interactive.aci -- --read-stdin`,
+		`--debug --insecure-skip-verify run --interactive rkt-inspect-interactive.aci -- --read-stdin`,
 		`Saluton`,
 		`Received text: Saluton`,
 	},
 }
 
 func TestInteractive(t *testing.T) {
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
 	for i, tt := range interactiveTests {
 		t.Logf("Running test #%v: %v", i, tt.testName)
 
@@ -81,8 +85,9 @@ func TestInteractive(t *testing.T) {
 		patchTestACI(aciFileName, tt.aciBuildArgs...)
 		defer os.Remove(aciFileName)
 
-		t.Logf("Command: %v", tt.rktCmd)
-		child, err := gexpect.Spawn(tt.rktCmd)
+		rktCmd := fmt.Sprintf("%s %s", ctx.cmd(), tt.rktArgs)
+		t.Logf("Command: %v", rktCmd)
+		child, err := gexpect.Spawn(rktCmd)
 		if err != nil {
 			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
 		}

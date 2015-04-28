@@ -18,5 +18,4 @@
 # version as the system-wide installed go.
 GO=`which go`
 
-sudo GOPATH="${PWD}/../gopath" RKT_ENABLE_DESTRUCTIVE_TESTS="$RKT_ENABLE_DESTRUCTIVE_TESTS" GOROOT="$GOROOT" $GO test -v $*
-
+sudo GOPATH="${PWD}/../gopath" GOROOT="$GOROOT" $GO test -v $*
