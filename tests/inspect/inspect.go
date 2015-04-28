@@ -63,7 +63,7 @@ func main() {
 	globalFlagset.Parse(os.Args[1:])
 	args := globalFlagset.Args()
 	if len(args) > 0 {
-		fmt.Fprintln(os.Stderr, "Wrong parameters\n")
+		fmt.Fprintln(os.Stderr, "Wrong parameters")
 		os.Exit(1)
 	}
 
