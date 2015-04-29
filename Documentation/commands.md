@@ -210,7 +210,6 @@ EXAMPLE_OVERRIDE=over
 ```
 
 _TODO: Exit codes_
-_TODO: Logging_
 
 #### Disable Signature Verification
 
@@ -316,6 +315,42 @@ Work in progress. Please contribute!
 #### Run a Pod in the Background
 
 Work in progress. Please contribute!
+
+### Logging
+
+By default, rkt will send logs directly to stdout/stderr, allowing them to be caputered by the invoking process.
+On host systems running systemd, rkt will attempt to integrate with journald on the host.
+In this case, the logs can be accessed directly via journalctl.
+
+#### Accessing logs via journalctl
+
+To get the logs you need to get pod's machine name. You can use machinectl
+
+```
+$ machinectl
+MACHINE                                  CLASS     SERVICE
+rkt-f241c969-1710-445a-8129-d3a7ffdd9a60 container nspawn
+
+1 machines listed.
+```
+
+or `rkt list --full`
+
+```
+# rkt list --full
+UUID                                    ACI     STATE   NETWORKS
+f241c969-1710-445a-8129-d3a7ffdd9a60    busybox running
+```
+
+Pod's machine name will be the pod's UUID with a `rkt-` prefix.
+
+Then you can use systemd's journalctl with `_HOSTNAME` set to the machine name:
+
+```
+$ journalctl -m _HOSTNAME=rkt-f241c969-1710-445a-8129-d3a7ffdd9a60
+
+[...]
+```
 
 ### rkt status
 
