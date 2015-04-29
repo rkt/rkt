@@ -9,7 +9,7 @@
 rkt (pronounced _"rock-it"_) is a CLI for running app containers on Linux. rkt is designed to be composable, secure, and fast. 
 
 Some of rkt's key features and goals include:
-- First-class integration with init systems (systemd, upstart) and cluster orchestration tools (fleet, Kubernetes)
+- First-class integration with init systems ([systemd](Documentation/using-rkt-with-systemd.md), upstart) and cluster orchestration tools (fleet, Kubernetes)
 - Compatibility with other container software (e.g. rkt can run [Docker images](Documentation/running-docker-images.md))
 - Modular and extensible architecture ([network configuration plugins](Documentation/networking.md), swappable execution engines based on systemd or QEMU/KVM)
 
