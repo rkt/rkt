@@ -2,6 +2,8 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -68,6 +70,36 @@ func GetACIInfosWithAppName(tx *sql.Tx, appname string) ([]*ACIInfo, bool, error
 		return nil, false, err
 	}
 	return aciinfos, found, err
+}
+
+// GetAllACIInfos returns all the ACIInfos sorted by optional sortfields and
+// with ascending or descending order.
+func GetAllACIInfos(tx *sql.Tx, sortfields []string, ascending bool) ([]*ACIInfo, error) {
+	aciinfos := []*ACIInfo{}
+	query := "SELECT * from aciinfo"
+	if len(sortfields) > 0 {
+		query += fmt.Sprintf(" ORDER BY %s ", strings.Join(sortfields, ", "))
+		if ascending {
+			query += "ASC"
+		} else {
+			query += "DESC"
+		}
+	}
+	rows, err := tx.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		aciinfo := &ACIInfo{}
+		if err := rows.Scan(&aciinfo.BlobKey, &aciinfo.AppName, &aciinfo.ImportTime, &aciinfo.Latest); err != nil {
+			return nil, err
+		}
+		aciinfos = append(aciinfos, aciinfo)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return aciinfos, err
 }
 
 // WriteACIInfo adds or updates the provided aciinfo.

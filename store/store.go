@@ -504,6 +504,16 @@ nextKey:
 	return "", fmt.Errorf("aci not found")
 }
 
+func (ds Store) GetAllACIInfos(sortfields []string, ascending bool) ([]*ACIInfo, error) {
+	aciInfos := []*ACIInfo{}
+	err := ds.db.Do(func(tx *sql.Tx) error {
+		var err error
+		aciInfos, err = GetAllACIInfos(tx, sortfields, ascending)
+		return err
+	})
+	return aciInfos, err
+}
+
 func (s Store) Dump(hex bool) {
 	for _, s := range s.stores {
 		var keyCount int
