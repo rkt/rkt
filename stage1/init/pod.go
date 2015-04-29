@@ -188,6 +188,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, inte
 	} else {
 		opts = append(opts, newUnitOption("Service", "StandardOutput", "journal+console"))
 		opts = append(opts, newUnitOption("Service", "StandardError", "journal+console"))
+		opts = append(opts, newUnitOption("Service", "SyslogIdentifier", filepath.Base(app.Exec[0])))
 	}
 
 	for _, eh := range app.EventHandlers {
