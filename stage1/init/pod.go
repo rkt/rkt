@@ -185,6 +185,9 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, inte
 		opts = append(opts, newUnitOption("Service", "StandardInput", "tty"))
 		opts = append(opts, newUnitOption("Service", "StandardOutput", "tty"))
 		opts = append(opts, newUnitOption("Service", "StandardError", "tty"))
+	} else {
+		opts = append(opts, newUnitOption("Service", "StandardOutput", "journal+console"))
+		opts = append(opts, newUnitOption("Service", "StandardError", "journal+console"))
 	}
 
 	for _, eh := range app.EventHandlers {
