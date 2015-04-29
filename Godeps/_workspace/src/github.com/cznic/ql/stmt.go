@@ -30,6 +30,9 @@ var (
 	_ stmt = beginTransactionStmt{}
 	_ stmt = commitStmt{}
 	_ stmt = rollbackStmt{}
+
+	exprCache   = map[string]expression{}
+	exprCacheMu sync.Mutex
 )
 
 type stmt interface {
@@ -58,8 +61,29 @@ type updateStmt struct {
 	where     expression
 }
 
+func str2expr(expr string) (expression, error) {
+	exprCacheMu.Lock()
+	e := exprCache[expr]
+	exprCacheMu.Unlock()
+	if e != nil {
+		return e, nil
+	}
+
+	src := "select " + expr + " from t"
+	l, err := Compile(src)
+	if err != nil {
+		return nil, err
+	}
+
+	e = l.l[0].(*selectStmt).flds[0].expr
+	exprCacheMu.Lock()
+	exprCache[expr] = e
+	exprCacheMu.Unlock()
+	return e, nil
+}
+
 func (s *updateStmt) String() string {
-	u := fmt.Sprintf("UPDATE TABLE %s", s.tableName)
+	u := fmt.Sprintf("UPDATE %s", s.tableName)
 	a := make([]string, len(s.list))
 	for i, v := range s.list {
 		a[i] = v.String()
@@ -68,7 +92,7 @@ func (s *updateStmt) String() string {
 	if s.where != nil {
 		w = fmt.Sprintf(" WHERE %s", s.where)
 	}
-	return fmt.Sprintf("%s %s%s", u, strings.Join(a, ", "), w)
+	return fmt.Sprintf("%s %s%s;", u, strings.Join(a, ", "), w)
 }
 
 func (s *updateStmt) exec(ctx *execCtx) (_ Recordset, err error) {
@@ -84,6 +108,11 @@ func (s *updateStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 			return nil, fmt.Errorf("UPDATE: unknown column %s", asgn.colName)
 		}
 		tcols[i] = col
+	}
+
+	constraints, defaults, err := constraintsAndDefaults(ctx, s.tableName)
+	if err != nil {
+		return nil, err
 	}
 
 	m := map[interface{}]interface{}{}
@@ -145,6 +174,12 @@ func (s *updateStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		}
 		if err = typeCheck(data[2:], t.cols); err != nil {
 			return nil, err
+		}
+
+		if len(constraints) != 0 { // => len(defaults) != 0 as well
+			if err = checkConstraintsAndDefaults(ctx, data[2:], t.cols, m, constraints, defaults); err != nil {
+				return nil, err
+			}
 		}
 
 		for i, v := range t.indices {
@@ -379,6 +414,13 @@ func (s *alterTableDropColumnStmt) String() string {
 	return fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", s.tableName, s.colName)
 }
 
+var (
+	deleteColumn2 = mustCompile(`
+		delete from __Column2
+		where TableName == $1 && Name == $2
+	`)
+)
+
 func (s *alterTableDropColumnStmt) exec(ctx *execCtx) (Recordset, error) {
 	t, ok := ctx.db.root.tables[s.tableName]
 	if !ok {
@@ -390,6 +432,12 @@ func (s *alterTableDropColumnStmt) exec(ctx *execCtx) (Recordset, error) {
 		if c.name == s.colName {
 			if len(cols) == 1 {
 				return nil, fmt.Errorf("ALTER TABLE %s DROP COLUMN: cannot drop the only column: %s", s.tableName, s.colName)
+			}
+
+			if _, ok := ctx.db.root.tables["__Column2"]; ok {
+				if _, err := deleteColumn2.l[0].exec(&execCtx{db: ctx.db, arg: []interface{}{s.tableName, c.name}}); err != nil {
+					return nil, err
+				}
 			}
 
 			c.name = ""
@@ -416,7 +464,20 @@ type alterTableAddStmt struct {
 }
 
 func (s *alterTableAddStmt) String() string {
-	return fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s;", s.tableName, s.c.name)
+	r := fmt.Sprintf("ALTER TABLE %s ADD %s %s", s.tableName, s.c.name, typeStr(s.c.typ))
+	c := s.c
+	if x := c.constraint; x != nil { //TODO add (*col).String()
+		switch e := x.expr; {
+		case e != nil:
+			r += " " + e.String()
+		default:
+			r += " NOT NULL"
+		}
+	}
+	if x := c.dflt; x != nil {
+		r += " DEFAULT " + x.String()
+	}
+	return r + ";"
 }
 
 func (s *alterTableAddStmt) exec(ctx *execCtx) (Recordset, error) {
@@ -425,11 +486,17 @@ func (s *alterTableAddStmt) exec(ctx *execCtx) (Recordset, error) {
 		return nil, fmt.Errorf("ALTER TABLE: table %s does not exist", s.tableName)
 	}
 
+	hasRecords := t.head != 0
+	c := s.c
+	if c.constraint != nil && hasRecords {
+		return nil, fmt.Errorf("ALTER TABLE %s ADD %s: cannot add constrained column to table with existing data", s.tableName, c.name)
+	}
+
 	cols := t.cols
 	for _, c := range cols {
 		nm := c.name
 		if nm == s.c.name {
-			return nil, fmt.Errorf("ALTER TABLE %s ADD COLUMN %s: column exists", s.tableName, nm)
+			return nil, fmt.Errorf("ALTER TABLE %s ADD: column %s exists", s.tableName, nm)
 		}
 	}
 
@@ -437,6 +504,26 @@ func (s *alterTableAddStmt) exec(ctx *execCtx) (Recordset, error) {
 		t.indices = append(t.indices, nil)
 		t.xroots = append(t.xroots, 0)
 		if err := t.store.Update(t.hxroots, t.xroots...); err != nil {
+			return nil, err
+		}
+	}
+
+	if c.constraint != nil || c.dflt != nil {
+		for _, s := range createColumn2.l {
+			_, err := s.exec(&execCtx{db: ctx.db})
+			if err != nil {
+				return nil, err
+			}
+		}
+		notNull := c.constraint != nil && c.constraint.expr == nil
+		var co, d string
+		if c.constraint != nil && c.constraint.expr != nil {
+			co = c.constraint.expr.String()
+		}
+		if e := c.dflt; e != nil {
+			d = e.String()
+		}
+		if _, err := insertColumn2.l[0].exec(&execCtx{db: ctx.db, arg: []interface{}{s.tableName, c.name, notNull, co, d}}); err != nil {
 			return nil, err
 		}
 	}
@@ -451,6 +538,7 @@ type selectStmt struct {
 	distinct      bool
 	flds          []*fld
 	from          *crossJoinRset
+	outer         *outerJoinRset
 	group         *groupByRset
 	hasAggregates bool
 	limit         *limitRset
@@ -473,7 +561,7 @@ func (s *selectStmt) String() string {
 		a := make([]string, len(s.flds))
 		for i, v := range s.flds {
 			s := v.expr.String()
-			if v.name != "" {
+			if v.name != "" && v.name != s {
 				s += " AS " + v.name
 			}
 			a[i] = s
@@ -482,6 +570,32 @@ func (s *selectStmt) String() string {
 	}
 	b.WriteString(" FROM ")
 	b.WriteString(s.from.String())
+	if o := s.outer; o != nil {
+		switch o.typ {
+		case leftJoin:
+			b.WriteString(" LEFT")
+		case rightJoin:
+			b.WriteString(" RIGHT")
+		case fullJoin:
+			b.WriteString(" FULL")
+		}
+		b.WriteString(" OUTER JOIN ")
+		switch x := o.source[0].(type) {
+		case string:
+			b.WriteString(x)
+		case *selectStmt:
+			b.WriteString("(")
+			b.WriteString(x.String())
+			b.WriteString(")")
+		default:
+			panic("internal error")
+		}
+		if s := o.source[1].(string); s != "" {
+			b.WriteString(" AS " + s)
+		}
+		b.WriteString(" ON ")
+		b.WriteString(o.on.String())
+	}
 	if s.where != nil {
 		b.WriteString(" WHERE ")
 		b.WriteString(s.where.expr.String())
@@ -567,6 +681,10 @@ func (s *selectStmt) exec0() (r rset) { //LATER overlapping goroutines/pipelines
 			r = &whereRset{expr: w.expr, src: r}
 		}
 	}
+	if o := s.outer; o != nil {
+		o.crossJoin = r.(*crossJoinRset)
+		r = o
+	}
 	switch {
 	case !s.hasAggregates && s.group == nil: // nop
 	case !s.hasAggregates && s.group != nil:
@@ -612,7 +730,7 @@ func (s *insertIntoStmt) String() string {
 	}
 	switch {
 	case s.sel != nil:
-		return fmt.Sprintf("INSERT INTO %s%s (%s);", s.tableName, cn, s.sel)
+		return fmt.Sprintf("INSERT INTO %s%s %s;", s.tableName, cn, s.sel)
 	default:
 		a := make([]string, len(s.lists))
 		for i, v := range s.lists {
@@ -626,12 +744,13 @@ func (s *insertIntoStmt) String() string {
 	}
 }
 
-func (s *insertIntoStmt) execSelect(t *table, cols []*col, ctx *execCtx) (_ Recordset, err error) {
+func (s *insertIntoStmt) execSelect(t *table, cols []*col, ctx *execCtx, constraints []*constraint, defaults []expression) (_ Recordset, err error) {
 	r := s.sel.exec0()
 	ok := false
 	h := t.head
 	data0 := make([]interface{}, len(t.cols0)+2)
 	cc := ctx.db.cc
+	m := map[interface{}]interface{}{}
 	if err = r.do(ctx, false, func(id interface{}, data []interface{}) (more bool, err error) {
 		if ok {
 			for i, d := range data {
@@ -639,6 +758,12 @@ func (s *insertIntoStmt) execSelect(t *table, cols []*col, ctx *execCtx) (_ Reco
 			}
 			if err = typeCheck(data0[2:], cols); err != nil {
 				return
+			}
+
+			if len(constraints) != 0 { // => len(defaults) != 0 as well
+				if err = checkConstraintsAndDefaults(ctx, data0[2:], t.cols, m, constraints, defaults); err != nil {
+					return false, err
+				}
 			}
 
 			id, err := t.store.ID()
@@ -689,6 +814,161 @@ func (s *insertIntoStmt) execSelect(t *table, cols []*col, ctx *execCtx) (_ Reco
 	return
 }
 
+var (
+	selectColumn2 = MustCompile(`
+		select Name, NotNull, ConstraintExpr, DefaultExpr
+		from __Column2
+		where TableName == $1
+	`)
+)
+
+func constraintsAndDefaults(ctx *execCtx, table string) (constraints []*constraint, defaults []expression, _ error) {
+	if isSystemName[table] {
+		return nil, nil, nil
+	}
+
+	_, ok := ctx.db.root.tables["__Column2"]
+	if !ok {
+		return nil, nil, nil
+	}
+
+	t, ok := ctx.db.root.tables[table]
+	if !ok {
+		return nil, nil, fmt.Errorf("table %q does not exist", table)
+	}
+
+	cols := t.cols
+	constraints = make([]*constraint, len(cols))
+	defaults = make([]expression, len(cols))
+	arg := []interface{}{table}
+	rs, err := selectColumn2.l[0].exec(&execCtx{db: ctx.db})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var rows [][]interface{}
+	ok = false
+	if err := rs.(recordset).do(
+		&execCtx{db: ctx.db, arg: arg},
+		false,
+		func(id interface{}, data []interface{}) (more bool, err error) {
+			if ok {
+				rows = append(rows, data)
+				return true, nil
+			}
+
+			ok = true
+			return true, nil
+		},
+	); err != nil {
+		return nil, nil, err
+	}
+
+	for _, row := range rows {
+		nm := row[0].(string)
+		nonNull := row[1].(bool)
+		cexpr := row[2].(string)
+		dexpr := row[3].(string)
+		for i, c := range cols {
+			if c.name == nm {
+				var co *constraint
+				if nonNull || cexpr != "" {
+					co = &constraint{}
+					if cexpr != "" {
+						if co.expr, err = str2expr(cexpr); err != nil {
+							return nil, nil, fmt.Errorf("constraint %q: %v", cexpr, err)
+						}
+					}
+				}
+				constraints[i] = co
+				if dexpr != "" {
+					if defaults[i], err = str2expr(dexpr); err != nil {
+						return nil, nil, fmt.Errorf("constraint %q: %v", dexpr, err)
+					}
+				}
+			}
+		}
+	}
+	return constraints, defaults, nil
+}
+
+func checkConstraintsAndDefaults(
+	ctx *execCtx,
+	row []interface{},
+	cols []*col,
+	m map[interface{}]interface{},
+	constraints []*constraint,
+	defaults []expression) error {
+
+	// 1.
+	for _, c := range cols {
+		m[c.name] = row[c.index]
+	}
+
+	// 2.
+	for i, c := range cols {
+		val := row[c.index]
+		expr := defaults[i]
+		if val != nil || expr == nil {
+			continue
+		}
+
+		dval, err := expr.eval(ctx, m, ctx.arg)
+		if err != nil {
+			return err
+		}
+
+		row[c.index] = dval
+		if err = typeCheck(row, []*col{c}); err != nil {
+			return err
+		}
+	}
+
+	// 3.
+	for _, c := range cols {
+		m[c.name] = row[c.index]
+	}
+
+	// 4.
+	for i, c := range cols {
+		constraint := constraints[i]
+		if constraint == nil {
+			continue
+		}
+
+		val := row[c.index]
+		expr := constraint.expr
+		if expr == nil { // Constraint: NOT NULL
+			if val == nil {
+				return fmt.Errorf("column %s: constraint violation: NOT NULL", c.name)
+			}
+
+			continue
+		}
+
+		// Constraint is an expression
+		cval, err := expr.eval(ctx, m, ctx.arg)
+		if err != nil {
+			return err
+		}
+
+		if cval == nil {
+			return fmt.Errorf("column %s: constraint violation: %s", c.name, expr)
+		}
+
+		bval, ok := cval.(bool)
+		if !ok {
+			return fmt.Errorf("column %s: non bool constraint expression: %s", c.name, expr)
+		}
+
+		if !bval {
+			return fmt.Errorf("column %s: constraint violation: %s", c.name, expr)
+		}
+	}
+
+	return nil
+}
+
 func (s *insertIntoStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 	t, ok := ctx.db.root.tables[s.tableName]
 	if !ok {
@@ -710,8 +990,13 @@ func (s *insertIntoStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		}
 	}
 
+	constraints, defaults, err := constraintsAndDefaults(ctx, s.tableName)
+	if err != nil {
+		return nil, err
+	}
+
 	if s.sel != nil {
-		return s.execSelect(t, cols, ctx)
+		return s.execSelect(t, cols, ctx, constraints, defaults)
 	}
 
 	for _, list := range s.lists {
@@ -724,9 +1009,10 @@ func (s *insertIntoStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 	root := ctx.db.root
 	cc := ctx.db.cc
 	r := make([]interface{}, len(t.cols0))
+	m := map[interface{}]interface{}{}
 	for _, list := range s.lists {
 		for i, expr := range list {
-			val, err := expr.eval(ctx, nil, arg)
+			val, err := expr.eval(ctx, m, arg)
 			if err != nil {
 				return nil, err
 			}
@@ -735,6 +1021,12 @@ func (s *insertIntoStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		}
 		if err = typeCheck(r, cols); err != nil {
 			return
+		}
+
+		if len(constraints) != 0 { // => len(defaults) != 0 as well
+			if err = checkConstraintsAndDefaults(ctx, r, t.cols, m, constraints, defaults); err != nil {
+				return nil, err
+			}
 		}
 
 		id, err := t.addRecord(r)
@@ -860,7 +1152,19 @@ type createTableStmt struct {
 func (s *createTableStmt) String() string {
 	a := make([]string, len(s.cols))
 	for i, v := range s.cols {
-		a[i] = fmt.Sprintf("%s %s", v.name, typeStr(v.typ))
+		var c, d string
+		if x := v.constraint; x != nil {
+			switch e := x.expr; {
+			case e != nil:
+				c = " " + e.String()
+			default:
+				c = " NOT NULL"
+			}
+		}
+		if x := v.dflt; x != nil {
+			d = " DEFAULT " + x.String()
+		}
+		a[i] = fmt.Sprintf("%s %s%s%s", v.name, typeStr(v.typ), c, d)
 	}
 	e := ""
 	if s.ifNotExists {
@@ -868,6 +1172,20 @@ func (s *createTableStmt) String() string {
 	}
 	return fmt.Sprintf("CREATE TABLE %s%s (%s);", e, s.tableName, strings.Join(a, ", "))
 }
+
+var (
+	createColumn2 = mustCompile(`
+		create table if not exists __Column2 (
+			TableName string,
+			Name string,
+			NotNull bool,
+			ConstraintExpr string,
+			DefaultExpr string,
+		);
+		create index if not exists __Column2TableName on __Column2(TableName);
+	`)
+	insertColumn2 = mustCompile(`insert into __Column2 values($1, $2, $3, $4, $5)`)
+)
 
 func (s *createTableStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 	root := ctx.db.root
@@ -884,6 +1202,7 @@ func (s *createTableStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 	}
 
 	m := map[string]bool{}
+	mustCreateColumn2 := true
 	for i, c := range s.cols {
 		nm := c.name
 		if m[nm] {
@@ -892,6 +1211,29 @@ func (s *createTableStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 
 		m[nm] = true
 		c.index = i
+		if c.constraint != nil || c.dflt != nil {
+			if mustCreateColumn2 {
+				for _, s := range createColumn2.l {
+					_, err := s.exec(&execCtx{db: ctx.db})
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+
+			mustCreateColumn2 = false
+			notNull := c.constraint != nil && c.constraint.expr == nil
+			var co, d string
+			if c.constraint != nil && c.constraint.expr != nil {
+				co = c.constraint.expr.String()
+			}
+			if e := c.dflt; e != nil {
+				d = e.String()
+			}
+			if _, err := insertColumn2.l[0].exec(&execCtx{db: ctx.db, arg: []interface{}{s.tableName, c.name, notNull, co, d}}); err != nil {
+				return nil, err
+			}
+		}
 	}
 	_, err = root.createTable(s.tableName, s.cols)
 	return

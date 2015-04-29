@@ -187,7 +187,7 @@ type pLike struct {
 }
 
 func (p *pLike) isStatic() bool { return p.expr.isStatic() && p.pattern.isStatic() }
-func (p *pLike) String() string { return fmt.Sprintf("%q LIKE %q", p.expr, p.pattern) }
+func (p *pLike) String() string { return fmt.Sprintf("%s LIKE %s", p.expr, p.pattern) }
 
 func (p *pLike) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (v interface{}, err error) {
 	var sexpr string
@@ -2892,13 +2892,16 @@ func (i *ident) eval(execCtx *execCtx, ctx map[interface{}]interface{}, _ []inte
 	return
 }
 
-type pIn struct {
-	expr   expression
-	list   []expression
+type pInEval struct {
 	m      map[interface{}]struct{} // IN (SELECT...) results
-	not    bool
 	sample interface{}
-	sel    *selectStmt
+}
+
+type pIn struct {
+	expr expression
+	list []expression
+	not  bool
+	sel  *selectStmt
 }
 
 func (n *pIn) isStatic() bool {
@@ -2965,9 +2968,13 @@ func (n *pIn) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []inte
 		return n.not, nil
 	}
 
-	if n.m == nil { // SELECT not yet evaluated.
+	var ev *pInEval
+	ev0 := ctx[n]
+	if ev0 == nil { // SELECT not yet evaluated.
 		r := n.sel.exec0()
-		n.m = map[interface{}]struct{}{}
+		ev = &pInEval{m: map[interface{}]struct{}{}}
+		ctx[n] = ev
+		m := ev.m
 		ok := false
 		typechecked := false
 		if err := r.do(execCtx, false, func(id interface{}, data []interface{}) (more bool, err error) {
@@ -2976,7 +2983,7 @@ func (n *pIn) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []inte
 					return true, nil
 				}
 
-				n.m[data[0]] = struct{}{}
+				m[data[0]] = struct{}{}
 			}
 
 			if ok {
@@ -2984,13 +2991,13 @@ func (n *pIn) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []inte
 					return true, nil
 				}
 
-				n.sample = data[0]
-				switch n.sample.(type) {
+				ev.sample = data[0]
+				switch ev.sample.(type) {
 				case bool, byte, complex128, complex64, float32,
 					float64, int16, int32, int64, int8,
 					string, uint16, uint32, uint64:
 					typechecked = true
-					n.m[n.sample] = struct{}{}
+					m[ev.sample] = struct{}{}
 					return true, nil
 				default:
 					return false, fmt.Errorf("IN (%s): invalid field type: %T", n.sel, data[0])
@@ -3008,13 +3015,15 @@ func (n *pIn) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []inte
 		}); err != nil {
 			return nil, err
 		}
+	} else {
+		ev = ev0.(*pInEval)
 	}
 
-	if n.sample == nil {
+	if ev.sample == nil {
 		return nil, nil
 	}
 
-	_, ok := n.m[coerce1(lhs, n.sample)]
+	_, ok := ev.m[coerce1(lhs, ev.sample)]
 	return ok != n.not, nil
 }
 
@@ -3028,8 +3037,25 @@ func (l value) String() string {
 	switch x := l.val.(type) {
 	case nil:
 		return "NULL"
+	case idealComplex:
+		s := fmt.Sprint(x)
+		return s[1 : len(s)-1]
+	case complex64:
+		s := fmt.Sprint(x)
+		return s[1 : len(s)-1]
+	case complex128:
+		s := fmt.Sprint(x)
+		return s[1 : len(s)-1]
 	case string:
 		return fmt.Sprintf("%q", x)
+	case time.Duration:
+		return fmt.Sprintf("duration(%q)", l.val)
+	case time.Time:
+		return fmt.Sprintf("time(%q)", l.val)
+	case *big.Rat:
+		return fmt.Sprintf("bigrat(%q)", l.val)
+	case *big.Int:
+		return fmt.Sprintf(`bigint("%v")`, l.val)
 	default:
 		return fmt.Sprintf("%v", l.val)
 	}
@@ -3370,11 +3396,11 @@ func (c *call) eval(execCtx *execCtx, ctx map[interface{}]interface{}, args []in
 		return nil, fmt.Errorf("unknown function %s", c.f)
 	}
 
-	isId := c.f == "id"
+	isID := c.f == "id"
 	a := make([]interface{}, len(c.arg))
 	for i, arg := range c.arg {
 		if v, err = expand1(arg.eval(execCtx, ctx, args)); err != nil {
-			if !isId {
+			if !isID {
 				return nil, err
 			}
 

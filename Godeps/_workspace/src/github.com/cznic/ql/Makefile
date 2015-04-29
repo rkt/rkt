@@ -5,6 +5,7 @@
 .PHONY: all clean nuke
 
 all: editor scanner.go parser.go
+	go test
 	go build
 	go vet || true
 	golint
@@ -13,9 +14,6 @@ all: editor scanner.go parser.go
 
 bench: all
 	go test -run NONE -bench .
-
-check: ql.y
-	goyacc -v /dev/null -o /dev/null $<
 
 clean:
 	go clean
@@ -33,10 +31,10 @@ cpu: ql.test
 	./$< -test.bench . -test.cpuprofile cpu.out
 	go tool pprof --lines $< cpu.out
 
-editor: check scanner.go parser.go coerce.go
+editor: ql.y scanner.go parser.go coerce.go
 	go fmt
 	go test -i
-	go test
+	go test -short
 	go install
 
 internalError:
@@ -51,7 +49,10 @@ nuke:
 	go clean -i
 
 parser.go: parser.y
-	goyacc -o $@ $<
+	a=$(shell tempfile) ; \
+	  goyacc -o /dev/null -xegen $$a $< ; \
+	  goyacc -o $@ -xe $$a $< ; \
+	  rm -f $a
 	sed -i -e 's|//line.*||' -e 's/yyEofCode/yyEOFCode/' $@
 
 ql.test: all
@@ -59,6 +60,7 @@ ql.test: all
 ql.y: doc.go
 	sed -n '1,/^package/ s/^\/\/  //p' < $< \
 		| ebnf2y -o $@ -oe $*.ebnf -start StatementList -pkg $* -p _
+	goyacc -o /dev/null $@
 
 scanner.go: scanner.l parser.go
 	golex -o $@ $<

@@ -407,10 +407,10 @@ SELECT none FROM employee, department;
 -- S 44
 SELECT employee.LastName FROM employee, department;
 |semployee.LastName
-[John]
-[John]
-[John]
-[John]
+[Williams]
+[Williams]
+[Williams]
+[Williams]
 [Smith]
 [Smith]
 [Smith]
@@ -440,10 +440,6 @@ ORDER by employee.LastName;
 [Heisenberg 33 34 Clerical]
 [Heisenberg 33 33 Engineering]
 [Heisenberg 33 31 Sales]
-[John <nil> 35 Marketing]
-[John <nil> 34 Clerical]
-[John <nil> 33 Engineering]
-[John <nil> 31 Sales]
 [Jones 33 35 Marketing]
 [Jones 33 34 Clerical]
 [Jones 33 33 Engineering]
@@ -460,6 +456,10 @@ ORDER by employee.LastName;
 [Smith 34 34 Clerical]
 [Smith 34 33 Engineering]
 [Smith 34 31 Sales]
+[Williams <nil> 35 Marketing]
+[Williams <nil> 34 Clerical]
+[Williams <nil> 33 Engineering]
+[Williams <nil> 31 Sales]
 
 -- S 46
 SELECT *
@@ -493,9 +493,6 @@ ORDER BY employee.LastName;
 [Clerical 34 Heisenberg 33]
 [Engineering 33 Heisenberg 33]
 [Sales 31 Heisenberg 33]
-[Clerical 34 John <nil>]
-[Engineering 33 John <nil>]
-[Sales 31 John <nil>]
 [Clerical 34 Jones 33]
 [Engineering 33 Jones 33]
 [Sales 31 Jones 33]
@@ -508,6 +505,9 @@ ORDER BY employee.LastName;
 [Clerical 34 Smith 34]
 [Engineering 33 Smith 34]
 [Sales 31 Smith 34]
+[Clerical 34 Williams <nil>]
+[Engineering 33 Williams <nil>]
+[Sales 31 Williams <nil>]
 
 -- S 49
 SELECT department.DepartmentName, department.DepartmentID, employee.LastName, employee.DepartmentID
@@ -517,8 +517,6 @@ ORDER BY employee.LastName;
 |sdepartment.DepartmentName, ldepartment.DepartmentID, semployee.LastName, lemployee.DepartmentID
 [Marketing 35 Heisenberg 33]
 [Sales 31 Heisenberg 33]
-[Marketing 35 John <nil>]
-[Sales 31 John <nil>]
 [Marketing 35 Jones 33]
 [Sales 31 Jones 33]
 [Marketing 35 Rafferty 31]
@@ -527,14 +525,16 @@ ORDER BY employee.LastName;
 [Sales 31 Robinson 34]
 [Marketing 35 Smith 34]
 [Sales 31 Smith 34]
+[Marketing 35 Williams <nil>]
+[Sales 31 Williams <nil>]
 
 -- S 50
 SELECT department.DepartmentName, department.DepartmentID, employee.LastName, employee.DepartmentID
 FROM employee, department
 WHERE department.DepartmentName NOT IN ("Engineering", "HR", "Clerical");
 |sdepartment.DepartmentName, ldepartment.DepartmentID, semployee.LastName, ?employee.DepartmentID
-[Marketing 35 John <nil>]
-[Sales 31 John <nil>]
+[Marketing 35 Williams <nil>]
+[Sales 31 Williams <nil>]
 [Marketing 35 Smith 34]
 [Sales 31 Smith 34]
 [Marketing 35 Robinson 34]
@@ -554,8 +554,6 @@ ORDER BY employee.LastName;
 |sdepartment.DepartmentName, ldepartment.DepartmentID, semployee.LastName, lemployee.DepartmentID
 [Marketing 35 Heisenberg 33]
 [Clerical 34 Heisenberg 33]
-[Marketing 35 John <nil>]
-[Clerical 34 John <nil>]
 [Marketing 35 Jones 33]
 [Clerical 34 Jones 33]
 [Marketing 35 Rafferty 31]
@@ -564,6 +562,8 @@ ORDER BY employee.LastName;
 [Clerical 34 Robinson 34]
 [Marketing 35 Smith 34]
 [Clerical 34 Smith 34]
+[Marketing 35 Williams <nil>]
+[Clerical 34 Williams <nil>]
 
 -- S 52
 SELECT department.DepartmentName, department.DepartmentID, employee.LastName, employee.DepartmentID
@@ -573,8 +573,6 @@ ORDER BY employee.LastName;
 |sdepartment.DepartmentName, ldepartment.DepartmentID, semployee.LastName, lemployee.DepartmentID
 [Marketing 35 Heisenberg 33]
 [Clerical 34 Heisenberg 33]
-[Marketing 35 John <nil>]
-[Clerical 34 John <nil>]
 [Marketing 35 Jones 33]
 [Clerical 34 Jones 33]
 [Marketing 35 Rafferty 31]
@@ -583,6 +581,8 @@ ORDER BY employee.LastName;
 [Clerical 34 Robinson 34]
 [Marketing 35 Smith 34]
 [Clerical 34 Smith 34]
+[Marketing 35 Williams <nil>]
+[Clerical 34 Williams <nil>]
 
 -- S 53
 SELECT department.DepartmentName, department.DepartmentID, employee.LastName, employee.DepartmentID
@@ -592,8 +592,6 @@ ORDER BY employee.LastName;
 |sdepartment.DepartmentName, ldepartment.DepartmentID, semployee.LastName, lemployee.DepartmentID
 [Marketing 35 Heisenberg 33]
 [Sales 31 Heisenberg 33]
-[Marketing 35 John <nil>]
-[Sales 31 John <nil>]
 [Marketing 35 Jones 33]
 [Sales 31 Jones 33]
 [Marketing 35 Rafferty 31]
@@ -602,6 +600,8 @@ ORDER BY employee.LastName;
 [Sales 31 Robinson 34]
 [Marketing 35 Smith 34]
 [Sales 31 Smith 34]
+[Marketing 35 Williams <nil>]
+[Sales 31 Williams <nil>]
 
 -- S 54
 SELECT LastName, LastName FROM employee;
@@ -616,11 +616,11 @@ SELECT LastName AS a, LastName AS b FROM employee
 ORDER by a, b;
 |sa, sb
 [Heisenberg Heisenberg]
-[John John]
 [Jones Jones]
 [Rafferty Rafferty]
 [Robinson Robinson]
 [Smith Smith]
+[Williams Williams]
 
 -- S 57
 SELECT employee.LastName AS name, employee.DepartmentID AS id, department.DepartmentName AS department, department.DepartmentID AS id2
@@ -636,36 +636,36 @@ ORDER BY name, id, department, id2;
 
 -- S 58
 SELECT * FROM;
-||syntax
+||expected .*RecordSetList
 
 -- S 59
 SELECT * FROM employee
 ORDER BY LastName;
 |sLastName, lDepartmentID
 [Heisenberg 33]
-[John <nil>]
 [Jones 33]
 [Rafferty 31]
 [Robinson 34]
 [Smith 34]
+[Williams <nil>]
 
 -- S 60
 SELECT * FROM employee AS e
 ORDER BY LastName;
 |sLastName, lDepartmentID
 [Heisenberg 33]
-[John <nil>]
 [Jones 33]
 [Rafferty 31]
 [Robinson 34]
 [Smith 34]
+[Williams <nil>]
 
 -- S 61
 SELECT none FROM (
 	SELECT * FROM employee;
 	SELECT * FROM department;
 );
-||syntax
+||expected .*'\)'
 
 -- S 62
 SELECT none FROM (
@@ -692,11 +692,11 @@ SELECT * FROM (
 ORDER BY LastName;
 |sLastName, lDepartmentID
 [Heisenberg 33]
-[John <nil>]
 [Jones 33]
 [Rafferty 31]
 [Robinson 34]
 [Smith 34]
+[Williams <nil>]
 
 -- S 66
 SELECT * FROM (
@@ -705,11 +705,11 @@ SELECT * FROM (
 ORDER BY Name;
 |sName
 [Heisenberg]
-[John]
 [Jones]
 [Rafferty]
 [Robinson]
 [Smith]
+[Williams]
 
 -- S 67
 SELECT Name FROM (
@@ -725,11 +725,11 @@ SELECT name AS Name FROM (
 ORDER BY Name;
 |sName
 [Heisenberg]
-[John]
 [Jones]
 [Rafferty]
 [Robinson]
 [Smith]
+[Williams]
 
 -- S 69
 SELECT name AS Name FROM (
@@ -738,11 +738,11 @@ SELECT name AS Name FROM (
 ORDER BY Name;
 |sName
 [Heisenberg]
-[John]
 [Jones]
 [Rafferty]
 [Robinson]
 [Smith]
+[Williams]
 
 -- S 70
 SELECT employee.LastName, department.DepartmentName, department.DepartmentID FROM (
@@ -812,10 +812,10 @@ FROM
 	FROM department
 );
 |s, ?, l, s
-[John <nil> 35 Marketing]
-[John <nil> 34 Clerical]
-[John <nil> 33 Engineering]
-[John <nil> 31 Sales]
+[Williams <nil> 35 Marketing]
+[Williams <nil> 34 Clerical]
+[Williams <nil> 33 Engineering]
+[Williams <nil> 31 Sales]
 [Smith 34 35 Marketing]
 [Smith 34 34 Clerical]
 [Smith 34 33 Engineering]
@@ -854,10 +854,6 @@ ORDER BY e.LastName, e.DepartmentID;
 [Heisenberg 33 34 Clerical]
 [Heisenberg 33 33 Engineering]
 [Heisenberg 33 31 Sales]
-[John <nil> 35 Marketing]
-[John <nil> 34 Clerical]
-[John <nil> 33 Engineering]
-[John <nil> 31 Sales]
 [Jones 33 35 Marketing]
 [Jones 33 34 Clerical]
 [Jones 33 33 Engineering]
@@ -874,6 +870,10 @@ ORDER BY e.LastName, e.DepartmentID;
 [Smith 34 34 Clerical]
 [Smith 34 33 Engineering]
 [Smith 34 31 Sales]
+[Williams <nil> 35 Marketing]
+[Williams <nil> 34 Clerical]
+[Williams <nil> 33 Engineering]
+[Williams <nil> 31 Sales]
 
 -- S 76
 SELECT *
@@ -893,25 +893,25 @@ ORDER BY d.DepartmentID DESC;
 [Heisenberg 33 35 Marketing]
 [Robinson 34 35 Marketing]
 [Smith 34 35 Marketing]
-[John <nil> 35 Marketing]
+[Williams <nil> 35 Marketing]
 [Rafferty 31 34 Clerical]
 [Jones 33 34 Clerical]
 [Heisenberg 33 34 Clerical]
 [Robinson 34 34 Clerical]
 [Smith 34 34 Clerical]
-[John <nil> 34 Clerical]
+[Williams <nil> 34 Clerical]
 [Rafferty 31 33 Engineering]
 [Jones 33 33 Engineering]
 [Heisenberg 33 33 Engineering]
 [Robinson 34 33 Engineering]
 [Smith 34 33 Engineering]
-[John <nil> 33 Engineering]
+[Williams <nil> 33 Engineering]
 [Rafferty 31 31 Sales]
 [Jones 33 31 Sales]
 [Heisenberg 33 31 Sales]
 [Robinson 34 31 Sales]
 [Smith 34 31 Sales]
-[John <nil> 31 Sales]
+[Williams <nil> 31 Sales]
 
 -- S 77
 SELECT *
@@ -927,10 +927,6 @@ ORDER BY employee.LastName;
 [Heisenberg 33 34 Clerical]
 [Heisenberg 33 33 Engineering]
 [Heisenberg 33 31 Sales]
-[John <nil> 35 Marketing]
-[John <nil> 34 Clerical]
-[John <nil> 33 Engineering]
-[John <nil> 31 Sales]
 [Jones 33 35 Marketing]
 [Jones 33 34 Clerical]
 [Jones 33 33 Engineering]
@@ -947,6 +943,10 @@ ORDER BY employee.LastName;
 [Smith 34 34 Clerical]
 [Smith 34 33 Engineering]
 [Smith 34 31 Sales]
+[Williams <nil> 35 Marketing]
+[Williams <nil> 34 Clerical]
+[Williams <nil> 33 Engineering]
+[Williams <nil> 31 Sales]
 
 -- S 78
 SELECT *
@@ -1642,11 +1642,11 @@ FROM employee
 ORDER BY Name;
 |l, lAUQLUE, lDepartmentID, l, sName
 [314 42 33 1033 Heisenberg]
-[314 42 <nil> <nil> John]
 [314 42 33 1033 Jones]
 [314 42 31 1031 Rafferty]
 [314 42 34 1034 Robinson]
 [314 42 34 1034 Smith]
+[314 42 <nil> <nil> Williams]
 
 -- S 154
 SELECT *
@@ -1659,10 +1659,6 @@ ORDER BY e.LastName;
 [Heisenberg 33 34 Clerical]
 [Heisenberg 33 33 Engineering]
 [Heisenberg 33 31 Sales]
-[John <nil> 35 Marketing]
-[John <nil> 34 Clerical]
-[John <nil> 33 Engineering]
-[John <nil> 31 Sales]
 [Jones 33 35 Marketing]
 [Jones 33 34 Clerical]
 [Jones 33 33 Engineering]
@@ -1679,6 +1675,10 @@ ORDER BY e.LastName;
 [Smith 34 34 Clerical]
 [Smith 34 33 Engineering]
 [Smith 34 31 Sales]
+[Williams <nil> 35 Marketing]
+[Williams <nil> 34 Clerical]
+[Williams <nil> 33 Engineering]
+[Williams <nil> 31 Sales]
 
 -- S 155
 SELECT * FROM employee AS e, ( SELECT * FROM department) AS d
@@ -1688,10 +1688,6 @@ ORDER BY e.LastName;
 [Heisenberg 33 34 Clerical]
 [Heisenberg 33 33 Engineering]
 [Heisenberg 33 31 Sales]
-[John <nil> 35 Marketing]
-[John <nil> 34 Clerical]
-[John <nil> 33 Engineering]
-[John <nil> 31 Sales]
 [Jones 33 35 Marketing]
 [Jones 33 34 Clerical]
 [Jones 33 33 Engineering]
@@ -1708,6 +1704,10 @@ ORDER BY e.LastName;
 [Smith 34 34 Clerical]
 [Smith 34 33 Engineering]
 [Smith 34 31 Sales]
+[Williams <nil> 35 Marketing]
+[Williams <nil> 34 Clerical]
+[Williams <nil> 33 Engineering]
+[Williams <nil> 31 Sales]
 
 -- 156
 BEGIN TRANSACTION;
@@ -1804,22 +1804,22 @@ SELECT * FROM employee
 ORDER BY LastName;
 |sLastName, lDepartmentID
 [Heisenberg 33]
-[John <nil>]
 [Jones 33]
 [Rafferty 31]
 [Robinson 34]
 [Smith 34]
+[Williams <nil>]
 
 -- S 166
 SELECT *
 FROM employee
 ORDER BY LastName DESC;
-|sLastName, lDepartmentID
+|sLastName, ?DepartmentID
+[Williams <nil>]
 [Smith 34]
 [Robinson 34]
 [Rafferty 31]
 [Jones 33]
-[John <nil>]
 [Heisenberg 33]
 
 -- S 167
@@ -1852,7 +1852,7 @@ SELECT * FROM employee ORDER BY DepartmentID, LastName DESC;
 [Jones 33]
 [Heisenberg 33]
 [Rafferty 31]
-[John <nil>]
+[Williams <nil>]
 
 -- S 170
 SELECT * FROM employee ORDER BY 0+DepartmentID DESC;
@@ -1862,7 +1862,7 @@ SELECT * FROM employee ORDER BY 0+DepartmentID DESC;
 [Jones 33]
 [Heisenberg 33]
 [Rafferty 31]
-[John <nil>]
+[Williams <nil>]
 
 -- S 171
 SELECT * FROM employee ORDER BY +DepartmentID DESC;
@@ -1872,7 +1872,7 @@ SELECT * FROM employee ORDER BY +DepartmentID DESC;
 [Jones 33]
 [Heisenberg 33]
 [Rafferty 31]
-[John <nil>]
+[Williams <nil>]
 
 -- S 172
 SELECT ^DepartmentID AS y FROM employee
@@ -1965,9 +1965,9 @@ ORDER BY y;
 -- S 179
 SELECT * from employee WHERE LastName == "Jones" &oror; DepartmentID IS NULL
 ORDER by LastName DESC;
-|sLastName, lDepartmentID
+|sLastName, ?DepartmentID
+[Williams <nil>]
 [Jones 33]
-[John <nil>]
 
 -- S 180
 SELECT * from employee WHERE LastName != "Jones" && DepartmentID IS NOT NULL
@@ -2010,11 +2010,11 @@ SELECT LastName[100] FROM employee;
 SELECT LastName[0], LastName FROM employee ORDER BY LastName;
 |u, sLastName
 [72 Heisenberg]
-[74 John]
 [74 Jones]
 [82 Rafferty]
 [82 Robinson]
 [83 Smith]
+[87 Williams]
 
 -- S 189
 SELECT LastName, string(LastName[0]), string(LastName[1]), string(LastName[2]), string(LastName[3])
@@ -2022,11 +2022,11 @@ FROM employee
 ORDER BY LastName;
 |sLastName, s, s, s, s
 [Heisenberg H e i s]
-[John J o h n]
 [Jones J o n e]
 [Rafferty R a f f]
 [Robinson R o b i]
 [Smith S m i t]
+[Williams W i l l]
 
 -- S 190
 SELECT LastName, LastName[:], LastName[:2], LastName[2:], LastName[1:3]
@@ -2034,11 +2034,11 @@ FROM employee
 ORDER by LastName;
 |sLastName, s, s, s, s
 [Heisenberg Heisenberg He isenberg ei]
-[John John Jo hn oh]
 [Jones Jones Jo nes on]
 [Rafferty Rafferty Ra fferty af]
 [Robinson Robinson Ro binson ob]
 [Smith Smith Sm ith mi]
+[Williams Williams Wi lliams il]
 
 -- S 191
 SELECT LastName
@@ -2057,12 +2057,12 @@ SELECT
 FROM
 	employee,
 ORDER BY LastName DESC;
-|lDepartmentID, sLastName, s, s, s, s
+|?DepartmentID, sLastName, s, ?, ?, ?
+[<nil> Williams Will <nil> <nil> <nil>]
 [34 Smith Smit   ]
 [34 Robinson Robi   ]
 [31 Rafferty Raff   ]
 [33 Jones Jone   ]
-[<nil> John John <nil> <nil> <nil>]
 [33 Heisenberg Heis   ]
 
 -- S 193
@@ -2138,10 +2138,6 @@ ORDER BY employee.LastName, department.DepartmentID;
 [Heisenberg 33 33 Engineering]
 [Heisenberg 33 34 Clerical]
 [Heisenberg 33 35 Marketing]
-[John <nil> 31 Sales]
-[John <nil> 33 Engineering]
-[John <nil> 34 Clerical]
-[John <nil> 35 Marketing]
 [Jones 33 31 Sales]
 [Jones 33 33 Engineering]
 [Jones 33 34 Clerical]
@@ -2158,6 +2154,10 @@ ORDER BY employee.LastName, department.DepartmentID;
 [Smith 34 33 Engineering]
 [Smith 34 34 Clerical]
 [Smith 34 35 Marketing]
+[Williams <nil> 31 Sales]
+[Williams <nil> 33 Engineering]
+[Williams <nil> 34 Clerical]
+[Williams <nil> 35 Marketing]
 
 -- S 199, http://en.wikipedia.org/wiki/Join_(SQL)#Inner_join
 SELECT *
@@ -2235,7 +2235,7 @@ ORDER BY id();
 [7 Heisenberg]
 [8 Robinson]
 [9 Smith]
-[10 John]
+[10 Williams]
 
 -- S 205
 BEGIN TRANSACTION;
@@ -2250,7 +2250,7 @@ ORDER BY id();
 [7 Heisenberg]
 [8 Robinson]
 [9 Smith]
-[10 John]
+[10 Williams]
 
 -- S 206
 BEGIN TRANSACTION;
@@ -2266,7 +2266,7 @@ ORDER BY id();
 [7 Heisenberg]
 [8 Robinson]
 [9 Smith]
-[10 John]
+[10 Williams]
 [11 Jones]
 
 -- S 207
@@ -2309,7 +2309,7 @@ SELECT * FROM employee;
 -- S 210
 BEGIN TRANSACTION;
 	UPDATE employee
-		FirstName = "John"
+		FirstName = "Williams"
 	WHERE DepartmentID == 33;
 COMMIT;
 SELECT * FROM employee;
@@ -2325,11 +2325,11 @@ SELECT * FROM employee
 ORDER BY LastName;
 |sLastName, lDepartmentID
 [Heisenberg 1033]
-[John <nil>]
 [Jones 1033]
 [Rafferty 31]
 [Robinson 34]
 [Smith 34]
+[Williams <nil>]
 
 -- S 212
 BEGIN TRANSACTION;
@@ -2340,13 +2340,13 @@ BEGIN TRANSACTION;
 COMMIT;
 SELECT * FROM employee
 ORDER BY LastName DESC;
-|sLastName, lDepartmentID
+|sLastName, ?DepartmentID
+[Williams <nil>]
 [Smith 34]
 [Robinson 34]
 [Rafferty 31]
 [Mr. Heisenberg 1033]
 [Jones 33]
-[John <nil>]
 
 -- S 213
 BEGIN TRANSACTION;
@@ -2357,13 +2357,13 @@ BEGIN TRANSACTION;
 COMMIT;
 SELECT * FROM employee
 ORDER BY LastName DESC;
-|sLastName, lDepartmentID
+|sLastName, ?DepartmentID
+[Williams <nil>]
 [Smith 34]
 [Robinson 34]
 [Rafferty 31]
 [Mr. Heisenberg 1033]
 [Jones 33]
-[John <nil>]
 
 -- S 214
 BEGIN TRANSACTION;
@@ -2374,11 +2374,11 @@ SELECT * FROM employee
 ORDER BY LastName;
 |sLastName, lDepartmentID
 [Heisenberg 1033]
-[John <nil>]
 [Jones 1033]
 [Rafferty 1031]
 [Robinson 1034]
 [Smith 1034]
+[Williams <nil>]
 
 -- S 215
 BEGIN TRANSACTION;
@@ -2429,11 +2429,11 @@ SELECT LastName[:len(LastName)-3] AS y FROM employee
 ORDER BY y;
 |sy
 [Heisenb]
-[J]
 [Jo]
 [Raffe]
 [Robin]
 [Sm]
+[Willi]
 
 -- S 224
 SELECT complex(float32(DepartmentID+int(id())), 0) AS x, complex(DepartmentID+int(id()), 0)
@@ -2862,7 +2862,7 @@ SELECT min(LastName), min(DepartmentID) FROM employee;
 -- S 267
 SELECT max(LastName), max(DepartmentID) FROM employee;
 |s, l
-[Smith 34]
+[Williams 34]
 
 -- S 268
 SELECT sum(LastName), sum(DepartmentID) FROM employee;
@@ -2924,37 +2924,37 @@ SELECT avg(2*DepartmentID) FROM employee;
 -- S 278
 SELECT * FROM employee GROUP BY DepartmentID;
 |sLastName, ?DepartmentID
-[John <nil>]
+[Williams <nil>]
 [Rafferty 31]
 [Heisenberg 33]
 [Smith 34]
 
 -- S 279
 SELECT * FROM employee GROUP BY DepartmentID ORDER BY LastName DESC;
-|sLastName, lDepartmentID
+|sLastName, ?DepartmentID
+[Williams <nil>]
 [Smith 34]
 [Rafferty 31]
-[John <nil>]
 [Heisenberg 33]
 
 -- S 280
 SELECT * FROM employee GROUP BY DepartmentID, LastName ORDER BY LastName DESC;
-|sLastName, lDepartmentID
+|sLastName, ?DepartmentID
+[Williams <nil>]
 [Smith 34]
 [Robinson 34]
 [Rafferty 31]
 [Jones 33]
-[John <nil>]
 [Heisenberg 33]
 
 -- S 281
 SELECT * FROM employee GROUP BY LastName, DepartmentID  ORDER BY LastName DESC;
-|sLastName, lDepartmentID
+|sLastName, ?DepartmentID
+[Williams <nil>]
 [Smith 34]
 [Robinson 34]
 [Rafferty 31]
 [Jones 33]
-[John <nil>]
 [Heisenberg 33]
 
 -- 282
@@ -4506,9 +4506,9 @@ BEGIN TRANSACTION;
 	CREATE TABLE t (c time);
 	INSERT INTO t VALUES (date(2006, 1, 2, 15, 4, 5, 999999999, "CET"));
 COMMIT;
-SELECT formatTime(c, "2006-01-02 15:04:05.999999999 -0700") FROM t;
+SELECT formatTime(timeIn(c, "UTC"), "2006-01-02 15:04:05.999999999 -0700") FROM t;
 |s
-[2006-01-02 15:04:05.999999999 +0100]
+[2006-01-02 14:04:05.999999999 +0000]
 
 -- 428
 BEGIN TRANSACTION;
@@ -4890,9 +4890,9 @@ BEGIN TRANSACTION;
 		),
 	;
 COMMIT;
-SELECT formatTime(a+b, "2006-01-02 15:04:05.999999999 -0700") FROM t;
+SELECT formatTime(timeIn(a+b, "UTC"), "2006-01-02 15:04:05.999999999 -0700") FROM t;
 |s
-[2013-11-27 15:03:03.999999999 +0100]
+[2013-11-27 14:03:03.999999999 +0000]
 
 -- 457
 BEGIN TRANSACTION;
@@ -4903,9 +4903,9 @@ BEGIN TRANSACTION;
 		),
 	;
 COMMIT;
-SELECT formatTime(b+a, "2006-01-02 15:04:05.999999999 -0700") FROM t;
+SELECT formatTime(timeIn(b+a, "UTC"), "2006-01-02 15:04:05.999999999 -0700") FROM t;
 |s
-[2013-11-27 15:03:03.999999999 +0100]
+[2013-11-27 14:03:03.999999999 +0000]
 
 -- 458
 BEGIN TRANSACTION;
@@ -4941,9 +4941,9 @@ BEGIN TRANSACTION;
 		),
 	;
 COMMIT;
-SELECT formatTime(a-b, "2006-01-02 15:04:05.999999999 -0700") FROM t;
+SELECT formatTime(timeIn(a-b, "UTC"), "2006-01-02 15:04:05.999999999 -0700") FROM t;
 |s
-[2013-11-27 08:59:01.999999999 +0100]
+[2013-11-27 07:59:01.999999999 +0000]
 
 -- 461
 BEGIN TRANSACTION;
@@ -4986,10 +4986,10 @@ BEGIN TRANSACTION;
 		(parseTime("2006-Jan-02", "2013-Nov-27")),
 	;
 COMMIT;
-SELECT formatTime(a, "2006-01-02 15:04:05.999999999 -0700") as a FROM t ORDER BY a;
+SELECT formatTime(timeIn(a, "UTC"), "2006-01-02 15:04:05.999999999 -0700") as a FROM t ORDER BY a;
 |sa
 [2013-11-27 00:00:00 +0000]
-[2013-11-27 14:07:00 +0100]
+[2013-11-27 13:07:00 +0000]
 
 -- 465
 BEGIN TRANSACTION;
@@ -4999,10 +4999,10 @@ BEGIN TRANSACTION;
 		(parseTime("2006-Jan-02", "2013-Nov-27")),
 	;
 COMMIT;
-SELECT hour(a) AS y FROM t ORDER BY y;
+SELECT hour(timeIn(a, "UTC")) AS y FROM t ORDER BY y;
 |ly
 [0]
-[14]
+[13]
 
 -- 466
 BEGIN TRANSACTION;
@@ -5157,10 +5157,10 @@ BEGIN TRANSACTION;
 	INSERT INTO t VALUES (2, "b", parseTime("Jan 2, 2006 at 3:04pm (MST)", "Jan 12, 2014 at 6:27pm (CET)"));
 	UPDATE t b = "hello" WHERE a == 1;
 COMMIT;
-SELECT a, b, formatTime(t, "2006-01-02 15:04:05.999999999 -0700") as t FROM t;
+SELECT a, b, formatTime(timeIn(t, "UTC"), "2006-01-02 15:04:05.999999999 -0700") as t FROM t;
 |la, sb, st
-[2 b 2014-01-12 18:27:00 +0100]
-[1 hello 2014-01-12 18:26:00 +0100]
+[2 b 2014-01-12 17:27:00 +0000]
+[1 hello 2014-01-12 17:26:00 +0000]
 
 -- 479 // https://github.com/cznic/ql/issues/23
 BEGIN TRANSACTION;
@@ -5172,10 +5172,10 @@ BEGIN TRANSACTION;
 		t = parseTime("Jan 2, 2006 at 3:04pm (MST)", "Jan 12, 2014 at 6:28pm (CET)"),
 	WHERE a == 1;
 COMMIT;
-SELECT a, b, formatTime(t, "2006-01-02 15:04:05.999999999 -0700") as t FROM t;
+SELECT a, b, formatTime(timeIn(t, "UTC"), "2006-01-02 15:04:05.999999999 -0700") as t FROM t;
 |la, sb, st
-[2 b 2014-01-12 18:27:00 +0100]
-[1 hello 2014-01-12 18:28:00 +0100]
+[2 b 2014-01-12 17:27:00 +0000]
+[1 hello 2014-01-12 17:28:00 +0000]
 
 -- 480 // https://github.com/cznic/ql/issues/23
 BEGIN TRANSACTION;
@@ -6381,7 +6381,7 @@ BEGIN TRANSACTION;
 	CREATE TABLE t (i int);
 COMMIT;
 SELECT * FROM q.t;
-||syntax error
+||expected .*where
 
 -- 574
 BEGIN TRANSACTION;
@@ -8317,7 +8317,7 @@ SELECT * FROM t ORDER BY i;
 
 -- 710 // https://github.com/cznic/ql/issues/43
 SELECT Name, Unique FROM __Index;
-||syntax error
+||expected .*Field
 
 -- 711
 BEGIN TRANSACTION;
@@ -8496,7 +8496,7 @@ SELECT * FROM employee;
 -- S 726
 BEGIN TRANSACTION;
 	UPDATE employee SET
-		FirstName = "John"
+		FirstName = "Williams"
 	WHERE DepartmentID == 33;
 COMMIT;
 SELECT * FROM employee;
@@ -8512,11 +8512,11 @@ SELECT * FROM employee
 ORDER BY LastName;
 |sLastName, lDepartmentID
 [Heisenberg 1033]
-[John <nil>]
 [Jones 1033]
 [Rafferty 31]
 [Robinson 34]
 [Smith 34]
+[Williams <nil>]
 
 -- 728 // https://github.com/cznic/ql/issues/49
 BEGIN TRANSACTION;
@@ -9460,3 +9460,1136 @@ BEGIN TRANSACTION;
 COMMIT;
 SELECT i FROM tableA WHERE id() IN (SELECT idA from tableB) ORDER BY id();
 |?i
+
+-- 783 // https://github.com/cznic/ql/issues/84
+BEGIN TRANSACTION;
+	CREATE TABLE testA (
+		comment string,
+		data blob,
+	);
+INSERT INTO testA (comment) VALUES ("c1");
+UPDATE testA SET data = blob("newVal");
+COMMIT;
+SELECT * FROM testA;
+|scomment, ?data
+[c1 [110 101 119 86 97 108]]
+
+-- 784 // https://github.com/cznic/ql/issues/84
+BEGIN TRANSACTION;
+	CREATE TABLE testA (
+		comment string,
+		data blob,
+	);
+INSERT INTO testA (comment) VALUES ("c1");
+UPDATE testA SET data = __testBlob(257);
+COMMIT;
+SELECT * FROM testA;
+|scomment, ?data
+[c1 [209 231 244 253 191 74 169 85 3 88 111 250 130 24 50 218 91 40 161 60 32 53 58 129 75 81 71 109 70 211 146 67 107 65 150 142 179 2 173 53 73 229 68 154 46 108 47 91 179 98 107 202 157 189 137 4 47 39 93 235 58 112 186 143 68 85 217 33 155 218 180 143 27 76 155 226 205 31 187 12 68 33 75 110 208 42 99 61 223 170 228 184 243 241 64 39 174 64 19 129 203 84 254 78 102 59 16 104 151 21 201 4 117 20 99 125 162 19 201 211 171 71 26 173 37 52 16 115 143 113 128 206 85 192 126 252 146 224 184 146 101 35 198 231 35 236 189 114 184 92 58 124 128 162 106 95 241 186 172 196 31 138 44 178 168 127 69 116 225 27 53 171 157 185 48 205 167 150 77 69 129 86 72 117 129 121 62 224 186 31 116 4 196 103 206 63 185 236 75 172 217 51 223 26 195 127 79 72 199 160 103 92 192 202 67 17 99 200 111 174 71 24 64 119 113 178 105 44 12 25 70 6 69 173 90 100 171 122 155 220 185 99 41 101 190 142 44 217 102 93 63 225 218 239 167 40 254]]
+
+-- 785 // https://github.com/cznic/ql/issues/84
+BEGIN TRANSACTION;
+	CREATE TABLE testA (
+		comment string,
+		data blob,
+	);
+INSERT INTO testA (comment) VALUES ("c1"), ("c2");
+UPDATE testA SET data = blob("newVal") WHERE comment == "c1";
+COMMIT;
+SELECT * FROM testA ORDER BY comment;
+|scomment, ?data
+[c1 [110 101 119 86 97 108]]
+[c2 <nil>]
+
+-- 786 // https://github.com/cznic/ql/issues/84
+BEGIN TRANSACTION;
+	CREATE TABLE testA (
+		comment string,
+		data blob,
+	);
+INSERT INTO testA (comment) VALUES ("c1"), ("c2");
+UPDATE testA SET data = blob("newVal") WHERE comment == "c2";
+COMMIT;
+SELECT * FROM testA ORDER BY comment;
+|scomment, ?data
+[c1 <nil>]
+[c2 [110 101 119 86 97 108]]
+
+-- 787 // https://github.com/cznic/ql/issues/84
+BEGIN TRANSACTION;
+	CREATE TABLE testA (
+		comment string,
+		data blob,
+	);
+INSERT INTO testA (comment) VALUES ("c1"), ("c2");
+UPDATE testA SET data = blob("newVal");
+COMMIT;
+SELECT * FROM testA ORDER BY comment;
+|scomment, ?data
+[c1 [110 101 119 86 97 108]]
+[c2 [110 101 119 86 97 108]]
+
+-- 788 // https://github.com/cznic/ql/issues/84
+BEGIN TRANSACTION;
+	CREATE TABLE testA (
+		comment string,
+		data blob,
+	);
+INSERT INTO testA (comment) VALUES ("c1"), ("c2");
+UPDATE testA SET data = __testBlob(257) WHERE comment == "c1";
+COMMIT;
+SELECT * FROM testA ORDER BY comment;
+|scomment, ?data
+[c1 [209 231 244 253 191 74 169 85 3 88 111 250 130 24 50 218 91 40 161 60 32 53 58 129 75 81 71 109 70 211 146 67 107 65 150 142 179 2 173 53 73 229 68 154 46 108 47 91 179 98 107 202 157 189 137 4 47 39 93 235 58 112 186 143 68 85 217 33 155 218 180 143 27 76 155 226 205 31 187 12 68 33 75 110 208 42 99 61 223 170 228 184 243 241 64 39 174 64 19 129 203 84 254 78 102 59 16 104 151 21 201 4 117 20 99 125 162 19 201 211 171 71 26 173 37 52 16 115 143 113 128 206 85 192 126 252 146 224 184 146 101 35 198 231 35 236 189 114 184 92 58 124 128 162 106 95 241 186 172 196 31 138 44 178 168 127 69 116 225 27 53 171 157 185 48 205 167 150 77 69 129 86 72 117 129 121 62 224 186 31 116 4 196 103 206 63 185 236 75 172 217 51 223 26 195 127 79 72 199 160 103 92 192 202 67 17 99 200 111 174 71 24 64 119 113 178 105 44 12 25 70 6 69 173 90 100 171 122 155 220 185 99 41 101 190 142 44 217 102 93 63 225 218 239 167 40 254]]
+[c2 <nil>]
+
+-- 789 // https://github.com/cznic/ql/issues/84
+BEGIN TRANSACTION;
+	CREATE TABLE testA (
+		comment string,
+		data blob,
+	);
+INSERT INTO testA (comment) VALUES ("c1"), ("c2");
+UPDATE testA SET data = __testBlob(257) WHERE comment == "c2";
+COMMIT;
+SELECT * FROM testA ORDER BY comment;
+|scomment, ?data
+[c1 <nil>]
+[c2 [209 231 244 253 191 74 169 85 3 88 111 250 130 24 50 218 91 40 161 60 32 53 58 129 75 81 71 109 70 211 146 67 107 65 150 142 179 2 173 53 73 229 68 154 46 108 47 91 179 98 107 202 157 189 137 4 47 39 93 235 58 112 186 143 68 85 217 33 155 218 180 143 27 76 155 226 205 31 187 12 68 33 75 110 208 42 99 61 223 170 228 184 243 241 64 39 174 64 19 129 203 84 254 78 102 59 16 104 151 21 201 4 117 20 99 125 162 19 201 211 171 71 26 173 37 52 16 115 143 113 128 206 85 192 126 252 146 224 184 146 101 35 198 231 35 236 189 114 184 92 58 124 128 162 106 95 241 186 172 196 31 138 44 178 168 127 69 116 225 27 53 171 157 185 48 205 167 150 77 69 129 86 72 117 129 121 62 224 186 31 116 4 196 103 206 63 185 236 75 172 217 51 223 26 195 127 79 72 199 160 103 92 192 202 67 17 99 200 111 174 71 24 64 119 113 178 105 44 12 25 70 6 69 173 90 100 171 122 155 220 185 99 41 101 190 142 44 217 102 93 63 225 218 239 167 40 254]]
+
+-- 790 // https://github.com/cznic/ql/issues/84
+BEGIN TRANSACTION;
+	CREATE TABLE testA (
+		comment string,
+		data blob,
+	);
+INSERT INTO testA (comment) VALUES ("c1"), ("c2");
+UPDATE testA SET data = __testBlob(257);
+COMMIT;
+SELECT * FROM testA ORDER BY comment;
+|scomment, ?data
+[c1 [209 231 244 253 191 74 169 85 3 88 111 250 130 24 50 218 91 40 161 60 32 53 58 129 75 81 71 109 70 211 146 67 107 65 150 142 179 2 173 53 73 229 68 154 46 108 47 91 179 98 107 202 157 189 137 4 47 39 93 235 58 112 186 143 68 85 217 33 155 218 180 143 27 76 155 226 205 31 187 12 68 33 75 110 208 42 99 61 223 170 228 184 243 241 64 39 174 64 19 129 203 84 254 78 102 59 16 104 151 21 201 4 117 20 99 125 162 19 201 211 171 71 26 173 37 52 16 115 143 113 128 206 85 192 126 252 146 224 184 146 101 35 198 231 35 236 189 114 184 92 58 124 128 162 106 95 241 186 172 196 31 138 44 178 168 127 69 116 225 27 53 171 157 185 48 205 167 150 77 69 129 86 72 117 129 121 62 224 186 31 116 4 196 103 206 63 185 236 75 172 217 51 223 26 195 127 79 72 199 160 103 92 192 202 67 17 99 200 111 174 71 24 64 119 113 178 105 44 12 25 70 6 69 173 90 100 171 122 155 220 185 99 41 101 190 142 44 217 102 93 63 225 218 239 167 40 254]]
+[c2 [209 231 244 253 191 74 169 85 3 88 111 250 130 24 50 218 91 40 161 60 32 53 58 129 75 81 71 109 70 211 146 67 107 65 150 142 179 2 173 53 73 229 68 154 46 108 47 91 179 98 107 202 157 189 137 4 47 39 93 235 58 112 186 143 68 85 217 33 155 218 180 143 27 76 155 226 205 31 187 12 68 33 75 110 208 42 99 61 223 170 228 184 243 241 64 39 174 64 19 129 203 84 254 78 102 59 16 104 151 21 201 4 117 20 99 125 162 19 201 211 171 71 26 173 37 52 16 115 143 113 128 206 85 192 126 252 146 224 184 146 101 35 198 231 35 236 189 114 184 92 58 124 128 162 106 95 241 186 172 196 31 138 44 178 168 127 69 116 225 27 53 171 157 185 48 205 167 150 77 69 129 86 72 117 129 121 62 224 186 31 116 4 196 103 206 63 185 236 75 172 217 51 223 26 195 127 79 72 199 160 103 92 192 202 67 17 99 200 111 174 71 24 64 119 113 178 105 44 12 25 70 6 69 173 90 100 171 122 155 220 185 99 41 101 190 142 44 217 102 93 63 225 218 239 167 40 254]]
+
+-- 791
+BEGIN TRANSACTION;
+	CREATE TABLE t (c float32);
+	INSERT INTO t VALUES (43.2);
+COMMIT;
+SELECT formatFloat(c) FROM t;
+|s
+[43.2]
+
+-- 792
+BEGIN TRANSACTION;
+	CREATE TABLE t (c float64);
+	INSERT INTO t VALUES (43.2);
+COMMIT;
+SELECT formatFloat(c) FROM t;
+|s
+[43.2]
+
+-- 793
+BEGIN TRANSACTION;
+	CREATE TABLE t (c float64);
+	INSERT INTO t VALUES (43.2);
+COMMIT;
+SELECT formatFloat(c, 'b') FROM t;
+|s
+[6079859496950170p-47]
+
+-- 794
+BEGIN TRANSACTION;
+	CREATE TABLE t (c float64);
+	INSERT INTO t VALUES (43.2);
+COMMIT;
+SELECT formatFloat(c, 'e', 5) FROM t;
+|s
+[4.32000e+01]
+
+-- 795
+BEGIN TRANSACTION;
+	CREATE TABLE t (c float64);
+	INSERT INTO t VALUES (43.2);
+COMMIT;
+SELECT formatFloat(c, 'b', 7, 32) FROM t;
+|s
+[11324621p-18]
+
+-- 796
+BEGIN TRANSACTION;
+	CREATE TABLE t (c int32);
+	INSERT INTO t VALUES (-42);
+COMMIT;
+SELECT formatInt(c) FROM t;
+|s
+[-42]
+
+-- 797
+BEGIN TRANSACTION;
+	CREATE TABLE t (c int64);
+	INSERT INTO t VALUES (-42);
+COMMIT;
+SELECT formatInt(c) FROM t;
+|s
+[-42]
+
+-- 798
+BEGIN TRANSACTION;
+	CREATE TABLE t (c int64);
+	INSERT INTO t VALUES (-42);
+COMMIT;
+SELECT formatInt(c, 18) FROM t;
+|s
+[-26]
+
+-- 799
+BEGIN TRANSACTION;
+	CREATE TABLE t (c uint32);
+	INSERT INTO t VALUES (42);
+COMMIT;
+SELECT formatInt(c) FROM t;
+|s
+[42]
+
+-- 800
+BEGIN TRANSACTION;
+	CREATE TABLE t (c uint64);
+	INSERT INTO t VALUES (42);
+COMMIT;
+SELECT formatInt(c) FROM t;
+|s
+[42]
+
+-- 801
+BEGIN TRANSACTION;
+	CREATE TABLE t (c uint64);
+	INSERT INTO t VALUES (42);
+COMMIT;
+SELECT formatInt(c, 18) FROM t;
+|s
+[26]
+
+-- 802
+BEGIN TRANSACTION;
+	CREATE TABLE t (c int);
+	INSERT INTO t VALUES (-42);
+COMMIT;
+SELECT formatInt(c, 18) FROM t;
+|s
+[-26]
+
+-- 803
+BEGIN TRANSACTION;
+	CREATE TABLE t (c uint);
+	INSERT INTO t VALUES (42);
+COMMIT;
+SELECT formatInt(c, 18) FROM t;
+|s
+[26]
+
+-- 804
+BEGIN TRANSACTION;
+	CREATE TABLE t (c int8);
+	INSERT INTO t VALUES (-42);
+COMMIT;
+SELECT formatInt(c, 18) FROM t;
+|s
+[-26]
+
+-- 805
+BEGIN TRANSACTION;
+	CREATE TABLE t (c uint8);
+	INSERT INTO t VALUES (42);
+COMMIT;
+SELECT formatInt(c, 18) FROM t;
+|s
+[26]
+
+-- 806
+BEGIN TRANSACTION;
+	CREATE TABLE t (c int16);
+	INSERT INTO t VALUES (-42);
+COMMIT;
+SELECT formatInt(c, 18) FROM t;
+|s
+[-26]
+
+-- 807
+BEGIN TRANSACTION;
+	CREATE TABLE t (c uint16);
+	INSERT INTO t VALUES (42);
+COMMIT;
+SELECT formatInt(c, 18) FROM t;
+|s
+[26]
+
+-- 808
+BEGIN TRANSACTION;
+        CREATE TABLE t (i int);
+        INSERT INTO t VALUES(42);
+        ALTER TABLE t ADD b blob;
+COMMIT;
+SELECT * FROM t;
+|li, ?b
+[42 <nil>]
+
+-- 809
+BEGIN TRANSACTION;
+        CREATE TABLE t (i int);
+        INSERT INTO t VALUES(42);
+        ALTER TABLE t ADD b blob;
+        UPDATE t b = blob("a");
+COMMIT;
+SELECT * FROM t;
+|li, ?b
+[42 [97]]
+
+-- 810 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+        DROP TABLE __Column2;
+COMMIT;
+||system table
+
+-- 811 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+        CREATE TABLE __Column2 (i int);
+COMMIT;
+||system table
+
+-- 812 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+        UPDATE __Column2 SET i = 42;
+COMMIT;
+||system table
+
+-- 813 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+        CREATE INDEX __Column2Default ON __Column2(DefaultExpr);
+COMMIT;
+||system table
+
+-- 814 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+COMMIT;
+SELECT * FROM __Column2;
+||does not exist
+
+-- 815 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int DEFAULT 42);
+COMMIT;
+SELECT * FROM __Column2;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t i false  42]
+
+-- 816 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int NOT NULL);
+COMMIT;
+SELECT * FROM __Column2;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t i true  ]
+
+-- 817 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int NOT NULL DEFAULT 43);
+COMMIT;
+SELECT * FROM __Column2;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t i true  43]
+
+-- 818 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int i > 44);
+COMMIT;
+SELECT * FROM __Column2;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t i false i>44 ]
+
+-- 819 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int i > 45 DEFAULT 46);
+COMMIT;
+SELECT * FROM __Column2;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t i false i>45 46]
+
+-- 820 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+	ALTER TABLE t ADD s string;
+COMMIT;
+SELECT * FROM __Column2;
+||does not exist
+
+-- 821 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+COMMIT;
+BEGIN TRANSACTION;
+	ALTER TABLE t ADD s string;
+COMMIT;
+SELECT * FROM __Column2;
+||does not exist
+
+-- 822 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+	ALTER TABLE t ADD s string DEFAULT "foo";
+COMMIT;
+SELECT * FROM __Column2;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t s false  "foo"]
+
+-- 823 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+COMMIT;
+BEGIN TRANSACTION;
+	ALTER TABLE t ADD s string DEFAULT "foo";
+COMMIT;
+SELECT * FROM __Column2;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t s false  "foo"]
+
+-- 824 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+	ALTER TABLE t ADD s string NOT NULL;
+COMMIT;
+SELECT * FROM __Column2;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t s true  ]
+
+-- 825 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+COMMIT;
+BEGIN TRANSACTION;
+	ALTER TABLE t ADD s string NOT NULL;
+COMMIT;
+SELECT * FROM __Column2;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t s true  ]
+
+-- 826 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+	INSERT INTO t VALUES(42);
+	ALTER TABLE t ADD s string NOT NULL;
+COMMIT;
+SELECT * FROM __Column2;
+||existing data
+
+-- 827 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+	INSERT INTO t VALUES(42);
+COMMIT;
+BEGIN TRANSACTION;
+	ALTER TABLE t ADD s string NOT NULL;
+COMMIT;
+SELECT * FROM __Column2;
+||existing data
+
+-- 828 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+	INSERT INTO t VALUES(42);
+	ALTER TABLE t ADD s string s > "";
+COMMIT;
+SELECT * FROM __Column2;
+||existing data
+
+-- 829 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int);
+	INSERT INTO t VALUES(42);
+	ALTER TABLE t ADD s string s > "";
+COMMIT;
+BEGIN TRANSACTION;
+	ALTER TABLE t ADD s string s > "";
+COMMIT;
+SELECT * FROM __Column2;
+||existing data
+
+-- 830 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int DEFAULT 42, s string DEFAULT 43);
+COMMIT;
+SELECT * FROM __Column2 ORDER BY Name;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t i false  42]
+[t s false  43]
+
+-- 831 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int DEFAULT 42, s string DEFAULT 43);
+	ALTER TABLE t DROP COLUMN s;
+COMMIT;
+SELECT * FROM __Column2 ORDER BY Name;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t i false  42]
+
+-- 832 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int DEFAULT 42, s string DEFAULT 43);
+COMMIT;
+BEGIN TRANSACTION;
+	ALTER TABLE t DROP COLUMN s;
+COMMIT;
+SELECT * FROM __Column2 ORDER BY Name;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t i false  42]
+
+-- 833 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int DEFAULT 42, s string DEFAULT 43);
+	ALTER TABLE t DROP COLUMN i;
+COMMIT;
+SELECT * FROM __Column2 ORDER BY Name;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t s false  43]
+
+-- 834 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int DEFAULT 42, s string DEFAULT 43);
+COMMIT;
+BEGIN TRANSACTION;
+	ALTER TABLE t DROP COLUMN i;
+COMMIT;
+SELECT * FROM __Column2 ORDER BY Name;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t s false  43]
+
+-- 835 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (i int NOT NULL);
+	INSERT INTO t VALUES(42);
+COMMIT;
+SELECT * FROM __Column2 ORDER BY Name;
+|sTableName, sName, bNotNull, sConstraintExpr, sDefaultExpr
+[t i true  ]
+
+-- 836 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int, c int);
+	INSERT INTO t VALUES(NULL, NULL, NULL);
+COMMIT;
+SELECT * FROM t;
+|?a, ?b, ?c
+[<nil> <nil> <nil>]
+
+-- 837 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int NOT NULL, c int);
+	INSERT INTO t VALUES(NULL, 42, NULL);
+COMMIT;
+SELECT * FROM t;
+|?a, lb, ?c
+[<nil> 42 <nil>]
+
+-- 838 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int NOT NULL, c int);
+	INSERT INTO t VALUES(NULL, NULL, NULL);
+COMMIT;
+SELECT * FROM t;
+||NOT NULL
+
+-- 839 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int DEFAULT 42, c int);
+	INSERT INTO t VALUES(NULL, NULL, NULL);
+COMMIT;
+SELECT * FROM t;
+|?a, lb, ?c
+[<nil> 42 <nil>]
+
+-- 840 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > 42, c int);
+	INSERT INTO t VALUES(NULL, NULL, NULL);
+COMMIT;
+SELECT * FROM t;
+||constraint violation
+
+-- 841 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > 42, c int);
+	INSERT INTO t VALUES(NULL, 42, NULL);
+COMMIT;
+SELECT * FROM t;
+||constraint violation
+
+-- 842 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > 42, c int);
+	INSERT INTO t VALUES(NULL, 43, NULL);
+COMMIT;
+SELECT * FROM t;
+|?a, lb, ?c
+[<nil> 43 <nil>]
+
+-- 843 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > 42 DEFAULT 42, c int);
+	INSERT INTO t VALUES(NULL, NULL, NULL);
+COMMIT;
+SELECT * FROM t;
+||constraint violation
+
+-- 844 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > 42 DEFAULT 43, c int);
+	INSERT INTO t VALUES(NULL, NULL, NULL);
+COMMIT;
+SELECT * FROM t;
+|?a, lb, ?c
+[<nil> 43 <nil>]
+
+-- 845 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > 42 DEFAULT 43, c int);
+	INSERT INTO t VALUES(NULL, 42, NULL);
+COMMIT;
+SELECT * FROM t;
+||constraint violation
+
+-- 846 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > 42 DEFAULT 430, c int);
+	INSERT INTO t VALUES(NULL, 43, NULL);
+COMMIT;
+SELECT * FROM t;
+|?a, lb, ?c
+[<nil> 43 <nil>]
+
+-- 847 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > a && b < c, c int);
+	INSERT INTO t VALUES(1, 2, 3);
+COMMIT;
+SELECT * FROM t;
+|la, lb, lc
+[1 2 3]
+
+-- 848 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > a && b < c, c int);
+	INSERT INTO t VALUES(1, 1, 3);
+COMMIT;
+SELECT * FROM t;
+||constraint violation
+
+-- 849 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > a && b < c, c int);
+	INSERT INTO t VALUES(1, 3, 3);
+COMMIT;
+SELECT * FROM t;
+||constraint violation
+
+-- 850 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > a && b < c DEFAULT (a+c)/2, c int);
+	INSERT INTO t VALUES(1, NULL, 3);
+COMMIT;
+SELECT * FROM t;
+|la, lb, lc
+[1 2 3]
+
+-- 851 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > a && b < c DEFAULT (a+c)/2, c int);
+	INSERT INTO t VALUES(1, 1, 3);
+COMMIT;
+SELECT * FROM t;
+||constraint violation
+
+-- 852 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int b > a && b < c DEFAULT (a+c)/2, c int);
+	INSERT INTO t VALUES(1, 3, 3);
+COMMIT;
+SELECT * FROM t;
+||constraint violation
+
+-- 853 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE department (
+		DepartmentName string DepartmentName IN ("HQ", "R/D", "Lab", "HR")
+			DEFAULT "HQ",
+	);
+	INSERT INTO department VALUES ("foo");
+COMMIT;
+SELECT * FROM department;
+||constraint violation
+
+-- 854 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE department (
+		DepartmentName string DepartmentName IN ("HQ", "R/D", "Lab", "HR")
+			DEFAULT "HQ",
+	);
+	INSERT INTO department VALUES ("HQ");
+COMMIT;
+SELECT * FROM department;
+|sDepartmentName
+[HQ]
+
+-- 855 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE department (
+		DepartmentName string DepartmentName IN ("HQ", "R/D", "Lab", "HR")
+			DEFAULT "HQ",
+	);
+	INSERT INTO department VALUES (NULL);
+COMMIT;
+SELECT * FROM department;
+|sDepartmentName
+[HQ]
+
+-- 856 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE department (
+		DepartmentName string DepartmentName IN ("HQ", "R/D", "Lab", "HR")
+			DEFAULT "HQ",
+	);
+	INSERT INTO department VALUES ("R&D");
+COMMIT;
+SELECT * FROM department;
+||constraint violation
+
+-- 857 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE department (
+		DepartmentName string DepartmentName IN ("HQ", "R/D", "Lab", "HR")
+			DEFAULT "HQ",
+	);
+	INSERT INTO department VALUES ("R/D");
+COMMIT;
+SELECT * FROM department;
+|sDepartmentName
+[R/D]
+
+-- 858 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (
+		TimeStamp time TimeStamp <= now() && since(TimeStamp) < duration("10s") DEFAULT now(),
+	);
+	INSERT INTO t VALUES(NULL);
+COMMIT;
+SELECT TimeStamp IS NOT NULL FROM t;
+|b
+[true]
+
+-- 859 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (
+		TimeStamp time TimeStamp <= now() && since(TimeStamp) < duration("10s") DEFAULT now(),
+	);
+	INSERT INTO t VALUES(now()-duration("11s"));
+COMMIT;
+SELECT TimeStamp IS NOT NULL FROM t;
+||constraint violation
+
+-- 860 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (
+		TimeStamp time TimeStamp <= now() && since(TimeStamp) < duration("10s") DEFAULT now(),
+	);
+	INSERT INTO t VALUES(now()+duration("1s"));
+COMMIT;
+SELECT TimeStamp IS NOT NULL FROM t;
+||constraint violation
+
+-- 861 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (
+		TimeStamp time TimeStamp <= now() && since(TimeStamp) < duration("10s") DEFAULT now(),
+	);
+	INSERT INTO t VALUES(now()-duration("1s"));
+COMMIT;
+SELECT TimeStamp IS NOT NULL FROM t;
+|b
+[true]
+
+-- 862 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (
+		TimeStamp time TimeStamp <= now() && since(TimeStamp) < duration("10s") DEFAULT now(),
+	);
+	INSERT INTO t VALUES(now());
+COMMIT;
+SELECT TimeStamp IS NOT NULL FROM t;
+|b
+[true]
+
+-- 863 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (
+		Event string Event != "" && Event LIKE "[0-9]+:[ \t]+.*",
+	);
+	INSERT INTO t VALUES("123 foo");
+COMMIT;
+SELECT Event FROM t;
+||constraint violation
+
+-- 864 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (
+		Event string Event != "" && Event LIKE "[0-9]+:[ \t]+.*",
+	);
+	INSERT INTO t VALUES("123: foo");
+COMMIT;
+SELECT Event FROM t;
+|sEvent
+[123: foo]
+
+-- 865 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int, c int);
+	CREATE TABLE s (i int);
+	INSERT INTO s VALUES (1), (2), (NULL), (3), (4);
+	INSERT INTO t(b) SELECT * FROM s;
+COMMIT;
+SELECT b FROM t ORDER BY b DESC;
+|lb
+[4]
+[3]
+[2]
+[1]
+[<nil>]
+
+-- 866 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int NOT NULL, c int);
+	CREATE TABLE s (i int);
+	INSERT INTO s VALUES (1), (2), (NULL), (3), (4);
+	INSERT INTO t(b) SELECT * FROM s WHERE i IS NOT NULL;
+COMMIT;
+SELECT b FROM t ORDER BY b DESC;
+|lb
+[4]
+[3]
+[2]
+[1]
+
+-- 867 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int NOT NULL, c int);
+	CREATE TABLE s (i int);
+	INSERT INTO s VALUES (1), (2), (NULL), (3), (4);
+	INSERT INTO t(b) SELECT * FROM s;
+COMMIT;
+SELECT i FROM t ORDER BY b DESC;
+||NOT NULL
+
+-- 868 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int, c int);
+	INSERT INTO t(b) VALUES (10), (20), (30);
+	UPDATE t b = NULL WHERE b == 20;
+COMMIT;
+SELECT b FROM t ORDER BY b DESC;
+|lb
+[30]
+[10]
+[<nil>]
+
+-- 869 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int NOT NULL, c int);
+	INSERT INTO t(b) VALUES (10), (20), (30);
+	UPDATE t b = NULL WHERE b == 20;
+COMMIT;
+SELECT b FROM t ORDER BY b DESC;
+||NOT NULL
+
+-- 870 // https://github.com/cznic/ql/issues/85
+BEGIN TRANSACTION;
+	CREATE TABLE t (a int, b int NOT NULL DEFAULT 42, c int);
+	INSERT INTO t(b) VALUES (10), (20), (30);
+	UPDATE t b = NULL WHERE b == 20;
+COMMIT;
+SELECT b FROM t ORDER BY b DESC;
+|lb
+[42]
+[30]
+[10]
+
+-- S 871 // https://github.com/cznic/ql/issues/91
+SELECT *
+FROM employee 
+LEFT OUTER JOIN department
+ON employee.DepartmentID == department.DepartmentID
+ORDER BY employee.LastName;
+|semployee.LastName, lemployee.DepartmentID, ldepartment.DepartmentID, sdepartment.DepartmentName
+[Heisenberg 33 33 Engineering]
+[Jones 33 33 Engineering]
+[Rafferty 31 31 Sales]
+[Robinson 34 34 Clerical]
+[Smith 34 34 Clerical]
+[Williams <nil> <nil> <nil>]
+
+-- S 872 // https://github.com/cznic/ql/issues/91
+SELECT *
+FROM employee 
+LEFT JOIN department
+ON employee.DepartmentID == department.DepartmentID
+ORDER BY employee.LastName;
+|semployee.LastName, lemployee.DepartmentID, ldepartment.DepartmentID, sdepartment.DepartmentName
+[Heisenberg 33 33 Engineering]
+[Jones 33 33 Engineering]
+[Rafferty 31 31 Sales]
+[Robinson 34 34 Clerical]
+[Smith 34 34 Clerical]
+[Williams <nil> <nil> <nil>]
+
+-- S 873 // https://github.com/cznic/ql/issues/91
+SELECT *
+FROM employee 
+RIGHT OUTER JOIN department
+ON employee.DepartmentID == department.DepartmentID
+ORDER BY employee.LastName;
+|?employee.LastName, ?employee.DepartmentID, ldepartment.DepartmentID, sdepartment.DepartmentName
+[<nil> <nil> 35 Marketing]
+[Heisenberg 33 33 Engineering]
+[Jones 33 33 Engineering]
+[Rafferty 31 31 Sales]
+[Robinson 34 34 Clerical]
+[Smith 34 34 Clerical]
+
+-- S 874 // https://github.com/cznic/ql/issues/91
+SELECT *
+FROM employee 
+RIGHT JOIN department
+ON employee.DepartmentID == department.DepartmentID
+ORDER BY employee.LastName;
+|?employee.LastName, ?employee.DepartmentID, ldepartment.DepartmentID, sdepartment.DepartmentName
+[<nil> <nil> 35 Marketing]
+[Heisenberg 33 33 Engineering]
+[Jones 33 33 Engineering]
+[Rafferty 31 31 Sales]
+[Robinson 34 34 Clerical]
+[Smith 34 34 Clerical]
+
+-- S 875 // https://github.com/cznic/ql/issues/91
+SELECT *
+FROM employee 
+FULL OUTER JOIN department
+ON employee.DepartmentID == none;
+||unknown
+
+-- S 876 // https://github.com/cznic/ql/issues/91
+SELECT *
+FROM employee 
+FULL JOIN department
+ON employee.DepartmentID == none;
+||unknown
+
+-- 877 // https://dev.mysql.com/worklog/task/?id=1604
+BEGIN TRANSACTION;
+	CREATE TABLE t1 (s1 int);
+	CREATE TABLE t2 (s1 int);
+	INSERT INTO t1 VALUES (1);
+	INSERT INTO t1 VALUES (1);
+COMMIT;
+SELECT * FROM t1 LEFT JOIN t2 ON t1.s1 == t2.s1;
+|lt1.s1, ?t2.s1
+[1 <nil>]
+[1 <nil>]
+
+-- 878 // https://github.com/cznic/ql/issues/91
+BEGIN TRANSACTION;
+	CREATE TABLE a (i int, s string);
+	INSERT INTO a VALUES (1, "a"), (3, "a"), (NULL, "an1"), (NULL, "an2");
+	CREATE TABLE b (i int, s string);
+	INSERT INTO b VALUES (2, "b"), (3, "b"), (NULL, "bn1"), (NULL, "bn2");
+COMMIT;
+SELECT * FROM a LEFT JOIN b ON a.i == b.i
+ORDER BY a.s, a.i, b.s, b.i;
+|la.i, sa.s, ?b.i, ?b.s
+[1 a <nil> <nil>]
+[3 a 3 b]
+[<nil> an1 <nil> <nil>]
+[<nil> an2 <nil> <nil>]
+
+-- 879 // https://github.com/cznic/ql/issues/91
+BEGIN TRANSACTION;
+	CREATE TABLE a (i int, s string);
+	INSERT INTO a VALUES (1, "a"), (3, "a"), (NULL, "an1"), (NULL, "an2");
+	CREATE TABLE b (i int, s string);
+	INSERT INTO b VALUES (2, "b"), (3, "b"), (NULL, "bn1"), (NULL, "bn2");
+COMMIT;
+SELECT * FROM a RIGHT JOIN b ON a.i == b.i
+ORDER BY a.s, a.i, b.s, b.i;
+|?a.i, ?a.s, lb.i, sb.s
+[<nil> <nil> 2 b]
+[<nil> <nil> <nil> bn1]
+[<nil> <nil> <nil> bn2]
+[3 a 3 b]
+
+-- 880 // https://github.com/cznic/ql/issues/91
+BEGIN TRANSACTION;
+	CREATE TABLE a (i int, s string);
+	INSERT INTO a VALUES (1, "a"), (3, "a"), (NULL, "an1"), (NULL, "an2");
+	CREATE TABLE b (i int, s string);
+	INSERT INTO b VALUES (2, "b"), (3, "b"), (NULL, "bn1"), (NULL, "bn2");
+COMMIT;
+SELECT * FROM b LEFT JOIN a ON a.i == b.i
+ORDER BY a.s, a.i, b.s, b.i;
+|lb.i, sb.s, ?a.i, ?a.s
+[2 b <nil> <nil>]
+[<nil> bn1 <nil> <nil>]
+[<nil> bn2 <nil> <nil>]
+[3 b 3 a]
+
+-- 881 // https://github.com/cznic/ql/issues/91
+BEGIN TRANSACTION;
+	CREATE TABLE a (i int, s string);
+	INSERT INTO a VALUES (1, "a"), (3, "a"), (NULL, "an1"), (NULL, "an2");
+	CREATE TABLE b (i int, s string);
+	INSERT INTO b VALUES (2, "b"), (3, "b"), (NULL, "bn1"), (NULL, "bn2");
+COMMIT;
+SELECT * FROM b RIGHT JOIN a ON a.i == b.i
+ORDER BY a.s, a.i, b.s, b.i;
+|?b.i, ?b.s, la.i, sa.s
+[<nil> <nil> 1 a]
+[3 b 3 a]
+[<nil> <nil> <nil> an1]
+[<nil> <nil> <nil> an2]
+
+-- 882 // https://github.com/cznic/ql/issues/91
+BEGIN TRANSACTION;
+	CREATE TABLE a (i int, s string);
+	INSERT INTO a VALUES (1, "a"), (3, "a");
+	CREATE TABLE b (i int, s string);
+	INSERT INTO b VALUES (2, "b"), (3, "b");
+COMMIT;
+SELECT * FROM a FULL JOIN b ON a.i == b.i
+ORDER BY a.s, a.i, b.s, b.i;
+|?a.i, ?a.s, lb.i, sb.s
+[<nil> <nil> 2 b]
+[1 a <nil> <nil>]
+[3 a 3 b]
+
+-- 883 // https://github.com/cznic/ql/issues/91
+BEGIN TRANSACTION;
+	CREATE TABLE a (i int, s string);
+	INSERT INTO a VALUES (1, "a"), (3, "a");
+	CREATE TABLE b (i int, s string);
+	INSERT INTO b VALUES (2, "b"), (3, "b");
+COMMIT;
+SELECT * FROM a FULL OUTER JOIN b ON a.i == b.i
+ORDER BY a.s, a.i, b.s, b.i;
+|?a.i, ?a.s, lb.i, sb.s
+[<nil> <nil> 2 b]
+[1 a <nil> <nil>]
+[3 a 3 b]
+
+-- S 884 // https://github.com/cznic/ql/issues/91
+SELECT *
+FROM employee 
+FULL JOIN department
+ON employee.DepartmentID == department.DepartmentID
+ORDER BY employee.LastName;
+|?employee.LastName, ?employee.DepartmentID, ldepartment.DepartmentID, sdepartment.DepartmentName
+[<nil> <nil> 35 Marketing]
+[Heisenberg 33 33 Engineering]
+[Jones 33 33 Engineering]
+[Rafferty 31 31 Sales]
+[Robinson 34 34 Clerical]
+[Smith 34 34 Clerical]
+[Williams <nil> <nil> <nil>]
+
+-- S 885 // https://github.com/cznic/ql/issues/91
+SELECT *
+FROM employee 
+FULL OUTER JOIN department
+ON employee.DepartmentID == department.DepartmentID
+ORDER BY employee.LastName;
+|?employee.LastName, ?employee.DepartmentID, ldepartment.DepartmentID, sdepartment.DepartmentName
+[<nil> <nil> 35 Marketing]
+[Heisenberg 33 33 Engineering]
+[Jones 33 33 Engineering]
+[Rafferty 31 31 Sales]
+[Robinson 34 34 Clerical]
+[Smith 34 34 Clerical]
+[Williams <nil> <nil> <nil>]
+
+-- S 886 // https://github.com/cznic/ql/issues/91
+BEGIN TRANSACTION;
+	CREATE TABLE t (s string);
+	INSERT INTO t VALUES ("A"), ("B");
+COMMIT;
+SELECT *
+FROM t, employee 
+LEFT JOIN department
+ON employee.DepartmentID == department.DepartmentID
+ORDER BY t.s, employee.LastName;
+|st.s, semployee.LastName, lemployee.DepartmentID, ldepartment.DepartmentID, sdepartment.DepartmentName
+[A Heisenberg 33 33 Engineering]
+[A Jones 33 33 Engineering]
+[A Rafferty 31 31 Sales]
+[A Robinson 34 34 Clerical]
+[A Smith 34 34 Clerical]
+[A Williams <nil> <nil> <nil>]
+[B Heisenberg 33 33 Engineering]
+[B Jones 33 33 Engineering]
+[B Rafferty 31 31 Sales]
+[B Robinson 34 34 Clerical]
+[B Smith 34 34 Clerical]
+[B Williams <nil> <nil> <nil>]
+
+-- S 887 // https://github.com/cznic/ql/issues/91
+BEGIN TRANSACTION;
+	CREATE TABLE t (s string);
+	INSERT INTO t VALUES ("A"), ("B");
+COMMIT;
+SELECT *
+FROM t, employee 
+RIGHT JOIN department
+ON employee.DepartmentID == department.DepartmentID
+ORDER BY t.s, employee.LastName;
+|st.s, ?employee.LastName, ?employee.DepartmentID, ldepartment.DepartmentID, sdepartment.DepartmentName
+[A <nil> <nil> 35 Marketing]
+[A Heisenberg 33 33 Engineering]
+[A Jones 33 33 Engineering]
+[A Rafferty 31 31 Sales]
+[A Robinson 34 34 Clerical]
+[A Smith 34 34 Clerical]
+[B <nil> <nil> 35 Marketing]
+[B Heisenberg 33 33 Engineering]
+[B Jones 33 33 Engineering]
+[B Rafferty 31 31 Sales]
+[B Robinson 34 34 Clerical]
+[B Smith 34 34 Clerical]
+
+-- S 888 // https://github.com/cznic/ql/issues/91
+BEGIN TRANSACTION;
+	CREATE TABLE t (s string);
+	INSERT INTO t VALUES ("A"), ("B");
+COMMIT;
+SELECT *
+FROM t, employee 
+FULL JOIN department
+ON employee.DepartmentID == department.DepartmentID
+ORDER BY t.s, employee.LastName;
+|?t.s, ?employee.LastName, ?employee.DepartmentID, ldepartment.DepartmentID, sdepartment.DepartmentName
+[<nil> <nil> <nil> 35 Marketing]
+[A Heisenberg 33 33 Engineering]
+[A Jones 33 33 Engineering]
+[A Rafferty 31 31 Sales]
+[A Robinson 34 34 Clerical]
+[A Smith 34 34 Clerical]
+[A Williams <nil> <nil> <nil>]
+[B Heisenberg 33 33 Engineering]
+[B Jones 33 33 Engineering]
+[B Rafferty 31 31 Sales]
+[B Robinson 34 34 Clerical]
+[B Smith 34 34 Clerical]
+[B Williams <nil> <nil> <nil>]

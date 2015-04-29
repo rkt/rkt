@@ -35,6 +35,7 @@ type lexer struct {
         sc     int
         src    string
         val    []byte
+	root   bool
 }
 
 func newLexer(src string) (l *lexer) {
@@ -144,12 +145,14 @@ by              {b}{y}
 column          {c}{o}{l}{u}{m}{n}
 commit          {c}{o}{m}{m}{i}{t}
 create          {c}{r}{e}{a}{t}{e}
+default         {d}{e}{f}{a}{u}{l}{t}
 delete          {d}{e}{l}{e}{t}{e}
 desc            {d}{e}{s}{c}
 distinct        {d}{i}{s}{t}{i}{n}{c}{t}
 drop            {d}{r}{o}{p}
 exists          {e}{x}{i}{s}{t}{s}
 from            {f}{r}{o}{m}
+full            {f}{u}{l}{l}
 group           {g}{r}{o}{u}{p}
 if              {i}{f}
 in              {i}{n}
@@ -157,6 +160,8 @@ index           {i}{n}{d}{e}{x}
 insert          {i}{n}{s}{e}{r}{t}
 into            {i}{n}{t}{o}
 is              {i}{s}
+join            {j}{o}{i}{n}
+left            {l}{e}{f}{t}
 like            {l}{i}{k}{e}
 limit           {l}{i}{m}{i}{t}
 not             {n}{o}{t}
@@ -164,6 +169,8 @@ offset          {o}{f}{f}{s}{e}{t}
 on              {o}{n}
 or              {o}{r}
 order           {o}{r}{d}{e}{r}
+outer           {o}{u}{t}{e}{r}
+right           {r}{i}{g}{h}{t}
 rollback        {r}{o}{l}{l}{b}{a}{c}{k}
 select          {s}{e}{l}{e}{c}{t}
 set             {s}{e}{t}
@@ -252,12 +259,14 @@ ident           {idchar0}{idchars}*
 {column}                return column
 {commit}                return commit
 {create}                return create
+{default}               return defaultKwd
 {delete}                return deleteKwd
 {desc}                  return desc
 {distinct}              return distinct
 {drop}                  return drop
 {exists}                return exists
 {from}                  return from
+{full}                  return full
 {group}                 return group
 {if}                    return ifKwd
 {index}                 return index
@@ -265,13 +274,18 @@ ident           {idchar0}{idchars}*
 {into}                  return into
 {in}                    return in
 {is}                    return is
+{join}                  return join
+{left}                  return left
 {like}                  return like
 {limit}                 return limit
 {not}                   return not
 {offset}                return offset
 {on}                    return on
-{or}                    return or
 {order}                 return order
+{or}                    return or
+{outer}                 return outer
+{right}                 return right
+
 {rollback}              return rollback
 
 {select}                l.agg = append(l.agg, false)

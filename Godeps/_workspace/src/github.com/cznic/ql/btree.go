@@ -73,14 +73,14 @@ var ( // R/O zero values
 )
 
 func clr(q interface{}) {
-	switch x := q.(type) {
+	switch z := q.(type) {
 	case *x:
-		for i := 0; i <= x.c; i++ { // Ch0 Sep0 ... Chn-1 Sepn-1 Chn
-			clr(x.x[i].ch)
+		for i := 0; i <= z.c; i++ { // Ch0 Sep0 ... Chn-1 Sepn-1 Chn
+			clr(z.x[i].ch)
 		}
-		*x = zx // GC
+		*z = zx // GC
 	case *d:
-		*x = zd // GC
+		*z = zd // GC
 	}
 }
 
@@ -216,30 +216,30 @@ func (t *tree) Delete(k []interface{}) (ok bool) {
 		var i int
 		i, ok = t.find(q, k)
 		if ok {
-			switch x := q.(type) {
+			switch z := q.(type) {
 			case *x:
-				dp := x.x[i].sep
+				dp := z.x[i].sep
 				switch {
 				case dp.c > kd:
 					t.extract(dp, 0)
 				default:
-					if x.c < kx && q != t.r {
-						t.underflowX(p, &x, pi, &i)
+					if z.c < kx && q != t.r {
+						t.underflowX(p, &z, pi, &i)
 					}
 					pi = i + 1
-					p = x
-					q = x.x[pi].ch
+					p = z
+					q = z.x[pi].ch
 					ok = false
 					continue
 				}
 			case *d:
-				t.extract(x, i)
-				if x.c >= kd {
+				t.extract(z, i)
+				if z.c >= kd {
 					return
 				}
 
 				if q != t.r {
-					t.underflow(p, x, pi)
+					t.underflow(p, z, pi)
 				} else if t.c == 0 {
 					t.Clear()
 				}
@@ -247,14 +247,14 @@ func (t *tree) Delete(k []interface{}) (ok bool) {
 			return
 		}
 
-		switch x := q.(type) {
+		switch z := q.(type) {
 		case *x:
-			if x.c < kx && q != t.r {
-				t.underflowX(p, &x, pi, &i)
+			if z.c < kx && q != t.r {
+				t.underflowX(p, &z, pi, &i)
 			}
 			pi = i
-			p = x
-			q = x.x[i].ch
+			p = z
+			q = z.x[i].ch
 		case *d:
 			return
 		}
@@ -276,12 +276,12 @@ func (t *tree) extract(q *d, i int) { // (r []interface{}) {
 func (t *tree) find(q interface{}, k []interface{}) (i int, ok bool) {
 	var mk []interface{}
 	l := 0
-	switch x := q.(type) {
+	switch z := q.(type) {
 	case *x:
-		h := x.c - 1
+		h := z.c - 1
 		for l <= h {
 			m := (l + h) >> 1
-			mk = x.x[m].sep.d[0].k
+			mk = z.x[m].sep.d[0].k
 			switch cmp := t.cmp(k, mk); {
 			case cmp > 0:
 				l = m + 1
@@ -292,10 +292,10 @@ func (t *tree) find(q interface{}, k []interface{}) (i int, ok bool) {
 			}
 		}
 	case *d:
-		h := x.c - 1
+		h := z.c - 1
 		for l <= h {
 			m := (l + h) >> 1
-			mk = x.d[m].k
+			mk = z.d[m].k
 			switch cmp := t.cmp(k, mk); {
 			case cmp > 0:
 				l = m + 1
@@ -330,16 +330,16 @@ func (t *tree) Get(k []interface{}) (v []interface{}, ok bool) {
 	for {
 		var i int
 		if i, ok = t.find(q, k); ok {
-			switch x := q.(type) {
+			switch z := q.(type) {
 			case *x:
-				return x.x[i].sep.d[0].v, true
+				return z.x[i].sep.d[0].v, true
 			case *d:
-				return x.d[i].v, true
+				return z.d[i].v, true
 			}
 		}
-		switch x := q.(type) {
+		switch z := q.(type) {
 		case *x:
-			q = x.x[i].ch
+			q = z.x[i].ch
 		default:
 			return
 		}
@@ -410,20 +410,20 @@ func (t *tree) Seek(k []interface{}) (e *enumerator, ok bool) {
 	for {
 		var i int
 		if i, ok = t.find(q, k); ok {
-			switch x := q.(type) {
+			switch z := q.(type) {
 			case *x:
-				e = &enumerator{nil, ok, 0, k, x.x[i].sep, t, t.ver}
+				e = &enumerator{nil, ok, 0, k, z.x[i].sep, t, t.ver}
 				return
 			case *d:
-				e = &enumerator{nil, ok, i, k, x, t, t.ver}
+				e = &enumerator{nil, ok, i, k, z, t, t.ver}
 				return
 			}
 		}
-		switch x := q.(type) {
+		switch z := q.(type) {
 		case *x:
-			q = x.x[i].ch
+			q = z.x[i].ch
 		case *d:
-			e = &enumerator{nil, ok, i, k, x, t, t.ver}
+			e = &enumerator{nil, ok, i, k, z, t, t.ver}
 			return
 		}
 	}
@@ -460,29 +460,29 @@ func (t *tree) Set(k []interface{}, v []interface{}) {
 		for {
 			i, ok := t.find(q, k)
 			if ok {
-				switch x := q.(type) {
+				switch z := q.(type) {
 				case *x:
-					x.x[i].sep.d[0].v = v
+					z.x[i].sep.d[0].v = v
 				case *d:
-					x.d[i].v = v
+					z.d[i].v = v
 				}
 				return
 			}
 
-			switch x := q.(type) {
+			switch z := q.(type) {
 			case *x:
-				if x.c > 2*kx {
-					t.splitX(p, &x, pi, &i)
+				if z.c > 2*kx {
+					t.splitX(p, &z, pi, &i)
 				}
 				pi = i
-				p = x
-				q = x.x[i].ch
+				p = z
+				q = z.x[i].ch
 			case *d:
 				switch {
-				case x.c < 2*kd:
-					t.insert(x, i, k, v)
+				case z.c < 2*kd:
+					t.insert(z, i, k, v)
 				default:
-					t.overflow(p, x, pi, i, k, v)
+					t.overflow(p, z, pi, i, k, v)
 				}
 				return
 			}

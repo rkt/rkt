@@ -22,7 +22,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/b"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/strutil"
+)
+
+const (
+	noNames = iota
+	returnNames
+	onlyNames
+)
+
+const (
+	leftJoin = iota
+	rightJoin
+	fullJoin
 )
 
 // NOTE: all rset implementations must be safe for concurrent use by multiple
@@ -35,18 +48,13 @@ var (
 	_ rset = (*limitRset)(nil)
 	_ rset = (*offsetRset)(nil)
 	_ rset = (*orderByRset)(nil)
+	_ rset = (*outerJoinRset)(nil)
 	_ rset = (*selectRset)(nil)
 	_ rset = (*selectStmt)(nil)
 	_ rset = (*tableRset)(nil)
 	_ rset = (*whereRset)(nil)
 
 	isTesting bool // enables test hook: select from an index
-)
-
-const (
-	noNames = iota
-	returnNames
-	onlyNames
 )
 
 // List represents a group of compiled statements.
@@ -1557,9 +1565,11 @@ func findFld(fields []*fld, name string) (f *fld) {
 }
 
 type col struct {
-	index int
-	name  string
-	typ   int
+	index      int
+	name       string
+	typ        int
+	constraint *constraint
+	dflt       expression
 }
 
 func findCol(cols []*col, name string) (c *col) {
@@ -1669,12 +1679,31 @@ func (db *DB) Run(ctx *TCtx, ql string, arg ...interface{}) (rs []Recordset, ind
 	return db.Execute(ctx, l, arg...)
 }
 
+func (db *DB) run(ctx *TCtx, ql string, arg ...interface{}) (rs []Recordset, index int, err error) {
+	l, err := compile(ql)
+	if err != nil {
+		return nil, -1, err
+	}
+
+	return db.Execute(ctx, l, arg...)
+}
+
 // Compile parses the ql statements from src and returns a compiled list for
 // DB.Execute or an error if any.
 //
 // Compile is safe for concurrent use by multiple goroutines.
 func Compile(src string) (List, error) {
 	l := newLexer(src)
+	if yyParse(l) != 0 {
+		return List{}, l.errs[0]
+	}
+
+	return List{l.list, l.params}, nil
+}
+
+func compile(src string) (List, error) {
+	l := newLexer(src)
+	l.root = true
 	if yyParse(l) != 0 {
 		return List{}, l.errs[0]
 	}
@@ -1691,6 +1720,15 @@ func MustCompile(src string) List {
 	list, err := Compile(src)
 	if err != nil {
 		panic("ql: Compile(" + strconv.Quote(src) + "): " + err.Error()) // panic ok here
+	}
+
+	return list
+}
+
+func mustCompile(src string) List {
+	list, err := compile(src)
+	if err != nil {
+		panic("ql: compile(" + strconv.Quote(src) + "): " + err.Error()) // panic ok here
 	}
 
 	return list
@@ -2159,4 +2197,238 @@ func (db *DB) Info() (r *DbInfo, err error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	return db.info()
+}
+
+type constraint struct {
+	expr expression // If expr == nil: constraint is 'NOT NULL'
+}
+
+type outerJoinRset struct {
+	typ       int // leftJoin, rightJoin, fullJoin
+	crossJoin *crossJoinRset
+	source    []interface{}
+	on        expression
+}
+
+func (o *outerJoinRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) error {
+	sources := append(o.crossJoin.sources, o.source)
+	var b3 *b.Tree
+	switch o.typ {
+	case rightJoin: // switch last two sources
+		n := len(sources)
+		sources[n-2], sources[n-1] = sources[n-1], sources[n-2]
+	case fullJoin:
+		b3 = b.TreeNew(func(a, b interface{}) int {
+			x := a.(int64)
+			y := b.(int64)
+			if x < y {
+				return -1
+			}
+
+			if x == y {
+				return 0
+			}
+
+			return 1
+		})
+	}
+	rsets := make([]rset, len(sources))
+	altNames := make([]string, len(sources))
+	for i, pair0 := range sources {
+		pair := pair0.([]interface{})
+		altName := pair[1].(string)
+		switch x := pair[0].(type) {
+		case string: // table name
+			rsets[i] = tableRset(x)
+			if altName == "" {
+				altName = x
+			}
+		case *selectStmt:
+			rsets[i] = x
+		default:
+			log.Panic("internal error")
+		}
+		altNames[i] = altName
+	}
+
+	var flds, leftFlds, rightFlds []*fld
+	var nF, nP, nL, nR int
+	fldsSent := false
+	iq := 0
+	stop := false
+	ids := map[string]interface{}{}
+	m := map[interface{}]interface{}{}
+	var g func([]interface{}, []rset, int) error
+	var match bool
+	var rid int64
+	firstR := true
+	g = func(prefix []interface{}, rsets []rset, x int) (err error) {
+		rset := rsets[0]
+		rsets = rsets[1:]
+		ok := false
+		return rset.do(ctx, onlyNames, func(id interface{}, in []interface{}) (bool, error) {
+			if onlyNames && fldsSent {
+				stop = true
+				return false, nil
+			}
+
+			if ok {
+				ids[altNames[x]] = id
+				if len(rsets) != 0 {
+					newPrefix := append(prefix, in...)
+					match = false
+					rid = 0
+					if err := g(newPrefix, rsets, x+1); err != nil {
+						return false, err
+					}
+
+					if len(newPrefix) < nP+nL {
+						return true, nil
+					}
+
+					firstR = false
+					if match {
+						return true, nil
+					}
+
+					row := append(newPrefix, make([]interface{}, len(rightFlds))...)
+					switch o.typ {
+					case rightJoin:
+						row2 := row[:nP:nP]
+						row2 = append(row2, row[nP+nL:]...)
+						row2 = append(row2, row[nP:nP+nL]...)
+						row = row2
+					}
+					more, err := f(ids, row)
+					if !more {
+						stop = true
+					}
+					return more && !stop, err
+				}
+
+				// prefix: left "table" row
+				// in: right "table" row
+				row := append(prefix, in...)
+				switch o.typ {
+				case rightJoin:
+					row2 := row[:nP:nP]
+					row2 = append(row2, row[nP+nL:]...)
+					row2 = append(row2, row[nP:nP+nL]...)
+					row = row2
+				case fullJoin:
+					rid++
+					if !firstR {
+						break
+					}
+
+					b3.Set(rid, in)
+				}
+				for i, fld := range flds {
+					if nm := fld.name; nm != "" {
+						m[nm] = row[i]
+					}
+				}
+
+				val, err := o.on.eval(ctx, m, ctx.arg)
+				if err != nil {
+					return false, err
+				}
+
+				if val == nil {
+					return true && !stop, nil
+				}
+
+				x, ok := val.(bool)
+				if !ok {
+					return false, fmt.Errorf("invalid ON expression %s (value of type %T)", val, val)
+				}
+
+				if !x {
+					return true && !stop, nil
+				}
+
+				match = true
+				if o.typ == fullJoin {
+					b3.Delete(rid)
+				}
+				more, err := f(ids, row)
+				if !more {
+					stop = true
+				}
+				return more && !stop, err
+			}
+
+			ok = true
+			if !fldsSent {
+				f0 := append([]*fld(nil), in[0].([]*fld)...)
+				q := altNames[iq]
+				for i, elem := range f0 {
+					nf := &fld{}
+					*nf = *elem
+					switch {
+					case q == "":
+						nf.name = ""
+					case nf.name != "":
+						nf.name = fmt.Sprintf("%s.%s", altNames[iq], nf.name)
+					}
+					f0[i] = nf
+				}
+				iq++
+				flds = append(flds, f0...)
+				leftFlds = append([]*fld(nil), rightFlds...)
+				rightFlds = append([]*fld(nil), f0...)
+			}
+			if len(rsets) == 0 && !fldsSent {
+				fldsSent = true
+				nF = len(flds)
+				nL = len(leftFlds)
+				nR = len(rightFlds)
+				nP = nF - nL - nR
+				x := flds
+				switch o.typ {
+				case rightJoin:
+					x = x[:nP:nP]
+					x = append(x, rightFlds...)
+					x = append(x, leftFlds...)
+					flds = x
+				}
+				more, err := f(nil, []interface{}{x})
+				if !more {
+					stop = true
+				}
+				return more && !stop, err
+			}
+
+			return !stop, nil
+		})
+	}
+	if err := g(nil, rsets, 0); err != nil {
+		return err
+	}
+
+	if o.typ != fullJoin {
+		return nil
+	}
+
+	it, err := b3.SeekFirst()
+	if err != nil {
+		return err
+	}
+
+	pref := make([]interface{}, nP+nL)
+	for {
+		_, v, err := it.Next()
+		if err != nil { // No more items
+			return nil
+		}
+
+		more, err := f(nil, append(pref, v.([]interface{})...))
+		if err != nil {
+			return err
+		}
+
+		if !more {
+			return nil
+		}
+	}
 }
