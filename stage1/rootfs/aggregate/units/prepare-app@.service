@@ -2,6 +2,8 @@
 Description=Prepare minimum environment for chrooted applications
 DefaultDependencies=false
 OnFailureJobMode=fail
+Requires=systemd-journald.service
+After=systemd-journald.service
 
 [Service]
 Type=oneshot
