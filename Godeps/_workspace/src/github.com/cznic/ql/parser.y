@@ -31,64 +31,179 @@ import (
 	list []interface{}
 }
 
-%token	add alter and andand andnot as asc
-	begin between bigIntType bigRatType blobType boolType by byteType
-	column commit complex128Type complex64Type create
-	deleteKwd desc distinct drop durationType
-	eq exists
-	falseKwd floatType float32Type float64Type floatLit from 
-	ge group
-	identifier ifKwd imaginaryLit in index insert intType int16Type
-	int32Type int64Type int8Type into intLit is
-	le like limit lsh 
-	neq not null
-	offset on or order oror
-	qlParam
-	rollback rsh runeType
-	selectKwd set stringType stringLit
-	tableKwd timeType transaction trueKwd truncate
-	uintType uint16Type uint32Type uint64Type uint8Type unique update
-	values
-	where
-
 %token	<item>
-	floatLit imaginaryLit intLit stringLit
 
-%token	<item>
-	bigIntType bigRatType blobType boolType byteType
-	complex64Type complex128Type
-	durationType
-	falseKwd floatType float32Type float64Type
-	identifier intType int16Type int32Type int64Type int8Type 
-	null
-	qlParam
-	runeType
-	stringType
-	timeType trueKwd
-	uintType uint16Type uint32Type uint64Type uint8Type
+	/*yy:token "1.%d"   */	floatLit	"floating-point literal"
+	/*yy:token "%c"     */	identifier	"identifier"
+	/*yy:token "%di"    */	imaginaryLit	"imaginary literal"
+	/*yy:token "%d"     */	intLit		"integer literal"
+	/*yy:token "$%d"    */	qlParam		"QL parameter"
+	/*yy:token "\"%c\"" */	stringLit	"string literal"
+
+	add		"ADD"
+	alter		"ALTER"
+	and 		"AND"
+	andand 		"&&"
+	andnot		"&^"
+	as		"AS"
+	asc		"ASC"
+	begin		"BEGIN"
+	between		"BETWEEN"
+	bigIntType	"bigint"
+	bigRatType	"bigrat"
+	blobType	"blob"
+	boolType	"bool"
+	by		"BY"
+	byteType	"byte"
+	column		"COLUMN"
+	commit		"COMMIT"
+	complex128Type	"complex128"
+	complex64Type	"complex64"
+	create		"CREATE"
+	defaultKwd	"DEFAULT"
+	deleteKwd	"DELETE"
+	desc		"DESC"
+	distinct	"DISTINCT"
+	drop		"DROP"
+	durationType	"duration"
+	eq		"=="
+	exists		"EXISTS"
+	falseKwd	"false"
+	floatType	"float"
+	float32Type	"float32"
+	float64Type	"float64"
+	from		"FROM"
+	full		"FULL"
+	ge		">="
+	group		"GROUP"
+	ifKwd		"if"
+	in		"IN"
+	index		"INDEX"
+	insert		"INSERT"
+	intType		"int"
+	int16Type	"int16"
+	int32Type	"int32"
+	int64Type	"int64"
+	int8Type	"int8"
+	into		"INTO"
+	is		"IS"
+	join		"JOIN"
+	le		"<="
+	left		"LEFT"
+	like		"LIKE"
+	limit		"LIMIT"
+	lsh 		"<<"
+	neq		"!="
+	not		"NOT"
+	null		"NULL"
+	offset		"OFFSET"
+	on		"ON"
+	or		"OR"
+	order		"ORDER"
+	oror		"||"
+	outer		"OUTER"
+	right		"RIGHT"
+	rollback	"ROLLBACK"
+	rsh		">>"
+	runeType	"rune"
+	selectKwd	"SELECT"
+	set		"SET"
+	stringType	"string"
+	tableKwd	"TABLE"
+	timeType	"time"
+	transaction	"TRANSACTION"
+	trueKwd		"true"
+	truncate	"TRUNCATE"
+	uintType	"uint"
+	uint16Type	"uint16"
+	uint32Type	"uint32"
+	uint64Type	"uint64"
+	uint8Type	"uint8",
+	unique		"UNIQUE"
+	update		"UPDATE"
+	values		"VALUES"
+	where		"WHERE"
+
 
 %type	<item>
-	AlterTableStmt Assignment AssignmentList AssignmentList1
-	BeginTransactionStmt
-	Call Call1 ColumnDef ColumnName ColumnNameList ColumnNameList1
-	CommitStmt Conversion CreateIndexStmt CreateIndexIfNotExists
-	CreateIndexStmtUnique CreateTableStmt CreateTableStmt1
-	DeleteFromStmt DropIndexStmt DropIndexIfExists DropTableStmt
-	EmptyStmt Expression ExpressionList ExpressionList1
-	Factor Factor1 Field Field1 FieldList
-	GroupByClause
-	Index InsertIntoStmt InsertIntoStmt1 InsertIntoStmt2
-	Literal
-	Operand OrderBy OrderBy1
-	QualifiedIdent
-	PrimaryExpression PrimaryFactor PrimaryTerm
-	RecordSet RecordSet1 RecordSet2 RollbackStmt
-	SelectStmt SelectStmtDistinct SelectStmtFieldList SelectStmtLimit
-	SelectStmtWhere SelectStmtGroup SelectStmtOffset SelectStmtOrder Slice
-	Statement StatementList
-	TableName Term TruncateTableStmt Type
-	UnaryExpr UpdateStmt UpdateStmt1
-	WhereClause
+	AlterTableStmt		"ALTER TABLE statement"
+	Assignment		"assignment"
+	AssignmentList		"assignment list"
+	AssignmentList1		"assignment list optional trailing comma"
+	BeginTransactionStmt	"BEGIN TRANSACTION statement"
+	Call			"function call"
+	Call1			"function call optional argument list"
+	ColumnDef		"table column definition"
+	ColumnName		"column name"
+	ColumnNameList		"column name list"
+	ColumnNameList1		"column name list with optional trailing comma"
+	CommaOpt		"optional comma"
+	CommitStmt		"COMMIT statement"
+	Constraint		"column value constraint"
+	ConstraintOpt		"optional column value constraint"
+	Conversion		"conversion"
+	CreateIndexStmt		"CREATE INDEX statement"
+	CreateIndexIfNotExists	"CREATE INDEX statement optional IF NOT EXISTS cluse"
+	CreateIndexStmtUnique	"CREATE INDEX optional UNIQUE clause"
+	CreateTableStmt		"CREATE TABLE statement"
+	CreateTableStmt1	"CREATE TABLE statement colum definition list"
+	Default			"DEFAULT clause"
+	DefaultOpt		"optional DEFAULT clause"
+	DeleteFromStmt		"DELETE FROM statement"
+	DropIndexStmt		"DROP INDEX statement"
+	DropIndexIfExists	"DROP INDEX statement optional IF EXISTS clause"
+	DropTableStmt		"DROP TABLE statement"
+	EmptyStmt		"empty statement"
+	Expression		"expression"
+	ExpressionList		"expression list"
+	ExpressionList1		"expression list expression"
+	Factor			"expression factor"
+	Factor1			"binary expression factor"
+	Field			"field expression"
+	Field1			"field expression optional AS clause"
+	FieldList		"field expression list"
+	GroupByClause		"GROUP BY clause"
+	Index			"string index"
+	InsertIntoStmt		"INSERT INTO statement"
+	InsertIntoStmt1		"INSERT INTO statement optional column list clause"
+	InsertIntoStmt2		"INSERT INTO statement optional values list"
+	JoinClause		"SELECT statement JOIN clause"
+	JoinClauseOpt		"SELECT statement optional JOIN clause"
+	JoinType		"join type"
+	Literal			"literal value"
+	logAnd			"logical and operator"
+	logOr			"logical or operator"
+	Operand			"operand"
+	OrderBy			"ORDER BY clause"
+	OrderBy1		"ORDER BY clause optional collation specification"
+	OuterOpt		"optional OUTER clause"
+	QualifiedIdent		"qualified identifier"
+	PrimaryExpression	"primary expression"
+	PrimaryFactor		"primary expression factor"
+	PrimaryTerm		"primary expression term"
+	RecordSet		"record set"
+	RecordSet1		"record set name or parenthesized SELECTECT statement"
+	RecordSet2		"record set optional AS clause"
+	RollbackStmt		"ROLLBACK statement"
+	SelectStmt		"SELECT statement"
+	SelectStmtDistinct	"SELECT statement optional DISTINCT clause"
+	SelectStmtFieldList	"SELECT statement field list"
+	SelectStmtLimit		"SELECT statement optional LIMIT clause"
+	SelectStmtWhere		"SELECT statement optional WHERE clause"
+	SelectStmtGroup		"SELECT statement optional GROUP BY clause"
+	SelectStmtOffset	"SELECT statement optional OFFSET clause"
+	SelectStmtOrder		"SELECT statement optional ORDER BY clause"
+	Slice			"string slice"
+	Statement		"statement"
+	StatementList		"statement list"
+	TableName		"table name"
+	Term			"expression term"
+	TruncateTableStmt	"TRANSACTION TABLE statement"
+	Type			"type"
+	UnaryExpr		"unary expression"
+	UpdateStmt		"UPDATE statement"
+	UpdateStmt1		"UPDATE statement optional WHERE clause"
+	WhereClause		"WHERE clause"
 
 %type	<list>	RecordSetList
 
@@ -113,7 +228,7 @@ Assignment:
 	}
 
 AssignmentList:
-	Assignment AssignmentList1 AssignmentList2
+	Assignment AssignmentList1 CommaOpt
 	{
 		$$ = append([]assignment{$1.(assignment)}, $2.([]assignment)...)
 	}
@@ -127,10 +242,6 @@ AssignmentList1:
 	{
 		$$ = append($1.([]assignment), $3.(assignment))
 	}
-
-AssignmentList2:
-	/* EMPTY */
-|	','
 
 BeginTransactionStmt:
 	begin transaction
@@ -152,16 +263,20 @@ Call1:
 |	ExpressionList
 
 ColumnDef:
-	ColumnName Type
+	ColumnName Type ConstraintOpt DefaultOpt
 	{
-		$$ = &col{name: $1.(string), typ: $2.(int)}
+		x := &col{name: $1.(string), typ: $2.(int), constraint: $3.(*constraint)}
+		if $4 != nil {
+			x.dflt = $4.(expression)
+		}
+		$$ = x
 	}
 
 ColumnName:
 	identifier
 
 ColumnNameList:
-	ColumnName ColumnNameList1 ColumnNameList2
+	ColumnName ColumnNameList1 CommaOpt
 	{
 		$$ = append([]string{$1.(string)}, $2.([]string)...)
 	}
@@ -176,15 +291,27 @@ ColumnNameList1:
 		$$ = append($1.([]string), $3.(string))
 	}
 
-ColumnNameList2:
-	/* EMPTY */
-|	','
-
 CommitStmt:
 	commit
 	{
 		$$ = commitStmt{}
 	}
+
+Constraint:
+	not null
+	{
+		$$ = &constraint{}
+	}
+|	Expression
+	{
+		$$ = &constraint{$1.(expression)}
+	}
+
+ConstraintOpt:
+	{
+		$$ = (*constraint)(nil)
+	}
+|	Constraint
 
 Conversion:
 	Type '(' Expression ')'
@@ -200,6 +327,10 @@ CreateIndexStmt:
 		if indexName == tableName || indexName == columnName {
 			yylex.(*lexer).err("index name collision: %s", indexName)
 			return 1
+		}
+
+		if yylex.(*lexer).root {
+			break
 		}
 
 		if isSystemName[indexName] || isSystemName[tableName] {
@@ -219,6 +350,10 @@ CreateIndexStmt:
 		if indexName == tableName {
 			yylex.(*lexer).err("index name collision: %s", indexName)
 			return 1
+		}
+
+		if yylex.(*lexer).root {
+			break
 		}
 
 		if isSystemName[indexName] || isSystemName[tableName] {
@@ -246,19 +381,29 @@ CreateIndexStmtUnique:
 	}
 
 CreateTableStmt:
-	create tableKwd TableName '(' ColumnDef CreateTableStmt1 CreateTableStmt2 ')'
+	create tableKwd TableName '(' ColumnDef CreateTableStmt1 CommaOpt ')'
 	{
 		nm := $3.(string)
 		$$ = &createTableStmt{tableName: nm, cols: append([]*col{$5.(*col)}, $6.([]*col)...)}
+
+		if yylex.(*lexer).root {
+			break
+		}
+
 		if isSystemName[nm] {
 			yylex.(*lexer).err("name is used for system tables: %s", nm)
 			return 1
 		}
 	}
-|	create tableKwd ifKwd not exists TableName '(' ColumnDef CreateTableStmt1 CreateTableStmt2 ')'
+|	create tableKwd ifKwd not exists TableName '(' ColumnDef CreateTableStmt1 CommaOpt ')'
 	{
 		nm := $6.(string)
 		$$ = &createTableStmt{ifNotExists: true, tableName: nm, cols: append([]*col{$8.(*col)}, $9.([]*col)...)}
+
+		if yylex.(*lexer).root {
+			break
+		}
+
 		if isSystemName[nm] {
 			yylex.(*lexer).err("name is used for system tables: %s", nm)
 			return 1
@@ -275,18 +420,44 @@ CreateTableStmt1:
 		$$ = append($1.([]*col), $3.(*col))
 	}
 
-CreateTableStmt2:
-	/* EMPTY */
-|	','
+Default:
+	defaultKwd Expression
+	{
+		$$ = $2
+	}
+
+DefaultOpt:
+	{
+		$$ = nil
+	}
+|	Default
 
 DeleteFromStmt:
 	deleteKwd from TableName
 	{
 		$$ = &truncateTableStmt{$3.(string)}
+
+		if yylex.(*lexer).root {
+			break
+		}
+
+		if isSystemName[$3.(string)] {
+			yylex.(*lexer).err("name is used for system tables: %s", $3.(string))
+			return 1
+		}
 	}
 |	deleteKwd from TableName WhereClause
 	{
 		$$ = &deleteStmt{tableName: $3.(string), where: $4.(*whereRset).expr}
+
+		if yylex.(*lexer).root {
+			break
+		}
+
+		if isSystemName[$3.(string)] {
+			yylex.(*lexer).err("name is used for system tables: %s", $3.(string))
+			return 1
+		}
 	}
 
 DropIndexStmt:
@@ -309,6 +480,11 @@ DropTableStmt:
 	{
 		nm := $3.(string)
 		$$ = &dropTableStmt{tableName: nm}
+
+		if yylex.(*lexer).root {
+			break
+		}
+
 		if isSystemName[nm] {
 			yylex.(*lexer).err("name is used for system tables: %s", nm)
 			return 1
@@ -318,6 +494,11 @@ DropTableStmt:
 	{
 		nm := $5.(string)
 		$$ = &dropTableStmt{ifExists: true, tableName: nm}
+
+		if yylex.(*lexer).root {
+			break
+		}
+
 		if isSystemName[nm] {
 			yylex.(*lexer).err("name is used for system tables: %s", nm)
 			return 1
@@ -343,10 +524,14 @@ Expression:
 
 logOr:
 	oror
+	{
+	}
 |	or
+	{
+	}
 
 ExpressionList:
-	Expression ExpressionList1 ExpressionList2
+	Expression ExpressionList1 CommaOpt
 	{
 		$$ = append([]expression{$1.(expression)}, $2.([]expression)...)
 	}
@@ -361,10 +546,6 @@ ExpressionList1:
 		$$ = append($1.([]expression), $3.(expression))
 	}
 
-ExpressionList2:
-	/* EMPTY */
-|	','
-
 Factor:
 	Factor1
 |       Factor1 in '(' ExpressionList ')'
@@ -375,11 +556,11 @@ Factor:
         {
 		$$ = &pIn{expr: $1.(expression), not: true, list: $5.([]expression)}
         }
-|       Factor1 in '(' SelectStmt ')'
+|       Factor1 in '(' SelectStmt semiOpt ')'
         {
 		$$ = &pIn{expr: $1.(expression), sel: $4.(*selectStmt)}
         }
-|       Factor1 not in '(' SelectStmt ')'
+|       Factor1 not in '(' SelectStmt semiOpt ')'
         {
 		$$ = &pIn{expr: $1.(expression), not: true, sel: $5.(*selectStmt)}
         }
@@ -517,9 +698,18 @@ Index:
 	}
 
 InsertIntoStmt:
-	insert into TableName InsertIntoStmt1 values '(' ExpressionList ')' InsertIntoStmt2 InsertIntoStmt3
+	insert into TableName InsertIntoStmt1 values '(' ExpressionList ')' InsertIntoStmt2 CommaOpt
 	{
 		$$ = &insertIntoStmt{tableName: $3.(string), colNames: $4.([]string), lists: append([][]expression{$7.([]expression)}, $9.([][]expression)...)}
+
+		if yylex.(*lexer).root {
+			break
+		}
+
+		if isSystemName[$3.(string)] {
+			yylex.(*lexer).err("name is used for system tables: %s", $3.(string))
+			return 1
+		}
 	}
 |	insert into TableName InsertIntoStmt1 SelectStmt
 	{
@@ -545,10 +735,6 @@ InsertIntoStmt2:
 	{
 		$$ = append($1.([][]expression), $4.([]expression))
 	}
-
-InsertIntoStmt3:
-|      ','
-
 
 Literal:
 	falseKwd
@@ -761,12 +947,12 @@ RecordSet:
 
 RecordSet1:
 	identifier
-|	'(' SelectStmt RecordSet11 ')'
+|	'(' SelectStmt semiOpt ')'
 	{
 		$$ = $2
 	}
 
-RecordSet11:
+semiOpt:
 	/* EMPTY */
 |	';'
 
@@ -796,9 +982,46 @@ RollbackStmt:
 		$$ = rollbackStmt{}
 	}
 
+JoinType:
+	left
+	{
+		$$ = leftJoin
+	}
+|	right
+	{
+		$$ = rightJoin
+	}
+|	full
+	{
+		$$ = fullJoin
+	}
+
+OuterOpt:
+	{
+		$$ = nil
+	}
+|	outer
+
+JoinClause:
+	JoinType OuterOpt join RecordSet on Expression
+	{
+		$$ = &outerJoinRset{
+			typ: $1.(int),
+			source: $4.([]interface{}),
+			on: $6.(expression),
+		}
+	}
+
+JoinClauseOpt:
+	{
+		$$ = (*outerJoinRset)(nil)
+	}
+|	JoinClause
+
 SelectStmt:
 	selectKwd SelectStmtDistinct SelectStmtFieldList from RecordSetList
-	SelectStmtWhere SelectStmtGroup SelectStmtOrder SelectStmtLimit SelectStmtOffset
+	CommaOpt JoinClauseOpt SelectStmtWhere SelectStmtGroup SelectStmtOrder
+	SelectStmtLimit SelectStmtOffset
 	{
 		x := yylex.(*lexer)
 		n := len(x.agg)
@@ -807,29 +1030,12 @@ SelectStmt:
 			flds:          $3.([]*fld),
 			from:          &crossJoinRset{sources: $5},
 			hasAggregates: x.agg[n-1],
-			where:         $6.(*whereRset),
-			group:         $7.(*groupByRset),
-			order:         $8.(*orderByRset),
-			limit:         $9.(*limitRset),
-			offset:        $10.(*offsetRset),
-		}
-		x.agg = x.agg[:n-1]
-	}
-|	selectKwd SelectStmtDistinct SelectStmtFieldList from RecordSetList ','
-	SelectStmtWhere SelectStmtGroup SelectStmtOrder SelectStmtLimit SelectStmtOffset
-	{
-		x := yylex.(*lexer)
-		n := len(x.agg)
-		$$ = &selectStmt{
-			distinct:      $2.(bool),
-			flds:          $3.([]*fld),
-			from:          &crossJoinRset{sources: $5},
-			hasAggregates: x.agg[n-1],
-			where:         $7.(*whereRset),
-			group:         $8.(*groupByRset),
-			order:         $9.(*orderByRset),
-			limit:         $10.(*limitRset),
-			offset:        $11.(*offsetRset),
+			outer:         $7.(*outerJoinRset),
+			where:         $8.(*whereRset),
+			group:         $9.(*groupByRset),
+			order:         $10.(*orderByRset),
+			limit:         $11.(*limitRset),
+			offset:        $12.(*offsetRset),
 		}
 		x.agg = x.agg[:n-1]
 	}
@@ -965,7 +1171,11 @@ Term:
 
 logAnd:
 	andand
+	{
+	}
 |	and
+	{
+	}
 
 TruncateTableStmt:
 	truncate tableKwd TableName
@@ -1000,9 +1210,18 @@ Type:
 |	uint8Type
 
 UpdateStmt:
-	update TableName oSet AssignmentList UpdateStmt1
+	update TableName SetOpt AssignmentList UpdateStmt1
 	{
 		$$ = &updateStmt{tableName: $2.(string), list: $4.([]assignment), where: $5.(*whereRset).expr}
+
+		if yylex.(*lexer).root {
+			break
+		}
+
+		if isSystemName[$2.(string)] {
+			yylex.(*lexer).err("name is used for system tables: %s", $2.(string))
+			return 1
+		}
 	}
 
 UpdateStmt1:
@@ -1058,5 +1277,16 @@ WhereClause:
 	}
 
 
-oSet:
+SetOpt:
+	{
+	}
 |	set
+	{
+	}
+
+CommaOpt:
+	{
+	}
+|	','
+	{
+	}

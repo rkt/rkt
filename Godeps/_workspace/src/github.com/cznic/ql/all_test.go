@@ -2718,3 +2718,77 @@ func Example_id() {
 	// [20 2 twenty]
 	// ----
 }
+
+func eqRows(a, b [][]interface{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, rowa := range a {
+		rowb := b[i]
+		if len(rowa) != len(rowb) {
+			return false
+		}
+
+		for j, va := range rowa {
+			if va != rowb[j] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func TestInPredicateBug(t *testing.T) {
+	db, err := OpenMem()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, err := db.Run(NewRWCtx(), `
+	BEGIN TRANSACTION;
+		CREATE TABLE all (i int);
+		INSERT INTO all VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9);
+		CREATE TABLE even (i int);
+		INSERT INTO even VALUES (0), (2), (4), (6), (8);
+	COMMIT;
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	q := MustCompile(`SELECT * FROM all WHERE i IN (SELECT * FROM even) ORDER BY i`)
+	rs, _, err := db.Execute(nil, q)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := rs[0].Rows(-1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if g, e := rows, [][]interface{}{{int64(0)}, {int64(2)}, {int64(4)}, {int64(6)}, {int64(8)}}; !eqRows(g, e) {
+		t.Fatalf("\n%v\n%v", g, e)
+	}
+
+	if _, _, err := db.Run(NewRWCtx(), `
+	BEGIN TRANSACTION;
+		TRUNCATE TABLE even;
+		INSERT INTO even VALUES (1), (3), (5);
+	COMMIT;
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	if rs, _, err = db.Execute(nil, q); err != nil {
+		t.Fatal(err)
+	}
+
+	if rows, err = rs[0].Rows(-1, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if g, e := rows, [][]interface{}{{int64(1)}, {int64(3)}, {int64(5)}}; !eqRows(g, e) {
+		t.Fatalf("\n%v\n%v", g, e)
+	}
+}

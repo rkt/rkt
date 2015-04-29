@@ -107,6 +107,10 @@
 			"Rev": "415a79c4bfa377b484b16c632347b3925a0f35ff"
 		},
 		{
+			"ImportPath": "github.com/cznic/b",
+			"Rev": "e2e747ce049fb910cff6b1fd7ad8faf3900939d5"
+		},
+		{
 			"ImportPath": "github.com/cznic/bufs",
 			"Rev": "3dcccbd7064a1689f9c093a988ea11ac00e21f51"
 		},
@@ -124,7 +128,7 @@
 		},
 		{
 			"ImportPath": "github.com/cznic/ql",
-			"Rev": "fc1b91b82089d3f132fbed8a7c9f349c3133eb96"
+			"Rev": "69ca5f1dbae7e230dbfc8812d3e9764e144bbf45"
 		},
 		{
 			"ImportPath": "github.com/cznic/sortutil",

@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -31,6 +32,8 @@ var builtin = map[string]struct {
 	"date":         {builtinDate, 8, 8, true, false},
 	"day":          {builtinDay, 1, 1, true, false},
 	"formatTime":   {builtinFormatTime, 2, 2, true, false},
+	"formatFloat":  {builtinFormatFloat, 1, 4, true, false},
+	"formatInt":    {builtinFormatInt, 1, 2, true, false},
 	"hasPrefix":    {builtinHasPrefix, 2, 2, true, false},
 	"hasSuffix":    {builtinHasSuffix, 2, 2, true, false},
 	"hour":         {builtinHour, 1, 1, true, false},
@@ -362,6 +365,117 @@ func builtinFormatTime(arg []interface{}, ctx map[interface{}]interface{}) (v in
 	default:
 		return nil, invArg(x, "formatTime")
 	}
+}
+
+func builtinFormatFloat(arg []interface{}, ctx map[interface{}]interface{}) (v interface{}, err error) {
+	var val float64
+	var fmt byte = 'g'
+
+	prec := -1
+	bitSize := 64
+
+	switch x := arg[0].(type) {
+	case nil:
+		return nil, nil
+	case float32:
+		val = float64(x)
+		bitSize = 32
+	case float64:
+		val = x
+	default:
+		return nil, invArg(x, "formatFloat")
+	}
+
+	switch len(arg) {
+	case 4:
+		arg3 := coerce1(arg[3], int64(0))
+		switch y := arg3.(type) {
+		case nil:
+			return nil, nil
+		case int64:
+			bitSize = int(y)
+		default:
+			return nil, invArg(y, "formatFloat")
+		}
+		fallthrough
+	case 3:
+		arg2 := coerce1(arg[2], int64(0))
+		switch y := arg2.(type) {
+		case nil:
+			return nil, nil
+		case int64:
+			prec = int(y)
+		default:
+			return nil, invArg(y, "formatFloat")
+		}
+		fallthrough
+	case 2:
+		arg1 := coerce1(arg[1], byte(0))
+		switch y := arg1.(type) {
+		case nil:
+			return nil, nil
+		case byte:
+			fmt = y
+		default:
+			return nil, invArg(y, "formatFloat")
+		}
+	}
+
+	return strconv.FormatFloat(val, fmt, prec, bitSize), nil
+}
+
+func builtinFormatInt(arg []interface{}, ctx map[interface{}]interface{}) (v interface{}, err error) {
+	var intVal int64
+	var uintVal uint64
+
+	uintType := false
+	base := 10
+
+	switch x := arg[0].(type) {
+	case nil:
+		return nil, nil
+	case int8:
+		intVal = int64(x)
+	case int16:
+		intVal = int64(x)
+	case int32:
+		intVal = int64(x)
+	case int64:
+		intVal = x
+	case uint8:
+		uintType = true
+		uintVal = uint64(x)
+	case uint16:
+		uintType = true
+		uintVal = uint64(x)
+	case uint32:
+		uintType = true
+		uintVal = uint64(x)
+	case uint64:
+		uintType = true
+		uintVal = x
+	default:
+		return nil, invArg(x, "formatInt")
+	}
+
+	switch len(arg) {
+	case 2:
+		arg1 := coerce1(arg[1], int64(0))
+		switch y := arg1.(type) {
+		case nil:
+			return nil, nil
+		case int64:
+			base = int(y)
+		default:
+			return nil, invArg(y, "formatInt")
+		}
+	}
+
+	if uintType {
+		return strconv.FormatUint(uintVal, base), nil
+	}
+
+	return strconv.FormatInt(intVal, base), nil
 }
 
 func builtinHasPrefix(arg []interface{}, _ map[interface{}]interface{}) (v interface{}, err error) {

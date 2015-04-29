@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //MAYBE set operations
-//MAYBE IN ( SELECT ... )
 //MAYBE +=, -=, ...
 
 //TODO verify there's a graceful failure for a 2G+ blob on a 32 bit machine.
@@ -14,6 +13,15 @@
 // (whichever specification SQL is considered to be).
 //
 // Change list
+//
+// 2015-04-20: Added support for {LEFT,RIGHT,FULL} [OUTER] JOIN.
+//
+// 2015-04-18: Column definitions can now have constraints and defaults.
+// Details are discussed in the "Constraints and defaults" chapter below the
+// CREATE TABLE statement documentation.
+//
+// 2015-03-06: New built-in functions formatFloat and formatInt. Thanks
+// urandom! (https://github.com/urandom)
 //
 // 2015-02-16: IN predicate now accepts a SELECT statement. See the updated
 // "Predicates" section.
@@ -72,6 +80,24 @@
 // 2014-04-10: Introduction of query rewriting.
 //
 // 2014-04-07: Introduction of indices.
+//
+// Building non CGO QL
+//
+// QL imports zappy[8], a block-based compressor, which speeds up its
+// performance by using a C version of the compression/decompression
+// algorithms.  If a CGO-free (pure Go) version of QL, or an app using QL, is
+// required, please include 'purego' in the -tags option of go
+// {build,get,install}. For example:
+//
+//	$ go get -tags purego github.com/cznic/ql
+//
+// If zappy was installed before installing QL, it might be necessary to
+// rebuild zappy first (or rebuild QL with all its dependencies using the -a
+// option):
+//
+//	$ touch "$GOPATH"/src/github.com/cznic/zappy/*.go
+//	$ go install -tags purego github.com/cznic/zappy
+//	$ go install github.com/cznic/ql
 //
 // Notation
 //
@@ -188,6 +214,7 @@
 // avoid using any identifiers starting with two underscores. For example
 //
 //	__Column
+//	__Column2
 //	__Index
 //	__Table
 //
@@ -195,17 +222,18 @@
 //
 // The following keywords are reserved and may not be used as identifiers.
 //
-//	ADD      BY          duration  INDEX   NULL    TRUNCATE
-//	ALTER    byte        EXISTS    INSERT  OFFSET  uint
-//	AND      COLUMN      false     int     ON      uint16
-//	AS       complex128  float     int16   ORDER   uint32
-//	ASC      complex64   float32   int32   SELECT  uint64
-//	BETWEEN  CREATE      float64   int64   SET     uint8
-//	bigint   DELETE      FROM      int8    string  UNIQUE
-//	bigrat   DESC        GROUP     INTO    TABLE   UPDATE
-//	blob     DISTINCT    IF        LIMIT   time    VALUES
-//	bool     DROP        IN        LIKE    true    WHERE
-//	                               NOT     OR
+//	ADD      COLUMN      float     int64   OUTER     uint32
+//	ALTER    complex128  float3    int8    RIGHT     uint64
+//	AND      complex64   float6    INTO    SELECT    uint8
+//	AS       CREATE      FROM  2   JOIN    SET       UNIQUE
+//	ASC      DEFAULT     GROUP 4   LEFT    string    UPDATE
+//	BETWEEN  DELETE      IF        LIMIT   TABLE     VALUES
+//	bigint   DESC        IN        LIKE    time      WHERE
+//	bigrat   DISTINCT    INDEX     NOT     true
+//	blob     DROP        INSERT    NULL    OR
+//	bool     duration    int       OFFSET  TRUNCATE
+//	BY       EXISTS      int16     ON      uint
+//	byte     false       int32     ORDER   uint16
 //
 // Keywords are not case sensitive.
 //
@@ -565,13 +593,13 @@
 //
 // The following functions are implicitly declared
 //
-//	avg          complex     contains   count      date
-//	day          formatTime  hasPrefix  hasSuffix  hour
-//	hours        id          imag       len        max
-//	min          minute      minutes    month      nanosecond
-//	nanoseconds  now         parseTime  real       second
-//	seconds      since       sum        timeIn     weekday
-//	year         yearDay
+//	avg          complex     contains    count       date
+//	day          formatTime  formatFloat formatInt
+//	hasPrefix    hasSuffix   hour        hours       id
+//	imag         len         max         min         minute
+//	minutes      month       nanosecond  nanoseconds now
+//	parseTime    real        second      seconds     since
+//	sum          timeIn      weekday     year        yearDay
 //
 // Expressions
 //
@@ -804,7 +832,7 @@
 //  Predicate = (
 //  			[ "NOT" ] (
 //  			  "IN" "(" ExpressionList ")"
-//  			| "IN" "(" SelectStmt ")"
+//  			| "IN" "(" SelectStmt [ ";" ] ")"
 //  			| "BETWEEN" PrimaryFactor "AND" PrimaryFactor
 //  			)
 //              |       "IS" [ "NOT" ] "NULL"
@@ -1236,6 +1264,10 @@
 // 		ALTER TABLE Income DROP COLUMN Taxes;
 //	COMMIT;
 //
+// When adding a column to a table with existing data, the constraint clause of
+// the ColumnDef cannot be used. Adding a constrained column to an empty table
+// is fine.
+//
 // BEGIN TRANSACTION
 //
 // Begin transactions statements introduce a new transaction level. Every
@@ -1335,7 +1367,9 @@
 //  CreateTableStmt = "CREATE" "TABLE" [ "IF" "NOT" "EXISTS" ] TableName
 //  	"(" ColumnDef { "," ColumnDef } [ "," ] ")" .
 //
-//  ColumnDef = ColumnName Type .
+//  ColumnDef = ColumnName Type
+//  	[ "NOT" "NULL" | Expression ]
+//  	[ "DEFAULT" Expression ] .
 //  ColumnName = identifier .
 //  TableName = identifier .
 //
@@ -1354,6 +1388,81 @@
 //
 // The optional IF NOT EXISTS clause makes the statement a no operation if the
 // table already exists.
+//
+// The optional constraint clause has two forms. The first one is found in many
+// SQL dialects.
+//
+//	BEGIN TRANSACTION;
+// 		CREATE TABLE department (
+// 			DepartmentID   int,
+// 			DepartmentName string NOT NULL,
+// 		);
+//	COMMIT;
+//
+// This form prevents the data in column DepartmentName to be NULL.
+//
+// The second form allows an arbitrary boolean expression to be used to
+// validate the column. If the value of the expression is true then the
+// validation succeeded. If the value of the expression is false or NULL then
+// the validation fails. If the value of the expression is not of type bool an
+// error occurs.
+//
+//	BEGIN TRANSACTION;
+// 		CREATE TABLE department (
+// 			DepartmentID   int,
+// 			DepartmentName string DepartmentName IN ("HQ", "R/D", "Lab", "HR"),
+// 		);
+//	COMMIT;
+//
+//	BEGIN TRANSACTION;
+// 		CREATE TABLE t (
+//			TimeStamp time TimeStamp < now() && since(TimeStamp) < duration("10s"),
+//			Event string Event != "" && Event like "[0-9]+:[ \t]+.*",
+//		);
+//	COMMIT;
+//
+// The optional DEFAULT clause is an expression which, if present, is
+// substituted instead of a NULL value when the colum is assigned a value.
+//
+//	BEGIN TRANSACTION;
+// 		CREATE TABLE department (
+// 			DepartmentID   int,
+// 			DepartmentName string DepartmentName IN ("HQ", "R/D", "Lab", "HR") DEFAULT "HQ",
+// 		);
+//	COMMIT;
+//
+// Note that the constraint and/or default expressions may refer to other
+// columns by name:
+//
+//	BEGIN TRANSACTION;
+//		CREATE TABLE t (
+//			a int,
+//			b int b > a && b < c DEFAULT (a+c)/2,
+//			c int,
+//	);
+//	COMMIT;
+//
+//
+// Constraints and defaults
+//
+// When a table row is inserted by the INSERT INTO statement or when a table
+// row is updated by the UPDATE statement, the order of operations is as
+// follows:
+//
+// 1. The new values of the affected columns are set and the values of all the
+// row columns become the named values which can be referred to in default
+// expressions evaluated in step 2.
+//
+// 2. If any row column value is NULL and the DEFAULT clause is present in the
+// column's definition, the default expression is evaluated and its value is
+// set as the respective column value.
+//
+// 3. The values, potentially updated, of row columns become the named values
+// which can be referred to in constraint expressions evaluated during step 4.
+//
+// 4. All row columns which definition has the constraint clause present will
+// have that constraint checked. If any constraint violation is detected, the
+// overall operation fails and no changes to the table are made.
 //
 // DELETE FROM
 //
@@ -1447,6 +1556,11 @@
 //		FROM department;
 //	COMMIT;
 //
+// If any of the columns of the table were defined using the optional
+// constraints clause or the optional defaults clause then those are processed
+// on a per row basis. The details are discussed in the "Constraints and
+// defaults" chapter below the CREATE TABLE statement documentation.
+//
 // ROLLBACK
 //
 // The rollback statement closes the innermost transaction nesting level
@@ -1485,7 +1599,9 @@
 // clause.
 //
 //  SelectStmt = "SELECT" [ "DISTINCT" ] ( "*" | FieldList ) "FROM" RecordSetList
-//  	[ WhereClause ] [ GroupByClause ] [ OrderBy ] [ Limit ] [ Offset ].
+//  	[ JoinClause ] [ WhereClause ] [ GroupByClause ] [ OrderBy ] [ Limit ] [ Offset ].
+//
+//  JoinClause = ( "LEFT" | "RIGHT" | "FULL" ) [ "OUTER" ] "JOIN" RecordSet "ON" Expression .
 //
 //  RecordSet = ( TableName | "(" SelectStmt [ ";" ] ")" ) [ "AS" identifier ] .
 //  RecordSetList = RecordSet { "," RecordSet } [ "," ] .
@@ -1561,6 +1677,29 @@
 //
 //	SELECT * FROM employee AS e, ( SELECT * FROM department) AS d;
 //	// Fields are []string{"e.LastName", "e.DepartmentID", "d.DepartmentID", "d.DepartmentName"
+//
+// Outer joins
+//
+// The optional JOIN clause, for example
+//
+//	SELECT *
+//	FROM a
+//	LEFT OUTER JOIN b ON expr;
+//
+// is mostly equal to
+//
+//	SELECT *
+//	FROM a, b
+//	WHERE expr;
+//
+// except that the rows from a which, when they appear in the cross join, never
+// made expr to evaluate to true, are combined with a virtual row from b,
+// containing all nulls, and added to the result set. For the RIGHT JOIN
+// variant the discussed rules are used for rows from b not satisfying expr ==
+// true and the virtual, all-null row "comes" from a. The FULL JOIN adds the
+// respective rows which would be otherwise provided by the separate executions
+// of the LEFT JOIN and RIGHT JOIN variants. For more thorough OUTER JOIN
+// discussion please see the Wikipedia article at [10].
 //
 // Recordset ordering
 //
@@ -1668,26 +1807,30 @@
 // 1. The FROM clause is evaluated, producing a Cartesian product of its source
 // record sets (tables or nested SELECT statements).
 //
-// 2. If present, the WHERE clause is evaluated on the result set of the
+// 2. If present, the JOIN cluase is evaluated on the result set of the
+// previous evaluation and the recordset specified by the JOIN clause. (...
+// JOIN Recordset ON ...)
+//
+// 3. If present, the WHERE clause is evaluated on the result set of the
 // previous evaluation.
 //
-// 3. If present, the GROUP BY clause is evaluated on the result set of the
+// 4. If present, the GROUP BY clause is evaluated on the result set of the
 // previous evaluation(s).
 //
-// 4. The SELECT field expressions are evaluated on the result set of the
+// 5. The SELECT field expressions are evaluated on the result set of the
 // previous evaluation(s).
 //
-// 5. If present, the DISTINCT modifier is evaluated on the result set of the
+// 6. If present, the DISTINCT modifier is evaluated on the result set of the
 // previous evaluation(s).
 //
-// 6. If present, the ORDER BY clause is evaluated on the result set of the
+// 7. If present, the ORDER BY clause is evaluated on the result set of the
 // previous evaluation(s).
 //
-// 7. If present, the OFFSET clause is evaluated on the result set of the
+// 8. If present, the OFFSET clause is evaluated on the result set of the
 // previous evaluation(s). The offset expression is evaluated once for the
 // first record produced by the previous evaluations.
 //
-// 8. If present, the LIMIT clause is evaluated on the result set of the
+// 9. If present, the LIMIT clause is evaluated on the result set of the
 // previous evaluation(s). The limit expression is evaluated once for the first
 // record produced by the previous evaluations.
 //
@@ -1724,6 +1867,11 @@
 //	COMMIT;
 //
 // Note: The SET clause is optional.
+//
+// If any of the columns of the table were defined using the optional
+// constraints clause or the optional defaults clause then those are processed
+// on a per row basis. The details are discussed in the "Constraints and
+// defaults" chapter below the CREATE TABLE statement documentation.
 //
 // System Tables
 //
@@ -1874,6 +2022,35 @@
 //
 // on a machine in the ACDT zone. The time value is in both cases the same so
 // its ordering and comparing is correct. Only the display value can differ.
+//
+// Format numbers
+//
+// The built-in functions formatFloat and formatInt format numbers
+// to strings using go's number format functions in the `strconv` package. For
+// all three functions, only the first argument is mandatory. The default values
+// of the rest are shown in the examples. If the first argument is NULL, the
+// result is NULL.
+//
+//	formatFloat(43.2[, 'g', -1, 64]) string
+//
+// returns
+//
+//	"43.2"
+//
+//	formatInt(-42[, 10]) string
+//
+// returns
+//
+//	"-42"
+//
+//	formatInt(uint32(42)[, 10]) string
+//
+// returns
+//
+//	"42"
+//
+// Unlike the `strconv` equivalent, the formatInt function handles all integer
+// types, both signed and unsigned.
 //
 // HasPrefix
 //
@@ -2216,6 +2393,9 @@
 //	[5]: http://golang.org/LICENSE
 //	[6]: http://golang.org/pkg/regexp/#Regexp.MatchString
 //	[7]: http://developer.mimer.com/validator/sql-reserved-words.tml
+//	[8]: http://godoc.org/github.com/cznic/zappy
+//	[9]: http://www.w3schools.com/sql/sql_default.asp
+//	[10]: http://en.wikipedia.org/wiki/Join_(SQL)#Outer_join
 //
 // Implementation details
 //

@@ -64,7 +64,10 @@ Assignment = ColumnName "=" Expression .
 AssignmentList = Assignment { "," Assignment } [ "," ] .
 BeginTransactionStmt = "BEGIN" "TRANSACTION" .
 Call = "(" [ ExpressionList ] ")" .
-ColumnDef = ColumnName Type .
+ColumnDef = ColumnName Type [
+		  "NOT" "NULL"
+		| Expression
+	  ] [ "DEFAULT" Expression ] .
 ColumnName = identifier .
 ColumnNameList = ColumnName { "," ColumnName } [ "," ] .
 CommitStmt = "COMMIT" .
@@ -105,6 +108,11 @@ IndexName = identifier .
 InsertIntoStmt = "INSERT" "INTO" TableName [
 		 "(" ColumnNameList ")"
 	  ] ( Values | SelectStmt ) .
+JoinClause = (
+		  "LEFT"
+		| "RIGHT"
+		| "FULL"
+	  ) [ "OUTER" ] "JOIN" RecordSet "ON" Expression .
 Limit = "Limit" Expression .
 Literal = "FALSE"
 	| "NULL"
@@ -123,7 +131,7 @@ OrderBy = "ORDER" "BY" ExpressionList [ "ASC" | "DESC" ] .
 Predicate = (
 		  [ "NOT" ] (
 			  "IN" "(" ExpressionList ")"
-			| "IN" "(" SelectStmt ")"
+			| "IN" "(" SelectStmt [ ";" ] ")"
 			| "BETWEEN" PrimaryFactor "AND" PrimaryFactor
 		  )
 		| "IS" [ "NOT" ] "NULL"
@@ -159,7 +167,7 @@ RecordSet = (
 	  ) [ "AS" identifier ] .
 RecordSetList = RecordSet { "," RecordSet } [ "," ] .
 RollbackStmt = "ROLLBACK" .
-SelectStmt = "SELECT" [ "DISTINCT" ] ( "*" | FieldList ) "FROM" RecordSetList [ WhereClause ] [ GroupByClause ] [ OrderBy ] [ Limit ] [ Offset ] .
+SelectStmt = "SELECT" [ "DISTINCT" ] ( "*" | FieldList ) "FROM" RecordSetList [ JoinClause ] [ WhereClause ] [ GroupByClause ] [ OrderBy ] [ Limit ] [ Offset ] .
 Slice = "[" [ Expression ] ":" [ Expression ] "]" .
 Statement = EmptyStmt
 	| AlterTableStmt
