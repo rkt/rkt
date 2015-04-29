@@ -1,5 +1,8 @@
 # build systemd from source, produce an install hook selecting the needed files and host dependencies
 
+# make needs to use bash for nullglob
+SHELL := /bin/bash
+
 usr.done: Makefile install
 	cp -f install ../aggregate/install.d/00usr
 	touch usr.done
@@ -31,10 +34,31 @@ systemd.done: Makefile systemd.src
 
 # TODO(vc): it may make more sense to have the systemd source be a git submodule?
 systemd.src: Makefile patches/*
+	if [ -z "$(RKT_STAGE1_SYSTEMD_SRC)" ]; then echo "Error: RKT_STAGE1_SYSTEMD_SRC undefined"; exit 1; fi
+	if [ -z "$(RKT_STAGE1_SYSTEMD_VER)" ]; then echo "Error: RKT_STAGE1_SYSTEMD_VER undefined"; exit 1; fi
 	{ [ ! -e systemd ] || rm -Rf systemd; }
 	mkdir systemd
-	git clone --branch v215 --depth 1 git://anongit.freedesktop.org/systemd/systemd
-	cd systemd && for p in ../patches/*; do patch -p1 <"$$p"; done
+	if [ "$(RKT_STAGE1_SYSTEMD_VER)" = "HEAD" ]; then \
+		git clone --depth 1 $(RKT_STAGE1_SYSTEMD_SRC) ; \
+		PATCHES_DIR=patches/master ; \
+	else \
+		git clone --branch $(RKT_STAGE1_SYSTEMD_VER) --depth 1 $(RKT_STAGE1_SYSTEMD_SRC) ; \
+		PATCHES_DIR=patches/$(RKT_STAGE1_SYSTEMD_VER) ; \
+	fi ; \
+	if [ -d $$PATCHES_DIR ]; then \
+		set -e ; \
+		cd systemd ; \
+		shopt -s nullglob ; \
+		for p in ../$$PATCHES_DIR/*.patch ; \
+		do \
+			if patch -p1 <"$$p" ; \
+			then \
+				: ; \
+			else \
+				exit 1 ; \
+			fi ; \
+		done ; \
+	fi
 	cd systemd && ./autogen.sh
 	touch systemd.src
 

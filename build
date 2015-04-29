@@ -14,15 +14,23 @@ export GOPATH=${PWD}/gopath
 eval $(go env)
 
 # set default stage1 usr style and validate potential override
-RKT_STAGE1_USR_FROM="${RKT_STAGE1_USR_FROM:-coreos}"
+export RKT_STAGE1_USR_FROM="${RKT_STAGE1_USR_FROM:-coreos}"
 case "${RKT_STAGE1_USR_FROM}" in
-	coreos|src)
+	none)
+		echo "stage1 build disabled"
+		;;
+	coreos)
+		echo "stage1 will reuse coreos image"
+		;;
+	src)
+		export RKT_STAGE1_SYSTEMD_SRC="${RKT_STAGE1_SYSTEMD_SRC:-git://anongit.freedesktop.org/systemd/systemd}"
+		export RKT_STAGE1_SYSTEMD_VER="${RKT_STAGE1_SYSTEMD_VER:-v219}"
+		echo "stage1 will be built from sources: $RKT_STAGE1_SYSTEMD_SRC $RKT_STAGE1_SYSTEMD_VER"
 		;;
 	*)
 		echo "RKT_STAGE1_USR_FROM=${RKT_STAGE1_USR_FROM} unsupported"
 		exit 255
 esac
-export RKT_STAGE1_USR_FROM
 
 echo "Building rkt (stage0)..."
 go build -o ${GOBIN}/rkt \
@@ -70,10 +78,12 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	mkdir -p stage1/rootfs/gc/bin
 	ln -sf ${GOBIN}/gc stage1/rootfs/gc/bin
 
-	JOBS=1
-	which lscpu >&/dev/null && JOBS=$(lscpu --parse=CPU | grep -c ^[^#])
-	echo "Building rootfs (stage1) using ${JOBS} CPUs..."
-	make -C stage1/rootfs -j ${JOBS}
+	if [ "$RKT_STAGE1_USR_FROM" != "none" ] ; then
+		JOBS=1
+		which lscpu >&/dev/null && JOBS=$(lscpu --parse=CPU | grep -c ^[^#])
+		echo "Building rootfs (stage1) using ${JOBS} CPUs..."
+		make -C stage1/rootfs -j ${JOBS}
+	fi
 fi
 
 echo "Building functional tests..."
