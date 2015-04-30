@@ -20,6 +20,7 @@ import (
 	"crypto/sha512"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -58,6 +59,10 @@ var diskvStores = [...]string{
 	"blob",
 	"imageManifest",
 }
+
+var (
+	ErrKeyNotFound = errors.New("no keys found")
+)
 
 // Store encapsulates a content-addressable-storage for storing ACIs on disk.
 type Store struct {
@@ -220,7 +225,7 @@ func (s Store) ResolveKey(key string) (string, error) {
 
 	keyCount := len(aciInfos)
 	if keyCount == 0 {
-		return "", fmt.Errorf("no keys found")
+		return "", ErrKeyNotFound
 	}
 	if keyCount != 1 {
 		return "", fmt.Errorf("ambiguous key: %q", key)
