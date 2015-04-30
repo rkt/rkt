@@ -70,3 +70,12 @@ func WriteRemote(tx *sql.Tx, remote *Remote) error {
 	}
 	return nil
 }
+
+// RemoveRemote removes the remote with the given blobKey.
+func RemoveRemote(tx *sql.Tx, blobKey string) error {
+	_, err := tx.Exec("DELETE FROM remote WHERE blobkey == $1", blobKey)
+	if err != nil {
+		return err
+	}
+	return nil
+}

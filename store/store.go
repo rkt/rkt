@@ -20,6 +20,7 @@ import (
 	"crypto/sha512"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -57,6 +58,26 @@ const (
 var diskvStores = [...]string{
 	"blob",
 	"imageManifest",
+}
+
+var (
+	ErrKeyNotFound = errors.New("no keys found")
+)
+
+// StoreRemovalError defines an error removing a non transactional store (like
+// a diskv store or the tree store).
+// When this happen there's the possibility that the store is left in an
+// unclean state (for example with some stale files).
+type StoreRemovalError struct {
+	errors []error
+}
+
+func (e *StoreRemovalError) Error() string {
+	s := fmt.Sprintf("some aci disk entries cannot be removed: ")
+	for _, err := range e.errors {
+		s = s + fmt.Sprintf("[%v]", err)
+	}
+	return s
 }
 
 // Store encapsulates a content-addressable-storage for storing ACIs on disk.
@@ -220,7 +241,7 @@ func (s Store) ResolveKey(key string) (string, error) {
 
 	keyCount := len(aciInfos)
 	if keyCount == 0 {
-		return "", fmt.Errorf("no keys found")
+		return "", ErrKeyNotFound
 	}
 	if keyCount != 1 {
 		return "", fmt.Errorf("ambiguous key: %q", key)
@@ -326,6 +347,57 @@ func (s Store) WriteACI(r io.Reader, latest bool) (string, error) {
 	return key, nil
 }
 
+// RemoveACI removes the ACI with the given key. It firstly removes the aci
+// infos inside the db, then it tries to remove the non transactional data.
+// If some error occurs removing some non transactional data a
+// StoreRemovalError is returned.
+func (ds Store) RemoveACI(key string) error {
+	imageKeyLock, err := lock.ExclusiveKeyLock(ds.imageLockDir, key)
+	if err != nil {
+		return fmt.Errorf("error locking image: %v", err)
+	}
+	defer imageKeyLock.Close()
+
+	// Firstly remove aciinfo and remote from the db in an unique transaction.
+	// remote needs to be removed or a GetRemote will return a blobKey not
+	// referenced by any ACIInfo.
+	err = ds.db.Do(func(tx *sql.Tx) error {
+		if _, found, err := GetACIInfoWithBlobKey(tx, key); err != nil {
+			return fmt.Errorf("error getting aciinfo: %v", err)
+		} else if !found {
+			return fmt.Errorf("cannot find image with key: %s", key)
+		}
+
+		if err := RemoveACIInfo(tx, key); err != nil {
+			return err
+		}
+		if err := RemoveRemote(tx, key); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("cannot remove image with key: %s from db: %v", key, err)
+	}
+
+	// Then remove non transactional entries from the blob, imageManifest
+	// and tree store.
+	// TODO(sgotti). Now that the ACIInfo is removed the image doesn't
+	// exists anymore, but errors removing non transactional entries can
+	// leave stale data that will require a cas GC to be implemented.
+	storeErrors := []error{}
+	for _, s := range ds.stores {
+		if err := s.Erase(key); err != nil {
+			// If there's an error save it and continue with the other stores
+			storeErrors = append(storeErrors, err)
+		}
+	}
+	if len(storeErrors) > 0 {
+		return &StoreRemovalError{errors: storeErrors}
+	}
+	return nil
+}
+
 // RenderTreeStore renders a treestore for the given image key if it's not
 // already fully rendered.
 // Users of treestore should call s.RenderTreeStore before using it to ensure
@@ -353,12 +425,10 @@ func (s Store) RenderTreeStore(key string, rebuild bool) error {
 	// Firstly remove a possible partial treestore if existing.
 	// This is needed as a previous ACI removal operation could have failed
 	// cleaning the tree store leaving some stale files.
-	err = s.treestore.Remove(key)
-	if err != nil {
+	if err := s.treestore.Remove(key); err != nil {
 		return err
 	}
-	err = s.treestore.Write(key, &s)
-	if err != nil {
+	if err := s.treestore.Write(key, &s); err != nil {
 		return err
 	}
 	return nil
@@ -388,6 +458,20 @@ func (s Store) GetTreeStorePath(key string) string {
 // be done calling IsRendered()
 func (s Store) GetTreeStoreRootFS(key string) string {
 	return s.treestore.GetRootFS(key)
+}
+
+// RemoveTreeStore removes the rendered image in tree store with the given key.
+func (ds Store) RemoveTreeStore(key string) error {
+	treeStoreKeyLock, err := lock.ExclusiveKeyLock(ds.treeStoreLockDir, key)
+	if err != nil {
+		return fmt.Errorf("error locking tree store: %v", err)
+	}
+	defer treeStoreKeyLock.Close()
+
+	if err := ds.treestore.Remove(key); err != nil {
+		return fmt.Errorf("error removing the tree store: %v", err)
+	}
+	return nil
 }
 
 // GetRemote tries to retrieve a remote with the given ACIURL. found will be
