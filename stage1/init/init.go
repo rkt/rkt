@@ -47,6 +47,7 @@ import (
 	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/util"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus/introspect"
 
@@ -216,6 +217,19 @@ func getArgsEnv(p *Pod, flavor, systemdVersion string, debug bool) ([]string, []
 			args = append(args, fmt.Sprintf("--register=true"))
 		} else {
 			args = append(args, fmt.Sprintf("--register=false"))
+		}
+
+		if util.IsRunningSystemd() {
+			// we write /etc/machine-id here because systemd-nspawn needs it to link
+			// the container's journal to the host
+			mPath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "machine-id")
+			mId := strings.Replace(p.UUID.String(), "-", "", -1)
+
+			if err := ioutil.WriteFile(mPath, []byte(mId), 0644); err != nil {
+				log.Fatalf("error writing /etc/machine-id: %v\n", err)
+			}
+
+			args = append(args, "--link-journal=try-host")
 		}
 	default:
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
