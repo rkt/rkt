@@ -72,6 +72,29 @@ func GetACIInfosWithAppName(tx *sql.Tx, appname string) ([]*ACIInfo, bool, error
 	return aciinfos, found, err
 }
 
+// GetAciInfosWithBlobKey returns the ACIInfo with the given blobKey. found will be
+// false if no aciinfo exists.
+func GetACIInfoWithBlobKey(tx *sql.Tx, blobKey string) (*ACIInfo, bool, error) {
+	aciinfo := &ACIInfo{}
+	found := false
+	rows, err := tx.Query("SELECT * from aciinfo WHERE blobkey == $1", blobKey)
+	if err != nil {
+		return nil, false, err
+	}
+	for rows.Next() {
+		found = true
+		if err := rows.Scan(&aciinfo.BlobKey, &aciinfo.AppName, &aciinfo.ImportTime, &aciinfo.Latest); err != nil {
+			return nil, false, err
+		}
+		// No more than one row for blobkey must exist.
+		break
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+	return aciinfo, found, err
+}
+
 // GetAllACIInfos returns all the ACIInfos sorted by optional sortfields and
 // with ascending or descending order.
 func GetAllACIInfos(tx *sql.Tx, sortfields []string, ascending bool) ([]*ACIInfo, error) {
@@ -115,5 +138,14 @@ func WriteACIInfo(tx *sql.Tx, aciinfo *ACIInfo) error {
 		return err
 	}
 
+	return nil
+}
+
+// RemoveACIInfo removes the ACIInfo with the given blobKey.
+func RemoveACIInfo(tx *sql.Tx, blobKey string) error {
+	_, err := tx.Exec("DELETE from aciinfo where blobkey == $1", blobKey)
+	if err != nil {
+		return err
+	}
 	return nil
 }

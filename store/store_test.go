@@ -449,5 +449,99 @@ func TestTreeStore(t *testing.T) {
 	if err == nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+}
+
+func TestRemoveACI(t *testing.T) {
+	dir, err := ioutil.TempDir("", tstprefix)
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+	ds, err := NewStore(dir)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	imj := `{
+                    "acKind": "ImageManifest",
+                    "acVersion": "0.4.0",
+                    "name": "example.com/test01"
+                }`
+
+	aciFile, err := aci.NewACI(dir, imj, nil)
+	if err != nil {
+		t.Fatalf("error creating test tar: %v", err)
+	}
+	// Rewind the ACI
+	if _, err := aciFile.Seek(0, 0); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	key, err := ds.WriteACI(aciFile, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	aciURL := "http://example.com/test01.aci"
+	// Create our first Remote, and simulate Store() to create row in the table
+	na := NewRemote(aciURL, "")
+	na.BlobKey = key
+	ds.WriteRemote(na)
+
+	err = ds.RemoveACI(key)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify that no remote for the specified key exists
+	_, found, err := ds.GetRemote(aciURL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if found {
+		t.Fatalf("expected to find no remote, but a remote was found")
+	}
+
+	// Try to remove a non-existent key
+	err = ds.RemoveACI("sha512-aaaaaaaaaaaaaaaaa")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	// Simulate error removing from the
+	imj = `{
+                   "acKind": "ImageManifest",
+                   "acVersion": "0.3.0",
+                   "name": "example.com/test01"
+               }`
+
+	aciFile, err = aci.NewACI(dir, imj, nil)
+	if err != nil {
+		t.Fatalf("error creating test tar: %v", err)
+	}
+	// Rewind the ACI
+	if _, err := aciFile.Seek(0, 0); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	key, err = ds.WriteACI(aciFile, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	aciURL = "http://example.com/test02.aci"
+	// Create our first Remote, and simulate Store() to create row in the table
+	na = NewRemote(aciURL, "")
+	na.BlobKey = key
+	ds.WriteRemote(na)
+
+	err = os.Remove(filepath.Join(dir, "cas", "blob", blockTransform(key)[0], blockTransform(key)[1], key))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	err = ds.RemoveACI(key)
+	if err == nil {
+		t.Fatalf("expected error: %v", err)
+	}
+	if _, ok := err.(*StoreRemovalError); !ok {
+		t.Fatalf("expected StoreRemovalError got: %v", err)
+	}
 
 }
