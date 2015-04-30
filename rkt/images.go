@@ -32,7 +32,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/mitchellh/ioprogress"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/ioprogress"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
@@ -478,6 +478,14 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer) error {
 	barSize := int64(80 - len(prefix) - fmtBytesSize)
 	bar := ioprogress.DrawTextFormatBar(barSize)
 	fmtfunc := func(progress, total int64) string {
+		// Content-Length is set to -1 when unknown.
+		if total == -1 {
+			return fmt.Sprintf(
+				"%s: %v of an unknown total size",
+				prefix,
+				ioprogress.ByteUnitStr(progress),
+			)
+		}
 		return fmt.Sprintf(
 			"%s: %s %s",
 			prefix,

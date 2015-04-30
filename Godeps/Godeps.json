@@ -107,6 +107,10 @@
 			"Rev": "415a79c4bfa377b484b16c632347b3925a0f35ff"
 		},
 		{
+			"ImportPath": "github.com/coreos/ioprogress",
+			"Rev": "326b3ee6276a33c8bdcf480ca9c99228942ab970"
+		},
+		{
 			"ImportPath": "github.com/cznic/b",
 			"Rev": "e2e747ce049fb910cff6b1fd7ad8faf3900939d5"
 		},
@@ -163,10 +167,6 @@
 			"ImportPath": "github.com/kr/pty",
 			"Comment": "release.r56-25-g05017fc",
 			"Rev": "05017fcccf23c823bfdea560dcc958a136e54fb7"
-		},
-		{
-			"ImportPath": "github.com/mitchellh/ioprogress",
-			"Rev": "c2b2845d63abaf335647a8b9c7437e6c11a2a613"
 		},
 		{
 			"ImportPath": "github.com/petar/GoLLRB/llrb",

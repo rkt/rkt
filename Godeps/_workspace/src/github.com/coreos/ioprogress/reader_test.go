@@ -31,7 +31,7 @@ func TestReader(t *testing.T) {
 	}
 }
 
-const drawReaderStr = "0/6\r2/6\r4/6\r6/6\r\n"
+const drawReaderStr = "0/6\r2/6\r4/6\r6/6\r6/6\r\n"
 
 // testReader is a test structure to help with testing the Reader by
 // returning fixed slices of data.
