@@ -47,8 +47,8 @@ func TestDrawTextFormatBar(t *testing.T) {
 }
 
 func TestDrawTextFormatBytes(t *testing.T) {
-	cases := []struct{
-		P, T int64
+	cases := []struct {
+		P, T   int64
 		Output string
 	}{
 		{
