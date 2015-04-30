@@ -33,13 +33,13 @@ systemctl restart nginx.service
 
 ## Advanced Unit File
 
-A more advanced unit example takes advantage of a few convinient systemd features:
+A more advanced unit example takes advantage of a few convenient systemd features:
 
 1. Inheriting environment variables specified in the unit with `--inherit-env`. This functionality keeps your units clear and concise instead of layering on a ton of flags to `rkt run`.
-2. Using the dependency graph to start our pod after networking has come online. This is helpful if your application requires outside connectivity to fetch remote configuration (for exmaple, from etcd).
-3. Set resource limits for this rkt pod. This can also be done in the unit instead of passing in a mess of flags to `rkt run`.
+2. Using the dependency graph to start our pod after networking has come online. This is helpful if your application requires outside connectivity to fetch remote configuration (for example, from etcd).
+3. Set resource limits for this rkt pod. This can also be done in the unit instead of `rkt run`.
  
-Here's what it looks like altogether:
+Here's what it looks like all together:
 
 ```
 [Unit]
