@@ -17,65 +17,34 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
 )
 
-func TestSuccess(t *testing.T) {
-	patchTestACI("rkt-inspect-exit0.aci", "--exec=/inspect --print-msg=Hello --exit-code=0")
-	defer os.Remove("rkt-inspect-exit0.aci")
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+func TestExitCode(t *testing.T) {
+	for i := 0; i < 3; i++ {
+		t.Logf("%d\n", i)
+		patchTestACI("rkt-inspect-exit.aci", fmt.Sprintf("--exec=/inspect --print-msg=Hello --exit-code=%d", i))
+		defer os.Remove("rkt-inspect-exit.aci")
+		ctx := newRktRunCtx()
+		defer ctx.cleanup()
 
-	child, err := gexpect.Spawn(fmt.Sprintf("%s --debug --insecure-skip-verify run ./rkt-inspect-exit0.aci", ctx.cmd()))
-	if err != nil {
-		t.Fatalf("Cannot exec rkt")
-	}
-	err = child.Expect("Hello")
-	if err != nil {
-		t.Fatalf("Missing hello: %v", err)
-	}
-	forbidden := "main process exited, code=exited, status="
-	_, receiver := child.AsyncInteractChannels()
-	for {
-		msg, open := <-receiver
-		if !open {
-			break
+		cmd := fmt.Sprintf(`/bin/sh -c "`+
+			`%s --debug --insecure-skip-verify run ./rkt-inspect-exit.aci ;`+
+			`UUID=$(%s list --full|grep exited|awk '{print $1}') ;`+
+			`echo -n 'status=' ;`+
+			`%s status $UUID|grep '^sha512-.*=[0-9]*$'|cut -d= -f2"`,
+			ctx.cmd(), ctx.cmd(), ctx.cmd())
+		t.Logf("%s\n", cmd)
+		child, err := gexpect.Spawn(cmd)
+		if err != nil {
+			t.Fatalf("Cannot exec rkt")
 		}
-		if strings.Contains(msg, forbidden) {
-			t.Fatalf("Forbidden text received")
+
+		err = child.Wait()
+		if err != nil {
+			t.Fatalf("rkt didn't terminate correctly: %v", err)
 		}
-	}
-
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
-}
-
-func TestFailure(t *testing.T) {
-	patchTestACI("rkt-inspect-exit20.aci", "--exec=/inspect --print-msg=Hello --exit-code=20")
-	defer os.Remove("rkt-inspect-exit20.aci")
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
-
-	child, err := gexpect.Spawn(fmt.Sprintf("%s --debug --insecure-skip-verify run ./rkt-inspect-exit20.aci", ctx.cmd()))
-	if err != nil {
-		t.Fatalf("Cannot exec rkt")
-	}
-	err = child.Expect("Hello")
-	if err != nil {
-		t.Fatalf("Missing hello: %v", err)
-	}
-	err = child.Expect("process exited, code=exited, status=20")
-	if err != nil {
-		t.Fatalf("Missing exit status: %v", err)
-	}
-
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 }
