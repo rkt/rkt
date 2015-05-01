@@ -45,7 +45,7 @@ const (
 // describing the environment in which the pod
 // is running in
 type podEnv struct {
-	rktRoot string
+	podRoot string
 	podID   types.UUID
 }
 
@@ -64,7 +64,7 @@ func (e *podEnv) loadNets() ([]activeNet, error) {
 	}
 
 	if !netExists(nets, "default") {
-		defPath := path.Join(common.Stage1RootfsPath(e.rktRoot), DefaultNetPath)
+		defPath := path.Join(common.Stage1RootfsPath(e.podRoot), DefaultNetPath)
 		n, err := loadNet(defPath)
 		if err != nil {
 			return nil, err
@@ -76,11 +76,11 @@ func (e *podEnv) loadNets() ([]activeNet, error) {
 }
 
 func (e *podEnv) podNSPath() string {
-	return filepath.Join(e.rktRoot, "netns")
+	return filepath.Join(e.podRoot, "netns")
 }
 
 func (e *podEnv) netDir() string {
-	return filepath.Join(e.rktRoot, "net")
+	return filepath.Join(e.podRoot, "net")
 }
 
 func (e *podEnv) setupNets(nets []activeNet) error {

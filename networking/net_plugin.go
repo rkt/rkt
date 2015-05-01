@@ -60,7 +60,7 @@ func (e *podEnv) pluginPaths() []string {
 	// try 3rd-party path first
 	return []string{
 		UserNetPluginsPath,
-		filepath.Join(common.Stage1RootfsPath(e.rktRoot), BuiltinNetPluginsPath),
+		filepath.Join(common.Stage1RootfsPath(e.podRoot), BuiltinNetPluginsPath),
 	}
 }
 
