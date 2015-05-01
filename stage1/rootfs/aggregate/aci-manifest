@@ -1,6 +1,6 @@
 {
     "acKind": "ImageManifest",
-    "acVersion": "0.5.4",
+    "acVersion": "0.5.5",
     "name": "coreos.com/rkt/stage1",
     "labels": [
         {
