@@ -49,13 +49,14 @@ type Networking struct {
 	nets   []activeNet
 }
 
-// Setup creates a new networking namespace and executes network
-// plugins to setup private networking. It returns in the new pod
-// namespace
-func Setup(rktRoot string, podID types.UUID, fps []ForwardedPort) (*Networking, error) {
+// Setup creates a new networking namespace and executes network plugins to
+// setup private networking. It returns in the new pod namespace
+func Setup(podRoot string, podID types.UUID, fps []ForwardedPort) (*Networking, error) {
+	// TODO(jonboulle): currently podRoot is _always_ ".", and behaviour in other
+	// circumstances is untested. This should be cleaned up.
 	n := Networking{
 		podEnv: podEnv{
-			rktRoot: rktRoot,
+			podRoot: podRoot,
 			podID:   podID,
 		},
 	}
@@ -101,11 +102,11 @@ func Setup(rktRoot string, podID types.UUID, fps []ForwardedPort) (*Networking, 
 
 // Load creates the Networking object from saved state.
 // Assumes the current netns is that of the host.
-func Load(rktRoot string, podID *types.UUID) (*Networking, error) {
+func Load(podRoot string, podID *types.UUID) (*Networking, error) {
 	// the current directory is pod root
-	pdirfd, err := syscall.Open(rktRoot, syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
+	pdirfd, err := syscall.Open(podRoot, syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to open pod root directory (%v): %v", rktRoot, err)
+		return nil, fmt.Errorf("Failed to open pod root directory (%v): %v", podRoot, err)
 	}
 	defer syscall.Close(pdirfd)
 
@@ -139,7 +140,7 @@ func Load(rktRoot string, podID *types.UUID) (*Networking, error) {
 
 	return &Networking{
 		podEnv: podEnv{
-			rktRoot: rktRoot,
+			podRoot: podRoot,
 			podID:   *podID,
 		},
 		hostNS: hostNS,
@@ -164,8 +165,7 @@ func (n *Networking) GetDefaultHostIP() net.IP {
 // Teardown cleans up a produced Networking object.
 func (n *Networking) Teardown() {
 	// Teardown everything in reverse order of setup.
-	// This should be indempotent -- be tolerant of
-	// missing stuff
+	// This should be idempotent -- be tolerant of missing stuff
 
 	if err := n.enterHostNS(); err != nil {
 		log.Printf("Error switching to host netns: %v", err)
@@ -217,7 +217,7 @@ func (e *Networking) Save() error {
 		nis = append(nis, *n.runtime)
 	}
 
-	return netinfo.Save(e.rktRoot, nis)
+	return netinfo.Save(e.podRoot, nis)
 }
 
 func newNetNS() (hostNS, childNS *os.File, err error) {
