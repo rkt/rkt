@@ -19,6 +19,7 @@ package main
 import (
 	"container/list"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -103,6 +104,8 @@ func (f *finder) findImage(img string, asc string, discover bool) (*types.Hash, 
 
 	return h, nil
 }
+
+var errStatusAccepted = errors.New("server is still processing the request")
 
 type fetcher struct {
 	imageActionData
@@ -361,6 +364,7 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 		return nil, aciFile, nil
 	}
 
+	var retrySignature bool
 	if f.ks != nil && ascFile == nil {
 		u, err := url.Parse(ascURL)
 		if err != nil {
@@ -377,10 +381,18 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 			if err != nil {
 				return nil, nil, fmt.Errorf("error setting up temporary file: %v", err)
 			}
-			if err = f.downloadSignatureFile(ascURL, ascFile); err != nil {
+			defer os.Remove(ascFile.Name())
+
+			err = f.downloadSignatureFile(ascURL, ascFile)
+			switch err {
+			case errStatusAccepted:
+				retrySignature = true
+				stdout("rkt: server requested deferring the signature download")
+			case nil:
+				break
+			default:
 				return nil, nil, fmt.Errorf("error downloading the signature file: %v", err)
 			}
-			defer os.Remove(ascFile.Name())
 		}
 		defer ascFile.Close()
 	}
@@ -400,6 +412,12 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 
 		if err = f.downloadACI(aciURL, aciFile); err != nil {
 			return nil, nil, fmt.Errorf("error downloading ACI: %v", err)
+		}
+	}
+
+	if retrySignature {
+		if err = f.downloadSignatureFile(ascURL, ascFile); err != nil {
+			return nil, aciFile, fmt.Errorf("error downloading the signature file: %v", err)
 		}
 	}
 
@@ -473,6 +491,18 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer) error {
 	}
 	defer res.Body.Close()
 
+	// TODO(jonboulle): handle http more robustly (redirects?)
+	switch res.StatusCode {
+	case http.StatusAccepted:
+		// If the server returns Status Accepted (HTTP 202), we should retry
+		// downloading the signature later.
+		return errStatusAccepted
+	case http.StatusOK:
+		break
+	default:
+		return fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
+	}
+
 	prefix := "Downloading " + label
 	fmtBytesSize := 18
 	barSize := int64(80 - len(prefix) - fmtBytesSize)
@@ -499,11 +529,6 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer) error {
 		Size:         res.ContentLength,
 		DrawFunc:     ioprogress.DrawTerminalf(os.Stdout, fmtfunc),
 		DrawInterval: time.Second,
-	}
-
-	// TODO(jonboulle): handle http more robustly (redirects?)
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
 	}
 
 	if _, err := io.Copy(out, reader); err != nil {
