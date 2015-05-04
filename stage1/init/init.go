@@ -222,16 +222,16 @@ func forwardedPorts(pod *Pod) ([]networking.ForwardedPort, error) {
 		n := ""
 		fp := networking.ForwardedPort{}
 
-		for an, a := range pod.Apps {
+		for _, a := range pod.Manifest.Apps {
 			for _, p := range a.App.Ports {
 				if p.Name == ep.Name {
 					if n == "" {
 						fp.Protocol = p.Protocol
 						fp.HostPort = ep.HostPort
 						fp.PodPort = p.Port
-						n = an
+						n = a.Name.String()
 					} else {
-						return nil, fmt.Errorf("Ambiguous exposed port in PodManifest: %q and %q both define port %q", n, an, p.Name)
+						return nil, fmt.Errorf("Ambiguous exposed port in PodManifest: %q and %q both define port %q", n, a.Name, p.Name)
 					}
 				}
 			}
