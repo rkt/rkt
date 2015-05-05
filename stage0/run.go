@@ -34,6 +34,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -431,6 +432,13 @@ func setupStage1Image(cfg RunConfig, img types.Hash, cdir string, useOverlay boo
 		s1 := common.Stage1ImagePath(cdir)
 		if err := overlayRender(cfg, img, cdir, s1); err != nil {
 			return fmt.Errorf("error rendering overlay filesystem: %v", err)
+		}
+
+		// we will later read the status from the upper layer of the overlay fs
+		// force the status directory to be there by touching it
+		statusPath := filepath.Join(s1, "rootfs", "rkt", "status")
+		if err := os.Chtimes(statusPath, time.Now(), time.Now()); err != nil {
+			return fmt.Errorf("error touching status dir: %v", err)
 		}
 	}
 
