@@ -19,7 +19,7 @@ The following is a simple example of a unit file using rkt to run an nginx image
 Description=nginx
 
 [Service]
-ExecStart=/usr/bin/rkt --insecure-skip-verify run docker://nginx:latest
+ExecStart=/usr/bin/rkt --insecure-skip-verify run docker://nginx
 Restart=always
 ```
 
