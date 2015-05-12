@@ -69,7 +69,7 @@ func TestFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Missing hello: %v", err)
 	}
-	err = child.Expect("main process exited, code=exited, status=20")
+	err = child.Expect("process exited, code=exited, status=20")
 	if err != nil {
 		t.Fatalf("Missing exit status: %v", err)
 	}
