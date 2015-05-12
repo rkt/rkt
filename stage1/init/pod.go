@@ -424,7 +424,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManifest) (
 func (p *Pod) PodToNspawnArgs() ([]string, error) {
 	args := []string{
 		"--uuid=" + p.UUID.String(),
-		"--machine=" + "rkt-" + p.UUID.String(),
+		"--machine=" + p.GetMachineID(),
 		"--directory=" + common.Stage1RootfsPath(p.Root),
 	}
 
@@ -454,4 +454,20 @@ func (p *Pod) getFlavor() (flavor string, systemdVersion string, err error) {
 	}
 	systemdVersion = strings.Trim(string(systemdVersionBytes), " \n")
 	return
+}
+
+// GetAppHashes returns a list of hashes of the apps in this pod
+func (p *Pod) GetAppHashes() []types.Hash {
+	var names []types.Hash
+	for _, a := range p.Manifest.Apps {
+		names = append(names, a.Image.ID)
+	}
+
+	return names
+}
+
+// GetMachineID returns the machine id string of the pod to be passed to
+// systemd-nspawn
+func (p *Pod) GetMachineID() string {
+	return "rkt-" + p.UUID.String()
 }
