@@ -22,9 +22,9 @@ import (
 var (
 	cmdImage = &Command{
 		Name:    "image",
-		Summary: "Inspect the image content or extract the image. See the subcommands usage for help",
-		Usage:   "SUBCOMMAND IMAGE [file]",
-		Description: `SUBCOMMAND could be "cat-manifest", "cat-file", etc. IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
+		Summary: "Operate on an image in the local store",
+		Usage:   "SUBCOMMAND IMAGE [args...]",
+		Description: `SUBCOMMAND could be "cat-manifest". IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
 They will be checked in that order and the first match will be used.`,
 		Run:   runImage,
 		Flags: &imageFlags,
@@ -61,5 +61,5 @@ func runImage(args []string) (exit int) {
 		stderr("image: unknown subcommand: %q", args[0])
 		os.Exit(2)
 	}
-	return subCmd.Run(subArgs)
+	return subCmd.Run(subArgs[subCmd.Flags.NFlag():])
 }

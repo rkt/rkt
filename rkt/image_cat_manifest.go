@@ -32,11 +32,13 @@ They will be checked in that order and the first match will be used.`,
 		Flags: &imageCatManifestFlag,
 	}
 	imageCatManifestFlag flag.FlagSet
+	flagPrettyPrint      bool
 )
 
 func init() {
 	subCommands["image"] = append(subCommands["image"], cmdImageCatManifest)
 
+	imageCatManifestFlag.BoolVar(&flagPrettyPrint, "pretty-print", false, "apply indent to format the output")
 }
 
 func runImageCatManifest(args []string) (exit int) {
@@ -75,7 +77,12 @@ func runImageCatManifest(args []string) (exit int) {
 		return 1
 	}
 
-	b, err := json.Marshal(manifest)
+	var b []byte
+	if flagPrettyPrint {
+		b, err = json.MarshalIndent(manifest, "", "\t")
+	} else {
+		b, err = json.Marshal(manifest)
+	}
 	if err != nil {
 		stderr("image cat-manifest: cannot read the image manifest: %v\n", err)
 		return 1
