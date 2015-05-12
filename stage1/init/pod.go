@@ -249,6 +249,14 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, inte
 		}
 	}
 
+	for _, i := range am.App.Isolators {
+		switch v := i.Value().(type) {
+		case *types.ResourceMemory:
+			l := v.Limit().String()
+			opts = append(opts, newUnitOption("Service", "MemoryLimit", l))
+		}
+	}
+
 	if len(saPorts) > 0 {
 		sockopts := []*unit.UnitOption{
 			newUnitOption("Unit", "Description", name+" socket-activated ports"),
