@@ -155,8 +155,8 @@ Host an HTML page with the following meta tags:
 Serve the following files at the locations described in the meta tags:
 
 ```
-https://example.com/images/hello-0.0.1-linux-amd64.aci.asc
-https://example.com/images/hello-0.0.1-linux-amd64.aci
+https://example.com/images/example.com/hello-0.0.1-linux-amd64.aci.asc
+https://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
 https://example.com/pubkeys.gpg
 ```
 
