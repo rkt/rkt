@@ -14,7 +14,7 @@ hello-0.0.1-linux-amd64.aci
 
 ## Signing ACIs
 
-By default rkt requires ACIs to be signed using a gpg detached signature. The following steps will walk you through the creation of a gpg keypair suitable for signing an ACI. If you have an existing gpg signing key skip to the [Signing the ACI](signing-the-aci) step.  
+By default rkt requires ACIs to be signed using a gpg detached signature. The following steps will walk you through the creation of a gpg keypair suitable for signing an ACI. If you have an existing gpg signing key skip to the [Signing the ACI](#signing-the-aci) step.  
 
 ### Generate a gpg signing key
 
