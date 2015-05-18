@@ -52,5 +52,6 @@ for link in ${BUSYBOX_LINKS}; do
 done
 
 echo "Busybox installed. Use the following command to enter pod's stage1:"
-SYSTEMD_PID=$(sudo cat "${RKT_RUN_DIR}/${UUID}/pid")
+SYSTEMD_PPID=$(sudo cat "${RKT_RUN_DIR}/${UUID}/ppid")
+SYSTEMD_PID=$(sudo cat /proc/$SYSTEMD_PPID/task/$SYSTEMD_PPID/children)
 echo sudo nsenter -m -u -i -p -t ${SYSTEMD_PID}

@@ -19,10 +19,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -731,14 +734,95 @@ func (p *pod) getState() string {
 	return state
 }
 
+type ErrChildNotReady struct {
+}
+
+func (e ErrChildNotReady) Error() string {
+	return fmt.Sprintf("Child not ready")
+}
+
+// Returns the pid of the child, or ErrChildNotReady if not ready
+func getChildPID(ppid int) (int, error) {
+	var pid int
+
+	// If possible, get the child in O(1). Fallback on O(n) when the kernel does not have
+	// either CONFIG_PROC_CHILDREN or CONFIG_CHECKPOINT_RESTORE
+	_, err := os.Stat("/proc/1/task/1/children")
+	if err == nil {
+		b, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/task/%d/children", ppid, ppid))
+		if err == nil {
+			children := strings.SplitN(string(b), " ", 2)
+			if len(children) == 2 && children[1] != "" {
+				return -1, fmt.Errorf("too many children of pid %d", ppid)
+			}
+			if _, err := fmt.Sscanf(children[0], "%d ", &pid); err == nil {
+				return pid, nil
+			}
+		}
+		return -1, ErrChildNotReady{}
+	}
+
+	// Fallback on the slower method
+	fdir, err := os.Open(`/proc`)
+	if err != nil {
+		return -1, err
+	}
+	defer fdir.Close()
+
+	for {
+		fi, err := fdir.Readdir(1)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return -1, err
+		}
+		var pid64 int64
+		if pid64, err = strconv.ParseInt(fi[0].Name(), 10, 0); err != nil {
+			continue
+		}
+		filename := fmt.Sprintf("/proc/%d/stat", pid64)
+		statBytes, err := ioutil.ReadFile(filename)
+		if err != nil {
+			// The process just died? It's not the one we want then.
+			continue
+		}
+		statFields := strings.SplitN(string(statBytes), " ", 5)
+		if len(statFields) != 5 {
+			return -1, fmt.Errorf("incomplete file %q", filename)
+		}
+		if statFields[3] == fmt.Sprintf("%d", ppid) {
+			return int(pid64), nil
+		}
+	}
+
+	return -1, ErrChildNotReady{}
+}
+
 // getPID returns the pid of the pod.
 func (p *pod) getPID() (pid int, err error) {
+	// rkt supports two methods to find the container's PID 1:
+	// the pid file and the ppid file.
+	// See Documentation/devel/stage1-implementors-guide.md
+	for {
+		var ppid int
 
-	// No do { } while() Golang, seriously?
-	for first := true; first || (os.IsNotExist(err) && p.isRunning()); first = false {
 		pid, err = p.readIntFromFile("pid")
 		if err == nil {
 			return
+		}
+
+		ppid, err = p.readIntFromFile("ppid")
+		if err == nil {
+			pid, err = getChildPID(ppid)
+			if err == nil {
+				return pid, nil
+			}
+			if _, ok := err.(ErrChildNotReady); ok {
+				err = nil
+			} else {
+				return -1, err
+			}
 		}
 
 		// There's a window between a pod transitioning to run and the pid file being created by stage1.
@@ -749,8 +833,11 @@ func (p *pod) getPID() (pid int, err error) {
 		if err := p.refreshState(); err != nil {
 			return -1, err
 		}
+
+		if !os.IsNotExist(err) || !p.isRunning() {
+			return -1, err
+		}
 	}
-	return
 }
 
 // getStage1Hash returns the hash of the stage1 image used in this pod
