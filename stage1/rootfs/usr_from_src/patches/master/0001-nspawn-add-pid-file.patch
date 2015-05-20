@@ -1,54 +1,55 @@
-From b4a4d62248eb4599d8c9633ec95494b5fc2b844e Mon Sep 17 00:00:00 2001
-From: Vito Caputo <vito.caputo@coreos.com>
-Date: Mon, 16 Mar 2015 15:13:49 -0700
-Subject: [PATCH 2/2] nspawn: add --pid-file
+From cbfeb79b3728c6a9cade801ac23bed681fb03573 Mon Sep 17 00:00:00 2001
+From: Alban Crequy <alban@endocode.com>
+Date: Tue, 19 May 2015 11:52:05 +0200
+Subject: [PATCH] nspawn: add --pid-file
 
-Simple mechanism for recording the container's pid independent of any external
-daemons/systemd services.
+Simple mechanism for recording the container's pid independent of any
+external daemons/systemd services.
 
 [patch ported to v219 -alban]
+[patch ported to git master 2015-05-20 -alban]
 ---
- src/nspawn/nspawn.c | 23 +++++++++++++++++++++++
- 1 file changed, 23 insertions(+)
+ src/nspawn/nspawn.c | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
 
 diff --git a/src/nspawn/nspawn.c b/src/nspawn/nspawn.c
-index d458ab4..360147e 100644
+index a38f47d..869a864 100644
 --- a/src/nspawn/nspawn.c
 +++ b/src/nspawn/nspawn.c
-@@ -175,6 +175,7 @@ static bool arg_share_system = false;
+@@ -190,6 +190,7 @@ static bool arg_quiet = false;
+ static bool arg_share_system = false;
  static bool arg_register = true;
  static bool arg_keep_unit = false;
- static int arg_keep_fd = -1;
 +static const char *arg_pid_file = NULL;
  static char **arg_network_interfaces = NULL;
  static char **arg_network_macvlan = NULL;
  static char **arg_network_ipvlan = NULL;
-@@ -252,6 +253,7 @@ static void help(void) {
+@@ -271,6 +272,7 @@ static void help(void) {
+                "     --keep-unit            Do not register a scope for the machine, reuse\n"
                 "                            the service unit nspawn is running in\n"
                 "     --volatile[=MODE]      Run the system in volatile mode\n"
-                "     --keep-fd=FDNUM        Do not close the specified file descriptor\n"
 +               "     --pid-file=FILE        Write child pid to FILE\n"
                 , program_invocation_short_name);
  }
  
-@@ -294,6 +296,7 @@ static int parse_argv(int argc, char *argv[]) {
+@@ -397,6 +399,7 @@ static int parse_argv(int argc, char *argv[]) {
+                 ARG_SHARE_SYSTEM,
                  ARG_REGISTER,
                  ARG_KEEP_UNIT,
-                 ARG_KEEP_FD,
 +                ARG_PID_FILE,
                  ARG_NETWORK_INTERFACE,
                  ARG_NETWORK_MACVLAN,
                  ARG_NETWORK_IPVLAN,
-@@ -333,6 +336,7 @@ static int parse_argv(int argc, char *argv[]) {
+@@ -437,6 +440,7 @@ static int parse_argv(int argc, char *argv[]) {
+                 { "share-system",          no_argument,       NULL, ARG_SHARE_SYSTEM      },
                  { "register",              required_argument, NULL, ARG_REGISTER          },
                  { "keep-unit",             no_argument,       NULL, ARG_KEEP_UNIT         },
-                 { "keep-fd",               required_argument, NULL, ARG_KEEP_FD           },
 +                { "pid-file",              required_argument, NULL, ARG_PID_FILE          },
                  { "network-interface",     required_argument, NULL, ARG_NETWORK_INTERFACE },
                  { "network-macvlan",       required_argument, NULL, ARG_NETWORK_MACVLAN   },
                  { "network-ipvlan",        required_argument, NULL, ARG_NETWORK_IPVLAN    },
-@@ -665,6 +669,10 @@ static int parse_argv(int argc, char *argv[]) {
-                         }
+@@ -820,6 +824,10 @@ static int parse_argv(int argc, char *argv[]) {
+                         arg_keep_unit = true;
                          break;
  
 +                case ARG_PID_FILE:
@@ -58,7 +59,7 @@ index d458ab4..360147e 100644
                  case ARG_PERSONALITY:
  
                          arg_personality = personality_from_string(optarg);
-@@ -3579,6 +3587,13 @@ static int wait_for_container(pid_t pid, ContainerStatus *container) {
+@@ -3840,6 +3848,14 @@ static int wait_for_container(pid_t pid, ContainerStatus *container) {
          return r;
  }
  
@@ -69,10 +70,11 @@ index d458ab4..360147e 100644
 +        return write_string_file_atomic(f, pid_str);
 +}
 +
++
  static void nop_handler(int sig) {}
  
  static int on_orderly_shutdown(sd_event_source *s, const struct signalfd_siginfo *si, void *userdata) {
-@@ -4399,6 +4414,14 @@ int main(int argc, char *argv[]) {
+@@ -4635,6 +4651,14 @@ int main(int argc, char *argv[]) {
                                  _cleanup_rtnl_unref_ sd_rtnl *rtnl = NULL;
                                  char last_char = 0;
  
