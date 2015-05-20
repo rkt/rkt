@@ -217,41 +217,28 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 	}
 
 	if discover && u.Scheme == "" {
-		if f.local {
-			app, err := discovery.NewAppFromString(img)
-			if err != nil {
-				return "", err
-			}
-			labels, err := types.LabelsFromMap(app.Labels)
-			if err != nil {
-				return "", err
-			}
-			return f.s.GetACI(app.Name, labels)
-		}
 		if app := newDiscoveryApp(img); app != nil {
-			stdout("rkt: searching for app image %s", img)
-			ep, attempts, err := discovery.DiscoverEndpoints(*app, true)
-
-			if globalFlags.Debug {
-				for _, a := range attempts {
-					stderr("meta tag 'ac-discovery' not found on %s: %v", a.Prefix, a.Error)
+			var discoveryError error
+			if !f.local {
+				stdout("rkt: searching for app image %s", img)
+				ep, err := discoverApp(app, true)
+				if err != nil {
+					discoveryError = err
+				} else {
+					latest := false
+					// No specified version label, mark it as latest
+					if _, ok := app.Labels["version"]; !ok {
+						latest = true
+					}
+					return f.fetchImageFromEndpoints(ep, ascFile, latest)
 				}
 			}
-
-			if err != nil {
-				return "", err
+			if discoveryError != nil {
+				stdout("discovery failed for %q: %v. Trying to find image in the store.", img, discoveryError)
 			}
-
-			if len(ep.ACIEndpoints) == 0 {
-				return "", fmt.Errorf("no endpoints discovered")
+			if f.local || discoveryError != nil {
+				return f.fetchImageFromStore(img)
 			}
-
-			latest := false
-			// No specified version label, mark it as latest
-			if _, ok := app.Labels["version"]; !ok {
-				latest = true
-			}
-			return f.fetchImageFromEndpoints(ep, ascFile, latest)
 		}
 	}
 
@@ -261,6 +248,19 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 		return "", fmt.Errorf("rkt only supports http, https, docker or file URLs (%s)", img)
 	}
 	return f.fetchImageFromURL(u.String(), u.Scheme, ascFile, false)
+}
+
+func (f *fetcher) fetchImageFromStore(img string) (string, error) {
+	// TODO(sgotti) redo newDiscoveryApp as discovery.DiscoverEndpoint may
+	// have added a defaultVersion label (nil is ignored as it's already
+	// checked in the calling function)
+	// remove when fixed in appc/spec#412
+	app := newDiscoveryApp(img)
+	labels, err := types.LabelsFromMap(app.Labels)
+	if err != nil {
+		return "", err
+	}
+	return f.s.GetACI(app.Name, labels)
 }
 
 func (f *fetcher) fetchImageFromEndpoints(ep *discovery.Endpoints, ascFile *os.File, latest bool) (string, error) {
@@ -571,4 +571,20 @@ func newDiscoveryApp(img string) *discovery.App {
 		app.Labels["os"] = defaultOS
 	}
 	return app
+}
+
+func discoverApp(app *discovery.App, insecure bool) (*discovery.Endpoints, error) {
+	ep, attempts, err := discovery.DiscoverEndpoints(*app, insecure)
+	if globalFlags.Debug {
+		for _, a := range attempts {
+			stderr("meta tag 'ac-discovery' not found on %s: %v", a.Prefix, a.Error)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	if len(ep.ACIEndpoints) == 0 {
+		return nil, fmt.Errorf("no endpoints discovered")
+	}
+	return ep, nil
 }
