@@ -54,24 +54,20 @@ func loadConf(bytes []byte) (*NetConf, error) {
 	return n, nil
 }
 
-func modeFromString(s string) (netlink.MacvlanMode, error) {
+func modeFromString(s string) (netlink.IPVlanMode, error) {
 	switch s {
 	case "":
-		return netlink.MACVLAN_MODE_BRIDGE, nil
-	case "private":
-		return netlink.MACVLAN_MODE_PRIVATE, nil
-	case "vepa":
-		return netlink.MACVLAN_MODE_VEPA, nil
-	case "bridge":
-		return netlink.MACVLAN_MODE_BRIDGE, nil
-	case "passthru":
-		return netlink.MACVLAN_MODE_PASSTHRU, nil
+		return netlink.IPVLAN_MODE_L2, nil
+	case "l2":
+		return netlink.IPVLAN_MODE_L2, nil
+	case "l3":
+		return netlink.IPVLAN_MODE_L3, nil
 	default:
-		return 0, fmt.Errorf("unknown macvlan mode: %q", s)
+		return 0, fmt.Errorf("unknown ipvlan mode: %q", s)
 	}
 }
 
-func createMacvlan(conf *NetConf, ifName string, netns *os.File) error {
+func createIpvlan(conf *NetConf, ifName string, netns *os.File) error {
 	mode, err := modeFromString(conf.Mode)
 	if err != nil {
 		return err
@@ -82,7 +78,7 @@ func createMacvlan(conf *NetConf, ifName string, netns *os.File) error {
 		return fmt.Errorf("failed to lookup master %q: %v", conf.Master, err)
 	}
 
-	mv := &netlink.Macvlan{
+	mv := &netlink.IPVlan{
 		LinkAttrs: netlink.LinkAttrs{
 			MTU:         conf.MTU,
 			Name:        ifName,
@@ -93,7 +89,7 @@ func createMacvlan(conf *NetConf, ifName string, netns *os.File) error {
 	}
 
 	if err := netlink.LinkAdd(mv); err != nil {
-		return fmt.Errorf("failed to create macvlan: %v", err)
+		return fmt.Errorf("failed to create ipvlan: %v", err)
 	}
 
 	return err
@@ -116,7 +112,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
-	if err = createMacvlan(n, tmpName, netns); err != nil {
+	if err = createIpvlan(n, tmpName, netns); err != nil {
 		return err
 	}
 
@@ -132,7 +128,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	err = ns.WithNetNS(netns, func(_ *os.File) error {
 		err := renameLink(tmpName, args.IfName)
 		if err != nil {
-			return fmt.Errorf("failed to rename macvlan to %q: %v", args.IfName, err)
+			return fmt.Errorf("failed to rename ipvlan to %q: %v", args.IfName, err)
 		}
 
 		return plugin.ConfigureIface(args.IfName, result)

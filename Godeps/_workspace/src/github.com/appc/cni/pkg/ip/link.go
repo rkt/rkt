@@ -15,7 +15,7 @@
 package ip
 
 import (
-	"crypto/sha512"
+	"crypto/rand"
 	"fmt"
 	"net"
 	"os"
@@ -23,7 +23,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 )
 
-func makeVeth(name, peer string, mtu int) (netlink.Link, error) {
+func makeVethPair(name, peer string, mtu int) (netlink.Link, error) {
 	veth := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:  name,
@@ -39,37 +39,65 @@ func makeVeth(name, peer string, mtu int) (netlink.Link, error) {
 	return veth, nil
 }
 
+func makeVeth(name string, mtu int) (peerName string, veth netlink.Link, err error) {
+	for i := 0; i < 10; i++ {
+		peerName, err = RandomVethName()
+		if err != nil {
+			return
+		}
+
+		veth, err = makeVethPair(name, peerName, mtu)
+		switch {
+		case err == nil:
+			return
+
+		case os.IsExist(err):
+			continue
+
+		default:
+			err = fmt.Errorf("failed to make veth pair: %v", err)
+			return
+		}
+	}
+
+	// should really never be hit
+	err = fmt.Errorf("failed to find a unique veth name")
+	return
+}
+
 // RandomVethName returns string "veth" with random prefix (hashed from entropy)
-func RandomVethName(entropy string) string {
-	h := sha512.New()
-	h.Write([]byte(entropy))
-	return fmt.Sprintf("veth%x", h.Sum(nil)[:5])
+func RandomVethName() (string, error) {
+	entropy := make([]byte, 4)
+	_, err := rand.Reader.Read(entropy)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate random veth name: %v", err)
+	}
+
+	// NetworkManager (recent versions) will ignore veth devices that start with "veth"
+	return fmt.Sprintf("veth%x", entropy), nil
 }
 
 // SetupVeth sets up a virtual ethernet link.
 // Should be in container netns.
-// TODO(eyakubovich): get rid of entropy and ask kernel to pick name via pattern
-func SetupVeth(entropy, contVethName string, mtu int, hostNS *os.File) (hostVeth, contVeth netlink.Link, err error) {
-	// NetworkManager (recent versions) will ignore veth devices that start with "veth"
-	hostVethName := RandomVethName(entropy)
-	hostVeth, err = makeVeth(hostVethName, contVethName, mtu)
+func SetupVeth(contVethName string, mtu int, hostNS *os.File) (hostVeth, contVeth netlink.Link, err error) {
+	var hostVethName string
+	hostVethName, contVeth, err = makeVeth(contVethName, mtu)
 	if err != nil {
-		err = fmt.Errorf("failed to make veth pair: %v", err)
-		return
-	}
-
-	if err = netlink.LinkSetUp(hostVeth); err != nil {
-		err = fmt.Errorf("failed to set %q up: %v", hostVethName, err)
-		return
-	}
-
-	contVeth, err = netlink.LinkByName(contVethName)
-	if err != nil {
-		err = fmt.Errorf("failed to lookup %q: %v", contVethName, err)
 		return
 	}
 
 	if err = netlink.LinkSetUp(contVeth); err != nil {
+		err = fmt.Errorf("failed to set %q up: %v", contVethName, err)
+		return
+	}
+
+	hostVeth, err = netlink.LinkByName(hostVethName)
+	if err != nil {
+		err = fmt.Errorf("failed to lookup %q: %v", hostVethName, err)
+		return
+	}
+
+	if err = netlink.LinkSetUp(hostVeth); err != nil {
 		err = fmt.Errorf("failed to set %q up: %v", contVethName, err)
 		return
 	}

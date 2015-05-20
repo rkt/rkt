@@ -17,9 +17,12 @@
 package skel
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
 )
 
 // CmdArgs captures all the arguments passed in to the plugin
@@ -61,13 +64,12 @@ func PluginMain(cmdAdd, cmdDel func(_ *CmdArgs) error) {
 	}
 
 	if argsMissing {
-		os.Exit(1)
+		die("required env variables missing")
 	}
 
 	stdinData, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
-		log.Printf("Error reading from stdin: %v", err)
-		os.Exit(1)
+		die("error reading from stdin: %v", err)
 	}
 
 	cmdArgs := &CmdArgs{
@@ -87,12 +89,18 @@ func PluginMain(cmdAdd, cmdDel func(_ *CmdArgs) error) {
 		err = cmdDel(cmdArgs)
 
 	default:
-		log.Printf("Unknown CNI_COMMAND: %v", cmd)
-		os.Exit(1)
+		die("unknown CNI_COMMAND: %v", cmd)
 	}
 
 	if err != nil {
-		log.Printf("%v: %v", cmd, err)
-		os.Exit(1)
+		die(err.Error())
 	}
+}
+
+func die(f string, args ...interface{}) {
+	plugin.PrintError(&plugin.Error{
+		Code: 100,
+		Msg:  fmt.Sprintf(f, args...),
+	})
+	os.Exit(1)
 }
