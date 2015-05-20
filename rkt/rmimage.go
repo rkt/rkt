@@ -46,13 +46,13 @@ func runRmImage(args []string) (exit int) {
 
 	s, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
-		stderr("rkt: cannot open store: %v\n", err)
+		stderr("rkt: cannot open store: %v", err)
 		return 1
 	}
 
 	referencedImgs, err := getReferencedImgs(s)
 	if err != nil {
-		stderr("rkt: cannot get referenced images: %v\n", err)
+		stderr("rkt: cannot get referenced images: %v", err)
 		return 1
 	}
 
@@ -64,16 +64,16 @@ func runRmImage(args []string) (exit int) {
 		errors++
 		h, err := types.NewHash(pkey)
 		if err != nil {
-			stderr("rkt: wrong imageID %q: %v\n", pkey, err)
+			stderr("rkt: wrong imageID %q: %v", pkey, err)
 			continue
 		}
 		key, err := s.ResolveKey(h.String())
 		if err != nil {
-			stderr("rkt: imageID %q not valid: %v\n", pkey, err)
+			stderr("rkt: imageID %q not valid: %v", pkey, err)
 			continue
 		}
 		if key == "" {
-			stderr("rkt: imageID %q doesn't exists\n", pkey)
+			stderr("rkt: imageID %q doesn't exists", pkey)
 			continue
 		}
 
@@ -81,13 +81,13 @@ func runRmImage(args []string) (exit int) {
 		if err != nil {
 			if serr, ok := err.(*store.StoreRemovalError); ok {
 				staleErrors++
-				stderr("rkt: some files cannot be removed for imageID %q: %v\n", pkey, serr)
+				stderr("rkt: some files cannot be removed for imageID %q: %v", pkey, serr)
 			} else {
-				stderr("rkt: error removing aci for imageID %q: %v\n", pkey, err)
+				stderr("rkt: error removing aci for imageID %q: %v", pkey, err)
 			}
 			continue
 		}
-		stdout("rkt: successfully removed aci for imageID: %q\n", pkey)
+		stderr("rkt: successfully removed aci for imageID: %q", pkey)
 
 		// Remove the treestore only if the image isn't referenced by
 		// some containers
@@ -102,7 +102,7 @@ func runRmImage(args []string) (exit int) {
 			err = s.RemoveTreeStore(key)
 			if err != nil {
 				staleErrors++
-				stderr("rkt: error removing treestore for imageID %q: %v\n", pkey, err)
+				stderr("rkt: error removing treestore for imageID %q: %v", pkey, err)
 				continue
 			}
 		}
@@ -111,13 +111,13 @@ func runRmImage(args []string) (exit int) {
 	}
 
 	if done > 0 {
-		stdout("rkt: %d image(s) successfully removed\n", done)
+		stderr("rkt: %d image(s) successfully removed", done)
 	}
 	if errors > 0 {
-		stdout("rkt: %d image(s) cannot be removed\n", errors)
+		stderr("rkt: %d image(s) cannot be removed", errors)
 	}
 	if staleErrors > 0 {
-		stdout("rkt: %d image(s) removed but left some stale files\n", staleErrors)
+		stderr("rkt: %d image(s) removed but left some stale files", staleErrors)
 	}
 	return 0
 }

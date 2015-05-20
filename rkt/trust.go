@@ -115,11 +115,11 @@ func addKeys(pkls []string, prefix string) error {
 		}
 
 		if !accepted {
-			stdout("Not trusting %q", pkl)
+			stderr("Not trusting %q", pkl)
 			continue
 		}
 
-		stdout("Trusting %q for prefix %q.", pkl, flagPrefix)
+		stderr("Trusting %q for prefix %q.", pkl, flagPrefix)
 
 		if err := addPubKey(prefix, pk); err != nil {
 			return fmt.Errorf("Error adding key: %v", err)
@@ -135,10 +135,10 @@ func addPubKey(prefix string, key *os.File) (err error) {
 	var path string
 	if prefix == "" {
 		path, err = ks.StoreTrustedKeyRoot(key)
-		stdout("Added root key at %q", path)
+		stderr("Added root key at %q", path)
 	} else {
 		path, err = ks.StoreTrustedKeyPrefix(prefix, key)
-		stdout("Added key for prefix %q at %q", prefix, path)
+		stderr("Added key for prefix %q at %q", prefix, path)
 	}
 
 	return
@@ -265,21 +265,21 @@ func reviewKey(prefix string, location string, key *os.File, forceAccept bool) (
 		return false, fmt.Errorf("error reading key: %v", err)
 	}
 
-	stdout("Prefix: %q\nKey: %q", prefix, location)
+	stderr("Prefix: %q\nKey: %q", prefix, location)
 	for _, k := range kr {
-		stdout("GPG key fingerprint is: %s", fingerToString(k.PrimaryKey.Fingerprint))
+		stderr("GPG key fingerprint is: %s", fingerToString(k.PrimaryKey.Fingerprint))
 		for _, sk := range k.Subkeys {
-			stdout("    Subkey fingerprint: %s", fingerToString(sk.PublicKey.Fingerprint))
+			stderr("    Subkey fingerprint: %s", fingerToString(sk.PublicKey.Fingerprint))
 		}
 		for n, _ := range k.Identities {
-			stdout("\t%s", n)
+			stderr("\t%s", n)
 		}
 	}
 
 	if !forceAccept {
 		in := bufio.NewReader(os.Stdin)
 		for {
-			fmt.Printf("Are you sure you want to trust this key (yes/no)? ")
+			stderr("Are you sure you want to trust this key (yes/no)? ")
 			input, err := in.ReadString('\n')
 			if err != nil {
 				return false, fmt.Errorf("error reading input: %v", err)
@@ -290,11 +290,11 @@ func reviewKey(prefix string, location string, key *os.File, forceAccept bool) (
 			case "no\n":
 				return false, nil
 			default:
-				stdout("Please enter 'yes' or 'no'")
+				stderr("Please enter 'yes' or 'no'")
 			}
 		}
 	} else {
-		stdout("rkt: warning: trust fingerprint verification has been disabled")
+		stderr("rkt: warning: trust fingerprint verification has been disabled")
 	}
 	return true, nil
 }

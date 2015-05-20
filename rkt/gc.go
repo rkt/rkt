@@ -83,7 +83,7 @@ func runGC(args []string) (exit int) {
 func renameExited() error {
 	if err := walkPods(includeRunDir, func(p *pod) {
 		if p.isExited {
-			stdout("Moving pod %q to garbage", p.uuid)
+			stderr("Moving pod %q to garbage", p.uuid)
 			if err := p.xToExitedGarbage(); err != nil && err != os.ErrNotExist {
 				stderr("Rename error: %v", err)
 			}
@@ -146,7 +146,7 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 func renameAborted() error {
 	if err := walkPods(includePrepareDir, func(p *pod) {
 		if p.isAbortedPrepare {
-			stdout("Moving failed prepare %q to garbage", p.uuid)
+			stderr("Moving failed prepare %q to garbage", p.uuid)
 			if err := p.xToGarbage(); err != nil && err != os.ErrNotExist {
 				stderr("Rename error: %v", err)
 			}
@@ -170,7 +170,7 @@ func renameExpired(preparedExpiration time.Duration) error {
 		}
 
 		if expiration := time.Unix(st.Ctim.Unix()).Add(preparedExpiration); time.Now().After(expiration) {
-			stdout("Moving expired prepared pod %q to garbage", p.uuid)
+			stderr("Moving expired prepared pod %q to garbage", p.uuid)
 			if err := p.xToGarbage(); err != nil && err != os.ErrNotExist {
 				stderr("Rename error: %v", err)
 			}
