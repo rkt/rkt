@@ -10,8 +10,9 @@ if [ "${CI-}" == true ] ; then
 		# Semaphore installs more dependencies on their platform,
 		# they should be removed from here to save time.
 
-		sudo apt-get update -qq
-		sudo apt-get install -y libmount-dev libblkid-dev # systemd deps
+		# sudo apt-get update -qq
+		# sudo apt-get install -y $packagename
+		:
 	fi
 
 	# https://circleci.com/
