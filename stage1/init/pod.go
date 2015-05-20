@@ -254,6 +254,14 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, inte
 		case *types.ResourceMemory:
 			l := v.Limit().String()
 			opts = append(opts, newUnitOption("Service", "MemoryLimit", l))
+		case *types.ResourceCPU:
+			l := v.Limit().String()
+			milliCores, err := strconv.Atoi(l)
+			if err != nil {
+				return err
+			}
+			quota := strconv.Itoa(milliCores/10) + "%"
+			opts = append(opts, newUnitOption("Service", "CPUQuota", quota))
 		}
 	}
 
