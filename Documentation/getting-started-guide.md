@@ -55,12 +55,12 @@ Edit: manifest.json
 ```
 {
     "acKind": "ImageManifest",
-    "acVersion": "0.2.0",
-    "name": "coreos.com/hello",
+    "acVersion": "0.5.1",
+    "name": "example.com/hello",
     "labels": [
         {
             "name": "version",
-            "value": "1.0.0"
+            "value": "0.0.1"
         },
         {
             "name": "arch",
@@ -121,14 +121,14 @@ $ cp hello hello-layout/rootfs/bin/
 ## Build the application image
 
 ```
-$ actool build hello-layout/ hello.aci
+$ actool build hello-layout/ hello-0.0.1-linux-amd64.aci
 ```
 
 ### Validate the application image
 
 ```
-$ actool -debug validate hello.aci
-hello.aci: valid app container image
+$ actool -debug validate hello-0.0.1-linux-amd64.aci
+hello-0.0.1-linux-amd64.aci: valid app container image
 ```
 
 ## Run
@@ -136,8 +136,10 @@ hello.aci: valid app container image
 ### Launch a local application image
 
 ```
-$ rkt run hello.aci
+$ sudo rkt -insecure-skip-verify run hello-0.0.1-linux-amd64.aci
 ```
+
+Note that `-insecure-skip-verify` is required because, by default, rkt expects our signature to be signed. See the [Signing and Verification Guide](signing-and-verification-guide.md) for more details.
 
 At this point our hello app is running on port 5000 and ready to handle HTTP
 requests.
