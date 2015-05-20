@@ -130,7 +130,7 @@ func setupVeth(netns string, br *netlink.Bridge, ifName string, mtu int, pr *plu
 
 	err := ns.WithNetNSPath(netns, func(hostNS *os.File) error {
 		// create the veth pair in the container and move host end into host netns
-		hostVeth, _, err := ip.SetupVeth(netns, ifName, mtu, hostNS)
+		hostVeth, _, err := ip.SetupVeth(ifName, mtu, hostNS)
 		if err != nil {
 			return err
 		}

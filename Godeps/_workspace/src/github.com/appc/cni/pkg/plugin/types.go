@@ -48,6 +48,12 @@ type Route struct {
 	GW  net.IP
 }
 
+type Error struct {
+	Code    uint   `json:"code"`
+	Msg     string `json:"msg"`
+	Details string `json:"details,omitempty"`
+}
+
 // net.IPNet is not JSON (un)marshallable so this duality is needed
 // for our custom ip.IPNet type
 

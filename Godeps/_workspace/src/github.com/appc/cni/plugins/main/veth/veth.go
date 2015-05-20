@@ -46,9 +46,7 @@ type NetConf struct {
 func setupContainerVeth(netns, ifName string, mtu int, pr *plugin.Result) (string, error) {
 	var hostVethName string
 	err := ns.WithNetNSPath(netns, func(hostNS *os.File) error {
-		entropy := netns + ifName
-
-		hostVeth, _, err := ip.SetupVeth(entropy, ifName, mtu, hostNS)
+		hostVeth, _, err := ip.SetupVeth(ifName, mtu, hostNS)
 		if err != nil {
 			return err
 		}
@@ -115,7 +113,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	if conf.IPMasq {
-		h := sha512.Sum512([]byte(args.Netns))
+		h := sha512.Sum512([]byte(args.ContainerID))
 		chain := fmt.Sprintf("CNI-%s-%x", conf.Name, h[:8])
 		if err = ip.SetupIPMasq(&result.IP4.IP, chain); err != nil {
 			return err
@@ -142,7 +140,7 @@ func cmdDel(args *skel.CmdArgs) error {
 	}
 
 	if conf.IPMasq {
-		h := sha512.Sum512([]byte(args.Netns))
+		h := sha512.Sum512([]byte(args.ContainerID))
 		chain := fmt.Sprintf("CNI-%s-%x", conf.Name, h[:8])
 		if err = ip.TeardownIPMasq(ipn, chain); err != nil {
 			return err

@@ -124,9 +124,18 @@ func ConfigureIface(ifName string, res *Result) error {
 	return nil
 }
 
-// PrintResult writes out prettified Result to stdout
+// PrintResult writes out prettified Result JSON to stdout
 func PrintResult(res *Result) error {
-	data, err := json.MarshalIndent(res, "", "    ")
+	return prettyPrint(res)
+}
+
+// PrintError writes out prettified Error JSON to stdout
+func PrintError(err *Error) error {
+	return prettyPrint(err)
+}
+
+func prettyPrint(obj interface{}) error {
+	data, err := json.MarshalIndent(obj, "", "    ")
 	if err != nil {
 		return err
 	}
