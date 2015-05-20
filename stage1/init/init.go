@@ -43,6 +43,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -114,6 +115,21 @@ func init() {
 	runtime.LockOSThread()
 }
 
+func getFlavor(p *Pod) (flavor, systemdVersion string, err error) {
+	flavor, err = os.Readlink(filepath.Join(common.Stage1RootfsPath(p.Root), "flavor"))
+	if err != nil {
+		return "", "", fmt.Errorf("unable to determine stage1 flavor: %v", err)
+	}
+	if flavor == "src" {
+		systemdVersionBytes, err := ioutil.ReadFile(filepath.Join(common.Stage1RootfsPath(p.Root), "systemd-version"))
+		if err != nil {
+			return "", "", fmt.Errorf("unable to determine stage1's systemd version: %v", err)
+		}
+		systemdVersion = strings.Trim(string(systemdVersionBytes), " \n")
+	}
+	return
+}
+
 // machinedRegister checks if nspawn should register the pod to machined
 func machinedRegister() bool {
 	// machined has a D-Bus interface following versioning guidelines, see:
@@ -149,14 +165,9 @@ func machinedRegister() bool {
 }
 
 // getArgsEnv returns the nspawn args and env according to the usr used
-func getArgsEnv(p *Pod, debug bool) ([]string, []string, error) {
+func getArgsEnv(p *Pod, flavor, systemdVersion string, debug bool) ([]string, []string, error) {
 	args := []string{}
 	env := os.Environ()
-
-	flavor, err := os.Readlink(filepath.Join(common.Stage1RootfsPath(p.Root), "flavor"))
-	if err != nil {
-		return nil, nil, fmt.Errorf("unable to determine stage1 flavor: %v", err)
-	}
 
 	switch flavor {
 	case "coreos":
@@ -180,16 +191,27 @@ func getArgsEnv(p *Pod, debug bool) ([]string, []string, error) {
 	case "src":
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
+
+		switch systemdVersion {
+		case "v215":
+			fallthrough
+		case "v219":
+			lfd, err := common.GetRktLockFD()
+			if err != nil {
+				return nil, nil, err
+			}
+			args = append(args, fmt.Sprintf("--keep-fd=%v", lfd))
+		default:
+			// since systemd-nspawn v220 (commit 6b7d2e, "nspawn: close extra fds
+			// before execing init"), fds remain open, so --keep-fd is not needed.
+		}
+
 		out, err := os.Getwd()
 		if err != nil {
 			return nil, nil, err
 		}
-		lfd, err := common.GetRktLockFD()
-		if err != nil {
-			return nil, nil, err
-		}
 		args = append(args, fmt.Sprintf("--pid-file=%v", filepath.Join(out, "pid")))
-		args = append(args, fmt.Sprintf("--keep-fd=%v", lfd))
+
 		if machinedRegister() {
 			args = append(args, fmt.Sprintf("--register=true"))
 		} else {
@@ -335,7 +357,13 @@ func stage1() int {
 		return 2
 	}
 
-	args, env, err := getArgsEnv(p, debug)
+	flavor, systemdVersion, err := getFlavor(p)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get stage1 flavor: %v\n", err)
+		return 3
+	}
+
+	args, env, err := getArgsEnv(p, flavor, systemdVersion, debug)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get execution parameters: %v\n", err)
 		return 3
