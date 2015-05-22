@@ -278,7 +278,7 @@ func runInstall(args []string) (exit int) {
 		stderr("install: error creating db files: %v", err)
 		return 1
 	}
-	fmt.Println("rkt directory structure successfully created.")
+	stderr("rkt directory structure successfully created.")
 
 	return 0
 }

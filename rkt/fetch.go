@@ -16,7 +16,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"runtime"
 
@@ -88,7 +87,7 @@ func runFetch(args []string) (exit int) {
 			return err
 		}
 		shortHash := types.ShortHash(hash)
-		fmt.Println(shortHash)
+		stdout(shortHash)
 		return nil
 	})
 	if err != nil {

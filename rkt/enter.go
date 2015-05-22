@@ -156,7 +156,7 @@ func getAppImageID(p *pod) (*types.Hash, error) {
 func getEnterArgv(p *pod, imageID *types.Hash, cmdArgs []string) ([]string, error) {
 	var argv []string
 	if len(cmdArgs) < 2 {
-		stdout("No command specified, assuming %q", defaultCmd)
+		stderr("No command specified, assuming %q", defaultCmd)
 		argv = []string{defaultCmd}
 	} else {
 		argv = cmdArgs[1:]

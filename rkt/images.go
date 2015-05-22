@@ -220,7 +220,7 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 		if app := newDiscoveryApp(img); app != nil {
 			var discoveryError error
 			if !f.local {
-				stdout("rkt: searching for app image %s", img)
+				stderr("rkt: searching for app image %s", img)
 				ep, err := discoverApp(app, true)
 				if err != nil {
 					discoveryError = err
@@ -234,7 +234,7 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 				}
 			}
 			if discoveryError != nil {
-				stdout("discovery failed for %q: %v. Trying to find image in the store.", img, discoveryError)
+				stderr("discovery failed for %q: %v. Trying to find image in the store.", img, discoveryError)
 			}
 			if f.local || discoveryError != nil {
 				return f.fetchImageFromStore(img)
@@ -274,7 +274,7 @@ func (f *fetcher) fetchImageFromURL(imgurl string, scheme string, ascFile *os.Fi
 func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File, latest bool) (string, error) {
 	if f.insecureSkipVerify {
 		if f.ks != nil {
-			stdout("rkt: warning: TLS verification and signature verification has been disabled")
+			stderr("rkt: warning: TLS verification and signature verification has been disabled")
 		}
 	} else if scheme == "docker" {
 		return "", fmt.Errorf("signature verification for docker images is not supported (try --insecure-skip-verify)")
@@ -288,12 +288,12 @@ func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File
 	}
 
 	if ok {
-		stdout("rkt: found image in local store, skipping fetching from %s", aciURL)
+		stderr("rkt: found image in local store, skipping fetching from %s", aciURL)
 		return key, nil
 	}
 
 	if scheme != "file" || f.debug {
-		stdout("rkt: fetching image from %s", aciURL)
+		stderr("rkt: fetching image from %s", aciURL)
 	}
 
 	if f.local && scheme != "file" {
@@ -308,9 +308,9 @@ func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File
 	}
 
 	if entity != nil && !f.insecureSkipVerify {
-		fmt.Println("rkt: signature verified: ")
+		stderr("rkt: signature verified: ")
 		for _, v := range entity.Identities {
-			stdout("  %s", v.Name)
+			stderr("  %s", v.Name)
 		}
 	}
 	key, err = f.s.WriteACI(aciFile, latest)
@@ -381,7 +381,7 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 				return nil, nil, fmt.Errorf("error opening signature file: %v", err)
 			}
 		} else {
-			stdout("Downloading signature from %v\n", ascURL)
+			stderr("Downloading signature from %v\n", ascURL)
 			ascFile, err = f.s.TmpFile()
 			if err != nil {
 				return nil, nil, fmt.Errorf("error setting up temporary file: %v", err)
@@ -392,7 +392,7 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 			switch err {
 			case errStatusAccepted:
 				retrySignature = true
-				stdout("rkt: server requested deferring the signature download")
+				stderr("rkt: server requested deferring the signature download")
 			case nil:
 				break
 			default:
