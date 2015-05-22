@@ -71,20 +71,43 @@ The bridge can optionally be setup to act as the gateway for the network. `bridg
 
 #### macvlan
 
-macvlan "clones" a real interface by assigning a made up MAC address to the "cloned" interface.
-The real and macvlan interfaces share the same physical device but have distinct MAC and IP addresses.
-With multiple macvlan interfaces sharing the same device, it behaves similarly to a bridge.
-Since macvlan interface has its own MAC and is located on the same link segment as the host, it makes it especially a good choice for using the DHCP server to acquire an IP address.
-With the IP address allocated by the real network infrastructure, this makes the pod IP routable in the same way as the host IP. `macvlan` specific configuration fields are:
+macvlan behaves similar to a bridge but does not provide communication between the host and the pod.
 
-- **master** (string): the name of host interface to "clone". This field is required.
+macvlan creates a virtual copy of a master interface and assigns the copy a randomly generated MAC address.
+The pod can communicate with the network that is attached to the master interface.
+The distinct MAC address allows the pod to be identified by external network services like DHCP servers, firewalls, routers, etc.
+macvlan interfaces cannot communicate with the host via the macvlan interface.
+This is because traffic that is sent by the pod onto the macvlan interface is bypassing the master interface and is sent directly to the interfaces underlying network.
+Before traffic gets sent to the underlying network it can be evaluated within the macvlan driver, allowing it to communicate with all other pods that created their macvlan interface from the same master interface.
+
+`macvlan` specific configuration fields are:
+- **master** (string): the name of the host interface to copy. This field is required.
 - **mode** (string): One of "bridge", "private", "vepa", or "passthru". This controls how traffic is handled between different macvlan interfaces on the same host. See [this guide](http://www.pocketnix.org/posts/Linux%20Networking:%20MAC%20VLANs%20and%20Virtual%20Ethernets) for discussion of modes. Defaults to "bridge".
-- **mtu** (integer): the size of the MTU in bytes for bridge and veths. Defaults to MTU of the master device.
+- **mtu** (integer): the size of the MTU in bytes for the macvlan interface. Defaults to MTU of the master device.
 - **ipMasq** (boolean): whether to setup IP masquerading on the host. Defaults to false.
 
 #### ipvlan
 
-- [Coming soon](https://github.com/coreos/rkt/issues/479)
+ipvlan behaves very similar to macvlan but does not provide distinct MAC addresses for pods. 
+macvlan and ipvlan can't be used on the same master device together.
+
+ipvlan creates virtual copies of interfaces like macvlan but does not assign a new MAC address to the copied interface.
+This does not allow the pods to be distinguished on a MAC level and so cannot be used with DHCP servers.
+In other scenarios this can be an advantage, e.g. when an external network port does not allow multiple MAC addresses.
+ipvlan also solves the problem of MAC address exhaustion that can occur with a large number of pods copying the same master interface.
+ipvlan interfaces are able to have different IP addresses than the master interface and will therefore have the needed distinction for most use-cases.
+
+`ipvlan` specific configuration fields are:
+- **master** (string): the name of the host interface to copy. This field is required.
+- **mode** (string): One of "l2", "l3". See [kernel documentation on ipvlan](https://www.kernel.org/doc/Documentation/networking/ipvlan.txt). Defaults to "l2".
+- **mtu** (integer): the size of the MTU in bytes for the ipvlan interface. Defaults to MTU of the master device.
+- **ipMasq** (boolean): whether to setup IP masquerading on the host. Defaults to false.
+
+**Notes**
+* ipvlan can cause problems with duplicated IPv6 link-local addresses since they
+  are partially constructed using the MAC address. This issue is being currently
+  [addressed by the ipvlan kernel module developers](http://thread.gmane.org/gmane.linux.network/363346/focus=363345)
+
 
 ## IP Address Management
 
@@ -120,6 +143,27 @@ Additional configuration fields:
 - **rangeEnd** (string): Last IP address in the allocatable range. Defaults to last IP in `subnet` range.
 - **gateway** (string): The IP address of the gateway in this subnet.
 - **routes** (list of strings): List of IP routes in CIDR notation. The routes get added to pod namespace with next-hop set to the gateway of the network.
+
+The following shows a more complex IPv6 example in combination with the ipvlan plugin. The gateway is configured for the default
+route, allowing the pod to access external networks via the ipvlan interface.
+```json
+{
+    "name": "ipv6-public",
+    "type": "ipvlan",
+    "master": "em1",
+    "mode": "l3",
+    "ipam": {
+        "type": "host-local",
+        "subnet": "2001:0db8:161:8374::/64",
+        "rangeStart": "2001:0db8:161:8374::1:2",
+        "rangeEnd": "2001:0db8:161:8374::1:fffe",
+        "gateway": "fe80::1",
+        "routes": [
+            { "dst": "::0/0" }
+        ]
+    }
+}
+```
 
 ### dhcp
 
