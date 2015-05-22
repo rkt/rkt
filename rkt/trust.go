@@ -31,7 +31,6 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
-	"github.com/coreos/rkt/pkg/keystore"
 )
 
 var (
@@ -130,7 +129,7 @@ func addKeys(pkls []string, prefix string) error {
 
 // addPubKey adds a key to the keystore
 func addPubKey(prefix string, key *os.File) (err error) {
-	ks := keystore.New(nil)
+	ks := getKeystore()
 
 	var path string
 	if prefix == "" {
