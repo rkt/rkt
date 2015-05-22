@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/sys"
 )
 
 func treeStoreWriteACI(dir string, s *Store) (string, error) {
@@ -75,6 +76,10 @@ func treeStoreWriteACI(dir string, s *Store) (string, error) {
 }
 
 func TestTreeStoreWrite(t *testing.T) {
+	if !sys.HasChrootCapability() {
+		t.Skipf("chroot capability not available. Disabling test.")
+	}
+
 	dir, err := ioutil.TempDir("", tstprefix)
 	if err != nil {
 		t.Fatalf("error creating tempdir: %v", err)
@@ -104,6 +109,10 @@ func TestTreeStoreWrite(t *testing.T) {
 }
 
 func TestTreeStoreRemove(t *testing.T) {
+	if !sys.HasChrootCapability() {
+		t.Skipf("chroot capability not available. Disabling test.")
+	}
+
 	dir, err := ioutil.TempDir("", tstprefix)
 	if err != nil {
 		t.Fatalf("error creating tempdir: %v", err)

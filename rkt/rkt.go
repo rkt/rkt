@@ -26,6 +26,7 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/keystore"
+	"github.com/coreos/rkt/pkg/multicall"
 	"github.com/coreos/rkt/rkt/config"
 )
 
@@ -78,6 +79,9 @@ func init() {
 }
 
 func main() {
+	// check if rkt is executed with a multicall command
+	multicall.MaybeExec()
+
 	// parse global arguments
 	globalFlagset.Parse(os.Args[1:])
 	args := globalFlagset.Args()

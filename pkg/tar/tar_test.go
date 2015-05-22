@@ -24,7 +24,14 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/coreos/rkt/pkg/multicall"
+	"github.com/coreos/rkt/pkg/sys"
 )
+
+func init() {
+	multicall.MaybeExec()
+}
 
 type testTarEntry struct {
 	header   *tar.Header
@@ -158,67 +165,11 @@ func checkExpectedFiles(dir string, expectedFiles map[string]*fileInfo) error {
 	return nil
 }
 
-func TestExtractTarInsecureSymlink(t *testing.T) {
-	entries := []*testTarEntry{
-		{
-			contents: "hello",
-			header: &tar.Header{
-				Name: "hello.txt",
-				Size: 5,
-			},
-		},
-		{
-			header: &tar.Header{
-				Name:     "link.txt",
-				Linkname: "hello.txt",
-				Typeflag: tar.TypeSymlink,
-			},
-		},
-	}
-	insecureSymlinkEntries := append(entries, &testTarEntry{
-		header: &tar.Header{
-			Name:     "../etc/secret.conf",
-			Linkname: "secret.conf",
-			Typeflag: tar.TypeSymlink,
-		},
-	})
-	insecureHardlinkEntries := append(entries, &testTarEntry{
-		header: &tar.Header{
-			Name:     "../etc/secret.conf",
-			Linkname: "secret.conf",
-			Typeflag: tar.TypeLink,
-		},
-	})
-	for _, entries := range [][]*testTarEntry{insecureSymlinkEntries, insecureHardlinkEntries} {
-		testTarPath, err := newTestTar(entries)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-
-		defer os.Remove(testTarPath)
-		containerTar, err := os.Open(testTarPath)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		tr := tar.NewReader(containerTar)
-		tmpdir, err := ioutil.TempDir("", "rkt-temp-dir")
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		os.RemoveAll(tmpdir)
-		err = os.MkdirAll(tmpdir, 0755)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		defer os.RemoveAll(tmpdir)
-		err = ExtractTar(tr, tmpdir, false, nil)
-		if _, ok := err.(insecureLinkError); !ok {
-			t.Errorf("expected insecureSymlinkError error")
-		}
-	}
-}
-
 func TestExtractTarFolders(t *testing.T) {
+	if !sys.HasChrootCapability() {
+		t.Skipf("chroot capability not available. Disabling test.")
+	}
+
 	entries := []*testTarEntry{
 		{
 			contents: "foo",
@@ -287,7 +238,7 @@ func TestExtractTarFolders(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	tr := tar.NewReader(containerTar)
+	defer containerTar.Close()
 	tmpdir, err := ioutil.TempDir("", "rkt-temp-dir")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -298,7 +249,7 @@ func TestExtractTarFolders(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	defer os.RemoveAll(tmpdir)
-	err = ExtractTar(tr, tmpdir, false, nil)
+	err = ExtractTar(containerTar, tmpdir, false, nil)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -367,34 +318,37 @@ func TestExtractTarFileToBuf(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	defer os.Remove(testTarPath)
-	containerTar, err := os.Open(testTarPath)
+	containerTar1, err := os.Open(testTarPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	defer containerTar1.Close()
 
-	tr := tar.NewReader(containerTar)
-	buf, err := ExtractFileFromTar(tr, "folder/foo.txt")
+	tr := tar.NewReader(containerTar1)
+	buf, err := extractFileFromTar(tr, "folder/foo.txt")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if string(buf) != "foo" {
 		t.Errorf("unexpected contents, wanted: %s, got: %s", "foo", buf)
 	}
-	containerTar.Close()
 
-	containerTar, err = os.Open(testTarPath)
+	containerTar2, err := os.Open(testTarPath)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	tr = tar.NewReader(containerTar)
-	buf, err = ExtractFileFromTar(tr, "folder/symlink.txt")
+	defer containerTar2.Close()
+	tr = tar.NewReader(containerTar2)
+	buf, err = extractFileFromTar(tr, "folder/symlink.txt")
 	if err == nil {
 		t.Errorf("expected error")
 	}
-	containerTar.Close()
 }
 
 func TestExtractTarPWL(t *testing.T) {
+	if !sys.HasChrootCapability() {
+		t.Skipf("chroot capability not available. Disabling test.")
+	}
 	entries := []*testTarEntry{
 		{
 			header: &tar.Header{
@@ -434,7 +388,7 @@ func TestExtractTarPWL(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	tr := tar.NewReader(containerTar)
+	defer containerTar.Close()
 	tmpdir, err := ioutil.TempDir("", "rkt-temp-dir")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -443,7 +397,7 @@ func TestExtractTarPWL(t *testing.T) {
 
 	pwl := make(PathWhitelistMap)
 	pwl["folder/foo.txt"] = struct{}{}
-	err = ExtractTar(tr, tmpdir, false, pwl)
+	err = ExtractTar(containerTar, tmpdir, false, pwl)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -457,6 +411,10 @@ func TestExtractTarPWL(t *testing.T) {
 }
 
 func TestExtractTarOverwrite(t *testing.T) {
+	if !sys.HasChrootCapability() {
+		t.Skipf("chroot capability not available. Disabling test.")
+	}
+
 	tmpdir, err := ioutil.TempDir("", "rkt-temp-dir")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -539,12 +497,12 @@ func TestExtractTarOverwrite(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	defer os.Remove(testTarPath)
-	containerTar, err := os.Open(testTarPath)
+	containerTar1, err := os.Open(testTarPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	tr := tar.NewReader(containerTar)
-	err = ExtractTar(tr, tmpdir, false, nil)
+	defer containerTar1.Close()
+	err = ExtractTar(containerTar1, tmpdir, false, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -619,12 +577,12 @@ func TestExtractTarOverwrite(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	defer os.Remove(testTarPath)
-	containerTar, err = os.Open(testTarPath)
+	containerTar2, err := os.Open(testTarPath)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	tr = tar.NewReader(containerTar)
-	err = ExtractTar(tr, tmpdir, true, nil)
+	defer containerTar2.Close()
+	err = ExtractTar(containerTar2, tmpdir, true, nil)
 
 	expectedFiles := []*fileInfo{
 		&fileInfo{path: "hello.txt", typeflag: tar.TypeReg, size: 8, contents: "newhello"},
@@ -646,6 +604,9 @@ func TestExtractTarOverwrite(t *testing.T) {
 }
 
 func TestExtractTarTimes(t *testing.T) {
+	if !sys.HasChrootCapability() {
+		t.Skipf("chroot capability not available. Disabling test.")
+	}
 
 	// Do not set ns as tar has second precision
 	time1 := time.Unix(100000, 0)
@@ -687,7 +648,7 @@ func TestExtractTarTimes(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	tr := tar.NewReader(containerTar)
+	defer containerTar.Close()
 	tmpdir, err := ioutil.TempDir("", "rkt-temp-dir")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -697,7 +658,7 @@ func TestExtractTarTimes(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	err = ExtractTar(tr, tmpdir, false, nil)
+	err = ExtractTar(containerTar, tmpdir, false, nil)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
