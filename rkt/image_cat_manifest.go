@@ -18,18 +18,19 @@ import (
 	"encoding/json"
 	"flag"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/store"
 )
 
 var (
 	cmdImageCatManifest = &Command{
-		Name:    "cat-manifest",
-		Summary: "Inspect and print the image manifest",
-		Usage:   "IMAGE",
-		Description: `IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
-They will be checked in that order and the first match will be used.`,
-		Run:   runImageCatManifest,
-		Flags: &imageCatManifestFlag,
+		Name:        "cat-manifest",
+		Summary:     "Inspect and print the image manifest",
+		Usage:       "IMAGE",
+		Description: `IMAGE should be a string referencing an image; either a hash or an image name.`,
+		Run:         runImageCatManifest,
+		Flags:       &imageCatManifestFlag,
 	}
 	imageCatManifestFlag flag.FlagSet
 	flagPrettyPrint      bool
@@ -49,31 +50,38 @@ func runImageCatManifest(args []string) (exit int) {
 
 	s, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
-		stderr("image cat-manifest: cannot open store: %v\n", err)
-		return 1
-	}
-	ks := getKeystore()
-
-	fn := &finder{
-		imageActionData: imageActionData{
-			s:                  s,
-			ks:                 ks,
-			insecureSkipVerify: true,
-			debug:              globalFlags.Debug,
-		},
-		local:    true,
-		withDeps: false,
-	}
-
-	h, err := fn.findImage(args[0], "", true)
-	if err != nil {
-		stderr("image cat-manifest: cannot find image: %v\n", err)
+		stderr("image cat-manifest: cannot open store: %v", err)
 		return 1
 	}
 
-	manifest, err := fn.s.GetImageManifest(h.String())
+	var key string
+	if _, err := types.NewHash(args[0]); err == nil {
+		key, err = s.ResolveKey(args[0])
+		if err != nil {
+			stderr("image cat-manifest: cannot resolve key: %v", err)
+			return 1
+		}
+	} else {
+		app, err := discovery.NewAppFromString(args[0])
+		if err != nil {
+			stderr("image cat-manifest: cannot parse the image name: %v", err)
+			return 1
+		}
+		labels, err := types.LabelsFromMap(app.Labels)
+		if err != nil {
+			stderr("image cat-manifest: invalid labels in the name: %v", err)
+			return 1
+		}
+		key, err = s.GetACI(app.Name, labels)
+		if err != nil {
+			stderr("image cat-manifest: cannot find image: %v", err)
+			return 1
+		}
+	}
+
+	manifest, err := s.GetImageManifest(key)
 	if err != nil {
-		stderr("image cat-manifest: cannot get image manifest: %v\n", err)
+		stderr("image cat-manifest: cannot get image manifest: %v", err)
 		return 1
 	}
 
@@ -84,7 +92,7 @@ func runImageCatManifest(args []string) (exit int) {
 		b, err = json.Marshal(manifest)
 	}
 	if err != nil {
-		stderr("image cat-manifest: cannot read the image manifest: %v\n", err)
+		stderr("image cat-manifest: cannot read the image manifest: %v", err)
 		return 1
 	}
 
