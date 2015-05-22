@@ -464,12 +464,18 @@ func (p *Pod) getFlavor() (flavor string, systemdVersion string, err error) {
 	if err != nil {
 		return "", "", fmt.Errorf("unable to determine stage1 flavor: %v", err)
 	}
+
+	if flavor == "usr-from-host" {
+		// This flavor does not contain systemd, so don't return systemdVersion
+		return flavor, "", nil
+	}
+
 	systemdVersionBytes, err := ioutil.ReadFile(filepath.Join(common.Stage1RootfsPath(p.Root), "systemd-version"))
 	if err != nil {
 		return "", "", fmt.Errorf("unable to determine stage1's systemd version: %v", err)
 	}
 	systemdVersion = strings.Trim(string(systemdVersionBytes), " \n")
-	return
+	return flavor, systemdVersion, nil
 }
 
 // GetAppHashes returns a list of hashes of the apps in this pod

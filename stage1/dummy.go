@@ -28,5 +28,4 @@ import (
 	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/main/ipvlan"
 	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/main/macvlan"
 	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/main/veth"
-	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/goaci/proj2aci"
 )
