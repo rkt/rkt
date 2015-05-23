@@ -77,34 +77,34 @@ func runRmImage(args []string) (exit int) {
 			continue
 		}
 
-		err = s.RemoveACI(key)
-		if err != nil {
-			if serr, ok := err.(*store.StoreRemovalError); ok {
-				staleErrors++
-				stderr("rkt: some files cannot be removed for imageID %q: %v", pkey, serr)
-			} else {
-				stderr("rkt: error removing aci for imageID %q: %v", pkey, err)
-			}
-			continue
-		}
-		stderr("rkt: successfully removed aci for imageID: %q", pkey)
-
-		// Remove the treestore only if the image isn't referenced by
+		// Remove the image only if the image isn't referenced by
 		// some containers
 		// TODO(sgotti) there's a windows between getting refenced
 		// images and this check where a new container could be
 		// prepared/runned with this image. To avoid this a global lock
 		// is needed.
 		if _, ok := referencedImgs[key]; ok {
-			stderr("rkt: imageID is referenced by some containers, cannot remove the tree store")
+			stderr("rkt: imageID %q is referenced by some containers, cannot remove.", pkey)
 			continue
 		} else {
+			err = s.RemoveACI(key)
+			if err != nil {
+				if serr, ok := err.(*store.StoreRemovalError); ok {
+					staleErrors++
+					stderr("rkt: some files cannot be removed for imageID %q: %v", pkey, serr)
+				} else {
+					stderr("rkt: error removing aci for imageID %q: %v", pkey, err)
+					continue
+				}
+			}
+
 			err = s.RemoveTreeStore(key)
 			if err != nil {
 				staleErrors++
 				stderr("rkt: error removing treestore for imageID %q: %v", pkey, err)
 				continue
 			}
+			stdout("rkt: successfully removed aci for imageID: %q", pkey)
 		}
 		errors--
 		done++
