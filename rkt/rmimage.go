@@ -127,15 +127,22 @@ func getReferencedImgs(s *store.Store) (map[string]struct{}, error) {
 	walkErrors := []error{}
 	// Consider pods in preparing, prepared, run, exitedgarbage state
 	if err := walkPods(includeMostDirs, func(p *pod) {
-		appImgs, err := p.getAppsHashes()
+		appHashes, err := p.getAppsHashes()
 		if err != nil {
 			// Ignore errors reading/parsing pod file
 			return
 		}
-		for _, appImg := range appImgs {
-			key, err := s.ResolveKey(appImg.String())
+		stage1Hash, err := p.getStage1Hash()
+		if err != nil {
+			// Ignore errors reading/parsing the stage1 hash file
+			return
+		}
+		allHashes := append(appHashes, *stage1Hash)
+
+		for _, imgHash := range allHashes {
+			key, err := s.ResolveKey(imgHash.String())
 			if err != nil && err != store.ErrKeyNotFound {
-				walkErrors = append(walkErrors, fmt.Errorf("bad imageID %q in pod definition: %v", appImg.String(), err))
+				walkErrors = append(walkErrors, fmt.Errorf("bad imageID %q in pod definition: %v", imgHash.String(), err))
 				return
 			}
 			imgs[key] = struct{}{}
