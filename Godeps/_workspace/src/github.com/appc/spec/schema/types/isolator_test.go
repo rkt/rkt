@@ -150,7 +150,7 @@ func TestIsolatorsGetByName(t *testing.T) {
 				"value": {"set": ["CAP_KILL"]}
 			},
 			{
-				"name": "os/linux/capabilities-revoke-set",
+				"name": "os/linux/capabilities-remove-set",
 				"value": {"set": ["CAP_KILL"]}
 			}
 		]
@@ -165,7 +165,7 @@ func TestIsolatorsGetByName(t *testing.T) {
 		{"resource/cpu", 1, 30, nil},
 		{"resource/memory", 2147483648, 1000000000, nil},
 		{"os/linux/capabilities-retain-set", 0, 0, []LinuxCapability{"CAP_KILL"}},
-		{"os/linux/capabilities-revoke-set", 0, 0, []LinuxCapability{"CAP_KILL"}},
+		{"os/linux/capabilities-remove-set", 0, 0, []LinuxCapability{"CAP_KILL"}},
 	}
 
 	var is Isolators

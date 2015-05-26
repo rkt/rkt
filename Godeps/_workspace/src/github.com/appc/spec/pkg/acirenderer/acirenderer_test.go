@@ -793,6 +793,123 @@ func TestFileOverride(t *testing.T) {
 	}
 }
 
+// Test an image with 1 dep. The upper image overrides a dir provided by a
+// parent with a non-dir file.
+func TestFileOvverideDir(t *testing.T) {
+	dir, err := ioutil.TempDir("", tstprefix)
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+	ds := NewTestStore()
+
+	imj := `
+		{
+		    "acKind": "ImageManifest",
+		    "acVersion": "0.1.1",
+		    "name": "example.com/test01"
+		}
+	`
+
+	entries := []*testTarEntry{
+		{
+			contents: imj,
+			header: &tar.Header{
+				Name: "manifest",
+				Size: int64(len(imj)),
+			},
+		},
+		{
+			header: &tar.Header{
+				Name:     "rootfs/a/b",
+				Typeflag: tar.TypeDir,
+				Mode:     0700,
+			},
+		},
+		{
+			header: &tar.Header{
+				Name:     "rootfs/a/b/c",
+				Typeflag: tar.TypeDir,
+				Mode:     0700,
+			},
+		},
+		{
+			contents: "hello",
+			header: &tar.Header{
+				Name: "rootfs/a/b/c/file01",
+				Size: 5,
+			},
+		},
+	}
+
+	key1, err := newTestACI(entries, dir, ds)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	im, err := createImageManifest(imj)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	image1 := Image{Im: im, Key: key1, Level: 1}
+
+	imj = `
+		{
+		    "acKind": "ImageManifest",
+		    "acVersion": "0.1.1",
+		    "name": "example.com/test02"
+		}
+	`
+
+	k1, _ := types.NewHash(key1)
+	imj, err = addDependencies(imj,
+		types.Dependency{
+			App:     "example.com/test01",
+			ImageID: k1},
+	)
+
+	entries = []*testTarEntry{
+		{
+			contents: imj,
+			header: &tar.Header{
+				Name: "manifest",
+				Size: int64(len(imj)),
+			},
+		},
+		{
+			contents: "hellohello",
+			header: &tar.Header{
+				Name: "rootfs/a/b",
+				Size: 10,
+			},
+		},
+	}
+
+	expectedFiles := []*fileInfo{
+		&fileInfo{path: "manifest", typeflag: tar.TypeReg},
+		&fileInfo{path: "rootfs/a/b", typeflag: tar.TypeReg, size: 10},
+	}
+
+	key2, err := newTestACI(entries, dir, ds)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	im, err = createImageManifest(imj)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	image2 := Image{Im: im, Key: key2, Level: 0}
+
+	images := Images{image2, image1}
+	err = checkRenderACIFromList(images, expectedFiles, ds)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	err = checkRenderACI("example.com/test02", expectedFiles, ds)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // Test an image with 1 dep. The parent image has a pathWhiteList.
 func TestPWLOnlyParent(t *testing.T) {
 	dir, err := ioutil.TempDir("", tstprefix)

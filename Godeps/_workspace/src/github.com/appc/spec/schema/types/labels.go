@@ -7,7 +7,7 @@ import (
 )
 
 var ValidOSArch = map[string][]string{
-	"linux":   {"amd64", "i386"},
+	"linux":   {"amd64", "i386", "aarch64", "armv7l", "armv7b"},
 	"freebsd": {"amd64", "i386", "arm"},
 	"darwin":  {"x86_64", "i386"},
 }
