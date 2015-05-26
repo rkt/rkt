@@ -21,13 +21,12 @@ import (
 
 var (
 	cmdImage = &Command{
-		Name:    "image",
-		Summary: "Operate on an image in the local store",
-		Usage:   "SUBCOMMAND IMAGE [args...]",
-		Description: `SUBCOMMAND could be "cat-manifest". IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
-They will be checked in that order and the first match will be used.`,
-		Run:   runImage,
-		Flags: &imageFlags,
+		Name:        "image",
+		Summary:     "Operate on an image in the local store",
+		Usage:       "SUBCOMMAND IMAGE [args...]",
+		Description: `SUBCOMMAND could be "cat-manifest". IMAGE should be a string referencing an image; either a hash or an image name.`,
+		Run:         runImage,
+		Flags:       &imageFlags,
 	}
 	imageFlags flag.FlagSet
 )
