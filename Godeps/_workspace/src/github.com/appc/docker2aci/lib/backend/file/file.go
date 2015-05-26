@@ -44,8 +44,8 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDo
 	return ancestry, parsedDockerURL, nil
 }
 
-func (lb *FileBackend) BuildACI(layerID string, dockerURL *types.ParsedDockerURL, outputDir string, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
-	tmpDir, err := ioutil.TempDir("", "docker2aci-")
+func (lb *FileBackend) BuildACI(layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
+	tmpDir, err := ioutil.TempDir(tmpBaseDir, "docker2aci-")
 	if err != nil {
 		return "", nil, fmt.Errorf("error creating dir: %v", err)
 	}
@@ -204,7 +204,7 @@ func getTarFileBytes(file *os.File, path string) ([]byte, error) {
 }
 
 func extractEmbeddedLayer(file *os.File, layerID string, outputPath string) (*os.File, error) {
-	util.Info("Extracting layer: ", layerID, "\n")
+	util.Info("Extracting ", layerID[:12], "\n")
 
 	_, err := file.Seek(0, 0)
 	if err != nil {

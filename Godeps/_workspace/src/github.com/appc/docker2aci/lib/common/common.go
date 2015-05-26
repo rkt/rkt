@@ -5,13 +5,13 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/tarball"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"time"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/tarball"
 	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/types"
@@ -109,10 +109,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	if err != nil {
 		return nil, err
 	}
-	name, err := appctypes.NewACName(appURL)
-	if err != nil {
-		return nil, err
-	}
+	name := appctypes.MustACName(appURL)
 	genManifest.Name = *name
 
 	acVersion, err := appctypes.NewSemVer(schemaVersion)
@@ -123,28 +120,46 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 	genManifest.ACKind = appctypes.ACKind(schema.ImageManifestKind)
 
-	var labels appctypes.Labels
-	var parentLabels appctypes.Labels
+	var (
+		labels       appctypes.Labels
+		parentLabels appctypes.Labels
+		annotations  appctypes.Annotations
+	)
 
-	layer, _ := appctypes.NewACName("layer")
+	layer := appctypes.MustACName("layer")
 	labels = append(labels, appctypes.Label{Name: *layer, Value: layerData.ID})
 
 	tag := dockerURL.Tag
-	version, _ := appctypes.NewACName("version")
+	version := appctypes.MustACName("version")
 	labels = append(labels, appctypes.Label{Name: *version, Value: tag})
 
 	if layerData.OS != "" {
-		os, _ := appctypes.NewACName("os")
+		os := appctypes.MustACName("os")
 		labels = append(labels, appctypes.Label{Name: *os, Value: layerData.OS})
 		parentLabels = append(parentLabels, appctypes.Label{Name: *os, Value: layerData.OS})
 
 		if layerData.Architecture != "" {
-			arch, _ := appctypes.NewACName("arch")
+			arch := appctypes.MustACName("arch")
 			parentLabels = append(parentLabels, appctypes.Label{Name: *arch, Value: layerData.Architecture})
 		}
 	}
 
+	if layerData.Author != "" {
+		authorsKey := appctypes.MustACName("authors")
+		annotations = append(annotations, appctypes.Annotation{Name: *authorsKey, Value: layerData.Author})
+	}
+	epoch := time.Unix(0, 0)
+	if !layerData.Created.Equal(epoch) {
+		createdKey := appctypes.MustACName("created")
+		annotations = append(annotations, appctypes.Annotation{Name: *createdKey, Value: layerData.Created.Format(time.RFC3339)})
+	}
+	if layerData.Comment != "" {
+		commentKey := appctypes.MustACName("docker/comment")
+		annotations = append(annotations, appctypes.Annotation{Name: *commentKey, Value: layerData.Comment})
+	}
+
 	genManifest.Labels = labels
+	genManifest.Annotations = annotations
 
 	if dockerConfig != nil {
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
@@ -162,6 +177,12 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 				Environment:      env,
 				WorkingDirectory: dockerConfig.WorkingDir,
 			}
+
+			app.MountPoints, err = convertVolumesToMPs(dockerConfig.Volumes)
+			if err != nil {
+				return nil, err
+			}
+
 			genManifest.App = app
 		}
 	}
@@ -172,15 +193,42 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		if err != nil {
 			return nil, err
 		}
-		parentAppName, err := appctypes.NewACName(parentAppNameString)
-		if err != nil {
-			return nil, err
-		}
+		parentAppName := appctypes.MustACName(parentAppNameString)
 
 		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{App: *parentAppName, Labels: parentLabels})
 	}
 
 	return genManifest, nil
+}
+
+func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPoint, error) {
+	mps := []appctypes.MountPoint{}
+	dup := make(map[string]int)
+
+	for p := range dockerVolumes {
+		n := filepath.Join("volume-", p)
+		sn, err := appctypes.SanitizeACName(n)
+		if err != nil {
+			return nil, err
+		}
+
+		// check for duplicate names
+		if i, ok := dup[sn]; ok {
+			dup[sn] = i + 1
+			sn = fmt.Sprintf("%s-%d", sn, i)
+		} else {
+			dup[sn] = 1
+		}
+
+		mp := appctypes.MountPoint{
+			Name: *appctypes.MustACName(sn),
+			Path: p,
+		}
+
+		mps = append(mps, mp)
+	}
+
+	return mps, nil
 }
 
 func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string, compress bool) (*schema.ImageManifest, error) {
@@ -287,8 +335,22 @@ func parseDockerUser(dockerUser string) (string, string) {
 }
 
 func subtractWhiteouts(pathWhitelist []string, whiteouts []string) []string {
-	for _, whiteout := range whiteouts {
-		idx := util.IndexOf(pathWhitelist, whiteout)
+	matchPaths := []string{}
+	for _, path := range pathWhitelist {
+		// If one of the parent dirs of the current path matches the
+		// whiteout then also this path should be removed
+		curPath := path
+		for curPath != "/" {
+			for _, whiteout := range whiteouts {
+				if curPath == whiteout {
+					matchPaths = append(matchPaths, path)
+				}
+			}
+			curPath = filepath.Dir(curPath)
+		}
+	}
+	for _, matchPath := range matchPaths {
+		idx := util.IndexOf(pathWhitelist, matchPath)
 		if idx != -1 {
 			pathWhitelist = append(pathWhitelist[:idx], pathWhitelist[idx+1:]...)
 		}
