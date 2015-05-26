@@ -10,7 +10,7 @@ For more information on the rkt internals, see the [`devel`](devel/) documentati
 rkt should be able to be built on any modern Linux system.
 For the most part the codebase is self-contained (e.g. all dependencies are vendored), but assembly of the stage1 requires some other tools to be installed on the system.
 
-### Requirements
+### Build-time requirements
 
 * Linux 3.8+
   * make
@@ -29,6 +29,21 @@ git clone https://github.com/coreos/rkt.git
 cd rkt
 ./build
 ```
+
+### Run-time requirements
+
+rkt is statically linked and does not require any dynamic libraries to be installed. However, it requires the following kernel features:
+
+* `CONFIG_CGROUPS`
+* `CONFIG_NAMESPACES`
+* `CONFIG_UTS_NS`
+* `CONFIG_IPC_NS`
+* `CONFIG_PID_NS`
+* `CONFIG_NET_NS`
+
+Additionally, the following features are nice to have:
+
+* `CONFIG_OVERLAY_FS` (to prepare the rootfs without tar)
 
 ### With Docker
 
