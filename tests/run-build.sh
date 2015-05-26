@@ -11,16 +11,16 @@ mkdir -p builds
 cd builds
 
 # Semaphore does not clean git subtrees between each build.
-rm -rf $BUILD_DIR
+sudo rm -rf $BUILD_DIR
 
 git clone --depth 1 ../ $BUILD_DIR
 
 cd $BUILD_DIR
 
-./test
+sudo -E PATH="$PATH" ./test
 
 cd ..
 
 # Make sure there is enough disk space for the next build
-rm -rf $BUILD_DIR
+sudo rm -rf $BUILD_DIR
 

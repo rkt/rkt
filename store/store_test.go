@@ -25,11 +25,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/multicall"
+	"github.com/coreos/rkt/pkg/sys"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 const tstprefix = "store-test"
+
+func init() {
+	multicall.MaybeExec()
+}
 
 func TestBlobStore(t *testing.T) {
 	dir, err := ioutil.TempDir("", tstprefix)
@@ -334,6 +341,10 @@ func TestGetAci(t *testing.T) {
 }
 
 func TestTreeStore(t *testing.T) {
+	if !sys.HasChrootCapability() {
+		t.Skipf("chroot capability not available. Disabling test.")
+	}
+
 	dir, err := ioutil.TempDir("", tstprefix)
 	if err != nil {
 		t.Fatalf("error creating tempdir: %v", err)

@@ -1,12 +1,12 @@
 package aci
 
 import (
-	"archive/tar"
 	"fmt"
+
+	ptar "github.com/coreos/rkt/pkg/tar"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/acirenderer"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	ptar "github.com/coreos/rkt/pkg/tar"
 )
 
 // Given an imageID, start with the matching image available in the store,
@@ -50,11 +50,13 @@ func renderImage(renderedACI acirenderer.RenderedACI, dir string, ap acirenderer
 		if err != nil {
 			return err
 		}
-		defer rs.Close()
+
 		// Overwrite is not needed. If a file needs to be overwritten then the renderedACI builder has a bug
-		if err := ptar.ExtractTar(tar.NewReader(rs), dir, false, ra.FileMap); err != nil {
+		if err := ptar.ExtractTar(rs, dir, false, ra.FileMap); err != nil {
+			rs.Close()
 			return fmt.Errorf("error extracting ACI: %v", err)
 		}
+		rs.Close()
 	}
 
 	return nil

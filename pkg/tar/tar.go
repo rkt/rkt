@@ -23,14 +23,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 )
 
 const DEFAULT_DIR_MODE os.FileMode = 0755
-
-type insecureLinkError error
 
 var ErrNotSupportedPlatform = errors.New("platform and architecture is not supported")
 
@@ -38,10 +35,10 @@ var ErrNotSupportedPlatform = errors.New("platform and architecture is not suppo
 // root of the tar file and should be cleaned (for example using filepath.Clean)
 type PathWhitelistMap map[string]struct{}
 
-// ExtractTar extracts a tarball (from a tar.Reader) into the given directory
+// extractTar extracts a tarball (from a tar.Reader) into the root directory
 // if pwl is not nil, only the paths in the map are extracted.
 // If overwrite is true, existing files will be overwritten.
-func ExtractTar(tr *tar.Reader, dir string, overwrite bool, pwl PathWhitelistMap) error {
+func extractTar(tr *tar.Reader, overwrite bool, pwl PathWhitelistMap) error {
 	um := syscall.Umask(0)
 	defer syscall.Umask(um)
 
@@ -59,7 +56,7 @@ Tar:
 					continue
 				}
 			}
-			err = ExtractFile(tr, hdr, dir, overwrite)
+			err = extractFile(tr, hdr, overwrite)
 			if err != nil {
 				return fmt.Errorf("error extracting tarball: %v", err)
 			}
@@ -74,7 +71,7 @@ Tar:
 	// Restore dirs atime and mtime. This has to be done after extracting
 	// as a file extraction will change its parent directory's times.
 	for _, hdr := range dirhdrs {
-		p := filepath.Join(dir, hdr.Name)
+		p := filepath.Join("/", hdr.Name)
 		if err := syscall.UtimesNano(p, HdrToTimespec(hdr)); err != nil {
 			return err
 		}
@@ -82,11 +79,11 @@ Tar:
 	return nil
 }
 
-// ExtractFile extracts the file described by hdr from the given tarball into
-// the provided directory.
+// extractFile extracts the file described by hdr from the given tarball into
+// the root directory.
 // If overwrite is true, existing files will be overwritten.
-func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string, overwrite bool) error {
-	p := filepath.Join(dir, hdr.Name)
+func extractFile(tr *tar.Reader, hdr *tar.Header, overwrite bool) error {
+	p := filepath.Join("/", hdr.Name)
 	fi := hdr.FileInfo()
 	typ := hdr.Typeflag
 	if overwrite {
@@ -137,18 +134,11 @@ func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string, overwrite bool) er
 		}
 		dir.Close()
 	case typ == tar.TypeLink:
-		dest := filepath.Join(dir, hdr.Linkname)
-		if !strings.HasPrefix(dest, dir) {
-			return insecureLinkError(fmt.Errorf("insecure link %q -> %q", p, hdr.Linkname))
-		}
+		dest := filepath.Join("/", hdr.Linkname)
 		if err := os.Link(dest, p); err != nil {
 			return err
 		}
 	case typ == tar.TypeSymlink:
-		dest := filepath.Join(filepath.Dir(p), hdr.Linkname)
-		if !strings.HasPrefix(dest, dir) {
-			return insecureLinkError(fmt.Errorf("insecure symlink %q -> %q", p, hdr.Linkname))
-		}
 		if err := os.Symlink(hdr.Linkname, p); err != nil {
 			return err
 		}
@@ -203,9 +193,9 @@ func ExtractFile(tr *tar.Reader, hdr *tar.Header, dir string, overwrite bool) er
 	return nil
 }
 
-// ExtractFileFromTar extracts a regular file from the given tar, returning its
+// extractFileFromTar extracts a regular file from the given tar, returning its
 // contents as a byte slice
-func ExtractFileFromTar(tr *tar.Reader, file string) ([]byte, error) {
+func extractFileFromTar(tr *tar.Reader, file string) ([]byte, error) {
 	for {
 		hdr, err := tr.Next()
 		switch err {

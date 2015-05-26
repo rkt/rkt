@@ -44,6 +44,9 @@ func (ts *TreeStore) Write(key string, s *Store) error {
 	if err != nil {
 		return fmt.Errorf("treestore: cannot convert key to imageID: %v", err)
 	}
+	if err := os.MkdirAll(treepath, 0755); err != nil {
+		return fmt.Errorf("treestore: cannot create treestore directory %s: %v", treepath, err)
+	}
 	err = aci.RenderACIWithImageID(*imageID, treepath, s)
 	if err != nil {
 		return fmt.Errorf("treestore: cannot render aci: %v", err)
