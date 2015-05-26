@@ -7,7 +7,7 @@ import (
 
 const (
 	LinuxCapabilitiesRetainSetName = "os/linux/capabilities-retain-set"
-	LinuxCapabilitiesRevokeSetName = "os/linux/capabilities-revoke-set"
+	LinuxCapabilitiesRevokeSetName = "os/linux/capabilities-remove-set"
 )
 
 func init() {

@@ -1,3 +1,5 @@
+// +build linux freebsd netbsd openbsd
+
 package tarheader
 
 import (
