@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	rmImageReferenced = "rkt: imageID is referenced by some containers, cannot remove the tree store"
+	rmImageReferenced = `rkt: imageID %q is referenced by some containers, cannot remove.`
 	rmImageOk         = "rkt: successfully removed aci for imageID:"
 
 	unreferencedACI = "rkt-unreferencedACI.aci"
@@ -94,6 +94,26 @@ func TestImageRm(t *testing.T) {
 	if err := removeImageId(ctx, unreferencedImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
+	cmd = fmt.Sprintf("%s gc --grace-period=0s", ctx.cmd())
+	t.Logf("Running gc: %v", cmd)
+	child, err = gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec: %v", err)
+	}
+	if err := child.Wait(); err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+
+	t.Logf("Removing stage1 image (should work)")
+	if err := removeImageId(ctx, stage1ImageID, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	t.Logf("Removing image for app %s (should work)", referencedApp)
+	if err := removeImageId(ctx, referencedImageID, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 }
 
 func getImageId(ctx *rktRunCtx, name string) (string, error) {
@@ -115,7 +135,7 @@ func getImageId(ctx *rktRunCtx, name string) (string, error) {
 }
 
 func removeImageId(ctx *rktRunCtx, imageID string, shouldWork bool) error {
-	expect := rmImageReferenced
+	expect := fmt.Sprintf(rmImageReferenced, imageID)
 	if shouldWork {
 		expect = rmImageOk
 	}
