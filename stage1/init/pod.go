@@ -327,7 +327,16 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManifest) (
 		key := mp.Name
 		vol, ok := vols[key]
 		if !ok {
-			return nil, fmt.Errorf("no volume for mountpoint %q in app %q", key, name)
+			catCmd := fmt.Sprintf("sudo rkt image cat-manifest --pretty-print %v", id)
+			volumeCmd := ""
+			for _, mp := range app.MountPoints {
+				volumeCmd += fmt.Sprintf("--volume %s,kind=host,source=/some/path ", mp.Name)
+			}
+
+			return nil, fmt.Errorf("no volume for mountpoint %q in app %q.\n"+
+				"You can inspect the volumes with:\n\t%v\n"+
+				"App %q requires the following volumes:\n\t%v",
+				key, name, catCmd, name, volumeCmd)
 		}
 		opt := make([]string, 4)
 
@@ -385,7 +394,7 @@ func (p *Pod) PodToNspawnArgs() ([]string, error) {
 		}
 		aa, err := p.appToNspawnArgs(ra, am)
 		if err != nil {
-			return nil, fmt.Errorf("failed to construct args for app %q: %v", am.Name, err)
+			return nil, err
 		}
 		args = append(args, aa...)
 	}
