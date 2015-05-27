@@ -2,6 +2,7 @@
 
 # maintain a cached copy of coreos pxe image
 
+# when changing the image, update the systemd version in stage1/rootfs/usr_from_coreos/install
 IMG_RELEASE="444.5.0"
 IMG_URL="http://stable.release.core-os.net/amd64-usr/${IMG_RELEASE}/coreos_production_pxe_image.cpio.gz"
 

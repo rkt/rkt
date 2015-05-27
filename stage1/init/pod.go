@@ -181,11 +181,16 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, inte
 		newUnitOption("Service", "Group", "0"),
 	}
 
+	_, systemdStage1Version, err := p.getFlavor()
+	if err != nil {
+		return fmt.Errorf("Failed to get stage1 flavor: %v\n", err)
+	}
+
 	if interactive {
 		opts = append(opts, newUnitOption("Service", "StandardInput", "tty"))
 		opts = append(opts, newUnitOption("Service", "StandardOutput", "tty"))
 		opts = append(opts, newUnitOption("Service", "StandardError", "tty"))
-	} else {
+	} else if systemdSupportsJournalLinking(systemdStage1Version) {
 		opts = append(opts, newUnitOption("Service", "StandardOutput", "journal+console"))
 		opts = append(opts, newUnitOption("Service", "StandardError", "journal+console"))
 		opts = append(opts, newUnitOption("Service", "SyslogIdentifier", filepath.Base(app.Exec[0])))
@@ -404,4 +409,17 @@ func (p *Pod) PodToNspawnArgs() ([]string, error) {
 	}
 
 	return args, nil
+}
+
+func (p *Pod) getFlavor() (flavor string, systemdVersion string, err error) {
+	flavor, err = os.Readlink(filepath.Join(common.Stage1RootfsPath(p.Root), "flavor"))
+	if err != nil {
+		return "", "", fmt.Errorf("unable to determine stage1 flavor: %v", err)
+	}
+	systemdVersionBytes, err := ioutil.ReadFile(filepath.Join(common.Stage1RootfsPath(p.Root), "systemd-version"))
+	if err != nil {
+		return "", "", fmt.Errorf("unable to determine stage1's systemd version: %v", err)
+	}
+	systemdVersion = strings.Trim(string(systemdVersionBytes), " \n")
+	return
 }

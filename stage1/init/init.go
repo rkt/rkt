@@ -116,21 +116,6 @@ func init() {
 	runtime.LockOSThread()
 }
 
-func getFlavor(p *Pod) (flavor, systemdVersion string, err error) {
-	flavor, err = os.Readlink(filepath.Join(common.Stage1RootfsPath(p.Root), "flavor"))
-	if err != nil {
-		return "", "", fmt.Errorf("unable to determine stage1 flavor: %v", err)
-	}
-	if flavor == "src" {
-		systemdVersionBytes, err := ioutil.ReadFile(filepath.Join(common.Stage1RootfsPath(p.Root), "systemd-version"))
-		if err != nil {
-			return "", "", fmt.Errorf("unable to determine stage1's systemd version: %v", err)
-		}
-		systemdVersion = strings.Trim(string(systemdVersionBytes), " \n")
-	}
-	return
-}
-
 // machinedRegister checks if nspawn should register the pod to machined
 func machinedRegister() bool {
 	// machined has a D-Bus interface following versioning guidelines, see:
@@ -166,7 +151,7 @@ func machinedRegister() bool {
 }
 
 // getArgsEnv returns the nspawn args and env according to the usr used
-func getArgsEnv(p *Pod, flavor, systemdVersion string, debug bool) ([]string, []string, error) {
+func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) ([]string, []string, error) {
 	args := []string{}
 	env := os.Environ()
 
@@ -193,7 +178,7 @@ func getArgsEnv(p *Pod, flavor, systemdVersion string, debug bool) ([]string, []
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
 
-		switch systemdVersion {
+		switch systemdStage1Version {
 		case "v215":
 			fallthrough
 		case "v219":
@@ -218,11 +203,14 @@ func getArgsEnv(p *Pod, flavor, systemdVersion string, debug bool) ([]string, []
 		} else {
 			args = append(args, fmt.Sprintf("--register=false"))
 		}
+
 	default:
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
 	}
 
-	if util.IsRunningSystemd() {
+	// link journal only if the host is running systemd and stage1 supports
+	// linking
+	if util.IsRunningSystemd() && systemdSupportsJournalLinking(systemdStage1Version) {
 		// we write /etc/machine-id here because systemd-nspawn needs it to link
 		// the container's journal to the host
 		mPath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "machine-id")
@@ -371,7 +359,7 @@ func stage1() int {
 		return 2
 	}
 
-	flavor, systemdVersion, err := getFlavor(p)
+	flavor, systemdVersion, err := p.getFlavor()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get stage1 flavor: %v\n", err)
 		return 3
@@ -444,6 +432,19 @@ func runningFromUnitFile() (ret bool, err error) {
 	default:
 		err = fmt.Errorf("error calling sd_pid_get_owner_uid: %v", syscall.Errno(-errno))
 		return
+	}
+}
+
+func systemdSupportsJournalLinking(version string) bool {
+	switch {
+	case version == "v219":
+		fallthrough
+	case version == "v220":
+		fallthrough
+	case version == "master":
+		return true
+	default:
+		return false
 	}
 }
 
