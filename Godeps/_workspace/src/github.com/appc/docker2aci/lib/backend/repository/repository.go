@@ -10,11 +10,13 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/common"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/util"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/ioprogress"
 )
 
 type RepoData struct {
@@ -59,8 +61,8 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDo
 	return ancestry, dockerURL, nil
 }
 
-func (rb *RepositoryBackend) BuildACI(layerID string, dockerURL *types.ParsedDockerURL, outputDir string, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
-	tmpDir, err := ioutil.TempDir("", "docker2aci-")
+func (rb *RepositoryBackend) BuildACI(layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
+	tmpDir, err := ioutil.TempDir(tmpBaseDir, "docker2aci-")
 	if err != nil {
 		return "", nil, fmt.Errorf("error creating dir: %v", err)
 	}
@@ -76,24 +78,11 @@ func (rb *RepositoryBackend) BuildACI(layerID string, dockerURL *types.ParsedDoc
 		return "", nil, fmt.Errorf("error unmarshaling layer data: %v", err)
 	}
 
-	// remove size
-	layer, err := getLayer(layerID, rb.repoData.Endpoints[0], rb.repoData, int64(size))
+	layerFile, err := getLayer(layerID, rb.repoData.Endpoints[0], rb.repoData, size, tmpDir)
 	if err != nil {
 		return "", nil, fmt.Errorf("error getting the remote layer: %v", err)
 	}
-	defer layer.Close()
-
-	layerFile, err := ioutil.TempFile(tmpDir, "dockerlayer-")
-	if err != nil {
-		return "", nil, fmt.Errorf("error creating layer: %v", err)
-	}
-
-	_, err = io.Copy(layerFile, layer)
-	if err != nil {
-		return "", nil, fmt.Errorf("error getting layer: %v", err)
-	}
-
-	layerFile.Sync()
+	defer layerFile.Close()
 
 	util.Debug("Generating layer ACI...")
 	aciPath, manifest, err := common.GenerateACI(layerData, dockerURL, outputDir, layerFile, curPwl, compress)
@@ -230,7 +219,7 @@ func getAncestry(imgID, registry string, repoData *RepoData) ([]string, error) {
 	return ancestry, nil
 }
 
-func getJson(imgID, registry string, repoData *RepoData) ([]byte, int, error) {
+func getJson(imgID, registry string, repoData *RepoData) ([]byte, int64, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", "https://"+path.Join(registry, "images", imgID, "json"), nil)
 	if err != nil {
@@ -248,10 +237,10 @@ func getJson(imgID, registry string, repoData *RepoData) ([]byte, int, error) {
 		return nil, -1, fmt.Errorf("HTTP code: %d, URL: %s", res.StatusCode, req.URL)
 	}
 
-	imageSize := -1
+	imageSize := int64(-1)
 
 	if hdr := res.Header.Get("X-Docker-Size"); hdr != "" {
-		imageSize, err = strconv.Atoi(hdr)
+		imageSize, err = strconv.ParseInt(hdr, 10, 64)
 		if err != nil {
 			return nil, -1, err
 		}
@@ -265,7 +254,7 @@ func getJson(imgID, registry string, repoData *RepoData) ([]byte, int, error) {
 	return b, imageSize, nil
 }
 
-func getLayer(imgID, registry string, repoData *RepoData, imgSize int64) (io.ReadCloser, error) {
+func getLayer(imgID, registry string, repoData *RepoData, imgSize int64, tmpDir string) (*os.File, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", "https://"+path.Join(registry, "images", imgID, "layer"), nil)
 	if err != nil {
@@ -275,19 +264,63 @@ func getLayer(imgID, registry string, repoData *RepoData, imgSize int64) (io.Rea
 	setAuthToken(req, repoData.Tokens)
 	setCookie(req, repoData.Cookie)
 
-	util.Info("Downloading layer: ", imgID, "\n")
-
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
 		res.Body.Close()
 		return nil, fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
 	}
 
-	return res.Body, nil
+	// if we didn't receive the size via X-Docker-Size when we retrieved the
+	// layer's json, try Content-Length
+	if imgSize == -1 {
+		if hdr := res.Header.Get("Content-Length"); hdr != "" {
+			imgSize, err = strconv.ParseInt(hdr, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	prefix := "Downloading " + imgID[:12]
+	fmtBytesSize := 18
+	barSize := int64(80 - len(prefix) - fmtBytesSize)
+	bar := ioprogress.DrawTextFormatBar(barSize)
+	fmtfunc := func(progress, total int64) string {
+		return fmt.Sprintf(
+			"%s: %s %s",
+			prefix,
+			bar(progress, total),
+			ioprogress.DrawTextFormatBytes(progress, total),
+		)
+	}
+
+	progressReader := &ioprogress.Reader{
+		Reader:       res.Body,
+		Size:         imgSize,
+		DrawFunc:     ioprogress.DrawTerminalf(os.Stderr, fmtfunc),
+		DrawInterval: 500 * time.Millisecond,
+	}
+
+	layerFile, err := ioutil.TempFile(tmpDir, "dockerlayer-")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = io.Copy(layerFile, progressReader)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := layerFile.Sync(); err != nil {
+		return nil, err
+	}
+
+	return layerFile, nil
 }
 
 func setAuthToken(req *http.Request, token []string) {

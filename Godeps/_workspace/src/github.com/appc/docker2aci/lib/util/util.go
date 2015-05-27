@@ -67,12 +67,12 @@ func Warn(i ...interface{}) {
 }
 
 func Info(i ...interface{}) {
-	printTo(os.Stdout, i...)
+	printTo(os.Stderr, i...)
 }
 
 func Debug(i ...interface{}) {
 	if debugEnabled {
-		printTo(os.Stdout, i...)
+		printTo(os.Stderr, i...)
 	}
 }
 

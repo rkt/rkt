@@ -365,7 +365,7 @@ func stage1() int {
 
 	args, env, err := getArgsEnv(p, flavor, systemdVersion, debug)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get execution parameters: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 3
 	}
 
