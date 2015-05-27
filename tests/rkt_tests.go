@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -68,7 +69,7 @@ func (d *dirDesc) cleanup() {
 // rktOption returns option for rkt invocation
 func (d *dirDesc) rktOption() string {
 	d.ensureValid()
-	return fmt.Sprintf("--%s='%s'", d.option, d.dir)
+	return fmt.Sprintf("--%s=%s", d.option, d.dir)
 }
 
 func (d *dirDesc) ensureValid() {
@@ -130,7 +131,11 @@ func (ctx *rktRunCtx) cmd() string {
 	for _, d := range ctx.directories {
 		opts = append(opts, d.rktOption())
 	}
-	return fmt.Sprintf("../bin/rkt %s", strings.Join(opts, " "))
+	abs, err := filepath.Abs("../bin/rkt")
+	if err != nil {
+		abs = "../bin/rkt"
+	}
+	return fmt.Sprintf("%s %s", abs, strings.Join(opts, " "))
 }
 
 func (ctx *rktRunCtx) ensureValid() {
