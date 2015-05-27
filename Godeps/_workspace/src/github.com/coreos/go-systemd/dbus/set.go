@@ -12,39 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package unit
+package dbus
 
-import (
-	"fmt"
-)
-
-type UnitOption struct {
-	Section string
-	Name    string
-	Value   string
+type set struct {
+	data map[string]bool
 }
 
-func (uo *UnitOption) String() string {
-	return fmt.Sprintf("{Section: %q, Name: %q, Value: %q}", uo.Section, uo.Name, uo.Value)
+func (s *set) Add(value string) {
+	s.data[value] = true
 }
 
-func (uo *UnitOption) Match(other *UnitOption) bool {
-	return uo.Section == other.Section &&
-		uo.Name == other.Name &&
-		uo.Value == other.Value
+func (s *set) Remove(value string) {
+	delete(s.data, value)
 }
 
-func AllMatch(u1 []*UnitOption, u2 []*UnitOption) bool {
-	length := len(u1)
-	if length != len(u2) {
-		return false
+func (s *set) Contains(value string) (exists bool) {
+	_, exists = s.data[value]
+	return
+}
+
+func (s *set) Length() int {
+	return len(s.data)
+}
+
+func (s *set) Values() (values []string) {
+	for val, _ := range s.data {
+		values = append(values, val)
 	}
+	return
+}
 
-	for i := 0; i < length; i++ {
-		if !u1[i].Match(u2[i]) {
-			return false
-		}
-	}
-
-	return true
+func newSet() *set {
+	return &set{make(map[string]bool)}
 }

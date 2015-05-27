@@ -112,8 +112,18 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/unit",
-			"Comment": "v2-41-g415a79c4bfa3",
-			"Rev": "415a79c4bfa377b484b16c632347b3925a0f35ff"
+			"Comment": "v2-55-gd7b0894",
+			"Rev": "d7b08942d0d85bfcb4694864881c4af7324784d2"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-systemd/dbus",
+			"Comment": "v2-55-gd7b0894",
+			"Rev": "d7b08942d0d85bfcb4694864881c4af7324784d2"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-systemd/util",
+			"Comment": "v2-55-gd7b0894",
+			"Rev": "d7b08942d0d85bfcb4694864881c4af7324784d2"
 		},
 		{
 			"ImportPath": "github.com/coreos/ioprogress",

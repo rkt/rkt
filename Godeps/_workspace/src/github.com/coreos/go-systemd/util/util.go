@@ -12,39 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package unit
+// Package util contains utility functions related to systemd that applications
+// can use to check things like whether systemd is running.
+package util
 
 import (
-	"fmt"
+	"os"
 )
 
-type UnitOption struct {
-	Section string
-	Name    string
-	Value   string
-}
-
-func (uo *UnitOption) String() string {
-	return fmt.Sprintf("{Section: %q, Name: %q, Value: %q}", uo.Section, uo.Name, uo.Value)
-}
-
-func (uo *UnitOption) Match(other *UnitOption) bool {
-	return uo.Section == other.Section &&
-		uo.Name == other.Name &&
-		uo.Value == other.Value
-}
-
-func AllMatch(u1 []*UnitOption, u2 []*UnitOption) bool {
-	length := len(u1)
-	if length != len(u2) {
+// IsRunningSystemd checks whether the host was booted with systemd as its init
+// system. This functions similar to systemd's `sd_booted(3)`: internally, it
+// checks whether /run/systemd/system/ exists and is a directory.
+// http://www.freedesktop.org/software/systemd/man/sd_booted.html
+func IsRunningSystemd() bool {
+	fi, err := os.Lstat("/run/systemd/system")
+	if err != nil {
 		return false
 	}
-
-	for i := 0; i < length; i++ {
-		if !u1[i].Match(u2[i]) {
-			return false
-		}
-	}
-
-	return true
+	return fi.IsDir()
 }
