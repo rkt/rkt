@@ -124,6 +124,38 @@ func newUnitOption(section, name, value string) *unit.UnitOption {
 	return &unit.UnitOption{Section: section, Name: name, Value: value}
 }
 
+func (p *Pod) WritePrepareAppTemplate(version string) error {
+	opts := []*unit.UnitOption{
+		newUnitOption("Unit", "Description", "Prepare minimum environment for chrooted applications"),
+		newUnitOption("Unit", "DefaultDependencies", "false"),
+		newUnitOption("Unit", "OnFailureJobMode", "fail"),
+		newUnitOption("Service", "Type", "oneshot"),
+		newUnitOption("Service", "Restart", "no"),
+		newUnitOption("Service", "ExecStart", "/prepare-app %I"),
+		newUnitOption("Service", "User", "0"),
+		newUnitOption("Service", "Group", "0"),
+		newUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE"),
+	}
+
+	if systemdSupportsJournalLinking(version) {
+		opts = append(opts, newUnitOption("Unit", "Requires", "systemd-journald.service"))
+		opts = append(opts, newUnitOption("Unit", "After", "systemd-journald.service"))
+	}
+
+	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), unitsDir)
+	file, err := os.OpenFile(filepath.Join(unitsPath, "prepare-app@.service"), os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create service unit file: %v", err)
+	}
+	defer file.Close()
+
+	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
+		return fmt.Errorf("failed to write service unit file: %v", err)
+	}
+
+	return nil
+}
+
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
 func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, interactive bool) error {
 	name := ra.Name.String()

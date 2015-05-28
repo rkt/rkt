@@ -354,18 +354,23 @@ func stage1() int {
 		defer unregisterPod(p)
 	}
 
-	if err = p.PodToSystemd(interactive); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
-		return 2
-	}
-
-	flavor, systemdVersion, err := p.getFlavor()
+	flavor, systemdStage1Version, err := p.getFlavor()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get stage1 flavor: %v\n", err)
 		return 3
 	}
 
-	args, env, err := getArgsEnv(p, flavor, systemdVersion, debug)
+	if err = p.WritePrepareAppTemplate(systemdStage1Version); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write prepare-app service template: %v\n", err)
+		return 2
+	}
+
+	if err = p.PodToSystemd(interactive); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
+		return 2
+	}
+
+	args, env, err := getArgsEnv(p, flavor, systemdStage1Version, debug)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 3
