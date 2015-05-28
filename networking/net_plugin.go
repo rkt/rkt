@@ -110,23 +110,9 @@ func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) ([]byte, 
 		return nil, fmt.Errorf("Could not find plugin %q", n.conf.Type)
 	}
 
-	// TODO(jonboulle): This is a temporary workaround for an upstream
-	// issue in CNI: various plugins expect CNI_NETNS to be unique (e.g.
-	// veth uses it as a source of entropy, host-local uses it as an
-	// identifier), but rkt was passing a relative path which is identical
-	// for all pods. For now, let's use an absolute path, until the
-	// upstream issue is sorted. **This will break host-local removals**, but
-	// allow --private-net to work with multiple pods.
-	// (In future we will probably pass CNI_CONTAINERID and use that for
-	// uniqueness-requiring operations instead.)
-	// https://github.com/appc/cni/issues/5
-	netns, err := filepath.Abs(netns)
-	if err != nil {
-		panic(err)
-	}
 	vars := [][2]string{
 		{"CNI_COMMAND", cmd},
-		{"CNI_PODID", e.podID.String()},
+		{"CNI_CONTAINERID", e.podID.String()},
 		{"CNI_NETNS", netns},
 		{"CNI_ARGS", n.runtime.Args},
 		{"CNI_IFNAME", n.runtime.IfName},
@@ -145,6 +131,6 @@ func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) ([]byte, 
 		Stderr: os.Stderr,
 	}
 
-	err = c.Run()
+	err := c.Run()
 	return stdout.Bytes(), err
 }

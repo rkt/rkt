@@ -132,10 +132,8 @@ func Load(podRoot string, podID *types.UUID) (*Networking, error) {
 
 		// make a copy of ni to make it a unique object as it's saved via ptr
 		rti := ni
-		nets = append(nets, activeNet{
-			conf:    n.conf,
-			runtime: &rti,
-		})
+		n.runtime = &rti
+		nets = append(nets, *n)
 	}
 
 	return &Networking{
