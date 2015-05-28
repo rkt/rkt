@@ -33,10 +33,26 @@ import (
 const UserNetPluginsPath = "/usr/lib/rkt/plugins/net"
 const BuiltinNetPluginsPath = "usr/lib/rkt/plugins/net"
 
+func pluginErr(err error, output []byte) error {
+	if _, ok := err.(*exec.ExitError); ok {
+		emsg := plugin.Error{}
+		if perr := json.Unmarshal(output, &emsg); perr != nil {
+			return fmt.Errorf("netplugin failed but error parsing its diagnostic message %q: %v", string(output), perr)
+		}
+		details := ""
+		if emsg.Details != "" {
+			details = fmt.Sprintf("; %v", emsg.Details)
+		}
+		return fmt.Errorf("%v%v", emsg.Msg, details)
+	}
+
+	return err
+}
+
 func (e *podEnv) netPluginAdd(n *activeNet, netns string) (ip, hostIP net.IP, err error) {
 	output, err := e.execNetPlugin("ADD", n, netns)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, pluginErr(err, output)
 	}
 
 	pr := plugin.Result{}
@@ -52,8 +68,11 @@ func (e *podEnv) netPluginAdd(n *activeNet, netns string) (ip, hostIP net.IP, er
 }
 
 func (e *podEnv) netPluginDel(n *activeNet, netns string) error {
-	_, err := e.execNetPlugin("DEL", n, netns)
-	return err
+	output, err := e.execNetPlugin("DEL", n, netns)
+	if err != nil {
+		return pluginErr(err, output)
+	}
+	return nil
 }
 
 func (e *podEnv) pluginPaths() []string {
@@ -126,9 +145,6 @@ func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) ([]byte, 
 		Stderr: os.Stderr,
 	}
 
-	if err := c.Run(); err != nil {
-		return nil, err
-	}
-
-	return stdout.Bytes(), nil
+	err = c.Run()
+	return stdout.Bytes(), err
 }
