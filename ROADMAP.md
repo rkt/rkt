@@ -9,13 +9,6 @@ The [milestones defined in GitHub](https://github.com/coreos/rkt/milestones) rep
 rkt is an implementation of the [App Container spec](https://github.com/appc/spec), which is still under active development on an approximately similar timeframe.
 Until the specification reaches version 1.0, rkt's major/minor versions will trail that of the spec.
 
-### rkt 0.5.6 (May)
-- Better integration with systemd on host 
-  - Running from unit files for top-level isolation
-  - Per-app logging via journalctl
-- ipvlan support
-- Further functional testing
-
 ### rkt 0.6 (June)
 - new stage1 autoconf build system
 - Better UX around local image management with `rkt image`
