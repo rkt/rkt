@@ -22,7 +22,7 @@ The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/b
 
 After merging and going back to master branch, we check out the release version and tag it:
 - `git checkout HEAD^` should work (or `git checkout HEAD^2~`? git how does it work); sanity check version/version.go after doing this
-- Build the release with `./build`; we'll use this in a minute. Sanity check `bin/rkt version`
+- Build the release with `./build` with the default build options (don't define any environment variables `RKT_STAGE1_*`, ); we'll use this in a minute. Sanity check `bin/rkt version`
 - Add a signed tag: `git tag -s v0.1.2`. **With release notes**. Try to capture most of the salient changes since the last release, but don't go into unnecessary detail (better to link/reference the documentation wherever possible). Use the previous tags as examples to follow: try `git tag -n100`
 - Push the tag to GitHub: `git push --tags`
 
