@@ -39,15 +39,17 @@ const (
 	UserNetPath = "/etc/rkt/net.d"
 
 	// Default net path relative to stage1 root
-	DefaultNetPath = "etc/rkt/net.d/99-default.conf"
+	DefaultNetPath           = "etc/rkt/net.d/99-default.conf"
+	DefaultRestrictedNetPath = "etc/rkt/net.d/99-default-restricted.conf"
 )
 
 // "base" struct that's populated from the beginning
 // describing the environment in which the pod
 // is running in
 type podEnv struct {
-	podRoot string
-	podID   types.UUID
+	podRoot      string
+	podID        types.UUID
+	netsLoadList common.PrivateNetList
 }
 
 type activeNet struct {
@@ -59,13 +61,19 @@ type activeNet struct {
 
 // Loads nets specified by user and default one from stage1
 func (e *podEnv) loadNets() ([]activeNet, error) {
-	nets, err := loadUserNets()
+	nets, err := loadUserNets(e.netsLoadList)
 	if err != nil {
 		return nil, err
 	}
 
 	if !netExists(nets, "default") {
-		defPath := path.Join(common.Stage1RootfsPath(e.podRoot), DefaultNetPath)
+		var defaultNet string
+		if e.netsLoadList.Specific("default") || e.netsLoadList.All() {
+			defaultNet = DefaultNetPath
+		} else {
+			defaultNet = DefaultRestrictedNetPath
+		}
+		defPath := path.Join(common.Stage1RootfsPath(e.podRoot), defaultNet)
 		n, err := loadNet(defPath)
 		if err != nil {
 			return nil, err
@@ -207,7 +215,7 @@ func copyFileToDir(src, dstdir string) (string, error) {
 	return dst, err
 }
 
-func loadUserNets() ([]activeNet, error) {
+func loadUserNets(netsLoadList common.PrivateNetList) ([]activeNet, error) {
 	files, err := listFiles(UserNetPath)
 	if err != nil {
 		return nil, err
@@ -227,6 +235,10 @@ func loadUserNets() ([]activeNet, error) {
 		n, err := loadNet(filepath)
 		if err != nil {
 			return nil, err
+		}
+
+		if !(netsLoadList.All() || netsLoadList.Specific(n.conf.Name)) {
+			continue
 		}
 
 		// "default" is slightly special

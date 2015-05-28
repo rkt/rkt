@@ -62,10 +62,10 @@ type PrepareConfig struct {
 // configuration parameters needed by Run
 type RunConfig struct {
 	CommonConfig
-	PrivateNet  bool         // pod should have its own network stack
-	LockFd      int          // lock file descriptor
-	Interactive bool         // whether the pod is interactive or not
-	Images      []types.Hash // application images (prepare gets them via Apps)
+	PrivateNet  common.PrivateNetList // pod should have its own network stack
+	LockFd      int                   // lock file descriptor
+	Interactive bool                  // whether the pod is interactive or not
+	Images      []types.Hash          // application images (prepare gets them via Apps)
 }
 
 // configuration shared by both Run and Prepare
@@ -319,8 +319,8 @@ func Run(cfg RunConfig, dir string) {
 	if cfg.Debug {
 		args = append(args, "--debug")
 	}
-	if cfg.PrivateNet {
-		args = append(args, "--private-net")
+	if cfg.PrivateNet.Any() {
+		args = append(args, "--private-net="+cfg.PrivateNet.String())
 	}
 	if cfg.Interactive {
 		args = append(args, "--interactive")

@@ -25,6 +25,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
 )
 
@@ -51,13 +52,14 @@ type Networking struct {
 
 // Setup creates a new networking namespace and executes network plugins to
 // setup private networking. It returns in the new pod namespace
-func Setup(podRoot string, podID types.UUID, fps []ForwardedPort) (*Networking, error) {
+func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, privateNetList common.PrivateNetList) (*Networking, error) {
 	// TODO(jonboulle): currently podRoot is _always_ ".", and behaviour in other
 	// circumstances is untested. This should be cleaned up.
 	n := Networking{
 		podEnv: podEnv{
-			podRoot: podRoot,
-			podID:   podID,
+			podRoot:      podRoot,
+			podID:        podID,
+			netsLoadList: privateNetList,
 		},
 	}
 
