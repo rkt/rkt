@@ -87,6 +87,14 @@ func main() {
 
 	if globalFlags.PrintMsg != "" {
 		fmt.Fprintf(os.Stdout, "%s\n", globalFlags.PrintMsg)
+		messageLoopStr := os.Getenv("MESSAGE_LOOP")
+		messageLoop, err := strconv.Atoi(messageLoopStr)
+		if err == nil {
+			for i := 1; i < messageLoop; i++ {
+				time.Sleep(time.Second)
+				fmt.Fprintf(os.Stdout, "%s\n", globalFlags.PrintMsg)
+			}
+		}
 	}
 
 	if globalFlags.PrintEnv != "" {
