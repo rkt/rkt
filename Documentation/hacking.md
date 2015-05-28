@@ -54,6 +54,19 @@ Replace $SRC with the absolute path to your rkt source code:
 $ sudo docker run -v $SRC:/opt/rkt -i -t golang:1.3 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath && cd /opt/rkt && go get github.com/appc/spec/... && ./build"
 ```
 
+### Building systemd in stage1 from the sources
+
+By default, rkt gets systemd from a CoreOS image to generate stage1. But it's also possible to build systemd from the sources. To do that, you can set the following environment variables:
+
+* `RKT_STAGE1_USR_FROM=none|coreos|src`: choose how to generate systemd for stage1
+* `RKT_STAGE1_SYSTEMD_VER=v219|v220|master`: if `RKT_STAGE1_USR_FROM=src`, choose the systemd branch or tag to build
+
+Example:
+
+```
+RKT_STAGE1_USR_FROM=src RKT_STAGE1_SYSTEMD_VER=v220 ./build
+```
+
 ### Alternative stage1 paths
 
 rkt is designed and intended to be modular, using a [staged architecture](devel/architecture.md).
