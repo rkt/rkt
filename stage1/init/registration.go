@@ -39,30 +39,42 @@ Make sure metadata service is currently running.
 For more information on running metadata service,
 see https://github.com/coreos/rkt/blob/master/Documentation/metadata-service.md`)
 
-func registerPod(p *Pod, ip net.IP) error {
+func registerPod(p *Pod, ip net.IP) (rerr error) {
 	uuid := p.UUID.String()
 
 	cmf, err := os.Open(common.PodManifestPath(p.Root))
 	if err != nil {
-		return fmt.Errorf("failed opening runtime manifest: %v", err)
+		rerr = fmt.Errorf("failed opening runtime manifest: %v", err)
+		return
 	}
-	defer cmf.Close()
 
 	pth := fmt.Sprintf("/pods/%v?ip=%v", uuid, ip.To4().String())
-	if err := httpRequest("PUT", pth, cmf); err != nil {
-		return fmt.Errorf("failed to register pod with metadata svc: %v", err)
+	err = httpRequest("PUT", pth, cmf)
+	cmf.Close()
+	if err != nil {
+		rerr = fmt.Errorf("failed to register pod with metadata svc: %v", err)
+		return
 	}
+
+	defer func() {
+		if rerr != nil {
+			unregisterPod(p)
+		}
+	}()
 
 	for _, app := range p.Manifest.Apps {
 		ampath := common.ImageManifestPath(p.Root, app.Image.ID)
 		amf, err := os.Open(ampath)
 		if err != nil {
-			fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
+			rerr = fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
+			return
 		}
-		defer amf.Close()
 
-		if err := registerApp(uuid, app.Name.String(), amf); err != nil {
-			fmt.Errorf("failed to register app with metadata svc: %v", err)
+		err = registerApp(uuid, app.Name.String(), amf)
+		amf.Close()
+		if err != nil {
+			rerr = fmt.Errorf("failed to register app with metadata svc: %v", err)
+			return
 		}
 	}
 

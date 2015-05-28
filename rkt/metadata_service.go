@@ -238,7 +238,7 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 	uuid, err := types.NewUUID(mux.Vars(r)["uuid"])
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "UUID is missing or mulformed: %v", err)
+		fmt.Fprintf(w, "UUID is missing or malformed: %v", err)
 		return
 	}
 
