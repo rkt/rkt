@@ -30,6 +30,7 @@ type NetInfo struct {
 	IfName   string `json:"ifName"`
 	IP       net.IP `json:"ip"`
 	Args     string `json:"args"`
+	HostIP   net.IP
 }
 
 func LoadAt(cdirfd int) ([]NetInfo, error) {

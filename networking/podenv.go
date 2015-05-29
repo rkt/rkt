@@ -20,7 +20,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -54,7 +53,6 @@ type activeNet struct {
 	confBytes []byte
 	conf      *plugin.NetConf
 	runtime   *netinfo.NetInfo
-	hostIP    net.IP // kludge for default network
 }
 
 // Loads nets specified by user and default one from stage1
@@ -108,12 +106,11 @@ func (e *podEnv) setupNets(nets []activeNet) error {
 			return fmt.Errorf("error copying %q to %q: %v", n.runtime.ConfPath, e.netDir(), err)
 		}
 
-		n.runtime.IP, n.hostIP, err = e.netPluginAdd(&n, nspath)
+		n.runtime.IP, n.runtime.HostIP, err = e.netPluginAdd(&n, nspath)
 		if err != nil {
 			return fmt.Errorf("error adding network %q: %v", n.conf.Name, err)
 		}
 	}
-
 	return nil
 }
 

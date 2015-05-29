@@ -153,11 +153,11 @@ func (n *Networking) GetDefaultIP() net.IP {
 	return n.nets[len(n.nets)-1].runtime.IP
 }
 
-func (n *Networking) GetDefaultHostIP() net.IP {
+func (n *Networking) GetDefaultHostIP() (net.IP, error) {
 	if len(n.nets) == 0 {
-		return nil
+		return nil, fmt.Errorf("no networks found")
 	}
-	return n.nets[len(n.nets)-1].hostIP
+	return n.nets[len(n.nets)-1].runtime.HostIP, nil
 }
 
 // Teardown cleans up a produced Networking object.
