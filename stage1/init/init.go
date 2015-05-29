@@ -345,7 +345,12 @@ func stage1() int {
 			return 6
 		}
 
-		p.MetadataServiceURL = common.MetadataServicePublicURL(n.GetDefaultHostIP())
+		hostIP, err := n.GetDefaultHostIP()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to get default Host IP: %v\n", err)
+			return 6
+		}
+		p.MetadataServiceURL = common.MetadataServicePublicURL(hostIP)
 
 		if err = registerPod(p, n.GetDefaultIP()); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to register pod: %v\n", err)
