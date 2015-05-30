@@ -46,6 +46,8 @@ var (
 		Sleep            int
 		PrintMemoryLimit bool
 		PrintCPUQuota    bool
+		FileName         string
+		Content          string
 	}{}
 )
 
@@ -63,6 +65,8 @@ func init() {
 	globalFlagset.IntVar(&globalFlags.Sleep, "sleep", -1, "Sleep before exiting (in seconds)")
 	globalFlagset.BoolVar(&globalFlags.PrintMemoryLimit, "print-memorylimit", false, "Print cgroup memory limit")
 	globalFlagset.BoolVar(&globalFlags.PrintCPUQuota, "print-cpuquota", false, "Print cgroup cpu quota in milli-cores")
+	globalFlagset.StringVar(&globalFlags.FileName, "file-name", "", "The file to read/write, $FILE will be ignored if this is specified")
+	globalFlagset.StringVar(&globalFlags.Content, "content", "", "The content to write, $CONTENT will be ignored if this is specified")
 }
 
 func main() {
@@ -141,7 +145,15 @@ func main() {
 
 	if globalFlags.WriteFile {
 		fileName := os.Getenv("FILE")
-		err := ioutil.WriteFile(fileName, []byte(os.Getenv("CONTENT")), 0600)
+		if globalFlags.FileName != "" {
+			fileName = globalFlags.FileName
+		}
+		content := os.Getenv("CONTENT")
+		if globalFlags.Content != "" {
+			content = globalFlags.Content
+		}
+
+		err := ioutil.WriteFile(fileName, []byte(content), 0600)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot write to file %q: %v\n", fileName, err)
 			os.Exit(1)
@@ -151,6 +163,10 @@ func main() {
 
 	if globalFlags.ReadFile {
 		fileName := os.Getenv("FILE")
+		if globalFlags.FileName != "" {
+			fileName = globalFlags.FileName
+		}
+
 		dat, err := ioutil.ReadFile(fileName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot read file %q: %v\n", fileName, err)

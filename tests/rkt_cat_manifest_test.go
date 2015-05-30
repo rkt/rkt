@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -37,7 +36,6 @@ const (
 // Read some non-existing image manifest via the image name, and verify nothing is found.
 // Read some non-existing image manifest via the image hash, and verify nothing is found.
 func TestCatManifest(t *testing.T) {
-	var testImageHash string
 	testImage := "rkt-inspect-image-cat-manifest.aci"
 	testImageName := "coreos.com/rkt-cat-manifest-test"
 	expectManifest := strings.Replace(manifestTemplate, "IMG_NAME", testImageName, -1)
@@ -56,21 +54,7 @@ func TestCatManifest(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	// Import the test image into store manually.
-	cmds := strings.Fields(ctx.cmd())
-	fetchCmd := exec.Command(cmds[0], cmds[1:]...)
-	fetchCmd.Args = append(fetchCmd.Args, "--insecure-skip-verify", "fetch", testImage)
-	output, err := fetchCmd.Output()
-	if err != nil {
-		t.Fatalf("Cannot read the output: %v", err)
-	}
-
-	// Read out the image hash.
-	ix := strings.Index(string(output), "sha512-")
-	if ix < 0 {
-		t.Fatalf("Unexpected result: %v, expecting a sha512 hash", testImageHash)
-	}
-	testImageHash = strings.TrimSpace(string(output)[ix:])
+	testImageHash := importImageAndFetchHash(t, ctx, testImage)
 
 	tests := []struct {
 		image      string
