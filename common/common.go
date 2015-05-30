@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -134,4 +135,46 @@ func SupportsOverlay() bool {
 		}
 	}
 	return false
+}
+
+// PrivateNetList implements the flag.Value interface to allow specification
+// of -private-net with and without values
+type PrivateNetList struct {
+	mapping map[string]bool
+}
+
+func (i *PrivateNetList) IsBoolFlag() bool { return true }
+
+func (l *PrivateNetList) String() string {
+	return strings.Join(l.Strings(), ",")
+}
+
+func (l *PrivateNetList) Set(value string) error {
+	if l.mapping == nil {
+		l.mapping = make(map[string]bool)
+	}
+	for _, s := range strings.Split(value, ",") {
+		l.mapping[s] = true
+	}
+	return nil
+}
+
+func (l *PrivateNetList) Strings() []string {
+	var list []string
+	for k, _ := range l.mapping {
+		list = append(list, k)
+	}
+	return list
+}
+
+func (l *PrivateNetList) Any() bool {
+	return len(l.mapping) > 0
+}
+
+func (l *PrivateNetList) All() bool {
+	return l.mapping["true"]
+}
+
+func (l *PrivateNetList) Specific(net string) bool {
+	return l.mapping[net]
 }
