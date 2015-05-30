@@ -43,7 +43,7 @@ cd rkt-v0.5.6
 
 ### Trying out rkt using Vagrant
 
-For Mac (and other Vagrant) users we have set up a `Vagrantfile`: clone this repository and make sure you have [Vagrant](https://www.vagrantup.com/) installed. `vagrant up` starts up a Linux box and installs via some scripts `rkt` and `actool`. With a subsequent `vagrant ssh` you are ready to go:
+For Mac (and other Vagrant) users we have set up a `Vagrantfile`: clone this repository and make sure you have [Vagrant](https://www.vagrantup.com/) 1.5.x or greater installed. `vagrant up` starts up a Linux box and installs via some scripts `rkt` and `actool`. With a subsequent `vagrant ssh` you are ready to go:
 ```
 git clone https://github.com/coreos/rkt
 cd rkt
