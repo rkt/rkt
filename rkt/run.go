@@ -76,7 +76,7 @@ func init() {
 	runFlags.StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
 	runFlags.Var(&flagVolumes, "volume", "volumes to mount into the pod")
 	runFlags.Var(&flagPorts, "port", "ports to expose on the host (requires --private-net)")
-	runFlags.Var(&flagPrivateNet, "private-net", "give pod a private network that defaults to the default network plus all user networks. Can be limited to a a comma separated list of network names")
+	runFlags.Var(&flagPrivateNet, "private-net", "give pod a private network that defaults to the default network plus all user-configured networks. Can be limited to a comma-separated list of network names")
 	runFlags.BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	runFlags.BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	runFlags.Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
