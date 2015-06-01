@@ -17,7 +17,7 @@
 		},
 		{
 			"ImportPath": "github.com/ThomasRooney/gexpect",
-			"Rev": "3b60906367401d3dc2f9e5f3b5395184f8a2d75f"
+			"Rev": "67f0ed29c4037339afb2dbe91187d2e1012c3ade"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/ip",

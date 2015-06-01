@@ -1,64 +1,60 @@
 package gexpect
 
 import (
-	"log"
 	"strings"
 	"testing"
 )
 
-func TestHelloWorld(*testing.T) {
-	log.Printf("Testing Hello World... ")
+func TestHelloWorld(t *testing.T) {
+	t.Logf("Testing Hello World... ")
 	child, err := Spawn("echo \"Hello World\"")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	err = child.Expect("Hello World")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	log.Printf("Success\n")
 }
 
-func TestDoubleHelloWorld(*testing.T) {
-	log.Printf("Testing Double Hello World... ")
+func TestDoubleHelloWorld(t *testing.T) {
+	t.Logf("Testing Double Hello World... ")
 	child, err := Spawn(`sh -c "echo Hello World ; echo Hello ; echo Hi"`)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	err = child.Expect("Hello World")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	err = child.Expect("Hello")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	err = child.Expect("Hi")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	log.Printf("Success\n")
 }
 
-func TestHelloWorldFailureCase(*testing.T) {
-	log.Printf("Testing Hello World Failure case... ")
+func TestHelloWorldFailureCase(t *testing.T) {
+	t.Logf("Testing Hello World Failure case... ")
 	child, err := Spawn("echo \"Hello World\"")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	err = child.Expect("YOU WILL NEVER FIND ME")
 	if err != nil {
-		log.Printf("Success\n")
 		return
 	}
-	panic("Expected an error for TestHelloWorldFailureCase")
+	t.Fatal("Expected an error for TestHelloWorldFailureCase")
 }
 
-func TestBiChannel(*testing.T) {
-	log.Printf("Testing BiChannel screen... ")
-	child, err := Spawn("screen")
+func TestBiChannel(t *testing.T) {
+	t.Logf("Testing BiChannel screen... ")
+	child, err := Spawn("cat")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	sender, reciever := child.AsyncInteractChannels()
 	wait := func(str string) {
@@ -72,37 +68,99 @@ func TestBiChannel(*testing.T) {
 			}
 		}
 	}
-	sender <- "\n"
-	sender <- "echo Hello World\n"
-	wait("Hello World")
-	sender <- "times\n"
-	wait("s")
-	sender <- "^D\n"
-	log.Printf("Success\n")
-
+	sender <- "echo\n"
+	wait("echo")
+	sender <- "echo2"
+	wait("echo2")
+	child.Close()
+	// child.Wait()
 }
 
-func TestExpectRegex(*testing.T) {
-	log.Printf("Testing ExpectRegex... ")
-
-	child, err := Spawn("/bin/sh times")
-	if err != nil {
-		panic(err)
-	}
-	child.ExpectRegex("Name")
-	log.Printf("Success\n")
-
-}
-
-func TestCommandStart(*testing.T) {
-	log.Printf("Testing Command... ")
+func TestCommandStart(t *testing.T) {
+	t.Logf("Testing Command... ")
 
 	// Doing this allows you to modify the cmd struct prior to execution, for example to add environment variables
 	child, err := Command("echo 'Hello World'")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	child.Start()
 	child.Expect("Hello World")
-	log.Printf("Success\n")
+}
+
+var regexMatchTests = []struct {
+	re   string
+	good string
+	bad  string
+}{
+	{`a`, `a`, `b`},
+	{`.b`, `ab`, `ac`},
+	{`a+hello`, `aaaahello`, `bhello`},
+	{`(hello|world)`, `hello`, `unknown`},
+	{`(hello|world)`, `world`, `unknown`},
+}
+
+func TestRegexMatch(t *testing.T) {
+	t.Logf("Testing Regular Expression Matching... ")
+	for _, tt := range regexMatchTests {
+		runTest := func(input string) bool {
+			var match bool
+			child, err := Spawn("echo \"" + input + "\"")
+			if err != nil {
+				t.Fatal(err)
+			}
+			match, err = child.ExpectRegex(tt.re)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return match
+		}
+		if !runTest(tt.good) {
+			t.Errorf("Regex Not matching [%#q] with pattern [%#q]", tt.good, tt.re)
+		}
+		if runTest(tt.bad) {
+			t.Errorf("Regex Matching [%#q] with pattern [%#q]", tt.bad, tt.re)
+		}
+	}
+}
+
+var regexFindTests = []struct {
+	re      string
+	input   string
+	matches []string
+}{
+	{`he(l)lo wo(r)ld`, `hello world`, []string{"hello world", "l", "r"}},
+	{`(a)`, `a`, []string{"a", "a"}},
+	{`so.. (hello|world)`, `so.. hello`, []string{"so.. hello", "hello"}},
+	{`(a+)hello`, `aaaahello`, []string{"aaaahello", "aaaa"}},
+	{`\d+ (\d+) (\d+)`, `123 456 789`, []string{"123 456 789", "456", "789"}},
+}
+
+func TestRegexFind(t *testing.T) {
+	t.Logf("Testing Regular Expression Search... ")
+	for _, tt := range regexFindTests {
+		runTest := func(input string) []string {
+			child, err := Spawn("echo \"" + input + "\"")
+			if err != nil {
+				t.Fatal(err)
+			}
+			matches, err := child.ExpectRegexFind(tt.re)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return matches
+		}
+		matches := runTest(tt.input)
+		if len(matches) != len(tt.matches) {
+			t.Fatalf("Regex not producing the expected number of patterns.. got[%d] ([%s]) expected[%d] ([%s])",
+				len(matches), strings.Join(matches, ","),
+				len(tt.matches), strings.Join(tt.matches, ","))
+		}
+		for i, _ := range matches {
+			if matches[i] != tt.matches[i] {
+				t.Errorf("Regex Expected group [%s] and got group [%s] with pattern [%#q] and input [%s]",
+					tt.matches[i], matches[i], tt.re, tt.input)
+			}
+		}
+	}
 }
