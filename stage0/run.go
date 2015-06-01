@@ -132,6 +132,7 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		ra := schema.RuntimeApp{
 			// TODO(vc): leverage RuntimeApp.Name for disambiguating the apps
 			Name: am.Name,
+			App:  am.App,
 			Image: schema.RuntimeImage{
 				Name: &am.Name,
 				ID:   img,
@@ -140,14 +141,10 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		}
 
 		if execAppends := app.Args; execAppends != nil {
-			ra.App = am.App
 			ra.App.Exec = append(ra.App.Exec, execAppends...)
 		}
 
 		if cfg.InheritEnv || len(cfg.ExplicitEnv) > 0 {
-			if ra.App == nil {
-				ra.App = am.App
-			}
 			MergeEnvs(&ra.App.Environment, cfg.InheritEnv, cfg.ExplicitEnv)
 		}
 		pm.Apps = append(pm.Apps, ra)
