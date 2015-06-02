@@ -144,7 +144,7 @@ func removeImageId(ctx *rktRunCtx, imageID string, shouldWork bool) error {
 	if err != nil {
 		return fmt.Errorf("Cannot exec: %v", err)
 	}
-	if err := child.Expect(expect); err != nil {
+	if err := expectWithOutput(child, expect); err != nil {
 		return fmt.Errorf("Expected %q but not found: %v", expect, err)
 	}
 	if err := child.Wait(); err != nil {

@@ -42,7 +42,7 @@ func TestExitCode(t *testing.T) {
 			t.Fatalf("Cannot exec rkt")
 		}
 
-		err = child.Expect(fmt.Sprintf("status=%d", i))
+		err = expectWithOutput(child, fmt.Sprintf("status=%d", i))
 		if err != nil {
 			t.Fatalf("Failed to get the status")
 		}

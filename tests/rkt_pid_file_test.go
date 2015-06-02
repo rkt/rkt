@@ -35,7 +35,7 @@ func preparePidFileRace(t *testing.T, ctx *rktRunCtx) (*gexpect.ExpectSubprocess
 		t.Fatalf("Cannot exec rkt")
 	}
 
-	err = runChild.Expect("Enter text:")
+	err = expectWithOutput(runChild, "Enter text:")
 	if err != nil {
 		t.Fatalf("Waited for the prompt but not found: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestPidFileDelayedStart(t *testing.T) {
 	}
 
 	// Now the "enter" command works and can complete
-	if err := enterChild.Expect("RktEnterWorksFine"); err != nil {
+	if err := expectWithOutput(enterChild, "RktEnterWorksFine"); err != nil {
 		t.Fatalf("Waited for enter to works but failed: %v", err)
 	}
 	if err := enterChild.Wait(); err != nil {
@@ -99,7 +99,7 @@ func TestPidFileDelayedStart(t *testing.T) {
 	if err := runChild.SendLine("Bye"); err != nil {
 		t.Fatalf("rkt couldn't write to the container: %v", err)
 	}
-	if err := runChild.Expect("Received text: Bye"); err != nil {
+	if err := expectWithOutput(runChild, "Received text: Bye"); err != nil {
 		t.Fatalf("Expected Bye but not found: %v", err)
 	}
 	if err := runChild.Wait(); err != nil {

@@ -108,7 +108,7 @@ func TestCatManifest(t *testing.T) {
 		}
 
 		if tt.expect != "" {
-			if err := child.Expect(tt.expect); err != nil {
+			if err := expectWithOutput(child, tt.expect); err != nil {
 				t.Fatalf("Expected %q but not found: %v", tt.expect, err)
 			}
 		}

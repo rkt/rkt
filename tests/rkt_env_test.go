@@ -85,7 +85,7 @@ func TestEnv(t *testing.T) {
 			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
 		}
 
-		err = child.Expect(tt.runExpect)
+		err = expectWithOutput(child, tt.runExpect)
 		if err != nil {
 			t.Fatalf("Expected %q but not found: %v", tt.runExpect, err)
 		}
@@ -103,7 +103,7 @@ func TestEnv(t *testing.T) {
 			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
 		}
 
-		err = child.Expect("Enter text:")
+		err = expectWithOutput(child, "Enter text:")
 		if err != nil {
 			t.Fatalf("Waited for the prompt but not found #%v: %v", i, err)
 		}
@@ -115,7 +115,7 @@ func TestEnv(t *testing.T) {
 			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
 		}
 
-		err = enterChild.Expect(tt.runExpect)
+		err = expectWithOutput(enterChild, tt.runExpect)
 		if err != nil {
 			t.Fatalf("Expected %q but not found: %v", tt.runExpect, err)
 		}
@@ -128,7 +128,7 @@ func TestEnv(t *testing.T) {
 		if err != nil {
 			t.Fatalf("rkt couldn't write to the container: %v", err)
 		}
-		err = child.Expect("Received text: Bye")
+		err = expectWithOutput(child, "Received text: Bye")
 		if err != nil {
 			t.Fatalf("Expected Bye but not found #%v: %v", i, err)
 		}
