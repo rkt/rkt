@@ -26,22 +26,16 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
 )
 
-func TestPidFileRace(t *testing.T) {
-	patchTestACI("rkt-inspect-sleep.aci", "--exec=/inspect --read-stdin")
-	defer os.Remove("rkt-inspect-sleep.aci")
-
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
-
+func preparePidFileRace(t *testing.T, ctx *rktRunCtx) (*gexpect.ExpectSubprocess, *gexpect.ExpectSubprocess, string, string) {
 	// Start the pod
 	runCmd := fmt.Sprintf("%s --debug --insecure-skip-verify run -interactive ./rkt-inspect-sleep.aci", ctx.cmd())
 	t.Logf("%s", runCmd)
-	child, err := gexpect.Spawn(runCmd)
+	runChild, err := gexpect.Spawn(runCmd)
 	if err != nil {
 		t.Fatalf("Cannot exec rkt")
 	}
 
-	err = child.Expect("Enter text:")
+	err = runChild.Expect("Enter text:")
 	if err != nil {
 		t.Fatalf("Waited for the prompt but not found: %v", err)
 	}
@@ -75,32 +69,71 @@ func TestPidFileRace(t *testing.T) {
 	// Enter should be able to wait until the pid file appears
 	time.Sleep(1 * time.Second)
 
+	return runChild, enterChild, pidFileName, pidFileNameBackup
+}
+
+// Check that "enter" is able to wait for the pid file to be created
+func TestPidFileDelayedStart(t *testing.T) {
+	patchTestACI("rkt-inspect-sleep.aci", "--exec=/inspect --read-stdin")
+	defer os.Remove("rkt-inspect-sleep.aci")
+
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
+	runChild, enterChild, pidFileName, pidFileNameBackup := preparePidFileRace(t, ctx)
+
 	// Restore pid file so the "enter" command can find it
 	if err := os.Rename(pidFileNameBackup, pidFileName); err != nil {
 		t.Fatalf("Cannot restore pid file: %v", err)
 	}
 
 	// Now the "enter" command works and can complete
-	err = enterChild.Expect("RktEnterWorksFine")
-	if err != nil {
+	if err := enterChild.Expect("RktEnterWorksFine"); err != nil {
 		t.Fatalf("Waited for enter to works but failed: %v", err)
 	}
-	err = enterChild.Wait()
-	if err != nil {
+	if err := enterChild.Wait(); err != nil {
 		t.Fatalf("rkt enter didn't terminate correctly: %v", err)
 	}
 
 	// Terminate the pod
-	err = child.SendLine("Bye")
-	if err != nil {
+	if err := runChild.SendLine("Bye"); err != nil {
 		t.Fatalf("rkt couldn't write to the container: %v", err)
 	}
-	err = child.Expect("Received text: Bye")
-	if err != nil {
+	if err := runChild.Expect("Received text: Bye"); err != nil {
 		t.Fatalf("Expected Bye but not found: %v", err)
 	}
-	err = child.Wait()
-	if err != nil {
+	if err := runChild.Wait(); err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
+}
+
+// Check that "enter" doesn't wait forever for the pid file when the pod is terminated
+func TestPidFileAbortedStart(t *testing.T) {
+	patchTestACI("rkt-inspect-sleep.aci", "--exec=/inspect --read-stdin")
+	defer os.Remove("rkt-inspect-sleep.aci")
+
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
+	runChild, enterChild, _, _ := preparePidFileRace(t, ctx)
+
+	// Terminate the pod with the escape sequence: ^]^]^]
+	if err := runChild.SendLine("\035\035\035"); err != nil {
+		t.Fatalf("Failed to terminate the pod: %v", err)
+	}
+	if err := runChild.Wait(); err.Error() != "exit status 1" {
+		t.Fatalf("rkt didn't terminate as expected: %v", err)
+	}
+
+	// Now the "enter" command terminates quickly
+	before := time.Now()
+	if err := enterChild.Wait(); err.Error() != "exit status 1" {
+		t.Fatalf("rkt enter didn't terminate as expected: %v", err)
+	}
+	delay := time.Now().Sub(before)
+	t.Logf("rkt enter terminated %v after the pod was terminated", delay)
+	if delay > time.Second { // 1 second shall be enough: it takes less than 50ms on my computer
+		t.Fatalf("rkt enter didn't terminate quickly enough: %v", delay)
+	}
+
 }
