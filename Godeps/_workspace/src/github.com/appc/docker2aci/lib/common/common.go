@@ -9,13 +9,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"time"
-
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/tarball"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/util"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/tarball"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	appctypes "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -183,6 +183,11 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 				return nil, err
 			}
 
+			app.Ports, err = convertPorts(dockerConfig.ExposedPorts, dockerConfig.PortSpecs)
+			if err != nil {
+				return nil, err
+			}
+
 			genManifest.App = app
 		}
 	}
@@ -199,6 +204,56 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	}
 
 	return genManifest, nil
+}
+
+func convertPorts(dockerExposedPorts map[string]struct{}, dockerPortSpecs []string) ([]appctypes.Port, error) {
+	ports := []appctypes.Port{}
+
+	for ep := range dockerExposedPorts {
+		appcPort, err := parseDockerPort(ep)
+		if err != nil {
+			return nil, err
+		}
+		ports = append(ports, *appcPort)
+	}
+
+	if dockerExposedPorts == nil && dockerPortSpecs != nil {
+		util.Debug("warning: docker image uses deprecated PortSpecs field")
+		for _, ep := range dockerPortSpecs {
+			appcPort, err := parseDockerPort(ep)
+			if err != nil {
+				return nil, err
+			}
+			ports = append(ports, *appcPort)
+		}
+	}
+
+	return ports, nil
+}
+
+func parseDockerPort(dockerPort string) (*appctypes.Port, error) {
+	var portString string
+	proto := "tcp"
+	sp := strings.Split(dockerPort, "/")
+	if len(sp) < 2 {
+		portString = dockerPort
+	} else {
+		proto = sp[1]
+		portString = sp[0]
+	}
+
+	port, err := strconv.ParseUint(portString, 10, 0)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing port %q: %v", portString, err)
+	}
+
+	appcPort := &appctypes.Port{
+		Name:     *appctypes.MustACName(dockerPort),
+		Protocol: proto,
+		Port:     uint(port),
+	}
+
+	return appcPort, nil
 }
 
 func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPoint, error) {
