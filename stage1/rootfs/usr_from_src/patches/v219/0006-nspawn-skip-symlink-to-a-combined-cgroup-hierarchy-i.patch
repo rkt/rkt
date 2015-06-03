@@ -1,0 +1,92 @@
+From 4f30798831619a2ca7b56ef94d7601fe0238f04d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Iago=20L=C3=B3pez=20Galeiras?= <iago@endocode.com>
+Date: Wed, 13 May 2015 15:45:49 +0200
+Subject: [PATCH 6/6] nspawn: skip symlink to a combined cgroup hierarchy if it
+ already exists
+
+If a symlink to a combined cgroup hierarchy already exists and points to
+the right path, skip it. This avoids an error when the cgroups are set
+manually before calling nspawn.
+---
+ src/nspawn/nspawn.c | 10 +++++++---
+ src/shared/util.c   | 22 ++++++++++++++++++++++
+ src/shared/util.h   |  2 ++
+ 3 files changed, 31 insertions(+), 3 deletions(-)
+
+diff --git a/src/nspawn/nspawn.c b/src/nspawn/nspawn.c
+index f179dcb..df912a1 100644
+--- a/src/nspawn/nspawn.c
++++ b/src/nspawn/nspawn.c
+@@ -1025,7 +1025,6 @@ static int mount_cgroup(const char *dest) {
+         if (r < 0)
+                 return log_error_errno(r, "Failed to determine our own cgroup path: %m");
+ 
+-
+         for (;;) {
+                 _cleanup_free_ char *controller = NULL, *origin = NULL, *combined = NULL;
+ 
+@@ -1065,8 +1064,13 @@ static int mount_cgroup(const char *dest) {
+                         if (r < 0)
+                                 return r;
+ 
+-                        if (symlink(combined, target) < 0)
+-                                return log_error_errno(errno, "Failed to create symlink for combined hierarchy: %m");
++                        r = symlink_idempotent(combined, target);
++                        if (r == -EINVAL) {
++                                log_error("Invalid existing symlink for combined hierarchy");
++                                return r;
++                        }
++                        if (r < 0)
++                                return log_error_errno(r, "Failed to create symlink for combined hierarchy: %m");
+                 }
+         }
+ 
+diff --git a/src/shared/util.c b/src/shared/util.c
+index ba035ca..2ea9cdf 100644
+--- a/src/shared/util.c
++++ b/src/shared/util.c
+@@ -4503,6 +4503,28 @@ int symlink_atomic(const char *from, const char *to) {
+         return 0;
+ }
+ 
++int symlink_idempotent(const char *from, const char *to) {
++        _cleanup_free_ char *p = NULL;
++        int r;
++
++        assert(from);
++        assert(to);
++
++        if (symlink(from, to) < 0) {
++                if (errno != EEXIST)
++                        return -errno;
++
++                r = readlink_malloc(to, &p);
++                if (r < 0)
++                        return r;
++
++                if (!streq(p, from))
++                        return -EINVAL;
++        }
++
++        return 0;
++}
++
+ int mknod_atomic(const char *path, mode_t mode, dev_t dev) {
+         _cleanup_free_ char *t = NULL;
+         int r;
+diff --git a/src/shared/util.h b/src/shared/util.h
+index a83b588..874e2dc 100644
+--- a/src/shared/util.h
++++ b/src/shared/util.h
+@@ -564,6 +564,8 @@ int terminal_vhangup(const char *name);
+ 
+ int vt_disallocate(const char *name);
+ 
++int symlink_idempotent(const char *from, const char *to);
++
+ int symlink_atomic(const char *from, const char *to);
+ int mknod_atomic(const char *path, mode_t mode, dev_t dev);
+ int mkfifo_atomic(const char *path, mode_t mode);
+-- 
+2.4.1
+
