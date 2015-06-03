@@ -40,7 +40,7 @@ func preparePidFileRace(t *testing.T, ctx *rktRunCtx) (*gexpect.ExpectSubprocess
 		t.Fatalf("Waited for the prompt but not found: %v", err)
 	}
 
-	// Check the pid file is really created
+	// Check the ppid file is really created
 	cmd := fmt.Sprintf(`%s list --full|grep running`, ctx.cmd())
 	output, err := exec.Command("/bin/sh", "-c", cmd).CombinedOutput()
 	if err != nil {
@@ -48,15 +48,15 @@ func preparePidFileRace(t *testing.T, ctx *rktRunCtx) (*gexpect.ExpectSubprocess
 	}
 	UUID := strings.Split(string(output), "\t")[0]
 
-	pidFileName := filepath.Join(ctx.dataDir(), "pods/run", UUID, "pid")
+	pidFileName := filepath.Join(ctx.dataDir(), "pods/run", UUID, "ppid")
 	if _, err := os.Stat(pidFileName); err != nil {
 		t.Fatalf("Pid file missing: %v", err)
 	}
 
-	// Temporarily move the pid file away
+	// Temporarily move the ppid file away
 	pidFileNameBackup := pidFileName + ".backup"
 	if err := os.Rename(pidFileName, pidFileNameBackup); err != nil {
-		t.Fatalf("Cannot move pid file away: %v", err)
+		t.Fatalf("Cannot move ppid file away: %v", err)
 	}
 
 	// Start the "enter" command without the pidfile
@@ -66,13 +66,13 @@ func preparePidFileRace(t *testing.T, ctx *rktRunCtx) (*gexpect.ExpectSubprocess
 	if err != nil {
 		t.Fatalf("Cannot exec rkt enter")
 	}
-	// Enter should be able to wait until the pid file appears
+	// Enter should be able to wait until the ppid file appears
 	time.Sleep(1 * time.Second)
 
 	return runChild, enterChild, pidFileName, pidFileNameBackup
 }
 
-// Check that "enter" is able to wait for the pid file to be created
+// Check that "enter" is able to wait for the ppid file to be created
 func TestPidFileDelayedStart(t *testing.T) {
 	patchTestACI("rkt-inspect-sleep.aci", "--exec=/inspect --read-stdin")
 	defer os.Remove("rkt-inspect-sleep.aci")
@@ -82,9 +82,9 @@ func TestPidFileDelayedStart(t *testing.T) {
 
 	runChild, enterChild, pidFileName, pidFileNameBackup := preparePidFileRace(t, ctx)
 
-	// Restore pid file so the "enter" command can find it
+	// Restore ppid file so the "enter" command can find it
 	if err := os.Rename(pidFileNameBackup, pidFileName); err != nil {
-		t.Fatalf("Cannot restore pid file: %v", err)
+		t.Fatalf("Cannot restore ppid file: %v", err)
 	}
 
 	// Now the "enter" command works and can complete
@@ -107,7 +107,7 @@ func TestPidFileDelayedStart(t *testing.T) {
 	}
 }
 
-// Check that "enter" doesn't wait forever for the pid file when the pod is terminated
+// Check that "enter" doesn't wait forever for the ppid file when the pod is terminated
 func TestPidFileAbortedStart(t *testing.T) {
 	patchTestACI("rkt-inspect-sleep.aci", "--exec=/inspect --read-stdin")
 	defer os.Remove("rkt-inspect-sleep.aci")

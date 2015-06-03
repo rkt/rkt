@@ -38,6 +38,10 @@ In the bundled rkt stage 1 which includes systemd-nspawn and systemd, the entryp
 
 An alternative stage 1 could forego systemd-nspawn and systemd altogether, or retain these and introduce something like novm or qemu-kvm for greater isolation by first starting a VM.  All that is required is an executable at the place indicated by the "coreos.com/rkt/stage1/run" entrypoint which knows how to apply the Pod Manifest and prepared ACI file-systems to good effect.
 
+The resolved entrypoint must inform rkt of its PID for the benefit of `rkt enter`. rkt supports two ways of doing that, stage1 implementors must pick one:
+
+1. Writing to "/var/lib/rkt/pods/$uuid/pid" the PID of the process that is PID 1 in the container.
+2. Writing to "/var/lib/rkt/pods/$uuid/ppid" the PID of the parent of the process that is PID 1 in the container. This assumes it has only one child.
 
 #### Arguments
 * --debug to activate debugging
@@ -57,9 +61,10 @@ An alternative stage 1 would need to do whatever is appropriate for entering the
 
 #### Arguments
 
-1. image id of the specific application to enter
-2. cmd to execute
-3. any cmd arguments
+1. PID of the process that is PID 1 in the container. rkt finds that PID by one of the two supported methods described in the `rkt run` section.
+2. image id of the specific application to enter
+3. cmd to execute
+4. any cmd arguments
 
 
 

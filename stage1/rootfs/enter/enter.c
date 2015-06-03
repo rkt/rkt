@@ -55,6 +55,8 @@ int main(int argc, char *argv[])
 	int	status;
 	int	root_fd;
 
+	/* The parameters list is specified in
+	 * Documentation/devel/stage1-implementors-guide.md */
 	exit_if(argc < 4,
 		"Usage: %s pid imageid cmd [args...]", argv[0])
 

@@ -192,12 +192,6 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 			// before execing init"), fds remain open, so --keep-fd is not needed.
 		}
 
-		out, err := os.Getwd()
-		if err != nil {
-			return nil, nil, err
-		}
-		args = append(args, fmt.Sprintf("--pid-file=%v", filepath.Join(out, "pid")))
-
 		if machinedRegister() {
 			args = append(args, fmt.Sprintf("--register=true"))
 		} else {
@@ -379,6 +373,21 @@ func stage1() int {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 3
+	}
+
+	// write ppid file as specified in
+	// Documentation/devel/stage1-implementors-guide.md
+	out, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot get current working directory: %v\n", err)
+		return 4
+	}
+	// we are the parent of the process that is PID 1 in the container so we write our PID to "ppid"
+	err = ioutil.WriteFile(filepath.Join(out, "ppid"),
+		[]byte(fmt.Sprintf("%d\n", os.Getpid())), 0644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot write ppid file: %v\n", err)
+		return 4
 	}
 
 	var execFn func() error
