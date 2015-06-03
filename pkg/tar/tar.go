@@ -26,6 +26,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/device"
 	"github.com/coreos/rkt/pkg/fileutil"
 )
 
@@ -145,15 +146,15 @@ func extractFile(tr *tar.Reader, hdr *tar.Header, overwrite bool) error {
 			return err
 		}
 	case typ == tar.TypeChar:
-		dev := makedev(int(hdr.Devmajor), int(hdr.Devminor))
+		dev := device.Makedev(uint(hdr.Devmajor), uint(hdr.Devminor))
 		mode := uint32(fi.Mode()) | syscall.S_IFCHR
-		if err := syscall.Mknod(p, mode, dev); err != nil {
+		if err := syscall.Mknod(p, mode, int(dev)); err != nil {
 			return err
 		}
 	case typ == tar.TypeBlock:
-		dev := makedev(int(hdr.Devmajor), int(hdr.Devminor))
+		dev := device.Makedev(uint(hdr.Devmajor), uint(hdr.Devminor))
 		mode := uint32(fi.Mode()) | syscall.S_IFBLK
-		if err := syscall.Mknod(p, mode, dev); err != nil {
+		if err := syscall.Mknod(p, mode, int(dev)); err != nil {
 			return err
 		}
 	case typ == tar.TypeFifo:
@@ -222,11 +223,6 @@ func extractFileFromTar(tr *tar.Reader, file string) ([]byte, error) {
 			return nil, fmt.Errorf("error extracting tarball: %v", err)
 		}
 	}
-}
-
-// makedev mimics glib's gnu_dev_makedev
-func makedev(major, minor int) int {
-	return (minor & 0xff) | (major & 0xfff << 8) | int((uint64(minor & ^0xff) << 12)) | int(uint64(major & ^0xfff)<<32)
 }
 
 func HdrToTimespec(hdr *tar.Header) []syscall.Timespec {
