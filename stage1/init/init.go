@@ -332,10 +332,12 @@ func parseCgroups() (map[int][]string, error) {
 		var enabled int
 		fmt.Sscanf(sc.Text(), "%s %d %d %d", &controller, &hierarchy, &num, &enabled)
 
-		if _, ok := cgroups[hierarchy]; !ok {
-			cgroups[hierarchy] = []string{controller}
-		} else {
-			cgroups[hierarchy] = append(cgroups[hierarchy], controller)
+		if enabled == 1 {
+			if _, ok := cgroups[hierarchy]; !ok {
+				cgroups[hierarchy] = []string{controller}
+			} else {
+				cgroups[hierarchy] = append(cgroups[hierarchy], controller)
+			}
 		}
 	}
 
