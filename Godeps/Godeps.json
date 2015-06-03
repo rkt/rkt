@@ -64,6 +64,10 @@
 			"Rev": "06ed1491dee087e5a83984239e8e11577d8a6131"
 		},
 		{
+			"ImportPath": "github.com/appc/goaci/proj2aci",
+			"Rev": "f99814ac2ac967bc202afd1c923cde30a65811ed"
+		},
+		{
 			"ImportPath": "github.com/appc/spec/aci",
 			"Comment": "v0.5.2",
 			"Rev": "1d31afed77b39d52145ffd368d4c62eef675cbdf"
@@ -111,12 +115,12 @@
 			"Rev": "6fe83ccda8fb9b7549c9ab4ba47f47858bc950aa"
 		},
 		{
-			"ImportPath": "github.com/coreos/go-systemd/unit",
+			"ImportPath": "github.com/coreos/go-systemd/dbus",
 			"Comment": "v2-55-gd7b0894",
 			"Rev": "d7b08942d0d85bfcb4694864881c4af7324784d2"
 		},
 		{
-			"ImportPath": "github.com/coreos/go-systemd/dbus",
+			"ImportPath": "github.com/coreos/go-systemd/unit",
 			"Comment": "v2-55-gd7b0894",
 			"Rev": "d7b08942d0d85bfcb4694864881c4af7324784d2"
 		},
@@ -218,6 +222,10 @@
 		{
 			"ImportPath": "golang.org/x/net/html",
 			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
+		},
+		{
+			"ImportPath": "golang.org/x/tools/go/vcs",
+			"Rev": "27e692e6ec36d8f48be794f32553e1400c70dbf2"
 		},
 		{
 			"ImportPath": "speter.net/go/exp/math/dec/inf",
