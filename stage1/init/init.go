@@ -86,6 +86,13 @@ const (
 	localtimePath = "/etc/localtime"
 )
 
+var (
+	cgroupControllerRWFiles = map[string][]string{
+		"memory": []string{"memory.limit_in_bytes"},
+		"cpu":    []string{"cpu.cfs_quota_us"},
+	}
+)
+
 // mirrorLocalZoneInfo tries to reproduce the /etc/localtime target in stage1/ to satisfy systemd-nspawn
 func mirrorLocalZoneInfo(root string) {
 	zif, err := os.Readlink(localtimePath)
@@ -372,6 +379,20 @@ func getControllerSymlinks(cgroups map[int][]string) map[string]string {
 	return symlinks
 }
 
+func getControllerRWFiles(controller string) []string {
+	parts := strings.Split(controller, ",")
+	for _, p := range parts {
+		if files, ok := cgroupControllerRWFiles[p]; ok {
+			// cgroup.procs always needs to be RW for allowing systemd to add
+			// processes to the controller
+			files = append(files, "cgroup.procs")
+			return files
+		}
+	}
+
+	return nil
+}
+
 // createCgroups mounts the cgroup controllers hierarchy for the container but
 // leaves the subcgroup for each app read-write so the systemd inside stage1
 // can apply isolators to them
@@ -456,8 +477,8 @@ func createCgroups(root string, machineID string, appHashes []types.Hash) error 
 		// directories to mount read-write
 		subcgroupPath := filepath.Join(cPath, subcgroup)
 
-		// 3c. Create and bind-mount app cgroup directories over themselves so
-		// they stay read-write
+		// 3c. Create cgroup directories and mount the files we need over
+		// themselves so they stay read-write
 		for _, a := range appHashes {
 			serviceName := ServiceUnitName(a)
 			appCgroup := filepath.Join(subcgroupPath, serviceName)
@@ -465,8 +486,12 @@ func createCgroups(root string, machineID string, appHashes []types.Hash) error 
 			if err := os.MkdirAll(appCgroup, 0755); err != nil {
 				return err
 			}
-			if err := syscall.Mount(appCgroup, appCgroup, "", syscall.MS_BIND, ""); err != nil {
-				return fmt.Errorf("error bind mounting %q: %v", appCgroup, err)
+			for _, f := range getControllerRWFiles(c) {
+				cgroupFilePath := filepath.Join(appCgroup, f)
+
+				if err := syscall.Mount(cgroupFilePath, cgroupFilePath, "", syscall.MS_BIND, ""); err != nil {
+					return fmt.Errorf("error bind mounting %q: %v", cgroupFilePath, err)
+				}
 			}
 		}
 
