@@ -212,7 +212,17 @@ func runRun(args []string) (exit int) {
 		PrivateNet:   flagPrivateNet,
 		LockFd:       lfd,
 		Interactive:  flagInteractive,
-		Images:       rktApps.GetImageIDs(),
+	}
+
+	if len(flagPodManifest) > 0 {
+		imgs, err := p.getAppsHashes()
+		if err != nil {
+			stderr("run: cannot get the image hashes in the pod manifest: %v", err)
+			return 1
+		}
+		rcfg.Images = imgs
+	} else {
+		rcfg.Images = rktApps.GetImageIDs()
 	}
 	stage0.Run(rcfg, p.path()) // execs, never returns
 
