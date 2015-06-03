@@ -24,7 +24,6 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
-	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/device"
 	"github.com/coreos/rkt/pkg/fileutil"
@@ -226,14 +225,5 @@ func extractFileFromTar(tr *tar.Reader, file string) ([]byte, error) {
 }
 
 func HdrToTimespec(hdr *tar.Header) []syscall.Timespec {
-	return []syscall.Timespec{timeToTimespec(hdr.AccessTime), timeToTimespec(hdr.ModTime)}
-}
-
-// TODO(sgotti) use UTIMES_OMIT on linux if Time.IsZero ?
-func timeToTimespec(time time.Time) (ts syscall.Timespec) {
-	nsec := int64(0)
-	if !time.IsZero() {
-		nsec = time.UnixNano()
-	}
-	return syscall.NsecToTimespec(nsec)
+	return []syscall.Timespec{fileutil.TimeToTimespec(hdr.AccessTime), fileutil.TimeToTimespec(hdr.ModTime)}
 }
