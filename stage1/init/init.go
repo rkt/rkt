@@ -209,17 +209,19 @@ func installAssets() error {
 		return err
 	}
 	// More paths could be added in that list if some Linux distributions install it in a different path
-	systemdShutdownBin, err := lookupPath("systemd-shutdown", "/lib/systemd:/usr/lib/systemd")
+	// Note that we look in /usr/lib/... first because of the merge:
+	// http://www.freedesktop.org/wiki/Software/systemd/TheCaseForTheUsrMerge/
+	systemdShutdownBin, err := lookupPath("systemd-shutdown", "/usr/lib/systemd:/lib/systemd")
 	if err != nil {
 		return err
 	}
-	systemdBin, err := lookupPath("systemd", "/lib/systemd:/usr/lib/systemd")
+	systemdBin, err := lookupPath("systemd", "/usr/lib/systemd:/lib/systemd")
 	if err != nil {
 		return err
 	}
 
 	assets := []string{}
-	assets = append(assets, proj2aci.GetAssetString("/lib/systemd/systemd", systemdBin))
+	assets = append(assets, proj2aci.GetAssetString("/usr/lib/systemd/systemd", systemdBin))
 	assets = append(assets, proj2aci.GetAssetString("/usr/bin/systemctl", systemctlBin))
 	assets = append(assets, proj2aci.GetAssetString("/usr/bin/bash", bashBin))
 	// systemd-shutdown has to be installed at the same path as on the host
