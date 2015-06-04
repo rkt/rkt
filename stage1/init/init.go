@@ -561,13 +561,16 @@ func createCgroups(root string, machineID string, appHashes []types.Hash) error 
 		for _, a := range appHashes {
 			serviceName := ServiceUnitName(a)
 			appCgroup := filepath.Join(subcgroupPath, serviceName)
-
 			if err := os.MkdirAll(appCgroup, 0755); err != nil {
 				return err
 			}
 			for _, f := range getControllerRWFiles(c) {
 				cgroupFilePath := filepath.Join(appCgroup, f)
-
+				// the file may not be there if kernel doesn't support the
+				// feature, skip it in that case
+				if _, err := os.Stat(cgroupFilePath); os.IsNotExist(err) {
+					continue
+				}
 				if err := syscall.Mount(cgroupFilePath, cgroupFilePath, "", syscall.MS_BIND, ""); err != nil {
 					return fmt.Errorf("error bind mounting %q: %v", cgroupFilePath, err)
 				}
