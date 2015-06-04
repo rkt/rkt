@@ -18,4 +18,20 @@
 # version as the system-wide installed go.
 GO=`which go`
 
+HOST_RUNNING_SYSTEMD=0
+if [ $(basename $(sudo readlink /proc/1/exe)) == systemd ] ; then
+	HOST_RUNNING_SYSTEMD=1
+fi
+
+STAGE1_SRC_FROM_HOST=0
+if tar tvf ../bin/stage1.aci rootfs/flavor|grep -q usr-from-host ; then
+	STAGE1_SRC_FROM_HOST=1
+fi
+
+if [ $HOST_RUNNING_SYSTEMD -eq 0 -a $STAGE1_SRC_FROM_HOST -eq 1 ] ; then
+	echo "Cannot use stage1 compiled with usr-from-host because systemd is not installed."
+	echo "Functional tests disabled."
+	exit 0
+fi
+
 sudo GOPATH="${PWD}/../gopath" GOROOT="$GOROOT" $GO test -v $*

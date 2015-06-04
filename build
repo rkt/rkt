@@ -19,6 +19,9 @@ case "${RKT_STAGE1_USR_FROM}" in
 	none)
 		echo "stage1 build disabled"
 		;;
+	usr-from-host)
+		echo "stage1 will pick binaries from the host at run-time"
+		;;
 	coreos)
 		echo "stage1 will reuse coreos image"
 		;;

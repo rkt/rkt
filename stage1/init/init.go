@@ -67,6 +67,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/goaci/proj2aci"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/util"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus"
@@ -178,6 +179,56 @@ func machinedRegister() bool {
 	return found == 2
 }
 
+func lookupPath(bin string, paths string) (string, error) {
+	pathsArr := filepath.SplitList(paths)
+	for _, path := range pathsArr {
+		binPath := filepath.Join(path, bin)
+		binAbsPath, err := filepath.Abs(binPath)
+		if err != nil {
+			return "", fmt.Errorf("unable to find absolute path for %s", binPath)
+		}
+		d, err := os.Stat(binAbsPath)
+		if err != nil {
+			continue
+		}
+		// Check the executable bit, inspired by os.exec.LookPath()
+		if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
+			return binAbsPath, nil
+		}
+	}
+	return "", fmt.Errorf("unable to find %q in %q", bin, paths)
+}
+
+func installAssets() error {
+	systemctlBin, err := lookupPath("systemctl", os.Getenv("PATH"))
+	if err != nil {
+		return err
+	}
+	bashBin, err := lookupPath("bash", os.Getenv("PATH"))
+	if err != nil {
+		return err
+	}
+	// More paths could be added in that list if some Linux distributions install it in a different path
+	systemdShutdownBin, err := lookupPath("systemd-shutdown", "/lib/systemd:/usr/lib/systemd")
+	if err != nil {
+		return err
+	}
+	systemdBin, err := lookupPath("systemd", "/lib/systemd:/usr/lib/systemd")
+	if err != nil {
+		return err
+	}
+
+	assets := []string{}
+	assets = append(assets, proj2aci.GetAssetString("/lib/systemd/systemd", systemdBin))
+	assets = append(assets, proj2aci.GetAssetString("/usr/bin/systemctl", systemctlBin))
+	assets = append(assets, proj2aci.GetAssetString("/usr/bin/bash", bashBin))
+	// systemd-shutdown has to be installed at the same path as on the host
+	// because it depends on systemd build flag -DSYSTEMD_SHUTDOWN_BINARY_PATH=
+	assets = append(assets, proj2aci.GetAssetString(systemdShutdownBin, systemdShutdownBin))
+
+	return proj2aci.PrepareAssets(assets, "./stage1/rootfs/", nil)
+}
+
 // getArgsEnv returns the nspawn args and env according to the usr used
 func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) ([]string, []string, error) {
 	args := []string{}
@@ -225,6 +276,32 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 		} else {
 			args = append(args, fmt.Sprintf("--register=false"))
 		}
+
+	case "usr-from-host":
+		hostNspawnBin, err := lookupPath("systemd-nspawn", os.Getenv("PATH"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// Check dynamically which version is installed on the host
+		// Only support v220 for now.
+		versionBytes, err := exec.Command(hostNspawnBin, "--version").CombinedOutput()
+		if err != nil {
+			return nil, nil, fmt.Errorf("unable to probe %s version: %v", hostNspawnBin, err)
+		}
+		version := strings.SplitN(string(versionBytes), "\n", 2)[0]
+		if version != "systemd 220" {
+			return nil, nil, fmt.Errorf("%s version not supported: %v", hostNspawnBin, version)
+		}
+
+		// Copy systemd, bash, etc. in stage1 at run-time
+		if err := installAssets(); err != nil {
+			return nil, nil, fmt.Errorf("cannot install assets from the host: %v", err)
+		}
+
+		args = append(args, hostNspawnBin)
+		args = append(args, "--boot") // Launch systemd in the pod
+		args = append(args, fmt.Sprintf("--register=true"))
 
 	default:
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
