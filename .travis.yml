@@ -14,5 +14,5 @@ install:
  - go get golang.org/x/tools/cmd/vet
 
 script:
- - ./test
-
+ - ./configure
+ - make stage0-test SHELL="/bin/bash -v"

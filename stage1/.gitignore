@@ -5,7 +5,6 @@ rootfs/aggregate/stage1/
 rootfs/diagexec/diagexec
 rootfs/enter/enter
 rootfs/prepare-app/prepare-app
-rootfs/shim/shim.so
 rootfs/usr_from_coreos/cache/
 rootfs/usr_from_coreos/manifest.txt
 rootfs/usr_from_coreos/rootfs/
