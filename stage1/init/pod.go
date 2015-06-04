@@ -252,16 +252,17 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, inte
 	for _, i := range am.App.Isolators {
 		switch v := i.Value().(type) {
 		case *types.ResourceMemory:
-			l := v.Limit().String()
-			opts = append(opts, newUnitOption("Service", "MemoryLimit", l))
-		case *types.ResourceCPU:
-			l := v.Limit().String()
-			milliCores, err := strconv.Atoi(l)
+			limit := v.Limit().String()
+			opts, err = maybeAddIsolator(opts, "memory", limit)
 			if err != nil {
 				return err
 			}
-			quota := strconv.Itoa(milliCores/10) + "%"
-			opts = append(opts, newUnitOption("Service", "CPUQuota", quota))
+		case *types.ResourceCPU:
+			limit := v.Limit().String()
+			opts, err = maybeAddIsolator(opts, "cpu", limit)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
