@@ -25,6 +25,8 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+
+	"github.com/coreos/rkt/pkg/fileutil"
 )
 
 const DEFAULT_DIR_MODE os.FileMode = 0755
@@ -185,7 +187,7 @@ func extractFile(tr *tar.Reader, hdr *tar.Header, overwrite bool) error {
 			return err
 		}
 	} else {
-		if err := LUtimesNano(p, ts); err != nil && err != ErrNotSupportedPlatform {
+		if err := fileutil.LUtimesNano(p, ts); err != nil && err != ErrNotSupportedPlatform {
 			return err
 		}
 	}
