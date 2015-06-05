@@ -19,6 +19,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -84,13 +85,7 @@ func isIsolatorSupported(isolator string) bool {
 	return false
 }
 
-func parseCgroups() (map[int][]string, error) {
-	f, err := os.Open("/proc/cgroups")
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
+func parseCgroups(f io.Reader) (map[int][]string, error) {
 	sc := bufio.NewScanner(f)
 
 	// skip first line since it is a comment
@@ -162,7 +157,13 @@ func getControllerRWFiles(controller string) []string {
 // leaves the subcgroup for each app read-write so the systemd inside stage1
 // can apply isolators to them
 func createCgroups(root string, machineID string, appHashes []types.Hash) error {
-	cgroups, err := parseCgroups()
+	cgroupsFile, err := os.Open("/proc/cgroups")
+	if err != nil {
+		return err
+	}
+	defer cgroupsFile.Close()
+
+	cgroups, err := parseCgroups(cgroupsFile)
 	if err != nil {
 		return fmt.Errorf("error parsing /proc/cgroups: %v", err)
 	}
