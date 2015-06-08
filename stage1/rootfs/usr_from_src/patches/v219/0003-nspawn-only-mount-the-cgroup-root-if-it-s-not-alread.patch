@@ -1,19 +1,21 @@
-From 3e0ab7a3c7ffbb03a249f89bb5b0532deecd714d Mon Sep 17 00:00:00 2001
+From eb078b430caf7aa8fb8e9ee5c60c77b9a090e946 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Iago=20L=C3=B3pez=20Galeiras?= <iago@endocode.com>
 Date: Wed, 13 May 2015 15:45:48 +0200
-Subject: [PATCH 5/6] nspawn: only mount the cgroup root if it's not already
+Subject: [PATCH 3/5] nspawn: only mount the cgroup root if it's not already
  mounted
 
 This allows the user to set the cgroups manually before calling nspawn.
+
+Origin: upstream, https://github.com/systemd/systemd/commit/54b4755f15438c86991d5a4eaadc47150f7e5a84
 ---
  src/nspawn/nspawn.c | 27 +++++++++++++--------------
  1 file changed, 13 insertions(+), 14 deletions(-)
 
 diff --git a/src/nspawn/nspawn.c b/src/nspawn/nspawn.c
-index 5a30bdd..f179dcb 100644
+index b5b535c..af70f21 100644
 --- a/src/nspawn/nspawn.c
 +++ b/src/nspawn/nspawn.c
-@@ -828,18 +828,19 @@ static int mount_all(const char *dest) {
+@@ -808,18 +808,19 @@ static int mount_all(const char *dest) {
          } MountPoint;
  
          static const MountPoint mount_table[] = {
@@ -44,7 +46,7 @@ index 5a30bdd..f179dcb 100644
  #endif
          };
  
-@@ -1024,9 +1025,6 @@ static int mount_cgroup(const char *dest) {
+@@ -1004,9 +1005,6 @@ static int mount_cgroup(const char *dest) {
          if (r < 0)
                  return log_error_errno(r, "Failed to determine our own cgroup path: %m");
  
@@ -54,7 +56,7 @@ index 5a30bdd..f179dcb 100644
  
          for (;;) {
                  _cleanup_free_ char *controller = NULL, *origin = NULL, *combined = NULL;
-@@ -1086,6 +1084,7 @@ static int mount_cgroup(const char *dest) {
+@@ -1066,6 +1064,7 @@ static int mount_cgroup(const char *dest) {
          if (mount(NULL, systemd_root, NULL, MS_BIND|MS_REMOUNT|MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_RDONLY, NULL) < 0)
                  return log_error_errno(errno, "Failed to mount cgroup root read-only: %m");
  
@@ -63,5 +65,5 @@ index 5a30bdd..f179dcb 100644
                  return log_error_errno(errno, "Failed to remount %s read-only: %m", cgroup_root);
  
 -- 
-2.4.1
+2.1.4
 

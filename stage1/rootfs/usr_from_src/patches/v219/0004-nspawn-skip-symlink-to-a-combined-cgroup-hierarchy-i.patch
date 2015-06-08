@@ -1,12 +1,14 @@
-From 4f30798831619a2ca7b56ef94d7601fe0238f04d Mon Sep 17 00:00:00 2001
+From 9caa3733cb49cd88f1c03f6abfb005ad264bc535 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Iago=20L=C3=B3pez=20Galeiras?= <iago@endocode.com>
 Date: Wed, 13 May 2015 15:45:49 +0200
-Subject: [PATCH 6/6] nspawn: skip symlink to a combined cgroup hierarchy if it
+Subject: [PATCH 4/5] nspawn: skip symlink to a combined cgroup hierarchy if it
  already exists
 
 If a symlink to a combined cgroup hierarchy already exists and points to
 the right path, skip it. This avoids an error when the cgroups are set
 manually before calling nspawn.
+
+Origin: upstream, https://github.com/systemd/systemd/commit/875e1014dd9d55cd0692dcce843598cffb2d09b0
 ---
  src/nspawn/nspawn.c | 10 +++++++---
  src/shared/util.c   | 22 ++++++++++++++++++++++
@@ -14,10 +16,10 @@ manually before calling nspawn.
  3 files changed, 31 insertions(+), 3 deletions(-)
 
 diff --git a/src/nspawn/nspawn.c b/src/nspawn/nspawn.c
-index f179dcb..df912a1 100644
+index af70f21..a4e5419 100644
 --- a/src/nspawn/nspawn.c
 +++ b/src/nspawn/nspawn.c
-@@ -1025,7 +1025,6 @@ static int mount_cgroup(const char *dest) {
+@@ -1005,7 +1005,6 @@ static int mount_cgroup(const char *dest) {
          if (r < 0)
                  return log_error_errno(r, "Failed to determine our own cgroup path: %m");
  
@@ -25,7 +27,7 @@ index f179dcb..df912a1 100644
          for (;;) {
                  _cleanup_free_ char *controller = NULL, *origin = NULL, *combined = NULL;
  
-@@ -1065,8 +1064,13 @@ static int mount_cgroup(const char *dest) {
+@@ -1045,8 +1044,13 @@ static int mount_cgroup(const char *dest) {
                          if (r < 0)
                                  return r;
  
@@ -88,5 +90,5 @@ index a83b588..874e2dc 100644
  int mknod_atomic(const char *path, mode_t mode, dev_t dev);
  int mkfifo_atomic(const char *path, mode_t mode);
 -- 
-2.4.1
+2.1.4
 

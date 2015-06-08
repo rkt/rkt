@@ -253,13 +253,14 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 
 		switch systemdStage1Version {
 		case "v215":
-			fallthrough
-		case "v219":
 			lfd, err := common.GetRktLockFD()
 			if err != nil {
 				return nil, nil, err
 			}
 			args = append(args, fmt.Sprintf("--keep-fd=%v", lfd))
+		case "v219":
+			// --keep-fd is not needed thanks to
+			// stage1/rootfs/usr_from_src/patches/v219/0005-nspawn-close-extra-fds-before-execing-init.patch
 		default:
 			// since systemd-nspawn v220 (commit 6b7d2e, "nspawn: close extra fds
 			// before execing init"), fds remain open, so --keep-fd is not needed.

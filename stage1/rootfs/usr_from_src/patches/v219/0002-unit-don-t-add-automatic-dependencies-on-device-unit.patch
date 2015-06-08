@@ -1,10 +1,12 @@
-From 5bc5f0724a1df0458bd4b9f2d757cb46f5b0d27c Mon Sep 17 00:00:00 2001
+From d0ec6449100ebbabe7586da53bc0a29fdf97caf3 Mon Sep 17 00:00:00 2001
 From: Lennart Poettering <lennart@poettering.net>
 Date: Fri, 24 Apr 2015 17:28:06 +0200
-Subject: [PATCH 4/4] unit: don't add automatic dependencies on device units if
+Subject: [PATCH 2/5] unit: don't add automatic dependencies on device units if
  they aren't supported
 
 http://lists.freedesktop.org/archives/systemd-devel/2015-April/031187.html
+
+Origin: upstream, https://github.com/systemd/systemd/commit/47bc12e1ba35d38edda737dae232088d6d3ae688
 ---
  src/core/unit.c | 10 +++++++---
  1 file changed, 7 insertions(+), 3 deletions(-)
