@@ -21,6 +21,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
 )
 
 // dirDesc structure manages one directory and provides an option for
@@ -142,6 +145,30 @@ func (ctx *rktRunCtx) ensureValid() {
 	for _, d := range ctx.directories {
 		d.ensureValid()
 	}
+}
+
+func expectCommon(p *gexpect.ExpectSubprocess, searchString string, timeout time.Duration) error {
+	var err error
+
+	p.Capture()
+	if timeout == 0 {
+		err = p.Expect(searchString)
+	} else {
+		err = p.ExpectTimeout(searchString, timeout)
+	}
+	if err != nil {
+		return fmt.Errorf(string(p.Collect()))
+	}
+
+	return nil
+}
+
+func expectWithOutput(p *gexpect.ExpectSubprocess, searchString string) error {
+	return expectCommon(p, searchString, 0)
+}
+
+func expectTimeoutWithOutput(p *gexpect.ExpectSubprocess, searchString string, timeout time.Duration) error {
+	return expectCommon(p, searchString, timeout)
 }
 
 func patchTestACI(newFileName string, args ...string) {

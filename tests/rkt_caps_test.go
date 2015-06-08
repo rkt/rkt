@@ -107,12 +107,12 @@ func TestCaps(t *testing.T) {
 			} else {
 				expectedLine += "=disabled"
 			}
-			err = child.Expect(expectedLine)
+			err = expectWithOutput(child, expectedLine)
 			if err != nil {
 				t.Fatalf("Expected %q but not found: %v", expectedLine, err)
 			}
 
-			err = child.Expect("User: uid=0 euid=0 gid=0 egid=0")
+			err = expectWithOutput(child, "User: uid=0 euid=0 gid=0 egid=0")
 			if err != nil {
 				t.Fatalf("Expected user 0 but not found: %v", err)
 			}
@@ -155,12 +155,12 @@ func TestNonRootCaps(t *testing.T) {
 		} else {
 			expectedLine += "=disabled"
 		}
-		err = child.Expect(expectedLine)
+		err = expectWithOutput(child, expectedLine)
 		if err != nil {
 			t.Fatalf("Expected %q but not found: %v", expectedLine, err)
 		}
 
-		err = child.Expect("User: uid=9000 euid=9000 gid=9000 egid=9000")
+		err = expectWithOutput(child, "User: uid=9000 euid=9000 gid=9000 egid=9000")
 		if err != nil {
 			t.Fatalf("Expected user 9000 but not found: %v", err)
 		}
