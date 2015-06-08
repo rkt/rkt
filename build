@@ -40,7 +40,7 @@ go build -o ${GOBIN}/rkt \
 	${RKT_STAGE1_IMAGE:+-ldflags "-X main.defaultStage1Image '${RKT_STAGE1_IMAGE}'"} \
 	${REPO_PATH}/rkt
 
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
+if [[ "$(uname)" == "Linux" ]]; then
 	echo "Building network plugins..."
 	cni_plugins="Godeps/_workspace/src/github.com/appc/cni/plugins/main/* "
 	cni_plugins="$cni_plugins Godeps/_workspace/src/github.com/appc/cni/plugins/ipam/* "
@@ -87,7 +87,8 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 		echo "Building rootfs (stage1) using ${JOBS} CPUs..."
 		make -C stage1/rootfs -j ${JOBS}
 	fi
+
+	echo "Building functional tests..."
+	(cd tests && ./build)
 fi
 
-echo "Building functional tests..."
-(cd tests && ./build)
