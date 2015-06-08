@@ -390,6 +390,22 @@ func forwardedPorts(pod *Pod) ([]networking.ForwardedPort, error) {
 	return fps, nil
 }
 
+func writePpid(pid int) error {
+	// write ppid file as specified in
+	// Documentation/devel/stage1-implementors-guide.md
+	out, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("Cannot get current working directory: %v\n", err)
+	}
+	// we are the parent of the process that is PID 1 in the container so we write our PID to "ppid"
+	err = ioutil.WriteFile(filepath.Join(out, "ppid"),
+		[]byte(fmt.Sprintf("%d\n", pid)), 0644)
+	if err != nil {
+		return fmt.Errorf("Cannot write ppid file: %v\n", err)
+	}
+	return nil
+}
+
 func stage1() int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
@@ -474,21 +490,6 @@ func stage1() int {
 		return 3
 	}
 
-	// write ppid file as specified in
-	// Documentation/devel/stage1-implementors-guide.md
-	out, err := os.Getwd()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot get current working directory: %v\n", err)
-		return 4
-	}
-	// we are the parent of the process that is PID 1 in the container so we write our PID to "ppid"
-	err = ioutil.WriteFile(filepath.Join(out, "ppid"),
-		[]byte(fmt.Sprintf("%d\n", os.Getpid())), 0644)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot write ppid file: %v\n", err)
-		return 4
-	}
-
 	// The systemd version shipped with CoreOS (v215) doesn't allow the
 	// external mounting of cgroups
 	// TODO remove this check when CoreOS updates systemd to v220
@@ -513,8 +514,21 @@ func stage1() int {
 			Stderr: os.Stderr,
 			Env:    env,
 		}
-		execFn = cmd.Run
+		execFn = func() error {
+			err = cmd.Start()
+			if err != nil {
+				return fmt.Errorf("Failed to start nspawn: %v\n", err)
+			}
+			if err = writePpid(cmd.Process.Pid); err != nil {
+				return err
+			}
+			return cmd.Wait()
+		}
 	} else {
+		if err = writePpid(os.Getpid()); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			return 4
+		}
 		execFn = func() error {
 			return syscall.Exec(args[0], args, env)
 		}
