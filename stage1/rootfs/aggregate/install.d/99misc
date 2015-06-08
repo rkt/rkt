@@ -7,6 +7,7 @@ install -m 0644 units/exit-watcher.service "$ROOT/usr/lib/systemd/system"
 install -m 0644 units/local-fs.target "$ROOT/usr/lib/systemd/system"
 install -m 0644 units/reaper.service "$ROOT/usr/lib/systemd/system"
 install -m 0644 units/sockets.target "$ROOT/usr/lib/systemd/system"
+install -m 0644 units/halt.target "$ROOT/usr/lib/systemd/system"
 install -m 0755 scripts/reaper.sh "$ROOT"
 
 install -d "$ROOT/etc"
