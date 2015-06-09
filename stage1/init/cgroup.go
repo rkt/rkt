@@ -162,7 +162,10 @@ func getOwnCgroupPath(controller string) (string, error) {
 
 	s := bufio.NewScanner(cg)
 	for s.Scan() {
-		parts := strings.Split(s.Text(), ":")
+		parts := strings.SplitN(s.Text(), ":", 3)
+		if len(parts) < 3 {
+			return "", fmt.Errorf("error parsing /proc/self/cgroup")
+		}
 		if parts[1] == controller {
 			return parts[2], nil
 		}
