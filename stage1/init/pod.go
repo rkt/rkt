@@ -249,7 +249,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, inte
 		}
 	}
 
-	for _, i := range am.App.Isolators {
+	for _, i := range app.Isolators {
 		switch v := i.Value().(type) {
 		case *types.ResourceMemory:
 			limit := v.Limit().String()
@@ -418,7 +418,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManifest) (
 		args = append(args, strings.Join(opt, ""))
 	}
 
-	for _, i := range am.App.Isolators {
+	for _, i := range app.Isolators {
 		switch v := i.Value().(type) {
 		case types.LinuxCapabilitiesSet:
 			var caps []string
