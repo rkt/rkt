@@ -4,8 +4,8 @@ Work in progress. Please contribute if you see an area that needs more detail.
 
 ## Downloading Images (ACIs)
 
-[aci-images]: https://github.com/appc/spec/blob/master/SPEC.md#app-container-image
-[appc-discovery]: https://github.com/appc/spec/blob/master/SPEC.md#app-container-image-discovery
+[aci-images]: https://github.com/appc/spec/blob/master/spec/aci.md#app-container-image
+[appc-discovery]: https://github.com/appc/spec/blob/master/spec/discovery.md#app-container-image-discovery
 
 rkt runs applications packaged as [Application Container Images (ACI)][aci-images] an open-source specification. ACIs consist of the root filesystem of the application container, a manifest and an optional signature.
 
