@@ -30,7 +30,7 @@ Select `Ubuntu 14.04 LTS v1503 (beta with Docker support)`.
 ### Environment variables
 
 ```
-RKT_STAGE1_USR_FROM=src
+RKT_ENABLE_FUNCTIONAL_TESTS=true
 ```
 
 ## CircleCI
