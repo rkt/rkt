@@ -33,8 +33,8 @@ $ sudo rkt --insecure-skip-verify run \
 
 [appc-repo]: https://github.com/appc/spec/
 [appc-spec]: https://github.com/appc/spec/blob/master/SPEC.md
-[appc-aci]: https://github.com/appc/spec/blob/master/SPEC.md#app-container-image
-[appc-pods]: https://github.com/appc/spec/blob/master/SPEC.md#app-container-pods-pods
-[appc-ace]: https://github.com/appc/spec/blob/master/SPEC.md#app-container-executor
-[appc-meta]: https://github.com/appc/spec/blob/master/SPEC.md#app-container-metadata-service
+[appc-aci]: https://github.com/appc/spec/blob/master/spec/aci.md#app-container-image
+[appc-pods]: https://github.com/appc/spec/blob/master/spec/pods.md#app-container-pods-pods
+[appc-ace]: https://github.com/appc/spec/blob/master/spec/ace.md#app-container-executor
+[appc-meta]: https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service
 [appc-val]: https://github.com/appc/spec/blob/master/README.md#validating-app-container-executors-aces

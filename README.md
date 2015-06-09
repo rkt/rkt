@@ -106,7 +106,7 @@ $ find /var/lib/rkt/cas/blob/
 /var/lib/rkt/cas/blob/sha512/1e/sha512-1eba37d9b344b33d272181e176da111ef2fdd4958b88ba4071e56db9ac07cf62
 ```
 
-Per the [App Container Specification](https://github.com/appc/spec/blob/master/SPEC.md#image-archives), the SHA-512 hash is of the tarball and can be reproduced with other tools:
+Per the [App Container Specification](https://github.com/appc/spec/blob/master/spec/aci.md#image-archives), the SHA-512 hash is of the tarball and can be reproduced with other tools:
 
 ```
 $ wget https://github.com/coreos/etcd/releases/download/v2.0.4/etcd-v2.0.4-linux-amd64.aci
