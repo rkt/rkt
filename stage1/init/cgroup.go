@@ -28,7 +28,6 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
-	"github.com/coreos/rkt/common"
 )
 
 type addIsolatorFunc func(opts []*unit.UnitOption, limit string) ([]*unit.UnitOption, error)
@@ -153,10 +152,29 @@ func getControllerRWFiles(controller string) []string {
 	return nil
 }
 
+func getOwnCgroupPath(controller string) (string, error) {
+	selfCgroupPath := "/proc/self/cgroup"
+	cg, err := os.Open(selfCgroupPath)
+	if err != nil {
+		return "", fmt.Errorf("error opening /proc/self/cgroup: %v", err)
+	}
+	defer cg.Close()
+
+	s := bufio.NewScanner(cg)
+	for s.Scan() {
+		parts := strings.Split(s.Text(), ":")
+		if parts[1] == controller {
+			return parts[2], nil
+		}
+	}
+
+	return "", fmt.Errorf("controller %q not found", controller)
+}
+
 // createCgroups mounts the cgroup controllers hierarchy for the container but
 // leaves the subcgroup for each app read-write so the systemd inside stage1
 // can apply isolators to them
-func createCgroups(root string, machineID string, appHashes []types.Hash) error {
+func createCgroups(root string, subcgroup string, appHashes []types.Hash) error {
 	cgroupsFile, err := os.Open("/proc/cgroups")
 	if err != nil {
 		return err
@@ -197,31 +215,6 @@ func createCgroups(root string, machineID string, appHashes []types.Hash) error 
 		syscall.MS_STRICTATIME
 	if err := syscall.Mount("tmpfs", cgroupTmpfs, "tmpfs", flags, "mode=755"); err != nil {
 		return fmt.Errorf("error mounting %q: %v", cgroupTmpfs, err)
-	}
-
-	var subcgroup string
-	fromUnit, err := runningFromUnitFile()
-	if err != nil {
-		return fmt.Errorf("error determining if we're running from a unit file: %v", err)
-	}
-	if fromUnit {
-		slice, err := getSlice()
-		if err != nil {
-			return fmt.Errorf("error getting slice name: %v", err)
-		}
-		slicePath, err := common.SliceToPath(slice)
-		if err != nil {
-			return fmt.Errorf("error converting slice name to path: %v", err)
-		}
-		unit, err := getUnitFileName()
-		if err != nil {
-			return fmt.Errorf("error getting unit name: %v", err)
-		}
-		subcgroup = filepath.Join(slicePath, unit, "system.slice")
-	} else {
-		escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
-		machineDir := "machine-" + escapedmID + ".scope"
-		subcgroup = filepath.Join("machine.slice", machineDir, "system.slice")
 	}
 
 	// 3. Mount controllers
