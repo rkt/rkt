@@ -321,7 +321,7 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 		args = append(args, "--quiet") // silence most nspawn output (log_warning is currently not covered by this)
 	}
 
-	keepUnit, err := runningFromUnitFile()
+	keepUnit, err := isRunningFromUnitFile()
 	if err != nil {
 		return nil, nil, fmt.Errorf("error determining if we're running from a unit file: %v", err)
 	}
@@ -498,9 +498,15 @@ func stage1() int {
 		appHashes := p.GetAppHashes()
 		s1Root := common.Stage1RootfsPath(p.Root)
 		machineID := p.GetMachineID()
-		if err := createCgroups(s1Root, machineID, appHashes); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating cgroups: %v\n", err)
-			return 5
+
+		subcgroup, err := getContainerSubCgroup(machineID)
+		if err == nil {
+			if err := createCgroups(s1Root, subcgroup, appHashes); err != nil {
+				fmt.Fprintf(os.Stderr, "Error creating cgroups: %v\n", err)
+				return 5
+			}
+		} else {
+			fmt.Fprintf(os.Stderr, "Disabling per-app isolators: %v\n", err)
 		}
 	}
 
@@ -542,6 +548,48 @@ func stage1() int {
 	}
 
 	return 0
+}
+
+func getContainerSubCgroup(machineID string) (string, error) {
+	var subcgroup string
+	fromUnit, err := isRunningFromUnitFile()
+	if err != nil {
+		return "", fmt.Errorf("error determining if we're running from a unit file: %v", err)
+	}
+	if fromUnit {
+		slice, err := getSlice()
+		if err != nil {
+			return "", fmt.Errorf("error getting slice name: %v", err)
+		}
+		slicePath, err := common.SliceToPath(slice)
+		if err != nil {
+			return "", fmt.Errorf("error converting slice name to path: %v", err)
+		}
+		unit, err := getUnitFileName()
+		if err != nil {
+			return "", fmt.Errorf("error getting unit name: %v", err)
+		}
+		subcgroup = filepath.Join(slicePath, unit, "system.slice")
+	} else {
+		if machinedRegister() {
+			// we are not in the final cgroup yet: systemd-nspawn will move us
+			// to the correct cgroup later during registration so we can't
+			// look it up in /proc/self/cgroup
+			escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
+			machineDir := "machine-" + escapedmID + ".scope"
+			subcgroup = filepath.Join("machine.slice", machineDir, "system.slice")
+		} else {
+			// when registration is disabled the container will be directly
+			// under rkt's cgroup so we can look it up in /proc/self/cgroup
+			ownCgroupPath, err := getOwnCgroupPath("name=systemd")
+			if err != nil {
+				return "", fmt.Errorf("error getting own cgroup path: %v", err)
+			}
+			subcgroup = filepath.Join(ownCgroupPath, "system.slice")
+		}
+	}
+
+	return subcgroup, nil
 }
 
 func getUnitFileName() (unit string, err error) {
@@ -616,7 +664,7 @@ func getSlice() (slice string, err error) {
 	return
 }
 
-func runningFromUnitFile() (ret bool, err error) {
+func isRunningFromUnitFile() (ret bool, err error) {
 	libname := C.CString("libsystemd.so")
 	defer C.free(unsafe.Pointer(libname))
 	handle := C.dlopen(libname, C.RTLD_LAZY)
