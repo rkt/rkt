@@ -34,7 +34,7 @@
                 "name": "resource/memory",
                 "value": {
                     "request": "25M",
-                    "limit": "120M"
+                    "limit": "25M"
                 }
             },
             {
