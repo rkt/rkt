@@ -166,8 +166,11 @@ func getOwnCgroupPath(controller string) (string, error) {
 		if len(parts) < 3 {
 			return "", fmt.Errorf("error parsing /proc/self/cgroup")
 		}
-		if parts[1] == controller {
-			return parts[2], nil
+		controllerParts := strings.Split(parts[1], ",")
+		for _, c := range controllerParts {
+			if c == controller {
+				return parts[2], nil
+			}
 		}
 	}
 
