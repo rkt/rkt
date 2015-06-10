@@ -28,6 +28,7 @@ import (
 const (
 	// if you change this you need to change tests/image/manifest accordingly
 	maxMemoryUsage = 25 * 1024 * 1024 // 25MB
+	CPUQuota       = 100              // milli-cores
 )
 
 var memoryTest = struct {
@@ -37,6 +38,16 @@ var memoryTest = struct {
 }{
 	`Check memory isolator`,
 	[]string{"--exec=/inspect --print-memorylimit"},
+	`--insecure-skip-verify run rkt-inspect-isolators.aci`,
+}
+
+var cpuTest = struct {
+	testName     string
+	aciBuildArgs []string
+	rktArgs      string
+}{
+	`Check CPU quota`,
+	[]string{"--exec=/inspect --print-cpuquota"},
 	`--insecure-skip-verify run rkt-inspect-isolators.aci`,
 }
 
@@ -97,4 +108,40 @@ func TestAppIsolatorMemory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
+}
+
+func TestAppIsolatorCPU(t *testing.T) {
+	ok, err := isControllerEnabled("cpu")
+	if err != nil {
+		t.Fatalf("Error checking if the cpu cgroup controller is enabled: %v", err)
+	}
+	if !ok {
+		t.Skip("CPU cgroup controller disabled.")
+	}
+
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
+	t.Logf("Running test: %v", cpuTest.testName)
+
+	aciFileName := "rkt-inspect-isolators.aci"
+	patchTestACI(aciFileName, cpuTest.aciBuildArgs...)
+	defer os.Remove(aciFileName)
+
+	rktCmd := fmt.Sprintf("%s %s", ctx.cmd(), cpuTest.rktArgs)
+	t.Logf("Command: %v", rktCmd)
+	child, err := gexpect.Spawn(rktCmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	expectedLine := "CPU Quota: " + strconv.Itoa(CPUQuota)
+	if err := expectWithOutput(child, expectedLine); err != nil {
+		t.Fatalf("Didn't receive expected output %q: %v", expectedLine, err)
+	}
+
+	err = child.Wait()
+	if err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+
 }

@@ -45,6 +45,7 @@ var (
 		WriteFile        bool
 		Sleep            int
 		PrintMemoryLimit bool
+		PrintCPUQuota    bool
 	}{}
 )
 
@@ -61,6 +62,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
 	globalFlagset.IntVar(&globalFlags.Sleep, "sleep", -1, "Sleep before exiting (in seconds)")
 	globalFlagset.BoolVar(&globalFlags.PrintMemoryLimit, "print-memorylimit", false, "Print cgroup memory limit")
+	globalFlagset.BoolVar(&globalFlags.PrintCPUQuota, "print-cpuquota", false, "Print cgroup cpu quota in milli-cores")
 }
 
 func main() {
@@ -192,6 +194,42 @@ func main() {
 		}
 
 		fmt.Printf("Memory Limit: %s\n", string(limit))
+	}
+
+	if globalFlags.PrintCPUQuota {
+		cpuCgroupPath, err := getOwnCgroupPath("cpu")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting own cpu cgroup path: %v\n", err)
+			os.Exit(1)
+		}
+		// we use /proc/1/root to escape the chroot we're in and read our
+		// cpu quota
+		periodPath := filepath.Join("/proc/1/root/sys/fs/cgroup/cpu", cpuCgroupPath, "cpu.cfs_period_us")
+		periodBytes, err := ioutil.ReadFile(periodPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Can't read cpu.cpu_period_us\n")
+			os.Exit(1)
+		}
+		quotaPath := filepath.Join("/proc/1/root/sys/fs/cgroup/cpu", cpuCgroupPath, "cpu.cfs_quota_us")
+		quotaBytes, err := ioutil.ReadFile(quotaPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Can't read cpu.cpu_quota_us\n")
+			os.Exit(1)
+		}
+
+		period, err := strconv.Atoi(strings.Trim(string(periodBytes), "\n"))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		quota, err := strconv.Atoi(strings.Trim(string(quotaBytes), "\n"))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+
+		quotaMilliCores := quota * 1000 / period
+		fmt.Printf("CPU Quota: %s\n", strconv.Itoa(quotaMilliCores))
 	}
 
 	os.Exit(globalFlags.ExitCode)
