@@ -17,7 +17,7 @@
 // TODO(sgotti) waiting for a utimensat functions accepting flags and a
 // LUtimesNano using it in https://github.com/golang/sys/
 
-package tar
+package fileutil
 
 import (
 	"syscall"

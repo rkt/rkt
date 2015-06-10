@@ -41,6 +41,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
@@ -413,7 +414,13 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 	}
 
 	if !useOverlay {
-		if err := aci.RenderACIWithImageID(img, s1, cfg.Store); err != nil {
+		if err := writeManifest(cfg.CommonConfig, img, s1); err != nil {
+			return fmt.Errorf("error writing manifest: %v", err)
+		}
+
+		destRootfs := filepath.Join(s1, "rootfs")
+		cachedTreePath := cfg.Store.GetTreeStoreRootFS(img.String())
+		if err := fileutil.CopyTree(cachedTreePath, destRootfs); err != nil {
 			return fmt.Errorf("error rendering ACI: %v", err)
 		}
 	}
@@ -435,6 +442,26 @@ func setupStage1Image(cfg RunConfig, img types.Hash, cdir string, useOverlay boo
 		if err := os.Chtimes(statusPath, time.Now(), time.Now()); err != nil {
 			return fmt.Errorf("error touching status dir: %v", err)
 		}
+	}
+
+	return nil
+}
+
+// writeManifest takes an img ID and writes the corresponding manifest in dest
+func writeManifest(cfg CommonConfig, img types.Hash, dest string) error {
+	manifest, err := cfg.Store.GetImageManifest(img.String())
+	if err != nil {
+		return err
+	}
+
+	mb, err := json.Marshal(manifest)
+	if err != nil {
+		return fmt.Errorf("error marshalling image manifest: %v", err)
+	}
+
+	log.Printf("Writing image manifest")
+	if err := ioutil.WriteFile(filepath.Join(dest, "manifest"), mb, 0700); err != nil {
+		return fmt.Errorf("error writing pod manifest: %v", err)
 	}
 
 	return nil

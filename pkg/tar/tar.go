@@ -24,7 +24,9 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
-	"time"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/device"
+	"github.com/coreos/rkt/pkg/fileutil"
 )
 
 const DEFAULT_DIR_MODE os.FileMode = 0755
@@ -143,15 +145,15 @@ func extractFile(tr *tar.Reader, hdr *tar.Header, overwrite bool) error {
 			return err
 		}
 	case typ == tar.TypeChar:
-		dev := makedev(int(hdr.Devmajor), int(hdr.Devminor))
+		dev := device.Makedev(uint(hdr.Devmajor), uint(hdr.Devminor))
 		mode := uint32(fi.Mode()) | syscall.S_IFCHR
-		if err := syscall.Mknod(p, mode, dev); err != nil {
+		if err := syscall.Mknod(p, mode, int(dev)); err != nil {
 			return err
 		}
 	case typ == tar.TypeBlock:
-		dev := makedev(int(hdr.Devmajor), int(hdr.Devminor))
+		dev := device.Makedev(uint(hdr.Devmajor), uint(hdr.Devminor))
 		mode := uint32(fi.Mode()) | syscall.S_IFBLK
-		if err := syscall.Mknod(p, mode, dev); err != nil {
+		if err := syscall.Mknod(p, mode, int(dev)); err != nil {
 			return err
 		}
 	case typ == tar.TypeFifo:
@@ -185,7 +187,7 @@ func extractFile(tr *tar.Reader, hdr *tar.Header, overwrite bool) error {
 			return err
 		}
 	} else {
-		if err := LUtimesNano(p, ts); err != nil && err != ErrNotSupportedPlatform {
+		if err := fileutil.LUtimesNano(p, ts); err != nil && err != ErrNotSupportedPlatform {
 			return err
 		}
 	}
@@ -222,20 +224,6 @@ func extractFileFromTar(tr *tar.Reader, file string) ([]byte, error) {
 	}
 }
 
-// makedev mimics glib's gnu_dev_makedev
-func makedev(major, minor int) int {
-	return (minor & 0xff) | (major & 0xfff << 8) | int((uint64(minor & ^0xff) << 12)) | int(uint64(major & ^0xfff)<<32)
-}
-
 func HdrToTimespec(hdr *tar.Header) []syscall.Timespec {
-	return []syscall.Timespec{timeToTimespec(hdr.AccessTime), timeToTimespec(hdr.ModTime)}
-}
-
-// TODO(sgotti) use UTIMES_OMIT on linux if Time.IsZero ?
-func timeToTimespec(time time.Time) (ts syscall.Timespec) {
-	nsec := int64(0)
-	if !time.IsZero() {
-		nsec = time.UnixNano()
-	}
-	return syscall.NsecToTimespec(nsec)
+	return []syscall.Timespec{fileutil.TimeToTimespec(hdr.AccessTime), fileutil.TimeToTimespec(hdr.ModTime)}
 }

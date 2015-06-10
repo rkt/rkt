@@ -16,7 +16,7 @@
 
 // These functions are from github.com/docker/docker/pkg/system
 
-package tar
+package fileutil
 
 import "syscall"
 
