@@ -10,7 +10,7 @@ fi
 mkdir image/rootfs
 
 # Populate rootfs
-(cd inspect && go build)
+(cd inspect && CGO_ENABLED=0 go build -a -installsuffix cgo)
 cp inspect/inspect image/rootfs/
 mkdir image/rootfs/dir{1,2}
 echo -n dir1 > image/rootfs/dir1/file
