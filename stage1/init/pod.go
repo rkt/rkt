@@ -465,6 +465,8 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	id := ra.Image.ID
 	app := ra.App
 
+	var err error
+
 	vols := make(map[types.ACName]types.Volume)
 
 	// TODO(philips): this is implicitly creating a mapping from MountPoint
@@ -474,6 +476,11 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 
 	for _, v := range p.Manifest.Volumes {
 		vols[v.Name] = v
+		if v.Kind == "empty" {
+			if err = os.MkdirAll(filepath.Join(common.Stage1SharedVolumesDir(p.Root), v.Name.String()), 0755); err != nil {
+				return nil, fmt.Errorf("could not create shared volume %q: %v", v.Name, err)
+			}
+		}
 	}
 
 	for _, mp := range app.MountPoints {
@@ -506,7 +513,20 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 			opt[0] = "--bind="
 		}
 
-		opt[1] = vol.Source
+		if vol.Kind == "host" {
+			opt[1] = vol.Source
+		} else {
+			var absRoot string
+			if p.Root == "." {
+				absRoot, err = os.Getwd()
+				if err != nil {
+					return nil, fmt.Errorf("Cannot get current working directory: %v\n", err)
+				}
+			} else {
+				absRoot = p.Root
+			}
+			opt[1] = filepath.Join(common.Stage1SharedVolumesDir(absRoot), vol.Name.String())
+		}
 		opt[2] = ":"
 		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), mp.Path)
 
