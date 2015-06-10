@@ -53,8 +53,11 @@ func isControllerEnabled(controller string) (bool, error) {
 		if len(parts) < 2 {
 			return false, fmt.Errorf("error parsing /proc/1/cgroup")
 		}
-		if parts[1] == controller {
-			return true, nil
+		controllerParts := strings.Split(parts[1], ",")
+		for _, c := range controllerParts {
+			if c == controller {
+				return true, nil
+			}
 		}
 	}
 
