@@ -60,7 +60,7 @@ func addMemoryLimit(opts []*unit.UnitOption, limit string) ([]*unit.UnitOption, 
 
 func MaybeAddIsolator(opts []*unit.UnitOption, isolator string, limit string) ([]*unit.UnitOption, error) {
 	var err error
-	if isIsolatorSupported(isolator) {
+	if IsIsolatorSupported(isolator) {
 		opts, err = isolatorFuncs[isolator](opts, limit)
 		if err != nil {
 			return nil, err
@@ -71,7 +71,8 @@ func MaybeAddIsolator(opts []*unit.UnitOption, isolator string, limit string) ([
 	return opts, nil
 }
 
-func isIsolatorSupported(isolator string) bool {
+// IsIsolatorSupported returns whether an isolator is supported in the kernel
+func IsIsolatorSupported(isolator string) bool {
 	if files, ok := cgroupControllerRWFiles[isolator]; ok {
 		for _, f := range files {
 			isolatorPath := filepath.Join("/sys/fs/cgroup/", isolator, f)

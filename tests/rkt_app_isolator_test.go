@@ -15,14 +15,13 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
+	"github.com/coreos/rkt/common/cgroup"
 )
 
 const (
@@ -51,37 +50,10 @@ var cpuTest = struct {
 	`--insecure-skip-verify run rkt-inspect-isolators.aci`,
 }
 
-func isControllerEnabled(controller string) (bool, error) {
-	cg, err := os.Open("/proc/1/cgroup")
-	if err != nil {
-		return false, fmt.Errorf("error opening /proc/1/cgroup: %v", err)
-	}
-	defer cg.Close()
-
-	s := bufio.NewScanner(cg)
-	for s.Scan() {
-		parts := strings.SplitN(s.Text(), ":", 2)
-		if len(parts) < 2 {
-			return false, fmt.Errorf("error parsing /proc/1/cgroup")
-		}
-		controllerParts := strings.Split(parts[1], ",")
-		for _, c := range controllerParts {
-			if c == controller {
-				return true, nil
-			}
-		}
-	}
-
-	return false, nil
-}
-
 func TestAppIsolatorMemory(t *testing.T) {
-	ok, err := isControllerEnabled("memory")
-	if err != nil {
-		t.Fatalf("Error checking if the memory cgroup controller is enabled: %v", err)
-	}
+	ok := cgroup.IsIsolatorSupported("memory")
 	if !ok {
-		t.Skip("Memory cgroup controller disabled.")
+		t.Skip("Memory isolator not supported.")
 	}
 
 	ctx := newRktRunCtx()
@@ -111,12 +83,9 @@ func TestAppIsolatorMemory(t *testing.T) {
 }
 
 func TestAppIsolatorCPU(t *testing.T) {
-	ok, err := isControllerEnabled("cpu")
-	if err != nil {
-		t.Fatalf("Error checking if the cpu cgroup controller is enabled: %v", err)
-	}
+	ok := cgroup.IsIsolatorSupported("cpu")
 	if !ok {
-		t.Skip("CPU cgroup controller disabled.")
+		t.Skip("CPU isolator not supported.")
 	}
 
 	ctx := newRktRunCtx()
