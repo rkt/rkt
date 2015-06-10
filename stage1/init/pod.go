@@ -74,7 +74,7 @@ func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 	}
 	p.Manifest = pm
 
-	for _, app := range p.Manifest.Apps {
+	for i, app := range p.Manifest.Apps {
 		ampath := common.ImageManifestPath(p.Root, app.Image.ID)
 		buf, err := ioutil.ReadFile(ampath)
 		if err != nil {
@@ -88,6 +88,9 @@ func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 		name := am.Name.String()
 		if _, ok := p.Apps[name]; ok {
 			return nil, fmt.Errorf("got multiple definitions for app: %s", name)
+		}
+		if app.App == nil {
+			p.Manifest.Apps[i].App = am.App
 		}
 		p.Apps[name] = am
 	}
@@ -157,13 +160,10 @@ func (p *Pod) WritePrepareAppTemplate(version string) error {
 }
 
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
-func (p *Pod) appToSystemd(ra *schema.RuntimeApp, am *schema.ImageManifest, interactive bool) error {
+func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 	name := ra.Name.String()
 	id := ra.Image.ID
-	app := am.App
-	if ra.App != nil {
-		app = ra.App
-	}
+	app := ra.App
 
 	workDir := "/"
 	if app.WorkingDirectory != "" {
@@ -351,7 +351,7 @@ func (p *Pod) PodToSystemd(interactive bool) error {
 			// should never happen
 			panic("app not found in pod manifest")
 		}
-		if err := p.appToSystemd(ra, am, interactive); err != nil {
+		if err := p.appToSystemd(ra, interactive); err != nil {
 			return fmt.Errorf("failed to transform app %q into systemd service: %v", am.Name, err)
 		}
 	}
@@ -361,14 +361,11 @@ func (p *Pod) PodToSystemd(interactive bool) error {
 
 // appToNspawnArgs transforms the given app manifest, with the given associated
 // app image id, into a subset of applicable systemd-nspawn argument
-func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp, am *schema.ImageManifest) ([]string, error) {
+func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	args := []string{}
 	name := ra.Name.String()
 	id := ra.Image.ID
-	app := am.App
-	if ra.App != nil {
-		app = ra.App
-	}
+	app := ra.App
 
 	vols := make(map[types.ACName]types.Volume)
 
@@ -450,7 +447,7 @@ func (p *Pod) PodToNspawnArgs() ([]string, error) {
 		if ra == nil {
 			panic("could not find app in pod manifest!")
 		}
-		aa, err := p.appToNspawnArgs(ra, am)
+		aa, err := p.appToNspawnArgs(ra)
 		if err != nil {
 			return nil, err
 		}

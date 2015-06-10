@@ -15,11 +15,7 @@
 package main
 
 import (
-	"strings"
 	"testing"
-
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 func TestQuoteExec(t *testing.T) {
@@ -46,83 +42,6 @@ func TestQuoteExec(t *testing.T) {
 		o := quoteExec(tt.input)
 		if o != tt.output {
 			t.Errorf("#%d: expected `%v` got `%v`", i, tt.output, o)
-		}
-	}
-}
-
-// TestAppToNspawnArgsOverridesImageManifestReadOnly tests
-// that the ImageManifest's `readOnly` volume setting will be
-// overrided by PodManifest.
-func TestAppToNspawnArgsOverridesImageManifestReadOnly(t *testing.T) {
-	falseVar := false
-	trueVar := true
-	tests := []struct {
-		imageManifestVolumeReadOnly bool
-		podManifestVolumeReadOnly   *bool
-		expectReadOnly              bool
-	}{
-		{
-			false,
-			nil,
-			false,
-		},
-		{
-			false,
-			&falseVar,
-			false,
-		},
-		{
-			false,
-			&trueVar,
-			true,
-		},
-		{
-			true,
-			nil,
-			true,
-		},
-		{
-			true,
-			&falseVar,
-			false,
-		},
-		{
-			true,
-			&trueVar,
-			true,
-		},
-	}
-
-	for i, tt := range tests {
-		imageManifest := &schema.ImageManifest{
-			App: &types.App{
-				MountPoints: []types.MountPoint{
-					{
-						Name:     "foo-mount",
-						Path:     "/app/foo",
-						ReadOnly: tt.imageManifestVolumeReadOnly,
-					},
-				},
-			},
-		}
-		podManifest := &schema.PodManifest{
-			Volumes: []types.Volume{
-				{
-					Name:     "foo-mount",
-					Kind:     "host",
-					Source:   "/host/foo",
-					ReadOnly: tt.podManifestVolumeReadOnly,
-				},
-			},
-		}
-
-		p := &Pod{Manifest: podManifest}
-		output, err := p.appToNspawnArgs(&schema.RuntimeApp{}, imageManifest)
-		if err != nil {
-			t.Errorf("#%d: unexpected error: `%v`", i, err)
-		}
-		if ro := strings.HasPrefix(output[0], "--bind-ro"); ro != tt.expectReadOnly {
-			t.Errorf("#%d: expected: readOnly: %v, saw: %v", i, tt.expectReadOnly, ro)
 		}
 	}
 }
