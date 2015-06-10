@@ -100,14 +100,10 @@ go test -timeout 60s ${COVER} $@ ${TEST} --race
 
 # Functional tests use 'sudo' to run as root - it's more dangerous
 # than unit tests and may require typing a password. Only run them
-# inside well-known CI systems.
-if [ "$CI" == true -a -e bin/stage1.aci ] ; then
-	if [ "${CIRCLECI}" == true -o "${SEMAPHORE}" == true ] ; then
-		echo "Checking functional tests..."
-		(cd tests && ./test)
-	else
-		echo "Functional tests disabled."
-	fi
+# inside CI systems that opts-in with $RKT_ENABLE_FUNCTIONAL_TESTS=true.
+if [ "$CI" == true -a "${RKT_ENABLE_FUNCTIONAL_TESTS}" == true -a -e bin/stage1.aci ] ; then
+	echo "Checking functional tests..."
+	(cd tests && ./test)
 else
 	echo "Functional tests disabled."
 fi
