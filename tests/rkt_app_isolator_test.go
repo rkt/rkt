@@ -27,7 +27,7 @@ import (
 const (
 	// if you change this you need to change tests/image/manifest accordingly
 	maxMemoryUsage = 25 * 1024 * 1024 // 25MB
-	CPUQuota       = 100              // milli-cores
+	CPUQuota       = 800              // milli-cores
 )
 
 var memoryTest = struct {
