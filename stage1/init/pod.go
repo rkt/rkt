@@ -32,6 +32,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/common/cgroup"
 )
 
 // Pod encapsulates a PodManifest and ImageManifests
@@ -123,26 +124,22 @@ func quoteExec(exec []string) string {
 	return strings.Join(qexec, " ")
 }
 
-func newUnitOption(section, name, value string) *unit.UnitOption {
-	return &unit.UnitOption{Section: section, Name: name, Value: value}
-}
-
 func (p *Pod) WritePrepareAppTemplate(version string) error {
 	opts := []*unit.UnitOption{
-		newUnitOption("Unit", "Description", "Prepare minimum environment for chrooted applications"),
-		newUnitOption("Unit", "DefaultDependencies", "false"),
-		newUnitOption("Unit", "OnFailureJobMode", "fail"),
-		newUnitOption("Service", "Type", "oneshot"),
-		newUnitOption("Service", "Restart", "no"),
-		newUnitOption("Service", "ExecStart", "/prepare-app %I"),
-		newUnitOption("Service", "User", "0"),
-		newUnitOption("Service", "Group", "0"),
-		newUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE"),
+		unit.NewUnitOption("Unit", "Description", "Prepare minimum environment for chrooted applications"),
+		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
+		unit.NewUnitOption("Unit", "OnFailureJobMode", "fail"),
+		unit.NewUnitOption("Service", "Type", "oneshot"),
+		unit.NewUnitOption("Service", "Restart", "no"),
+		unit.NewUnitOption("Service", "ExecStart", "/prepare-app %I"),
+		unit.NewUnitOption("Service", "User", "0"),
+		unit.NewUnitOption("Service", "Group", "0"),
+		unit.NewUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE"),
 	}
 
 	if systemdSupportsJournalLinking(version) {
-		opts = append(opts, newUnitOption("Unit", "Requires", "systemd-journald.service"))
-		opts = append(opts, newUnitOption("Unit", "After", "systemd-journald.service"))
+		opts = append(opts, unit.NewUnitOption("Unit", "Requires", "systemd-journald.service"))
+		opts = append(opts, unit.NewUnitOption("Unit", "After", "systemd-journald.service"))
 	}
 
 	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), unitsDir)
@@ -202,15 +199,15 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 	execWrap := []string{"/diagexec", common.RelAppRootfsPath(id), workDir, RelEnvFilePath(id), strconv.Itoa(uid), strconv.Itoa(gid)}
 	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
-		newUnitOption("Unit", "Description", name),
-		newUnitOption("Unit", "DefaultDependencies", "false"),
-		newUnitOption("Unit", "OnFailureJobMode", "isolate"),
-		newUnitOption("Unit", "OnFailure", "reaper.service"),
-		newUnitOption("Unit", "Wants", "exit-watcher.service"),
-		newUnitOption("Service", "Restart", "no"),
-		newUnitOption("Service", "ExecStart", execStart),
-		newUnitOption("Service", "User", "0"),
-		newUnitOption("Service", "Group", "0"),
+		unit.NewUnitOption("Unit", "Description", name),
+		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
+		unit.NewUnitOption("Unit", "OnFailureJobMode", "isolate"),
+		unit.NewUnitOption("Unit", "OnFailure", "reaper.service"),
+		unit.NewUnitOption("Unit", "Wants", "exit-watcher.service"),
+		unit.NewUnitOption("Service", "Restart", "no"),
+		unit.NewUnitOption("Service", "ExecStart", execStart),
+		unit.NewUnitOption("Service", "User", "0"),
+		unit.NewUnitOption("Service", "Group", "0"),
 	}
 
 	_, systemdStage1Version, err := p.getFlavor()
@@ -219,13 +216,13 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 	}
 
 	if interactive {
-		opts = append(opts, newUnitOption("Service", "StandardInput", "tty"))
-		opts = append(opts, newUnitOption("Service", "StandardOutput", "tty"))
-		opts = append(opts, newUnitOption("Service", "StandardError", "tty"))
+		opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "tty"))
+		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "tty"))
+		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "tty"))
 	} else if systemdSupportsJournalLinking(systemdStage1Version) {
-		opts = append(opts, newUnitOption("Service", "StandardOutput", "journal+console"))
-		opts = append(opts, newUnitOption("Service", "StandardError", "journal+console"))
-		opts = append(opts, newUnitOption("Service", "SyslogIdentifier", filepath.Base(app.Exec[0])))
+		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
+		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
+		opts = append(opts, unit.NewUnitOption("Service", "SyslogIdentifier", filepath.Base(app.Exec[0])))
 	}
 
 	for _, eh := range app.EventHandlers {
@@ -239,7 +236,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 			return fmt.Errorf("unrecognized eventHandler: %v", eh.Name)
 		}
 		exec := quoteExec(append(execWrap, eh.Exec...))
-		opts = append(opts, newUnitOption("Service", typ, exec))
+		opts = append(opts, unit.NewUnitOption("Service", typ, exec))
 	}
 
 	saPorts := []types.Port{}
@@ -253,13 +250,13 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 		switch v := i.Value().(type) {
 		case *types.ResourceMemory:
 			limit := v.Limit().String()
-			opts, err = maybeAddIsolator(opts, "memory", limit)
+			opts, err = cgroup.MaybeAddIsolator(opts, "memory", limit)
 			if err != nil {
 				return err
 			}
 		case *types.ResourceCPU:
 			limit := v.Limit().String()
-			opts, err = maybeAddIsolator(opts, "cpu", limit)
+			opts, err = cgroup.MaybeAddIsolator(opts, "cpu", limit)
 			if err != nil {
 				return err
 			}
@@ -268,10 +265,10 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 
 	if len(saPorts) > 0 {
 		sockopts := []*unit.UnitOption{
-			newUnitOption("Unit", "Description", name+" socket-activated ports"),
-			newUnitOption("Unit", "DefaultDependencies", "false"),
-			newUnitOption("Socket", "BindIPv6Only", "both"),
-			newUnitOption("Socket", "Service", ServiceUnitName(id)),
+			unit.NewUnitOption("Unit", "Description", name+" socket-activated ports"),
+			unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
+			unit.NewUnitOption("Socket", "BindIPv6Only", "both"),
+			unit.NewUnitOption("Socket", "Service", ServiceUnitName(id)),
 		}
 
 		for _, sap := range saPorts {
@@ -284,7 +281,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 			default:
 				return fmt.Errorf("unrecognized protocol: %v", sap.Protocol)
 			}
-			sockopts = append(sockopts, newUnitOption("Socket", proto, fmt.Sprintf("%v", sap.Port)))
+			sockopts = append(sockopts, unit.NewUnitOption("Socket", proto, fmt.Sprintf("%v", sap.Port)))
 		}
 
 		file, err := os.OpenFile(SocketUnitPath(p.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
@@ -301,11 +298,11 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 			return fmt.Errorf("failed to link socket want: %v", err)
 		}
 
-		opts = append(opts, newUnitOption("Unit", "Requires", SocketUnitName(id)))
+		opts = append(opts, unit.NewUnitOption("Unit", "Requires", SocketUnitName(id)))
 	}
 
-	opts = append(opts, newUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(id)))
-	opts = append(opts, newUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(id)))
+	opts = append(opts, unit.NewUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(id)))
+	opts = append(opts, unit.NewUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(id)))
 
 	file, err := os.OpenFile(ServiceUnitPath(p.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {

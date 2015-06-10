@@ -14,7 +14,7 @@
 
 //+build linux
 
-package main
+package cgroup
 
 import (
 	"io"
