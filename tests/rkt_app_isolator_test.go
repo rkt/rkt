@@ -35,7 +35,7 @@ var memoryTest = struct {
 	aciBuildArgs []string
 	rktArgs      string
 }{
-	`Check memory isolator 25MB`,
+	`Check memory isolator`,
 	[]string{"--exec=/inspect --print-memorylimit"},
 	`--insecure-skip-verify run rkt-inspect-isolators.aci`,
 }
