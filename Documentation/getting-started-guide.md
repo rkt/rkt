@@ -139,7 +139,7 @@ hello-0.0.1-linux-amd64.aci: valid app container image
 $ sudo rkt -insecure-skip-verify run hello-0.0.1-linux-amd64.aci
 ```
 
-Note that `-insecure-skip-verify` is required because, by default, rkt expects our signature to be signed. See the [Signing and Verification Guide](signing-and-verification-guide.md) for more details.
+Note that `-insecure-skip-verify` is required because, by default, rkt expects our signature to be signed. See the [Signing and Verification Guide](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md) for more details.
 
 At this point our hello app is running on port 5000 and ready to handle HTTP
 requests.

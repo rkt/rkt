@@ -24,7 +24,7 @@ cd rkt-v0.5.6
 
 ## Trust the CoreOS signing key
 
-This shows how to trust the CoreOS signing key using the [`rkt trust` command](commands.md#rkt-trust). 
+This shows how to trust the CoreOS signing key using the [`rkt trust` command](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#rkt-trust). 
 
 ```
 ./rkt  trust  --prefix coreos.com/etcd
@@ -54,7 +54,7 @@ rkt: signature verified:
   sha512-91e98d7f1679a097c878203c9659f2a2
 ```
 
-For more on this and other ways to retrieve ACIs, check out the `rkt fetch` section of the [commands guide](commands.md#rkt-fetch).
+For more on this and other ways to retrieve ACIs, check out the `rkt fetch` section of the [commands guide](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#rkt-fetch).
 
 
 ## Run the ACI
@@ -94,4 +94,4 @@ Finally, let's run the application we just retrieved:
 ```
 
 Congratulations! You've run your first application with rkt.
-For more on how to use rkt, check out the [commands guide](commands.md).
+For more on how to use rkt, check out the [commands guide](https://github.com/coreos/rkt/blob/master/Documentation/commands.md).
