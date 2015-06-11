@@ -2,7 +2,7 @@ mkdir -p "$ROOT"
 cp -a ../usr_from_coreos/rootfs/. "$ROOT"
 
 install -m 0755 ../shim/shim.so "$ROOT"
-ln -s shim.so "$ROOT/fakesdboot.so"
+ln -sf shim.so "$ROOT/fakesdboot.so"
 
 ln -sf "coreos" "$ROOT/flavor"
 echo "v215" > "$ROOT/systemd-version"
