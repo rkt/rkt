@@ -181,21 +181,23 @@ func validatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 	}
 
 	appNames := make(map[types.ACName]struct{})
-	for _, app := range pm.Apps {
-		img := app.Image
+	for _, ra := range pm.Apps {
+		img := ra.Image
 		am, err := prepareAppImage(cfg, img.ID, dir, cfg.UseOverlay)
 		if err != nil {
 			return nil, fmt.Errorf("error setting up image %s: %v", img, err)
 		}
-		if _, ok := appNames[app.Name]; ok {
-			return nil, fmt.Errorf("error: multiple apps with name %s", app.Name)
+		if _, ok := appNames[ra.Name]; ok {
+			return nil, fmt.Errorf("error: multiple apps with name %s", ra.Name)
 		}
-		appNames[app.Name] = struct{}{}
-		if !app.Name.Equals(am.Name) {
-			return nil, fmt.Errorf("error: image has a different name from the app (%q vs %q)", am.Name, app.Name)
+		appNames[ra.Name] = struct{}{}
+
+		// TODO(yifan): Loose this restriction. See https://github.com/coreos/rkt/pull/833.
+		if !ra.Name.Equals(am.Name) {
+			return nil, fmt.Errorf("error: image has a different name from the app (%q vs %q)", am.Name, ra.Name)
 		}
-		if am.App == nil {
-			return nil, fmt.Errorf("error: image %s has no app section", img)
+		if ra.App == nil && am.App == nil {
+			return nil, fmt.Errorf("error: no app section in the pod manifest or the image manifest")
 		}
 	}
 	return pmb, nil
