@@ -156,6 +156,7 @@ Additional configuration fields:
 
 The following shows a more complex IPv6 example in combination with the ipvlan plugin. The gateway is configured for the default
 route, allowing the pod to access external networks via the ipvlan interface.
+
 ```json
 {
     "name": "ipv6-public",
