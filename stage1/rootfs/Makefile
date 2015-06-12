@@ -1,9 +1,6 @@
 USR=usr_from_$(subst usr-from-,,$(RKT_STAGE1_USR_FROM))
 
-# Only include shim on the coreos flavor
-SHIM=$(subst usr_from_coreos,shim,$(findstring usr_from_coreos,$(USR)))
-
-_SUBDIRS=$(USR) waiter $(SHIM) diagexec prepare-app enter net-plugins net init gc
+_SUBDIRS=$(USR) waiter diagexec prepare-app enter net-plugins net init gc
 SUBDIRS=$(_SUBDIRS) aggregate
 export CFLAGS=-Wall -Os
 
