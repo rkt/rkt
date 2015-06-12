@@ -317,17 +317,18 @@ func handlePodAnnotations(w http.ResponseWriter, r *http.Request, pm *schema.Pod
 func handlePodAnnotation(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest) {
 	defer r.Body.Close()
 
-	k, err := types.NewACName(mux.Vars(r)["name"])
+	n := mux.Vars(r)["name"]
+	k, err := types.NewACName(n)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Pod annotation is not a valid AC Name")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Pod annotation %q is not a valid AC Name", n)
 		return
 	}
 
 	v, ok := pm.Annotations.Get(k.String())
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Pod annotation (%v) not found", k)
+		fmt.Fprintf(w, "Pod annotation %q not found", k)
 		return
 	}
 
@@ -364,14 +365,14 @@ func handlePodUUID(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(uuid.String()))
 }
 
-func mergeAppAnnotations(im *schema.ImageManifest, cm *schema.PodManifest) types.Annotations {
+func mergeAppAnnotations(im *schema.ImageManifest, pm *schema.PodManifest, appName *types.ACName) types.Annotations {
 	merged := types.Annotations{}
 
 	for _, annot := range im.Annotations {
 		merged.Set(annot.Name, annot.Value)
 	}
 
-	if app := cm.Apps.Get(im.Name); app != nil {
+	if app := pm.Apps.Get(*appName); app != nil {
 		for _, annot := range app.Annotations {
 			merged.Set(annot.Name, annot.Value)
 		}
@@ -383,10 +384,18 @@ func mergeAppAnnotations(im *schema.ImageManifest, cm *schema.PodManifest) types
 func handleAppAnnotations(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
+	n := mux.Vars(r)["app"]
+	an, err := types.NewACName(n)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "App name %q is not a valid AC Name", n)
+		return
+	}
+
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
-	for _, annot := range mergeAppAnnotations(im, pm) {
+	for _, annot := range mergeAppAnnotations(im, pm, an) {
 		fmt.Fprintln(w, string(annot.Name))
 	}
 }
@@ -394,19 +403,28 @@ func handleAppAnnotations(w http.ResponseWriter, r *http.Request, pm *schema.Pod
 func handleAppAnnotation(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
-	k, err := types.NewACName(mux.Vars(r)["name"])
+	n := mux.Vars(r)["name"]
+	k, err := types.NewACName(n)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "App annotation is not a valid AC Name")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "App annotation name %q is not a valid AC Name", n)
 		return
 	}
 
-	merged := mergeAppAnnotations(im, pm)
+	n = mux.Vars(r)["app"]
+	an, err := types.NewACName(n)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "App name %q is not a valid AC Name", n)
+		return
+	}
+
+	merged := mergeAppAnnotations(im, pm, an)
 
 	v, ok := merged.Get(k.String())
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "App annotation (%v) not found", k)
+		fmt.Fprintf(w, "App annotation %q not found", k)
 		return
 	}
 
@@ -429,13 +447,21 @@ func handleImageManifest(w http.ResponseWriter, r *http.Request, _ *schema.PodMa
 func handleAppID(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest, im *schema.ImageManifest) {
 	defer r.Body.Close()
 
+	n := mux.Vars(r)["app"]
+	an, err := types.NewACName(n)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "App name %q is not a valid AC Name", n)
+		return
+	}
+
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-	a := pm.Apps.Get(im.Name)
-	if a == nil {
-		panic("could not find app in manifest!")
+	app := pm.Apps.Get(*an)
+	if app == nil {
+		panic("impossible: could not find app in manifest!")
 	}
-	w.Write([]byte(a.Image.ID.String()))
+	w.Write([]byte(app.Image.ID.String()))
 }
 
 func initCrypto() error {
