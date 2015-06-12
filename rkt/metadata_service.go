@@ -318,10 +318,10 @@ func handlePodAnnotation(w http.ResponseWriter, r *http.Request, pm *schema.PodM
 	defer r.Body.Close()
 
 	n := mux.Vars(r)["name"]
-	k, err := types.NewACName(n)
+	k, err := types.NewACIdentifier(n)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Pod annotation %q is not a valid AC Name", n)
+		fmt.Fprintf(w, "Pod annotation %q is not a valid AC Identifier", n)
 		return
 	}
 
@@ -404,10 +404,10 @@ func handleAppAnnotation(w http.ResponseWriter, r *http.Request, pm *schema.PodM
 	defer r.Body.Close()
 
 	n := mux.Vars(r)["name"]
-	k, err := types.NewACName(n)
+	k, err := types.NewACIdentifier(n)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "App annotation name %q is not a valid AC Name", n)
+		fmt.Fprintf(w, "App annotation name %q is not a valid AC Identifier", n)
 		return
 	}
 
@@ -459,7 +459,9 @@ func handleAppID(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest,
 	w.WriteHeader(http.StatusOK)
 	app := pm.Apps.Get(*an)
 	if app == nil {
-		panic("impossible: could not find app in manifest!")
+		// This is impossiple as we have already checked that
+		// the image manifest is not nil in the parent function.
+		panic("could not find app in manifest!")
 	}
 	w.Write([]byte(app.Image.ID.String()))
 }
