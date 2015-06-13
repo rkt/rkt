@@ -10,9 +10,8 @@ before_install:
  - sudo apt-get install -y cpio realpath squashfs-tools
 
 install:
- - go get code.google.com/p/go.tools/cmd/cover
- - go get code.google.com/p/go.tools/cmd/vet
- - go get github.com/appc/spec/...
+ - go get golang.org/x/tools/cmd/cover
+ - go get golang.org/x/tools/cmd/vet
 
 script:
  - ./test
