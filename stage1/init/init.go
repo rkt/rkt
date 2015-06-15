@@ -80,8 +80,6 @@ import (
 const (
 	// Path to systemd-nspawn binary within the stage1 rootfs
 	nspawnBin = "/usr/bin/systemd-nspawn"
-	// Path to the interpreter within the stage1 rootfs
-	interpBin = "/usr/lib/ld-linux-x86-64.so.2"
 	// Path to the localtime file/symlink in host
 	localtimePath = "/etc/localtime"
 )
@@ -160,7 +158,6 @@ func machinedRegister() bool {
 		// machined v215 supports methods "RegisterMachine" and "CreateMachine" called by nspawn v215.
 		// machined v216+ (since commit 5aa4bb) additionally supports methods "CreateMachineWithNetwork"
 		// and "RegisterMachineWithNetwork", called by nspawn v216+.
-		// TODO(alban): write checks for both versions in order to register on machined v215?
 		for _, method := range iface.Methods {
 			if method.Name == "CreateMachineWithNetwork" || method.Name == "RegisterMachineWithNetwork" {
 				found++
@@ -230,22 +227,14 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 
 	switch flavor {
 	case "coreos":
-		// when running the coreos-derived stage1 with unpatched systemd-nspawn we need some ld-linux hackery
-		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), interpBin))
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
 
-		// Note: the coreos flavor uses systemd-nspawn v215 but machinedRegister()
-		// checks for the nspawn registration method used since v216. So we will
-		// not register when the host has systemd v215.
 		if machinedRegister() {
 			args = append(args, fmt.Sprintf("--register=true"))
 		} else {
 			args = append(args, fmt.Sprintf("--register=false"))
 		}
-
-		env = append(env, "LD_PRELOAD="+filepath.Join(common.Stage1RootfsPath(p.Root), "fakesdboot.so"))
-		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib"))
 
 	case "src":
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
@@ -491,23 +480,17 @@ func stage1() int {
 		return 3
 	}
 
-	// The systemd version shipped with CoreOS (v215) doesn't allow the
-	// external mounting of cgroups
-	// TODO remove this check when CoreOS updates systemd to v220
-	if flavor != "coreos" {
-		appHashes := p.GetAppHashes()
-		s1Root := common.Stage1RootfsPath(p.Root)
-		machineID := p.GetMachineID()
-
-		subcgroup, err := getContainerSubCgroup(machineID)
-		if err == nil {
-			if err := createCgroups(s1Root, subcgroup, appHashes); err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating cgroups: %v\n", err)
-				return 5
-			}
-		} else {
-			fmt.Fprintf(os.Stderr, "Disabling per-app isolators: %v\n", err)
+	appHashes := p.GetAppHashes()
+	s1Root := common.Stage1RootfsPath(p.Root)
+	machineID := p.GetMachineID()
+	subcgroup, err := getContainerSubCgroup(machineID)
+	if err == nil {
+		if err := createCgroups(s1Root, subcgroup, appHashes); err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating cgroups: %v\n", err)
+			return 5
 		}
+	} else {
+		fmt.Fprintf(os.Stderr, "Disabling per-app isolators: %v\n", err)
 	}
 
 	var execFn func() error
