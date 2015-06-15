@@ -1,24 +1,59 @@
-# build systemd from source, produce an install hook selecting the needed files and host dependencies
-include ../../makelib/lib.mk
+UFS_SYSTEMD_DESC := $(RKT_STAGE1_SYSTEMD_SRC)/$(RKT_STAGE1_SYSTEMD_VER)
+UFS_SYSTEMDDIR := $(BUILDDIR)/tmp/usr_from_src/systemd/$(call escape-for-file,$(UFS_SYSTEMD_DESC))
+UFS_SYSTEMD_SRCDIR := $(UFS_SYSTEMDDIR)/src
+UFS_SYSTEMD_BUILDDIR := $(UFS_SYSTEMDDIR)/build
 
-PWD := $(shell pwd)
-ISCRIPT := $(BUILDDIR)/install.d/00usr.install
+$(call setup-dep-file,UFS_PATCHES_DEPMK,$(UFS_SYSTEMD_DESC)-systemd-patches)
+$(call setup-dep-file,UFS_MAIN_STAMP_DEPMK,$(UFS_SYSTEMD_DESC)-systemd-install)
 
-.PHONY: install
+UFS_ROOTFSDIR := $(UFS_SYSTEMDDIR)/rootfs
 
-install: SHELL := $(BASH)
-install: $(BUILDDIR)/systemd.done 
-	@echo $(call dep-copy-fs,$(BUILDDIR)/systemd-installed) > $(ISCRIPT)
-	@echo $(call dep-install-file,$(call find-so-deps, $(BUILDDIR)/systemd-installed)) >> $(ISCRIPT)
-	@echo $(call dep-systemd-version,$(RKT_STAGE1_SYSTEMD_VER)) >> $(ISCRIPT)
-	@echo 'echo `git -C $(BUILDDIR)/src/systemd describe --tags` > "{{ROOT}}/systemd-git-version"' >> $(ISCRIPT)
-	@echo $(call dep-flavor,src) >> $(ISCRIPT)
+# We assume that the name passed to --stage1-systemd-version that
+# matches a regexp '^v\d+$' (name starts with a v followed by a
+# number, like v211) is a name of tag. Otherwise it's a branch. `expr
+# string : regexp` returns a number of characters that matched, so if
+# that number is equal to string length then it means that string
+# matched the regexp.
+UFS_SYSTEMD_TAG_MATCH := $(shell expr "$(RKT_STAGE1_SYSTEMD_VER)" : 'v[[:digit:]]\+')
+UFS_SYSTEMD_TAG_LENGTH := $(shell expr length "$(RKT_STAGE1_SYSTEMD_VER)")
+UFS_PATCHES_DIR := $(MK_SRCDIR)/patches/$(RKT_STAGE1_SYSTEMD_VER)
+UFS_LIB_SYMLINK := $(ACIROOTFSDIR)/lib
+UFS_LIB64_SYMLINK := $(ACIROOTFSDIR)/lib64
 
-# configure, build, and install systemd
-$(BUILDDIR)/systemd.done: $(BUILDDIR)/systemd.src.done usr_from_src.mk
-	{ [ ! -e $(BUILDDIR)/systemd-build ] || rm -Rf $(BUILDDIR)/systemd-build; }
-	mkdir $(BUILDDIR)/systemd-build
-	cd $(BUILDDIR)/systemd-build && $(BUILDDIR)/src/systemd/configure \
+$(call setup-stamp-file,UFS_STAMP)
+$(call setup-stamp-file,UFS_SYSTEMD_CLONE_AND_PATCH_STAMP,/systemd_clone_and_patch/$(UFS_SYSTEMD_DESC))
+$(call setup-stamp-file,UFS_SYSTEMD_BUILD_STAMP,/systemd_build/$(UFS_SYSTEMD_DESC))
+
+STAGE1_USR_STAMPS += $(UFS_STAMP)
+INSTALL_SYMLINKS += usr/lib:$(UFS_LIB_SYMLINK) usr/lib64:$(UFS_LIB64_SYMLINK)
+
+$(call inc-one,bash.mk)
+
+-include $(UFS_MAIN_STAMP_DEPMK)
+$(UFS_STAMP): UFS_ROOTFSDIR := $(UFS_ROOTFSDIR)
+$(UFS_STAMP): ACIROOTFSDIR := $(ACIROOTFSDIR)
+$(UFS_STAMP): RKT_STAGE1_SYSTEMD_VER := $(RKT_STAGE1_SYSTEMD_VER)
+$(UFS_STAMP): PERL := $(PERL)
+$(UFS_STAMP): DEPSGENTOOL := $(DEPSGENTOOL)
+$(UFS_STAMP): UFS_MAIN_STAMP_DEPMK := $(UFS_MAIN_STAMP_DEPMK)
+$(UFS_STAMP): $(UFS_SYSTEMD_BUILD_STAMP) | $(ACIROOTFSDIR) $(UFS_LIB_SYMLINK) $(UFS_LIB64_SYMLINK)
+	set -e; \
+	cp -af "$(UFS_ROOTFSDIR)/." "$(ACIROOTFSDIR)"; \
+	ln -sf 'src' "$(ACIROOTFSDIR)/flavor"; \
+	echo "$(RKT_STAGE1_SYSTEMD_VER)" >"$(ACIROOTFSDIR)/systemd-version"; \
+	"$(PERL)" "$(DEPSGENTOOL)" --target='$$(UFS_STAMP)' $$(find "$(UFS_ROOTFSDIR)" -type f) >"$(UFS_MAIN_STAMP_DEPMK)"; \
+	touch "$@"
+
+$(UFS_SYSTEMD_BUILD_STAMP): UFS_SYSTEMD_BUILDDIR := $(UFS_SYSTEMD_BUILDDIR)
+$(UFS_SYSTEMD_BUILD_STAMP): UFS_SYSTEMD_SRCDIR := $(UFS_SYSTEMD_SRCDIR)
+$(UFS_SYSTEMD_BUILD_STAMP): UFS_ROOTFSDIR := $(UFS_ROOTFSDIR)
+$(UFS_SYSTEMD_BUILD_STAMP): MAKE := $(MAKE)
+$(UFS_SYSTEMD_BUILD_STAMP): $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP)
+	set -e; \
+	rm -Rf "$(UFS_SYSTEMD_BUILDDIR)"; \
+	mkdir -p "$(UFS_SYSTEMD_BUILDDIR)"; \
+	pushd "$(UFS_SYSTEMD_BUILDDIR)"; \
+	"$(abspath $(UFS_SYSTEMD_SRCDIR))/configure" \
 		--disable-dbus \
 		--disable-python-devel \
 		--disable-kmod \
@@ -62,40 +97,95 @@ $(BUILDDIR)/systemd.done: $(BUILDDIR)/systemd.src.done usr_from_src.mk
 		--disable-terminal \
 		--disable-hwdb \
 		--disable-importd \
-	    --disable-firstboot \
-	    --enable-seccomp \
-		&& $(MAKE) && DESTDIR=$(BUILDDIR)/systemd-installed make install-strip
-	touch $(BUILDDIR)/systemd.done
+		--disable-firstboot \
+		--enable-seccomp; \
+	$(MAKE) all; \
+	DESTDIR="$(abspath $(UFS_ROOTFSDIR))" $(MAKE) install-strip; \
+	popd; \
+	touch "$@"
 
-# make needs to use bash for nullglob
-$(BUILDDIR)/systemd.src.done: SHELL := $(shell which $(BASH))
+$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP): $(UFS_SYSTEMD_SRCDIR)/configure
+	touch "$@"
 
-# TODO(vc): it may make more sense to have the systemd source be a git submodule?
-$(BUILDDIR)/systemd.src.done: patches/*
-	if [ -z "$(RKT_STAGE1_SYSTEMD_SRC)" ]; then echo "Error: RKT_STAGE1_SYSTEMD_SRC undefined"; exit 1; fi
-	if [ -z "$(RKT_STAGE1_SYSTEMD_VER)" ]; then echo "Error: RKT_STAGE1_SYSTEMD_VER undefined"; exit 1; fi
-	{ [ ! -e $(BUILDDIR)/src/systemd ] || rm -Rf $(BUILDDIR)/src/systemd; }
-	if [ "$(RKT_STAGE1_SYSTEMD_VER)" = "HEAD" ]; then \
-		$(GIT) clone $(RKT_STAGE1_SYSTEMD_SRC) $(BUILDDIR)/src/systemd; \
-		PATCHES_DIR=$(PWD)/patches/master ; \
+-include $(UFS_PATCHES_DEPMK)
+$(UFS_SYSTEMD_SRCDIR)/configure: UFS_PATCHES_DIR := $(UFS_PATCHES_DIR)
+$(UFS_SYSTEMD_SRCDIR)/configure: GIT := $(GIT)
+$(UFS_SYSTEMD_SRCDIR)/configure: UFS_SYSTEMD_SRCDIR := $(UFS_SYSTEMD_SRCDIR)
+$(UFS_SYSTEMD_SRCDIR)/configure: PERL := $(PERL)
+$(UFS_SYSTEMD_SRCDIR)/configure: DEPSGENTOOL := $(DEPSGENTOOL)
+$(UFS_SYSTEMD_SRCDIR)/configure: UFS_PATCHES_DEPMK := $(UFS_PATCHES_DEPMK)
+$(UFS_SYSTEMD_SRCDIR)/configure:
+	@set -e; \
+	shopt -s nullglob ; \
+	if [ -d "$(UFS_PATCHES_DIR)" ]; then \
+		for p in "$(abspath $(UFS_PATCHES_DIR))"/*.patch; do \
+			"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" am "$${p}"; \
+		done; \
+	fi; \
+	"$(PERL)" "$(DEPSGENTOOL)" --target='$$(UFS_SYSTEMD_SRCDIR)/configure' --suffix=.patch "$(UFS_PATCHES_DIR)"/*.patch >"$(UFS_PATCHES_DEPMK)"; \
+	pushd "$(UFS_SYSTEMD_SRCDIR)"; \
+	./autogen.sh; \
+	popd
+
+$(UFS_SYSTEMD_SRCDIR)/configure.ac: GIT := $(GIT)
+$(UFS_SYSTEMD_SRCDIR)/configure.ac: RKT_STAGE1_SYSTEMD_VER := $(RKT_STAGE1_SYSTEMD_VER)
+$(UFS_SYSTEMD_SRCDIR)/configure.ac: RKT_STAGE1_SYSTEMD_SRC := $(RKT_STAGE1_SYSTEMD_SRC)
+$(UFS_SYSTEMD_SRCDIR)/configure.ac: UFS_SYSTEMD_SRCDIR := $(UFS_SYSTEMD_SRCDIR)
+$(UFS_SYSTEMD_SRCDIR)/configure.ac:
+	"$(GIT)" clone --depth 1 --branch "$(RKT_STAGE1_SYSTEMD_VER)" "$(RKT_STAGE1_SYSTEMD_SRC)" "$(UFS_SYSTEMD_SRCDIR)"
+
+ifneq ($(UFS_SYSTEMD_TAG_MATCH),$(UFS_SYSTEMD_TAG_LENGTH))
+
+# If the name is not a tag then we try to pull new changes from upstream.
+
+UFS_SYSTEMD_REVFILE := $(UFS_SYSTEMDDIR)/rev
+UFS_SYSTEMD_REVFILE_TMP := $(UFS_SYSTEMD_REVFILE).tmp
+
+$(UFS_SYSTEMD_SRCDIR)/configure: $(UFS_SYSTEMD_REVFILE)
+
+$(UFS_SYSTEMD_REVFILE): UFS_SYSTEMD_REVFILE_REFRESH
+
+UFS_SYSTEMD_REVFILE_REFRESH: GIT := $(GIT)
+UFS_SYSTEMD_REVFILE_REFRESH: UFS_SYSTEMD_SRCDIR := $(UFS_SYSTEMD_SRCDIR)
+UFS_SYSTEMD_REVFILE_REFRESH: RKT_STAGE1_SYSTEMD_VER := $(RKT_STAGE1_SYSTEMD_VER)
+UFS_SYSTEMD_REVFILE_REFRESH: UFS_SYSTEMD_REVFILE_TMP := $(UFS_SYSTEMD_REVFILE_TMP)
+UFS_SYSTEMD_REVFILE_REFRESH: UFS_SYSTEMD_REVFILE := $(UFS_SYSTEMD_REVFILE)
+UFS_SYSTEMD_REVFILE_REFRESH: $(UFS_SYSTEMD_SRCDIR)/configure.ac
+	set -e; \
+	"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" fetch origin "$(RKT_STAGE1_SYSTEMD_VER)"; \
+	"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" rev-parse "origin/$(RKT_STAGE1_SYSTEMD_VER)" >"$(UFS_SYSTEMD_REVFILE_TMP)"; \
+	if cmp --silent "$(UFS_SYSTEMD_REVFILE)" "$(UFS_SYSTEMD_REVFILE_TMP)"; then \
+		rm -f "$(UFS_SYSTEMD_REVFILE_TMP)"; \
 	else \
-		$(GIT) clone --branch $(RKT_STAGE1_SYSTEMD_VER) $(RKT_STAGE1_SYSTEMD_SRC) $(BUILDDIR)/src/systemd ; \
-		PATCHES_DIR=$(PWD)/patches/$(RKT_STAGE1_SYSTEMD_VER) ; \
-	fi ; \
-	if [ -d $$PATCHES_DIR ]; then \
-		set -e ; \
-		cd $(BUILDDIR)/src/systemd ; \
-		shopt -s nullglob ; \
-		for p in $$PATCHES_DIR/*.patch ; \
-		do \
-			if patch -p1 <"$$p" ; \
-			then \
-				: ; \
-			else \
-				exit 1 ; \
-			fi ; \
-		done ; \
+		"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" reset --hard "origin/$(RKT_STAGE1_SYSTEMD_VER)"; \
+		mv "$(UFS_SYSTEMD_REVFILE_TMP)" "$(UFS_SYSTEMD_REVFILE)"; \
 	fi
-	echo -n "Systemd git version: " && git -C systemd describe --tags
-	cd $(BUILDDIR)/src/systemd && ./autogen.sh
-	touch $(BUILDDIR)/systemd.src.done
+
+.PHONY: UFS_SYSTEMD_REVFILE_REFRESH
+
+UFS_SYSTEMD_REVFILE :=
+UFS_SYSTEMD_REVFILE_TMP :=
+
+else
+
+# The name is a tag, so we do not refresh the git repository.
+
+$(UFS_SYSTEMD_SRCDIR)/configure: $(UFS_SYSTEMD_SRCDIR)/configure.ac
+
+endif
+
+UFS_SYSTEMD_DESC :=
+UFS_SYSTEMDDIR :=
+UFS_SYSTEMD_SRCDIR :=
+UFS_SYSTEMD_BUILDDIR :=
+UFS_PATCHES_DEPMK :=
+UFS_MAIN_STAMP_DEPMK :=
+UFS_ROOTFSDIR :=
+UFS_SYSTEMD_TAG_MATCH :=
+UFS_SYSTEMD_TAG_LENGTH :=
+UFS_PATCHES_DIR :=
+UFS_LIB_SYMLINK :=
+UFS_LIB64_SYMLINK :=
+UFS_STAMP :=
+UFS_SYSTEMD_CLONE_AND_PATCH_STAMP :=
+UFS_SYSTEMD_BUILD_STAMP :=

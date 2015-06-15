@@ -1,9 +1,16 @@
-include ../../makelib/lib.mk
+LOCAL_NAME := reaper.sh
+LOCAL_REAPER := $(MK_SRCDIR)/$(LOCAL_NAME)
+LOCAL_ACI_REAPER := $(ACIROOTFSDIR)/$(LOCAL_NAME)
 
-ISCRIPT := $(BUILDDIR)/install.d/10reaper.install
-PWD := $(shell pwd)
+$(call setup-stamp-file,LOCAL_STAMP)
 
-.PHONY: install
+$(LOCAL_STAMP): $(LOCAL_ACI_REAPER)
+	touch "$@"
 
-install:
-	@echo $(call dep-install-file-to-perm,$(PWD)/reaper.sh,/,755) > $(ISCRIPT)
+STAGE1_INSTALL_FILES += $(LOCAL_REAPER):$(LOCAL_ACI_REAPER):0755
+STAGE1_STAMPS += $(LOCAL_STAMP)
+
+LOCAL_NAME :=
+LOCAL_REAPER :=
+LOCAL_ACI_REAPER :=
+LOCAL_STAMP :=

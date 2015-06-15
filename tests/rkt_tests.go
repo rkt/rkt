@@ -163,9 +163,13 @@ func (ctx *rktRunCtx) cmd() string {
 }
 
 func (ctx *rktRunCtx) rktBin() string {
-	abs, err := filepath.Abs("../bin/rkt")
+	rkt := os.Getenv("RKT")
+	if rkt == "" {
+		panic("Cannot run rkt: RKT env var is not specified")
+	}
+	abs, err := filepath.Abs(rkt)
 	if err != nil {
-		abs = "../bin/rkt"
+		abs = rkt
 	}
 	return abs
 }
@@ -209,23 +213,41 @@ func expectTimeoutWithOutput(p *gexpect.ExpectSubprocess, searchString string, t
 	return expectCommon(p, searchString, timeout)
 }
 
-func patchACI(inputFileName, newFileName string, args ...string) {
+func patchACI(inputFileName, newFileName string, args ...string) string {
 	var allArgs []string
+
+	actool := os.Getenv("ACTOOL")
+	if actool == "" {
+		panic("Cannot create ACI: ACTOOL env var is not specified")
+	}
+	tmpDir := os.Getenv("FUNCTIONAL_TMP")
+	if tmpDir == "" {
+		panic("Cannot create ACI: FUNCTIONAL_TMP env var is not specified")
+	}
+	imagePath, err := filepath.Abs(filepath.Join(tmpDir, newFileName))
+	if err != nil {
+		panic(fmt.Sprintf("Cannot create ACI: %v\n", err))
+	}
 	allArgs = append(allArgs, "patch-manifest")
 	allArgs = append(allArgs, "--no-compression")
 	allArgs = append(allArgs, "--overwrite")
 	allArgs = append(allArgs, args...)
 	allArgs = append(allArgs, inputFileName)
-	allArgs = append(allArgs, newFileName)
+	allArgs = append(allArgs, imagePath)
 
-	output, err := exec.Command("../bin/actool", allArgs...).CombinedOutput()
+	output, err := exec.Command(actool, allArgs...).CombinedOutput()
 	if err != nil {
 		panic(fmt.Sprintf("Cannot create ACI: %v: %s\n", err, output))
 	}
+	return imagePath
 }
 
-func patchTestACI(newFileName string, args ...string) {
-	patchACI("rkt-inspect.aci", newFileName, args...)
+func patchTestACI(newFileName string, args ...string) string {
+	image := os.Getenv("RKT_INSPECT_IMAGE")
+	if image == "" {
+		panic("Cannot create ACI: RKT_INSPECT_IMAGE env var is not specified")
+	}
+	return patchACI(image, newFileName, args...)
 }
 
 func getHash(filePath string) (string, error) {

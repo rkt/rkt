@@ -6,7 +6,6 @@ bin/systemd-ask-password
 bin/systemd-cat
 bin/systemd-cgls
 bin/systemd-cgtop
-bin/systemd-coredumpctl
 bin/systemd-delta
 bin/systemd-detect-virt
 bin/systemd-inhibit
@@ -91,17 +90,14 @@ lib64/systemd/systemd-localed
 lib64/systemd/systemd-logind
 lib64/systemd/systemd-machined
 lib64/systemd/systemd-modules-load
-lib64/systemd/systemd-multi-seat-x
 lib64/systemd/systemd-networkd
 lib64/systemd/systemd-networkd-wait-online
 lib64/systemd/systemd-random-seed
-lib64/systemd/systemd-readahead
 lib64/systemd/systemd-remount-fs
 lib64/systemd/systemd-reply-password
 lib64/systemd/systemd-resolved
 lib64/systemd/systemd-rfkill
 lib64/systemd/systemd-shutdown
-lib64/systemd/systemd-shutdownd
 lib64/systemd/systemd-sleep
 lib64/systemd/systemd-socket-proxyd
 lib64/systemd/systemd-sysctl
@@ -110,7 +106,6 @@ lib64/systemd/systemd-timesyncd
 lib64/systemd/systemd-udevd
 lib64/systemd/systemd-update-done
 lib64/systemd/systemd-update-utmp
-lib64/systemd/systemd-user-sessions
 lib64/systemd/systemd-vconsole-setup
 lib64/systemd/system-sleep
 lib64/systemd/user-generators

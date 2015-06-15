@@ -1,8 +1,28 @@
-include ../../makelib/lib.mk
+LOCAL_ETCDIR := $(ACIROOTFSDIR)/etc
+LOCAL_ACI_OS_RELEASE := $(LOCAL_ETCDIR)/os-release
+LOCAL_ACI_DIRS := \
+	$(LOCAL_ETCDIR) \
+	$(ACIROOTFSDIR)/opt/stage2 \
+	$(ACIROOTFSDIR)/rkt/status \
+	$(ACIROOTFSDIR)/rkt/env
+LOCAL_ACI_MANIFEST := $(ACIDIR)/manifest
 
-ISCRIPT := $(BUILDDIR)/install.d/40aci.install
+$(call setup-stamp-file,LOCAL_STAMP)
 
-.PHONY: install
+$(LOCAL_STAMP): $(LOCAL_ACI_OS_RELEASE) $(LOCAL_ACI_MANIFEST) | $(LOCAL_ACI_DIRS)
+	touch "$@"
 
-install:
-	$(call write-template,install.tpl.sh,{{INSTALL}}=$(call escape_space,$(INSTALL)) {{PWD}}=$(shell pwd),$(ISCRIPT))
+$(LOCAL_ACI_OS_RELEASE): | $(LOCAL_ETCDIR)
+	echo "rkt" > "$@"
+
+$(LOCAL_ACI_MANIFEST): | $(ACIDIR)
+
+STAGE1_INSTALL_DIRS += $(foreach d,$(LOCAL_ACI_DIRS),$d:0755)
+STAGE1_INSTALL_FILES += $(MK_SRCDIR)/aci-manifest:$(LOCAL_ACI_MANIFEST):0644
+STAGE1_STAMPS += $(LOCAL_STAMP)
+
+LOCAL_STAMP :=
+LOCAL_ETCDIR :=
+LOCAL_ACI_OS_RELEASE :=
+LOCAL_ACI_DIRS :=
+LOCAL_ACI_MANIFEST :=

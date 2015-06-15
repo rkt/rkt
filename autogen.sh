@@ -1,2 +1,2 @@
 #!/bin/bash -e
-autoreconf --install
+autoreconf --install --warnings=all --force

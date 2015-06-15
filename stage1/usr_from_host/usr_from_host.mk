@@ -1,8 +1,8 @@
-include ../../makelib/lib.mk
+$(call setup-stamp-file,UFH_STAMP)
 
-.PHONY: install
+STAGE1_USR_STAMPS += $(UFH_STAMP)
 
-ISCRIPT := $(BUILDDIR)/install.d/00usr.install
-
-install: usr_from_host.mk
-	@echo $(call dep-flavor,host) > $(ISCRIPT)
+$(UFH_STAMP): ACIROOTFSDIR := $(ACIROOTFSDIR)
+$(UFH_STAMP): | $(ACIROOTFSDIR)
+	ln -sf 'host' "$(ACIROOTFSDIR)/flavor"
+	touch "$@"

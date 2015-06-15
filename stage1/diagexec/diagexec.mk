@@ -1,16 +1,3 @@
-include ../../makelib/lib.mk
+ASSCB_EXTRA_HEADERS := elf.h
 
-BINARY=$(BINDIR)/diagexec
-SRC=diagexec.c
-ISCRIPT := $(BUILDDIR)/install.d/10diagexec.install
-
-.PHONY: clean install
-
-install: $(BINARY)
-	@echo $(call dep-install-file-to,$(BINARY),/) > $(ISCRIPT)
-
-$(BINARY): $(SRC) elf.h diagexec.mk
-	$(CC) $(CFLAGS) -o $@ $(SRC) -static -s
-
-clean:
-	rm -f $(BINARY)
+include makelib/aci_simple_static_c_bin.mk

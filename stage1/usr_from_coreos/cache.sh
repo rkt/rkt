@@ -1,11 +1,9 @@
-#!/bin/bash -e
-
 # maintain a cached copy of coreos pxe image
 
-# when changing the image, update the systemd version in
-# stage1/usr_from_coreos/usr_from_coreos.mk
-IMG_RELEASE="709.0.0"
-IMG_URL="http://alpha.release.core-os.net/amd64-usr/${IMG_RELEASE}/coreos_production_pxe_image.cpio.gz"
+if [ -z "${IMG_URL}" -o -z "${ITMP}" ]
+then
+    exit 1
+fi
 
 # coreos gpg signing key
 GPG_LONG_ID="50E0885593D2DCB4"
