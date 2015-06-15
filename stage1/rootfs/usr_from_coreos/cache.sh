@@ -12,7 +12,7 @@ function req() {
 	which "${what}" >/dev/null || { echo "${what} required"; exit 1; }
 }
 
-req curl
+req wget
 req gpg
 req mktemp
 req md5sum
@@ -165,8 +165,8 @@ function cache_url() {
 	if ! gpg_verify "${cache}" "${sigfile}" "${key}" "${keyid}"; then
 
 		# refresh the cache on failure, and verify it again
-		curl --location --output "${cache}" "${url}"
-		curl --location --output "${sigfile}" "${sigurl}"
+		wget --tries=20 --output-document="${cache}" "${url}" # the wget default for retries is 20 times.
+		wget --tries=20 --output-document="${sigfile}" "${sigurl}"
 
 		gpg_verify "${cache}" "${sigfile}" "${key}" "${keyid}" || return 1
 	fi
