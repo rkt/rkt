@@ -90,7 +90,7 @@ func checkSignature(ks *Keystore, prefix string, signed, signature io.Reader) (*
 	entities, err := openpgp.CheckArmoredDetachedSignature(keyring, signed, signature)
 	if err == io.EOF {
 		// otherwise, the client failure is just "EOF", which is not helpful
-		return nil, fmt.Errorf("keystore: no signatures found")
+		return nil, fmt.Errorf("keystore: no valid signatures found in signature file")
 	}
 	return entities, err
 }
