@@ -73,6 +73,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus/introspect"
 
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/networking"
 	"github.com/coreos/rkt/pkg/sys"
 )
@@ -485,7 +486,7 @@ func stage1() int {
 	machineID := p.GetMachineID()
 	subcgroup, err := getContainerSubCgroup(machineID)
 	if err == nil {
-		if err := createCgroups(s1Root, subcgroup, appHashes); err != nil {
+		if err := cgroup.CreateCgroups(s1Root, subcgroup, appHashes); err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating cgroups: %v\n", err)
 			return 5
 		}
@@ -564,7 +565,7 @@ func getContainerSubCgroup(machineID string) (string, error) {
 		} else {
 			// when registration is disabled the container will be directly
 			// under rkt's cgroup so we can look it up in /proc/self/cgroup
-			ownCgroupPath, err := getOwnCgroupPath("name=systemd")
+			ownCgroupPath, err := cgroup.GetOwnCgroupPath("name=systemd")
 			if err != nil {
 				return "", fmt.Errorf("error getting own cgroup path: %v", err)
 			}

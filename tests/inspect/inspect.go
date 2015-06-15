@@ -28,6 +28,7 @@ import (
 	"unsafe"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/syndtr/gocapability/capability"
+	"github.com/coreos/rkt/common/cgroup"
 )
 
 var (
@@ -179,7 +180,7 @@ func main() {
 	}
 
 	if globalFlags.PrintMemoryLimit {
-		memCgroupPath, err := getOwnCgroupPath("memory")
+		memCgroupPath, err := cgroup.GetOwnCgroupPath("memory")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting own memory cgroup path: %v\n", err)
 			os.Exit(1)
@@ -197,7 +198,7 @@ func main() {
 	}
 
 	if globalFlags.PrintCPUQuota {
-		cpuCgroupPath, err := getOwnCgroupPath("cpu")
+		cpuCgroupPath, err := cgroup.GetOwnCgroupPath("cpu")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting own cpu cgroup path: %v\n", err)
 			os.Exit(1)
@@ -233,31 +234,4 @@ func main() {
 	}
 
 	os.Exit(globalFlags.ExitCode)
-}
-
-// FIXME(iago): this function is exactly the same as the one in
-// stage1/init/cgroup.go. Find a way to avoid this redundancy.
-func getOwnCgroupPath(controller string) (string, error) {
-	selfCgroupPath := "/proc/self/cgroup"
-	cg, err := os.Open(selfCgroupPath)
-	if err != nil {
-		return "", fmt.Errorf("error opening /proc/self/cgroup: %v", err)
-	}
-	defer cg.Close()
-
-	s := bufio.NewScanner(cg)
-	for s.Scan() {
-		parts := strings.SplitN(s.Text(), ":", 3)
-		if len(parts) < 3 {
-			return "", fmt.Errorf("error parsing /proc/self/cgroup")
-		}
-		controllerParts := strings.Split(parts[1], ",")
-		for _, c := range controllerParts {
-			if c == controller {
-				return parts[2], nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("controller %q not found", controller)
 }

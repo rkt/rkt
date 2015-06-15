@@ -14,7 +14,7 @@
 
 //+build linux
 
-package main
+package cgroup
 
 import (
 	"bufio"
@@ -49,18 +49,18 @@ func addCpuLimit(opts []*unit.UnitOption, limit string) ([]*unit.UnitOption, err
 		return nil, err
 	}
 	quota := strconv.Itoa(milliCores/10) + "%"
-	opts = append(opts, newUnitOption("Service", "CPUQuota", quota))
+	opts = append(opts, unit.NewUnitOption("Service", "CPUQuota", quota))
 	return opts, nil
 }
 
 func addMemoryLimit(opts []*unit.UnitOption, limit string) ([]*unit.UnitOption, error) {
-	opts = append(opts, newUnitOption("Service", "MemoryLimit", limit))
+	opts = append(opts, unit.NewUnitOption("Service", "MemoryLimit", limit))
 	return opts, nil
 }
 
-func maybeAddIsolator(opts []*unit.UnitOption, isolator string, limit string) ([]*unit.UnitOption, error) {
+func MaybeAddIsolator(opts []*unit.UnitOption, isolator string, limit string) ([]*unit.UnitOption, error) {
 	var err error
-	if isIsolatorSupported(isolator) {
+	if IsIsolatorSupported(isolator) {
 		opts, err = isolatorFuncs[isolator](opts, limit)
 		if err != nil {
 			return nil, err
@@ -71,7 +71,8 @@ func maybeAddIsolator(opts []*unit.UnitOption, isolator string, limit string) ([
 	return opts, nil
 }
 
-func isIsolatorSupported(isolator string) bool {
+// IsIsolatorSupported returns whether an isolator is supported in the kernel
+func IsIsolatorSupported(isolator string) bool {
 	if files, ok := cgroupControllerRWFiles[isolator]; ok {
 		for _, f := range files {
 			isolatorPath := filepath.Join("/sys/fs/cgroup/", isolator, f)
@@ -152,11 +153,11 @@ func getControllerRWFiles(controller string) []string {
 	return nil
 }
 
-func getOwnCgroupPath(controller string) (string, error) {
-	selfCgroupPath := "/proc/self/cgroup"
-	cg, err := os.Open(selfCgroupPath)
+func parseOwnCgroupController(controller string) ([]string, error) {
+	cgroupPath := "/proc/self/cgroup"
+	cg, err := os.Open(cgroupPath)
 	if err != nil {
-		return "", fmt.Errorf("error opening /proc/self/cgroup: %v", err)
+		return nil, fmt.Errorf("error opening /proc/self/cgroup: %v", err)
 	}
 	defer cg.Close()
 
@@ -164,23 +165,33 @@ func getOwnCgroupPath(controller string) (string, error) {
 	for s.Scan() {
 		parts := strings.SplitN(s.Text(), ":", 3)
 		if len(parts) < 3 {
-			return "", fmt.Errorf("error parsing /proc/self/cgroup")
+			return nil, fmt.Errorf("error parsing /proc/self/cgroup")
 		}
 		controllerParts := strings.Split(parts[1], ",")
 		for _, c := range controllerParts {
 			if c == controller {
-				return parts[2], nil
+				return parts, nil
 			}
 		}
 	}
 
-	return "", fmt.Errorf("controller %q not found", controller)
+	return nil, fmt.Errorf("controller %q not found", controller)
 }
 
-// createCgroups mounts the cgroup controllers hierarchy for the container but
+// GetOwnCgroupPath returns the cgroup path of this process in controller
+// hierarchy
+func GetOwnCgroupPath(controller string) (string, error) {
+	parts, err := parseOwnCgroupController(controller)
+	if err != nil {
+		return "", err
+	}
+	return parts[2], nil
+}
+
+// CreateCgroups mounts the cgroup controllers hierarchy for the container but
 // leaves the subcgroup for each app read-write so the systemd inside stage1
 // can apply isolators to them
-func createCgroups(root string, subcgroup string, appHashes []types.Hash) error {
+func CreateCgroups(root string, subcgroup string, appHashes []types.Hash) error {
 	cgroupsFile, err := os.Open("/proc/cgroups")
 	if err != nil {
 		return err
@@ -245,7 +256,8 @@ func createCgroups(root string, subcgroup string, appHashes []types.Hash) error 
 		// 3c. Create cgroup directories and mount the files we need over
 		// themselves so they stay read-write
 		for _, a := range appHashes {
-			serviceName := ServiceUnitName(a)
+			serviceName := types.ShortHash(a.String()) + ".service"
+
 			appCgroup := filepath.Join(subcgroupPath, serviceName)
 			if err := os.MkdirAll(appCgroup, 0755); err != nil {
 				return err

@@ -41,7 +41,7 @@
                 "name": "resource/cpu",
                 "value": {
                     "request": "50",
-                    "limit": "100"
+                    "limit": "800"
                 }
             }
         ],
