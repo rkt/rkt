@@ -269,14 +269,19 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 		}
 
 		// Check dynamically which version is installed on the host
-		// Only support v220 for now.
+		// Support version >= 220
 		versionBytes, err := exec.Command(hostNspawnBin, "--version").CombinedOutput()
 		if err != nil {
 			return nil, nil, fmt.Errorf("unable to probe %s version: %v", hostNspawnBin, err)
 		}
-		version := strings.SplitN(string(versionBytes), "\n", 2)[0]
-		if version != "systemd 220" {
-			return nil, nil, fmt.Errorf("%s version not supported: %v", hostNspawnBin, version)
+		versionStr := strings.SplitN(string(versionBytes), "\n", 2)[0]
+		var version int
+		n, err := fmt.Sscanf(versionStr, "systemd %d", &version)
+		if err != nil {
+			return nil, nil, fmt.Errorf("cannot parse version: %q", versionStr)
+		}
+		if n != 1 || version < 220 {
+			return nil, nil, fmt.Errorf("rkt needs systemd-nspawn >= 220. %s version not supported: %v", hostNspawnBin, versionStr)
 		}
 
 		// Copy systemd, bash, etc. in stage1 at run-time
