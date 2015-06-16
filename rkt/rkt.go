@@ -82,6 +82,11 @@ func main() {
 	// check if rkt is executed with a multicall command
 	multicall.MaybeExec()
 
+	cmdRkt.SetUsageFunc(usageFunc)
+
+	// Make help just show the usage
+	cmdRkt.SetHelpTemplate(`{{.UsageString}}`)
+
 	cmdRkt.Execute()
 	os.Exit(cmdExitCode)
 }
