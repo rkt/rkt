@@ -16,35 +16,32 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/store"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 )
 
 var (
-	cmdImageCatManifest = &Command{
-		Name:        "cat-manifest",
-		Summary:     "Inspect and print the image manifest",
-		Usage:       "IMAGE",
-		Description: `IMAGE should be a string referencing an image; either a hash or an image name.`,
-		Run:         runImageCatManifest,
-		Flags:       &imageCatManifestFlag,
+	cmdImageCatManifest = &cobra.Command{
+		Use:   "cat-manifest IMAGE",
+		Short: "Inspect and print the image manifest",
+		Long:  `IMAGE should be a string referencing an image; either a hash or an image name.`,
+		Run:   runWrapper(runImageCatManifest),
 	}
-	imageCatManifestFlag flag.FlagSet
-	flagPrettyPrint      bool
+	flagPrettyPrint bool
 )
 
 func init() {
-	subCommands["image"] = append(subCommands["image"], cmdImageCatManifest)
-
-	imageCatManifestFlag.BoolVar(&flagPrettyPrint, "pretty-print", false, "apply indent to format the output")
+	cmdImage.AddCommand(cmdImageCatManifest)
+	cmdImageCatManifest.Flags().BoolVar(&flagPrettyPrint, "pretty-print", false, "apply indent to format the output")
 }
 
-func runImageCatManifest(args []string) (exit int) {
+func runImageCatManifest(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 1 {
-		printSubCommandUsageByName("image", "cat-manifest", subCommands["image"])
+		cmd.Usage()
 		return 1
 	}
 

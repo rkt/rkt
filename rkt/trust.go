@@ -20,7 +20,6 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -30,45 +29,39 @@ import (
 	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
 
 var (
-	cmdTrust = &Command{
-		Name:    cmdTrustName,
-		Summary: "Trust a key for image verification",
-		Usage:   "[--prefix PREFIX] [--insecure-allow-http] [--root] [PUBKEY ...]",
-		Description: `Adds keys to the local keystore for use in verifying signed images.
+	cmdTrust = &cobra.Command{
+		Use:   "trust [--prefix=PREFIX] [--insecure-allow-http] [--root] [PUBKEY ...]",
+		Short: "Trust a key for image verification",
+		Long: `Adds keys to the local keystore for use in verifying signed images.
 PUBKEY may be either a local file or URL,
 PREFIX scopes the applicability of PUBKEY to image names sharing PREFIX.
 Meta discovery of PUBKEY at PREFIX will be attempted if no PUBKEY is specified.
 --root must be specified to add keys with no prefix.`,
-		Run:   runTrust,
-		Flags: &trustFlags,
+		Run: runWrapper(runTrust),
 	}
-	trustFlags    flag.FlagSet
 	flagPrefix    string
 	flagRoot      bool
 	flagAllowHTTP bool
 )
 
-const (
-	cmdTrustName = "trust"
-)
-
 func init() {
-	commands = append(commands, cmdTrust)
-	trustFlags.StringVar(&flagPrefix, "prefix", "", "prefix to limit trust to")
-	trustFlags.BoolVar(&flagRoot, "root", false, "add root key without a prefix")
-	trustFlags.BoolVar(&flagAllowHTTP, "insecure-allow-http", false, "allow HTTP use for key discovery and/or retrieval")
+	cmdRkt.AddCommand(cmdTrust)
+	cmdTrust.Flags().StringVar(&flagPrefix, "prefix", "", "prefix to limit trust to")
+	cmdTrust.Flags().BoolVar(&flagRoot, "root", false, "add root key without a prefix")
+	cmdTrust.Flags().BoolVar(&flagAllowHTTP, "insecure-allow-http", false, "allow HTTP use for key discovery and/or retrieval")
 }
 
-func runTrust(args []string) (exit int) {
+func runTrust(cmd *cobra.Command, args []string) (exit int) {
 	if flagPrefix == "" && !flagRoot {
 		if len(args) != 0 {
 			stderr("--root required for non-prefixed (root) keys")
 		} else {
-			printCommandUsageByName(cmdTrustName)
+			cmd.Usage()
 		}
 		return 1
 	}

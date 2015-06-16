@@ -15,13 +15,14 @@
 package main
 
 import (
-	"flag"
 	"os"
 	"runtime"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/store"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 )
 
 const (
@@ -32,24 +33,25 @@ const (
 )
 
 var (
-	cmdFetch = &Command{
-		Name:                 "fetch",
-		Summary:              "Fetch image(s) and store them in the local cache",
-		Usage:                "IMAGE_URL...",
-		Run:                  runFetch,
-		Flags:                &fetchFlags,
-		WantsFlagsTerminator: true,
+	cmdFetch = &cobra.Command{
+		Use:   "fetch IMAGE_URL...",
+		Short: "Fetch image(s) and store them in the local cache",
+		Run:   runWrapper(runFetch),
 	}
-	fetchFlags flag.FlagSet
 )
 
 func init() {
-	commands = append(commands, cmdFetch)
-	fetchFlags.Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
+	cmdRkt.AddCommand(cmdFetch)
+	// Disable interspersed flags to stop parsing after the first non flag
+	// argument. All the subsequent parsing will be done by parseApps.
+	// This is needed to correctly handle multiple IMAGE --signature=sigfile options
+	cmdFetch.Flags().SetInterspersed(false)
+
+	cmdFetch.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 }
 
-func runFetch(args []string) (exit int) {
-	if err := parseApps(&rktApps, args, &fetchFlags, false); err != nil {
+func runFetch(cmd *cobra.Command, args []string) (exit int) {
+	if err := parseApps(&rktApps, args, cmd.Flags(), false); err != nil {
 		stderr("fetch: unable to parse arguments: %v", err)
 		return 1
 	}

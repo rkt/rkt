@@ -15,16 +15,17 @@
 package main
 
 import (
-	"flag"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	flag "github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
 )
 
 func TestParseAppArgs(t *testing.T) {
 	flags := flag.NewFlagSet("test", flag.ExitOnError)
+	flags.SetInterspersed(false)
 	tests := []struct {
 		in     string
 		images []string

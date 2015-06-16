@@ -17,9 +17,9 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
 	"github.com/coreos/rkt/common/apps"
 )
 
@@ -31,7 +31,7 @@ var (
 // Between per-app argument lists flags.Parse() is called using the supplied FlagSet.
 // Anything not consumed by flags.Parse() and not found to be a per-app argument list is treated as an image.
 // allowAppArgs controls whether "--" prefixed per-app arguments will be accepted or not.
-func parseApps(al *apps.Apps, args []string, flags *flag.FlagSet, allowAppArgs bool) error {
+func parseApps(al *apps.Apps, args []string, flags *pflag.FlagSet, allowAppArgs bool) error {
 	nAppsLastAppArgs := al.Count()
 
 	// valid args here may either be:
@@ -124,6 +124,10 @@ func (al *appAsc) String() string {
 		return ""
 	}
 	return app.Asc
+}
+
+func (al *appAsc) Type() string {
+	return "appAsc"
 }
 
 // TODO(vc): --mount, --set-env, etc.

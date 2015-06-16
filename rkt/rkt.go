@@ -15,15 +15,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/pkg/multicall"
@@ -38,11 +36,8 @@ const (
 )
 
 var (
-	globalFlagset = flag.NewFlagSet(cliName, flag.ExitOnError)
-	tabOut        *tabwriter.Writer
-	commands      []*Command // Commands should register themselves by appending
-	subCommands   = make(map[string][]*Command)
-	globalFlags   = struct {
+	tabOut      *tabwriter.Writer
+	globalFlags = struct {
 		Dir                string
 		SystemConfigDir    string
 		LocalConfigDir     string
@@ -50,78 +45,45 @@ var (
 		Help               bool
 		InsecureSkipVerify bool
 	}{}
+
+	cmdExitCode int
 )
 
-func init() {
-	globalFlagset.BoolVar(&globalFlags.Help, "help", false, "Print usage information and exit")
-	globalFlagset.BoolVar(&globalFlags.Debug, "debug", false, "Print out more debug information to stderr")
-	globalFlagset.StringVar(&globalFlags.Dir, "dir", defaultDataDir, "rkt data directory")
-	globalFlagset.StringVar(&globalFlags.SystemConfigDir, "system-config", common.DefaultSystemConfigDir, "system configuration directory")
-	globalFlagset.StringVar(&globalFlags.LocalConfigDir, "local-config", common.DefaultLocalConfigDir, "local configuration directory")
-	globalFlagset.BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip all TLS, image or fingerprint verification")
+var cmdRkt = &cobra.Command{
+	Use:   "rkt [command]",
+	Short: cliDescription,
 }
 
-type Command struct {
-	Name                 string        // Name of the Command and the string to use to invoke it
-	Summary              string        // One-sentence summary of what the Command does
-	Usage                string        // Usage options/arguments
-	Description          string        // Detailed description of command
-	Flags                *flag.FlagSet // Set of flags associated with this command
-	WantsFlagsTerminator bool          // Include the potential "--" flags terminator in args for Run
-
-	Run func(args []string) int // Run a command with the given arguments, return exit status
-
+func init() {
+	cmdRkt.PersistentFlags().BoolVar(&globalFlags.Debug, "debug", false, "Print out more debug information to stderr")
+	cmdRkt.PersistentFlags().StringVar(&globalFlags.Dir, "dir", defaultDataDir, "rkt data directory")
+	cmdRkt.PersistentFlags().StringVar(&globalFlags.SystemConfigDir, "system-config", common.DefaultSystemConfigDir, "system configuration directory")
+	cmdRkt.PersistentFlags().StringVar(&globalFlags.LocalConfigDir, "local-config", common.DefaultLocalConfigDir, "local configuration directory")
+	cmdRkt.PersistentFlags().BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip all TLS, image or fingerprint verification")
 }
 
 func init() {
 	tabOut = new(tabwriter.Writer)
 	tabOut.Init(os.Stdout, 0, 8, 1, '\t', 0)
+
+	cobra.EnablePrefixMatching = true
+}
+
+// runWrapper return a func(cmd *cobra.Command, args []string) that internally
+// will add command function return code and the reinsertion of the "--" flag
+// terminator.
+func runWrapper(cf func(cmd *cobra.Command, args []string) (exit int)) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+		cmdExitCode = cf(cmd, args)
+	}
 }
 
 func main() {
 	// check if rkt is executed with a multicall command
 	multicall.MaybeExec()
 
-	// parse global arguments
-	globalFlagset.Parse(os.Args[1:])
-	args := globalFlagset.Args()
-	if len(args) < 1 || globalFlags.Help {
-		args = []string{"help"}
-	}
-
-	var cmd *Command
-	subArgs := args[1:]
-
-	// determine which Command should be run
-	for _, c := range commands {
-		if c.Name == args[0] {
-			cmd = c
-			if err := c.Flags.Parse(subArgs); err != nil {
-				stderr("%v", err)
-				os.Exit(2)
-			}
-			break
-		}
-	}
-
-	if cmd == nil {
-		stderr("%v: unknown subcommand: %q", cliName, args[0])
-		stderr("Run '%v help' for usage.", cliName)
-		os.Exit(2)
-	}
-
-	if !globalFlags.Debug {
-		log.SetOutput(ioutil.Discard)
-	}
-
-	// XXX(vc): Flags.Args() stops parsing at "--" but swallows it in doing so.
-	// This interferes with parseApps() so we detect that here and reclaim "--",
-	// passing it to the subcommand with the rest of the arguments.
-	subArgsConsumed := len(subArgs) - cmd.Flags.NArg()
-	if cmd.WantsFlagsTerminator && subArgsConsumed > 0 && subArgs[subArgsConsumed-1] == "--" {
-		subArgsConsumed--
-	}
-	os.Exit(cmd.Run(subArgs[subArgsConsumed:]))
+	cmdRkt.Execute()
+	os.Exit(cmdExitCode)
 }
 
 func stderr(format string, a ...interface{}) {
@@ -132,18 +94,6 @@ func stderr(format string, a ...interface{}) {
 func stdout(format string, a ...interface{}) {
 	out := fmt.Sprintf(format, a...)
 	fmt.Fprintln(os.Stdout, strings.TrimSuffix(out, "\n"))
-}
-
-func getAllFlags() (flags []*flag.Flag) {
-	return getFlags(globalFlagset)
-}
-
-func getFlags(flagset *flag.FlagSet) (flags []*flag.Flag) {
-	flags = make([]*flag.Flag, 0)
-	flagset.VisitAll(func(f *flag.Flag) {
-		flags = append(flags, f)
-	})
-	return
 }
 
 // where pod directories are created and locked before moving to prepared

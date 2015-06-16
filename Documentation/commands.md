@@ -20,11 +20,11 @@ Before this can happen, rkt needs to know which creators you trust, and therefor
 When adding a trusted key, a prefix can scope the level of established trust to a subset of images. A few examples:
 
 ```
-$rkt trust --prefix storage.coreos.com
+$rkt trust --prefix=storage.coreos.com
 ```
 
 ```
-$rkt trust --prefix coreos.com/etcd
+$rkt trust --prefix=coreos.com/etcd
 ```
 
 To trust a key for an entire root domain, you must use the `--root` flag.
@@ -44,7 +44,7 @@ The easiest way to trust a key is through meta discovery. rkt will find and down
 And use it to download the public key and present it to you for approval:
 
 ```
-$ rkt trust --prefix coreos.com/etcd
+$ rkt trust --prefix=coreos.com/etcd
 Prefix: "coreos.com/etcd"
 Key: "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg"
 GPG key fingerprint is: 8B86 DE38 890D DB72 9186  7B02 5210 BD88 8818 2190
@@ -57,7 +57,7 @@ Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.
 If rkt can't find a key using meta discovery, an error will be printed:
 
 ```
-$ rkt trust --prefix coreos.com                     
+$ rkt trust --prefix=coreos.com
 Error determining key location: --prefix meta discovery error: found no ACI meta tags
 ```
 
@@ -66,7 +66,7 @@ Error determining key location: --prefix meta discovery error: found no ACI meta
 If you know where a public key is located, you can request it directly from disk or via HTTPS:
 
 ```
-$ sudo ./rkt trust --prefix coreos.com/etcd https://coreos.com/dist/pubkeys/aci-pubkeys.gpg
+$ sudo ./rkt trust --prefix=coreos.com/etcd https://coreos.com/dist/pubkeys/aci-pubkeys.gpg
 Prefix: "coreos.com/etcd"
 Key: "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg"
 GPG key fingerprint is: 8B86 DE38 890D DB72 9186  7B02 5210 BD88 8818 2190
@@ -137,7 +137,7 @@ sha512-fa1cb92dc276b0f9bedf87981e61ecde
 If you want to run an existing Docker image, you can fetch from a Docker registry. rkt will download and convert the image to ACI.
 
 ```
-$ rkt -insecure-skip-verify fetch docker://busybox
+$ rkt --insecure-skip-verify fetch docker://busybox
 rkt: fetching image from docker://busybox
 rkt: warning: signature verification has been disabled
 Downloading layer: 4986bf8c15363d1c5d15512d5266f8777bfba4974ac56e3270e7760f6f0a8125
@@ -203,7 +203,7 @@ The precedence is as follows with the last item replacing previous environment e
 ```
 $ export EXAMPLE_ENV=hello
 $ export EXAMPLE_OVERRIDE=under
-$ sudo rkt run --inherit-env --set-env FOO=bar --set-env EXAMPLE_OVERRIDE=over example.com/env-printer
+$ sudo rkt run --inherit-env --set-env=FOO=bar --set-env=EXAMPLE_OVERRIDE=over example.com/env-printer
 EXAMPLE_ENV=hello
 FOO=bar
 EXAMPLE_OVERRIDE=over
@@ -213,10 +213,10 @@ _TODO: Exit codes_
 
 #### Disable Signature Verification
 
-If desired, `-insecure-skip-verify` can be used to disable this security check:
+If desired, `--insecure-skip-verify` can be used to disable this security check:
 
 ```
-$ sudo rkt -insecure-skip-verify run coreos.com/etcd:v2.0.0
+$ sudo rkt --insecure-skip-verify run coreos.com/etcd:v2.0.0
 rkt: searching for app image coreos.com/etcd:v2.0.0
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 rkt: warning: signature verification has been disabled
@@ -283,7 +283,7 @@ Since they reference the volume using an abstract name rather than a specific so
 To tie it all together, we use the `rkt run` command-line to provide them with a volume by this name. Here's what it looks like:
 
 ```
-sudo ./rkt run --volume work,kind=host,source=/opt/tenant1/work \
+sudo ./rkt run --volume=work,kind=host,source=/opt/tenant1/work \
   example.com/reduce-worker \
   example.com/worker-backup
 ```

@@ -15,27 +15,25 @@
 package main
 
 import (
-	"flag"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/version"
 )
 
 var (
-	cmdVersion = &Command{
-		Name:        "version",
-		Description: "Print the version and exit",
-		Summary:     "Print the version and exit",
-		Run:         runVersion,
-		Flags:       &versionFlags,
+	cmdVersion = &cobra.Command{
+		Use:   "version",
+		Short: "Print the version and exit",
+		Long:  "Print the version and exit",
+		Run:   runWrapper(runVersion),
 	}
-	versionFlags flag.FlagSet
 )
 
 func init() {
-	commands = append(commands, cmdVersion)
+	cmdRkt.AddCommand(cmdVersion)
 }
 
-func runVersion(args []string) (exit int) {
+func runVersion(cmd *cobra.Command, args []string) (exit int) {
 	stdout("rkt version %s", version.Version)
 	stdout("appc version %s", schema.AppContainerVersion)
 	return

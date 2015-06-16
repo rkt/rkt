@@ -14,51 +14,15 @@
 
 package main
 
-import (
-	"flag"
-	"os"
-)
+import "github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 
 var (
-	cmdImage = &Command{
-		Name:        "image",
-		Summary:     "Operate on an image in the local store",
-		Usage:       "SUBCOMMAND IMAGE [args...]",
-		Description: `SUBCOMMAND could be "cat-manifest". IMAGE should be a string referencing an image; either a hash or an image name.`,
-		Run:         runImage,
-		Flags:       &imageFlags,
+	cmdImage = &cobra.Command{
+		Use:   "image [command]",
+		Short: "Operate on an image in the local store",
 	}
-	imageFlags flag.FlagSet
 )
 
 func init() {
-	commands = append(commands, cmdImage)
-}
-
-func runImage(args []string) (exit int) {
-	if len(args) < 1 {
-		printCommandUsageByName("image")
-		return 1
-	}
-
-	var subCmd *Command
-	subArgs := args[1:]
-
-	// determine which Command should be run
-	for _, c := range subCommands["image"] {
-		if c.Name == args[0] {
-			subCmd = c
-			if err := c.Flags.Parse(subArgs); err != nil {
-				stderr("%v", err)
-				os.Exit(2)
-			}
-			break
-		}
-	}
-
-	if subCmd == nil {
-		stderr("image: unknown subcommand: %q", args[0])
-		os.Exit(2)
-	}
-	return subCmd.Run(subArgs[subCmd.Flags.NFlag():])
+	cmdRkt.AddCommand(cmdImage)
 }

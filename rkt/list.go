@@ -17,35 +17,32 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	common "github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
 )
 
 var (
-	cmdList = &Command{
-		Name:    "list",
-		Summary: "List pods",
-		Usage:   "",
-		Run:     runList,
-		Flags:   &listFlags,
+	cmdList = &cobra.Command{
+		Use:   "list",
+		Short: "List pods",
+		Run:   runWrapper(runList),
 	}
-	listFlags      flag.FlagSet
 	flagNoLegend   bool
 	flagFullOutput bool
 )
 
 func init() {
-	commands = append(commands, cmdList)
-	listFlags.BoolVar(&flagNoLegend, "no-legend", false, "suppress a legend with the list")
-	listFlags.BoolVar(&flagFullOutput, "full", false, "use long output format")
+	cmdRkt.AddCommand(cmdList)
+	cmdList.Flags().BoolVar(&flagNoLegend, "no-legend", false, "suppress a legend with the list")
+	cmdList.Flags().BoolVar(&flagFullOutput, "full", false, "use long output format")
 }
 
-func runList(args []string) (exit int) {
+func runList(cmd *cobra.Command, args []string) (exit int) {
 	if !flagNoLegend {
 		fmt.Fprintf(tabOut, "UUID\tACI\tSTATE\tNETWORKS\n")
 	}

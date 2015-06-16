@@ -16,20 +16,15 @@
 
 package main
 
-import (
-	"flag"
-)
+import "github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 
 var (
-	cmdStatus = &Command{
-		Name:    cmdStatusName,
-		Summary: "Check the status of a rkt pod",
-		Usage:   "[--wait] UUID",
-		Run:     runStatus,
-		Flags:   &statusFlags,
+	cmdStatus = &cobra.Command{
+		Use:   "status [--wait] UUID",
+		Short: "Check the status of a rkt pod",
+		Run:   runWrapper(runStatus),
 	}
-	statusFlags flag.FlagSet
-	flagWait    bool
+	flagWait bool
 )
 
 const (
@@ -39,13 +34,13 @@ const (
 )
 
 func init() {
-	commands = append(commands, cmdStatus)
-	statusFlags.BoolVar(&flagWait, "wait", false, "toggle waiting for the pod to exit")
+	cmdRkt.AddCommand(cmdStatus)
+	cmdStatus.Flags().BoolVar(&flagWait, "wait", false, "toggle waiting for the pod to exit")
 }
 
-func runStatus(args []string) (exit int) {
+func runStatus(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 1 {
-		printCommandUsageByName(cmdStatusName)
+		cmd.Usage()
 		return 1
 	}
 

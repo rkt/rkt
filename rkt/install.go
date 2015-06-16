@@ -17,7 +17,6 @@ package main
 import (
 	"bufio"
 	"crypto/sha1"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/store"
 )
 
@@ -35,14 +35,11 @@ const (
 )
 
 var (
-	cmdInstall = &Command{
-		Name:    "install",
-		Summary: "Set up rkt data directories with correct permissions",
-		Usage:   "",
-		Run:     runInstall,
-		Flags:   &installFlags,
+	cmdInstall = &cobra.Command{
+		Use:   "install",
+		Short: "Set up rkt data directories with correct permissions",
+		Run:   runWrapper(runInstall),
 	}
-	installFlags flag.FlagSet
 
 	// dirs relative to globalFlags.Dir
 	dirs = map[string]os.FileMode{
@@ -69,7 +66,7 @@ type Group struct {
 }
 
 func init() {
-	commands = append(commands, cmdInstall)
+	cmdRkt.AddCommand(cmdInstall)
 }
 
 func parseGroupLine(line string, group *Group) {
@@ -249,7 +246,7 @@ func createDbFiles(casDbPath string, gid int, perm os.FileMode) error {
 	return nil
 }
 
-func runInstall(args []string) (exit int) {
+func runInstall(cmd *cobra.Command, args []string) (exit int) {
 	gid, err := lookupGid(rktGroup)
 	if err != nil {
 		stderr("install: error looking up rkt gid: %v", err)

@@ -15,30 +15,26 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 
-	"github.com/coreos/rkt/store"
-
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/coreos/rkt/store"
 )
 
 var (
-	cmdRmImage = &Command{
-		Name:    "rmimage",
-		Summary: "Remove image(s) with the given key(s) from the local store",
-		Usage:   "IMAGEID...",
-		Run:     runRmImage,
-		Flags:   &rmImageFlags,
+	cmdRmImage = &cobra.Command{
+		Use:   "rmimage IMAGEID...",
+		Short: "Remove image(s) with the given key(s) from the local store",
+		Run:   runWrapper(runRmImage),
 	}
-	rmImageFlags flag.FlagSet
 )
 
 func init() {
-	commands = append(commands, cmdRmImage)
+	cmdRkt.AddCommand(cmdRmImage)
 }
 
-func runRmImage(args []string) (exit int) {
+func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) < 1 {
 		stderr("rkt: Must provide at least one image key")
 		return 1

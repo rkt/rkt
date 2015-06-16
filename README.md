@@ -71,7 +71,7 @@ rkt uses content addressable storage (CAS) for storing an ACI on disk. In this e
 Since rkt verifies signatures by default, you will need to first [trust](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md#establishing-trust) the [CoreOS public key](https://coreos.com/dist/pubkeys/aci-pubkeys.gpg) used to sign the image, using `rkt trust`:
 
 ```
-$ sudo rkt trust --prefix coreos.com/etcd
+$ sudo rkt trust --prefix=coreos.com/etcd
 Prefix: "coreos.com/etcd"
 Key: "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg"
 GPG key fingerprint is: 8B86 DE38 890D DB72 9186  7B02 5210 BD88 8818 2190

@@ -27,7 +27,7 @@ cd rkt-v0.5.6
 This shows how to trust the CoreOS signing key using the [`rkt trust` command](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#rkt-trust). 
 
 ```
-./rkt  trust  --prefix coreos.com/etcd
+./rkt trust --prefix=coreos.com/etcd
 Prefix: "coreos.com/etcd"
 Key: "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg"
 GPG key fingerprint is: 8B86 DE38 890D DB72 9186  7B02 5210 BD88 8818 2190
