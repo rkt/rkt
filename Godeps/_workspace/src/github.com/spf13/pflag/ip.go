@@ -22,9 +22,6 @@ func (i *ipValue) Set(s string) error {
 	*i = ipValue(ip)
 	return nil
 }
-func (i *ipValue) Get() interface{} {
-	return net.IP(*i)
-}
 
 func (i *ipValue) Type() string {
 	return "ip"

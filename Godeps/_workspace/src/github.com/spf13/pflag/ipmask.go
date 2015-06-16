@@ -22,9 +22,6 @@ func (i *ipMaskValue) Set(s string) error {
 	*i = ipMaskValue(ip)
 	return nil
 }
-func (i *ipMaskValue) Get() interface{} {
-	return net.IPMask(*i)
-}
 
 func (i *ipMaskValue) Type() string {
 	return "ipMask"
