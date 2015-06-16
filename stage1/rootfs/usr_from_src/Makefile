@@ -85,10 +85,10 @@ systemd.src: Makefile patches/*
 	{ [ ! -e systemd ] || rm -Rf systemd; }
 	mkdir systemd
 	if [ "$(RKT_STAGE1_SYSTEMD_VER)" = "HEAD" ]; then \
-		git clone $(RKT_STAGE1_SYSTEMD_SRC) ; \
+		git clone $(RKT_STAGE1_SYSTEMD_SRC) systemd ; \
 		PATCHES_DIR=patches/master ; \
 	else \
-		git clone --branch $(RKT_STAGE1_SYSTEMD_VER) $(RKT_STAGE1_SYSTEMD_SRC) ; \
+		git clone --branch $(RKT_STAGE1_SYSTEMD_VER) $(RKT_STAGE1_SYSTEMD_SRC) systemd ; \
 		PATCHES_DIR=patches/$(RKT_STAGE1_SYSTEMD_VER) ; \
 	fi ; \
 	if [ -d $$PATCHES_DIR ]; then \
