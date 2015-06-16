@@ -81,6 +81,8 @@ import (
 const (
 	// Path to systemd-nspawn binary within the stage1 rootfs
 	nspawnBin = "/usr/bin/systemd-nspawn"
+	// Path to the interpreter within the stage1 rootfs
+	interpBin = "/usr/lib/ld-linux-x86-64.so.2"
 	// Path to the localtime file/symlink in host
 	localtimePath = "/etc/localtime"
 )
@@ -228,6 +230,7 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 
 	switch flavor {
 	case "coreos":
+		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), interpBin))
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
 
@@ -236,6 +239,9 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 		} else {
 			args = append(args, fmt.Sprintf("--register=false"))
 		}
+
+		// use only dynamic libraries provided in the image
+		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib"))
 
 	case "src":
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
