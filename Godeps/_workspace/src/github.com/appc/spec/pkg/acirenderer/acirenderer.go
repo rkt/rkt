@@ -1,3 +1,17 @@
+// Copyright 2015 The appc Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package acirenderer
 
 import (
@@ -19,17 +33,17 @@ import (
 type ACIRegistry interface {
 	ACIProvider
 	GetImageManifest(key string) (*schema.ImageManifest, error)
-	GetACI(name types.ACName, labels types.Labels) (string, error)
+	GetACI(name types.ACIdentifier, labels types.Labels) (string, error)
 }
 
 // An ACIProvider provides functions to get an ACI contents, to convert an
 // ACI hash to the key under which the ACI is known to the provider and to resolve an
-// ImageID to the key under which it's known to the provider.
+// image ID to the key under which it's known to the provider.
 type ACIProvider interface {
 	// Read the ACI contents stream given the key. Use ResolveKey to
-	// convert an ImageID to the relative provider's key.
+	// convert an image ID to the relative provider's key.
 	ReadStream(key string) (io.ReadCloser, error)
-	// Converts an ImageID to the, if existent, key under which the
+	// Converts an image ID to the, if existent, key under which the
 	// ACI is known to the provider
 	ResolveKey(key string) (string, error)
 	// Converts a Hash to the provider's key
@@ -75,7 +89,7 @@ func GetRenderedACIWithImageID(imageID types.Hash, ap ACIRegistry) (RenderedACI,
 // GetRenderedACI, given an image app name and optional labels, starts with the
 // best matching image available in the store, creates the dependencies list
 // and returns the RenderedACI list.
-func GetRenderedACI(name types.ACName, labels types.Labels, ap ACIRegistry) (RenderedACI, error) {
+func GetRenderedACI(name types.ACIdentifier, labels types.Labels, ap ACIRegistry) (RenderedACI, error) {
 	imgs, err := CreateDepListFromNameLabels(name, labels, ap)
 	if err != nil {
 		return nil, err
@@ -145,7 +159,14 @@ func getACIFiles(img Image, ap ACIProvider, allFiles map[string]byte, pwlm map[s
 		name := hdr.Name
 		cleanName := filepath.Clean(name)
 
-		// Ignore files outside /rootfs/ (at the moment only "manifest")
+		// Add the rootfs directory.
+		if cleanName == "rootfs" && hdr.Typeflag == tar.TypeDir {
+			ra.FileMap[cleanName] = struct{}{}
+			allFiles[cleanName] = hdr.Typeflag
+			return nil
+		}
+
+		// Ignore files outside /rootfs/ (at the moment only "manifest").
 		if !strings.HasPrefix(cleanName, "rootfs/") {
 			return nil
 		}

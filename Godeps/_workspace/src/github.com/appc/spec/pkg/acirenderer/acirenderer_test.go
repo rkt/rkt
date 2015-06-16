@@ -1,3 +1,17 @@
+// Copyright 2015 The appc Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package acirenderer
 
 import (
@@ -264,8 +278,8 @@ func TestDirFromParent(t *testing.T) {
 	k1, _ := types.NewHash(key1)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 	)
 
 	entries = []*testTarEntry{
@@ -359,8 +373,8 @@ func TestNewDir(t *testing.T) {
 	k1, _ := types.NewHash(key1)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 	)
 
 	entries = []*testTarEntry{
@@ -453,8 +467,8 @@ func TestDirOverride(t *testing.T) {
 	k1, _ := types.NewHash(key1)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 	)
 
 	entries = []*testTarEntry{
@@ -556,8 +570,8 @@ func TestFileFromParent(t *testing.T) {
 	k1, _ := types.NewHash(key1)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 	)
 
 	entries = []*testTarEntry{
@@ -644,8 +658,8 @@ func TestNewFile(t *testing.T) {
 	k1, _ := types.NewHash(key1)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 	)
 
 	entries = []*testTarEntry{
@@ -746,8 +760,8 @@ func TestFileOverride(t *testing.T) {
 	k1, _ := types.NewHash(key1)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 	)
 
 	entries = []*testTarEntry{
@@ -863,8 +877,8 @@ func TestFileOvverideDir(t *testing.T) {
 	k1, _ := types.NewHash(key1)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 	)
 
 	entries = []*testTarEntry{
@@ -1030,8 +1044,8 @@ func TestPWLOnlyParent(t *testing.T) {
 	k1, _ := types.NewHash(key1)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 	)
 
 	entries = []*testTarEntry{
@@ -1211,8 +1225,8 @@ func TestPWLOnlyImage(t *testing.T) {
 	k1, _ := types.NewHash(key1)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 	)
 
 	entries = []*testTarEntry{
@@ -1412,11 +1426,11 @@ func Test2Deps1(t *testing.T) {
 	k2, _ := types.NewHash(key2)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 		types.Dependency{
-			App:     "example.com/test02",
-			ImageID: k2},
+			ImageName: "example.com/test02",
+			ImageID:   k2},
 	)
 
 	entries = []*testTarEntry{
@@ -1625,11 +1639,11 @@ func Test2Deps2(t *testing.T) {
 	k2, _ := types.NewHash(key2)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 		types.Dependency{
-			App:     "example.com/test02",
-			ImageID: k2},
+			ImageName: "example.com/test02",
+			ImageID:   k2},
 	)
 
 	entries = []*testTarEntry{
@@ -1845,8 +1859,8 @@ func Test3Deps(t *testing.T) {
 	k2, _ := types.NewHash(key2)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test03",
-			ImageID: k2},
+			ImageName: "example.com/test03",
+			ImageID:   k2},
 	)
 
 	entries = []*testTarEntry{
@@ -1905,11 +1919,11 @@ func Test3Deps(t *testing.T) {
 	k3, _ := types.NewHash(key3)
 	imj, err = addDependencies(imj,
 		types.Dependency{
-			App:     "example.com/test01",
-			ImageID: k1},
+			ImageName: "example.com/test01",
+			ImageID:   k1},
 		types.Dependency{
-			App:     "example.com/test02",
-			ImageID: k3},
+			ImageName: "example.com/test02",
+			ImageID:   k3},
 	)
 
 	entries = []*testTarEntry{
@@ -1978,7 +1992,7 @@ func Test3Deps(t *testing.T) {
 
 // Given an image app name and optional labels, get the best matching image
 // available in the store, build its dependency list and render it inside dir
-func RenderACI(name types.ACName, labels types.Labels, ap ACIRegistry) (map[string]*fileInfo, error) {
+func RenderACI(name types.ACIdentifier, labels types.Labels, ap ACIRegistry) (map[string]*fileInfo, error) {
 	renderedACI, err := GetRenderedACI(name, labels, ap)
 	if err != nil {
 		return nil, err
@@ -2039,7 +2053,7 @@ func renderImage(renderedACI RenderedACI, ap ACIProvider) (map[string]*fileInfo,
 	return files, nil
 }
 
-func checkRenderACI(app types.ACName, expectedFiles []*fileInfo, ds *TestStore) error {
+func checkRenderACI(app types.ACIdentifier, expectedFiles []*fileInfo, ds *TestStore) error {
 	files, err := RenderACI(app, nil, ds)
 	if err != nil {
 		return err
@@ -2112,4 +2126,92 @@ func FISliceToMap(slice []*fileInfo) map[string]*fileInfo {
 		fim[fi.path] = fi
 	}
 	return fim
+}
+
+func TestEmptyRootFsDir(t *testing.T) {
+	dir, err := ioutil.TempDir("", tstprefix)
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	ds := NewTestStore()
+
+	tests := []struct {
+		name          types.ACIdentifier
+		imj           string
+		entries       []*testTarEntry
+		expectedFiles []*fileInfo
+	}{
+		// Image with an empty rootfs dir.
+		{
+			"example.com/test_empty_rootfs",
+			`
+		            {
+		                "acKind": "ImageManifest",
+		                "acVersion": "0.6.1",
+		                "name": "example.com/test_empty_rootfs"
+		            }
+                        `,
+			[]*testTarEntry{
+				// Empty rootfs directory.
+				{
+					header: &tar.Header{
+						Name:     "rootfs",
+						Typeflag: tar.TypeDir,
+						Mode:     0700,
+					},
+				},
+			},
+			[]*fileInfo{
+				{path: "manifest", typeflag: tar.TypeReg},
+				{path: "rootfs", typeflag: tar.TypeDir, mode: 0700},
+			},
+		},
+
+		// Image with an empty rootfs dir and pathWhitelist.
+		{
+			"example.com/test_empty_rootfs_pwl",
+			`
+		            {
+		                "acKind": "ImageManifest",
+		                "acVersion": "0.6.1",
+		                "name": "example.com/test_empty_rootfs_pwl",
+                                "pathWhitelist": ["foo"]
+		            }
+                        `,
+			[]*testTarEntry{
+				// Empty rootfs directory.
+				{
+					header: &tar.Header{
+						Name:     "rootfs",
+						Typeflag: tar.TypeDir,
+						Mode:     0700,
+					},
+				},
+			},
+			[]*fileInfo{
+				{path: "manifest", typeflag: tar.TypeReg},
+				{path: "rootfs", typeflag: tar.TypeDir, mode: 0700},
+			},
+		},
+	}
+
+	for i, tt := range tests {
+		tt.entries = append(tt.entries, &testTarEntry{
+			contents: tt.imj,
+			header: &tar.Header{
+				Name: "manifest",
+				Size: int64(len(tt.imj)),
+			},
+		})
+
+		if _, err := newTestACI(tt.entries, dir, ds); err != nil {
+			t.Fatalf("%d: unexpected error: %v", i, err)
+		}
+
+		if err := checkRenderACI(tt.name, tt.expectedFiles, ds); err != nil {
+			t.Fatalf("%d: unexpected error: %v", i, err)
+		}
+	}
 }
