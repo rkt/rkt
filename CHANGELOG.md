@@ -1,3 +1,26 @@
+### v0.6.1
+
+The highlight of this release is the support of per-app memory and CPU
+isolators. This means that, in addition to restricting a pod’s CPU and memory
+usage, individual apps inside a pod can also be restricted now.
+
+rkt 0.6.1 also includes a new CLI/subcommand framework, more functional testing
+and journalctl integration by default.
+
+Full changelog:
+
+* Updated to v0.6.1 of the appc spec
+* support per-app memory and CPU isolators
+* allow network selection to the --private-net flag which can be useful for
+  grouping certain pods together while separating others
+* move to the Cobra CLI/subcommand framework
+* per-app logging via journalctl now supported by default
+* stage1 runs an unpatched systemd v220
+* to help packagers, rkt can generate stage1 from the binaries on the host at
+  runtime
+* more functional tests
+* bugfixes
+
 ### v0.5.6
 
 rkt 0.5.6 includes better integration with systemd on the host, some minor bug
