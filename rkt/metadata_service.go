@@ -43,7 +43,7 @@ import (
 
 var (
 	cmdMetadataService = &cobra.Command{
-		Use:   "metadata-service [--src-addr=CIDR] [--listen-port=PORT] [--no-idle]",
+		Use:   "metadata-service [--listen-port=PORT]",
 		Short: "Run metadata service",
 		Run:   runWrapper(runMetadataService),
 	}
