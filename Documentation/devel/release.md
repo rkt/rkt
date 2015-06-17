@@ -12,6 +12,7 @@ Let's get started:
 - Update the [roadmap](https://github.com/coreos/rkt/blob/master/ROADMAP.md) to remove the release you're performing, if necessary
 - Branch from the latest master, make sure your git status is clean
 - Ensure the build is clean! `./build` should work, `./test` should pass, functional + integration tests on CI should be green
+- Update the [release notes](https://github.com/coreos/rkt/blob/master/CHANGELOG.md). Try to capture most of the salient changes since the last release, but don't go into unnecessary detail (better to link/reference the documentation wherever possible).
 
 The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/blob/master/version/version.go#L17), so the first thing to do is bump it:
 - Run `scripts/bump-release v0.1.2`. This should generate two commits: a bump to the actual release (e.g. v0.1.2), and then a bump to the release+git (e.g. v0.1.2+git). The actual release version should only exist in a single commit!
@@ -23,15 +24,15 @@ The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/b
 After merging and going back to master branch, we check out the release version and tag it:
 - `git checkout HEAD^` should work (or `git checkout HEAD^2~`? git how does it work); sanity check version/version.go after doing this
 - Build the release with `./build` with the default build options (don't define any environment variables `RKT_STAGE1_*`, ); we'll use this in a minute. Sanity check `bin/rkt version`
-- Add a signed tag: `git tag -s v0.1.2`. **With release notes**. Try to capture most of the salient changes since the last release, but don't go into unnecessary detail (better to link/reference the documentation wherever possible). Use the previous tags as examples to follow: try `git tag -n100`
+- Add a signed tag: `git tag -s v0.1.2`. (We previously used tags for release notes, but now we store them in CHANGELOG.md, so a short tag with the release name is fine).
 - Push the tag to GitHub: `git push --tags`
 
 Now we switch to the GitHub web UI to conduct the release:
 - https://github.com/coreos/rkt/releases/new
 - Tag "v0.1.2", release title "v0.1.2"
 - For now, check "This is a pre-release"
-- Copy-paste the release notes from the tag (easiest way to find them again is `git tag -n100`. There's probably a better way to do this). 
-- You can also add a little more detail and polish to the release notes here if you wish, as it is more targeted towards users (vs the tag release notes being for developers); use your best judgement and see previous tags/releases on GH for examples.
+- Copy-paste the release notes you added earlier in [CHANGELOG.md](https://github.com/coreos/rkt/blob/master/CHANGELOG.md)
+- You can also add a little more detail and polish to the release notes here if you wish, as it is more targeted towards users (vs the changelog being more for developers); use your best judgement and see previous releases on GH for examples.
 - Attach the release. This is a simple tarball:
 
 ```
