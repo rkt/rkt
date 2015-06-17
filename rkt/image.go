@@ -19,7 +19,7 @@ import "github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 var (
 	cmdImage = &cobra.Command{
 		Use:   "image [command]",
-		Short: "Operate on an image in the local store",
+		Short: "Operate on image(s) in the local store",
 	}
 )
 
