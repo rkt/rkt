@@ -35,9 +35,9 @@ Check out the [roadmap](ROADMAP.md) for more details on the future of rkt.
 To download the `rkt` binary, simply grab the latest release directly from GitHub:
 
 ```
-wget https://github.com/coreos/rkt/releases/download/v0.5.6/rkt-v0.5.6.tar.gz
-tar xzvf rkt-v0.5.6.tar.gz
-cd rkt-v0.5.6
+wget https://github.com/coreos/rkt/releases/download/v0.6.1/rkt-v0.6.1.tar.gz
+tar xzvf rkt-v0.6.1.tar.gz
+cd rkt-v0.6.1
 ./rkt help
 ```
 
