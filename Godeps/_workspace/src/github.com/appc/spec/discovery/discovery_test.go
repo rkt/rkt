@@ -1,3 +1,17 @@
+// Copyright 2015 The appc Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package discovery
 
 import (
@@ -67,7 +81,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			true,
 			App{
 				Name: "example.com/myapp",
-				Labels: map[types.ACName]string{
+				Labels: map[types.ACIdentifier]string{
 					"version": "1.0.0",
 					"os":      "linux",
 					"arch":    "amd64",
@@ -90,7 +104,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			true,
 			App{
 				Name: "example.com/myapp/foobar",
-				Labels: map[types.ACName]string{
+				Labels: map[types.ACIdentifier]string{
 					"version": "1.0.0",
 					"os":      "linux",
 					"arch":    "amd64",
@@ -113,7 +127,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			false,
 			App{
 				Name: "example.com/myapp/foobar/bazzer",
-				Labels: map[types.ACName]string{
+				Labels: map[types.ACIdentifier]string{
 					"version": "1.0.0",
 					"os":      "linux",
 					"arch":    "amd64",
@@ -130,7 +144,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			true,
 			App{
 				Name: "example.com/myapp",
-				Labels: map[types.ACName]string{
+				Labels: map[types.ACIdentifier]string{
 					"version": "1.0.0",
 				},
 			},
@@ -149,7 +163,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			false,
 			App{
 				Name:   "example.com/myapp",
-				Labels: map[types.ACName]string{},
+				Labels: map[types.ACIdentifier]string{},
 			},
 			[]ACIEndpoint{
 				ACIEndpoint{
@@ -165,7 +179,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 			false,
 			App{
 				Name: "example.com/myapp",
-				Labels: map[types.ACName]string{
+				Labels: map[types.ACIdentifier]string{
 					"name":    "labelcalledname",
 					"version": "1.0.0",
 				},
@@ -181,7 +195,7 @@ func TestDiscoverEndpoints(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		httpGet = tt.get
+		httpGet = &mockHttpGetter{getter: tt.get}
 		de, _, err := DiscoverEndpoints(tt.app, true)
 		if err != nil && !tt.expectDiscoverySuccess {
 			continue

@@ -1,3 +1,17 @@
+// Copyright 2015 The appc Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package discovery
 
 import (
@@ -9,15 +23,15 @@ import (
 )
 
 type App struct {
-	Name   types.ACName
-	Labels map[types.ACName]string
+	Name   types.ACIdentifier
+	Labels map[types.ACIdentifier]string
 }
 
-func NewApp(name string, labels map[types.ACName]string) (*App, error) {
+func NewApp(name string, labels map[types.ACIdentifier]string) (*App, error) {
 	if labels == nil {
-		labels = make(map[types.ACName]string, 0)
+		labels = make(map[types.ACIdentifier]string, 0)
 	}
-	acn, err := types.NewACName(name)
+	acn, err := types.NewACIdentifier(name)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +49,7 @@ func NewApp(name string, labels map[types.ACName]string) (*App, error) {
 func NewAppFromString(app string) (*App, error) {
 	var (
 		name   string
-		labels map[types.ACName]string
+		labels map[types.ACIdentifier]string
 	)
 
 	app = strings.Replace(app, ":", ",version=", -1)
@@ -44,7 +58,7 @@ func NewAppFromString(app string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	labels = make(map[types.ACName]string, 0)
+	labels = make(map[types.ACIdentifier]string, 0)
 	for key, val := range v {
 		if len(val) > 1 {
 			return nil, fmt.Errorf("label %s with multiple values %q", key, val)
@@ -53,7 +67,7 @@ func NewAppFromString(app string) (*App, error) {
 			name = val[0]
 			continue
 		}
-		labelName, err := types.NewACName(key)
+		labelName, err := types.NewACIdentifier(key)
 		if err != nil {
 			return nil, err
 		}
@@ -64,6 +78,17 @@ func NewAppFromString(app string) (*App, error) {
 		return nil, err
 	}
 	return a, nil
+}
+
+func (a *App) Copy() *App {
+	ac := &App{
+		Name:   a.Name,
+		Labels: make(map[types.ACIdentifier]string, 0),
+	}
+	for k, v := range a.Labels {
+		ac.Labels[k] = v
+	}
+	return ac
 }
 
 // String returns the URL-like image name
