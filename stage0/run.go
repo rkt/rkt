@@ -201,7 +201,7 @@ func validatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		img := ra.Image
 		am, err := prepareAppImage(cfg, img.ID, dir, cfg.UseOverlay)
 		if err != nil {
-			return nil, fmt.Errorf("error setting up image %s: %v", img, err)
+			return nil, fmt.Errorf("error setting up image %s: %v", img.ID, err)
 		}
 		if _, ok := appNames[ra.Name]; ok {
 			return nil, fmt.Errorf("error: multiple apps with name %s", ra.Name)
