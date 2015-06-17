@@ -17,43 +17,44 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 )
 
 var (
-	cmdEnter = &Command{
-		Name:    cmdEnterName,
-		Summary: "Enter the namespaces of an app within a rkt pod",
-		Usage:   "[--imageid IMAGEID] UUID [CMD [ARGS ...]]",
-		Run:     runEnter,
-		Flags:   &enterFlags,
+	cmdEnter = &cobra.Command{
+		Use:   "enter [--imageid=IMAGEID] UUID [CMD [ARGS ...]]",
+		Short: "Enter the namespaces of an app within a rkt pod",
+		Run:   runWrapper(runEnter),
 	}
-	enterFlags     flag.FlagSet
-	flagAppImageID types.Hash
+	flagAppImageID string
 )
 
 const (
-	defaultCmd   = "/bin/bash"
-	cmdEnterName = "enter"
+	defaultCmd = "/bin/bash"
 )
 
 func init() {
-	commands = append(commands, cmdEnter)
-	enterFlags.Var(&flagAppImageID, "imageid", "imageid of the app to enter within the specified pod")
+	cmdRkt.AddCommand(cmdEnter)
+	cmdEnter.Flags().StringVar(&flagAppImageID, "imageid", "", "imageid of the app to enter within the specified pod")
+
+	// Disable interspersed flags to stop parsing after the first non flag
+	// argument. This is need to permit to correctly handle
+	// multiple "IMAGE -- imageargs ---"  options
+	cmdEnter.Flags().SetInterspersed(false)
 }
 
-func runEnter(args []string) (exit int) {
+func runEnter(cmd *cobra.Command, args []string) (exit int) {
 
 	if len(args) < 1 {
-		printCommandUsageByName(cmdEnterName)
+		cmd.Usage()
 		return 1
 	}
 
@@ -121,8 +122,8 @@ func runEnter(args []string) (exit int) {
 // If the PM contains a single image, that image's id is returned
 // If the PM has multiple images, the ids and names are printed and an error is returned
 func getAppImageID(p *pod) (*types.Hash, error) {
-	if !flagAppImageID.Empty() {
-		return &flagAppImageID, nil
+	if flagAppImageID != "" {
+		return types.NewHash(flagAppImageID)
 	}
 
 	// figure out the image id, or show a list if multiple are present

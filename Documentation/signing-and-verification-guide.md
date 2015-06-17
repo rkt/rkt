@@ -229,7 +229,7 @@ As an example, let's look at how we can trust a key used to sign images of the p
 The easiest way to trust a key is to use the `rkt trust` subcommand. In this case, we directly pass it the URI containing the public key we wish to trust:
 
 ```
-$ rkt trust --prefix example.com/hello https://example.com/pubkeys.gpg
+$ rkt trust --prefix=example.com/hello https://example.com/pubkeys.gpg
 Prefix: "example.com/hello"
 Key: "https://example.com/aci-pubkeys.gpg"
 GPG key fingerprint is: B346 E31D E7E3 C6F9 D1D4  603F 4DFB 61BF 26EF 7A14
@@ -310,10 +310,10 @@ rkt: example.com/hello:0.0.1 verified signed by:
 ^]^]Container stage1 terminated by signal KILL.
 ```
 
-Use the `-insecure-skip-verify` flag to disable all verification for a single run:
+Use the `--insecure-skip-verify` flag to disable all verification for a single run:
 
 ```
-$ sudo rkt -insecure-skip-verify run example.com/hello:0.0.1
+$ sudo rkt --insecure-skip-verify run example.com/hello:0.0.1
 rkt: starting to discover app img example.com/hello:0.0.1
 rkt: starting to fetch img from http://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
 rkt: warning: TLS verification and signature verification has been disabled
@@ -322,7 +322,7 @@ Downloading aci: [=                                            ] 32.8 KB/1.26 MB
 ^]^]Container stage1 terminated by signal KILL.
 ```
 
-Notice when the `-insecure-skip-verify` flag is used, rkt will print the following warning:
+Notice when the `--insecure-skip-verify` flag is used, rkt will print the following warning:
 
 ```
 rkt: warning: TLS verification and signature verification has been disabled
@@ -343,10 +343,10 @@ rkt: example.com/hello:0.0.1 verified signed by:
 sha512-b3f138e10482d4b5f334294d69ae5c40
 ```
 
-As before, use the `-insecure-skip-verify` flag to disable tls and image verification:
+As before, use the `--insecure-skip-verify` flag to disable tls and image verification:
 
 ```
-$ sudo rkt -insecure-skip-verify fetch example.com/hello:0.0.1
+$ sudo rkt --insecure-skip-verify fetch example.com/hello:0.0.1
 rkt: starting to discover app img example.com/hello:0.0.1
 rkt: starting to fetch img from http://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
 rkt: warning: TLS verification and signature verification has been disabled

@@ -17,11 +17,11 @@
 package main
 
 import (
-	"flag"
 	"os"
 	"syscall"
 	"time"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 )
@@ -32,25 +32,22 @@ const (
 )
 
 var (
-	cmdGC = &Command{
-		Name:    "gc",
-		Summary: "Garbage-collect rkt pods no longer in use",
-		Usage:   "[--grace-period=duration] [--expire-prepared=duration]",
-		Run:     runGC,
-		Flags:   &gcFlags,
+	cmdGC = &cobra.Command{
+		Use:   "gc [--grace-period=duration] [--expire-prepared=duration]",
+		Short: "Garbage-collect rkt pods no longer in use",
+		Run:   runWrapper(runGC),
 	}
-	gcFlags                flag.FlagSet
 	flagGracePeriod        time.Duration
 	flagPreparedExpiration time.Duration
 )
 
 func init() {
-	commands = append(commands, cmdGC)
-	gcFlags.DurationVar(&flagGracePeriod, "grace-period", defaultGracePeriod, "duration to wait before discarding inactive pods from garbage")
-	gcFlags.DurationVar(&flagPreparedExpiration, "expire-prepared", defaultPreparedExpiration, "duration to wait before expiring prepared pods")
+	cmdRkt.AddCommand(cmdGC)
+	cmdGC.Flags().DurationVar(&flagGracePeriod, "grace-period", defaultGracePeriod, "duration to wait before discarding inactive pods from garbage")
+	cmdGC.Flags().DurationVar(&flagPreparedExpiration, "expire-prepared", defaultPreparedExpiration, "duration to wait before expiring prepared pods")
 }
 
-func runGC(args []string) (exit int) {
+func runGC(cmd *cobra.Command, args []string) (exit int) {
 	if err := renameExited(); err != nil {
 		stderr("Failed to rename exited pods: %v", err)
 		return 1

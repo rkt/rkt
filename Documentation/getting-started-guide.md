@@ -99,7 +99,7 @@ Edit: manifest.json
 To validate the manifest, we can use `actool`, which is currently provided in [releases in the App Container repository](https://github.com/appc/spec/releases).
 
 ```
-$ actool -debug validate manifest.json
+$ actool --debug validate manifest.json
 manifest.json: valid ImageManifest
 ```
 
@@ -127,7 +127,7 @@ $ actool build hello-layout/ hello-0.0.1-linux-amd64.aci
 ### Validate the application image
 
 ```
-$ actool -debug validate hello-0.0.1-linux-amd64.aci
+$ actool --debug validate hello-0.0.1-linux-amd64.aci
 hello-0.0.1-linux-amd64.aci: valid app container image
 ```
 
@@ -136,10 +136,10 @@ hello-0.0.1-linux-amd64.aci: valid app container image
 ### Launch a local application image
 
 ```
-$ sudo rkt -insecure-skip-verify run hello-0.0.1-linux-amd64.aci
+$ sudo rkt --insecure-skip-verify run hello-0.0.1-linux-amd64.aci
 ```
 
-Note that `-insecure-skip-verify` is required because, by default, rkt expects our signature to be signed. See the [Signing and Verification Guide](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md) for more details.
+Note that `--insecure-skip-verify` is required because, by default, rkt expects our signature to be signed. See the [Signing and Verification Guide](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md) for more details.
 
 At this point our hello app is running on port 5000 and ready to handle HTTP
 requests.

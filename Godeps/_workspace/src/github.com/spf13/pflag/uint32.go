@@ -18,9 +18,6 @@ func (i *uint32Value) Set(s string) error {
 	*i = uint32Value(v)
 	return err
 }
-func (i *uint32Value) Get() interface{} {
-	return uint32(*i)
-}
 
 func (i *uint32Value) Type() string {
 	return "uint32"

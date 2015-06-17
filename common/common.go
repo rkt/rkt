@@ -159,6 +159,10 @@ func (l *PrivateNetList) Set(value string) error {
 	return nil
 }
 
+func (l *PrivateNetList) Type() string {
+	return "privateNetList"
+}
+
 func (l *PrivateNetList) Strings() []string {
 	var list []string
 	for k, _ := range l.mapping {

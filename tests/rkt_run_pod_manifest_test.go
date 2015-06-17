@@ -329,7 +329,7 @@ func TestPodManifest(t *testing.T) {
 		defer os.Remove(manifestFile)
 
 		// 1. Test 'rkt run'.
-		runCmd := fmt.Sprintf("%s run --pod-manifest %s", ctx.cmd(), manifestFile)
+		runCmd := fmt.Sprintf("%s run --pod-manifest=%s", ctx.cmd(), manifestFile)
 		t.Logf("Running 'run' test #%v: %v", i, runCmd)
 		child, err := gexpect.Spawn(runCmd)
 		if err != nil {
@@ -351,7 +351,8 @@ func TestPodManifest(t *testing.T) {
 		// 2. Test 'rkt prepare' + 'rkt run-prepared'.
 		cmds := strings.Fields(ctx.cmd())
 		prepareCmd := exec.Command(cmds[0], cmds[1:]...)
-		prepareCmd.Args = append(prepareCmd.Args, "--insecure-skip-verify", "prepare", "--pod-manifest", manifestFile)
+		prepareArg := fmt.Sprintf("--pod-manifest=%s", manifestFile)
+		prepareCmd.Args = append(prepareCmd.Args, "--insecure-skip-verify", "prepare", prepareArg)
 		output, err := prepareCmd.Output()
 		if err != nil {
 			t.Fatalf("Cannot read the output: %v", err)

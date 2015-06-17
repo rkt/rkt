@@ -17,10 +17,10 @@
 package main
 
 import (
-	"flag"
 	"io/ioutil"
 	"log"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 )
@@ -30,26 +30,24 @@ const (
 )
 
 var (
-	cmdRunPrepared = &Command{
-		Name:        cmdRunPreparedName,
-		Summary:     "Run a prepared application pod in rkt",
-		Usage:       "UUID",
-		Description: "UUID must have been acquired via `rkt prepare`",
-		Run:         runRunPrepared,
-		Flags:       &runPreparedFlags,
+	cmdRunPrepared = &cobra.Command{
+		Use:   "run-prepared UUID",
+		Short: "Run a prepared application pod in rkt",
+		Long:  "UUID must have been acquired via `rkt prepare`",
+		Run:   runWrapper(runRunPrepared),
 	}
-	runPreparedFlags flag.FlagSet
 )
 
 func init() {
-	commands = append(commands, cmdRunPrepared)
-	runPreparedFlags.Var(&flagPrivateNet, "private-net", "give pod a private network")
-	runPreparedFlags.BoolVar(&flagInteractive, "interactive", false, "the pod is interactive")
+	cmdRkt.AddCommand(cmdRunPrepared)
+
+	cmdRunPrepared.Flags().Var(&flagPrivateNet, "private-net", "give pod a private network")
+	cmdRunPrepared.Flags().BoolVar(&flagInteractive, "interactive", false, "the pod is interactive")
 }
 
-func runRunPrepared(args []string) (exit int) {
+func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 1 {
-		printCommandUsageByName(cmdRunPreparedName)
+		cmd.Usage()
 		return 1
 	}
 

@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -38,16 +37,15 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/gorilla/mux"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
 )
 
 var (
-	cmdMetadataService = &Command{
-		Name:    "metadata-service",
-		Summary: "Run metadata service",
-		Usage:   "[--src-addr CIDR] [--listen-port PORT] [--no-idle]",
-		Run:     runMetadataService,
-		Flags:   &metadataServiceFlags,
+	cmdMetadataService = &cobra.Command{
+		Use:   "metadata-service [--src-addr=CIDR] [--listen-port=PORT] [--no-idle]",
+		Short: "Run metadata service",
+		Run:   runWrapper(runMetadataService),
 	}
 )
 
@@ -57,8 +55,7 @@ var (
 	errPodNotFound = errors.New("pod not found")
 	errAppNotFound = errors.New("app not found")
 
-	flagListenPort       int
-	metadataServiceFlags flag.FlagSet
+	flagListenPort int
 
 	exitCh = make(chan os.Signal, 1)
 )
@@ -68,8 +65,8 @@ const (
 )
 
 func init() {
-	commands = append(commands, cmdMetadataService)
-	metadataServiceFlags.IntVar(&flagListenPort, "listen-port", common.MetadataServicePort, "listen port")
+	cmdRkt.AddCommand(cmdMetadataService)
+	cmdMetadataService.Flags().IntVar(&flagListenPort, "listen-port", common.MetadataServicePort, "listen port")
 }
 
 type mdsPod struct {
@@ -631,7 +628,7 @@ func runPublicServer(l net.Listener) {
 	close(exitCh)
 }
 
-func runMetadataService(args []string) (exit int) {
+func runMetadataService(cmd *cobra.Command, args []string) (exit int) {
 	log.Print("Metadata service starting...")
 
 	unixl, err := unixListener()
