@@ -39,7 +39,7 @@ Make sure metadata service is currently running.
 For more information on running metadata service,
 see https://github.com/coreos/rkt/blob/master/Documentation/metadata-service.md`)
 
-func registerPod(p *Pod, ip net.IP) (rerr error) {
+func registerPod(p *Pod, token string) (rerr error) {
 	uuid := p.UUID.String()
 
 	cmf, err := os.Open(common.PodManifestPath(p.Root))
@@ -48,7 +48,7 @@ func registerPod(p *Pod, ip net.IP) (rerr error) {
 		return
 	}
 
-	pth := fmt.Sprintf("/pods/%v?ip=%v", uuid, ip.To4().String())
+	pth := fmt.Sprintf("/pods/%v?token=%v", uuid, token)
 	err = httpRequest("PUT", pth, cmf)
 	cmf.Close()
 	if err != nil {

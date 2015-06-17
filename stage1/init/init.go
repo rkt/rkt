@@ -53,6 +53,7 @@ import "C"
 // this implements /init of stage1/nspawn+systemd
 
 import (
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"io"
@@ -461,12 +462,20 @@ func stage1() int {
 			fmt.Fprintf(os.Stderr, "Failed to get default Host IP: %v\n", err)
 			return 6
 		}
-		p.MetadataServiceURL = common.MetadataServicePublicURL(hostIP)
 
-		if err = registerPod(p, n.GetDefaultIP()); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to register pod: %v\n", err)
-			return 6
+		mdsToken, err := generateMDSToken()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to generate MDS token: %v", err)
+			return 8
 		}
+
+		p.MetadataServiceURL = common.MetadataServicePublicURL(hostIP, mdsToken)
+
+		if err = registerPod(p, mdsToken); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to register pod: %v\n", err)
+			return 8
+		}
+
 		defer unregisterPod(p)
 	}
 
@@ -709,6 +718,15 @@ func systemdSupportsJournalLinking(version string) bool {
 	default:
 		return false
 	}
+}
+
+func generateMDSToken() (string, error) {
+	bytes := make([]byte, 16)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", bytes), nil
 }
 
 func main() {
