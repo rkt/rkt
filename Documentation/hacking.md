@@ -20,7 +20,7 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
   * squashfs-tools
   * realpath
   * gpg
-* Go 1.3+
+* Go 1.4+
 
 Once the requirements have been met you can build rkt by running the following commands:
 
@@ -51,7 +51,7 @@ Alternatively, you can build rkt in a Docker container with the following comman
 Replace $SRC with the absolute path to your rkt source code:
 
 ```
-$ sudo docker run -v $SRC:/opt/rkt -i -t golang:1.3 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath && cd /opt/rkt && go get github.com/appc/spec/... && ./build"
+$ sudo docker run -v $SRC:/opt/rkt -i -t golang:1.4 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath && cd /opt/rkt && go get github.com/appc/spec/... && ./build"
 ```
 
 ### Building systemd in stage1 from the sources
