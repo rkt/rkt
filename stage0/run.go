@@ -474,7 +474,7 @@ func writeManifest(cfg CommonConfig, img types.Hash, dest string) error {
 
 	log.Printf("Writing image manifest")
 	if err := ioutil.WriteFile(filepath.Join(dest, "manifest"), mb, 0700); err != nil {
-		return fmt.Errorf("error writing pod manifest: %v", err)
+		return fmt.Errorf("error writing image manifest: %v", err)
 	}
 
 	return nil
@@ -485,19 +485,8 @@ func writeManifest(cfg CommonConfig, img types.Hash, dest string) error {
 // It writes the manifest in the specified directory and mounts an overlay
 // filesystem from the cached tree of the image as rootfs.
 func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string) error {
-	manifest, err := cfg.Store.GetImageManifest(img.String())
-	if err != nil {
+	if err := writeManifest(cfg.CommonConfig, img, dest); err != nil {
 		return err
-	}
-
-	mb, err := json.Marshal(manifest)
-	if err != nil {
-		return fmt.Errorf("error marshalling image manifest: %v", err)
-	}
-
-	log.Printf("Writing image manifest")
-	if err := ioutil.WriteFile(filepath.Join(dest, "manifest"), mb, 0700); err != nil {
-		return fmt.Errorf("error writing pod manifest: %v", err)
 	}
 
 	destRootfs := path.Join(dest, "rootfs")
