@@ -151,8 +151,8 @@ func (isa *ImagesSortAsc) Type() string {
 }
 
 var (
-	cmdImages = &cobra.Command{
-		Use:   "images",
+	cmdImageList = &cobra.Command{
+		Use:   "list",
 		Short: "List images in the local store",
 		Run:   runWrapper(runImages),
 	}
@@ -167,11 +167,11 @@ func init() {
 	flagImagesSortFields = []string{importTimeField}
 	flagImagesSortAsc = true
 
-	cmdRkt.AddCommand(cmdImages)
-	cmdImages.Flags().Var(&flagImagesFields, "fields", `comma separated list of fields to display. Accepted values: "key", "appname", "importtime", "latest"`)
-	cmdImages.Flags().Var(&flagImagesSortFields, "sort", `sort the output according to the provided comma separated list of fields. Accepted values: "appname", "importtime"`)
-	cmdImages.Flags().Var(&flagImagesSortAsc, "order", `choose the sorting order if at least one sort field is provided (--sort). Accepted values: "asc", "desc"`)
-	cmdImages.Flags().BoolVar(&flagNoLegend, "no-legend", false, "suppress a legend with the list")
+	cmdImage.AddCommand(cmdImageList)
+	cmdImageList.Flags().Var(&flagImagesFields, "fields", `comma separated list of fields to display. Accepted values: "key", "appname", "importtime", "latest"`)
+	cmdImageList.Flags().Var(&flagImagesSortFields, "sort", `sort the output according to the provided comma separated list of fields. Accepted values: "appname", "importtime"`)
+	cmdImageList.Flags().Var(&flagImagesSortAsc, "order", `choose the sorting order if at least one sort field is provided (--sort). Accepted values: "asc", "desc"`)
+	cmdImageList.Flags().BoolVar(&flagNoLegend, "no-legend", false, "suppress a legend with the list")
 }
 
 func runImages(cmd *cobra.Command, args []string) (exit int) {
