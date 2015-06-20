@@ -72,6 +72,7 @@ type PrepareConfig struct {
 	Apps               *apps.Apps          // apps to prepare
 	InheritEnv         bool                // inherit parent environment into apps
 	ExplicitEnv        []string            // always set these environment variables for all the apps
+	EnvFromFile        []string            // environment variables loaded from files, set for all the apps
 	Ports              []types.ExposedPort // list of ports that rkt will expose on the host
 	UseOverlay         bool                // prepare pod with overlay fs
 	SkipTreeStoreCheck bool                // skip checking the treestore before rendering
@@ -125,20 +126,14 @@ func debug(format string, i ...interface{}) {
 	}
 }
 
-// MergeEnvs amends appEnv setting variables in setEnv before setting anything new from os.Environ if inheritEnv = true
-// setEnv is expected to be in the os.Environ() key=value format
-func MergeEnvs(appEnv *types.Environment, inheritEnv bool, setEnv []string) {
-	for _, ev := range setEnv {
+// mergeEnvs merges environment variables from env into the current appEnv
+// if override is set to true, then variables with the same name will be set to the value in env
+// env is expected to be in the os.Environ() key=value format
+func mergeEnvs(appEnv *types.Environment, env []string, override bool) {
+	for _, ev := range env {
 		pair := strings.SplitN(ev, "=", 2)
-		appEnv.Set(pair[0], pair[1])
-	}
-
-	if inheritEnv {
-		for _, ev := range os.Environ() {
-			pair := strings.SplitN(ev, "=", 2)
-			if _, exists := appEnv.Get(pair[0]); !exists {
-				appEnv.Set(pair[0], pair[1])
-			}
+		if _, exists := appEnv.Get(pair[0]); override || !exists {
+			appEnv.Set(pair[0], pair[1])
 		}
 	}
 }
@@ -280,9 +275,14 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 			ra.App.Group = group
 		}
 
-		if cfg.InheritEnv || len(cfg.ExplicitEnv) > 0 {
-			MergeEnvs(&ra.App.Environment, cfg.InheritEnv, cfg.ExplicitEnv)
+		// loading the environment from the lowest priority to highest
+		if cfg.InheritEnv {
+			// Inherit environment does not override app image environment
+			mergeEnvs(&ra.App.Environment, os.Environ(), false)
 		}
+
+		mergeEnvs(&ra.App.Environment, cfg.EnvFromFile, true)
+		mergeEnvs(&ra.App.Environment, cfg.ExplicitEnv, true)
 		pm.Apps = append(pm.Apps, ra)
 		return nil
 	}); err != nil {

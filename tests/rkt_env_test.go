@@ -78,6 +78,18 @@ var envTests = []struct {
 		`/bin/sh -c "export VAR_OTHER=host ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --interactive --inherit-env=true --set-env=VAR_OTHER=setenv ^SLEEP^"`,
 		`/bin/sh -c "export VAR_OTHER=host ; ^RKT_BIN^ --debug enter $(^RKT_BIN^ list --full|grep running|awk '{print $1}') /inspect --print-env=VAR_OTHER"`,
 	},
+	{
+		`/bin/sh -c "^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --set-env=VAR_OTHER=setenv --set-env-file=env_file_test.conf ^PRINT_VAR_OTHER^"`,
+		"VAR_OTHER=setenv",
+		`/bin/sh -c "^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --interactive --set-env=VAR_OTHER=setenv --set-env-file=env_file_test.conf ^SLEEP^"`,
+		`/bin/sh -c "export VAR_OTHER=host ; ^RKT_BIN^ --debug enter $(^RKT_BIN^ list --full|grep running|awk '{print $1}') /inspect --print-env=VAR_OTHER"`,
+	},
+	{
+		`/bin/sh -c "^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --set-env-file=env_file_test.conf ^PRINT_VAR_OTHER^"`,
+		"VAR_OTHER=file",
+		`/bin/sh -c "^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --interactive --set-env-file=env_file_test.conf ^SLEEP^"`,
+		`/bin/sh -c "^RKT_BIN^ --debug enter $(^RKT_BIN^ list --full|grep running|awk '{print $1}') /inspect --print-env=VAR_OTHER"`,
+	},
 }
 
 func TestEnv(t *testing.T) {

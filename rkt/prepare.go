@@ -60,6 +60,7 @@ func init() {
 	cmdPrepare.Flags().BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	cmdPrepare.Flags().BoolVar(&flagPrivateUsers, "private-users", false, "run within user namespaces.")
 	cmdPrepare.Flags().Var(&flagExplicitEnv, "set-env", "environment variable to set for apps in the form name=value")
+	cmdPrepare.Flags().Var(&flagEnvFromFile, "set-env-file", "the path to an environment variables file")
 	cmdPrepare.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
 	cmdPrepare.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
 	cmdPrepare.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--quiet' and '--no-overlay' will have effect")
@@ -107,7 +108,8 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || flagStoreOnly || flagNoStore ||
+	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || flagStoreOnly || flagNoStore ||
+		flagInheritEnv || !flagExplicitEnv.IsEmpty() || !flagEnvFromFile.IsEmpty() ||
 		(*appsVolume)(&rktApps).String() != "" || (*appMount)(&rktApps).String() != "" || (*appExec)(&rktApps).String() != "" ||
 		(*appUser)(&rktApps).String() != "" || (*appGroup)(&rktApps).String() != "") {
 		stderr.Print("conflicting flags set with --pod-manifest (see --help)")
@@ -181,6 +183,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		pcfg.Ports = []types.ExposedPort(flagPorts)
 		pcfg.InheritEnv = flagInheritEnv
 		pcfg.ExplicitEnv = flagExplicitEnv.Strings()
+		pcfg.EnvFromFile = flagEnvFromFile.Strings()
 		pcfg.Apps = &rktApps
 	}
 

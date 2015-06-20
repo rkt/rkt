@@ -80,11 +80,13 @@ To inherit all environment variables from the parent use the `--inherit-env` fla
 
 To explicitly set individual environment variables use the `--set-env` flag.
 
+To explicitly set environment variables from a file use the `--set-env-file` flag. Variables are expected to be in the format `VAR_NAME=VALUE` separated by the new line character `\n`. Lines starting with `#` or `;` and empty ones will be ignored.
 The precedence is as follows with the last item replacing previous environment entries:
 
 - Parent environment
 - App image environment
-- Explicitly set environment
+- Explicitly set environment variables from file (`--set-env-file`)
+- Explicitly set environment variables on command line (`--set-env`)
 
 ```
 # export EXAMPLE_ENV=hello
@@ -360,6 +362,7 @@ For more details see the [hacking documentation](../hacking.md).
 | `--port` | none | A port name and number pair | Container port name to expose through host port number. Requires [contained network](../networking/overview.md#contained-mode). Syntax: `--port=NAME:HOSTPORT` The NAME is that given in the ACI. By convention, Docker containers' EXPOSEd ports are given a name formed from the port number, a hyphen, and the protocol, e.g., `80-tcp`, giving something like `--port=80-tcp:8080` |
 | `--private-users` |  `false` | `true` or `false` | Run within user namespaces. |
 | `--set-env` | none | An environment variable (ex. `--set-env=NAME=VALUE`) | An environment variable to set for apps. |
+| `--set-env-file` |  `` | Path of an environment variables file (ex. `--set-env-file=/path/to/env/file`) | Environment variables to set for apps |
 | `--signature` | none | A file path | Local signature file to use in validating the preceding image |
 | `--stage1-from-dir` | none | Image name (ex. `--stage1-name=coreos.com/rkt/stage1-coreos`) | A stage1 image file name to search for inside the default stage1 images directory. |
 | `--stage1-hash` | none | Image hash (ex. `--stage1-hash=sha512-dedce9f5ea50`) | A hash of a stage1 image. The image must exist in the store. |

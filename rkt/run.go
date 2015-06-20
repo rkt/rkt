@@ -17,7 +17,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -57,6 +59,7 @@ image arguments with a lone "---" to resume argument parsing.`,
 	flagPrivateUsers bool
 	flagInheritEnv   bool
 	flagExplicitEnv  envMap
+	flagEnvFromFile  envFileMap
 	flagInteractive  bool
 	flagDNS          flagStringList
 	flagDNSSearch    flagStringList
@@ -81,6 +84,7 @@ func init() {
 	cmdRun.Flags().BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	cmdRun.Flags().BoolVar(&flagPrivateUsers, "private-users", false, "run within user namespaces.")
 	cmdRun.Flags().Var(&flagExplicitEnv, "set-env", "environment variable to set for apps in the form name=value")
+	cmdRun.Flags().Var(&flagEnvFromFile, "set-env-file", "path to an environment variables file")
 	cmdRun.Flags().BoolVar(&flagInteractive, "interactive", false, "run pod interactively. If true, only one image may be supplied.")
 	cmdRun.Flags().Var(&flagDNS, "dns", "name servers to write in /etc/resolv.conf")
 	cmdRun.Flags().Var(&flagDNSSearch, "dns-search", "DNS search domains to write in /etc/resolv.conf")
@@ -150,7 +154,8 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagStoreOnly || flagNoStore ||
+	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || rktApps.Count() > 0 || flagStoreOnly || flagNoStore ||
+		flagInheritEnv || !flagExplicitEnv.IsEmpty() || !flagEnvFromFile.IsEmpty() ||
 		(*appsVolume)(&rktApps).String() != "" || (*appMount)(&rktApps).String() != "" || (*appExec)(&rktApps).String() != "" ||
 		(*appUser)(&rktApps).String() != "" || (*appGroup)(&rktApps).String() != "" ||
 		(*appCapsRetain)(&rktApps).String() != "" || (*appCapsRemove)(&rktApps).String() != "") {
@@ -249,6 +254,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		pcfg.Ports = []types.ExposedPort(flagPorts)
 		pcfg.InheritEnv = flagInheritEnv
 		pcfg.ExplicitEnv = flagExplicitEnv.Strings()
+		pcfg.EnvFromFile = flagEnvFromFile.Strings()
 		pcfg.Apps = &rktApps
 	}
 
@@ -408,4 +414,69 @@ func (e *envMap) Strings() []string {
 
 func (e *envMap) Type() string {
 	return "envMap"
+}
+
+// envFileMap
+type envFileMap struct {
+	mapping map[string]string
+}
+
+func skipLine(s []string) bool {
+	// Empty line
+	if len(s) == 0 {
+		return true
+	}
+	// Line start with '#' and ';'
+	if string(s[0][0]) == "#" || string(s[0][0]) == ";" {
+		return true
+	}
+	return false
+}
+
+func (e *envFileMap) Set(s string) error {
+	if e.mapping == nil {
+		e.mapping = make(map[string]string)
+	}
+	file, err := os.Open(s)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		// TODO parse '\' to skip new line character
+		pair := strings.SplitN(scanner.Text(), "=", 2)
+		if skipLine(pair) {
+			continue
+		}
+		if len(pair) != 2 {
+			return fmt.Errorf("environment variable must be specified as name=value (file %q)", file)
+		}
+		if _, exists := e.mapping[pair[0]]; exists {
+			return fmt.Errorf("environment variable %q already set (file %q)", pair[0], file)
+		}
+		e.mapping[pair[0]] = pair[1]
+	}
+	return nil
+}
+
+func (e *envFileMap) IsEmpty() bool {
+	return len(e.mapping) == 0
+}
+
+func (e *envFileMap) String() string {
+	return strings.Join(e.Strings(), "\n")
+}
+
+func (e *envFileMap) Strings() []string {
+	var env []string
+	for n, v := range e.mapping {
+		env = append(env, n+"="+v)
+	}
+	return env
+}
+
+func (e *envFileMap) Type() string {
+	return "envFileMap"
 }
