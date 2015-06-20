@@ -99,3 +99,14 @@ func TestRmInvalid(t *testing.T) {
 	cmd = fmt.Sprintf("%s rm --uuid-file=%s", ctx.Cmd(), uuidFile)
 	runRktAndCheckOutput(t, cmd, expected, true)
 }
+
+func TestRmEmptyUUID(t *testing.T) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	emptyUUID := "\"\""
+	expected := fmt.Sprintf("UUID cannot be empty")
+
+	cmd := fmt.Sprintf("%s rm %s", ctx.Cmd(), emptyUUID)
+	runRktAndCheckOutput(t, cmd, expected, true)
+}
