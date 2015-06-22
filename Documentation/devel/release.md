@@ -17,6 +17,7 @@ Let's get started:
 The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/blob/master/version/version.go#L17), so the first thing to do is bump it:
 - Run `scripts/bump-release v0.1.2`. This should generate two commits: a bump to the actual release (e.g. v0.1.2), and then a bump to the release+git (e.g. v0.1.2+git). The actual release version should only exist in a single commit!
 - Sanity check what the script did with `git diff HEAD^^` or similar. As well as changing the actual version, it also attempts to fix a bunch of references in the documentation etc.
+- Fix the commit `HEAD^^` so that the version in `stage1/rootfs/aggregate/aci-manifest` is correct.
 - If the script didn't work, yell at the author and/or fix it. It can almost certainly be improved.
 - File a PR and get a review from another [MAINTAINER](https://github.com/coreos/rkt/blob/master/MAINTAINERS). This is useful to a) sanity check the diff, and b) be very explicit/public that a release is happening
 - Ensure the CI on the release PR is green!
