@@ -27,6 +27,23 @@ func (i *ipValue) Type() string {
 	return "ip"
 }
 
+func ipConv(sval string) (interface{}, error) {
+	ip := net.ParseIP(sval)
+	if ip != nil {
+		return ip, nil
+	}
+	return nil, fmt.Errorf("invalid string being converted to IP address: %s", sval)
+}
+
+// GetIP return the net.IP value of a flag with the given name
+func (f *FlagSet) GetIP(name string) (net.IP, error) {
+	val, err := f.getFlagType(name, "ip", ipConv)
+	if err != nil {
+		return nil, err
+	}
+	return val.(net.IP), nil
+}
+
 // IPVar defines an net.IP flag with specified name, default value, and usage string.
 // The argument p points to an net.IP variable in which to store the value of the flag.
 func (f *FlagSet) IPVar(p *net.IP, name string, value net.IP, usage string) {
