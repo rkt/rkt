@@ -502,7 +502,7 @@ func stage1() int {
 			return 5
 		}
 	} else {
-		fmt.Fprintf(os.Stderr, "Disabling per-app isolators: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Continuing with per-app isolators disabled: %v\n", err)
 	}
 
 	var execFn func() error
@@ -549,20 +549,20 @@ func getContainerSubCgroup(machineID string) (string, error) {
 	var subcgroup string
 	fromUnit, err := isRunningFromUnitFile()
 	if err != nil {
-		return "", fmt.Errorf("error determining if we're running from a unit file: %v", err)
+		return "", fmt.Errorf("could not determine if we're running from a unit file: %v", err)
 	}
 	if fromUnit {
 		slice, err := getSlice()
 		if err != nil {
-			return "", fmt.Errorf("error getting slice name: %v", err)
+			return "", fmt.Errorf("could not get slice name: %v", err)
 		}
 		slicePath, err := common.SliceToPath(slice)
 		if err != nil {
-			return "", fmt.Errorf("error converting slice name to path: %v", err)
+			return "", fmt.Errorf("could not convert slice name to path: %v", err)
 		}
 		unit, err := getUnitFileName()
 		if err != nil {
-			return "", fmt.Errorf("error getting unit name: %v", err)
+			return "", fmt.Errorf("could not get unit name: %v", err)
 		}
 		subcgroup = filepath.Join(slicePath, unit, "system.slice")
 	} else {
@@ -578,7 +578,7 @@ func getContainerSubCgroup(machineID string) (string, error) {
 			// under rkt's cgroup so we can look it up in /proc/self/cgroup
 			ownCgroupPath, err := cgroup.GetOwnCgroupPath("name=systemd")
 			if err != nil {
-				return "", fmt.Errorf("error getting own cgroup path: %v", err)
+				return "", fmt.Errorf("could not get own cgroup path: %v", err)
 			}
 			subcgroup = filepath.Join(ownCgroupPath, "system.slice")
 		}
