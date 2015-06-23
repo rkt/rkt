@@ -205,11 +205,11 @@
 		},
 		{
 			"ImportPath": "github.com/spf13/cobra",
-			"Rev": "8f5946caaeeff40a98d67f60c25e89c3525038a3"
+			"Rev": "66816bcd0378e248c613e3c443c020f544c28804"
 		},
 		{
 			"ImportPath": "github.com/spf13/pflag",
-			"Rev": "5644820622454e71517561946e3d94b9f9db6842"
+			"Rev": "67cbc198fd11dab704b214c1e629a97af392c085"
 		},
 		{
 			"ImportPath": "github.com/syndtr/gocapability/capability",
