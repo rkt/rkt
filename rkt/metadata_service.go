@@ -30,7 +30,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 
@@ -71,37 +70,37 @@ func init() {
 
 type mdsPod struct {
 	uuid     types.UUID
-	ip       string
+	token    string
 	manifest *schema.PodManifest
 	apps     map[string]*schema.ImageManifest
 }
 
 type podStore struct {
-	byIP   map[string]*mdsPod
-	byUUID map[types.UUID]*mdsPod
-	mutex  sync.Mutex
+	byToken map[string]*mdsPod
+	byUUID  map[types.UUID]*mdsPod
+	mutex   sync.Mutex
 }
 
 func newPodStore() *podStore {
 	return &podStore{
-		byIP:   make(map[string]*mdsPod),
-		byUUID: make(map[types.UUID]*mdsPod),
+		byToken: make(map[string]*mdsPod),
+		byUUID:  make(map[types.UUID]*mdsPod),
 	}
 }
 
-func (ps *podStore) addPod(u *types.UUID, ip string, manifest *schema.PodManifest) {
+func (ps *podStore) addPod(u *types.UUID, token string, manifest *schema.PodManifest) {
 	ps.mutex.Lock()
 	defer ps.mutex.Unlock()
 
 	p := &mdsPod{
 		uuid:     *u,
-		ip:       ip,
+		token:    token,
 		manifest: manifest,
 		apps:     make(map[string]*schema.ImageManifest),
 	}
 
 	ps.byUUID[*u] = p
-	ps.byIP[ip] = p
+	ps.byToken[token] = p
 }
 
 func (ps *podStore) addApp(u *types.UUID, app string, manifest *schema.ImageManifest) error {
@@ -128,38 +127,38 @@ func (ps *podStore) remove(u *types.UUID) error {
 	}
 
 	delete(ps.byUUID, *u)
-	delete(ps.byIP, p.ip)
+	delete(ps.byToken, p.token)
 
 	return nil
 }
 
-func (ps *podStore) getUUID(ip string) (*types.UUID, error) {
+func (ps *podStore) getUUID(token string) (*types.UUID, error) {
 	ps.mutex.Lock()
 	defer ps.mutex.Unlock()
 
-	p, ok := ps.byIP[ip]
+	p, ok := ps.byToken[token]
 	if !ok {
 		return nil, errPodNotFound
 	}
 	return &p.uuid, nil
 }
 
-func (ps *podStore) getPodManifest(ip string) (*schema.PodManifest, error) {
+func (ps *podStore) getPodManifest(token string) (*schema.PodManifest, error) {
 	ps.mutex.Lock()
 	defer ps.mutex.Unlock()
 
-	p, ok := ps.byIP[ip]
+	p, ok := ps.byToken[token]
 	if !ok {
 		return nil, errPodNotFound
 	}
 	return p.manifest, nil
 }
 
-func (ps *podStore) getManifests(ip, an string) (*schema.PodManifest, *schema.ImageManifest, error) {
+func (ps *podStore) getManifests(token, an string) (*schema.PodManifest, *schema.ImageManifest, error) {
 	ps.mutex.Lock()
 	defer ps.mutex.Unlock()
 
-	p, ok := ps.byIP[ip]
+	p, ok := ps.byToken[token]
 	if !ok {
 		return nil, nil, errPodNotFound
 	}
@@ -190,10 +189,10 @@ func handleRegisterPod(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ip := queryValue(r.URL, "ip")
-	if ip == "" {
+	token := queryValue(r.URL, "token")
+	if token == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "ip missing")
+		fmt.Fprint(w, "token missing")
 		return
 	}
 
@@ -205,7 +204,7 @@ func handleRegisterPod(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pods.addPod(uuid, ip, pm)
+	pods.addPod(uuid, token, pm)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -265,11 +264,11 @@ func handleRegisterApp(w http.ResponseWriter, r *http.Request) {
 
 func podGet(h func(http.ResponseWriter, *http.Request, *schema.PodManifest)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ip := strings.Split(r.RemoteAddr, ":")[0]
+		token := mux.Vars(r)["token"]
 
-		pm, err := pods.getPodManifest(ip)
+		pm, err := pods.getPodManifest(token)
 		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
+			w.WriteHeader(http.StatusUnauthorized)
 			fmt.Fprintln(w, err)
 			return
 		}
@@ -280,7 +279,7 @@ func podGet(h func(http.ResponseWriter, *http.Request, *schema.PodManifest)) htt
 
 func appGet(h func(http.ResponseWriter, *http.Request, *schema.PodManifest, *schema.ImageManifest)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ip := strings.Split(r.RemoteAddr, ":")[0]
+		token := mux.Vars(r)["token"]
 
 		an := mux.Vars(r)["app"]
 		if an == "" {
@@ -289,14 +288,19 @@ func appGet(h func(http.ResponseWriter, *http.Request, *schema.PodManifest, *sch
 			return
 		}
 
-		pm, im, err := pods.getManifests(ip, an)
-		if err != nil {
+		pm, im, err := pods.getManifests(token, an)
+		switch {
+		case err == nil:
+			h(w, r, pm, im)
+
+		case err == errPodNotFound:
+			w.WriteHeader(http.StatusUnauthorized)
+			fmt.Fprintln(w, err)
+
+		default:
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintln(w, err)
-			return
 		}
-
-		h(w, r, pm, im)
 	}
 }
 
@@ -348,11 +352,11 @@ func handlePodManifest(w http.ResponseWriter, r *http.Request, pm *schema.PodMan
 func handlePodUUID(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	ip := strings.Split(r.RemoteAddr, ":")[0]
+	token := mux.Vars(r)["token"]
 
-	uuid, err := pods.getUUID(ip)
+	uuid, err := pods.getUUID(token)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprintln(w, err)
 		return
 	}
@@ -473,11 +477,11 @@ func initCrypto() error {
 func handlePodSign(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	ip := strings.Split(r.RemoteAddr, ":")[0]
+	token := mux.Vars(r)["token"]
 
-	uuid, err := pods.getUUID(ip)
+	uuid, err := pods.getUUID(token)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprintln(w, err)
 		return
 	}
@@ -605,7 +609,7 @@ func runRegistrationServer(l net.Listener) {
 
 func runPublicServer(l net.Listener) {
 	r := mux.NewRouter().Headers("Metadata-Flavor", "AppContainer").
-		PathPrefix("/acMetadata/v1").Subrouter()
+		PathPrefix("/{token}/acMetadata/v1").Subrouter()
 
 	mr := r.Methods("GET").Subrouter()
 

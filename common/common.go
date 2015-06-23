@@ -102,8 +102,8 @@ func ImageManifestPath(root string, imageID types.Hash) string {
 }
 
 // MetadataServicePublicURL returns the public URL used to host the metadata service
-func MetadataServicePublicURL(ip net.IP) string {
-	return fmt.Sprintf("http://%v:%v", ip, MetadataServicePort)
+func MetadataServicePublicURL(ip net.IP, token string) string {
+	return fmt.Sprintf("http://%v:%v/%v", ip, MetadataServicePort, token)
 }
 
 func GetRktLockFD() (int, error) {
