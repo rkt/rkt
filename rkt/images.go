@@ -26,11 +26,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	docker2aci "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/common"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -192,6 +194,7 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 	var (
 		ascFile *os.File
 		err     error
+		latest  bool
 	)
 	if asc != "" && f.ks != nil {
 		ascFile, err = os.Open(asc)
@@ -227,7 +230,6 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 				if err != nil {
 					discoveryError = err
 				} else {
-					latest := false
 					// No specified version label, mark it as latest
 					if _, ok := app.Labels["version"]; !ok {
 						latest = true
@@ -245,11 +247,16 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 	}
 
 	switch u.Scheme {
-	case "http", "https", "docker", "file":
+	case "http", "https", "file":
+	case "docker":
+		dockerURL := common.ParseDockerURL(path.Join(u.Host, u.Path))
+		if dockerURL.Tag == "latest" {
+			latest = true
+		}
 	default:
 		return "", fmt.Errorf("rkt only supports http, https, docker or file URLs (%s)", img)
 	}
-	return f.fetchImageFromURL(u.String(), u.Scheme, ascFile, false)
+	return f.fetchImageFromURL(u.String(), u.Scheme, ascFile, latest)
 }
 
 func (f *fetcher) fetchImageFromStore(img string) (string, error) {
@@ -273,6 +280,12 @@ func (f *fetcher) fetchImageFromURL(imgurl string, scheme string, ascFile *os.Fi
 	return f.fetchImageFrom("", imgurl, ascURLFromImgURL(imgurl), scheme, ascFile, latest)
 }
 
+// fetchImageFrom fetches an image from the aciURL.
+// If the aciURL is a file path (scheme == 'file'), then we bypass the on-disk store.
+// If the `--local` flag is provided, then we will only fetch from the on-disk store (unless aciURL is a file path).
+// If the label is 'latest', then we will bypass the on-disk store (unless '--local' is specified).
+// Otherwise if '--local' is false, aciURL is not a file path, and the label is not 'latest' or empty, we will first
+// try to fetch from the on-disk store, if not found, then fetch from the internet.
 func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, ascFile *os.File, latest bool) (string, error) {
 	if f.insecureSkipVerify {
 		if f.ks != nil {
@@ -281,26 +294,25 @@ func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, 
 	} else if scheme == "docker" {
 		return "", fmt.Errorf("signature verification for docker images is not supported (try --insecure-skip-verify)")
 	}
-	var key string
-	rem, ok, err := f.s.GetRemote(aciURL)
-	if err == nil {
-		key = rem.BlobKey
-	} else {
-		return "", err
+
+	if (f.local && scheme != "file") || (scheme != "file" && !latest) {
+		rem, ok, err := f.s.GetRemote(aciURL)
+		if err != nil {
+			return "", err
+		}
+		if ok {
+			stderr("rkt: found image in local store, skipping fetching from %s", aciURL)
+			return rem.BlobKey, nil
+		}
+		if f.local {
+			return "", fmt.Errorf("url %s not available in local store", aciURL)
+		}
 	}
 
-	if ok {
-		stderr("rkt: found image in local store, skipping fetching from %s", aciURL)
-		return key, nil
-	}
-
-	if scheme != "file" || f.debug {
+	if scheme != "file" && f.debug {
 		stderr("rkt: fetching image from %s", aciURL)
 	}
 
-	if f.local && scheme != "file" {
-		return "", fmt.Errorf("url %s not available in local store", aciURL)
-	}
 	entity, aciFile, err := f.fetch(appName, aciURL, ascURL, ascFile)
 	if err != nil {
 		return "", err
@@ -315,13 +327,13 @@ func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, 
 			stderr("  %s", v.Name)
 		}
 	}
-	key, err = f.s.WriteACI(aciFile, latest)
+	key, err := f.s.WriteACI(aciFile, latest)
 	if err != nil {
 		return "", err
 	}
 
 	if scheme != "file" {
-		rem = store.NewRemote(aciURL, ascURL)
+		rem := store.NewRemote(aciURL, ascURL)
 		rem.BlobKey = key
 		err = f.s.WriteRemote(rem)
 		if err != nil {
