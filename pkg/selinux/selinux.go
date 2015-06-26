@@ -1,3 +1,18 @@
+// Copyright 2014,2015 Red Hat, Inc
+// Copyright 2014,2015 Docker, Inc
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // +build linux
 
 package selinux
@@ -15,8 +30,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/docker/docker/pkg/mount"
-	"github.com/docker/libcontainer/system"
+	"github.com/coreos/rkt/pkg/fileutil"
 )
 
 const (
@@ -54,29 +68,7 @@ func SetDisabled() {
 // processes.  The existence of an selinuxfs mount is used to determine
 // whether selinux is currently enabled or not.
 func getSelinuxMountPoint() string {
-	if selinuxfs != "unknown" {
-		return selinuxfs
-	}
-	selinuxfs = ""
-
-	mounts, err := mount.GetMounts()
-	if err != nil {
-		return selinuxfs
-	}
-	for _, mount := range mounts {
-		if mount.Fstype == "selinuxfs" {
-			selinuxfs = mount.Mountpoint
-			break
-		}
-	}
-	if selinuxfs != "" {
-		var buf syscall.Statfs_t
-		syscall.Statfs(selinuxfs, &buf)
-		if (buf.Flags & stRdOnly) == 1 {
-			selinuxfs = ""
-		}
-	}
-	return selinuxfs
+	return "/sys/fs/selinux"
 }
 
 // SelinuxEnabled returns whether selinux is currently enabled.
@@ -151,14 +143,31 @@ func readCon(name string) (string, error) {
 	return val, err
 }
 
+type SelinuxError struct {
+	Errno int
+	Prob  string
+}
+
+const (
+	InvalidContext = iota
+)
+
+func (e *SelinuxError) Error() string {
+	return fmt.Sprintf("SELinux: %s", e.Prob)
+}
+
 // Setfilecon sets the SELinux label for this path or returns an error.
 func Setfilecon(path string, scon string) error {
-	return system.Lsetxattr(path, xattrNameSelinux, []byte(scon), 0)
+	err := fileutil.Lsetxattr(path, xattrNameSelinux, []byte(scon), 0)
+	if err != syscall.EINVAL {
+		return err
+	}
+	return &SelinuxError{InvalidContext, "Invalid Context"}
 }
 
 // Getfilecon returns the SELinux label for this path or returns an error.
 func Getfilecon(path string) (string, error) {
-	con, err := system.Lgetxattr(path, xattrNameSelinux)
+	con, err := fileutil.Lgetxattr(path, xattrNameSelinux)
 
 	// Trim the NUL byte at the end of the byte buffer, if present.
 	if con[len(con)-1] == '\x00' {
