@@ -42,6 +42,7 @@ import (
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/fileutil"
+	"github.com/coreos/rkt/pkg/label"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
@@ -71,11 +72,13 @@ type RunConfig struct {
 
 // configuration shared by both Run and Prepare
 type CommonConfig struct {
-	Store       *store.Store // store containing all of the configured application images
-	Stage1Image types.Hash   // stage1 image containing usable /init and /enter entrypoints
-	UUID        *types.UUID  // UUID of the pod
-	PodsDir     string       // root directory for rkt pods
-	Debug       bool
+	Store        *store.Store // store containing all of the configured application images
+	Stage1Image  types.Hash   // stage1 image containing usable /init and /enter entrypoints
+	UUID         *types.UUID  // UUID of the pod
+	PodsDir      string       // root directory for rkt pods
+	Debug        bool
+	MountLabel   string // selinux label to use for fs
+	ProcessLabel string // selinux label to use for process
 }
 
 func init() {
@@ -341,6 +344,10 @@ func Run(cfg RunConfig, dir string) {
 		log.Fatalf("error clearing FD_CLOEXEC on lock fd")
 	}
 
+	if err := label.SetProcessLabel(cfg.ProcessLabel); err != nil {
+		log.Fatalf("error setting process SELinux label: %v", err)
+	}
+
 	if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
 	}
@@ -511,6 +518,7 @@ func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string) erro
 	}
 
 	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", cachedTreePath, upperDir, workDir)
+	opts = label.FormatMountLabel(opts, cfg.MountLabel)
 	if err := syscall.Mount("overlay", destRootfs, "overlay", 0, opts); err != nil {
 		return fmt.Errorf("error mounting: %v", err)
 	}

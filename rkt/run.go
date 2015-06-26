@@ -28,6 +28,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/label"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 )
@@ -167,11 +168,19 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
+	processLabel, mountLabel, err := label.InitLabels(nil)
+	if err != nil {
+		stderr("Error initialising SELinux: %v", err)
+		return 1
+	}
+
 	cfg := stage0.CommonConfig{
-		Store:       s,
-		Stage1Image: *s1img,
-		UUID:        p.uuid,
-		Debug:       globalFlags.Debug,
+		MountLabel:   mountLabel,
+		ProcessLabel: processLabel,
+		Store:        s,
+		Stage1Image:  *s1img,
+		UUID:         p.uuid,
+		Debug:        globalFlags.Debug,
 	}
 
 	pcfg := stage0.PrepareConfig{

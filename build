@@ -35,8 +35,10 @@ case "${RKT_STAGE1_USR_FROM}" in
 		exit 255
 esac
 
+export TAGS='-tags selinux'
+
 echo "Building rkt (stage0)..."
-go build -o ${GOBIN}/rkt \
+go build ${TAGS} -o ${GOBIN}/rkt \
 	${RKT_STAGE1_IMAGE:+-ldflags "-X main.defaultStage1Image '${RKT_STAGE1_IMAGE}'"} \
 	${REPO_PATH}/rkt
 

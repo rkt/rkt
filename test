@@ -96,7 +96,7 @@ split=(${TEST// / })
 TEST=${split[@]/#/${REPO_PATH}/}
 
 echo "Running tests..."
-go test -timeout 60s ${COVER} $@ ${TEST} --race
+go test ${TAGS} -timeout 60s ${COVER} $@ ${TEST} --race
 
 # Functional tests use 'sudo' to run as root - it's more dangerous
 # than unit tests and may require typing a password. Only run them
