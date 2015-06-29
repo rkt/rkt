@@ -143,8 +143,6 @@ type PrivateNetList struct {
 	mapping map[string]bool
 }
 
-func (i *PrivateNetList) IsBoolFlag() bool { return true }
-
 func (l *PrivateNetList) String() string {
 	return strings.Join(l.Strings(), ",")
 }
