@@ -21,7 +21,9 @@ Until the specification reaches version 1.0, rkt's major/minor versions will tra
 - Better UX around trust
 
 ### rkt 0.8-0.9 (July?)
+- stable on-disk format
 - stage1 split out from coreos/rkt
+  - stable and documented stage0/stage1 ABI
 - rkt packaged for other distributions (e.g. Fedora)
 - rkt can run applications as non-root
 - rkt can retrieve images via BitTorrent
