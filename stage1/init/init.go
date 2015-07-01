@@ -320,7 +320,8 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 	}
 
 	if !debug {
-		args = append(args, "--quiet") // silence most nspawn output (log_warning is currently not covered by this)
+		args = append(args, "--quiet")             // silence most nspawn output (log_warning is currently not covered by this)
+		env = append(env, "SYSTEMD_LOG_LEVEL=err") // silence log_warning too
 	}
 
 	keepUnit, err := isRunningFromUnitFile()
