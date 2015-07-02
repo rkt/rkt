@@ -154,5 +154,5 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details on submitting patches and the co
 ## Contact
 
 - Mailing list: [rkt-dev](https://groups.google.com/forum/?hl=en#!forum/rkt-dev)
-- IRC: #[coreos](irc://irc.freenode.org:6667/#coreos) on freenode.org
+- IRC: #[rkt-dev](irc://irc.freenode.org:6667/#rkt-dev) on freenode.org
 - Planning: [milestones](https://github.com/coreos/rkt/milestones)
