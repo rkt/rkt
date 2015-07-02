@@ -329,7 +329,7 @@ func TestPodManifest(t *testing.T) {
 		defer os.Remove(manifestFile)
 
 		// 1. Test 'rkt run'.
-		runCmd := fmt.Sprintf("%s run --pod-manifest=%s", ctx.cmd(), manifestFile)
+		runCmd := fmt.Sprintf("%s run --mds-register=false --pod-manifest=%s", ctx.cmd(), manifestFile)
 		t.Logf("Running 'run' test #%v: %v", i, runCmd)
 		child, err := gexpect.Spawn(runCmd)
 		if err != nil {
@@ -364,7 +364,7 @@ func TestPodManifest(t *testing.T) {
 			t.Fatalf("%q is not a valid UUID: %v", podIDStr, err)
 		}
 
-		runPreparedCmd := fmt.Sprintf("%s run-prepared %s", ctx.cmd(), podID.String())
+		runPreparedCmd := fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.cmd(), podID.String())
 		t.Logf("Running 'run' test #%v: %v", i, runPreparedCmd)
 		child, err = gexpect.Spawn(runPreparedCmd)
 		if err != nil {
