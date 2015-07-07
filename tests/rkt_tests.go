@@ -174,6 +174,7 @@ func expectTimeoutWithOutput(p *gexpect.ExpectSubprocess, searchString string, t
 func patchTestACI(newFileName string, args ...string) {
 	var allArgs []string
 	allArgs = append(allArgs, "patch-manifest")
+	allArgs = append(allArgs, "--no-compression")
 	allArgs = append(allArgs, "--overwrite")
 	allArgs = append(allArgs, args...)
 	allArgs = append(allArgs, "rkt-inspect.aci")
