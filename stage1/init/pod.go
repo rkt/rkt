@@ -201,7 +201,6 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", name),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
-		unit.NewUnitOption("Unit", "OnFailureJobMode", "isolate"),
 		unit.NewUnitOption("Unit", "OnFailure", "reaper.service"),
 		unit.NewUnitOption("Unit", "Wants", "exit-watcher.service"),
 		unit.NewUnitOption("Service", "Restart", "no"),
