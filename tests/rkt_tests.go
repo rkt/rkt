@@ -15,7 +15,10 @@
 package main
 
 import (
+	"crypto/sha512"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -184,4 +187,20 @@ func patchTestACI(newFileName string, args ...string) {
 	if err != nil {
 		panic(fmt.Sprintf("Cannot create ACI: %v: %s\n", err, output))
 	}
+}
+
+func getHash(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", fmt.Errorf("error opening file: %v", err)
+	}
+
+	hash := sha512.New()
+	r := io.TeeReader(f, hash)
+
+	if _, err := io.Copy(ioutil.Discard, r); err != nil {
+		return "", fmt.Errorf("error reading file: %v", err)
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
