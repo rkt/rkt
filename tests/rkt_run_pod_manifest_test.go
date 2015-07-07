@@ -337,7 +337,7 @@ func TestPodManifest(t *testing.T) {
 		}
 
 		if tt.expectedResult != "" {
-			if err := child.Expect(tt.expectedResult); err != nil {
+			if err := expectWithOutput(child, tt.expectedResult); err != nil {
 				t.Fatalf("Expected %q but not found: %v", tt.expectedResult, err)
 			}
 		}
@@ -372,7 +372,7 @@ func TestPodManifest(t *testing.T) {
 		}
 
 		if tt.expectedResult != "" {
-			if err := child.Expect(tt.expectedResult); err != nil {
+			if err := expectWithOutput(child, tt.expectedResult); err != nil {
 				t.Fatalf("Expected %q but not found: %v", tt.expectedResult, err)
 			}
 		}
