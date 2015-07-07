@@ -22,15 +22,15 @@ $(TST_SHORT_TESTS_STAMP): TST_GO_TEST_PACKAGES := $(TST_GO_TEST_PACKAGES)
 $(TST_SHORT_TESTS_STAMP):
 	set -e; \
 	res=$$($(GOFMT) -l $(TST_GOFMT_DIRS)); \
-	if [ -n "${res}" ]; then echo -e "gofmt checking failed:\n${res}"; exit 1; fi; \
+	if [ -n "$${res}" ]; then echo -e "gofmt checking failed:\n$${res}"; exit 1; fi; \
 	res=$$($(GO_ENV) "$(GO)" vet $(TST_GO_VET_PACKAGES)); \
-	if [ -n "${res}" ]; then echo -e "govet checking failed:\n${res}"; exit 1; fi; \
+	if [ -n "$${res}" ]; then echo -e "govet checking failed:\n$${res}"; exit 1; fi; \
 	res=$$( \
 		for file in $$(find . -type f -iname '*.go' ! -path './Godeps/*'); do \
 			head -n1 "$${file}" | grep -Eq "(Copyright|generated)" || echo -e "  $${file}"; \
 		done; \
 	); \
-	if [ -n "${res}" ]; then echo -e "license header checking failed:\n${res}"; exit 1; fi; \
+	if [ -n "$${res}" ]; then echo -e "license header checking failed:\n$${res}"; exit 1; fi; \
 	$(GO_ENV) "$(GO)" test -timeout 60s -cover $(TST_GO_TEST_PACKAGES) --race
 
 TOPLEVEL_CHECK_STAMPS += $(TST_SHORT_TESTS_STAMP)
