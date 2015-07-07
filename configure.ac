@@ -137,9 +137,12 @@ AS_VAR_IF([RKT_RUN_FUNCTIONAL_TESTS], [yes],
                                              [sdv=`systemctl --version | head -1 | sed -e 's/^systemd \(@<:@0-9@:>@*\)$/\1/'`]
                                              [AS_IF([test ${sdv} -lt 220],
                                                     [AC_MSG_RESULT([no])]
-                                                    [AC_MSG_ERROR([Cannot run functional tests with ${RKT_STAGE1_USR_FROM} stage1 flavor and with version of systemd on host lower than 220 (currently running ${sdv})])])])])],
+                                                    [AC_MSG_ERROR([Cannot run functional tests with ${RKT_STAGE1_USR_FROM} stage1 flavor - systemd version on host is lower than 220 (currently running ${sdv})])])],
+                                             [AC_MSG_RESULT([no])]
+                                             [AC_MSG_ERROR([Cannot run functional tests with ${RKT_STAGE1_USR_FROM} stage1 flavor - no systemd on host])])])],
                    [AC_MSG_RESULT([no])]
-                   [AC_MSG_ERROR([functional tests are supported only under linux])])])
+                   [AC_MSG_ERROR([functional tests are supported only under linux])])]
+          [AC_MSG_RESULT([yes])])
 
 AC_SUBST(RKT_RUN_FUNCTIONAL_TESTS)
 
