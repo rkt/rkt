@@ -30,9 +30,13 @@ type aciToolkit struct {
 }
 
 func (t *aciToolkit) prepareACI() ([]byte, error) {
-	dir, err := t.createTree()
-	if dir != "" {
-		defer os.RemoveAll(dir)
+	tmp := os.Getenv("FUNCTIONAL_TMP")
+	if tmp == "" {
+		return nil, fmt.Errorf("empty FUNCTIONAL_TMP env var")
+	}
+	taas, dir, err := t.createTree(tmp)
+	if taas != "" {
+		defer os.RemoveAll(taas)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to build ACI tree: %v", err)
@@ -40,7 +44,7 @@ func (t *aciToolkit) prepareACI() ([]byte, error) {
 	if err := t.buildProg(dir); err != nil {
 		return nil, fmt.Errorf("failed to build test program: %v", err)
 	}
-	fn, err := t.buildACI(dir)
+	fn, err := t.buildACI(tmp, dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build ACI: %v", err)
 	}
@@ -65,24 +69,28 @@ func main() {
 `
 )
 
-func (t *aciToolkit) createTree() (string, error) {
-	aciDir := "ACI"
+func (t *aciToolkit) createTree(tmpDir string) (string, string, error) {
+	taasDir := filepath.Join(tmpDir, "taas")
+	aciDir := filepath.Join(taasDir, "ACI")
 	rootDir := filepath.Join(aciDir, "rootfs")
 	manifestFile := filepath.Join(aciDir, "manifest")
 	srcFile := filepath.Join(rootDir, "prog.go")
+	if err := os.Mkdir(taasDir, 0755); err != nil {
+		return "", "", fmt.Errorf("failed to create taas directory: %v", err)
+	}
 	if err := os.Mkdir(aciDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create ACI directory: %v", err)
+		return taasDir, "", fmt.Errorf("failed to create ACI directory: %v", err)
 	}
 	if err := os.Mkdir(rootDir, 0755); err != nil {
-		return aciDir, fmt.Errorf("failed to create rootfs directory: %v", err)
+		return taasDir, "", fmt.Errorf("failed to create rootfs directory: %v", err)
 	}
 	if err := ioutil.WriteFile(manifestFile, []byte(manifestStr), 0644); err != nil {
-		return "", fmt.Errorf("failed to write manifest: %v", err)
+		return taasDir, "", fmt.Errorf("failed to write manifest: %v", err)
 	}
 	if err := ioutil.WriteFile(srcFile, []byte(testProgSrcStr), 0644); err != nil {
-		return "", fmt.Errorf("failed to write go source: %v", err)
+		return taasDir, "", fmt.Errorf("failed to write go source: %v", err)
 	}
-	return aciDir, nil
+	return taasDir, aciDir, nil
 }
 
 func (t *aciToolkit) buildProg(aciDir string) error {
@@ -97,7 +105,7 @@ func (t *aciToolkit) buildProg(aciDir string) error {
 	return runTool(t.goTool, args, dir)
 }
 
-func (t *aciToolkit) buildACI(aciDir string) (string, error) {
+func (t *aciToolkit) buildACI(tmpDir, aciDir string) (string, error) {
 	timedata, err := time.Now().MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("failed to serialize current date to bytes: %v", err)
@@ -105,7 +113,7 @@ func (t *aciToolkit) buildACI(aciDir string) (string, error) {
 	if err := ioutil.WriteFile(filepath.Join(aciDir, "rootfs", "stamp"), timedata, 0644); err != nil {
 		return "", fmt.Errorf("failed to write a stamp: %v", err)
 	}
-	fn := "prog-build.aci"
+	fn := filepath.Join(tmpDir, "prog-build.aci")
 	args := []string{
 		"actool",
 		"build",
