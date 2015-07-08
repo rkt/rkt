@@ -56,17 +56,17 @@ endef
 # 2 - go list format item
 # 3 - excluded directories
 define go-find-directories-unstripped
-$(eval _TST_ESCAPED_REPO_PATH_ := $(REPO_PATH)) \
-$(eval _TST_ESCAPED_REPO_PATH_ := $(subst .,\.,$(_TST_ESCAPED_REPO_PATH_))) \
-$(eval _TST_ESCAPED_REPO_PATH_ := $(subst /,\/,$(_TST_ESCAPED_REPO_PATH_))) \
+$(eval _TST_ESCAPED_SRCDIR_ := $(MK_TOPLEVEL_ABS_SRCDIR)) \
+$(eval _TST_ESCAPED_SRCDIR_ := $(subst .,\.,$(_TST_ESCAPED_SRCDIR_))) \
+$(eval _TST_ESCAPED_SRCDIR_ := $(subst /,\/,$(_TST_ESCAPED_SRCDIR_))) \
 $(eval _TST_SPACE_ := ) \
 $(eval _TST_SPACE_ += ) \
 $(eval _TST_FILES_ := $(shell $(GO_ENV) "$(GO)" list -f '{{.ImportPath}} {{.$2}}' $1 | \
         grep --invert-match '\[\]' | \
-        sed -e 's/.*$(_TST_ESCAPED_REPO_PATH_)\///' -e 's/[[:space:]]*\[.*\]$$//' \
+        sed -e 's/.*$(_TST_ESCAPED_SRCDIR_)\///' -e 's/[[:space:]]*\[.*\]$$//' \
         $(if $3,| grep --invert-match '^\($(subst $(_TST_SPACE_),\|,$3)\)'))) \
 $(_TST_FILES_) \
-$(eval _TST_ESCAPED_REPO_PATH_ :=) \
+$(eval _TST_ESCAPED_SRCDIR_ :=) \
 $(eval _TST_SPACE_ :=) \
 $(eval _TST_FILES_ :=)
 endef
