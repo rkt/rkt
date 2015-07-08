@@ -34,11 +34,20 @@ const (
 // rkt image render and check that the exported image has the /inspect file and
 // that its hash matches the original inspect binary hash
 func TestImageRender(t *testing.T) {
-	baseImage := "rkt-inspect.aci"
-	emptyImage := "rkt-empty.aci"
-	testImage := "rkt-inspect-image-render.aci"
+	baseImage := os.Getenv("RKT_INSPECT_IMAGE")
+	if baseImage == "" {
+		panic("Empty RKT_INSPECT_IMAGE environment variable")
+	}
+	emptyImage := os.Getenv("RKT_EMPTY_IMAGE")
+	if emptyImage == "" {
+		panic("Empty RKT_INSPECT_IMAGE environment variable")
+	}
 	testImageName := "coreos.com/rkt-image-render-test"
-	inspectHash, err := getHash("inspect/inspect")
+	inspectFile := os.Getenv("INSPECT_BINARY")
+	if inspectFile == "" {
+		panic("Empty INSPECT_BINARY environment variable")
+	}
+	inspectHash, err := getHash(inspectFile)
 	if err != nil {
 		panic("Cannot get inspect binary's hash")
 	}
@@ -60,7 +69,7 @@ func TestImageRender(t *testing.T) {
 	}
 	defer os.Remove(tmpManifest.Name())
 
-	patchACI(emptyImage, testImage, "--manifest", tmpManifest.Name())
+	testImage := patchACI(emptyImage, "rkt-inspect-image-render.aci", "--manifest", tmpManifest.Name())
 	defer os.Remove(testImage)
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()

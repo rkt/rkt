@@ -28,9 +28,16 @@ import (
 // image with the inspect binary, extract it with rkt image extract and check
 // that the exported /inspect hash matches the original inspect binary hash
 func TestImageExtract(t *testing.T) {
-	testImage := "rkt-inspect.aci"
+	testImage := os.Getenv("RKT_INSPECT_IMAGE")
+	if testImage == "" {
+		panic("Empty RKT_INSPECT_IMAGE environment variable")
+	}
 	testImageName := "coreos.com/rkt-inspect"
-	inspectHash, err := getHash("inspect/inspect")
+	inspectFile := os.Getenv("INSPECT_BINARY")
+	if inspectFile == "" {
+		panic("Empty INSPECT_BINARY environment variable")
+	}
+	inspectHash, err := getHash(inspectFile)
 	if err != nil {
 		panic("Cannot get inspect binary's hash")
 	}
