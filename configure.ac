@@ -1,4 +1,4 @@
-AC_PREREQ([2.69])
+AC_PREREQ([2.68])
 AC_INIT([rkt], [0.5.6+git], [https://github.com/coreos/rkt/issues])
 
 AC_CANONICAL_HOST
