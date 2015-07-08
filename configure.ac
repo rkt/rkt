@@ -6,13 +6,13 @@ AC_CANONICAL_HOST
 AC_DEFUN([RKT_REQ_PROG],
          [AS_VAR_IF([$1], [],
                     [AC_CHECK_PROG($@)
-                     AS_VAR_IF([$1], [$3], [], AC_MSG_ERROR([$2 not found]))],
+                     AS_VAR_IF([$1], [$3], [], AC_MSG_ERROR([*** $2 not found]))],
                     [])])
 
 AC_DEFUN([RKT_REQ_ABS_PROG],
          [AS_VAR_IF([$1], [],
                     [AC_PATH_PROG($@)
-		     AS_IF([test "x$]$1[" = 'x'], [AC_MSG_ERROR([$2 not found])])],
+                     AS_IF([test "x$]$1[" = 'x'], [AC_MSG_ERROR([*** $2 not found])])],
                     [])])
 
 # STAGE1 build settings
@@ -48,7 +48,7 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
                  RKT_REQ_PROG([LIBTOOLIZE],[libtoolize],[libtoolize])],
         [host],
                 [],
-        [AC_MSG_ERROR([stage1 build type '${RKT_STAGE1_USR_FROM}' unsupported])])
+        [AC_MSG_ERROR([*** stage1 build type '${RKT_STAGE1_USR_FROM}' unsupported])])
 
 AC_SUBST(RKT_STAGE1_USR_FROM)
 
