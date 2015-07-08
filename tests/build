@@ -19,7 +19,13 @@ echo -n dir2 > image/rootfs/dir2/file
 # Create base image
 ../bin/actool build --overwrite image rkt-inspect.aci
 
+# Create empty image
+[ -d empty-image/rootfs ] && rmdir empty-image/rootfs
+mkdir empty-image/rootfs
+../bin/actool build --overwrite empty-image rkt-empty.aci
+
 # Alternative images are created in tests themselves
 
 # Cleanup
 rm -rf image/rootfs
+rm -rf empty-image/rootfs
