@@ -25,7 +25,7 @@ RKT_REQ_ABS_PROG([ABS_GO], [go])
 m4_define([DEFAULT_FLAVOR], [coreos])
 AC_ARG_WITH(stage1,
             AS_HELP_STRING([--with-stage1=type],
-                           [type of stage1 build one of 'src', 'coreos', 'host', 'none' (default: 'DEFAULT_FLAVOR')]),
+                           [type of stage1 build one of 'src', 'coreos', 'host', 'none', 'kvm' (default: 'DEFAULT_FLAVOR')]),
             [RKT_STAGE1_USR_FROM="${withval}"],
             [RKT_STAGE1_USR_FROM="coreos"])
 
@@ -48,6 +48,9 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
                  RKT_REQ_PROG([LIBTOOLIZE],[libtoolize],[libtoolize])],
         [host],
                 [],
+        [kvm],
+                [# just a warrning because of nature of this flavor
+                AC_MSG_WARN([* kvm is an experimental stage1 implementation, some features are missing])],
         [AC_MSG_ERROR([*** stage1 build type '${RKT_STAGE1_USR_FROM}' unsupported])])
 
 AC_SUBST(RKT_STAGE1_USR_FROM)
