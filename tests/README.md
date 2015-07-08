@@ -5,13 +5,13 @@ The tests use [gexpect](https://github.com/ThomasRooney/gexpect) to spawn variou
 
 ## Semaphore
 
-The tests run on the [Semaphore](https://semaphoreci.com/) CI system through the [`rktbot`](https://semaphoreci.com/rktbot) user, which is part of the [`coreos`](https://semaphoreci.com/coreos/) org on Semaphore. 
+The tests run on the [Semaphore](https://semaphoreci.com/) CI system through the [`rktbot`](https://semaphoreci.com/rktbot) user, which is part of the [`coreos`](https://semaphoreci.com/coreos/) org on Semaphore.
 This user is authorized against the corresponding [`rktbot`](https://github.com/rktbot) GitHub account.
 The credentials for `rktbot` are currently managed by CoreOS.
 
 ### Build settings
 
-Use the following build commands:
+Use "Other" language and the following build commands:
 
 ```
 ./tests/install-deps.sh            # Setup
@@ -26,12 +26,6 @@ git clean -ffdx                    # Post Thread
 ### Platform
 
 Select `Ubuntu 14.04 LTS v1503 (beta with Docker support)`.
-
-### Environment variables
-
-```
-RKT_ENABLE_FUNCTIONAL_TESTS=true
-```
 
 ## CircleCI
 
