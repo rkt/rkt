@@ -122,27 +122,39 @@ AS_VAR_IF([RKT_STAGE1_IMAGE], [],
 AC_SUBST(RKT_STAGE1_IMAGE_FLAGS)
 
 AC_ARG_ENABLE([functional-tests],
-              AS_HELP_STRING([--enable-functional-tests=no],
-                             [enable functional tests on make check (linux only, uses sudo)]),
+              AS_HELP_STRING([--enable-functional-tests],
+                             [enable functional tests on make check (linux only, uses sudo, default: no, use auto to enable if possible)]),
               [RKT_RUN_FUNCTIONAL_TESTS="${enableval}"],
               [RKT_RUN_FUNCTIONAL_TESTS="no"])
 
-AS_VAR_IF([RKT_RUN_FUNCTIONAL_TESTS], [yes],
-          [AC_MSG_CHECKING([whether functional tests can be run])]
-          [AS_CASE([${host}],
-                   [*-*-linux*],
-                           [AS_VAR_IF([RKT_STAGE1_USR_FROM], [host],
-                                      dnl checking if we are running systemd as init, -.mount is a mount unit for /.
-                                      [AS_IF([systemctl 2>/dev/null | grep --silent -e '-\.mount'],
-                                             [sdv=`systemctl --version | head -1 | sed -e 's/^systemd \(@<:@0-9@:>@*\)$/\1/'`]
-                                             [AS_IF([test ${sdv} -lt 220],
-                                                    [AC_MSG_RESULT([no])]
-                                                    [AC_MSG_ERROR([Cannot run functional tests with ${RKT_STAGE1_USR_FROM} stage1 flavor - systemd version on host is lower than 220 (currently running ${sdv})])])],
-                                             [AC_MSG_RESULT([no])]
-                                             [AC_MSG_ERROR([Cannot run functional tests with ${RKT_STAGE1_USR_FROM} stage1 flavor - no systemd on host])])])],
-                   [AC_MSG_RESULT([no])]
-                   [AC_MSG_ERROR([functional tests are supported only under linux])])]
-          [AC_MSG_RESULT([yes])])
+AS_IF([test "x${RKT_RUN_FUNCTIONAL_TESTS}" = 'xyes' -o "x${RKT_RUN_FUNCTIONAL_TESTS}" = 'xauto'],
+      [AC_MSG_CHECKING([whether functional tests can be run])]
+      [rkt_functional_tests_msg='']
+      [AS_CASE([${host}],
+               [*-*-linux*],
+                       [AS_VAR_IF([RKT_STAGE1_USR_FROM], [host],
+                                  dnl checking if we are running systemd as init, -.mount is a mount unit for /.
+                                  [AS_IF([systemctl 2>/dev/null | grep --silent -e '-\.mount'],
+                                         dnl systemd runs as init
+                                         [sdv=`systemctl --version | head -1 | sed -e 's/^systemd \(@<:@0-9@:>@*\)$/\1/'`]
+                                         [AS_IF([test ${sdv} -lt 220],
+                                                [rkt_functional_tests_msg="Cannot run functional tests with ${RKT_STAGE1_USR_FROM} stage1 flavor - systemd version on host is lower than 220 (currently running ${sdv})"])],
+                                         dnl systemd is not an init
+                                         [rkt_functional_tests_msg="Cannot run functional tests with ${RKT_STAGE1_USR_FROM} stage1 flavor - no systemd on host"])])],
+               dnl non-linux host
+               [rkt_functional_tests_msg="functional tests are supported only under linux"])]
+      [AS_VAR_IF([rkt_functional_tests_msg], [],
+                 dnl no message, tests can be run
+                 [RKT_RUN_FUNCTIONAL_TESTS=yes]
+                 [AC_MSG_RESULT([yes])],
+                 dnl message available
+                 [AC_MSG_RESULT([no])]
+                 [AS_VAR_IF([RKT_RUN_FUNCTIONAL_TESTS], [auto],
+                            dnl only print an info
+                            [RKT_RUN_FUNCTIONAL_TESTS=no]
+                            [AC_MSG_NOTICE([${rkt_functional_tests_msg}])],
+                            dnl bail out
+                            [AC_MSG_ERROR([*** ${rkt_functional_tests_msg}])])])])
 
 AC_SUBST(RKT_RUN_FUNCTIONAL_TESTS)
 
