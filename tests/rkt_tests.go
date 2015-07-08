@@ -15,7 +15,10 @@
 package main
 
 import (
+	"crypto/sha512"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -171,16 +174,37 @@ func expectTimeoutWithOutput(p *gexpect.ExpectSubprocess, searchString string, t
 	return expectCommon(p, searchString, timeout)
 }
 
-func patchTestACI(newFileName string, args ...string) {
+func patchACI(inputFileName, newFileName string, args ...string) {
 	var allArgs []string
 	allArgs = append(allArgs, "patch-manifest")
+	allArgs = append(allArgs, "--no-compression")
 	allArgs = append(allArgs, "--overwrite")
 	allArgs = append(allArgs, args...)
-	allArgs = append(allArgs, "rkt-inspect.aci")
+	allArgs = append(allArgs, inputFileName)
 	allArgs = append(allArgs, newFileName)
 
 	output, err := exec.Command("../bin/actool", allArgs...).CombinedOutput()
 	if err != nil {
 		panic(fmt.Sprintf("Cannot create ACI: %v: %s\n", err, output))
 	}
+}
+
+func patchTestACI(newFileName string, args ...string) {
+	patchACI("rkt-inspect.aci", newFileName, args...)
+}
+
+func getHash(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", fmt.Errorf("error opening file: %v", err)
+	}
+
+	hash := sha512.New()
+	r := io.TeeReader(f, hash)
+
+	if _, err := io.Copy(ioutil.Discard, r); err != nil {
+		return "", fmt.Errorf("error reading file: %v", err)
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }

@@ -395,3 +395,61 @@ Garbage collecting pod "21b1cb32-c156-4d26-82ae-eda1ab60f595"
 Garbage collecting pod "5dd42e9c-7413-49a9-9113-c2a8327d08ab"
 Garbage collecting pod "f07a4070-79a9-4db0-ae65-a090c9c393a3"
 ```
+
+### rkt image export
+
+There are cases where you might want to export the ACI from the store to copy to another machine, file server, etc.
+
+```
+$ rkt image export coreos.com/etcd etcd.aci
+$ tar xvf etcd.aci
+```
+
+NOTES:
+- A matching image must be fetched before doing this operation, rkt will not attempt to download an image first, this subcommand will incur no-network I/O.
+- The exported ACI file might be different than the original one because rkt image export always returns uncompressed ACIs.
+
+
+### rkt image extract/render
+
+For debugging or inspection you may want to extract an ACI to a directory on disk. There are a few different options depending on your use case but the basic command looks like this:
+
+```
+$ rkt image extract coreos.com/etcd etcd-extracted
+$ find etcd-extracted
+etcd-extracted
+etcd-extracted/manifest
+etcd-extracted/rootfs
+etcd-extracted/rootfs/etcd
+etcd-extracted/rootfs/etcdctl
+...
+```
+
+NOTE: Like with rkt image export, a matching image must be fetched before doing this operation.
+
+Now there are some flags that can be added to this:
+
+To get just the rootfs use:
+
+```
+$ rkt image extract --rootfs-only coreos.com/etcd etcd-extracted
+$ find etcd-extracted
+etcd-extracted
+etcd-extracted/etcd
+etcd-extracted/etcdctl
+...
+```
+
+If you want the image rendered as it would look ready-to-run inside of the rkt stage2 then use `rkt image render`. NOTE: this will not use overlayfs or any other mechanism. This is to simplify the cleanup: to remove the extracted files you can run a a simple `rm -Rf`.
+
+### rkt image cat-manifest
+
+For debugging or inspection you may want to extract an ACI manifest to stdout.
+
+```
+$ rkt image cat-manifest --pretty-print coreos.com/etcd
+{
+  "acVersion": "0.6.1",
+  "acKind": "ImageManifest",
+...
+```

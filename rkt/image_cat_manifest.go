@@ -17,8 +17,6 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/store"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
@@ -51,29 +49,10 @@ func runImageCatManifest(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	var key string
-	if _, err := types.NewHash(args[0]); err == nil {
-		key, err = s.ResolveKey(args[0])
-		if err != nil {
-			stderr("image cat-manifest: cannot resolve key: %v", err)
-			return 1
-		}
-	} else {
-		app, err := discovery.NewAppFromString(args[0])
-		if err != nil {
-			stderr("image cat-manifest: cannot parse the image name: %v", err)
-			return 1
-		}
-		labels, err := types.LabelsFromMap(app.Labels)
-		if err != nil {
-			stderr("image cat-manifest: invalid labels in the name: %v", err)
-			return 1
-		}
-		key, err = s.GetACI(app.Name, labels)
-		if err != nil {
-			stderr("image cat-manifest: cannot find image: %v", err)
-			return 1
-		}
+	key, err := getKeyFromAppOrHash(s, args[0])
+	if err != nil {
+		stderr("image cat-manifest: %v", err)
+		return 1
 	}
 
 	manifest, err := s.GetImageManifest(key)
