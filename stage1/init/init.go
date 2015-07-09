@@ -461,10 +461,10 @@ func stage1() int {
 			fmt.Fprintf(os.Stderr, "Failed to setup network: %v\n", err)
 			return 6
 		}
-		defer n.Teardown()
 
 		if err = n.Save(); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to save networking state %v\n", err)
+			n.Teardown()
 			return 6
 		}
 
@@ -505,6 +505,24 @@ func stage1() int {
 		return 3
 	}
 
+	// create a separate mount namespace so the cgroup filesystems
+	// are unmounted when exiting the pod
+	if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
+		log.Fatalf("error unsharing: %v", err)
+	}
+
+	// we recursively make / a "shared and slave" so mount events from the
+	// new namespace don't propagate to the host namespace but mount events
+	// from the host propagate to the new namespace and are forwarded to
+	// its peer group
+	// See https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
+	if err := syscall.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SLAVE, ""); err != nil {
+		log.Fatalf("error making / a slave mount: %v", err)
+	}
+	if err := syscall.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SHARED, ""); err != nil {
+		log.Fatalf("error making / a shared and slave mount: %v", err)
+	}
+
 	appHashes := p.GetAppHashes()
 	s1Root := common.Stage1RootfsPath(p.Root)
 	machineID := p.GetMachineID()
@@ -518,38 +536,14 @@ func stage1() int {
 		fmt.Fprintf(os.Stderr, "Continuing with per-app isolators disabled: %v\n", err)
 	}
 
-	var execFn func() error
-
-	if privNet.Any() {
-		cmd := exec.Cmd{
-			Path:   args[0],
-			Args:   args,
-			Stdin:  os.Stdin,
-			Stdout: os.Stdout,
-			Stderr: os.Stderr,
-			Env:    env,
-		}
-		execFn = func() error {
-			err = cmd.Start()
-			if err != nil {
-				return fmt.Errorf("Failed to start nspawn: %v\n", err)
-			}
-			if err = writePpid(cmd.Process.Pid); err != nil {
-				return err
-			}
-			return cmd.Wait()
-		}
-	} else {
-		if err = writePpid(os.Getpid()); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			return 4
-		}
-		execFn = func() error {
-			return syscall.Exec(args[0], args, env)
-		}
+	if err = writePpid(os.Getpid()); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return 4
 	}
 
-	err = withClearedCloExec(lfd, execFn)
+	err = withClearedCloExec(lfd, func() error {
+		return syscall.Exec(args[0], args, env)
+	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute nspawn: %v\n", err)
 		return 7

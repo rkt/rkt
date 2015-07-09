@@ -917,9 +917,13 @@ func (p *pod) getAppCount() (int, error) {
 	return len(m.Apps), nil
 }
 
-func (p *pod) getStatusDir() (string, error) {
+func (p *pod) usesOverlay() bool {
 	_, err := p.openFile(common.OverlayPreparedFilename, syscall.O_RDONLY)
-	if err == nil {
+	return err == nil
+}
+
+func (p *pod) getStatusDir() (string, error) {
+	if p.usesOverlay() {
 		// the pod uses overlay. Since the mount is in another mount
 		// namespace (or gone), return the status directory from the overlay
 		// upper layer
