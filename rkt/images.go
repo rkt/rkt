@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bytes"
 	"container/list"
 	"crypto/tls"
 	"errors"
@@ -35,6 +36,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/ioprogress"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	pgperrors "github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
@@ -230,7 +232,7 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 					if _, ok := app.Labels["version"]; !ok {
 						latest = true
 					}
-					return f.fetchImageFromEndpoints(ep, ascFile, latest)
+					return f.fetchImageFromEndpoints(app.Name.String(), ep, ascFile, latest)
 				}
 			}
 			if discoveryError != nil {
@@ -263,15 +265,15 @@ func (f *fetcher) fetchImageFromStore(img string) (string, error) {
 	return f.s.GetACI(app.Name, labels)
 }
 
-func (f *fetcher) fetchImageFromEndpoints(ep *discovery.Endpoints, ascFile *os.File, latest bool) (string, error) {
-	return f.fetchImageFrom(ep.ACIEndpoints[0].ACI, ep.ACIEndpoints[0].ASC, "", ascFile, latest)
+func (f *fetcher) fetchImageFromEndpoints(appName string, ep *discovery.Endpoints, ascFile *os.File, latest bool) (string, error) {
+	return f.fetchImageFrom(appName, ep.ACIEndpoints[0].ACI, ep.ACIEndpoints[0].ASC, "", ascFile, latest)
 }
 
 func (f *fetcher) fetchImageFromURL(imgurl string, scheme string, ascFile *os.File, latest bool) (string, error) {
-	return f.fetchImageFrom(imgurl, ascURLFromImgURL(imgurl), scheme, ascFile, latest)
+	return f.fetchImageFrom("", imgurl, ascURLFromImgURL(imgurl), scheme, ascFile, latest)
 }
 
-func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File, latest bool) (string, error) {
+func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, ascFile *os.File, latest bool) (string, error) {
 	if f.insecureSkipVerify {
 		if f.ks != nil {
 			stderr("rkt: warning: TLS verification and signature verification has been disabled")
@@ -299,7 +301,7 @@ func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File
 	if f.local && scheme != "file" {
 		return "", fmt.Errorf("url %s not available in local store", aciURL)
 	}
-	entity, aciFile, err := f.fetch(aciURL, ascURL, ascFile)
+	entity, aciFile, err := f.fetch(appName, aciURL, ascURL, ascFile)
 	if err != nil {
 		return "", err
 	}
@@ -331,11 +333,12 @@ func (f *fetcher) fetchImageFrom(aciURL, ascURL, scheme string, ascFile *os.File
 }
 
 // fetch opens/downloads and verifies the remote ACI.
+// If appName is not "", it will be used to check that the manifest contain the correct appName
 // If ascFile is not nil, it will be used as the signature file and ascURL will be ignored.
 // If Keystore is nil signature verification will be skipped, regardless of ascFile.
 // fetch returns the signer, an *os.File representing the ACI, and an error if any.
 // err will be nil if the ACI fetches successfully and the ACI is verified.
-func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entity, *os.File, error) {
+func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File) (*openpgp.Entity, *os.File, error) {
 	var entity *openpgp.Entity
 	u, err := url.Parse(aciURL)
 	if err != nil {
@@ -402,6 +405,20 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 		defer ascFile.Close()
 	}
 
+	// check if the identity used by the signature is in the store before a
+	// possibly expensive download. This is only an optimization and it's
+	// ok to skip the test if the signature will be downloaded later.
+	if !retrySignature && f.ks != nil && appName != "" {
+		if _, err := ascFile.Seek(0, 0); err != nil {
+			return nil, nil, fmt.Errorf("error seeking signature file: %v", err)
+		}
+		if entity, err = f.ks.CheckSignature(appName, bytes.NewBuffer([]byte{}), ascFile); err != nil {
+			if _, ok := err.(pgperrors.SignatureError); !ok {
+				return nil, nil, err
+			}
+		}
+	}
+
 	var aciFile *os.File
 	if u.Scheme == "file" {
 		aciFile, err = os.Open(u.Path)
@@ -424,6 +441,19 @@ func (f *fetcher) fetch(aciURL, ascURL string, ascFile *os.File) (*openpgp.Entit
 		if err = f.downloadSignatureFile(ascURL, ascFile); err != nil {
 			return nil, aciFile, fmt.Errorf("error downloading the signature file: %v", err)
 		}
+	}
+
+	manifest, err := aci.ManifestFromImage(aciFile)
+	if err != nil {
+		return nil, aciFile, err
+	}
+	// Check if the downloaded ACI has the correct app name.
+	// The check is only performed when the aci is downloaded through the
+	// discovery protocol, but not with local files or full URL.
+	if appName != "" && manifest.Name.String() != appName {
+		return nil, aciFile,
+			fmt.Errorf("error when reading the app name: %q expected but %q found",
+				appName, manifest.Name.String())
 	}
 
 	if f.ks != nil {

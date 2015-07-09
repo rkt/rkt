@@ -344,7 +344,7 @@ func TestDownloading(t *testing.T) {
 				insecureSkipVerify: true,
 			},
 		}
-		_, aciFile, err := ft.fetch(tt.ACIURL, "", nil)
+		_, aciFile, err := ft.fetch("", tt.ACIURL, "", nil)
 		if err == nil {
 			defer os.Remove(aciFile.Name())
 		}
