@@ -26,6 +26,7 @@ $(call setup-stamp-file,UFS_SYSTEMD_BUILD_STAMP,/systemd_build/$(UFS_SYSTEMD_DES
 
 STAGE1_USR_STAMPS += $(UFS_STAMP)
 # INSTALL_SYMLINKS += usr/lib:$(UFS_LIB_SYMLINK) usr/lib64:$(UFS_LIB64_SYMLINK)
+STAGE1_COPY_SO_DEPS := yes
 
 $(call inc-one,bash.mk)
 

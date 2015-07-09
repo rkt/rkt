@@ -27,6 +27,7 @@ STAGE1_INSTALL_FILES :=
 STAGE1_INSTALL_SYMLINKS :=
 STAGE1_INSTALL_DIRS :=
 STAGE1_CREATE_DIRS :=
+STAGE1_COPY_SO_DEPS :=
 
 $(call setup-stamp-file,STAGE1_ASSEMBLE_ACI_STAMP,/assemble_aci)
 $(call setup-stamp-file,STAGE1_FIND_SO_DEPS_STAMP,/find_so_deps)
@@ -72,9 +73,19 @@ TOPLEVEL_STAMPS += $(STAGE1_ASSEMBLE_ACI_STAMP)
 $(STAGE1_ASSEMBLE_ACI_STAMP): $(STAGE1_ACI)
 	touch "$@"
 
+ifeq ($(STAGE1_COPY_SO_DEPS),)
+
+$(STAGE1_ACI): $(STAGE1_STAMPS)
+
+else
+
+$(STAGE1_ACI): $(STAGE1_FIND_SO_DEPS_STAMP)
+
+endif
+
 $(STAGE1_ACI): ACIDIR := $(ACIDIR)
 $(STAGE1_ACI): ACTOOL := $(ACTOOL)
-$(STAGE1_ACI): $(STAGE1_FIND_SO_DEPS_STAMP) $(ACTOOL_STAMP) | $(BINDIR)
+$(STAGE1_ACI): $(ACTOOL_STAMP) | $(BINDIR)
 	"$(ACTOOL)" build --overwrite "$(ACIDIR)" "$@"
 
 $(STAGE1_STAMPS): $(STAGE1_USR_STAMPS)
@@ -92,7 +103,7 @@ $(STAGE1_FIND_SO_DEPS_STAMP): STAGE1_LIBDIRS := $(STAGE1_LIBDIRS)
 $(STAGE1_FIND_SO_DEPS_STAMP): INSTALL := $(INSTALL)
 $(STAGE1_FIND_SO_DEPS_STAMP): $(STAGE1_STAMPS)
 	set -e; \
-	all_libs=$$(find "$(ACIROOTFSDIR)" -type f | xargs file | grep ELF | cut -f1 -d: | LD_LIBRARY_PATH="$(STAGE1_LIBDIRS)" xargs ldd | grep -v '^[^[:space:]]' | grep '/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*(0x[0-9a-fA-F]*)//' -e 's/.*=>[[:space:]]*//' | grep '^/' | sort -u); \
+	all_libs=$$(find "$(ACIROOTFSDIR)" -type f | xargs file | grep ELF | cut -f1 -d: | LD_LIBRARY_PATH="$(STAGE1_LIBDIRS)" xargs ldd | grep -v '^[^[:space:]]' | grep '/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*(0x[0-9a-fA-F]*)//' -e 's/.*=>[[:space:]]*//' | grep -Fve "$(ACIROOTFSDIR)" | sort -u); \
 	for f in $${all_libs}; do \
 		$(INSTALL) -D "$${f}" "$(ACIROOTFSDIR)$${f}"; \
 	done; \
@@ -105,3 +116,4 @@ STAGE1_ACI :=
 STAGE1_ASSEMBLE_ACI_STAMP :=
 STAGE1_FIND_SO_DEPS_STAMP :=
 STAGE1_LIBDIRS :=
+STAGE1_COPY_SO_DEPS :=
