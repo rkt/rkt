@@ -87,6 +87,7 @@ func (d *dirDesc) ensureValid() {
 type rktRunCtx struct {
 	directories []*dirDesc
 	useDefaults bool
+	mds         *exec.Cmd
 }
 
 func newRktRunCtx() *rktRunCtx {
@@ -97,6 +98,11 @@ func newRktRunCtx() *rktRunCtx {
 			newDirDesc("systemdir-", "system configuration", "system-config"),
 		},
 	}
+}
+
+func (ctx *rktRunCtx) launchMDS() error {
+	ctx.mds = exec.Command("../bin/rkt", "metadata-service")
+	return ctx.mds.Start()
 }
 
 func (ctx *rktRunCtx) dataDir() string {
@@ -126,6 +132,12 @@ func (ctx *rktRunCtx) reset() {
 }
 
 func (ctx *rktRunCtx) cleanup() {
+	if ctx.mds != nil {
+		ctx.mds.Process.Kill()
+		ctx.mds.Wait()
+		os.Remove("/run/rkt/metadata-svc.sock")
+	}
+
 	for _, d := range ctx.directories {
 		d.cleanup()
 	}
