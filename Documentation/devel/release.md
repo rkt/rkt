@@ -11,7 +11,7 @@ Let's get started:
 - Start at the relevant milestone on GitHub (e.g. https://github.com/coreos/rkt/milestones/v0.1.2): ensure all referenced issues are closed (or moved elsewhere, if they're not done). Close the milestone.
 - Update the [roadmap](https://github.com/coreos/rkt/blob/master/ROADMAP.md) to remove the release you're performing, if necessary
 - Branch from the latest master, make sure your git status is clean
-- Ensure the build is clean! `./build` should work, `./test` should pass, functional + integration tests on CI should be green
+- Ensure the build is clean! `make` should work, `make check` should pass, functional + integration tests on CI should be green
 - Update the [release notes](https://github.com/coreos/rkt/blob/master/CHANGELOG.md). Try to capture most of the salient changes since the last release, but don't go into unnecessary detail (better to link/reference the documentation wherever possible).
 
 The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/blob/master/version/version.go#L17), so the first thing to do is bump it:
