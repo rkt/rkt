@@ -18,10 +18,12 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 )
@@ -121,6 +123,34 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 				return
 			}
 			stage1RootFS := s.GetTreeStoreRootFS(stage1ID.String())
+
+			if p.usesOverlay() {
+				apps, err := p.getAppsHashes()
+				if err != nil {
+					stderr("Error retrieving app hashes from pod manifest: %v", err)
+					return
+				}
+				for _, a := range apps {
+					dest := filepath.Join(common.AppImagePath(p.path(), a), "rootfs")
+					if err := syscall.Unmount(dest, 0); err != nil {
+						// machine could have been rebooted and mounts lost.
+						// ignore "does not exist" and "not a mount point" errors
+						if err != syscall.ENOENT && err != syscall.EINVAL {
+							stderr("Error unmounting app at %v: %v", dest, err)
+						}
+					}
+				}
+
+				s1 := filepath.Join(common.Stage1ImagePath(p.path()), "rootfs")
+				if err := syscall.Unmount(s1, 0); err != nil {
+					// machine could have been rebooted and mounts lost.
+					// ignore "does not exist" and "not a mount point" errors
+					if err != syscall.ENOENT && err != syscall.EINVAL {
+						stderr("Error unmounting stage1 at %v: %v", s1, err)
+						return
+					}
+				}
+			}
 
 			// execute stage1's GC
 			if err := stage0.GC(p.path(), p.uuid, stage1RootFS, globalFlags.Debug); err != nil {
