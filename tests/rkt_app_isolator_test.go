@@ -33,21 +33,17 @@ const (
 var memoryTest = struct {
 	testName     string
 	aciBuildArgs []string
-	rktArgs      string
 }{
 	`Check memory isolator`,
 	[]string{"--exec=/inspect --print-memorylimit"},
-	`--insecure-skip-verify run --mds-register=false rkt-inspect-isolators.aci`,
 }
 
 var cpuTest = struct {
 	testName     string
 	aciBuildArgs []string
-	rktArgs      string
 }{
 	`Check CPU quota`,
 	[]string{"--exec=/inspect --print-cpuquota"},
-	`--insecure-skip-verify run --mds-register=false rkt-inspect-isolators.aci`,
 }
 
 func TestAppIsolatorMemory(t *testing.T) {
@@ -61,11 +57,10 @@ func TestAppIsolatorMemory(t *testing.T) {
 
 	t.Logf("Running test: %v", memoryTest.testName)
 
-	aciFileName := "rkt-inspect-isolators.aci"
-	patchTestACI(aciFileName, memoryTest.aciBuildArgs...)
+	aciFileName := patchTestACI("rkt-inspect-isolators.aci", memoryTest.aciBuildArgs...)
 	defer os.Remove(aciFileName)
 
-	rktCmd := fmt.Sprintf("%s %s", ctx.cmd(), memoryTest.rktArgs)
+	rktCmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), aciFileName)
 	t.Logf("Command: %v", rktCmd)
 	child, err := gexpect.Spawn(rktCmd)
 	if err != nil {
@@ -93,11 +88,10 @@ func TestAppIsolatorCPU(t *testing.T) {
 
 	t.Logf("Running test: %v", cpuTest.testName)
 
-	aciFileName := "rkt-inspect-isolators.aci"
-	patchTestACI(aciFileName, cpuTest.aciBuildArgs...)
+	aciFileName := patchTestACI("rkt-inspect-isolators.aci", cpuTest.aciBuildArgs...)
 	defer os.Remove(aciFileName)
 
-	rktCmd := fmt.Sprintf("%s %s", ctx.cmd(), cpuTest.rktArgs)
+	rktCmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), aciFileName)
 	t.Logf("Command: %v", rktCmd)
 	child, err := gexpect.Spawn(rktCmd)
 	if err != nil {

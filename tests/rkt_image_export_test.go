@@ -33,7 +33,6 @@ const (
 // image, export it with rkt image export and check that the exported ACI hash
 // matches the hash of the imported ACI
 func TestImageExport(t *testing.T) {
-	testImage := "rkt-inspect-image-export.aci"
 	testImageName := "coreos.com/rkt-image-export-test"
 	expectManifest := strings.Replace(manifestExportTemplate, "IMG_NAME", testImageName, -1)
 
@@ -54,7 +53,7 @@ func TestImageExport(t *testing.T) {
 	}
 	defer os.Remove(tmpManifestName)
 
-	patchTestACI(testImage, "--manifest", tmpManifestName)
+	testImage := patchTestACI("rkt-inspect-image-export.aci", "--manifest", tmpManifestName)
 	defer os.Remove(testImage)
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()

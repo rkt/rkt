@@ -21,6 +21,7 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
   * realpath
   * gpg
 * Go 1.4+
+* Perl 5.10 with the Capture::Tiny module (on Fedora/RHEL/Centos: perl-Capture-Tiny package, on Debian/Ubuntu libcapture-tiny-perl package)
 
 Once the requirements have been met you can build rkt by running the following commands:
 
