@@ -1,3 +1,29 @@
+### v0.7.0
+
+rkt 0.7.0 includes new subcommands for `rkt image` to manipulate images from
+the local store.
+
+It also has a new build system based on autotools and integration with SELinux.
+
+Full changelog:
+
+- New subcommands for `rkt image`: extract, render and export
+- Metadata service:
+  - Auth now based on tokens
+  - Registration done by default, unless --mds-register=false is passed
+- Build:
+  - Remove support for Go 1.3
+  - Replace build system with autoconf and make
+- Network: fixes for plugins related to mnt namespace
+- Signature: clearer error messages
+- Security:
+  - Support for SELinux
+  - Check signature before downloading
+- Commands: fix error messages and parameter parsing
+- Output: reduce output verbosity
+- Systemd integration: fix stop bug
+- Tests: Improve tests output
+
 ### v0.6.1
 
 The highlight of this release is the support of per-app memory and CPU
