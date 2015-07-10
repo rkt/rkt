@@ -49,7 +49,7 @@ func registerPod(root string, uuid *types.UUID, apps schema.AppList) (token stri
 	u := uuid.String()
 
 	var err error
-	token, rerr = generateMDSToken()
+	token, err = generateMDSToken()
 	if err != nil {
 		rerr = fmt.Errorf("failed to generate MDS token: %v", err)
 		return
