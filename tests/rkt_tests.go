@@ -101,7 +101,7 @@ func newRktRunCtx() *rktRunCtx {
 }
 
 func (ctx *rktRunCtx) launchMDS() error {
-	ctx.mds = exec.Command("../bin/rkt", "metadata-service")
+	ctx.mds = exec.Command(ctx.rktBin(), "metadata-service")
 	return ctx.mds.Start()
 }
 
@@ -126,6 +126,7 @@ func (ctx *rktRunCtx) dir(idx int) string {
 }
 
 func (ctx *rktRunCtx) reset() {
+	ctx.runGC()
 	for _, d := range ctx.directories {
 		d.reset()
 	}
@@ -138,22 +139,44 @@ func (ctx *rktRunCtx) cleanup() {
 		os.Remove("/run/rkt/metadata-svc.sock")
 	}
 
+	ctx.runGC()
 	for _, d := range ctx.directories {
 		d.cleanup()
 	}
 }
 
+func (ctx *rktRunCtx) runGC() {
+	rktArgs := append(ctx.rktOptions(),
+		"gc",
+		"--grace-period=0s",
+	)
+	if err := exec.Command(ctx.rktBin(), rktArgs...).Run(); err != nil {
+		panic(fmt.Sprintf("Failed to run gc: %v", err))
+	}
+}
+
 func (ctx *rktRunCtx) cmd() string {
+	return fmt.Sprintf("%s %s",
+		ctx.rktBin(),
+		strings.Join(ctx.rktOptions(), " "),
+	)
+}
+
+func (ctx *rktRunCtx) rktBin() string {
+	abs, err := filepath.Abs("../bin/rkt")
+	if err != nil {
+		abs = "../bin/rkt"
+	}
+	return abs
+}
+
+func (ctx *rktRunCtx) rktOptions() []string {
 	ctx.ensureValid()
 	opts := make([]string, 0, len(ctx.directories))
 	for _, d := range ctx.directories {
 		opts = append(opts, d.rktOption())
 	}
-	abs, err := filepath.Abs("../bin/rkt")
-	if err != nil {
-		abs = "../bin/rkt"
-	}
-	return fmt.Sprintf("%s %s", abs, strings.Join(opts, " "))
+	return opts
 }
 
 func (ctx *rktRunCtx) ensureValid() {
