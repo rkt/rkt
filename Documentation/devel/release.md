@@ -26,7 +26,7 @@ The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/b
 
 After merging and going back to master branch, we check out the release version and tag it:
 - `git checkout HEAD^` should work (or `git checkout HEAD^2~`? git how does it work); sanity check version/version.go after doing this
-- Build the release with `./autogen.sh && ./configure && make`, we'll use this in a minute. Sanity check `bin/rkt version`
+- Build the release with `./autogen.sh && ./configure && make`, we'll use this in a minute. Sanity check `build-rkt-0.7.0/bin/rkt version`
 - Add a signed tag: `git tag -s v0.7.0`. (We previously used tags for release notes, but now we store them in CHANGELOG.md, so a short tag with the release name is fine).
 - Push the tag to GitHub: `git push --tags`
 
@@ -41,7 +41,7 @@ Now we switch to the GitHub web UI to conduct the release:
 ```
 	export NAME="rkt-v0.7.0"
 	mkdir $NAME 
-	cp bin/rkt bin/stage1.aci $NAME/ 
+	cp build-rkt-0.7.0/bin/rkt build-rkt-0.7.0/bin/stage1.aci $NAME/
 	tar czvf $NAME.tar.gz $NAME/
 ```
 
