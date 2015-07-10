@@ -40,3 +40,14 @@ test:
     - RKT_STAGE1_USR_FROM=src ./build
     - ./test
 ```
+
+## Manually running the functional tests
+
+Make sure that `--enable-functional-tests` is passed to configure
+script, then, after building the project, functional tests can be run.
+
+```
+./configure --enable-functional-tests
+make -j4
+make check GO_TEST_FUNC_ARGS='-run NameOfTheTest'
+```

@@ -92,31 +92,31 @@ sub generate
 
     for my $f (@files)
     {
-	my $dir = dirname($f);
+        my $dir = dirname($f);
 
-	unless (exists($dirs{$dir}))
-	{
-	    $dirs{$dir} = [$f];
-	}
-	else
-	{
-	    my $files = $dirs{$dir};
+        unless (exists($dirs{$dir}))
+        {
+            $dirs{$dir} = [$f];
+        }
+        else
+        {
+            my $files = $dirs{$dir};
 
-	    push(@{$files}, $f);
-	}
+            push(@{$files}, $f);
+        }
     }
     @deps_gen_dirs = sort keys %dirs;
 
     for my $dir (@deps_gen_dirs)
     {
-	my $escaped = escape_path($dir);
-	my @files = sort_u(@{$dirs{$dir}});
-	my @filenames = map { basename $_ } @files;
-	my $assign = '_DEPS_GEN_FILES_IN_' . $escaped . ' :=';
+        my $escaped = escape_path($dir);
+        my @files = sort_u(@{$dirs{$dir}});
+        my @filenames = map { basename $_ } @files;
+        my $assign = '_DEPS_GEN_FILES_IN_' . $escaped . ' :=';
 
-	push(@all_files, @files);
-	push(@deps_gen_files_in_fill, $assign . ' ' . join(' ', @filenames));
-	push(@deps_gen_files_in_empty, $assign);
+        push(@all_files, @files);
+        push(@deps_gen_files_in_fill, $assign . ' ' . join(' ', @filenames));
+        push(@deps_gen_files_in_empty, $assign);
     }
 
     @deps_gen_target_deps = sort_u(@all_files);

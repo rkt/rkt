@@ -17,6 +17,7 @@ TST_GO_VET_PACKAGES := $(filter-out github.com/coreos/rkt/store,$(TST_GO_VET_PAC
 endif
 
 $(TST_SHORT_TESTS_STAMP): TST_GOFMT_DIRS := $(TST_GOFMT_DIRS)
+$(TST_SHORT_TESTS_STAMP): RKT_TAGS := $(RKT_TAGS)
 $(TST_SHORT_TESTS_STAMP): TST_GO_VET_PACKAGES := $(TST_GO_VET_PACKAGES)
 $(TST_SHORT_TESTS_STAMP): TST_GO_TEST_PACKAGES := $(TST_GO_TEST_PACKAGES)
 $(TST_SHORT_TESTS_STAMP):
@@ -31,7 +32,7 @@ $(TST_SHORT_TESTS_STAMP):
 		done; \
 	); \
 	if [ -n "$${res}" ]; then echo -e "license header checking failed:\n$${res}"; exit 1; fi; \
-	$(GO_ENV) "$(GO)" test -timeout 60s -cover $(TST_GO_TEST_PACKAGES) --race
+	$(GO_ENV) "$(GO)" test -timeout 60s -cover $(RKT_TAGS) $(TST_GO_TEST_PACKAGES) --race
 
 TOPLEVEL_CHECK_STAMPS += $(TST_SHORT_TESTS_STAMP)
 

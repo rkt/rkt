@@ -11,13 +11,13 @@ sub get_list
 {
     my @cmd = @_;
     my ($stdout, $stderr, $status) = capture {
-	system(@cmd);
+        system(@cmd);
     };
 
     if ($status != 0)
     {
-	say STDERR $stderr;
-	exit 1;
+        say STDERR $stderr;
+        exit 1;
     }
 
     $stdout =~ s/^'\[//;
@@ -50,11 +50,11 @@ sub package_deps
 
     for my $f (@imports)
     {
-	unless (exists($pkgs{$f}))
-	{
-	    $f =~ s/$main\///;
-	    push(@files, package_deps($main, $f));
-	}
+        unless (exists($pkgs{$f}))
+        {
+            $f =~ s/$main\///;
+            push(@files, package_deps($main, $f));
+        }
     }
 
     @files

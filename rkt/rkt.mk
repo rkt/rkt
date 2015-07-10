@@ -4,7 +4,7 @@ $(call setup-stamp-file,RKT_STAMP)
 
 RKT_BINARY := $(BINDIR)/$(LOCAL_NAME)
 
-# variables for makelib/build_go.mk
+# variables for makelib/build_go_bin.mk
 BGB_BINARY := $(RKT_BINARY)
 BGB_PKG_IN_REPO := $(subst $(MK_TOPLEVEL_SRCDIR)/,,$(MK_SRCDIR))
 BGB_GO_FLAGS := $(RKT_STAGE1_IMAGE_FLAGS) $(RKT_TAGS)

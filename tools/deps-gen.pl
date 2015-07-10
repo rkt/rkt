@@ -12,7 +12,7 @@ my $opt_suffix = '';
 my $opt_target = '';
 
 GetOptions("target|t=s" => \$opt_target,
-	   "suffix|s=s" => \$opt_suffix)
+           "suffix|s=s" => \$opt_suffix)
     or die("Wrong command line args");
 
 if ($opt_target eq '')

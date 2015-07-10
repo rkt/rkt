@@ -15,7 +15,8 @@ $$(eval $$(call _FILE_OPS_MK_SPLIT_2_,$1,_FILE_OPS_MK_DIR_,_FILE_OPS_MK_MODE_))
 CLEAN_DIRS += $$(_FILE_OPS_MK_DIR_)
 $$(_FILE_OPS_MK_DIR_): INSTALL := $$(INSTALL)
 $$(_FILE_OPS_MK_DIR_): _FILE_OPS_MK_MODE_ := $$(_FILE_OPS_MK_MODE_)
-#$$(_FILE_OPS_MK_DIR_): | $$(call to-dir,$$(_FILE_OPS_MK_DIR_))
+# TODO: Create a proper dependency on parent directory
+# $$(_FILE_OPS_MK_DIR_): | $$(call to-dir,$$(_FILE_OPS_MK_DIR_))
 $$(_FILE_OPS_MK_DIR_):
 	[[ -e "$$@" ]] || $$(INSTALL) $$(call _FILE_OPS_MK_DASH_M_,$$(_FILE_OPS_MK_MODE_)) -d "$$@"
 	$$(call _FILE_OPS_MK_BAIL_OUT_IF_NOT_DIR_,$$@)
