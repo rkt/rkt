@@ -1,5 +1,5 @@
 AC_PREREQ([2.68])
-AC_INIT([rkt], [0.7.0], [https://github.com/coreos/rkt/issues])
+AC_INIT([rkt], [0.7.0+git], [https://github.com/coreos/rkt/issues])
 
 AC_CANONICAL_HOST
 

@@ -5,7 +5,7 @@
     "labels": [
         {
             "name": "version",
-            "value": "0.7.0"
+            "value": "0.7.0+git"
         },
         {
             "name": "arch",
