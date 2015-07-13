@@ -27,20 +27,6 @@ git clean -ffdx                    # Post Thread
 
 Select `Ubuntu 14.04 LTS v1503 (beta with Docker support)`.
 
-## CircleCI
-
-Ideally the tests will also run on [CircleCI](https://circleci.com), but there is currently a known issue because access to the cgroup filesystems is restricted - more info [here](https://github.com/coreos/rkt/issues/600#issuecomment-87655911)
-
-Assuming this can be resolved, the following configuration can be used:
-
-```circle.yml
-test:
-  override:
-    - ./tests/install-deps.sh
-    - RKT_STAGE1_USR_FROM=src ./build
-    - ./test
-```
-
 ## Manually running the functional tests
 
 Make sure that `--enable-functional-tests` is passed to configure
