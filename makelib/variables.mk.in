@@ -49,7 +49,7 @@ RKT_RUN_FUNCTIONAL_TESTS := @RKT_RUN_FUNCTIONAL_TESTS@
 
 # build-related directories and binaries
 BUILDDIR ?= $(MK_TOPLEVEL_ABS_SRCDIR)/build-$(distdir)
-BUILDDIR := $(abspath $(BUILDDIR))
+override BUILDDIR := $(abspath $(BUILDDIR))
 
 MAKETOOLSDIR := $(MK_TOPLEVEL_SRCDIR)/tools
 STAMPSDIR := $(BUILDDIR)/stamps
