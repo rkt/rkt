@@ -28,7 +28,7 @@ Once the requirements have been met you can build rkt by running the following c
 ```
 git clone https://github.com/coreos/rkt.git
 cd rkt
-./build
+./autogen.sh && ./configure && make
 ```
 
 ### Run-time requirements
@@ -52,20 +52,22 @@ Alternatively, you can build rkt in a Docker container with the following comman
 Replace $SRC with the absolute path to your rkt source code:
 
 ```
-$ sudo docker run -v $SRC:/opt/rkt -i -t golang:1.4 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath && cd /opt/rkt && go get github.com/appc/spec/... && ./build"
+$ sudo docker run -v $SRC:/opt/rkt -i -t golang:1.4 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath autoconf libcapture-tiny-perl file && cd /opt/rkt && go get github.com/appc/spec/... && ./autogen.sh && ./configure && make"
 ```
 
 ### Building systemd in stage1 from the sources
 
-By default, rkt gets systemd from a CoreOS image to generate stage1. But it's also possible to build systemd from the sources. To do that, you can set the following environment variables:
+By default, rkt gets systemd from a CoreOS image to generate stage1. But it's also possible to build systemd from the sources.
+After running `./autogen.sh` you can select the following options:
 
-* `RKT_STAGE1_USR_FROM=none|coreos|src`: choose how to generate systemd for stage1
-* `RKT_STAGE1_SYSTEMD_VER=v219|v220|master`: if `RKT_STAGE1_USR_FROM=src`, choose the systemd branch or tag to build
+* ./configure --with-stage1=none|coreos|src|host`: choose how to generate systemd for stage1 (default: 'coreos')
+* ./configure --with-stage1-systemd-version=version`: if stage1 is set to build from src, choose the systemd branch or tag to build (default: 'v220')
+* ./configure --with-stage1-systemd-src=git-path`: if stage1 is set to build from src, systemd git repository's address (default: 'https://github.com/systemd/systemd.git')
 
 Example:
 
 ```
-RKT_STAGE1_USR_FROM=src RKT_STAGE1_SYSTEMD_VER=v220 ./build
+./autogen.sh && ./configure --with-stage1=src --with-stage1-systemd-version=master --with-stage1-systemd-src=$HOME/src/systemd && make
 ```
 
 ### Alternative stage1 paths
@@ -75,12 +77,12 @@ rkt is designed and intended to be modular, using a [staged architecture](devel/
 `rkt run` determines the stage1 image it should use via its `-stage1-image` flag.
 By default, if this flag is unset at runtime, rkt will default to looking for a file called `stage1.aci` that is in the same directory as the rkt binary itself.
 
-However, a default value can be set for this parameter at build time by setting the environment variable `RKT_STAGE1_IMAGE` (i.e when invoking ./build).
+However, a default value can be set for this parameter at build time by setting the option `--with-stage1-image-path` when invoking `./configure`
 This is useful for those packaging rkt for distribution who will provide the stage1 in a fixed/known location.
 
-The variable should be set to the fully qualified path at which rkt can find the stage1 image - for example:
+The option should be set to the fully qualified path at which rkt can find the stage1 image - for example:
 
-	RKT_STAGE1_IMAGE=/usr/lib/rkt/stage1.aci ./build
+	./autogen.sh && ./configure --with-stage1-image-path=/usr/lib/rkt/stage1.aci && make
 
 rkt will then use this environment variable to set the default value for the `stage1-image` flag.
 
