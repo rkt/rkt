@@ -3,7 +3,7 @@
 set -x
 
 export DEBIAN_FRONTEND=noninteractive
-VERSION=1.4.1
+VERSION=1.4.2
 OS=linux
 ARCH=amd64
 

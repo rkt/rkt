@@ -6,6 +6,8 @@ Vagrant.configure('2') do |config|
     config.vm.provider :virtualbox do |vb, override|
         vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
         vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+        # add more ram, the default isn't enough for the build
+        vb.customize ["modifyvm", :id, "--memory", "768"]
     end
 
     # install Build Dependencies (GOLANG)
