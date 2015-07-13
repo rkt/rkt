@@ -47,6 +47,7 @@ The resolved entrypoint must inform rkt of its PID for the benefit of `rkt enter
 * `--debug` to activate debugging
 * `--private-net` to trigger the creation of a private network
 * `--mds-token=$TOKEN` passes the auth token to the apps via `AC_METADATA_URL` env var
+* `--interactive` to run a pod interactively, that is, pass standard input to the application (only for pods with one application)
 
 
 ### `rkt enter` => "coreos.com/rkt/stage1/enter"
