@@ -6,8 +6,10 @@ $(strip $(_LIB_MK_TMP_MSUBST_VAL_)) \
 $(eval _LIB_MK_TMP_MSUBST_VAL_ :=)
 endef
 
+# When updating replaced chars here, remember to update them in
+# libdepsgen.pm in escape_path sub.
 define escape-for-file
-$(strip $(call multi-subst,- / . :,_,$1))
+$(strip $(call multi-subst,- / . : +,_,$1))
 endef
 
 define path-to-file-with-suffix
