@@ -57,6 +57,7 @@ TOOLSDIR := $(BUILDDIR)/tools
 BINDIR := $(BUILDDIR)/bin
 GOPATH := $(BUILDDIR)/gopath
 DEPSDIR := $(BUILDDIR)/deps
+REVSDIR := $(BUILDDIR)/revs
 ACIDIR := $(BUILDDIR)/aci-for-$(RKT_STAGE1_USR_FROM)-flavor
 ACIROOTFSDIR := $(ACIDIR)/rootfs
 
@@ -77,5 +78,6 @@ CREATE_DIRS += \
 	$(BINDIR) \
 	$(GOPATH) \
 	$(DEPSDIR) \
+	$(REVSDIR) \
 	$(ACIDIR) \
 	$(ACIROOTFSDIR)
