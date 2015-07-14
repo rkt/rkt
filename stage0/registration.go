@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -34,7 +35,11 @@ import (
 	"github.com/coreos/rkt/common"
 )
 
-const retryCount = 3
+const (
+	retryCount = 3
+
+	mdsRegisteredFile = "./mds-registered"
+)
 
 var retryPause = time.Second
 
@@ -72,9 +77,16 @@ func registerPod(root string, uuid *types.UUID, apps schema.AppList) (token stri
 
 	defer func() {
 		if rerr != nil {
-			unregisterPod(uuid)
+			unregisterPod(root, uuid)
 		}
 	}()
+
+	rf, err := os.Create(filepath.Join(root, mdsRegisteredFile))
+	if err != nil {
+		rerr = fmt.Errorf("failed to create mds-register file: %v", err)
+		return
+	}
+	rf.Close()
 
 	for _, app := range apps {
 		ampath := common.ImageManifestPath(root, app.Image.ID)
@@ -96,9 +108,19 @@ func registerPod(root string, uuid *types.UUID, apps schema.AppList) (token stri
 }
 
 // unregisterPod unregisters pod with the metadata service.
-func unregisterPod(uuid *types.UUID) error {
-	pth := path.Join("/pods", uuid.String())
-	return httpRequest("DELETE", pth, nil)
+func unregisterPod(root string, uuid *types.UUID) error {
+	_, err := os.Stat(filepath.Join(root, mdsRegisteredFile))
+	switch {
+	case err == nil:
+		pth := path.Join("/pods", uuid.String())
+		return httpRequest("DELETE", pth, nil)
+
+	case os.IsNotExist(err):
+		return nil
+
+	default:
+		return err
+	}
 }
 
 func generateMDSToken() (string, error) {
