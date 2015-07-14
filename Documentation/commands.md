@@ -338,7 +338,7 @@ NOTE: Journald integration requires systemd version v219 or v220 in stage1.
 
 #### Accessing logs via journalctl
 
-To get the logs you need to get pod's machine name. You can use machinectl
+To get the logs of a running pod you need to get pod's machine name. You can use machinectl
 
 ```
 $ machinectl
@@ -358,15 +358,13 @@ f241c969-1710-445a-8129-d3a7ffdd9a60    busybox running
 
 Pod's machine name will be the pod's UUID with a `rkt-` prefix.
 
-Then you can use systemd's journalctl with `_HOSTNAME` set to the machine name:
+Then you can use systemd's journalctl:
 
 ```
-$ journalctl -m _HOSTNAME=rkt-f241c969-1710-445a-8129-d3a7ffdd9a60
+$ sudo journalctl -M rkt-f241c969-1710-445a-8129-d3a7ffdd9a60
 
 [...]
 ```
-
-rkt doesn't integrate with `journalctl -M` yet (see https://github.com/coreos/rkt/issues/947).
 
 ### rkt status
 

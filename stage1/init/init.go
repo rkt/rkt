@@ -324,7 +324,7 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 			log.Fatalf("error writing /etc/machine-id: %v\n", err)
 		}
 
-		args = append(args, "--link-journal=try-host")
+		args = append(args, "--link-journal=try-guest")
 	}
 
 	if !debug {
