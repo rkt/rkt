@@ -23,7 +23,6 @@ define _DEPS_GEN_COMPARE_LIST_
 $(eval _DEPS_GEN_VAR_ := _DEPS_GEN_FILES_IN_$(call escape-for-file,$1)) \
 $(eval _DEPS_GEN_TF1_ := $(sort $(strip $(call _DEPS_GEN_SUFFIXED_FILES_WILDCARD_,$1,!!!_DEPS_GEN_FILE_SUFFIX!!!)))) \
 $(eval _DEPS_GEN_F1_ := $(patsubst $1/%,%,$(_DEPS_GEN_TF1_))) \
-$(eval _DEPS_GEN_F1_ := $(patsubst $1/%,%,$(sort $(wildcard $1/*.go)))) \
 $(eval _DEPS_GEN_F2_ := $(strip $(sort $($(_DEPS_GEN_VAR_))))) \
 $(eval _DEPS_GEN_CF1_ := $(subst $(_DEPS_GEN_SPACE_),-,$(_DEPS_GEN_F1_))) \
 $(eval _DEPS_GEN_CF2_ := $(subst $(_DEPS_GEN_SPACE_),-,$(_DEPS_GEN_F2_))) \
