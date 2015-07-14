@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
 )
@@ -109,7 +110,7 @@ func TestVolumes(t *testing.T) {
 			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
 		}
 
-		err = expectWithOutput(child, tt.expect)
+		err = expectTimeoutWithOutput(child, tt.expect, time.Minute)
 		if err != nil {
 			fmt.Printf("Command: %s\n", cmd)
 			t.Fatalf("Expected %q but not found #%v: %v", tt.expect, i, err)
