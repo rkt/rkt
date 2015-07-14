@@ -67,7 +67,7 @@ sub escape_path
 {
     my ($path) = @_;
 
-    $path =~ s/[-\/.:]/_/gr;
+    $path =~ s/[-\/.:+]/_/gr;
 }
 
 sub sort_u

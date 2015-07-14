@@ -45,6 +45,9 @@ $(UFC_ACI_ROOTFS_STAMP): $(UFC_MKBASE_STAMP) $(UFC_FILELIST)
 	mv "$(UFC_DEPMK).tmp" "$(UFC_DEPMK)"; \
 	 \
 	ln -sf 'coreos' "$(ACIROOTFSDIR)/flavor"; \
+	ln -sf 'usr/lib64' "$(ACIROOTFSDIR)/lib64"; \
+	ln -sf 'usr/lib' "$(ACIROOTFSDIR)/lib"; \
+	ln -sf 'usr/bin' "$(ACIROOTFSDIR)/bin"; \
 	echo "$(UFC_SYSTEMD_VERSION)" >"$(ACIROOTFSDIR)/systemd-version"; \
 	touch "$@"
 
