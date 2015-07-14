@@ -18,7 +18,7 @@ Use the `RemoveOnStop` directive in the relevant `.socket` file to clean up.
 
 Example systemd unit files for running the metadata service are available in [dist](https://github.com/coreos/rkt/tree/master/dist/init/systemd)
 
-In addition to listening on a Unix socket, the metadata service will also listen on a TCP port.
+In addition to listening on a Unix socket, the metadata service will also listen on a TCP port 2375.
 When contacting the metadata service, the apps utilize this port.
 The IP and port of the metadata service are passed by rkt to pods via the `AC_METADATA_URL` environment variable.
 
