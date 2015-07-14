@@ -6,15 +6,8 @@
 
 By default, `rkt run` will start the pod with host networking.
 This means that the apps within the pod will share the network stack and the interfaces with the host machine.
-Since the metadata service uses the pod IP for identity, rkt will _not_ register the pod with the metadata service in this mode.
-
-Note: because of the lack of the metadata service rkt does not strictly implement the app container specification in host mode.
 
 ## Private networking mode
-
-For all of the private networking options the metadata service, launched via `rkt metadata-service`, must be running.
-The service will listen on 0.0.0.0:2375 by default and provides the private networking containers the metadata services described in the App Container Spec.
-Ideally this metadata service is launched via your systems init system.
 
 If `rkt run` is started with the `--private-net` flag, the pod will be executed with its own network stack, with the default network plus all configured networks.
 Passing a list of comma separated network names as in `--private-net=net1,net2,net3,...` restricts the network stack to the specified networks.

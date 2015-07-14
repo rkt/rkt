@@ -133,6 +133,16 @@ hello-0.0.1-linux-amd64.aci: valid app container image
 
 ## Run
 
+### Launch the metadata service
+
+Start the metadata service from your init system or simply from another terminal:
+
+```
+$ sudo rkt metadata-service
+```
+
+rkt will register pods with the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/metadata-service.md) so they can introspect their environment.
+
 ### Launch a local application image
 
 ```
