@@ -14,7 +14,7 @@ Most parameters defined in an image can be overridden at runtime by rkt. For exa
 
 appc defines the [_pod_][appc-pods] as the basic unit of execution. A pod is a grouping of one or more app images (ACIs), with some additional metadata optionally applied to the pod as a whole - for example, a resource constraint can be applied at the pod level and then forms an "outer bound" for all the applications in the pod. The images in a pod execute with a shared context, including networking.
 
-A pod in rkt is conceptually identical to a pod [as defined in Kubernetes](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/pods.md).
+A pod in rkt is conceptually identical to a pod [as defined in Kubernetes](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/user-guide/pods.md).
 
 ## Validating rkt as an appc implementation
 
