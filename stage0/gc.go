@@ -30,10 +30,9 @@ import (
 // /gc can expect to have its CWD set to the pod root.
 // stage1Path is the path of the stage1 rootfs
 func GC(pdir string, uuid *types.UUID, stage1Path string, debug bool) error {
-	err := unregisterPod(uuid)
+	err := unregisterPod(pdir, uuid)
 	if err != nil {
-		// We can't be sure if pod was registered or even if MDS is running.
-		// Therefore all we can do is log a warning
+		// Probably not worth abandoning the rest
 		log.Printf("Warning: could not unregister pod with metadata service: %v", err)
 	}
 
