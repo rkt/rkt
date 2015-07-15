@@ -1,4 +1,4 @@
-LOCAL_PLUGIN_NAMES := main/veth main/bridge main/macvlan ipam/host-local
+LOCAL_PLUGIN_NAMES := main/veth main/bridge main/macvlan main/ipvlan ipam/host-local
 LOCAL_ACI_PLUGINSDIR := $(ACIROOTFSDIR)/usr/lib/rkt/plugins/net
 LOCAL_HOST_LOCAL_PTP_SYMLINK := $(LOCAL_ACI_PLUGINSDIR)/host-local-ptp
 
