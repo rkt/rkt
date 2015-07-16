@@ -23,8 +23,8 @@ rkt implements the two runtime components of the appc specification: the [Applic
 To validate that `rkt` successfully implements the ACE part of the spec, use the App Container [validation ACIs][appc-val]:
 
 ```
-$ sudo rkt metadata-service &  # Make sure metadata service is running
-$ sudo rkt --insecure-skip-verify run \
+# rkt metadata-service &  # Make sure metadata service is running
+# rkt --insecure-skip-verify run \
 	--private-net \
 	--volume=database,kind=host,source=/tmp \
 	https://github.com/appc/spec/releases/download/v0.5.1/ace-validator-main.aci \

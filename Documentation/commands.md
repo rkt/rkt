@@ -20,17 +20,17 @@ Before this can happen, rkt needs to know which creators you trust, and therefor
 When adding a trusted key, a prefix can scope the level of established trust to a subset of images. A few examples:
 
 ```
-$rkt trust --prefix=storage.coreos.com
+# rkt trust --prefix=storage.coreos.com
 ```
 
 ```
-$rkt trust --prefix=coreos.com/etcd
+# rkt trust --prefix=coreos.com/etcd
 ```
 
 To trust a key for an entire root domain, you must use the `--root` flag.
 
 ```
-$rkt trust --root coreos.com
+# rkt trust --root coreos.com
 ```
 
 #### Trust a Key Using Meta Discovery
@@ -44,7 +44,7 @@ The easiest way to trust a key is through meta discovery. rkt will find and down
 And use it to download the public key and present it to you for approval:
 
 ```
-$ rkt trust --prefix=coreos.com/etcd
+# rkt trust --prefix=coreos.com/etcd
 Prefix: "coreos.com/etcd"
 Key: "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg"
 GPG key fingerprint is: 8B86 DE38 890D DB72 9186  7B02 5210 BD88 8818 2190
@@ -57,7 +57,7 @@ Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.
 If rkt can't find a key using meta discovery, an error will be printed:
 
 ```
-$ rkt trust --prefix=coreos.com
+# rkt trust --prefix=coreos.com
 Error determining key location: --prefix meta discovery error: found no ACI meta tags
 ```
 
@@ -66,7 +66,7 @@ Error determining key location: --prefix meta discovery error: found no ACI meta
 If you know where a public key is located, you can request it directly from disk or via HTTPS:
 
 ```
-$ sudo ./rkt trust --prefix=coreos.com/etcd https://coreos.com/dist/pubkeys/aci-pubkeys.gpg
+# rkt trust --prefix=coreos.com/etcd https://coreos.com/dist/pubkeys/aci-pubkeys.gpg
 Prefix: "coreos.com/etcd"
 Key: "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg"
 GPG key fingerprint is: 8B86 DE38 890D DB72 9186  7B02 5210 BD88 8818 2190
@@ -97,7 +97,7 @@ The easiest way to fetch an ACI is through meta discovery. rkt will find and dow
 If you have previously trusted the image creator, it will be downloaded and verified: 
 
 ```
-$ rkt fetch coreos.com/etcd:v2.0.0
+# rkt fetch coreos.com/etcd:v2.0.0
 rkt: searching for app image coreos.com/etcd:v2.0.0
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 Downloading aci: [=======================================      ] 3.25 MB/3.7 MB
@@ -110,7 +110,7 @@ sha512-fa1cb92dc276b0f9bedf87981e61ecde
 If you haven't trusted the creator, it will be downloaded but not verified:
 
 ```
-$ sudo ./rkt fetch coreos.com/etcd:v2.0.0
+# rkt fetch coreos.com/etcd:v2.0.0
 rkt: searching for app image coreos.com/etcd:v2.0.0
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 Downloading aci: [=======================================      ] 3.25 MB/3.7 MB
@@ -124,7 +124,7 @@ sha512-fa1cb92dc276b0f9bedf87981e61ecde
 If you already know where an image is stored, you can fetch it directly:
 
 ```
-$ rkt fetch https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
+# rkt fetch https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 Downloading aci: [=======================================      ] 3.25 MB/3.7 MB
 Downloading signature from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.sig
@@ -137,7 +137,7 @@ sha512-fa1cb92dc276b0f9bedf87981e61ecde
 If you want to run an existing Docker image, you can fetch from a Docker registry. rkt will download and convert the image to ACI.
 
 ```
-$ rkt --insecure-skip-verify fetch docker://busybox
+# rkt --insecure-skip-verify fetch docker://busybox
 rkt: fetching image from docker://busybox
 rkt: warning: signature verification has been disabled
 Downloading layer: 4986bf8c15363d1c5d15512d5266f8777bfba4974ac56e3270e7760f6f0a8125
@@ -162,22 +162,22 @@ Images can be run by either their name, their hash, an explicit transport addres
 
 ```
 # Run by name
-$ sudo rkt run coreos.com/etcd:v2.0.0
+# rkt run coreos.com/etcd:v2.0.0
 ```
 
 ```
 # Run by hash
-$ sudo rkt run sha512-fa1cb92dc276b0f9bedf87981e61ecde
+# rkt run sha512-fa1cb92dc276b0f9bedf87981e61ecde
 ```
 
 ```
 # Run by ACI address
-$ sudo rkt run https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
+# rkt run https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 ```
 
 ```
 # Run by Docker registry
-$ sudo rkt run docker://quay.io/coreos/etcd:v2.0.0
+# rkt run docker://quay.io/coreos/etcd:v2.0.0
 ```
 
 #### Passing Arguments
@@ -186,7 +186,7 @@ To pass additional arguments to images use the pattern of `image1 -- [image1 fla
 For example:
 
 ```
-$ sudo rkt run example.com/worker -- --loglevel verbose --- example.com/syncer -- --interval 30s
+# rkt run example.com/worker -- --loglevel verbose --- example.com/syncer -- --interval 30s
 ```
 
 #### Influencing Environment Variables
@@ -202,22 +202,20 @@ The precedence is as follows with the last item replacing previous environment e
 - Explicitly set environment
 
 ```
-$ export EXAMPLE_ENV=hello
-$ export EXAMPLE_OVERRIDE=under
-$ sudo rkt run --inherit-env --set-env=FOO=bar --set-env=EXAMPLE_OVERRIDE=over example.com/env-printer
+# export EXAMPLE_ENV=hello
+# export EXAMPLE_OVERRIDE=under
+# rkt run --inherit-env --set-env=FOO=bar --set-env=EXAMPLE_OVERRIDE=over example.com/env-printer
 EXAMPLE_ENV=hello
 FOO=bar
 EXAMPLE_OVERRIDE=over
 ```
-
-_TODO: Exit codes_
 
 #### Disable Signature Verification
 
 If desired, `--insecure-skip-verify` can be used to disable this security check:
 
 ```
-$ sudo rkt --insecure-skip-verify run coreos.com/etcd:v2.0.0
+# rkt --insecure-skip-verify run coreos.com/etcd:v2.0.0
 rkt: searching for app image coreos.com/etcd:v2.0.0
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 rkt: warning: signature verification has been disabled
@@ -284,7 +282,7 @@ Since they reference the volume using an abstract name rather than a specific so
 To tie it all together, we use the `rkt run` command-line to provide them with a volume by this name. Here's what it looks like:
 
 ```
-sudo ./rkt run --volume=work,kind=host,source=/opt/tenant1/work \
+# rkt run --volume=work,kind=host,source=/opt/tenant1/work \
   example.com/reduce-worker \
   example.com/worker-backup
 ```
@@ -313,18 +311,82 @@ It will additionally set a default route in the pod namespace.
 Finally, it will enable IP masquerading on the host to NAT the egress traffic.
 
 ```
-sudo ./rkt run --private-net coreos.com/etcd:v2.0.0
+# rkt run --private-net coreos.com/etcd:v2.0.0
 ```
 
 ##### Other Networking Examples
 
 Additional networking modes and more examples can be found in the [networking documentation](https://github.com/coreos/rkt/blob/master/Documentation/networking.md)
 
+### rkt enter
+
+If you want to enter a running pod to explore its filesystem or see what's running you can use rkt enter.
+
+```
+# rkt enter 6f34ec91
+Pod contains multiple apps:
+        sha512-1eba37d9b344b33d272181e176da111e: etcd
+        sha512-2b3791fff07ed3b09bfd6ae6b6b6d7dc: redis
+Unable to determine image id: specify app using "rkt enter --imageid ..."
+# rkt enter --imageid=sha512-2b3791fff07ed3b09bfd6ae6b6b6d7dc 6f34ec91
+No command specified, assuming "/bin/bash"
+root@rkt-50a725f4-4d1e-43dc-b05b-f83538e211ae:/# ls
+bin   data  entrypoint.sh  home  lib64  mnt  proc  run   selinux  sys  usr
+boot  dev   etc            lib   media  opt  root  sbin  srv      tmp  var
+```
+
 #### Use a Custom Stage 1
+
+rkt is designed and intended to be modular, using a [staged architecture](devel/architecture.md).
+
+You can use a custom stage1 by using the `--stage1-image` flag.
+
+```
+# rkt --stage1-image=/tmp/stage1.aci run coreos.com/etcd:v2.0.0
+```
+
+For more details see the [hacking documentation](hacking.md).
+
+#### Run a Pod in the Background
 
 Work in progress. Please contribute!
 
-#### Run a Pod in the Background
+## Pod inspection
+
+### rkt list
+
+You can list all rkt pods.
+
+
+```
+# rkt list
+UUID            ACI     STATE   NETWORKS
+6f34ec91        etcd    running default:ip4=172.16.28.7
+                redis
+5bc080ca        etcd    exited
+                redis
+```
+
+### rkt status
+
+Given a pod UUID, you can get the exit status of its apps.
+
+```
+# rkt status 5bc080ca
+state=exited
+pid=-1
+exited=true
+sha512-2b3791fff07ed3b09bfd6ae6b6b6d7dc=0
+sha512-1eba37d9b344b33d272181e176da111e=0
+```
+
+If the pod is still running, you can wait for it to finish and then get the status with `rkt status --wait UUID`
+
+## Metadata Service
+
+Work in progress. Please contribute!
+
+### rkt metadata-service
 
 Work in progress. Please contribute!
 
@@ -361,49 +423,32 @@ Pod's machine name will be the pod's UUID with a `rkt-` prefix.
 Then you can use systemd's journalctl:
 
 ```
-$ sudo journalctl -M rkt-f241c969-1710-445a-8129-d3a7ffdd9a60
+# journalctl -M rkt-f241c969-1710-445a-8129-d3a7ffdd9a60
 
 [...]
 ```
 
-### rkt status
+## Interacting with the local image store
 
-Work in progress. Please contribute!
+### rkt image list
 
-### rkt enter
-
-Work in progress. Please contribute!
-
-## Metadata Service
-
-Work in progress. Please contribute!
-
-### rkt metadata-service
-
-Work in progress. Please contribute!
-
-## Other Commands
-
-### rkt gc
-
-rkt has a built-in garbage collection command that is designed to be run periodically from a timer or cron job. Stopped pods are moved to the garbage and cleaned up during a subsequent garbage collection pass. Each `gc` pass removes any pods remaining in the garbage past the grace period. [Read more about the pod lifecycle][gc-docs].
-
-[gc-docs]: https://github.com/coreos/rkt/blob/master/Documentation/devel/pod-lifecycle.md#garbage-collection
+You can get a list of images in the local store with their keys, app names and import times.
 
 ```
-$ rkt gc --grace-period=30m0s
-Moving pod "21b1cb32-c156-4d26-82ae-eda1ab60f595" to garbage
-Moving pod "5dd42e9c-7413-49a9-9113-c2a8327d08ab" to garbage
-Moving pod "f07a4070-79a9-4db0-ae65-a090c9c393a3" to garbage
+# rkt image list
+KEY                                                                     APPNAME                         IMPORTTIME                              LATEST
+sha512-fa1cb92dc276b0f9bedf87981e61ecde93cc16432d2441f23aa006a42bb873df coreos.com/etcd:v2.0.0          2015-07-10 10:14:37.323 +0200 CEST      false
+sha512-a03f6bad952b30ca1875b1b179ab34a0f556cfbf3893950f59c408992d1bc891 coreos.com/rkt/stage1:0.7.0     2015-07-12 20:27:56.041 +0200 CEST      false
 ```
 
-On the next pass, the pods are removed:
+### rkt image rm
+
+Given an image key you can remove it from the local store.
 
 ```
-$ rkt gc --grace-period=30m0s
-Garbage collecting pod "21b1cb32-c156-4d26-82ae-eda1ab60f595"
-Garbage collecting pod "5dd42e9c-7413-49a9-9113-c2a8327d08ab"
-Garbage collecting pod "f07a4070-79a9-4db0-ae65-a090c9c393a3"
+# rkt image rm sha512-a03f6bad952b30ca1875b1b179ab34a0f556cfbf3893950f59c408992d1bc891
+rkt: successfully removed aci for imageID: "sha512-a03f6bad952b30ca1875b1b179ab34a0f556cfbf3893950f59c408992d1bc891"
+rkt: 1 image(s) successfully remove
 ```
 
 ### rkt image export
@@ -411,7 +456,7 @@ Garbage collecting pod "f07a4070-79a9-4db0-ae65-a090c9c393a3"
 There are cases where you might want to export the ACI from the store to copy to another machine, file server, etc.
 
 ```
-$ rkt image export coreos.com/etcd etcd.aci
+# rkt image export coreos.com/etcd etcd.aci
 $ tar xvf etcd.aci
 ```
 
@@ -425,8 +470,8 @@ NOTES:
 For debugging or inspection you may want to extract an ACI to a directory on disk. There are a few different options depending on your use case but the basic command looks like this:
 
 ```
-$ rkt image extract coreos.com/etcd etcd-extracted
-$ find etcd-extracted
+# rkt image extract coreos.com/etcd etcd-extracted
+# find etcd-extracted
 etcd-extracted
 etcd-extracted/manifest
 etcd-extracted/rootfs
@@ -442,8 +487,8 @@ Now there are some flags that can be added to this:
 To get just the rootfs use:
 
 ```
-$ rkt image extract --rootfs-only coreos.com/etcd etcd-extracted
-$ find etcd-extracted
+# rkt image extract --rootfs-only coreos.com/etcd etcd-extracted
+# find etcd-extracted
 etcd-extracted
 etcd-extracted/etcd
 etcd-extracted/etcdctl
@@ -457,9 +502,33 @@ If you want the image rendered as it would look ready-to-run inside of the rkt s
 For debugging or inspection you may want to extract an ACI manifest to stdout.
 
 ```
-$ rkt image cat-manifest --pretty-print coreos.com/etcd
+# rkt image cat-manifest --pretty-print coreos.com/etcd
 {
   "acVersion": "0.6.1",
   "acKind": "ImageManifest",
 ...
+```
+
+## Other Commands
+
+### rkt gc
+
+rkt has a built-in garbage collection command that is designed to be run periodically from a timer or cron job. Stopped pods are moved to the garbage and cleaned up during a subsequent garbage collection pass. Each `gc` pass removes any pods remaining in the garbage past the grace period. [Read more about the pod lifecycle][gc-docs].
+
+[gc-docs]: https://github.com/coreos/rkt/blob/master/Documentation/devel/pod-lifecycle.md#garbage-collection
+
+```
+# rkt gc --grace-period=30m0s
+Moving pod "21b1cb32-c156-4d26-82ae-eda1ab60f595" to garbage
+Moving pod "5dd42e9c-7413-49a9-9113-c2a8327d08ab" to garbage
+Moving pod "f07a4070-79a9-4db0-ae65-a090c9c393a3" to garbage
+```
+
+On the next pass, the pods are removed:
+
+```
+# rkt gc --grace-period=30m0s
+Garbage collecting pod "21b1cb32-c156-4d26-82ae-eda1ab60f595"
+Garbage collecting pod "5dd42e9c-7413-49a9-9113-c2a8327d08ab"
+Garbage collecting pod "f07a4070-79a9-4db0-ae65-a090c9c393a3"
 ```

@@ -300,7 +300,7 @@ If you would like to trust a public key for _any_ image, store the public key in
 By default rkt will attempt to download the ACI detached signature and verify the image:
 
 ```
-$ sudo rkt run example.com/hello:0.0.1
+# rkt run example.com/hello:0.0.1
 rkt: starting to discover app img example.com/hello:0.0.1
 rkt: starting to fetch img from http://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
 Downloading aci: [                                             ] 7.24 KB/1.26 MB
@@ -313,7 +313,7 @@ rkt: example.com/hello:0.0.1 verified signed by:
 Use the `--insecure-skip-verify` flag to disable all verification for a single run:
 
 ```
-$ sudo rkt --insecure-skip-verify run example.com/hello:0.0.1
+# rkt --insecure-skip-verify run example.com/hello:0.0.1
 rkt: starting to discover app img example.com/hello:0.0.1
 rkt: starting to fetch img from http://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
 rkt: warning: TLS verification and signature verification has been disabled
@@ -334,7 +334,7 @@ Using the fetch subcommand you can download and verify an ACI without immediatel
 This can be useful to precache ACIs on a large number of hosts:
 
 ```
-$ sudo rkt fetch example.com/hello:0.0.1
+# rkt fetch example.com/hello:0.0.1
 rkt: starting to discover app img example.com/hello:0.0.1
 rkt: starting to fetch img from http://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
 Downloading aci: [                                             ] 14.5 KB/1.26 MB
@@ -346,7 +346,7 @@ sha512-b3f138e10482d4b5f334294d69ae5c40
 As before, use the `--insecure-skip-verify` flag to disable tls and image verification:
 
 ```
-$ sudo rkt --insecure-skip-verify fetch example.com/hello:0.0.1
+# rkt --insecure-skip-verify fetch example.com/hello:0.0.1
 rkt: starting to discover app img example.com/hello:0.0.1
 rkt: starting to fetch img from http://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
 rkt: warning: TLS verification and signature verification has been disabled

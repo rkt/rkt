@@ -193,7 +193,7 @@ The example below demonstrates an image manifest snippet declaring a single port
 The pod's TCP port 80 can be mapped to an arbitrary port on the host during rkt invocation:
 
 ```
-$ rkt run --private-net --port=http:8888 myapp.aci
+# rkt run --private-net --port=http:8888 myapp.aci
 ````
 
 Now, any traffic arriving on host's TCP port 8888 will be forwarded to the pod on port 80.
