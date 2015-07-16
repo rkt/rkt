@@ -382,28 +382,27 @@ Work in progress. Please contribute!
 
 Work in progress. Please contribute!
 
-## Other Commands
+## Interact with the local image store
 
-### rkt gc
+### rkt image list
 
-rkt has a built-in garbage collection command that is designed to be run periodically from a timer or cron job. Stopped pods are moved to the garbage and cleaned up during a subsequent garbage collection pass. Each `gc` pass removes any pods remaining in the garbage past the grace period. [Read more about the pod lifecycle][gc-docs].
-
-[gc-docs]: https://github.com/coreos/rkt/blob/master/Documentation/devel/pod-lifecycle.md#garbage-collection
+You can get a list of images in the local store with their keys, app names and import times.
 
 ```
-$ rkt gc --grace-period=30m0s
-Moving pod "21b1cb32-c156-4d26-82ae-eda1ab60f595" to garbage
-Moving pod "5dd42e9c-7413-49a9-9113-c2a8327d08ab" to garbage
-Moving pod "f07a4070-79a9-4db0-ae65-a090c9c393a3" to garbage
+$ rkt image list
+KEY                                                                     APPNAME                         IMPORTTIME                              LATEST
+sha512-fa1cb92dc276b0f9bedf87981e61ecde93cc16432d2441f23aa006a42bb873df coreos.com/etcd:v2.0.0          2015-07-10 10:14:37.323 +0200 CEST      false
+sha512-a03f6bad952b30ca1875b1b179ab34a0f556cfbf3893950f59c408992d1bc891 coreos.com/rkt/stage1:0.7.0     2015-07-12 20:27:56.041 +0200 CEST      false
 ```
 
-On the next pass, the pods are removed:
+### rkt image rm
+
+Given an image key you can remove it from the local store.
 
 ```
-$ rkt gc --grace-period=30m0s
-Garbage collecting pod "21b1cb32-c156-4d26-82ae-eda1ab60f595"
-Garbage collecting pod "5dd42e9c-7413-49a9-9113-c2a8327d08ab"
-Garbage collecting pod "f07a4070-79a9-4db0-ae65-a090c9c393a3"
+$ rkt image rm sha512-a03f6bad952b30ca1875b1b179ab34a0f556cfbf3893950f59c408992d1bc891
+rkt: successfully removed aci for imageID: "sha512-a03f6bad952b30ca1875b1b179ab34a0f556cfbf3893950f59c408992d1bc891"
+rkt: 1 image(s) successfully remove
 ```
 
 ### rkt image export
@@ -462,4 +461,28 @@ $ rkt image cat-manifest --pretty-print coreos.com/etcd
   "acVersion": "0.6.1",
   "acKind": "ImageManifest",
 ...
+```
+
+## Other Commands
+
+### rkt gc
+
+rkt has a built-in garbage collection command that is designed to be run periodically from a timer or cron job. Stopped pods are moved to the garbage and cleaned up during a subsequent garbage collection pass. Each `gc` pass removes any pods remaining in the garbage past the grace period. [Read more about the pod lifecycle][gc-docs].
+
+[gc-docs]: https://github.com/coreos/rkt/blob/master/Documentation/devel/pod-lifecycle.md#garbage-collection
+
+```
+$ rkt gc --grace-period=30m0s
+Moving pod "21b1cb32-c156-4d26-82ae-eda1ab60f595" to garbage
+Moving pod "5dd42e9c-7413-49a9-9113-c2a8327d08ab" to garbage
+Moving pod "f07a4070-79a9-4db0-ae65-a090c9c393a3" to garbage
+```
+
+On the next pass, the pods are removed:
+
+```
+$ rkt gc --grace-period=30m0s
+Garbage collecting pod "21b1cb32-c156-4d26-82ae-eda1ab60f595"
+Garbage collecting pod "5dd42e9c-7413-49a9-9113-c2a8327d08ab"
+Garbage collecting pod "f07a4070-79a9-4db0-ae65-a090c9c393a3"
 ```
