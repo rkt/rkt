@@ -52,7 +52,7 @@ Alternatively, you can build rkt in a Docker container with the following comman
 Replace $SRC with the absolute path to your rkt source code:
 
 ```
-$ sudo docker run -v $SRC:/opt/rkt -i -t golang:1.4 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath autoconf libcapture-tiny-perl file && cd /opt/rkt && go get github.com/appc/spec/... && ./autogen.sh && ./configure && make"
+# docker run -v $SRC:/opt/rkt -i -t golang:1.4 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath autoconf libcapture-tiny-perl file && cd /opt/rkt && go get github.com/appc/spec/... && ./autogen.sh && ./configure && make"
 ```
 
 ### Building systemd in stage1 from the sources
@@ -116,7 +116,7 @@ Hence, you'll need to work around this with bind mounts, with something like the
 ```
 $ export GOPATH=/tmp/foo        # or any directory you please
 $ mkdir -p $GOPATH/src/github.com/coreos/rkt
-$ sudo mount --bind ~/src/rkt $GOPATH/src/github.com/coreos/rkt
+# mount --bind ~/src/rkt $GOPATH/src/github.com/coreos/rkt
 $ cd $GOPATH/src/github.com/coreos/rkt
 ```
 

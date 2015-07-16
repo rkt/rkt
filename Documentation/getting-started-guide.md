@@ -138,7 +138,7 @@ hello-0.0.1-linux-amd64.aci: valid app container image
 Start the metadata service from your init system or simply from another terminal:
 
 ```
-$ sudo rkt metadata-service
+# rkt metadata-service
 ```
 
 rkt will register pods with the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/metadata-service.md) so they can introspect their environment.
@@ -146,7 +146,7 @@ rkt will register pods with the [metadata service](https://github.com/coreos/rkt
 ### Launch a local application image
 
 ```
-$ sudo rkt --insecure-skip-verify run hello-0.0.1-linux-amd64.aci
+# rkt --insecure-skip-verify run hello-0.0.1-linux-amd64.aci
 ```
 
 Note that `--insecure-skip-verify` is required because, by default, rkt expects our signature to be signed. See the [Signing and Verification Guide](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md) for more details.

@@ -26,7 +26,7 @@ The first stage is the actual `rkt` binary itself. When running a pod, this bina
 Given a run command such as:
 
 ```
-$ sudo rkt run \
+# rkt run \
 	sha512-8a30f14877cd8065939e3912542a17d1a5fd9b4c \
 	sha512-abcd29837d89389s9d0898ds908ds890df890908
 ```
