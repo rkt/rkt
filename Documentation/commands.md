@@ -210,8 +210,6 @@ FOO=bar
 EXAMPLE_OVERRIDE=over
 ```
 
-_TODO: Exit codes_
-
 #### Disable Signature Verification
 
 If desired, `--insecure-skip-verify` can be used to disable this security check:
@@ -328,6 +326,47 @@ Work in progress. Please contribute!
 
 Work in progress. Please contribute!
 
+### rkt list
+
+You can list all rkt pods.
+
+
+```
+# rkt list
+UUID            ACI     STATE   NETWORKS
+6f34ec91        etcd    running default:ip4=172.16.28.7
+                redis
+5bc080ca        etcd    exited
+                redis
+```
+
+### rkt status
+
+Given a pod UUID, you can get the exit status of its apps.
+
+```
+# rkt status 5bc080ca
+state=exited
+pid=-1
+exited=true
+sha512-2b3791fff07ed3b09bfd6ae6b6b6d7dc=0
+sha512-1eba37d9b344b33d272181e176da111e=0
+```
+
+If the pod is still running, you can wait for it to finish and then get the status with `rkt status --wait UUID`
+
+### rkt enter
+
+Work in progress. Please contribute!
+
+## Metadata Service
+
+Work in progress. Please contribute!
+
+### rkt metadata-service
+
+Work in progress. Please contribute!
+
 ### Logging
 
 By default, rkt will send logs directly to stdout/stderr, allowing them to be caputered by the invoking process.
@@ -366,23 +405,7 @@ Then you can use systemd's journalctl:
 [...]
 ```
 
-### rkt status
-
-Work in progress. Please contribute!
-
-### rkt enter
-
-Work in progress. Please contribute!
-
-## Metadata Service
-
-Work in progress. Please contribute!
-
-### rkt metadata-service
-
-Work in progress. Please contribute!
-
-## Interact with the local image store
+## Interacting with the local image store
 
 ### rkt image list
 
