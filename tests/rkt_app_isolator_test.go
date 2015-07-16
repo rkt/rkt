@@ -46,6 +46,14 @@ var cpuTest = struct {
 	[]string{"--exec=/inspect --print-cpuquota"},
 }
 
+var cgroupsTest = struct {
+	testName     string
+	aciBuildArgs []string
+}{
+	`Check cgroup mounts`,
+	[]string{"--exec=/inspect --check-cgroups"},
+}
+
 func TestAppIsolatorMemory(t *testing.T) {
 	ok := cgroup.IsIsolatorSupported("memory")
 	if !ok {
@@ -106,5 +114,30 @@ func TestAppIsolatorCPU(t *testing.T) {
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
+}
 
+func TestCgroups(t *testing.T) {
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
+	t.Logf("Running test: %v", cgroupsTest.testName)
+
+	aciFileName := patchTestACI("rkt-inspect-isolators.aci", cgroupsTest.aciBuildArgs...)
+	defer os.Remove(aciFileName)
+
+	rktCmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), aciFileName)
+	t.Logf("Command: %v", rktCmd)
+	child, err := gexpect.Spawn(rktCmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	expectedLine := "check-cgroups: SUCCESS"
+	if err := expectWithOutput(child, expectedLine); err != nil {
+		t.Fatalf("Didn't receive expected output %q: %v", expectedLine, err)
+	}
+
+	err = child.Wait()
+	if err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
 }
