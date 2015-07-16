@@ -318,6 +318,23 @@ Finally, it will enable IP masquerading on the host to NAT the egress traffic.
 
 Additional networking modes and more examples can be found in the [networking documentation](https://github.com/coreos/rkt/blob/master/Documentation/networking.md)
 
+### rkt enter
+
+If you want to enter a running pod to explore its filesystem or see what's running you can use rkt enter.
+
+```
+# rkt enter 6f34ec91
+Pod contains multiple apps:
+        sha512-1eba37d9b344b33d272181e176da111e: etcd
+        sha512-2b3791fff07ed3b09bfd6ae6b6b6d7dc: redis
+Unable to determine image id: specify app using "rkt enter --imageid ..."
+# rkt enter --imageid=sha512-2b3791fff07ed3b09bfd6ae6b6b6d7dc 6f34ec91
+No command specified, assuming "/bin/bash"
+root@rkt-50a725f4-4d1e-43dc-b05b-f83538e211ae:/# ls
+bin   data  entrypoint.sh  home  lib64  mnt  proc  run   selinux  sys  usr
+boot  dev   etc            lib   media  opt  root  sbin  srv      tmp  var
+```
+
 #### Use a Custom Stage 1
 
 Work in progress. Please contribute!
@@ -325,6 +342,8 @@ Work in progress. Please contribute!
 #### Run a Pod in the Background
 
 Work in progress. Please contribute!
+
+## Pod inspection
 
 ### rkt list
 
@@ -354,10 +373,6 @@ sha512-1eba37d9b344b33d272181e176da111e=0
 ```
 
 If the pod is still running, you can wait for it to finish and then get the status with `rkt status --wait UUID`
-
-### rkt enter
-
-Work in progress. Please contribute!
 
 ## Metadata Service
 
