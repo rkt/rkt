@@ -233,7 +233,7 @@ func installAssets() error {
 }
 
 // getArgsEnv returns the nspawn args and env according to the usr used
-func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) ([]string, []string, error) {
+func getArgsEnv(p *Pod, flavor string, debug bool) ([]string, []string, error) {
 	args := []string{}
 	env := os.Environ()
 
@@ -255,21 +255,6 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 	case "src":
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
-
-		switch systemdStage1Version {
-		case "v215":
-			lfd, err := common.GetRktLockFD()
-			if err != nil {
-				return nil, nil, err
-			}
-			args = append(args, fmt.Sprintf("--keep-fd=%v", lfd))
-		case "v219":
-			// --keep-fd is not needed thanks to
-			// stage1/rootfs/usr_from_src/patches/v219/0005-nspawn-close-extra-fds-before-execing-init.patch
-		default:
-			// since systemd-nspawn v220 (commit 6b7d2e, "nspawn: close extra fds
-			// before execing init"), fds remain open, so --keep-fd is not needed.
-		}
 
 		if machinedRegister() {
 			args = append(args, fmt.Sprintf("--register=true"))
@@ -312,9 +297,8 @@ func getArgsEnv(p *Pod, flavor string, systemdStage1Version string, debug bool) 
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
 	}
 
-	// link journal only if the host is running systemd and stage1 supports
-	// linking
-	if util.IsRunningSystemd() && systemdSupportsJournalLinking(systemdStage1Version) {
+	// link journal only if the host is running systemd
+	if util.IsRunningSystemd() {
 		// we write /etc/machine-id here because systemd-nspawn needs it to link
 		// the container's journal to the host
 		mPath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "machine-id")
@@ -483,13 +467,13 @@ func stage1() int {
 		}
 	}
 
-	flavor, systemdStage1Version, err := p.getFlavor()
+	flavor, _, err := p.getFlavor()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get stage1 flavor: %v\n", err)
 		return 3
 	}
 
-	if err = p.WritePrepareAppTemplate(systemdStage1Version); err != nil {
+	if err = p.WritePrepareAppTemplate(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write prepare-app service template: %v\n", err)
 		return 2
 	}
@@ -499,7 +483,7 @@ func stage1() int {
 		return 2
 	}
 
-	args, env, err := getArgsEnv(p, flavor, systemdStage1Version, debug)
+	args, env, err := getArgsEnv(p, flavor, debug)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 3
@@ -702,19 +686,6 @@ func isRunningFromUnitFile() (ret bool, err error) {
 	default:
 		err = fmt.Errorf("error calling sd_pid_get_owner_uid: %v", syscall.Errno(-errno))
 		return
-	}
-}
-
-func systemdSupportsJournalLinking(version string) bool {
-	switch {
-	case version == "v219":
-		fallthrough
-	case version == "v220":
-		fallthrough
-	case version == "master":
-		return true
-	default:
-		return false
 	}
 }
 
