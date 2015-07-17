@@ -61,7 +61,7 @@ By default, rkt gets systemd from a CoreOS image to generate stage1. But it's al
 After running `./autogen.sh` you can select the following options:
 
 * ./configure --with-stage1=none|coreos|src|host`: choose how to generate systemd for stage1 (default: 'coreos')
-* ./configure --with-stage1-systemd-version=version`: if stage1 is set to build from src, choose the systemd branch or tag to build (default: 'v220')
+* ./configure --with-stage1-systemd-version=version`: if stage1 is set to build from src, choose the systemd branch or tag to build (default: 'v222')
 * ./configure --with-stage1-systemd-src=git-path`: if stage1 is set to build from src, systemd git repository's address (default: 'https://github.com/systemd/systemd.git')
 
 Example:
