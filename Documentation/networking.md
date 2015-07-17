@@ -10,9 +10,9 @@ This means that the apps within the pod will share the network stack and the int
 ## Private networking mode
 
 If `rkt run` is started with the `--private-net` flag, the pod will be executed with its own network stack, with the default network plus all configured networks.
+This is equivalent to passing `--private-net=all`.
 Passing a list of comma separated network names as in `--private-net=net1,net2,net3,...` restricts the network stack to the specified networks.
 This can be useful for grouping certain pods together while separating others.
-If the list of network names contains no known networks the pod will end up with loop networking only.
 
 ### The default network
 The default network consists of a loopback device and a veth device.

@@ -174,7 +174,7 @@ func (l *PrivateNetList) Any() bool {
 }
 
 func (l *PrivateNetList) All() bool {
-	return l.mapping["true"]
+	return l.mapping["all"]
 }
 
 func (l *PrivateNetList) Specific(net string) bool {
