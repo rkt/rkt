@@ -322,7 +322,7 @@ func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, 
 	}
 
 	if entity != nil && !f.insecureSkipVerify {
-		stderr("rkt: signature verified: ")
+		stderr("rkt: signature verified:")
 		for _, v := range entity.Identities {
 			stderr("  %s", v.Name)
 		}

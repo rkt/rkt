@@ -185,7 +185,7 @@ Docker registry. This field must be specified and cannot be empty.
 
 Currently, Docker registries only support basic HTTP authentication, so
 `credentials` field has two subfields - `user` and `password`. These
-fields have to be specified and cannot be empty.
+fields must be specified and cannot be empty.
 
 Some popular Docker registries:
 * index.docker.io (this is used when no Docker registry is
