@@ -34,21 +34,22 @@ import (
 var (
 	globalFlagset = flag.NewFlagSet("inspect", flag.ExitOnError)
 	globalFlags   = struct {
-		ReadStdin        bool
-		CheckTty         bool
-		PrintMsg         string
-		PrintEnv         string
-		PrintCapsPid     int
-		PrintUser        bool
-		CheckCwd         string
-		ExitCode         int
-		ReadFile         bool
-		WriteFile        bool
-		Sleep            int
-		PrintMemoryLimit bool
-		PrintCPUQuota    bool
-		FileName         string
-		Content          string
+		ReadStdin         bool
+		CheckTty          bool
+		PrintMsg          string
+		PrintEnv          string
+		PrintCapsPid      int
+		PrintUser         bool
+		CheckCwd          string
+		ExitCode          int
+		ReadFile          bool
+		WriteFile         bool
+		Sleep             int
+		PrintMemoryLimit  bool
+		PrintCPUQuota     bool
+		FileName          string
+		Content           string
+		CheckCgroupMounts bool
 	}{}
 )
 
@@ -68,6 +69,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.PrintCPUQuota, "print-cpuquota", false, "Print cgroup cpu quota in milli-cores")
 	globalFlagset.StringVar(&globalFlags.FileName, "file-name", "", "The file to read/write, $FILE will be ignored if this is specified")
 	globalFlagset.StringVar(&globalFlags.Content, "content", "", "The content to write, $CONTENT will be ignored if this is specified")
+	globalFlagset.BoolVar(&globalFlags.CheckCgroupMounts, "check-cgroups", false, "Try to write to the cgroup filesystem. Everything should be RO except some well-known files")
 }
 
 func main() {
@@ -247,6 +249,28 @@ func main() {
 
 		quotaMilliCores := quota * 1000 / period
 		fmt.Printf("CPU Quota: %s\n", strconv.Itoa(quotaMilliCores))
+	}
+
+	if globalFlags.CheckCgroupMounts {
+		rootCgroupPath := "/proc/1/root/sys/fs/cgroup"
+		testPaths := []string{rootCgroupPath}
+
+		// test a couple of controllers if they're available
+		if cgroup.IsIsolatorSupported("memory") {
+			testPaths = append(testPaths, filepath.Join(rootCgroupPath, "memory"))
+		}
+		if cgroup.IsIsolatorSupported("cpu") {
+			testPaths = append(testPaths, filepath.Join(rootCgroupPath, "cpu"))
+		}
+
+		for _, p := range testPaths {
+			if err := syscall.Mkdir(filepath.Join(p, "test"), 0600); err == nil || err != syscall.EROFS {
+				fmt.Println("check-cgroups: FAIL")
+				os.Exit(1)
+			}
+		}
+
+		fmt.Println("check-cgroups: SUCCESS")
 	}
 
 	os.Exit(globalFlags.ExitCode)
