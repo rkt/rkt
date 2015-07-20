@@ -271,7 +271,7 @@ func reviewKey(prefix string, location string, key *os.File, forceAccept bool) (
 	if !forceAccept {
 		in := bufio.NewReader(os.Stdin)
 		for {
-			stderr("Are you sure you want to trust this key (yes/no)? ")
+			stderr("Are you sure you want to trust this key (yes/no)?")
 			input, err := in.ReadString('\n')
 			if err != nil {
 				return false, fmt.Errorf("error reading input: %v", err)

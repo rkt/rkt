@@ -94,7 +94,7 @@ rkt uses HTTPS to locate and download remote ACIs and their attached signatures.
 
 The easiest way to fetch an ACI is through meta discovery. rkt will find and download the ACI and signature from a location that the creator has published on their website. This process is detailed in the [Application Container specification][appc-discovery].
 
-If you have previously trusted the image creator, it will be downloaded and verified: 
+If you have previously trusted the image creator, it will be downloaded and verified:
 
 ```
 # rkt fetch coreos.com/etcd:v2.0.0
@@ -102,7 +102,7 @@ rkt: searching for app image coreos.com/etcd:v2.0.0
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 Downloading aci: [=======================================      ] 3.25 MB/3.7 MB
 Downloading signature from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.sig
-rkt: signature verified: 
+rkt: signature verified:
   CoreOS ACI Builder <release@coreos.com>
 sha512-fa1cb92dc276b0f9bedf87981e61ecde
 ```
@@ -148,6 +148,10 @@ sha512-c4010045aec65aefa74770ef2bb648d9
 ```
 
 Docker images do not support signature verification.
+
+#### Authentication
+
+If you want to download an image from a private repository, then you will often need to pass credentials to be able to access it. rkt currently supports authentication for fetching images via https:// or docker:// protocols. To specify credentials you will have to write some configuration files. You can find the format of the configuration file and examples in the [configuration documentation](configuration.md). Note that the configuration kind for images downloaded via https:// and images downloaded via docker:// is different.
 
 ## Running Pods
 
@@ -229,7 +233,7 @@ Volumes are defined in each ACI and are referenced by name. Volumes can be expos
 [rkt #378]: https://github.com/coreos/rkt/issues/378
 
 
-##### Mounting Host Volumes 
+##### Mounting Host Volumes
 
 For `host` volumes, the `--volume` flag allows you to specify each mount, its type and the location on the host. The volume is then mounted into each app running to the pod based on information defined in the ACI manifest.
 

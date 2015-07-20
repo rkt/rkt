@@ -6,7 +6,7 @@
 
 ![rkt Logo](logos/rkt-horizontal-color.png)
 
-rkt (pronounced _"rock-it"_) is a CLI for running app containers on Linux. rkt is designed to be composable, secure, and fast. 
+rkt (pronounced _"rock-it"_) is a CLI for running app containers on Linux. rkt is designed to be composable, secure, and fast.
 
 Some of rkt's key features and goals include:
 - First-class integration with init systems ([systemd](Documentation/using-rkt-with-systemd.md), upstart) and cluster orchestration tools (fleet, Kubernetes)
@@ -17,7 +17,7 @@ For more on the background and motivation behind rkt, read the original [launch 
 
 ## App Container
 
-rkt is an implementation of the [App Container spec](Documentation/app-container.md). 
+rkt is an implementation of the [App Container spec](Documentation/app-container.md).
 rkt's native image format ([ACI](Documentation/app-container.md#ACI)) and runtime/execution environment ([pods](Documentation/app-container.md#pods)) are defined in the specification.
 
 ## Project status
@@ -62,7 +62,7 @@ To build ACIs, a simple way to get started is by using [`actool`](https://github
 Another good resource is the [appc build repository](https://github.com/appc/build-repository) which has resources for building ACIs from a number of popular projects and languages.
 There are also tools for converting [Docker images to ACIs](https://github.com/appc/docker2aci) (although note that rkt can [also run Docker images natively](Documentation/running-docker-images.md) directly from Docker repositories by using this library internally).
 
-The example below uses a pre-built ACI for [etcd](https://github.com/coreos/etcd) (you can see how this was built [here](https://github.com/coreos/etcd/blob/master/scripts/build-aci)).
+The example below uses a pre-built ACI for [etcd](https://github.com/coreos/etcd) (this was built by the [build-aci script](https://github.com/coreos/etcd/blob/master/scripts/build-aci)).
 
 ### Downloading an App Container Image (ACI)
 
@@ -81,7 +81,7 @@ Trusting "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg" for prefix "coreos.co
 Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190"
 ```
 
-A detailed, step-by-step guide for the signing procedure [is here](Documentation/getting-started-ubuntu-trusty.md#trust-the-coreos-signing-key).
+In Documentation, you can find a [detailed, step-by-step guide for the signing procedure](Documentation/getting-started-ubuntu-trusty.md#trust-the-coreos-signing-key).
 
 Now that we've trusted the CoreOS public key, we can fetch the ACI using `rkt fetch`:
 
@@ -91,10 +91,12 @@ rkt: searching for app image coreos.com/etcd:v2.0.4
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.4/etcd-v2.0.4-linux-amd64.aci
 Downloading aci: [==========================================   ] 3.47 MB/3.7 MB
 Downloading signature from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.4-linux-amd64.aci.asc
-rkt: signature verified: 
+rkt: signature verified:
   CoreOS ACI Builder <release@coreos.com>
 sha512-1eba37d9b344b33d272181e176da111e
 ```
+
+Sometimes you will want to download an image from a private repository. This usually involves passing usernames and passwords or other kinds of credentials to the server. rkt currently supports authentication via configuration files. You can find configuration file format description (with examples!) in [configuration documentation](Documentation/configuration.md).
 
 For the curious, we can see the files written to disk in rkt's CAS:
 
