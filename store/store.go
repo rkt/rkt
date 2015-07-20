@@ -53,6 +53,9 @@ const (
 	lenHashKey = (lenHash / 2) * 2 // half length, in hex characters
 	lenKey     = len(hashPrefix) + lenHashKey
 	minlenKey  = len(hashPrefix) + 2 // at least sha512-aa
+
+	// how many backups to keep when migrating to new db version
+	backupsNumber = 5
 )
 
 var diskvStores = [...]string{
@@ -183,7 +186,9 @@ func NewStore(base string) (*Store, error) {
 		if err != nil {
 			return nil, err
 		}
-		// TODO(sgotti) take a db backup (for debugging and last resort rollback?)
+		if err := s.backupDB(); err != nil {
+			return nil, err
+		}
 		fn := func(tx *sql.Tx) error {
 			return migrate(tx, dbVersion)
 		}
@@ -193,6 +198,12 @@ func NewStore(base string) (*Store, error) {
 	}
 
 	return s, nil
+}
+
+// backupDB backs up current database.
+func (s Store) backupDB() error {
+	backupsDir := filepath.Join(s.base, "cas", "db-backups")
+	return createBackup(s.db.dbdir, backupsDir, backupsNumber)
 }
 
 // TmpFile returns an *os.File local to the same filesystem as the Store, or
