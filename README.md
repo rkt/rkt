@@ -96,6 +96,8 @@ rkt: signature verified:
 sha512-1eba37d9b344b33d272181e176da111e
 ```
 
+Sometimes you will want to download an image from a private repository. This usually involves passing usernames and passwords or other kinds of credentials to the server. rkt currently supports authentication via configuration files. You can find configuration file format description (with examples!) in [configuration documentation](Documentation/configuration.md).
+
 For the curious, we can see the files written to disk in rkt's CAS:
 
 ```

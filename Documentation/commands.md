@@ -149,6 +149,10 @@ sha512-c4010045aec65aefa74770ef2bb648d9
 
 Docker images do not support signature verification.
 
+#### Authentication
+
+If you want to download an image from a private repository, then you will often need to pass credentials to be able to access it. rkt currently supports authentication for fetching images via https:// or docker:// protocols. To specify credentials you will have to write some configuration files. You can find the format of the configuration file and examples in the [configuration documentation](configuration.md). Note that the configuration kind for images downloaded via https:// and images downloaded via docker:// is different.
+
 ## Running Pods
 
 rkt can run ACIs based on name, hash, local file on disk or URL. If an ACI hasn't been cached on disk, rkt will attempt to find and download it.
