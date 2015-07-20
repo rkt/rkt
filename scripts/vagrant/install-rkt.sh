@@ -3,7 +3,7 @@
 set -xe
 export DEBIAN_FRONTEND=noninteractive
 
-APP_SPEC_VERSION=0.4.1
+APP_SPEC_VERSION=0.6.1
 
 if ! [ -d app-spec ]; then
   echo "Install actool ${APP_SPEC_VERSION}"
@@ -16,13 +16,8 @@ if ! [ -d app-spec ]; then
   popd
 fi
 
-which unsquash || sudo apt-get install -y squashfs-tools
+which unsquash || sudo apt-get install -y squashfs-tools autoconf libcapture-tiny-perl
 
 pushd /vagrant
-./build
-sudo cp -v bin/* /usr/local/bin
-
-cat << EOF | sudo tee /etc/profile.d/99rkt.sh
-  export PATH=$PWD/bin:\$PATH
-  export GOPATH=$PWD/gopath:\$GOPATH
-EOF
+./autogen.sh && ./configure && make BUILDDIR=build-rkt
+sudo cp -v build-rkt/bin/* /usr/local/bin
