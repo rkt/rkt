@@ -45,6 +45,7 @@ var (
 		ReadFile          bool
 		WriteFile         bool
 		Sleep             int
+		PreSleep          int
 		PrintMemoryLimit  bool
 		PrintCPUQuota     bool
 		FileName          string
@@ -65,6 +66,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.ReadFile, "read-file", false, "Print the content of the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
 	globalFlagset.IntVar(&globalFlags.Sleep, "sleep", -1, "Sleep before exiting (in seconds)")
+	globalFlagset.IntVar(&globalFlags.PreSleep, "pre-sleep", -1, "Sleep before executing (in seconds)")
 	globalFlagset.BoolVar(&globalFlags.PrintMemoryLimit, "print-memorylimit", false, "Print cgroup memory limit")
 	globalFlagset.BoolVar(&globalFlags.PrintCPUQuota, "print-cpuquota", false, "Print cgroup cpu quota in milli-cores")
 	globalFlagset.StringVar(&globalFlags.FileName, "file-name", "", "The file to read/write, $FILE will be ignored if this is specified")
@@ -78,6 +80,10 @@ func main() {
 	if len(args) > 0 {
 		fmt.Fprintln(os.Stderr, "Wrong parameters")
 		os.Exit(1)
+	}
+
+	if globalFlags.PreSleep >= 0 {
+		time.Sleep(time.Duration(globalFlags.PreSleep) * time.Second)
 	}
 
 	if globalFlags.ReadStdin {
@@ -103,7 +109,7 @@ func main() {
 		messageLoopStr := os.Getenv("MESSAGE_LOOP")
 		messageLoop, err := strconv.Atoi(messageLoopStr)
 		if err == nil {
-			for i := 1; i < messageLoop; i++ {
+			for i := 0; i < messageLoop; i++ {
 				time.Sleep(time.Second)
 				fmt.Fprintf(os.Stdout, "%s\n", globalFlags.PrintMsg)
 			}
