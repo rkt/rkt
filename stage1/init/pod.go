@@ -124,22 +124,19 @@ func quoteExec(exec []string) string {
 	return strings.Join(qexec, " ")
 }
 
-func (p *Pod) WritePrepareAppTemplate(version string) error {
+func (p *Pod) WritePrepareAppTemplate() error {
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", "Prepare minimum environment for chrooted applications"),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
 		unit.NewUnitOption("Unit", "OnFailureJobMode", "fail"),
+		unit.NewUnitOption("Unit", "Requires", "systemd-journald.service"),
+		unit.NewUnitOption("Unit", "After", "systemd-journald.service"),
 		unit.NewUnitOption("Service", "Type", "oneshot"),
 		unit.NewUnitOption("Service", "Restart", "no"),
 		unit.NewUnitOption("Service", "ExecStart", "/prepare-app %I"),
 		unit.NewUnitOption("Service", "User", "0"),
 		unit.NewUnitOption("Service", "Group", "0"),
 		unit.NewUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE"),
-	}
-
-	if systemdSupportsJournalLinking(version) {
-		opts = append(opts, unit.NewUnitOption("Unit", "Requires", "systemd-journald.service"))
-		opts = append(opts, unit.NewUnitOption("Unit", "After", "systemd-journald.service"))
 	}
 
 	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), unitsDir)
@@ -209,16 +206,11 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 		unit.NewUnitOption("Service", "Group", "0"),
 	}
 
-	_, systemdStage1Version, err := p.getFlavor()
-	if err != nil {
-		return fmt.Errorf("Failed to get stage1 flavor: %v\n", err)
-	}
-
 	if interactive {
 		opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "tty"))
 		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "tty"))
 		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "tty"))
-	} else if systemdSupportsJournalLinking(systemdStage1Version) {
+	} else {
 		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
 		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
 		opts = append(opts, unit.NewUnitOption("Service", "SyslogIdentifier", filepath.Base(app.Exec[0])))

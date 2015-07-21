@@ -76,7 +76,7 @@ AS_VAR_IF([RKT_STAGE1_SYSTEMD_SRC], [auto],
 AC_SUBST(RKT_STAGE1_SYSTEMD_SRC)
 
 ## STAGE1: Systemd version
-m4_define([DEFAULT_STAGE1_SYSTEMD_VER], [v220])
+m4_define([DEFAULT_STAGE1_SYSTEMD_VER], [v222])
 AC_ARG_WITH(stage1-systemd-version,
             AS_HELP_STRING([--with-stage1-systemd-version=version],
                            [systemd version to build (default: 'DEFAULT_STAGE1_SYSTEMD_VER')]),
