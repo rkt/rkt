@@ -69,6 +69,7 @@ type RunConfig struct {
 	Interactive bool                  // whether the pod is interactive or not
 	MDSRegister bool                  // whether to register with metadata service or not
 	Images      schema.AppList        // application images (prepare gets them via Apps)
+	LocalConfig string                // Path to local configuration
 }
 
 // configuration shared by both Run and Prepare
@@ -326,6 +327,10 @@ func Run(cfg RunConfig, dir string) {
 		}
 
 		args = append(args, "--mds-token="+mdsToken)
+	}
+
+	if cfg.LocalConfig != "" {
+		args = append(args, "--local-config="+cfg.LocalConfig)
 	}
 
 	args = append(args, cfg.UUID.String())

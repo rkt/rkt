@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	// Absolute path where users place their net configs
-	UserNetPath = "/etc/rkt/net.d"
+	// Suffix to LocalConfigDir path, where users place their net configs
+	UserNetPathSuffix = "net.d"
 
 	// Default net path relative to stage1 root
 	DefaultNetPath           = "etc/rkt/net.d/99-default.conf"
@@ -49,6 +49,7 @@ type podEnv struct {
 	podRoot      string
 	podID        types.UUID
 	netsLoadList common.PrivateNetList
+	localConfig  string
 }
 
 type activeNet struct {
@@ -59,7 +60,7 @@ type activeNet struct {
 
 // Loads nets specified by user and default one from stage1
 func (e *podEnv) loadNets() ([]activeNet, error) {
-	nets, err := loadUserNets(e.netsLoadList)
+	nets, err := loadUserNets(e.localConfig, e.netsLoadList)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +108,7 @@ func (e *podEnv) setupNets(nets []activeNet) error {
 
 	n := activeNet{}
 	for i, n = range nets {
-		log.Printf("Setup: executing net-plugin %v", n.conf.Type)
+		log.Printf("Loading network %v with type %v", n.conf.Name, n.conf.Type)
 
 		n.runtime.IfName = fmt.Sprintf(ifnamePattern, i)
 		if n.runtime.ConfPath, err = copyFileToDir(n.runtime.ConfPath, e.netDir()); err != nil {
@@ -212,8 +213,11 @@ func copyFileToDir(src, dstdir string) (string, error) {
 	return dst, err
 }
 
-func loadUserNets(netsLoadList common.PrivateNetList) ([]activeNet, error) {
-	files, err := listFiles(UserNetPath)
+func loadUserNets(localConfig string, netsLoadList common.PrivateNetList) ([]activeNet, error) {
+	userNetPath := filepath.Join(localConfig, UserNetPathSuffix)
+	log.Printf("Loading networks from %v\n", userNetPath)
+
+	files, err := listFiles(userNetPath)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +227,7 @@ func loadUserNets(netsLoadList common.PrivateNetList) ([]activeNet, error) {
 	nets := make([]activeNet, 0, len(files))
 
 	for _, filename := range files {
-		filepath := path.Join(UserNetPath, filename)
+		filepath := filepath.Join(userNetPath, filename)
 
 		if !strings.HasSuffix(filepath, ".conf") {
 			continue

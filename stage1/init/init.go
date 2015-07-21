@@ -128,6 +128,7 @@ var (
 	interactive bool
 	mdsToken    string
 	localhostIP net.IP
+	localConfig string
 )
 
 func init() {
@@ -135,7 +136,7 @@ func init() {
 	flag.Var(&privNet, "private-net", "Setup private network")
 	flag.BoolVar(&interactive, "interactive", false, "The pod is interactive")
 	flag.StringVar(&mdsToken, "mds-token", "", "MDS auth token")
-
+	flag.StringVar(&localConfig, "local-config", common.DefaultLocalConfigDir, "Local config path")
 	// this ensures that main runs only on main thread (thread group leader).
 	// since namespace ops (unshare, setns) are done for a single thread, we
 	// must ensure that the goroutine does not jump from OS thread to thread
@@ -456,7 +457,7 @@ func stage1() int {
 			return 6
 		}
 
-		n, err := networking.Setup(root, p.UUID, fps, privNet)
+		n, err := networking.Setup(root, p.UUID, fps, privNet, localConfig)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to setup network: %v\n", err)
 			return 6
