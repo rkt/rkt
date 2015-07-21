@@ -45,10 +45,10 @@ The resolved entrypoint must inform rkt of its PID for the benefit of `rkt enter
 
 #### Arguments
 * `--debug` to activate debugging
-* `--private-net` to trigger the creation of a private network
+* `--private-net[=$NET1,$NET2,...]` to trigger the creation of a private network. special cases: no name and *all* load all networks
 * `--mds-token=$TOKEN` passes the auth token to the apps via `AC_METADATA_URL` env var
 * `--interactive` to run a pod interactively, that is, pass standard input to the application (only for pods with one application)
-
+* `--local-config=$PATH` to override the local configuration directory
 
 ### `rkt enter` => "coreos.com/rkt/stage1/enter"
 

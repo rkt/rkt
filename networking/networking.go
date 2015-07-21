@@ -52,7 +52,7 @@ type Networking struct {
 
 // Setup creates a new networking namespace and executes network plugins to
 // setup private networking. It returns in the new pod namespace
-func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, privateNetList common.PrivateNetList) (*Networking, error) {
+func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, privateNetList common.PrivateNetList, localConfig string) (*Networking, error) {
 	// TODO(jonboulle): currently podRoot is _always_ ".", and behaviour in other
 	// circumstances is untested. This should be cleaned up.
 	n := Networking{
@@ -60,6 +60,7 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, privateNetList
 			podRoot:      podRoot,
 			podID:        podID,
 			netsLoadList: privateNetList,
+			localConfig:  localConfig,
 		},
 	}
 

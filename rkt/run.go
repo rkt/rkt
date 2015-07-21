@@ -226,6 +226,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		LockFd:       lfd,
 		Interactive:  flagInteractive,
 		MDSRegister:  flagMDSRegister,
+		LocalConfig:  globalFlags.LocalConfigDir,
 	}
 
 	imgs, err := p.getApps()
