@@ -68,7 +68,7 @@ type RunConfig struct {
 	LockFd      int                   // lock file descriptor
 	Interactive bool                  // whether the pod is interactive or not
 	MDSRegister bool                  // whether to register with metadata service or not
-	Images      schema.AppList        // application images (prepare gets them via Apps)
+	Apps        schema.AppList        // applications (prepare gets them via Apps)
 	LocalConfig string                // Path to local configuration
 }
 
@@ -136,13 +136,17 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 
 	if err := cfg.Apps.Walk(func(app *apps.App) error {
 		img := app.ImageID
-		am, err := prepareAppImage(cfg, img, dir, cfg.UseOverlay)
+
+		am, err := cfg.Store.GetImageManifest(img.String())
 		if err != nil {
-			return fmt.Errorf("error setting up image %s: %v", img, err)
+			return fmt.Errorf("error getting the manifest: %v", err)
 		}
 		appName, err := imageNameToAppName(am.Name)
 		if err != nil {
 			return fmt.Errorf("error converting image name to app name: %v", err)
+		}
+		if err := prepareAppImage(cfg, *appName, img, dir, cfg.UseOverlay); err != nil {
+			return fmt.Errorf("error setting up image %s: %v", img, err)
 		}
 		if pm.Apps.Get(*appName) != nil {
 			return fmt.Errorf("error: multiple apps with name %s", am.Name)
@@ -203,9 +207,13 @@ func validatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 	appNames := make(map[types.ACName]struct{})
 	for _, ra := range pm.Apps {
 		img := ra.Image
-		am, err := prepareAppImage(cfg, img.ID, dir, cfg.UseOverlay)
+
+		am, err := cfg.Store.GetImageManifest(img.ID.String())
 		if err != nil {
-			return nil, fmt.Errorf("error setting up image %s: %v", img.ID, err)
+			return nil, fmt.Errorf("error getting the manifest: %v", err)
+		}
+		if err := prepareAppImage(cfg, ra.Name, img.ID, dir, cfg.UseOverlay); err != nil {
+			return nil, fmt.Errorf("error setting up image %s: %v", img, err)
 		}
 		if _, ok := appNames[ra.Name]; ok {
 			return nil, fmt.Errorf("error: multiple apps with name %s", ra.Name)
@@ -289,8 +297,8 @@ func Run(cfg RunConfig, dir string) {
 	}
 	log.Printf("Wrote filesystem to %s\n", dir)
 
-	for _, img := range cfg.Images {
-		if err := setupAppImage(cfg, img.Image.ID, dir, useOverlay); err != nil {
+	for _, app := range cfg.Apps {
+		if err := setupAppImage(cfg, app.Name, app.Image.ID, dir, useOverlay); err != nil {
 			log.Fatalf("error setting up app image: %v", err)
 		}
 	}
@@ -321,7 +329,7 @@ func Run(cfg RunConfig, dir string) {
 		args = append(args, "--interactive")
 	}
 	if cfg.MDSRegister {
-		mdsToken, err := registerPod(".", cfg.UUID, cfg.Images)
+		mdsToken, err := registerPod(".", cfg.UUID, cfg.Apps)
 		if err != nil {
 			log.Fatalf("failed to register the pod: %v", err)
 		}
@@ -350,47 +358,40 @@ func Run(cfg RunConfig, dir string) {
 }
 
 // prepareAppImage renders and verifies the tree cache of the app image that
-// corresponds to the given hash.
+// corresponds to the given app name.
 // When useOverlay is false, it attempts to render and expand the app image
-// TODO(jonboulle): tighten up the Hash type here; currently it is partially-populated (i.e. half-length sha512)
-func prepareAppImage(cfg PrepareConfig, img types.Hash, cdir string, useOverlay bool) (*schema.ImageManifest, error) {
+func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cdir string, useOverlay bool) error {
 	log.Println("Loading image", img.String())
 
 	if useOverlay {
 		if err := cfg.Store.RenderTreeStore(img.String(), false); err != nil {
-			return nil, fmt.Errorf("error rendering tree image: %v", err)
+			return fmt.Errorf("error rendering tree image: %v", err)
 		}
 		if err := cfg.Store.CheckTreeStore(img.String()); err != nil {
 			log.Printf("Warning: tree cache is in a bad state. Rebuilding...")
 			if err := cfg.Store.RenderTreeStore(img.String(), true); err != nil {
-				return nil, fmt.Errorf("error rendering tree image: %v", err)
+				return fmt.Errorf("error rendering tree image: %v", err)
 			}
 		}
 	} else {
-		ad := common.AppImagePath(cdir, img)
+		ad := common.AppPath(cdir, appName)
 		err := os.MkdirAll(ad, 0755)
 		if err != nil {
-			return nil, fmt.Errorf("error creating image directory: %v", err)
+			return fmt.Errorf("error creating image directory: %v", err)
 		}
 
 		if err := aci.RenderACIWithImageID(img, ad, cfg.Store); err != nil {
-			return nil, fmt.Errorf("error rendering ACI: %v", err)
+			return fmt.Errorf("error rendering ACI: %v", err)
 		}
 	}
-
-	am, err := cfg.Store.GetImageManifest(img.String())
-	if err != nil {
-		return nil, fmt.Errorf("error getting the manifest: %v", err)
-	}
-
-	return am, nil
+	return nil
 }
 
 // setupAppImage mounts the overlay filesystem for the app image that
 // corresponds to the given hash. Then, it creates the tmp directory.
 // When useOverlay is false it just creates the tmp directory for this app.
-func setupAppImage(cfg RunConfig, img types.Hash, cdir string, useOverlay bool) error {
-	ad := common.AppImagePath(cdir, img)
+func setupAppImage(cfg RunConfig, appName types.ACName, img types.Hash, cdir string, useOverlay bool) error {
+	ad := common.AppPath(cdir, appName)
 	if useOverlay {
 		err := os.MkdirAll(ad, 0776)
 		if err != nil {

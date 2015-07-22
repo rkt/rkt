@@ -125,13 +125,13 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 			stage1RootFS := s.GetTreeStoreRootFS(stage1ID.String())
 
 			if p.usesOverlay() {
-				apps, err := p.getAppsHashes()
+				apps, err := p.getApps()
 				if err != nil {
-					stderr("Error retrieving app hashes from pod manifest: %v", err)
+					stderr("Error retrieving app list from pod manifest: %v", err)
 					return
 				}
 				for _, a := range apps {
-					dest := filepath.Join(common.AppImagePath(p.path(), a), "rootfs")
+					dest := filepath.Join(common.AppPath(p.path(), a.Name), "rootfs")
 					if err := syscall.Unmount(dest, 0); err != nil {
 						// machine could have been rebooted and mounts lost.
 						// ignore "does not exist" and "not a mount point" errors
