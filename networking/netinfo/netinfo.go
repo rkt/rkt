@@ -30,6 +30,7 @@ type NetInfo struct {
 	IfName   string `json:"ifName"`
 	IP       net.IP `json:"ip"`
 	Args     string `json:"args"`
+	Mask     net.IP
 	HostIP   net.IP
 }
 
