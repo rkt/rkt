@@ -508,12 +508,15 @@ func stage1() int {
 		log.Fatalf("error making / a shared and slave mount: %v", err)
 	}
 
-	appHashes := p.GetAppHashes()
+	var serviceNames []string
+	for _, app := range p.Manifest.Apps {
+		serviceNames = append(serviceNames, ServiceUnitName(app.Name))
+	}
 	s1Root := common.Stage1RootfsPath(p.Root)
 	machineID := p.GetMachineID()
 	subcgroup, err := getContainerSubCgroup(machineID)
 	if err == nil {
-		if err := cgroup.CreateCgroups(s1Root, subcgroup, appHashes); err != nil {
+		if err := cgroup.CreateCgroups(s1Root, subcgroup, serviceNames); err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating cgroups: %v\n", err)
 			return 5
 		}
