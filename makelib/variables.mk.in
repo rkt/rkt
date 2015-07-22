@@ -25,7 +25,6 @@ GOFMT := @GOFMTBINARY@
 GIT := @GIT@
 BASH := @BASH_SHELL@
 BASH_SHELL := @BASH_SHELL@
-PERL := @PERL@
 ABS_GO := @ABS_GO@
 
 # path to rkt source code distro
@@ -62,8 +61,7 @@ ACIDIR := $(BUILDDIR)/aci-for-$(RKT_STAGE1_USR_FROM)-flavor
 ACIROOTFSDIR := $(ACIDIR)/rootfs
 
 ACTOOL := $(BINDIR)/actool
-GODEPSGENTOOL := $(MAKETOOLSDIR)/go-deps-gen.pl
-DEPSGENTOOL := $(MAKETOOLSDIR)/deps-gen.pl
+DEPSGENTOOL := $(TOOLSDIR)/depsgen
 
 # test-related variables
 GO_TEST_PACKAGES ?= ./...

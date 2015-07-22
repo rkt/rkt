@@ -21,7 +21,6 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
   * realpath
   * gpg
 * Go 1.4+
-* Perl 5.10 with the Capture::Tiny module (on Fedora/RHEL/Centos: perl-Capture-Tiny package, on Debian/Ubuntu libcapture-tiny-perl package)
 
 Once the requirements have been met you can build rkt by running the following commands:
 
@@ -52,7 +51,7 @@ Alternatively, you can build rkt in a Docker container with the following comman
 Replace $SRC with the absolute path to your rkt source code:
 
 ```
-# docker run -v $SRC:/opt/rkt -i -t golang:1.4 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath autoconf libcapture-tiny-perl file && cd /opt/rkt && go get github.com/appc/spec/... && ./autogen.sh && ./configure && make"
+# docker run -v $SRC:/opt/rkt -i -t golang:1.4 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath autoconf file && cd /opt/rkt && go get github.com/appc/spec/... && ./autogen.sh && ./configure && make"
 ```
 
 ### Building systemd in stage1 from the sources

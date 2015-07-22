@@ -34,16 +34,15 @@ $(call inc-one,bash.mk)
 $(UFS_STAMP): UFS_ROOTFSDIR := $(UFS_ROOTFSDIR)
 $(UFS_STAMP): ACIROOTFSDIR := $(ACIROOTFSDIR)
 $(UFS_STAMP): RKT_STAGE1_SYSTEMD_VER := $(RKT_STAGE1_SYSTEMD_VER)
-$(UFS_STAMP): PERL := $(PERL)
 $(UFS_STAMP): DEPSGENTOOL := $(DEPSGENTOOL)
 $(UFS_STAMP): UFS_MAIN_STAMP_DEPMK := $(UFS_MAIN_STAMP_DEPMK)
 # $(UFS_STAMP): | $(UFS_LIB_SYMLINK) $(UFS_LIB64_SYMLINK)
-$(UFS_STAMP): $(UFS_SYSTEMD_BUILD_STAMP) | $(ACIROOTFSDIR)
+$(UFS_STAMP): $(UFS_SYSTEMD_BUILD_STAMP) $(DEPSGENTOOL_STAMP) | $(ACIROOTFSDIR)
 	set -e; \
 	cp -af "$(UFS_ROOTFSDIR)/." "$(ACIROOTFSDIR)"; \
 	ln -sf 'src' "$(ACIROOTFSDIR)/flavor"; \
 	echo "$(RKT_STAGE1_SYSTEMD_VER)" >"$(ACIROOTFSDIR)/systemd-version"; \
-	"$(PERL)" "$(DEPSGENTOOL)" --target='$$(UFS_STAMP)' $$(find "$(UFS_ROOTFSDIR)" -type f) >"$(UFS_MAIN_STAMP_DEPMK)"; \
+	"$(DEPSGENTOOL)" glob --target='$$(UFS_STAMP)' $$(find "$(UFS_ROOTFSDIR)" -type f) >"$(UFS_MAIN_STAMP_DEPMK)"; \
 	touch "$@"
 
 $(UFS_SYSTEMD_BUILD_STAMP): UFS_SYSTEMD_BUILDDIR := $(UFS_SYSTEMD_BUILDDIR)
@@ -113,10 +112,9 @@ $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP): $(UFS_SYSTEMD_SRCDIR)/configure
 $(UFS_SYSTEMD_SRCDIR)/configure: UFS_PATCHES_DIR := $(UFS_PATCHES_DIR)
 $(UFS_SYSTEMD_SRCDIR)/configure: GIT := $(GIT)
 $(UFS_SYSTEMD_SRCDIR)/configure: UFS_SYSTEMD_SRCDIR := $(UFS_SYSTEMD_SRCDIR)
-$(UFS_SYSTEMD_SRCDIR)/configure: PERL := $(PERL)
 $(UFS_SYSTEMD_SRCDIR)/configure: DEPSGENTOOL := $(DEPSGENTOOL)
 $(UFS_SYSTEMD_SRCDIR)/configure: UFS_PATCHES_DEPMK := $(UFS_PATCHES_DEPMK)
-$(UFS_SYSTEMD_SRCDIR)/configure:
+$(UFS_SYSTEMD_SRCDIR)/configure: $(DEPSGENTOOL_STAMP)
 	@set -e; \
 	shopt -s nullglob ; \
 	if [ -d "$(UFS_PATCHES_DIR)" ]; then \
@@ -124,7 +122,7 @@ $(UFS_SYSTEMD_SRCDIR)/configure:
 			"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" am "$${p}"; \
 		done; \
 	fi; \
-	"$(PERL)" "$(DEPSGENTOOL)" --target='$$(UFS_SYSTEMD_SRCDIR)/configure' --suffix=.patch "$(UFS_PATCHES_DIR)"/*.patch >"$(UFS_PATCHES_DEPMK)"; \
+	"$(DEPSGENTOOL)" glob --target='$$(UFS_SYSTEMD_SRCDIR)/configure' --suffix=.patch "$(UFS_PATCHES_DIR)"/*.patch >"$(UFS_PATCHES_DEPMK)"; \
 	pushd "$(UFS_SYSTEMD_SRCDIR)"; \
 	./autogen.sh; \
 	popd
