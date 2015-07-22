@@ -115,7 +115,12 @@ func walkPods(include includeMask, f func(*pod)) error {
 	sort.Strings(ls)
 
 	for _, uuid := range ls {
-		p, err := getPod(uuid)
+		u, err := types.NewUUID(uuid)
+		if err != nil {
+			stderr("Skipping %q: %v", uuid, err)
+			continue
+		}
+		p, err := getPod(u)
 		if err != nil {
 			stderr("Skipping %q: %v", uuid, err)
 			continue
@@ -186,18 +191,12 @@ func newPod() (*pod, error) {
 // getPod returns a pod struct representing the given pod.
 // The returned lock is always left in an open but unlocked state.
 // The pod must be closed using pod.Close()
-func getPod(uuid string) (*pod, error) {
+func getPod(uuid *types.UUID) (*pod, error) {
 	if err := initPods(); err != nil {
 		return nil, err
 	}
 
-	p := &pod{}
-
-	u, err := types.NewUUID(uuid)
-	if err != nil {
-		return nil, err
-	}
-	p.uuid = u
+	p := &pod{uuid: uuid}
 
 	// we try open the pod in all possible directories, in the same order the states occur
 	l, err := lock.NewLock(p.embryoPath(), lock.Dir)
@@ -488,7 +487,8 @@ func (p *pod) xToGarbage() error {
 // isRunning does the annoying tests to infer if a pod is in a running state
 func (p *pod) isRunning() bool {
 	// when none of these things, running!
-	return !p.isEmbryo && !p.isAbortedPrepare && !p.isPreparing && !p.isPrepared && !p.isExited && !p.isExitedGarbage && !p.isGarbage && !p.isGone
+	return !p.isEmbryo && !p.isAbortedPrepare && !p.isPreparing && !p.isPrepared &&
+		!p.isExited && !p.isExitedGarbage && !p.isExitedDeleting && !p.isGarbage && !p.isDeleting && !p.isGone
 }
 
 // listPods returns a list of pod uuids in string form.
