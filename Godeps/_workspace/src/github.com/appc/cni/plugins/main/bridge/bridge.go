@@ -94,7 +94,7 @@ func bridgeByName(name string) (*netlink.Bridge, error) {
 	return br, nil
 }
 
-func ensureBridge(brName string, mtu int, ipn *net.IPNet) (*netlink.Bridge, error) {
+func ensureBridge(brName string, mtu int) (*netlink.Bridge, error) {
 	br := &netlink.Bridge{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: brName,
@@ -118,24 +118,16 @@ func ensureBridge(brName string, mtu int, ipn *net.IPNet) (*netlink.Bridge, erro
 		return nil, err
 	}
 
-	if ipn != nil {
-		return br, ensureBridgeAddr(br, ipn)
-	}
-
 	return br, nil
 }
 
-func setupVeth(netns string, br *netlink.Bridge, ifName string, mtu int, pr *plugin.Result) error {
+func setupVeth(netns string, br *netlink.Bridge, ifName string, mtu int) error {
 	var hostVethName string
 
-	err := ns.WithNetNSPath(netns, func(hostNS *os.File) error {
+	err := ns.WithNetNSPath(netns, false, func(hostNS *os.File) error {
 		// create the veth pair in the container and move host end into host netns
 		hostVeth, _, err := ip.SetupVeth(ifName, mtu, hostNS)
 		if err != nil {
-			return err
-		}
-
-		if err = plugin.ConfigureIface(ifName, pr); err != nil {
 			return err
 		}
 
@@ -165,17 +157,9 @@ func calcGatewayIP(ipn *net.IPNet) net.IP {
 	return ip.NextIP(nid)
 }
 
-func setupBridge(n *NetConf, ipConf *plugin.IPConfig) (*netlink.Bridge, error) {
-	var gwn *net.IPNet
-	if n.IsGW {
-		gwn = &net.IPNet{
-			IP:   ipConf.Gateway,
-			Mask: ipConf.IP.Mask,
-		}
-	}
-
+func setupBridge(n *NetConf) (*netlink.Bridge, error) {
 	// create bridge if necessary
-	br, err := ensureBridge(n.BrName, n.MTU, gwn)
+	br, err := ensureBridge(n.BrName, n.MTU)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bridge %q: %v", n.BrName, err)
 	}
@@ -186,6 +170,15 @@ func setupBridge(n *NetConf, ipConf *plugin.IPConfig) (*netlink.Bridge, error) {
 func cmdAdd(args *skel.CmdArgs) error {
 	n, err := loadNetConf(args.StdinData)
 	if err != nil {
+		return err
+	}
+
+	br, err := setupBridge(n)
+	if err != nil {
+		return err
+	}
+
+	if err = setupVeth(args.Netns, br, args.IfName, n.MTU); err != nil {
 		return err
 	}
 
@@ -203,13 +196,26 @@ func cmdAdd(args *skel.CmdArgs) error {
 		result.IP4.Gateway = calcGatewayIP(&result.IP4.IP)
 	}
 
-	br, err := setupBridge(n, result.IP4)
+	err = ns.WithNetNSPath(args.Netns, false, func(hostNS *os.File) error {
+		return plugin.ConfigureIface(args.IfName, result)
+	})
 	if err != nil {
 		return err
 	}
 
-	if err = setupVeth(args.Netns, br, args.IfName, n.MTU, result); err != nil {
-		return err
+	if n.IsGW {
+		gwn := &net.IPNet{
+			IP:   result.IP4.Gateway,
+			Mask: result.IP4.IP.Mask,
+		}
+
+		if err = ensureBridgeAddr(br, gwn); err != nil {
+			return err
+		}
+
+		if err := ip.EnableIP4Forward(); err != nil {
+			return fmt.Errorf("failed to enable forwarding: %v", err)
+		}
 	}
 
 	if n.IPMasq {
@@ -219,7 +225,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 	}
 
-	return plugin.PrintResult(result)
+	return result.Print()
 }
 
 func cmdDel(args *skel.CmdArgs) error {
@@ -228,14 +234,14 @@ func cmdDel(args *skel.CmdArgs) error {
 		return err
 	}
 
-	err = ns.WithNetNSPath(args.Netns, func(hostNS *os.File) error {
-		return ip.DelLinkByName(args.IfName)
-	})
+	err = plugin.ExecDel(n.IPAM.Type, args.StdinData)
 	if err != nil {
 		return err
 	}
 
-	return plugin.ExecDel(n.IPAM.Type, args.StdinData)
+	return ns.WithNetNSPath(args.Netns, false, func(hostNS *os.File) error {
+		return ip.DelLinkByName(args.IfName)
+	})
 }
 
 func main() {

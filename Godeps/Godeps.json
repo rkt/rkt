@@ -21,39 +21,58 @@
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/ip",
-			"Rev": "49a018fa85ac216fdc76c835371807bdcf3b8ead"
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/ns",
-			"Rev": "49a018fa85ac216fdc76c835371807bdcf3b8ead"
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/plugin",
-			"Rev": "49a018fa85ac216fdc76c835371807bdcf3b8ead"
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/skel",
-			"Rev": "49a018fa85ac216fdc76c835371807bdcf3b8ead"
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/plugins/ipam/dhcp",
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local",
-			"Rev": "49a018fa85ac216fdc76c835371807bdcf3b8ead"
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/bridge",
-			"Rev": "49a018fa85ac216fdc76c835371807bdcf3b8ead"
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/ipvlan",
-			"Rev": "49a018fa85ac216fdc76c835371807bdcf3b8ead"
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/macvlan",
-			"Rev": "49a018fa85ac216fdc76c835371807bdcf3b8ead"
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
 		},
 		{
-			"ImportPath": "github.com/appc/cni/plugins/main/veth",
-			"Rev": "49a018fa85ac216fdc76c835371807bdcf3b8ead"
+			"ImportPath": "github.com/appc/cni/plugins/main/ptp",
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/plugins/meta/flannel",
+			"Comment": "v0.1.0",
+			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
@@ -115,6 +134,11 @@
 			"Rev": "6fe83ccda8fb9b7549c9ab4ba47f47858bc950aa"
 		},
 		{
+			"ImportPath": "github.com/coreos/go-systemd/activation",
+			"Comment": "v2-55-gd7b0894",
+			"Rev": "d7b08942d0d85bfcb4694864881c4af7324784d2"
+		},
+		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
 			"Comment": "v2-57-gbe94bc7",
 			"Rev": "be94bc700879ae8217780e9d141789a2defa302b"
@@ -168,6 +192,14 @@
 		{
 			"ImportPath": "github.com/cznic/zappy",
 			"Rev": "47331054e4f96186e3ff772877c0443909368a45"
+		},
+		{
+			"ImportPath": "github.com/d2g/dhcp4",
+			"Rev": "f0e4d29ff0231dce36e250b2ed9ff08412584bca"
+		},
+		{
+			"ImportPath": "github.com/d2g/dhcp4client",
+			"Rev": "bed07e1bc5b85f69c6f0fd73393aa35ec68ed892"
 		},
 		{
 			"ImportPath": "github.com/godbus/dbus",
@@ -230,6 +262,10 @@
 		{
 			"ImportPath": "golang.org/x/net/html",
 			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "e11762ca30adc5b39fdbfd8c4250dabeb8e456d3"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/vcs",

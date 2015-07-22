@@ -58,9 +58,10 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
-	return plugin.PrintResult(&plugin.Result{
+	r := &plugin.Result{
 		IP4: ipConf,
-	})
+	}
+	return r.Print()
 }
 
 func cmdDel(args *skel.CmdArgs) error {

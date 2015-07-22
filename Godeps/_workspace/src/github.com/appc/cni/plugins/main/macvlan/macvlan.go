@@ -56,14 +56,12 @@ func loadConf(bytes []byte) (*NetConf, error) {
 
 func modeFromString(s string) (netlink.MacvlanMode, error) {
 	switch s {
-	case "":
+	case "", "bridge":
 		return netlink.MACVLAN_MODE_BRIDGE, nil
 	case "private":
 		return netlink.MACVLAN_MODE_PRIVATE, nil
 	case "vepa":
 		return netlink.MACVLAN_MODE_VEPA, nil
-	case "bridge":
-		return netlink.MACVLAN_MODE_BRIDGE, nil
 	case "passthru":
 		return netlink.MACVLAN_MODE_PASSTHRU, nil
 	default:
@@ -82,10 +80,17 @@ func createMacvlan(conf *NetConf, ifName string, netns *os.File) error {
 		return fmt.Errorf("failed to lookup master %q: %v", conf.Master, err)
 	}
 
+	// due to kernel bug we have to create with tmpname or it might
+	// collide with the name on the host and error out
+	tmpName, err := ip.RandomVethName()
+	if err != nil {
+		return err
+	}
+
 	mv := &netlink.Macvlan{
 		LinkAttrs: netlink.LinkAttrs{
 			MTU:         conf.MTU,
-			Name:        ifName,
+			Name:        tmpName,
 			ParentIndex: m.Attrs().Index,
 			Namespace:   netlink.NsFd(int(netns.Fd())),
 		},
@@ -96,7 +101,13 @@ func createMacvlan(conf *NetConf, ifName string, netns *os.File) error {
 		return fmt.Errorf("failed to create macvlan: %v", err)
 	}
 
-	return err
+	return ns.WithNetNS(netns, false, func(_ *os.File) error {
+		err := renameLink(tmpName, ifName)
+		if err != nil {
+			return fmt.Errorf("failed to rename macvlan to %q: %v", ifName, err)
+		}
+		return nil
+	})
 }
 
 func cmdAdd(args *skel.CmdArgs) error {
@@ -111,12 +122,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 	defer netns.Close()
 
-	tmpName, err := ip.RandomVethName()
-	if err != nil {
-		return err
-	}
-
-	if err = createMacvlan(n, tmpName, netns); err != nil {
+	if err = createMacvlan(n, args.IfName, netns); err != nil {
 		return err
 	}
 
@@ -129,12 +135,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return errors.New("IPAM plugin returned missing IPv4 config")
 	}
 
-	err = ns.WithNetNS(netns, func(_ *os.File) error {
-		err := renameLink(tmpName, args.IfName)
-		if err != nil {
-			return fmt.Errorf("failed to rename macvlan to %q: %v", args.IfName, err)
-		}
-
+	err = ns.WithNetNS(netns, false, func(_ *os.File) error {
 		return plugin.ConfigureIface(args.IfName, result)
 	})
 	if err != nil {
@@ -148,7 +149,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 	}
 
-	return plugin.PrintResult(result)
+	return result.Print()
 }
 
 func cmdDel(args *skel.CmdArgs) error {
@@ -162,7 +163,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		return err
 	}
 
-	return ns.WithNetNSPath(args.Netns, func(hostNS *os.File) error {
+	return ns.WithNetNSPath(args.Netns, false, func(hostNS *os.File) error {
 		return ip.DelLinkByName(args.IfName)
 	})
 }
