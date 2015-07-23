@@ -41,7 +41,7 @@ var (
 PUBKEY may be either a local file or URL,
 PREFIX scopes the applicability of PUBKEY to image names sharing PREFIX.
 Meta discovery of PUBKEY at PREFIX will be attempted if no PUBKEY is specified.
---root must be specified to add keys with no prefix.`,
+--root must be specified to add keys with no prefix; path to a key file must be given (no discovery).`,
 		Run: runWrapper(runTrust),
 	}
 	flagPrefix    string
@@ -52,7 +52,7 @@ Meta discovery of PUBKEY at PREFIX will be attempted if no PUBKEY is specified.
 func init() {
 	cmdRkt.AddCommand(cmdTrust)
 	cmdTrust.Flags().StringVar(&flagPrefix, "prefix", "", "prefix to limit trust to")
-	cmdTrust.Flags().BoolVar(&flagRoot, "root", false, "add root key without a prefix")
+	cmdTrust.Flags().BoolVar(&flagRoot, "root", false, "add root key from filesystem without a prefix")
 	cmdTrust.Flags().BoolVar(&flagAllowHTTP, "insecure-allow-http", false, "allow HTTP use for key discovery and/or retrieval")
 }
 
