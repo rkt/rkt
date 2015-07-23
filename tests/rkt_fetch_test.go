@@ -133,31 +133,8 @@ func TestImplicitFetch(t *testing.T) {
 	importImageAndFetchHash(t, ctx, "docker://busybox:ubuntu-12.04")
 	importImageAndFetchHash(t, ctx, "docker://busybox:latest")
 
-	// 2. Try run/prepare with specified tag, should get the $foundMsg.
+	// 2. Try run/prepare with/without tag ':latest', should not get $foundMsg.
 	cmds := []string{
-		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false docker://busybox:ubuntu-12.04", ctx.cmd()),
-		fmt.Sprintf("%s --insecure-skip-verify prepare docker://busybox:ubuntu-12.04", ctx.cmd()),
-	}
-
-	for _, cmd := range cmds {
-		t.Logf("Running test %v", cmd)
-
-		child, err := gexpect.Spawn(cmd)
-		if err != nil {
-			t.Fatalf("Cannot exec rkt: %v", err)
-		}
-
-		if err := child.Expect(foundMsg); err != nil {
-			t.Fatalf("Expected %q but not found: %v", foundMsg, err)
-		}
-
-		if err := child.Wait(); err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
-		}
-	}
-
-	// 3. Try run/prepare with/without tag ':latest', should not get $foundMsg.
-	cmds = []string{
 		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false docker://busybox", ctx.cmd()),
 		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false docker://busybox:latest", ctx.cmd()),
 		fmt.Sprintf("%s --insecure-skip-verify prepare docker://busybox", ctx.cmd()),
@@ -171,8 +148,58 @@ func TestImplicitFetch(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Cannot exec rkt: %v", err)
 		}
-		if err := child.Expect(foundMsg); err == nil {
+		if err := expectWithOutput(child, foundMsg); err == nil {
 			t.Fatalf("%q should not be found", foundMsg)
+		}
+		if err := child.Wait(); err != nil {
+			t.Fatalf("rkt didn't terminate correctly: %v", err)
+		}
+	}
+}
+
+// TestRunPrepareLocal tests that 'rkt run/prepare' will only use the on-disk store if flag is --local
+func TestRunPrepareLocal(t *testing.T) {
+	notAvailableMsg := "not available in local store"
+	foundMsg := "using image in local store"
+
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
+	cmds := []string{
+		fmt.Sprintf("%s --insecure-skip-verify run --local --mds-register=false docker://busybox", ctx.cmd()),
+		fmt.Sprintf("%s --insecure-skip-verify run --local --mds-register=false docker://busybox:latest", ctx.cmd()),
+		fmt.Sprintf("%s --insecure-skip-verify prepare --local docker://busybox", ctx.cmd()),
+		fmt.Sprintf("%s --insecure-skip-verify prepare --local docker://busybox:latest", ctx.cmd()),
+	}
+
+	// 1. Try run/prepare with the image not available in the store, should get $notAvailableMsg.
+	for _, cmd := range cmds {
+		t.Logf("Running test %v", cmd)
+
+		child, err := gexpect.Spawn(cmd)
+		if err != nil {
+			t.Fatalf("Cannot exec rkt: %v", err)
+		}
+		if err := expectWithOutput(child, notAvailableMsg); err != nil {
+			t.Fatalf("%q should be found", notAvailableMsg)
+		}
+		child.Wait()
+	}
+
+	// 2. Fetch the image
+	importImageAndFetchHash(t, ctx, "docker://busybox")
+	importImageAndFetchHash(t, ctx, "docker://busybox:latest")
+
+	// 3. Try run/prepare with the image available in the store, should get $foundMsg.
+	for _, cmd := range cmds {
+		t.Logf("Running test %v", cmd)
+
+		child, err := gexpect.Spawn(cmd)
+		if err != nil {
+			t.Fatalf("Cannot exec rkt: %v", err)
+		}
+		if err := expectWithOutput(child, foundMsg); err != nil {
+			t.Fatalf("%q should be found", foundMsg)
 		}
 		if err := child.Wait(); err != nil {
 			t.Fatalf("rkt didn't terminate correctly: %v", err)

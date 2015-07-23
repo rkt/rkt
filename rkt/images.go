@@ -28,6 +28,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -287,6 +288,8 @@ func (f *fetcher) fetchImageFromURL(imgurl string, scheme string, ascFile *os.Fi
 // Otherwise if '--local' is false, aciURL is not a file path, and the label is not 'latest' or empty, we will first
 // try to fetch from the on-disk store, if not found, then fetch from the internet.
 func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, ascFile *os.File, latest bool) (string, error) {
+	var rem *store.Remote
+
 	if f.insecureSkipVerify {
 		if f.ks != nil {
 			stderr("rkt: warning: TLS verification and signature verification has been disabled")
@@ -296,13 +299,21 @@ func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, 
 	}
 
 	if (f.local && scheme != "file") || (scheme != "file" && !latest) {
-		rem, ok, err := f.s.GetRemote(aciURL)
+		var err error
+		ok := false
+		rem, ok, err = f.s.GetRemote(aciURL)
 		if err != nil {
 			return "", err
 		}
 		if ok {
-			stderr("rkt: found image in local store, skipping fetching from %s", aciURL)
-			return rem.BlobKey, nil
+			if f.local {
+				stderr("rkt: using image in local store for app %s", appName)
+				return rem.BlobKey, nil
+			}
+			if useCached(rem.DownloadTime, rem.CacheMaxAge) {
+				stderr("rkt: found image in local store, skipping fetching from %s", aciURL)
+				return rem.BlobKey, nil
+			}
 		}
 		if f.local {
 			return "", fmt.Errorf("url %s not available in local store", aciURL)
@@ -313,9 +324,21 @@ func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, 
 		stderr("rkt: fetching image from %s", aciURL)
 	}
 
-	entity, aciFile, err := f.fetch(appName, aciURL, ascURL, ascFile)
+	var etag string
+	if rem != nil {
+		etag = rem.ETag
+	}
+	entity, aciFile, cd, err := f.fetch(appName, aciURL, ascURL, ascFile, etag)
 	if err != nil {
 		return "", err
+	}
+	if cd != nil && cd.useCached {
+		if rem != nil {
+			return rem.BlobKey, nil
+		} else {
+			// should never happen
+			panic("asked to use cached image but remote is nil")
+		}
 	}
 	if scheme != "file" {
 		defer os.Remove(aciFile.Name())
@@ -335,6 +358,11 @@ func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, 
 	if scheme != "file" {
 		rem := store.NewRemote(aciURL, ascURL)
 		rem.BlobKey = key
+		rem.DownloadTime = time.Now()
+		if cd != nil {
+			rem.ETag = cd.etag
+			rem.CacheMaxAge = cd.maxAge
+		}
 		err = f.s.WriteRemote(rem)
 		if err != nil {
 			return "", err
@@ -350,18 +378,22 @@ func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, 
 // If Keystore is nil signature verification will be skipped, regardless of ascFile.
 // fetch returns the signer, an *os.File representing the ACI, and an error if any.
 // err will be nil if the ACI fetches successfully and the ACI is verified.
-func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File) (*openpgp.Entity, *os.File, error) {
-	var entity *openpgp.Entity
+func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File, etag string) (*openpgp.Entity, *os.File, *cacheData, error) {
+	var (
+		entity *openpgp.Entity
+		cd     *cacheData
+	)
+
 	u, err := url.Parse(aciURL)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error parsing ACI url: %v", err)
+		return nil, nil, nil, fmt.Errorf("error parsing ACI url: %v", err)
 	}
 	if u.Scheme == "docker" {
 		registryURL := strings.TrimPrefix(aciURL, "docker://")
 
 		tmpDir, err := f.s.TmpDir()
 		if err != nil {
-			return nil, nil, fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
+			return nil, nil, nil, fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
 		}
 
 		indexName := docker2aci.GetIndexName(registryURL)
@@ -373,33 +405,33 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File)
 		}
 		acis, err := docker2aci.Convert(registryURL, true, tmpDir, tmpDir, user, password)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error converting docker image to ACI: %v", err)
+			return nil, nil, nil, fmt.Errorf("error converting docker image to ACI: %v", err)
 		}
 
 		aciFile, err := os.Open(acis[0])
 		if err != nil {
-			return nil, nil, fmt.Errorf("error opening squashed ACI file: %v", err)
+			return nil, nil, nil, fmt.Errorf("error opening squashed ACI file: %v", err)
 		}
 
-		return nil, aciFile, nil
+		return nil, aciFile, nil, nil
 	}
 
 	var retrySignature bool
 	if f.ks != nil && ascFile == nil {
 		u, err := url.Parse(ascURL)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error parsing ASC url: %v", err)
+			return nil, nil, nil, fmt.Errorf("error parsing ASC url: %v", err)
 		}
 		if u.Scheme == "file" {
 			ascFile, err = os.Open(u.Path)
 			if err != nil {
-				return nil, nil, fmt.Errorf("error opening signature file: %v", err)
+				return nil, nil, nil, fmt.Errorf("error opening signature file: %v", err)
 			}
 		} else {
 			stderr("Downloading signature from %v\n", ascURL)
 			ascFile, err = f.s.TmpFile()
 			if err != nil {
-				return nil, nil, fmt.Errorf("error setting up temporary file: %v", err)
+				return nil, nil, nil, fmt.Errorf("error setting up temporary file: %v", err)
 			}
 			defer os.Remove(ascFile.Name())
 
@@ -411,7 +443,7 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File)
 			case nil:
 				break
 			default:
-				return nil, nil, fmt.Errorf("error downloading the signature file: %v", err)
+				return nil, nil, nil, fmt.Errorf("error downloading the signature file: %v", err)
 			}
 		}
 		defer ascFile.Close()
@@ -422,11 +454,11 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File)
 	// ok to skip the test if the signature will be downloaded later.
 	if !retrySignature && f.ks != nil && appName != "" {
 		if _, err := ascFile.Seek(0, 0); err != nil {
-			return nil, nil, fmt.Errorf("error seeking signature file: %v", err)
+			return nil, nil, nil, fmt.Errorf("error seeking signature file: %v", err)
 		}
 		if entity, err = f.ks.CheckSignature(appName, bytes.NewBuffer([]byte{}), ascFile); err != nil {
 			if _, ok := err.(pgperrors.SignatureError); !ok {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 		}
 	}
@@ -435,35 +467,38 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File)
 	if u.Scheme == "file" {
 		aciFile, err = os.Open(u.Path)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error opening ACI file: %v", err)
+			return nil, nil, nil, fmt.Errorf("error opening ACI file: %v", err)
 		}
 	} else {
 		aciFile, err = f.s.TmpFile()
 		if err != nil {
-			return nil, aciFile, fmt.Errorf("error setting up temporary file: %v", err)
+			return nil, aciFile, nil, fmt.Errorf("error setting up temporary file: %v", err)
 		}
 		defer os.Remove(aciFile.Name())
 
-		if err = f.downloadACI(aciURL, aciFile); err != nil {
-			return nil, nil, fmt.Errorf("error downloading ACI: %v", err)
+		if cd, err = f.downloadACI(aciURL, aciFile, etag); err != nil {
+			return nil, nil, nil, fmt.Errorf("error downloading ACI: %v", err)
+		}
+		if cd.useCached {
+			return nil, nil, cd, nil
 		}
 	}
 
 	if retrySignature {
 		if err = f.downloadSignatureFile(ascURL, ascFile); err != nil {
-			return nil, aciFile, fmt.Errorf("error downloading the signature file: %v", err)
+			return nil, aciFile, nil, fmt.Errorf("error downloading the signature file: %v", err)
 		}
 	}
 
 	manifest, err := aci.ManifestFromImage(aciFile)
 	if err != nil {
-		return nil, aciFile, err
+		return nil, aciFile, nil, err
 	}
 	// Check if the downloaded ACI has the correct app name.
 	// The check is only performed when the aci is downloaded through the
 	// discovery protocol, but not with local files or full URL.
 	if appName != "" && manifest.Name.String() != appName {
-		return nil, aciFile,
+		return nil, aciFile, nil,
 			fmt.Errorf("error when reading the app name: %q expected but %q found",
 				appName, manifest.Name.String())
 	}
@@ -471,24 +506,24 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File)
 	if f.ks != nil {
 		manifest, err := aci.ManifestFromImage(aciFile)
 		if err != nil {
-			return nil, aciFile, err
+			return nil, aciFile, nil, err
 		}
 
 		if _, err := aciFile.Seek(0, 0); err != nil {
-			return nil, aciFile, fmt.Errorf("error seeking ACI file: %v", err)
+			return nil, aciFile, nil, fmt.Errorf("error seeking ACI file: %v", err)
 		}
 		if _, err := ascFile.Seek(0, 0); err != nil {
-			return nil, aciFile, fmt.Errorf("error seeking signature file: %v", err)
+			return nil, aciFile, nil, fmt.Errorf("error seeking signature file: %v", err)
 		}
 		if entity, err = f.ks.CheckSignature(manifest.Name.String(), aciFile, ascFile); err != nil {
-			return nil, aciFile, err
+			return nil, aciFile, nil, err
 		}
 	}
 
 	if _, err := aciFile.Seek(0, 0); err != nil {
-		return nil, aciFile, fmt.Errorf("error seeking ACI file: %v", err)
+		return nil, aciFile, nil, fmt.Errorf("error seeking ACI file: %v", err)
 	}
-	return entity, aciFile, nil
+	return entity, aciFile, cd, nil
 }
 
 type writeSyncer interface {
@@ -497,21 +532,23 @@ type writeSyncer interface {
 }
 
 // downloadACI gets the aci specified at aciurl
-func (f *fetcher) downloadACI(aciurl string, out writeSyncer) error {
-	return f.downloadHTTP(aciurl, "ACI", out)
+func (f *fetcher) downloadACI(aciurl string, out writeSyncer, etag string) (*cacheData, error) {
+	return f.downloadHTTP(aciurl, "ACI", out, etag)
 }
 
 // downloadSignatureFile gets the signature specified at sigurl
 func (f *fetcher) downloadSignatureFile(sigurl string, out writeSyncer) error {
-	return f.downloadHTTP(sigurl, "signature", out)
+	_, err := f.downloadHTTP(sigurl, "signature", out, "")
+	return err
+
 }
 
 // downloadHTTP retrieves url, creating a temp file using getTempFile
-// file:// http:// and https:// urls supported
-func (f *fetcher) downloadHTTP(url, label string, out writeSyncer) error {
+// http:// and https:// urls supported
+func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) (*cacheData, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	options := make(http.Header)
 	// Send credentials only over secure channel
@@ -531,23 +568,35 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer) error {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
+	if etag != "" {
+		req.Header.Add("If-None-Match", etag)
+	}
+
 	client := &http.Client{Transport: transport}
 	res, err := client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer res.Body.Close()
 
+	cd := &cacheData{}
 	// TODO(jonboulle): handle http more robustly (redirects?)
 	switch res.StatusCode {
 	case http.StatusAccepted:
 		// If the server returns Status Accepted (HTTP 202), we should retry
 		// downloading the signature later.
-		return errStatusAccepted
+		return nil, errStatusAccepted
 	case http.StatusOK:
-		break
+		fallthrough
+	case http.StatusNotModified:
+		cd.etag = res.Header.Get("ETag")
+		cd.maxAge = getMaxAge(res.Header.Get("Cache-Control"))
+		cd.useCached = (res.StatusCode == http.StatusNotModified)
+		if cd.useCached {
+			return cd, nil
+		}
 	default:
-		return fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
+		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
 	}
 
 	prefix := "Downloading " + label
@@ -579,14 +628,14 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer) error {
 	}
 
 	if _, err := io.Copy(out, reader); err != nil {
-		return fmt.Errorf("error copying %s: %v", label, err)
+		return nil, fmt.Errorf("error copying %s: %v", label, err)
 	}
 
 	if err := out.Sync(); err != nil {
-		return fmt.Errorf("error writing %s: %v", label, err)
+		return nil, fmt.Errorf("error writing %s: %v", label, err)
 	}
 
-	return nil
+	return cd, nil
 }
 
 func ascURLFromImgURL(imgurl string) string {
@@ -629,4 +678,56 @@ func discoverApp(app *discovery.App, insecure bool) (*discovery.Endpoints, error
 		return nil, fmt.Errorf("no endpoints discovered")
 	}
 	return ep, nil
+}
+
+type cacheData struct {
+	useCached bool
+	etag      string
+	maxAge    int
+}
+
+func getMaxAge(headerValue string) int {
+	var MaxAge int = 0
+
+	if len(headerValue) > 0 {
+		parts := strings.Split(headerValue, " ")
+		for i := 0; i < len(parts); i++ {
+			attr, val := parts[i], ""
+			if j := strings.Index(attr, "="); j >= 0 {
+				attr, val = attr[:j], attr[j+1:]
+			}
+			lowerAttr := strings.ToLower(attr)
+
+			switch lowerAttr {
+			case "no-store":
+				MaxAge = 0
+				continue
+			case "no-cache":
+				MaxAge = 0
+				continue
+			case "max-age":
+				secs, err := strconv.Atoi(val)
+				if err != nil || secs != 0 && val[0] == '0' {
+					break
+				}
+				if secs <= 0 {
+					MaxAge = 0
+				} else {
+					MaxAge = secs
+				}
+				continue
+			}
+		}
+	}
+	return MaxAge
+}
+
+// useCached checks if downloadTime plus maxAge is before/after the current time.
+// return true if the cached image should be used, false otherwise.
+func useCached(downloadTime time.Time, maxAge int) bool {
+	freshnessLifetime := int(time.Now().Sub(downloadTime).Seconds())
+	if maxAge > 0 && freshnessLifetime < maxAge {
+		return true
+	}
+	return false
 }

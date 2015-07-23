@@ -17,6 +17,7 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type migrateFunc func(*sql.Tx) error
@@ -26,6 +27,7 @@ var (
 	// version to migrate to.
 	migrateTable = map[int]migrateFunc{
 		1: migrateToV1,
+		2: migrateToV2,
 	}
 )
 
@@ -55,5 +57,27 @@ func migrate(tx *sql.Tx, finalVersion int) error {
 }
 
 func migrateToV1(tx *sql.Tx) error {
+	return nil
+}
+
+func migrateToV2(tx *sql.Tx) error {
+	_, err := tx.Exec("ALTER TABLE remote ADD cachemaxage int")
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("ALTER TABLE remote ADD downloadedtime time")
+	if err != nil {
+		return err
+	}
+	// Set the default values for the new columns on the current rows
+	_, err = tx.Exec("UPDATE remote cachemaxage = 0")
+	if err != nil {
+		return err
+	}
+	t := time.Time{}.UTC()
+	_, err = tx.Exec("UPDATE remote downloadedtime = $1", t)
+	if err != nil {
+		return err
+	}
 	return nil
 }

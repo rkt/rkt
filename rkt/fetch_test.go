@@ -29,6 +29,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/keystore"
@@ -344,7 +345,7 @@ func TestDownloading(t *testing.T) {
 				insecureSkipVerify: true,
 			},
 		}
-		_, aciFile, err := ft.fetch("", tt.ACIURL, "", nil)
+		_, aciFile, _, err := ft.fetch("", tt.ACIURL, "", nil, "")
 		if err == nil {
 			defer os.Remove(aciFile.Name())
 		}
@@ -441,6 +442,187 @@ func TestFetchImage(t *testing.T) {
 	}
 }
 
+type cachingServerHandler struct {
+	aciBody []byte
+	ascBody []byte
+	etag    string
+	maxAge  int
+	t       *testing.T
+}
+
+func (h *cachingServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch filepath.Ext(r.URL.Path) {
+	case ".aci":
+		if h.maxAge > 0 {
+			w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", h.maxAge))
+		}
+		if h.etag != "" {
+			w.Header().Set("ETag", h.etag)
+			if cc := r.Header.Get("If-None-Match"); cc == h.etag {
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+		}
+		w.Write(h.aciBody)
+		return
+	case ".asc":
+		w.Write(h.ascBody)
+		return
+	}
+}
+
+func TestFetchImageCache(t *testing.T) {
+	dir, err := ioutil.TempDir("", "fetch-image-cache")
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+	s, err := store.NewStore(dir)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	defer s.Dump(false)
+
+	ks, ksPath, err := keystore.NewTestKeystore()
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
+	defer os.RemoveAll(ksPath)
+
+	key := keystoretest.KeyMap["example.com/app"]
+	if _, err := ks.StoreTrustedKeyPrefix("example.com/app", bytes.NewBufferString(key.ArmoredPublicKey)); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	a, err := aci.NewBasicACI(dir, "example.com/app")
+	defer a.Close()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	// Rewind the ACI
+	if _, err := a.Seek(0, 0); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	asc, err := aci.NewDetachedSignature(key.ArmoredPrivateKey, a)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	// Rewind the ACI
+	if _, err := a.Seek(0, 0); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	aciBody, err := ioutil.ReadAll(a)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	ascBody, err := ioutil.ReadAll(asc)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	nocacheServer := &cachingServerHandler{
+		aciBody: aciBody,
+		ascBody: ascBody,
+		etag:    "",
+		maxAge:  0,
+		t:       t,
+	}
+	etagServer := &cachingServerHandler{
+		aciBody: aciBody,
+		ascBody: ascBody,
+		etag:    "123456789",
+		maxAge:  0,
+		t:       t,
+	}
+	maxAgeServer := &cachingServerHandler{
+		aciBody: aciBody,
+		ascBody: ascBody,
+		etag:    "",
+		maxAge:  10,
+		t:       t,
+	}
+	etagMaxAgeServer := &cachingServerHandler{
+		aciBody: aciBody,
+		ascBody: ascBody,
+		etag:    "123456789",
+		maxAge:  10,
+		t:       t,
+	}
+
+	nocacheTS := httptest.NewServer(nocacheServer)
+	defer nocacheTS.Close()
+	etagTS := httptest.NewServer(etagServer)
+	defer etagTS.Close()
+	maxAgeTS := httptest.NewServer(maxAgeServer)
+	defer maxAgeTS.Close()
+	etagMaxAgeTS := httptest.NewServer(etagMaxAgeServer)
+	defer etagMaxAgeTS.Close()
+
+	tests := []struct {
+		URL             string
+		etag            string
+		cacheMaxAge     int
+		shouldUseCached bool
+	}{
+		{nocacheTS.URL, "", 0, false},
+		{etagTS.URL, "123456789", 0, true},
+		{maxAgeTS.URL, "", 10, true},
+		{etagMaxAgeTS.URL, "123456789", 10, true},
+	}
+
+	for _, tt := range tests {
+		ft := &fetcher{
+			imageActionData: imageActionData{
+				s:  s,
+				ks: ks,
+			},
+		}
+		aciURL := fmt.Sprintf("%s/app.aci", tt.URL)
+		_, err = ft.fetchImage(aciURL, "", true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		rem, _, err := s.GetRemote(aciURL)
+		if err != nil {
+			t.Fatalf("Error getting remote info: %v\n", err)
+		}
+		if rem.ETag != tt.etag {
+			t.Errorf("expected remote to have a ETag header argument")
+		}
+		if rem.CacheMaxAge != tt.cacheMaxAge {
+			t.Errorf("expected max-age header argument to be %q", tt.cacheMaxAge)
+		}
+
+		downloadTime := rem.DownloadTime
+		_, err = ft.fetchImage(aciURL, "", true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		rem, _, err = s.GetRemote(aciURL)
+		if err != nil {
+			t.Fatalf("Error getting remote info: %v\n", err)
+		}
+		if rem.ETag != tt.etag {
+			t.Errorf("expected remote to have a ETag header argument")
+		}
+		if rem.CacheMaxAge != tt.cacheMaxAge {
+			t.Errorf("expected max-age header argument to be %q", tt.cacheMaxAge)
+		}
+		if tt.shouldUseCached {
+			if downloadTime != rem.DownloadTime {
+				t.Errorf("expected current download time to be the same of the previous one (no download) but they differ")
+			}
+		} else {
+			if downloadTime == rem.DownloadTime {
+				t.Errorf("expected current download time to be different from the previous one (new image download) but they are the same")
+			}
+		}
+
+		if err := s.RemoveACI(rem.BlobKey); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	}
+}
+
 func TestSigURLFromImgURL(t *testing.T) {
 	tests := []struct {
 		in, out string
@@ -455,5 +637,32 @@ func TestSigURLFromImgURL(t *testing.T) {
 		if out != tt.out {
 			t.Errorf("#%d: got %v, want %v", i, out, tt.out)
 		}
+	}
+}
+
+func TestGetMaxAge(t *testing.T) {
+	ma := getMaxAge("max-age=10")
+	if ma != 10 {
+		t.Errorf("got max-age: %d, want %d", ma, 10)
+	}
+	ma = getMaxAge("no-cache")
+	if ma != 0 {
+		t.Errorf("got max-age: %d, want %d", ma, 0)
+	}
+	ma = getMaxAge("no-store")
+	if ma != 0 {
+		t.Errorf("got max-age: %d, want %d", ma, 0)
+	}
+}
+
+func TestUseCached(t *testing.T) {
+	ma := 10
+	t1 := time.Now().Add(-11 * time.Second)
+	if useCached(t1, ma) {
+		t.Errorf("expected useCached to return false")
+	}
+	t1 = time.Now().Add(-1 * time.Second)
+	if !useCached(t1, ma) {
+		t.Errorf("expected useCached to return true")
 	}
 }
