@@ -82,3 +82,14 @@ endef
 define go-find-directories
 $(strip $(call go-find-directories-unstripped,$1,$2,$3))
 endef
+
+# Returns 1 if both parameters are equal, otherwise returns empty
+# string.
+# Example: is_a_equal_to_b := $(if $(call equal,a,b),yes,no)
+define equal
+$(strip
+        $(eval _EQ_TMP_ := $(shell expr '$1' = '$2'))
+        $(filter $(_EQ_TMP_),1)
+        $(eval _EQ_TMP_ :=)
+)
+endef
