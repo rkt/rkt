@@ -15,8 +15,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -41,6 +43,11 @@ func replacements(kv ...string) map[string]string {
 	return r
 }
 
+// appName returns application name, like depsgen
+func appName() string {
+	return filepath.Base(os.Args[0])
+}
+
 // replacePlaceholders replaces placeholders with values in kv in
 // initial str. Placeholders are in form of !!!FOO!!!, but those
 // passed here should be without exclamation marks.
@@ -49,4 +56,11 @@ func replacePlaceholders(str string, kv ...string) string {
 		str = strings.Replace(str, "!!!"+ph+"!!!", value, -1)
 	}
 	return str
+}
+
+// standardFlags returns a new flag set with target flag already set up
+func standardFlags(cmd string) (*flag.FlagSet, *string) {
+	f := flag.NewFlagSet(appName()+" "+cmd, flag.ExitOnError)
+	target := f.String("target", "", "Make target (example: $(FOO_BINARY))")
+	return f, target
 }
