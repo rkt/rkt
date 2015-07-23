@@ -40,7 +40,7 @@ func init() {
 
 func globDeps(args []string) string {
 	target, suffix, files := getGlobArgs(args)
-	return Generate(target, getGlobMakeFunction(files, suffix), files)
+	return GenerateFileDeps(target, getGlobMakeFunction(files, suffix), files)
 }
 
 // getGlobArgs parses given parameters and returns a target, a suffix

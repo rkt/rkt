@@ -22,13 +22,13 @@ import (
 	"strings"
 )
 
-// replacements creates a map from passed strings. This function
-// expects an even number of strings, otherwise it will bail out. Odd
-// (first, third and so on) strings are keys, even (second, fourth and
-// so on) strings are values.
-func replacements(kv ...string) map[string]string {
+// toMap creates a map from passed strings. This function expects an
+// even number of strings, otherwise it will bail out. Odd (first,
+// third and so on) strings are keys, even (second, fourth and so on)
+// strings are values.
+func toMap(kv ...string) map[string]string {
 	if len(kv)%2 != 0 {
-		fmt.Fprintf(os.Stderr, "Expected even number of strings in replacements\n")
+		fmt.Fprintf(os.Stderr, "Expected even number of strings in toMap\n")
 		os.Exit(1)
 	}
 	r := make(map[string]string, len(kv))
@@ -52,7 +52,7 @@ func appName() string {
 // initial str. Placeholders are in form of !!!FOO!!!, but those
 // passed here should be without exclamation marks.
 func replacePlaceholders(str string, kv ...string) string {
-	for ph, value := range replacements(kv...) {
+	for ph, value := range toMap(kv...) {
 		str = strings.Replace(str, "!!!"+ph+"!!!", value, -1)
 	}
 	return str

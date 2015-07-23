@@ -51,7 +51,7 @@ func goDeps(args []string) string {
 	var result string
 	switch mode {
 	case makeMode:
-		result = Generate(target, getGoMakeFunction(repo, module), deps)
+		result = GenerateFileDeps(target, getGoMakeFunction(repo, module), deps)
 	case filesMode:
 		result = strings.Join(deps, " ")
 	default:
