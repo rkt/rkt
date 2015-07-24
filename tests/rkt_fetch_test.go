@@ -159,8 +159,8 @@ func TestImplicitFetch(t *testing.T) {
 	// 3. Try run/prepare with/without tag ':latest', should not get $foundMsg.
 	cmds = []string{
 		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false docker://busybox", ctx.cmd()),
-		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false docker://busybox", ctx.cmd()),
-		fmt.Sprintf("%s --insecure-skip-verify prepare docker://busybox:latest", ctx.cmd()),
+		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false docker://busybox:latest", ctx.cmd()),
+		fmt.Sprintf("%s --insecure-skip-verify prepare docker://busybox", ctx.cmd()),
 		fmt.Sprintf("%s --insecure-skip-verify prepare docker://busybox:latest", ctx.cmd()),
 	}
 
