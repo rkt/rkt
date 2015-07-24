@@ -33,7 +33,7 @@ type testdb interface {
 }
 
 type DBV0 struct {
-	aciinfos []*ACIInfoV0_1
+	aciinfos []*ACIInfoV0_2
 	remotes  []*RemoteV0_1
 }
 
@@ -52,7 +52,7 @@ func (d *DBV0) populate(db *DB) error {
 func (d *DBV0) load(db *DB) error {
 	fn := func(tx *sql.Tx) error {
 		var err error
-		d.aciinfos, err = getAllACIInfosV0_1(tx)
+		d.aciinfos, err = getAllACIInfosV0_2(tx)
 		if err != nil {
 			return err
 		}
@@ -83,7 +83,7 @@ func (d *DBV0) compare(td testdb) bool {
 }
 
 type DBV1 struct {
-	aciinfos []*ACIInfoV0_1
+	aciinfos []*ACIInfoV0_2
 	remotes  []*RemoteV0_1
 }
 
@@ -97,7 +97,7 @@ func (d *DBV1) populate(db *DB) error {
 func (d *DBV1) load(db *DB) error {
 	fn := func(tx *sql.Tx) error {
 		var err error
-		d.aciinfos, err = getAllACIInfosV0_1(tx)
+		d.aciinfos, err = getAllACIInfosV0_2(tx)
 		if err != nil {
 			return err
 		}
@@ -127,27 +127,72 @@ func (d *DBV1) compare(td testdb) bool {
 	return true
 }
 
+type DBV2 struct {
+	aciinfos []*ACIInfoV0_2
+	remotes  []*RemoteV2
+}
+
+func (d *DBV2) version() int {
+	return 2
+}
+func (d *DBV2) populate(db *DB) error {
+	return populateDBV2(db, d.version(), d.aciinfos, d.remotes)
+}
+
+func (d *DBV2) load(db *DB) error {
+	fn := func(tx *sql.Tx) error {
+		var err error
+		d.aciinfos, err = getAllACIInfosV0_2(tx)
+		if err != nil {
+			return err
+		}
+		d.remotes, err = getAllRemoteV2(tx)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	if err := db.Do(fn); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *DBV2) compare(td testdb) bool {
+	d2, ok := td.(*DBV2)
+	if !ok {
+		return false
+	}
+	if !compareSlicesNoOrder(d.aciinfos, d2.aciinfos) {
+		return false
+	}
+	if !compareSlicesNoOrder(d.remotes, d2.remotes) {
+		return false
+	}
+	return true
+}
+
 // The ACIInfo struct for different db versions. The ending VX_Y represent the
 // first and the last version where the format isn't changed
 // The latest existing struct should to be updated when updating the db version
 // without changing the struct format (ex. V0_1 to V0_2).
 // A new struct and its relative function should be added if the format is changed.
 // The same applies for all of the the other structs.
-type ACIInfoV0_1 struct {
+type ACIInfoV0_2 struct {
 	BlobKey    string
 	AppName    string
 	ImportTime time.Time
 	Latest     bool
 }
 
-func getAllACIInfosV0_1(tx *sql.Tx) ([]*ACIInfoV0_1, error) {
-	aciinfos := []*ACIInfoV0_1{}
+func getAllACIInfosV0_2(tx *sql.Tx) ([]*ACIInfoV0_2, error) {
+	aciinfos := []*ACIInfoV0_2{}
 	rows, err := tx.Query("SELECT * from aciinfo")
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
-		aciinfo := &ACIInfoV0_1{}
+		aciinfo := &ACIInfoV0_2{}
 		if err := rows.Scan(&aciinfo.BlobKey, &aciinfo.AppName, &aciinfo.ImportTime, &aciinfo.Latest); err != nil {
 			return nil, err
 		}
@@ -185,7 +230,35 @@ func getAllRemoteV0_1(tx *sql.Tx) ([]*RemoteV0_1, error) {
 	return remotes, nil
 }
 
-func populateDBV0_1(db *DB, dbVersion int, aciInfos []*ACIInfoV0_1, remotes []*RemoteV0_1) error {
+type RemoteV2 struct {
+	ACIURL       string
+	SigURL       string
+	ETag         string
+	BlobKey      string
+	CacheMaxAge  int
+	DownloadTime time.Time
+}
+
+func getAllRemoteV2(tx *sql.Tx) ([]*RemoteV2, error) {
+	remotes := []*RemoteV2{}
+	rows, err := tx.Query("SELECT * from remote")
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		remote := &RemoteV2{}
+		if err := rows.Scan(&remote.ACIURL, &remote.SigURL, &remote.ETag, &remote.BlobKey, &remote.CacheMaxAge, &remote.DownloadTime); err != nil {
+			return nil, err
+		}
+		remotes = append(remotes, remote)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return remotes, nil
+}
+
+func populateDBV0_1(db *DB, dbVersion int, aciInfos []*ACIInfoV0_2, remotes []*RemoteV0_1) error {
 	var dbCreateStmts = [...]string{
 		// version table
 		"CREATE TABLE IF NOT EXISTS version (version int);",
@@ -230,6 +303,64 @@ func populateDBV0_1(db *DB, dbVersion int, aciInfos []*ACIInfoV0_1, remotes []*R
 	fn = func(tx *sql.Tx) error {
 		for _, remote := range remotes {
 			_, err := tx.Exec("INSERT into remote values ($1, $2, $3, $4)", remote.ACIURL, remote.SigURL, remote.ETag, remote.BlobKey)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := db.Do(fn); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func populateDBV2(db *DB, dbVersion int, aciInfos []*ACIInfoV0_2, remotes []*RemoteV2) error {
+	var dbCreateStmts = [...]string{
+		// version table
+		"CREATE TABLE IF NOT EXISTS version (version int);",
+		fmt.Sprintf("INSERT INTO version VALUES (%d)", dbVersion),
+
+		// remote table. The primary key is "aciurl".
+		"CREATE TABLE IF NOT EXISTS remote (aciurl string, sigurl string, etag string, blobkey string, cachemaxage int, downloadtime time);",
+		"CREATE UNIQUE INDEX IF NOT EXISTS aciurlidx ON remote (aciurl)",
+
+		// aciinfo table. The primary key is "blobkey" and it matches the key used to save that aci in the blob store
+		"CREATE TABLE IF NOT EXISTS aciinfo (blobkey string, appname string, importtime time, latest bool);",
+		"CREATE UNIQUE INDEX IF NOT EXISTS blobkeyidx ON aciinfo (blobkey)",
+		"CREATE INDEX IF NOT EXISTS appnameidx ON aciinfo (appname)",
+	}
+
+	fn := func(tx *sql.Tx) error {
+		for _, stmt := range dbCreateStmts {
+			_, err := tx.Exec(stmt)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := db.Do(fn); err != nil {
+		return err
+	}
+
+	fn = func(tx *sql.Tx) error {
+		for _, aciinfo := range aciInfos {
+			_, err := tx.Exec("INSERT into aciinfo values ($1, $2, $3, $4)", aciinfo.BlobKey, aciinfo.AppName, aciinfo.ImportTime, aciinfo.Latest)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := db.Do(fn); err != nil {
+		return err
+	}
+
+	fn = func(tx *sql.Tx) error {
+		for _, remote := range remotes {
+			_, err := tx.Exec("INSERT into remote values ($1, $2, $3, $4, $5, $6)", remote.ACIURL, remote.SigURL, remote.ETag, remote.BlobKey, remote.CacheMaxAge, remote.DownloadTime)
 			if err != nil {
 				return err
 			}
@@ -322,7 +453,7 @@ func TestMigrate(t *testing.T) {
 		},
 		{
 			&DBV0{
-				[]*ACIInfoV0_1{
+				[]*ACIInfoV0_2{
 					{"sha512-aaaaaaaa", "example.com/app01", now, false},
 					{"sha512-bbbbbbbb", "example.com/app02", now, true},
 				},
@@ -332,7 +463,7 @@ func TestMigrate(t *testing.T) {
 				},
 			},
 			&DBV1{
-				[]*ACIInfoV0_1{
+				[]*ACIInfoV0_2{
 					{"sha512-aaaaaaaa", "example.com/app01", now, false},
 					{"sha512-bbbbbbbb", "example.com/app02", now, true},
 				},
@@ -342,6 +473,29 @@ func TestMigrate(t *testing.T) {
 				},
 			},
 			&DBV1{},
+		},
+		{
+			&DBV1{
+				[]*ACIInfoV0_2{
+					{"sha512-aaaaaaaa", "example.com/app01", now, false},
+					{"sha512-bbbbbbbb", "example.com/app02", now, true},
+				},
+				[]*RemoteV0_1{
+					{"http://example.com/app01.aci", "http://example.com/app01.aci.asc", "", "sha512-aaaaaaaa"},
+					{"http://example.com/app02.aci", "http://example.com/app02.aci.asc", "", "sha512-bbbbbbbb"},
+				},
+			},
+			&DBV2{
+				[]*ACIInfoV0_2{
+					{"sha512-aaaaaaaa", "example.com/app01", now, false},
+					{"sha512-bbbbbbbb", "example.com/app02", now, true},
+				},
+				[]*RemoteV2{
+					{"http://example.com/app01.aci", "http://example.com/app01.aci.asc", "", "sha512-aaaaaaaa", 0, time.Time{}.UTC()},
+					{"http://example.com/app02.aci", "http://example.com/app02.aci.asc", "", "sha512-bbbbbbbb", 0, time.Time{}.UTC()},
+				},
+			},
+			&DBV2{},
 		},
 	}
 

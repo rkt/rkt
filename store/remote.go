@@ -17,7 +17,10 @@
 // key-value blob store: https://github.com/peterbourgon/diskv
 package store
 
-import "database/sql"
+import (
+	"database/sql"
+	"time"
+)
 
 func NewRemote(aciurl, sigurl string) *Remote {
 	r := &Remote{
@@ -32,20 +35,22 @@ type Remote struct {
 	SigURL string
 	ETag   string
 	// The key in the blob store under which the ACI has been saved.
-	BlobKey string
+	BlobKey      string
+	CacheMaxAge  int
+	DownloadTime time.Time
 }
 
 // GetRemote tries to retrieve a remote with the given aciURL. found will be
 // false if remote doesn't exist.
 func GetRemote(tx *sql.Tx, aciURL string) (remote *Remote, found bool, err error) {
 	remote = &Remote{}
-	rows, err := tx.Query("SELECT sigurl, etag, blobkey FROM remote WHERE aciurl == $1", aciURL)
+	rows, err := tx.Query("SELECT * FROM remote WHERE aciurl == $1", aciURL)
 	if err != nil {
 		return nil, false, err
 	}
 	for rows.Next() {
 		found = true
-		if err := rows.Scan(&remote.SigURL, &remote.ETag, &remote.BlobKey); err != nil {
+		if err := rows.Scan(&remote.ACIURL, &remote.SigURL, &remote.ETag, &remote.BlobKey, &remote.CacheMaxAge, &remote.DownloadTime); err != nil {
 			return nil, false, err
 		}
 	}
@@ -64,7 +69,7 @@ func WriteRemote(tx *sql.Tx, remote *Remote) error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("INSERT INTO remote VALUES ($1, $2, $3, $4)", remote.ACIURL, remote.SigURL, remote.ETag, remote.BlobKey)
+	_, err = tx.Exec("INSERT INTO remote VALUES ($1, $2, $3, $4, $5, $6)", remote.ACIURL, remote.SigURL, remote.ETag, remote.BlobKey, remote.CacheMaxAge, remote.DownloadTime)
 	if err != nil {
 		return err
 	}
