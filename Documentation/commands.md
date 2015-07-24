@@ -324,17 +324,18 @@ Additional networking modes and more examples can be found in the [networking do
 
 ### rkt enter
 
-If you want to enter a running pod to explore its filesystem or see what's running you can use rkt enter.
+Given a pod UUID, if you want to enter a running pod to explore its filesystem or see what's running you can use rkt enter.
 
 ```
-# rkt enter 6f34ec91
+# rkt enter 76dc6286
 Pod contains multiple apps:
-        sha512-1eba37d9b344b33d272181e176da111e: etcd
-        sha512-2b3791fff07ed3b09bfd6ae6b6b6d7dc: redis
-Unable to determine image id: specify app using "rkt enter --imageid ..."
-# rkt enter --imageid=sha512-2b3791fff07ed3b09bfd6ae6b6b6d7dc 6f34ec91
+        redis
+        etcd
+Unable to determine app name: specify app using "rkt enter --app= ..."
+
+# rkt enter --app=redis 76dc6286
 No command specified, assuming "/bin/bash"
-root@rkt-50a725f4-4d1e-43dc-b05b-f83538e211ae:/# ls
+root@rkt-76dc6286-f672-45f2-908c-c36dcd663560:/# ls
 bin   data  entrypoint.sh  home  lib64  mnt  proc  run   selinux  sys  usr
 boot  dev   etc            lib   media  opt  root  sbin  srv      tmp  var
 ```
@@ -364,11 +365,10 @@ You can list all rkt pods.
 
 ```
 # rkt list
-UUID            ACI     STATE   NETWORKS
-6f34ec91        etcd    running default:ip4=172.16.28.7
-                redis
-5bc080ca        etcd    exited
-                redis
+UUID		APP	    ACI 		    STATE	NETWORKS
+5bc080ca	redis	redis		    running	default:ip4=172.16.28.7
+        	etcd	coreos.com/etcd
+3089337c	nginx	nginx		    exited
 ```
 
 ### rkt status
@@ -380,8 +380,8 @@ Given a pod UUID, you can get the exit status of its apps.
 state=exited
 pid=-1
 exited=true
-sha512-2b3791fff07ed3b09bfd6ae6b6b6d7dc=0
-sha512-1eba37d9b344b33d272181e176da111e=0
+etcd=0
+redis=0
 ```
 
 If the pod is still running, you can wait for it to finish and then get the status with `rkt status --wait UUID`
@@ -416,8 +416,8 @@ or `rkt list --full`
 
 ```
 # rkt list --full
-UUID                                    ACI     STATE   NETWORKS
-f241c969-1710-445a-8129-d3a7ffdd9a60    busybox running
+UUID					                APP	    ACI 	STATE	NETWORKS
+f241c969-1710-445a-8129-d3a7ffdd9a60	busybox	busybox	running
 ```
 
 Pod's machine name will be the pod's UUID with a `rkt-` prefix.

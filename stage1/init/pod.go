@@ -40,7 +40,7 @@ type Pod struct {
 	Root               string // root directory where the pod will be located
 	UUID               types.UUID
 	Manifest           *schema.PodManifest
-	Apps               map[string]*schema.ImageManifest
+	Images             map[string]*schema.ImageManifest
 	MetadataServiceURL string
 	Networks           []string
 }
@@ -59,9 +59,9 @@ var (
 // its associated Application Manifests, under $root/stage1/opt/stage1/$apphash
 func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 	p := &Pod{
-		Root: root,
-		UUID: *uuid,
-		Apps: make(map[string]*schema.ImageManifest),
+		Root:   root,
+		UUID:   *uuid,
+		Images: make(map[string]*schema.ImageManifest),
 	}
 
 	buf, err := ioutil.ReadFile(common.PodManifestPath(p.Root))
@@ -76,7 +76,7 @@ func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 	p.Manifest = pm
 
 	for i, app := range p.Manifest.Apps {
-		ampath := common.ImageManifestPath(p.Root, app.Image.ID)
+		ampath := common.ImageManifestPath(p.Root, app.Name)
 		buf, err := ioutil.ReadFile(ampath)
 		if err != nil {
 			return nil, fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
@@ -86,14 +86,14 @@ func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 		if err = json.Unmarshal(buf, am); err != nil {
 			return nil, fmt.Errorf("failed unmarshalling app manifest %q: %v", ampath, err)
 		}
-		name := am.Name.String()
-		if _, ok := p.Apps[name]; ok {
-			return nil, fmt.Errorf("got multiple definitions for app: %s", name)
+
+		if _, ok := p.Images[app.Name.String()]; ok {
+			return nil, fmt.Errorf("got multiple definitions for app: %v", app.Name)
 		}
 		if app.App == nil {
 			p.Manifest.Apps[i].App = am.App
 		}
-		p.Apps[name] = am
+		p.Images[app.Name.String()] = am
 	}
 
 	return p, nil
@@ -155,9 +155,14 @@ func (p *Pod) WritePrepareAppTemplate() error {
 
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
 func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
-	name := ra.Name.String()
-	id := ra.Image.ID
 	app := ra.App
+	appName := ra.Name
+	image, ok := p.Images[appName.String()]
+	if !ok {
+		// This is impossible as we have updated the map in LoadPod().
+		panic(fmt.Sprintf("No images for app %q", ra.Name.String()))
+	}
+	imgName := image.Name
 
 	workDir := "/"
 	if app.WorkingDirectory != "" {
@@ -165,10 +170,13 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 	}
 
 	env := app.Environment
-	env.Set("AC_APP_NAME", name)
+
+	// TOOD(yifan): AC_APP_NAME here is actually an image name.
+	// Think of changing AC_APP_NAME to AC_IMAGE_NAME.
+	env.Set("AC_APP_NAME", imgName.String())
 	env.Set("AC_METADATA_URL", p.MetadataServiceURL)
 
-	if err := p.writeEnvFile(env, id); err != nil {
+	if err := p.writeEnvFile(env, appName); err != nil {
 		return fmt.Errorf("unable to write environment file: %v", err)
 	}
 
@@ -193,10 +201,10 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 		}
 	}
 
-	execWrap := []string{"/diagexec", common.RelAppRootfsPath(id), workDir, RelEnvFilePath(id), strconv.Itoa(uid), strconv.Itoa(gid)}
+	execWrap := []string{"/diagexec", common.RelAppRootfsPath(appName), workDir, RelEnvFilePath(appName), strconv.Itoa(uid), strconv.Itoa(gid)}
 	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
-		unit.NewUnitOption("Unit", "Description", name),
+		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v", appName, imgName)),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
 		unit.NewUnitOption("Unit", "OnFailure", "reaper.service"),
 		unit.NewUnitOption("Unit", "Wants", "exit-watcher.service"),
@@ -256,10 +264,10 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 
 	if len(saPorts) > 0 {
 		sockopts := []*unit.UnitOption{
-			unit.NewUnitOption("Unit", "Description", name+" socket-activated ports"),
+			unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v %s", appName, imgName, "socket-activated ports")),
 			unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
 			unit.NewUnitOption("Socket", "BindIPv6Only", "both"),
-			unit.NewUnitOption("Socket", "Service", ServiceUnitName(id)),
+			unit.NewUnitOption("Socket", "Service", ServiceUnitName(appName)),
 		}
 
 		for _, sap := range saPorts {
@@ -275,7 +283,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 			sockopts = append(sockopts, unit.NewUnitOption("Socket", proto, fmt.Sprintf("%v", sap.Port)))
 		}
 
-		file, err := os.OpenFile(SocketUnitPath(p.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
+		file, err := os.OpenFile(SocketUnitPath(p.Root, appName), os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
 			return fmt.Errorf("failed to create socket file: %v", err)
 		}
@@ -285,17 +293,17 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 			return fmt.Errorf("failed to write socket unit file: %v", err)
 		}
 
-		if err = os.Symlink(path.Join("..", SocketUnitName(id)), SocketWantPath(p.Root, id)); err != nil {
+		if err = os.Symlink(path.Join("..", SocketUnitName(appName)), SocketWantPath(p.Root, appName)); err != nil {
 			return fmt.Errorf("failed to link socket want: %v", err)
 		}
 
-		opts = append(opts, unit.NewUnitOption("Unit", "Requires", SocketUnitName(id)))
+		opts = append(opts, unit.NewUnitOption("Unit", "Requires", SocketUnitName(appName)))
 	}
 
-	opts = append(opts, unit.NewUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(id)))
-	opts = append(opts, unit.NewUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(id)))
+	opts = append(opts, unit.NewUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(appName)))
+	opts = append(opts, unit.NewUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(appName)))
 
-	file, err := os.OpenFile(ServiceUnitPath(p.Root, id), os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(ServiceUnitPath(p.Root, appName), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create service unit file: %v", err)
 	}
@@ -305,17 +313,17 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 		return fmt.Errorf("failed to write service unit file: %v", err)
 	}
 
-	if err = os.Symlink(path.Join("..", ServiceUnitName(id)), ServiceWantPath(p.Root, id)); err != nil {
+	if err = os.Symlink(path.Join("..", ServiceUnitName(appName)), ServiceWantPath(p.Root, appName)); err != nil {
 		return fmt.Errorf("failed to link service want: %v", err)
 	}
 
 	return nil
 }
 
-// writeEnvFile creates an environment file for given app id
-// the minimum required environment variables by the appc spec will be set to sensible
+// writeEnvFile creates an environment file for given app name, the minimum
+// required environment variables by the appc spec will be set to sensible
 // defaults here if they're not provided by env.
-func (p *Pod) writeEnvFile(env types.Environment, id types.Hash) error {
+func (p *Pod) writeEnvFile(env types.Environment, appName types.ACName) error {
 	ef := bytes.Buffer{}
 
 	for dk, dv := range defaultEnv {
@@ -327,7 +335,7 @@ func (p *Pod) writeEnvFile(env types.Environment, id types.Hash) error {
 	for _, e := range env {
 		fmt.Fprintf(&ef, "%s=%s\000", e.Name, e.Value)
 	}
-	return ioutil.WriteFile(EnvFilePath(p.Root, id), ef.Bytes(), 0640)
+	return ioutil.WriteFile(EnvFilePath(p.Root, appName), ef.Bytes(), 0640)
 }
 
 // PodToSystemd creates the appropriate systemd service unit files for
@@ -343,10 +351,10 @@ func (p *Pod) PodToSystemd(interactive bool) error {
 }
 
 // appToNspawnArgs transforms the given app manifest, with the given associated
-// app image id, into a subset of applicable systemd-nspawn argument
+// app name, into a subset of applicable systemd-nspawn argument
 func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	args := []string{}
-	name := ra.Name.String()
+	appName := ra.Name
 	id := ra.Image.ID
 	app := ra.App
 
@@ -374,7 +382,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 			return nil, fmt.Errorf("no volume for mountpoint %q in app %q.\n"+
 				"You can inspect the volumes with:\n\t%v\n"+
 				"App %q requires the following volumes:\n\t%v",
-				key, name, catCmd, name, volumeCmd)
+				key, appName, catCmd, appName, volumeCmd)
 		}
 		opt := make([]string, 4)
 
@@ -393,7 +401,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 
 		opt[1] = vol.Source
 		opt[2] = ":"
-		opt[3] = filepath.Join(common.RelAppRootfsPath(id), mp.Path)
+		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), mp.Path)
 
 		args = append(args, strings.Join(opt, ""))
 	}

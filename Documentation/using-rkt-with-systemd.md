@@ -113,7 +113,7 @@ root      7343  0.3  0.0  10652  7332 ?        Ssl  12:38   0:04      \_ /etcd
 │ │ └─system.slice
 │ │   ├─systemd-journald.service
 │ │   │ └─7277 /usr/lib/systemd/systemd-journald
-│ │   └─sha512-c03b055d02e51e36f44a2be436eb77d5.service
+│ │   └─etcd.service
 │ │     └─7343 /etcd
 ```
 
@@ -125,34 +125,34 @@ To actually see all the cgroups, use `--all` flag. This will show two cgroups fo
 ├─1 /usr/lib/systemd/systemd --switched-root --system --deserialize 21
 ├─system.slice
 │ ├─var-lib-rkt-pods-run-6d0d9608\x2da744\x2d4333\x2dbe21\x2d942145a97a5a-stage1-rootfs.mount
-│ ├─var-lib-rkt-pods-run-6d0d9608\x2da744\x2d4333\x2dbe21\x2d942145a97a5a-stage1-rootfs-opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs.mount
+│ ├─var-lib-rkt-pods-run-6d0d9608\x2da744\x2d4333\x2dbe21\x2d942145a97a5a-stage1-rootfs-opt-stage2-etcd-rootfs.mount
 │ ├─etcd.service
 │ │ ├─7258 stage1/rootfs/usr/lib/ld-linux-x86-64.so.2 stage1/rootfs/usr/bin/systemd-nspawn --boot --register=true --link-journal=try-guest --quiet --keep-unit --uuid=6d0d9608-a744-4333-be21-942145a97a5a --machine=rkt-6d0d9608-a744-4333-be21-942145a97a5a --directory=stage1/rootfs -- --default-standard-output=tty --log-target=null --log-level=warning --show-status=0
 │ │ ├─7275 /usr/lib/systemd/systemd --default-standard-output=tty --log-target=null --log-level=warning --show-status=0
 │ │ └─system.slice
 │ │   ├─proc-sys-kernel-random-boot_id.mount
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-dev-random.mount
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-dev-net-tun.mount
+│ │   ├─opt-stage2-etcd-rootfs-dev-random.mount
+│ │   ├─opt-stage2-etcd-rootfs-dev-net-tun.mount
 │ │   ├─-.mount
 │ │   ├─system-prepare\x2dapp.slice
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-dev-pts.mount
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-sys.mount
+│ │   ├─opt-stage2-etcd-rootfs-dev-pts.mount
+│ │   ├─opt-stage2-etcd-rootfs-sys.mount
 │ │   ├─tmp.mount
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs.mount
+│ │   ├─opt-stage2-etcd-rootfs.mount
 │ │   ├─systemd-journald.service
 │ │   │ └─7277 /usr/lib/systemd/systemd-journald
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-proc.mount
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-dev-urandom.mount
-│ │   ├─sha512-c03b055d02e51e36f44a2be436eb77d5.service
+│ │   ├─opt-stage2-etcd-rootfs-proc.mount
+│ │   ├─opt-stage2-etcd-rootfs-dev-urandom.mount
+│ │   ├─etcd.service
 │ │   │ └─7343 /etcd
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-dev-tty.mount
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-dev-console.mount
+│ │   ├─opt-stage2-etcd-rootfs-dev-tty.mount
+│ │   ├─opt-stage2-etcd-rootfs-dev-console.mount
 │ │   ├─run-systemd-nspawn-incoming.mount
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-dev-zero.mount
+│ │   ├─opt-stage2-etcd-rootfs-dev-zero.mount
 │ │   ├─exit-watcher.service
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-dev-null.mount
-│ │   ├─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-dev-full.mount
-│ │   └─opt-stage2-sha512\x2dc03b055d02e51e36f44a2be436eb77d5-rootfs-dev-shm.mount
+│ │   ├─opt-stage2-etcd-rootfs-dev-null.mount
+│ │   ├─opt-stage2-etcd-rootfs-dev-full.mount
+│ │   └─opt-stage2-etcd-rootfs-dev-shm.mount
 ```
 
 ## journalctl -M

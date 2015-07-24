@@ -35,20 +35,20 @@ Authentication succeeded.
 Sending SIGTERM to remaining processes...
 Sending SIGKILL to remaining processes...
 Unmounting file systems.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/dev/pts.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/dev/shm.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/sys.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/proc.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/dev/console.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/dev/tty.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/dev/urandom.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/dev/random.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/dev/full.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/dev/zero.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs/dev/null.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs.
+Unmounting /opt/stage2/testprog/rootfs/dev/pts.
+Unmounting /opt/stage2/testprog/rootfs/dev/shm.
+Unmounting /opt/stage2/testprog/rootfs/sys.
+Unmounting /opt/stage2/testprog/rootfs/proc.
+Unmounting /opt/stage2/testprog/rootfs/dev/console.
+Unmounting /opt/stage2/testprog/rootfs/dev/tty.
+Unmounting /opt/stage2/testprog/rootfs/dev/urandom.
+Unmounting /opt/stage2/testprog/rootfs/dev/random.
+Unmounting /opt/stage2/testprog/rootfs/dev/full.
+Unmounting /opt/stage2/testprog/rootfs/dev/zero.
+Unmounting /opt/stage2/testprog/rootfs/dev/null.
+Unmounting /opt/stage2/testprog/rootfs.
 Unmounting /proc/sys/kernel/random/boot_id.
-Unmounting /opt/stage2/sha512-82d0d76f85d04a73e17a377c304ffbd8/rootfs.
+Unmounting /opt/stage2/testprog/rootfs.
 All filesystems unmounted.
 Halting system.
 ```

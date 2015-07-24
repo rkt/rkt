@@ -90,7 +90,7 @@ func registerPod(root string, uuid *types.UUID, apps schema.AppList) (token stri
 	rf.Close()
 
 	for _, app := range apps {
-		ampath := common.ImageManifestPath(root, app.Image.ID)
+		ampath := common.ImageManifestPath(root, app.Name)
 		amf, err := os.Open(ampath)
 		if err != nil {
 			rerr = fmt.Errorf("failed reading app manifest %q: %v", ampath, err)

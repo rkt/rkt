@@ -26,9 +26,7 @@ The first stage is the actual `rkt` binary itself. When running a pod, this bina
 Given a run command such as:
 
 ```
-# rkt run \
-	sha512-8a30f14877cd8065939e3912542a17d1a5fd9b4c \
-	sha512-abcd29837d89389s9d0898ds908ds890df890908
+# rkt run app1.aci app2.aci
 ```
 
 a pod manifest compliant with the ACE spec will be generated, and the filesystem created by stage0 should be:
@@ -39,8 +37,8 @@ a pod manifest compliant with the ACE spec will be generated, and the filesystem
 /stage1/manifest
 /stage1/rootfs/init
 /stage1/rootfs/opt
-/stage1/rootfs/opt/stage2/sha512-648db489d57363b29f1597d4312b2129
-/stage1/rootfs/opt/stage2/sha512-0c45e8c0ab2b3cdb9ec6649073d5c6c4
+/stage1/rootfs/opt/stage2/${app1-name}
+/stage1/rootfs/opt/stage2/${app2-name}
 ```
 
 where:

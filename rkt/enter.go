@@ -30,11 +30,11 @@ import (
 
 var (
 	cmdEnter = &cobra.Command{
-		Use:   "enter [--imageid=IMAGEID] UUID [CMD [ARGS ...]]",
+		Use:   "enter [--app=APPNAME] UUID [CMD [ARGS ...]]",
 		Short: "Enter the namespaces of an app within a rkt pod",
 		Run:   runWrapper(runEnter),
 	}
-	flagAppImageID string
+	flagAppName string
 )
 
 const (
@@ -43,7 +43,7 @@ const (
 
 func init() {
 	cmdRkt.AddCommand(cmdEnter)
-	cmdEnter.Flags().StringVar(&flagAppImageID, "imageid", "", "imageid of the app to enter within the specified pod")
+	cmdEnter.Flags().StringVar(&flagAppName, "app", "", "name of the app to enter within the specified pod")
 
 	// Disable interspersed flags to stop parsing after the first non flag
 	// argument. This is need to permit to correctly handle
@@ -52,7 +52,6 @@ func init() {
 }
 
 func runEnter(cmd *cobra.Command, args []string) (exit int) {
-
 	if len(args) < 1 {
 		cmd.Usage()
 		return 1
@@ -79,17 +78,17 @@ func runEnter(cmd *cobra.Command, args []string) (exit int) {
 
 	podPID, err := p.getPID()
 	if err != nil {
-		stderr("Unable to determine pid for pod %q: %v", pid, err)
+		stderr("Unable to determine the pid for pod %q: %v", pid, err)
 		return 1
 	}
 
-	imageID, err := getAppImageID(p)
+	appName, err := getAppName(p)
 	if err != nil {
-		stderr("Unable to determine image id: %v", err)
+		stderr("Unable to determine app name: %v", err)
 		return 1
 	}
 
-	argv, err := getEnterArgv(p, imageID, args)
+	argv, err := getEnterArgv(p, args)
 	if err != nil {
 		stderr("Enter failed: %v", err)
 		return 1
@@ -109,7 +108,7 @@ func runEnter(cmd *cobra.Command, args []string) (exit int) {
 
 	stage1RootFS := s.GetTreeStoreRootFS(stage1ID.String())
 
-	if err = stage0.Enter(p.path(), podPID, imageID, stage1RootFS, argv); err != nil {
+	if err = stage0.Enter(p.path(), podPID, *appName, stage1RootFS, argv); err != nil {
 		stderr("Enter failed: %v", err)
 		return 1
 	}
@@ -117,16 +116,16 @@ func runEnter(cmd *cobra.Command, args []string) (exit int) {
 	return 0
 }
 
-// getAppImageID returns the image id to enter
+// getAppName returns the app name to enter
 // If one was supplied in the flags then it's simply returned
-// If the PM contains a single image, that image's id is returned
-// If the PM has multiple images, the ids and names are printed and an error is returned
-func getAppImageID(p *pod) (*types.Hash, error) {
-	if flagAppImageID != "" {
-		return types.NewHash(flagAppImageID)
+// If the PM contains a single app, that app's name is returned
+// If the PM has multiple apps, the names are printed and an error is returned
+func getAppName(p *pod) (*types.ACName, error) {
+	if flagAppName != "" {
+		return types.NewACName(flagAppName)
 	}
 
-	// figure out the image id, or show a list if multiple are present
+	// figure out the app name, or show a list if multiple are present
 	b, err := ioutil.ReadFile(common.PodManifestPath(p.path()))
 	if err != nil {
 		return nil, fmt.Errorf("error reading pod manifest: %v", err)
@@ -141,20 +140,20 @@ func getAppImageID(p *pod) (*types.Hash, error) {
 	case 0:
 		return nil, fmt.Errorf("pod contains zero apps")
 	case 1:
-		return &m.Apps[0].Image.ID, nil
+		return &m.Apps[0].Name, nil
 	default:
 	}
 
 	stderr("Pod contains multiple apps:")
 	for _, ra := range m.Apps {
-		stderr("\t%s: %s", types.ShortHash(ra.Image.ID.String()), ra.Name.String())
+		stderr("\t%v", ra.Name)
 	}
 
-	return nil, fmt.Errorf("specify app using \"rkt enter --imageid ...\"")
+	return nil, fmt.Errorf("specify app using \"rkt enter --app= ...\"")
 }
 
 // getEnterArgv returns the argv to use for entering the pod
-func getEnterArgv(p *pod, imageID *types.Hash, cmdArgs []string) ([]string, error) {
+func getEnterArgv(p *pod, cmdArgs []string) ([]string, error) {
 	var argv []string
 	if len(cmdArgs) < 2 {
 		stderr("No command specified, assuming %q", defaultCmd)

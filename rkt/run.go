@@ -229,12 +229,12 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		LocalConfig:  globalFlags.LocalConfigDir,
 	}
 
-	imgs, err := p.getApps()
+	apps, err := p.getApps()
 	if err != nil {
-		stderr("run: cannot get the image hashes in the pod manifest: %v", err)
+		stderr("run: cannot get the appList in the pod manifest: %v", err)
 		return 1
 	}
-	rcfg.Images = imgs
+	rcfg.Apps = apps
 	stage0.Run(rcfg, p.path()) // execs, never returns
 
 	return 1

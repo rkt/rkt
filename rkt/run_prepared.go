@@ -115,9 +115,9 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	imgs, err := p.getApps()
+	apps, err := p.getApps()
 	if err != nil {
-		stderr("prepared-run: unable to get apps names and hashes: %v", err)
+		stderr("prepared-run: unable to get app list: %v", err)
 		return 1
 	}
 
@@ -132,7 +132,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		LockFd:      lfd,
 		Interactive: flagInteractive,
 		MDSRegister: flagMDSRegister,
-		Images:      imgs,
+		Apps:        apps,
 	}
 	stage0.Run(rcfg, p.path()) // execs, never returns
 	return 1
