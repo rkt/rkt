@@ -17,6 +17,7 @@ package plugin
 import (
 	"encoding/json"
 	"net"
+	"os"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
 )
@@ -36,6 +37,10 @@ type Result struct {
 	IP6 *IPConfig `json:"ip6,omitempty"`
 }
 
+func (r *Result) Print() error {
+	return prettyPrint(r)
+}
+
 // IPConfig contains values necessary to configure an interface
 type IPConfig struct {
 	IP      net.IPNet
@@ -52,6 +57,14 @@ type Error struct {
 	Code    uint   `json:"code"`
 	Msg     string `json:"msg"`
 	Details string `json:"details,omitempty"`
+}
+
+func (e *Error) Error() string {
+	return e.Msg
+}
+
+func (e *Error) Print() error {
+	return prettyPrint(e)
 }
 
 // net.IPNet is not JSON (un)marshallable so this duality is needed
@@ -109,4 +122,13 @@ func (r *Route) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(rt)
+}
+
+func prettyPrint(obj interface{}) error {
+	data, err := json.MarshalIndent(obj, "", "    ")
+	if err != nil {
+		return err
+	}
+	_, err = os.Stdout.Write(data)
+	return err
 }

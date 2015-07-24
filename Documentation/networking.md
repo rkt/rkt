@@ -49,7 +49,7 @@ The following fields apply to all configuration files.
 Additional fields are specified for various types.
 
 - **name** (string): An arbitrary label for the network. By convention the conf file is labeled with a leading ordinal, dash, network name, and .conf extension.
-- **type** (string): The type of network/interface to create. The type actually names a network plugin with rkt bundled with few built-in ones.
+- **type** (string): The type of network/interface to create. The type actually names a network plugin. rkt is bundled with few built-in plugins.
 - **ipam** (dict): IP Address Management -- controls the settings related to IP address assignment, gateway, and routes.
 
 ### Built-in network types
@@ -115,7 +115,7 @@ ipvlan interfaces are able to have different IP addresses than the master interf
 ## IP Address Management
 
 The policy for IP address allocation, associated gateway and routes is separately configurable via the `ipam` section of the configuration file.
-rkt currently ships with one type of IPAM (host-local) but DHCP is in the works. Like the network types, IPAM types can be implemented by third-parties via plugins.
+rkt currently ships with two IPAM types: host-local and DHCP. Like the network types, IPAM types can be implemented by third-parties via plugins.
 
 ### host-local
 
@@ -171,7 +171,51 @@ route, allowing the pod to access external networks via the ipvlan interface.
 
 ### dhcp
 
-[Coming soon](https://github.com/coreos/rkt/issues/558)
+DHCP type requires a daemon to be running on the host.
+The DHCP plugin binary can be executed in the daemon mode by launching it with `daemon` argument.
+However the DHCP plugin is bundled in stage1.aci so this requires extracting the binary from it:
+
+```
+$ sudo ./rkt fetch --insecure-skip-verify ./stage1.aci
+$ sudo ./rkt image extract coreos.com/rkt/stage1 /tmp/stage1
+$ sudo cp /tmp/stage1/rootfs/usr/lib/rkt/plugins/net/dhcp .
+```
+
+Now start the daemon:
+
+```
+$ sudo ./dhcp daemon
+```
+
+It is now possible to use the DHCP type by specifying it in the ipam section of the network configuration file:
+
+```
+{
+	"name": "lan",
+	"type": "macvlan",
+	"master": "eth0",
+	"ipam": {
+		"type": "dhcp"
+	}
+}
+```
+
+For more information about DHCP plugin, see (CNI docs)[https://github.com/appc/cni/blob/master/Documentation/dhcp.md]
+
+## Other plugins
+
+### flannel
+This plugin is designed to work in conjunction with flannel, a network fabric for containers.
+The basic network configuration is as follows:
+```json
+{
+	"name": "containers",
+	"type": "flannel"
+}
+```
+
+This will setup a linux-bridge, connect the container to the bridge and assign container IPs out of the subnet that flannel assigned to the host.
+For more information included advanced configuration options, see (CNI docs)[https://github.com/appc/cni/blob/master/Documentation/flannel.md]
 
 ## Exposing container ports on the host
 Apps declare their public ports in the image manifest file.

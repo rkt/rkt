@@ -64,12 +64,12 @@ func PluginMain(cmdAdd, cmdDel func(_ *CmdArgs) error) {
 	}
 
 	if argsMissing {
-		die("required env variables missing")
+		dieMsg("required env variables missing")
 	}
 
 	stdinData, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
-		die("error reading from stdin: %v", err)
+		dieMsg("error reading from stdin: %v", err)
 	}
 
 	cmdArgs := &CmdArgs{
@@ -89,18 +89,29 @@ func PluginMain(cmdAdd, cmdDel func(_ *CmdArgs) error) {
 		err = cmdDel(cmdArgs)
 
 	default:
-		die("unknown CNI_COMMAND: %v", cmd)
+		dieMsg("unknown CNI_COMMAND: %v", cmd)
 	}
 
 	if err != nil {
-		die(err.Error())
+		if e, ok := err.(*plugin.Error); ok {
+			// don't wrap Error in Error
+			dieErr(e)
+		}
+		dieMsg(err.Error())
 	}
 }
 
-func die(f string, args ...interface{}) {
-	plugin.PrintError(&plugin.Error{
+func dieMsg(f string, args ...interface{}) {
+	e := &plugin.Error{
 		Code: 100,
 		Msg:  fmt.Sprintf(f, args...),
-	})
+	}
+	dieErr(e)
+}
+
+func dieErr(e *plugin.Error) {
+	if err := e.Print(); err != nil {
+		log.Print("Error writing error JSON to stdout: ", err)
+	}
 	os.Exit(1)
 }

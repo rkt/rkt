@@ -23,9 +23,11 @@ import (
 
 // Vendor in CNI plugins
 import (
+	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/ipam/dhcp"
 	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/ipam/host-local"
 	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/main/bridge"
 	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/main/ipvlan"
 	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/main/macvlan"
-	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/main/veth"
+	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/main/ptp"
+	_ "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/meta/flannel"
 )

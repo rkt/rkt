@@ -48,19 +48,30 @@ func SetNS(f *os.File, flags uintptr) error {
 
 // WithNetNSPath executes the passed closure under the given network
 // namespace, restoring the original namespace afterwards.
-func WithNetNSPath(nspath string, f func(*os.File) error) error {
+// Changing namespaces must be done on a goroutine that has been
+// locked to an OS thread. If lockThread arg is true, this function
+// locks the goroutine prior to change namespace and unlocks before
+// returning
+func WithNetNSPath(nspath string, lockThread bool, f func(*os.File) error) error {
 	ns, err := os.Open(nspath)
 	if err != nil {
 		return fmt.Errorf("Failed to open %v: %v", nspath, err)
 	}
 	defer ns.Close()
-
-	return WithNetNS(ns, f)
+	return WithNetNS(ns, lockThread, f)
 }
 
 // WithNetNS executes the passed closure under the given network
 // namespace, restoring the original namespace afterwards.
-func WithNetNS(ns *os.File, f func(*os.File) error) error {
+// Changing namespaces must be done on a goroutine that has been
+// locked to an OS thread. If lockThread arg is true, this function
+// locks the goroutine prior to change namespace and unlocks before
+// returning
+func WithNetNS(ns *os.File, lockThread bool, f func(*os.File) error) error {
+	if lockThread {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+	}
 	// save a handle to current (host) network namespace
 	thisNS, err := os.Open("/proc/self/ns/net")
 	if err != nil {

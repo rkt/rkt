@@ -45,7 +45,7 @@ type NetConf struct {
 
 func setupContainerVeth(netns, ifName string, mtu int, pr *plugin.Result) (string, error) {
 	var hostVethName string
-	err := ns.WithNetNSPath(netns, func(hostNS *os.File) error {
+	err := ns.WithNetNSPath(netns, false, func(hostNS *os.File) error {
 		hostVeth, _, err := ip.SetupVeth(ifName, mtu, hostNS)
 		if err != nil {
 			return err
@@ -94,6 +94,10 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return fmt.Errorf("failed to load netconf: %v", err)
 	}
 
+	if err := ip.EnableIP4Forward(); err != nil {
+		return fmt.Errorf("failed to enable forwarding: %v", err)
+	}
+
 	// run the IPAM plugin and get back the config to apply
 	result, err := plugin.ExecAdd(conf.IPAM.Type, args.StdinData)
 	if err != nil {
@@ -120,7 +124,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 	}
 
-	return plugin.PrintResult(result)
+	return result.Print()
 }
 
 func cmdDel(args *skel.CmdArgs) error {
@@ -130,7 +134,7 @@ func cmdDel(args *skel.CmdArgs) error {
 	}
 
 	var ipn *net.IPNet
-	err := ns.WithNetNSPath(args.Netns, func(hostNS *os.File) error {
+	err := ns.WithNetNSPath(args.Netns, false, func(hostNS *os.File) error {
 		var err error
 		ipn, err = ip.DelLinkByNameAddr(args.IfName, netlink.FAMILY_V4)
 		return err
