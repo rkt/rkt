@@ -68,7 +68,10 @@ func SetDisabled() {
 // processes.  The existence of an selinuxfs mount is used to determine
 // whether selinux is currently enabled or not.
 func getSelinuxMountPoint() string {
-	return "/sys/fs/selinux"
+	if _, err := os.Stat(selinuxPath); os.IsNotExist(err) {
+		return ""
+	}
+	return selinuxPath
 }
 
 // SelinuxEnabled returns whether selinux is currently enabled.
