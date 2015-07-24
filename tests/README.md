@@ -20,6 +20,7 @@ Use "Other" language and the following build commands:
 ./tests/run-build.sh host          # Thread 1
 ./tests/run-build.sh coreos        # Thread 2
 ./tests/run-build.sh src master    # Thread 2
+./tests/run-build.sh kvm           # Thread 2
 git clean -ffdx                    # Post Thread
 ```
 

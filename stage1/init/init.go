@@ -63,6 +63,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -239,6 +240,64 @@ func getArgsEnv(p *Pod, flavor string, debug bool) ([]string, []string, error) {
 	env := os.Environ()
 
 	switch flavor {
+	case "kvm":
+		// kernel and lkvm are relative path, because init has /var/lib/rkt/..../uuid as its working directory
+		// TODO: move to path.go
+		kernelPath := filepath.Join(common.Stage1RootfsPath(p.Root), "bzImage")
+		lkvmPath := filepath.Join(common.Stage1RootfsPath(p.Root), "lkvm")
+
+		// TODO: base on resource isolators
+		cpu := 1
+		mem := 128
+
+		kernelParams := []string{
+			"console=hvc0",
+			"init=/usr/lib/systemd/systemd",
+			"no_timer_check",
+			"noreplace-smp",
+			"systemd.default_standard_error=journal+console",
+			"systemd.default_standard_output=journal+console",
+			// "systemd.default_standard_output=tty",
+			"tsc=reliable",
+			"MACHINEID=" + p.UUID.String(),
+		}
+
+		if debug {
+			kernelParams = append(kernelParams, []string{
+				"debug",
+				"systemd.log_level=debug",
+				"systemd.show_status=true",
+				// "systemd.confirm_spawn=true",
+			}...)
+		} else {
+			kernelParams = append(kernelParams, "quiet")
+		}
+
+		args = append(args, []string{
+			"./" + lkvmPath, // relative path
+			"run",
+			"--name", "rkt-" + p.UUID.String(),
+			"--no-dhcp", // speed bootup
+			"--cpu", strconv.Itoa(cpu),
+			"--mem", strconv.Itoa(mem),
+			"--console=virtio",
+			"--kernel", kernelPath,
+			"--disk", "stage1/rootfs", // relative to run/pods/uuid dir this is a place where systemd resides
+			// MACHINEID will be available as environment variable
+			"--params", strings.Join(kernelParams, " "),
+		}...,
+		)
+
+		if debug {
+			args = append(args, "--debug")
+		}
+
+		// TODO: host volume sharing with 9p
+		// TODO: append additional networks settings
+		// args = append(args, network/volumes args...)
+
+		return args, env, nil
+
 	case "coreos":
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), interpBin))
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
@@ -533,7 +592,7 @@ func stage1() int {
 		return syscall.Exec(args[0], args, env)
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to execute nspawn: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to execute %q: %v\n", args[0], err)
 		return 7
 	}
 

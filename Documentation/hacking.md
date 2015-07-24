@@ -59,7 +59,7 @@ Replace $SRC with the absolute path to your rkt source code:
 By default, rkt gets systemd from a CoreOS image to generate stage1. But it's also possible to build systemd from the sources.
 After running `./autogen.sh` you can select the following options:
 
-* ./configure --with-stage1=none|coreos|src|host`: choose how to generate systemd for stage1 (default: 'coreos')
+* ./configure --with-stage1=none|coreos|src|host|kvm`: choose how to generate systemd for stage1 (default: 'coreos')
 * ./configure --with-stage1-systemd-version=version`: if stage1 is set to build from src, choose the systemd branch or tag to build (default: 'v222')
 * ./configure --with-stage1-systemd-src=git-path`: if stage1 is set to build from src, systemd git repository's address (default: 'https://github.com/systemd/systemd.git')
 
@@ -68,6 +68,14 @@ Example:
 ```
 ./autogen.sh && ./configure --with-stage1=src --with-stage1-systemd-version=master --with-stage1-systemd-src=$HOME/src/systemd && make
 ```
+
+### Building stage1 with kvm as execution engine
+
+Based on CoreOS, but with additional components for running containers on top of a hypervisor.
+
+To build, use `--with-stage1=kvm` flag in `./configure`
+
+This will generate stage1 with embedded kernel and kvmtool to start pod in virtual machine.
 
 ### Alternative stage1 paths
 

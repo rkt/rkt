@@ -19,7 +19,7 @@ cd "${BUILD_DIR}"
 
 ./autogen.sh
 case "${RKT_STAGE1_USR_FROM}" in
-    coreos)
+    coreos|kvm)
 	./configure --with-stage1="${RKT_STAGE1_USR_FROM}" \
 		    --enable-functional-tests
 	;;
