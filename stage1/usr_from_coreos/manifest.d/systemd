@@ -43,6 +43,9 @@ lib64/libgpg-error.so.0.10.0
 lib64/libitm.so
 lib64/libitm.so.1
 lib64/libitm.so.1.0.0
+lib64/libip4tc.so
+lib64/libip4tc.so.0
+lib64/libip4tc.so.0.1.0
 lib64/libkmod.so
 lib64/libkmod.so.2
 lib64/libkmod.so.2.2.5
