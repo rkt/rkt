@@ -29,6 +29,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/syndtr/gocapability/capability"
 	"github.com/coreos/rkt/common/cgroup"
+	"github.com/coreos/rkt/tests/test_netutils"
 )
 
 var (
@@ -51,6 +52,16 @@ var (
 		FileName          string
 		Content           string
 		CheckCgroupMounts bool
+		PrintNetNS        bool
+		PrintIPv4         string
+		PrintIPv6         string
+		PrintDefaultGWv4  bool
+		PrintDefaultGWv6  bool
+		PrintGWv4         string
+		PrintGWv6         string
+		GetHttp           string
+		ServeHttp         string
+		ServeHttpTimeout  int
 	}{}
 )
 
@@ -72,6 +83,16 @@ func init() {
 	globalFlagset.StringVar(&globalFlags.FileName, "file-name", "", "The file to read/write, $FILE will be ignored if this is specified")
 	globalFlagset.StringVar(&globalFlags.Content, "content", "", "The content to write, $CONTENT will be ignored if this is specified")
 	globalFlagset.BoolVar(&globalFlags.CheckCgroupMounts, "check-cgroups", false, "Try to write to the cgroup filesystem. Everything should be RO except some well-known files")
+	globalFlagset.BoolVar(&globalFlags.PrintNetNS, "print-netns", false, "Print the network namespace")
+	globalFlagset.StringVar(&globalFlags.PrintIPv4, "print-ipv4", "", "Takes an interface name and prints its IPv4")
+	globalFlagset.StringVar(&globalFlags.PrintIPv6, "print-ipv6", "", "Takes an interface name and prints its IPv6")
+	globalFlagset.BoolVar(&globalFlags.PrintDefaultGWv4, "print-defaultgwv4", false, "Print the default IPv4 gateway")
+	globalFlagset.BoolVar(&globalFlags.PrintDefaultGWv6, "print-defaultgwv6", false, "Print the default IPv6 gateway")
+	globalFlagset.StringVar(&globalFlags.PrintGWv4, "print-gwv4", "", "Takes an interface name and prints its gateway's IPv4")
+	globalFlagset.StringVar(&globalFlags.PrintGWv6, "print-gwv6", "", "Takes an interface name and prints its gateway's IPv6")
+	globalFlagset.StringVar(&globalFlags.GetHttp, "get-http", "", "HTTP-Get from the given address")
+	globalFlagset.StringVar(&globalFlags.ServeHttp, "serve-http", "", "Serve the hostname via HTTP on the given address:port")
+	globalFlagset.IntVar(&globalFlags.ServeHttpTimeout, "serve-http-timeout", 30, "HTTP Timeout to wait for a client connection")
 }
 
 func main() {
@@ -277,6 +298,79 @@ func main() {
 		}
 
 		fmt.Println("check-cgroups: SUCCESS")
+	}
+
+	if globalFlags.PrintNetNS {
+		ns, err := os.Readlink("/proc/self/ns/net")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("NetNS: %s\n", ns)
+	}
+
+	if globalFlags.PrintIPv4 != "" {
+		iface := globalFlags.PrintIPv4
+		ips, err := test_netutils.GetIPsv4(iface)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("%v IPv4: %s\n", iface, ips[0])
+	}
+
+	if globalFlags.PrintDefaultGWv4 {
+		gw, err := test_netutils.GetDefaultGWv4()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("DefaultGWv4: %s\n", gw)
+	}
+
+	if globalFlags.PrintDefaultGWv6 {
+		gw, err := test_netutils.GetDefaultGWv6()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("DefaultGWv6: %s\n", gw)
+	}
+
+	if globalFlags.PrintGWv4 != "" {
+		// TODO: GetGW not implemented yet
+		iface := globalFlags.PrintGWv4
+		gw, err := test_netutils.GetGWv4(iface)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("%v GWv4: %s\n", iface, gw)
+	}
+
+	if globalFlags.PrintIPv6 != "" {
+		// TODO
+	}
+
+	if globalFlags.PrintGWv6 != "" {
+		// TODO
+	}
+
+	if globalFlags.ServeHttp != "" {
+		err := test_netutils.HttpServe(globalFlags.ServeHttp, globalFlags.ServeHttpTimeout)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	if globalFlags.GetHttp != "" {
+		body, err := test_netutils.HttpGet(globalFlags.GetHttp)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("HTTP-Get received: %s\n", body)
 	}
 
 	os.Exit(globalFlags.ExitCode)
