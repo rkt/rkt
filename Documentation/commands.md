@@ -27,10 +27,10 @@ When adding a trusted key, a prefix can scope the level of established trust to 
 # rkt trust --prefix=coreos.com/etcd
 ```
 
-To trust a key for an entire root domain, you must use the `--root` flag.
+To trust a key for an entire root domain, you must use the `--root` flag, with a path to a local key file (no discovery). 
 
 ```
-# rkt trust --root coreos.com
+# rkt trust --root ~/aci-pubkeys.gpg
 ```
 
 #### Trust a Key Using Meta Discovery
@@ -80,7 +80,6 @@ Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.
 
 Trusted public keys can be pre-populated by placing them in the appropriate location on disk for the desired prefix.
 
-_Depends on https://github.com/coreos/rkt/issues/500_
 ```
 $ ls -l /etc/rkt/trustedkeys/
 [insert example of root key vs prefixed key]
