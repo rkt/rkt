@@ -146,15 +146,46 @@ static void diag(const char *exe)
 	diag(itrp);
 }
 
-/* Read environment from env and make it our own. */
-/* The environment file must exist, may be empty, and is expected to be of the format:
+/* Append env variables listed in keep_env to env_file if they're present in
+ * current environment */
+void append_env(const char *env_file, const char **keep_env)
+{
+	FILE		*f;
+	const char	**p;
+	char		*v;
+	char		nul = '\0';
+
+	pexit_if((f = fopen(env_file, "a")) == NULL,
+		"Unable to fopen \"%s\"", env_file);
+
+	p = keep_env;
+	while (*p) {
+		v = getenv(*p);
+		if (v) {
+			pexit_if(fprintf(f, "%s=%s%c", *p, v, nul) != (strlen(*p) + strlen(v) + 2),
+				"Unable to write to \"%s\"", env_file);
+		}
+		p++;
+	}
+
+	pexit_if(fclose(f) == EOF,
+		"Unable to fclose \"%s\"", env_file);
+
+	return;
+}
+
+/* Read environment from env and make it our own keeping the env variables in
+ * keep_env if they're present in the current environment.
+ * The environment file must exist, may be empty, and is expected to be of the format:
  * key=value\0key=value\0...
  */
-static void load_env(const char *env)
+static void load_env(const char *env, const char **keep_env)
 {
 	struct stat		st;
 	char			*map, *k, *v;
 	typeof(st.st_size)	i;
+
+	append_env(env, keep_env);
 
 	map_file(env, PROT_READ|PROT_WRITE, MAP_PRIVATE, &st, (void **)&map);
 
@@ -181,6 +212,15 @@ static void load_env(const char *env)
 
 int main(int argc, char *argv[])
 {
+	/* We need to keep these env variables since systemd uses them for socket
+	 * activation
+	 */
+	static const char *keep_env[] = {
+		"LISTEN_FDS",
+		"LISTEN_PID",
+		NULL
+	};
+
 	const char *root, *cwd, *env, *uid_str, *gid_str, *exe;
 	char **args;
 	uid_t uid;
@@ -198,7 +238,7 @@ int main(int argc, char *argv[])
 	args = &argv[6];
 	exe = args[0];
 
-	load_env(env);
+	load_env(env, keep_env);
 
 	pexit_if(chroot(root) == -1, "Chroot \"%s\" failed", root);
 	pexit_if(chdir(cwd) == -1, "Chdir \"%s\" failed", cwd);
