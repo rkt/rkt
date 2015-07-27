@@ -93,3 +93,15 @@ $(strip
         $(eval _EQ_TMP_ :=)
 )
 endef
+
+# Returns a string with all backslashes and double quotes escaped and
+# wrapped in another double quotes. Useful for passing a string as a
+# single parameter. In general the following should print the same:
+# str := "aaa"
+# $(info $(str))
+# $(shell echo $(call escape-and-wrap,$(str)))
+define escape-and-wrap
+"$(subst ",\",$(subst \,\\,$1))"
+endef
+# "
+# the double quotes in comment above remove highlighting confusion
