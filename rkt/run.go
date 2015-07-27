@@ -145,7 +145,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	s, err := store.NewStore(globalFlags.Dir)
+	s, err := store.NewStore(getDataDir())
 	if err != nil {
 		stderr("run: cannot open store: %v", err)
 		return 1
@@ -280,7 +280,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 	rcfg.Apps = apps
-	stage0.Run(rcfg, p.path(), globalFlags.Dir) // execs, never returns
+	stage0.Run(rcfg, p.path(), getDataDir()) // execs, never returns
 
 	return 1
 }

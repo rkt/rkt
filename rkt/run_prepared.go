@@ -58,7 +58,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 	}
 	defer p.Close()
 
-	s, err := store.NewStore(globalFlags.Dir)
+	s, err := store.NewStore(getDataDir())
 	if err != nil {
 		stderr("prepared-run: cannot open store: %v", err)
 		return 1
@@ -130,6 +130,6 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 	if globalFlags.Debug {
 		stage0.InitDebug()
 	}
-	stage0.Run(rcfg, p.path(), globalFlags.Dir) // execs, never returns
+	stage0.Run(rcfg, p.path(), getDataDir()) // execs, never returns
 	return 1
 }

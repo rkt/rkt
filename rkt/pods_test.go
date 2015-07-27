@@ -119,7 +119,10 @@ func TestWalkPods(t *testing.T) {
 		}
 		defer os.RemoveAll(d)
 
-		globalFlags.Dir = d
+		// This will mark the flag as changed, so it will have
+		// precendence over the configuration and the default
+		// value.
+		cmdRkt.PersistentFlags().Set("dir", d)
 		if err := initPods(); err != nil {
 			t.Fatalf("error initializing pods: %v", err)
 		}

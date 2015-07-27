@@ -241,3 +241,40 @@ For example, given the above system configuration and the following local config
 The result is that when downloading images from `index.docker.io`, `rkt` still sends user `foo` and password `bar`, but when downloading from `quay.io`, it uses user `baz` and password `quux`; and for `gcr.io` it will use user `goo` and password `gle`.
 
 Note that _within_ a particular configuration directory (either system or local), it is a syntax error for the same Docker registry to be defined in multiple files.
+
+### rktKind: `paths`
+
+This kind of configuration is used to customize the various paths that rkt uses.
+The configuration files should be placed inside a `paths.d` subdirectory (e.g. in `/usr/lib/rkt/paths.d` or `/etc/rkt/paths.d`).
+
+#### rktVersion: `v1`
+
+##### Description and examples
+
+This version of `paths` configuration specifies one additional field: `data`.
+
+The `data` field is a string that defines where image data and running pods are stored.
+If its value is not overridden, it is `/var/lib/rkt` by default.
+
+For example, to store images in your home partition instead of the root partition:
+
+`/etc/rkt/paths.d/paths.json`
+```json
+{
+	"rktKind": "paths",
+	"rktVersion": "v1",
+	"data": "/home/me/rkt"
+}
+```
+
+##### Override semantics
+
+Overriding is done for each directory.
+Not specifying a directory leaves it as its default path.
+
+The `data` directory can be specified via the `--dir` command line argument.
+If this is provided, this takes precedence over any configuration files.
+
+Configuration files can be added to the system configuration (`/usr/lib/rkt/paths.d`) and the local configuration (`/etc/rkt/paths.d`).
+If there are configurations in both, the local configuration takes precedence.
+If there are multiple configurations in the same directory, an error occurs.
