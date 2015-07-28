@@ -104,6 +104,11 @@ func rawRequestLimit(request, limit string) *json.RawMessage {
 	return rawValue(fmt.Sprintf(`{"request":%q,"limit":%q}`, request, limit))
 }
 
+type imagePatch struct {
+	name    string
+	patches []string
+}
+
 // Test running pod manifests that contains just one app.
 // TODO(yifan): Figure out a way to test port mapping on single host.
 func TestPodManifest(t *testing.T) {
@@ -120,7 +125,7 @@ func TestPodManifest(t *testing.T) {
 
 	tests := []struct {
 		// [image name]:[image patches]
-		images         map[string][]string
+		images         []imagePatch
 		podManifest    *schema.PodManifest
 		shouldSuccess  bool
 		expectedResult string
@@ -128,8 +133,8 @@ func TestPodManifest(t *testing.T) {
 	}{
 		{
 			// Simple read.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-read.aci": {},
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-read.aci", []string{}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
@@ -152,8 +157,8 @@ func TestPodManifest(t *testing.T) {
 		},
 		{
 			// Simple read after write with volume mounted.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-vol-rw.aci": {},
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-vol-rw.aci", []string{}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
@@ -183,8 +188,8 @@ func TestPodManifest(t *testing.T) {
 		},
 		{
 			// Simple read after write with read-only mount point, should fail.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-vol-ro.aci": {},
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-vol-ro.aci", []string{}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
@@ -216,8 +221,8 @@ func TestPodManifest(t *testing.T) {
 			// Simple read after write with volume mounted.
 			// Override the image's mount point spec. This should fail as the volume is
 			// read-only in pod manifest, (which will override the mount point in both image/pod manifest).
-			map[string][]string{
-				"rkt-test-run-pod-manifest-vol-rw-override.aci": {"--mounts=dir1,path=/dir1,readOnly=false"},
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-vol-rw-override.aci", []string{"--mounts=dir1,path=/dir1,readOnly=false"}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
@@ -248,8 +253,8 @@ func TestPodManifest(t *testing.T) {
 		{
 			// Simple read after write with volume mounted.
 			// Override the image's mount point spec.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-vol-rw-override.aci": {"--mounts=dir1,path=/dir1,readOnly=true"},
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-vol-rw-override.aci", []string{"--mounts=dir1,path=/dir1,readOnly=true"}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
@@ -279,10 +284,13 @@ func TestPodManifest(t *testing.T) {
 		},
 		{
 			// Simple read after write with volume mounted, no apps in pod manifest.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-vol-rw-no-app.aci": {
-					"--exec=/inspect --write-file --read-file --file-name=/dir1/file --content=host:baz",
-					"--mounts=dir1,path=/dir1,readOnly=false",
+			[]imagePatch{
+				{
+					"rkt-test-run-pod-manifest-vol-rw-no-app.aci",
+					[]string{
+						"--exec=/inspect --write-file --read-file --file-name=/dir1/file --content=host:baz",
+						"--mounts=dir1,path=/dir1,readOnly=false",
+					},
 				},
 			},
 			&schema.PodManifest{
@@ -301,10 +309,13 @@ func TestPodManifest(t *testing.T) {
 			// Simple read after write with volume mounted, no apps in pod manifest.
 			// This should succeed even the mount point in image manifest is readOnly,
 			// because it is overrided by the volume's readOnly.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-vol-ro-no-app.aci": {
-					"--exec=/inspect --write-file --read-file --file-name=/dir1/file --content=host:zaz",
-					"--mounts=dir1,path=/dir1,readOnly=true",
+			[]imagePatch{
+				{
+					"rkt-test-run-pod-manifest-vol-ro-no-app.aci",
+					[]string{
+						"--exec=/inspect --write-file --read-file --file-name=/dir1/file --content=host:zaz",
+						"--mounts=dir1,path=/dir1,readOnly=true",
+					},
 				},
 			},
 			&schema.PodManifest{
@@ -322,10 +333,13 @@ func TestPodManifest(t *testing.T) {
 		{
 			// Simple read after write with read-only volume mounted, no apps in pod manifest.
 			// This should fail as the volume is read-only.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-vol-ro-no-app.aci": {
-					"--exec=/inspect --write-file --read-file --file-name=/dir1/file --content=baz",
-					"--mounts=dir1,path=/dir1,readOnly=false",
+			[]imagePatch{
+				{
+					"rkt-test-run-pod-manifest-vol-ro-no-app.aci",
+					[]string{
+						"--exec=/inspect --write-file --read-file --file-name=/dir1/file --content=baz",
+						"--mounts=dir1,path=/dir1,readOnly=false",
+					},
 				},
 			},
 			&schema.PodManifest{
@@ -342,8 +356,8 @@ func TestPodManifest(t *testing.T) {
 		},
 		{
 			// Print CPU quota, which should be overwritten by the pod manifest.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-cpu-isolator.aci": {},
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-cpu-isolator.aci", []string{}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
@@ -369,8 +383,8 @@ func TestPodManifest(t *testing.T) {
 		},
 		{
 			// Print memory limit, which should be overwritten by the pod manifest.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-memory-isolator.aci": {},
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-memory-isolator.aci", []string{}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
@@ -396,11 +410,11 @@ func TestPodManifest(t *testing.T) {
 			"memory",
 		},
 		{
-			// Multiple apps in the pod. The first app will read out the content
+			// Multiple apps (with same images) in the pod. The first app will read out the content
 			// written by the second app.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-app1.aci": {"--name=rkt-inspect-readapp"},
-				"rkt-test-run-pod-manifest-app2.aci": {"--name=rkt-inspect-writeapp"},
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-app.aci", []string{}},
+				{"rkt-test-run-pod-manifest-app.aci", []string{}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
@@ -444,8 +458,8 @@ func TestPodManifest(t *testing.T) {
 		},
 		{
 			// Pod manifest overwrites the image's capability.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-cap.aci": {"--capability=CAP_NET_ADMIN"},
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-cap.aci", []string{"--capability=CAP_NET_ADMIN"}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
@@ -468,8 +482,8 @@ func TestPodManifest(t *testing.T) {
 		},
 		{
 			// Pod manifest overwrites the image's capability.
-			map[string][]string{
-				"rkt-test-run-pod-manifest-cap.aci": {"--capability=CAP_NET_ADMIN"},
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-cap.aci", []string{"--capability=CAP_NET_BIND_SERVICE"}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
@@ -480,12 +494,12 @@ func TestPodManifest(t *testing.T) {
 							User:  "0",
 							Group: "0",
 							Environment: []types.EnvironmentVariable{
-								{"CAPABILITY", strconv.Itoa(int(capability.CAP_NET_BIND_SERVICE))},
+								{"CAPABILITY", strconv.Itoa(int(capability.CAP_NET_ADMIN))},
 							},
 							Isolators: []types.Isolator{
 								{
 									Name:     "os/linux/capabilities-retain-set",
-									ValueRaw: rawValue(fmt.Sprintf(`{"set":["CAP_NET_BIND_SERVICE"]}`)),
+									ValueRaw: rawValue(fmt.Sprintf(`{"set":["CAP_NET_ADMIN"]}`)),
 								},
 							},
 						},
@@ -493,7 +507,7 @@ func TestPodManifest(t *testing.T) {
 				},
 			},
 			true,
-			fmt.Sprintf("%v=enabled", capability.CAP_NET_BIND_SERVICE.String()),
+			fmt.Sprintf("%v=enabled", capability.CAP_NET_ADMIN.String()),
 			"",
 		},
 	}
@@ -504,13 +518,12 @@ func TestPodManifest(t *testing.T) {
 			continue
 		}
 
-		j := 0
-		for name, patches := range tt.images {
-			imageFile := patchTestACI(name, patches...)
+		for j, v := range tt.images {
+			imageFile := patchTestACI(v.name, v.patches...)
 			hash := importImageAndFetchHash(t, ctx, imageFile)
 			defer os.Remove(imageFile)
 
-			imgName := types.MustACIdentifier(name)
+			imgName := types.MustACIdentifier(v.name)
 			imgID, err := types.NewHash(hash)
 			if err != nil {
 				t.Fatalf("Cannot generate types.Hash from %v: %v", hash, err)
@@ -519,8 +532,6 @@ func TestPodManifest(t *testing.T) {
 			ra := &tt.podManifest.Apps[j]
 			ra.Image.Name = imgName
 			ra.Image.ID = *imgID
-
-			j++
 		}
 
 		tt.podManifest.ACKind = schema.PodManifestKind
