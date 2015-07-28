@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -99,6 +100,42 @@ func init() {
 	cmdRun.Flags().SetInterspersed(false)
 }
 
+func getStage1Hash(s *store.Store, stage1ImagePath string) (*types.Hash, error) {
+	fn := &finder{
+		imageActionData: imageActionData{
+			s: s,
+		},
+		local:    true,
+		withDeps: false,
+	}
+	isDefault := stage1ImagePath == defaultStage1Image
+
+	var (
+		s1img *types.Hash
+		err   error
+	)
+	// with a default stage1, first try to get the image from the store
+	if isDefault {
+		// we make sure we've built rkt with a clean git tree, otherwise we
+		// don't know if something changed
+		if !strings.HasSuffix(defaultStage1Version, "-dirty") {
+			stage1AppName := fmt.Sprintf("%s:%s", defaultStage1Name, url.QueryEscape(defaultStage1Version))
+			s1img, err = fn.findImage(stage1AppName, "", true)
+		}
+	}
+
+	// we couldn't find a proper stage1 image in the store, fall back to using
+	// a stage1 ACI file (slow)
+	if s1img == nil {
+		s1img, err = fn.findImage(stage1ImagePath, "", false)
+		if err != nil {
+			return nil, fmt.Errorf("error finding stage1 image %q: %v", stage1ImagePath, err)
+		}
+	}
+
+	return s1img, nil
+}
+
 func runRun(cmd *cobra.Command, args []string) (exit int) {
 	err := parseApps(&rktApps, args, cmd.Flags(), true)
 	if err != nil {
@@ -158,9 +195,10 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		local:    flagLocal,
 		withDeps: false,
 	}
-	s1img, err := fn.findImage(flagStage1Image, "", false)
+
+	s1img, err := getStage1Hash(s, flagStage1Image)
 	if err != nil {
-		stderr("Error finding stage1 image %q: %v", flagStage1Image, err)
+		stderr("%v", err)
 		return 1
 	}
 
