@@ -23,12 +23,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/dbus"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/util"
+	sd_dbus "github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/dbus"
+	sd_util "github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/util"
 )
 
 func TestServiceFile(t *testing.T) {
-	if !util.IsRunningSystemd() {
+	if !sd_util.IsRunningSystemd() {
 		t.Skip("Systemd is not running on the host.")
 	}
 
@@ -37,7 +37,7 @@ func TestServiceFile(t *testing.T) {
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	conn, err := dbus.New()
+	conn, err := sd_dbus.New()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,8 +53,8 @@ func TestServiceFile(t *testing.T) {
 	opts := "-- --print-msg=HelloWorld --sleep=1000"
 
 	cmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false --set-env=MESSAGE_LOOP=1000 %s %s", ctx.cmd(), image, opts)
-	props := []dbus.Property{
-		dbus.PropExecStart(strings.Split(cmd, " "), false),
+	props := []sd_dbus.Property{
+		sd_dbus.PropExecStart(strings.Split(cmd, " "), false),
 	}
 	target := fmt.Sprintf("rkt-testing-transient-%d.service", r.Int())
 

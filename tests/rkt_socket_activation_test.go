@@ -27,8 +27,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/dbus"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/util"
+	sd_dbus "github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/dbus"
+	sd_util "github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/util"
 )
 
 func randomFreePort(t *testing.T) (int, error) {
@@ -50,7 +50,7 @@ func randomFreePort(t *testing.T) (int, error) {
 }
 
 func TestSocketActivation(t *testing.T) {
-	if !util.IsRunningSystemd() {
+	if !sd_util.IsRunningSystemd() {
 		t.Skip("Systemd is not running on the host.")
 	}
 
@@ -68,7 +68,7 @@ func TestSocketActivation(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	conn, err := dbus.New()
+	conn, err := sd_dbus.New()
 	if err != nil {
 		t.Fatal(err)
 	}
