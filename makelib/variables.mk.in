@@ -17,6 +17,9 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 
+# build related variables
+GOARCH_FOR_BUILD := @GOARCH_FOR_BUILD@
+
 # these are rkt-build specific variables
 
 # binaries we need to build things

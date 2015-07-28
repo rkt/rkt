@@ -2,6 +2,7 @@ AC_PREREQ([2.68])
 AC_INIT([rkt], [0.7.0+git], [https://github.com/coreos/rkt/issues])
 
 AC_CANONICAL_HOST
+AC_CANONICAL_BUILD
 
 AC_DEFUN([RKT_REQ_PROG],
          [AS_VAR_IF([$1], [],
@@ -160,6 +161,22 @@ AS_IF([test "x${RKT_RUN_FUNCTIONAL_TESTS}" = 'xyes' -o "x${RKT_RUN_FUNCTIONAL_TE
                             [AC_MSG_ERROR([*** ${rkt_functional_tests_msg}])])])])
 
 AC_SUBST(RKT_RUN_FUNCTIONAL_TESTS)
+
+# cross_compiling is a standard autoconf variable.  See the autoconf manual for
+# details.
+AS_VAR_IF([cross_compiling], [no], [GOARCH_FOR_BUILD=${GOARCH_FOR_BUILD:-${GOARCH}}],
+	[AC_MSG_CHECKING([build golang arch])
+	AS_VAR_IF([GOARCH_FOR_BUILD], [],
+		[AS_CASE([${build_cpu}],
+			[x86_64], [GOARCH_FOR_BUILD="amd64"],
+			[aarch64], [GOARCH_FOR_BUILD="arm64"],
+			[powerpc], [GOARCH_FOR_BUILD="ppc64"],
+			[AC_MSG_RESULT([unknown]); AC_MSG_ERROR([unknown build cpu: ${build_cpu}.  Set GOARCH_FOR_BUILD variable.])]);
+		AC_MSG_RESULT([${GOARCH_FOR_BUILD}])],
+		[AC_MSG_RESULT([user supplied ${GOARCH_FOR_BUILD}])])]
+	)
+
+AC_SUBST(GOARCH_FOR_BUILD)
 
 # Checks for programs.
 AC_PROG_CC
