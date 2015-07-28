@@ -26,7 +26,7 @@ import (
 var (
 	cmdImageExport = &cobra.Command{
 		Use:   "export IMAGE OUTPUT_ACI_FILE",
-		Short: "export a stored image to an ACI file",
+		Short: "Export a stored image to an ACI file",
 		Long:  `IMAGE should be a string referencing an image: either a hash or an image name.`,
 		Run:   runWrapper(runImageExport),
 	}

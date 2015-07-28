@@ -30,7 +30,7 @@ import (
 var (
 	cmdImageExtract = &cobra.Command{
 		Use:   "extract IMAGE OUTPUT_DIR",
-		Short: "extract a stored image to a directory",
+		Short: "Extract a stored image to a directory",
 		Long:  `IMAGE should be a string referencing an image: either a hash or an image name.`,
 		Run:   runWrapper(runImageExtract),
 	}
