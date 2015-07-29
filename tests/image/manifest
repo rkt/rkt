@@ -33,15 +33,15 @@
             {
                 "name": "resource/memory",
                 "value": {
-                    "request": "25M",
-                    "limit": "25M"
+                    "request": "25Mi",
+                    "limit": "25Mi"
                 }
             },
             {
                 "name": "resource/cpu",
                 "value": {
-                    "request": "50",
-                    "limit": "800"
+                    "request": "50m",
+                    "limit": "800m"
                 }
             }
         ],

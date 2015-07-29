@@ -246,14 +246,12 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 	for _, i := range app.Isolators {
 		switch v := i.Value().(type) {
 		case *types.ResourceMemory:
-			limit := v.Limit().String()
-			opts, err = cgroup.MaybeAddIsolator(opts, "memory", limit)
+			opts, err = cgroup.MaybeAddIsolator(opts, "memory", v.Limit())
 			if err != nil {
 				return err
 			}
 		case *types.ResourceCPU:
-			limit := v.Limit().String()
-			opts, err = cgroup.MaybeAddIsolator(opts, "cpu", limit)
+			opts, err = cgroup.MaybeAddIsolator(opts, "cpu", v.Limit())
 			if err != nil {
 				return err
 			}

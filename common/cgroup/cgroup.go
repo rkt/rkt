@@ -26,10 +26,11 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/GoogleCloudPlatform/kubernetes/pkg/api/resource"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 )
 
-type addIsolatorFunc func(opts []*unit.UnitOption, limit string) ([]*unit.UnitOption, error)
+type addIsolatorFunc func(opts []*unit.UnitOption, limit *resource.Quantity) ([]*unit.UnitOption, error)
 
 var (
 	isolatorFuncs = map[string]addIsolatorFunc{
@@ -42,22 +43,21 @@ var (
 	}
 )
 
-func addCpuLimit(opts []*unit.UnitOption, limit string) ([]*unit.UnitOption, error) {
-	milliCores, err := strconv.Atoi(limit)
-	if err != nil {
-		return nil, err
+func addCpuLimit(opts []*unit.UnitOption, limit *resource.Quantity) ([]*unit.UnitOption, error) {
+	if limit.Value() > resource.MaxMilliValue {
+		return nil, fmt.Errorf("cpu limit exceeds the maximum millivalue: %v", limit.String())
 	}
-	quota := strconv.Itoa(milliCores/10) + "%"
+	quota := strconv.Itoa(int(limit.MilliValue()/10)) + "%"
 	opts = append(opts, unit.NewUnitOption("Service", "CPUQuota", quota))
 	return opts, nil
 }
 
-func addMemoryLimit(opts []*unit.UnitOption, limit string) ([]*unit.UnitOption, error) {
-	opts = append(opts, unit.NewUnitOption("Service", "MemoryLimit", limit))
+func addMemoryLimit(opts []*unit.UnitOption, limit *resource.Quantity) ([]*unit.UnitOption, error) {
+	opts = append(opts, unit.NewUnitOption("Service", "MemoryLimit", strconv.Itoa(int(limit.Value()))))
 	return opts, nil
 }
 
-func MaybeAddIsolator(opts []*unit.UnitOption, isolator string, limit string) ([]*unit.UnitOption, error) {
+func MaybeAddIsolator(opts []*unit.UnitOption, isolator string, limit *resource.Quantity) ([]*unit.UnitOption, error) {
 	var err error
 	if IsIsolatorSupported(isolator) {
 		opts, err = isolatorFuncs[isolator](opts, limit)
