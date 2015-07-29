@@ -273,7 +273,9 @@ func TestGetAci(t *testing.T) {
 				},
 				{
 					"example.com/test02",
-					types.Labels{
+					// Workaround for https://github.com/golang/go/issues/6820 :
+					// `go vet` does not correctly detect types.Labels as a container
+					[]types.Label{
 						{
 							Name:  "version",
 							Value: "1.0.0",
@@ -283,7 +285,7 @@ func TestGetAci(t *testing.T) {
 				},
 				{
 					"example.com/test02",
-					types.Labels{
+					[]types.Label{
 						{
 							Name:  "version",
 							Value: "2.0.0",
