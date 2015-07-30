@@ -35,11 +35,11 @@ RKT_REQ_ABS_PROG([ABS_GO], [go])
 
 ## STAGE1:type
 m4_define([DEFAULT_FLAVOR], [coreos])
-AC_ARG_WITH(stage1,
+AC_ARG_WITH([stage1],
             AS_HELP_STRING([--with-stage1=type],
                            [type of stage1 build one of 'src', 'coreos', 'host', 'none', 'kvm' (default: 'DEFAULT_FLAVOR')]),
             [RKT_STAGE1_USR_FROM="${withval}"],
-            [RKT_STAGE1_USR_FROM="coreos"])
+            [RKT_STAGE1_USR_FROM="DEFAULT_FLAVOR"])
 
 AS_CASE([${RKT_STAGE1_USR_FROM}],
         [none],
@@ -62,7 +62,7 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
                 [],
         [kvm],
                 [# just a warrning because of nature of this flavor
-                AC_MSG_WARN([* kvm is an experimental stage1 implementation, some features are missing])],
+                 AC_MSG_WARN([* kvm is an experimental stage1 implementation, some features are missing])],
         [AC_MSG_ERROR([*** stage1 build type '${RKT_STAGE1_USR_FROM}' unsupported])])
 
 AC_SUBST(RKT_STAGE1_USR_FROM)
@@ -111,19 +111,21 @@ AC_SUBST(RKT_STAGE1_DEFAULT_ACI_LDFLAGS)
 
 ## STAGE1: Systemd git path for src flavor
 m4_define([DEFAULT_STAGE1_SYSTEMD_SRC], [https://github.com/systemd/systemd.git])
-AC_ARG_WITH(stage1-systemd-src,
+AC_ARG_WITH([stage1-systemd-src],
             AS_HELP_STRING([--with-stage1-systemd-src=git-path],
-                           [address to git repository of systemd, used in 'src' build mode (default: 'DEFAULT_STAGE1_SYSTEMD_SRC')]),
+                           [address to git repository of systemd, used in 'src' stage1 flavor (default: 'DEFAULT_STAGE1_SYSTEMD_SRC')]),
             [RKT_STAGE1_SYSTEMD_SRC="${withval}"],
             [RKT_STAGE1_SYSTEMD_SRC='auto'])
 
+dnl warn if --with-stage1-systemd-src is used in non-src stage1 flavor
 AS_VAR_IF([RKT_STAGE1_SYSTEMD_SRC], [auto],
           [],
           [AS_VAR_IF([RKT_STAGE1_USR_FROM], [src],
                      [],
-                     [AC_MSG_WARN(--with-stage1-systemd-src is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor)])])
+                     [AC_MSG_WARN([* --with-stage1-systemd-src is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])])])
 
 
+dnl use default systemd src git repo if we did not specify another
 AS_VAR_IF([RKT_STAGE1_SYSTEMD_SRC], [auto],
           [AS_VAR_IF([RKT_STAGE1_USR_FROM], [src],
                      [RKT_STAGE1_SYSTEMD_SRC=DEFAULT_STAGE1_SYSTEMD_SRC],
@@ -134,29 +136,32 @@ AC_SUBST(RKT_STAGE1_SYSTEMD_SRC)
 
 ## STAGE1: Systemd version
 m4_define([DEFAULT_STAGE1_SYSTEMD_VER], [v222])
-AC_ARG_WITH(stage1-systemd-version,
+AC_ARG_WITH([stage1-systemd-version],
             AS_HELP_STRING([--with-stage1-systemd-version=version],
-                           [systemd version to build (default: 'DEFAULT_STAGE1_SYSTEMD_VER')]),
+                           [systemd version to build, used in 'src' stage1 flavor (default: 'DEFAULT_STAGE1_SYSTEMD_VER', should be in format 'v<number>', like v222)]),
             [RKT_STAGE1_SYSTEMD_VER="${withval}"],
             [RKT_STAGE1_SYSTEMD_VER='auto'])
 
+dnl warn if --with-stage1-systemd-version is used in non-src stage1 flavor
 AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [auto],
           [],
           [AS_VAR_IF([RKT_STAGE1_USR_FROM], [src],
                      [],
-                     [AC_MSG_WARN([--with-stage1-systemd-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])])])
+                     [AC_MSG_WARN([* --with-stage1-systemd-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])])])
 
 
+dnl use default systemd version if we did not specify another
 AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [auto],
           [AS_VAR_IF([RKT_STAGE1_USR_FROM], [src],
                      [RKT_STAGE1_SYSTEMD_VER=DEFAULT_STAGE1_SYSTEMD_VER],
                      [])],
           [])
 
+dnl warn if version is HEAD, just use master
 AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [HEAD],
           [AS_VAR_IF([RKT_STAGE1_USR_FROM], [src],
-                     [AC_MSG_WARN(['HEAD' is not a systemd version, setting it to 'master' instead])]
-                     [RKT_STAGE1_SYSTEMD_VER=master],
+                     [AC_MSG_WARN(['HEAD' is not a systemd version, setting it to 'master' instead])
+                      RKT_STAGE1_SYSTEMD_VER=master],
                      [])],
           [])
 
@@ -164,7 +169,7 @@ AC_SUBST(RKT_STAGE1_SYSTEMD_VER)
 
 ## STAGE1: linker-defined custom STAGE1 image path, default is unset
 m4_define([DEFAULT_STAGE1_IMAGE], [])
-AC_ARG_WITH(stage1-image-path,
+AC_ARG_WITH([stage1-image-path],
             AS_HELP_STRING([--with-stage1-image-path],
                            [custom stage1 image path (default: 'DEFAULT_STAGE1_IMAGE')]),
             [RKT_STAGE1_IMAGE="${withval}"],
@@ -178,39 +183,41 @@ AS_VAR_IF([RKT_STAGE1_IMAGE], [],
 
 AC_SUBST(RKT_STAGE1_IMAGE_LDFLAGS)
 
+## Functional tests
+
 AC_ARG_ENABLE([functional-tests],
               AS_HELP_STRING([--enable-functional-tests],
-                             [enable functional tests on make check (linux only, uses sudo, default: no, use auto to enable if possible)]),
+                             [enable functional tests on make check (linux only, uses sudo, default: no, use auto to enable if possible, for host stage1 flavor systemd version 220 or higher on host is required)]),
               [RKT_RUN_FUNCTIONAL_TESTS="${enableval}"],
               [RKT_RUN_FUNCTIONAL_TESTS="no"])
 
 AS_IF([test "x${RKT_RUN_FUNCTIONAL_TESTS}" = 'xyes' -o "x${RKT_RUN_FUNCTIONAL_TESTS}" = 'xauto'],
-      [AC_MSG_CHECKING([whether functional tests can be run])]
-      [rkt_functional_tests_msg='']
-      [AS_CASE([${host}],
+      [AC_MSG_CHECKING([whether functional tests can be run])
+       rkt_functional_tests_msg=''
+       AS_CASE([${host}],
                [*-*-linux*],
                        [AS_VAR_IF([RKT_STAGE1_USR_FROM], [host],
                                   dnl checking if we are running systemd as init, -.mount is a mount unit for /.
                                   [AS_IF([systemctl 2>/dev/null | grep --silent -e '-\.mount'],
                                          dnl systemd runs as init
-                                         [sdv=`systemctl --version | head -1 | sed -e 's/^systemd \(@<:@0-9@:>@*\)$/\1/'`]
-                                         [AS_IF([test ${sdv} -lt 220],
+                                         [sdv=`systemctl --version | head -1 | sed -e 's/^systemd \(@<:@0-9@:>@*\)$/\1/'`
+                                          AS_IF([test ${sdv} -lt 220],
                                                 [rkt_functional_tests_msg="Cannot run functional tests with ${RKT_STAGE1_USR_FROM} stage1 flavor - systemd version on host is lower than 220 (currently running ${sdv})"])],
                                          dnl systemd is not an init
                                          [rkt_functional_tests_msg="Cannot run functional tests with ${RKT_STAGE1_USR_FROM} stage1 flavor - no systemd on host"])])],
                dnl non-linux host
-               [rkt_functional_tests_msg="functional tests are supported only under linux"])]
-      [AS_VAR_IF([rkt_functional_tests_msg], [],
+               [rkt_functional_tests_msg="functional tests are supported only under linux"])
+      AS_VAR_IF([rkt_functional_tests_msg], [],
                  dnl no message, tests can be run
-                 [RKT_RUN_FUNCTIONAL_TESTS=yes]
-                 [AC_MSG_RESULT([yes])],
-                 dnl message available
-                 [AC_MSG_RESULT([no])]
-                 [AS_VAR_IF([RKT_RUN_FUNCTIONAL_TESTS], [auto],
-                            dnl only print an info
-                            [RKT_RUN_FUNCTIONAL_TESTS=no]
-                            [AC_MSG_NOTICE([${rkt_functional_tests_msg}])],
-                            dnl bail out
+                 [RKT_RUN_FUNCTIONAL_TESTS=yes
+                  AC_MSG_RESULT([yes])],
+                 dnl message available, tests will not be run
+                 [AC_MSG_RESULT([no])
+                  AS_VAR_IF([RKT_RUN_FUNCTIONAL_TESTS], [auto],
+                            dnl functional tests are optional, so only print an info
+                            [RKT_RUN_FUNCTIONAL_TESTS=no
+                             AC_MSG_NOTICE([${rkt_functional_tests_msg}])],
+                            dnl functional tests are required, so bail out
                             [AC_MSG_ERROR([*** ${rkt_functional_tests_msg}])])])])
 
 AC_SUBST(RKT_RUN_FUNCTIONAL_TESTS)
@@ -252,10 +259,14 @@ AC_OUTPUT
 AC_MSG_RESULT([
         AC_PACKAGE_NAME ${RKT_VERSION}
 
+        general build parameters
+
         stage1 flavor:          '${RKT_STAGE1_USR_FROM}'
         stage1 image path:      '${RKT_STAGE1_IMAGE}'
         functional tests:       '${RKT_RUN_FUNCTIONAL_TESTS}'])
 
+AC_MSG_RESULT([
+        ${RKT_STAGE1_USR_FROM} flavor specific build parameters])
 AS_CASE([${RKT_STAGE1_USR_FROM}],
         [src],
                 [AC_MSG_RESULT([
@@ -265,4 +276,5 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
                 [AC_MSG_RESULT([
         stage1 name:            '${RKT_STAGE1_DEFAULT_NAME}'
         stage1 version:         '${RKT_STAGE1_DEFAULT_VERSION}'])],
-        [])
+        [AC_MSG_RESULT([
+        <none>])])
