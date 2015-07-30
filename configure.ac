@@ -174,6 +174,56 @@ AS_VAR_IF([RKT_STAGE1_IMAGE], [],
 
 AC_SUBST(RKT_STAGE1_IMAGE_LDFLAGS)
 
+## STAGE1: path to coreos pxe and its systemd version
+
+m4_define([DEFAULT_LOCAL_COREOS_PXE_IMAGE_PATH], [])
+AC_ARG_WITH([coreos-local-pxe-image-path],
+            AS_HELP_STRING([--with-coreos-local-pxe-image-path],
+                           [path to local CoreOS PXE image, used in 'coreos' and 'kvm' stage1 flavors (default: 'DEFAULT_LOCAL_COREOS_PXE_IMAGE_PATH') (the GPG signature of this file will not be checked!)]),
+            [RKT_LOCAL_COREOS_PXE_IMAGE_PATH="${withval}"],
+            [RKT_LOCAL_COREOS_PXE_IMAGE_PATH=""])
+
+AC_ARG_WITH([coreos-local-pxe-image-systemd-version],
+            AS_HELP_STRING([--with-coreos-local-pxe-image-systemd-version],
+                           [version of systemd in local CoreOS PXE image, used in 'coreos' and 'kvm' stage1 flavors (should be in format 'v<number>', like v222)]),
+            [RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER="${withval}"],
+            [RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER=])
+
+AS_CASE([$RKT_STAGE1_USR_FROM],
+        dnl for kvm and coreos check if both pxe image path and
+        dnl systemd version are specified or neither
+        [kvm|coreos],
+                [AS_VAR_IF([RKT_LOCAL_COREOS_PXE_IMAGE_PATH], [],
+                           dnl no local coreos pxe image path specified
+                           [AS_VAR_IF([RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER],[],
+                                      dnl no version specified, alright, keep quiet
+                                      [],
+                                      dnl version specified, warn about it being ignored
+                                      [AC_MSG_WARN([* --with-coreos-local-pxe-image-systemd-version is ignored, because --with-coreos-local-pxe-image-path was not specified])
+                                       RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER=''])],
+                           dnl local coreos pxe image path specified
+                           [AS_VAR_IF([RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER],[],
+                                      dnl no version specified, bail out, version is required
+                                      [AC_MSG_ERROR([*** No systemd version for local CoreOS PXE image specified, use --with-coreos-local-pxe-image-systemd-version])],
+                                      dnl version specified, alright, keep quiet
+                                      [])])],
+        dnl for other flavors just warn if either is specified
+        [AS_VAR_IF([RKT_LOCAL_COREOS_PXE_IMAGE_PATH], [],
+                   dnl empty value, alright
+                   [],
+                   dnl not empty, warn about it, zero it just in case
+                   [AC_MSG_WARN([* --with-coreos-local-pxe-image-path is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
+                    RKT_LOCAL_COREOS_PXE_IMAGE_PATH=''])
+         AS_VAR_IF([RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER], [],
+                   dnl empty value, alright
+                   [],
+                   dnl not empty, warn about it, zero it just in case
+                   [AC_MSG_WARN([* --with-coreos-local-pxe-image-systemd-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
+                    RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER=''])])
+
+AC_SUBST(RKT_LOCAL_COREOS_PXE_IMAGE_PATH)
+AC_SUBST(RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER)
+
 ## Functional tests
 
 AC_ARG_ENABLE([functional-tests],
@@ -252,20 +302,24 @@ AC_MSG_RESULT([
 
         general build parameters
 
-        stage1 flavor:          '${RKT_STAGE1_USR_FROM}'
-        stage1 image path:      '${RKT_STAGE1_IMAGE}'
-        functional tests:       '${RKT_RUN_FUNCTIONAL_TESTS}'])
+        stage1 flavor:                          '${RKT_STAGE1_USR_FROM}'
+        stage1 image path:                      '${RKT_STAGE1_IMAGE}'
+        functional tests:                       '${RKT_RUN_FUNCTIONAL_TESTS}'])
 
 AC_MSG_RESULT([
         ${RKT_STAGE1_USR_FROM} flavor specific build parameters])
 AS_CASE([${RKT_STAGE1_USR_FROM}],
         [src],
                 [AC_MSG_RESULT([
-        systemd git repo:       '${RKT_STAGE1_SYSTEMD_SRC}'
-        systemd version:        '${RKT_STAGE1_SYSTEMD_VER}'])],
+        systemd git repo:                       '${RKT_STAGE1_SYSTEMD_SRC}'
+        systemd version:                        '${RKT_STAGE1_SYSTEMD_VER}'])],
+        [coreos|kvm],
+                [AC_MSG_RESULT([
+        local CoreOS PXE image path:            '${RKT_LOCAL_COREOS_PXE_IMAGE_PATH}'
+        local CoreOS PXE image systemd version: '${RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER}'])],
         [none],
                 [AC_MSG_RESULT([
-        stage1 name:            '${RKT_STAGE1_DEFAULT_NAME}'
-        stage1 version:         '${RKT_STAGE1_DEFAULT_VERSION}'])],
+        stage1 name:                            '${RKT_STAGE1_DEFAULT_NAME}'
+        stage1 version:                         '${RKT_STAGE1_DEFAULT_VERSION}'])],
         [AC_MSG_RESULT([
         <none>])])
