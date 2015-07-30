@@ -57,7 +57,7 @@ func runImageExtract(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	key, err := getKeyFromAppOrHash(s, args[0])
+	key, err := getStoreKeyFromAppOrHash(s, args[0])
 	if err != nil {
 		stderr("image extract: %v", err)
 		return 1
