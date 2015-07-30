@@ -109,7 +109,8 @@ AC_SUBST(RKT_STAGE1_DEFAULT_NAME)
 AC_SUBST(RKT_STAGE1_DEFAULT_VERSION)
 AC_SUBST(RKT_STAGE1_DEFAULT_ACI_LDFLAGS)
 
-## STAGE1: Systemd git path for src flavor
+## STAGE1: Systemd git path and version for src flavor
+
 m4_define([DEFAULT_STAGE1_SYSTEMD_SRC], [https://github.com/systemd/systemd.git])
 AC_ARG_WITH([stage1-systemd-src],
             AS_HELP_STRING([--with-stage1-systemd-src=git-path],
@@ -117,24 +118,6 @@ AC_ARG_WITH([stage1-systemd-src],
             [RKT_STAGE1_SYSTEMD_SRC="${withval}"],
             [RKT_STAGE1_SYSTEMD_SRC='auto'])
 
-dnl warn if --with-stage1-systemd-src is used in non-src stage1 flavor
-AS_VAR_IF([RKT_STAGE1_SYSTEMD_SRC], [auto],
-          [],
-          [AS_VAR_IF([RKT_STAGE1_USR_FROM], [src],
-                     [],
-                     [AC_MSG_WARN([* --with-stage1-systemd-src is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])])])
-
-
-dnl use default systemd src git repo if we did not specify another
-AS_VAR_IF([RKT_STAGE1_SYSTEMD_SRC], [auto],
-          [AS_VAR_IF([RKT_STAGE1_USR_FROM], [src],
-                     [RKT_STAGE1_SYSTEMD_SRC=DEFAULT_STAGE1_SYSTEMD_SRC],
-                     [])],
-          [])
-
-AC_SUBST(RKT_STAGE1_SYSTEMD_SRC)
-
-## STAGE1: Systemd version
 m4_define([DEFAULT_STAGE1_SYSTEMD_VER], [v222])
 AC_ARG_WITH([stage1-systemd-version],
             AS_HELP_STRING([--with-stage1-systemd-version=version],
@@ -142,29 +125,37 @@ AC_ARG_WITH([stage1-systemd-version],
             [RKT_STAGE1_SYSTEMD_VER="${withval}"],
             [RKT_STAGE1_SYSTEMD_VER='auto'])
 
-dnl warn if --with-stage1-systemd-version is used in non-src stage1 flavor
-AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [auto],
-          [],
-          [AS_VAR_IF([RKT_STAGE1_USR_FROM], [src],
-                     [],
-                     [AC_MSG_WARN([* --with-stage1-systemd-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])])])
-
-
-dnl use default systemd version if we did not specify another
-AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [auto],
-          [AS_VAR_IF([RKT_STAGE1_USR_FROM], [src],
-                     [RKT_STAGE1_SYSTEMD_VER=DEFAULT_STAGE1_SYSTEMD_VER],
-                     [])],
-          [])
+AS_CASE([$RKT_STAGE1_USR_FROM],
+        [src],
+                [AS_VAR_IF([RKT_STAGE1_SYSTEMD_SRC], [auto],
+                           dnl systemd source not specified, use default
+                           [RKT_STAGE1_SYSTEMD_SRC=DEFAULT_STAGE1_SYSTEMD_SRC],
+                           dnl systemd source specified, use it
+                           [])
+                 AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [auto],
+                           dnl systemd version not specified, use default
+                           [RKT_STAGE1_SYSTEMD_VER=DEFAULT_STAGE1_SYSTEMD_VER],
+                           dnl systemd version specified, use it
+                           [])],
+        dnl other flavors
+        [AS_VAR_IF([RKT_STAGE1_SYSTEMD_SRC], [auto],
+                   dnl systemd source not specified, alright, zero the value just in case
+                   [RKT_STAGE1_SYSTEMD_SRC=''],
+                   dnl systemd source specified, warn about it being ignored
+                   [AC_MSG_WARN([* --with-stage1-systemd-src is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])])
+         AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [auto],
+                   dnl systemd version not specified, alright, zero the value just in case
+                   [RKT_STAGE1_SYSTEMD_VER=''],
+                   dnl systemd version specified, warn about it being ignored
+                   [AC_MSG_WARN([* --with-stage1-systemd-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])])])
 
 dnl warn if version is HEAD, just use master
 AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [HEAD],
-          [AS_VAR_IF([RKT_STAGE1_USR_FROM], [src],
-                     [AC_MSG_WARN(['HEAD' is not a systemd version, setting it to 'master' instead])
-                      RKT_STAGE1_SYSTEMD_VER=master],
-                     [])],
+          [AC_MSG_WARN([* 'HEAD' is not a systemd version, setting it to 'master' instead])
+           RKT_STAGE1_SYSTEMD_VER='master'],
           [])
 
+AC_SUBST(RKT_STAGE1_SYSTEMD_SRC)
 AC_SUBST(RKT_STAGE1_SYSTEMD_VER)
 
 ## STAGE1: linker-defined custom STAGE1 image path, default is unset
