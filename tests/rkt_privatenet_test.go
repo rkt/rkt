@@ -178,12 +178,22 @@ func TestPrivateNetDefaultConnectivity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot get network host's interfaces: %v", err)
 	}
-	iface := ifaces[1].Name
-	ifaceIPsv4, err := test_netutils.GetIPsv4(iface)
-	if err != nil {
-		t.Fatalf("Cannot get network host's default IPv4: %v", err)
+	var httpGetAddr string
+	for _, iface := range ifaces[1:] {
+		name := iface.Name
+		ifaceIPsv4, err := test_netutils.GetIPsv4(name)
+		if err != nil {
+			t.Fatalf("Cannot get IPV4 address for interface %v: %v", name, err)
+		}
+		if len(ifaceIPsv4) > 0 {
+			httpGetAddr = fmt.Sprintf("http://%v:54321", ifaceIPsv4[0])
+			t.Log("Telling the child to connect via", httpGetAddr)
+			break
+		}
 	}
-	httpGetAddr := fmt.Sprintf("http://%v:54321", ifaceIPsv4[0])
+	if httpGetAddr == "" {
+		t.Skipf("Can not find any NAT'able IPv4 on the host, skipping..")
+	}
 
 	testImageArgs := []string{fmt.Sprintf("--exec=/inspect --get-http=%v", httpGetAddr)}
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
