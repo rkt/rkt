@@ -20,6 +20,7 @@ Description=etcd
 
 [Service]
 ExecStart=/usr/bin/rkt --insecure-skip-verify run --mds-register=false coreos.com/etcd:v2.0.10
+KillMode=mixed
 Restart=always
 ```
 
@@ -33,7 +34,8 @@ systemctl enable etcd.service
 systemctl disable etcd.service
 ```
 
-`ExecStop` clause is not required - stopping a pod is handled by `systemd`. That means that running `systemctl stop etcd.service` will send `SIGTERM` to `stage1`'s `systemd`, which in turn will initiate orderly shutdown inside the pod.
+`ExecStop` clause is not required - setting [`KillMode=mixed`](http://www.freedesktop.org/software/systemd/man/systemd.kill.html#KillMode=) means that running `systemctl stop etcd.service` will send `SIGTERM` to `stage1`'s `systemd`, which in turn will initiate orderly shutdown inside the pod.
+In case something goes wrong with container's shutdown, to ensure no processes are left around, `SIGKILL` will be sent to the remaining service processes after a timeout.
 
 ## Advanced Unit File
 
@@ -66,6 +68,7 @@ Environment=TMPDIR=/var/tmp
 ExecStartPre=/usr/bin/rkt fetch myapp.com/myapp-1.3.4
 # Start the app
 ExecStart=/usr/bin/rkt run --inherit-env --private-net --port=http:8888 myapp.com/myapp-1.3.4
+KillMode=mixed
 Restart=always
 ```
 
