@@ -20,6 +20,7 @@ Description=etcd
 
 [Service]
 ExecStart=/usr/bin/rkt --insecure-skip-verify run --mds-register=false coreos.com/etcd:v2.0.10
+KillMode=mixed
 Restart=always
 ```
 
@@ -33,7 +34,8 @@ systemctl enable etcd.service
 systemctl disable etcd.service
 ```
 
-`ExecStop` clause is not required - stopping a pod is handled by `systemd`. That means that running `systemctl stop etcd.service` will send `SIGTERM` to `stage1`'s `systemd`, which in turn will initiate orderly shutdown inside the pod.
+`ExecStop` clause is not required - setting [`KillMode=mixed`](http://www.freedesktop.org/software/systemd/man/systemd.kill.html#KillMode=) means that running `systemctl stop etcd.service` will send `SIGTERM` to `stage1`'s `systemd`, which in turn will initiate orderly shutdown inside the pod.
+In case something goes wrong with container's shutdown, to ensure no processes are left around, `SIGKILL` will be sent to the remaining service processes after a timeout.
 
 ## Advanced Unit File
 
@@ -66,8 +68,75 @@ Environment=TMPDIR=/var/tmp
 ExecStartPre=/usr/bin/rkt fetch myapp.com/myapp-1.3.4
 # Start the app
 ExecStart=/usr/bin/rkt run --inherit-env --private-net --port=http:8888 myapp.com/myapp-1.3.4
+KillMode=mixed
 Restart=always
 ```
+
+## Socket-activated service
+
+`rkt` supports [socket-activated services](http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html).
+This means systemd will listen on a port on behalf of a container and when it receives a connection to that port, it will start the container and the app inside will handle the connection.
+Note that your application needs to be able to accept sockets from systemd's native socket passing interface.
+
+To make socket activation work, you need to add to your application manifest a [socket-activated port](https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema):
+
+```
+...
+{
+...
+    "app": {
+        ...
+        "ports": [
+            {
+                "name": "8080-tcp",
+                "protocol": "tcp",
+                "port": 8080,
+                "count": 1,
+                "socketActivated": true
+            }
+        ]
+    }
+}
+```
+
+Then you will need a pair of service and socket unit files. The socket unit file will have the same port you've set in the image manifest of your app and the service unit file will just run `rkt`:
+
+
+```
+# my-socket-activated-app.service
+[Unit]
+Description=My socket-activated app
+
+[Service]
+ExecStart=/usr/bin/rkt run myapp.com/my-socket-activated-app:v1.0
+KillMode=mixed
+```
+
+```
+# my-socket-activated-app.socket
+[Unit]
+Description=My socket-activated app's socket
+
+[Socket]
+ListenStream=8080
+```
+
+Finally you start the socket unit:
+
+```
+# systemctl start my-socket-activated-app.socket
+# systemctl status my-socket-activated-app.socket
+● my-socket-activated-app.socket - My socket-activated app's socket
+   Loaded: loaded (/etc/systemd/system/my-socket-activated-app.socket; static; vendor preset: disabled)
+   Active: active (listening) since Thu 2015-07-30 12:24:50 CEST; 2s ago
+   Listen: [::]:8080 (Stream)
+
+Jul 30 12:24:50 locke-work systemd[1]: Listening on My socket-activated app's socket.
+Jul 30 12:24:50 locke-work systemd[1]: Starting My socket-activated app's socket.
+```
+
+From this point, whenever you get a connection to port 8080 your container will start and handle it transparently.
+
 
 ## Using (not only) systemd tools
 
