@@ -131,11 +131,11 @@ func KvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, privateNetL
 			err = netlink.AddrAdd(
 				*link,
 				&netlink.Addr{
-					&net.IPNet{
-						n.runtime.HostIP,
-						net.IPMask(n.runtime.Mask),
+					IPNet: &net.IPNet{
+						IP:   n.runtime.HostIP,
+						Mask: net.IPMask(n.runtime.Mask),
 					},
-					ifName,
+					Label: ifName,
 				})
 			if err != nil {
 				return nil, fmt.Errorf("cannot add address to host tap device %q: %v", ifName, err)
@@ -144,8 +144,8 @@ func KvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, privateNetL
 			if n.conf.IPMasq {
 				chain := "CNI-" + n.conf.Name
 				if err = ip.SetupIPMasq(&net.IPNet{
-					n.runtime.IP,
-					net.IPMask(n.runtime.Mask),
+					IP:   n.runtime.IP,
+					Mask: net.IPMask(n.runtime.Mask),
 				}, chain); err != nil {
 					return nil, err
 				}
