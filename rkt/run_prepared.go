@@ -42,7 +42,7 @@ func init() {
 	cmdRkt.AddCommand(cmdRunPrepared)
 
 	cmdRunPrepared.Flags().Var(&flagPrivateNet, "private-net", "give pod a private network")
-	cmdRunPrepared.Flags().Lookup("private-net").NoOptDefVal = "true"
+	cmdRunPrepared.Flags().Lookup("private-net").NoOptDefVal = "all"
 	cmdRunPrepared.Flags().BoolVar(&flagInteractive, "interactive", false, "the pod is interactive")
 	cmdRunPrepared.Flags().BoolVar(&flagMDSRegister, "mds-register", true, "register pod with metadata service")
 }
