@@ -15,12 +15,15 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 	"github.com/coreos/rkt/tests/test_netutils"
@@ -41,16 +44,16 @@ func TestPrivateNetOmittedNetNS(t *testing.T) {
 	defer ctx.reset()
 
 	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
-	t.Logf("Command: %v", cmd)
+	t.Logf("Command: %v\n", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Cannot exec rkt: %v", err)
 	}
 
 	expectedRegex := `NetNS: (net:\[\d+\])`
-	result, _ := child.ExpectRegexFind(expectedRegex)
-	if len(result) == 0 {
-		t.Fatalf("Expected %q but not found", expectedRegex)
+	result, out, err := expectRegexWithOutput(child, expectedRegex)
+	if err != nil {
+		t.Fatalf("Error: %v\nOutput: %v", err, out)
 	}
 
 	ns, err := os.Readlink("/proc/self/ns/net")
@@ -87,7 +90,7 @@ func TestPrivateNetOmittedConnectivity(t *testing.T) {
 	defer ctx.reset()
 
 	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
-	t.Logf("Command: %v", cmd)
+	t.Logf("Command: %v\n", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Cannot exec rkt: %v", err)
@@ -106,9 +109,9 @@ func TestPrivateNetOmittedConnectivity(t *testing.T) {
 	// Host connects to the child
 	go func() {
 		expectedRegex := `serving on`
-		result, _ := child.ExpectRegexFind(expectedRegex)
-		if len(result) == 0 {
-			t.Fatalf("Expected %q but not found", expectedRegex)
+		_, out, err := expectRegexWithOutput(child, expectedRegex)
+		if err != nil {
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
 		}
 		body, err := test_netutils.HttpGet(httpGetAddr)
 		if err != nil {
@@ -134,16 +137,16 @@ func TestPrivateNetDefaultNetNS(t *testing.T) {
 	defer ctx.cleanup()
 
 	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=default --mds-register=false %s", ctx.cmd(), testImage)
-	t.Logf("Command: %v", cmd)
+	t.Logf("Command: %v\n", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Cannot exec rkt: %v", err)
 	}
 
 	expectedRegex := `NetNS: (net:\[\d+\])`
-	result, _ := child.ExpectRegexFind(expectedRegex)
-	if len(result) == 0 {
-		t.Fatalf("Expected %q but not found", expectedRegex)
+	result, out, err := expectRegexWithOutput(child, expectedRegex)
+	if err != nil {
+		t.Fatalf("Error: %v\nOutput: %v", err, out)
 	}
 
 	ns, err := os.Readlink("/proc/self/ns/net")
@@ -221,15 +224,15 @@ func TestPrivateNetDefaultConnectivity(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=default --mds-register=false %s", ctx.cmd(), testImage)
-		t.Logf("Command: %v", cmd)
+		t.Logf("Command: %v\n", cmd)
 		child, err := gexpect.Spawn(cmd)
 		if err != nil {
 			t.Fatalf("Cannot exec rkt: %v", err)
 		}
 		expectedRegex := `HTTP-Get received: (.*)\r`
-		result, _ := child.ExpectRegexFind(expectedRegex)
-		if len(result) == 0 {
-			t.Fatalf("Expected %q but not found", expectedRegex)
+		result, out, err := expectRegexWithOutput(child, expectedRegex)
+		if err != nil {
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
 		}
 		if result[1] != hostname {
 			t.Fatalf("Hostname received by client `%v` doesn't match `%v`", result[1], hostname)
@@ -266,16 +269,16 @@ func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
 	defer ctx.reset()
 
 	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=default-restricted --mds-register=false %s", ctx.cmd(), testImage)
-	t.Logf("Command: %v", cmd)
+	t.Logf("Command: %v\n", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Cannot exec rkt: %v", err)
 	}
 
 	expectedRegex := `IPv4: (.*)\r`
-	result, _ := child.ExpectRegexFind(expectedRegex)
-	if len(result) == 0 {
-		t.Fatalf("Expected %q but not found", expectedRegex)
+	result, out, err := expectRegexWithOutput(child, expectedRegex)
+	if err != nil {
+		t.Fatalf("Error: %v\nOutput: %v", err, out)
 	}
 	httpGetAddr := fmt.Sprintf("http://%v:54321", result[1])
 
@@ -296,9 +299,9 @@ func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		expectedRegex := `serving on`
-		result, _ := child.ExpectRegexFind(expectedRegex)
-		if len(result) == 0 {
-			t.Fatalf("Expected %q but not found", expectedRegex)
+		_, out, err := expectRegexWithOutput(child, expectedRegex)
+		if err != nil {
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
 		}
 		body, err := test_netutils.HttpGet(httpGetAddr)
 		if err != nil {
@@ -311,4 +314,221 @@ func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
 	}()
 
 	wg.Wait()
+}
+
+func writeNetwork(t *testing.T, net networkTemplateT, netd string) error {
+	var err error
+	path := filepath.Join(netd, net.Name+".conf")
+	file, err := os.Create(path)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
+	b, err := json.Marshal(net)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Writing", net.Name, "to", path)
+	_, err = file.Write(b)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var networkTemplate string = `
+{
+"name": "{{.Name}}",
+"type": "{{.Typ}}",
+{{ if .Master }}"master": "{{.Master}}",{{end}}
+"ipam": {
+	"type": "{{.IpamTyp}}",
+	{{ if .IpamSubnet }}"subnet": "{{.IpamSubnet}}",{{end}}
+	{{ if .IpamRoutes }}"routes": {{.IpamRoutes}}{{end}}
+	}
+}
+`
+
+type networkTemplateT struct {
+	Name   string
+	Type   string
+	Master string `json:"master,omitempty"`
+	IpMasq bool
+	Ipam   ipamTemplateT
+}
+
+type ipamTemplateT struct {
+	Type   string
+	Subnet string              `json:"subnet,omitempty"`
+	Routes []map[string]string `json:"routes,omitempty"`
+}
+
+func TestTemplates(t *testing.T) {
+	net := networkTemplateT{
+		Name: "ptp0",
+		Type: "ptp",
+		Ipam: ipamTemplateT{
+			Type:   "host-local-ptp",
+			Subnet: "10.1.3.0/24",
+			Routes: []map[string]string{{"dst": "0.0.0.0/0"}},
+		},
+	}
+
+	b, err := json.Marshal(net)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	t.Logf("%v", string(b))
+}
+
+/*
+ * Two containers spawn in the same custom network.
+ * ---
+ * Container 1 opens the http server
+ * Container 2 fires a HttpGet on it
+ * The body of the HttpGet is Container 1's hostname, which must match
+ */
+func testPrivateNetCustomDual(t *testing.T, net networkTemplateT) {
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+	defer ctx.reset()
+
+	configdir := ctx.directories[1].dir
+	netdir := filepath.Join(configdir, "net.d")
+	err := os.MkdirAll(netdir, 0644)
+	defer os.RemoveAll(netdir)
+	if err != nil {
+		t.Fatalf("Cannot create netdir: %v", err)
+	}
+	err = writeNetwork(t, net, netdir)
+	if err != nil {
+		t.Fatalf("Cannot write network file: %v", err)
+	}
+
+	container1IPv4, container1Hostname, abort := make(chan string), make(chan string), make(chan bool)
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		httpServeAddr := "0.0.0.0:54321"
+		testImageArgs := []string{"--exec=/inspect --print-ipv4=eth0 --serve-http=" + httpServeAddr}
+		testImage := patchTestACI("rkt-inspect-networking1.aci", testImageArgs...)
+		defer os.Remove(testImage)
+
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=%v --mds-register=false %s", ctx.cmd(), net.Name, testImage)
+		fmt.Printf("Command: %v\n", cmd)
+		child, err := gexpect.Spawn(cmd)
+		if err != nil {
+			log.Fatalf("Cannot exec rkt: %v", err)
+		}
+
+		expectedRegex := `IPv4: (\d+\.\d+\.\d+\.\d+)`
+		result, out, err := expectRegexTimeoutWithOutput(child, expectedRegex, 30*time.Second)
+		if err != nil {
+			abort <- true
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
+		} else {
+			container1IPv4 <- result[1]
+			expectedRegex = `(rkt-.*): serving on`
+			result, out, err = expectRegexTimeoutWithOutput(child, expectedRegex, 30*time.Second)
+			if err != nil {
+				t.Fatalf("Error: %v\nOutput: %v", err, out)
+				abort <- true
+			} else {
+				container1Hostname <- result[1]
+			}
+		}
+		err = child.Wait()
+		if err != nil {
+			t.Fatalf("rkt didn't terminate correctly: %v", err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		var httpGetAddr string
+		select {
+		case <-abort:
+			return
+		case ipv4 := <-container1IPv4:
+			httpGetAddr = fmt.Sprintf("http://%v:54321", ipv4)
+		}
+
+		testImageArgs := []string{"--exec=/inspect --get-http=" + httpGetAddr}
+		testImage := patchTestACI("rkt-inspect-networking2.aci", testImageArgs...)
+		defer os.Remove(testImage)
+
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=%v --mds-register=false %s", ctx.cmd(), net.Name, testImage)
+		fmt.Printf("Command: %v\n", cmd)
+		child, err := gexpect.Spawn(cmd)
+		if err != nil {
+			t.Fatalf("Cannot exec rkt: %v", err)
+		}
+
+		select {
+		case <-abort:
+		case expectedHostname := <-container1Hostname:
+			expectedRegex := `HTTP-Get received: (.*)\r`
+			result, out, err := expectRegexTimeoutWithOutput(child, expectedRegex, 20*time.Second)
+			if err != nil {
+				t.Fatalf("Error: %v\nOutput: %v", err, out)
+			}
+			t.Logf("HTTP-Get received: %s", result[1])
+			receivedHostname := result[1]
+
+			if receivedHostname != expectedHostname {
+				t.Fatalf("Received hostname `%v` doesn't match `%v`", receivedHostname, expectedHostname)
+			}
+		}
+
+		err = child.Wait()
+		if err != nil {
+			t.Fatalf("rkt didn't terminate correctly: %v", err)
+		}
+	}()
+
+	wg.Wait()
+}
+
+func TestPrivateNetCustomPtp(t *testing.T) {
+	net := networkTemplateT{
+		Name:   "ptp0",
+		Type:   "ptp",
+		IpMasq: false,
+		Ipam: ipamTemplateT{
+			Type:   "host-local-ptp",
+			Subnet: "10.1.3.0/24",
+			Routes: []map[string]string{
+				{"dst": "0.0.0.0/0"},
+			},
+		},
+	}
+	testPrivateNetCustomDual(t, net)
+}
+
+/*
+ * TODO: test connection to host on an outside interface
+ */
+func TestPrivateNetCustomMacvlan(t *testing.T) {
+	ifaces, err := net.Interfaces()
+	var ifaceName string
+	if err != nil {
+		t.Fatalf("Cannot get network host's interfaces: %v", err)
+	} else if len(ifaces) >= 2 {
+		ifaceName = ifaces[1].Name
+	}
+	net := networkTemplateT{
+		Name:   "macvlan0",
+		Type:   "macvlan",
+		Master: ifaceName,
+		Ipam: ipamTemplateT{Type: "host-local",
+			Subnet: "10.1.2.0/24",
+		},
+	}
+	testPrivateNetCustomDual(t, net)
 }
