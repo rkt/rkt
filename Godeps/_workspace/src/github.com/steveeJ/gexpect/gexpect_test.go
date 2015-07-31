@@ -1,8 +1,10 @@
 package gexpect
 
 import (
+	"fmt"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHelloWorld(t *testing.T) {
@@ -51,6 +53,7 @@ func TestHelloWorldFailureCase(t *testing.T) {
 }
 
 func TestBiChannel(t *testing.T) {
+
 	t.Logf("Testing BiChannel screen... ")
 	child, err := Spawn("cat")
 	if err != nil {
@@ -68,12 +71,14 @@ func TestBiChannel(t *testing.T) {
 			}
 		}
 	}
-	sender <- "echo\n"
+
+	endlChar := fmt.Sprintln("")[0]
+	sender <- fmt.Sprintf("echo%c", endlChar)
 	wait("echo")
-	sender <- "echo2"
+	sender <- fmt.Sprintf("echo2%c", endlChar)
 	wait("echo2")
 	child.Close()
-	// child.Wait()
+	child.Wait()
 }
 
 func TestCommandStart(t *testing.T) {
@@ -162,5 +167,72 @@ func TestRegexFind(t *testing.T) {
 					tt.matches[i], matches[i], tt.re, tt.input)
 			}
 		}
+	}
+}
+
+func TestRegexWithOutput(t *testing.T) {
+	t.Logf("Testing Regular Expression search with output...")
+
+	s := "You will not find me"
+	p, err := Spawn("echo -n " + s)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	searchPattern := `I should not find you`
+	result, out, err := p.ExpectRegexFindWithOutput(searchPattern)
+	if err == nil {
+		t.Fatalf("Shouldn't have found `%v` in `%v`", searchPattern, out)
+	}
+	if s != out {
+		t.Fatalf("Child output didn't match: %s", out)
+	}
+
+	err = p.Wait()
+	if err != nil {
+		t.Fatalf("Child didn't terminate correctly: %v", err)
+	}
+
+	p, err = Spawn("echo You will find me")
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	searchPattern = `.*(You will).*`
+	result, out, err = p.ExpectRegexFindWithOutput(searchPattern)
+	if err != nil || result[1] != "You will" {
+		t.Fatalf("Did not find pattern `%v` in `%v'\n", searchPattern, out)
+	}
+	err = p.Wait()
+	if err != nil {
+		t.Fatalf("Child didn't terminate correctly: %v", err)
+	}
+}
+
+func TestRegexTimeoutWithOutput(t *testing.T) {
+	t.Logf("Testing Regular Expression search with output...")
+
+	seconds := 2
+	timeout := time.Duration(seconds-1) * time.Second
+
+	p, err := Spawn(fmt.Sprintf("sh -c 'sleep %d && echo You find me'", seconds))
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	searchPattern := `find me`
+	result, out, err := p.ExpectTimeoutRegexFindWithOutput(searchPattern, timeout)
+	if err == nil {
+		t.Fatalf("Shouldn't finished call with result: %v", result)
+	}
+
+	seconds = 2
+	timeout = time.Duration(seconds+1) * time.Second
+
+	p, err = Spawn(fmt.Sprintf("sh -c 'sleep %d && echo You find me'", seconds))
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	searchPattern = `find me`
+	result, out, err = p.ExpectTimeoutRegexFindWithOutput(searchPattern, timeout)
+	if err != nil {
+		t.Fatalf("Didn't find %v in output: %v", searchPattern, out)
 	}
 }

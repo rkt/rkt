@@ -1,6 +1,6 @@
 package main
 
-import gexpect "github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
+import gexpect "github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 import "log"
 
 func main() {

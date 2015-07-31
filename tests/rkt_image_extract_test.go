@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
 // TestImageExtract tests 'rkt image extract', it will import some existing

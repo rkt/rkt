@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
 // dirDesc structure manages one directory and provides an option for
