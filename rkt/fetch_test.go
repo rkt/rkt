@@ -442,6 +442,44 @@ func TestFetchImage(t *testing.T) {
 	}
 }
 
+func TestFetchImageFromStore(t *testing.T) {
+	dir, err := ioutil.TempDir("", "fetch-image")
+	if err != nil {
+		t.Fatalf("error creating tempdir: %v", err)
+	}
+	defer os.RemoveAll(dir)
+	s, err := store.NewStore(dir)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	defer s.Dump(false)
+
+	// Test an aci without os and arch labels
+	a, err := aci.NewBasicACI(dir, "example.com/app")
+	defer a.Close()
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	// Rewind the ACI
+	if _, err := a.Seek(0, 0); err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	_, err = s.WriteACI(a, false)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
+	ft := &fetcher{
+		imageActionData: imageActionData{
+			s: s,
+		},
+	}
+	_, err = ft.fetchImageFromStore("example.com/app")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 type cachingServerHandler struct {
 	aciBody []byte
 	ascBody []byte

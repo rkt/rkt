@@ -14,15 +14,7 @@
 
 package main
 
-import (
-	"fmt"
-
-	"github.com/coreos/rkt/store"
-
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
-)
+import "github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 
 var (
 	cmdImage = &cobra.Command{
@@ -33,29 +25,4 @@ var (
 
 func init() {
 	cmdRkt.AddCommand(cmdImage)
-}
-
-func getKeyFromAppOrHash(s *store.Store, input string) (string, error) {
-	var key string
-	if _, err := types.NewHash(input); err == nil {
-		key, err = s.ResolveKey(input)
-		if err != nil {
-			return "", fmt.Errorf("cannot resolve key: %v", err)
-		}
-	} else {
-		app, err := discovery.NewAppFromString(input)
-		if err != nil {
-			return "", fmt.Errorf("cannot parse the image name: %v", err)
-		}
-		labels, err := types.LabelsFromMap(app.Labels)
-		if err != nil {
-			return "", fmt.Errorf("invalid labels in the name: %v", err)
-		}
-		key, err = s.GetACI(app.Name, labels)
-		if err != nil {
-			return "", fmt.Errorf("cannot find image: %v", err)
-		}
-	}
-
-	return key, nil
 }

@@ -261,16 +261,7 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 }
 
 func (f *fetcher) fetchImageFromStore(img string) (string, error) {
-	// TODO(sgotti) redo newDiscoveryApp as discovery.DiscoverEndpoint may
-	// have added a defaultVersion label (nil is ignored as it's already
-	// checked in the calling function)
-	// remove when fixed in appc/spec#412
-	app := newDiscoveryApp(img)
-	labels, err := types.LabelsFromMap(app.Labels)
-	if err != nil {
-		return "", err
-	}
-	return f.s.GetACI(app.Name, labels)
+	return getStoreKeyFromApp(f.s, img)
 }
 
 func (f *fetcher) fetchImageFromEndpoints(appName string, ep *discovery.Endpoints, ascFile *os.File, latest bool) (string, error) {
@@ -678,6 +669,38 @@ func discoverApp(app *discovery.App, insecure bool) (*discovery.Endpoints, error
 		return nil, fmt.Errorf("no endpoints discovered")
 	}
 	return ep, nil
+}
+
+func getStoreKeyFromApp(s *store.Store, img string) (string, error) {
+	app, err := discovery.NewAppFromString(img)
+	if err != nil {
+		return "", fmt.Errorf("cannot parse the image name: %v", err)
+	}
+	labels, err := types.LabelsFromMap(app.Labels)
+	if err != nil {
+		return "", fmt.Errorf("invalid labels in the name: %v", err)
+	}
+	key, err := s.GetACI(app.Name, labels)
+	if err != nil {
+		return "", fmt.Errorf("cannot find image: %v", err)
+	}
+	return key, nil
+}
+
+func getStoreKeyFromAppOrHash(s *store.Store, input string) (string, error) {
+	var key string
+	if _, err := types.NewHash(input); err == nil {
+		key, err = s.ResolveKey(input)
+		if err != nil {
+			return "", fmt.Errorf("cannot resolve key: %v", err)
+		}
+	} else {
+		key, err = getStoreKeyFromApp(s, input)
+		if err != nil {
+			return "", fmt.Errorf("cannot find image: %v", err)
+		}
+	}
+	return key, nil
 }
 
 type cacheData struct {
