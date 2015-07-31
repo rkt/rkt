@@ -171,9 +171,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool) error {
 
 	env := app.Environment
 
-	// TOOD(yifan): AC_APP_NAME here is actually an image name.
-	// Think of changing AC_APP_NAME to AC_IMAGE_NAME.
-	env.Set("AC_APP_NAME", imgName.String())
+	env.Set("AC_APP_NAME", appName.String())
 	env.Set("AC_METADATA_URL", p.MetadataServiceURL)
 
 	if err := p.writeEnvFile(env, appName); err != nil {
