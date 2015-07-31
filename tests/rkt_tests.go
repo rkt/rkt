@@ -209,6 +209,14 @@ func expectWithOutput(p *gexpect.ExpectSubprocess, searchString string) error {
 	return expectCommon(p, searchString, 0)
 }
 
+func expectRegexWithOutput(p *gexpect.ExpectSubprocess, searchPattern string) ([]string, string, error) {
+	return p.ExpectRegexFindWithOutput(searchPattern)
+}
+
+func expectRegexTimeoutWithOutput(p *gexpect.ExpectSubprocess, searchPattern string, timeout time.Duration) ([]string, string, error) {
+	return p.ExpectTimeoutRegexFindWithOutput(searchPattern, timeout)
+}
+
 func expectTimeoutWithOutput(p *gexpect.ExpectSubprocess, searchString string, timeout time.Duration) error {
 	return expectCommon(p, searchString, timeout)
 }
