@@ -66,7 +66,7 @@ var defaultConfig = NewConfig(common.DefaultSystemConfigDir, common.DefaultLocal
 
 // CheckSignature is a convenience method for creating a Keystore with a default
 // configuration and invoking CheckSignature.
-func CheckSignature(prefix string, signed, signature io.Reader) (*openpgp.Entity, error) {
+func CheckSignature(prefix string, signed, signature io.ReadSeeker) (*openpgp.Entity, error) {
 	ks := New(defaultConfig)
 	return checkSignature(ks, prefix, signed, signature)
 }
@@ -74,11 +74,11 @@ func CheckSignature(prefix string, signed, signature io.Reader) (*openpgp.Entity
 // CheckSignature takes a signed file and a detached signature and returns the signer
 // if the signature is signed by a trusted signer.
 // If the signer is unknown or not trusted, opengpg.ErrUnknownIssuer is returned.
-func (ks *Keystore) CheckSignature(prefix string, signed, signature io.Reader) (*openpgp.Entity, error) {
+func (ks *Keystore) CheckSignature(prefix string, signed, signature io.ReadSeeker) (*openpgp.Entity, error) {
 	return checkSignature(ks, prefix, signed, signature)
 }
 
-func checkSignature(ks *Keystore, prefix string, signed, signature io.Reader) (*openpgp.Entity, error) {
+func checkSignature(ks *Keystore, prefix string, signed, signature io.ReadSeeker) (*openpgp.Entity, error) {
 	acidentifier, err := types.NewACIdentifier(prefix)
 	if err != nil {
 		return nil, err
@@ -88,6 +88,17 @@ func checkSignature(ks *Keystore, prefix string, signed, signature io.Reader) (*
 		return nil, fmt.Errorf("keystore: error loading keyring %v", err)
 	}
 	entities, err := openpgp.CheckArmoredDetachedSignature(keyring, signed, signature)
+	if err == io.EOF {
+		// When the signature is binary instead of armored, the error is io.EOF.
+		// Let's try with binary signatures as well
+		if _, err := signed.Seek(0, 0); err != nil {
+			return nil, fmt.Errorf("error seeking ACI file: %v", err)
+		}
+		if _, err := signature.Seek(0, 0); err != nil {
+			return nil, fmt.Errorf("error seeking signature file: %v", err)
+		}
+		entities, err = openpgp.CheckDetachedSignature(keyring, signed, signature)
+	}
 	if err == io.EOF {
 		// otherwise, the client failure is just "EOF", which is not helpful
 		return nil, fmt.Errorf("keystore: no valid signatures found in signature file")
