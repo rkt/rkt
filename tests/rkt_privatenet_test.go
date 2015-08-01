@@ -21,12 +21,11 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
-	"github.com/coreos/rkt/tests/test_netutils"
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 /*
@@ -113,7 +112,7 @@ func TestPrivateNetOmittedConnectivity(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error: %v\nOutput: %v", err, out)
 		}
-		body, err := test_netutils.HttpGet(httpGetAddr)
+		body, err := testutils.HttpGet(httpGetAddr)
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}
@@ -135,6 +134,7 @@ func TestPrivateNetDefaultNetNS(t *testing.T) {
 
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
+	defer ctx.reset()
 
 	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=default --mds-register=false %s", ctx.cmd(), testImage)
 	t.Logf("Command: %v\n", cmd)
@@ -162,8 +162,6 @@ func TestPrivateNetDefaultNetNS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
-
-	ctx.reset()
 }
 
 /*
@@ -184,7 +182,7 @@ func TestPrivateNetDefaultConnectivity(t *testing.T) {
 	var httpGetAddr string
 	for _, iface := range ifaces[1:] {
 		name := iface.Name
-		ifaceIPsv4, err := test_netutils.GetIPsv4(name)
+		ifaceIPsv4, err := testutils.GetIPsv4(name)
 		if err != nil {
 			t.Fatalf("Cannot get IPV4 address for interface %v: %v", name, err)
 		}
@@ -303,7 +301,7 @@ func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error: %v\nOutput: %v", err, out)
 		}
-		body, err := test_netutils.HttpGet(httpGetAddr)
+		body, err := testutils.HttpGet(httpGetAddr)
 		if err != nil {
 			log.Fatalf("%v\n", err)
 		}

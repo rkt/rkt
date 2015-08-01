@@ -29,7 +29,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/syndtr/gocapability/capability"
 	"github.com/coreos/rkt/common/cgroup"
-	"github.com/coreos/rkt/tests/test_netutils"
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 var (
@@ -311,7 +311,7 @@ func main() {
 
 	if globalFlags.PrintIPv4 != "" {
 		iface := globalFlags.PrintIPv4
-		ips, err := test_netutils.GetIPsv4(iface)
+		ips, err := testutils.GetIPsv4(iface)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
@@ -320,7 +320,7 @@ func main() {
 	}
 
 	if globalFlags.PrintDefaultGWv4 {
-		gw, err := test_netutils.GetDefaultGWv4()
+		gw, err := testutils.GetDefaultGWv4()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
@@ -329,7 +329,7 @@ func main() {
 	}
 
 	if globalFlags.PrintDefaultGWv6 {
-		gw, err := test_netutils.GetDefaultGWv6()
+		gw, err := testutils.GetDefaultGWv6()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
@@ -340,7 +340,7 @@ func main() {
 	if globalFlags.PrintGWv4 != "" {
 		// TODO: GetGW not implemented yet
 		iface := globalFlags.PrintGWv4
-		gw, err := test_netutils.GetGWv4(iface)
+		gw, err := testutils.GetGWv4(iface)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
@@ -357,7 +357,7 @@ func main() {
 	}
 
 	if globalFlags.ServeHttp != "" {
-		err := test_netutils.HttpServe(globalFlags.ServeHttp, globalFlags.ServeHttpTimeout)
+		err := testutils.HttpServe(globalFlags.ServeHttp, globalFlags.ServeHttpTimeout)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
@@ -365,7 +365,7 @@ func main() {
 	}
 
 	if globalFlags.GetHttp != "" {
-		body, err := test_netutils.HttpGet(globalFlags.GetHttp)
+		body, err := testutils.HttpGet(globalFlags.GetHttp)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
