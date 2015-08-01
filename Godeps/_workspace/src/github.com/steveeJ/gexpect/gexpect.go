@@ -3,6 +3,7 @@ package gexpect
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -200,7 +201,7 @@ func (expect *ExpectSubprocess) expectRegexFind(regex string, output bool) ([]st
 	// convert indexes to strings
 
 	if len(result) == 0 {
-		err = errors.New("ExpectRegex didn't find regex")
+		err = fmt.Errorf("ExpectRegex didn't find regex '%v'.", regex)
 	}
 	return result, stringIndexedInto, err
 }
@@ -213,7 +214,7 @@ func (expect *ExpectSubprocess) expectTimeoutRegexFind(regex string, timeout tim
 	}()
 	go func() {
 		time.Sleep(timeout)
-		err = errors.New("ExpectRegex timed out")
+		err = fmt.Errorf("ExpectRegex timed out after %v finding '%v'.", timeout, regex)
 		t <- true
 	}()
 	<-t
@@ -275,7 +276,7 @@ func (expect *ExpectSubprocess) ExpectTimeout(searchString string, timeout time.
 	select {
 	case e = <-result:
 	case <-time.After(timeout):
-		e = errors.New("Expect timed out.")
+		e = fmt.Errorf("Expect timed out after %v waiting for '%v'.", timeout, searchString)
 	}
 	return e
 }

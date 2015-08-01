@@ -245,7 +245,7 @@
 		},
 		{
 			"ImportPath": "github.com/steveeJ/gexpect",
-			"Rev": "d65e778abc225705bdcb82e5200e00f96a902eef"
+			"Rev": "d56b2c62c0a0ba2733c18b27024a961195f10a17"
 		},
 		{
 			"ImportPath": "github.com/syndtr/gocapability/capability",
