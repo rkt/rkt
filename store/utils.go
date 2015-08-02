@@ -15,15 +15,9 @@
 package store
 
 import (
-	"compress/bzip2"
-	"compress/gzip"
-	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"strings"
-
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
 )
 
 // blockTransform creates a path slice from the given string to use as a
@@ -46,29 +40,4 @@ func blockTransform(s string) []string {
 func parseAlways(s string) *url.URL {
 	u, _ := url.Parse(s)
 	return u
-}
-
-func decompress(rs io.Reader, typ aci.FileType) (io.Reader, error) {
-	var (
-		dr  io.Reader
-		err error
-	)
-	switch typ {
-	case aci.TypeGzip:
-		dr, err = gzip.NewReader(rs)
-		if err != nil {
-			return nil, err
-		}
-	case aci.TypeBzip2:
-		dr = bzip2.NewReader(rs)
-	case aci.TypeXz:
-		dr = aci.XzReader(rs)
-	case aci.TypeTar:
-		dr = rs
-	case aci.TypeUnknown:
-		return nil, errors.New("error: unknown image filetype")
-	default:
-		return nil, errors.New("no type returned from DetectFileType?")
-	}
-	return dr, nil
 }

@@ -15,8 +15,6 @@
 package store
 
 import (
-	"bufio"
-	"bytes"
 	"crypto/sha512"
 	"database/sql"
 	"encoding/json"
@@ -279,21 +277,8 @@ func (s Store) ReadStream(key string) (io.ReadCloser, error) {
 // (i.e. the hash of the uncompressed ACI)
 // latest defines if the aci has to be marked as the latest. For example an ACI
 // discovered without asking for a specific version (latest pattern).
-func (s Store) WriteACI(r io.Reader, latest bool) (string, error) {
-	// Peek at the first 512 bytes of the reader to detect filetype
-	br := bufio.NewReaderSize(r, 32768)
-	hd, err := br.Peek(512)
-	switch err {
-	case nil:
-	case io.EOF: // We may have still peeked enough to guess some types, so fall through
-	default:
-		return "", fmt.Errorf("error reading image header: %v", err)
-	}
-	typ, err := aci.DetectFileType(bytes.NewBuffer(hd))
-	if err != nil {
-		return "", fmt.Errorf("error detecting image type: %v", err)
-	}
-	dr, err := decompress(br, typ)
+func (s Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
+	dr, err := aci.NewCompressedReader(r)
 	if err != nil {
 		return "", fmt.Errorf("error decompressing image: %v", err)
 	}
