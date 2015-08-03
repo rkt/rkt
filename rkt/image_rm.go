@@ -15,8 +15,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/store"
@@ -46,12 +44,6 @@ func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	referencedImgs, err := getReferencedImgs(s)
-	if err != nil {
-		stderr("rkt: cannot get referenced images: %v", err)
-		return 1
-	}
-
 	//TODO(sgotti) Which return code to use when the removal fails only for some images?
 	done := 0
 	errors := 0
@@ -73,35 +65,16 @@ func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 			continue
 		}
 
-		// Remove the image only if the image isn't referenced by
-		// some containers
-		// TODO(sgotti) there's a windows between getting refenced
-		// images and this check where a new container could be
-		// prepared/runned with this image. To avoid this a global lock
-		// is needed.
-		if _, ok := referencedImgs[key]; ok {
-			stderr("rkt: imageID %q is referenced by some containers, cannot remove.", pkey)
-			continue
-		} else {
-			err = s.RemoveACI(key)
-			if err != nil {
-				if serr, ok := err.(*store.StoreRemovalError); ok {
-					staleErrors++
-					stderr("rkt: some files cannot be removed for imageID %q: %v", pkey, serr)
-				} else {
-					stderr("rkt: error removing aci for imageID %q: %v", pkey, err)
-					continue
-				}
-			}
-
-			err = s.RemoveTreeStore(key)
-			if err != nil {
+		if err = s.RemoveACI(key); err != nil {
+			if serr, ok := err.(*store.StoreRemovalError); ok {
 				staleErrors++
-				stderr("rkt: error removing treestore for imageID %q: %v", pkey, err)
+				stderr("rkt: some files cannot be removed for imageID %q: %v", pkey, serr)
+			} else {
+				stderr("rkt: error removing aci for imageID %q: %v", pkey, err)
 				continue
 			}
-			stdout("rkt: successfully removed aci for imageID: %q", pkey)
 		}
+		stdout("rkt: successfully removed aci for imageID: %q", pkey)
 		errors--
 		done++
 	}
@@ -116,39 +89,4 @@ func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 		stderr("rkt: %d image(s) removed but left some stale files", staleErrors)
 	}
 	return 0
-}
-
-func getReferencedImgs(s *store.Store) (map[string]struct{}, error) {
-	imgs := map[string]struct{}{}
-	walkErrors := []error{}
-	// Consider pods in preparing, prepared, run, exitedgarbage state
-	if err := walkPods(includeMostDirs, func(p *pod) {
-		appHashes, err := p.getAppsHashes()
-		if err != nil {
-			// Ignore errors reading/parsing pod file
-			return
-		}
-		stage1Hash, err := p.getStage1Hash()
-		if err != nil {
-			// Ignore errors reading/parsing the stage1 hash file
-			return
-		}
-		allHashes := append(appHashes, *stage1Hash)
-
-		for _, imgHash := range allHashes {
-			key, err := s.ResolveKey(imgHash.String())
-			if err != nil && err != store.ErrKeyNotFound {
-				walkErrors = append(walkErrors, fmt.Errorf("bad imageID %q in pod definition: %v", imgHash.String(), err))
-				return
-			}
-			imgs[key] = struct{}{}
-		}
-	}); err != nil {
-		return nil, fmt.Errorf("failed to get pod handles: %v", err)
-	}
-	if len(walkErrors) > 0 {
-		return nil, fmt.Errorf("errors occured walking pods. errors: %v", walkErrors)
-
-	}
-	return imgs, nil
 }
