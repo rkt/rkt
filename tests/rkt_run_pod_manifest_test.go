@@ -29,6 +29,8 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/syndtr/gocapability/capability"
+
+	"github.com/coreos/rkt/common/cgroup"
 )
 
 const baseAppName = "rkt-inspect"
@@ -122,6 +124,7 @@ func TestPodManifest(t *testing.T) {
 		podManifest    *schema.PodManifest
 		shouldSuccess  bool
 		expectedResult string
+		cgroup         string
 	}{
 		{
 			// Simple read.
@@ -145,6 +148,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			true,
 			"dir1",
+			"",
 		},
 		{
 			// Simple read after write with volume mounted.
@@ -175,6 +179,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			true,
 			"host:foo",
+			"",
 		},
 		{
 			// Simple read after write with read-only mount point, should fail.
@@ -205,6 +210,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			false,
 			`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
+			"",
 		},
 		{
 			// Simple read after write with volume mounted.
@@ -237,6 +243,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			false,
 			`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
+			"",
 		},
 		{
 			// Simple read after write with volume mounted.
@@ -268,6 +275,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			true,
 			"host:bar",
+			"",
 		},
 		{
 			// Simple read after write with volume mounted, no apps in pod manifest.
@@ -287,6 +295,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			true,
 			"host:baz",
+			"",
 		},
 		{
 			// Simple read after write with volume mounted, no apps in pod manifest.
@@ -308,6 +317,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			true,
 			"host:zaz",
+			"",
 		},
 		{
 			// Simple read after write with read-only volume mounted, no apps in pod manifest.
@@ -328,6 +338,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			false,
 			`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
+			"",
 		},
 		{
 			// Print CPU quota, which should be overwritten by the pod manifest.
@@ -354,6 +365,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			true,
 			`CPU Quota: 100`,
+			"cpu",
 		},
 		{
 			// Print memory limit, which should be overwritten by the pod manifest.
@@ -381,6 +393,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			true,
 			`Memory Limit: 4194304`,
+			"memory",
 		},
 		{
 			// Multiple apps in the pod. The first app will read out the content
@@ -427,6 +440,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			true,
 			"host:foo",
+			"",
 		},
 		{
 			// Pod manifest overwrites the image's capability.
@@ -450,6 +464,7 @@ func TestPodManifest(t *testing.T) {
 			},
 			true,
 			fmt.Sprintf("%v=disabled", capability.CAP_NET_ADMIN.String()),
+			"",
 		},
 		{
 			// Pod manifest overwrites the image's capability.
@@ -479,10 +494,16 @@ func TestPodManifest(t *testing.T) {
 			},
 			true,
 			fmt.Sprintf("%v=enabled", capability.CAP_NET_BIND_SERVICE.String()),
+			"",
 		},
 	}
 
 	for i, tt := range tests {
+		if tt.cgroup != "" && !cgroup.IsIsolatorSupported(tt.cgroup) {
+			t.Logf("Skip test #%v: cgroup %s not supported", i, tt.cgroup)
+			continue
+		}
+
 		j := 0
 		for name, patches := range tt.images {
 			imageFile := patchTestACI(name, patches...)
