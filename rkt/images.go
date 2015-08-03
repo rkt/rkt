@@ -495,11 +495,6 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 	}
 
 	if f.ks != nil {
-		manifest, err := aci.ManifestFromImage(aciFile)
-		if err != nil {
-			return nil, aciFile, nil, err
-		}
-
 		if _, err := aciFile.Seek(0, 0); err != nil {
 			return nil, aciFile, nil, fmt.Errorf("error seeking ACI file: %v", err)
 		}
