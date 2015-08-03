@@ -19,18 +19,11 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"net/url"
-	"os"
-	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+
+	"github.com/coreos/rkt/common"
 )
 
 var (
@@ -78,215 +71,17 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	pkls, err := getPubKeyLocations(flagPrefix, args)
+	pkls, err := common.GetPubKeyLocations(flagPrefix, args, flagAllowHTTP, globalFlags.Debug)
 	if err != nil {
 		stderr("Error determining key location: %v", err)
 		return 1
 	}
 
-	if err := addKeys(pkls, flagPrefix); err != nil {
+	if err := common.AddKeys(pkls, flagPrefix, flagAllowHTTP, globalFlags.InsecureSkipVerify,
+		globalFlags.SystemConfigDir, globalFlags.LocalConfigDir); err != nil {
 		stderr("Error adding keys: %v", err)
 		return 1
 	}
 
 	return 0
-}
-
-// addKeys adds the keys listed in pkls at prefix
-func addKeys(pkls []string, prefix string) error {
-	for _, pkl := range pkls {
-		pk, err := getPubKey(pkl)
-		if err != nil {
-			return fmt.Errorf("error accessing key: %v", err)
-		}
-		defer pk.Close()
-
-		accepted, err := reviewKey(prefix, pkl, pk, globalFlags.InsecureSkipVerify)
-		if err != nil {
-			return fmt.Errorf("error reviewing key: %v", err)
-		}
-
-		if !accepted {
-			stderr("Not trusting %q", pkl)
-			continue
-		}
-
-		stderr("Trusting %q for prefix %q.", pkl, flagPrefix)
-
-		if err := addPubKey(prefix, pk); err != nil {
-			return fmt.Errorf("Error adding key: %v", err)
-		}
-	}
-	return nil
-}
-
-// addPubKey adds a key to the keystore
-func addPubKey(prefix string, key *os.File) (err error) {
-	ks := getKeystore()
-
-	var path string
-	if prefix == "" {
-		path, err = ks.StoreTrustedKeyRoot(key)
-		stderr("Added root key at %q", path)
-	} else {
-		path, err = ks.StoreTrustedKeyPrefix(prefix, key)
-		stderr("Added key for prefix %q at %q", prefix, path)
-	}
-
-	return
-}
-
-// getPubKeyLocation either returns the location supplied in argv or discovers one @ prefix
-func getPubKeyLocations(prefix string, args []string) ([]string, error) {
-	if len(args) > 0 {
-		return args, nil
-	}
-
-	if prefix == "" {
-		return nil, fmt.Errorf("at least one key or --prefix required")
-	}
-
-	kls, err := metaDiscoverPubKeyLocations(prefix)
-	if err != nil {
-		return nil, fmt.Errorf("--prefix meta discovery error: %v", err)
-	}
-
-	if len(kls) == 0 {
-		return nil, fmt.Errorf("meta discovery on %s resulted in no keys", prefix)
-	}
-
-	return kls, nil
-}
-
-// metaDiscoverPubKeyLocations discovers the public key through ACDiscovery by applying prefix as an ACApp
-func metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
-	app, err := discovery.NewAppFromString(prefix)
-	if err != nil {
-		return nil, err
-	}
-
-	ep, attempts, err := discovery.DiscoverPublicKeys(*app, flagAllowHTTP)
-	if err != nil {
-		return nil, err
-	}
-
-	if globalFlags.Debug {
-		for _, a := range attempts {
-			fmt.Fprintf(os.Stderr, "meta tag 'ac-discovery-pubkeys' not found on %s: %v\n", a.Prefix, a.Error)
-		}
-	}
-
-	return ep.Keys, nil
-}
-
-// getPubKey retrieves a public key (if remote), and verifies it's a gpg key
-func getPubKey(location string) (*os.File, error) {
-	u, err := url.Parse(location)
-	if err != nil {
-		return nil, err
-	}
-
-	switch u.Scheme {
-	case "":
-		return os.Open(location)
-	case "http":
-		if !flagAllowHTTP {
-			return nil, fmt.Errorf("--insecure-allow-http required for http URLs")
-		}
-		fallthrough
-	case "https":
-		return downloadKey(u.String())
-	}
-
-	return nil, fmt.Errorf("only http and https urls supported")
-}
-
-// downloadKey retrieves the file, storing it in a deleted tempfile
-func downloadKey(url string) (*os.File, error) {
-	tf, err := ioutil.TempFile("", "")
-	if err != nil {
-		return nil, fmt.Errorf("error creating tempfile: %v", err)
-	}
-	os.Remove(tf.Name()) // no need to keep the tempfile around
-
-	defer func() {
-		if err != nil {
-			tf.Close()
-		}
-	}()
-
-	res, err := http.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("error getting key: %v", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
-	}
-
-	if _, err := io.Copy(tf, res.Body); err != nil {
-		return nil, fmt.Errorf("error copying key: %v", err)
-	}
-
-	tf.Seek(0, os.SEEK_SET)
-
-	return tf, nil
-}
-
-func fingerToString(fpr [20]byte) string {
-	str := ""
-	for i, b := range fpr {
-		if i > 0 && i%2 == 0 {
-			str += " "
-			if i == 10 {
-				str += " "
-			}
-		}
-		str += strings.ToUpper(fmt.Sprintf("%.2x", b))
-	}
-	return str
-}
-
-// reviewKey shows the key summary and conditionally asks the user to accept it
-func reviewKey(prefix string, location string, key *os.File, forceAccept bool) (bool, error) {
-	defer key.Seek(0, os.SEEK_SET)
-
-	kr, err := openpgp.ReadArmoredKeyRing(key)
-	if err != nil {
-		return false, fmt.Errorf("error reading key: %v", err)
-	}
-
-	stderr("Prefix: %q\nKey: %q", prefix, location)
-	for _, k := range kr {
-		stderr("GPG key fingerprint is: %s", fingerToString(k.PrimaryKey.Fingerprint))
-		for _, sk := range k.Subkeys {
-			stderr("    Subkey fingerprint: %s", fingerToString(sk.PublicKey.Fingerprint))
-		}
-		for n, _ := range k.Identities {
-			stderr("\t%s", n)
-		}
-	}
-
-	if !forceAccept {
-		in := bufio.NewReader(os.Stdin)
-		for {
-			stderr("Are you sure you want to trust this key (yes/no)?")
-			input, err := in.ReadString('\n')
-			if err != nil {
-				return false, fmt.Errorf("error reading input: %v", err)
-			}
-			switch input {
-			case "yes\n":
-				return true, nil
-			case "no\n":
-				return false, nil
-			default:
-				stderr("Please enter 'yes' or 'no'")
-			}
-		}
-	} else {
-		stderr("rkt: warning: trust fingerprint verification has been disabled")
-	}
-	return true, nil
 }

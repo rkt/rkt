@@ -34,13 +34,14 @@ import (
 	"time"
 
 	docker2aci "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/common"
+	docker2acicommon "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/common"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/ioprogress"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 	pgperrors "github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
@@ -252,7 +253,7 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 	switch u.Scheme {
 	case "http", "https", "file":
 	case "docker":
-		dockerURL := common.ParseDockerURL(path.Join(u.Host, u.Path))
+		dockerURL := docker2acicommon.ParseDockerURL(path.Join(u.Host, u.Path))
 		if dockerURL.Tag == "latest" {
 			latest = true
 		}
@@ -412,6 +413,18 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 		}
 
 		return nil, aciFile, nil, nil
+	}
+
+	// attempt to automatically fetch the public key in case it is available on a TLS connection.
+	if !globalFlags.InsecureSkipVerify && appName != "" {
+		pkls, err := common.GetPubKeyLocations(appName, []string{}, false, globalFlags.Debug)
+		if err != nil {
+			stderr("Error determining key location: %v", err)
+		} else {
+			if err := common.AddKeys(pkls, appName, false, true, globalFlags.SystemConfigDir, globalFlags.LocalConfigDir); err != nil {
+				stderr("Error adding keys: %v", err)
+			}
+		}
 	}
 
 	var retrySignature bool
