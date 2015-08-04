@@ -56,6 +56,47 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
 
 AC_SUBST(RKT_STAGE1_USR_FROM)
 
+m4_define(DEFAULT_STAGE1_NAME,coreos.com/rkt/stage1)
+m4_define(DEFAULT_STAGE1_VERSION,AC_PACKAGE_VERSION)
+AC_ARG_WITH(stage1-default-name,
+	    AS_HELP_STRING([--with-stage1-default-name=stage1_name],
+	                   [default name of stage1, default: DEFAULT_STAGE1_NAME]),
+	    [RKT_STAGE1_DEFAULT_NAME="${withval}"],
+	    [RKT_STAGE1_DEFAULT_NAME=auto])
+
+AC_ARG_WITH(stage1-default-version,
+	    AS_HELP_STRING([--with-stage1-default-version=stage1_version],
+	                   [default version of stage1, default: DEFAULT_STAGE1_VERSION]),
+	    [RKT_STAGE1_DEFAULT_VERSION="${withval}"],
+	    [RKT_STAGE1_DEFAULT_VERSION=auto])
+
+dnl warn if we specified above flags for other flavors than none
+AS_VAR_IF([RKT_STAGE1_USR_FROM], [none],
+	  dnl none flavor
+	  [],
+	  dnl not none flavor
+	  [AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
+	             dnl default
+		     [],
+		     dnl not default
+		     [AC_MSG_WARN([* --with-stage1-default-name is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
+		      RKT_STAGE1_DEFAULT_NAME=auto])
+	   AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
+	             dnl default
+		     [],
+		     dnl not default
+		     [AC_MSG_WARN([* --with-stage1-default-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
+		      RKT_STAGE1_DEFAULT_VERSION=auto])])
+
+AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
+          [RKT_STAGE1_DEFAULT_NAME=DEFAULT_STAGE1_NAME])
+AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
+          [RKT_STAGE1_DEFAULT_VERSION=DEFAULT_STAGE1_VERSION])
+
+RKT_STAGE1_DEFAULT_ACI_LDFLAGS="-X main.defaultStage1Name '${RKT_STAGE1_DEFAULT_NAME}' -X main.defaultStage1Version '${RKT_STAGE1_DEFAULT_VERSION}'"
+
+AC_SUBST(RKT_STAGE1_DEFAULT_ACI_LDFLAGS)
+
 ## STAGE1: Systemd git path for src flavor
 m4_define([DEFAULT_STAGE1_SYSTEMD_SRC], [https://github.com/systemd/systemd.git])
 AC_ARG_WITH(stage1-systemd-src,
@@ -117,13 +158,13 @@ AC_ARG_WITH(stage1-image-path,
             [RKT_STAGE1_IMAGE="${withval}"],
             [RKT_STAGE1_IMAGE=""])
 
-RKT_STAGE1_IMAGE_FLAGS=
+RKT_STAGE1_IMAGE_LDFLAGS=
 # if stage1 image variable is set, add a linker flag to rkt defining the variable
 AS_VAR_IF([RKT_STAGE1_IMAGE], [],
           [],
-          [RKT_STAGE1_IMAGE_FLAGS="-ldflags \"-X main.defaultStage1Image '${RKT_STAGE1_IMAGE}'\""])
+          [RKT_STAGE1_IMAGE_LDFLAGS="-X main.defaultStage1Image '${RKT_STAGE1_IMAGE}'"])
 
-AC_SUBST(RKT_STAGE1_IMAGE_FLAGS)
+AC_SUBST(RKT_STAGE1_IMAGE_LDFLAGS)
 
 AC_ARG_ENABLE([functional-tests],
               AS_HELP_STRING([--enable-functional-tests],
@@ -194,7 +235,6 @@ AC_MSG_RESULT([
 
         stage1 flavor:          '${RKT_STAGE1_USR_FROM}'
         stage1 image path:      '${RKT_STAGE1_IMAGE}'
-        linker flags:           '${RKT_STAGE1_IMAGE_FLAGS}'
         functional tests:       '${RKT_RUN_FUNCTIONAL_TESTS}'])
 
 AS_CASE([${RKT_STAGE1_USR_FROM}],
@@ -202,4 +242,8 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
                 [AC_MSG_RESULT([
         systemd git repo:       '${RKT_STAGE1_SYSTEMD_SRC}'
         systemd version:        '${RKT_STAGE1_SYSTEMD_VER}'])],
-        [])
+        [none],
+	        [AC_MSG_RESULT([
+	stage1 name:            '${RKT_STAGE1_DEFAULT_NAME}'
+	stage1 version:         '${RKT_STAGE1_DEFAULT_VERSION}'])],
+	[])

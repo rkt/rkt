@@ -45,9 +45,11 @@ RKT_STAGE1_SYSTEMD_SRC := @RKT_STAGE1_SYSTEMD_SRC@
 # systemd build version
 RKT_STAGE1_SYSTEMD_VER := @RKT_STAGE1_SYSTEMD_VER@
 # stage1 image flags (the optional custom path linked into binary set by user)
-RKT_STAGE1_IMAGE_FLAGS := @RKT_STAGE1_IMAGE_FLAGS@
+RKT_STAGE1_IMAGE_LDFLAGS := @RKT_STAGE1_IMAGE_LDFLAGS@
 # whether to run functional tests
 RKT_RUN_FUNCTIONAL_TESTS := @RKT_RUN_FUNCTIONAL_TESTS@
+# ld flags for default stage1 name and version
+RKT_STAGE1_DEFAULT_ACI_LDFLAGS := @RKT_STAGE1_DEFAULT_ACI_LDFLAGS@
 
 # build-related directories and binaries
 BUILDDIR ?= $(MK_TOPLEVEL_ABS_SRCDIR)/build-$(distdir)

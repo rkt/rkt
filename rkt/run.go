@@ -34,7 +34,9 @@ import (
 )
 
 var (
-	defaultStage1Image string // either set by linker, or guessed in init()
+	defaultStage1Image   string // either set by linker, or guessed in init()
+	defaultStage1Name    string // set by linker
+	defaultStage1Version string // set by linker
 
 	cmdRun = &cobra.Command{
 		Use:   "run [--volume=name,kind=host,...] IMAGE [-- image-args...[---]]...",
