@@ -1,5 +1,6 @@
 bin/coredumpctl
 bin/journalctl
+bin/mount
 bin/systemctl
 bin/systemd-analyze
 bin/systemd-ask-password
