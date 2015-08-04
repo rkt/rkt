@@ -447,7 +447,7 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 		if _, err := ascFile.Seek(0, 0); err != nil {
 			return nil, nil, nil, fmt.Errorf("error seeking signature file: %v", err)
 		}
-		if entity, err = f.ks.CheckSignature(appName, bytes.NewBuffer([]byte{}), ascFile); err != nil {
+		if entity, err = f.ks.CheckSignature(appName, bytes.NewReader([]byte{}), ascFile); err != nil {
 			if _, ok := err.(pgperrors.SignatureError); !ok {
 				return nil, nil, nil, err
 			}
