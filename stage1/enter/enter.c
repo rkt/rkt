@@ -15,6 +15,7 @@
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <limits.h>
 #include <sched.h>
 #include <signal.h>
@@ -50,17 +51,48 @@ static int openpidfd(int pid, char *which) {
 int main(int argc, char *argv[])
 {
 	int	fd;
-	int	pid;
+	int	pid = 0;
+	char *appname = NULL;
 	pid_t	child;
 	int	status;
 	int	root_fd;
 
+	int c;
+
 	/* The parameters list is specified in
 	 * Documentation/devel/stage1-implementors-guide.md */
-	exit_if(argc < 4,
-		"Usage: %s pid appName cmd [args...]", argv[0])
+	while (1) {
+		int option_index = 0;
+		static struct option long_options[] = {
+		   {"pid",     required_argument, 0,  'p' },
+		   {"appname", required_argument, 0,  'a' },
+		   {0,         0,                 0,  0 }
+		};
 
-	pid = atoi(argv[1]);
+		c = getopt_long(argc, argv, "p:a:",
+				long_options, &option_index);
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'p':
+			pid = atoi(optarg);
+			break;
+		case 'a':
+			appname = optarg;
+			break;
+		case 0:
+			break;
+		case ':':   /* missing option argument */
+		case '?':
+		default:
+			fprintf(stderr, "Usage: %s --pid=1234 "
+					"--appname=name -- cmd [args...]",
+					argv[0]);
+			exit(1);
+		}
+	}
+
 	root_fd = openpidfd(pid, "root");
 
 #define ns(_typ, _nam)							\
@@ -89,25 +121,22 @@ int main(int argc, char *argv[])
 		"Unable to fork");
 
 /* some stuff make the argv->args copy less cryptic */
-#define ENTER_ARGV_FWD_OFFSET		3
 #define DIAGEXEC_ARGV_FWD_OFFSET	6
-#define args_fwd_idx(_idx) \
-	((_idx - ENTER_ARGV_FWD_OFFSET) + DIAGEXEC_ARGV_FWD_OFFSET)
 
 	if(child == 0) {
 		char		root[PATH_MAX];
 		char		env[PATH_MAX];
-		char		*args[args_fwd_idx(argc) + 1 /* NULL terminator */];
-		int		i;
+		char		*args[DIAGEXEC_ARGV_FWD_OFFSET + argc - optind + 1 /* NULL terminator */];
+		int		argsind;
 
 		/* Child goes on to execute /diagexec */
 
 		exit_if(snprintf(root, sizeof(root),
-				 "/opt/stage2/%s/rootfs", argv[2]) == sizeof(root),
+				 "/opt/stage2/%s/rootfs", appname) == sizeof(root),
 			"Root path overflow");
 
 		exit_if(snprintf(env, sizeof(env),
-				 "/rkt/env/%s", argv[2]) == sizeof(env),
+				 "/rkt/env/%s", appname) == sizeof(env),
 			"Env path overflow");
 
 		args[0] = "/diagexec";
@@ -116,10 +145,11 @@ int main(int argc, char *argv[])
 		args[3] = env;
 		args[4] = "0"; /* uid */
 		args[5] = "0"; /* gid */
-		for(i = ENTER_ARGV_FWD_OFFSET; i < argc; i++) {
-			args[args_fwd_idx(i)] = argv[i];
-		}
-		args[args_fwd_idx(i)] = NULL;
+		argsind = DIAGEXEC_ARGV_FWD_OFFSET;
+		while (optind < argc)
+			args[argsind++] = argv[optind++];
+
+		args[argsind] = NULL;
 
 		pexit_if(execv(args[0], args) == -1,
 			"Exec failed");
