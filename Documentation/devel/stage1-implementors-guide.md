@@ -68,7 +68,14 @@ An alternative stage 1 would need to do whatever is appropriate for entering the
 3. cmd to execute.
 4. any cmd arguments.
 
+### `rkt gc` => "coreos.com/rkt/stage1/gc"
 
+It deals with garbage collecting resources allocated by stage1. For example, it removes the network namespace of a pod.
+
+#### Arguments
+
+* `--debug` to activate debugging
+* UUID of the pod
 
 Examples
 --------
@@ -102,6 +109,10 @@ Examples
         {   
             "name": "coreos.com/rkt/stage1/enter",
             "value": "/ex/enter"
+        },
+        {
+            "name": "coreos.com/rkt/stage1/gc",
+            "value": "/ex/gc"
         }
     ]
 }
