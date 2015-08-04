@@ -180,7 +180,7 @@ Images can be run by either their name, their hash, an explicit transport addres
 
 ```
 # Run by Docker registry
-# rkt run docker://quay.io/coreos/etcd:v2.0.0
+# rkt --insecure-skip-verify run docker://quay.io/coreos/etcd:v2.0.0
 ```
 
 #### Passing Arguments
