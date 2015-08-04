@@ -57,7 +57,7 @@ func getLabelPriority(name types.ACIdentifier) int {
 	return len(labelsPriority) + 1
 }
 
-// labelsSlice implements sort.Interface for types.Labels.
+// labelsSlice implements sort.Interface for types.Labels
 type labelsSlice types.Labels
 
 func (p labelsSlice) Len() int { return len(p) }
@@ -67,7 +67,7 @@ func (p labelsSlice) Less(i, j int) bool {
 func (p labelsSlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
 func labelsToString(inLabels types.Labels) string {
-	// take a copy to void changing the original slice
+	// take a copy to avoid changing the original slice
 	labels := append(types.Labels(nil), inLabels...)
 	sort.Sort(labelsSlice(labels))
 
