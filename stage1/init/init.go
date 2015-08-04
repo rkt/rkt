@@ -236,7 +236,7 @@ func installAssets() error {
 }
 
 // getArgsEnv returns the nspawn args and env according to the usr used
-func getArgsEnv(p *Pod, flavor string, debug bool, n networking.Networking) ([]string, []string, error) {
+func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]string, []string, error) {
 	args := []string{}
 	env := os.Environ()
 
@@ -246,7 +246,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n networking.Networking) ([]s
 		// TODO: move to path.go
 		kernelPath := filepath.Join(common.Stage1RootfsPath(p.Root), "bzImage")
 		lkvmPath := filepath.Join(common.Stage1RootfsPath(p.Root), "lkvm")
-		lkvmNetParams, kernelNetParams, err := kvm.GetKVMNetParams(n)
+		lkvmNetArgs, kernelNetParams, err := kvm.GetKVMNetArgs(n)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -293,7 +293,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n networking.Networking) ([]s
 			"--params", strings.Join(kernelParams, " "),
 		}...,
 		)
-		args = append(args, lkvmNetParams...)
+		args = append(args, lkvmNetArgs...)
 
 		if debug {
 			args = append(args, "--debug")
@@ -540,7 +540,7 @@ func stage1() int {
 		}
 	} else {
 		if flavor == "kvm" {
-			fmt.Fprintf(os.Stderr, "Flavor kvm requires private network configuration.\n")
+			fmt.Fprintf(os.Stderr, "Flavor kvm requires private network configuration (try --private-net).\n")
 			return 6
 		}
 		if len(mdsToken) > 0 {
@@ -558,7 +558,7 @@ func stage1() int {
 		return 2
 	}
 
-	args, env, err := getArgsEnv(p, flavor, debug, *n)
+	args, env, err := getArgsEnv(p, flavor, debug, n)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return 3

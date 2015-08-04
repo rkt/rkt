@@ -65,13 +65,11 @@ func main() {
 
 func gcNetworking(podID *types.UUID) error {
 	flavor, err := os.Readlink(filepath.Join(common.Stage1RootfsPath("."), "flavor"))
-
 	if err != nil {
 		return fmt.Errorf("Failed to get stage1 flavor: %v\n", err)
 	}
 
-	var n *networking.Networking
-	n, err = networking.Load(".", podID)
+	n, err := networking.Load(".", podID)
 	switch {
 	case err == nil:
 		n.Teardown(flavor)

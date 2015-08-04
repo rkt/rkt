@@ -51,10 +51,11 @@ type Networking struct {
 	nets   []activeNet
 }
 
+// NetConf local struct extends plugin.NetConf with information about masquerading
+// similar to CNI plugins
 type NetConf struct {
 	plugin.NetConf
 	IPMasq bool `json:"ipMasq"`
-	MTU    int  `json:"mtu"`
 }
 
 // Setup creates a new networking namespace and executes network plugins to
@@ -179,27 +180,27 @@ func (n *Networking) Teardown(flavor string) {
 	// Teardown everything in reverse order of setup.
 	// This should be idempotent -- be tolerant of missing stuff
 
-	if flavor != "kvm" {
-		if err := n.enterHostNS(); err != nil {
-			log.Printf("Error switching to host netns: %v", err)
-			return
-		}
+	if flavor == "kvm" {
+		n.kvmTeardown()
+		return
+	}
+
+	if err := n.enterHostNS(); err != nil {
+		log.Printf("Error switching to host netns: %v", err)
+		return
 	}
 
 	if err := n.unforwardPorts(); err != nil {
 		log.Printf("Error removing forwarded ports: %v", err)
 	}
 
-	if flavor != "kvm" {
-		n.teardownNets(n.nets)
-		if err := syscall.Unmount(n.podNSPath(), 0); err != nil {
-			// if already unmounted, umount(2) returns EINVAL
-			if !os.IsNotExist(err) && err != syscall.EINVAL {
-				log.Printf("Error unmounting %q: %v", n.podNSPath(), err)
-			}
+	n.teardownNets(n.nets)
+
+	if err := syscall.Unmount(n.podNSPath(), 0); err != nil {
+		// if already unmounted, umount(2) returns EINVAL
+		if !os.IsNotExist(err) && err != syscall.EINVAL {
+			log.Printf("Error unmounting %q: %v", n.podNSPath(), err)
 		}
-	} else {
-		n.teardownKvmNets(n.nets)
 	}
 }
 

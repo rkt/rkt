@@ -1,3 +1,17 @@
+// Copyright 2015 The rkt Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // kvm.go file provides networking supporting functions for kvm flavor
 package networking
 
@@ -34,6 +48,9 @@ func setupTapDevice() (netlink.Link, error) {
 	return link, nil
 }
 
+// kvmSetupNetAddressing calls IPAM plugin (with a hack) to reserve an IP to be
+// used by newly create tuntap pair
+// in result it updates activeNet.runtime configuration with IP, Mask and HostIP
 func kvmSetupNetAddressing(network *Networking, n activeNet, ifName string) error {
 	// TODO: very ugly hack, that go through upper plugin, down to ipam plugin
 	n.conf.Type = n.conf.IPAM.Type
@@ -55,6 +72,9 @@ func kvmSetupNetAddressing(network *Networking, n activeNet, ifName string) erro
 	return nil
 }
 
+// kvmSetup prepare new Networking to be used in kvm environment based on tuntap pair interfaces
+// to allow communication with virtual machine created by lkvm tool
+// right now it only supports default "ptp" network type (other types ends with error)
 func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, privateNetList common.PrivateNetList, localConfig string) (*Networking, error) {
 	network := Networking{
 		podEnv: podEnv{
@@ -120,21 +140,40 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, privateNetL
 	return &network, nil
 }
 
-func (e *Networking) teardownKvmNets(nets []activeNet) {
-	for _, n := range nets {
-		switch n.conf.Type {
-		case "ptp":
-			tuntap.RemovePersistentIface(n.runtime.IfName, tuntap.Tap)
-			n.conf.Type = n.conf.IPAM.Type
+/*
+extend Networking struct with methods to clean up kvm specific network configurations
+*/
 
-			_, err := e.execNetPlugin("DEL", &n, n.runtime.IfName)
+// teardownKvmNets teardown every active networking from networking by
+// removing tuntap interface and releasing its ip from IPAM plugin
+func (n *Networking) teardownKvmNets() {
+	for _, an := range n.nets {
+		switch an.conf.Type {
+		case "ptp":
+			// remove tuntap interface
+			tuntap.RemovePersistentIface(an.runtime.IfName, tuntap.Tap)
+			// ugly hack again to directly call IPAM plugin to release IP
+			an.conf.Type = an.conf.IPAM.Type
+
+			_, err := n.execNetPlugin("DEL", &an, an.runtime.IfName)
 			if err != nil {
 				log.Printf("Error executing network plugin: %q", err)
 			}
 		default:
-			log.Printf("Unsupported network type: %q", n.conf.Type)
+			log.Printf("Unsupported network type: %q", an.conf.Type)
 		}
 	}
+}
+
+// kvmTeardown network teardown for kvm flavor based pods
+// similar to Networking.Teardown but without host namespaces
+func (n *Networking) kvmTeardown() {
+
+	if err := n.unforwardPorts(); err != nil {
+		log.Printf("Error removing forwarded ports (kvm): %v", err)
+	}
+	n.teardownKvmNets()
+
 }
 
 // NetParams exposes conf(NetConf)/runtime(NetInfo) data to stage1/init client
