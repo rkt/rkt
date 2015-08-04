@@ -183,6 +183,15 @@ Images can be run by either their name, their hash, an explicit transport addres
 # rkt --insecure-skip-verify run docker://quay.io/coreos/etcd:v2.0.0
 ```
 
+#### Overriding Executable to launch
+
+Application images include an `exec` field that specifies the executable to launch.
+This executable can be overriden by rkt using the `--exec` flag:
+
+```
+# rkt --insecure-skip-verify run docker://busybox --exec /bin/date
+```
+
 #### Passing Arguments
 
 To pass additional arguments to images use the pattern of `image1 -- [image1 flags] --- image2 -- [image2 flags]`.
@@ -190,6 +199,12 @@ For example:
 
 ```
 # rkt run example.com/worker -- --loglevel verbose --- example.com/syncer -- --interval 30s
+```
+
+This can be combined with overridden executables:
+
+```
+# rkt run example.com/worker --exec /bin/ov -- --loglevel verbose --- example.com/syncer --exec /bin/syncer2 -- --interval 30s
 ```
 
 #### Influencing Environment Variables
