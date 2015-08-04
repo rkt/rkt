@@ -581,7 +581,7 @@ nextKey:
 	if curaciinfo != nil {
 		return curaciinfo.BlobKey, nil
 	}
-	return "", fmt.Errorf("aci not found")
+	return "", fmt.Errorf("cannot find aci satisfying name: %q and labels: %s in the local store", name, labelsToString(labels))
 }
 
 func (ds Store) GetAllACIInfos(sortfields []string, ascending bool) ([]*ACIInfo, error) {
