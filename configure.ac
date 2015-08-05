@@ -241,7 +241,8 @@ RKT_REQ_PROG([GOBINARY],[go],[go])
 RKT_REQ_PROG([GOFMTBINARY],[gofmt],[gofmt])
 
 AC_CONFIG_FILES([makelib/variables.mk
-                 stage1/aci/aci-manifest])
+                 stage1/aci/aci-manifest.test:stage1/aci/aci-manifest.in])
+AC_CONFIG_COMMANDS([stage1/aci/aci-manifest], [if cmp --silent stage1/aci/aci-manifest.test stage1/aci/aci-manifest; then :; else cp stage1/aci/aci-manifest.test stage1/aci/aci-manifest; fi;])
 AC_OUTPUT
 AC_MSG_RESULT([
         AC_PACKAGE_NAME ${RKT_VERSION}
