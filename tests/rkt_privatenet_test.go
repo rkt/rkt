@@ -77,6 +77,7 @@ func TestPrivateNetOmittedNetNS(t *testing.T) {
  * localhost address
  */
 func TestPrivateNetOmittedConnectivity(t *testing.T) {
+
 	httpServeAddr := "0.0.0.0:54321"
 	httpGetAddr := "http://127.0.0.1:54321"
 
@@ -95,31 +96,37 @@ func TestPrivateNetOmittedConnectivity(t *testing.T) {
 		t.Fatalf("Cannot exec rkt: %v", err)
 	}
 
+	ga := testutils.NewGoroutineAssistant(t)
 	// Child opens the server
-	c := make(chan struct{})
+	ga.Add(1)
 	go func() {
+		defer ga.Done()
 		err = child.Wait()
 		if err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
+			ga.Fatalf("rkt didn't terminate correctly: %v", err)
+			return
 		}
-		c <- struct{}{}
 	}()
 
 	// Host connects to the child
+	ga.Add(1)
 	go func() {
+		defer ga.Done()
 		expectedRegex := `serving on`
 		_, out, err := expectRegexWithOutput(child, expectedRegex)
 		if err != nil {
-			t.Fatalf("Error: %v\nOutput: %v", err, out)
+			ga.Fatalf("Error: %v\nOutput: %v", err, out)
+			return
 		}
 		body, err := testutils.HttpGet(httpGetAddr)
 		if err != nil {
-			log.Fatalf("%v\n", err)
+			ga.Fatalf("%v\n", err)
+			return
 		}
 		log.Printf("HTTP-Get received: %s", body)
 	}()
 
-	<-c
+	ga.Wait()
 }
 
 /*
@@ -204,46 +211,48 @@ func TestPrivateNetDefaultConnectivity(t *testing.T) {
 	defer ctx.cleanup()
 	defer ctx.reset()
 
-	var wg sync.WaitGroup
+	ga := testutils.NewGoroutineAssistant(t)
 
 	// Host opens the server
-	wg.Add(1)
+	ga.Add(1)
 	go func() {
-		defer wg.Done()
-		err := test_netutils.HttpServe(httpServeAddr, httpServeTimeout)
+		defer ga.Done()
+		err := testutils.HttpServe(httpServeAddr, httpServeTimeout)
 		if err != nil {
 			t.Fatalf("Error during HttpServe: %v", err)
 		}
 	}()
 
 	// Child connects to host
-	wg.Add(1)
+	ga.Add(1)
 	hostname, err := os.Hostname()
 	go func() {
-		defer wg.Done()
+		defer ga.Done()
 		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=default --mds-register=false %s", ctx.cmd(), testImage)
 		t.Logf("Command: %v\n", cmd)
 		child, err := gexpect.Spawn(cmd)
 		if err != nil {
-			t.Fatalf("Cannot exec rkt: %v", err)
+			ga.Fatalf("Cannot exec rkt: %v", err)
+			return
 		}
 		expectedRegex := `HTTP-Get received: (.*)\r`
 		result, out, err := expectRegexWithOutput(child, expectedRegex)
 		if err != nil {
-			t.Fatalf("Error: %v\nOutput: %v", err, out)
+			ga.Fatalf("Error: %v\nOutput: %v", err, out)
+			return
 		}
 		if result[1] != hostname {
-			t.Fatalf("Hostname received by client `%v` doesn't match `%v`", result[1], hostname)
+			ga.Fatalf("Hostname received by client `%v` doesn't match `%v`", result[1], hostname)
+			return
 		}
 
 		err = child.Wait()
 		if err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
+			ga.Fatalf("rkt didn't terminate correctly: %v", err)
 		}
 	}()
 
-	wg.Wait()
-
+	ga.Wait()
 }
 
 /*
@@ -280,38 +289,39 @@ func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
 	}
 	httpGetAddr := fmt.Sprintf("http://%v:54321", result[1])
 
-	var wg sync.WaitGroup
-
+	ga := testutils.NewGoroutineAssistant(t)
 	// Child opens the server
-	wg.Add(1)
+	ga.Add(1)
 	go func() {
-		defer wg.Done()
+		defer ga.Done()
 		err = child.Wait()
 		if err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
+			ga.Fatalf("rkt didn't terminate correctly: %v", err)
 		}
 	}()
 
 	// Host connects to the child
-	wg.Add(1)
+	ga.Add(1)
 	go func() {
-		defer wg.Done()
+		defer ga.Done()
 		expectedRegex := `serving on`
 		_, out, err := expectRegexWithOutput(child, expectedRegex)
 		if err != nil {
-			t.Fatalf("Error: %v\nOutput: %v", err, out)
+			ga.Fatalf("Error: %v\nOutput: %v", err, out)
+			return
 		}
 		body, err := testutils.HttpGet(httpGetAddr)
 		if err != nil {
-			log.Fatalf("%v\n", err)
+			ga.Fatalf("%v\n", err)
+			return
 		}
 		log.Printf("HTTP-Get received: %s", body)
 		if err != nil {
-			log.Fatalf("%v\n", err)
+			ga.Fatalf("%v\n", err)
 		}
 	}()
 
-	wg.Wait()
+	ga.Wait()
 }
 
 func writeNetwork(t *testing.T, net networkTemplateT, netd string) error {
@@ -335,19 +345,6 @@ func writeNetwork(t *testing.T, net networkTemplateT, netd string) error {
 
 	return nil
 }
-
-var networkTemplate string = `
-{
-"name": "{{.Name}}",
-"type": "{{.Typ}}",
-{{ if .Master }}"master": "{{.Master}}",{{end}}
-"ipam": {
-	"type": "{{.IpamTyp}}",
-	{{ if .IpamSubnet }}"subnet": "{{.IpamSubnet}}",{{end}}
-	{{ if .IpamRoutes }}"routes": {{.IpamRoutes}}{{end}}
-	}
-}
-`
 
 type networkTemplateT struct {
 	Name   string
@@ -396,21 +393,21 @@ func testPrivateNetCustomDual(t *testing.T, net networkTemplateT) {
 	configdir := ctx.directories[1].dir
 	netdir := filepath.Join(configdir, "net.d")
 	err := os.MkdirAll(netdir, 0644)
-	defer os.RemoveAll(netdir)
 	if err != nil {
 		t.Fatalf("Cannot create netdir: %v", err)
 	}
+	defer os.RemoveAll(netdir)
 	err = writeNetwork(t, net, netdir)
 	if err != nil {
 		t.Fatalf("Cannot write network file: %v", err)
 	}
 
-	container1IPv4, container1Hostname, abort := make(chan string), make(chan string), make(chan bool)
-	var wg sync.WaitGroup
+	container1IPv4, container1Hostname := make(chan string), make(chan string)
+	ga := testutils.NewGoroutineAssistant(t)
 
-	wg.Add(1)
+	ga.Add(1)
 	go func() {
-		defer wg.Done()
+		defer ga.Done()
 		httpServeAddr := "0.0.0.0:54321"
 		testImageArgs := []string{"--exec=/inspect --print-ipv4=eth0 --serve-http=" + httpServeAddr}
 		testImage := patchTestACI("rkt-inspect-networking1.aci", testImageArgs...)
@@ -420,42 +417,37 @@ func testPrivateNetCustomDual(t *testing.T, net networkTemplateT) {
 		fmt.Printf("Command: %v\n", cmd)
 		child, err := gexpect.Spawn(cmd)
 		if err != nil {
-			log.Fatalf("Cannot exec rkt: %v", err)
+			ga.Fatalf("Cannot exec rkt: %v", err)
+			return
 		}
 
 		expectedRegex := `IPv4: (\d+\.\d+\.\d+\.\d+)`
 		result, out, err := expectRegexTimeoutWithOutput(child, expectedRegex, 30*time.Second)
 		if err != nil {
-			abort <- true
-			t.Fatalf("Error: %v\nOutput: %v", err, out)
-		} else {
-			container1IPv4 <- result[1]
-			expectedRegex = `(rkt-.*): serving on`
-			result, out, err = expectRegexTimeoutWithOutput(child, expectedRegex, 30*time.Second)
-			if err != nil {
-				t.Fatalf("Error: %v\nOutput: %v", err, out)
-				abort <- true
-			} else {
-				container1Hostname <- result[1]
-			}
+			ga.Fatalf("Error: %v\nOutput: %v", err, out)
+			return
 		}
+		container1IPv4 <- result[1]
+		expectedRegex = `(rkt-.*): serving on`
+		result, out, err = expectRegexTimeoutWithOutput(child, expectedRegex, 30*time.Second)
+		if err != nil {
+			ga.Fatalf("Error: %v\nOutput: %v", err, out)
+			return
+		}
+		container1Hostname <- result[1]
+
 		err = child.Wait()
 		if err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
+			ga.Fatalf("rkt didn't terminate correctly: %v", err)
 		}
 	}()
 
-	wg.Add(1)
+	ga.Add(1)
 	go func() {
-		defer wg.Done()
+		defer ga.Done()
 
 		var httpGetAddr string
-		select {
-		case <-abort:
-			return
-		case ipv4 := <-container1IPv4:
-			httpGetAddr = fmt.Sprintf("http://%v:54321", ipv4)
-		}
+		httpGetAddr = fmt.Sprintf("http://%v:54321", <-container1IPv4)
 
 		testImageArgs := []string{"--exec=/inspect --get-http=" + httpGetAddr}
 		testImage := patchTestACI("rkt-inspect-networking2.aci", testImageArgs...)
@@ -468,29 +460,28 @@ func testPrivateNetCustomDual(t *testing.T, net networkTemplateT) {
 			t.Fatalf("Cannot exec rkt: %v", err)
 		}
 
-		select {
-		case <-abort:
-		case expectedHostname := <-container1Hostname:
-			expectedRegex := `HTTP-Get received: (.*)\r`
-			result, out, err := expectRegexTimeoutWithOutput(child, expectedRegex, 20*time.Second)
-			if err != nil {
-				t.Fatalf("Error: %v\nOutput: %v", err, out)
-			}
-			t.Logf("HTTP-Get received: %s", result[1])
-			receivedHostname := result[1]
+		expectedHostname := <-container1Hostname
+		expectedRegex := `HTTP-Get received: (.*)\r`
+		result, out, err := expectRegexTimeoutWithOutput(child, expectedRegex, 20*time.Second)
+		if err != nil {
+			ga.Fatalf("Error: %v\nOutput: %v", err, out)
+			return
+		}
+		t.Logf("HTTP-Get received: %s", result[1])
+		receivedHostname := result[1]
 
-			if receivedHostname != expectedHostname {
-				t.Fatalf("Received hostname `%v` doesn't match `%v`", receivedHostname, expectedHostname)
-			}
+		if receivedHostname != expectedHostname {
+			ga.Fatalf("Received hostname `%v` doesn't match `%v`", receivedHostname, expectedHostname)
+			return
 		}
 
 		err = child.Wait()
 		if err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
+			ga.Fatalf("rkt didn't terminate correctly: %v", err)
 		}
 	}()
 
-	wg.Wait()
+	ga.Wait()
 }
 
 func TestPrivateNetCustomPtp(t *testing.T) {
@@ -500,7 +491,7 @@ func TestPrivateNetCustomPtp(t *testing.T) {
 		IpMasq: false,
 		Ipam: ipamTemplateT{
 			Type:   "host-local-ptp",
-			Subnet: "10.1.3.0/24",
+			Subnet: "10.1.1.0/24",
 			Routes: []map[string]string{
 				{"dst": "0.0.0.0/0"},
 			},
@@ -514,17 +505,20 @@ func TestPrivateNetCustomPtp(t *testing.T) {
  */
 func TestPrivateNetCustomMacvlan(t *testing.T) {
 	ifaces, err := net.Interfaces()
-	var ifaceName string
 	if err != nil {
 		t.Fatalf("Cannot get network host's interfaces: %v", err)
-	} else if len(ifaces) >= 2 {
+	}
+
+	var ifaceName string
+	if len(ifaces) >= 2 {
 		ifaceName = ifaces[1].Name
 	}
 	net := networkTemplateT{
 		Name:   "macvlan0",
 		Type:   "macvlan",
 		Master: ifaceName,
-		Ipam: ipamTemplateT{Type: "host-local",
+		Ipam: ipamTemplateT{
+			Type:   "host-local",
 			Subnet: "10.1.2.0/24",
 		},
 	}
