@@ -16,7 +16,6 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -32,6 +31,7 @@ const (
 	// goMakeFunction is a template for generating all files for a
 	// given module in a given repo.
 	goMakeFunction = "$(shell $(GO_ENV) \"$(DEPSGENTOOL)\" go --repo \"!!!REPO!!!\" --module \"!!!MODULE!!!\" --mode files)"
+	goCmd          = "go"
 )
 
 type depsMode int
@@ -42,7 +42,7 @@ const (
 )
 
 func init() {
-	cmds["go"] = goDeps
+	cmds[goCmd] = goDeps
 }
 
 func goDeps(args []string) string {
@@ -51,7 +51,7 @@ func goDeps(args []string) string {
 	var result string
 	switch mode {
 	case makeMode:
-		result = Generate(target, getGoMakeFunction(repo, module), deps)
+		result = GenerateFileDeps(target, getGoMakeFunction(repo, module), deps)
 	case filesMode:
 		result = strings.Join(deps, " ")
 	default:
@@ -70,8 +70,7 @@ func getGoMakeFunction(repo, module string) string {
 // getArgs parses given parameters and returns target, repo, module and
 // mode. If mode is "files", then target is optional.
 func getGoArgs(args []string) (string, string, string, depsMode) {
-	f := flag.NewFlagSet("depsgen go", flag.ExitOnError)
-	target := f.String("target", "", "Make target (example: $(FOO_BINARY))")
+	f, target := standardFlags(goCmd)
 	repo := f.String("repo", "", "Go repo (example: github.com/coreos/rkt)")
 	module := f.String("module", "", "Module inside Go repo (example: stage1)")
 	mode := f.String("mode", "make", "Mode to use (make - print deps as makefile [default], files - print a list of files)")

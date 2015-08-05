@@ -35,6 +35,7 @@ _BGB_PATH_ := $(_BGB_TMP_PATH_)
 _BGB_PKG_NAME_ := $(REPO_PATH)/$(BGB_PKG_IN_REPO)
 
 $(call setup-dep-file,_BGB_DEPMK,$(_BGB_PKG_NAME_))
+$(call setup-dep-file,_BGB_KV_DEPMK,$(_BGB_PKG_NAME_)/kv)
 
 # Do not depend on depsgen when we are building depsgen. Also, when
 # building depsgen, it will be built first as depsgen.tmp, which in
@@ -51,20 +52,24 @@ $(BGB_BINARY): $(DEPSGENTOOL_STAMP)
 endif
 
 -include $(_BGB_DEPMK)
+-include $(_BGB_KV_DEPMK)
 $(BGB_BINARY): BGB_ADDITIONAL_GO_ENV := $(BGB_ADDITIONAL_GO_ENV)
 $(BGB_BINARY): GO_ENV := $(GO_ENV)
 $(BGB_BINARY): GO := $(GO)
 $(BGB_BINARY): BGB_GO_FLAGS := $(BGB_GO_FLAGS)
+$(BGB_BINARY): _ESCAPED_BGB_GO_FLAGS_ := $(call escape-and-wrap,$(BGB_GO_FLAGS))
 $(BGB_BINARY): _BGB_PKG_NAME_ := $(_BGB_PKG_NAME_)
 $(BGB_BINARY): DEPSGENTOOL := $(DEPSGENTOOL)
 $(BGB_BINARY): _BGB_DEPSGEN_SUFFIX_ := $(_BGB_DEPSGEN_SUFFIX_)
 $(BGB_BINARY): REPO_PATH := $(REPO_PATH)
 $(BGB_BINARY): BGB_PKG_IN_REPO := $(BGB_PKG_IN_REPO)
 $(BGB_BINARY): _BGB_DEPMK := $(_BGB_DEPMK)
+$(BGB_BINARY): _BGB_KV_DEPMK := $(_BGB_KV_DEPMK)
 $(BGB_BINARY): $(_BGB_PATH_) $(_BGB_RKT_SYMLINK_STAMP_) | $(DEPSDIR)
 	set -e; \
 	$(BGB_ADDITIONAL_GO_ENV) $(GO_ENV) "$(GO)" build -o "$@.tmp" $(BGB_GO_FLAGS) "$(_BGB_PKG_NAME_)"; \
 	$(GO_ENV) "$(DEPSGENTOOL)$(_BGB_DEPSGEN_SUFFIX_)" go --repo "$(REPO_PATH)" --module "$(BGB_PKG_IN_REPO)" --target '$$(BGB_BINARY)' >"$(_BGB_DEPMK)"; \
+	$(GO_ENV) "$(DEPSGENTOOL)$(_BGB_DEPSGEN_SUFFIX_)" kv --target '$$(BGB_BINARY)' BGB_GO_FLAGS $(_ESCAPED_BGB_GO_FLAGS_) >"$(_BGB_KV_DEPMK)"; \
 	mv "$@.tmp" "$@"
 
 BGB_PKG_IN_REPO :=
@@ -73,5 +78,6 @@ BGB_GO_FLAGS :=
 BGB_ADDITIONAL_GO_ENV :=
 _BGB_PKG_NAME_ :=
 _BGB_DEPMK :=
+_BGB_KV_DEPMK :=
 _BGB_DEPSGEN_SUFFIX_ :=
 # _BGB_RKT_SYMLINK_STAMP_ deliberately not cleared

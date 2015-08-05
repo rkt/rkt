@@ -15,7 +15,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,22 +31,22 @@ const (
 	// beginning with a dot, which are normally not taken into
 	// account by wildcard.
 	globMakeWildcard = "$(wildcard !!!DIR!!!/*!!!SUFFIX!!!) $(wildcard !!!DIR!!!/.*!!!SUFFIX!!!)"
+	globCmd          = "glob"
 )
 
 func init() {
-	cmds["glob"] = globDeps
+	cmds[globCmd] = globDeps
 }
 
 func globDeps(args []string) string {
 	target, suffix, files := getGlobArgs(args)
-	return Generate(target, getGlobMakeFunction(files, suffix), files)
+	return GenerateFileDeps(target, getGlobMakeFunction(files, suffix), files)
 }
 
 // getGlobArgs parses given parameters and returns a target, a suffix
 // and a list of files.
 func getGlobArgs(args []string) (string, string, []string) {
-	f := flag.NewFlagSet("depsgen glob", flag.ExitOnError)
-	target := f.String("target", "", "Make target (example: $(FOO_BINARY))")
+	f, target := standardFlags(globCmd)
 	suffix := f.String("suffix", "", "File suffix (example: .go)")
 
 	f.Parse(args)
