@@ -93,7 +93,7 @@ func printStatus(p *pod) error {
 
 		stdout("pid=%d\nexited=%t", pid, p.isExited)
 		for app, stat := range stats {
-			stdout("%s=%d", app, stat)
+			stdout("app-%s=%d", app, stat)
 		}
 	}
 	return nil
