@@ -14,4 +14,5 @@
 
 package version
 
-const Version = "0.7.0+git"
+var Version string // value set with linker flags
+// don't you dare modifying this value!

@@ -6,3 +6,4 @@
 /configure
 /makelib/variables.mk
 /build-rkt-*
+/stage1/aci/aci-manifest

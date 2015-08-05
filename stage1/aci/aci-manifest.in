@@ -1,11 +1,11 @@
 {
     "acKind": "ImageManifest",
     "acVersion": "0.6.1",
-    "name": "coreos.com/rkt/stage1",
+    "name": "@RKT_STAGE1_DEFAULT_NAME@",
     "labels": [
         {
             "name": "version",
-            "value": "0.7.0+git"
+            "value": "@RKT_STAGE1_DEFAULT_VERSION@"
         },
         {
             "name": "arch",

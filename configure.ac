@@ -1,6 +1,17 @@
 AC_PREREQ([2.68])
 AC_INIT([rkt], [0.7.0+git], [https://github.com/coreos/rkt/issues])
 
+dnl if version ends with +git, append a short git-hash.
+AS_IF([test `expr match 'AC_PACKAGE_VERSION' '.*+git$'` -gt 0],
+      dnl version has +git suffix
+      [RKT_VERSION="AC_PACKAGE_VERSION`git rev-parse --short HEAD`"],
+      dnl version has no +git suffix
+      [RKT_VERSION="AC_PACKAGE_VERSION"])
+
+RKT_VERSION_LDFLAGS="-X github.com/coreos/rkt/version.Version '${RKT_VERSION}'"
+AC_SUBST(RKT_VERSION)
+AC_SUBST(RKT_VERSION_LDFLAGS)
+
 AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
 
@@ -57,7 +68,6 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
 AC_SUBST(RKT_STAGE1_USR_FROM)
 
 m4_define(DEFAULT_STAGE1_NAME,coreos.com/rkt/stage1)
-m4_define(DEFAULT_STAGE1_VERSION,AC_PACKAGE_VERSION)
 AC_ARG_WITH(stage1-default-name,
 	    AS_HELP_STRING([--with-stage1-default-name=stage1_name],
 	                   [default name of stage1, default: DEFAULT_STAGE1_NAME]),
@@ -66,7 +76,7 @@ AC_ARG_WITH(stage1-default-name,
 
 AC_ARG_WITH(stage1-default-version,
 	    AS_HELP_STRING([--with-stage1-default-version=stage1_version],
-	                   [default version of stage1, default: DEFAULT_STAGE1_VERSION]),
+	                   [default version of stage1, default: same as rkt version]),
 	    [RKT_STAGE1_DEFAULT_VERSION="${withval}"],
 	    [RKT_STAGE1_DEFAULT_VERSION=auto])
 
@@ -91,10 +101,12 @@ AS_VAR_IF([RKT_STAGE1_USR_FROM], [none],
 AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
           [RKT_STAGE1_DEFAULT_NAME=DEFAULT_STAGE1_NAME])
 AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
-          [RKT_STAGE1_DEFAULT_VERSION=DEFAULT_STAGE1_VERSION])
+          [RKT_STAGE1_DEFAULT_VERSION=${RKT_VERSION}])
 
 RKT_STAGE1_DEFAULT_ACI_LDFLAGS="-X main.defaultStage1Name '${RKT_STAGE1_DEFAULT_NAME}' -X main.defaultStage1Version '${RKT_STAGE1_DEFAULT_VERSION}'"
 
+AC_SUBST(RKT_STAGE1_DEFAULT_NAME)
+AC_SUBST(RKT_STAGE1_DEFAULT_VERSION)
 AC_SUBST(RKT_STAGE1_DEFAULT_ACI_LDFLAGS)
 
 ## STAGE1: Systemd git path for src flavor
@@ -228,10 +240,11 @@ RKT_REQ_PROG([GIT],[git],[git])
 RKT_REQ_PROG([GOBINARY],[go],[go])
 RKT_REQ_PROG([GOFMTBINARY],[gofmt],[gofmt])
 
-AC_CONFIG_FILES([makelib/variables.mk])
+AC_CONFIG_FILES([makelib/variables.mk
+                 stage1/aci/aci-manifest])
 AC_OUTPUT
 AC_MSG_RESULT([
-        AC_PACKAGE_NAME AC_PACKAGE_VERSION
+        AC_PACKAGE_NAME ${RKT_VERSION}
 
         stage1 flavor:          '${RKT_STAGE1_USR_FROM}'
         stage1 image path:      '${RKT_STAGE1_IMAGE}'
