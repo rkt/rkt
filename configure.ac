@@ -4,7 +4,7 @@ AC_INIT([rkt], [0.7.0+git], [https://github.com/coreos/rkt/issues])
 dnl if version ends with +git, append a short git-hash.
 AS_IF([test `expr match 'AC_PACKAGE_VERSION' '.*+git$'` -gt 0],
       dnl version has +git suffix, ignore errors (not a git repo)
-      [RKT_VERSION="AC_PACKAGE_VERSION`git rev-parse --short HEAD 2>/dev/null`"],
+      [RKT_VERSION="AC_PACKAGE_VERSION`git rev-parse --short HEAD 2>/dev/null``git diff-index --quiet HEAD 2>/dev/null || echo -dirty`"],
       dnl version has no +git suffix
       [RKT_VERSION="AC_PACKAGE_VERSION"])
 
