@@ -65,7 +65,7 @@ func (e *podEnv) loadNets() ([]activeNet, error) {
 		return nil, err
 	}
 
-	if !netExists(nets, "default") {
+	if !netExists(nets, "default") && !netExists(nets, "default-restricted") {
 		var defaultNet string
 		if e.netsLoadList.Specific("default") || e.netsLoadList.All() {
 			defaultNet = DefaultNetPath
@@ -78,6 +78,11 @@ func (e *podEnv) loadNets() ([]activeNet, error) {
 			return nil, err
 		}
 		nets = append(nets, *n)
+	}
+
+	missing := missingNets(e.netsLoadList, nets)
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("networks not found: %v", strings.Join(missing, ", "))
 	}
 
 	return nets, nil
@@ -256,4 +261,23 @@ func loadUserNets(localConfig string, netsLoadList common.PrivateNetList) ([]act
 	}
 
 	return nets, nil
+}
+
+func missingNets(defined common.PrivateNetList, loaded []activeNet) []string {
+	diff := make(map[string]struct{})
+	for _, n := range defined.Strings() {
+		if n != "all" {
+			diff[n] = struct{}{}
+		}
+	}
+
+	for _, an := range loaded {
+		delete(diff, an.conf.Name)
+	}
+
+	missing := []string{}
+	for n, _ := range diff {
+		missing = append(missing, n)
+	}
+	return missing
 }
