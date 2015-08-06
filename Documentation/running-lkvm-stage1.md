@@ -89,7 +89,7 @@ For example, if you have a container stage1 named `stage1-container.aci` and a l
 
 ## What doesn't work
 
-LKVM support is in an very early stage so not evey feature works yet:
+LKVM support is in an very early stage so not every feature works yet:
 
 * Network support [#1219](https://github.com/coreos/rkt/pull/1219)
 
