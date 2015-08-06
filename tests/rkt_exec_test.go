@@ -19,7 +19,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
 func TestRunOverrideExec(t *testing.T) {
