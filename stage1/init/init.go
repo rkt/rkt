@@ -78,6 +78,7 @@ import (
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/networking"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/stage1/init/kvm"
 )
 
 const (
@@ -292,9 +293,12 @@ func getArgsEnv(p *Pod, flavor string, debug bool) ([]string, []string, error) {
 			args = append(args, "--debug")
 		}
 
-		// TODO: host volume sharing with 9p
 		// TODO: append additional networks settings
 		// args = append(args, network/volumes args...)
+
+		// host volume sharing with 9p
+		nsargs := kvm.VolumesToKvmDiskArgs(p.Manifest.Volumes)
+		args = append(args, nsargs...)
 
 		return args, env, nil
 
@@ -538,7 +542,7 @@ func stage1() int {
 		return 2
 	}
 
-	if err = p.PodToSystemd(interactive); err != nil {
+	if err = p.PodToSystemd(interactive, flavor); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
 		return 2
 	}
