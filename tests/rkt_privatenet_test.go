@@ -28,6 +28,14 @@ import (
 	"github.com/coreos/rkt/tests/testutils"
 )
 
+var httpPortCnt int = 54321
+
+func getNextHttpPort() int {
+	// TODO: use random available port
+	httpPortCnt++
+	return httpPortCnt
+}
+
 /*
  * No private net
  * ---
@@ -78,8 +86,9 @@ func TestPrivateNetOmittedNetNS(t *testing.T) {
  */
 func TestPrivateNetOmittedConnectivity(t *testing.T) {
 
-	httpServeAddr := "0.0.0.0:54321"
-	httpGetAddr := "http://127.0.0.1:54321"
+	httpPort := getNextHttpPort()
+	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
+	httpGetAddr := fmt.Sprintf("http://127.0.0.1:%v", httpPort)
 
 	testImageArgs := []string{"--exec=/inspect --serve-http=" + httpServeAddr}
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
@@ -177,9 +186,11 @@ func TestPrivateNetDefaultNetNS(t *testing.T) {
  * Host launches http server on all interfaces in the host netns
  * Container must be able to connect via any IP address of the host in the
  * default network, which is NATed
+ * TODO: test connection to host on an outside interface
  */
 func TestPrivateNetDefaultConnectivity(t *testing.T) {
-	httpServeAddr := "0.0.0.0:54321"
+	httpPort := getNextHttpPort()
+	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
 	httpServeTimeout := 30
 
 	ifaces, err := net.Interfaces()
@@ -194,7 +205,7 @@ func TestPrivateNetDefaultConnectivity(t *testing.T) {
 			t.Fatalf("Cannot get IPV4 address for interface %v: %v", name, err)
 		}
 		if len(ifaceIPsv4) > 0 {
-			httpGetAddr = fmt.Sprintf("http://%v:54321", ifaceIPsv4[0])
+			httpGetAddr = fmt.Sprintf("http://%v:%v", ifaceIPsv4[0], httpPort)
 			t.Log("Telling the child to connect via", httpGetAddr)
 			break
 		}
@@ -264,7 +275,8 @@ func TestPrivateNetDefaultConnectivity(t *testing.T) {
  * TODO: verify that the container isn't NATed
  */
 func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
-	httpServeAddr := "0.0.0.0:54321"
+	httpPort := getNextHttpPort()
+	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
 	iface := "eth0"
 
 	testImageArgs := []string{fmt.Sprintf("--exec=/inspect --print-ipv4=%v --serve-http=%v", iface, httpServeAddr)}
@@ -287,7 +299,7 @@ func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error: %v\nOutput: %v", err, out)
 	}
-	httpGetAddr := fmt.Sprintf("http://%v:54321", result[1])
+	httpGetAddr := fmt.Sprintf("http://%v:%v", result[1], httpPort)
 
 	ga := testutils.NewGoroutineAssistant(t)
 	// Child opens the server
@@ -347,11 +359,12 @@ func writeNetwork(t *testing.T, net networkTemplateT, netd string) error {
 }
 
 type networkTemplateT struct {
-	Name   string
-	Type   string
-	Master string `json:"master,omitempty"`
-	IpMasq bool
-	Ipam   ipamTemplateT
+	Name      string
+	Type      string
+	Master    string `json:"master,omitempty"`
+	IpMasq    bool
+	IsGateway bool
+	Ipam      ipamTemplateT
 }
 
 type ipamTemplateT struct {
@@ -360,7 +373,7 @@ type ipamTemplateT struct {
 	Routes []map[string]string `json:"routes,omitempty"`
 }
 
-func TestTemplates(t *testing.T) {
+func TestPrivateNetTemplates(t *testing.T) {
 	net := networkTemplateT{
 		Name: "ptp0",
 		Type: "ptp",
@@ -375,7 +388,24 @@ func TestTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	t.Logf("%v", string(b))
+	expected := `{"Name":"ptp0","Type":"ptp","IpMasq":false,"IsGateway":false,"Ipam":{"Type":"host-local-ptp","subnet":"10.1.3.0/24","routes":[{"dst":"0.0.0.0/0"}]}}`
+	if string(b) != expected {
+		t.Fatalf("Template extected:\n%v\ngot:\n%v\n", expected, string(b))
+	}
+}
+
+func prepareTestNet(t *testing.T, ctx *rktRunCtx, nt networkTemplateT) (netdir string) {
+	configdir := ctx.directories[1].dir
+	netdir = filepath.Join(configdir, "net.d")
+	err := os.MkdirAll(netdir, 0644)
+	if err != nil {
+		t.Fatalf("Cannot create netdir: %v", err)
+	}
+	err = writeNetwork(t, nt, netdir)
+	if err != nil {
+		t.Fatalf("Cannot write network file: %v", err)
+	}
+	return netdir
 }
 
 /*
@@ -385,22 +415,15 @@ func TestTemplates(t *testing.T) {
  * Container 2 fires a HttpGet on it
  * The body of the HttpGet is Container 1's hostname, which must match
  */
-func testPrivateNetCustomDual(t *testing.T, net networkTemplateT) {
+func testPrivateNetCustomDual(t *testing.T, nt networkTemplateT) {
+	httpPort := getNextHttpPort()
+
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 	defer ctx.reset()
 
-	configdir := ctx.directories[1].dir
-	netdir := filepath.Join(configdir, "net.d")
-	err := os.MkdirAll(netdir, 0644)
-	if err != nil {
-		t.Fatalf("Cannot create netdir: %v", err)
-	}
+	netdir := prepareTestNet(t, ctx, nt)
 	defer os.RemoveAll(netdir)
-	err = writeNetwork(t, net, netdir)
-	if err != nil {
-		t.Fatalf("Cannot write network file: %v", err)
-	}
 
 	container1IPv4, container1Hostname := make(chan string), make(chan string)
 	ga := testutils.NewGoroutineAssistant(t)
@@ -408,12 +431,12 @@ func testPrivateNetCustomDual(t *testing.T, net networkTemplateT) {
 	ga.Add(1)
 	go func() {
 		defer ga.Done()
-		httpServeAddr := "0.0.0.0:54321"
+		httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
 		testImageArgs := []string{"--exec=/inspect --print-ipv4=eth0 --serve-http=" + httpServeAddr}
 		testImage := patchTestACI("rkt-inspect-networking1.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=%v --mds-register=false %s", ctx.cmd(), net.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
 		fmt.Printf("Command: %v\n", cmd)
 		child, err := gexpect.Spawn(cmd)
 		if err != nil {
@@ -447,13 +470,13 @@ func testPrivateNetCustomDual(t *testing.T, net networkTemplateT) {
 		defer ga.Done()
 
 		var httpGetAddr string
-		httpGetAddr = fmt.Sprintf("http://%v:54321", <-container1IPv4)
+		httpGetAddr = fmt.Sprintf("http://%v:%v", <-container1IPv4, httpPort)
 
 		testImageArgs := []string{"--exec=/inspect --get-http=" + httpGetAddr}
 		testImage := patchTestACI("rkt-inspect-networking2.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=%v --mds-register=false %s", ctx.cmd(), net.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
 		fmt.Printf("Command: %v\n", cmd)
 		child, err := gexpect.Spawn(cmd)
 		if err != nil {
@@ -484,11 +507,99 @@ func testPrivateNetCustomDual(t *testing.T, net networkTemplateT) {
 	ga.Wait()
 }
 
+/*
+ * Host launches http server on all interfaces in the host netns
+ * Container must be able to connect via any IP address of the host in the
+ * macvlan network, which is NAT
+ * TODO: test connection to host on an outside interface
+ */
+func testPrivateNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+	defer ctx.reset()
+
+	netdir := prepareTestNet(t, ctx, nt)
+	defer os.RemoveAll(netdir)
+
+	httpPort := getNextHttpPort()
+	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
+	httpServeTimeout := 30
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		t.Fatalf("Cannot get network host's interfaces: %v", err)
+	}
+
+	var httpGetAddr string
+	for _, iface := range ifaces[1:] {
+		name := iface.Name
+		ifaceIPsv4, err := testutils.GetIPsv4(name)
+		if err != nil {
+			t.Fatalf("Cannot get IPV4 address for interface %v: %v", name, err)
+		}
+		if len(ifaceIPsv4) > 0 {
+			httpGetAddr = fmt.Sprintf("http://%v:%v", ifaceIPsv4[0], httpPort)
+			t.Log("Telling the child to connect via", httpGetAddr)
+			break
+		}
+	}
+	if httpGetAddr == "" {
+		t.Skipf("Can not find any NAT'able IPv4 on the host, skipping..")
+	}
+
+	ga := testutils.NewGoroutineAssistant(t)
+
+	// Host opens the server
+	ga.Add(1)
+	go func() {
+		defer ga.Done()
+		err := testutils.HttpServe(httpServeAddr, httpServeTimeout)
+		if err != nil {
+			t.Fatalf("Error during HttpServe: %v", err)
+		}
+	}()
+
+	// Child connects to host
+	ga.Add(1)
+	hostname, err := os.Hostname()
+	go func() {
+		defer ga.Done()
+		testImageArgs := []string{fmt.Sprintf("--exec=/inspect --get-http=%v", httpGetAddr)}
+		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
+		defer os.Remove(testImage)
+
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
+		t.Logf("Command: %v\n", cmd)
+		child, err := gexpect.Spawn(cmd)
+		if err != nil {
+			ga.Fatalf("Cannot exec rkt: %v", err)
+			return
+		}
+		expectedRegex := `HTTP-Get received: (.*)\r`
+		result, out, err := expectRegexWithOutput(child, expectedRegex)
+		if err != nil {
+			ga.Fatalf("Error: %v\nOutput: %v", err, out)
+			return
+		}
+		if result[1] != hostname {
+			ga.Fatalf("Hostname received by client `%v` doesn't match `%v`", result[1], hostname)
+			return
+		}
+
+		err = child.Wait()
+		if err != nil {
+			ga.Fatalf("rkt didn't terminate correctly: %v", err)
+		}
+	}()
+
+	ga.Wait()
+}
+
 func TestPrivateNetCustomPtp(t *testing.T) {
-	net := networkTemplateT{
+	nt := networkTemplateT{
 		Name:   "ptp0",
 		Type:   "ptp",
-		IpMasq: false,
+		IpMasq: true,
 		Ipam: ipamTemplateT{
 			Type:   "host-local-ptp",
 			Subnet: "10.1.1.0/24",
@@ -497,12 +608,10 @@ func TestPrivateNetCustomPtp(t *testing.T) {
 			},
 		},
 	}
-	testPrivateNetCustomDual(t, net)
+	testPrivateNetCustomNatConnectivity(t, nt)
+	testPrivateNetCustomDual(t, nt)
 }
 
-/*
- * TODO: test connection to host on an outside interface
- */
 func TestPrivateNetCustomMacvlan(t *testing.T) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
@@ -510,10 +619,11 @@ func TestPrivateNetCustomMacvlan(t *testing.T) {
 	}
 
 	var ifaceName string
-	if len(ifaces) >= 2 {
-		ifaceName = ifaces[1].Name
+	if len(ifaces) < 2 {
+		t.Skipf("Cannot run test without non-lo host interface")
 	}
-	net := networkTemplateT{
+	ifaceName = ifaces[1].Name
+	nt := networkTemplateT{
 		Name:   "macvlan0",
 		Type:   "macvlan",
 		Master: ifaceName,
@@ -522,5 +632,34 @@ func TestPrivateNetCustomMacvlan(t *testing.T) {
 			Subnet: "10.1.2.0/24",
 		},
 	}
-	testPrivateNetCustomDual(t, net)
+	testPrivateNetCustomDual(t, nt)
+}
+
+func TestPrivateNetCustomBridge(t *testing.T) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		t.Fatalf("Cannot get network host's interfaces: %v", err)
+	}
+
+	var ifaceName string
+	if len(ifaces) < 2 {
+		t.Skipf("Cannot run test without non-lo host interface")
+	}
+	ifaceName = ifaces[1].Name
+	nt := networkTemplateT{
+		Name:      "bridge0",
+		Type:      "bridge",
+		IpMasq:    true,
+		IsGateway: true,
+		Master:    ifaceName,
+		Ipam: ipamTemplateT{
+			Type:   "host-local",
+			Subnet: "10.1.3.0/24",
+			Routes: []map[string]string{
+				{"dst": "0.0.0.0/0"},
+			},
+		},
+	}
+	testPrivateNetCustomNatConnectivity(t, nt)
+	testPrivateNetCustomDual(t, nt)
 }
