@@ -16,10 +16,6 @@
 			"Rev": "53ec66caf4e952a1384ec93b9f0cde37616e4caf"
 		},
 		{
-			"ImportPath": "github.com/ThomasRooney/gexpect",
-			"Rev": "67f0ed29c4037339afb2dbe91187d2e1012c3ade"
-		},
-		{
 			"ImportPath": "github.com/appc/cni/pkg/ip",
 			"Comment": "v0.1.0",
 			"Rev": "8c8753e40992a00cb1309d3cc5697c7a958450ea"
@@ -246,6 +242,10 @@
 		{
 			"ImportPath": "github.com/spf13/pflag",
 			"Rev": "67cbc198fd11dab704b214c1e629a97af392c085"
+		},
+		{
+			"ImportPath": "github.com/steveeJ/gexpect",
+			"Rev": "d56b2c62c0a0ba2733c18b27024a961195f10a17"
 		},
 		{
 			"ImportPath": "github.com/syndtr/gocapability/capability",

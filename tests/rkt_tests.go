@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/ThomasRooney/gexpect"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
 // dirDesc structure manages one directory and provides an option for
@@ -207,6 +207,14 @@ func expectCommon(p *gexpect.ExpectSubprocess, searchString string, timeout time
 
 func expectWithOutput(p *gexpect.ExpectSubprocess, searchString string) error {
 	return expectCommon(p, searchString, 0)
+}
+
+func expectRegexWithOutput(p *gexpect.ExpectSubprocess, searchPattern string) ([]string, string, error) {
+	return p.ExpectRegexFindWithOutput(searchPattern)
+}
+
+func expectRegexTimeoutWithOutput(p *gexpect.ExpectSubprocess, searchPattern string, timeout time.Duration) ([]string, string, error) {
+	return p.ExpectTimeoutRegexFindWithOutput(searchPattern, timeout)
 }
 
 func expectTimeoutWithOutput(p *gexpect.ExpectSubprocess, searchString string, timeout time.Duration) error {
