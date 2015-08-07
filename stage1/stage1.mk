@@ -21,22 +21,22 @@
 
 STAGE1_STAMPS :=
 STAGE1_USR_STAMPS :=
-STAGE1_SUBDIRS := diagexec prepare-app enter net-plugins net init gc reaper units aci usr_from_$(RKT_STAGE1_USR_FROM)
-STAGE1_ACI := $(BINDIR)/stage1.aci
+_STAGE1_SUBDIRS_ := diagexec prepare-app enter net-plugins net init gc reaper units aci usr_from_$(RKT_STAGE1_USR_FROM)
+_STAGE1_ACI_ := $(BINDIR)/stage1.aci
+STAGE1_COPY_SO_DEPS :=
 STAGE1_INSTALL_FILES :=
 STAGE1_INSTALL_SYMLINKS :=
 STAGE1_INSTALL_DIRS :=
 STAGE1_CREATE_DIRS :=
-STAGE1_COPY_SO_DEPS :=
 
-$(call setup-stamp-file,STAGE1_ASSEMBLE_ACI_STAMP,/assemble_aci)
-$(call setup-stamp-file,STAGE1_FIND_SO_DEPS_STAMP,/find_so_deps)
+$(call setup-stamp-file,_STAGE1_ASSEMBLE_ACI_STAMP_,/assemble_aci)
+$(call setup-stamp-file,_STAGE1_FIND_SO_DEPS_STAMP_,/find_so_deps)
 
-$(call inc-many,$(foreach sd,$(STAGE1_SUBDIRS),$(sd)/$(sd).mk))
+$(call inc-many,$(foreach sd,$(_STAGE1_SUBDIRS_),$(sd)/$(sd).mk))
 
 # var name,whether it has to be split,if yes which word is the created
 # file
-STAGE1_FILE_VARS := \
+_STAGE1_FILE_VARS_ := \
 	INSTALL_FILES:y:2 \
 	INSTALL_SYMLINKS:y:2 \
 	INSTALL_DIRS:y:1 \
@@ -48,7 +48,7 @@ endef
 
 # append contents of STAGE1_INSTALL_FILES to INSTALL_FILES and
 # generate dependencies of created files on $(STAGE1_USR_STAMPS)
-$(foreach v,$(STAGE1_FILE_VARS), \
+$(foreach v,$(_STAGE1_FILE_VARS_), \
 	$(eval _STAGE1_VAR_LIST_ := $(subst :, ,$v)) \
 	$(eval _STAGE1_VAR_NAME_ := $(word 1,$(_STAGE1_VAR_LIST_))) \
 	$(eval _STAGE1_DO_SPLIT_ := $(word 2,$(_STAGE1_VAR_LIST_))) \
@@ -64,43 +64,43 @@ $(foreach v,$(STAGE1_FILE_VARS), \
 	$(eval $(_STAGE1_S1_VAR_NAME_) :=) \
 )
 
-CLEAN_FILES += $(STAGE1_ACI)
-TOPLEVEL_STAMPS += $(STAGE1_ASSEMBLE_ACI_STAMP)
+CLEAN_FILES += $(_STAGE1_ACI_)
+TOPLEVEL_STAMPS += $(_STAGE1_ASSEMBLE_ACI_STAMP_)
 
-$(STAGE1_ASSEMBLE_ACI_STAMP): $(STAGE1_ACI)
+$(_STAGE1_ASSEMBLE_ACI_STAMP_): $(_STAGE1_ACI_)
 	touch "$@"
 
 ifeq ($(STAGE1_COPY_SO_DEPS),)
 
-$(STAGE1_ACI): $(STAGE1_STAMPS)
+$(_STAGE1_ACI_): $(STAGE1_STAMPS)
 
 else
 
-$(STAGE1_ACI): $(STAGE1_FIND_SO_DEPS_STAMP)
+$(_STAGE1_ACI_): $(_STAGE1_FIND_SO_DEPS_STAMP_)
 
 endif
 
-$(STAGE1_ACI): ACIDIR := $(ACIDIR)
-$(STAGE1_ACI): ACTOOL := $(ACTOOL)
-$(STAGE1_ACI): $(ACTOOL_STAMP) | $(BINDIR)
+$(_STAGE1_ACI_): ACIDIR := $(ACIDIR)
+$(_STAGE1_ACI_): ACTOOL := $(ACTOOL)
+$(_STAGE1_ACI_): $(ACTOOL_STAMP) | $(BINDIR)
 	"$(ACTOOL)" build --overwrite "$(ACIDIR)" "$@"
 
 $(STAGE1_STAMPS): $(STAGE1_USR_STAMPS)
 
-STAGE1_LIBDIRS := $(ACIROOTFSDIR)/lib:$(ACIROOTFSDIR)/lib64:$(ACIROOTFSDIR)/usr/lib:$(ACIROOTFSDIR)/usr/lib64
+_STAGE1_LIBDIRS_ := $(ACIROOTFSDIR)/lib:$(ACIROOTFSDIR)/lib64:$(ACIROOTFSDIR)/usr/lib:$(ACIROOTFSDIR)/usr/lib64
 
 ifneq ($(LD_LIBRARY_PATH),)
 
-STAGE1_LIBDIRS := $(STAGE1_LIBDIRS):$(LD_LIBRARY_PATH)
+_STAGE1_LIBDIRS_ := $(_STAGE1_LIBDIRS_):$(LD_LIBRARY_PATH)
 
 endif
 
-$(STAGE1_FIND_SO_DEPS_STAMP): ACIROOTFSDIR := $(ACIROOTFSDIR)
-$(STAGE1_FIND_SO_DEPS_STAMP): STAGE1_LIBDIRS := $(STAGE1_LIBDIRS)
-$(STAGE1_FIND_SO_DEPS_STAMP): INSTALL := $(INSTALL)
-$(STAGE1_FIND_SO_DEPS_STAMP): $(STAGE1_STAMPS)
+$(_STAGE1_FIND_SO_DEPS_STAMP_): ACIROOTFSDIR := $(ACIROOTFSDIR)
+$(_STAGE1_FIND_SO_DEPS_STAMP_): _STAGE1_LIBDIRS_ := $(_STAGE1_LIBDIRS_)
+$(_STAGE1_FIND_SO_DEPS_STAMP_): INSTALL := $(INSTALL)
+$(_STAGE1_FIND_SO_DEPS_STAMP_): $(STAGE1_STAMPS)
 	set -e; \
-	all_libs=$$(find "$(ACIROOTFSDIR)" -type f | xargs file | grep ELF | cut -f1 -d: | LD_LIBRARY_PATH="$(STAGE1_LIBDIRS)" xargs ldd | grep -v '^[^[:space:]]' | grep '/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*(0x[0-9a-fA-F]*)//' -e 's/.*=>[[:space:]]*//' | grep -Fve "$(ACIROOTFSDIR)" | sort -u); \
+	all_libs=$$(find "$(ACIROOTFSDIR)" -type f | xargs file | grep ELF | cut -f1 -d: | LD_LIBRARY_PATH="$(_STAGE1_LIBDIRS_)" xargs ldd | grep -v '^[^[:space:]]' | grep '/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*(0x[0-9a-fA-F]*)//' -e 's/.*=>[[:space:]]*//' | grep -Fve "$(ACIROOTFSDIR)" | sort -u); \
 	for f in $${all_libs}; do \
 		$(INSTALL) -D "$${f}" "$(ACIROOTFSDIR)$${f}"; \
 	done; \
