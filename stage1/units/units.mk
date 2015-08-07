@@ -18,12 +18,14 @@ LOCAL_UNIT_SYMLINKS := \
         reboot.target:$(LOCAL_CTRL_ALT_DEL)
 $(call setup-stamp-file,LOCAL_STAMP)
 
-local-to-aci-unit = $(LOCAL_UNITDIR)/$(notdir $1)
+define LOCAL_SRC_TO_ACI_UNIT
+$(LOCAL_UNITDIR)/$(notdir $1)
+endef
 
 LOCAL_ACI_UNIT_FILES :=
 LOCAL_INSTALL_TRIPLETS :=
 $(foreach u,$(LOCAL_UNIT_FILES), \
-        $(eval _UNITS_MK_ACI_UNIT_ := $(call local-to-aci-unit,$u)) \
+        $(eval _UNITS_MK_ACI_UNIT_ := $(call LOCAL_SRC_TO_ACI_UNIT,$u)) \
         $(eval LOCAL_ACI_UNIT_FILES += $(_UNITS_MK_ACI_UNIT_)) \
         $(eval LOCAL_INSTALL_TRIPLETS += $u:$(_UNITS_MK_ACI_UNIT_):0644) \
         $(eval _UNITS_MK_ACI_UNIT_ :=))
@@ -43,7 +45,7 @@ LOCAL_UNIT_DIRS :=
 LOCAL_UNIT_FILES :=
 LOCAL_STAMP :=
 
-local-to-aci-unit :=
+LOCAL_SRC_TO_ACI_UNIT :=
 
 LOCAL_ACI_UNIT_FILES :=
 LOCAL_INSTALL_TRIPLETS :=
