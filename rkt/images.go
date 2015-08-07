@@ -34,7 +34,7 @@ import (
 	"time"
 
 	docker2aci "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
-	docker2acicommon "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/common"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/common"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -252,7 +252,7 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 	switch u.Scheme {
 	case "http", "https", "file":
 	case "docker":
-		dockerURL := docker2acicommon.ParseDockerURL(path.Join(u.Host, u.Path))
+		dockerURL := common.ParseDockerURL(path.Join(u.Host, u.Path))
 		if dockerURL.Tag == "latest" {
 			latest = true
 		}
