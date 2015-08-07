@@ -15,6 +15,4 @@ $(UFK_REPLACE_FLAVOR_STAMP):
 	ln -sf 'kvm' "$(ACIROOTFSDIR)/flavor"
 	touch "$@"
 
-UFK_INCLUDES :=
-UFK_STAMPS :=
-UFK_REPLACE_FLAVOR_STAMP :=
+$(call undefine-namespaces,UFK)

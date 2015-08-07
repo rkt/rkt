@@ -19,6 +19,6 @@ $(BGB_BINARY): $(MK_PATH) | $(BINDIR)
 
 include makelib/build_go_bin.mk
 
-LOCAL_NAME :=
+$(call undefine-namespaces,LOCAL)
 # RKT_STAMP deliberately not cleared
 # RKT_BINARY deliberately not cleared

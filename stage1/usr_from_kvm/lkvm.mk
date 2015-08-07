@@ -55,15 +55,4 @@ $(LKVM_SRCDIR)/Makefile: | $(LKVM_TMP)
 	git clean -ffdx; \
 	touch "$@"
 
-LKVM_STAMP :=
-LKVM_TMP :=
-LKVM_SRCDIR :=
-LKVM_BINARY :=
-LKVM_ACI_BINARY :=
-LKVM_GIT :=
-LKVM_VERSION := 
-LKVM_STUFFDIR := 
-LKVM_PATCHES := 
-LKVM_PATCH_STAMP :=
-LKVM_PATCHES_DEPMK :=
-
+$(call undefine-namespaces,LKVM)

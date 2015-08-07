@@ -33,6 +33,4 @@ $(BGB_BINARY): $(_ASGB_PATH_)
 
 include makelib/build_go_bin.mk
 
-_ASGB_NAME_ :=
-_ASGB_ACI_BINARY_ :=
-_ASGB_STAMP_ :=
+$(call undefine-namespaces,ASGB _ASGB)

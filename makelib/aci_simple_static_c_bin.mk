@@ -33,7 +33,4 @@ $(_ASSCB_STAMP_): $(_ASSCB_ACI_BINARY_)
 
 include makelib/build_static_c_bin.mk
 
-ASSCB_EXTRA_HEADERS :=
-_ASSCB_NAME_ :=
-_ASSCB_ACI_BINARY_ :=
-_ASSCB_STAMP_ :=
+$(call undefine-namespaces,ASSCB _ASSCB)

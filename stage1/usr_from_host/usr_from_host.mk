@@ -6,3 +6,5 @@ $(UFH_STAMP): ACIROOTFSDIR := $(ACIROOTFSDIR)
 $(UFH_STAMP): | $(ACIROOTFSDIR)
 	ln -sf 'host' "$(ACIROOTFSDIR)/flavor"
 	touch "$@"
+
+$(call undefine-namespaces,UFH)
