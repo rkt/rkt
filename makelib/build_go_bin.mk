@@ -12,13 +12,17 @@
 # MAKEFILE_LIST
 # REPO_PATH
 
-_BGB_TMP_PATH_ ?= $(lastword $(MAKEFILE_LIST))
+_BGB_PATH_ := $(lastword $(MAKEFILE_LIST))
 
-ifeq ($(_BGB_PATH_),)
+# the gopath symlink creation rule should be generated only once, even
+# if we include this file multiple times.
+ifeq ($(_BGB_RKT_SYMLINK_STAMP_),)
+
+# the symlink stamp wasn't yet generated, do it now.
 
 _BGB_RKT_SYMLINK_NAME_ := $(GOPATH)/src/$(REPO_PATH)
 
-$(call setup-custom-stamp-file,_BGB_RKT_SYMLINK_STAMP_,$(_BGB_TMP_PATH_)/rkt-symlink)
+$(call setup-custom-stamp-file,_BGB_RKT_SYMLINK_STAMP_,$(_BGB_PATH_)/rkt-symlink)
 
 $(_BGB_RKT_SYMLINK_STAMP_): | $(_BGB_RKT_SYMLINK_NAME_)
 	touch "$@"
@@ -29,8 +33,6 @@ CREATE_DIRS += $(call to-dir,$(_BGB_RKT_SYMLINK_NAME_))
 _BGB_RKT_SYMLINK_NAME_ :=
 
 endif
-
-_BGB_PATH_ := $(_BGB_TMP_PATH_)
 
 _BGB_PKG_NAME_ := $(REPO_PATH)/$(BGB_PKG_IN_REPO)
 

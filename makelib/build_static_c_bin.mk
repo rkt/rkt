@@ -8,8 +8,7 @@
 # CC - C compiler
 # CFLAGS - flags passed to CC.
 
-_BSCB_TMP_PATH_ ?= $(lastword $(MAKEFILE_LIST))
-_BSCB_PATH_ := $(_BSCB_TMP_PATH_)
+_BSCB_PATH_ := $(lastword $(MAKEFILE_LIST))
 
 $(BSCB_BINARY): CC := $(CC)
 $(BSCB_BINARY): CFLAGS := $(CFLAGS)

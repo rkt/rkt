@@ -9,9 +9,7 @@
 # MK_FILENAME - name of mk file including this file
 # MK_PATH - path of mk file including this file
 
-_ASSCB_TMP_PATH_ ?= $(lastword $(MAKEFILE_LIST))
-_ASSCB_PATH_ := $(_ASSCB_TMP_PATH_)
-
+_ASSCB_PATH_ := $(lastword $(MAKEFILE_LIST))
 _ASSCB_NAME_ := $(patsubst %.mk,%,$(MK_FILENAME))
 _ASSCB_ACI_BINARY_ := $(ACIROOTFSDIR)/$(_ASSCB_NAME_)
 
