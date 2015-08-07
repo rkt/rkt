@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -383,10 +384,15 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 	if u.Scheme == "docker" {
 		registryURL := strings.TrimPrefix(aciURL, "docker://")
 
-		tmpDir, err := f.s.TmpDir()
+		storeTmpDir, err := f.s.TmpDir()
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
 		}
+		tmpDir, err := ioutil.TempDir(storeTmpDir, "docker2aci-")
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		defer os.RemoveAll(tmpDir)
 
 		indexName := docker2aci.GetIndexName(registryURL)
 		user := ""
