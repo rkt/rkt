@@ -87,10 +87,10 @@ endef
 # string.
 # Example: is_a_equal_to_b := $(if $(call equal,a,b),yes,no)
 define equal
-$(strip
-        $(eval _EQ_TMP_ := $(shell expr '$1' = '$2'))
-        $(filter $(_EQ_TMP_),1)
-        $(eval _EQ_TMP_ :=)
+$(strip \
+        $(eval _EQ_TMP_ := $(shell expr '$1' = '$2')) \
+        $(filter $(_EQ_TMP_),1) \
+        $(eval _EQ_TMP_ :=) \
 )
 endef
 
