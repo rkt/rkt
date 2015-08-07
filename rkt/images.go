@@ -44,6 +44,7 @@ import (
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
 	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/version"
 )
 
 type imageActionData struct {
@@ -557,6 +558,7 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 	if etag != "" {
 		req.Header.Add("If-None-Match", etag)
 	}
+	req.Header.Add("User-Agent", fmt.Sprintf("rkt/%s", version.Version))
 
 	client := &http.Client{Transport: transport}
 	res, err := client.Do(req)
