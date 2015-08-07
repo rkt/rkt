@@ -67,8 +67,8 @@ func metaDiscoverPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]s
 	return ep.Keys, nil
 }
 
-// GetPubKey retrieves a public key (if remote), and verifies it's a gpg key
-func GetPubKey(location string, allowHTTP bool) (*os.File, error) {
+// getPubKey retrieves a public key (if remote), and verifies it's a gpg key
+func getPubKey(location string, allowHTTP bool) (*os.File, error) {
 	u, err := url.Parse(location)
 	if err != nil {
 		return nil, err
@@ -123,22 +123,38 @@ func downloadKey(url string) (*os.File, error) {
 }
 
 // addKeys adds the keys listed in pkls at prefix
-func addKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool) error {
+func addKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool, allowOverride bool) error {
+	ks := getKeystore()
+
 	for _, pkl := range pkls {
-		pk, err := GetPubKey(pkl, allowHTTP)
+		pk, err := getPubKey(pkl, allowHTTP)
 		if err != nil {
 			return fmt.Errorf("error accessing key: %v", err)
 		}
 		defer pk.Close()
 
-		accepted, err := reviewKey(prefix, pkl, pk, forceAccept)
+		exists, err := ks.TrustedKeyPrefixExists(prefix, pk)
 		if err != nil {
-			return fmt.Errorf("error reviewing key: %v", err)
+			return fmt.Errorf("error reading key: %v", err)
+		}
+		err = displayKey(prefix, pkl, pk)
+		if err != nil {
+			return fmt.Errorf("error displayKey key: %v", err)
+		}
+		if exists && !allowOverride {
+			stderr("Key %q already in the keystore", pkl)
+			return nil
 		}
 
-		if !accepted {
-			stderr("Not trusting %q", pkl)
-			continue
+		if !forceAccept {
+			accepted, err := reviewKey()
+			if err != nil {
+				return fmt.Errorf("error reviewing key: %v", err)
+			}
+			if !accepted {
+				stderr("Not trusting %q", pkl)
+				continue
+			}
 		}
 
 		if forceAccept {
@@ -147,68 +163,63 @@ func addKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool) err
 			stderr("Trusting %q for prefix %q after fingerprint review.", pkl, prefix)
 		}
 
-		if err := addPubKey(prefix, pk); err != nil {
-			return fmt.Errorf("Error adding key: %v", err)
+		if prefix == "" {
+			path, err := ks.StoreTrustedKeyRoot(pk)
+			if err != nil {
+				return fmt.Errorf("Error adding root key: %v", err)
+			}
+			stderr("Added root key at %q", path)
+		} else {
+			path, err := ks.StoreTrustedKeyPrefix(prefix, pk)
+			if err != nil {
+				return fmt.Errorf("Error adding key for prefix %q: %v", prefix, err)
+			}
+			stderr("Added key for prefix %q at %q", prefix, path)
 		}
 	}
 	return nil
 }
 
-// addPubKey adds a key to the keystore
-func addPubKey(prefix string, key *os.File) (err error) {
-	ks := getKeystore()
-
-	var path string
-	if prefix == "" {
-		path, err = ks.StoreTrustedKeyRoot(key)
-		stderr("Added root key at %q", path)
-	} else {
-		path, err = ks.StoreTrustedKeyPrefix(prefix, key)
-		stderr("Added key for prefix %q at %q", prefix, path)
-	}
-
-	return
-}
-
-// reviewKey shows the key summary and conditionally asks the user to accept it
-func reviewKey(prefix string, location string, key *os.File, forceAccept bool) (bool, error) {
+// displayKey shows the key summary
+func displayKey(prefix string, location string, key *os.File) error {
 	defer key.Seek(0, os.SEEK_SET)
 
 	kr, err := openpgp.ReadArmoredKeyRing(key)
 	if err != nil {
-		return false, fmt.Errorf("error reading key: %v", err)
+		return fmt.Errorf("error reading key: %v", err)
 	}
 
-	stderr("Prefix: %q\nKey: %q", prefix, location)
+	stderr("prefix: %q\nkey: %q", prefix, location)
 	for _, k := range kr {
-		stderr("GPG key fingerprint is: %s", fingerToString(k.PrimaryKey.Fingerprint))
+		stderr("gpg key fingerprint is: %s", fingerToString(k.PrimaryKey.Fingerprint))
 		for _, sk := range k.Subkeys {
-			stderr("    Subkey fingerprint: %s", fingerToString(sk.PublicKey.Fingerprint))
+			stderr("    subkey fingerprint: %s", fingerToString(sk.PublicKey.Fingerprint))
 		}
 		for n, _ := range k.Identities {
 			stderr("\t%s", n)
 		}
 	}
+	return nil
+}
 
-	if !forceAccept {
-		in := bufio.NewReader(os.Stdin)
-		for {
-			stderr("Are you sure you want to trust this key (yes/no)?")
-			input, err := in.ReadString('\n')
-			if err != nil {
-				return false, fmt.Errorf("error reading input: %v", err)
-			}
-			switch input {
-			case "yes\n":
-				return true, nil
-			case "no\n":
-				return false, nil
-			default:
-				stderr("Please enter 'yes' or 'no'")
-			}
+// reviewKey asks the user to accept the key
+func reviewKey() (bool, error) {
+	in := bufio.NewReader(os.Stdin)
+	for {
+		stderr("Are you sure you want to trust this key (yes/no)?")
+		input, err := in.ReadString('\n')
+		if err != nil {
+			return false, fmt.Errorf("error reading input: %v", err)
+		}
+		switch input {
+		case "yes\n":
+			return true, nil
+		case "no\n":
+			return false, nil
+		default:
+			stderr("Please enter 'yes' or 'no'")
 		}
 	}
-	return true, nil
 }
 
 func fingerToString(fpr [20]byte) string {

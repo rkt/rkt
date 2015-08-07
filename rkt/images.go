@@ -420,7 +420,7 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 		if err != nil {
 			stderr("Error determining key location: %v", err)
 		} else {
-			if err := addKeys(pkls, appName, false, true); err != nil {
+			if err := addKeys(pkls, appName, false, true, false); err != nil {
 				stderr("Error adding keys: %v", err)
 			}
 		}

@@ -80,7 +80,7 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 		}
 	}
 
-	if err := addKeys(pkls, flagPrefix, flagAllowHTTP, globalFlags.InsecureSkipVerify); err != nil {
+	if err := addKeys(pkls, flagPrefix, flagAllowHTTP, globalFlags.InsecureSkipVerify, true); err != nil {
 		stderr("Error adding keys: %v", err)
 		return 1
 	}

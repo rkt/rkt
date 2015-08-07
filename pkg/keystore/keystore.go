@@ -136,6 +136,52 @@ func (ks *Keystore) MaskTrustedKeySystemRoot(fingerprint string) (string, error)
 	return dst, ioutil.WriteFile(dst, []byte(""), 0644)
 }
 
+func (ks *Keystore) TrustedKeyPrefixExists(prefix string, r io.ReadSeeker) (bool, error) {
+	defer r.Seek(0, os.SEEK_SET)
+
+	pubkeyBytes, err := ioutil.ReadAll(r)
+	if err != nil {
+		return false, err
+	}
+	entityList, err := openpgp.ReadArmoredKeyRing(bytes.NewReader(pubkeyBytes))
+	if err != nil {
+		return false, err
+	}
+	pubKey := entityList[0].PrimaryKey
+	fileName := fingerprintToFilename(pubKey.Fingerprint)
+
+	acidentifier, err := types.NewACIdentifier(prefix)
+	if err != nil {
+		return false, err
+	}
+
+	// example: /etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
+	pathName := path.Join(ks.LocalPrefixPath, acidentifier.String(), fileName)
+	if _, err := os.Stat(pathName); err == nil {
+		return true, nil
+	}
+
+	// example: /usr/lib/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
+	pathName = path.Join(ks.SystemPrefixPath, acidentifier.String(), fileName)
+	if _, err := os.Stat(pathName); err == nil {
+		return true, nil
+	}
+
+	// example: /etc/rkt/trustedkeys/root.d/8b86de38890ddb7291867b025210bd8888182190
+	pathName = path.Join(ks.LocalRootPath, fileName)
+	if _, err := os.Stat(pathName); err == nil {
+		return true, nil
+	}
+
+	// example: /usr/lib/rkt/trustedkeys/root.d/8b86de38890ddb7291867b025210bd8888182190
+	pathName = path.Join(ks.SystemRootPath, fileName)
+	if _, err := os.Stat(pathName); err == nil {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 // StoreTrustedKeyPrefix stores the contents of public key r as a prefix trusted key.
 func (ks *Keystore) StoreTrustedKeyPrefix(prefix string, r io.Reader) (string, error) {
 	acidentifier, err := types.NewACIdentifier(prefix)
