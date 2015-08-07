@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package main
 
 import (
 	"bufio"
@@ -30,8 +30,8 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
 
-// GetPubKeyLocation either returns the locations supplied in argv or discovers one at prefix
-func GetPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, error) {
+// getPubKeyLocations either returns the locations supplied in argv or discovers one at prefix
+func getPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, error) {
 	if prefix == "" {
 		return nil, fmt.Errorf("at least one key or --prefix required")
 	}
@@ -62,7 +62,7 @@ func metaDiscoverPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]s
 
 	if debug {
 		for _, a := range attempts {
-			fmt.Fprintf(os.Stderr, "meta tag 'ac-discovery-pubkeys' not found on %s: %v\n", a.Prefix, a.Error)
+			stderr("meta tag 'ac-discovery-pubkeys' not found on %s: %v", a.Prefix, a.Error)
 		}
 	}
 
@@ -124,8 +124,8 @@ func downloadKey(url string) (*os.File, error) {
 	return tf, nil
 }
 
-// AddKeys adds the keys listed in pkls at prefix
-func AddKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool, systemConfigDir, localConfigDir string) error {
+// addKeys adds the keys listed in pkls at prefix
+func addKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool, systemConfigDir, localConfigDir string) error {
 	config := keystore.NewConfig(systemConfigDir, localConfigDir)
 	ks := keystore.New(config)
 
@@ -142,14 +142,14 @@ func AddKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool, sys
 		}
 
 		if !accepted {
-			fmt.Fprintf(os.Stderr, "Not trusting %q\n", pkl)
+			stderr("Not trusting %q", pkl)
 			continue
 		}
 
 		if forceAccept {
-			fmt.Fprintf(os.Stderr, "Trusting %q for prefix %q without fingerprint review.\n", pkl, prefix)
+			stderr("Trusting %q for prefix %q without fingerprint review.", pkl, prefix)
 		} else {
-			fmt.Fprintf(os.Stderr, "Trusting %q for prefix %q after fingerprint review.\n", pkl, prefix)
+			stderr("Trusting %q for prefix %q after fingerprint review.", pkl, prefix)
 		}
 
 		if err := addPubKey(prefix, pk, ks); err != nil {
@@ -164,10 +164,10 @@ func addPubKey(prefix string, key *os.File, ks *keystore.Keystore) (err error) {
 	var path string
 	if prefix == "" {
 		path, err = ks.StoreTrustedKeyRoot(key)
-		fmt.Fprintf(os.Stderr, "Added root key at %q\n", path)
+		stderr("Added root key at %q", path)
 	} else {
 		path, err = ks.StoreTrustedKeyPrefix(prefix, key)
-		fmt.Fprintf(os.Stderr, "Added key for prefix %q at %q\n", prefix, path)
+		stderr("Added key for prefix %q at %q", prefix, path)
 	}
 
 	return
@@ -182,21 +182,21 @@ func reviewKey(prefix string, location string, key *os.File, forceAccept bool) (
 		return false, fmt.Errorf("error reading key: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "Prefix: %q\nKey: %q\n", prefix, location)
+	stderr("Prefix: %q\nKey: %q", prefix, location)
 	for _, k := range kr {
-		fmt.Fprintf(os.Stderr, "GPG key fingerprint is: %s\n", fingerToString(k.PrimaryKey.Fingerprint))
+		stderr("GPG key fingerprint is: %s", fingerToString(k.PrimaryKey.Fingerprint))
 		for _, sk := range k.Subkeys {
-			fmt.Fprintf(os.Stderr, "    Subkey fingerprint: %s\n", fingerToString(sk.PublicKey.Fingerprint))
+			stderr("    Subkey fingerprint: %s", fingerToString(sk.PublicKey.Fingerprint))
 		}
 		for n, _ := range k.Identities {
-			fmt.Fprintf(os.Stderr, "\t%s\n", n)
+			stderr("\t%s", n)
 		}
 	}
 
 	if !forceAccept {
 		in := bufio.NewReader(os.Stdin)
 		for {
-			fmt.Fprintf(os.Stderr, "Are you sure you want to trust this key (yes/no)?\n")
+			stderr("Are you sure you want to trust this key (yes/no)?")
 			input, err := in.ReadString('\n')
 			if err != nil {
 				return false, fmt.Errorf("error reading input: %v", err)
@@ -207,7 +207,7 @@ func reviewKey(prefix string, location string, key *os.File, forceAccept bool) (
 			case "no\n":
 				return false, nil
 			default:
-				fmt.Fprintf(os.Stderr, "Please enter 'yes' or 'no'\n")
+				stderr("Please enter 'yes' or 'no'")
 			}
 		}
 	}

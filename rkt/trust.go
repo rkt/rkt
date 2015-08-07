@@ -22,8 +22,6 @@ import (
 	"net/url"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
-
-	"github.com/coreos/rkt/common"
 )
 
 var (
@@ -75,14 +73,14 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 0 {
 		pkls = args
 	} else {
-		pkls, err = common.GetPubKeyLocations(flagPrefix, flagAllowHTTP, globalFlags.Debug)
+		pkls, err = getPubKeyLocations(flagPrefix, flagAllowHTTP, globalFlags.Debug)
 		if err != nil {
 			stderr("Error determining key location: %v", err)
 			return 1
 		}
 	}
 
-	if err := common.AddKeys(pkls, flagPrefix, flagAllowHTTP, globalFlags.InsecureSkipVerify,
+	if err := addKeys(pkls, flagPrefix, flagAllowHTTP, globalFlags.InsecureSkipVerify,
 		globalFlags.SystemConfigDir, globalFlags.LocalConfigDir); err != nil {
 		stderr("Error adding keys: %v", err)
 		return 1

@@ -41,7 +41,6 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/ioprogress"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 	pgperrors "github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
-	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
@@ -417,11 +416,11 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 
 	// attempt to automatically fetch the public key in case it is available on a TLS connection.
 	if !globalFlags.InsecureSkipVerify && appName != "" {
-		pkls, err := common.GetPubKeyLocations(appName, false, globalFlags.Debug)
+		pkls, err := getPubKeyLocations(appName, false, globalFlags.Debug)
 		if err != nil {
 			stderr("Error determining key location: %v", err)
 		} else {
-			if err := common.AddKeys(pkls, appName, false, true, globalFlags.SystemConfigDir, globalFlags.LocalConfigDir); err != nil {
+			if err := addKeys(pkls, appName, false, true, globalFlags.SystemConfigDir, globalFlags.LocalConfigDir); err != nil {
 				stderr("Error adding keys: %v", err)
 			}
 		}
