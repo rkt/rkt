@@ -42,14 +42,20 @@ func (e *podEnv) forwardPorts(fps []ForwardedPort, defIP net.IP) error {
 
 	rule := e.portFwdRuleSpec(chain)
 
-	// outside traffic hitting this host
-	if err = ipt.AppendUnique("nat", "PREROUTING", rule...); err != nil {
-		return err
-	}
-
-	// traffic originating on this host
-	if err = ipt.AppendUnique("nat", "OUTPUT", rule...); err != nil {
-		return err
+	for _, entry := range [][]string{
+		{"nat", "PREROUTING"}, // outside traffic hitting this host
+		{"nat", "OUTPUT"},     // traffic originating on this host
+	} {
+		exists, err := ipt.Exists(entry[0], entry[1], rule...)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			err = ipt.Insert(entry[0], entry[1], 1, rule...)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	for _, p := range fps {
