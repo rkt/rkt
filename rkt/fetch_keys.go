@@ -24,8 +24,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/coreos/rkt/pkg/keystore"
-
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
@@ -125,10 +123,7 @@ func downloadKey(url string) (*os.File, error) {
 }
 
 // addKeys adds the keys listed in pkls at prefix
-func addKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool, systemConfigDir, localConfigDir string) error {
-	config := keystore.NewConfig(systemConfigDir, localConfigDir)
-	ks := keystore.New(config)
-
+func addKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool) error {
 	for _, pkl := range pkls {
 		pk, err := GetPubKey(pkl, allowHTTP)
 		if err != nil {
@@ -152,7 +147,7 @@ func addKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool, sys
 			stderr("Trusting %q for prefix %q after fingerprint review.", pkl, prefix)
 		}
 
-		if err := addPubKey(prefix, pk, ks); err != nil {
+		if err := addPubKey(prefix, pk); err != nil {
 			return fmt.Errorf("Error adding key: %v", err)
 		}
 	}
@@ -160,7 +155,9 @@ func addKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool, sys
 }
 
 // addPubKey adds a key to the keystore
-func addPubKey(prefix string, key *os.File, ks *keystore.Keystore) (err error) {
+func addPubKey(prefix string, key *os.File) (err error) {
+	ks := getKeystore()
+
 	var path string
 	if prefix == "" {
 		path, err = ks.StoreTrustedKeyRoot(key)
