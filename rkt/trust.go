@@ -71,10 +71,15 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	pkls, err := common.GetPubKeyLocations(flagPrefix, args, flagAllowHTTP, globalFlags.Debug)
-	if err != nil {
-		stderr("Error determining key location: %v", err)
-		return 1
+	var pkls []string
+	if len(args) != 0 {
+		pkls = args
+	} else {
+		pkls, err = common.GetPubKeyLocations(flagPrefix, flagAllowHTTP, globalFlags.Debug)
+		if err != nil {
+			stderr("Error determining key location: %v", err)
+			return 1
+		}
 	}
 
 	if err := common.AddKeys(pkls, flagPrefix, flagAllowHTTP, globalFlags.InsecureSkipVerify,

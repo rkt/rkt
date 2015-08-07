@@ -417,7 +417,7 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 
 	// attempt to automatically fetch the public key in case it is available on a TLS connection.
 	if !globalFlags.InsecureSkipVerify && appName != "" {
-		pkls, err := common.GetPubKeyLocations(appName, []string{}, false, globalFlags.Debug)
+		pkls, err := common.GetPubKeyLocations(appName, false, globalFlags.Debug)
 		if err != nil {
 			stderr("Error determining key location: %v", err)
 		} else {

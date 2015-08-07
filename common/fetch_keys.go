@@ -31,11 +31,7 @@ import (
 )
 
 // GetPubKeyLocation either returns the locations supplied in argv or discovers one at prefix
-func GetPubKeyLocations(prefix string, args []string, allowHTTP bool, debug bool) ([]string, error) {
-	if len(args) > 0 {
-		return args, nil
-	}
-
+func GetPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, error) {
 	if prefix == "" {
 		return nil, fmt.Errorf("at least one key or --prefix required")
 	}
