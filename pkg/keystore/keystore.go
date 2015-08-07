@@ -28,6 +28,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	"github.com/coreos/rkt/common"
 )
 
 // A Config structure is used to configure a Keystore.
@@ -46,6 +47,9 @@ type Keystore struct {
 
 // New returns a new Keystore based on config.
 func New(config *Config) *Keystore {
+	if config == nil {
+		config = defaultConfig
+	}
 	return &Keystore{config}
 }
 
@@ -56,6 +60,15 @@ func NewConfig(systemPath, localPath string) *Config {
 		SystemRootPath:   filepath.Join(systemPath, "trustedkeys", "root.d"),
 		SystemPrefixPath: filepath.Join(systemPath, "trustedkeys", "prefix.d"),
 	}
+}
+
+var defaultConfig = NewConfig(common.DefaultSystemConfigDir, common.DefaultLocalConfigDir)
+
+// CheckSignature is a convenience method for creating a Keystore with a default
+// configuration and invoking CheckSignature.
+func CheckSignature(prefix string, signed, signature io.ReadSeeker) (*openpgp.Entity, error) {
+	ks := New(defaultConfig)
+	return checkSignature(ks, prefix, signed, signature)
 }
 
 // CheckSignature takes a signed file and a detached signature and returns the signer
@@ -243,19 +256,12 @@ func fingerprintToFilename(fp [20]byte) string {
 // NewTestKeystore returns a KeyStore, the path to the temp directory, and
 // an error if any.
 func NewTestKeystore() (*Keystore, string, error) {
-	// The system and local config directories defined here are only for
-	// the tests so they can be arbitrary. For simplicity, we use the same
-	// values as common.DefaultSystemConfigDir and
-	// common.DefaultLocalConfigDir.
-	const TestSystemConfigDir = "/usr/lib/rkt"
-	const TestLocalConfigDir = "/etc/rkt"
-
 	dir, err := ioutil.TempDir("", "keystore-test")
 	if err != nil {
 		return nil, "", err
 	}
-	systemDir := filepath.Join(dir, TestSystemConfigDir)
-	localDir := filepath.Join(dir, TestLocalConfigDir)
+	systemDir := filepath.Join(dir, common.DefaultSystemConfigDir)
+	localDir := filepath.Join(dir, common.DefaultLocalConfigDir)
 	c := NewConfig(systemDir, localDir)
 	for _, path := range []string{c.LocalRootPath, c.SystemRootPath, c.LocalPrefixPath, c.SystemPrefixPath} {
 		if err := os.MkdirAll(path, 0755); err != nil {
