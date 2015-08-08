@@ -248,7 +248,8 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		// TODO: move to path.go
 		kernelPath := filepath.Join(common.Stage1RootfsPath(p.Root), "bzImage")
 		lkvmPath := filepath.Join(common.Stage1RootfsPath(p.Root), "lkvm")
-		lkvmNetArgs, kernelNetParams, err := kvm.GetKVMNetArgs(n)
+		netDescriptions := kvm.GetNetworkDescriptions(n)
+		lkvmNetArgs, kernelNetParams, err := kvm.GetKVMNetArgs(netDescriptions)
 		if err != nil {
 			return nil, nil, err
 		}
