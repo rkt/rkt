@@ -136,6 +136,46 @@ func (ks *Keystore) MaskTrustedKeySystemRoot(fingerprint string) (string, error)
 	return dst, ioutil.WriteFile(dst, []byte(""), 0644)
 }
 
+func (ks *Keystore) TrustedKeyPrefixExists(prefix string, r io.ReadSeeker) (bool, error) {
+	defer r.Seek(0, os.SEEK_SET)
+
+	entityList, err := openpgp.ReadArmoredKeyRing(r)
+	if err != nil {
+		return false, err
+	}
+	if len(entityList) < 1 {
+		return false, errors.New("missing opengpg entity")
+	}
+	pubKey := entityList[0].PrimaryKey
+	fileName := fingerprintToFilename(pubKey.Fingerprint)
+
+	acidentifier, err := types.NewACIdentifier(prefix)
+	if err != nil {
+		return false, err
+	}
+
+	pathNames := []string{
+		// example: /etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
+		path.Join(ks.LocalPrefixPath, acidentifier.String(), fileName),
+		// example: /usr/lib/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
+		path.Join(ks.SystemPrefixPath, acidentifier.String(), fileName),
+		// example: /etc/rkt/trustedkeys/root.d/8b86de38890ddb7291867b025210bd8888182190
+		path.Join(ks.LocalRootPath, fileName),
+		// example: /usr/lib/rkt/trustedkeys/root.d/8b86de38890ddb7291867b025210bd8888182190
+		path.Join(ks.SystemRootPath, fileName),
+	}
+	for _, p := range pathNames {
+		_, err := os.Stat(p)
+		if err == nil {
+			return true, nil
+		} else if !os.IsNotExist(err) {
+			return false, fmt.Errorf("cannot check file %q: %v", p, err)
+		}
+	}
+
+	return false, nil
+}
+
 // StoreTrustedKeyPrefix stores the contents of public key r as a prefix trusted key.
 func (ks *Keystore) StoreTrustedKeyPrefix(prefix string, r io.Reader) (string, error) {
 	acidentifier, err := types.NewACIdentifier(prefix)
@@ -161,6 +201,9 @@ func storeTrustedKey(dir string, r io.Reader) (string, error) {
 	entityList, err := openpgp.ReadArmoredKeyRing(bytes.NewReader(pubkeyBytes))
 	if err != nil {
 		return "", err
+	}
+	if len(entityList) < 1 {
+		return "", errors.New("missing opengpg entity")
 	}
 	pubKey := entityList[0].PrimaryKey
 	trustedKeyPath := path.Join(dir, fingerprintToFilename(pubKey.Fingerprint))

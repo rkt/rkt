@@ -414,6 +414,19 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 		return nil, aciFile, nil, nil
 	}
 
+	// attempt to automatically fetch the public key in case it is available on a TLS connection.
+	if !globalFlags.InsecureSkipVerify && appName != "" {
+		pkls, err := getPubKeyLocations(appName, false, globalFlags.Debug)
+		if err != nil {
+			stderr("Error determining key location: %v", err)
+		} else {
+			// no http, don't ask user for accepting the key, no overriding
+			if err := addKeys(pkls, appName, false, true, false); err != nil {
+				stderr("Error adding keys: %v", err)
+			}
+		}
+	}
+
 	var retrySignature bool
 	if f.ks != nil && ascFile == nil {
 		u, err := url.Parse(ascURL)
