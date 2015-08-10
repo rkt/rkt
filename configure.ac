@@ -69,34 +69,34 @@ AC_SUBST(RKT_STAGE1_USR_FROM)
 
 m4_define(DEFAULT_STAGE1_NAME,coreos.com/rkt/stage1)
 AC_ARG_WITH(stage1-default-name,
-	    AS_HELP_STRING([--with-stage1-default-name=stage1_name],
-	                   [default name of stage1, default: DEFAULT_STAGE1_NAME]),
-	    [RKT_STAGE1_DEFAULT_NAME="${withval}"],
-	    [RKT_STAGE1_DEFAULT_NAME=auto])
+            AS_HELP_STRING([--with-stage1-default-name=stage1_name],
+                           [default name of stage1, default: DEFAULT_STAGE1_NAME]),
+            [RKT_STAGE1_DEFAULT_NAME="${withval}"],
+            [RKT_STAGE1_DEFAULT_NAME=auto])
 
 AC_ARG_WITH(stage1-default-version,
-	    AS_HELP_STRING([--with-stage1-default-version=stage1_version],
-	                   [default version of stage1, default: same as rkt version]),
-	    [RKT_STAGE1_DEFAULT_VERSION="${withval}"],
-	    [RKT_STAGE1_DEFAULT_VERSION=auto])
+            AS_HELP_STRING([--with-stage1-default-version=stage1_version],
+                           [default version of stage1, default: same as rkt version]),
+            [RKT_STAGE1_DEFAULT_VERSION="${withval}"],
+            [RKT_STAGE1_DEFAULT_VERSION=auto])
 
 dnl warn if we specified above flags for other flavors than none
 AS_VAR_IF([RKT_STAGE1_USR_FROM], [none],
-	  dnl none flavor
-	  [],
-	  dnl not none flavor
-	  [AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
-	             dnl default
-		     [],
-		     dnl not default
-		     [AC_MSG_WARN([* --with-stage1-default-name is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
-		      RKT_STAGE1_DEFAULT_NAME=auto])
-	   AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
-	             dnl default
-		     [],
-		     dnl not default
-		     [AC_MSG_WARN([* --with-stage1-default-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
-		      RKT_STAGE1_DEFAULT_VERSION=auto])])
+          dnl none flavor
+          [],
+          dnl not none flavor
+          [AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
+                     dnl default
+                     [],
+                     dnl not default
+                     [AC_MSG_WARN([* --with-stage1-default-name is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
+                      RKT_STAGE1_DEFAULT_NAME=auto])
+           AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
+                     dnl default
+                     [],
+                     dnl not default
+                     [AC_MSG_WARN([* --with-stage1-default-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
+                      RKT_STAGE1_DEFAULT_VERSION=auto])])
 
 AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
           [RKT_STAGE1_DEFAULT_NAME=DEFAULT_STAGE1_NAME])
@@ -217,17 +217,22 @@ AC_SUBST(RKT_RUN_FUNCTIONAL_TESTS)
 
 # cross_compiling is a standard autoconf variable.  See the autoconf manual for
 # details.
-AS_VAR_IF([cross_compiling], [no], [GOARCH_FOR_BUILD=${GOARCH_FOR_BUILD:-${GOARCH}}],
-	[AC_MSG_CHECKING([build golang arch])
-	AS_VAR_IF([GOARCH_FOR_BUILD], [],
-		[AS_CASE([${build_cpu}],
-			[x86_64], [GOARCH_FOR_BUILD="amd64"],
-			[aarch64], [GOARCH_FOR_BUILD="arm64"],
-			[powerpc], [GOARCH_FOR_BUILD="ppc64"],
-			[AC_MSG_RESULT([unknown]); AC_MSG_ERROR([unknown build cpu: ${build_cpu}.  Set GOARCH_FOR_BUILD variable.])]);
-		AC_MSG_RESULT([${GOARCH_FOR_BUILD}])],
-		[AC_MSG_RESULT([user supplied ${GOARCH_FOR_BUILD}])])]
-	)
+AS_VAR_IF([cross_compiling], [no],
+          dnl no crosscompilation
+          [GOARCH_FOR_BUILD=${GOARCH_FOR_BUILD:-${GOARCH}}],
+          dnl we do crosscompilation
+          [AC_MSG_CHECKING([build golang arch])
+           AS_VAR_IF([GOARCH_FOR_BUILD], [],
+                     [AS_CASE([${build_cpu}],
+                              [x86_64],
+                                      [GOARCH_FOR_BUILD="amd64"],
+                              [aarch64],
+                                      [GOARCH_FOR_BUILD="arm64"],
+                              [powerpc],
+                                      [GOARCH_FOR_BUILD="ppc64"],
+                              [AC_MSG_RESULT([unknown]); AC_MSG_ERROR([unknown build cpu: ${build_cpu}.  Set GOARCH_FOR_BUILD variable.])])
+                      AC_MSG_RESULT([${GOARCH_FOR_BUILD}])],
+                     [AC_MSG_RESULT([user supplied ${GOARCH_FOR_BUILD}])])])
 
 AC_SUBST(GOARCH_FOR_BUILD)
 
@@ -257,7 +262,7 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
         systemd git repo:       '${RKT_STAGE1_SYSTEMD_SRC}'
         systemd version:        '${RKT_STAGE1_SYSTEMD_VER}'])],
         [none],
-	        [AC_MSG_RESULT([
-	stage1 name:            '${RKT_STAGE1_DEFAULT_NAME}'
-	stage1 version:         '${RKT_STAGE1_DEFAULT_VERSION}'])],
-	[])
+                [AC_MSG_RESULT([
+        stage1 name:            '${RKT_STAGE1_DEFAULT_NAME}'
+        stage1 version:         '${RKT_STAGE1_DEFAULT_VERSION}'])],
+        [])
