@@ -44,6 +44,7 @@ var (
 		Debug              bool
 		Help               bool
 		InsecureSkipVerify bool
+		TrustKeysFromHttps bool
 	}{}
 
 	cmdExitCode int
@@ -60,6 +61,7 @@ func init() {
 	cmdRkt.PersistentFlags().StringVar(&globalFlags.SystemConfigDir, "system-config", common.DefaultSystemConfigDir, "system configuration directory")
 	cmdRkt.PersistentFlags().StringVar(&globalFlags.LocalConfigDir, "local-config", common.DefaultLocalConfigDir, "local configuration directory")
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip all TLS, image or fingerprint verification")
+	cmdRkt.PersistentFlags().BoolVar(&globalFlags.TrustKeysFromHttps, "trust-keys-from-https", true, "automatically trust gpg keys fetched from https")
 }
 
 func init() {
