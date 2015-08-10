@@ -1,6 +1,17 @@
 AC_PREREQ([2.68])
 AC_INIT([rkt], [0.7.0+git], [https://github.com/coreos/rkt/issues])
 
+dnl if version ends with +git, append a short git-hash.
+AS_IF([test `expr match 'AC_PACKAGE_VERSION' '.*+git$'` -gt 0],
+      dnl version has +git suffix, ignore errors (not a git repo)
+      [RKT_VERSION="AC_PACKAGE_VERSION`git rev-parse --short HEAD 2>/dev/null``git diff-index --quiet HEAD 2>/dev/null || echo -dirty`"],
+      dnl version has no +git suffix
+      [RKT_VERSION="AC_PACKAGE_VERSION"])
+
+RKT_VERSION_LDFLAGS="-X github.com/coreos/rkt/version.Version '${RKT_VERSION}'"
+AC_SUBST(RKT_VERSION)
+AC_SUBST(RKT_VERSION_LDFLAGS)
+
 AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
 
@@ -55,6 +66,48 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
         [AC_MSG_ERROR([*** stage1 build type '${RKT_STAGE1_USR_FROM}' unsupported])])
 
 AC_SUBST(RKT_STAGE1_USR_FROM)
+
+m4_define(DEFAULT_STAGE1_NAME,coreos.com/rkt/stage1)
+AC_ARG_WITH(stage1-default-name,
+            AS_HELP_STRING([--with-stage1-default-name=stage1_name],
+                           [default name of stage1, default: DEFAULT_STAGE1_NAME]),
+            [RKT_STAGE1_DEFAULT_NAME="${withval}"],
+            [RKT_STAGE1_DEFAULT_NAME=auto])
+
+AC_ARG_WITH(stage1-default-version,
+            AS_HELP_STRING([--with-stage1-default-version=stage1_version],
+                           [default version of stage1, default: same as rkt version]),
+            [RKT_STAGE1_DEFAULT_VERSION="${withval}"],
+            [RKT_STAGE1_DEFAULT_VERSION=auto])
+
+dnl warn if we specified above flags for other flavors than none
+AS_VAR_IF([RKT_STAGE1_USR_FROM], [none],
+          dnl none flavor
+          [],
+          dnl not none flavor
+          [AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
+                     dnl default
+                     [],
+                     dnl not default
+                     [AC_MSG_WARN([* --with-stage1-default-name is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
+                      RKT_STAGE1_DEFAULT_NAME=auto])
+           AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
+                     dnl default
+                     [],
+                     dnl not default
+                     [AC_MSG_WARN([* --with-stage1-default-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
+                      RKT_STAGE1_DEFAULT_VERSION=auto])])
+
+AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
+          [RKT_STAGE1_DEFAULT_NAME=DEFAULT_STAGE1_NAME])
+AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
+          [RKT_STAGE1_DEFAULT_VERSION=${RKT_VERSION}])
+
+RKT_STAGE1_DEFAULT_ACI_LDFLAGS="-X main.defaultStage1Name '${RKT_STAGE1_DEFAULT_NAME}' -X main.defaultStage1Version '${RKT_STAGE1_DEFAULT_VERSION}'"
+
+AC_SUBST(RKT_STAGE1_DEFAULT_NAME)
+AC_SUBST(RKT_STAGE1_DEFAULT_VERSION)
+AC_SUBST(RKT_STAGE1_DEFAULT_ACI_LDFLAGS)
 
 ## STAGE1: Systemd git path for src flavor
 m4_define([DEFAULT_STAGE1_SYSTEMD_SRC], [https://github.com/systemd/systemd.git])
@@ -117,13 +170,13 @@ AC_ARG_WITH(stage1-image-path,
             [RKT_STAGE1_IMAGE="${withval}"],
             [RKT_STAGE1_IMAGE=""])
 
-RKT_STAGE1_IMAGE_FLAGS=
+RKT_STAGE1_IMAGE_LDFLAGS=
 # if stage1 image variable is set, add a linker flag to rkt defining the variable
 AS_VAR_IF([RKT_STAGE1_IMAGE], [],
           [],
-          [RKT_STAGE1_IMAGE_FLAGS="-ldflags \"-X main.defaultStage1Image '${RKT_STAGE1_IMAGE}'\""])
+          [RKT_STAGE1_IMAGE_LDFLAGS="-X main.defaultStage1Image '${RKT_STAGE1_IMAGE}'"])
 
-AC_SUBST(RKT_STAGE1_IMAGE_FLAGS)
+AC_SUBST(RKT_STAGE1_IMAGE_LDFLAGS)
 
 AC_ARG_ENABLE([functional-tests],
               AS_HELP_STRING([--enable-functional-tests],
@@ -164,17 +217,22 @@ AC_SUBST(RKT_RUN_FUNCTIONAL_TESTS)
 
 # cross_compiling is a standard autoconf variable.  See the autoconf manual for
 # details.
-AS_VAR_IF([cross_compiling], [no], [GOARCH_FOR_BUILD=${GOARCH_FOR_BUILD:-${GOARCH}}],
-	[AC_MSG_CHECKING([build golang arch])
-	AS_VAR_IF([GOARCH_FOR_BUILD], [],
-		[AS_CASE([${build_cpu}],
-			[x86_64], [GOARCH_FOR_BUILD="amd64"],
-			[aarch64], [GOARCH_FOR_BUILD="arm64"],
-			[powerpc], [GOARCH_FOR_BUILD="ppc64"],
-			[AC_MSG_RESULT([unknown]); AC_MSG_ERROR([unknown build cpu: ${build_cpu}.  Set GOARCH_FOR_BUILD variable.])]);
-		AC_MSG_RESULT([${GOARCH_FOR_BUILD}])],
-		[AC_MSG_RESULT([user supplied ${GOARCH_FOR_BUILD}])])]
-	)
+AS_VAR_IF([cross_compiling], [no],
+          dnl no crosscompilation
+          [GOARCH_FOR_BUILD=${GOARCH_FOR_BUILD:-${GOARCH}}],
+          dnl we do crosscompilation
+          [AC_MSG_CHECKING([build golang arch])
+           AS_VAR_IF([GOARCH_FOR_BUILD], [],
+                     [AS_CASE([${build_cpu}],
+                              [x86_64],
+                                      [GOARCH_FOR_BUILD="amd64"],
+                              [aarch64],
+                                      [GOARCH_FOR_BUILD="arm64"],
+                              [powerpc],
+                                      [GOARCH_FOR_BUILD="ppc64"],
+                              [AC_MSG_RESULT([unknown]); AC_MSG_ERROR([unknown build cpu: ${build_cpu}.  Set GOARCH_FOR_BUILD variable.])])
+                      AC_MSG_RESULT([${GOARCH_FOR_BUILD}])],
+                     [AC_MSG_RESULT([user supplied ${GOARCH_FOR_BUILD}])])])
 
 AC_SUBST(GOARCH_FOR_BUILD)
 
@@ -187,14 +245,15 @@ RKT_REQ_PROG([GIT],[git],[git])
 RKT_REQ_PROG([GOBINARY],[go],[go])
 RKT_REQ_PROG([GOFMTBINARY],[gofmt],[gofmt])
 
-AC_CONFIG_FILES([makelib/variables.mk])
+AC_CONFIG_FILES([makelib/variables.mk
+                 stage1/aci/aci-manifest.test:stage1/aci/aci-manifest.in])
+AC_CONFIG_COMMANDS([stage1/aci/aci-manifest], [if cmp --silent stage1/aci/aci-manifest.test stage1/aci/aci-manifest; then :; else cp stage1/aci/aci-manifest.test stage1/aci/aci-manifest; fi;])
 AC_OUTPUT
 AC_MSG_RESULT([
-        AC_PACKAGE_NAME AC_PACKAGE_VERSION
+        AC_PACKAGE_NAME ${RKT_VERSION}
 
         stage1 flavor:          '${RKT_STAGE1_USR_FROM}'
         stage1 image path:      '${RKT_STAGE1_IMAGE}'
-        linker flags:           '${RKT_STAGE1_IMAGE_FLAGS}'
         functional tests:       '${RKT_RUN_FUNCTIONAL_TESTS}'])
 
 AS_CASE([${RKT_STAGE1_USR_FROM}],
@@ -202,4 +261,8 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
                 [AC_MSG_RESULT([
         systemd git repo:       '${RKT_STAGE1_SYSTEMD_SRC}'
         systemd version:        '${RKT_STAGE1_SYSTEMD_VER}'])],
+        [none],
+                [AC_MSG_RESULT([
+        stage1 name:            '${RKT_STAGE1_DEFAULT_NAME}'
+        stage1 version:         '${RKT_STAGE1_DEFAULT_VERSION}'])],
         [])

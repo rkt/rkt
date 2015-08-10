@@ -118,9 +118,10 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		local:    flagLocal,
 		withDeps: false,
 	}
-	s1img, err := fn.findImage(flagStage1Image, "", false)
+
+	s1img, err := getStage1Hash(s, flagStage1Image)
 	if err != nil {
-		stderr("prepare: finding stage1 image %q: %v", flagStage1Image, err)
+		stderr("prepare: %v", err)
 		return 1
 	}
 
