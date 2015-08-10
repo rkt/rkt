@@ -69,7 +69,7 @@ $(BGB_BINARY): $(_BGB_PATH_) $(_BGB_RKT_SYMLINK_STAMP_) | $(DEPSDIR)
 	set -e; \
 	$(BGB_ADDITIONAL_GO_ENV) $(GO_ENV) "$(GO)" build -o "$@.tmp" $(BGB_GO_FLAGS) "$(_BGB_PKG_NAME_)"; \
 	$(GO_ENV) "$(DEPSGENTOOL)$(_BGB_DEPSGEN_SUFFIX_)" go --repo "$(REPO_PATH)" --module "$(BGB_PKG_IN_REPO)" --target '$$(BGB_BINARY)' >"$(_BGB_DEPMK)"; \
-	$(GO_ENV) "$(DEPSGENTOOL)$(_BGB_DEPSGEN_SUFFIX_)" kv --target '$$(BGB_BINARY)' BGB_GO_FLAGS $(_ESCAPED_BGB_GO_FLAGS_) >"$(_BGB_KV_DEPMK)"; \
+	"$(DEPSGENTOOL)$(_BGB_DEPSGEN_SUFFIX_)" kv --target '$$(BGB_BINARY)' BGB_GO_FLAGS $(_ESCAPED_BGB_GO_FLAGS_) >"$(_BGB_KV_DEPMK)"; \
 	mv "$@.tmp" "$@"
 
 # _BGB_RKT_SYMLINK_STAMP_ is deliberately not cleared - it needs to
