@@ -69,10 +69,8 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	var pkls []string
-	if len(args) != 0 {
-		pkls = args
-	} else {
+	pkls := args
+	if len(pkls) == 0 {
 		pkls, err = getPubKeyLocations(flagPrefix, flagAllowHTTP, globalFlags.Debug)
 		if err != nil {
 			stderr("Error determining key location: %v", err)
@@ -80,6 +78,7 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 		}
 	}
 
+	// allow override
 	if err := addKeys(pkls, flagPrefix, flagAllowHTTP, globalFlags.InsecureSkipVerify, true); err != nil {
 		stderr("Error adding keys: %v", err)
 		return 1

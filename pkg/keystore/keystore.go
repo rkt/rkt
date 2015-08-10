@@ -139,13 +139,12 @@ func (ks *Keystore) MaskTrustedKeySystemRoot(fingerprint string) (string, error)
 func (ks *Keystore) TrustedKeyPrefixExists(prefix string, r io.ReadSeeker) (bool, error) {
 	defer r.Seek(0, os.SEEK_SET)
 
-	pubkeyBytes, err := ioutil.ReadAll(r)
+	entityList, err := openpgp.ReadArmoredKeyRing(r)
 	if err != nil {
 		return false, err
 	}
-	entityList, err := openpgp.ReadArmoredKeyRing(bytes.NewReader(pubkeyBytes))
-	if err != nil {
-		return false, err
+	if len(entityList) < 1 {
+		return false, errors.New("missing opengpg entity")
 	}
 	pubKey := entityList[0].PrimaryKey
 	fileName := fingerprintToFilename(pubKey.Fingerprint)
@@ -155,28 +154,23 @@ func (ks *Keystore) TrustedKeyPrefixExists(prefix string, r io.ReadSeeker) (bool
 		return false, err
 	}
 
-	// example: /etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
-	pathName := path.Join(ks.LocalPrefixPath, acidentifier.String(), fileName)
-	if _, err := os.Stat(pathName); err == nil {
-		return true, nil
+	pathNames := []string{
+		// example: /etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
+		path.Join(ks.LocalPrefixPath, acidentifier.String(), fileName),
+		// example: /usr/lib/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
+		path.Join(ks.SystemPrefixPath, acidentifier.String(), fileName),
+		// example: /etc/rkt/trustedkeys/root.d/8b86de38890ddb7291867b025210bd8888182190
+		path.Join(ks.LocalRootPath, fileName),
+		// example: /usr/lib/rkt/trustedkeys/root.d/8b86de38890ddb7291867b025210bd8888182190
+		path.Join(ks.SystemRootPath, fileName),
 	}
-
-	// example: /usr/lib/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
-	pathName = path.Join(ks.SystemPrefixPath, acidentifier.String(), fileName)
-	if _, err := os.Stat(pathName); err == nil {
-		return true, nil
-	}
-
-	// example: /etc/rkt/trustedkeys/root.d/8b86de38890ddb7291867b025210bd8888182190
-	pathName = path.Join(ks.LocalRootPath, fileName)
-	if _, err := os.Stat(pathName); err == nil {
-		return true, nil
-	}
-
-	// example: /usr/lib/rkt/trustedkeys/root.d/8b86de38890ddb7291867b025210bd8888182190
-	pathName = path.Join(ks.SystemRootPath, fileName)
-	if _, err := os.Stat(pathName); err == nil {
-		return true, nil
+	for _, p := range pathNames {
+		_, err := os.Stat(p)
+		if err == nil {
+			return true, nil
+		} else if !os.IsNotExist(err) {
+			return false, fmt.Errorf("cannot check file %q: %v", p, err)
+		}
 	}
 
 	return false, nil
@@ -207,6 +201,9 @@ func storeTrustedKey(dir string, r io.Reader) (string, error) {
 	entityList, err := openpgp.ReadArmoredKeyRing(bytes.NewReader(pubkeyBytes))
 	if err != nil {
 		return "", err
+	}
+	if len(entityList) < 1 {
+		return "", errors.New("missing opengpg entity")
 	}
 	pubKey := entityList[0].PrimaryKey
 	trustedKeyPath := path.Join(dir, fingerprintToFilename(pubKey.Fingerprint))

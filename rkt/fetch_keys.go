@@ -28,15 +28,15 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
 
-// getPubKeyLocations either returns the locations supplied in argv or discovers one at prefix
+// getPubKeyLocations discovers one location at prefix
 func getPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, error) {
 	if prefix == "" {
-		return nil, fmt.Errorf("at least one key or --prefix required")
+		return nil, fmt.Errorf("empty prefix")
 	}
 
 	kls, err := metaDiscoverPubKeyLocations(prefix, allowHTTP, debug)
 	if err != nil {
-		return nil, fmt.Errorf("--prefix meta discovery error: %v", err)
+		return nil, fmt.Errorf("prefix meta discovery error: %v", err)
 	}
 
 	if len(kls) == 0 {
@@ -117,33 +117,35 @@ func downloadKey(url string) (*os.File, error) {
 		return nil, fmt.Errorf("error copying key: %v", err)
 	}
 
-	tf.Seek(0, os.SEEK_SET)
+	if _, err = tf.Seek(0, os.SEEK_SET); err != nil {
+		return nil, fmt.Errorf("error seeking: %v", err)
+	}
 
 	return tf, nil
 }
 
 // addKeys adds the keys listed in pkls at prefix
-func addKeys(pkls []string, prefix string, allowHTTP bool, forceAccept bool, allowOverride bool) error {
+func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride bool) error {
 	ks := getKeystore()
 
 	for _, pkl := range pkls {
 		pk, err := getPubKey(pkl, allowHTTP)
 		if err != nil {
-			return fmt.Errorf("error accessing key: %v", err)
+			return fmt.Errorf("error accessing the key %s: %v", pkl, err)
 		}
 		defer pk.Close()
 
 		exists, err := ks.TrustedKeyPrefixExists(prefix, pk)
 		if err != nil {
-			return fmt.Errorf("error reading key: %v", err)
+			return fmt.Errorf("error reading the key %s: %v", pkl, err)
 		}
 		err = displayKey(prefix, pkl, pk)
 		if err != nil {
-			return fmt.Errorf("error displayKey key: %v", err)
+			return fmt.Errorf("error displaying the key %s: %v", pkl, err)
 		}
 		if exists && !allowOverride {
 			stderr("Key %q already in the keystore", pkl)
-			return nil
+			continue
 		}
 
 		if !forceAccept {
