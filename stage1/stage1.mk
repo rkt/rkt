@@ -80,8 +80,8 @@ $(_STAGE1_ACI_): $(_STAGE1_FIND_SO_DEPS_STAMP_)
 
 endif
 
-$(_STAGE1_ACI_): ACIDIR := $(ACIDIR)
-$(_STAGE1_ACI_): ACTOOL := $(ACTOOL)
+$(call forward-vars,$(_STAGE1_ACI_), \
+	ACTOOL ACIDIR)
 $(_STAGE1_ACI_): $(ACTOOL_STAMP) | $(BINDIR)
 	"$(ACTOOL)" build --overwrite "$(ACIDIR)" "$@"
 
@@ -95,9 +95,8 @@ _STAGE1_LIBDIRS_ := $(_STAGE1_LIBDIRS_):$(LD_LIBRARY_PATH)
 
 endif
 
-$(_STAGE1_FIND_SO_DEPS_STAMP_): ACIROOTFSDIR := $(ACIROOTFSDIR)
-$(_STAGE1_FIND_SO_DEPS_STAMP_): _STAGE1_LIBDIRS_ := $(_STAGE1_LIBDIRS_)
-$(_STAGE1_FIND_SO_DEPS_STAMP_): INSTALL := $(INSTALL)
+$(call forward-vars,$(_STAGE1_FIND_SO_DEPS_STAMP_), \
+	ACIROOTFSDIR _STAGE1_LIBDIRS_ INSTALL)
 $(_STAGE1_FIND_SO_DEPS_STAMP_): $(STAGE1_STAMPS)
 	set -e; \
 	all_libs=$$(find "$(ACIROOTFSDIR)" -type f | xargs file | grep ELF | cut -f1 -d: | LD_LIBRARY_PATH="$(_STAGE1_LIBDIRS_)" xargs ldd | grep -v '^[^[:space:]]' | grep '/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*(0x[0-9a-fA-F]*)//' -e 's/.*=>[[:space:]]*//' | grep -Fve "$(ACIROOTFSDIR)" | sort -u); \
