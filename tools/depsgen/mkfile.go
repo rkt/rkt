@@ -49,11 +49,7 @@ else
 
 endif
 
-_DEPS_GEN_GET_ALL_FILES_ :=
-_DEPS_GEN_ALL_FILES_STORED_ :=
-_DEPS_GEN_SPACE_ :=
-_DEPS_GEN_F1_ :=
-_DEPS_GEN_F2_ :=
+$(call undefine-namespaces,_DEPS_GEN)
 `
 
 	// kvStoredPrefix is used to prefix the variable name we want
@@ -80,9 +76,7 @@ ifeq ($(_DEPS_GEN_INVALIDATE_),yes)
 
 endif
 
-_DEPS_GEN_VARIABLES_ :=
-!!!DEPS_GEN_STORED_VALUES_CLEAR!!!
-_DEPS_GEN_INVALIDATE_ :=
+$(call undefine-namespaces,_DEPS_GEN)
 `
 )
 
@@ -101,12 +95,10 @@ func GenerateFileDeps(target, filesGenerator string, files []string) string {
 func GenerateKvDeps(target string, keysValues map[string]string) string {
 	variables := make([]string, 0, len(keysValues))
 	storedValuesSet := make([]string, 0, len(keysValues))
-	storedValuesClear := make([]string, 0, len(keysValues))
 	for k, v := range keysValues {
 		variables = append(variables, k)
 		assign := kvStoredPrefix + k + " :="
 		storedValuesSet = append(storedValuesSet, assign+" "+v)
-		storedValuesClear = append(storedValuesClear, assign)
 	}
 
 	return replacePlaceholders(kvDepMkTemplate,
@@ -115,6 +107,5 @@ func GenerateKvDeps(target string, keysValues map[string]string) string {
 		"DEPS_GEN_STORED_VALUES_SET", strings.Join(storedValuesSet, "\n"),
 		"DEPS_GEN_STORED_PREFIX", kvStoredPrefix,
 		"DEPS_GEN_TARGET", target,
-		"DEPS_GEN_STORED_VALUES_CLEAR", strings.Join(storedValuesClear, "\n"),
 	)
 }
