@@ -83,7 +83,7 @@ func (e *StoreRemovalError) Error() string {
 
 // Store encapsulates a content-addressable-storage for storing ACIs on disk.
 type Store struct {
-	base      string
+	dir       string
 	stores    []*diskv.Diskv
 	db        *DB
 	treestore *TreeStore
@@ -99,45 +99,45 @@ type Store struct {
 	treeStoreLockDir string
 }
 
-func NewStore(base string) (*Store, error) {
-	casDir := filepath.Join(base, "cas")
+func NewStore(baseDir string) (*Store, error) {
+	storeDir := filepath.Join(baseDir, "cas")
 
 	s := &Store{
-		base:   base,
+		dir:    storeDir,
 		stores: make([]*diskv.Diskv, len(diskvStores)),
 	}
 
-	s.imageLockDir = filepath.Join(casDir, "imagelocks")
+	s.imageLockDir = filepath.Join(storeDir, "imagelocks")
 	err := os.MkdirAll(s.imageLockDir, defaultPathPerm)
 	if err != nil {
 		return nil, err
 	}
 
-	s.treeStoreLockDir = filepath.Join(casDir, "treestorelocks")
+	s.treeStoreLockDir = filepath.Join(storeDir, "treestorelocks")
 	err = os.MkdirAll(s.treeStoreLockDir, defaultPathPerm)
 	if err != nil {
 		return nil, err
 	}
 
 	// Take a shared cas lock
-	s.storeLock, err = lock.NewLock(casDir, lock.Dir)
+	s.storeLock, err = lock.NewLock(storeDir, lock.Dir)
 	if err != nil {
 		return nil, err
 	}
 
 	for i, p := range diskvStores {
 		s.stores[i] = diskv.New(diskv.Options{
-			BasePath:  filepath.Join(casDir, p),
+			BasePath:  filepath.Join(storeDir, p),
 			Transform: blockTransform,
 		})
 	}
-	db, err := NewDB(filepath.Join(casDir, "db"))
+	db, err := NewDB(filepath.Join(storeDir, "db"))
 	if err != nil {
 		return nil, err
 	}
 	s.db = db
 
-	s.treestore = &TreeStore{path: filepath.Join(base, "cas", "tree")}
+	s.treestore = &TreeStore{path: filepath.Join(storeDir, "tree")}
 
 	needsMigrate := false
 	fn := func(tx *sql.Tx) error {
@@ -200,7 +200,7 @@ func NewStore(base string) (*Store, error) {
 
 // backupDB backs up current database.
 func (s Store) backupDB() error {
-	backupsDir := filepath.Join(s.base, "cas", "db-backups")
+	backupsDir := filepath.Join(s.dir, "db-backups")
 	return createBackup(s.db.dbdir, backupsDir, backupsNumber)
 }
 
@@ -217,7 +217,7 @@ func (s Store) TmpFile() (*os.File, error) {
 // TmpDir creates and returns dir local to the same filesystem as the Store,
 // or any error encountered
 func (s Store) TmpDir() (string, error) {
-	dir := filepath.Join(s.base, "tmp")
+	dir := filepath.Join(s.dir, "tmp")
 	if err := os.MkdirAll(dir, defaultPathPerm); err != nil {
 		return "", err
 	}
