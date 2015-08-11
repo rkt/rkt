@@ -21,9 +21,13 @@ rkt will allocate an IPv4 /31 (2 IP addresses) out of 172.16.28.0/24 and assign 
 It will additionally set the default route in the pod namespace.
 Finally, it will enable IP masquerading on the host to NAT the egress traffic.
 
-**Note**: The default network must be explicitly listed in order to be loaded when `-private-net=...` is specified with a list of network names. 
-In case it's not specified, a restricted default network will be created to allow communication with the metadata service. 
-In this case the default route and IP masquerading will not be setup.
+**Note**: The default network must be explicitly listed in order to be loaded when `--private-net=...` is specified with a list of network names.
+
+Example: If you want default networking and two more networks you need to pass `--private-net=default,net1,net2`.
+
+If *default* is not among the specified networks the *default-restricted* network will be added to the list of networks automatically.
+The *default-restricted* network does not set up the default route and IP masquerading.
+It only allows communication with the host via the veth interface and thus enables the pod to communicate with the metadata service which runs on the host.
 
 ### Setting up additional networks
 
