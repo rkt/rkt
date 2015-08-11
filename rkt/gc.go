@@ -112,55 +112,7 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 			}
 			stdout("Garbage collecting pod %q", p.uuid)
 
-			s, err := store.NewStore(globalFlags.Dir)
-			if err != nil {
-				stderr("Cannot open store: %v", err)
-				return
-			}
-			stage1ID, err := p.getStage1Hash()
-			if err != nil {
-				stderr("Error getting stage1 hash")
-				return
-			}
-			stage1RootFS := s.GetTreeStoreRootFS(stage1ID.String())
-
-			// execute stage1's GC
-			if err := stage0.GC(p.path(), p.uuid, stage1RootFS, globalFlags.Debug); err != nil {
-				stderr("Stage1 GC of pod %q failed: %v", p.uuid, err)
-				return
-			}
-
-			if p.usesOverlay() {
-				apps, err := p.getApps()
-				if err != nil {
-					stderr("Error retrieving app list from pod manifest: %v", err)
-					return
-				}
-				for _, a := range apps {
-					dest := filepath.Join(common.AppPath(p.path(), a.Name), "rootfs")
-					if err := syscall.Unmount(dest, 0); err != nil {
-						// machine could have been rebooted and mounts lost.
-						// ignore "does not exist" and "not a mount point" errors
-						if err != syscall.ENOENT && err != syscall.EINVAL {
-							stderr("Error unmounting app at %v: %v", dest, err)
-						}
-					}
-				}
-
-				s1 := filepath.Join(common.Stage1ImagePath(p.path()), "rootfs")
-				if err := syscall.Unmount(s1, 0); err != nil {
-					// machine could have been rebooted and mounts lost.
-					// ignore "does not exist" and "not a mount point" errors
-					if err != syscall.ENOENT && err != syscall.EINVAL {
-						stderr("Error unmounting stage1 at %v: %v", s1, err)
-						return
-					}
-				}
-			}
-
-			if err := os.RemoveAll(gp); err != nil {
-				stderr("Unable to remove pod %q: %v", p.uuid, err)
-			}
+			deletePod(p)
 		}
 	}); err != nil {
 		return err
@@ -215,12 +167,72 @@ func emptyGarbage() error {
 			return
 		}
 		stdout("Garbage collecting pod %q", p.uuid)
-		if err := os.RemoveAll(p.path()); err != nil {
-			stderr("Unable to remove pod %q: %v", p.uuid, err)
-		}
+
+		deletePod(p)
 	}); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// deletePod cleans up files and resource associated with the pod
+// pod must be under exclusive lock and be in either ExitedGarbage
+// or Garbage state
+func deletePod(p *pod) {
+	if !p.isExitedGarbage && !p.isGarbage {
+		panic("logic error: deletePod called with non-garbage pod")
+	}
+
+	if p.isExitedGarbage {
+		s, err := store.NewStore(globalFlags.Dir)
+		if err != nil {
+			stderr("Cannot open store: %v", err)
+			return
+		}
+		stage1ID, err := p.getStage1Hash()
+		if err != nil {
+			stderr("Error getting stage1 hash")
+			return
+		}
+		stage1RootFS := s.GetTreeStoreRootFS(stage1ID.String())
+
+		// execute stage1's GC
+		if err := stage0.GC(p.path(), p.uuid, stage1RootFS, globalFlags.Debug); err != nil {
+			stderr("Stage1 GC of pod %q failed: %v", p.uuid, err)
+			return
+		}
+
+		if p.usesOverlay() {
+			apps, err := p.getApps()
+			if err != nil {
+				stderr("Error retrieving app hashes from pod manifest: %v", err)
+				return
+			}
+			for _, a := range apps {
+				dest := filepath.Join(common.AppPath(p.path(), a.Name), "rootfs")
+				if err := syscall.Unmount(dest, 0); err != nil {
+					// machine could have been rebooted and mounts lost.
+					// ignore "does not exist" and "not a mount point" errors
+					if err != syscall.ENOENT && err != syscall.EINVAL {
+						stderr("Error unmounting app at %v: %v", dest, err)
+					}
+				}
+			}
+
+			s1 := filepath.Join(common.Stage1ImagePath(p.path()), "rootfs")
+			if err := syscall.Unmount(s1, 0); err != nil {
+				// machine could have been rebooted and mounts lost.
+				// ignore "does not exist" and "not a mount point" errors
+				if err != syscall.ENOENT && err != syscall.EINVAL {
+					stderr("Error unmounting stage1 at %v: %v", s1, err)
+					return
+				}
+			}
+		}
+	}
+
+	if err := os.RemoveAll(p.path()); err != nil {
+		stderr("Unable to remove pod %q: %v", p.uuid, err)
+	}
 }

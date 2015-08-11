@@ -548,3 +548,20 @@ Garbage collecting pod "21b1cb32-c156-4d26-82ae-eda1ab60f595"
 Garbage collecting pod "5dd42e9c-7413-49a9-9113-c2a8327d08ab"
 Garbage collecting pod "f07a4070-79a9-4db0-ae65-a090c9c393a3"
 ```
+
+### rkt rm
+
+Cleans up all resources (files, network objects) associated with a pod just like `rkt gc`.
+This command can be used to immediately free resources without waiting for garbage collection to run.
+
+```
+rkt rm c138310f
+```
+
+Instead of passing UUID on command line, rm command can read the UUID from a text file.
+This can be paired with `--uuid-file-save` to remove pods by name:
+
+```
+rkt run --uuid-files-save=/run/rkt-uuids/mypod ...
+rkt rm --uuid-file=/run/rkt-uuids/mypod
+```

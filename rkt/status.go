@@ -50,7 +50,7 @@ func runStatus(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	p, err := getPod(podUUID.String())
+	p, err := getPod(podUUID)
 	if err != nil {
 		stderr("Unable to get pod: %v", err)
 		return 1

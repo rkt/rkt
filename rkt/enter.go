@@ -63,22 +63,21 @@ func runEnter(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	pid := podUUID.String()
-	p, err := getPod(pid)
+	p, err := getPod(podUUID)
 	if err != nil {
-		stderr("Failed to open pod %q: %v", pid, err)
+		stderr("Failed to open pod %q: %v", podUUID, err)
 		return 1
 	}
 	defer p.Close()
 
 	if !p.isRunning() {
-		stderr("Pod %q isn't currently running", pid)
+		stderr("Pod %q isn't currently running", podUUID)
 		return 1
 	}
 
 	podPID, err := p.getPID()
 	if err != nil {
-		stderr("Unable to determine the pid for pod %q: %v", pid, err)
+		stderr("Unable to determine the pid for pod %q: %v", podUUID, err)
 		return 1
 	}
 

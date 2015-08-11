@@ -17,7 +17,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -64,4 +66,18 @@ func resolveUUID(uuid string) (*types.UUID, error) {
 	}
 
 	return u, nil
+}
+
+func readUUIDFromFile(path string) (*types.UUID, error) {
+	uuid, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	uuid = bytes.TrimSpace(uuid)
+
+	return types.NewUUID(string(uuid))
+}
+
+func writeUUIDToFile(uuid *types.UUID, path string) error {
+	return ioutil.WriteFile(path, []byte(uuid.String()), 0644)
 }

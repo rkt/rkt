@@ -50,17 +50,18 @@ which will instead be appended to the preceding image app's exec arguments.
 End the image arguments with a lone "---" to resume argument parsing.`,
 		Run: runWrapper(runRun),
 	}
-	flagStage1Image string
-	flagVolumes     volumeList
-	flagPorts       portList
-	flagPrivateNet  common.PrivateNetList
-	flagInheritEnv  bool
-	flagExplicitEnv envMap
-	flagInteractive bool
-	flagNoOverlay   bool
-	flagLocal       bool
-	flagPodManifest string
-	flagMDSRegister bool
+	flagStage1Image  string
+	flagVolumes      volumeList
+	flagPorts        portList
+	flagPrivateNet   common.PrivateNetList
+	flagInheritEnv   bool
+	flagExplicitEnv  envMap
+	flagInteractive  bool
+	flagNoOverlay    bool
+	flagLocal        bool
+	flagPodManifest  string
+	flagMDSRegister  bool
+	flagUUIDFileSave string
 )
 
 func init() {
@@ -86,6 +87,7 @@ func init() {
 	cmdRun.Flags().BoolVar(&flagLocal, "local", false, "use only local images (do not discover or download from remote URLs)")
 	cmdRun.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--private-net', '--no-overlay' and '--interactive' will have effects")
 	cmdRun.Flags().BoolVar(&flagMDSRegister, "mds-register", true, "register pod with metadata service")
+	cmdRun.Flags().StringVar(&flagUUIDFileSave, "uuid-file-save", "", "write out pod UUID to specified file")
 
 	// per-app flags
 	cmdRun.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
@@ -213,6 +215,15 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	if err != nil {
 		stderr("Error creating new pod: %v", err)
 		return 1
+	}
+
+	// if requested, write out pod UUID early so "rkt rm" can
+	// clean it up even if something goes wrong
+	if flagUUIDFileSave != "" {
+		if err := writeUUIDToFile(p.uuid, flagUUIDFileSave); err != nil {
+			stderr("Error saving pod UUID to file: %v", err)
+			return 1
+		}
 	}
 
 	processLabel, mountLabel, err := label.InitLabels(nil)

@@ -75,7 +75,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	p, err := getPod(podUUID.String())
+	p, err := getPod(podUUID)
 	if err != nil {
 		stderr("prepared-run: cannot get pod: %v", err)
 		return 1
