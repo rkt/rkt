@@ -152,6 +152,14 @@ func (n *Networking) teardownKvmNets() {
 		case "ptp":
 			// remove tuntap interface
 			tuntap.RemovePersistentIface(an.runtime.IfName, tuntap.Tap)
+			// remove masquerading if it was prepared
+			if an.conf.IPMasq {
+				chain := "CNI-" + an.conf.Name
+				ip.TeardownIPMasq(&net.IPNet{
+					IP:   an.runtime.IP,
+					Mask: net.IPMask(an.runtime.Mask),
+				}, chain)
+			}
 			// ugly hack again to directly call IPAM plugin to release IP
 			an.conf.Type = an.conf.IPAM.Type
 
