@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -193,26 +192,16 @@ func TestPrivateNetDefaultConnectivity(t *testing.T) {
 	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
 	httpServeTimeout := 30
 
-	ifaces, err := net.Interfaces()
+	nonLoIPv4, err := testutils.GetNonLoIfaceIPv4()
 	if err != nil {
-		t.Fatalf("Cannot get network host's interfaces: %v", err)
+		t.Fatalf("%v", err)
 	}
-	var httpGetAddr string
-	for _, iface := range ifaces[1:] {
-		name := iface.Name
-		ifaceIPsv4, err := testutils.GetIPsv4(name)
-		if err != nil {
-			t.Fatalf("Cannot get IPV4 address for interface %v: %v", name, err)
-		}
-		if len(ifaceIPsv4) > 0 {
-			httpGetAddr = fmt.Sprintf("http://%v:%v", ifaceIPsv4[0], httpPort)
-			t.Log("Telling the child to connect via", httpGetAddr)
-			break
-		}
-	}
-	if httpGetAddr == "" {
+	if nonLoIPv4 == "" {
 		t.Skipf("Can not find any NAT'able IPv4 on the host, skipping..")
 	}
+
+	httpGetAddr := fmt.Sprintf("http://%v:%v", nonLoIPv4, httpPort)
+	t.Log("Telling the child to connect via", httpGetAddr)
 
 	testImageArgs := []string{fmt.Sprintf("--exec=/inspect --get-http=%v", httpGetAddr)}
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
@@ -525,27 +514,16 @@ func testPrivateNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
 	httpServeTimeout := 30
 
-	ifaces, err := net.Interfaces()
+	nonLoIPv4, err := testutils.GetNonLoIfaceIPv4()
 	if err != nil {
-		t.Fatalf("Cannot get network host's interfaces: %v", err)
+		t.Fatalf("%v", err)
 	}
-
-	var httpGetAddr string
-	for _, iface := range ifaces[1:] {
-		name := iface.Name
-		ifaceIPsv4, err := testutils.GetIPsv4(name)
-		if err != nil {
-			t.Fatalf("Cannot get IPV4 address for interface %v: %v", name, err)
-		}
-		if len(ifaceIPsv4) > 0 {
-			httpGetAddr = fmt.Sprintf("http://%v:%v", ifaceIPsv4[0], httpPort)
-			t.Log("Telling the child to connect via", httpGetAddr)
-			break
-		}
-	}
-	if httpGetAddr == "" {
+	if nonLoIPv4 == "" {
 		t.Skipf("Can not find any NAT'able IPv4 on the host, skipping..")
 	}
+
+	httpGetAddr := fmt.Sprintf("http://%v:%v", nonLoIPv4, httpPort)
+	t.Log("Telling the child to connect via", httpGetAddr)
 
 	ga := testutils.NewGoroutineAssistant(t)
 
@@ -613,20 +591,18 @@ func TestPrivateNetCustomPtp(t *testing.T) {
 }
 
 func TestPrivateNetCustomMacvlan(t *testing.T) {
-	ifaces, err := net.Interfaces()
+	iface, err := testutils.GetNonLoIfaceWithAddrs()
 	if err != nil {
-		t.Fatalf("Cannot get network host's interfaces: %v", err)
+		t.Fatalf("Error while getting non-lo host interface: %v\n", err)
 	}
-
-	var ifaceName string
-	if len(ifaces) < 2 {
+	if iface.Name == "" {
 		t.Skipf("Cannot run test without non-lo host interface")
 	}
-	ifaceName = ifaces[1].Name
+
 	nt := networkTemplateT{
 		Name:   "macvlan0",
 		Type:   "macvlan",
-		Master: ifaceName,
+		Master: iface.Name,
 		Ipam: ipamTemplateT{
 			Type:   "host-local",
 			Subnet: "10.1.2.0/24",
@@ -636,22 +612,20 @@ func TestPrivateNetCustomMacvlan(t *testing.T) {
 }
 
 func TestPrivateNetCustomBridge(t *testing.T) {
-	ifaces, err := net.Interfaces()
+	iface, err := testutils.GetNonLoIfaceWithAddrs()
 	if err != nil {
-		t.Fatalf("Cannot get network host's interfaces: %v", err)
+		t.Fatalf("Error while getting non-lo host interface: %v\n", err)
 	}
-
-	var ifaceName string
-	if len(ifaces) < 2 {
+	if iface.Name == "" {
 		t.Skipf("Cannot run test without non-lo host interface")
 	}
-	ifaceName = ifaces[1].Name
+
 	nt := networkTemplateT{
 		Name:      "bridge0",
 		Type:      "bridge",
 		IpMasq:    true,
 		IsGateway: true,
-		Master:    ifaceName,
+		Master:    iface.Name,
 		Ipam: ipamTemplateT{
 			Type:   "host-local",
 			Subnet: "10.1.3.0/24",
