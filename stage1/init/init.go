@@ -299,9 +299,6 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 			args = append(args, "--debug")
 		}
 
-		// TODO: append additional networks settings
-		// args = append(args, network/volumes args...)
-
 		// host volume sharing with 9p
 		nsargs := kvm.VolumesToKvmDiskArgs(p.Manifest.Volumes)
 		args = append(args, nsargs...)
