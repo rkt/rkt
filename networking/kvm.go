@@ -53,6 +53,9 @@ func setupTapDevice() (netlink.Link, error) {
 // in result it updates activeNet.runtime configuration with IP, Mask and HostIP
 func kvmSetupNetAddressing(network *Networking, n activeNet, ifName string) error {
 	// TODO: very ugly hack, that go through upper plugin, down to ipam plugin
+	if err := ip.EnableIP4Forward(); err != nil {
+		return fmt.Errorf("failed to enable forwarding: %v", err)
+	}
 	n.conf.Type = n.conf.IPAM.Type
 	output, err := network.execNetPlugin("ADD", &n, ifName)
 	if err != nil {
