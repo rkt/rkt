@@ -401,7 +401,7 @@ func setupAppImage(cfg RunConfig, appName types.ACName, img types.Hash, cdir str
 			return fmt.Errorf("error creating image directory: %v", err)
 		}
 
-		if err := overlayRender(cfg, img, cdir, ad); err != nil {
+		if err := overlayRender(cfg, img, cdir, ad, appName.String()); err != nil {
 			return fmt.Errorf("error rendering overlay filesystem: %v", err)
 		}
 	}
@@ -452,7 +452,7 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 func setupStage1Image(cfg RunConfig, img types.Hash, cdir string, useOverlay bool) error {
 	if useOverlay {
 		s1 := common.Stage1ImagePath(cdir)
-		if err := overlayRender(cfg, img, cdir, s1); err != nil {
+		if err := overlayRender(cfg, img, cdir, s1, "stage1"); err != nil {
 			return fmt.Errorf("error rendering overlay filesystem: %v", err)
 		}
 
@@ -491,7 +491,7 @@ func writeManifest(cfg CommonConfig, img types.Hash, dest string) error {
 // overlay filesystem.
 // It writes the manifest in the specified directory and mounts an overlay
 // filesystem from the cached tree of the image as rootfs.
-func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string) error {
+func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string, appName string) error {
 	if err := writeManifest(cfg.CommonConfig, img, dest); err != nil {
 		return err
 	}
@@ -508,11 +508,11 @@ func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string) erro
 		return err
 	}
 
-	upperDir := path.Join(overlayDir, "upper")
+	upperDir := path.Join(overlayDir, "upper", appName)
 	if err := os.MkdirAll(upperDir, 0755); err != nil {
 		return err
 	}
-	workDir := path.Join(overlayDir, "work")
+	workDir := path.Join(overlayDir, "work", appName)
 	if err := os.MkdirAll(workDir, 0755); err != nil {
 		return err
 	}
