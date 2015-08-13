@@ -52,6 +52,7 @@ func init() {
 	cmdPrepare.Flags().BoolVar(&flagQuiet, "quiet", false, "suppress superfluous output on stdout, print only the UUID on success")
 	cmdPrepare.Flags().BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	cmdPrepare.Flags().BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
+	cmdPrepare.Flags().BoolVar(&flagPrivateUsers, "private-users", false, "Run within user namespaces.")
 	cmdPrepare.Flags().Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 	cmdPrepare.Flags().BoolVar(&flagLocal, "local", false, "use only local images (do not discover or download from remote URLs)")
 	cmdPrepare.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--quiet' and '--no-overlay' will have effects")
@@ -65,11 +66,15 @@ func init() {
 func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	var err error
 	origStdout := os.Stdout
+	var privateUsers string = ""
 	if flagQuiet {
 		if os.Stdout, err = os.Open("/dev/null"); err != nil {
 			stderr("prepare: unable to open /dev/null")
 			return 1
 		}
+	}
+
+	if flagPrivateUsers && common.SupportsUserNS() {
 	}
 
 	if err = parseApps(&rktApps, args, cmd.Flags(), true); err != nil {
@@ -148,6 +153,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	pcfg := stage0.PrepareConfig{
 		CommonConfig: cfg,
 		UseOverlay:   !flagNoOverlay && common.SupportsOverlay(),
+		PrivateUsers: privateUsers,
 	}
 
 	if len(flagPodManifest) > 0 {

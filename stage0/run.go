@@ -58,6 +58,7 @@ type PrepareConfig struct {
 	Ports       []types.ExposedPort // list of ports that rkt will expose on the host
 	UseOverlay  bool                // prepare pod with overlay fs
 	PodManifest string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
+	PrivateUsers string             // User namespaces
 }
 
 // configuration parameters needed by Run
