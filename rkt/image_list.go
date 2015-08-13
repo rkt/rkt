@@ -15,10 +15,13 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/lastditch"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/dustin/go-humanize"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/store"
@@ -178,7 +181,9 @@ func init() {
 }
 
 func runImages(cmd *cobra.Command, args []string) int {
-	tabOut := getTabOutWithWriter(os.Stdout)
+	errors := []error{}
+	tabBuffer := new(bytes.Buffer)
+	tabOut := getTabOutWithWriter(tabBuffer)
 
 	if !flagNoLegend {
 		headerFields := []string{}
@@ -205,9 +210,14 @@ func runImages(cmd *cobra.Command, args []string) int {
 	}
 
 	for _, aciInfo := range aciInfos {
-		im, err := s.GetImageManifest(aciInfo.BlobKey)
+		imj, err := s.GetImageManifestJSON(aciInfo.BlobKey)
 		if err != nil {
 			// ignore aciInfo with missing image manifest as it can be deleted in the meantime
+			continue
+		}
+		var im *schema.ImageManifest
+		if err = json.Unmarshal(imj, &im); err != nil {
+			errors = append(errors, newImgListLoadError(err, imj, aciInfo.BlobKey))
 			continue
 		}
 		version, ok := im.Labels.Get("version")
@@ -247,6 +257,38 @@ func runImages(cmd *cobra.Command, args []string) int {
 		fmt.Fprintf(tabOut, "%s\n", strings.Join(fieldValues, "\t"))
 	}
 
+	if len(errors) > 0 {
+		sep := "----------------------------------------"
+		stderr("%d error(s) encountered when listing images:", len(errors))
+		stderr("%s", sep)
+		for _, err := range errors {
+			stderr("%s", err.Error())
+			stderr("%s", sep)
+		}
+		stderr("Misc:")
+		stderr("  rkt's appc version: %s", schema.AppContainerVersion)
+		// make a visible break between errors and the listing
+		stderr("")
+	}
 	tabOut.Flush()
+	stdout("%s", tabBuffer.String())
 	return 0
+}
+
+func newImgListLoadError(err error, imj []byte, blobKey string) error {
+	lines := []string{}
+	im := lastditch.ImageManifest{}
+	imErr := im.UnmarshalJSON(imj)
+	if imErr == nil {
+		lines = append(lines, fmt.Sprintf("Unable to load manifest of image %s (spec version %s) because it is invalid:", im.Name, im.ACVersion))
+		lines = append(lines, fmt.Sprintf("  %v", err))
+	} else {
+		lines = append(lines, "Unable to load manifest of an image because it is invalid:")
+		lines = append(lines, fmt.Sprintf("  %v", err))
+		lines = append(lines, "  Also, failed to get any information about invalid image manifest:")
+		lines = append(lines, fmt.Sprintf("    %v", imErr))
+	}
+	lines = append(lines, "ID of the invalid image:")
+	lines = append(lines, fmt.Sprintf("  %s", blobKey))
+	return fmt.Errorf("%s", strings.Join(lines, "\n"))
 }
