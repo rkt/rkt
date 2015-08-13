@@ -27,14 +27,6 @@ import (
 	"github.com/coreos/rkt/tests/testutils"
 )
 
-var httpPortCnt int = 54321
-
-func getNextHttpPort() int {
-	// TODO: use random available port
-	httpPortCnt++
-	return httpPortCnt
-}
-
 /*
  * No private net
  * ---
@@ -85,7 +77,10 @@ func TestPrivateNetOmittedNetNS(t *testing.T) {
  */
 func TestPrivateNetOmittedConnectivity(t *testing.T) {
 
-	httpPort := getNextHttpPort()
+	httpPort, err := testutils.GetNextFreePort4()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
 	httpGetAddr := fmt.Sprintf("http://127.0.0.1:%v", httpPort)
 
@@ -188,7 +183,10 @@ func TestPrivateNetDefaultNetNS(t *testing.T) {
  * TODO: test connection to host on an outside interface
  */
 func TestPrivateNetDefaultConnectivity(t *testing.T) {
-	httpPort := getNextHttpPort()
+	httpPort, err := testutils.GetNextFreePort4()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
 	httpServeTimeout := 30
 
@@ -264,7 +262,10 @@ func TestPrivateNetDefaultConnectivity(t *testing.T) {
  * TODO: verify that the container isn't NATed
  */
 func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
-	httpPort := getNextHttpPort()
+	httpPort, err := testutils.GetNextFreePort4()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
 	iface := "eth0"
 
@@ -405,7 +406,10 @@ func prepareTestNet(t *testing.T, ctx *rktRunCtx, nt networkTemplateT) (netdir s
  * The body of the HttpGet is Container 1's hostname, which must match
  */
 func testPrivateNetCustomDual(t *testing.T, nt networkTemplateT) {
-	httpPort := getNextHttpPort()
+	httpPort, err := testutils.GetNextFreePort4()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
@@ -510,7 +514,10 @@ func testPrivateNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 	netdir := prepareTestNet(t, ctx, nt)
 	defer os.RemoveAll(netdir)
 
-	httpPort := getNextHttpPort()
+	httpPort, err := testutils.GetNextFreePort4()
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
 	httpServeTimeout := 30
 
