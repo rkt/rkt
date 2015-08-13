@@ -269,6 +269,15 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		defer f.Close()
 	}
 
+	if cfg.PrivateUsers.UidShift > 0 {
+		// mark the pod as prepared for user namespaces
+		uidrangeStr := uid.SerializeUidRange(cfg.PrivateUsers)
+
+		if err := ioutil.WriteFile(filepath.Join(dir, common.PrivateUsersPreparedFilename), []byte(uidrangeStr), 0700); err != nil {
+			return fmt.Errorf("error writing userns marker file: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -288,10 +297,27 @@ func preparedWithOverlay(dir string) (bool, error) {
 	return true, nil
 }
 
+func preparedWithPrivateUsers(dir string) (string, error) {
+	bytes, err := ioutil.ReadFile(filepath.Join(dir, common.PrivateUsersPreparedFilename))
+	if os.IsNotExist(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
 // Run mounts the right overlay filesystems and actually runs the prepared
 // pod by exec()ing the stage1 init inside the pod filesystem.
 func Run(cfg RunConfig, dir string) {
 	useOverlay, err := preparedWithOverlay(dir)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
+	privateUsers, err := preparedWithPrivateUsers(dir)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
@@ -333,6 +359,9 @@ func Run(cfg RunConfig, dir string) {
 	if cfg.Interactive {
 		args = append(args, "--interactive")
 	}
+	if len(privateUsers) > 0 {
+		args = append(args, "--private-users="+privateUsers)
+	}
 	if cfg.MDSRegister {
 		mdsToken, err := registerPod(".", cfg.UUID, cfg.Apps)
 		if err != nil {
@@ -369,6 +398,9 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 	log.Println("Loading image", img.String())
 
 	if useOverlay {
+		if cfg.PrivateUsers.UidShift > 0 {
+			return fmt.Errorf("cannot use both overlay and user namespace: not implemented yet")
+		}
 		if err := cfg.Store.RenderTreeStore(img.String(), false); err != nil {
 			return fmt.Errorf("error rendering tree image: %v", err)
 		}
