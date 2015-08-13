@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -155,7 +156,7 @@ func (p *Pod) WritePrepareAppTemplate() error {
 }
 
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
-func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor string) error {
+func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string) error {
 	app := ra.App
 	appName := ra.Name
 	image, ok := p.Images[appName.String()]
@@ -175,7 +176,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 	env.Set("AC_APP_NAME", appName.String())
 	env.Set("AC_METADATA_URL", p.MetadataServiceURL)
 
-	if err := p.writeEnvFile(env, appName); err != nil {
+	if err := p.writeEnvFile(env, appName, privateUsers); err != nil {
 		return fmt.Errorf("unable to write environment file: %v", err)
 	}
 
@@ -329,7 +330,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 // writeEnvFile creates an environment file for given app name, the minimum
 // required environment variables by the appc spec will be set to sensible
 // defaults here if they're not provided by env.
-func (p *Pod) writeEnvFile(env types.Environment, appName types.ACName) error {
+func (p *Pod) writeEnvFile(env types.Environment, appName types.ACName, privateUsers string) error {
 	ef := bytes.Buffer{}
 
 	for dk, dv := range defaultEnv {
@@ -341,12 +342,19 @@ func (p *Pod) writeEnvFile(env types.Environment, appName types.ACName) error {
 	for _, e := range env {
 		fmt.Fprintf(&ef, "%s=%s\000", e.Name, e.Value)
 	}
-	return ioutil.WriteFile(EnvFilePath(p.Root, appName), ef.Bytes(), 0640)
+
+	if len(privateUsers) > 0 {
+		// TODO: remove this work around and do a chown
+		syscall.Umask(0)
+		return ioutil.WriteFile(EnvFilePath(p.Root, appName), ef.Bytes(), 0666)
+	} else {
+		return ioutil.WriteFile(EnvFilePath(p.Root, appName), ef.Bytes(), 0644)
+	}
 }
 
 // PodToSystemd creates the appropriate systemd service unit files for
 // all the constituent apps of the Pod
-func (p *Pod) PodToSystemd(interactive bool, flavor string) error {
+func (p *Pod) PodToSystemd(interactive bool, flavor string, privateUsers string) error {
 
 	if flavor == "kvm" {
 		// prepare all applications names to become dependency for mount units
@@ -366,7 +374,7 @@ func (p *Pod) PodToSystemd(interactive bool, flavor string) error {
 
 	for i := range p.Manifest.Apps {
 		ra := &p.Manifest.Apps[i]
-		if err := p.appToSystemd(ra, interactive, flavor); err != nil {
+		if err := p.appToSystemd(ra, interactive, flavor, privateUsers); err != nil {
 			return fmt.Errorf("failed to transform app %q into systemd service: %v", ra.Name, err)
 		}
 	}

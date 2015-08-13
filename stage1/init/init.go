@@ -556,7 +556,7 @@ func stage1() int {
 		return 2
 	}
 
-	if err = p.PodToSystemd(interactive, flavor); err != nil {
+	if err = p.PodToSystemd(interactive, flavor, PrivateUsers); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
 		return 2
 	}

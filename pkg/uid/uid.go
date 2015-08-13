@@ -106,16 +106,16 @@ func SerializeUidRange(uidrange UidRange) string {
 	return uidrangeStr
 }
 
-func UnserializeUidRange(uidrange string) (*UidRange) {
-	ur := NewUidRange(0, 0)
+func UnserializeUidRange(uidrange string) (UidRange, error) {
+	ur := UidRange{0, 0}
 
 	uidshift, uidcount, err := ParseSerializedUidRange(uidrange)
 	if err != nil {
-		return ur
+		return ur, err
 	}
 
 	ur.UidShift = uidshift
 	ur.UidCount = uidcount
 
-	return ur
+	return ur, nil
 }
