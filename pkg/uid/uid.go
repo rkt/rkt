@@ -44,7 +44,7 @@ func GenerateContainerID(containerid uint64) (uint64) {
 
 	if containerID < 0x00010000 {
 		rand.Seed(time.Now().UnixNano())
-		containerID = uint64(rand.Int63n(0xFFFFFFFF) | 0X00010000)
+		containerID = uint64(rand.Int63n(0xFFFDFFFF)) + 0X00010000
 	}
 
 	return containerID
@@ -95,7 +95,7 @@ func ParseSerializedUidRange(uidrange string) (uidShift uint64, uidCount uint64,
 	return
 }
 
-func SerializeUidRange(uidrange *UidRange) string {
+func SerializeUidRange(uidrange UidRange) string {
 	var uidrangeStr string = ""
 
 	uidshift := strconv.FormatUint(uidrange.UidShift, 10)

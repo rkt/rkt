@@ -22,6 +22,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/coreos/rkt/pkg/uid"
+
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/device"
 )
 
@@ -58,7 +60,7 @@ func copySymlink(src, dest string) error {
 	return nil
 }
 
-func CopyTree(src, dest string) error {
+func CopyTree(src, dest string, uidrange *uid.UidRange) error {
 	dirs := make(map[string][]syscall.Timespec)
 	copyWalker := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -121,7 +123,18 @@ func CopyTree(src, dest string) error {
 			return fmt.Errorf("unsupported mode: %v", mode)
 		}
 
-		if err := os.Lchown(target, int(info.Sys().(*syscall.Stat_t).Uid), int(info.Sys().(*syscall.Stat_t).Gid)); err != nil {
+		var srcUid uint64 = uint64(info.Sys().(*syscall.Stat_t).Uid)
+		var srcGid uint64 = uint64(info.Sys().(*syscall.Stat_t).Gid)
+
+		if uidrange.UidCount > 0 && (srcUid >= uidrange.UidCount || srcGid >= uidrange.UidCount) {
+			return fmt.Errorf("source contains out of range uid/gid")
+		}
+		srcUid = srcUid + uidrange.UidShift
+		srcGid = srcGid + uidrange.UidShift
+		if uidrange.UidShift > 0 && (srcUid >= 0xFFFFFFFF || srcGid >= 0xFFFFFFFF) {
+			return fmt.Errorf("source contains out of range uid/gid")
+		}
+		if err := os.Lchown(target, int(srcUid), int(srcGid)); err != nil {
 			return err
 		}
 

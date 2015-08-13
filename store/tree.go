@@ -30,6 +30,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/tarheader"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/pkg/sys"
 )
 
@@ -50,6 +51,7 @@ type TreeStore struct {
 // before Write)
 func (ts *TreeStore) Write(key string, s *Store) error {
 	treepath := filepath.Join(ts.path, key)
+	var uidRange uid.UidRange
 	fi, _ := os.Stat(treepath)
 	if fi != nil {
 		return fmt.Errorf("treestore: path %s already exists", treepath)
@@ -61,7 +63,7 @@ func (ts *TreeStore) Write(key string, s *Store) error {
 	if err := os.MkdirAll(treepath, 0755); err != nil {
 		return fmt.Errorf("treestore: cannot create treestore directory %s: %v", treepath, err)
 	}
-	err = aci.RenderACIWithImageID(*imageID, treepath, s)
+	err = aci.RenderACIWithImageID(*imageID, treepath, s, uidRange)
 	if err != nil {
 		return fmt.Errorf("treestore: cannot render aci: %v", err)
 	}

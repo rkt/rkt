@@ -59,7 +59,7 @@ type PrepareConfig struct {
 	Ports        []types.ExposedPort // list of ports that rkt will expose on the host
 	UseOverlay   bool                // prepare pod with overlay fs
 	PodManifest  string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
-	PrivateUsers *uid.UidRange	 // User namespaces
+	PrivateUsers uid.UidRange	 // User namespaces
 }
 
 // configuration parameters needed by Run
@@ -417,7 +417,7 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 			return fmt.Errorf("error creating image directory: %v", err)
 		}
 
-		if err := aci.RenderACIWithImageID(img, ad, cfg.Store); err != nil {
+		if err := aci.RenderACIWithImageID(img, ad, cfg.Store, cfg.PrivateUsers); err != nil {
 			return fmt.Errorf("error rendering ACI: %v", err)
 		}
 	}
@@ -474,7 +474,7 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 
 		destRootfs := filepath.Join(s1, "rootfs")
 		cachedTreePath := cfg.Store.GetTreeStoreRootFS(img.String())
-		if err := fileutil.CopyTree(cachedTreePath, destRootfs); err != nil {
+		if err := fileutil.CopyTree(cachedTreePath, destRootfs, &cfg.PrivateUsers); err != nil {
 			return fmt.Errorf("error rendering ACI: %v", err)
 		}
 	}
