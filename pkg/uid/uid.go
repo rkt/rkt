@@ -31,7 +31,7 @@ type UidRange struct {
 	UidCount uint64
 }
 
-func NewUidRange(uidshift uint64, uidcount uint64) (*UidRange) {
+func NewUidRange(uidshift uint64, uidcount uint64) *UidRange {
 	ur := &UidRange{
 		uidshift,
 		uidcount,
@@ -39,7 +39,7 @@ func NewUidRange(uidshift uint64, uidcount uint64) (*UidRange) {
 	return ur
 }
 
-func GenerateContainerID(containerid uint64) (uint64) {
+func GenerateContainerID(containerid uint64) uint64 {
 	var containerID uint64 = containerid
 
 	if containerID < 0x00010000 {
@@ -50,7 +50,7 @@ func GenerateContainerID(containerid uint64) (uint64) {
 	return containerID
 }
 
-func GenerateUidShift(containerid uint64) (uint64) {
+func GenerateUidShift(containerid uint64) uint64 {
 	var uidShift uint64
 	rand.Seed(time.Now().UnixNano())
 	containerUid := rand.Intn(0x0000FFFF)
@@ -60,7 +60,7 @@ func GenerateUidShift(containerid uint64) (uint64) {
 	return uidShift
 }
 
-func GenerateUidRange(containerid uint64, uidcount uint64) (*UidRange) {
+func GenerateUidRange(containerid uint64, uidcount uint64) *UidRange {
 	uidShift := GenerateUidShift(containerid)
 	ur := NewUidRange(uidShift, uidcount)
 	return ur

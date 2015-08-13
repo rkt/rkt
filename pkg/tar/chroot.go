@@ -100,8 +100,8 @@ func ExtractTar(rs io.Reader, dir string, overwrite bool, uidShift uint64, uidCo
 	defer w.Close()
 	enc := json.NewEncoder(w)
 	cmd := mcEntrypoint.Cmd(dir, strconv.FormatBool(overwrite),
-	                        strconv.FormatUint(uidShift, 10),
-				strconv.FormatUint(uidCount, 10))
+		strconv.FormatUint(uidShift, 10),
+		strconv.FormatUint(uidCount, 10))
 	cmd.ExtraFiles = []*os.File{r}
 
 	cmd.Stdin = rs

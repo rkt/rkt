@@ -21,8 +21,8 @@ import (
 	"syscall"
 
 	"github.com/coreos/rkt/pkg/fileutil"
-	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/pkg/tar"
+	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/store"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"

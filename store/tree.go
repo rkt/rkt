@@ -30,8 +30,8 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/tarheader"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/pkg/aci"
-	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/pkg/uid"
 )
 
 const (

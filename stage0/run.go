@@ -43,8 +43,8 @@ import (
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/label"
-	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
 )
@@ -59,7 +59,7 @@ type PrepareConfig struct {
 	Ports        []types.ExposedPort // list of ports that rkt will expose on the host
 	UseOverlay   bool                // prepare pod with overlay fs
 	PodManifest  string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
-	PrivateUsers uid.UidRange	 // User namespaces
+	PrivateUsers uid.UidRange        // User namespaces
 }
 
 // configuration parameters needed by Run
