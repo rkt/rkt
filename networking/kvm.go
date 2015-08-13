@@ -16,6 +16,7 @@
 package networking
 
 import (
+	"crypto/sha512"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -123,7 +124,8 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, privateNetL
 			}
 
 			if n.conf.IPMasq {
-				chain := "CNI-" + n.conf.Name
+				h := sha512.Sum512([]byte(podID.String()))
+				chain := fmt.Sprintf("CNI-%s-%x", n.conf.Name, h[:8])
 				if err = ip.SetupIPMasq(&net.IPNet{
 					IP:   n.runtime.IP,
 					Mask: net.IPMask(n.runtime.Mask),
@@ -157,11 +159,15 @@ func (n *Networking) teardownKvmNets() {
 			tuntap.RemovePersistentIface(an.runtime.IfName, tuntap.Tap)
 			// remove masquerading if it was prepared
 			if an.conf.IPMasq {
-				chain := "CNI-" + an.conf.Name
-				ip.TeardownIPMasq(&net.IPNet{
+				h := sha512.Sum512([]byte(n.podID.String()))
+				chain := fmt.Sprintf("CNI-%s-%x", an.conf.Name, h[:8])
+				err := ip.TeardownIPMasq(&net.IPNet{
 					IP:   an.runtime.IP,
 					Mask: net.IPMask(an.runtime.Mask),
 				}, chain)
+				if err != nil {
+					log.Printf("Error on removing masquerading: %q", err)
+				}
 			}
 			// ugly hack again to directly call IPAM plugin to release IP
 			an.conf.Type = an.conf.IPAM.Type
