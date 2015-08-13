@@ -46,7 +46,7 @@ func TestExitCode(t *testing.T) {
 
 		err = expectWithOutput(child, fmt.Sprintf("status=%d", i))
 		if err != nil {
-			t.Fatalf("Failed to get the status")
+			t.Fatalf("Failed to get the status: %v", err)
 		}
 
 		err = child.Wait()
