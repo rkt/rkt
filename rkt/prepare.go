@@ -24,6 +24,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 )
@@ -66,7 +67,7 @@ func init() {
 func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	var err error
 	origStdout := os.Stdout
-	var privateUsers string = ""
+	var privateUsers uid.UidRange
 	if flagQuiet {
 		if os.Stdout, err = os.Open("/dev/null"); err != nil {
 			stderr("prepare: unable to open /dev/null")
@@ -75,6 +76,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	if flagPrivateUsers && common.SupportsUserNS() {
+		uid.SetUidRange(&privateUsers, 0, 0x10000)
 	}
 
 	if err = parseApps(&rktApps, args, cmd.Flags(), true); err != nil {
@@ -153,7 +155,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	pcfg := stage0.PrepareConfig{
 		CommonConfig: cfg,
 		UseOverlay:   !flagNoOverlay && common.SupportsOverlay(),
-		PrivateUsers: privateUsers,
+		PrivateUsers: &privateUsers,
 	}
 
 	if len(flagPodManifest) > 0 {

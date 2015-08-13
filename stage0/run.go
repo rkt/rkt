@@ -43,6 +43,7 @@ import (
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/label"
+	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
@@ -51,14 +52,14 @@ import (
 // configuration parameters required by Prepare
 type PrepareConfig struct {
 	CommonConfig
-	Apps        *apps.Apps          // apps to prepare
-	InheritEnv  bool                // inherit parent environment into apps
-	ExplicitEnv []string            // always set these environment variables for all the apps
-	Volumes     []types.Volume      // list of volumes that rkt can provide to applications
-	Ports       []types.ExposedPort // list of ports that rkt will expose on the host
-	UseOverlay  bool                // prepare pod with overlay fs
-	PodManifest string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
-	PrivateUsers string             // User namespaces
+	Apps         *apps.Apps          // apps to prepare
+	InheritEnv   bool                // inherit parent environment into apps
+	ExplicitEnv  []string            // always set these environment variables for all the apps
+	Volumes      []types.Volume      // list of volumes that rkt can provide to applications
+	Ports        []types.ExposedPort // list of ports that rkt will expose on the host
+	UseOverlay   bool                // prepare pod with overlay fs
+	PodManifest  string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
+	PrivateUsers *uid.UidRange	 // User namespaces
 }
 
 // configuration parameters needed by Run
