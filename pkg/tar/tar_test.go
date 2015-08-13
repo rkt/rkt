@@ -249,7 +249,7 @@ func TestExtractTarFolders(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	defer os.RemoveAll(tmpdir)
-	err = ExtractTar(containerTar, tmpdir, false, nil)
+	err = ExtractTar(containerTar, tmpdir, false, 0, 0, nil)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -397,7 +397,7 @@ func TestExtractTarPWL(t *testing.T) {
 
 	pwl := make(PathWhitelistMap)
 	pwl["folder/foo.txt"] = struct{}{}
-	err = ExtractTar(containerTar, tmpdir, false, pwl)
+	err = ExtractTar(containerTar, tmpdir, false, 0, 0, pwl)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -502,7 +502,7 @@ func TestExtractTarOverwrite(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	defer containerTar1.Close()
-	err = ExtractTar(containerTar1, tmpdir, false, nil)
+	err = ExtractTar(containerTar1, tmpdir, false, 0, 0, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -582,7 +582,7 @@ func TestExtractTarOverwrite(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	defer containerTar2.Close()
-	err = ExtractTar(containerTar2, tmpdir, true, nil)
+	err = ExtractTar(containerTar2, tmpdir, true, 0, 0, nil)
 
 	expectedFiles := []*fileInfo{
 		&fileInfo{path: "hello.txt", typeflag: tar.TypeReg, size: 8, contents: "newhello"},
@@ -658,7 +658,7 @@ func TestExtractTarTimes(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	err = ExtractTar(containerTar, tmpdir, false, nil)
+	err = ExtractTar(containerTar, tmpdir, false, 0, 0, nil)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
