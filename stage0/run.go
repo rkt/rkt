@@ -452,7 +452,9 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 func setupStage1Image(cfg RunConfig, img types.Hash, cdir string, useOverlay bool) error {
 	if useOverlay {
 		s1 := common.Stage1ImagePath(cdir)
-		if err := overlayRender(cfg, img, cdir, s1, "stage1"); err != nil {
+		// pass an empty appName: make sure it remains consistent with
+		// overlayStatusDirTemplate
+		if err := overlayRender(cfg, img, cdir, s1, ""); err != nil {
 			return fmt.Errorf("error rendering overlay filesystem: %v", err)
 		}
 
