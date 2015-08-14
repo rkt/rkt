@@ -27,13 +27,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
+	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/stage1/init/kvm"
 )
 
@@ -343,13 +343,24 @@ func (p *Pod) writeEnvFile(env types.Environment, appName types.ACName, privateU
 		fmt.Fprintf(&ef, "%s=%s\000", e.Name, e.Value)
 	}
 
-	if len(privateUsers) > 0 {
-		// TODO: remove this work around and do a chown
-		syscall.Umask(0)
-		return ioutil.WriteFile(EnvFilePath(p.Root, appName), ef.Bytes(), 0666)
-	} else {
-		return ioutil.WriteFile(EnvFilePath(p.Root, appName), ef.Bytes(), 0644)
+	uidRange, err := uid.UnserializeUidRange(privateUsers)
+	if err != nil {
+		return err
 	}
+
+	envFilePath := EnvFilePath(p.Root, appName)
+
+	if err := ioutil.WriteFile(envFilePath, ef.Bytes(), 0644); err != nil {
+		return err
+	}
+
+	if uidRange.UidShift != 0 && uidRange.UidCount != 0 {
+		if err := os.Chown(envFilePath, int(uidRange.UidShift), int(uidRange.UidShift)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // PodToSystemd creates the appropriate systemd service unit files for
