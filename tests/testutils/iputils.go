@@ -15,8 +15,12 @@
 package testutils
 
 import (
+	"bufio"
 	"fmt"
 	"net"
+	"os"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
@@ -87,4 +91,88 @@ func GetGWv4(iface string) (string, error) {
 
 func GetGWv6(iface string) (string, error) {
 	return GetGW(iface, netlink.FAMILY_V4)
+}
+
+func GetNonLoIfaceWithAddrs() (iface net.Interface, err error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return iface, err
+	}
+
+	for _, i := range ifaces {
+		if i.Flags&net.FlagLoopback == 0 {
+			ifaceNameLower := strings.ToLower(i.Name)
+			// Don't use rkt's interfaces
+			if strings.HasSuffix(ifaceNameLower, "cni") ||
+				strings.HasSuffix(ifaceNameLower, "veth") {
+				continue
+			}
+			addrs, err := i.Addrs()
+			if err != nil {
+				return iface, fmt.Errorf("Cannot get IPV4 address for interface %v: %v", i.Name, err)
+			}
+			if len(addrs) > 0 {
+				iface = i
+				break
+			}
+		}
+	}
+	return iface, err
+}
+
+func GetNonLoIfaceIPv4() (string, error) {
+	iface, err := GetNonLoIfaceWithAddrs()
+	if err != nil {
+		return "", fmt.Errorf("Error while getting non-lo host interface: %v\n", err)
+	}
+	if iface.Name == "" {
+		return "", nil
+	}
+
+	ifaceIPsv4, err := GetIPsv4(iface.Name)
+	if err != nil {
+		return "", fmt.Errorf("Cannot get IPV4 address for interface %v: %v", iface.Name, err)
+	}
+	if len(ifaceIPsv4) == 0 {
+		return "", nil
+	}
+	return ifaceIPsv4[0], nil
+}
+
+func CheckTcp4Port(port int) (bool, error) {
+	tcpFile, err := os.Open("/proc/net/tcp")
+	if err != nil {
+		return false, err
+	}
+	defer tcpFile.Close()
+
+	re := regexp.MustCompile(`:([A-Z0-9]+) `)
+	scanner := bufio.NewScanner(tcpFile)
+	for scanner.Scan() {
+		line := scanner.Text()
+		result := re.FindAllStringSubmatch(line, -1)
+		if result != nil {
+			i, err := strconv.ParseInt(result[0][1], 16, 32)
+			if err != nil {
+				return false, err
+			}
+			if int(i) == port {
+				return false, nil
+			}
+		}
+	}
+	return true, nil
+}
+
+func GetNextFreePort4() (int, error) {
+	for port := 49152; port <= 65535; port++ {
+		avail, err := CheckTcp4Port(port)
+		if err != nil {
+			return 0, err
+		}
+		if avail {
+			return port, nil
+		}
+	}
+	return 0, fmt.Errorf("No available ports")
 }

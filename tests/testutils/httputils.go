@@ -58,13 +58,13 @@ func HttpServe(addr string, timeout int) error {
 		sl.Stop()
 	}()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	serveMux := http.NewServeMux()
+	serveMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%v: Serve got a connection from %v\n", hostname, r.RemoteAddr)
 		fmt.Fprintf(w, "%v", hostname)
 		c <- r.RemoteAddr
 	})
-	server := http.Server{}
-	err = server.Serve(sl)
+	err = http.Serve(sl, serveMux)
 	if err != nil && err.Error() == "Listener stopped" {
 		err = nil
 	}
