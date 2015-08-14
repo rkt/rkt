@@ -123,8 +123,8 @@ func CopyTree(src, dest string, uidrange *uid.UidRange) error {
 			return fmt.Errorf("unsupported mode: %v", mode)
 		}
 
-		var srcUid uint64 = uint64(info.Sys().(*syscall.Stat_t).Uid)
-		var srcGid uint64 = uint64(info.Sys().(*syscall.Stat_t).Gid)
+		var srcUid = info.Sys().(*syscall.Stat_t).Uid
+		var srcGid = info.Sys().(*syscall.Stat_t).Gid
 
 		if uidrange.UidCount > 0 && (srcUid >= uidrange.UidCount || srcGid >= uidrange.UidCount) {
 			return fmt.Errorf("source contains out of range uid/gid")

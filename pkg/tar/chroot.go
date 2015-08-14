@@ -56,14 +56,17 @@ func extractTarCommand() error {
 		return fmt.Errorf("error parsing overwrite argument: %v", err)
 	}
 
-	uidShift, err := strconv.ParseUint(os.Args[3], 10, 32)
+	us, err := strconv.ParseUint(os.Args[3], 10, 32)
 	if err != nil {
 		return fmt.Errorf("error parsing uidShift argument: %v", err)
 	}
-	uidCount, err := strconv.ParseUint(os.Args[4], 10, 32)
+	uc, err := strconv.ParseUint(os.Args[4], 10, 32)
 	if err != nil {
 		return fmt.Errorf("error parsing uidShift argument: %v", err)
 	}
+
+	uidShift := uint32(us)
+	uidCount := uint32(uc)
 
 	if err := syscall.Chroot(dir); err != nil {
 		return fmt.Errorf("failed to chroot in %s: %v", dir, err)
@@ -92,7 +95,7 @@ func extractTarCommand() error {
 // If overwrite is true, existing files will be overwritten.
 // The extraction is executed by fork/exec()ing a new process. The new process
 // needs the CAP_SYS_CHROOT capability.
-func ExtractTar(rs io.Reader, dir string, overwrite bool, uidShift uint64, uidCount uint64, pwl PathWhitelistMap) error {
+func ExtractTar(rs io.Reader, dir string, overwrite bool, uidShift uint32, uidCount uint32, pwl PathWhitelistMap) error {
 	r, w, err := os.Pipe()
 	if err != nil {
 		return err
@@ -100,8 +103,8 @@ func ExtractTar(rs io.Reader, dir string, overwrite bool, uidShift uint64, uidCo
 	defer w.Close()
 	enc := json.NewEncoder(w)
 	cmd := mcEntrypoint.Cmd(dir, strconv.FormatBool(overwrite),
-		strconv.FormatUint(uidShift, 10),
-		strconv.FormatUint(uidCount, 10))
+		strconv.FormatUint(uint64(uidShift), 10),
+		strconv.FormatUint(uint64(uidCount), 10))
 	cmd.ExtraFiles = []*os.File{r}
 
 	cmd.Stdin = rs

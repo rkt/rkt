@@ -18,20 +18,18 @@
 package uid
 
 import (
-	"errors"
+	"fmt"
 	"math/rand"
-	"strconv"
-	"strings"
 	"time"
 )
 
 // A UidRange structure used to set uidshift and its range.
 type UidRange struct {
-	UidShift uint64
-	UidCount uint64
+	UidShift uint32
+	UidCount uint32
 }
 
-func NewUidRange(uidshift uint64, uidcount uint64) *UidRange {
+func NewUidRange(uidshift uint32, uidcount uint32) *UidRange {
 	ur := &UidRange{
 		uidshift,
 		uidcount,
@@ -39,83 +37,34 @@ func NewUidRange(uidshift uint64, uidcount uint64) *UidRange {
 	return ur
 }
 
-func GenerateContainerID(containerid uint64) uint64 {
-	var containerID uint64 = containerid
-
-	if containerID < 0x00010000 {
-		rand.Seed(time.Now().UnixNano())
-		containerID = uint64(rand.Int63n(0xFFFDFFFF)) + 0X00010000
-	}
-
-	return containerID
-}
-
-func GenerateUidShift(containerid uint64) uint64 {
-	var uidShift uint64
+func GenerateUidShift() uint32 {
 	rand.Seed(time.Now().UnixNano())
-	containerUid := rand.Intn(0x0000FFFF)
-
-	uidShift = GenerateContainerID(containerid) | uint64(containerUid)
+	// we force the MSB to 0 because devpts parses the uid,gid options as int
+	// instead of as uint.
+	// http://lxr.free-electrons.com/source/fs/devpts/inode.c?v=4.1#L189
+	n := rand.Intn(0x7FFF) + 1
+	uidShift := uint32(n << 16)
 
 	return uidShift
 }
 
-func GenerateUidRange(containerid uint64, uidcount uint64) *UidRange {
-	uidShift := GenerateUidShift(containerid)
-	ur := NewUidRange(uidShift, uidcount)
-	return ur
-}
-
-func SetUidRange(uidrange *UidRange, containerid uint64, uidcount uint64) {
-	uidShift := GenerateUidShift(containerid)
+func SetUidRange(uidrange *UidRange, uidcount uint32) {
+	uidShift := GenerateUidShift()
 	uidrange.UidShift = uidShift
 	uidrange.UidCount = uidcount
 }
 
-func ParseSerializedUidRange(uidrange string) (uidShift uint64, uidCount uint64, err error) {
-	if len(uidrange) == 0 {
-		return 0, 0, nil
-	}
-
-	uidrangeArr := strings.Split(uidrange, ":")
-	if len(uidrangeArr) < 2 {
-		return 0, 0, errors.New("uidrange format error")
-	}
-
-	uidShift, err = strconv.ParseUint(uidrangeArr[0], 10, 64)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	uidCount, err = strconv.ParseUint(uidrangeArr[1], 10, 64)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return
-}
-
-func SerializeUidRange(uidrange UidRange) string {
-	var uidrangeStr string = ""
-
-	uidshift := strconv.FormatUint(uidrange.UidShift, 10)
-	uidcount := strconv.FormatUint(uidrange.UidCount, 10)
-
-	uidrangeStr = uidshift + ":" + uidcount
-
-	return uidrangeStr
+func (uidrange UidRange) String() string {
+	return fmt.Sprintf("%d:%d", uidrange.UidShift, uidrange.UidCount)
 }
 
 func UnserializeUidRange(uidrange string) (UidRange, error) {
 	ur := UidRange{0, 0}
 
-	uidshift, uidcount, err := ParseSerializedUidRange(uidrange)
+	n, err := fmt.Sscanf(uidrange, "%d:%d", &ur.UidShift, &ur.UidCount)
 	if err != nil {
 		return ur, err
 	}
-
-	ur.UidShift = uidshift
-	ur.UidCount = uidcount
 
 	return ur, nil
 }

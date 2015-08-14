@@ -271,7 +271,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 
 	if cfg.PrivateUsers.UidShift > 0 {
 		// mark the pod as prepared for user namespaces
-		uidrangeStr := uid.SerializeUidRange(cfg.PrivateUsers)
+		uidrangeStr := cfg.PrivateUsers.String()
 
 		if err := ioutil.WriteFile(filepath.Join(dir, common.PrivateUsersPreparedFilename), []byte(uidrangeStr), 0700); err != nil {
 			return fmt.Errorf("error writing userns marker file: %v", err)

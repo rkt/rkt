@@ -150,7 +150,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	if flagPrivateUsers && common.SupportsUserNS() {
-		uid.SetUidRange(&privateUsers, 0, 0x10000)
+		uid.SetUidRange(&privateUsers, 0x10000)
 	}
 
 	if len(flagPorts) > 0 && !flagPrivateNet.Any() {
