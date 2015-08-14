@@ -31,6 +31,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/pkg/uid"
 )
 
 const (
@@ -61,7 +62,7 @@ func (ts *TreeStore) Write(key string, s *Store) error {
 	if err := os.MkdirAll(treepath, 0755); err != nil {
 		return fmt.Errorf("treestore: cannot create treestore directory %s: %v", treepath, err)
 	}
-	err = aci.RenderACIWithImageID(*imageID, treepath, s)
+	err = aci.RenderACIWithImageID(*imageID, treepath, s, uid.NewBlankUidRange())
 	if err != nil {
 		return fmt.Errorf("treestore: cannot render aci: %v", err)
 	}

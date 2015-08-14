@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	"github.com/coreos/rkt/pkg/fileutil"
+	"github.com/coreos/rkt/pkg/uid"
 )
 
 // createBackup backs a database up in a given directory. It basically
@@ -36,7 +37,7 @@ func createBackup(dbDir, backupsDir string, limit int) error {
 	if err := os.MkdirAll(backupsDir, defaultPathPerm); err != nil {
 		return err
 	}
-	if err := fileutil.CopyTree(dbDir, tmpBackupDir); err != nil {
+	if err := fileutil.CopyTree(dbDir, tmpBackupDir, uid.NewBlankUidRange()); err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmpBackupDir)

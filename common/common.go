@@ -34,9 +34,10 @@ const (
 	stage1Dir = "/stage1"
 	stage2Dir = "/opt/stage2"
 
-	EnvLockFd               = "RKT_LOCK_FD"
-	Stage1IDFilename        = "stage1ID"
-	OverlayPreparedFilename = "overlay-prepared"
+	EnvLockFd                    = "RKT_LOCK_FD"
+	Stage1IDFilename             = "stage1ID"
+	OverlayPreparedFilename      = "overlay-prepared"
+	PrivateUsersPreparedFilename = "private-users-prepared"
 
 	MetadataServicePort    = 2375
 	MetadataServiceRegSock = "/run/rkt/metadata-svc.sock"
@@ -129,6 +130,15 @@ func SupportsOverlay() bool {
 			return true
 		}
 	}
+	return false
+}
+
+// SupportsUserNS returns whether the kernel has CONFIG_USER_NS set
+func SupportsUserNS() bool {
+	if _, err := os.Stat("/proc/self/uid_map"); err == nil {
+		return true
+	}
+
 	return false
 }
 

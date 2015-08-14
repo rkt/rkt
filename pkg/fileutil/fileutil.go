@@ -22,6 +22,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/coreos/rkt/pkg/uid"
+
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/device"
 )
 
@@ -58,7 +60,7 @@ func copySymlink(src, dest string) error {
 	return nil
 }
 
-func CopyTree(src, dest string) error {
+func CopyTree(src, dest string, uidRange *uid.UidRange) error {
 	dirs := make(map[string][]syscall.Timespec)
 	copyWalker := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -121,7 +123,15 @@ func CopyTree(src, dest string) error {
 			return fmt.Errorf("unsupported mode: %v", mode)
 		}
 
-		if err := os.Lchown(target, int(info.Sys().(*syscall.Stat_t).Uid), int(info.Sys().(*syscall.Stat_t).Gid)); err != nil {
+		var srcUid = info.Sys().(*syscall.Stat_t).Uid
+		var srcGid = info.Sys().(*syscall.Stat_t).Gid
+
+		shiftedUid, shiftedGid, err := uidRange.ShiftRange(srcUid, srcGid)
+		if err != nil {
+			return err
+		}
+
+		if err := os.Lchown(target, int(shiftedUid), int(shiftedGid)); err != nil {
 			return err
 		}
 

@@ -44,6 +44,7 @@ import (
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/label"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
 )
@@ -51,13 +52,14 @@ import (
 // configuration parameters required by Prepare
 type PrepareConfig struct {
 	CommonConfig
-	Apps        *apps.Apps          // apps to prepare
-	InheritEnv  bool                // inherit parent environment into apps
-	ExplicitEnv []string            // always set these environment variables for all the apps
-	Volumes     []types.Volume      // list of volumes that rkt can provide to applications
-	Ports       []types.ExposedPort // list of ports that rkt will expose on the host
-	UseOverlay  bool                // prepare pod with overlay fs
-	PodManifest string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
+	Apps         *apps.Apps          // apps to prepare
+	InheritEnv   bool                // inherit parent environment into apps
+	ExplicitEnv  []string            // always set these environment variables for all the apps
+	Volumes      []types.Volume      // list of volumes that rkt can provide to applications
+	Ports        []types.ExposedPort // list of ports that rkt will expose on the host
+	UseOverlay   bool                // prepare pod with overlay fs
+	PodManifest  string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
+	PrivateUsers *uid.UidRange       // User namespaces
 }
 
 // configuration parameters needed by Run
@@ -267,6 +269,15 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		defer f.Close()
 	}
 
+	if cfg.PrivateUsers.Shift > 0 {
+		// mark the pod as prepared for user namespaces
+		uidrangeBytes := cfg.PrivateUsers.Serialize()
+
+		if err := ioutil.WriteFile(filepath.Join(dir, common.PrivateUsersPreparedFilename), uidrangeBytes, 0700); err != nil {
+			return fmt.Errorf("error writing userns marker file: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -286,10 +297,27 @@ func preparedWithOverlay(dir string) (bool, error) {
 	return true, nil
 }
 
+func preparedWithPrivateUsers(dir string) (string, error) {
+	bytes, err := ioutil.ReadFile(filepath.Join(dir, common.PrivateUsersPreparedFilename))
+	if os.IsNotExist(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
+}
+
 // Run mounts the right overlay filesystems and actually runs the prepared
 // pod by exec()ing the stage1 init inside the pod filesystem.
 func Run(cfg RunConfig, dir string) {
 	useOverlay, err := preparedWithOverlay(dir)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
+	privateUsers, err := preparedWithPrivateUsers(dir)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
@@ -331,6 +359,9 @@ func Run(cfg RunConfig, dir string) {
 	if cfg.Interactive {
 		args = append(args, "--interactive")
 	}
+	if len(privateUsers) > 0 {
+		args = append(args, "--private-users="+privateUsers)
+	}
 	if cfg.MDSRegister {
 		mdsToken, err := registerPod(".", cfg.UUID, cfg.Apps)
 		if err != nil {
@@ -367,6 +398,9 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 	log.Println("Loading image", img.String())
 
 	if useOverlay {
+		if cfg.PrivateUsers.Shift > 0 {
+			return fmt.Errorf("cannot use both overlay and user namespace: not implemented yet. (Try --no-overlay)")
+		}
 		if err := cfg.Store.RenderTreeStore(img.String(), false); err != nil {
 			return fmt.Errorf("error rendering tree image: %v", err)
 		}
@@ -383,7 +417,7 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 			return fmt.Errorf("error creating image directory: %v", err)
 		}
 
-		if err := aci.RenderACIWithImageID(img, ad, cfg.Store); err != nil {
+		if err := aci.RenderACIWithImageID(img, ad, cfg.Store, cfg.PrivateUsers); err != nil {
 			return fmt.Errorf("error rendering ACI: %v", err)
 		}
 	}
@@ -440,7 +474,7 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 
 		destRootfs := filepath.Join(s1, "rootfs")
 		cachedTreePath := cfg.Store.GetTreeStoreRootFS(img.String())
-		if err := fileutil.CopyTree(cachedTreePath, destRootfs); err != nil {
+		if err := fileutil.CopyTree(cachedTreePath, destRootfs, cfg.PrivateUsers); err != nil {
 			return fmt.Errorf("error rendering ACI: %v", err)
 		}
 	}
