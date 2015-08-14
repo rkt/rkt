@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -41,8 +40,9 @@ func Enter(cdir string, podPID int, appName types.ACName, stage1Path string, cmd
 	}
 
 	argv := []string{filepath.Join(stage1Path, ep)}
-	argv = append(argv, strconv.Itoa(podPID))
-	argv = append(argv, appName.String())
+	argv = append(argv, fmt.Sprintf("--pid=%d", podPID))
+	argv = append(argv, fmt.Sprintf("--appname=%s", appName.String()))
+	argv = append(argv, "--")
 	argv = append(argv, cmdline...)
 	if err := syscall.Exec(argv[0], argv, os.Environ()); err != nil {
 		return fmt.Errorf("error execing enter: %v", err)

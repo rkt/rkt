@@ -63,10 +63,11 @@ An alternative stage 1 would need to do whatever is appropriate for entering the
 
 #### Arguments
 
-1. PID of the process that is PID 1 in the container. rkt finds that PID by one of the two supported methods described in the `rkt run` section.
-2. app name of the specific application to enter.
-3. cmd to execute.
-4. any cmd arguments.
+1. `--pid=$PID` passes the PID of the process that is PID 1 in the container. rkt finds that PID by one of the two supported methods described in the `rkt run` section.
+2. `--appname=$NAME` passes the app name of the specific application to enter.
+3. the separator `--`
+4. cmd to execute.
+5. optionally, any cmd arguments.
 
 ### `rkt gc` => "coreos.com/rkt/stage1/gc"
 
