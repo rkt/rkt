@@ -1,3 +1,31 @@
+### v0.8.0-rc1
+
+rkt 0.8.0-rc1 includes support for running containers under an LKVM hypervisor
+and experimental user namespace support.
+
+Full changelog:
+
+- Documentation improvements
+- Better integration with systemd:
+ - journalctl -M
+ - machinectl {reboot,poweroff}
+- Update stage1's systemd to v222
+- Add more functional tests
+- Build system improvements
+- Fix bugs with garbage-collection
+- LKVM stage1 support with network and volumes
+- Smarter image discovery: ETag and Cache-Control support
+- Add CNI DHCP plugin
+- Support systemd socket activation
+- Backup CAS database when migrating
+- Improve error messages
+- Add the ability to override ACI exec
+- Optimize rkt startup times when a stage1 is present in the store
+- Trust keys fetched via TLS by default
+- Add the ability to garbage-collect a specific pod
+- Add experimental user namespace support
+- Bugfixes
+
 ### v0.7.0
 
 rkt 0.7.0 includes new subcommands for `rkt image` to manipulate images from

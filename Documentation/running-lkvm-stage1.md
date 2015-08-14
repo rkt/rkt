@@ -11,7 +11,7 @@ To use a LKVM stage1 you need to build rkt with the right options:
 $ ./autogen.sh && ./configure --with-stage1=kvm && make
 ```
 
-This will build the rkt binary and the LKVM stage1.aci in `build-rkt-0.7.0/bin/`.
+This will build the rkt binary and the LKVM stage1.aci in `build-rkt-0.8.0-rc1/bin/`.
 
 Provided you have hardware virtualization support and the [kernel KVM module](http://www.linux-kvm.org/page/Getting_the_kvm_kernel_modules) loaded (refer to your distribution for instructions), you can then run an image like you would normally do with rkt:
 
