@@ -51,7 +51,6 @@ type TreeStore struct {
 // before Write)
 func (ts *TreeStore) Write(key string, s *Store) error {
 	treepath := filepath.Join(ts.path, key)
-	var uidRange uid.UidRange
 	fi, _ := os.Stat(treepath)
 	if fi != nil {
 		return fmt.Errorf("treestore: path %s already exists", treepath)
@@ -63,7 +62,7 @@ func (ts *TreeStore) Write(key string, s *Store) error {
 	if err := os.MkdirAll(treepath, 0755); err != nil {
 		return fmt.Errorf("treestore: cannot create treestore directory %s: %v", treepath, err)
 	}
-	err = aci.RenderACIWithImageID(*imageID, treepath, s, uidRange)
+	err = aci.RenderACIWithImageID(*imageID, treepath, s, uid.NewBlankUidRange())
 	if err != nil {
 		return fmt.Errorf("treestore: cannot render aci: %v", err)
 	}

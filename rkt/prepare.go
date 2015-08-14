@@ -67,7 +67,7 @@ func init() {
 func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	var err error
 	origStdout := os.Stdout
-	var privateUsers uid.UidRange
+	privateUsers := uid.NewBlankUidRange()
 	if flagQuiet {
 		if os.Stdout, err = os.Open("/dev/null"); err != nil {
 			stderr("prepare: unable to open /dev/null")
@@ -76,7 +76,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	if flagPrivateUsers && common.SupportsUserNS() {
-		uid.SetUidRange(&privateUsers, 0x10000)
+		privateUsers.SetRandomUidRange(uid.DefaultRangeCount)
 	}
 
 	if err = parseApps(&rktApps, args, cmd.Flags(), true); err != nil {

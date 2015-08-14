@@ -343,19 +343,18 @@ func (p *Pod) writeEnvFile(env types.Environment, appName types.ACName, privateU
 		fmt.Fprintf(&ef, "%s=%s\000", e.Name, e.Value)
 	}
 
-	uidRange, err := uid.UnserializeUidRange(privateUsers)
-	if err != nil {
+	uidRange := uid.NewBlankUidRange()
+	if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
 		return err
 	}
 
 	envFilePath := EnvFilePath(p.Root, appName)
-
 	if err := ioutil.WriteFile(envFilePath, ef.Bytes(), 0644); err != nil {
 		return err
 	}
 
-	if uidRange.UidShift != 0 && uidRange.UidCount != 0 {
-		if err := os.Chown(envFilePath, int(uidRange.UidShift), int(uidRange.UidShift)); err != nil {
+	if uidRange.Shift != 0 && uidRange.Count != 0 {
+		if err := os.Chown(envFilePath, int(uidRange.Shift), int(uidRange.Shift)); err != nil {
 			return err
 		}
 	}

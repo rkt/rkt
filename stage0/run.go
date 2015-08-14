@@ -59,7 +59,7 @@ type PrepareConfig struct {
 	Ports        []types.ExposedPort // list of ports that rkt will expose on the host
 	UseOverlay   bool                // prepare pod with overlay fs
 	PodManifest  string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
-	PrivateUsers uid.UidRange        // User namespaces
+	PrivateUsers *uid.UidRange       // User namespaces
 }
 
 // configuration parameters needed by Run
@@ -269,11 +269,11 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		defer f.Close()
 	}
 
-	if cfg.PrivateUsers.UidShift > 0 {
+	if cfg.PrivateUsers.Shift > 0 {
 		// mark the pod as prepared for user namespaces
-		uidrangeStr := cfg.PrivateUsers.String()
+		uidrangeBytes := cfg.PrivateUsers.Serialize()
 
-		if err := ioutil.WriteFile(filepath.Join(dir, common.PrivateUsersPreparedFilename), []byte(uidrangeStr), 0700); err != nil {
+		if err := ioutil.WriteFile(filepath.Join(dir, common.PrivateUsersPreparedFilename), uidrangeBytes, 0700); err != nil {
 			return fmt.Errorf("error writing userns marker file: %v", err)
 		}
 	}
@@ -398,8 +398,8 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 	log.Println("Loading image", img.String())
 
 	if useOverlay {
-		if cfg.PrivateUsers.UidShift > 0 {
-			return fmt.Errorf("cannot use both overlay and user namespace: not implemented yet")
+		if cfg.PrivateUsers.Shift > 0 {
+			return fmt.Errorf("cannot use both overlay and user namespace: not implemented yet. (Try --no-overlay)")
 		}
 		if err := cfg.Store.RenderTreeStore(img.String(), false); err != nil {
 			return fmt.Errorf("error rendering tree image: %v", err)
@@ -474,7 +474,7 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 
 		destRootfs := filepath.Join(s1, "rootfs")
 		cachedTreePath := cfg.Store.GetTreeStoreRootFS(img.String())
-		if err := fileutil.CopyTree(cachedTreePath, destRootfs, &cfg.PrivateUsers); err != nil {
+		if err := fileutil.CopyTree(cachedTreePath, destRootfs, cfg.PrivateUsers); err != nil {
 			return fmt.Errorf("error rendering ACI: %v", err)
 		}
 	}

@@ -142,7 +142,7 @@ func getStage1Hash(s *store.Store, stage1ImagePath string) (*types.Hash, error) 
 }
 
 func runRun(cmd *cobra.Command, args []string) (exit int) {
-	var privateUsers uid.UidRange
+	privateUsers := uid.NewBlankUidRange()
 	err := parseApps(&rktApps, args, cmd.Flags(), true)
 	if err != nil {
 		stderr("run: error parsing app image arguments: %v", err)
@@ -150,7 +150,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	if flagPrivateUsers && common.SupportsUserNS() {
-		uid.SetUidRange(&privateUsers, 0x10000)
+		privateUsers.SetRandomUidRange(uid.DefaultRangeCount)
 	}
 
 	if len(flagPorts) > 0 && !flagPrivateNet.Any() {

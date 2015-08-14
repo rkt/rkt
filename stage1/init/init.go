@@ -128,7 +128,7 @@ var (
 	debug        bool
 	privNet      common.PrivateNetList
 	interactive  bool
-	PrivateUsers string
+	privateUsers string
 	mdsToken     string
 	localhostIP  net.IP
 	localConfig  string
@@ -138,7 +138,7 @@ func init() {
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
 	flag.Var(&privNet, "private-net", "Setup private network")
 	flag.BoolVar(&interactive, "interactive", false, "The pod is interactive")
-	flag.StringVar(&PrivateUsers, "private-users", "", "Run within user namespace. Can be set to [=UIDBASE[:NUIDS]]")
+	flag.StringVar(&privateUsers, "private-users", "", "Run within user namespace. Can be set to [=UIDBASE[:NUIDS]]")
 	flag.StringVar(&mdsToken, "mds-token", "", "MDS auth token")
 	flag.StringVar(&localConfig, "local-config", common.DefaultLocalConfigDir, "Local config path")
 	// this ensures that main runs only on main thread (thread group leader).
@@ -385,8 +385,8 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		env = append(env, "SYSTEMD_LOG_LEVEL=err") // silence log_warning too
 	}
 
-	if len(PrivateUsers) > 0 {
-		args = append(args, "--private-users="+PrivateUsers)
+	if len(privateUsers) > 0 {
+		args = append(args, "--private-users="+privateUsers)
 	}
 
 	keepUnit, err := isRunningFromUnitFile()
@@ -556,7 +556,7 @@ func stage1() int {
 		return 2
 	}
 
-	if err = p.PodToSystemd(interactive, flavor, PrivateUsers); err != nil {
+	if err = p.PodToSystemd(interactive, flavor, privateUsers); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
 		return 2
 	}

@@ -34,11 +34,10 @@ import (
 // is removed.
 func createBackup(dbDir, backupsDir string, limit int) error {
 	tmpBackupDir := filepath.Join(backupsDir, "tmp")
-	uidrange := uid.NewUidRange(0, 0)
 	if err := os.MkdirAll(backupsDir, defaultPathPerm); err != nil {
 		return err
 	}
-	if err := fileutil.CopyTree(dbDir, tmpBackupDir, uidrange); err != nil {
+	if err := fileutil.CopyTree(dbDir, tmpBackupDir, uid.NewBlankUidRange()); err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmpBackupDir)

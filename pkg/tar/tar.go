@@ -27,6 +27,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/device"
 	"github.com/coreos/rkt/pkg/fileutil"
+	"github.com/coreos/rkt/pkg/uid"
 )
 
 const DEFAULT_DIR_MODE os.FileMode = 0755
@@ -40,7 +41,7 @@ type PathWhitelistMap map[string]struct{}
 // extractTar extracts a tarball (from a tar.Reader) into the root directory
 // if pwl is not nil, only the paths in the map are extracted.
 // If overwrite is true, existing files will be overwritten.
-func extractTar(tr *tar.Reader, overwrite bool, pwl PathWhitelistMap, uidShift uint32, uidCount uint32) error {
+func extractTar(tr *tar.Reader, overwrite bool, pwl PathWhitelistMap, uidRange *uid.UidRange) error {
 	um := syscall.Umask(0)
 	defer syscall.Umask(um)
 
@@ -58,7 +59,7 @@ Tar:
 					continue
 				}
 			}
-			err = extractFile(tr, hdr, overwrite, uidShift, uidCount)
+			err = extractFile(tr, hdr, overwrite, uidRange)
 			if err != nil {
 				return fmt.Errorf("error extracting tarball: %v", err)
 			}
@@ -84,7 +85,7 @@ Tar:
 // extractFile extracts the file described by hdr from the given tarball into
 // the root directory.
 // If overwrite is true, existing files will be overwritten.
-func extractFile(tr *tar.Reader, hdr *tar.Header, overwrite bool, uidShift uint32, uidCount uint32) error {
+func extractFile(tr *tar.Reader, hdr *tar.Header, overwrite bool, uidRange *uid.UidRange) error {
 	p := filepath.Join("/", hdr.Name)
 	fi := hdr.FileInfo()
 	typ := hdr.Typeflag
@@ -165,10 +166,11 @@ func extractFile(tr *tar.Reader, hdr *tar.Header, overwrite bool, uidShift uint3
 		return fmt.Errorf("unsupported type: %v", typ)
 	}
 
-	if uidCount != 0 && (uint32(hdr.Uid) >= uidCount || uint32(hdr.Gid) >= uidCount) {
-		return fmt.Errorf("archive contains out of range uid/gid")
+	shiftedUid, shiftedGid, err := uidRange.ShiftRange(uint32(hdr.Uid), uint32(hdr.Gid))
+	if err != nil {
+		return err
 	}
-	if err := os.Lchown(p, hdr.Uid+int(uidShift), hdr.Gid+int(uidShift)); err != nil {
+	if err := os.Lchown(p, int(shiftedUid), int(shiftedGid)); err != nil {
 		return err
 	}
 

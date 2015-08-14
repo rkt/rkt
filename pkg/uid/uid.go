@@ -19,52 +19,65 @@ package uid
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"time"
 )
 
+const DefaultRangeCount = 0x10000
+
 // A UidRange structure used to set uidshift and its range.
 type UidRange struct {
-	UidShift uint32
-	UidCount uint32
+	Shift uint32
+	Count uint32
 }
 
-func NewUidRange(uidshift uint32, uidcount uint32) *UidRange {
-	ur := &UidRange{
-		uidshift,
-		uidcount,
-	}
-	return ur
-}
-
-func GenerateUidShift() uint32 {
+func generateUidShift() uint32 {
 	rand.Seed(time.Now().UnixNano())
 	// we force the MSB to 0 because devpts parses the uid,gid options as int
 	// instead of as uint.
 	// http://lxr.free-electrons.com/source/fs/devpts/inode.c?v=4.1#L189
+	// systemd issue: https://github.com/systemd/systemd/issues/956
 	n := rand.Intn(0x7FFF) + 1
 	uidShift := uint32(n << 16)
 
 	return uidShift
 }
 
-func SetUidRange(uidrange *UidRange, uidcount uint32) {
-	uidShift := GenerateUidShift()
-	uidrange.UidShift = uidShift
-	uidrange.UidCount = uidcount
+func NewBlankUidRange() *UidRange {
+	return &UidRange{
+		Shift: 0,
+		Count: 0}
 }
 
-func (uidrange UidRange) String() string {
-	return fmt.Sprintf("%d:%d", uidrange.UidShift, uidrange.UidCount)
+func (r *UidRange) SetRandomUidRange(uidCount uint32) {
+	uidShift := generateUidShift()
+	r.Shift = uidShift
+	r.Count = uidCount
 }
 
-func UnserializeUidRange(uidrange string) (UidRange, error) {
-	ur := UidRange{0, 0}
+func (r *UidRange) ShiftRange(uid uint32, gid uint32) (uint32, uint32, error) {
+	if r.Count > 0 && (uid >= r.Count || gid >= r.Count) {
+		return 0, 0, fmt.Errorf("uid %d or gid %d are out of range %d", uid, gid, r.Count)
+	}
+	if math.MaxUint32-r.Shift < uid || math.MaxUint32-r.Shift < gid {
+		return 0, 0, fmt.Errorf("uid or gid are out of range %d after shifting", math.MaxUint32)
+	}
+	return uid + r.Shift, gid + r.Shift, nil
+}
 
-	n, err := fmt.Sscanf(uidrange, "%d:%d", &ur.UidShift, &ur.UidCount)
+func (r *UidRange) Serialize() []byte {
+	return []byte(fmt.Sprintf("%d:%d", r.Shift, r.Count))
+}
+
+func (r *UidRange) Deserialize(uidRange []byte) error {
+	if len(uidRange) == 0 {
+		return nil
+	}
+	_, err := fmt.Sscanf(string(uidRange), "%d:%d", &r.Shift, &r.Count)
 	if err != nil {
-		return ur, err
+		return fmt.Errorf("error deserializing uid range: %v", err)
 	}
 
-	return ur, nil
+	return nil
 }

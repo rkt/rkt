@@ -60,7 +60,7 @@ func copySymlink(src, dest string) error {
 	return nil
 }
 
-func CopyTree(src, dest string, uidrange *uid.UidRange) error {
+func CopyTree(src, dest string, uidRange *uid.UidRange) error {
 	dirs := make(map[string][]syscall.Timespec)
 	copyWalker := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -126,15 +126,12 @@ func CopyTree(src, dest string, uidrange *uid.UidRange) error {
 		var srcUid = info.Sys().(*syscall.Stat_t).Uid
 		var srcGid = info.Sys().(*syscall.Stat_t).Gid
 
-		if uidrange.UidCount > 0 && (srcUid >= uidrange.UidCount || srcGid >= uidrange.UidCount) {
-			return fmt.Errorf("source contains out of range uid/gid")
+		shiftedUid, shiftedGid, err := uidRange.ShiftRange(srcUid, srcGid)
+		if err != nil {
+			return err
 		}
-		srcUid = srcUid + uidrange.UidShift
-		srcGid = srcGid + uidrange.UidShift
-		if uidrange.UidShift > 0 && (srcUid >= 0xFFFFFFFF || srcGid >= 0xFFFFFFFF) {
-			return fmt.Errorf("source contains out of range uid/gid")
-		}
-		if err := os.Lchown(target, int(srcUid), int(srcGid)); err != nil {
+
+		if err := os.Lchown(target, int(shiftedUid), int(shiftedGid)); err != nil {
 			return err
 		}
 

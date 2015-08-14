@@ -27,6 +27,7 @@ import (
 
 	"github.com/coreos/rkt/pkg/multicall"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/pkg/uid"
 )
 
 const (
@@ -65,8 +66,7 @@ func extractTarCommand() error {
 		return fmt.Errorf("error parsing uidShift argument: %v", err)
 	}
 
-	uidShift := uint32(us)
-	uidCount := uint32(uc)
+	uidRange := &uid.UidRange{Shift: uint32(us), Count: uint32(uc)}
 
 	if err := syscall.Chroot(dir); err != nil {
 		return fmt.Errorf("failed to chroot in %s: %v", dir, err)
@@ -80,7 +80,7 @@ func extractTarCommand() error {
 	if err := json.NewDecoder(fileMapFile).Decode(&fileMap); err != nil {
 		return fmt.Errorf("error decoding fileMap: %v", err)
 	}
-	if err := extractTar(tar.NewReader(os.Stdin), overwrite, fileMap, uidShift, uidCount); err != nil {
+	if err := extractTar(tar.NewReader(os.Stdin), overwrite, fileMap, uidRange); err != nil {
 		return fmt.Errorf("error extracting tar: %v", err)
 	}
 
@@ -95,7 +95,7 @@ func extractTarCommand() error {
 // If overwrite is true, existing files will be overwritten.
 // The extraction is executed by fork/exec()ing a new process. The new process
 // needs the CAP_SYS_CHROOT capability.
-func ExtractTar(rs io.Reader, dir string, overwrite bool, uidShift uint32, uidCount uint32, pwl PathWhitelistMap) error {
+func ExtractTar(rs io.Reader, dir string, overwrite bool, uidRange *uid.UidRange, pwl PathWhitelistMap) error {
 	r, w, err := os.Pipe()
 	if err != nil {
 		return err
@@ -103,8 +103,8 @@ func ExtractTar(rs io.Reader, dir string, overwrite bool, uidShift uint32, uidCo
 	defer w.Close()
 	enc := json.NewEncoder(w)
 	cmd := mcEntrypoint.Cmd(dir, strconv.FormatBool(overwrite),
-		strconv.FormatUint(uint64(uidShift), 10),
-		strconv.FormatUint(uint64(uidCount), 10))
+		strconv.FormatUint(uint64(uidRange.Shift), 10),
+		strconv.FormatUint(uint64(uidRange.Count), 10))
 	cmd.ExtraFiles = []*os.File{r}
 
 	cmd.Stdin = rs
