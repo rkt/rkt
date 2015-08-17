@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -37,20 +36,23 @@ const baseAppName = "rkt-inspect"
 
 func importImageAndFetchHash(t *testing.T, ctx *rktRunCtx, img string) string {
 	// Import the test image into store manually.
-	cmds := strings.Fields(ctx.cmd())
-	fetchCmd := exec.Command(cmds[0], cmds[1:]...)
-	fetchCmd.Args = append(fetchCmd.Args, "--insecure-skip-verify", "fetch", img)
-	output, err := fetchCmd.Output()
+	child, err := gexpect.Spawn(fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmd(), img))
 	if err != nil {
-		t.Fatalf("Cannot read the output: %v", err)
+		t.Fatalf("Cannot exec rkt: %v", err)
 	}
 
 	// Read out the image hash.
-	ix := strings.Index(string(output), "sha512-")
-	if ix < 0 {
-		t.Fatalf("Unexpected result: %v, expecting a sha512 hash", string(output))
+	result, out, err := expectRegexWithOutput(child, "sha512-[0-9a-f]{32}")
+	if err != nil || len(result) != 1 {
+		t.Fatalf("Error: %v\nOutput: %v", err, out)
 	}
-	return strings.TrimSpace(string(output)[ix:])
+
+	err = child.Wait()
+	if err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+
+	return result[0]
 }
 
 func generatePodManifestFile(t *testing.T, manifest *schema.PodManifest) string {
@@ -561,16 +563,23 @@ func TestPodManifest(t *testing.T) {
 		verifyHostFile(t, tmpdir, "file", i, tt.expectedResult)
 
 		// 2. Test 'rkt prepare' + 'rkt run-prepared'.
-		cmds := strings.Fields(ctx.cmd())
-		prepareCmd := exec.Command(cmds[0], cmds[1:]...)
-		prepareArg := fmt.Sprintf("--pod-manifest=%s", manifestFile)
-		prepareCmd.Args = append(prepareCmd.Args, "--insecure-skip-verify", "prepare", prepareArg)
-		output, err := prepareCmd.Output()
+		child, err = gexpect.Spawn(fmt.Sprintf("%s --insecure-skip-verify prepare --pod-manifest=%s",
+			ctx.cmd(), manifestFile))
 		if err != nil {
-			t.Fatalf("Cannot read the output: %v", err)
+			t.Fatalf("Cannot exec rkt: %v", err)
 		}
 
-		podIDStr := strings.TrimSpace(string(output))
+		// Read out the UUID.
+		result, out, err := expectRegexWithOutput(child, "\n[0-9a-f-]{36}")
+		if err != nil || len(result) != 1 {
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
+		}
+
+		err = child.Wait()
+		if err != nil {
+			t.Fatalf("rkt didn't terminate correctly: %v", err)
+		}
+		podIDStr := strings.TrimSpace(result[0])
 		podID, err := types.NewUUID(podIDStr)
 		if err != nil {
 			t.Fatalf("%q is not a valid UUID: %v", podIDStr, err)
