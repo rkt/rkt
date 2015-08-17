@@ -68,13 +68,8 @@ func metaDiscoverPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]s
 }
 
 // getPubKey retrieves a public key (if remote), and verifies it's a gpg key
-func getPubKey(location string, allowHTTP bool) (*os.File, error) {
-	u, err := url.Parse(location)
-	if err != nil {
-		return nil, err
-	}
-
-	switch u.Scheme {
+func getPubKey(scheme, location string, allowHTTP bool) (*os.File, error) {
+	switch scheme {
 	case "":
 		return os.Open(location)
 	case "http":
@@ -83,7 +78,7 @@ func getPubKey(location string, allowHTTP bool) (*os.File, error) {
 		}
 		fallthrough
 	case "https":
-		return downloadKey(u.String())
+		return downloadKey(location)
 	}
 
 	return nil, fmt.Errorf("only http and https urls supported")
@@ -129,7 +124,11 @@ func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride
 	ks := getKeystore()
 
 	for _, pkl := range pkls {
-		pk, err := getPubKey(pkl, allowHTTP)
+		u, err := url.Parse(pkl)
+		if err != nil {
+			return err
+		}
+		pk, err := getPubKey(u.Scheme, pkl, allowHTTP)
 		if err != nil {
 			return fmt.Errorf("error accessing the key %s: %v", pkl, err)
 		}
@@ -146,6 +145,10 @@ func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride
 		if exists && !allowOverride {
 			stderr("Key %q already in the keystore", pkl)
 			continue
+		}
+
+		if globalFlags.TrustKeysFromHttps && u.Scheme == "https" {
+			forceAccept = true
 		}
 
 		if !forceAccept {
