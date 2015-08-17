@@ -75,7 +75,11 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		}
 	}
 
-	if flagPrivateUsers && common.SupportsUserNS() {
+	if flagPrivateUsers {
+		if !common.SupportsUserNS() {
+			stderr("prepare: --private-users is not supported, kernel compiled without user namespace support")
+			return 1
+		}
 		privateUsers.SetRandomUidRange(uid.DefaultRangeCount)
 	}
 
