@@ -87,12 +87,6 @@ For example, if you have a container stage1 named `stage1-container.aci` and a l
 ...
 ```
 
-## What doesn't work
-
-LKVM support is in an very early stage so not every feature works yet:
-
-* Network support [#1219](https://github.com/coreos/rkt/pull/1219)
-
 ## How does it work?
 
 It leverages the work done by Intel with their [Clear Containers system](https://lwn.net/Articles/644675/).
