@@ -43,7 +43,7 @@ Now we switch to the GitHub web UI to conduct the release:
 
 ```
 	export NAME="rkt-v0.7.0"
-	mkdir $NAME 
+	mkdir $NAME
 	cp release-build/bin/rkt release-build/bin/stage1.aci release-build/bin/stage1-lkvm.aci $NAME/
 	tar czvf $NAME.tar.gz $NAME/
 ```
@@ -56,12 +56,11 @@ Now we switch to the GitHub web UI to conduct the release:
 
 - Publish the release!
 
-Now it's announcement time: send an email to rkt-dev@googlegroups.com describing the release. 
-Generally this is higher level overview outlining some of the major features, not a copy-paste of the release notes. 
+Now it's announcement time: send an email to rkt-dev@googlegroups.com describing the release.
+Generally this is higher level overview outlining some of the major features, not a copy-paste of the release notes.
 Use your discretion and see [previous release emails](https://groups.google.com/forum/#!forum/rkt-dev) for examples.
 Make sure to include a list of authors that contributed since the previous release - something like the following might be handy:
 
 ```
 	git log ...v0.6.1 --pretty=format:"%an" | sort | uniq | tr '\n' ',' | sed -e 's#,#, #g' -e 's#, $##'
 ```
-
