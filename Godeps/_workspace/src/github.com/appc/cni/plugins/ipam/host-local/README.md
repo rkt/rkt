@@ -64,7 +64,7 @@ f81d4fae-7dec-11d0-a765-00a0c91e6bf6
 		"range-start": "3ffe:ffff:0:01ff::0010",
 		"range-end": "3ffe:ffff:0:01ff::0020",
 		"routes": [
-			"3ffe:ffff:0:01ff::1/64"
+			{ "dst": "3ffe:ffff:0:01ff::1/64" }
 		]
 	}
 }
@@ -79,7 +79,7 @@ f81d4fae-7dec-11d0-a765-00a0c91e6bf6
 		"range-start": "203.0.113.10",
 		"range-end": "203.0.113.20",
 		"routes": [
-			"203.0.113.0/24"
+			{ "dst": "203.0.113.0/24" }
 		]
 	}
 }

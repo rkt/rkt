@@ -45,6 +45,7 @@ type NetConf struct {
 }
 
 type subnetEnv struct {
+	nw     *net.IPNet
 	sn     *net.IPNet
 	mtu    uint
 	ipmasq bool
@@ -73,6 +74,12 @@ func loadFlannelSubnetEnv(fn string) (*subnetEnv, error) {
 	for s.Scan() {
 		parts := strings.SplitN(s.Text(), "=", 2)
 		switch parts[0] {
+		case "FLANNEL_NETWORK":
+			_, se.nw, err = net.ParseCIDR(parts[1])
+			if err != nil {
+				return nil, err
+			}
+
 		case "FLANNEL_SUBNET":
 			_, se.sn, err = net.ParseCIDR(parts[1])
 			if err != nil {
@@ -189,9 +196,14 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 	}
 
-	n.Delegate["ipam"] = map[string]string{
+	n.Delegate["ipam"] = map[string]interface{}{
 		"type":   "host-local",
 		"subnet": fenv.sn.String(),
+		"routes": []plugin.Route{
+			plugin.Route{
+				Dst: *fenv.nw,
+			},
+		},
 	}
 
 	return delegateAdd(args.ContainerID, n.Delegate)
