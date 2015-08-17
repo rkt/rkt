@@ -33,7 +33,7 @@ func GetKVMNetArgs(n *networking.Networking) ([]string, []string, error) {
 		if netParams.IPMasq {
 			gw = netParams.HostIP.String()
 		}
-		kernelParams = append(kernelParams, "ip="+netParams.GuestIP.String()+"::"+gw+":"+netParams.Mask.String()+":"+fmt.Sprintf(networking.IfNamePattern, i)+":::")
+		kernelParams = append(kernelParams, "ip="+netParams.GuestIP.String()+"::"+gw+":"+netParams.Mask.String()+"::"+fmt.Sprintf(networking.IfNamePattern, i)+":::")
 
 		lkvmArgs = append(lkvmArgs, "--network", "mode=tap,tapif="+netParams.IfName+",host_ip="+netParams.HostIP.String()+",guest_ip="+netParams.GuestIP.String())
 	}
