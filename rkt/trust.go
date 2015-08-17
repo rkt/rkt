@@ -48,6 +48,12 @@ func init() {
 }
 
 func runTrust(cmd *cobra.Command, args []string) (exit int) {
+	if globalFlags.InsecureSkipVerify {
+		// --insecure-skip-verify disable the keystore but we need it for rkt trust
+		stderr("--insecure-skip-verify cannot be used with rkt trust")
+		return 1
+	}
+
 	if flagPrefix == "" && !flagRoot {
 		if len(args) != 0 {
 			stderr("--root required for non-prefixed (root) keys")

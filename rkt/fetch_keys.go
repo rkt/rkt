@@ -127,6 +127,9 @@ func downloadKey(url string) (*os.File, error) {
 // addKeys adds the keys listed in pkls at prefix
 func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride bool) error {
 	ks := getKeystore()
+	if ks == nil {
+		panic("could not get the key store")
+	}
 
 	for _, pkl := range pkls {
 		pk, err := getPubKey(pkl, allowHTTP)
