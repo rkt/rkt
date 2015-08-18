@@ -520,10 +520,11 @@ func TestPodManifest(t *testing.T) {
 			continue
 		}
 
+		var imagesToRemove []string
 		for j, v := range tt.images {
 			imageFile := patchTestACI(v.name, v.patches...)
 			hash := importImageAndFetchHash(t, ctx, imageFile)
-			defer os.Remove(imageFile)
+			imagesToRemove = append(imagesToRemove, imageFile)
 
 			imgName := types.MustACIdentifier(v.name)
 			imgID, err := types.NewHash(hash)
@@ -603,5 +604,10 @@ func TestPodManifest(t *testing.T) {
 			}
 		}
 		verifyHostFile(t, tmpdir, "file", i, tt.expectedResult)
+
+		// Remove testing images here to free some space, otherwise Semaphore CI might error.
+		for _, name := range imagesToRemove {
+			os.Remove(name)
+		}
 	}
 }
