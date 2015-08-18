@@ -1,6 +1,6 @@
-### v0.8.0-rc1
+### v0.8.0
 
-rkt 0.8.0-rc1 includes support for running containers under an LKVM hypervisor
+rkt 0.8.0 includes support for running containers under an LKVM hypervisor
 and experimental user namespace support.
 
 Full changelog:
