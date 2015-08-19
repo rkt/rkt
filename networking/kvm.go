@@ -33,8 +33,11 @@ import (
 
 // setupTapDevice creates persistent tap devices
 // and returns a newly created netlink.Link structure
-func setupTapDevice() (netlink.Link, error) {
-	ifName, err := tuntap.CreatePersistentIface(tuntap.Tap)
+func setupTapDevice(podID types.UUID) (netlink.Link, error) {
+	// network device names are limited to 16 characters
+	// the suffix %d will be replaced by the kernel with a suitable number
+	nameTemplate := fmt.Sprintf("rkt-%s-tap%%d", podID.String()[0:4])
+	ifName, err := tuntap.CreatePersistentIface(nameTemplate, tuntap.Tap)
 	if err != nil {
 		return nil, fmt.Errorf("tuntap persist %v", err)
 	}
@@ -97,7 +100,7 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, privateNetL
 	for _, n := range network.nets {
 		switch n.conf.Type {
 		case "ptp":
-			link, err := setupTapDevice()
+			link, err := setupTapDevice(podID)
 			if err != nil {
 				return nil, err
 			}

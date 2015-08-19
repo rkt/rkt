@@ -91,8 +91,8 @@ func operateOnIface(name string, kind uint16, persistency uintptr) (string, erro
 	return iface.name, nil
 }
 
-func CreatePersistentIface(kind uint16) (string, error) {
-	return operateOnIface("", kind, 1)
+func CreatePersistentIface(nameTemplate string, kind uint16) (string, error) {
+	return operateOnIface(nameTemplate, kind, 1)
 }
 
 func RemovePersistentIface(name string, kind uint16) error {
