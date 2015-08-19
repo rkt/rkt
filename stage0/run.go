@@ -320,7 +320,7 @@ func preparedWithPrivateUsers(dir string) (string, error) {
 
 // Run mounts the right overlay filesystems and actually runs the prepared
 // pod by exec()ing the stage1 init inside the pod filesystem.
-func Run(cfg RunConfig, dir string) {
+func Run(cfg RunConfig, dir string, dataDir string) {
 	useOverlay, err := preparedWithOverlay(dir)
 	if err != nil {
 		log.Fatalf("error: %v", err)
@@ -343,6 +343,18 @@ func Run(cfg RunConfig, dir string) {
 		}
 	}
 
+	destRootfs := common.Stage1RootfsPath(dir)
+	flavor, err := os.Readlink(filepath.Join(destRootfs, "flavor"))
+	if err != nil {
+		log.Printf("error reading flavor: %v\n", err)
+	}
+	if flavor == "kvm" {
+		err := kvmCheckSSHSetup(destRootfs, dataDir)
+		if err != nil {
+			log.Fatalf("error setting up ssh keys: %v", err)
+		}
+	}
+
 	if err := os.Setenv(common.EnvLockFd, fmt.Sprintf("%v", cfg.LockFd)); err != nil {
 		log.Fatalf("setting lock fd environment: %v", err)
 	}
@@ -360,7 +372,7 @@ func Run(cfg RunConfig, dir string) {
 	if err != nil {
 		log.Fatalf("error determining init entrypoint: %v", err)
 	}
-	args := []string{filepath.Join(common.Stage1RootfsPath(dir), ep)}
+	args := []string{filepath.Join(destRootfs, ep)}
 	log.Printf("Execing %s", ep)
 
 	if cfg.Debug {
