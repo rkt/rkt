@@ -19,6 +19,18 @@ $(call setup-stamp-file,UFC_STAMP)
 $(call setup-stamp-file,UFC_MKBASE_STAMP,/mkbase)
 $(call setup-stamp-file,UFC_ACI_ROOTFS_STAMP,/aci_rootfs)
 
+ifneq ($(RKT_LOCAL_COREOS_PXE_IMAGE_PATH),)
+
+UFC_PXE := $(abspath $(RKT_LOCAL_COREOS_PXE_IMAGE_PATH))
+
+endif
+
+ifneq ($(RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER),)
+
+UFC_SYSTEMD_VERSION := $(RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER)
+
+endif
+
 INSTALL_DIRS += $(UFC_ITMP):-
 STAGE1_USR_STAMPS += $(UFC_STAMP)
 
@@ -63,7 +75,7 @@ $(UFC_MKBASE_STAMP): $(UFC_SQUASHFS) $(UFC_FILELIST)
 $(UFC_SQUASHFS): UFC_SQUASHFS_BASE := $(UFC_SQUASHFS_BASE)
 $(UFC_SQUASHFS): UFC_PXE := $(UFC_PXE)
 $(UFC_SQUASHFS): UFC_ITMP := $(UFC_ITMP)
-$(UFC_SQUASHFS): $(UFC_PXE)
+$(UFC_SQUASHFS): $(UFC_PXE) | $(UFC_ITMP)
 	cd "$(UFC_ITMP)" && gzip -cd "$(UFC_PXE)" | cpio --unconditional --extract "$(UFC_SQUASHFS_BASE)"
 
 $(UFC_FILELIST): $(UFC_MANIFESTS) | $(UFC_ITMP)
@@ -71,11 +83,15 @@ $(UFC_FILELIST): $(UFC_MANIFESTS) | $(UFC_ITMP)
 	cmp "$@.tmp" "$@" || mv "$@.tmp" "$@"
 	rm -f "$@.tmp"
 
+ifeq ($(RKT_LOCAL_COREOS_PXE_IMAGE_PATH),)
+
 $(UFC_PXE): UFC_CACHE_SH := $(UFC_CACHE_SH)
 $(UFC_PXE): UFC_ITMP := $(UFC_ITMP)
 $(UFC_PXE): UFC_IMG_URL := $(UFC_IMG_URL)
 $(UFC_PXE): $(UFC_CACHE_SH) | $(UFC_ITMP)
 	ITMP="$(UFC_ITMP)" IMG_URL="$(UFC_IMG_URL)" $(BASH_SHELL) $(UFC_CACHE_SH)
+
+endif
 
 UFC_ITMP :=
 UFC_ROOTFS :=
