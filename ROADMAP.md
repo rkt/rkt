@@ -15,9 +15,17 @@ Until the specification reaches version 1.0, rkt's major/minor versions will tra
 - rkt registers pods with systemd-machined where possible [#438](https://github.com/coreos/rkt/issues/438)
   - machinectl {status,terminate,login,...}
 - better UX around trust [#367](https://github.com/coreos/rkt/issues/367)
-- rkt packaged for other distributions (e.g. Fedora) [#686](https://github.com/coreos/rkt/issues/686)
-- rkt can retrieve images via BitTorrent [#405](https://github.com/coreos/rkt/issues/405)
+- API service to expose read-only information about rkt pods [#1208](https://github.com/coreos/rkt/issues/1208)
+- rkt runs on non-systemd distributions (Void Linux, RancherOS) [#1076](https://github.com/coreos/rkt/issues/1076)
+- rkt packaged for other distributions 
+  - Fedora [#1304](https://github.com/coreos/rkt/issues/1304) 
+  - Gentoo [#1306](https://github.com/coreos/rkt/issues/1306) 
+  - Debian [#1307](https://github.com/coreos/rkt/issues/1307) 
 
 ### rkt 1.0 (September?)
+- rkt can retrieve images via BitTorrent [#405](https://github.com/coreos/rkt/issues/405)
+- rkt packaged for more distributions
+  - CentOS [#1305](https://github.com/coreos/rkt/issues/1305) 
+  - OpenSUSE [#1304](https://github.com/coreos/rkt/issues/1308) 
 - IPv6 support
 - rkt can run applications as non-root [#820](https://github.com/coreos/rkt/issues/820)
