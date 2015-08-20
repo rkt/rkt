@@ -13,8 +13,8 @@ endef
 define _FILE_OPS_CREATE_INSTALL_DIR_RULE_
 $$(eval $$(call _FILE_OPS_SPLIT_2_,$1,_FILE_OPS_CIDR_DIR_,_FILE_OPS_CIDR_MODE_))
 CLEAN_DIRS += $$(_FILE_OPS_CIDR_DIR_)
-$$(_FILE_OPS_CIDR_DIR_): INSTALL := $$(INSTALL)
-$$(_FILE_OPS_CIDR_DIR_): _FILE_OPS_CIDR_MODE_ := $$(_FILE_OPS_CIDR_MODE_)
+$$(call forward-vars,$$(_FILE_OPS_CIDR_DIR_), \
+	INSTALL _FILE_OPS_CIDR_MODE_)
 # TODO: Create a proper dependency on parent directory
 # $$(_FILE_OPS_CIDR_DIR_): | $$(call to-dir,$$(_FILE_OPS_CIDR_DIR_))
 $$(_FILE_OPS_CIDR_DIR_):
@@ -30,8 +30,8 @@ endef
 define _FILE_OPS_CREATE_INSTALL_FILE_RULE_
 $$(eval $$(call _FILE_OPS_SPLIT_3_,$1,_FILE_OPS_CIFR_SRC_,_FILE_OPS_CIFR_DEST_,_FILE_OPS_CIFR_MODE_))
 CLEAN_FILES += $$(_FILE_OPS_CIFR_DEST_)
-$$(_FILE_OPS_CIFR_DEST_): INSTALL := $$(INSTALL)
-$$(_FILE_OPS_CIFR_DEST_): _FILE_OPS_CIFR_MODE_ := $$(_FILE_OPS_CIFR_MODE_)
+$$(call forward-vars,$$(_FILE_OPS_CIFR_DEST_), \
+	INSTALL _FILE_OPS_CIFR_MODE_)
 $$(_FILE_OPS_CIFR_DEST_): $$(_FILE_OPS_CIFR_SRC_) | $$(call to-dir,$$(_FILE_OPS_CIFR_DEST_))
 	$$(INSTALL) $$(call _FILE_OPS_DASH_M_,$$(_FILE_OPS_CIFR_MODE_)) "$$<" "$$@"
 $$(call undefine-namespaces,_FILE_OPS_CIFR)
@@ -43,7 +43,8 @@ endef
 define _FILE_OPS_CREATE_INSTALL_SYMLINK_RULE_
 $$(eval $$(call _FILE_OPS_SPLIT_2_,$1,_FILE_OPS_CISR_TARGET_,_FILE_OPS_CISR_LINK_NAME_))
 CLEAN_FILES += $$(_FILE_OPS_CISR_LINK_NAME_)
-$$(_FILE_OPS_CISR_LINK_NAME_): _FILE_OPS_CISR_TARGET_ := $$(_FILE_OPS_CISR_TARGET_)
+$$(call forward-vars,$$(_FILE_OPS_CISR_LINK_NAME_), \
+	_FILE_OPS_CISR_TARGET_)
 $$(_FILE_OPS_CISR_LINK_NAME_): | $$(call to-dir,$$(_FILE_OPS_CISR_LINK_NAME_))
 	set -e; \
 	if [ -h "$$@" ]; then \

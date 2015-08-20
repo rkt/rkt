@@ -206,3 +206,19 @@ define escape-and-wrap
 endef
 # "
 # the double quotes in comment above remove highlighting confusion
+
+# Forwards given variables to a given rule.
+# 1 - a rule target
+# 2 - a list of variables to forward
+#
+# Example: $(call forward-vars,$(MY_TARGET),VAR1 VAR2 VAR3)
+#
+# The effect is basically:
+# $(MY_TARGET): VAR1 := $(VAR1)
+# $(MY_TARGET): VAR2 := $(VAR2)
+# $(MY_TARGET): VAR3 := $(VAR3)
+define forward-vars
+$(strip \
+	$(foreach v,$2, \
+		$(eval $1: $v := $($v))))
+endef

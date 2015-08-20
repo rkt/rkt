@@ -21,20 +21,18 @@ CREATE_DIRS += $(LKVM_TMP)
 $(LKVM_STAMP): $(LKVM_ACI_BINARY)
 	touch "$@"
 
-$(LKVM_BINARY): LKVM_SRCDIR := $(LKVM_SRCDIR)
+$(call forward-vars,$(LKVM_BINARY), \
+	MAKE LKVM_SRCDIR)
 $(LKVM_BINARY): $(LKVM_PATCH_STAMP)
 	$(MAKE) -C "$(LKVM_SRCDIR)" lkvm-static
 
 -include $(LKVM_PATCHES_DEPMK)
-$(LKVM_PATCH_STAMP): GO_ENV := $(GO_ENV)
-$(LKVM_PATCH_STAMP): DEPSGENTOOL := $(DEPSGENTOOL)
-$(LKVM_PATCH_STAMP): LKVM_PATCHES := $(LKVM_PATCHES)
-$(LKVM_PATCH_STAMP): LKVM_PATCHES_DEPMK := $(LKVM_PATCHES_DEPMK)
-$(LKVM_PATCH_STAMP): LKVM_SRCDIR := $(LKVM_SRCDIR)
+$(call forward-vars,$(LKVM_PATCH_STAMP), \
+	DEPSGENTOOL LKVM_PATCHES LKVM_PATCHES_DEPMK LKVM_SRCDIR)
 $(LKVM_PATCH_STAMP): $(LKVM_SRCDIR)/Makefile $(DEPSGENTOOL_STAMP)
 	set -e; \
 	shopt -s nullglob; \
-	$(GO_ENV) "$(DEPSGENTOOL)" glob --target '$$(LKVM_SRCDIR)/Makefile' --suffix=.patch $(LKVM_PATCHES) >"$(LKVM_PATCHES_DEPMK)"; \
+	"$(DEPSGENTOOL)" glob --target '$$(LKVM_SRCDIR)/Makefile' --suffix=.patch $(LKVM_PATCHES) >"$(LKVM_PATCHES_DEPMK)"; \
 	for p in $(LKVM_PATCHES); do \
 		patch --directory="$(LKVM_SRCDIR)" --strip=1 --forward <"$${p}"; \
 	done; \
@@ -42,9 +40,8 @@ $(LKVM_PATCH_STAMP): $(LKVM_SRCDIR)/Makefile $(DEPSGENTOOL_STAMP)
 
 # add remote only if not added
 # don't fetch existing (commit cannot change)
-$(LKVM_SRCDIR)/Makefile: LKVM_GIT := $(LKVM_GIT)
-$(LKVM_SRCDIR)/Makefile: LKVM_SRCDIR := $(LKVM_SRCDIR)
-$(LKVM_SRCDIR)/Makefile: LKVM_VERSION := $(LKVM_VERSION)
+$(call forward-vars,$(LKVM_SRCDIR)/Makefile, \
+	LKVM_SRCDIR LKVM_GIT LKVM_VERSION)
 $(LKVM_SRCDIR)/Makefile: | $(LKVM_TMP)
 	set -e; \
 	mkdir -p $(LKVM_SRCDIR); cd $(LKVM_SRCDIR); \
