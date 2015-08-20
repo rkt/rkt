@@ -9,5 +9,4 @@ STAGE1_INSTALL_SYMLINKS += usr/bin:$(ACIROOTFSDIR)/bin
 $(UFSB_STAMP): $(UFSB_BASH_ON_ACI) | $(ACIROOTFSDIR)/bin
 	touch "$@"
 
-UFSB_STAMP :=
-UFSB_BASH_ON_ACI :=
+$(call undefine-namespaces,UFSB)

@@ -35,9 +35,4 @@ $(call inc-one,functional.mk)
 
 endif
 
-TST_SHORT_TESTS_STAMP :=
-TST_DIRS_WITH_GOFILES :=
-TST_DIRS_WITH_TESTGOFILES :=
-TST_GOFMT_DIRS :=
-TST_GO_VET_PACKAGES :=
-TST_GO_TEST_PACKAGES :=
+$(call undefine-namespaces,TST)

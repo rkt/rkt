@@ -9,9 +9,7 @@
 # MK_FILENAME - name of mk file including this file
 # MK_PATH - path of mk file including this file
 
-_ASGB_TMP_PATH_ ?= $(lastword $(MAKEFILE_LIST))
-_ASGB_PATH_ := $(_ASGB_TMP_PATH_)
-
+_ASGB_PATH_ := $(lastword $(MAKEFILE_LIST))
 _ASGB_NAME_ := $(patsubst %.mk,%,$(MK_FILENAME))
 _ASGB_ACI_BINARY_ := $(ACIROOTFSDIR)/$(_ASGB_NAME_)
 
@@ -35,6 +33,4 @@ $(BGB_BINARY): $(_ASGB_PATH_)
 
 include makelib/build_go_bin.mk
 
-_ASGB_NAME_ :=
-_ASGB_ACI_BINARY_ :=
-_ASGB_STAMP_ :=
+$(call undefine-namespaces,ASGB _ASGB)
