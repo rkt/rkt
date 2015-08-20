@@ -57,7 +57,7 @@ func TestVolumesToKvmDiskArgs(t *testing.T) {
 		} else {
 			for iarg, argExpected := range tt.expected {
 				if got[iarg] != argExpected {
-					t.Errorf("#%d: arg %d expected `%v` got `%v`", i, iarg, argExpected, got[i])
+					t.Errorf("#%d: arg %d expected `%v` got `%v`", i, iarg, argExpected, got[iarg])
 				}
 			}
 		}
