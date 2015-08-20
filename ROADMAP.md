@@ -9,7 +9,7 @@ The [milestones defined in GitHub](https://github.com/coreos/rkt/milestones) rep
 rkt is an implementation of the [App Container spec](https://github.com/appc/spec), which is still under active development on an approximately similar timeframe.
 Until the specification reaches version 1.0, rkt's major/minor versions will trail that of the spec.
 
-### rkt 0.9 (August?)
+### rkt 0.9 (September)
 - stable on-disk format [#1132](https://github.com/coreos/rkt/issues/1132)
 - improved documentation around all top-level commands [#1164](https://github.com/coreos/rkt/issues/1164)
 - rkt registers pods with systemd-machined where possible [#438](https://github.com/coreos/rkt/issues/438)
@@ -22,7 +22,7 @@ Until the specification reaches version 1.0, rkt's major/minor versions will tra
   - Gentoo [#1306](https://github.com/coreos/rkt/issues/1306) 
   - Debian [#1307](https://github.com/coreos/rkt/issues/1307) 
 
-### rkt 1.0 (September?)
+### rkt 1.0 (October?)
 - rkt can retrieve images via BitTorrent [#405](https://github.com/coreos/rkt/issues/405)
 - rkt packaged for more distributions
   - CentOS [#1305](https://github.com/coreos/rkt/issues/1305) 
