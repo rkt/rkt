@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
@@ -272,4 +273,32 @@ func getHash(filePath string) (string, error) {
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func importImageAndFetchHash(t *testing.T, ctx *rktRunCtx, img string) string {
+	// Import the test image into store manually.
+	child, err := gexpect.Spawn(fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmd(), img))
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+
+	// Read out the image hash.
+	result, out, err := expectRegexWithOutput(child, "sha512-[0-9a-f]{32}")
+	if err != nil || len(result) != 1 {
+		t.Fatalf("Error: %v\nOutput: %v", err, out)
+	}
+
+	err = child.Wait()
+	if err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+
+	return result[0]
+}
+
+func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *rktRunCtx) string {
+	imagePath := patchTestACI(image, patches...)
+	defer os.Remove(imagePath)
+
+	return importImageAndFetchHash(t, ctx, imagePath)
 }

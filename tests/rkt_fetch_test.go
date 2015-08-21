@@ -32,20 +32,12 @@ func TestFetch(t *testing.T) {
 
 	// Fetch the image for the first time, this should write the image to the
 	// on-disk store.
-
-	imagePath := patchTestACI(image, "--exec=/inspect --read-file")
-
-	oldHash := importImageAndFetchHash(t, ctx, imagePath)
-	os.Remove(imagePath)
+	oldHash := patchImportAndFetchHash(image, []string{"--exec=/inspect --read-file"}, t, ctx)
 
 	// Fetch the image with the same name but different content, the expecting
 	// result is that we should get a different hash since we are not fetching
 	// from the on-disk store.
-
-	imagePath = patchTestACI(image, "--exec=/inspect --read-file --write-file")
-
-	newHash := importImageAndFetchHash(t, ctx, imagePath)
-	os.Remove(imagePath)
+	newHash := patchImportAndFetchHash(image, []string{"--exec=/inspect --read-file --write-file"}, t, ctx)
 
 	if oldHash == newHash {
 		t.Fatalf("ACI hash should be different as the image has changed")

@@ -34,27 +34,6 @@ import (
 
 const baseAppName = "rkt-inspect"
 
-func importImageAndFetchHash(t *testing.T, ctx *rktRunCtx, img string) string {
-	// Import the test image into store manually.
-	child, err := gexpect.Spawn(fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmd(), img))
-	if err != nil {
-		t.Fatalf("Cannot exec rkt: %v", err)
-	}
-
-	// Read out the image hash.
-	result, out, err := expectRegexWithOutput(child, "sha512-[0-9a-f]{32}")
-	if err != nil || len(result) != 1 {
-		t.Fatalf("Error: %v\nOutput: %v", err, out)
-	}
-
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
-
-	return result[0]
-}
-
 func generatePodManifestFile(t *testing.T, manifest *schema.PodManifest) string {
 	tmpDir := os.Getenv("FUNCTIONAL_TMP")
 	if tmpDir == "" {
@@ -520,12 +499,8 @@ func TestPodManifest(t *testing.T) {
 			continue
 		}
 
-		var imagesToRemove []string
 		for j, v := range tt.images {
-			imageFile := patchTestACI(v.name, v.patches...)
-			hash := importImageAndFetchHash(t, ctx, imageFile)
-			imagesToRemove = append(imagesToRemove, imageFile)
-
+			hash := patchImportAndFetchHash(v.name, v.patches, t, ctx)
 			imgName := types.MustACIdentifier(v.name)
 			imgID, err := types.NewHash(hash)
 			if err != nil {
@@ -604,10 +579,5 @@ func TestPodManifest(t *testing.T) {
 			}
 		}
 		verifyHostFile(t, tmpdir, "file", i, tt.expectedResult)
-
-		// Remove testing images here to free some space, otherwise Semaphore CI might error.
-		for _, name := range imagesToRemove {
-			os.Remove(name)
-		}
 	}
 }
