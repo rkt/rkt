@@ -85,8 +85,8 @@ func TestCaps(t *testing.T) {
 			stage2Args = append(stage2Args, "--capability="+tt.capIsolator)
 		}
 		stage1FileName := patchTestACI("rkt-inspect-print-caps-stage1.aci", stage1Args...)
-		stage2FileName := patchTestACI("rkt-inspect-print-caps-stage2.aci", stage2Args...)
 		defer os.Remove(stage1FileName)
+		stage2FileName := patchTestACI("rkt-inspect-print-caps-stage2.aci", stage2Args...)
 		defer os.Remove(stage2FileName)
 		stageFileNames := []string{stage1FileName, stage2FileName}
 
