@@ -295,3 +295,10 @@ func importImageAndFetchHash(t *testing.T, ctx *rktRunCtx, img string) string {
 
 	return result[0]
 }
+
+func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *rktRunCtx) string {
+	imagePath := patchTestACI(image, patches...)
+	defer os.Remove(imagePath)
+
+	return importImageAndFetchHash(t, ctx, imagePath)
+}
