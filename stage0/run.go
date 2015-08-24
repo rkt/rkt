@@ -213,19 +213,22 @@ func validatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 	for _, ra := range pm.Apps {
 		img := ra.Image
 
+		if img.ID.Empty() {
+			return nil, fmt.Errorf("no image ID for app %q", ra.Name)
+		}
 		am, err := cfg.Store.GetImageManifest(img.ID.String())
 		if err != nil {
-			return nil, fmt.Errorf("error getting the manifest: %v", err)
+			return nil, fmt.Errorf("error getting the image manifest from store: %v", err)
 		}
 		if err := prepareAppImage(cfg, ra.Name, img.ID, dir, cfg.UseOverlay); err != nil {
 			return nil, fmt.Errorf("error setting up image %s: %v", img, err)
 		}
 		if _, ok := appNames[ra.Name]; ok {
-			return nil, fmt.Errorf("error: multiple apps with name %s", ra.Name)
+			return nil, fmt.Errorf("multiple apps with same name %s", ra.Name)
 		}
 		appNames[ra.Name] = struct{}{}
 		if ra.App == nil && am.App == nil {
-			return nil, fmt.Errorf("error: no app section in the pod manifest or the image manifest")
+			return nil, fmt.Errorf("no app section in the pod manifest or the image manifest")
 		}
 	}
 	return pmb, nil
