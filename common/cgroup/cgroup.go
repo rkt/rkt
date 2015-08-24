@@ -188,6 +188,36 @@ func GetOwnCgroupPath(controller string) (string, error) {
 	return parts[2], nil
 }
 
+// If /system.slice does not exist in the cpuset controller, create it and
+// configure it.
+// Since this is a workaround, we ignore errors
+func fixCpusetKnobs(cpusetPath string) {
+	cgroupPathFix := filepath.Join(cpusetPath, "system.slice")
+	_ = os.MkdirAll(cgroupPathFix, 0755)
+	knobs := []string{"cpuset.mems", "cpuset.cpus"}
+	for _, knob := range knobs {
+		parentFile := filepath.Join(filepath.Dir(cgroupPathFix), knob)
+		childFile := filepath.Join(cgroupPathFix, knob)
+
+		data, err := ioutil.ReadFile(childFile)
+		if err != nil {
+			continue
+		}
+		// If the file is already configured, don't change it
+		if strings.TrimSpace(string(data)) != "" {
+			continue
+		}
+
+		data, err = ioutil.ReadFile(parentFile)
+		if err == nil {
+			// Workaround: just write twice to workaround the kernel bug fixed by this commit:
+			// https://github.com/torvalds/linux/commit/24ee3cf89bef04e8bc23788aca4e029a3f0f06d9
+			ioutil.WriteFile(childFile, data, 0644)
+			ioutil.WriteFile(childFile, data, 0644)
+		}
+	}
+}
+
 // CreateCgroups mounts the cgroup controllers hierarchy for the container but
 // leaves the subcgroup for each app read-write so the systemd inside stage1
 // can apply isolators to them
@@ -254,34 +284,8 @@ func CreateCgroups(root string, subcgroup string, serviceNames []string) error {
 		subcgroupPath := filepath.Join(cPath, subcgroup)
 
 		// Workaround for https://github.com/coreos/rkt/issues/1210
-		// If /machine.slice does not exist, create it and configure it
-		cgroupPathFix := filepath.Join(cPath, "system.slice")
-		if err := os.MkdirAll(cgroupPathFix, 0755); err != nil {
-			return err
-		}
-		knobs := []string{"cpuset.mems", "cpuset.cpus"}
-		for _, knob := range knobs {
-			parentFile := filepath.Join(filepath.Dir(cgroupPathFix), knob)
-			childFile := filepath.Join(cgroupPathFix, knob)
-
-			data, err := ioutil.ReadFile(childFile)
-			// If the file does not exist, just skip it. It will not exist in all
-			// hierarchies.
-			if err != nil {
-				continue
-			}
-			// If the file is already configured, don't change it
-			if strings.TrimSpace(string(data)) != "" {
-				continue
-			}
-
-			data, err = ioutil.ReadFile(parentFile)
-			if err == nil {
-				// Workaround: just write twice to workaround the kernel bug fixed by this commit:
-				// https://github.com/torvalds/linux/commit/24ee3cf89bef04e8bc23788aca4e029a3f0f06d9
-				ioutil.WriteFile(childFile, data, 0644)
-				ioutil.WriteFile(childFile, data, 0644)
-			}
+		if c == "cpuset" {
+			fixCpusetKnobs(cPath)
 		}
 
 		// 3c. Create cgroup directories and mount the files we need over
