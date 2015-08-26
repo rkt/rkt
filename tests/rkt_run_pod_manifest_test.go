@@ -499,8 +499,10 @@ func TestPodManifest(t *testing.T) {
 			continue
 		}
 
+		var hashesToRemove []string
 		for j, v := range tt.images {
 			hash := patchImportAndFetchHash(v.name, v.patches, t, ctx)
+			hashesToRemove = append(hashesToRemove, hash)
 			imgName := types.MustACIdentifier(v.name)
 			imgID, err := types.NewHash(hash)
 			if err != nil {
@@ -579,5 +581,12 @@ func TestPodManifest(t *testing.T) {
 			}
 		}
 		verifyHostFile(t, tmpdir, "file", i, tt.expectedResult)
+
+		// we run the garbage collector and remove the imported images to save
+		// space
+		runGC(t, ctx)
+		for _, h := range hashesToRemove {
+			removeFromCas(t, ctx, h)
+		}
 	}
 }

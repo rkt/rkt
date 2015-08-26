@@ -302,3 +302,29 @@ func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *
 
 	return importImageAndFetchHash(t, ctx, imagePath)
 }
+
+func runGC(t *testing.T, ctx *rktRunCtx) {
+	cmd := fmt.Sprintf("%s gc --grace-period=0s", ctx.cmd())
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+
+	err = child.Wait()
+	if err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+}
+
+func removeFromCas(t *testing.T, ctx *rktRunCtx, hash string) {
+	cmd := fmt.Sprintf("%s image rm %s", ctx.cmd(), hash)
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+
+	err = child.Wait()
+	if err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+}
