@@ -5,9 +5,11 @@
 if [ "${CI-}" == true ] ; then
 	# https://semaphoreci.com/
 	if [ "${SEMAPHORE-}" == true ] ; then
-		# To avoid having an empty body (and thus a syntax
-		# error) when there are no dependencies to install.
-		:
+		# In Semaphore's last platform update, the default gcc version is 4.6
+		# which breaks the systemd build.
+		# Set it to 4.8 manually.
+		# TODO: remove this when the issue is fixed in Semaphore
+		sudo update-alternatives --set gcc /usr/bin/gcc-4.8
 
 		# Most dependencies are already installed on Semaphore.
 		# Here we can install any missing dependencies. Whenever
