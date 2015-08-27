@@ -47,6 +47,11 @@ type Pod struct {
 	Networks           []string
 }
 
+const (
+	// Name of the file storing the pod's flavor
+	flavorFile = "flavor"
+)
+
 var (
 	defaultEnv = map[string]string{
 		"PATH":    "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
