@@ -443,11 +443,6 @@ func setupAppImage(cfg RunConfig, appName types.ACName, img types.Hash, cdir str
 		}
 	}
 
-	err := os.MkdirAll(filepath.Join(ad, "rootfs/tmp"), 0777)
-	if err != nil {
-		return fmt.Errorf("error creating tmp directory: %v", err)
-	}
-
 	return nil
 }
 
