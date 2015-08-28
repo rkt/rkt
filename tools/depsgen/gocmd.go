@@ -16,7 +16,6 @@ package main
 
 import (
 	"bytes"
-	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -49,17 +48,13 @@ func init() {
 func goDeps(args []string) string {
 	target, repo, module, mode := goGetArgs(args)
 	deps := goGetPackageDeps(repo, module)
-	var result string
 	switch mode {
 	case goMakeMode:
-		result = GenerateFileDeps(target, goGetMakeFunction(repo, module), deps)
+		return GenerateFileDeps(target, goGetMakeFunction(repo, module), deps)
 	case goFilesMode:
-		result = strings.Join(deps, " ")
-	default:
-		fmt.Fprintf(os.Stderr, "Wrong mode, shouldn't happen.\n")
-		os.Exit(1)
+		return strings.Join(deps, " ")
 	}
-	return result
+	panic("Should not happen")
 }
 
 // goGetMakeFunction returns a make snippet which will call depsgen go
