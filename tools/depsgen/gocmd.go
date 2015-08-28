@@ -16,12 +16,13 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/coreos/rkt/tools/common"
 )
 
 const (
@@ -77,12 +78,10 @@ func goGetArgs(args []string) (string, string, string, goDepsMode) {
 
 	f.Parse(args)
 	if *repo == "" {
-		fmt.Fprintf(os.Stderr, "--repo parameter must be specified and cannot be empty\n")
-		os.Exit(1)
+		common.Die("--repo parameter must be specified and cannot be empty")
 	}
 	if *module == "" {
-		fmt.Fprintf(os.Stderr, "--module parameter must be specified and cannot be empty\n")
-		os.Exit(1)
+		common.Die("--module parameter must be specified and cannot be empty")
 	}
 
 	var dMode goDepsMode
@@ -91,14 +90,12 @@ func goGetArgs(args []string) (string, string, string, goDepsMode) {
 	case "make":
 		dMode = goMakeMode
 		if *target == "" {
-			fmt.Fprintf(os.Stderr, "--target parameter must be specified and cannot be empty when using 'make' mode\n")
-			os.Exit(1)
+			common.Die("--target parameter must be specified and cannot be empty when using 'make' mode")
 		}
 	case "files":
 		dMode = goFilesMode
 	default:
-		fmt.Fprintf(os.Stderr, "unknown --mode parameter '%s' - expected either 'make' or 'files'\n", *mode)
-		os.Exit(1)
+		common.Die("unknown --mode parameter %q - expected either 'make' or 'files'", *mode)
 	}
 	return *target, *repo, *module, dMode
 }
@@ -173,8 +170,7 @@ func goRun(argv []string) []string {
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error running %s: %v: %s", strings.Join(argv, " "), err, stderr.String())
-		os.Exit(1)
+		common.Die("Error running %s: %v: %s", strings.Join(argv, " "), err, stderr.String())
 	}
 	rawLines := strings.Split(stdout.String(), "\n")
 	lines := make([]string, 0, len(rawLines))

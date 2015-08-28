@@ -19,6 +19,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/coreos/rkt/tools/common"
 )
 
 const (
@@ -51,8 +53,7 @@ func globGetArgs(args []string) (string, string, []string) {
 
 	f.Parse(args)
 	if *target == "" {
-		fmt.Fprintf(os.Stderr, "--target parameter must be specified and cannot be empty\n")
-		os.Exit(1)
+		common.Die("--target parameter must be specified and cannot be empty")
 	}
 	return *target, *suffix, f.Args()
 }

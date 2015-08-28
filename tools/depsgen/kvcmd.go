@@ -15,8 +15,7 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"github.com/coreos/rkt/tools/common"
 )
 
 const (
@@ -37,8 +36,7 @@ func kvGetArgs(args []string) (string, map[string]string) {
 
 	f.Parse(args)
 	if *target == "" {
-		fmt.Fprintf(os.Stderr, "--target parameter must be specified and cannot be empty\n")
-		os.Exit(1)
+		common.Die("--target parameter must be specified and cannot be empty")
 	}
 	return *target, toMap(f.Args()...)
 }
