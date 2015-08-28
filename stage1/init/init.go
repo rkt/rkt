@@ -244,6 +244,10 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 
 	switch flavor {
 	case "kvm":
+		if privateUsers != "" {
+			return nil, nil, fmt.Errorf("flag --private-users cannot be used with an lkvm stage1")
+		}
+
 		// kernel and lkvm are relative path, because init has /var/lib/rkt/..../uuid as its working directory
 		// TODO: move to path.go
 		kernelPath := filepath.Join(common.Stage1RootfsPath(p.Root), "bzImage")
