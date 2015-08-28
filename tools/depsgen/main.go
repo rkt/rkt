@@ -24,8 +24,9 @@ import (
 var cmds = make(map[string]func([]string) string)
 
 func main() {
+	depTypes := getAllDepTypes()
+	depTypesString := fmt.Sprintf("'%s'", strings.Join(depTypes, "', '"))
 	if len(os.Args) < 2 {
-		depTypesString := strings.Join(getAllDepTypes(), ", ")
 		fmt.Fprintf(os.Stderr, "Expected a deps type (possible values: %s)\n", depTypesString)
 		os.Exit(1)
 	}
@@ -33,8 +34,10 @@ func main() {
 	cmdArgs := os.Args[2:]
 	if f, ok := cmds[depType]; ok {
 		fmt.Print(f(cmdArgs))
+	} else if depType == "--help" || depType == "-help" {
+		fmt.Fprintf(os.Stderr, "Run %s with one of the following commands: %s\nE.g. %s %s --help\n", appName(), depTypesString, os.Args[0], depTypes[0])
 	} else {
-		fmt.Fprintf(os.Stderr, "Unknown deps type: %v\n", depType)
+		fmt.Fprintf(os.Stderr, "Unknown deps type: %q, expected one of %s\n", depType, depTypesString)
 		os.Exit(1)
 	}
 }
@@ -44,7 +47,7 @@ func main() {
 func getAllDepTypes() []string {
 	depTypes := make([]string, 0, len(cmds))
 	for depType := range cmds {
-		depTypes = append(depTypes, "'"+depType+"'")
+		depTypes = append(depTypes, depType)
 	}
 	sort.Strings(depTypes)
 	return depTypes
