@@ -237,7 +237,7 @@ func installAssets() error {
 	return proj2aci.PrepareAssets(assets, "./stage1/rootfs/", nil)
 }
 
-// getArgsEnv returns the nspawn args and env according to the usr used
+// getArgsEnv returns the nspawn or lkvm args and env according to the flavor used
 func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]string, []string, error) {
 	args := []string{}
 	env := os.Environ()
