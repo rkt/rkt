@@ -36,18 +36,25 @@ const (
 	globMakeWildcard = "$(wildcard !!!DIR!!!/*!!!SUFFIX!!!) $(wildcard !!!DIR!!!/.*!!!SUFFIX!!!)"
 )
 
+type globArgs struct {
+	target string
+	suffix string
+	files  []string
+}
+
 func init() {
 	cmds[globCmd] = globDeps
 }
 
 func globDeps(args []string) string {
-	target, suffix, files := globGetArgs(args)
-	return GenerateFileDeps(target, globGetMakeFunction(files, suffix), files)
+	parsedArgs := globGetArgs(args)
+	makeFunction := globGetMakeFunction(parsedArgs.files, parsedArgs.suffix)
+	return GenerateFileDeps(parsedArgs.target, makeFunction, parsedArgs.files)
 }
 
 // globGetArgs parses given parameters and returns a target, a suffix
 // and a list of files.
-func globGetArgs(args []string) (string, string, []string) {
+func globGetArgs(args []string) globArgs {
 	f, target := standardFlags(globCmd)
 	suffix := f.String("suffix", "", "File suffix (example: .go)")
 
@@ -55,7 +62,11 @@ func globGetArgs(args []string) (string, string, []string) {
 	if *target == "" {
 		common.Die("--target parameter must be specified and cannot be empty")
 	}
-	return *target, *suffix, f.Args()
+	return globArgs{
+		target: *target,
+		suffix: *suffix,
+		files:  f.Args(),
+	}
 }
 
 // globGetMakeFunction returns a make snippet which calls wildcard
