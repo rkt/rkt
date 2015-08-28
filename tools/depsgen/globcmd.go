@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/coreos/rkt/tools/common"
+	"github.com/coreos/rkt/tools/common/filelist"
 )
 
 const (
@@ -48,10 +49,13 @@ const (
 )
 
 type globArgs struct {
-	target string
-	suffix string
-	files  []string
-	mode   globMode
+	target   string
+	suffix   string
+	files    []string
+	mode     globMode
+	fMode    string
+	filelist string
+	mapTo    []string
 }
 
 func init() {
@@ -60,8 +64,9 @@ func init() {
 
 func globDeps(args []string) string {
 	parsedArgs := globGetArgs(args)
-	makeFunction := globGetMakeFunction(parsedArgs.files, parsedArgs.suffix, parsedArgs.mode)
-	return GenerateFileDeps(parsedArgs.target, makeFunction, parsedArgs.files)
+	files := globGetFiles(parsedArgs)
+	makeFunction := globGetMakeFunction(files, parsedArgs.suffix, parsedArgs.mode)
+	return GenerateFileDeps(parsedArgs.target, makeFunction, files)
 }
 
 // globGetArgs parses given parameters and returns a target, a suffix
@@ -70,17 +75,41 @@ func globGetArgs(args []string) globArgs {
 	f, target := standardFlags(globCmd)
 	suffix := f.String("suffix", "", "File suffix (example: .go)")
 	globbingMode := f.String("glob-mode", "all", "Which files to glob (normal, dot-files, all [default])")
+	filesMode := f.String("mode", "args", "How to get files, either 'filelist' mode or 'args' [default]")
+	filelist := f.String("filelist", "", "For filelist mode, read all the files from this file")
+	mapTo := []string{}
+	mapToWrapper := common.StringSliceWrapper{Slice: &mapTo}
+	f.Var(&mapToWrapper, "map-to", "Map contents of filelist to this directory, can be used multiple times")
 
 	f.Parse(args)
 	if *target == "" {
 		common.Die("--target parameter must be specified and cannot be empty")
 	}
 	mode := globModeFromString(*globbingMode)
+	switch *filesMode {
+	case "filelist":
+		if *filelist == "" {
+			common.Die("--filelist parameter must be specified and cannot be empty")
+		}
+		if len(mapTo) < 1 {
+			common.Die("--map-to parameter must be specified at least once")
+		}
+	case "args":
+		if *filelist != "" {
+			common.Warn("--filelist parameter is ignored in args mode")
+		}
+		if len(mapTo) > 0 {
+			common.Warn("--map-to parameter is ignored in args mode")
+		}
+	}
 	return globArgs{
-		target: *target,
-		suffix: *suffix,
-		files:  f.Args(),
-		mode:   mode,
+		target:   *target,
+		suffix:   *suffix,
+		files:    f.Args(),
+		mode:     mode,
+		fMode:    *filesMode,
+		filelist: *filelist,
+		mapTo:    mapTo,
 	}
 }
 
@@ -96,6 +125,30 @@ func globModeFromString(mode string) globMode {
 		common.Die("Unknown glob mode %q", mode)
 	}
 	panic("Should not happen")
+}
+
+func globGetFiles(args globArgs) []string {
+	if args.fMode == "args" {
+		return args.files
+	}
+	f, err := globGetFilesFromFilelist(args.filelist)
+	if err != nil {
+		common.Die("Failed to get files from filelist %q: %v", args.filelist, err)
+	}
+	return common.MapFilesToDirectories(f, args.mapTo)
+}
+
+func globGetFilesFromFilelist(filename string) ([]string, error) {
+	fl, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to open filelist %q: %v", filename, err)
+	}
+	defer fl.Close()
+	lists := filelist.Lists{}
+	if err := lists.ParseFilelist(fl); err != nil {
+		return nil, err
+	}
+	return lists.Files, nil
 }
 
 // globGetMakeFunction returns a make snippet which calls wildcard
