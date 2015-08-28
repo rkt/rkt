@@ -242,6 +242,11 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 	args := []string{}
 	env := os.Environ()
 
+	// We store the pod's flavor so we can later garbage collect it correctly
+	if err := os.Symlink(flavor, filepath.Join(p.Root, flavorFile)); err != nil {
+		return nil, nil, fmt.Errorf("failed to create flavor symlink: %v", err)
+	}
+
 	switch flavor {
 	case "kvm":
 		if privateUsers != "" {

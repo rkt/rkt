@@ -64,9 +64,17 @@ func main() {
 }
 
 func gcNetworking(podID *types.UUID) error {
+	var flavor string
+	// we first try to read the flavor from stage1 for backwards compatibility
 	flavor, err := os.Readlink(filepath.Join(common.Stage1RootfsPath("."), "flavor"))
 	if err != nil {
-		return fmt.Errorf("Failed to get stage1 flavor: %v\n", err)
+		// if we couldn't read the flavor from stage1 it could mean the overlay
+		// filesystem is already unmounted (e.g. the system has been rebooted).
+		// In that case we try to read it from the pod's root directory
+		flavor, err = os.Readlink("flavor")
+		if err != nil {
+			return fmt.Errorf("Failed to get stage1 flavor: %v\n", err)
+		}
 	}
 
 	n, err := networking.Load(".", podID)
