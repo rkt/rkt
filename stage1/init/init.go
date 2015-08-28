@@ -400,7 +400,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 
 	nsargs, err := p.PodToNspawnArgs()
 	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to generate nspawn args: %v", err)
+		return nil, nil, fmt.Errorf("failed to generate nspawn args: %v", err)
 	}
 	args = append(args, nsargs...)
 
@@ -563,7 +563,7 @@ func stage1() int {
 
 	args, env, err := getArgsEnv(p, flavor, debug, n)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 3
 	}
 
