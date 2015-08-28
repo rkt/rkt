@@ -25,20 +25,20 @@ import (
 )
 
 const (
-	// separator is used to separate tuple elements in go list
+	// goSeparator is used to separate tuple elements in go list
 	// format string.
-	separator = "!_##_!"
+	goSeparator = "!_##_!"
 	// goMakeFunction is a template for generating all files for a
 	// given module in a given repo.
 	goMakeFunction = "$(shell $(GO_ENV) \"$(DEPSGENTOOL)\" go --repo \"!!!REPO!!!\" --module \"!!!MODULE!!!\" --mode files)"
 	goCmd          = "go"
 )
 
-type depsMode int
+type goDepsMode int
 
 const (
-	makeMode depsMode = iota
-	filesMode
+	goMakeMode goDepsMode = iota
+	goFilesMode
 )
 
 func init() {
@@ -46,13 +46,13 @@ func init() {
 }
 
 func goDeps(args []string) string {
-	target, repo, module, mode := getGoArgs(args)
-	deps := getPackageDeps(repo, module)
+	target, repo, module, mode := goGetArgs(args)
+	deps := goGetPackageDeps(repo, module)
 	var result string
 	switch mode {
-	case makeMode:
-		result = GenerateFileDeps(target, getGoMakeFunction(repo, module), deps)
-	case filesMode:
+	case goMakeMode:
+		result = GenerateFileDeps(target, goGetMakeFunction(repo, module), deps)
+	case goFilesMode:
 		result = strings.Join(deps, " ")
 	default:
 		fmt.Fprintf(os.Stderr, "Wrong mode, shouldn't happen.\n")
@@ -61,15 +61,15 @@ func goDeps(args []string) string {
 	return result
 }
 
-// getGoMakeFunction returns a make snippet which will call depsgen go
+// goGetMakeFunction returns a make snippet which will call depsgen go
 // with "files" mode.
-func getGoMakeFunction(repo, module string) string {
+func goGetMakeFunction(repo, module string) string {
 	return replacePlaceholders(goMakeFunction, "REPO", repo, "MODULE", module)
 }
 
 // getArgs parses given parameters and returns target, repo, module and
 // mode. If mode is "files", then target is optional.
-func getGoArgs(args []string) (string, string, string, depsMode) {
+func goGetArgs(args []string) (string, string, string, goDepsMode) {
 	f, target := standardFlags(goCmd)
 	repo := f.String("repo", "", "Go repo (example: github.com/coreos/rkt)")
 	module := f.String("module", "", "Module inside Go repo (example: stage1)")
@@ -85,17 +85,17 @@ func getGoArgs(args []string) (string, string, string, depsMode) {
 		os.Exit(1)
 	}
 
-	var dMode depsMode
+	var dMode goDepsMode
 
 	switch *mode {
 	case "make":
-		dMode = makeMode
+		dMode = goMakeMode
 		if *target == "" {
 			fmt.Fprintf(os.Stderr, "--target parameter must be specified and cannot be empty when using 'make' mode\n")
 			os.Exit(1)
 		}
 	case "files":
-		dMode = filesMode
+		dMode = goFilesMode
 	default:
 		fmt.Fprintf(os.Stderr, "unknown --mode parameter '%s' - expected either 'make' or 'files'\n", *mode)
 		os.Exit(1)
@@ -103,44 +103,44 @@ func getGoArgs(args []string) (string, string, string, depsMode) {
 	return *target, *repo, *module, dMode
 }
 
-// getPackageDeps returns a list of files that are used to build a
+// goGetPackageDeps returns a list of files that are used to build a
 // module in a given repo.
-func getPackageDeps(repo, module string) []string {
+func goGetPackageDeps(repo, module string) []string {
 	pkg := path.Join(repo, module)
 	deps := []string{pkg}
-	for _, d := range getDeps(pkg) {
+	for _, d := range goGetDeps(pkg) {
 		if strings.HasPrefix(d, repo) {
 			deps = append(deps, d)
 		}
 	}
-	return getFiles(repo, deps)
+	return goGetFiles(repo, deps)
 }
 
-// getDeps gets all dependencies, direct or indirect, of a given
+// goGetDeps gets all dependencies, direct or indirect, of a given
 // package.
-func getDeps(pkg string) []string {
-	rawDeps := run(goList([]string{"Deps"}, []string{pkg}))
+func goGetDeps(pkg string) []string {
+	rawDeps := goRun(goList([]string{"Deps"}, []string{pkg}))
 	// we expect only one line
 	if len(rawDeps) != 1 {
 		return []string{}
 	}
-	return sliceRawSlice(rawDeps[0])
+	return goSliceRawSlice(rawDeps[0])
 }
 
-// getFiles returns a list of files that are in given packages. File
+// goGetFiles returns a list of files that are in given packages. File
 // paths are "relative" to passed repo.
-func getFiles(repo string, pkgs []string) []string {
+func goGetFiles(repo string, pkgs []string) []string {
 	params := []string{
 		"ImportPath",
 		"GoFiles",
 		"CgoFiles",
 	}
 	allFiles := []string{}
-	rawTuples := run(goList(params, pkgs))
+	rawTuples := goRun(goList(params, pkgs))
 	for _, raw := range rawTuples {
-		tuple := sliceRawTuple(raw)
+		tuple := goSliceRawTuple(raw)
 		module := strings.TrimPrefix(tuple[0], repo+"/")
-		files := append(sliceRawSlice(tuple[1]), sliceRawSlice(tuple[2])...)
+		files := append(goSliceRawSlice(tuple[1]), goSliceRawSlice(tuple[2])...)
 		for i := 0; i < len(files); i++ {
 			files[i] = filepath.Join(module, files[i])
 		}
@@ -160,13 +160,13 @@ func goList(params, pkgs []string) []string {
 	return append([]string{
 		"go",
 		"list",
-		"-f", strings.Join(templateParams, separator),
+		"-f", strings.Join(templateParams, goSeparator),
 	}, pkgs...)
 }
 
-// run executes given argument list and captures its output. The
+// goRun executes given argument list and captures its output. The
 // output is sliced into lines with empty lines being discarded.
-func run(argv []string) []string {
+func goRun(argv []string) []string {
 	cmd := exec.Command(argv[0], argv[1:]...)
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
@@ -186,9 +186,9 @@ func run(argv []string) []string {
 	return lines
 }
 
-// sliceRawSlice slices given string representation of a slice into
+// goSliceRawSlice slices given string representation of a slice into
 // slice of strings.
-func sliceRawSlice(s string) []string {
+func goSliceRawSlice(s string) []string {
 	s = strings.TrimPrefix(s, "[")
 	s = strings.TrimSuffix(s, "]")
 	s = strings.TrimSpace(s)
@@ -199,9 +199,9 @@ func sliceRawSlice(s string) []string {
 	return a
 }
 
-// sliceRawTuple slices given string along !_##_! separator to slice
+// goSliceRawTuple slices given string along !_##_! goSeparator to slice
 // of strings. Returned slice might need another round of slicing with
-// sliceRawSlice.
-func sliceRawTuple(t string) []string {
-	return strings.Split(t, separator)
+// goSliceRawSlice.
+func goSliceRawTuple(t string) []string {
+	return strings.Split(t, goSeparator)
 }

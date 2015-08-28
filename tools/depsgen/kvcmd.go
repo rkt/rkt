@@ -28,11 +28,11 @@ func init() {
 }
 
 func kvDeps(args []string) string {
-	target, keysValues := getKvArgs(args)
+	target, keysValues := kvGetArgs(args)
 	return GenerateKvDeps(target, keysValues)
 }
 
-func getKvArgs(args []string) (string, map[string]string) {
+func kvGetArgs(args []string) (string, map[string]string) {
 	f, target := standardFlags(kvCmd)
 
 	f.Parse(args)

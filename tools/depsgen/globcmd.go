@@ -22,16 +22,16 @@ import (
 )
 
 const (
+	globCmd = "glob"
 	// globMakeFunction is a template for generating all files for
 	// given set of wildcards. See globMakeWildcard.
-	globMakeFunction = "$(shell stat --format \"%n: %F\" !!!WILDCARDS!!! | grep -e 'regular file$$' | cut -f1 -d:)"
+	globMakeFunction = `$(shell stat --format "%n: %F" !!!WILDCARDS!!! | grep -e 'regular file$$' | cut -f1 -d:)`
 	// globMakeWildcard is a template for call wildcard function
 	// for in a given directory with a given suffix. First
 	// wildcard is for normal files, second wildcard is for files
 	// beginning with a dot, which are normally not taken into
 	// account by wildcard.
 	globMakeWildcard = "$(wildcard !!!DIR!!!/*!!!SUFFIX!!!) $(wildcard !!!DIR!!!/.*!!!SUFFIX!!!)"
-	globCmd          = "glob"
 )
 
 func init() {
@@ -39,13 +39,13 @@ func init() {
 }
 
 func globDeps(args []string) string {
-	target, suffix, files := getGlobArgs(args)
-	return GenerateFileDeps(target, getGlobMakeFunction(files, suffix), files)
+	target, suffix, files := globGetArgs(args)
+	return GenerateFileDeps(target, globGetMakeFunction(files, suffix), files)
 }
 
-// getGlobArgs parses given parameters and returns a target, a suffix
+// globGetArgs parses given parameters and returns a target, a suffix
 // and a list of files.
-func getGlobArgs(args []string) (string, string, []string) {
+func globGetArgs(args []string) (string, string, []string) {
 	f, target := standardFlags(globCmd)
 	suffix := f.String("suffix", "", "File suffix (example: .go)")
 
@@ -57,10 +57,10 @@ func getGlobArgs(args []string) (string, string, []string) {
 	return *target, *suffix, f.Args()
 }
 
-// getGlobMakeFunction returns a make snippet which calls wildcard
+// globGetMakeFunction returns a make snippet which calls wildcard
 // function in all directories where given files are and with a given
 // suffix.
-func getGlobMakeFunction(files []string, suffix string) string {
+func globGetMakeFunction(files []string, suffix string) string {
 	dirs := map[string]struct{}{}
 	for _, file := range files {
 		dirs[filepath.Dir(file)] = struct{}{}
