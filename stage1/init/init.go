@@ -237,13 +237,17 @@ func installAssets() error {
 	return proj2aci.PrepareAssets(assets, "./stage1/rootfs/", nil)
 }
 
-// getArgsEnv returns the nspawn args and env according to the usr used
+// getArgsEnv returns the nspawn or lkvm args and env according to the flavor used
 func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]string, []string, error) {
 	args := []string{}
 	env := os.Environ()
 
 	switch flavor {
 	case "kvm":
+		if privateUsers != "" {
+			return nil, nil, fmt.Errorf("flag --private-users cannot be used with an lkvm stage1")
+		}
+
 		// kernel and lkvm are relative path, because init has /var/lib/rkt/..../uuid as its working directory
 		// TODO: move to path.go
 		kernelPath := filepath.Join(common.Stage1RootfsPath(p.Root), "bzImage")
@@ -400,7 +404,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 
 	nsargs, err := p.PodToNspawnArgs()
 	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to generate nspawn args: %v", err)
+		return nil, nil, fmt.Errorf("failed to generate nspawn args: %v", err)
 	}
 	args = append(args, nsargs...)
 
@@ -563,7 +567,7 @@ func stage1() int {
 
 	args, env, err := getArgsEnv(p, flavor, debug, n)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 3
 	}
 
