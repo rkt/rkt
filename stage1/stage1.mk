@@ -30,7 +30,6 @@ STAGE1_INSTALL_DIRS :=
 STAGE1_CREATE_DIRS :=
 
 $(call setup-stamp-file,_STAGE1_ASSEMBLE_ACI_STAMP_,/assemble_aci)
-$(call setup-stamp-file,_STAGE1_FIND_SO_DEPS_STAMP_,/find_so_deps)
 
 $(call inc-many,$(foreach sd,$(_STAGE1_SUBDIRS_),$(sd)/$(sd).mk))
 
@@ -76,7 +75,9 @@ $(_STAGE1_ACI_): $(STAGE1_STAMPS)
 
 else
 
-$(_STAGE1_ACI_): $(_STAGE1_FIND_SO_DEPS_STAMP_)
+$(call inc-one,find-so-deps.mk)
+
+$(_STAGE1_ACI_): $(STAGE1_FSD_STAMP)
 
 endif
 
@@ -86,23 +87,5 @@ $(_STAGE1_ACI_): $(ACTOOL_STAMP) | $(BINDIR)
 	"$(ACTOOL)" build --overwrite "$(ACIDIR)" "$@"
 
 $(STAGE1_STAMPS): $(STAGE1_USR_STAMPS)
-
-_STAGE1_LIBDIRS_ := $(ACIROOTFSDIR)/lib:$(ACIROOTFSDIR)/lib64:$(ACIROOTFSDIR)/usr/lib:$(ACIROOTFSDIR)/usr/lib64
-
-ifneq ($(LD_LIBRARY_PATH),)
-
-_STAGE1_LIBDIRS_ := $(_STAGE1_LIBDIRS_):$(LD_LIBRARY_PATH)
-
-endif
-
-$(call forward-vars,$(_STAGE1_FIND_SO_DEPS_STAMP_), \
-	ACIROOTFSDIR _STAGE1_LIBDIRS_ INSTALL)
-$(_STAGE1_FIND_SO_DEPS_STAMP_): $(STAGE1_STAMPS)
-	set -e; \
-	all_libs=$$(find "$(ACIROOTFSDIR)" -type f | xargs file | grep ELF | cut -f1 -d: | LD_LIBRARY_PATH="$(_STAGE1_LIBDIRS_)" xargs ldd | grep -v '^[^[:space:]]' | grep '/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*(0x[0-9a-fA-F]*)//' -e 's/.*=>[[:space:]]*//' | grep -Fve "$(ACIROOTFSDIR)" | sort -u); \
-	for f in $${all_libs}; do \
-		$(INSTALL) -D "$${f}" "$(ACIROOTFSDIR)$${f}"; \
-	done; \
-	touch "$@"
 
 $(call undefine-namespaces,STAGE1 _STAGE1)
