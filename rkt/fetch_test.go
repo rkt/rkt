@@ -436,13 +436,13 @@ func TestFetchImage(t *testing.T) {
 			ks: ks,
 		},
 	}
-	_, err = ft.fetchImage(fmt.Sprintf("%s/app.aci", ts.URL), "", true)
+	_, err = ft.fetchImage(fmt.Sprintf("%s/app.aci", ts.URL), "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestFetchImageFromStore(t *testing.T) {
+func TestGetStoreKeyFromApp(t *testing.T) {
 	dir, err := ioutil.TempDir("", "fetch-image")
 	if err != nil {
 		t.Fatalf("error creating tempdir: %v", err)
@@ -469,12 +469,7 @@ func TestFetchImageFromStore(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 
-	ft := &fetcher{
-		imageActionData: imageActionData{
-			s: s,
-		},
-	}
-	_, err = ft.fetchImageFromStore("example.com/app")
+	_, err = getStoreKeyFromApp(s, "example.com/app")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -628,8 +623,10 @@ func TestFetchImageCache(t *testing.T) {
 				s:  s,
 				ks: ks,
 			},
+			// Skip local store
+			noStore: true,
 		}
-		_, err = ft.fetchImage(aciURL, "", true)
+		_, err = ft.fetchImage(aciURL, "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -645,7 +642,7 @@ func TestFetchImageCache(t *testing.T) {
 		}
 
 		downloadTime := rem.DownloadTime
-		_, err = ft.fetchImage(aciURL, "", true)
+		_, err = ft.fetchImage(aciURL, "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

@@ -22,179 +22,199 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
-// TestFetch tests that 'rkt fetch' will always bypass the on-disk store and
-// fetch from a local file or from a remote URL.
-func TestFetch(t *testing.T) {
-	image := "rkt-inspect-fetch.aci"
-
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
-
-	// Fetch the image for the first time, this should write the image to the
-	// on-disk store.
-	oldHash := patchImportAndFetchHash(image, []string{"--exec=/inspect --read-file"}, t, ctx)
-
-	// Fetch the image with the same name but different content, the expecting
-	// result is that we should get a different hash since we are not fetching
-	// from the on-disk store.
-	newHash := patchImportAndFetchHash(image, []string{"--exec=/inspect --read-file --write-file"}, t, ctx)
-
-	if oldHash == newHash {
-		t.Fatalf("ACI hash should be different as the image has changed")
-	}
-}
-
-// TestRunPrepareFromFile tests that when 'rkt run/prepare' a local ACI, it will bypass the
-// on-disk store.
-func TestRunPrepareFromFile(t *testing.T) {
-	foundMsg := "found image in local store"
+// TestFetchFromFile tests that 'rkt fetch/run/prepare' for a file will always
+// fetch the file regardless of the specified behavior (default, store only,
+// remote only).
+func TestFetchFromFile(t *testing.T) {
 	image := "rkt-inspect-implicit-fetch.aci"
-
 	imagePath := patchTestACI(image, "--exec=/inspect")
+
 	defer os.Remove(imagePath)
 
-	tests := []string{
-		imagePath,
-		"file://" + imagePath,
+	tests := []struct {
+		args  string
+		image string
+	}{
+		{"--insecure-skip-verify fetch", imagePath},
+		{"--insecure-skip-verify fetch --store-only", imagePath},
+		{"--insecure-skip-verify fetch --no-store", imagePath},
+		{"--insecure-skip-verify run --mds-register=false", imagePath},
+		{"--insecure-skip-verify run --mds-register=false --store-only", imagePath},
+		{"--insecure-skip-verify run --mds-register=false --no-store", imagePath},
+		{"--insecure-skip-verify prepare", imagePath},
+		{"--insecure-skip-verify prepare --store-only", imagePath},
+		{"--insecure-skip-verify prepare --no-store", imagePath},
 	}
-
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
-
-	importImageAndFetchHash(t, ctx, imagePath)
 
 	for _, tt := range tests {
-
-		// 1. Try run/prepare with '--local', should not get the $foundMsg, since we will ignore the '--local' when
-		// the image is a filepath.
-		cmds := []string{
-			fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false --local %s", ctx.cmd(), tt),
-			fmt.Sprintf("%s --insecure-skip-verify prepare --local %s", ctx.cmd(), tt),
-		}
-
-		for _, cmd := range cmds {
-			t.Logf("Running test %v", cmd)
-
-			child, err := gexpect.Spawn(cmd)
-			if err != nil {
-				t.Fatalf("Cannot exec rkt: %v", err)
-			}
-
-			if err := child.Expect(foundMsg); err == nil {
-				t.Fatalf("%q should not be found", foundMsg)
-			}
-
-			if err := child.Wait(); err != nil {
-				t.Fatalf("rkt didn't terminate correctly: %v", err)
-			}
-		}
-
-		// 2. Try run/prepare without '--local', should not get $foundMsg either.
-		cmds = []string{
-			fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), tt),
-			fmt.Sprintf("%s --insecure-skip-verify prepare %s", ctx.cmd(), tt),
-		}
-
-		for _, cmd := range cmds {
-			t.Logf("Running test %v", cmd)
-
-			child, err := gexpect.Spawn(cmd)
-			if err != nil {
-				t.Fatalf("Cannot exec rkt: %v", err)
-			}
-			if err := child.Expect(foundMsg); err == nil {
-				t.Fatalf("%q should not be found", foundMsg)
-			}
-			if err := child.Wait(); err != nil {
-				t.Fatalf("rkt didn't terminate correctly: %v", err)
-			}
-		}
+		testFetchFromFile(t, tt.args, tt.image)
 	}
 }
 
-// TestImplicitFetch tests that 'rkt run/prepare' will always bypass the on-disk store
-// if the tag is "latest".
-func TestImplicitFetch(t *testing.T) {
-	foundMsg := "found image in local store"
+func testFetchFromFile(t *testing.T, arg string, image string) {
+	fetchFromFileMsg := fmt.Sprintf("using image from file %s", image)
 
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	// 1. Fetch the image.
-	// TODO(yifan): Add other ACI with different schemes.
-	importImageAndFetchHash(t, ctx, "docker://busybox:ubuntu-12.04")
-	importImageAndFetchHash(t, ctx, "docker://busybox:latest")
+	cmd := fmt.Sprintf("%s %s %s", ctx.cmd(), arg, image)
 
-	// 2. Try run/prepare with/without tag ':latest', should not get $foundMsg.
-	cmds := []string{
-		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false docker://busybox", ctx.cmd()),
-		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false docker://busybox:latest", ctx.cmd()),
-		fmt.Sprintf("%s --insecure-skip-verify prepare docker://busybox", ctx.cmd()),
-		fmt.Sprintf("%s --insecure-skip-verify prepare docker://busybox:latest", ctx.cmd()),
+	t.Logf("Running test %v", cmd)
+
+	// 1. Run cmd, should get $fetchFromFileMsg.
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
 	}
+	if err := expectWithOutput(child, fetchFromFileMsg); err != nil {
+		t.Fatalf("%q should be found", fetchFromFileMsg)
+	}
+	child.Wait()
 
-	for _, cmd := range cmds {
-		t.Logf("Running test %v", cmd)
-
-		child, err := gexpect.Spawn(cmd)
-		if err != nil {
-			t.Fatalf("Cannot exec rkt: %v", err)
-		}
-		if err := expectWithOutput(child, foundMsg); err == nil {
-			t.Fatalf("%q should not be found", foundMsg)
-		}
-		if err := child.Wait(); err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
-		}
+	// 1. Run cmd again, should get $fetchFromFileMsg.
+	child, err = gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	if err := expectWithOutput(child, fetchFromFileMsg); err != nil {
+		t.Fatalf("%q should be found", fetchFromFileMsg)
+	}
+	if err := child.Wait(); err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 }
 
-// TestRunPrepareLocal tests that 'rkt run/prepare' will only use the on-disk store if flag is --local
-func TestRunPrepareLocal(t *testing.T) {
-	notAvailableMsg := "not available in local store"
-	foundMsg := "using image in local store"
+// TestFetch tests that 'rkt fetch/run/prepare' for any type (image name string
+// or URL) except file:// URL will work with the default, store only
+// (--store-only) and remote only (--no-store) behaviors.
+func TestFetch(t *testing.T) {
+	image := "rkt-inspect-implicit-fetch.aci"
+	imagePath := patchTestACI(image, "--exec=/inspect")
+
+	defer os.Remove(imagePath)
+
+	tests := []struct {
+		args     string
+		image    string
+		finalURL string
+	}{
+		{"--insecure-skip-verify fetch", "coreos.com/etcd:v2.1.2", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-skip-verify fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", ""},
+		{"--insecure-skip-verify fetch", "docker://busybox", ""},
+		{"--insecure-skip-verify fetch", "docker://busybox:latest", ""},
+		{"--insecure-skip-verify run --mds-register=false", "coreos.com/etcd:v2.1.2", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-skip-verify run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", ""},
+		{"--insecure-skip-verify run --mds-register=false", "docker://busybox", ""},
+		{"--insecure-skip-verify run --mds-register=false", "docker://busybox:latest", ""},
+		{"--insecure-skip-verify prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", ""},
+		{"--insecure-skip-verify prepare", "coreos.com/etcd:v2.1.2", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-skip-verify prepare", "docker://busybox", ""},
+		{"--insecure-skip-verify prepare", "docker://busybox:latest", ""},
+	}
+
+	for _, tt := range tests {
+		testFetchDefault(t, tt.args, tt.image, tt.finalURL)
+		testFetchStoreOnly(t, tt.args, tt.image, tt.finalURL)
+		testFetchNoStore(t, tt.args, tt.image, tt.finalURL)
+	}
+}
+
+func testFetchDefault(t *testing.T, arg string, image string, finalURL string) {
+	remoteFetchMsgTpl := `remote fetching from url %s`
+	storeMsgTpl := `using image from local store for .* %s`
+	if finalURL == "" {
+		finalURL = image
+	}
+	remoteFetchMsg := fmt.Sprintf(remoteFetchMsgTpl, finalURL)
+	storeMsg := fmt.Sprintf(storeMsgTpl, image)
 
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	cmds := []string{
-		fmt.Sprintf("%s --insecure-skip-verify run --local --mds-register=false docker://busybox", ctx.cmd()),
-		fmt.Sprintf("%s --insecure-skip-verify run --local --mds-register=false docker://busybox:latest", ctx.cmd()),
-		fmt.Sprintf("%s --insecure-skip-verify prepare --local docker://busybox", ctx.cmd()),
-		fmt.Sprintf("%s --insecure-skip-verify prepare --local docker://busybox:latest", ctx.cmd()),
+	cmd := fmt.Sprintf("%s %s %s", ctx.cmd(), arg, image)
+
+	t.Logf("Running test %v", cmd)
+
+	// 1. Run cmd with the image not available in the store, should get $remoteFetchMsg.
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
 	}
-
-	// 1. Try run/prepare with the image not available in the store, should get $notAvailableMsg.
-	for _, cmd := range cmds {
-		t.Logf("Running test %v", cmd)
-
-		child, err := gexpect.Spawn(cmd)
-		if err != nil {
-			t.Fatalf("Cannot exec rkt: %v", err)
-		}
-		if err := expectWithOutput(child, notAvailableMsg); err != nil {
-			t.Fatalf("%q should be found", notAvailableMsg)
-		}
-		child.Wait()
+	if err := expectWithOutput(child, remoteFetchMsg); err != nil {
+		t.Fatalf("%q should be found", remoteFetchMsg)
 	}
+	child.Wait()
 
-	// 2. Fetch the image
-	importImageAndFetchHash(t, ctx, "docker://busybox")
-	importImageAndFetchHash(t, ctx, "docker://busybox:latest")
-
-	// 3. Try run/prepare with the image available in the store, should get $foundMsg.
-	for _, cmd := range cmds {
-		t.Logf("Running test %v", cmd)
-
-		child, err := gexpect.Spawn(cmd)
-		if err != nil {
-			t.Fatalf("Cannot exec rkt: %v", err)
-		}
-		if err := expectWithOutput(child, foundMsg); err != nil {
-			t.Fatalf("%q should be found", foundMsg)
-		}
-		if err := child.Wait(); err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
-		}
+	// 2. Run cmd with the image available in the store, should get $storeMsg.
+	child, err = gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
 	}
+	result, out, err := expectRegexWithOutput(child, storeMsg)
+	if err != nil || len(result) != 1 {
+		t.Fatalf("%q regex must be found one time, Error: %v\nOutput: %v", storeMsg, err, out)
+	}
+	child.Wait()
+}
+
+func testFetchStoreOnly(t *testing.T, args string, image string, finalURL string) {
+	cannotFetchMsgTpl := `unable to fetch image for .* %s`
+	storeMsgTpl := `using image from local store for .* %s`
+	cannotFetchMsg := fmt.Sprintf(cannotFetchMsgTpl, image)
+	storeMsg := fmt.Sprintf(storeMsgTpl, image)
+
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
+	cmd := fmt.Sprintf("%s --store-only %s %s", ctx.cmd(), args, image)
+
+	t.Logf("Running test %v", cmd)
+
+	// 1. Run cmd with the image not available in the store should get $cannotFetchMsg.
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	result, out, err := expectRegexWithOutput(child, cannotFetchMsg)
+	if err != nil || len(result) != 1 {
+		t.Fatalf("%q regex must be found one time, Error: %v\nOutput: %v", cannotFetchMsg, err, out)
+	}
+	child.Wait()
+
+	importImageAndFetchHash(t, ctx, image)
+
+	// 2. Run cmd with the image available in the store, should get $storeMsg.
+	child, err = gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	result, out, err = expectRegexWithOutput(child, storeMsg)
+	if err != nil || len(result) != 1 {
+		t.Fatalf("%q regex must be found one time, Error: %v\nOutput: %v", storeMsg, err, out)
+	}
+	child.Wait()
+}
+
+func testFetchNoStore(t *testing.T, args string, image string, finalURL string) {
+	remoteFetchMsgTpl := `remote fetching from url %s`
+	remoteFetchMsg := fmt.Sprintf(remoteFetchMsgTpl, finalURL)
+
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
+	importImageAndFetchHash(t, ctx, image)
+
+	cmd := fmt.Sprintf("%s --no-store %s %s", ctx.cmd(), args, image)
+
+	t.Logf("Running test %v", cmd)
+
+	// 1. Run cmd with the image available in the store, should get $remoteFetchMsg.
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	if err := expectWithOutput(child, remoteFetchMsg); err != nil {
+		t.Fatalf("%q should be found", remoteFetchMsg)
+	}
+	child.Wait()
 }
