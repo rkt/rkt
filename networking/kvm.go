@@ -196,39 +196,30 @@ func (n *Networking) kvmTeardown() {
 
 }
 
-// NetParams exposes conf(NetConf)/runtime(NetInfo) data to stage1/init client
-type NetParams struct {
-	// runtime based information
-	HostIP  net.IP
-	GuestIP net.IP
-	Mask    net.IP
-	IfName  string
-	// TODO: required for other type of plugins, not yet available because what networking.Networking stores
-	// Net net.IPNet
+// Following methods implements behavior of netDescriber by activeNet
+// (behavior required by stage1/init/kvm package and its kernel parameters configuration)
 
-	// configuration based information
-	Name   string
-	Type   string
-	IPMasq bool
+func (an activeNet) HostIP() net.IP {
+	return an.runtime.HostIP
+}
+func (an activeNet) GuestIP() net.IP {
+	return an.runtime.IP
+}
+func (an activeNet) IfName() string {
+	return an.runtime.IfName
+}
+func (an activeNet) Mask() net.IP {
+	return an.runtime.Mask
+}
+func (an activeNet) Name() string {
+	return an.conf.Name
+}
+func (an activeNet) IPMasq() bool {
+	return an.conf.IPMasq
 }
 
-// GetNetworkParameters returns network parameters created
+// GetActiveNetworks returns activeNets to be used as NetDescriptors
 // by plugins, which are required for stage1 executor to run (only for KVM)
-func (e *Networking) GetNetworkParameters() []NetParams {
-	np := []NetParams{}
-	_ = np
-	for _, an := range e.nets {
-		np = append(np, NetParams{
-			HostIP:  an.runtime.HostIP,
-			GuestIP: an.runtime.IP,
-			IfName:  an.runtime.IfName,
-			Mask:    an.runtime.Mask,
-			// Net: // TODO: from where
-			Name:   an.conf.Name,
-			Type:   an.conf.Type,
-			IPMasq: an.conf.IPMasq,
-		})
-	}
-
-	return np
+func (e *Networking) GetActiveNetworks() []activeNet {
+	return e.nets
 }
