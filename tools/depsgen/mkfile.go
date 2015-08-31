@@ -41,6 +41,10 @@ ifeq ($(_DEPS_GEN_F1_),$(_DEPS_GEN_F2_))
 
 else
 
+$(info Invalidating !!!DEPS_GEN_TARGET!!!)
+$(info Prerequisites stored in deps file that are not in currently on disk: $(filter-out $(_DEPS_GEN_F2_),$(_DEPS_GEN_F1_)))
+$(info Prerequisites currently on disk that are not stored in deps file: $(filter-out $(_DEPS_GEN_F1_),$(_DEPS_GEN_F2_)))
+
 # invalidate the target
 !!!DEPS_GEN_TARGET!!!: _DEPS_GEN_INVALIDATE_
 .PHONY: _DEPS_GEN_INVALIDATE_
@@ -64,9 +68,16 @@ _DEPS_GEN_DO_INVALIDATE_ := no
 $(foreach v,$(_DEPS_GEN_VARIABLES_), \
         $(if $(call equal,$($v),$(!!!DEPS_GEN_STORED_PREFIX!!!$v)), \
                 , \
-                $(eval _DEPS_GEN_DO_INVALIDATE_ := yes)))
+                $(eval _DEPS_GEN_DO_INVALIDATE_ := yes) \
+                $(eval _DEPS_GEN_DIFFS_ += $v)))
 
 ifeq ($(_DEPS_GEN_DO_INVALIDATE_),yes)
+
+$(info Invalidating !!!DEPS_GEN_TARGET!!!)
+$(foreach k,$(_DEPS_GEN_DIFFS_), \
+        $(info Differing key: $k) \
+        $(info Value stored in deps file: $(!!!DEPS_GEN_STORED_PREFIX!!!$v)) \
+        $(info Value currently used: $($v)))
 
 # invalidate the target
 !!!DEPS_GEN_TARGET!!!: _DEPS_GEN_INVALIDATE_

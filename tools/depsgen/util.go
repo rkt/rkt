@@ -16,10 +16,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/coreos/rkt/tools/common"
 )
 
 // toMap creates a map from passed strings. This function expects an
@@ -28,8 +29,7 @@ import (
 // strings are values.
 func toMap(kv ...string) map[string]string {
 	if len(kv)%2 != 0 {
-		fmt.Fprintf(os.Stderr, "Expected even number of strings in toMap\n")
-		os.Exit(1)
+		common.Die("Expected even number of strings in toMap")
 	}
 	r := make(map[string]string, len(kv))
 	lastKey := ""

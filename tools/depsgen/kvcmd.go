@@ -15,8 +15,7 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"github.com/coreos/rkt/tools/common"
 )
 
 const (
@@ -28,17 +27,16 @@ func init() {
 }
 
 func kvDeps(args []string) string {
-	target, keysValues := getKvArgs(args)
+	target, keysValues := kvGetArgs(args)
 	return GenerateKvDeps(target, keysValues)
 }
 
-func getKvArgs(args []string) (string, map[string]string) {
+func kvGetArgs(args []string) (string, map[string]string) {
 	f, target := standardFlags(kvCmd)
 
 	f.Parse(args)
 	if *target == "" {
-		fmt.Fprintf(os.Stderr, "--target parameter must be specified and cannot be empty\n")
-		os.Exit(1)
+		common.Die("--target parameter must be specified and cannot be empty")
 	}
 	return *target, toMap(f.Args()...)
 }
