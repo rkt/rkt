@@ -480,6 +480,15 @@ func TestFetchImageFromStore(t *testing.T) {
 	}
 }
 
+type redirectingServerHandler struct {
+	destServer string
+}
+
+func (h *redirectingServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Location", fmt.Sprintf("%s/%s", h.destServer, r.URL.Path))
+	w.WriteHeader(http.StatusTemporaryRedirect)
+}
+
 type cachingServerHandler struct {
 	aciBody []byte
 	ascBody []byte
@@ -595,26 +604,31 @@ func TestFetchImageCache(t *testing.T) {
 	etagMaxAgeTS := httptest.NewServer(etagMaxAgeServer)
 	defer etagMaxAgeTS.Close()
 
-	tests := []struct {
+	type testData struct {
 		URL             string
 		etag            string
 		cacheMaxAge     int
 		shouldUseCached bool
-	}{
+	}
+	tests := []testData{
 		{nocacheTS.URL, "", 0, false},
 		{etagTS.URL, "123456789", 0, true},
 		{maxAgeTS.URL, "", 10, true},
 		{etagMaxAgeTS.URL, "123456789", 10, true},
 	}
-
-	for _, tt := range tests {
+	testFn := func(tt testData, useRedirect bool) {
+		aciURL := fmt.Sprintf("%s/app.aci", tt.URL)
+		if useRedirect {
+			redirectingTS := httptest.NewServer(&redirectingServerHandler{destServer: tt.URL})
+			defer redirectingTS.Close()
+			aciURL = fmt.Sprintf("%s/app.aci", redirectingTS.URL)
+		}
 		ft := &fetcher{
 			imageActionData: imageActionData{
 				s:  s,
 				ks: ks,
 			},
 		}
-		aciURL := fmt.Sprintf("%s/app.aci", tt.URL)
 		_, err = ft.fetchImage(aciURL, "", true)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -657,6 +671,17 @@ func TestFetchImageCache(t *testing.T) {
 
 		if err := s.RemoveACI(rem.BlobKey); err != nil {
 			t.Fatalf("unexpected error: %v", err)
+		}
+	}
+
+	// repeat the tests with and without a redirecting server
+	for i := 0; i <= 1; i++ {
+		useRedirect := false
+		if i == 1 {
+			useRedirect = true
+		}
+		for _, tt := range tests {
+			testFn(tt, useRedirect)
 		}
 	}
 }

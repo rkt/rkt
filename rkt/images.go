@@ -556,30 +556,24 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 	if err != nil {
 		return nil, err
 	}
-	options := make(http.Header)
-	// Send credentials only over secure channel
-	if req.URL.Scheme == "https" {
-		if hostOpts, ok := f.headers[req.URL.Host]; ok {
-			options = hostOpts.Header()
-		}
-	}
-	for k, v := range options {
-		for _, e := range v {
-			req.Header.Add(k, e)
-		}
-	}
 	transport := http.DefaultTransport
 	if f.insecureSkipVerify {
 		transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
-	if etag != "" {
-		req.Header.Add("If-None-Match", etag)
-	}
-	req.Header.Add("User-Agent", fmt.Sprintf("rkt/%s", version.Version))
 
 	client := &http.Client{Transport: transport}
+	f.setHTTPHeaders(req, etag)
+
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 10 {
+			return fmt.Errorf("too many redirects")
+		}
+		f.setHTTPHeaders(req, etag)
+		return nil
+	}
+
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -643,6 +637,25 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 	}
 
 	return cd, nil
+}
+
+func (f *fetcher) setHTTPHeaders(req *http.Request, etag string) {
+	options := make(http.Header)
+	// Send credentials only over secure channel
+	if req.URL.Scheme == "https" {
+		if hostOpts, ok := f.headers[req.URL.Host]; ok {
+			options = hostOpts.Header()
+		}
+	}
+	for k, v := range options {
+		for _, e := range v {
+			req.Header.Add(k, e)
+		}
+	}
+	if etag != "" {
+		req.Header.Add("If-None-Match", etag)
+	}
+	req.Header.Add("User-Agent", fmt.Sprintf("rkt/%s", version.Version))
 }
 
 func ascURLFromImgURL(imgurl string) string {
