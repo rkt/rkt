@@ -66,9 +66,7 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 	flagUUIDFileSave string
 )
 
-func init() {
-	cmdRkt.AddCommand(cmdRun)
-
+func setDefaultStage1Image() {
 	// if not set by linker, try discover the directory rkt is running
 	// from, and assume the default stage1.aci is stored alongside it.
 	if defaultStage1Image == "" {
@@ -76,8 +74,14 @@ func init() {
 			defaultStage1Image = filepath.Join(filepath.Dir(exePath), "stage1.aci")
 		}
 	}
+}
 
-	cmdRun.Flags().StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
+func init() {
+	setDefaultStage1Image()
+
+	cmdRkt.AddCommand(cmdRun)
+
+	cmdRun.Flags().StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. By default, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
 	cmdRun.Flags().Var(&flagVolumes, "volume", "volumes to mount into the pod")
 	cmdRun.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires --private-net)")
 	cmdRun.Flags().Var(&flagPrivateNet, "private-net", "give pod a private network that defaults to the default network plus all user-configured networks. Can be limited to a comma-separated list of network names")
