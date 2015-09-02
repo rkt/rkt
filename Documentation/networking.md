@@ -58,16 +58,16 @@ Additional fields are specified for various types.
 
 ### Built-in network types
 
-#### veth
+#### ptp
 
-veth is the probably the simplest type of networking and is used to set up default network. It creates a virtual ethernet pair (akin to a pipe) and places one end into pod and the other on the host. It is expected to be used with IPAM type that will allocate a /31 for both ends of the veth (such as host-local-ptp). `veth` specific configuration fields are:
+ptp is the probably the simplest type of networking and is used to set up default network. It creates a virtual ethernet pair (akin to a pipe) and places one end into pod and the other on the host. It is expected to be used with an IPAM type that will allocate a /31 for both ends of the veth (such as host-local-ptp). `ptp` specific configuration fields are:
 
 - **mtu** (integer): the size of the MTU in bytes.
 - **ipMasq** (boolean): whether to setup IP masquerading on the host.
 
 #### bridge
 
-Like the veth type, `bridge` will also create a veth pair and place one end into the pod. However the host end of the veth will be plugged into a linux-bridge.
+Like the ptp type, `bridge` will also create a veth pair and place one end into the pod. However the host end of the veth will be plugged into a linux-bridge.
 The configuration file specifies the bridge name and if the bridge does not exist, it will be created.
 The bridge can optionally be setup to act as the gateway for the network. `bridge` specific configuration fields are:
 
