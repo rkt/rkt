@@ -31,7 +31,7 @@ import (
 	"github.com/coreos/rkt/networking/tuntap"
 )
 
-// setupTapDevice creates persistent tap devices
+// setupTapDevice creates persistent tap device
 // and returns a newly created netlink.Link structure
 func setupTapDevice(podID types.UUID) (netlink.Link, error) {
 	// network device names are limited to 16 characters
@@ -126,18 +126,18 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 				return nil, fmt.Errorf("cannot add address to host tap device %q: %v", ifName, err)
 			}
 
-			if n.conf.IPMasq {
-				h := sha512.Sum512([]byte(podID.String()))
-				chain := fmt.Sprintf("CNI-%s-%x", n.conf.Name, h[:8])
-				if err = ip.SetupIPMasq(&net.IPNet{
-					IP:   n.runtime.IP,
-					Mask: net.IPMask(n.runtime.Mask),
-				}, chain); err != nil {
-					return nil, err
-				}
-			}
 		default:
 			return nil, fmt.Errorf("network %q have unsupported type: %q", n.conf.Name, n.conf.Type)
+		}
+		if n.conf.IPMasq {
+			h := sha512.Sum512([]byte(podID.String()))
+			chain := fmt.Sprintf("CNI-%s-%x", n.conf.Name, h[:8])
+			if err := ip.SetupIPMasq(&net.IPNet{
+				IP:   n.runtime.IP,
+				Mask: net.IPMask(n.runtime.Mask),
+			}, chain); err != nil {
+				return nil, err
+			}
 		}
 	}
 	err := network.forwardPorts(fps, network.GetDefaultIP())
@@ -160,27 +160,29 @@ func (n *Networking) teardownKvmNets() {
 		case "ptp":
 			// remove tuntap interface
 			tuntap.RemovePersistentIface(an.runtime.IfName, tuntap.Tap)
-			// remove masquerading if it was prepared
-			if an.conf.IPMasq {
-				h := sha512.Sum512([]byte(n.podID.String()))
-				chain := fmt.Sprintf("CNI-%s-%x", an.conf.Name, h[:8])
-				err := ip.TeardownIPMasq(&net.IPNet{
-					IP:   an.runtime.IP,
-					Mask: net.IPMask(an.runtime.Mask),
-				}, chain)
-				if err != nil {
-					log.Printf("Error on removing masquerading: %q", err)
-				}
-			}
-			// ugly hack again to directly call IPAM plugin to release IP
-			an.conf.Type = an.conf.IPAM.Type
 
-			_, err := n.execNetPlugin("DEL", &an, an.runtime.IfName)
-			if err != nil {
-				log.Printf("Error executing network plugin: %q", err)
-			}
 		default:
 			log.Printf("Unsupported network type: %q", an.conf.Type)
+			return
+		}
+		// ugly hack again to directly call IPAM plugin to release IP
+		an.conf.Type = an.conf.IPAM.Type
+
+		_, err := n.execNetPlugin("DEL", &an, an.runtime.IfName)
+		if err != nil {
+			log.Printf("Error executing network plugin: %q", err)
+		}
+		// remove masquerading if it was prepared
+		if an.conf.IPMasq {
+			h := sha512.Sum512([]byte(n.podID.String()))
+			chain := fmt.Sprintf("CNI-%s-%x", an.conf.Name, h[:8])
+			err := ip.TeardownIPMasq(&net.IPNet{
+				IP:   an.runtime.IP,
+				Mask: net.IPMask(an.runtime.Mask),
+			}, chain)
+			if err != nil {
+				log.Printf("Error on removing masquerading: %q", err)
+			}
 		}
 	}
 }
