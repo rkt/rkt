@@ -65,6 +65,56 @@ func setupTapDevice(podID types.UUID) (netlink.Link, error) {
 	return link, nil
 }
 
+type MacVTapNetConf struct {
+	NetConf
+	Master string `json:"master"`
+	Mode   string `json:"mode"`
+}
+
+// setupTapDevice creates persistent macvtap device
+// and returns a newly created netlink.Link structure
+func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf) (netlink.Link, error) {
+	master, err := netlink.LinkByName(config.Master)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot find master device '%v': %v", config.Master, err)
+	}
+	var mode netlink.MacvlanMode
+	switch config.Mode {
+	// if not set - defaults to bridge mode as in:
+	// https://github.com/coreos/rkt/blob/master/Documentation/networking.md#macvlan
+	case "", "bridge":
+		mode = netlink.MACVLAN_MODE_BRIDGE
+	case "private":
+		mode = netlink.MACVLAN_MODE_PRIVATE
+	case "vepa":
+		mode = netlink.MACVLAN_MODE_VEPA
+	case "passthru":
+		mode = netlink.MACVLAN_MODE_PASSTHRU
+	default:
+		return nil, fmt.Errorf("Unsupported macvtap mode: %v", config.Mode)
+	}
+	mtu := master.Attrs().MTU
+	if config.MTU != 0 {
+		mtu = config.MTU
+	}
+	nameTemplate := fmt.Sprintf("rkt-%s-vtap%%d", podID.String()[0:4])
+	link := &netlink.Macvtap{
+		Macvlan: netlink.Macvlan{
+			LinkAttrs: netlink.LinkAttrs{
+				Name:        nameTemplate,
+				MTU:         mtu,
+				ParentIndex: master.Attrs().Index,
+			},
+			Mode: mode,
+		},
+	}
+
+	if err := netlink.LinkAdd(link); err != nil {
+		return nil, fmt.Errorf("Cannot create macvtap interface: %v", err)
+	}
+	return link, nil
+}
+
 // kvmSetupNetAddressing calls IPAM plugin (with a hack) to reserve an IP to be
 // used by newly create tuntap pair
 // in result it updates activeNet.runtime configuration
@@ -288,6 +338,23 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 				}
 			}
 
+		case "macvlan":
+			config := MacVTapNetConf{}
+			if err := json.Unmarshal(n.confBytes, &config); err != nil {
+				return nil, fmt.Errorf("error parsing %q result: %v", n.conf.Name, err)
+			}
+			link, err := setupMacVTapDevice(podID, config)
+			if err != nil {
+				return nil, err
+			}
+			ifName := link.Attrs().Name
+			n.runtime.IfName = ifName
+
+			err = kvmSetupNetAddressing(&network, n, ifName)
+			if err != nil {
+				return nil, err
+			}
+
 		default:
 			return nil, fmt.Errorf("network %q have unsupported type: %q", n.conf.Name, n.conf.Type)
 		}
@@ -322,9 +389,23 @@ func (n *Networking) teardownKvmNets() {
 		case "ptp", "bridge":
 			// remove tuntap interface
 			tuntap.RemovePersistentIface(an.runtime.IfName, tuntap.Tap)
+
+		case "macvlan":
+			link, err := netlink.LinkByName(an.runtime.IfName)
+			if err != nil {
+				log.Printf("Cannot find link `%v`: %v", an.runtime.IfName, err)
+				continue
+			} else {
+				err := netlink.LinkDel(link)
+				if err != nil {
+					log.Printf("Cannot remove link `%v`: %v", an.runtime.IfName, err)
+					continue
+				}
+			}
+
 		default:
 			log.Printf("Unsupported network type: %q", an.conf.Type)
-			return
+			continue
 		}
 		// ugly hack again to directly call IPAM plugin to release IP
 		an.conf.Type = an.conf.IPAM.Type
@@ -368,6 +449,16 @@ func (an activeNet) GuestIP() net.IP {
 	return an.runtime.IP
 }
 func (an activeNet) IfName() string {
+	if an.conf.Type == "macvlan" {
+		// macvtap device passed as parameter to lkvm binary have different
+		// kind of name, path to /dev/tapN made with N as link index
+		link, err := netlink.LinkByName(an.runtime.IfName)
+		if err != nil {
+			log.Printf("Cannot get interface '%v': %v", an.runtime.IfName, err)
+			return ""
+		}
+		return fmt.Sprintf("/dev/tap%d", link.Attrs().Index)
+	}
 	return an.runtime.IfName
 }
 func (an activeNet) Mask() net.IP {
