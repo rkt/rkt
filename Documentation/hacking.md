@@ -97,7 +97,7 @@ rkt will then use this environment variable to set the default value for the `st
 ## Managing Dependencies
 
 rkt uses [`godep`](https://github.com/tools/godep) to manage third-party dependencies.
-The [build script](https://github.com/coreos/rkt/blob/master/build) is crafted to make this transparent to most users (i.e. if you're just building rkt from source, or modifying any of the codebase without changing dependencies, you should have no need to interact with godep).
+The build process is crafted to make this transparent to most users (i.e. if you're just building rkt from source, or modifying any of the codebase without changing dependencies, you should have no need to interact with godep).
 But occasionally the need arises to either a) add a new dependency or b) update/remove an existing dependency.
 At this point, the ramblings below from an experienced Godep victim^Wenthusiast might prove of use...
 
@@ -117,7 +117,7 @@ $ go get -d github.com/coreos/rkt/...  # or 'git clone https://github.com/coreos
 $ cd $GOPATH/src/github.com/coreos/rkt
 ```
 
-If, however, you instead prefer to manage your source code in directories like `~/src/rkt`, there's a problem: `godep` doesn't like symbolic links (which is what the rkt `build` script [uses to create a self-contained GOPATH](https://github.com/coreos/rkt/blob/master/build#L8)).
+If, however, you instead prefer to manage your source code in directories like `~/src/rkt`, there's a problem: `godep` doesn't like symbolic links (which is what the rkt build process uses by default to create a self-contained GOPATH).
 Hence, you'll need to work around this with bind mounts, with something like the following:
 
 ```
