@@ -341,6 +341,10 @@ func Run(cfg RunConfig, dir string) {
 		log.Fatalf("setting lock fd environment: %v", err)
 	}
 
+	if err := os.Setenv(common.SELinuxContext, fmt.Sprintf("%v", cfg.ProcessLabel)); err != nil {
+		log.Fatalf("setting SELinux context environment: %v", err)
+	}
+
 	log.Printf("Pivoting to filesystem %s", dir)
 	if err := os.Chdir(dir); err != nil {
 		log.Fatalf("failed changing to dir: %v", err)
@@ -383,10 +387,6 @@ func Run(cfg RunConfig, dir string) {
 	// make sure the lock fd stays open across exec
 	if err := sys.CloseOnExec(cfg.LockFd, false); err != nil {
 		log.Fatalf("error clearing FD_CLOEXEC on lock fd")
-	}
-
-	if err := label.SetProcessLabel(cfg.ProcessLabel); err != nil {
-		log.Fatalf("error setting process SELinux label: %v", err)
 	}
 
 	if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
@@ -546,8 +546,15 @@ func overlayRender(cfg RunConfig, img types.Hash, cdir string, dest string, appN
 	if err := os.MkdirAll(upperDir, 0755); err != nil {
 		return err
 	}
+	if err := label.SetFileLabel(upperDir, cfg.MountLabel); err != nil {
+		return err
+	}
+
 	workDir := path.Join(overlayDir, "work", appName)
 	if err := os.MkdirAll(workDir, 0755); err != nil {
+		return err
+	}
+	if err := label.SetFileLabel(workDir, cfg.MountLabel); err != nil {
 		return err
 	}
 
