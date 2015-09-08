@@ -204,7 +204,7 @@ It is now possible to use the DHCP type by specifying it in the ipam section of 
 }
 ```
 
-For more information about DHCP plugin, see (CNI docs)[https://github.com/appc/cni/blob/master/Documentation/dhcp.md]
+For more information about DHCP plugin, see [CNI docs](https://github.com/appc/cni/blob/master/Documentation/dhcp.md).
 
 ## Other plugins
 
@@ -219,7 +219,7 @@ The basic network configuration is as follows:
 ```
 
 This will setup a linux-bridge, connect the container to the bridge and assign container IPs out of the subnet that flannel assigned to the host.
-For more information included advanced configuration options, see (CNI docs)[https://github.com/appc/cni/blob/master/Documentation/flannel.md]
+For more information included advanced configuration options, see [CNI docs](https://github.com/appc/cni/blob/master/Documentation/flannel.md).
 
 ## Exposing container ports on the host
 Apps declare their public ports in the image manifest file.
