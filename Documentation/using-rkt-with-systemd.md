@@ -12,7 +12,7 @@ Consequently, standard `systemd` idioms like `systemctl start` and `systemctl st
 
 ## systemd-run
 
-If you just want to start a daemonized container you don't need to create a systemd unit file, you can just use `systemd-run`:
+To start a daemonized container from the command line, use [`systemd-run`](http://www.freedesktop.org/software/systemd/man/systemd-run.html):
 
 ```
 # systemd-run rkt run --mds-register=false coreos.com/etcd:v2.0.10
