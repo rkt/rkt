@@ -1,20 +1,6 @@
 AC_PREREQ([2.68])
 AC_INIT([rkt], [0.8.0+git], [https://github.com/coreos/rkt/issues])
 
-dnl if version ends with +git, append a short git-hash.
-AS_IF([test `expr match 'AC_PACKAGE_VERSION' '.*+git$'` -gt 0],
-      dnl version has +git suffix, ignore errors (not a git repo)
-      [RKT_VERSION="AC_PACKAGE_VERSION`git rev-parse --short HEAD 2>/dev/null``git diff-index --quiet HEAD 2>/dev/null || echo -dirty`"],
-      dnl version has no +git suffix
-      [RKT_VERSION="AC_PACKAGE_VERSION"])
-
-RKT_VERSION_LDFLAGS="-X github.com/coreos/rkt/version.Version '${RKT_VERSION}'"
-AC_SUBST(RKT_VERSION)
-AC_SUBST(RKT_VERSION_LDFLAGS)
-
-AC_CANONICAL_HOST
-AC_CANONICAL_BUILD
-
 AC_DEFUN([RKT_REQ_PROG],
          [AS_VAR_IF([$1], [],
                     [AC_CHECK_PROG($@)
@@ -32,6 +18,35 @@ AC_DEFUN([RKT_REQ_ABS_PROG],
 # beginning.
 RKT_REQ_ABS_PROG([BASH_SHELL], [bash])
 RKT_REQ_ABS_PROG([ABS_GO], [go])
+
+dnl drop it when we drop support for go < 1.5
+VERSION=`$ABS_GO version | grep -o 'go@<:@@<:@:digit:@:>@@:>@\+\.@<:@@<:@:digit:@:>@@:>@\+' | grep -o '@<:@@<:@:digit:@:>@@:>@\+\.@<:@@<:@:digit:@:>@@:>@\+'`
+GO_MAJOR=`echo $GO_VERSION | grep -o '^@<:@@<:@:digit:@:>@@:>@\+'`
+GO_MINOR=`echo $GO_VERSION | grep -o '@<:@@<:@:digit:@:>@@:>@\+$'`
+
+AS_IF([test $GO_MAJOR -gt 1 -o $GO_MINOR -gt 4],
+      dnl we have go 1.5 or greater
+      [RKT_XF() {
+           echo "-X '$1=$2'"
+       }],
+      dnl we have go 1.4 or lesser
+      [RKT_XF() {
+           echo "-X $1 '$2'"
+       }])
+
+dnl if version ends with +git, append a short git-hash.
+AS_IF([test `expr match 'AC_PACKAGE_VERSION' '.*+git$'` -gt 0],
+      dnl version has +git suffix, ignore errors (not a git repo)
+      [RKT_VERSION="AC_PACKAGE_VERSION`git rev-parse --short HEAD 2>/dev/null``git diff-index --quiet HEAD 2>/dev/null || echo -dirty`"],
+      dnl version has no +git suffix
+      [RKT_VERSION="AC_PACKAGE_VERSION"])
+
+RKT_VERSION_LDFLAGS=`RKT_XF github.com/coreos/rkt/version.Version "${RKT_VERSION}"`
+AC_SUBST(RKT_VERSION)
+AC_SUBST(RKT_VERSION_LDFLAGS)
+
+AC_CANONICAL_HOST
+AC_CANONICAL_BUILD
 
 ## STAGE1:type
 m4_define([DEFAULT_FLAVOR], [coreos])
@@ -103,7 +118,7 @@ AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
 AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
           [RKT_STAGE1_DEFAULT_VERSION=${RKT_VERSION}])
 
-RKT_STAGE1_DEFAULT_ACI_LDFLAGS="-X main.defaultStage1Name '${RKT_STAGE1_DEFAULT_NAME}' -X main.defaultStage1Version '${RKT_STAGE1_DEFAULT_VERSION}'"
+RKT_STAGE1_DEFAULT_ACI_LDFLAGS="`RKT_XF main.defaultStage1Name "${RKT_STAGE1_DEFAULT_NAME}"` `RKT_XF main.defaultStage1Version "${RKT_STAGE1_DEFAULT_VERSION}"`"
 
 AC_SUBST(RKT_STAGE1_DEFAULT_NAME)
 AC_SUBST(RKT_STAGE1_DEFAULT_VERSION)
@@ -170,7 +185,7 @@ RKT_STAGE1_IMAGE_LDFLAGS=
 # if stage1 image variable is set, add a linker flag to rkt defining the variable
 AS_VAR_IF([RKT_STAGE1_IMAGE], [],
           [],
-          [RKT_STAGE1_IMAGE_LDFLAGS="-X main.defaultStage1Image '${RKT_STAGE1_IMAGE}'"])
+          [RKT_STAGE1_IMAGE_LDFLAGS=`RKT_XF main.defaultStage1Image "${RKT_STAGE1_IMAGE}"`])
 
 AC_SUBST(RKT_STAGE1_IMAGE_LDFLAGS)
 
