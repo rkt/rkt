@@ -288,6 +288,25 @@ AC_SUBST(GOARCH_FOR_BUILD)
 AC_PROG_CC
 AC_PROG_INSTALL
 
+# Checks for libraries
+
+# check for libc generally
+AC_CHECK_LIB([c], [fork],
+             dnl libc is there
+             [],
+             dnl libc is not there
+             [AC_MSG_ERROR([*** No libc found. Try to install glibc-devel or libc6-dev.])])
+
+# check for static libc
+SAVE_LDFLAGS="$LDFLAGS"
+LDFLAGS="-static $LDFLAGS"
+AC_CHECK_LIB([c], [printf],
+             dnl static libc is there
+             [],
+             dnl static libc is not there
+             [AC_MSG_ERROR([*** No static libc found. Try to install glibc-static or libc6-dev.])])
+LDFLAGS="$SAVE_LDFLAGS"
+
 RKT_REQ_PROG([FILE],[file],[file])
 RKT_REQ_PROG([GIT],[git],[git])
 RKT_REQ_PROG([GOBINARY],[go],[go])
