@@ -71,7 +71,7 @@ Example:
 
 ### Building stage1 with kvm as execution engine
 
-Based on CoreOS, but with additional components for running containers on top of a hypervisor.
+The stage1 kvm image is based on CoreOS, but with additional components for running containers on top of a hypervisor.
 
 To build, use `--with-stage1=kvm` flag in `./configure`
 
