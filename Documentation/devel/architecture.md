@@ -53,19 +53,18 @@ At this point the stage0 execs `/stage1/rootfs/init` with the current working di
 
 ### Stage 1
 
-The next stage is a binary that the user trusts to set up cgroups, execute processes, and perform other operations as root on the host. This stage has the responsibility of taking the execution group filesystem that was created by stage 0 and creating the necessary cgroups, namespaces and mounts to launch the execution group:
+The next stage is a binary that the user trusts to set up cgroups, execute processes, and perform other operations as root on the host. This stage has the responsibility of taking the pod filesystem that was created by stage 0 and creating the necessary cgroups, namespaces and mounts to launch the pod. Specifically, it must:
 
-- Generate systemd unit files from the Image and Pod Manifests. The Image Manifest defines the default `exec` specifications of each application; the Pod Manifest defines the ordering of the units, as well as any `exec` overrides.
-- (containing, respectively, the exec specifications of each pod and the ordering given by the user)
-- Set up any external volumes (undefined at this point)
-- nspawn attach to the bridge and launch the execution group systemd
-- Launch the root systemd
-- Have the root systemd
+- Read the Image and Pod Manifests. The Image Manifest defines the default `exec` specifications of each application; the Pod Manifest defines the ordering of the units, as well as any overrides.
+- Generate systemd unit files from those Manifests
+- Create and enter network namespace if rkt is started with `--private-net`
+- Start systemd-nspawn (which takes care of the following steps)
+    - Set up any external volumes
+    - Launch systemd as PID 1 in the pod within the appropriate cgroups and namespaces
+    - Have systemd inside the pod launch the app(s).
 
 This process is slightly different for the qemu-kvm stage1 but a similar workflow starting at `exec()`'ing kvm instead of an nspawn.
 
 ### Stage 2
 
-The final stage is executing the actual application. The responsibilities of the stage2 include:
-
-- Launch the init process described in the Image Manifest
+The final stage, stage2, is the actual environment in which the applications run, as launched by stage1.
