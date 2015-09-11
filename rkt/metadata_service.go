@@ -509,10 +509,10 @@ func handlePodSign(w http.ResponseWriter, r *http.Request) {
 func handlePodVerify(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	uuid, err := types.NewUUID(r.FormValue("uid"))
+	uuid, err := types.NewUUID(r.FormValue("uuid"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "uid field missing or malformed: %v", err)
+		fmt.Fprintf(w, "uuid field missing or malformed: %v", err)
 		return
 	}
 
