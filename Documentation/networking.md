@@ -242,12 +242,39 @@ The pod's TCP port 80 can be mapped to an arbitrary port on the host during rkt 
 
 ```
 # rkt run --private-net --port=http:8888 myapp.aci
-````
+```
 
 Now, any traffic arriving on host's TCP port 8888 will be forwarded to the pod on port 80.
 
-### Overriding default network
+## Overriding default network
 If a network has a name "default", it will override the default network added
 by rkt. It is strongly recommended that such network also has type "veth" as
 it protects from the pod spoofing its IP address and defeating identity
 management provided by the metadata service.
+
+## Overriding network settings
+The network backend CNI allows the passing of [arguments as plugin parameters](https://github.com/appc/cni/blob/master/SPEC.md#parameters), specifically `CNI_ARGS`, at runtime.
+These arguments can be used to reconfigure a network without changing the configuration file.
+rkt supports the `CNI_ARGS` variable through the command line argument `--private-net`. 
+
+### Syntax
+The syntax for passing arguments to a network looks like `--private-net="$networkname1:$arg1=$val1;$arg2=val2"`.
+The usage of `"` is mandatory due to the `;` being used as separator within the arguments for a single network.
+To allow the passing of arguments to different networks simply append the arguments to the network name with a colon (`:`), and separate the arguments by semicolon (`;`).
+All arguments can either be given in a single instance of the `--private-net`, or can be spread across multiple uses of `--private-net`.
+*Reminder:* the separator for the networks (and their arguments) within one `--private-net` instance is the comma `,`.
+A network name must not be passed more than once, not within the same nor throughout multiple instances of `--private-net`.
+
+### Passing arguments to selected networks while loading all networks
+If all networks should be loaded but it's not necessary to pass arguments to all, add `all` to the list of networks. 
+
+### Example: load all networks and override IPs for two different networks
+This example will load all configured networks and override the IP addresses for *net1* and *net2*.
+
+```bash
+rkt run --private-net="all,net1:IP=1.2.3.4" --private-net="net2:IP=1.2.4.5" pod.aci
+```
+
+### Supported CNI_ARGS
+This is not documented yet, except for the example that follows a couple lines down.
+Please follow [this issue on CNI](https://github.com/appc/cni/issues/56) to track the progress of the documentation.

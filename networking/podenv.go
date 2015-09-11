@@ -256,6 +256,8 @@ func loadUserNets(localConfig string, netsLoadList common.PrivateNetList) ([]act
 			continue
 		}
 
+		n.runtime.Args = netsLoadList.SpecificArgs(n.conf.Name)
+
 		nets = append(nets, *n)
 	}
 
@@ -264,7 +266,7 @@ func loadUserNets(localConfig string, netsLoadList common.PrivateNetList) ([]act
 
 func missingNets(defined common.PrivateNetList, loaded []activeNet) []string {
 	diff := make(map[string]struct{})
-	for _, n := range defined.Strings() {
+	for _, n := range defined.StringsOnlyNames() {
 		if n != "all" {
 			diff[n] = struct{}{}
 		}
