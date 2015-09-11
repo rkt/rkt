@@ -45,9 +45,11 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 )
 
 func init() {
+	setDefaultStage1Image()
+
 	cmdRkt.AddCommand(cmdPrepare)
 
-	cmdPrepare.Flags().StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. If empty, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
+	cmdPrepare.Flags().StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. By default, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
 	cmdPrepare.Flags().Var(&flagVolumes, "volume", "volumes to mount into the pod")
 	cmdPrepare.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires --private-net)")
 	cmdPrepare.Flags().BoolVar(&flagQuiet, "quiet", false, "suppress superfluous output on stdout, print only the UUID on success")
