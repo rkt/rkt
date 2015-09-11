@@ -68,6 +68,8 @@ If you want to see the kernel and boot messages, run rkt with the `--debug` flag
 
 You can exit pressing `<Ctrl-a x>`.
 
+Notes: By default containers start working on all cpus and with 1GB. If user specify parameters via pod-manifest, memory will be increased by 128MB. Additional memory is required by system process.
+
 ### Selecting stage1 at runtime
 
 If you want to run software that requires hypervisor isolation along with trusted software that only needs container isolation, you can [choose which stage1.aci to use at runtime](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#use-a-custom-stage-1).

@@ -280,9 +280,22 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 			return nil, nil, err
 		}
 
-		// TODO: base on resource isolators
-		cpu := 1
-		mem := 128
+		cpu, mem := kvm.GetAppsResources(p.Manifest.Apps)
+
+		// if user doesn't specify amount of cpus we set no limit.
+		if cpu == 0 {
+			cpu = int64(runtime.NumCPU())
+		}
+		// Convert bytes into megabytes
+		mem /= 1024 * 1024
+
+		// If user doesn't specify amount of mem we set 1GB.
+		// else add additional 128MB for system process.
+		if mem == 0 {
+			mem = int64(1024)
+		} else {
+			mem += 128
+		}
 
 		kernelParams := []string{
 			"console=hvc0",
@@ -312,8 +325,8 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 			"run",
 			"--name", "rkt-" + p.UUID.String(),
 			"--no-dhcp", // speed bootup
-			"--cpu", strconv.Itoa(cpu),
-			"--mem", strconv.Itoa(mem),
+			"--cpu", strconv.FormatInt(cpu, 10),
+			"--mem", strconv.FormatInt(mem, 10),
 			"--console=virtio",
 			"--kernel", kernelPath,
 			"--disk", "stage1/rootfs", // relative to run/pods/uuid dir this is a place where systemd resides
