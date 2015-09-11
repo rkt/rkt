@@ -5,7 +5,7 @@ LKVM_BINARY := $(LKVM_SRCDIR)/lkvm-static
 LKVM_ACI_BINARY := $(ACIROOTFSDIR)/lkvm
 LKVM_GIT := https://kernel.googlesource.com/pub/scm/linux/kernel/git/will/kvmtool
 # just last published version (for reproducible builds), not for any other reason
-LKVM_VERSION := 4095fac878f618ae5e7384a1dc65ee34b6e05217
+LKVM_VERSION := efcf862611f2498d7b500e46a73d8a008e04325f
 
 LKVM_STUFFDIR := $(MK_SRCDIR)/lkvm
 LKVM_PATCHES := $(abspath $(LKVM_STUFFDIR)/patches/*.patch)
