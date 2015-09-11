@@ -144,8 +144,9 @@ func SupportsUserNS() bool {
 
 // PrivateNetList implements the flag.Value interface to allow specification
 // of -private-net with and without values
+// Example: --private-net="all,net1:k1=v1;k2=v2,net2:l1=w1"
 type PrivateNetList struct {
-	mapping map[string]bool
+	mapping map[string]string
 }
 
 func (l *PrivateNetList) String() string {
@@ -154,10 +155,32 @@ func (l *PrivateNetList) String() string {
 
 func (l *PrivateNetList) Set(value string) error {
 	if l.mapping == nil {
-		l.mapping = make(map[string]bool)
+		l.mapping = make(map[string]string)
 	}
 	for _, s := range strings.Split(value, ",") {
-		l.mapping[s] = true
+		netArgsPair := strings.Split(s, ":")
+		netName := netArgsPair[0]
+
+		if netName == "" {
+			return fmt.Errorf("netname must not be empty")
+		}
+		if _, duplicate := l.mapping[netName]; duplicate {
+			return fmt.Errorf("found duplicate netname %q", netName)
+		}
+
+		switch {
+		case len(netArgsPair) == 1:
+			l.mapping[netName] = ""
+		case len(netArgsPair) == 2:
+			if netName == "all" {
+				return fmt.Errorf("arguments are not supported by special netname %q", netName)
+			}
+			l.mapping[netName] = netArgsPair[1]
+		case len(netArgsPair) > 2:
+			return fmt.Errorf("network %q provided with invalid arguments: %v", netName, netArgsPair[1:])
+		default:
+			return fmt.Errorf("unexpected case when processing network %q", s)
+		}
 	}
 	return nil
 }
@@ -167,6 +190,18 @@ func (l *PrivateNetList) Type() string {
 }
 
 func (l *PrivateNetList) Strings() []string {
+	var list []string
+	for k, v := range l.mapping {
+		if v == "" {
+			list = append(list, k)
+		} else {
+			list = append(list, fmt.Sprintf("%s:%s", k, v))
+		}
+	}
+	return list
+}
+
+func (l *PrivateNetList) StringsOnlyNames() []string {
 	var list []string
 	for k, _ := range l.mapping {
 		list = append(list, k)
@@ -178,10 +213,15 @@ func (l *PrivateNetList) Any() bool {
 	return len(l.mapping) > 0
 }
 
-func (l *PrivateNetList) All() bool {
-	return l.mapping["all"]
+func (l *PrivateNetList) Specific(net string) bool {
+	_, exists := l.mapping[net]
+	return exists
 }
 
-func (l *PrivateNetList) Specific(net string) bool {
+func (l *PrivateNetList) SpecificArgs(net string) string {
 	return l.mapping[net]
+}
+
+func (l *PrivateNetList) All() bool {
+	return l.Specific("all")
 }
