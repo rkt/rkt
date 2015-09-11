@@ -177,7 +177,13 @@ func httpRequest(method, pth string, body io.Reader) error {
 
 	if urlErr, ok := err.(*url.Error); ok {
 		if opErr, ok := urlErr.Err.(*net.OpError); ok {
-			if opErr.Err == syscall.ENOENT || opErr.Err == syscall.ENOTSOCK {
+			errno := opErr.Err
+			// in go1.5 syscall errors in OpError.Err are of type
+			// os.SyscallError instead of directly syscall.Errno
+			if sysErr, ok := opErr.Err.(*os.SyscallError); ok {
+				errno = sysErr.Err
+			}
+			if errno == syscall.ENOENT || errno == syscall.ENOTSOCK {
 				return errUnreachable
 			}
 		}
