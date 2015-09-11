@@ -58,8 +58,15 @@ func addMemoryLimit(opts []*unit.UnitOption, limit *resource.Quantity) ([]*unit.
 	return opts, nil
 }
 
+// MaybeAddIsolator considers the given isolator; if the type is known
+// (i.e. IsIsolatorSupported is true) and the limit is non-nil, the supplied
+// opts will be extended with an appropriate option implementing the desired
+// isolation.
 func MaybeAddIsolator(opts []*unit.UnitOption, isolator string, limit *resource.Quantity) ([]*unit.UnitOption, error) {
 	var err error
+	if limit == nil {
+		return opts, nil
+	}
 	if IsIsolatorSupported(isolator) {
 		opts, err = isolatorFuncs[isolator](opts, limit)
 		if err != nil {
