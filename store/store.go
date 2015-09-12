@@ -327,7 +327,7 @@ func (s Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo := &ACIInfo{
 			BlobKey:    key,
-			AppName:    im.Name.String(),
+			Name:       im.Name.String(),
 			ImportTime: time.Now(),
 			Latest:     latest,
 		}
@@ -530,7 +530,7 @@ func (s Store) GetACI(name types.ACIdentifier, labels types.Labels) (string, err
 	var aciinfos []*ACIInfo
 	err := s.db.Do(func(tx *sql.Tx) error {
 		var err error
-		aciinfos, _, err = GetACIInfosWithAppName(tx, name.String())
+		aciinfos, _, err = GetACIInfosWithName(tx, name.String())
 		return err
 	})
 	if err != nil {

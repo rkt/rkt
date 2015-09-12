@@ -109,6 +109,5 @@ func (db *DB) DoTx(fns ...txfunc) error {
 			return err
 		}
 	}
-	tx.Commit()
-	return nil
+	return tx.Commit()
 }

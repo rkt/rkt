@@ -34,7 +34,7 @@ func TestWriteACIInfo(t *testing.T) {
 	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo := &ACIInfo{
 			BlobKey: "key01",
-			AppName: "name01",
+			Name:    "name01",
 		}
 		if err := WriteACIInfo(tx, aciinfo); err != nil {
 			return err
@@ -51,7 +51,7 @@ func TestWriteACIInfo(t *testing.T) {
 	aciinfos := []*ACIInfo{}
 	ok := false
 	if err = s.db.Do(func(tx *sql.Tx) error {
-		aciinfos, ok, err = GetACIInfosWithAppName(tx, "name01")
+		aciinfos, ok, err = GetACIInfosWithName(tx, "name01")
 		return err
 	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -68,7 +68,7 @@ func TestWriteACIInfo(t *testing.T) {
 	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo := &ACIInfo{
 			BlobKey: "key02",
-			AppName: "name01",
+			Name:    "name01",
 		}
 		if err := WriteACIInfo(tx, aciinfo); err != nil {
 			return err
@@ -78,7 +78,7 @@ func TestWriteACIInfo(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if err = s.db.Do(func(tx *sql.Tx) error {
-		aciinfos, ok, err = GetACIInfosWithAppName(tx, "name01")
+		aciinfos, ok, err = GetACIInfosWithName(tx, "name01")
 		return err
 	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
