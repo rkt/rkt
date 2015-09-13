@@ -65,7 +65,7 @@ etcd-extracted/etcdctl
 ...
 ```
 
-If you want the image rendered as it would look ready-to-run inside of the rkt stage2 then use `rkt image render`. NOTE: this will not use overlayfs or any other mechanism. This is to simplify the cleanup: to remove the extracted files you can run a a simple `rm -Rf`.
+If you want the image rendered as it would look ready-to-run inside of the rkt stage2 then use `rkt image render`. NOTE: this will not use overlayfs or any other mechanism. This is to simplify the cleanup: to remove the extracted files you can run a simple `rm -Rf`.
 
 ## rkt image cat-manifest
 
