@@ -276,5 +276,5 @@ rkt run --private-net="all,net1:IP=1.2.3.4" --private-net="net2:IP=1.2.4.5" pod.
 ```
 
 ### Supported CNI_ARGS
-This is not documented yet, except for the example that follows a couple lines down.
+This is not documented yet.
 Please follow [this issue on CNI](https://github.com/appc/cni/issues/56) to track the progress of the documentation.
