@@ -83,7 +83,7 @@ AC_SUBST(RKT_STAGE1_USR_FROM)
 
 AC_ARG_WITH(stage1-default-name,
             [AS_HELP_STRING([--with-stage1-default-name],
-                            [default name of stage1, default: 'coreos.com/rkt/stage1'])],
+                            [default name of stage1, default: 'coreos.com/rkt/stage1-${flavor}'])],
             [RKT_STAGE1_DEFAULT_NAME="${withval}"],
             [RKT_STAGE1_DEFAULT_NAME=auto])
 
@@ -112,7 +112,7 @@ AS_VAR_IF([RKT_STAGE1_USR_FROM], [none],
                       RKT_STAGE1_DEFAULT_VERSION=auto])])
 
 AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
-          [RKT_STAGE1_DEFAULT_NAME='coreos.com/rkt/stage1'])
+          [RKT_STAGE1_DEFAULT_NAME="coreos.com/rkt/stage1-${RKT_STAGE1_USR_FROM}"])
 AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
           [RKT_STAGE1_DEFAULT_VERSION=${RKT_VERSION}])
 
@@ -169,18 +169,22 @@ AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [HEAD],
 AC_SUBST(RKT_STAGE1_SYSTEMD_SRC)
 AC_SUBST(RKT_STAGE1_SYSTEMD_VER)
 
-## STAGE1: linker-defined custom STAGE1 image path, default is unset
+## STAGE1: linker-defined custom STAGE1 image path
 AC_ARG_WITH([stage1-image-path],
             [AS_HELP_STRING([--with-stage1-image-path],
-                            [custom stage1 image path (default: empty)])],
+                            [custom stage1 image path (default for all flavors but 'none': 'stage1-${flavor}', for 'none' - empty); the path has to be absolute, otherwise rkt will search for the image in the same directory as rkt using the basename of passed value])],
             [RKT_STAGE1_IMAGE="${withval}"],
-            [RKT_STAGE1_IMAGE=""])
+            [RKT_STAGE1_IMAGE="auto"])
 
-RKT_STAGE1_IMAGE_LDFLAGS=
-# if stage1 image variable is set, add a linker flag to rkt defining the variable
-AS_VAR_IF([RKT_STAGE1_IMAGE], [],
-          [],
-          [RKT_STAGE1_IMAGE_LDFLAGS=`RKT_XF main.defaultStage1Image "${RKT_STAGE1_IMAGE}"`])
+AS_VAR_IF([RKT_STAGE1_IMAGE],[auto],
+          [AS_CASE([$RKT_STAGE1_USR_FROM],
+                   [none],
+                           [RKT_STAGE1_IMAGE=""
+                            AC_MSG_WARN([* It will be necessary to pass --stage1-image flag to run rkt])],
+                   dnl other flavors
+                   [RKT_STAGE1_IMAGE="directory/with/rkt/binary/stage1-${RKT_STAGE1_USR_FROM}.aci"])])
+
+RKT_STAGE1_IMAGE_LDFLAGS=`RKT_XF main.defaultStage1Image "${RKT_STAGE1_IMAGE}"`
 
 AC_SUBST(RKT_STAGE1_IMAGE_LDFLAGS)
 

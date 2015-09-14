@@ -45,8 +45,6 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 )
 
 func init() {
-	setDefaultStage1Image()
-
 	cmdRkt.AddCommand(cmdPrepare)
 
 	addStage1ImageFlag(cmdPrepare.Flags())
@@ -132,7 +130,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		withDeps: false,
 	}
 
-	s1img, err := getStage1Hash(s, flagStage1Image)
+	s1img, err := getStage1Hash(s, cmd)
 	if err != nil {
 		stderr("prepare: %v", err)
 		return 1

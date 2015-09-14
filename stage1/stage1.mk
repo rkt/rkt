@@ -22,7 +22,7 @@
 STAGE1_STAMPS :=
 STAGE1_USR_STAMPS :=
 _STAGE1_SUBDIRS_ := diagexec prepare-app enter net-plugins net init gc reaper units aci usr_from_$(RKT_STAGE1_USR_FROM)
-_STAGE1_ACI_ := $(BINDIR)/stage1.aci
+_STAGE1_ACI_ := $(BINDIR)/stage1-$(RKT_STAGE1_USR_FROM).aci
 STAGE1_COPY_SO_DEPS :=
 STAGE1_INSTALL_FILES :=
 STAGE1_INSTALL_SYMLINKS :=
