@@ -68,7 +68,8 @@ If you want to see the kernel and boot messages, run rkt with the `--debug` flag
 
 You can exit pressing `<Ctrl-a x>`.
 
-Notes: By default containers start working on all cpus and with 1GB. If user specify parameters via pod-manifest, memory will be increased by 128MB. Additional memory is required by system process.
+Notes-cpus: By default containers start working on all cpus if at least one app does not have specfied cpus. In the other case, container will be working on aggregate amount of cpus. 
+Notes-memory: Container memory is a sum of memory required by each app in pod and additional 128MB required by system. If memory of some app is not specified, app memory will be set on default value (128MB).
 
 ### Selecting stage1 at runtime
 
