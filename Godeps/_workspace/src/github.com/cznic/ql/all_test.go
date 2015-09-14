@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
-	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -36,6 +36,11 @@ func init() {
 	isTesting = true
 }
 
+func dieHard(exitValue int) {
+	debug.PrintStack()
+	os.Exit(exitValue)
+}
+
 func dbg(s string, va ...interface{}) {
 	if s == "" {
 		s = strings.Repeat("%v ", len(va))
@@ -47,6 +52,9 @@ func dbg(s string, va ...interface{}) {
 }
 
 func caller(s string, va ...interface{}) {
+	if s == "" {
+		s = strings.Repeat("%v ", len(va))
+	}
 	_, fn, fl, _ := runtime.Caller(2)
 	fmt.Printf("caller: %s:%d: ", path.Base(fn), fl)
 	fmt.Printf(s, va...)
@@ -100,7 +108,7 @@ func fldsString(f []*fld) string {
 type testDB interface {
 	setup() (db *DB, err error)
 	mark() (err error)
-	teardown() (err error)
+	teardown(ctx *TCtx) (err error)
 }
 
 var (
@@ -129,7 +137,7 @@ func (m *memTestDB) mark() (err error) {
 	return
 }
 
-func (m *memTestDB) teardown() (err error) {
+func (m *memTestDB) teardown(ctx *TCtx) (err error) {
 	if m.m0 < 0 {
 		return
 	}
@@ -143,7 +151,12 @@ func (m *memTestDB) teardown() (err error) {
 		return fmt.Errorf("STORAGE LEAK: allocs: got %d, exp %d", g, e)
 	}
 
-	return
+	if ctx == nil {
+		return nil
+	}
+
+	_, _, err = m.db.Execute(ctx, txCommit)
+	return err
 }
 
 type fileTestDB struct {
@@ -174,7 +187,7 @@ func (m *fileTestDB) mark() (err error) {
 	return
 }
 
-func (m *fileTestDB) teardown() (err error) {
+func (m *fileTestDB) teardown(ctx *TCtx) (err error) {
 	runtime.GOMAXPROCS(m.gmp0)
 	defer func() {
 		f := m.db.store.(*file)
@@ -197,7 +210,13 @@ func (m *fileTestDB) teardown() (err error) {
 	if g, e := n, m.m0; g != e {
 		return fmt.Errorf("STORAGE LEAK: allocs: got %d, exp %d", g, e)
 	}
-	return
+
+	if ctx == nil {
+		return nil
+	}
+
+	_, _, err = m.db.Execute(ctx, txCommit)
+	return err
 }
 
 type osFileTestDB struct {
@@ -228,7 +247,7 @@ func (m *osFileTestDB) mark() (err error) {
 	return
 }
 
-func (m *osFileTestDB) teardown() (err error) {
+func (m *osFileTestDB) teardown(ctx *TCtx) (err error) {
 	runtime.GOMAXPROCS(m.gmp0)
 	defer func() {
 		f := m.db.store.(*file)
@@ -251,7 +270,13 @@ func (m *osFileTestDB) teardown() (err error) {
 	if g, e := n, m.m0; g != e {
 		return fmt.Errorf("STORAGE LEAK: allocs: got %d, exp %d", g, e)
 	}
-	return
+
+	if ctx == nil {
+		return nil
+	}
+
+	_, _, err = m.db.Execute(ctx, txCommit)
+	return err
 }
 
 func TestMemStorage(t *testing.T) {
@@ -259,10 +284,18 @@ func TestMemStorage(t *testing.T) {
 }
 
 func TestFileStorage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	test(t, &fileTestDB{})
 }
 
 func TestOSFileStorage(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	test(t, &osFileTestDB{})
 }
 
@@ -317,7 +350,7 @@ func benchmarkSelect(b *testing.B, n int, sel List, ts testDB) {
 		return
 	}
 
-	defer ts.teardown()
+	defer ts.teardown(nil)
 
 	ctx := NewRWCtx()
 	if _, i, err := db.Execute(ctx, compiledCreate); err != nil {
@@ -455,7 +488,7 @@ func benchmarkInsert(b *testing.B, batch, total int, ts testDB) {
 		return
 	}
 
-	defer ts.teardown()
+	defer ts.teardown(nil)
 
 	ctx := NewRWCtx()
 	if _, i, err := db.Execute(ctx, compiledCreate2); err != nil {
@@ -574,6 +607,10 @@ func BenchmarkInsertFile1kBn1e3t1e5(b *testing.B) {
 }
 
 func TestReopen(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	f, err := ioutil.TempFile("", "ql-test-")
 	if err != nil {
 		t.Fatal(err)
@@ -794,8 +831,7 @@ func Example_recordsetFields() {
 		panic(err)
 	}
 
-	ctx := NewRWCtx()
-	rs, _, err := db.Run(ctx, `
+	rs, _, err := db.Run(NewRWCtx(), `
 		BEGIN TRANSACTION;
 			CREATE TABLE t (s string, i int);
 			CREATE TABLE u (s string, i int);
@@ -813,29 +849,20 @@ func Example_recordsetFields() {
 			;
 		COMMIT;
 		
-		// [0]: Fields are not computable.
-		SELECT * FROM noTable;
-		
-		// [1]: Fields are computable even when Do will fail (table noTable does not exist).
-		SELECT X AS Y FROM noTable;
-		
-		// [2]: Both Fields and Do are okay.
 		SELECT t.s+u.s as a, t.i+u.i as b, "noName", "name" as Named FROM t, u;
 		
-		// [3]: Filds are computable even when Do will fail (uknown column a).
 		SELECT DISTINCT s as S, sum(i) as I FROM (
 			SELECT t.s+u.s as s, t.i+u.i, 3 as i FROM t, u;
 		)
-		GROUP BY a
-		ORDER BY d;
+		GROUP BY s
+		ORDER BY I;
 		
-		// [4]: Fields are computable even when Do will fail on missing $1.
 		SELECT DISTINCT * FROM (
 			SELECT t.s+u.s as S, t.i+u.i, 3 as I FROM t, u;
 		)
 		WHERE I < $1
 		ORDER BY S;
-		` /* , 42 */) // <-- $1 missing
+		`, 42)
 	if err != nil {
 		panic(err)
 	}
@@ -848,27 +875,11 @@ func Example_recordsetFields() {
 		default:
 			fmt.Printf("Fields[%d]: %#v\n", i, fields)
 		}
-		if err = v.Do(
-			true,
-			func(data []interface{}) (more bool, err error) {
-				fmt.Printf("    Do[%d]: %#v\n", i, data)
-				return false, nil
-			},
-		); err != nil {
-			fmt.Printf("    Do[%d]: error: %s\n", i, err)
-		}
 	}
 	// Output:
-	// Fields[0]: error: table noTable does not exist
-	//     Do[0]: error: table noTable does not exist
-	// Fields[1]: []string{"Y"}
-	//     Do[1]: error: table noTable does not exist
-	// Fields[2]: []string{"a", "b", "", "Named"}
-	//     Do[2]: []interface {}{"a", "b", "", "Named"}
-	// Fields[3]: []string{"S", "I"}
-	//     Do[3]: error: unknown column a
-	// Fields[4]: []string{"S", "", "I"}
-	//     Do[4]: error: missing $1
+	// Fields[0]: []string{"a", "b", "", "Named"}
+	// Fields[1]: []string{"S", "I"}
+	// Fields[2]: []string{"S", "", "I"}
 }
 
 func TestRowsAffected(t *testing.T) {
@@ -966,8 +977,9 @@ func dumpDB(db *DB, tag string) (string, error) {
 	f := strutil.IndentFormatter(&buf, "\t")
 	f.Format("---- %s%i\n", tag)
 	for nm, tab := range db.root.tables {
+		hh := tab.hhead
 		h := tab.head
-		f.Format("%u%q: head %d, scols0 %q, scols %q%i\n", nm, h, cols2meta(tab.cols0), cols2meta(tab.cols))
+		f.Format("%u%q: hhead %d, head %d, scols0 %q, scols %q%i\n", nm, hh, h, cols2meta(tab.cols0), cols2meta(tab.cols))
 		for h != 0 {
 			rec, err := db.store.Read(nil, h, tab.cols...)
 			if err != nil {
@@ -989,7 +1001,7 @@ func dumpDB(db *DB, tag string) (string, error) {
 				cname = tab.cols0[i-1].name
 			}
 			f.Format("index %s on %s%i\n", xname, cname)
-			it, _, err := v.x.Seek(nil)
+			it, _, err := v.x.Seek([]interface{}{nil})
 			if err != nil {
 				return "", err
 			}
@@ -1017,40 +1029,55 @@ func testIndices(db *DB, t *testing.T) {
 	ctx := NewRWCtx()
 	var err error
 	e := func(q string) {
+		s0, err := dumpDB(db, "pre\n\t"+q)
+		if err != nil {
+			t.Log(s0)
+			t.Fatal(err)
+		}
+
 		if _, _, err = db.Run(ctx, q); err != nil {
+			t.Log(q)
 			t.Fatal(err)
 		}
 
 		s, err := dumpDB(db, "post\n\t"+q)
 		if err != nil {
+			t.Log(s0)
+			t.Log(s)
 			t.Fatal(err)
 		}
 
-		t.Logf("%s\n\n", s)
 		if db.isMem {
 			return
 		}
 
 		nm := db.Name()
+
 		if err = db.Close(); err != nil {
+			t.Log(s0)
+			t.Log(s)
 			t.Fatal(err)
 		}
 
 		if db, err = OpenFile(nm, &Options{}); err != nil {
+			t.Log(s0)
+			t.Log(s)
 			t.Fatal(err)
 		}
 
 		if s, err = dumpDB(db, "reopened"); err != nil {
+			t.Log(s0)
+			t.Log(s)
 			t.Fatal(err)
 		}
 
-		t.Logf("%s\n\n", s)
 	}
 
 	e(`	BEGIN TRANSACTION;
 			CREATE TABLE t (i int);
 		COMMIT;`)
 	e(`	BEGIN TRANSACTION;
+			CREATE TABLE IF NOT EXISTS Index2 (TableName string);
 			CREATE INDEX x ON t (id());
 		COMMIT;`)
 	e(`	BEGIN TRANSACTION;
@@ -1149,6 +1176,14 @@ func testIndices(db *DB, t *testing.T) {
 			CREATE INDEX x ON t (i);
 			INSERT INTO t VALUES(42);
 		COMMIT;`)
+	e(`	BEGIN TRANSACTION;
+			DROP TABLE IF EXISTS t;
+			CREATE TABLE t (i int);
+			CREATE INDEX x ON t (i+1, 2*i); // Non simple index.
+		COMMIT;`)
+	e(`	BEGIN TRANSACTION;
+			DROP INDEX x;
+		COMMIT;`)
 
 	if err = db.Close(); err != nil {
 		t.Fatal(err)
@@ -1162,13 +1197,20 @@ func TestIndices(t *testing.T) {
 	}
 
 	testIndices(db, t)
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	dir, err := ioutil.TempDir("", "ql-test")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer os.RemoveAll(dir)
+	defer func() {
+		os.RemoveAll(dir)
+
+	}()
 
 	nm := filepath.Join(dir, "ql.db")
 	db, err = OpenFile(nm, &Options{CanCreate: true})
@@ -1957,6 +1999,10 @@ func TestIssue35(t *testing.T) {
 }
 
 func TestIssue28(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	RegisterDriver()
 	dir, err := ioutil.TempDir("", "ql-test-")
 	if err != nil {
@@ -2012,97 +2058,6 @@ func TestIssue28(t *testing.T) {
 	}
 }
 
-func TestIsPossiblyRewriteableCrossJoinWhereExpression(t *testing.T) {
-	db, err := OpenMem()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	table := []struct {
-		q     string
-		e     bool
-		slist string
-	}{
-		// 0
-		{"SELECT * FROM t WHERE !c", false, ""},
-		{"SELECT * FROM t WHERE !t.c && 4 < !u.c", true, "!c|4<!c"},
-		{"SELECT * FROM t WHERE !t.c && 4 < u.c", true, "!c|4<c"},
-		{"SELECT * FROM t WHERE !t.c", true, "!c"},
-		{"SELECT * FROM t WHERE 3 < c", false, ""},
-		// 5
-		{"SELECT * FROM t WHERE 3 < t.c", true, "3<c"},
-		{"SELECT * FROM t WHERE c && c", false, ""},
-		{"SELECT * FROM t WHERE c && u.c", false, ""},
-		{"SELECT * FROM t WHERE c == 42", false, ""},
-		{"SELECT * FROM t WHERE c > 3", false, ""},
-		// 10
-		{"SELECT * FROM t WHERE c", false, ""},
-		{"SELECT * FROM t WHERE false == !t.c", true, "false==!c"}, //TODO(indices) support !c relOp fixedValue (rewrite false==!c -> !c, true==c -> c, true != c -> !c, etc.)
-		{"SELECT * FROM t WHERE false == ^t.c", false, ""},
-		{"SELECT * FROM t WHERE false == t.c", true, "false==c"},
-		{"SELECT * FROM t WHERE t.c && 4 < u.c", true, "c|4<c"},
-		// 15
-		{"SELECT * FROM t WHERE t.c && c", false, ""},
-		{"SELECT * FROM t WHERE t.c && u.c && v.c > 0", true, "c|c|c>0"},
-		{"SELECT * FROM t WHERE t.c && u.c && v.c", true, "c|c|c"},
-		{"SELECT * FROM t WHERE t.c && u.c > 0 && v.c > 0", true, "c|c>0|c>0"},
-		{"SELECT * FROM t WHERE t.c && u.c", true, "c|c"},
-		// 20
-		{"SELECT * FROM t WHERE t.c < 3 && u.c > 2 && v.c != 42", true, "c<3|c>2|c!=42"},
-		{"SELECT * FROM t WHERE t.c > 0 && u.c && v.c", true, "c>0|c|c"},
-		{"SELECT * FROM t WHERE t.c > 0 && u.c > 0 && v.c > 0", true, "c>0|c>0|c>0"},
-		{"SELECT * FROM t WHERE t.c > 3 && 4 < u.c", true, "c>3|4<c"},
-		{"SELECT * FROM t WHERE t.c > 3 && u.c", true, "c>3|c"},
-		// 25
-		{"SELECT * FROM t WHERE t.c > 3", true, "c>3"},
-		{"SELECT * FROM t WHERE t.c", true, "c"},
-		{"SELECT * FROM t WHERE u.c == !t.c", false, ""},
-		{"SELECT * FROM t WHERE u.c == 42", true, "c==42"},
-		{"SELECT * FROM t WHERE u.c == ^t.c", false, ""},
-	}
-
-	for i, test := range table {
-		q, e, list := test.q, test.e, strings.Split(test.slist, "|")
-		sort.Strings(list)
-		l, err := Compile(q)
-		if err != nil {
-			t.Fatalf("%s\n%v", q, err)
-		}
-
-		rs, _, err := db.Execute(nil, l)
-		if err != nil {
-			t.Fatalf("%s\n%v", q, err)
-		}
-
-		r := rs[0].(recordset)
-		sel := r.rset.(*selectRset)
-		where := sel.src.(*whereRset)
-		g, glist := isPossiblyRewriteableCrossJoinWhereExpression(where.expr)
-		if g != e {
-			t.Fatalf("%d: %sg: %v e: %v", i, l, g, e)
-		}
-
-		if !g {
-			continue
-		}
-
-		a := []string{}
-		for _, v := range glist {
-			a = append(a, v.expr.String())
-		}
-		sort.Strings(a)
-		if g, e := len(glist), len(list); g != e {
-			t.Fatalf("%d: g: %v, e: %v", i, glist, list)
-		}
-
-		for j, g := range a {
-			if e := list[j]; g != e {
-				t.Fatalf("%d[%d]: g: %v e: %v", i, j, g, e)
-			}
-		}
-	}
-}
-
 func dumpFields(f []*fld) string {
 	a := []string{}
 	for _, v := range f {
@@ -2121,6 +2076,10 @@ func rndBytes(n int, seed int64) []byte {
 }
 
 func TestIssue50(t *testing.T) { // https://github.com/cznic/ql/issues/50
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	const dbFileName = "scans.qldb"
 
 	type Scan struct {
@@ -2261,6 +2220,10 @@ $9
 }
 
 func TestIssue56(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	var schema = `
 CREATE TABLE IF NOT EXISTS Test (
 	A string,
@@ -2644,6 +2607,10 @@ func Example_lIKE() {
 }
 
 func TestIssue73(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
 	RegisterDriver()
 	dir, err := ioutil.TempDir("", "ql-test-")
 	if err != nil {
@@ -2791,4 +2758,391 @@ func TestInPredicateBug(t *testing.T) {
 	if g, e := rows, [][]interface{}{{int64(1)}, {int64(3)}, {int64(5)}}; !eqRows(g, e) {
 		t.Fatalf("\n%v\n%v", g, e)
 	}
+}
+
+func testMentionedColumns(s stmt) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			switch x := e.(type) {
+			case error:
+				err = x
+			default:
+				err = fmt.Errorf("error: %v", e)
+			}
+		}
+	}()
+
+	switch x := s.(type) {
+	case
+		*alterTableAddStmt,
+		*alterTableDropColumnStmt,
+		beginTransactionStmt,
+		*createTableStmt,
+		commitStmt,
+		*dropIndexStmt,
+		*dropTableStmt,
+		*explainStmt,
+		rollbackStmt,
+		*truncateTableStmt:
+		// nop
+	case *createIndexStmt:
+		for _, e := range x.exprList {
+			mentionedColumns(e)
+		}
+	case *deleteStmt:
+		if e := x.where; e != nil {
+			mentionedColumns(e)
+		}
+	case *insertIntoStmt:
+		for _, ll := range x.lists {
+			for _, e := range ll {
+				mentionedColumns(e)
+			}
+		}
+	case *selectStmt:
+		for _, f := range x.flds {
+			mentionedColumns(f.expr)
+		}
+		if l := x.limit; l != nil {
+			mentionedColumns(l.expr)
+		}
+		if o := x.offset; o != nil {
+			mentionedColumns(o.expr)
+		}
+		if o := x.order; o != nil {
+			for _, e := range o.by {
+				mentionedColumns(e)
+			}
+		}
+		if w := x.where; w != nil {
+			mentionedColumns(w.expr)
+		}
+	case *updateStmt:
+		for _, v := range x.list {
+			mentionedColumns(v.expr)
+		}
+		if e := x.where; e != nil {
+			mentionedColumns(e)
+		}
+	default:
+		panic("internal error 056")
+	}
+	return nil
+}
+
+const (
+	issue99RowsToInsert = 100
+	issue99Cycles       = 100
+)
+
+var (
+	fieldsIssue99 = []string{
+		"Datacenter",
+		"Name",
+		"Address",
+		"Health",
+		"C0",
+		"C1",
+		"C2",
+		"C3",
+		"C4",
+		"C5",
+		"C6",
+		"C7",
+		"C8",
+		"C9",
+		"C10",
+		"C11",
+		"C12",
+		"C13",
+		"C14",
+		"C15",
+		"C16",
+		"C17",
+		"C18",
+		"C19",
+		"C20",
+		"C21",
+		"C22",
+		"C23",
+		"C24",
+		"C25",
+		"C26",
+		"C27",
+		"C28",
+		"C29",
+		"C30",
+		"C31",
+		"C32",
+		"C33",
+		"C34",
+		"C35",
+		"C36",
+		"C37",
+		"C38",
+		"C39",
+		"C40",
+		"C41",
+		"C42",
+		"C43",
+		"C44",
+		"C45",
+		"C46",
+		"C47",
+		"C48",
+		"C49",
+		"C50",
+		"C51",
+		"C52",
+		"C53",
+		"C54",
+		"C55",
+		"C56",
+		"C57",
+		"C58",
+		"C59",
+		"C60",
+		"C61",
+		"C62",
+		"C63",
+		"C64",
+		"C65",
+		"C66",
+		"C67",
+		"C68",
+		"C69",
+		"C70",
+		"C71",
+		"C72",
+		"C73",
+		"C74",
+		"C75",
+		"C76",
+		"C77",
+		"C78",
+		"C79",
+		"C80",
+		"C81",
+		"C82",
+		"C83",
+		"C84",
+		"C85",
+		"C86",
+		"C87",
+		"C88",
+		"C89",
+		"C90",
+		"C91",
+		"C92",
+		"C93",
+		"C94",
+		"C95",
+		"C96",
+		"C97",
+		"C98",
+		"C99",
+	}
+
+	valuesIssue99 = make([]interface{}, len(fieldsIssue99))
+)
+
+func init() {
+	for i := range valuesIssue99 {
+		s := ""
+		for _, v := range rand.Perm(32) {
+			s += string('0' + v)
+		}
+		valuesIssue99[i] = s
+	}
+	valuesIssue99[3] = true
+}
+
+func createTablesIssue99(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	if _, err = tx.Exec(`
+		DROP TABLE IF EXISTS Node;
+		CREATE TABLE Node (
+			Datacenter string,
+			Name string,
+			Address string,
+			Health bool,
+			C0 string DEFAULT "",
+			C1 string DEFAULT "",
+			C2 string DEFAULT "",
+			C3 string DEFAULT "",
+			C4 string DEFAULT "",
+			C5 string DEFAULT "",
+			C6 string DEFAULT "",
+			C7 string DEFAULT "",
+			C8 string DEFAULT "",
+			C9 string DEFAULT "",
+			C10 string DEFAULT "",
+			C11 string DEFAULT "",
+			C12 string DEFAULT "",
+			C13 string DEFAULT "",
+			C14 string DEFAULT "",
+			C15 string DEFAULT "",
+			C16 string DEFAULT "",
+			C17 string DEFAULT "",
+			C18 string DEFAULT "",
+			C19 string DEFAULT "",
+			C20 string DEFAULT "",
+			C21 string DEFAULT "",
+			C22 string DEFAULT "",
+			C23 string DEFAULT "",
+			C24 string DEFAULT "",
+			C25 string DEFAULT "",
+			C26 string DEFAULT "",
+			C27 string DEFAULT "",
+			C28 string DEFAULT "",
+			C29 string DEFAULT "",
+			C30 string DEFAULT "",
+			C31 string DEFAULT "",
+			C32 string DEFAULT "",
+			C33 string DEFAULT "",
+			C34 string DEFAULT "",
+			C35 string DEFAULT "",
+			C36 string DEFAULT "",
+			C37 string DEFAULT "",
+			C38 string DEFAULT "",
+			C39 string DEFAULT "",
+			C40 string DEFAULT "",
+			C41 string DEFAULT "",
+			C42 string DEFAULT "",
+			C43 string DEFAULT "",
+			C44 string DEFAULT "",
+			C45 string DEFAULT "",
+			C46 string DEFAULT "",
+			C47 string DEFAULT "",
+			C48 string DEFAULT "",
+			C49 string DEFAULT "",
+			C50 string DEFAULT "",
+			C51 string DEFAULT "",
+			C52 string DEFAULT "",
+			C53 string DEFAULT "",
+			C54 string DEFAULT "",
+			C55 string DEFAULT "",
+			C56 string DEFAULT "",
+			C57 string DEFAULT "",
+			C58 string DEFAULT "",
+			C59 string DEFAULT "",
+			C60 string DEFAULT "",
+			C61 string DEFAULT "",
+			C62 string DEFAULT "",
+			C63 string DEFAULT "",
+			C64 string DEFAULT "",
+			C65 string DEFAULT "",
+			C66 string DEFAULT "",
+			C67 string DEFAULT "",
+			C68 string DEFAULT "",
+			C69 string DEFAULT "",
+			C70 string DEFAULT "",
+			C71 string DEFAULT "",
+			C72 string DEFAULT "",
+			C73 string DEFAULT "",
+			C74 string DEFAULT "",
+			C75 string DEFAULT "",
+			C76 string DEFAULT "",
+			C77 string DEFAULT "",
+			C78 string DEFAULT "",
+			C79 string DEFAULT "",
+			C80 string DEFAULT "",
+			C81 string DEFAULT "",
+			C82 string DEFAULT "",
+			C83 string DEFAULT "",
+			C84 string DEFAULT "",
+			C85 string DEFAULT "",
+			C86 string DEFAULT "",
+			C87 string DEFAULT "",
+			C88 string DEFAULT "",
+			C89 string DEFAULT "",
+			C90 string DEFAULT "",
+			C91 string DEFAULT "",
+			C92 string DEFAULT "",
+			C93 string DEFAULT "",
+			C94 string DEFAULT "",
+			C95 string DEFAULT "",
+			C96 string DEFAULT "",
+			C97 string DEFAULT "",
+			C98 string DEFAULT "",
+			C99 string DEFAULT "",
+    		);`); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func issue99Fill(db *sql.DB) (int, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return -1, err
+	}
+
+	sql := "INSERT INTO Node (" + strings.Join(fieldsIssue99, ",") + ") VALUES ($1, $2, $3, $4"
+	for i := range valuesIssue99 {
+		if i > 3 {
+			sql += ", $" + strconv.Itoa(i+1)
+		}
+	}
+	sql += ")"
+
+	stmt, err := tx.Prepare(sql)
+	if err != nil {
+		return 0, err
+	}
+
+	for i := 0; i < issue99RowsToInsert; i++ {
+		if _, err = stmt.Exec(valuesIssue99...); err != nil {
+			return 0, err
+		}
+	}
+
+	return issue99RowsToInsert, tx.Commit()
+}
+
+func testIssue99(tb testing.TB, db *sql.DB) int {
+	sum := 0
+	for i := 0; i < issue99Cycles; i++ {
+		if err := createTablesIssue99(db); err != nil {
+			tb.Fatal(err)
+		}
+
+		n2, err := issue99Fill(db)
+		if err != nil {
+			tb.Fatal(err)
+		}
+
+		sum += n2
+	}
+	return sum
+}
+
+var benchmarkIssue99 sync.Once
+
+func BenchmarkIssue99(b *testing.B) {
+	if testing.Verbose() {
+		benchProlog(b)
+		benchmarkIssue99.Do(func() {
+			b.Logf(`1 op == (Re)create a 100+ column table, fill it with %d records. Repeat %d times.
+
+`, issue99RowsToInsert, issue99Cycles)
+		})
+	}
+	RegisterMemDriver()
+	db, err := sql.Open("ql-mem", "issue99")
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	recs := 0
+	for i := 0; i < b.N; i++ {
+		recs = testIssue99(b, db)
+	}
+	b.SetBytes(int64(recs) * benchScale)
 }

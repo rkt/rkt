@@ -163,7 +163,7 @@
 		},
 		{
 			"ImportPath": "github.com/cznic/exp/lldb",
-			"Rev": "9b0e4be12fbdb7b843e0a658a04c35d160371789"
+			"Rev": "36265f1914ea00990ff0b73f72350edf9b1850df"
 		},
 		{
 			"ImportPath": "github.com/cznic/fileutil",
@@ -175,7 +175,7 @@
 		},
 		{
 			"ImportPath": "github.com/cznic/ql",
-			"Rev": "69ca5f1dbae7e230dbfc8812d3e9764e144bbf45"
+			"Rev": "9c77931b60c6317f94de402268bbc3e8334b71f4"
 		},
 		{
 			"ImportPath": "github.com/cznic/sortutil",

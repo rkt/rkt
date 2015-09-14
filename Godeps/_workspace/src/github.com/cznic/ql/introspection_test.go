@@ -228,7 +228,7 @@ func TestSchema(t *testing.T) {
 
 		s, err := Compile(test.s)
 		if err != nil {
-			panic("internal error 070")
+			panic("internal error 055")
 		}
 
 		if g, e := l.String(), s.String(); g != e {
@@ -250,9 +250,9 @@ func ExampleSchema() {
 
 	schema := MustSchema((*department)(nil), "", nil)
 	sel := MustCompile(`
-		SELECT * FROM __Table;
-		SELECT * FROM __Column;
-		SELECT * FROM __Index;`,
+		SELECT * FROM __Table WHERE !hasPrefix(Name, "__") ORDER BY Name;
+		SELECT * FROM __Column WHERE !hasPrefix(TableName, "__") ORDER BY TableName, Ordinal;
+		SELECT * FROM __Index WHERE !hasPrefix(TableName, "__") ORDER BY Name, ColumnName;`,
 	)
 	fmt.Print(schema)
 

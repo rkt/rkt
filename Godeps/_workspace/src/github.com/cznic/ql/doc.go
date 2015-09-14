@@ -7,12 +7,42 @@
 
 //TODO verify there's a graceful failure for a 2G+ blob on a 32 bit machine.
 
-// Package ql is a pure Go embedded (S)QL database.
+// Package ql implements a pure Go embedded SQL database engine.
 //
-// QL is a SQL-like language. It is less complex and less powerful than SQL
-// (whichever specification SQL is considered to be).
+// QL is a member of the SQL family of languages. It is less complex and less
+// powerful than SQL (whichever specification SQL is considered to be).
 //
 // Change list
+//
+// 2015-06-15: To improve compatibility with other SQL implementations, the
+// count built-in aggregate function now accepts * as its argument.
+//
+// 2015-05-29: The execution planner was rewritten from scratch. It should use
+// indices in all places where they were used before plus in some additional
+// situations.  It is possible to investigate the plan using the newly added
+// EXPLAIN statement.  The QL tool is handy for such analysis. If the planner
+// would have used an index, but no such exists, the plan includes hints in
+// form of copy/paste ready CREATE INDEX statements.
+//
+// The planner is still quite simple and a lot of work on it is yet ahead. You
+// can help this process by filling an issue with a schema and query which
+// fails to use an index or indices when it should, in your opinion. Bonus
+// points for including output of `ql 'explain <query>'`.
+//
+// 2015-05-09: The grammar of the CREATE INDEX statement now accepts an
+// expression list instead of a single expression, which was further limited to
+// just a column name or the built-in id().  As a side effect, composite
+// indices are now functional. However, the values in the expression-list style
+// index are not yet used by other statements or the statement/query planner.
+// The composite index is useful while having UNIQUE clause to check for
+// semantically duplicate rows before they get added to the table or when such
+// a row is mutated using the UPDATE statement and the expression-list style
+// index tuple of the row is thus recomputed.
+//
+// 2015-05-02: The Schema field of table __Table now correctly reflects any
+// column constraints and/or defaults. Also, the (*DB).Info method now has that
+// information provided in new ColumInfo fields NotNull, Constraint and
+// Default.
 //
 // 2015-04-20: Added support for {LEFT,RIGHT,FULL} [OUTER] JOIN.
 //
@@ -222,18 +252,18 @@
 //
 // The following keywords are reserved and may not be used as identifiers.
 //
-//	ADD      COLUMN      float     int64   OUTER     uint32
-//	ALTER    complex128  float3    int8    RIGHT     uint64
-//	AND      complex64   float6    INTO    SELECT    uint8
-//	AS       CREATE      FROM  2   JOIN    SET       UNIQUE
-//	ASC      DEFAULT     GROUP 4   LEFT    string    UPDATE
-//	BETWEEN  DELETE      IF        LIMIT   TABLE     VALUES
-//	bigint   DESC        IN        LIKE    time      WHERE
-//	bigrat   DISTINCT    INDEX     NOT     true
-//	blob     DROP        INSERT    NULL    OR
-//	bool     duration    int       OFFSET  TRUNCATE
-//	BY       EXISTS      int16     ON      uint
-//	byte     false       int32     ORDER   uint16
+//	ADD      COLUMN      false     int32   ORDER     uint16
+//	ALTER    complex128  float     int64   OUTER     uint32
+//	AND      complex64   float32   int8    RIGHT     uint64
+//	AS       CREATE      float64   INTO    SELECT    uint8
+//	ASC      DEFAULT     FROM      JOIN    SET       UNIQUE
+//	BETWEEN  DELETE      GROUP     LEFT    string    UPDATE
+//	bigint   DESC        IF        LIMIT   TABLE     VALUES
+//	bigrat   DISTINCT    IN        LIKE    time      WHERE
+//	blob     DROP        INDEX     NOT     true
+//	bool     duration    INSERT    NULL    OR
+//	BY       EXISTS      int       OFFSET  TRUNCATE
+//	byte     EXPLAIN     int16     ON      uint
 //
 // Keywords are not case sensitive.
 //
@@ -638,7 +668,7 @@
 //              | PrimaryExpression Slice
 //              | PrimaryExpression Call .
 //
-//  Call  = "(" [ ExpressionList ] ")" .
+//  Call  = "(" [ "*" | ExpressionList ] ")" . // * only in count(*).
 //  Index = "[" Expression "]" .
 //  Slice = "[" [ Expression ] ":" [ Expression ] "]" .
 //
@@ -1237,7 +1267,7 @@
 //  Statement =  EmptyStmt | AlterTableStmt | BeginTransactionStmt | CommitStmt
 //  	| CreateIndexStmt | CreateTableStmt | DeleteFromStmt | DropIndexStmt
 //  	| DropTableStmt | InsertIntoStmt | RollbackStmt | SelectStmt
-//  	| TruncateTableStmt | UpdateStmt .
+//  	| TruncateTableStmt | UpdateStmt | ExplainStmt.
 //
 //  StatementList = Statement { ";" Statement } .
 //
@@ -1336,7 +1366,7 @@
 // column name of the table the index is on.
 //
 //  CreateIndexStmt = "CREATE" [ "UNIQUE" ] "INDEX" [ "IF" "NOT" "EXISTS" ]
-//  	IndexName "ON" TableName "(" ( ColumnName | "id" Call ) ")" .
+//  	IndexName "ON" TableName "(" ExpressionList ")" .
 //
 // For example
 //
@@ -1353,10 +1383,25 @@
 // indices might be used to improve the performance when the ORDER BY clause is
 // present.
 //
-// The UNIQUE modifier requires the indexed values to be unique or NULL.
+// The UNIQUE modifier requires the indexed values tuple to be index-wise
+// unique or have all values NULL.
 //
 // The optional IF NOT EXISTS clause makes the statement a no operation if the
 // index already exists.
+//
+// Simple index
+//
+// A simple index consists of only one expression which must be either a column
+// name or the built-in id().
+//
+// Expression list index
+//
+// A more complex and more general index is one that consists of more than one
+// expression or its single expression does not qualify as a simple index. In
+// this case the type of all expressions in the list must be one of the non
+// blob-like types.
+//
+// Note: Blob-like types are blob, bigint, bigrat, time and duration.
 //
 // CREATE TABLE
 //
@@ -1367,9 +1412,7 @@
 //  CreateTableStmt = "CREATE" "TABLE" [ "IF" "NOT" "EXISTS" ] TableName
 //  	"(" ColumnDef { "," ColumnDef } [ "," ] ")" .
 //
-//  ColumnDef = ColumnName Type
-//  	[ "NOT" "NULL" | Expression ]
-//  	[ "DEFAULT" Expression ] .
+//  ColumnDef = ColumnName Type [ "NOT" "NULL" | Expression ] [ "DEFAULT" Expression ] .
 //  ColumnName = identifier .
 //  TableName = identifier .
 //
@@ -1560,6 +1603,68 @@
 // constraints clause or the optional defaults clause then those are processed
 // on a per row basis. The details are discussed in the "Constraints and
 // defaults" chapter below the CREATE TABLE statement documentation.
+//
+// Explain statement
+//
+// Explain statement produces a recordset consisting of lines of text which
+// describe the execution plan of a statement, if any.
+//
+//  ExplainStmt = "EXPLAIN" Statement .
+//
+// For example, the QL tool treats the explain statement specially and outputs
+// the joined lines:
+//
+//	$ ql 'create table t(i int); create table u(j int)'
+//	$ ql 'explain select * from t, u where t.i > 42 && u.j < 314'
+//	┌Compute Cartesian product of
+//	│   ┌Iterate all rows of table "t"
+//	│   └Output field names ["i"]
+//	│   ┌Iterate all rows of table "u"
+//	│   └Output field names ["j"]
+//	└Output field names ["t.i" "u.j"]
+//	┌Filter on t.i > 42 && u.j < 314
+//	│Possibly useful indices
+//	│CREATE INDEX xt_i ON t(i);
+//	│CREATE INDEX xu_j ON u(j);
+//	└Output field names ["t.i" "u.j"]
+//	$ ql 'CREATE INDEX xt_i ON t(i); CREATE INDEX xu_j ON u(j);'
+//	$ ql 'explain select * from t, u where t.i > 42 && u.j < 314'
+//	┌Compute Cartesian product of
+//	│   ┌Iterate all rows of table "t" using index "xt_i" where i > 42
+//	│   └Output field names ["i"]
+//	│   ┌Iterate all rows of table "u" using index "xu_j" where j < 314
+//	│   └Output field names ["j"]
+//	└Output field names ["t.i" "u.j"]
+//	$ ql 'explain select * from t where i > 12 and i between 10 and 20 and i < 42'
+//	┌Iterate all rows of table "t" using index "xt_i" where i > 12 && i <= 20
+//	└Output field names ["i"]
+//	$
+//
+// The explanation may aid in uderstanding how a statement/query would be
+// executed and if indices are used as expected - or which indices may possibly
+// improve the statement performance.  The create index statements above were
+// directly copy/pasted in the terminal from the suggestions provided by the
+// filter recordset pipeline part returned by the explain statement.
+//
+// If the statement has nothing special in its plan, the result is the original
+// statement.
+//
+//	$ ql 'explain delete from t where 42 < i'
+//	DELETE FROM t WHERE i > 42;
+//	$
+//
+// To get an explanation of the select statement of the IN predicate, use the EXPLAIN
+// statement with that particular select statement.
+//
+//	$ ql 'explain select * from t where i in (select j from u where j > 0)'
+//	┌Iterate all rows of table "t"
+//	└Output field names ["i"]
+//	┌Filter on i IN (SELECT j FROM u WHERE j > 0;)
+//	└Output field names ["i"]
+//	$ ql 'explain select j from u where j > 0'
+//	┌Iterate all rows of table "u" using index "xu_j" where j > 0
+//	└Output field names ["j"]
+//	$
 //
 // ROLLBACK
 //
@@ -1875,11 +1980,11 @@
 //
 // System Tables
 //
-// To allow to query for DB meta data, there exist specially named virtual
-// tables.
+// To allow to query for DB meta data, there exist specially named tables, some
+// of them being virtual.
 //
-// Note: System tables have fake table-wise unique but meaningless and unstable
-// record IDs. Do not apply the built-in id() to any system table.
+// Note: Virtual system tables may have fake table-wise unique but meaningless
+// and unstable record IDs. Do not apply the built-in id() to any system table.
 //
 // Tables Table
 //
@@ -1887,7 +1992,8 @@
 //
 //	CREATE TABLE __Table (Name string, Schema string);
 //
-// The Schema column returns the statement to (re)create table Name.
+// The Schema column returns the statement to (re)create table Name. This table
+// is virtual.
 //
 // Columns Table
 //
@@ -1896,6 +2002,28 @@
 //	CREATE TABLE __Column (TableName string, Ordinal int, Name string, Type string);
 //
 // The Ordinal column defines the 1-based index of the column in the record.
+// This table is virtual.
+//
+// Columns2 Table
+//
+// The table __Colum2 lists all columns of all tables in the DB which have the
+// constraint NOT NULL or which have a constraint expression defined or which
+// have a default expression defined. The schema is
+//
+//	CREATE TABLE __Column2 (TableName string, Name string, NotNull bool, ConstraintExpr string, DefaultExpr string)
+//
+// It's possible to obtain a consolidated recordset for all properties of all
+// DB columns using
+//
+//	SELECT
+//		__Column.TableName, __Column.Ordinal, __Column.Name, __Column.Type,
+//		__Column2.NotNull, __Column2.ConstraintExpr, __Column2.DefaultExpr,
+//	FROM __Column
+//	LEFT JOIN __Column2
+//	ON __Column.TableName == __Column2.TableName && __Column.Name == __Column2.Name
+//	ORDER BY __Column.TableName, __Column.Ordinal;
+//
+// The Name column is the column name in TableName.
 //
 // Indices table
 //
@@ -1904,7 +2032,7 @@
 //	CREATE TABLE __Index (TableName string, ColumnName string, Name string, IsUnique bool);
 //
 // The IsUnique columns reflects if the index was created using the optional
-// UNIQUE clause.
+// UNIQUE clause. This table is virtual.
 //
 // Built-in functions
 //
@@ -1937,11 +2065,14 @@
 // returns 0 for an empty record set.
 //
 //	func count() int             // The number of rows in a record set.
+//	func count(*) int            // Equivalent to count().
 // 	func count(e expression) int // The number of cases where the expression value is not NULL.
 //
 // For example
 //
 //	SELECT count() FROM department; // # of rows
+//
+//	SELECT count(*) FROM department; // # of rows
 //
 //	SELECT count(DepartmentID) FROM department; // # of records with non NULL field DepartmentID
 //

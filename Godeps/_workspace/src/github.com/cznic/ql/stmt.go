@@ -7,9 +7,10 @@ package ql
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/strutil"
 )
 
 // NOTE: all stmt implementations must be safe for concurrent use by multiple
@@ -20,19 +21,87 @@ var (
 	_ stmt = (*alterTableDropColumnStmt)(nil)
 	_ stmt = (*createIndexStmt)(nil)
 	_ stmt = (*createTableStmt)(nil)
-	_ stmt = (*deleteStmt)(nil) //TODO use indices (need dlist)
+	_ stmt = (*deleteStmt)(nil) //TODO optimizer plan
 	_ stmt = (*dropIndexStmt)(nil)
 	_ stmt = (*dropTableStmt)(nil)
+	_ stmt = (*explainStmt)(nil)
 	_ stmt = (*insertIntoStmt)(nil)
 	_ stmt = (*selectStmt)(nil)
 	_ stmt = (*truncateTableStmt)(nil)
-	_ stmt = (*updateStmt)(nil) //TODO use indices
+	_ stmt = (*updateStmt)(nil) //TODO optimizer plan
 	_ stmt = beginTransactionStmt{}
 	_ stmt = commitStmt{}
 	_ stmt = rollbackStmt{}
+)
 
-	exprCache   = map[string]expression{}
-	exprCacheMu sync.Mutex
+var (
+	createColumn2 = mustCompile(`
+		create table if not exists __Column2 (
+			TableName string,
+			Name string,
+			NotNull bool,
+			ConstraintExpr string,
+			DefaultExpr string,
+		);
+		create index if not exists __Column2TableName on __Column2(TableName);
+	`)
+
+	insertColumn2 = mustCompile(`insert into __Column2 values($1, $2, $3, $4, $5)`)
+
+	selectColumn2 = MustCompile(`
+		select Name, NotNull, ConstraintExpr, DefaultExpr
+		from __Column2
+		where TableName == $1
+	`)
+
+	deleteColumn2 = mustCompile(`
+		delete from __Column2
+		where TableName == $1 && Name == $2
+	`)
+
+	createIndex2 = mustCompile(`
+		// Index register 2.
+		create table if not exists __Index2(
+			TableName string,
+			IndexName string,
+			IsUnique  bool,
+			IsSimple  bool,   // Just a column name or id().
+			Root      int64,  // BTree handle
+		);
+
+		// Expressions for given index. Compared in order of id(__Index2_Expr).
+		create table if not exists __Index2_Expr(
+			Index2_ID int,
+			Expr      string,
+		);
+
+		create index if not exists __xIndex2_TableName on __Index2(TableName);
+		create unique index if not exists __xIndex2_IndexName on __Index2(IndexName);
+		create index if not exists __xIndex2_ID on __Index2(id());
+		create index if not exists __xIndex2_Expr_Index2_ID on __Index2_Expr(Index2_ID);
+`)
+
+	insertIndex2     = mustCompile("insert into __Index2 values($1, $2, $3, $4, $5)")
+	insertIndex2Expr = mustCompile("insert into __Index2_Expr values($1, $2)")
+
+	deleteIndex2ByIndexName = mustCompile(`
+		delete from __Index2_Expr
+		where Index2_ID in (
+			select id() from __Index2 where IndexName == $1;
+		);	
+
+		delete from __Index2
+		where IndexName == $1;
+`)
+	deleteIndex2ByTableName = mustCompile(`
+		delete from __Index2_Expr
+		where Index2_ID in (
+			select id() from __Index2 where TableName == $1;
+		);	
+
+		delete from __Index2
+		where TableName == $1;
+`)
 )
 
 type stmt interface {
@@ -41,6 +110,8 @@ type stmt interface {
 	// - commitStmt
 	// - rollbackStmt
 	exec(ctx *execCtx) (Recordset, error)
+
+	explain(ctx *execCtx, w strutil.Formatter)
 
 	// return value ignored for
 	// - beginTransactionStmt
@@ -55,31 +126,40 @@ type execCtx struct { //LATER +shared temp
 	arg []interface{}
 }
 
+type explainStmt struct {
+	s stmt
+}
+
+func (s *explainStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	for {
+		x, ok := s.s.(*explainStmt)
+		if !ok {
+			s.s.explain(ctx, w)
+			return
+		}
+
+		s = x
+	}
+}
+
+func (s *explainStmt) String() string {
+	return "EXPLAIN " + s.s.String()
+}
+
+func (*explainStmt) isUpdating() bool { return false }
+
+func (s *explainStmt) exec(ctx *execCtx) (_ Recordset, err error) {
+	return recordset{ctx, &explainDefaultPlan{s.s}, ctx.db.cc}, nil
+}
+
 type updateStmt struct {
 	tableName string
 	list      []assignment
 	where     expression
 }
 
-func str2expr(expr string) (expression, error) {
-	exprCacheMu.Lock()
-	e := exprCache[expr]
-	exprCacheMu.Unlock()
-	if e != nil {
-		return e, nil
-	}
-
-	src := "select " + expr + " from t"
-	l, err := Compile(src)
-	if err != nil {
-		return nil, err
-	}
-
-	e = l.l[0].(*selectStmt).flds[0].expr
-	exprCacheMu.Lock()
-	exprCache[expr] = e
-	exprCacheMu.Unlock()
-	return e, nil
+func (s *updateStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
 }
 
 func (s *updateStmt) String() string {
@@ -110,11 +190,6 @@ func (s *updateStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		tcols[i] = col
 	}
 
-	constraints, defaults, err := constraintsAndDefaults(ctx, s.tableName)
-	if err != nil {
-		return nil, err
-	}
-
 	m := map[interface{}]interface{}{}
 	var nh int64
 	expr := s.where
@@ -137,9 +212,10 @@ func (s *updateStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		for _, col := range t.cols {
 			m[col.name] = data[2+col.index]
 		}
-		m["$id"] = data[1]
+		id := data[1].(int64)
+		m["$id"] = id
 		if expr != nil {
-			val, err := s.where.eval(ctx, m, ctx.arg)
+			val, err := s.where.eval(ctx, m)
 			if err != nil {
 				return nil, err
 			}
@@ -159,8 +235,18 @@ func (s *updateStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		}
 
 		// hit
+		for _, ix := range t.indices2 {
+			vlist, err := ix.eval(ctx, t.cols, id, data[2:])
+			if err != nil {
+				return nil, err
+			}
+
+			if err := ix.x.Delete(vlist, h); err != nil {
+				return nil, err
+			}
+		}
 		for i, asgn := range s.list {
-			val, err := asgn.expr.eval(ctx, m, ctx.arg)
+			val, err := asgn.expr.eval(ctx, m)
 			if err != nil {
 				return nil, err
 			}
@@ -176,10 +262,8 @@ func (s *updateStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 			return nil, err
 		}
 
-		if len(constraints) != 0 { // => len(defaults) != 0 as well
-			if err = checkConstraintsAndDefaults(ctx, data[2:], t.cols, m, constraints, defaults); err != nil {
-				return nil, err
-			}
+		if err = t.checkConstraintsAndDefaults(ctx, data[2:], m); err != nil {
+			return nil, err
 		}
 
 		for i, v := range t.indices {
@@ -191,7 +275,7 @@ func (s *updateStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 				continue
 			}
 
-			if err = v.x.Delete(old[i-1], h); err != nil {
+			if err = v.x.Delete([]interface{}{old[i-1]}, h); err != nil {
 				return nil, err
 			}
 		}
@@ -209,10 +293,21 @@ func (s *updateStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 				continue
 			}
 
-			if err = v.x.Create(data[2+i-1], h); err != nil {
+			if err = v.x.Create([]interface{}{data[2+i-1]}, h); err != nil {
 				return nil, err
 			}
 		}
+		for _, ix := range t.indices2 {
+			vlist, err := ix.eval(ctx, t.cols, id, data[2:])
+			if err != nil {
+				return nil, err
+			}
+
+			if err := ix.x.Create(vlist, h); err != nil {
+				return nil, err
+			}
+		}
+
 		cc.RowsAffected++
 	}
 	return
@@ -223,6 +318,10 @@ func (s *updateStmt) isUpdating() bool { return true }
 type deleteStmt struct {
 	tableName string
 	where     expression
+}
+
+func (s *deleteStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
 }
 
 func (s *deleteStmt) String() string {
@@ -264,8 +363,9 @@ func (s *deleteStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		for _, col := range t.cols {
 			m[col.name] = data[2+col.index]
 		}
-		m["$id"] = data[1]
-		val, err := s.where.eval(ctx, m, ctx.arg)
+		id := data[1].(int64)
+		m["$id"] = id
+		val, err := s.where.eval(ctx, m)
 		if err != nil {
 			return nil, err
 		}
@@ -290,7 +390,17 @@ func (s *deleteStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 			}
 
 			// overflow chunks left in place
-			if err = v.x.Delete(data[i+1], h); err != nil {
+			if err = v.x.Delete([]interface{}{data[i+1]}, h); err != nil {
+				return nil, err
+			}
+		}
+		for _, ix := range t.indices2 {
+			vlist, err := ix.eval(ctx, t.cols, id, data[2:])
+			if err != nil {
+				return nil, err
+			}
+
+			if err := ix.x.Delete(vlist, h); err != nil {
 				return nil, err
 			}
 		}
@@ -341,6 +451,10 @@ type truncateTableStmt struct {
 	tableName string
 }
 
+func (s *truncateTableStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
+}
+
 func (s *truncateTableStmt) String() string { return fmt.Sprintf("TRUNCATE TABLE %s;", s.tableName) }
 
 func (s *truncateTableStmt) exec(ctx *execCtx) (Recordset, error) {
@@ -359,6 +473,10 @@ type dropIndexStmt struct {
 	indexName string
 }
 
+func (s *dropIndexStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
+}
+
 func (s *dropIndexStmt) String() string { return fmt.Sprintf("DROP INDEX %s;", s.indexName) }
 
 func (s *dropIndexStmt) exec(ctx *execCtx) (Recordset, error) {
@@ -371,12 +489,24 @@ func (s *dropIndexStmt) exec(ctx *execCtx) (Recordset, error) {
 		return nil, fmt.Errorf("DROP INDEX: index %s does not exist", s.indexName)
 	}
 
-	for i, v := range t.indices {
-		if v == nil {
-			continue
+	if ctx.db.hasAllIndex2() {
+		if err := ctx.db.deleteIndex2ByIndexName(s.indexName); err != nil {
+			return nil, err
 		}
+	}
 
-		return nil, t.dropIndex(i)
+	switch ix := x.(type) {
+	case *indexedCol:
+		for i, v := range t.indices {
+			if v == nil || v.name != s.indexName {
+				continue
+			}
+
+			return nil, t.dropIndex(i)
+		}
+	case *index2:
+		delete(t.indices2, s.indexName)
+		return nil, ix.x.Drop()
 	}
 
 	panic("internal error 058")
@@ -387,6 +517,10 @@ func (s *dropIndexStmt) isUpdating() bool { return true }
 type dropTableStmt struct {
 	ifExists  bool
 	tableName string
+}
+
+func (s *dropTableStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
 }
 
 func (s *dropTableStmt) String() string { return fmt.Sprintf("DROP TABLE %s;", s.tableName) }
@@ -401,6 +535,12 @@ func (s *dropTableStmt) exec(ctx *execCtx) (Recordset, error) {
 		return nil, fmt.Errorf("DROP TABLE: table %s does not exist", s.tableName)
 	}
 
+	if ctx.db.hasAllIndex2() {
+		if err := ctx.db.deleteIndex2ByTableName(s.tableName); err != nil {
+			return nil, err
+		}
+	}
+
 	return nil, ctx.db.root.dropTable(t)
 }
 
@@ -410,16 +550,13 @@ type alterTableDropColumnStmt struct {
 	tableName, colName string
 }
 
+func (s *alterTableDropColumnStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
+}
+
 func (s *alterTableDropColumnStmt) String() string {
 	return fmt.Sprintf("ALTER TABLE %s DROP COLUMN %s;", s.tableName, s.colName)
 }
-
-var (
-	deleteColumn2 = mustCompile(`
-		delete from __Column2
-		where TableName == $1 && Name == $2
-	`)
-)
 
 func (s *alterTableDropColumnStmt) exec(ctx *execCtx) (Recordset, error) {
 	t, ok := ctx.db.root.tables[s.tableName]
@@ -443,12 +580,42 @@ func (s *alterTableDropColumnStmt) exec(ctx *execCtx) (Recordset, error) {
 			c.name = ""
 			t.cols0[c.index].name = ""
 			if t.hasIndices() {
-				if v := t.indices[c.index+1]; v != nil {
-					if err := t.dropIndex(c.index + 1); err != nil {
-						return nil, err
+				if len(t.indices) != 0 {
+					if v := t.indices[c.index+1]; v != nil {
+						if err := t.dropIndex(c.index + 1); err != nil {
+							return nil, err
+						}
+
+						if ctx.db.hasAllIndex2() {
+							if err := ctx.db.deleteIndex2ByIndexName(v.name); err != nil {
+								return nil, err
+							}
+						}
+					}
+				}
+
+				for nm, ix := range t.indices2 {
+					for _, e := range ix.exprList {
+						m := mentionedColumns(e)
+						if _, ok := m[s.colName]; ok {
+							if err := ctx.db.deleteIndex2ByIndexName(nm); err != nil {
+								return nil, err
+							}
+
+							if err := ix.x.Drop(); err != nil {
+								return nil, err
+							}
+
+							delete(t.indices2, nm)
+							break
+						}
 					}
 				}
 			}
+			if err := t.constraintsAndDefaults(ctx); err != nil {
+				return nil, err
+			}
+
 			return nil, t.updated()
 		}
 	}
@@ -461,6 +628,10 @@ func (s *alterTableDropColumnStmt) isUpdating() bool { return true }
 type alterTableAddStmt struct {
 	tableName string
 	c         *col
+}
+
+func (s *alterTableAddStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
 }
 
 func (s *alterTableAddStmt) String() string {
@@ -500,7 +671,7 @@ func (s *alterTableAddStmt) exec(ctx *execCtx) (Recordset, error) {
 		}
 	}
 
-	if t.hasIndices() {
+	if len(t.indices) != 0 {
 		t.indices = append(t.indices, nil)
 		t.xroots = append(t.xroots, 0)
 		if err := t.store.Update(t.hxroots, t.xroots...); err != nil {
@@ -529,6 +700,10 @@ func (s *alterTableAddStmt) exec(ctx *execCtx) (Recordset, error) {
 	}
 
 	t.cols0 = append(t.cols0, s.c)
+	if err := t.constraintsAndDefaults(ctx); err != nil {
+		return nil, err
+	}
+
 	return nil, t.updated()
 }
 
@@ -537,8 +712,7 @@ func (s *alterTableAddStmt) isUpdating() bool { return true }
 type selectStmt struct {
 	distinct      bool
 	flds          []*fld
-	from          *crossJoinRset
-	outer         *outerJoinRset
+	from          *joinRset
 	group         *groupByRset
 	hasAggregates bool
 	limit         *limitRset
@@ -546,6 +720,16 @@ type selectStmt struct {
 	offset        *offsetRset
 	order         *orderByRset
 	where         *whereRset
+}
+
+func (s *selectStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	p, err := s.plan(ctx)
+	if err != nil {
+		w.Format("ERROR: %v\n", err)
+		return
+	}
+
+	p.explain(w)
 }
 
 func (s *selectStmt) String() string {
@@ -570,32 +754,6 @@ func (s *selectStmt) String() string {
 	}
 	b.WriteString(" FROM ")
 	b.WriteString(s.from.String())
-	if o := s.outer; o != nil {
-		switch o.typ {
-		case leftJoin:
-			b.WriteString(" LEFT")
-		case rightJoin:
-			b.WriteString(" RIGHT")
-		case fullJoin:
-			b.WriteString(" FULL")
-		}
-		b.WriteString(" OUTER JOIN ")
-		switch x := o.source[0].(type) {
-		case string:
-			b.WriteString(x)
-		case *selectStmt:
-			b.WriteString("(")
-			b.WriteString(x.String())
-			b.WriteString(")")
-		default:
-			panic("internal error")
-		}
-		if s := o.source[1].(string); s != "" {
-			b.WriteString(" AS " + s)
-		}
-		b.WriteString(" ON ")
-		b.WriteString(o.on.String())
-	}
 	if s.where != nil {
 		b.WriteString(" WHERE ")
 		b.WriteString(s.where.expr.String())
@@ -620,98 +778,66 @@ func (s *selectStmt) String() string {
 	return b.String()
 }
 
-func (s *selectStmt) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	return s.exec0().do(ctx, onlyNames, f)
-}
-
-func (s *selectStmt) exec0() (r rset) { //LATER overlapping goroutines/pipelines
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	r = rset(s.from)
-	if w := s.where; w != nil {
-		switch ok, list := isPossiblyRewriteableCrossJoinWhereExpression(w.expr); ok && len(s.from.sources) > 1 {
-		case true:
-			//dbg("====(in, %d)\n%s\n----", len(list), s)
-			tables := s.from.tables()
-			if len(list) != len(tables) {
-				r = &whereRset{expr: w.expr, src: r}
-				break
-			}
-
-			m := map[string]int{}
-			for i, v := range tables {
-				m[v.name] = i
-			}
-			list2 := make([]int, len(list))
-			for i, v := range list {
-				itab, ok := m[v.table]
-				if !ok {
-					break
-				}
-
-				delete(m, v.table)
-				list2[i] = itab
-				if i == len(list)-1 { // last cycle
-					if len(m) != 0 { // all tabs "consumed" exactly once
-						break
-					}
-
-					// Can rewrite
-					crs := s.from
-					for i, v := range list {
-						sel := &selectStmt{
-							flds:  []*fld{}, // SELECT *
-							from:  &crossJoinRset{sources: []interface{}{[]interface{}{v.table, ""}}},
-							where: &whereRset{expr: v.expr},
-						}
-						info := tables[list2[i]]
-						crs.sources[info.i] = []interface{}{sel, info.rename}
-					}
-					r = rset(crs)
-					s.where = nil
-					//dbg("====(out)\n%s\n----", s)
-				}
-			}
-			if s.where == nil {
-				break
-			}
-
-			fallthrough
-		default:
-			r = &whereRset{expr: w.expr, src: r}
-		}
+func (s *selectStmt) plan(ctx *execCtx) (plan, error) { //LATER overlapping goroutines/pipelines
+	r, err := s.from.plan(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if o := s.outer; o != nil {
-		o.crossJoin = r.(*crossJoinRset)
-		r = o
+
+	if w := s.where; w != nil {
+		if r, err = (&whereRset{expr: w.expr, src: r}).plan(ctx); err != nil {
+			return nil, err
+		}
 	}
 	switch {
 	case !s.hasAggregates && s.group == nil: // nop
 	case !s.hasAggregates && s.group != nil:
-		r = &groupByRset{colNames: s.group.colNames, src: r}
+		if r, err = (&groupByRset{colNames: s.group.colNames, src: r}).plan(ctx); err != nil {
+			return nil, err
+		}
 	case s.hasAggregates && s.group == nil:
-		r = &groupByRset{src: r}
+		if r, err = (&groupByRset{src: r}).plan(ctx); err != nil {
+			return nil, err
+		}
 	case s.hasAggregates && s.group != nil:
-		r = &groupByRset{colNames: s.group.colNames, src: r}
+		if r, err = (&groupByRset{colNames: s.group.colNames, src: r}).plan(ctx); err != nil {
+			return nil, err
+		}
 	}
-	r = &selectRset{flds: s.flds, src: r}
+	if r, err = (&selectRset{flds: s.flds, src: r}).plan(ctx); err != nil {
+		return nil, err
+	}
+
 	if s.distinct {
-		r = &distinctRset{src: r}
+		if r, err = (&distinctRset{src: r}).plan(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if s := s.order; s != nil {
-		r = &orderByRset{asc: s.asc, by: s.by, src: r}
+		if r, err = (&orderByRset{asc: s.asc, by: s.by, src: r}).plan(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if s := s.offset; s != nil {
-		r = &offsetRset{s.expr, r}
+		if r, err = (&offsetRset{s.expr, r}).plan(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if s := s.limit; s != nil {
-		r = &limitRset{s.expr, r}
+		if r, err = (&limitRset{s.expr, r}).plan(ctx); err != nil {
+			return nil, err
+		}
 	}
-	return
+	return r, nil
 }
 
 func (s *selectStmt) exec(ctx *execCtx) (rs Recordset, err error) {
-	return recordset{ctx, s.exec0(), nil}, nil
+	r, err := s.plan(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return recordset{ctx, r, nil}, nil
 }
 
 func (s *selectStmt) isUpdating() bool { return false }
@@ -721,6 +847,10 @@ type insertIntoStmt struct {
 	lists     [][]expression
 	sel       *selectStmt
 	tableName string
+}
+
+func (s *insertIntoStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
 }
 
 func (s *insertIntoStmt) String() string {
@@ -744,233 +874,77 @@ func (s *insertIntoStmt) String() string {
 	}
 }
 
-func (s *insertIntoStmt) execSelect(t *table, cols []*col, ctx *execCtx, constraints []*constraint, defaults []expression) (_ Recordset, err error) {
-	r := s.sel.exec0()
-	ok := false
+func (s *insertIntoStmt) execSelect(t *table, cols []*col, ctx *execCtx) (_ Recordset, err error) {
+	//TODO missing rs column number eq check
+	r, err := s.sel.plan(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	h := t.head
 	data0 := make([]interface{}, len(t.cols0)+2)
 	cc := ctx.db.cc
 	m := map[interface{}]interface{}{}
-	if err = r.do(ctx, false, func(id interface{}, data []interface{}) (more bool, err error) {
-		if ok {
-			for i, d := range data {
-				data0[cols[i].index+2] = d
-			}
-			if err = typeCheck(data0[2:], cols); err != nil {
-				return
+	if err = r.do(ctx, func(_ interface{}, data []interface{}) (more bool, err error) {
+		for i, d := range data {
+			data0[cols[i].index+2] = d
+		}
+		if err = typeCheck(data0[2:], cols); err != nil {
+			return
+		}
+
+		if err = t.checkConstraintsAndDefaults(ctx, data0[2:], m); err != nil {
+			return false, err
+		}
+
+		id, err := t.store.ID()
+		if err != nil {
+			return false, err
+		}
+
+		data0[0] = h
+		data0[1] = id
+
+		// Any overflow chunks are written here.
+		if h, err = t.store.Create(data0...); err != nil {
+			return false, err
+		}
+
+		for i, v := range t.indices {
+			if v == nil {
+				continue
 			}
 
-			if len(constraints) != 0 { // => len(defaults) != 0 as well
-				if err = checkConstraintsAndDefaults(ctx, data0[2:], t.cols, m, constraints, defaults); err != nil {
-					return false, err
-				}
+			// Any overflow chunks are shared with the BTree key
+			if err = v.x.Create([]interface{}{data0[i+1]}, h); err != nil {
+				return false, err
 			}
-
-			id, err := t.store.ID()
+		}
+		for _, ix := range t.indices2 {
+			vlist, err := ix.eval(ctx, t.cols, id, data0[2:])
 			if err != nil {
 				return false, err
 			}
 
-			data0[0] = h
-			data0[1] = id
-
-			// Any overflow chunks are written here.
-			if h, err = t.store.Create(data0...); err != nil {
+			if err := ix.x.Create(vlist, h); err != nil {
 				return false, err
 			}
-
-			for i, v := range t.indices {
-				if v == nil {
-					continue
-				}
-
-				// Any overflow chunks are shared with the BTree key
-				if err = v.x.Create(data0[i+1], h); err != nil {
-					return false, err
-				}
-			}
-
-			cc.RowsAffected++
-			ctx.db.root.lastInsertID = id
-			return true, nil
 		}
 
-		ok = true
-		flds := data[0].([]*fld)
-		if g, e := len(flds), len(cols); g != e {
-			return false, fmt.Errorf("INSERT INTO SELECT: mismatched column counts, have %d, need %d", g, e)
-		}
-
+		cc.RowsAffected++
+		ctx.db.root.lastInsertID = id
 		return true, nil
 	}); err != nil {
-		return
-	}
-
-	if err = t.store.Update(t.hhead, h); err != nil {
-		return
+		return nil, err
 	}
 
 	t.head = h
-	return
-}
-
-var (
-	selectColumn2 = MustCompile(`
-		select Name, NotNull, ConstraintExpr, DefaultExpr
-		from __Column2
-		where TableName == $1
-	`)
-)
-
-func constraintsAndDefaults(ctx *execCtx, table string) (constraints []*constraint, defaults []expression, _ error) {
-	if isSystemName[table] {
-		return nil, nil, nil
-	}
-
-	_, ok := ctx.db.root.tables["__Column2"]
-	if !ok {
-		return nil, nil, nil
-	}
-
-	t, ok := ctx.db.root.tables[table]
-	if !ok {
-		return nil, nil, fmt.Errorf("table %q does not exist", table)
-	}
-
-	cols := t.cols
-	constraints = make([]*constraint, len(cols))
-	defaults = make([]expression, len(cols))
-	arg := []interface{}{table}
-	rs, err := selectColumn2.l[0].exec(&execCtx{db: ctx.db})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var rows [][]interface{}
-	ok = false
-	if err := rs.(recordset).do(
-		&execCtx{db: ctx.db, arg: arg},
-		false,
-		func(id interface{}, data []interface{}) (more bool, err error) {
-			if ok {
-				rows = append(rows, data)
-				return true, nil
-			}
-
-			ok = true
-			return true, nil
-		},
-	); err != nil {
-		return nil, nil, err
-	}
-
-	for _, row := range rows {
-		nm := row[0].(string)
-		nonNull := row[1].(bool)
-		cexpr := row[2].(string)
-		dexpr := row[3].(string)
-		for i, c := range cols {
-			if c.name == nm {
-				var co *constraint
-				if nonNull || cexpr != "" {
-					co = &constraint{}
-					if cexpr != "" {
-						if co.expr, err = str2expr(cexpr); err != nil {
-							return nil, nil, fmt.Errorf("constraint %q: %v", cexpr, err)
-						}
-					}
-				}
-				constraints[i] = co
-				if dexpr != "" {
-					if defaults[i], err = str2expr(dexpr); err != nil {
-						return nil, nil, fmt.Errorf("constraint %q: %v", dexpr, err)
-					}
-				}
-			}
-		}
-	}
-	return constraints, defaults, nil
-}
-
-func checkConstraintsAndDefaults(
-	ctx *execCtx,
-	row []interface{},
-	cols []*col,
-	m map[interface{}]interface{},
-	constraints []*constraint,
-	defaults []expression) error {
-
-	// 1.
-	for _, c := range cols {
-		m[c.name] = row[c.index]
-	}
-
-	// 2.
-	for i, c := range cols {
-		val := row[c.index]
-		expr := defaults[i]
-		if val != nil || expr == nil {
-			continue
-		}
-
-		dval, err := expr.eval(ctx, m, ctx.arg)
-		if err != nil {
-			return err
-		}
-
-		row[c.index] = dval
-		if err = typeCheck(row, []*col{c}); err != nil {
-			return err
-		}
-	}
-
-	// 3.
-	for _, c := range cols {
-		m[c.name] = row[c.index]
-	}
-
-	// 4.
-	for i, c := range cols {
-		constraint := constraints[i]
-		if constraint == nil {
-			continue
-		}
-
-		val := row[c.index]
-		expr := constraint.expr
-		if expr == nil { // Constraint: NOT NULL
-			if val == nil {
-				return fmt.Errorf("column %s: constraint violation: NOT NULL", c.name)
-			}
-
-			continue
-		}
-
-		// Constraint is an expression
-		cval, err := expr.eval(ctx, m, ctx.arg)
-		if err != nil {
-			return err
-		}
-
-		if cval == nil {
-			return fmt.Errorf("column %s: constraint violation: %s", c.name, expr)
-		}
-
-		bval, ok := cval.(bool)
-		if !ok {
-			return fmt.Errorf("column %s: non bool constraint expression: %s", c.name, expr)
-		}
-
-		if !bval {
-			return fmt.Errorf("column %s: constraint violation: %s", c.name, expr)
-		}
-	}
-
-	return nil
+	return nil, t.store.Update(t.hhead, h)
 }
 
 func (s *insertIntoStmt) exec(ctx *execCtx) (_ Recordset, err error) {
-	t, ok := ctx.db.root.tables[s.tableName]
+	root := ctx.db.root
+	t, ok := root.tables[s.tableName]
 	if !ok {
 		return nil, fmt.Errorf("INSERT INTO %s: table does not exist", s.tableName)
 	}
@@ -990,13 +964,8 @@ func (s *insertIntoStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		}
 	}
 
-	constraints, defaults, err := constraintsAndDefaults(ctx, s.tableName)
-	if err != nil {
-		return nil, err
-	}
-
 	if s.sel != nil {
-		return s.execSelect(t, cols, ctx, constraints, defaults)
+		return s.execSelect(t, cols, ctx)
 	}
 
 	for _, list := range s.lists {
@@ -1005,14 +974,12 @@ func (s *insertIntoStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		}
 	}
 
-	arg := ctx.arg
-	root := ctx.db.root
 	cc := ctx.db.cc
 	r := make([]interface{}, len(t.cols0))
 	m := map[interface{}]interface{}{}
 	for _, list := range s.lists {
 		for i, expr := range list {
-			val, err := expr.eval(ctx, m, arg)
+			val, err := expr.eval(ctx, m)
 			if err != nil {
 				return nil, err
 			}
@@ -1020,16 +987,14 @@ func (s *insertIntoStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 			r[cols[i].index] = val
 		}
 		if err = typeCheck(r, cols); err != nil {
-			return
+			return nil, err
 		}
 
-		if len(constraints) != 0 { // => len(defaults) != 0 as well
-			if err = checkConstraintsAndDefaults(ctx, r, t.cols, m, constraints, defaults); err != nil {
-				return nil, err
-			}
+		if err = t.checkConstraintsAndDefaults(ctx, r, m); err != nil {
+			return nil, err
 		}
 
-		id, err := t.addRecord(r)
+		id, err := t.addRecord(ctx, r)
 		if err != nil {
 			return nil, err
 		}
@@ -1037,54 +1002,67 @@ func (s *insertIntoStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		cc.RowsAffected++
 		root.lastInsertID = id
 	}
-	return
+	return nil, nil
 }
 
 func (s *insertIntoStmt) isUpdating() bool { return true }
 
 type beginTransactionStmt struct{}
 
+func (s beginTransactionStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
+}
+
 func (beginTransactionStmt) String() string { return "BEGIN TRANSACTION;" }
 func (beginTransactionStmt) exec(*execCtx) (Recordset, error) {
-	log.Panic("internal error 059")
-	panic("unreachable")
+	panic("internal error 059")
 }
 func (beginTransactionStmt) isUpdating() bool {
-	log.Panic("internal error 060")
-	panic("unreachable")
+	panic("internal error 060")
 }
 
 type commitStmt struct{}
 
+func (s commitStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
+}
+
 func (commitStmt) String() string { return "COMMIT;" }
 func (commitStmt) exec(*execCtx) (Recordset, error) {
-	log.Panic("internal error 061")
-	panic("unreachable")
+	panic("internal error 061")
 }
 func (commitStmt) isUpdating() bool {
-	log.Panic("internal error 062")
-	panic("unreachable")
+	panic("internal error 062")
 }
 
 type rollbackStmt struct{}
 
+func (s rollbackStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
+}
+
 func (rollbackStmt) String() string { return "ROLLBACK;" }
 func (rollbackStmt) exec(*execCtx) (Recordset, error) {
-	log.Panic("internal error 063")
-	panic("unreachable")
+	panic("internal error 063")
 }
 func (rollbackStmt) isUpdating() bool {
-	log.Panic("internal error 064")
-	panic("unreachable")
+	panic("internal error 064")
 }
 
 type createIndexStmt struct {
-	colName     string // alt. "id()" for index on id()
+	colName     string // alt. "id()" for simple index on id()
 	ifNotExists bool
 	indexName   string
 	tableName   string
 	unique      bool
+	exprList    []expression
 }
+
+func (s *createIndexStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
+}
+
+func (s *createIndexStmt) isSimpleIndex() bool { return s.colName != "" }
 
 func (s *createIndexStmt) String() string {
 	u := ""
@@ -1095,7 +1073,15 @@ func (s *createIndexStmt) String() string {
 	if s.ifNotExists {
 		e = "IF NOT EXISTS "
 	}
-	return fmt.Sprintf("CREATE %sINDEX %s%s ON %s (%s);", u, e, s.indexName, s.tableName, s.colName)
+	expr := s.colName
+	if !s.isSimpleIndex() {
+		var a []string
+		for _, v := range s.exprList {
+			a = append(a, v.String())
+		}
+		expr = strings.Join(a, ", ")
+	}
+	return fmt.Sprintf("CREATE %sINDEX %s%s ON %s (%s);", u, e, s.indexName, s.tableName, expr)
 }
 
 func (s *createIndexStmt) exec(ctx *execCtx) (Recordset, error) {
@@ -1105,7 +1091,7 @@ func (s *createIndexStmt) exec(ctx *execCtx) (Recordset, error) {
 			return nil, nil
 		}
 
-		return nil, fmt.Errorf("CREATE INDEX: table %s already has an index named %s", t.name, i.name)
+		return nil, fmt.Errorf("CREATE INDEX: table %s already has an index named %s", t.name, s.indexName)
 	}
 
 	if root.tables[s.indexName] != nil {
@@ -1121,24 +1107,66 @@ func (s *createIndexStmt) exec(ctx *execCtx) (Recordset, error) {
 		return nil, fmt.Errorf("CREATE INDEX: index name collision with existing column: %s", s.indexName)
 	}
 
-	if s.colName == "id()" {
-		if err := t.addIndex(s.unique, s.indexName, -1); err != nil {
+	var h int64
+	var err error
+	switch {
+	case s.isSimpleIndex():
+		colIndex := -1
+		if s.colName != "id()" {
+			c := findCol(t.cols, s.colName)
+			if c == nil {
+				return nil, fmt.Errorf("CREATE INDEX: column does not exist: %s", s.colName)
+			}
+
+			colIndex = c.index
+		}
+
+		if h, err = t.addIndex(s.unique, s.indexName, colIndex); err != nil {
 			return nil, fmt.Errorf("CREATE INDEX: %v", err)
 		}
 
-		return nil, t.updated()
+		if err = t.updated(); err != nil {
+			return nil, err
+		}
+	default:
+		for _, e := range s.exprList {
+			m := mentionedColumns(e)
+			for colName := range m {
+				c := findCol(t.cols, colName)
+				if c == nil {
+					return nil, fmt.Errorf("CREATE INDEX: column does not exist: %s", colName)
+				}
+			}
+		}
+		if h, err = t.addIndex2(ctx, s.unique, s.indexName, s.exprList); err != nil {
+			return nil, fmt.Errorf("CREATE INDEX: %v", err)
+		}
 	}
 
-	c := findCol(t.cols, s.colName)
-	if c == nil {
-		return nil, fmt.Errorf("CREATE INDEX: column does not exist: %s", s.colName)
+	switch ctx.db.hasIndex2 {
+	case 0:
+		if err := ctx.db.createIndex2(); err != nil {
+			return nil, err
+		}
+
+		if s.isSimpleIndex() {
+			return nil, nil
+		}
+	case 1:
+		return nil, nil
+	case 2:
+		if s.isSimpleIndex() {
+			return nil, ctx.db.insertIndex2(s.tableName, s.indexName, []string{s.colName}, s.unique, true, h)
+		}
+	default:
+		panic("internal error 011")
 	}
 
-	if err := t.addIndex(s.unique, s.indexName, c.index); err != nil {
-		return nil, fmt.Errorf("CREATE INDEX: %v", err)
+	exprList := make([]string, 0, len(s.exprList))
+	for _, e := range s.exprList {
+		exprList = append(exprList, e.String())
 	}
-
-	return nil, t.updated()
+	return nil, ctx.db.insertIndex2(s.tableName, s.indexName, exprList, s.unique, false, h)
 }
 
 func (s *createIndexStmt) isUpdating() bool { return true }
@@ -1147,6 +1175,10 @@ type createTableStmt struct {
 	ifNotExists bool
 	tableName   string
 	cols        []*col
+}
+
+func (s *createTableStmt) explain(ctx *execCtx, w strutil.Formatter) {
+	w.Format("%s\n", s)
 }
 
 func (s *createTableStmt) String() string {
@@ -1173,21 +1205,11 @@ func (s *createTableStmt) String() string {
 	return fmt.Sprintf("CREATE TABLE %s%s (%s);", e, s.tableName, strings.Join(a, ", "))
 }
 
-var (
-	createColumn2 = mustCompile(`
-		create table if not exists __Column2 (
-			TableName string,
-			Name string,
-			NotNull bool,
-			ConstraintExpr string,
-			DefaultExpr string,
-		);
-		create index if not exists __Column2TableName on __Column2(TableName);
-	`)
-	insertColumn2 = mustCompile(`insert into __Column2 values($1, $2, $3, $4, $5)`)
-)
-
 func (s *createTableStmt) exec(ctx *execCtx) (_ Recordset, err error) {
+	var cols []*col
+	for _, v := range s.cols {
+		cols = append(cols, v.clone())
+	}
 	root := ctx.db.root
 	if _, ok := root.tables[s.tableName]; ok {
 		if s.ifNotExists {
@@ -1203,7 +1225,7 @@ func (s *createTableStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 
 	m := map[string]bool{}
 	mustCreateColumn2 := true
-	for i, c := range s.cols {
+	for i, c := range cols {
 		nm := c.name
 		if m[nm] {
 			return nil, fmt.Errorf("CREATE TABLE: duplicate column %s", nm)
@@ -1213,8 +1235,8 @@ func (s *createTableStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 		c.index = i
 		if c.constraint != nil || c.dflt != nil {
 			if mustCreateColumn2 {
-				for _, s := range createColumn2.l {
-					_, err := s.exec(&execCtx{db: ctx.db})
+				for _, stmt := range createColumn2.l {
+					_, err := stmt.exec(&execCtx{db: ctx.db})
 					if err != nil {
 						return nil, err
 					}
@@ -1235,8 +1257,12 @@ func (s *createTableStmt) exec(ctx *execCtx) (_ Recordset, err error) {
 			}
 		}
 	}
-	_, err = root.createTable(s.tableName, s.cols)
-	return
+	t, err := root.createTable(s.tableName, cols)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, t.constraintsAndDefaults(ctx)
 }
 
 func (s *createTableStmt) isUpdating() bool { return true }

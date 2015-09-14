@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -261,22 +260,22 @@ func infer(from []interface{}, to *[]*col) {
 			case chunk:
 				vals, err := lldb.DecodeScalars([]byte(x.b))
 				if err != nil {
-					log.Panic("err")
+					panic(err)
 				}
 
 				if len(vals) == 0 {
-					log.Panic("internal error 040")
+					panic("internal error 040")
 				}
 
 				i, ok := vals[0].(int64)
 				if !ok {
-					log.Panic("internal error 041")
+					panic("internal error 041")
 				}
 
 				c.typ = int(i)
 			case map[string]interface{}: // map of ids of a cross join
 			default:
-				log.Panic("internal error 042")
+				panic("internal error 042")
 			}
 		}
 	}
@@ -484,7 +483,7 @@ func newFileFromOSFile(f lldb.OSFile) (fi *file, err error) {
 		}
 
 		if h != 1 { // root
-			log.Panic("internal error 043")
+			panic("internal error 043")
 		}
 
 		if h, err = s.a.Alloc(make([]byte, 8)); err != nil {
@@ -492,7 +491,7 @@ func newFileFromOSFile(f lldb.OSFile) (fi *file, err error) {
 		}
 
 		if h != 2 { // id
-			log.Panic("internal error 044")
+			panic("internal error 044")
 		}
 
 		close, closew = false, false
@@ -629,22 +628,23 @@ func (s *file) expandBytes(d []interface{}) (err error) {
 func (s *file) collate(a, b []byte) int { //TODO w/ error return
 	da, err := lldb.DecodeScalars(a)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	if err = s.expandBytes(da); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	db, err := lldb.DecodeScalars(b)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	if err = s.expandBytes(db); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
+	//dbg("da: %v, db: %v", da, db)
 	return collate(da, db)
 }
 
@@ -751,9 +751,7 @@ func (s *file) ID() (int64, error) {
 }
 
 func (s *file) free(h int64, blobCols []*col) (err error) {
-	s.mu.Lock()
 	b, err := s.a.Get(nil, h) //LATER +bufs
-	s.mu.Unlock()
 	if err != nil {
 		return
 	}
@@ -785,9 +783,7 @@ func (s *file) free(h int64, blobCols []*col) (err error) {
 }
 
 func (s *file) Read(dst []interface{}, h int64, cols ...*col) (data []interface{}, err error) { //NTYPE
-	s.mu.Lock()
 	b, err := s.a.Get(nil, h) //LATER +bufs
-	s.mu.Unlock()
 	if err != nil {
 		return
 	}
@@ -799,7 +795,7 @@ func (s *file) Read(dst []interface{}, h int64, cols ...*col) (data []interface{
 
 	for _, col := range cols {
 		i := col.index + 2
-		if i >= len(rec) {
+		if i >= len(rec) || rec[i] == nil {
 			continue
 		}
 
@@ -829,15 +825,13 @@ func (s *file) Read(dst []interface{}, h int64, cols ...*col) (data []interface{
 		case qUint64:
 		case qBlob, qBigInt, qBigRat, qTime, qDuration:
 			switch x := rec[i].(type) {
-			case nil:
-				rec[i] = nil
 			case []byte:
 				rec[i] = chunk{f: s, b: x}
 			default:
 				return nil, fmt.Errorf("(file-006) corrupted DB: non nil chunk type is not []byte")
 			}
 		default:
-			log.Panic("internal error 045")
+			panic("internal error 045")
 		}
 	}
 
@@ -870,9 +864,7 @@ func (s *file) freeChunks(enc []byte) (err error) {
 	}
 
 	for next != 0 {
-		s.mu.Lock()
 		b, err := s.a.Get(nil, next)
-		s.mu.Unlock()
 		if err != nil {
 			return err
 		}
@@ -937,9 +929,7 @@ func (s *file) loadChunks(enc []byte) (v interface{}, err error) {
 	}
 
 	for next != 0 {
-		s.mu.Lock()
 		b, err := s.a.Get(nil, next)
-		s.mu.Unlock()
 		if err != nil {
 			return nil, err
 		}
@@ -1121,19 +1111,35 @@ func init() {
 	}
 }
 
+func isIndexNull(data []interface{}) bool {
+	for _, v := range data {
+		if v != nil {
+			return false
+		}
+	}
+	return true
+}
+
 // The []byte version of the key in the BTree shares chunks, if any, with
 // the value stored in the record.
-func (x *fileIndex) Create(indexedValue interface{}, h int64) error {
+func (x *fileIndex) Create(indexedValues []interface{}, h int64) error {
+	for i, indexedValue := range indexedValues {
+		chunk, ok := indexedValue.(chunk)
+		if ok {
+			indexedValues[i] = chunk.b
+		}
+	}
+
 	t := x.t
 	switch {
 	case !x.unique:
-		k, err := lldb.EncodeScalars(indexedValue, h)
+		k, err := lldb.EncodeScalars(append(indexedValues, h)...)
 		if err != nil {
 			return err
 		}
 
 		return t.Set(k, gbZeroInt64)
-	case indexedValue == nil: // unique, NULL
+	case isIndexNull(indexedValues): // unique, NULL
 		k, err := lldb.EncodeScalars(nil, h)
 		if err != nil {
 			return err
@@ -1141,7 +1147,7 @@ func (x *fileIndex) Create(indexedValue interface{}, h int64) error {
 
 		return t.Set(k, gbZeroInt64)
 	default: // unique, non NULL
-		k, err := lldb.EncodeScalars(indexedValue, int64(0))
+		k, err := lldb.EncodeScalars(append(indexedValues, int64(0))...)
 		if err != nil {
 			return err
 		}
@@ -1156,16 +1162,18 @@ func (x *fileIndex) Create(indexedValue interface{}, h int64) error {
 				return v, true, nil
 			}
 
-			return nil, false, fmt.Errorf("(file-018) cannot insert into unique index: duplicate value: %v", indexedValue)
+			return nil, false, fmt.Errorf("(file-018) cannot insert into unique index: duplicate value(s): %v", indexedValues)
 		})
 		return err
 	}
 }
 
-func (x *fileIndex) Delete(indexedValue interface{}, h int64) error {
-	chunk, ok := indexedValue.(chunk)
-	if ok {
-		indexedValue = chunk.b
+func (x *fileIndex) Delete(indexedValues []interface{}, h int64) error {
+	for i, indexedValue := range indexedValues {
+		chunk, ok := indexedValue.(chunk)
+		if ok {
+			indexedValues[i] = chunk.b
+		}
 	}
 
 	t := x.t
@@ -1173,11 +1181,11 @@ func (x *fileIndex) Delete(indexedValue interface{}, h int64) error {
 	var err error
 	switch {
 	case !x.unique:
-		k, err = lldb.EncodeScalars(indexedValue, h)
-	case indexedValue == nil: // unique, NULL
+		k, err = lldb.EncodeScalars(append(indexedValues, h)...)
+	case isIndexNull(indexedValues): // unique, NULL
 		k, err = lldb.EncodeScalars(nil, h)
 	default: // unique, non NULL
-		k, err = lldb.EncodeScalars(indexedValue, int64(0))
+		k, err = lldb.EncodeScalars(append(indexedValues, int64(0))...)
 	}
 	if err != nil {
 		return err
@@ -1194,8 +1202,8 @@ func (x *fileIndex) Drop() error {
 	return x.f.a.Free(x.h)
 }
 
-func (x *fileIndex) Seek(indexedValue interface{}) (indexIterator, bool, error) { //TODO(indices) blobs: +test
-	k, err := lldb.EncodeScalars(indexedValue, 0)
+func (x *fileIndex) Seek(indexedValues []interface{}) (indexIterator, bool, error) { //TODO(indices) blobs: +test
+	k, err := lldb.EncodeScalars(append(indexedValues, 0)...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -1224,7 +1232,7 @@ type fileIndexIterator struct {
 	unique bool
 }
 
-func (i *fileIndexIterator) nextPrev(f func() ([]byte, []byte, error)) (interface{}, int64, error) { //TODO(indices) blobs: +test
+func (i *fileIndexIterator) nextPrev(f func() ([]byte, []byte, error)) ([]interface{}, int64, error) { //TODO(indices) blobs: +test
 	bk, bv, err := f()
 	if err != nil {
 		return nil, -1, err
@@ -1244,11 +1252,11 @@ func (i *fileIndexIterator) nextPrev(f func() ([]byte, []byte, error)) (interfac
 	}
 
 	var k indexKey
-	k.value = dk[0]
+	k.value = dk[:len(dk)-1]
 	switch i.unique {
 	case true:
-		if k.value == nil {
-			return nil, dk[1].(int64), nil
+		if isIndexNull(k.value) {
+			return nil, dk[len(dk)-1].(int64), nil
 		}
 
 		dv, err := lldb.DecodeScalars(bv)
@@ -1258,14 +1266,14 @@ func (i *fileIndexIterator) nextPrev(f func() ([]byte, []byte, error)) (interfac
 
 		return k.value, dv[0].(int64), nil
 	default:
-		return k.value, dk[1].(int64), nil
+		return k.value, dk[len(dk)-1].(int64), nil
 	}
 }
 
-func (i *fileIndexIterator) Next() (interface{}, int64, error) { //TODO(indices) blobs: +test
+func (i *fileIndexIterator) Next() ([]interface{}, int64, error) { //TODO(indices) blobs: +test
 	return i.nextPrev(i.en.Next)
 }
 
-func (i *fileIndexIterator) Prev() (interface{}, int64, error) { //TODO(indices) blobs: +test
+func (i *fileIndexIterator) Prev() ([]interface{}, int64, error) { //TODO(indices) blobs: +test
 	return i.nextPrev(i.en.Prev)
 }

@@ -13,6 +13,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/bufs"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/mathutil"
@@ -295,6 +296,7 @@ type Allocator struct {
 	cacheSz  int
 	hit      uint16
 	miss     uint16
+	mu       sync.Mutex
 }
 
 // NewAllocator returns a new Allocator. To open an existing file, pass its
@@ -647,14 +649,19 @@ func need(n int, src []byte) []byte {
 //
 // Handle must have been obtained initially from Alloc and must be still valid,
 // otherwise invalid data may be returned without detecting the error.
+//
+// Get is safe for concurrent access by multiple goroutines iff no other
+// goroutine mutates the DB.
 func (a *Allocator) Get(buf []byte, handle int64) (b []byte, err error) {
 	buf = buf[:cap(buf)]
+	a.mu.Lock() // X1+
 	if n, ok := a.m[handle]; ok {
 		a.lru.moveToFront(n)
 		b = need(len(n.b), buf)
 		copy(b, n.b)
 		a.expHit++
 		a.hit++
+		a.mu.Unlock() // X1-
 		return
 	}
 
@@ -666,9 +673,13 @@ func (a *Allocator) Get(buf []byte, handle int64) (b []byte, err error) {
 		}
 		a.hit, a.miss = 0, 0
 	}
+	a.mu.Unlock() // X1-
+
 	defer func(h int64) {
 		if err == nil {
+			a.mu.Lock() // X2+
 			a.cadd(b, h)
+			a.mu.Unlock() // X2-
 		}
 	}(handle)
 

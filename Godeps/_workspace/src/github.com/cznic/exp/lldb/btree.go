@@ -236,6 +236,9 @@ func (t *BTree) First() (key, value []byte, err error) {
 // The returned slice may be a sub-slice of buf if buf was large enough to hold
 // the entire content.  Otherwise, a newly allocated slice will be returned.
 // It is valid to pass a nil buf.
+//
+// Get is safe for concurrent access by multiple goroutines iff no other
+// goroutine mutates the tree.
 func (t *BTree) Get(buf, key []byte) (value []byte, err error) {
 	if t == nil {
 		err = errors.New("BTree method invoked on nil receiver")
@@ -311,6 +314,9 @@ func (t *BTree) Put(buf, key []byte, upd func(key, old []byte) (new []byte, writ
 // Seek returns an Enumerator with "position" or an error of any. Normally the
 // position is on a KV pair such that key >= KV.key. Then hit is key == KV.key.
 // The position is possibly "after" the last KV pair, but that is not an error.
+//
+// Seek is safe for concurrent access by multiple goroutines iff no other
+// goroutine mutates the tree.
 func (t *BTree) Seek(key []byte) (enum *BTreeEnumerator, hit bool, err error) {
 	enum0, hit, err := t.seek(key)
 	if err != nil {
@@ -345,6 +351,9 @@ func (t *BTree) seek(key []byte) (enum *bTreeEnumerator, hit bool, err error) {
 // KV.key.  The position is possibly "after" the last KV pair, but that is not
 // an error.  The collate function originally passed to CreateBTree is used for
 // enumerating the tree but a custom collate function c is used for IndexSeek.
+//
+// IndexSeek is safe for concurrent access by multiple goroutines iff no other
+// goroutine mutates the tree.
 func (t *BTree) IndexSeek(key []byte, c func(a, b []byte) int) (enum *BTreeEnumerator, hit bool, err error) { //TODO +test
 	enum0, hit, err := t.indexSeek(key, c)
 	if err != nil {
@@ -376,6 +385,9 @@ func (t *BTree) indexSeek(key []byte, c func(a, b []byte) int) (enum *bTreeEnume
 
 // seekFirst returns an enumerator positioned on the first KV pair in the tree,
 // if any.  For an empty tree, err == io.EOF is returend.
+//
+// SeekFirst is safe for concurrent access by multiple goroutines iff no other
+// goroutine mutates the tree.
 func (t *BTree) SeekFirst() (enum *BTreeEnumerator, err error) {
 	enum0, err := t.seekFirst()
 	if err != nil {
@@ -414,6 +426,9 @@ func (t *BTree) seekFirst() (enum *bTreeEnumerator, err error) {
 
 // seekLast returns an enumerator positioned on the last KV pair in the tree,
 // if any.  For an empty tree, err == io.EOF is returend.
+//
+// SeekLast is safe for concurrent access by multiple goroutines iff no other
+// goroutine mutates the tree.
 func (t *BTree) SeekLast() (enum *BTreeEnumerator, err error) {
 	enum0, err := t.seekLast()
 	if err != nil {
@@ -600,6 +615,9 @@ type BTreeEnumerator struct {
 // Next returns the currently enumerated KV pair, if it exists and moves to the
 // next KV in the key collation order. If there is no KV pair to return, err ==
 // io.EOF is returned.
+//
+// Next is safe for concurrent access by multiple goroutines iff no other
+// goroutine mutates the tree.
 func (e *BTreeEnumerator) Next() (key, value []byte, err error) {
 	if err = e.err; err != nil {
 		return
@@ -640,6 +658,9 @@ retry:
 // Prev returns the currently enumerated KV pair, if it exists and moves to the
 // previous KV in the key collation order. If there is no KV pair to return,
 // err == io.EOF is returned.
+//
+// Prev is safe for concurrent access by multiple goroutines iff no other
+// goroutine mutates the tree.
 func (e *BTreeEnumerator) Prev() (key, value []byte, err error) {
 	if err = e.err; err != nil {
 		return

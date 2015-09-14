@@ -6,7 +6,6 @@ package ql
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"reflect"
 	"strconv"
@@ -278,7 +277,7 @@ func builtinCount(arg []interface{}, ctx map[interface{}]interface{}) (v interfa
 			n++
 		}
 	default:
-		log.Panic("internal error 067")
+		panic("internal error 067")
 	}
 	ctx[fn] = n
 	return
@@ -557,7 +556,7 @@ func builtinID(arg []interface{}, ctx map[interface{}]interface{}) (v interface{
 	case int64:
 		return x, nil
 	default:
-		panic("internal error 072")
+		return nil, nil
 	}
 }
 
