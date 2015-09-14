@@ -119,4 +119,7 @@ _FILE_OPS_ALL_DIRS_ := \
 
 .PHONY: $(_FILE_OPS_ALL_DIRS_) _file_ops_mk_clean_
 
-$(call undefine-namespaces,_FILE_OPS)
+# Excluding _FILE_OPS_BAIL_OUT_IF_NOT_DIR_ and _FILE_OPS_DASH_M_
+# because they are used inside recipes. Undefining them here would
+# mean that inside recipes they would return empty value.
+$(call undefine-namespaces,_FILE_OPS,_FILE_OPS_BAIL_OUT_IF_NOT_DIR_ _FILE_OPS_DASH_M_)
