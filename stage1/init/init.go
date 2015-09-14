@@ -584,6 +584,11 @@ func stage1() int {
 		}
 	}
 
+	if err = p.WriteDefaultTarget(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write default.target: %v\n", err)
+		return 2
+	}
+
 	if err = p.WritePrepareAppTemplate(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write prepare-app service template: %v\n", err)
 		return 2

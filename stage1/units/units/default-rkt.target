@@ -1,3 +1,0 @@
-[Unit]
-Description=rkt apps target
-DefaultDependencies=false
