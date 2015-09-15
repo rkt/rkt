@@ -138,7 +138,10 @@ func getConfigFromContents(contents, kind string) (*Config, error) {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create tmp config file: %v", err))
 	}
+	// First remove the file, then close it (last deferred item is
+	// executed first).
 	defer f.Close()
+	defer os.Remove(f.Name())
 	if _, err := f.Write([]byte(contents)); err != nil {
 		panic(fmt.Sprintf("Writing config to file failed: %v", err))
 	}
