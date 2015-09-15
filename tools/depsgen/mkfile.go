@@ -76,8 +76,8 @@ ifeq ($(_DEPS_GEN_DO_INVALIDATE_),yes)
 $(info Invalidating !!!DEPS_GEN_TARGET!!!)
 $(foreach k,$(_DEPS_GEN_DIFFS_), \
         $(info Differing key: $k) \
-        $(info Value stored in deps file: $(!!!DEPS_GEN_STORED_PREFIX!!!$v)) \
-        $(info Value currently used: $($v)))
+        $(info Value stored in deps file: $(!!!DEPS_GEN_STORED_PREFIX!!!$k)) \
+        $(info Value currently used: $($k)))
 
 # invalidate the target
 !!!DEPS_GEN_TARGET!!!: _DEPS_GEN_INVALIDATE_
