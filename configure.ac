@@ -49,12 +49,11 @@ AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
 
 ## STAGE1:type
-m4_define([DEFAULT_FLAVOR], [coreos])
 AC_ARG_WITH([stage1],
-            AS_HELP_STRING([--with-stage1=type],
-                           [type of stage1 build one of 'src', 'coreos', 'host', 'none', 'kvm' (default: 'DEFAULT_FLAVOR')]),
+            [AS_HELP_STRING([--with-stage1],
+                            [type of stage1 build one of 'src', 'coreos', 'host', 'none', 'kvm' (default: 'coreos')])],
             [RKT_STAGE1_USR_FROM="${withval}"],
-            [RKT_STAGE1_USR_FROM="DEFAULT_FLAVOR"])
+            [RKT_STAGE1_USR_FROM="coreos"])
 
 AS_CASE([${RKT_STAGE1_USR_FROM}],
         [none],
@@ -82,16 +81,15 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
 
 AC_SUBST(RKT_STAGE1_USR_FROM)
 
-m4_define(DEFAULT_STAGE1_NAME,coreos.com/rkt/stage1)
 AC_ARG_WITH(stage1-default-name,
-            AS_HELP_STRING([--with-stage1-default-name=stage1_name],
-                           [default name of stage1, default: DEFAULT_STAGE1_NAME]),
+            [AS_HELP_STRING([--with-stage1-default-name],
+                            [default name of stage1, default: 'coreos.com/rkt/stage1'])],
             [RKT_STAGE1_DEFAULT_NAME="${withval}"],
             [RKT_STAGE1_DEFAULT_NAME=auto])
 
 AC_ARG_WITH(stage1-default-version,
-            AS_HELP_STRING([--with-stage1-default-version=stage1_version],
-                           [default version of stage1, default: same as rkt version]),
+            [AS_HELP_STRING([--with-stage1-default-version],
+                            [default version of stage1, default: same as rkt version])],
             [RKT_STAGE1_DEFAULT_VERSION="${withval}"],
             [RKT_STAGE1_DEFAULT_VERSION=auto])
 
@@ -114,7 +112,7 @@ AS_VAR_IF([RKT_STAGE1_USR_FROM], [none],
                       RKT_STAGE1_DEFAULT_VERSION=auto])])
 
 AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
-          [RKT_STAGE1_DEFAULT_NAME=DEFAULT_STAGE1_NAME])
+          [RKT_STAGE1_DEFAULT_NAME='coreos.com/rkt/stage1'])
 AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
           [RKT_STAGE1_DEFAULT_VERSION=${RKT_VERSION}])
 
@@ -126,17 +124,15 @@ AC_SUBST(RKT_STAGE1_DEFAULT_ACI_LDFLAGS)
 
 ## STAGE1: Systemd git path and version for src flavor
 
-m4_define([DEFAULT_STAGE1_SYSTEMD_SRC], [https://github.com/systemd/systemd.git])
 AC_ARG_WITH([stage1-systemd-src],
-            AS_HELP_STRING([--with-stage1-systemd-src=git-path],
-                           [address to git repository of systemd, used in 'src' stage1 flavor (default: 'DEFAULT_STAGE1_SYSTEMD_SRC')]),
+            [AS_HELP_STRING([--with-stage1-systemd-src],
+                            [address to git repository of systemd, used in 'src' stage1 flavor (default: 'https://github.com/systemd/systemd.git')])],
             [RKT_STAGE1_SYSTEMD_SRC="${withval}"],
             [RKT_STAGE1_SYSTEMD_SRC='auto'])
 
-m4_define([DEFAULT_STAGE1_SYSTEMD_VER], [v222])
 AC_ARG_WITH([stage1-systemd-version],
-            AS_HELP_STRING([--with-stage1-systemd-version=version],
-                           [systemd version to build, used in 'src' stage1 flavor (default: 'DEFAULT_STAGE1_SYSTEMD_VER', should be in format 'v<number>', like v222)]),
+            [AS_HELP_STRING([--with-stage1-systemd-version],
+                            [systemd version to build, used in 'src' stage1 flavor (default: 'v222', should be in format 'v<number>', like v222)])],
             [RKT_STAGE1_SYSTEMD_VER="${withval}"],
             [RKT_STAGE1_SYSTEMD_VER='auto'])
 
@@ -144,12 +140,12 @@ AS_CASE([$RKT_STAGE1_USR_FROM],
         [src],
                 [AS_VAR_IF([RKT_STAGE1_SYSTEMD_SRC], [auto],
                            dnl systemd source not specified, use default
-                           [RKT_STAGE1_SYSTEMD_SRC=DEFAULT_STAGE1_SYSTEMD_SRC],
+                           [RKT_STAGE1_SYSTEMD_SRC='https://github.com/systemd/systemd.git'],
                            dnl systemd source specified, use it
                            [])
                  AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [auto],
                            dnl systemd version not specified, use default
-                           [RKT_STAGE1_SYSTEMD_VER=DEFAULT_STAGE1_SYSTEMD_VER],
+                           [RKT_STAGE1_SYSTEMD_VER='v222'],
                            dnl systemd version specified, use it
                            [])],
         dnl other flavors
@@ -174,10 +170,9 @@ AC_SUBST(RKT_STAGE1_SYSTEMD_SRC)
 AC_SUBST(RKT_STAGE1_SYSTEMD_VER)
 
 ## STAGE1: linker-defined custom STAGE1 image path, default is unset
-m4_define([DEFAULT_STAGE1_IMAGE], [])
 AC_ARG_WITH([stage1-image-path],
-            AS_HELP_STRING([--with-stage1-image-path],
-                           [custom stage1 image path (default: 'DEFAULT_STAGE1_IMAGE')]),
+            [AS_HELP_STRING([--with-stage1-image-path],
+                            [custom stage1 image path (default: empty)])],
             [RKT_STAGE1_IMAGE="${withval}"],
             [RKT_STAGE1_IMAGE=""])
 
@@ -191,16 +186,15 @@ AC_SUBST(RKT_STAGE1_IMAGE_LDFLAGS)
 
 ## STAGE1: path to coreos pxe and its systemd version
 
-m4_define([DEFAULT_LOCAL_COREOS_PXE_IMAGE_PATH], [])
 AC_ARG_WITH([coreos-local-pxe-image-path],
-            AS_HELP_STRING([--with-coreos-local-pxe-image-path],
-                           [path to local CoreOS PXE image, used in 'coreos' and 'kvm' stage1 flavors (default: 'DEFAULT_LOCAL_COREOS_PXE_IMAGE_PATH') (the GPG signature of this file will not be checked!)]),
+            [AS_HELP_STRING([--with-coreos-local-pxe-image-path],
+                            [path to local CoreOS PXE image, used in 'coreos' and 'kvm' stage1 flavors (default: empty) (the GPG signature of this file will not be checked!)])],
             [RKT_LOCAL_COREOS_PXE_IMAGE_PATH="${withval}"],
             [RKT_LOCAL_COREOS_PXE_IMAGE_PATH=""])
 
 AC_ARG_WITH([coreos-local-pxe-image-systemd-version],
-            AS_HELP_STRING([--with-coreos-local-pxe-image-systemd-version],
-                           [version of systemd in local CoreOS PXE image, used in 'coreos' and 'kvm' stage1 flavors (should be in format 'v<number>', like v222)]),
+            [AS_HELP_STRING([--with-coreos-local-pxe-image-systemd-version],
+                            [version of systemd in local CoreOS PXE image, used in 'coreos' and 'kvm' stage1 flavors (should be in format 'v<number>', like v222)])],
             [RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER="${withval}"],
             [RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER=])
 
@@ -242,8 +236,8 @@ AC_SUBST(RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER)
 ## Functional tests
 
 AC_ARG_ENABLE([functional-tests],
-              AS_HELP_STRING([--enable-functional-tests],
-                             [enable functional tests on make check (linux only, uses sudo, default: no, use auto to enable if possible, for host stage1 flavor systemd version 220 or higher on host is required)]),
+              [AS_HELP_STRING([--enable-functional-tests],
+                              [enable functional tests on make check (linux only, uses sudo, default: 'no', use 'auto' to enable if possible, for host stage1 flavor systemd version 220 or higher on host is required)])],
               [RKT_RUN_FUNCTIONAL_TESTS="${enableval}"],
               [RKT_RUN_FUNCTIONAL_TESTS="no"])
 
