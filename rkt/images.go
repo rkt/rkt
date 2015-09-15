@@ -624,7 +624,7 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 	reader := &ioprogress.Reader{
 		Reader:       res.Body,
 		Size:         res.ContentLength,
-		DrawFunc:     ioprogress.DrawTerminalf(os.Stdout, fmtfunc),
+		DrawFunc:     ioprogress.DrawTerminalf(os.Stderr, fmtfunc),
 		DrawInterval: time.Second,
 	}
 
