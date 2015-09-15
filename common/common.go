@@ -35,6 +35,7 @@ const (
 	stage2Dir = "/opt/stage2"
 
 	EnvLockFd                    = "RKT_LOCK_FD"
+	SELinuxContext               = "RKT_SELINUX_CONTEXT"
 	Stage1IDFilename             = "stage1ID"
 	OverlayPreparedFilename      = "overlay-prepared"
 	PrivateUsersPreparedFilename = "private-users-prepared"

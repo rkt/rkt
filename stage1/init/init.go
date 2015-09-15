@@ -322,6 +322,10 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
 
+		if context := os.Getenv(common.SELinuxContext); context != "" {
+			args = append(args, fmt.Sprintf("-Z%s", context))
+		}
+
 		if machinedRegister() {
 			args = append(args, fmt.Sprintf("--register=true"))
 		} else {
@@ -334,6 +338,10 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 	case "src":
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
+
+		if context := os.Getenv(common.SELinuxContext); context != "" {
+			args = append(args, fmt.Sprintf("-Z%s", context))
+		}
 
 		if machinedRegister() {
 			args = append(args, fmt.Sprintf("--register=true"))
@@ -371,6 +379,10 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		args = append(args, hostNspawnBin)
 		args = append(args, "--boot") // Launch systemd in the pod
 		args = append(args, fmt.Sprintf("--register=true"))
+
+		if context := os.Getenv(common.SELinuxContext); context != "" {
+			args = append(args, fmt.Sprintf("-Z%s", context))
+		}
 
 	default:
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
