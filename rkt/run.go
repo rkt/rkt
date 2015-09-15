@@ -20,9 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/url"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -36,10 +33,6 @@ import (
 )
 
 var (
-	defaultStage1Image   string // either set by linker, or guessed in init()
-	defaultStage1Name    string // set by linker
-	defaultStage1Version string // set by linker
-
 	cmdRun = &cobra.Command{
 		Use:   "run [--volume=name,kind=host,...] IMAGE [-- image-args...[---]]...",
 		Short: "Run image(s) in a pod in rkt",
@@ -51,7 +44,6 @@ which will instead be appended to the preceding image app's exec arguments.
 End the image arguments with a lone "---" to resume argument parsing.`,
 		Run: runWrapper(runRun),
 	}
-	flagStage1Image  string
 	flagVolumes      volumeList
 	flagPorts        portList
 	flagPrivateNet   common.PrivateNetList
@@ -66,22 +58,12 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 	flagUUIDFileSave string
 )
 
-func setDefaultStage1Image() {
-	// if not set by linker, try discover the directory rkt is running
-	// from, and assume the default stage1.aci is stored alongside it.
-	if defaultStage1Image == "" {
-		if exePath, err := os.Readlink("/proc/self/exe"); err == nil {
-			defaultStage1Image = filepath.Join(filepath.Dir(exePath), "stage1.aci")
-		}
-	}
-}
-
 func init() {
 	setDefaultStage1Image()
 
 	cmdRkt.AddCommand(cmdRun)
 
-	cmdRun.Flags().StringVar(&flagStage1Image, "stage1-image", defaultStage1Image, `image to use as stage1. Local paths and http/https URLs are supported. By default, rkt will look for a file called "stage1.aci" in the same directory as rkt itself`)
+	addStage1ImageFlag(cmdRun.Flags())
 	cmdRun.Flags().Var(&flagVolumes, "volume", "volumes to mount into the pod")
 	cmdRun.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires --private-net)")
 	cmdRun.Flags().Var(&flagPrivateNet, "private-net", "give pod a private network that defaults to the default network plus all user-configured networks. Can be limited to a comma-separated list of network names")
@@ -107,42 +89,6 @@ func init() {
 	// argument. All the subsequent parsing will be done by parseApps.
 	// This is needed to correctly handle image args
 	cmdRun.Flags().SetInterspersed(false)
-}
-
-func getStage1Hash(s *store.Store, stage1ImagePath string) (*types.Hash, error) {
-	fn := &finder{
-		imageActionData: imageActionData{
-			s: s,
-		},
-		local:    true,
-		withDeps: false,
-	}
-	isDefault := stage1ImagePath == defaultStage1Image
-
-	var (
-		s1img *types.Hash
-		err   error
-	)
-	// with a default stage1, first try to get the image from the store
-	if isDefault {
-		// we make sure we've built rkt with a clean git tree, otherwise we
-		// don't know if something changed
-		if !strings.HasSuffix(defaultStage1Version, "-dirty") {
-			stage1AppName := fmt.Sprintf("%s:%s", defaultStage1Name, url.QueryEscape(defaultStage1Version))
-			s1img, err = fn.findImage(stage1AppName, "", true)
-		}
-	}
-
-	// we couldn't find a proper stage1 image in the store, fall back to using
-	// a stage1 ACI file (slow)
-	if s1img == nil {
-		s1img, err = fn.findImage(stage1ImagePath, "", false)
-		if err != nil {
-			return nil, fmt.Errorf("error finding stage1 image %q: %v", stage1ImagePath, err)
-		}
-	}
-
-	return s1img, nil
 }
 
 func runRun(cmd *cobra.Command, args []string) (exit int) {
