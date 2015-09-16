@@ -222,3 +222,89 @@ $(strip \
 	$(foreach v,$2, \
 		$(eval $1: $v := $($v))))
 endef
+
+# Used by generate-simple-rule, see its docs.
+define simple-rule-template
+$1: $2 $(if $(strip $3),| $3)
+	$(if $(strip $4),$4,:)
+endef
+
+# Generates a simple rule - without variable forwarding and with only
+# a single-command recipe.
+# 1 - targets
+# 2 - reqs
+# 3 - order-only reqs
+# 4 - recipe
+define generate-simple-rule
+$(eval $(call simple-rule-template,$1,$2,$3,$4))
+endef
+
+# Generates a rule with a "set -e".
+# 1 - target (stamp file)
+# 2 - reqs
+# 3 - order-only reqs
+# 4 - recipe placed after 'set -e'
+define generate-strict-rule
+$(call generate-simple-rule,$1,$2,$3,set -e; $(if $(strip $4),$4,:))
+endef
+
+# Generates a rule for creating a stamp with additional actions to be
+# performed before the actual stamp creation.
+# 1 - target (stamp file)
+# 2 - reqs
+# 3 - order-only reqs
+# 4 - recipe placed between 'set -e' and 'touch "$@"'
+define generate-stamp-rule
+$(call generate-strict-rule,$1,$2,$3,$4; touch "$$@")
+endef
+
+# 1 - from
+# 2 - to
+define bash-cond-rename
+if cmp --silent "$1" "$2"; then rm -f "$1"; else mv "$1" "$2"; fi
+endef
+
+# Generates a rule for generating a depmk for a given go binary from a
+# given package. It also tries to include the depmk.
+#
+# This function (and the other generate-*-deps) are stamp-based. It
+# generates no rule for actual depmk. Instead it generates a rule for
+# creating a stamp, which will also generate the depmk. This is to
+# avoid generating depmk at make startup, when it parses the
+# Makefile. At startup, make tries to rebuild all the files it tries
+# to include if there is a rule for the file. We do not want that -
+# that would override a depmk with a fresh one, so no file
+# additions/deletions made before running make would be detected.
+#
+# 1 - a stamp file
+# 2 - a binary name
+# 3 - depmk name
+# 4 - a package name
+define generate-go-deps
+$(strip \
+	$(if $(call equal,$2,$(DEPSGENTOOL)), \
+		$(eval _MISC_GGD_DEP_ := $(DEPSGENTOOL)), \
+		$(eval _MISC_GGD_DEP_ := $(DEPSGENTOOL_STAMP))) \
+	$(eval -include $3) \
+	$(eval $(call generate-stamp-rule,$1,$(_MISC_GGD_DEP_),$(DEPSDIR),$(GO_ENV) "$(DEPSGENTOOL)" go --repo "$(REPO_PATH)" --module "$4" --target '$2 $1' >"$3.tmp"; $(call bash-cond-rename,$3.tmp,$3))) \
+	$(call undefine-namespaces,_MISC_GGD))
+endef
+
+# Generates a rule for generating a key-value depmk for a given target
+# with given variable names to store. It also tries to include the
+# depmk.
+# 1 - a stamp file
+# 2 - a target
+# 3 - depmk name
+# 4 - a list of variable names to store
+define generate-kv-deps
+$(strip \
+	$(if $(call equal,$2,$(DEPSGENTOOL)), \
+		$(eval _MISC_GKD_DEP_ := $(DEPSGENTOOL)), \
+		$(eval _MISC_GKD_DEP_ := $(DEPSGENTOOL_STAMP))) \
+	$(foreach v,$4, \
+		$(eval _MISC_GKD_KV_ += $v $(call escape-and-wrap,$($v)))) \
+	$(eval -include $3) \
+	$(eval $(call generate-stamp-rule,$1,$(_MISC_GKD_DEP_),$(DEPSDIR),"$(DEPSGENTOOL)" kv --target '$2 $1' $(_MISC_GKD_KV_) >"$3.tmp"; $(call bash-cond-rename,$3.tmp,$3))) \
+	$(call undefine-namespaces,_MISC_GKD))
+endef
