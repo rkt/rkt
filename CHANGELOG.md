@@ -1,3 +1,32 @@
+### v0.8.1
+
+rkt v0.8.1 is an incremental release with numerous bug fixes and clean-up to the build system. It also introduces a few small new features and UX improvements.
+
+- New features and UX changes:
+  - `rkt rm` is now variadic: it can now remove multiple pods in one command, by UUID
+  - The `APPNAME` column in `rkt image list` output has been changed to the more accurate `NAME`. This involves a schema change in rkt's on-disk datastore, but this should be upgraded transparently.
+  - Headers are now sent when following HTTP redirects while trying to retrieve an image
+  - The default metadata service port number was changed from a registered/reserved IANA port to an arbitrary port in the non-dynamic range
+  - Added the ability to override arguments for network plugins
+  - rkt will now error out if someone attempts to use `--private-users` with the lkvm backend
+- Bug fixes:
+  - Fixed creation of /tmp in apps' root filesystems with correct permissions
+  - Fixed garbage collection after umounts (for example, if a system reboots before a pod is cleanly destroyed)
+  - Fixed a race in interactive mode when using the lkvm backend that could cause a deadlock or segfault
+  - Fixed bad parameter being passed to the metadata service ("uid" -> "uuid")
+  - Fixed setting of file permissions during stage1 set up
+  - Fixed a potential race condition during simultaneous `iptables` invocation
+  - Fixed ACI download progress being sent to stderr instead of stdout, now consistent with the output during retrieval of Docker images
+  - `rkt help prepare` will now show the correct default stage1 image
+  - rkt will refuse to add isolators with nil Limits, preventing a panic caused by an ambiguity in upstream appc schema
+- Other changes:
+  - Reworked the SELinux implementation to use `systemd-nspawn`'s native context-switching feature
+  - Added a workaround for a bug in Docker <1.8 when it is run on the same system as rkt (see https://github.com/coreos/rkt/issues/1210#issuecomment-132793300)
+  - Added a `rkt-xxxx-tapN` name to tap devices that rkt creates
+  - Functional tests now clean intermediate images between tests
+  - Countless improvements and cleanup to the build system
+  - Numerous documentation improvements, including splitting out all top-level `rkt` subcommands into their own documents
+
 ### v0.8.0
 
 rkt 0.8.0 includes support for running containers under an LKVM hypervisor

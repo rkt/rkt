@@ -1,5 +1,5 @@
 AC_PREREQ([2.68])
-AC_INIT([rkt], [0.8.0+git], [https://github.com/coreos/rkt/issues])
+AC_INIT([rkt], [0.8.1], [https://github.com/coreos/rkt/issues])
 
 AC_DEFUN([RKT_REQ_PROG],
          [AS_VAR_IF([$1], [],
