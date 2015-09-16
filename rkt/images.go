@@ -603,7 +603,7 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 	prefix := "Downloading " + label
 	fmtBytesSize := 18
 	barSize := int64(80 - len(prefix) - fmtBytesSize)
-	bar := ioprogress.DrawTextFormatBar(barSize)
+	bar := ioprogress.DrawTextFormatBarForW(barSize, os.Stderr)
 	fmtfunc := func(progress, total int64) string {
 		// Content-Length is set to -1 when unknown.
 		if total == -1 {
