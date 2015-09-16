@@ -63,7 +63,7 @@ AlterTableStmt = "ALTER" "TABLE" TableName (
 Assignment = ColumnName "=" Expression .
 AssignmentList = Assignment { "," Assignment } [ "," ] .
 BeginTransactionStmt = "BEGIN" "TRANSACTION" .
-Call = "(" [ ExpressionList ] ")" .
+Call = "(" [ "*" | ExpressionList ] ")" .
 ColumnDef = ColumnName Type [
 		  "NOT" "NULL"
 		| Expression
@@ -74,10 +74,7 @@ CommitStmt = "COMMIT" .
 Conversion = Type "(" Expression ")" .
 CreateIndexStmt = "CREATE" [ "UNIQUE" ] "INDEX" [
 		 "IF" "NOT" "EXISTS"
-	  ] IndexName "ON" TableName "(" (
-		  ColumnName
-		| "id" Call
-	  ) ")" .
+	  ] IndexName "ON" TableName "(" ExpressionList ")" .
 CreateTableStmt = "CREATE" "TABLE" [
 		 "IF" "NOT" "EXISTS"
 	  ] TableName "(" ColumnDef { "," ColumnDef } [ "," ] ")" .
@@ -85,6 +82,7 @@ DeleteFromStmt = "DELETE" "FROM" TableName [ WhereClause ] .
 DropIndexStmt = "DROP" "INDEX" [ "IF" "EXISTS" ] IndexName .
 DropTableStmt = "DROP" "TABLE" [ "IF" "EXISTS" ] TableName .
 EmptyStmt = .
+ExplainStmt = "EXPLAIN" Statement .
 Expression = Term {
 		 ( oror | "OR" ) Term
 	  } .
@@ -182,7 +180,8 @@ Statement = EmptyStmt
 	| RollbackStmt
 	| SelectStmt
 	| TruncateTableStmt
-	| UpdateStmt .
+	| UpdateStmt
+	| ExplainStmt .
 StatementList = Statement { ";" Statement } .
 TableName = identifier .
 Term = Factor {

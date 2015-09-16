@@ -202,31 +202,31 @@ the insertion order.
 
 Non unique index
 
-The composite key of the B+Tree is {indexed value, record handle}. The B+Tree
+The composite key of the B+Tree is {indexed values, record handle}. The B+Tree
 value is not used.
 
 	           B+Tree key                    B+Tree value
-	+---------------+---------------+      +--------------+
-	| Indexed Value | Record Handle |  ->  |   not used   |
-	+---------------+---------------+      +--------------+
+	+----------------+---------------+      +--------------+
+	| Indexed Values | Record Handle |  ->  |   not used   |
+	+----------------+---------------+      +--------------+
 
 Unique index
 
-If the indexed value is NULL then the composite B+Tree key is {nil, record
-handle} and the B+Tree value is not used.
+If the indexed values are all NULL then the composite B+Tree key is {nil,
+record handle} and the B+Tree value is not used.
 
 	        B+Tree key                B+Tree value
 	+------+-----------------+      +--------------+
 	| NULL |  Record Handle  |  ->  |   not used   |
 	+------+-----------------+      +--------------+
 
-If the indexed value is not NULL then key of the B+Tree key is the indexed
-value and the B+Tree value is the record handle. 
+If the indexed values are not all NULL then key of the B+Tree key are the indexed
+values and the B+Tree value is the record handle. 
 
 	        B+Tree key                B+Tree value
-	+------------------------+      +---------------+
-	| Non NULL Indexed Value |  ->  | Record Handle |
-	+------------------------+      +---------------+
+	+----------------+      +---------------+
+	| Indexed Values |  ->  | Record Handle |
+	+----------------+      +---------------+
 
 Non scalar types
 

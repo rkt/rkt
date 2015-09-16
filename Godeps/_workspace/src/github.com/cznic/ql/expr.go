@@ -6,7 +6,6 @@ package ql
 
 import (
 	"fmt"
-	"log"
 	"math/big"
 	"regexp"
 	"strings"
@@ -30,14 +29,121 @@ var (
 )
 
 type expression interface {
-	eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (v interface{}, err error)
+	clone(arg []interface{}, unqualify ...string) (expression, error)
+	eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error)
 	isStatic() bool
 	String() string
 }
 
+func cloneExpressionList(arg []interface{}, list []expression, unqualify ...string) ([]expression, error) {
+	r := make([]expression, len(list))
+	var err error
+	for i, v := range list {
+		if r[i], err = v.clone(arg, unqualify...); err != nil {
+			return nil, err
+		}
+	}
+	return r, nil
+}
+
+func isConstValue(v interface{}) interface{} {
+	switch x := v.(type) {
+	case value:
+		return x.val
+	case
+		idealComplex,
+		idealFloat,
+		idealInt,
+		idealRune,
+		idealUint:
+		return v
+	default:
+		return nil
+	}
+}
+
+func isColumnExpression(v expression) (bool, string) {
+	x, ok := v.(*ident)
+	if ok {
+		return true, x.s
+	}
+
+	c, ok := v.(*call)
+	if !ok || c.f != "id" || len(c.arg) != 0 {
+		return false, ""
+	}
+
+	return true, "id()"
+}
+
+func mentionedColumns0(e expression, q, nq bool, m map[string]struct{}) {
+	switch x := e.(type) {
+	case parameter,
+		value:
+		// nop
+	case *binaryOperation:
+		mentionedColumns0(x.l, q, nq, m)
+		mentionedColumns0(x.r, q, nq, m)
+	case *call:
+		if x.f != "id" {
+			for _, e := range x.arg {
+				mentionedColumns0(e, q, nq, m)
+			}
+		}
+	case *conversion:
+		mentionedColumns0(x.val, q, nq, m)
+	case *ident:
+		if q && x.isQualified() {
+			m[x.s] = struct{}{}
+		}
+		if nq && !x.isQualified() {
+			m[x.s] = struct{}{}
+		}
+	case *indexOp:
+		mentionedColumns0(x.expr, q, nq, m)
+		mentionedColumns0(x.x, q, nq, m)
+	case *isNull:
+		mentionedColumns0(x.expr, q, nq, m)
+	case *pexpr:
+		mentionedColumns0(x.expr, q, nq, m)
+	case *pIn:
+		mentionedColumns0(x.expr, q, nq, m)
+		for _, e := range x.list {
+			mentionedColumns0(e, q, nq, m)
+		}
+	case *pLike:
+		mentionedColumns0(x.expr, q, nq, m)
+		mentionedColumns0(x.pattern, q, nq, m)
+	case *slice:
+		mentionedColumns0(x.expr, q, nq, m)
+		if y := x.lo; y != nil {
+			mentionedColumns0(*y, q, nq, m)
+		}
+		if y := x.hi; y != nil {
+			mentionedColumns0(*y, q, nq, m)
+		}
+	case *unaryOperation:
+		mentionedColumns0(x.v, q, nq, m)
+	default:
+		panic("internal error 052")
+	}
+}
+
+func mentionedColumns(e expression) map[string]struct{} {
+	m := map[string]struct{}{}
+	mentionedColumns0(e, false, true, m)
+	return m
+}
+
+func mentionedQColumns(e expression) map[string]struct{} {
+	m := map[string]struct{}{}
+	mentionedColumns0(e, true, false, m)
+	return m
+}
+
 func staticExpr(e expression) (expression, error) {
 	if e.isStatic() {
-		v, err := e.eval(nil, nil, nil)
+		v, err := e.eval(nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -65,51 +171,17 @@ type exprTab struct {
 	table string
 }
 
-func isPossiblyRewriteableCrossJoinWhereExpression(expr expression) (bool, []exprTab) {
-	//dbg("....\n\texpr %v", expr)
-	//defer func() { dbg("\t\t%v: %v %v", expr, TODOb, TODOl) }()
-	switch x := expr.(type) {
-	case *binaryOperation:
-		if ok, tab, nx := x.isQIdentRelOpFixedValue(); ok {
-			return true, []exprTab{{nx, tab}}
-		}
-
-		if x.op != andand {
-			return false, nil
-		}
-
-		ok, rlist := isPossiblyRewriteableCrossJoinWhereExpression(x.r)
-		if !ok {
-			return false, nil
-		}
-
-		ok, llist := isPossiblyRewriteableCrossJoinWhereExpression(x.l)
-		if !ok {
-			return false, nil
-		}
-
-		return true, append(llist, rlist...)
-	case *ident:
-		if !x.isQualified() {
-			return false, nil
-		}
-
-		return true, []exprTab{{&ident{mustSelector(x.s)}, mustQualifier(x.s)}}
-	case *unaryOperation:
-		ok, tab, nx := x.isNotQIdent()
-		if !ok {
-			return false, nil
-		}
-
-		return true, []exprTab{{nx, tab}}
-	default:
-		//dbg("%T: %v", x, x)
-		return false, nil
-	}
-}
-
 type pexpr struct {
 	expr expression
+}
+
+func (p *pexpr) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	expr, err := p.expr.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pexpr{expr: expr}, nil
 }
 
 func (p *pexpr) isStatic() bool { return p.expr.isStatic() }
@@ -118,8 +190,8 @@ func (p *pexpr) String() string {
 	return fmt.Sprintf("(%s)", p.expr)
 }
 
-func (p *pexpr) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (v interface{}, err error) {
-	return p.expr.eval(execCtx, ctx, arg)
+func (p *pexpr) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error) {
+	return p.expr.eval(execCtx, ctx)
 }
 
 //DONE newBetween
@@ -186,17 +258,36 @@ type pLike struct {
 	sexpr   *string
 }
 
+func (p *pLike) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	expr, err := p.expr.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	pattern, err := p.pattern.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pLike{
+		expr:    expr,
+		pattern: pattern,
+		re:      p.re,
+		sexpr:   p.sexpr,
+	}, nil
+}
+
 func (p *pLike) isStatic() bool { return p.expr.isStatic() && p.pattern.isStatic() }
 func (p *pLike) String() string { return fmt.Sprintf("%s LIKE %s", p.expr, p.pattern) }
 
-func (p *pLike) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (v interface{}, err error) {
+func (p *pLike) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error) {
 	var sexpr string
 	var ok bool
 	switch {
 	case p.sexpr != nil:
 		sexpr = *p.sexpr
 	default:
-		expr, err := expand1(p.expr.eval(execCtx, ctx, arg))
+		expr, err := expand1(p.expr.eval(execCtx, ctx))
 		if err != nil {
 			return nil, err
 		}
@@ -218,7 +309,7 @@ func (p *pLike) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []in
 
 	re := p.re
 	if re == nil {
-		pattern, err := expand1(p.pattern.eval(execCtx, ctx, arg))
+		pattern, err := expand1(p.pattern.eval(execCtx, ctx))
 		if err != nil {
 			return nil, err
 		}
@@ -249,13 +340,59 @@ type binaryOperation struct {
 	l, r expression
 }
 
-func newBinaryOperation(op int, x, y interface{}) (v expression, err error) {
+func newBinaryOperation0(op int, x, y interface{}) (v expression, err error) {
+	if op == eq {
+		if l, ok := x.(value); ok {
+			if b, ok := l.val.(bool); ok {
+				if b { // true == y: y
+					return y.(expression), nil
+				}
+
+				// false == y: !y
+				return newUnaryOperation('!', y)
+			}
+		}
+
+		if r, ok := y.(value); ok {
+			if b, ok := r.val.(bool); ok {
+				if b { // x == true: x
+					return x.(expression), nil
+				}
+
+				// x == false: !x
+				return newUnaryOperation('!', x)
+			}
+		}
+	}
+
+	if op == neq {
+		if l, ok := x.(value); ok {
+			if b, ok := l.val.(bool); ok {
+				if b { // true != y: !y
+					return newUnaryOperation('!', y)
+				}
+
+				// false != y: y
+				return y.(expression), nil
+			}
+		}
+
+		if r, ok := y.(value); ok {
+			if b, ok := r.val.(bool); ok {
+				if b { // x != true: !x
+					return newUnaryOperation('!', x)
+				}
+
+				// x != false: x
+				return x.(expression), nil
+			}
+		}
+	}
+
 	b := binaryOperation{op, x.(expression), y.(expression)}
-	//dbg("newBinaryOperation %s", &b)
-	//defer func() { dbg("newBinaryOperation -> %v, %v", v, err) }()
 	var lv interface{}
 	if e := b.l; e.isStatic() {
-		if lv, err = e.eval(nil, nil, nil); err != nil {
+		if lv, err = e.eval(nil, nil); err != nil {
 			return nil, err
 		}
 
@@ -263,7 +400,7 @@ func newBinaryOperation(op int, x, y interface{}) (v expression, err error) {
 	}
 
 	if e := b.r; e.isStatic() {
-		v, err := e.eval(nil, nil, nil)
+		v, err := e.eval(nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -274,7 +411,7 @@ func newBinaryOperation(op int, x, y interface{}) (v expression, err error) {
 
 		if op == '/' || op == '%' {
 			rb := binaryOperation{eq, e, value{idealInt(0)}}
-			val, err := rb.eval(nil, nil, nil)
+			val, err := rb.eval(nil, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -295,70 +432,112 @@ func newBinaryOperation(op int, x, y interface{}) (v expression, err error) {
 		return &b, nil
 	}
 
-	val, err := b.eval(nil, nil, nil)
+	val, err := b.eval(nil, nil)
 	return value{val}, err
 }
 
-func (o *binaryOperation) isRelOp() bool {
-	op := o.op
-	return op == '<' || op == le || op == eq || op == neq || op == ge || op == '>'
-}
-
-// [!]qident relOp fixedValue or vice versa
-func (o *binaryOperation) isQIdentRelOpFixedValue() ( /* ok */ bool /* tableName */, string, expression) {
-	if !o.isRelOp() {
-		return false, "", nil
+func newBinaryOperation(op int, x, y interface{}) (v expression, err error) {
+	expr, err := newBinaryOperation0(op, x, y)
+	if err != nil {
+		return nil, err
 	}
 
-	switch lhs := o.l.(type) {
-	case *unaryOperation:
-		ok, tab, nx := lhs.isNotQIdent()
-		if !ok {
-			return false, "", nil
-		}
-
-		switch rhs := o.r.(type) {
-		case *parameter, value:
-			return true, tab, &binaryOperation{o.op, nx, rhs}
-		}
-	case *ident:
-		if !lhs.isQualified() {
-			return false, "", nil
-		}
-
-		switch rhs := o.r.(type) {
-		case *parameter, value:
-			return true, mustQualifier(lhs.s), &binaryOperation{o.op, &ident{mustSelector(lhs.s)}, rhs}
-		}
-	case *parameter, value:
-		switch rhs := o.r.(type) {
-		case *ident:
-			if !rhs.isQualified() {
-				return false, "", nil
-			}
-
-			return true, mustQualifier(rhs.s), &binaryOperation{o.op, lhs, &ident{mustSelector(rhs.s)}}
-		case *unaryOperation:
-			ok, tab, nx := rhs.isNotQIdent()
-			if !ok {
-				return false, "", nil
-			}
-
-			return true, tab, &binaryOperation{o.op, lhs, nx}
-		}
+	b, ok := expr.(*binaryOperation)
+	if !ok {
+		return expr, nil
 	}
-	return false, "", nil
+
+	if _, ok := b.l.(*ident); ok {
+		return expr, nil
+	}
+
+	if c, ok := b.l.(*call); ok && c.f == "id" {
+		return expr, nil
+	}
+
+	var r expression
+	if r, ok = b.r.(*ident); !ok {
+		r1, ok := b.r.(*call)
+		if !ok || r1.f != "id" || len(r1.arg) != 0 {
+			return expr, nil
+		}
+
+		r = r1
+	}
+
+	// Normalize expr relOp indent: ident invRelOp expr
+	switch b.op {
+	case '<':
+		return &binaryOperation{'>', r, b.l}, nil
+	case le:
+		return &binaryOperation{ge, r, b.l}, nil
+	case '>':
+		return &binaryOperation{'<', r, b.l}, nil
+	case ge:
+		return &binaryOperation{le, r, b.l}, nil
+	case eq, neq:
+		return &binaryOperation{b.op, r, b.l}, nil
+	default:
+		return expr, nil
+	}
 }
 
-func (o *binaryOperation) isBoolAnd() bool { return o.op == andand }
+func (o *binaryOperation) isIdentRelOpVal() (bool, string, interface{}, error) {
+	sid := ""
+	id, ok := o.l.(*ident)
+	if !ok {
+		f, ok := o.l.(*call)
+		if !ok || f.f != "id" || len(f.arg) != 0 {
+			return false, "", nil, nil
+		}
+
+		sid = "id()"
+	} else {
+		if id.isQualified() {
+			return false, "", nil, nil
+		}
+
+		sid = id.s
+	}
+
+	if v, ok := o.r.(value); ok {
+		switch o.op {
+		case '<',
+			le,
+			'>',
+			ge,
+			eq,
+			neq:
+			return true, sid, v.val, nil
+		default:
+			return false, "", nil, nil
+		}
+	}
+
+	return false, "", nil, nil
+}
+
+func (o *binaryOperation) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	l, err := o.l.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := o.r.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	return newBinaryOperation(o.op, l, r)
+}
 
 func (o *binaryOperation) isStatic() bool { return o.l.isStatic() && o.r.isStatic() }
 
 func (o *binaryOperation) String() string {
-	return fmt.Sprintf("%s%s%s", o.l, iop(o.op), o.r)
+	return fmt.Sprintf("%s %s %s", o.l, iop(o.op), o.r)
 }
 
-func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (r interface{}, err error) {
+func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (r interface{}, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			switch x := e.(type) {
@@ -372,14 +551,14 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 
 	switch op := o.op; op {
 	case andand:
-		a, err := expand1(o.l.eval(execCtx, ctx, arg))
+		a, err := expand1(o.l.eval(execCtx, ctx))
 		if err != nil {
 			return nil, err
 		}
 
 		switch x := a.(type) {
 		case nil:
-			b, err := expand1(o.r.eval(execCtx, ctx, arg))
+			b, err := expand1(o.r.eval(execCtx, ctx))
 			if err != nil {
 				return nil, err
 			}
@@ -401,7 +580,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 				return false, nil
 			}
 
-			b, err := expand1(o.r.eval(execCtx, ctx, arg))
+			b, err := expand1(o.r.eval(execCtx, ctx))
 			if err != nil {
 				return nil, err
 			}
@@ -418,14 +597,14 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return undOp(x, op)
 		}
 	case oror:
-		a, err := expand1(o.l.eval(execCtx, ctx, arg))
+		a, err := expand1(o.l.eval(execCtx, ctx))
 		if err != nil {
 			return nil, err
 		}
 
 		switch x := a.(type) {
 		case nil:
-			b, err := expand1(o.r.eval(execCtx, ctx, arg))
+			b, err := expand1(o.r.eval(execCtx, ctx))
 			if err != nil {
 				return nil, err
 			}
@@ -447,7 +626,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 				return x, nil
 			}
 
-			b, err := expand1(o.r.eval(execCtx, ctx, arg))
+			b, err := expand1(o.r.eval(execCtx, ctx))
 			if err != nil {
 				return nil, err
 			}
@@ -464,7 +643,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return undOp(x, op)
 		}
 	case '>':
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -615,7 +794,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case '<':
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -766,7 +945,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case le:
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -917,7 +1096,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case ge:
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -1068,7 +1247,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case neq:
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -1239,7 +1418,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case eq:
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -1410,7 +1589,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case '+':
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -1580,7 +1759,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case '-':
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -1745,7 +1924,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case rsh:
-		a, b := eval2(o.l, o.r, execCtx, ctx, arg)
+		a, b := eval2(o.l, o.r, execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -1844,7 +2023,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case lsh:
-		a, b := eval2(o.l, o.r, execCtx, ctx, arg)
+		a, b := eval2(o.l, o.r, execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -1943,7 +2122,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case '&':
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -2061,7 +2240,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case '|':
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -2179,7 +2358,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case andnot:
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -2297,7 +2476,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case '^':
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -2415,7 +2594,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case '%':
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -2537,7 +2716,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case '/':
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -2701,7 +2880,7 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	case '*':
-		a, b := o.get2(execCtx, ctx, arg)
+		a, b := o.get2(execCtx, ctx)
 		if a == nil || b == nil {
 			return
 		}
@@ -2857,13 +3036,12 @@ func (o *binaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}
 			return invOp2(a, b, op)
 		}
 	default:
-		log.Panic("internal error 037")
-		panic("unreachable")
+		panic("internal error 037")
 	}
 }
 
-func (o *binaryOperation) get2(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (x, y interface{}) {
-	x, y = eval2(o.l, o.r, execCtx, ctx, arg)
+func (o *binaryOperation) get2(execCtx *execCtx, ctx map[interface{}]interface{}) (x, y interface{}) {
+	x, y = eval2(o.l, o.r, execCtx, ctx)
 	//dbg("get2 pIn     - ", x, y)
 	//defer func() {dbg("get2 coerced ", x, y)}()
 	return coerce(x, y)
@@ -2873,13 +3051,28 @@ type ident struct {
 	s string
 }
 
+func (i *ident) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	x := strings.IndexByte(i.s, '.')
+	if x < 0 {
+		return &ident{s: i.s}, nil
+	}
+
+	q := i.s[:x]
+	for _, v := range unqualify {
+		if q == v {
+			return &ident{i.s[x+1:]}, nil
+		}
+	}
+	return &ident{s: i.s}, nil
+}
+
 func (i *ident) isQualified() bool { return strings.Contains(i.s, ".") }
 
 func (i *ident) isStatic() bool { return false }
 
 func (i *ident) String() string { return i.s }
 
-func (i *ident) eval(execCtx *execCtx, ctx map[interface{}]interface{}, _ []interface{}) (v interface{}, err error) {
+func (i *ident) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error) {
 	if _, ok := ctx["$agg0"]; ok {
 		return int64(0), nil
 	}
@@ -2902,6 +3095,25 @@ type pIn struct {
 	list []expression
 	not  bool
 	sel  *selectStmt
+}
+
+func (n *pIn) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	expr, err := n.expr.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := cloneExpressionList(arg, n.list)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pIn{
+		expr: expr,
+		list: list,
+		not:  n.not,
+		sel:  n.sel,
+	}, nil
 }
 
 func (n *pIn) isStatic() bool {
@@ -2939,8 +3151,8 @@ func (n *pIn) String() string {
 	return fmt.Sprintf("%s IN (%s)", n.expr, n.sel)
 }
 
-func (n *pIn) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (v interface{}, err error) {
-	lhs, err := expand1(n.expr.eval(execCtx, ctx, arg))
+func (n *pIn) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error) {
+	lhs, err := expand1(n.expr.eval(execCtx, ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -2956,7 +3168,7 @@ func (n *pIn) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []inte
 				return nil, err
 			}
 
-			eval, err := b.eval(execCtx, ctx, arg)
+			eval, err := b.eval(execCtx, ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -2971,13 +3183,20 @@ func (n *pIn) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []inte
 	var ev *pInEval
 	ev0 := ctx[n]
 	if ev0 == nil { // SELECT not yet evaluated.
-		r := n.sel.exec0()
+		r, err := n.sel.plan(execCtx)
+		if err != nil {
+			return nil, err
+		}
+
+		if g, e := len(r.fieldNames()), 1; g != e {
+			return false, fmt.Errorf("IN (%s): mismatched field count, have %d, need %d", n.sel, g, e)
+		}
+
 		ev = &pInEval{m: map[interface{}]struct{}{}}
 		ctx[n] = ev
 		m := ev.m
-		ok := false
 		typechecked := false
-		if err := r.do(execCtx, false, func(id interface{}, data []interface{}) (more bool, err error) {
+		if err := r.do(execCtx, func(id interface{}, data []interface{}) (more bool, err error) {
 			if typechecked {
 				if data[0] == nil {
 					return true, nil
@@ -2986,32 +3205,22 @@ func (n *pIn) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []inte
 				m[data[0]] = struct{}{}
 			}
 
-			if ok {
-				if data[0] == nil {
-					return true, nil
-				}
-
-				ev.sample = data[0]
-				switch ev.sample.(type) {
-				case bool, byte, complex128, complex64, float32,
-					float64, int16, int32, int64, int8,
-					string, uint16, uint32, uint64:
-					typechecked = true
-					m[ev.sample] = struct{}{}
-					return true, nil
-				default:
-					return false, fmt.Errorf("IN (%s): invalid field type: %T", n.sel, data[0])
-				}
-
+			if data[0] == nil {
+				return true, nil
 			}
 
-			flds := data[0].([]*fld)
-			if g, e := len(flds), 1; g != e {
-				return false, fmt.Errorf("IN (%s): mismatched field count, have %d, need %d", n.sel, g, e)
+			ev.sample = data[0]
+			switch ev.sample.(type) {
+			case bool, byte, complex128, complex64, float32,
+				float64, int16, int32, int64, int8,
+				string, uint16, uint32, uint64:
+				typechecked = true
+				m[ev.sample] = struct{}{}
+				return true, nil
+			default:
+				return false, fmt.Errorf("IN (%s): invalid field type: %T", n.sel, data[0])
 			}
 
-			ok = true
-			return true, nil
 		}); err != nil {
 			return nil, err
 		}
@@ -3029,6 +3238,10 @@ func (n *pIn) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []inte
 
 type value struct {
 	val interface{}
+}
+
+func (l value) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	return value{val: l.val}, nil
 }
 
 func (l value) isStatic() bool { return true }
@@ -3061,13 +3274,22 @@ func (l value) String() string {
 	}
 }
 
-func (l value) eval(execCtx *execCtx, ctx map[interface{}]interface{}, _ []interface{}) (interface{}, error) {
+func (l value) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (interface{}, error) {
 	return l.val, nil
 }
 
 type conversion struct {
 	typ int
 	val expression
+}
+
+func (c *conversion) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	val, err := c.val.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &conversion{typ: c.typ, val: val}, nil
 }
 
 func (c *conversion) isStatic() bool {
@@ -3080,8 +3302,8 @@ func (c *conversion) String() string {
 	return fmt.Sprintf("%s(%s)", typeStr(c.typ), c.val)
 }
 
-func (c *conversion) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (v interface{}, err error) {
-	val, err := expand1(c.val.eval(execCtx, ctx, arg))
+func (c *conversion) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error) {
+	val, err := expand1(c.val.eval(execCtx, ctx))
 	if err != nil {
 		return
 	}
@@ -3097,25 +3319,81 @@ type unaryOperation struct {
 func newUnaryOperation(op int, x interface{}) (v expression, err error) {
 	l, ok := x.(expression)
 	if !ok {
-		log.Panic("internal error 038")
+		panic("internal error 038")
 	}
 
-	u := unaryOperation{op, l}
-	if !l.isStatic() {
-		return &u, nil
+	for {
+		pe, ok := l.(*pexpr)
+		if ok {
+			l = pe.expr
+			continue
+		}
+
+		break
 	}
 
-	val, err := u.eval(nil, nil, nil)
-	if val == nil {
-		return value{nil}, nil
+	if l.isStatic() {
+		val, err := l.eval(nil, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		l = value{val}
 	}
 
-	return value{val}, err
+	if op == '!' {
+		b, ok := l.(*binaryOperation)
+		if ok {
+			switch b.op {
+			case eq:
+				b.op = neq
+				return b, nil
+			case neq:
+				b.op = eq
+				return b, nil
+			case '>':
+				b.op = le
+				return b, nil
+			case ge:
+				b.op = '<'
+				return b, nil
+			case '<':
+				b.op = ge
+				return b, nil
+			case le:
+				b.op = '>'
+				return b, nil
+			}
+		}
+
+		u, ok := l.(*unaryOperation)
+		if ok && u.op == '!' { // !!x: x
+			return u.v, nil
+		}
+	}
+
+	return &unaryOperation{op, l}, nil
+}
+
+func (u *unaryOperation) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	v, err := u.v.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &unaryOperation{op: u.op, v: v}, nil
 }
 
 func (u *unaryOperation) isStatic() bool { return u.v.isStatic() }
 
-func (u *unaryOperation) String() string { return fmt.Sprintf("%s%s", iop(u.op), u.v) }
+func (u *unaryOperation) String() string {
+	switch u.v.(type) {
+	case *binaryOperation:
+		return fmt.Sprintf("%s(%s)", iop(u.op), u.v)
+	default:
+		return fmt.Sprintf("%s%s", iop(u.op), u.v)
+	}
+}
 
 // !ident
 func (u *unaryOperation) isNotQIdent() (bool, string, expression) {
@@ -3131,7 +3409,7 @@ func (u *unaryOperation) isNotQIdent() (bool, string, expression) {
 	return false, "", nil
 }
 
-func (u *unaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (r interface{}, err error) {
+func (u *unaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (r interface{}, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			switch x := e.(type) {
@@ -3145,7 +3423,7 @@ func (u *unaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{},
 
 	switch op := u.op; op {
 	case '!':
-		a := eval(u.v, execCtx, ctx, arg)
+		a := eval(u.v, execCtx, ctx)
 		if a == nil {
 			return
 		}
@@ -3157,7 +3435,7 @@ func (u *unaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{},
 			return undOp(a, op)
 		}
 	case '^':
-		a := eval(u.v, execCtx, ctx, arg)
+		a := eval(u.v, execCtx, ctx)
 		if a == nil {
 			return
 		}
@@ -3211,7 +3489,7 @@ func (u *unaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{},
 			return undOp(a, op)
 		}
 	case '+':
-		a := eval(u.v, execCtx, ctx, arg)
+		a := eval(u.v, execCtx, ctx)
 		if a == nil {
 			return
 		}
@@ -3268,7 +3546,7 @@ func (u *unaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{},
 			return undOp(a, op)
 		}
 	case '-':
-		a := eval(u.v, execCtx, ctx, arg)
+		a := eval(u.v, execCtx, ctx)
 		if a == nil {
 			return
 		}
@@ -3325,8 +3603,7 @@ func (u *unaryOperation) eval(execCtx *execCtx, ctx map[interface{}]interface{},
 			return undOp(a, op)
 		}
 	default:
-		log.Panic("internal error 039")
-		panic("unreachable")
+		panic("internal error 039")
 	}
 }
 
@@ -3357,7 +3634,7 @@ func newCall(f string, arg []expression) (v expression, isAgg bool, err error) {
 			continue
 		}
 
-		eval, err := val.eval(nil, nil, nil)
+		eval, err := val.eval(nil, nil)
 		if err != nil {
 			return nil, isAgg, err
 		}
@@ -3366,6 +3643,15 @@ func newCall(f string, arg []expression) (v expression, isAgg bool, err error) {
 	}
 
 	return &c, isAgg, nil
+}
+
+func (c *call) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	list, err := cloneExpressionList(arg, c.arg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &call{f: c.f, arg: list}, nil
 }
 
 func (c *call) isStatic() bool {
@@ -3390,7 +3676,7 @@ func (c *call) String() string {
 	return fmt.Sprintf("%s(%s)", c.f, strings.Join(a, ", "))
 }
 
-func (c *call) eval(execCtx *execCtx, ctx map[interface{}]interface{}, args []interface{}) (v interface{}, err error) {
+func (c *call) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error) {
 	f, ok := builtin[c.f]
 	if !ok {
 		return nil, fmt.Errorf("unknown function %s", c.f)
@@ -3399,7 +3685,7 @@ func (c *call) eval(execCtx *execCtx, ctx map[interface{}]interface{}, args []in
 	isID := c.f == "id"
 	a := make([]interface{}, len(c.arg))
 	for i, arg := range c.arg {
-		if v, err = expand1(arg.eval(execCtx, ctx, args)); err != nil {
+		if v, err = expand1(arg.eval(execCtx, ctx)); err != nil {
 			if !isID {
 				return nil, err
 			}
@@ -3425,14 +3711,23 @@ type parameter struct {
 	n int
 }
 
+func (p parameter) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	i := p.n - 1
+	if i < len(arg) {
+		return value{val: arg[i]}, nil
+	}
+
+	return nil, fmt.Errorf("missing %s", p)
+}
+
 func (parameter) isStatic() bool { return false }
 
 func (p parameter) String() string { return fmt.Sprintf("$%d", p.n) }
 
-func (p parameter) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (v interface{}, err error) {
+func (p parameter) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error) {
 	i := p.n - 1
-	if i < len(arg) {
-		return arg[i], nil
+	if i < len(execCtx.arg) {
+		return execCtx.arg[i], nil
 	}
 
 	return nil, fmt.Errorf("missing %s", p)
@@ -3446,6 +3741,15 @@ type isNull struct {
 
 //LATER newIsNull
 
+func (is *isNull) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	expr, err := is.expr.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &isNull{expr: expr, not: is.not}, nil
+}
+
 func (is *isNull) isStatic() bool { return is.expr.isStatic() }
 
 func (is *isNull) String() string {
@@ -3456,8 +3760,8 @@ func (is *isNull) String() string {
 	return fmt.Sprintf("%s IS NULL", is.expr)
 }
 
-func (is *isNull) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (v interface{}, err error) {
-	val, err := is.expr.eval(execCtx, ctx, arg)
+func (is *isNull) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error) {
+	val, err := is.expr.eval(execCtx, ctx)
 	if err != nil {
 		return
 	}
@@ -3473,7 +3777,7 @@ func newIndex(sv, xv expression) (v expression, err error) {
 	s, fs, i := "", false, uint64(0)
 	x := indexOp{sv, xv}
 	if x.expr.isStatic() {
-		v, err := x.expr.eval(nil, nil, nil)
+		v, err := x.expr.eval(nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -3490,7 +3794,7 @@ func newIndex(sv, xv expression) (v expression, err error) {
 	}
 
 	if x.x.isStatic() {
-		v, err := x.x.eval(nil, nil, nil)
+		v, err := x.x.eval(nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -3513,14 +3817,28 @@ func newIndex(sv, xv expression) (v expression, err error) {
 	return &x, nil
 }
 
+func (x *indexOp) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	expr, err := x.expr.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	x2, err := x.x.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &indexOp{expr: expr, x: x2}, nil
+}
+
 func (x *indexOp) isStatic() bool {
 	return x.expr.isStatic() && x.x.isStatic()
 }
 
 func (x *indexOp) String() string { return fmt.Sprintf("%s[%s]", x.expr, x.x) }
 
-func (x *indexOp) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (v interface{}, err error) {
-	s0, err := x.expr.eval(execCtx, ctx, arg)
+func (x *indexOp) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error) {
+	s0, err := x.expr.eval(execCtx, ctx)
 	if err != nil {
 		return nil, runErr(err)
 	}
@@ -3530,7 +3848,7 @@ func (x *indexOp) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []
 		return nil, runErr(invXOp(s0, x.x))
 	}
 
-	i0, err := x.x.eval(execCtx, ctx, arg)
+	i0, err := x.x.eval(execCtx, ctx)
 	if err != nil {
 		return nil, runErr(err)
 	}
@@ -3552,11 +3870,11 @@ type slice struct {
 	lo, hi *expression
 }
 
-func newSlice(expr expression, lo, hi *expression) (v expression, err error) {
-	y := slice{expr, lo, hi}
+func newSlice(e expression, lo, hi *expression) (v expression, err error) {
+	y := slice{e, lo, hi}
 	var val interface{}
 	if e := y.expr; e.isStatic() {
-		if val, err = e.eval(nil, nil, nil); err != nil {
+		if val, err = e.eval(nil, nil); err != nil {
 			return nil, err
 		}
 
@@ -3568,8 +3886,8 @@ func newSlice(expr expression, lo, hi *expression) (v expression, err error) {
 	}
 
 	if p := y.lo; p != nil {
-		if e := *p; e.isStatic() {
-			if val, err = e.eval(nil, nil, nil); err != nil {
+		if e := expr(*p); e.isStatic() {
+			if val, err = e.eval(nil, nil); err != nil {
 				return nil, err
 			}
 
@@ -3583,8 +3901,8 @@ func newSlice(expr expression, lo, hi *expression) (v expression, err error) {
 	}
 
 	if p := y.hi; p != nil {
-		if e := *p; e.isStatic() {
-			if val, err = e.eval(nil, nil, nil); err != nil {
+		if e := expr(*p); e.isStatic() {
+			if val, err = e.eval(nil, nil); err != nil {
 				return nil, err
 			}
 
@@ -3599,8 +3917,34 @@ func newSlice(expr expression, lo, hi *expression) (v expression, err error) {
 	return &y, nil
 }
 
-func (s *slice) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []interface{}) (v interface{}, err error) {
-	s0, err := s.expr.eval(execCtx, ctx, arg)
+func (s *slice) clone(arg []interface{}, unqualify ...string) (expression, error) {
+	expr, err := s.expr.clone(arg, unqualify...)
+	if err != nil {
+		return nil, err
+	}
+
+	r := &slice{expr: expr, lo: s.lo, hi: s.hi}
+	if s.lo != nil {
+		e, err := (*s.lo).clone(arg, unqualify...)
+		if err != nil {
+			return nil, err
+		}
+
+		r.lo = &e
+	}
+	if s.hi != nil {
+		e, err := (*s.hi).clone(arg, unqualify...)
+		if err != nil {
+			return nil, err
+		}
+
+		r.hi = &e
+	}
+	return r, nil
+}
+
+func (s *slice) eval(execCtx *execCtx, ctx map[interface{}]interface{}) (v interface{}, err error) {
+	s0, err := s.expr.eval(execCtx, ctx)
 	if err != nil {
 		return
 	}
@@ -3616,7 +3960,7 @@ func (s *slice) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []in
 
 	var iLo, iHi uint64
 	if s.lo != nil {
-		i, err := (*s.lo).eval(execCtx, ctx, arg)
+		i, err := (*s.lo).eval(execCtx, ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -3632,7 +3976,7 @@ func (s *slice) eval(execCtx *execCtx, ctx map[interface{}]interface{}, arg []in
 
 	iHi = uint64(len(ss))
 	if s.hi != nil {
-		i, err := (*s.hi).eval(execCtx, ctx, arg)
+		i, err := (*s.hi).eval(execCtx, ctx)
 		if err != nil {
 			return nil, err
 		}

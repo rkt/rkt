@@ -28,6 +28,7 @@ var (
 	migrateTable = map[int]migrateFunc{
 		1: migrateToV1,
 		2: migrateToV2,
+		3: migrateToV3,
 	}
 )
 
@@ -78,6 +79,25 @@ func migrateToV2(tx *sql.Tx) error {
 	_, err = tx.Exec("UPDATE remote downloadedtime = $1", t)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func migrateToV3(tx *sql.Tx) error {
+	for _, t := range []string{
+		"CREATE TABLE aciinfo_tmp (blobkey string, name string, importtime time, latest bool);",
+		"INSERT INTO aciinfo_tmp (blobkey, name, importtime, latest) SELECT blobkey, appname, importtime, latest from aciinfo",
+		"DROP TABLE aciinfo",
+		"CREATE TABLE aciinfo (blobkey string, name string, importtime time, latest bool);",
+		"CREATE UNIQUE INDEX IF NOT EXISTS blobkeyidx ON aciinfo (blobkey)",
+		"CREATE INDEX IF NOT EXISTS nameidx ON aciinfo (name)",
+		"INSERT INTO aciinfo SELECT * from aciinfo_tmp",
+		"DROP TABLE aciinfo_tmp",
+	} {
+		_, err := tx.Exec(t)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

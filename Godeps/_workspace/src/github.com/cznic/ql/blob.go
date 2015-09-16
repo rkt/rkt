@@ -7,7 +7,6 @@ package ql
 import (
 	"bytes"
 	"encoding/gob"
-	"log"
 	"math/big"
 	"sync"
 	"time"
@@ -29,7 +28,7 @@ func init() {
 		"Jul 9, 2012 at 5:02am (CEST)",
 		time.FixedZone("XYZ", 1234),
 	); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 	newGobCoder()
 }
@@ -45,43 +44,60 @@ func newGobCoder() (g *gobCoder) {
 	g = &gobCoder{}
 	g.enc = gob.NewEncoder(&g.buf)
 	if err := g.enc.Encode(gobInitInt); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	if err := g.enc.Encode(gobInitRat); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	if err := g.enc.Encode(gobInitTime); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	if err := g.enc.Encode(gobInitDuration); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	g.dec = gob.NewDecoder(&g.buf)
 	i := big.NewInt(0)
 	if err := g.dec.Decode(i); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	r := big.NewRat(3, 5)
 	if err := g.dec.Decode(r); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	t := time.Now()
 	if err := g.dec.Decode(&t); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	var d time.Duration
 	if err := g.dec.Decode(&d); err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	return
+}
+
+func isBlobType(v interface{}) (bool, Type) {
+	switch v.(type) {
+	case []byte:
+		return true, Blob
+	case *big.Int:
+		return true, BigInt
+	case *big.Rat:
+		return true, BigRat
+	case time.Time:
+		return true, Time
+	case time.Duration:
+		return true, Duration
+	default:
+		return false, -1
+	}
 }
 
 func (g *gobCoder) encode(v interface{}) (b []byte, err error) {
@@ -101,8 +117,7 @@ func (g *gobCoder) encode(v interface{}) (b []byte, err error) {
 	case time.Duration:
 		err = g.enc.Encode(int64(x))
 	default:
-		//dbg("%T(%v)", v, v)
-		log.Panic("internal error 002")
+		panic("internal error 002")
 	}
 	b = g.buf.Bytes()
 	return
@@ -134,7 +149,7 @@ func (g *gobCoder) decode(b []byte, typ int) (v interface{}, err error) {
 		err = g.dec.Decode(&x)
 		v = time.Duration(x)
 	default:
-		log.Panic("internal error 003")
+		panic("internal error 003")
 	}
 	return
 }

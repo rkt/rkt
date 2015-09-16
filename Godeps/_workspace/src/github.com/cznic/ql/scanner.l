@@ -1,12 +1,7 @@
 /*
-
 Copyright (c) 2014 The ql Authors. All rights reserved.
 Use of this source code is governed by a BSD-style
 license that can be found in the LICENSE file.
-
-CAUTION: If this file is 'scanner.go', it was generated
-automatically from 'scanner.l' - DO NOT EDIT in that case!
-
 */
 
 %{
@@ -25,7 +20,9 @@ type lexer struct {
         c      int
         col    int
         errs   []error
+	expr   expression
         i      int
+	inj    int
         lcol   int
         line   int
         list   []stmt
@@ -92,6 +89,11 @@ func (l *lexer) Lex(lval *yySymType) (r int) {
                 S2
         )
 
+	if n := l.inj; n != 0 {
+		l.inj = 0
+		return n
+	}
+
         c0, c := 0, l.c
 %}
 
@@ -151,6 +153,7 @@ desc            {d}{e}{s}{c}
 distinct        {d}{i}{s}{t}{i}{n}{c}{t}
 drop            {d}{r}{o}{p}
 exists          {e}{x}{i}{s}{t}{s}
+explain		{e}{x}{p}{l}{a}{i}{n}
 from            {f}{r}{o}{m}
 full            {f}{u}{l}{l}
 group           {g}{r}{o}{u}{p}
@@ -265,6 +268,7 @@ ident           {idchar0}{idchars}*
 {distinct}              return distinct
 {drop}                  return drop
 {exists}                return exists
+{explain}               return explain
 {from}                  return from
 {full}                  return full
 {group}                 return group

@@ -87,7 +87,7 @@ func TestResolveKey(t *testing.T) {
 		err := s.db.Do(func(tx *sql.Tx) error {
 			aciinfo := &ACIInfo{
 				BlobKey:    d.String(),
-				AppName:    "example.com/app",
+				Name:       "example.com/app",
 				ImportTime: time.Now(),
 			}
 			return WriteACIInfo(tx, aciinfo)
@@ -327,7 +327,7 @@ func TestGetAci(t *testing.T) {
 			key, err := s.GetACI(test.name, test.labels)
 			if test.expected == -1 {
 				if err == nil {
-					t.Fatalf("Expected no key for appName %s, got %s", test.name, key)
+					t.Fatalf("Expected no key for name %s, got %s", test.name, key)
 				}
 
 			} else {

@@ -6,34 +6,24 @@
 //LATER profile cpu
 //LATER coverage
 
-//MAYBE CROSSJOIN (explicit form), LEFT JOIN, INNER JOIN, OUTER JOIN equivalents.
-
 package ql
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
-	"log"
 	"math/big"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/b"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/strutil"
 )
 
 const (
-	noNames = iota
-	returnNames
-	onlyNames
-)
-
-const (
-	leftJoin = iota
+	crossJoin = iota
+	leftJoin
 	rightJoin
 	fullJoin
 )
@@ -42,13 +32,12 @@ const (
 // goroutines.  If the do method requires any execution domain local data, they
 // must be held out of the implementing instance.
 var (
-	_ rset = (*crossJoinRset)(nil)
 	_ rset = (*distinctRset)(nil)
 	_ rset = (*groupByRset)(nil)
+	_ rset = (*joinRset)(nil)
 	_ rset = (*limitRset)(nil)
 	_ rset = (*offsetRset)(nil)
 	_ rset = (*orderByRset)(nil)
-	_ rset = (*outerJoinRset)(nil)
 	_ rset = (*selectRset)(nil)
 	_ rset = (*selectStmt)(nil)
 	_ rset = (*tableRset)(nil)
@@ -57,65 +46,41 @@ var (
 	isTesting bool // enables test hook: select from an index
 )
 
-// List represents a group of compiled statements.
-type List struct {
-	l      []stmt
-	params int
-}
-
-// String implements fmt.Stringer
-func (l List) String() string {
-	var b bytes.Buffer
-	f := strutil.IndentFormatter(&b, "\t")
-	for _, s := range l.l {
-		switch s.(type) {
-		case beginTransactionStmt:
-			f.Format("%s\n%i", s)
-		case commitStmt, rollbackStmt:
-			f.Format("%u%s\n", s)
-		default:
-			f.Format("%s\n", s)
-		}
-	}
-	return b.String()
-}
-
 type rset interface {
-	do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) error
+	plan(ctx *execCtx) (plan, error)
 }
 
 type recordset struct {
 	ctx *execCtx
-	rset
+	plan
 	tx *TCtx
 }
 
-func (r recordset) Do(names bool, f func(data []interface{}) (more bool, err error)) (err error) {
-	nm := noNames
-	if names {
-		nm = returnNames
+func (r recordset) fieldNames() []interface{} {
+	f := r.plan.fieldNames()
+	a := make([]interface{}, len(f))
+	for i, v := range f {
+		a[i] = v
 	}
-	return r.ctx.db.do(r, nm, f)
+	return a
 }
 
+// Do implements Recordset.
+func (r recordset) Do(names bool, f func(data []interface{}) (bool, error)) error {
+	if names {
+		if more, err := f(r.fieldNames()); err != nil || !more {
+			return err
+		}
+	}
+	return r.ctx.db.do(r, f)
+}
+
+// Fields implements Recordset.
 func (r recordset) Fields() (names []string, err error) {
-	err = r.ctx.db.do(
-		r,
-		onlyNames,
-		func(data []interface{}) (more bool, err error) {
-			for _, v := range data {
-				s, ok := v.(string)
-				if !ok {
-					return false, fmt.Errorf("got %T(%v), expected string (RecordSet.Fields)", v, v)
-				}
-				names = append(names, s)
-			}
-			return false, nil
-		},
-	)
-	return
+	return r.plan.fieldNames(), nil
 }
 
+// FirstRow implements Recordset.
 func (r recordset) FirstRow() (row []interface{}, err error) {
 	rows, err := r.Rows(1, 0)
 	if err != nil {
@@ -129,7 +94,9 @@ func (r recordset) FirstRow() (row []interface{}, err error) {
 	return nil, nil
 }
 
-func (r recordset) Rows(limit, offset int) (rows [][]interface{}, err error) {
+// Rows implements Recordset.
+func (r recordset) Rows(limit, offset int) ([][]interface{}, error) {
+	var rows [][]interface{}
 	if err := r.Do(false, func(row []interface{}) (bool, error) {
 		if offset > 0 {
 			offset--
@@ -154,98 +121,70 @@ func (r recordset) Rows(limit, offset int) (rows [][]interface{}, err error) {
 	return rows, nil
 }
 
-type groupByRset struct {
-	colNames []string
-	src      rset
+// List represents a group of compiled statements.
+type List struct {
+	l      []stmt
+	params int
 }
 
-func (r *groupByRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	t, err := ctx.db.store.CreateTemp(true)
-	if err != nil {
-		return
-	}
-
-	defer func() {
-		if derr := t.Drop(); derr != nil && err == nil {
-			err = derr
-		}
-	}()
-
-	var flds []*fld
-	var gcols []*col
-	var cols []*col
-	ok := false
-	k := make([]interface{}, len(r.colNames)) //LATER optimize when len(r.cols) == 0
-	if err = r.src.do(ctx, onlyNames, func(rid interface{}, in []interface{}) (more bool, err error) {
-		if ok {
-			infer(in, &cols)
-			for i, c := range gcols {
-				k[i] = in[c.index]
-			}
-			h0, err := t.Get(k)
-			if err != nil {
-				return false, err
-			}
-
-			var h int64
-			if len(h0) != 0 {
-				h, _ = h0[0].(int64)
-			}
-			nh, err := t.Create(append([]interface{}{h, nil}, in...)...)
-			if err != nil {
-				return false, err
-			}
-
-			for i, c := range gcols {
-				k[i] = in[c.index]
-			}
-			err = t.Set(k, []interface{}{nh})
-			if err != nil {
-				return false, err
-			}
-
-			return true, nil
-		}
-
-		ok = true
-		flds = in[0].([]*fld)
-		for _, c := range r.colNames {
-			i := findFldIndex(flds, c)
-			if i < 0 {
-				return false, fmt.Errorf("unknown column %s", c)
-			}
-
-			gcols = append(gcols, &col{name: c, index: i})
-		}
-		return !onlyNames, nil
-	}); err != nil {
-		return
-	}
-
-	if onlyNames {
-		_, err := f(nil, []interface{}{flds})
-		return err
-	}
-
-	it, err := t.SeekFirst()
-	if err != nil {
-		return noEOF(err)
-	}
-
-	for i, v := range flds {
-		cols[i].name = v.name
-		cols[i].index = i
-	}
-
-	var data []interface{}
-	var more bool
-	for more, err = f(nil, []interface{}{t, cols}); more && err == nil; more, err = f(nil, data) {
-		_, data, err = it.Next()
-		if err != nil {
-			return noEOF(err)
+// String implements fmt.Stringer
+func (l List) String() string {
+	var b bytes.Buffer
+	f := strutil.IndentFormatter(&b, "\t")
+	for _, s := range l.l {
+		switch s.(type) {
+		case beginTransactionStmt:
+			f.Format("%s\n%i", s)
+		case commitStmt, rollbackStmt:
+			f.Format("%u%s\n", s)
+		default:
+			f.Format("%s\n", s)
 		}
 	}
-	return err
+	return b.String()
+}
+
+// IsExplainStmt reports whether l is a single EXPLAIN statment or a single EXPLAIN
+// statment enclosed in a transaction.
+func (l List) IsExplainStmt() bool {
+	switch len(l.l) {
+	case 1:
+		_, ok := l.l[0].(*explainStmt)
+		return ok
+	case 3:
+		if _, ok := l.l[0].(beginTransactionStmt); !ok {
+			return false
+		}
+		if _, ok := l.l[1].(*explainStmt); !ok {
+			return false
+		}
+		_, ok := l.l[2].(commitStmt)
+		return ok
+	default:
+		return false
+	}
+}
+
+type groupByRset struct {
+	colNames []string
+	src      plan
+}
+
+func (r *groupByRset) plan(ctx *execCtx) (plan, error) {
+	fields := r.src.fieldNames()
+	for _, v := range r.colNames {
+		found := false
+		for _, v2 := range fields {
+			if v == v2 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, fmt.Errorf("unknown field %s", v)
+		}
+	}
+	return &groupByDefaultPlan{colNames: r.colNames, src: r.src, fields: fields}, nil
 }
 
 // TCtx represents transaction context. It enables to execute multiple
@@ -296,24 +235,8 @@ func NewRWCtx() *TCtx { return &TCtx{} }
 //
 // Fields
 //
-// The only reliable way, in the general case, how to get field names of a
-// recordset is to execute the Do method with the names parameter set to true.
-// Any SELECT can return different fields on different runs, provided the
-// columns of some of the underlying tables involved were altered in between
-// and the query sports the SELECT * form.  Then the fields are not really
-// known until the first query result row materializes.  The problem is that
-// some queries can be costly even before that first row is computed.  If only
-// the field names is what is required in some situation then executing such
-// costly query could be prohibitively expensive.
-//
-// The Fields method provides an alternative. It computes the recordset fields
-// while ignoring table data, WHERE clauses, predicates and without evaluating
-// any expressions nor any functions.
-//
-// The result of Fields can be obviously imprecise if tables are altered before
-// running Do later. In exchange, calling Fields is cheap - compared to
-// actually computing a first row of a query having, say cross joins on n
-// relations (1^n is always 1, n ∈ N).
+// Fields return a slice of field names of the recordset. The result is computed
+// without actually computing the recordset rows.
 //
 // FirstRow
 //
@@ -343,64 +266,17 @@ func (a *assignment) String() string {
 }
 
 type distinctRset struct {
-	src rset
+	src plan
 }
 
-func (r *distinctRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	t, err := ctx.db.store.CreateTemp(true)
-	if err != nil {
-		return
-	}
-
-	defer func() {
-		if derr := t.Drop(); derr != nil && err == nil {
-			err = derr
-		}
-	}()
-
-	var flds []*fld
-	ok := false
-	if err = r.src.do(ctx, onlyNames, func(id interface{}, in []interface{}) (more bool, err error) {
-		if ok {
-			if err = t.Set(in, nil); err != nil {
-				return false, err
-			}
-
-			return true, nil
-		}
-
-		flds = in[0].([]*fld)
-		ok = true
-		return true && !onlyNames, nil
-	}); err != nil {
-		return
-	}
-
-	if onlyNames {
-		_, err := f(nil, []interface{}{flds})
-		return noEOF(err)
-	}
-
-	it, err := t.SeekFirst()
-	if err != nil {
-		return noEOF(err)
-	}
-
-	var data []interface{}
-	var more bool
-	for more, err = f(nil, []interface{}{flds}); more && err == nil; more, err = f(nil, data) {
-		data, _, err = it.Next()
-		if err != nil {
-			return noEOF(err)
-		}
-	}
-	return err
+func (r *distinctRset) plan(ctx *execCtx) (plan, error) {
+	return &distinctDefaultPlan{src: r.src, fields: r.src.fieldNames()}, nil
 }
 
 type orderByRset struct {
 	asc bool
 	by  []expression
-	src rset
+	src plan
 }
 
 func (r *orderByRset) String() string {
@@ -415,1133 +291,380 @@ func (r *orderByRset) String() string {
 	return s
 }
 
-func (r *orderByRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	t, err := ctx.db.store.CreateTemp(r.asc)
-	if err != nil {
-		return
+func (r *orderByRset) plan(ctx *execCtx) (plan, error) {
+	if _, ok := r.src.(*nullPlan); ok {
+		return r.src, nil
 	}
 
-	defer func() {
-		if derr := t.Drop(); derr != nil && err == nil {
-			err = derr
-		}
-	}()
-
-	m := map[interface{}]interface{}{}
-	var flds []*fld
-	ok := false
-	k := make([]interface{}, len(r.by)+1)
-	id := int64(-1)
-	if err = r.src.do(ctx, onlyNames, func(rid interface{}, in []interface{}) (more bool, err error) {
-		id++
-		if ok {
-			for i, fld := range flds {
-				if nm := fld.name; nm != "" {
-					m[nm] = in[i]
+	var by []expression
+	fields := r.src.fieldNames()
+	for _, e := range r.by {
+		cols := mentionedColumns(e)
+		for k := range cols {
+			found := false
+			for _, v := range fields {
+				if k == v {
+					found = true
+					break
 				}
 			}
-			m["$id"] = rid
-			for i, expr := range r.by {
-				val, err := expr.eval(ctx, m, ctx.arg)
-				if err != nil {
-					return false, err
-				}
-
-				if val != nil {
-					val, ordered, err := isOrderedType(val)
-					if err != nil {
-						return false, err
-					}
-
-					if !ordered {
-						return false, fmt.Errorf("cannot order by %v (type %T)", val, val)
-
-					}
-				}
-
-				k[i] = val
+			if !found {
+				return nil, fmt.Errorf("unknown field %s", k)
 			}
-			k[len(r.by)] = id
-			if err = t.Set(k, in); err != nil {
-				return false, err
+		}
+		if len(cols) == 0 {
+			v, err := e.eval(ctx, nil)
+			if err != nil {
+				by = append(by, e)
+				continue
 			}
 
-			return true, nil
+			if isConstValue(v) != nil {
+				continue
+			}
 		}
 
-		ok = true
-		flds = in[0].([]*fld)
-		return true && !onlyNames, nil
-	}); err != nil {
-		return
+		by = append(by, e)
 	}
-
-	if onlyNames {
-		_, err = f(nil, []interface{}{flds})
-		return noEOF(err)
-	}
-
-	it, err := t.SeekFirst()
-	if err != nil {
-		if err != io.EOF {
-			return err
-		}
-
-		_, err = f(nil, []interface{}{flds})
-		return err
-	}
-
-	var data []interface{}
-	var more bool
-	for more, err = f(nil, []interface{}{flds}); more && err == nil; more, err = f(nil, data) {
-		_, data, err = it.Next()
-		if err != nil {
-			return noEOF(err)
-		}
-	}
-	return
+	return &orderByDefaultPlan{asc: r.asc, by: by, src: r.src, fields: fields}, nil
 }
-
-var nowhere = &whereRset{}
 
 type whereRset struct {
 	expr expression
-	src  rset
+	src  plan
 }
 
-func (r *whereRset) doIndexedBool(t *table, en indexIterator, v bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	m, err := f(nil, []interface{}{t.flds()})
-	if !m || err != nil {
-		return
-	}
+func (r *whereRset) planBinOp(x *binaryOperation) (plan, error) {
+	p := r.src
+	ok, cn := isColumnExpression(x.l)
+	if ok && cn == "id()" {
+		if v := isConstValue(x.r); v != nil {
+			v, err := typeCheck1(v, idCol)
+			if err != nil {
+				return nil, err
+			}
 
-	for {
-		k, h, err := en.Next()
-		if err != nil {
-			return noEOF(err)
-		}
-
-		switch x := k.(type) {
-		case nil:
-			panic("internal error 052") // nil should sort before true
-		case bool:
-			if x != v {
-				return nil
+			rv := v.(int64)
+			switch {
+			case p.hasID():
+				switch x.op {
+				case '<':
+					if rv <= 1 {
+						return &nullPlan{p.fieldNames()}, nil
+					}
+				case '>':
+					if rv <= 0 {
+						return p, nil
+					}
+				case ge:
+					if rv >= 1 {
+						return p, nil
+					}
+				case neq:
+					if rv <= 0 {
+						return p, nil
+					}
+				case eq:
+					if rv <= 0 {
+						return &nullPlan{p.fieldNames()}, nil
+					}
+				case le:
+					if rv <= 0 {
+						return &nullPlan{p.fieldNames()}, nil
+					}
+				}
 			}
 		}
-
-		if _, err := tableRset("").doOne(t, h, f); err != nil {
-			return err
-		}
 	}
+
+	var err error
+	var p2 plan
+	var is []string
+	switch x.op {
+	case eq, ge, '>', le, '<', neq:
+		if p2, is, err = p.filter(x); err != nil {
+			return nil, err
+		}
+
+		if p2 != nil {
+			return p2, nil
+		}
+	case andand:
+		var in []expression
+		var f func(expression)
+		f = func(e expression) {
+			b, ok := e.(*binaryOperation)
+			if !ok || b.op != andand {
+				in = append(in, e)
+				return
+			}
+
+			f(b.l)
+			f(b.r)
+		}
+		f(x)
+		out := []expression{}
+		p := r.src
+		isNewPlan := false
+		for _, e := range in {
+			p2, is2, err := p.filter(e)
+			if err != nil {
+				return nil, err
+			}
+
+			if p2 == nil {
+				is = append(is, is2...)
+				out = append(out, e)
+				continue
+			}
+
+			p = p2
+			isNewPlan = true
+		}
+
+		if !isNewPlan {
+			break
+		}
+
+		if len(out) == 0 {
+			return p, nil
+		}
+
+		for len(out) > 1 {
+			n := len(out)
+			e, err := newBinaryOperation(andand, out[n-2], out[n-1])
+			if err != nil {
+				return nil, err
+			}
+
+			out = out[:n-1]
+			out[n-2] = e
+		}
+
+		return &filterDefaultPlan{p, out[0], is}, nil
+	}
+
+	return &filterDefaultPlan{p, x, is}, nil
 }
 
-func (r *whereRset) tryBinOp(execCtx *execCtx, t *table, id *ident, v value, op int, f func(id interface{}, data []interface{}) (more bool, err error)) (bool, error) {
-	c := findCol(t.cols0, id.s)
-	if c == nil {
-		return false, fmt.Errorf("undefined column: %s", id.s)
+func (r *whereRset) planIdent(x *ident) (plan, error) {
+	p := r.src
+	p2, is, err := p.filter(x)
+	if err != nil {
+		return nil, err
 	}
 
-	xCol := t.indices[c.index+1]
-	if xCol == nil { // no index for this column
-		return false, nil
+	if p2 != nil {
+		return p2, nil
 	}
 
-	data := []interface{}{v.val}
-	cc := *c
-	cc.index = 0
-	if err := typeCheck(data, []*col{&cc}); err != nil {
-		return true, err
-	}
-
-	v.val = data[0]
-	ex := &binaryOperation{op, nil, v}
-	switch op {
-	case '<', le:
-		v.val = false // first value collating after nil
-		fallthrough
-	case eq, ge:
-		m, err := f(nil, []interface{}{t.flds()})
-		if !m || err != nil {
-			return true, err
-		}
-
-		en, _, err := xCol.x.Seek(v.val)
-		if err != nil {
-			return true, noEOF(err)
-		}
-
-		for {
-			k, h, err := en.Next()
-			if k == nil {
-				return true, nil
-			}
-
-			if err != nil {
-				return true, noEOF(err)
-			}
-
-			ex.l = value{k}
-			eval, err := ex.eval(execCtx, nil, nil)
-			if err != nil {
-				return true, err
-			}
-
-			if !eval.(bool) {
-				return true, nil
-			}
-
-			if _, err := tableRset("").doOne(t, h, f); err != nil {
-				return true, err
-			}
-		}
-	case '>':
-		m, err := f(nil, []interface{}{t.flds()})
-		if !m || err != nil {
-			return true, err
-		}
-
-		en, err := xCol.x.SeekLast()
-		if err != nil {
-			return true, noEOF(err)
-		}
-
-		for {
-			k, h, err := en.Prev()
-			if k == nil {
-				return true, nil
-			}
-
-			if err != nil {
-				return true, noEOF(err)
-			}
-
-			ex.l = value{k}
-			eval, err := ex.eval(execCtx, nil, nil)
-			if err != nil {
-				return true, err
-			}
-
-			if !eval.(bool) {
-				return true, nil
-			}
-
-			if _, err := tableRset("").doOne(t, h, f); err != nil {
-				return true, err
-			}
-		}
-	default:
-		panic("internal error 053")
-	}
+	return &filterDefaultPlan{p, x, is}, nil
 }
 
-func (r *whereRset) tryBinOpID(execCtx *execCtx, t *table, v value, op int, f func(id interface{}, data []interface{}) (more bool, err error)) (bool, error) {
-	xCol := t.indices[0]
-	if xCol == nil { // no index for id()
-		return false, nil
-	}
-
-	data := []interface{}{v.val}
-	if err := typeCheck(data, []*col{&col{typ: qInt64}}); err != nil {
-		return true, err
-	}
-
-	v.val = data[0]
-	ex := &binaryOperation{op, nil, v}
-	switch op {
-	case '<', le:
-		v.val = int64(1)
-		fallthrough
-	case eq, ge:
-		m, err := f(nil, []interface{}{t.flds()})
-		if !m || err != nil {
-			return true, err
-		}
-
-		en, _, err := xCol.x.Seek(v.val)
-		if err != nil {
-			return true, noEOF(err)
-		}
-
-		for {
-			k, h, err := en.Next()
-			if k == nil {
-				return true, nil
-			}
-
-			if err != nil {
-				return true, noEOF(err)
-			}
-
-			ex.l = value{k}
-			eval, err := ex.eval(execCtx, nil, nil)
-			if err != nil {
-				return true, err
-			}
-
-			if !eval.(bool) {
-				return true, nil
-			}
-
-			if _, err := tableRset("").doOne(t, h, f); err != nil {
-				return true, err
-			}
-		}
-	case '>':
-		m, err := f(nil, []interface{}{t.flds()})
-		if !m || err != nil {
-			return true, err
-		}
-
-		en, err := xCol.x.SeekLast()
-		if err != nil {
-			return true, noEOF(err)
-		}
-
-		for {
-			k, h, err := en.Prev()
-			if k == nil {
-				return true, nil
-			}
-
-			if err != nil {
-				return true, noEOF(err)
-			}
-
-			ex.l = value{k}
-			eval, err := ex.eval(execCtx, nil, nil)
-			if err != nil {
-				return true, err
-			}
-
-			if !eval.(bool) {
-				return true, nil
-			}
-
-			if _, err := tableRset("").doOne(t, h, f); err != nil {
-				return true, err
-			}
-		}
-	default:
-		panic("internal error 071")
-	}
-}
-
-func (r *whereRset) tryUseIndex(ctx *execCtx, f func(id interface{}, data []interface{}) (more bool, err error)) (bool, error) {
-	//TODO(indices) support IS [NOT] NULL
-	c, ok := r.src.(*crossJoinRset)
+func (r *whereRset) planIsNull(x *isNull) (plan, error) {
+	p := r.src
+	ok, cn := isColumnExpression(x.expr)
 	if !ok {
-		return false, nil
+		return &filterDefaultPlan{p, x, nil}, nil
 	}
 
-	tabName, ok := c.isSingleTable()
-	if !ok || isSystemName[tabName] {
-		return false, nil
-	}
-
-	t := ctx.db.root.tables[tabName]
-	if t == nil {
-		return true, fmt.Errorf("table %s does not exist", tabName)
-	}
-
-	if !t.hasIndices() {
-		return false, nil
-	}
-
-	//LATER WHERE column1 boolOp column2 ...
-	//LATER WHERE !column (rewritable as: column == false)
-	switch ex := r.expr.(type) {
-	case *unaryOperation: // WHERE !column
-		if ex.op != '!' {
-			return false, nil
-		}
-
-		switch operand := ex.v.(type) {
-		case *ident:
-			c := findCol(t.cols0, operand.s)
-			if c == nil { // no such column
-				return false, fmt.Errorf("unknown column %s", ex)
-			}
-
-			if c.typ != qBool { // not a bool column
-				return false, nil
-			}
-
-			xCol := t.indices[c.index+1]
-			if xCol == nil { // column isn't indexed
-				return false, nil
-			}
-
-			en, _, err := xCol.x.Seek(false)
-			if err != nil {
-				return false, noEOF(err)
-			}
-
-			return true, r.doIndexedBool(t, en, false, f)
-		default:
-			return false, nil
-		}
-	case *ident: // WHERE column
-		c := findCol(t.cols0, ex.s)
-		if c == nil { // no such column
-			return false, fmt.Errorf("unknown column %s", ex)
-		}
-
-		if c.typ != qBool { // not a bool column
-			return false, nil
-		}
-
-		xCol := t.indices[c.index+1]
-		if xCol == nil { // column isn't indexed
-			return false, nil
-		}
-
-		en, _, err := xCol.x.Seek(true)
-		if err != nil {
-			return false, noEOF(err)
-		}
-
-		return true, r.doIndexedBool(t, en, true, f)
-	case *binaryOperation:
-		//DONE handle id()
-		var invOp int
-		switch ex.op {
-		case '<':
-			invOp = '>'
-		case le:
-			invOp = ge
-		case eq:
-			invOp = eq
-		case '>':
-			invOp = '<'
-		case ge:
-			invOp = le
-		default:
-			return false, nil
-		}
-
-		switch lhs := ex.l.(type) {
-		case *call:
-			if !(lhs.f == "id" && len(lhs.arg) == 0) {
-				return false, nil
-			}
-
-			switch rhs := ex.r.(type) {
-			case parameter:
-				v, err := rhs.eval(ctx, nil, ctx.arg)
-				if err != nil {
-					return false, err
-				}
-
-				return r.tryBinOpID(ctx, t, value{v}, ex.op, f)
-			case value:
-				return r.tryBinOpID(ctx, t, rhs, ex.op, f)
-			default:
-				return false, nil
-			}
-		case *ident:
-			switch rhs := ex.r.(type) {
-			case parameter:
-				v, err := rhs.eval(ctx, nil, ctx.arg)
-				if err != nil {
-					return false, err
-				}
-
-				return r.tryBinOp(ctx, t, lhs, value{v}, ex.op, f)
-			case value:
-				return r.tryBinOp(ctx, t, lhs, rhs, ex.op, f)
-			default:
-				return false, nil
-			}
-		case parameter:
-			switch rhs := ex.r.(type) {
-			case *call:
-				if !(rhs.f == "id" && len(rhs.arg) == 0) {
-					return false, nil
-				}
-
-				v, err := lhs.eval(ctx, nil, ctx.arg)
-				if err != nil {
-					return false, err
-				}
-
-				return r.tryBinOpID(ctx, t, value{v}, invOp, f)
-			case *ident:
-				v, err := lhs.eval(ctx, nil, ctx.arg)
-				if err != nil {
-					return false, err
-				}
-
-				return r.tryBinOp(ctx, t, rhs, value{v}, invOp, f)
-			default:
-				return false, nil
-			}
-		case value:
-			switch rhs := ex.r.(type) {
-			case *call:
-				if !(rhs.f == "id" && len(rhs.arg) == 0) {
-					return false, nil
-				}
-
-				return r.tryBinOpID(ctx, t, lhs, invOp, f)
-			case *ident:
-				return r.tryBinOp(ctx, t, rhs, lhs, invOp, f)
-			default:
-				return false, nil
+	if cn == "id()" {
+		switch {
+		case p.hasID():
+			switch {
+			case x.not: // IS NOT NULL
+				return p, nil
+			default: // IS NULL
+				return &nullPlan{p.fieldNames()}, nil
 			}
 		default:
-			return false, nil
+			switch {
+			case x.not: // IS NOT NULL
+				return &nullPlan{p.fieldNames()}, nil
+			default: // IS NULL
+				return p, nil
+			}
 		}
-	default:
-		return false, nil
 	}
+
+	p2, is, err := p.filter(x)
+	if err != nil {
+		return nil, err
+	}
+
+	if p2 != nil {
+		return p2, nil
+	}
+
+	return &filterDefaultPlan{p, x, is}, nil
 }
 
-func (r *whereRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	//dbg("====")
-	if !onlyNames {
-		if ok, err := r.tryUseIndex(ctx, f); ok || err != nil {
-			//dbg("ok %t, err %v", ok, err)
-			return err
-		}
+func (r *whereRset) planUnaryOp(x *unaryOperation) (plan, error) {
+	p := r.src
+	p2, is, err := p.filter(x)
+	if err != nil {
+		return nil, err
 	}
 
-	//dbg("not using indices")
-	m := map[interface{}]interface{}{}
-	var flds []*fld
-	ok := false
-	return r.src.do(ctx, onlyNames, func(rid interface{}, in []interface{}) (more bool, err error) {
-		if ok {
-			for i, fld := range flds {
-				if nm := fld.name; nm != "" {
-					m[nm] = in[i]
-				}
-			}
-			m["$id"] = rid
-			val, err := r.expr.eval(ctx, m, ctx.arg)
-			if err != nil {
-				return false, err
-			}
+	if p2 != nil {
+		return p2, nil
+	}
 
-			if val == nil {
-				return true, nil
-			}
+	return &filterDefaultPlan{p, x, is}, nil
+}
 
-			x, ok := val.(bool)
-			if !ok {
-				return false, fmt.Errorf("invalid WHERE expression %s (value of type %T)", val, val)
-			}
+func (r *whereRset) plan(ctx *execCtx) (plan, error) {
+	expr, err := r.expr.clone(ctx.arg)
+	if err != nil {
+		return nil, err
+	}
 
-			if !x {
-				return true, nil
-			}
+	switch x := expr.(type) {
+	case *binaryOperation:
+		return r.planBinOp(x)
+	case *ident:
+		return r.planIdent(x)
+	case *isNull:
+		return r.planIsNull(x)
+	case *pIn:
+		//TODO optimize
+		//TODO show plan
+	case *pLike:
+		//TODO optimize
+	case *unaryOperation:
+		return r.planUnaryOp(x)
+	}
 
-			return f(rid, in)
-		}
-
-		flds = in[0].([]*fld)
-		ok = true
-		m, err := f(nil, in)
-		return m && !onlyNames, err
-	})
+	return &filterDefaultPlan{r.src, expr, nil}, nil
 }
 
 type offsetRset struct {
 	expr expression
-	src  rset
+	src  plan
 }
 
-func (r *offsetRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	m := map[interface{}]interface{}{}
-	var flds []*fld
-	var ok, eval bool
-	var off uint64
-	return r.src.do(ctx, onlyNames, func(rid interface{}, in []interface{}) (more bool, err error) {
-		if ok {
-			if !eval {
-				for i, fld := range flds {
-					if nm := fld.name; nm != "" {
-						m[nm] = in[i]
-					}
-				}
-				m["$id"] = rid
-				val, err := r.expr.eval(ctx, m, ctx.arg)
-				if err != nil {
-					return false, err
-				}
-
-				if val == nil {
-					return true, nil
-				}
-
-				if off, err = limOffExpr(val); err != nil {
-					return false, err
-				}
-
-				eval = true
-			}
-			if off > 0 {
-				off--
-				return true, nil
-			}
-
-			return f(rid, in)
-		}
-
-		flds = in[0].([]*fld)
-		ok = true
-		m, err := f(nil, in)
-		return m && !onlyNames, err
-	})
+func (r *offsetRset) plan(ctx *execCtx) (plan, error) {
+	return &offsetDefaultPlan{expr: r.expr, src: r.src, fields: r.src.fieldNames()}, nil
 }
 
 type limitRset struct {
 	expr expression
-	src  rset
+	src  plan
 }
 
-func (r *limitRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	m := map[interface{}]interface{}{}
-	var flds []*fld
-	var ok, eval bool
-	var lim uint64
-	return r.src.do(ctx, onlyNames, func(rid interface{}, in []interface{}) (more bool, err error) {
-		if ok {
-			if !eval {
-				for i, fld := range flds {
-					if nm := fld.name; nm != "" {
-						m[nm] = in[i]
-					}
-				}
-				m["$id"] = rid
-				val, err := r.expr.eval(ctx, m, ctx.arg)
-				if err != nil {
-					return false, err
-				}
-
-				if val == nil {
-					return true, nil
-				}
-
-				if lim, err = limOffExpr(val); err != nil {
-					return false, err
-				}
-
-				eval = true
-			}
-			switch lim {
-			case 0:
-				return false, nil
-			default:
-				lim--
-				return f(rid, in)
-			}
-		}
-
-		flds = in[0].([]*fld)
-		ok = true
-		m, err := f(nil, in)
-		return m && !onlyNames, err
-	})
+func (r *limitRset) plan(ctx *execCtx) (plan, error) {
+	return &limitDefaultPlan{expr: r.expr, src: r.src, fields: r.src.fieldNames()}, nil
 }
 
 type selectRset struct {
 	flds []*fld
-	src  rset
+	src  plan
 }
 
-func (r *selectRset) doGroup(grp *groupByRset, ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	if onlyNames {
-		if len(r.flds) != 0 {
-			_, err := f(nil, []interface{}{r.flds})
-			return err
+func (r *selectRset) plan(ctx *execCtx) (plan, error) {
+	var flds2 []*fld
+	if len(r.flds) != 0 {
+		m := map[string]struct{}{}
+		for _, v := range r.flds {
+			mentionedColumns0(v.expr, true, true, m)
+		}
+		for _, v := range r.src.fieldNames() {
+			delete(m, v)
+		}
+		for k := range m {
+			return nil, fmt.Errorf("unknown field %s", k)
 		}
 
-		return grp.do(ctx, true, f)
+		flds2 = append(flds2, r.flds...)
 	}
 
-	var t temp
-	var cols []*col
-	out := make([]interface{}, len(r.flds))
-	ok := false
-	rows := 0
-	if err = r.src.do(ctx, onlyNames, func(rid interface{}, in []interface{}) (more bool, err error) {
-		if ok {
-			h := in[0].(int64)
-			m := map[interface{}]interface{}{}
-			for h != 0 {
-				in, err = t.Read(nil, h, cols...)
-				if err != nil {
-					return false, err
-				}
-
-				rec := in[2:]
-				for i, c := range cols {
-					if nm := c.name; nm != "" {
-						m[nm] = rec[i]
-					}
-				}
-				m["$id"] = rid
-				for _, fld := range r.flds {
-					if _, err = fld.expr.eval(ctx, m, ctx.arg); err != nil {
-						return false, err
-					}
-				}
-
-				h = in[0].(int64)
-			}
-			m["$agg"] = true
-			for i, fld := range r.flds {
-				if out[i], err = fld.expr.eval(ctx, m, ctx.arg); err != nil {
-					return false, err
-				}
-			}
-			rows++
-			return f(nil, out)
-		}
-
-		ok = true
-		rows++
-		t = in[0].(temp)
-		cols = in[1].([]*col)
+	if x, ok := r.src.(*groupByDefaultPlan); ok {
 		if len(r.flds) == 0 {
-			r.flds = make([]*fld, len(cols))
-			for i, v := range cols {
-				r.flds[i] = &fld{expr: &ident{v.name}, name: v.name}
+			fields := x.fieldNames()
+			flds := make([]*fld, len(fields))
+			for i, v := range fields {
+				flds[i] = &fld{&ident{v}, v}
 			}
-			out = make([]interface{}, len(r.flds))
-		}
-		m, err := f(nil, []interface{}{r.flds})
-		return m && !onlyNames, err
-	}); err != nil || onlyNames {
-		return
-	}
-
-	switch rows {
-	case 0:
-		more, err := f(nil, []interface{}{r.flds})
-		if !more || err != nil {
-			return err
+			return &selectFieldsGroupPlan{flds: flds, src: x, fields: fields}, nil
 		}
 
-		fallthrough
-	case 1:
-		m := map[interface{}]interface{}{"$agg0": true} // aggregate empty record set
-		for i, fld := range r.flds {
-			if out[i], err = fld.expr.eval(ctx, m, ctx.arg); err != nil {
-				return
-			}
+		p := &selectFieldsGroupPlan{flds: flds2, src: x}
+		for _, v := range r.flds {
+			p.fields = append(p.fields, v.name)
 		}
-		_, err = f(nil, out)
-	}
-	return
-}
-
-func (r *selectRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	if grp, ok := r.src.(*groupByRset); ok {
-		return r.doGroup(grp, ctx, onlyNames, f)
+		return p, nil
 	}
 
 	if len(r.flds) == 0 {
-		return r.src.do(ctx, onlyNames, f)
+		return r.src, nil
 	}
 
-	if onlyNames {
-		_, err := f(nil, []interface{}{r.flds})
-		return err
-	}
-
-	var flds []*fld
-	m := map[interface{}]interface{}{}
-	ok := false
-	return r.src.do(ctx, onlyNames, func(rid interface{}, in []interface{}) (more bool, err error) {
-		if ok {
-			for i, fld := range flds {
-				if nm := fld.name; nm != "" {
-					m[nm] = in[i]
-				}
+	f0 := r.src.fieldNames()
+	if len(f0) == len(flds2) {
+		match := true
+		for i, v := range flds2 {
+			if x, ok := v.expr.(*ident); ok && x.s == f0[i] && v.name == f0[i] {
+				continue
 			}
-			m["$id"] = rid
-			out := make([]interface{}, len(r.flds))
-			for i, fld := range r.flds {
-				if out[i], err = fld.expr.eval(ctx, m, ctx.arg); err != nil {
-					return false, err
-				}
-			}
-			m, err := f(rid, out)
-			return m, err
 
+			match = false
+			break
 		}
 
-		ok = true
-		flds = in[0].([]*fld)
-		m, err := f(nil, []interface{}{r.flds})
-		return m && !onlyNames, err
-	})
+		if match {
+			return r.src, nil
+		}
+	}
+
+	src := r.src
+	if x, ok := src.(*tableDefaultPlan); ok {
+		isconst := true
+		for _, v := range flds2 {
+			if isConstValue(v.expr) == nil {
+				isconst = false
+				break
+			}
+		}
+		if isconst { // #250
+			src = &tableNilPlan{x.t}
+		}
+	}
+
+	p := &selectFieldsDefaultPlan{flds: flds2, src: src}
+	for _, v := range r.flds {
+		p.fields = append(p.fields, v.name)
+	}
+	return p, nil
 }
 
 type tableRset string
 
-func (r tableRset) doIndex(x *indexedCol, ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	flds := []*fld{&fld{name: x.name}}
-	m, err := f(nil, []interface{}{flds})
-	if onlyNames {
-		return err
-	}
-
-	if !m || err != nil {
-		return
-	}
-
-	en, _, err := x.x.Seek(nil)
-	if err != nil {
-		return err
-	}
-
-	var id int64
-	rec := []interface{}{nil}
-	for {
-		k, _, err := en.Next()
-		if err != nil {
-			return noEOF(err)
-		}
-
-		id++
-		rec[0] = k
-		m, err := f(id, rec)
-		if !m || err != nil {
-			return err
-		}
-	}
-}
-
-func (tableRset) doOne(t *table, h int64, f func(id interface{}, data []interface{}) (more bool, err error)) ( /* next handle */ int64, error) {
-	cols := t.cols
-	ncols := len(cols)
-	rec, err := t.store.Read(nil, h, cols...)
-	if err != nil {
-		return -1, err
-	}
-
-	h = rec[0].(int64)
-	if n := ncols + 2 - len(rec); n > 0 {
-		rec = append(rec, make([]interface{}, n)...)
-	}
-
-	for i, c := range cols {
-		if x := c.index; 2+x < len(rec) {
-			rec[2+i] = rec[2+x]
-			continue
-		}
-
-		rec[2+i] = nil //DONE +test (#571)
-	}
-	m, err := f(rec[1], rec[2:2+ncols]) // 0:next, 1:id
-	if !m || err != nil {
-		return -1, err
-	}
-
-	return h, nil
-}
-
-func (r tableRset) doSysTable(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	flds := []*fld{&fld{name: "Name"}, &fld{name: "Schema"}}
-	m, err := f(nil, []interface{}{flds})
-	if onlyNames {
-		return err
-	}
-
-	if !m || err != nil {
-		return
-	}
-
-	rec := make([]interface{}, 2)
-	di, err := ctx.db.info()
-	if err != nil {
-		return err
-	}
-
-	var id int64
-	for _, ti := range di.Tables {
-		rec[0] = ti.Name
-		a := []string{}
-		for _, ci := range ti.Columns {
-			a = append(a, fmt.Sprintf("%s %s", ci.Name, ci.Type))
-		}
-		rec[1] = fmt.Sprintf("CREATE TABLE %s (%s);", ti.Name, strings.Join(a, ", "))
-		id++
-		m, err := f(id, rec)
-		if !m || err != nil {
-			return err
-		}
-	}
-	return
-}
-
-func (r tableRset) doSysColumn(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	flds := []*fld{&fld{name: "TableName"}, &fld{name: "Ordinal"}, &fld{name: "Name"}, &fld{name: "Type"}}
-	m, err := f(nil, []interface{}{flds})
-	if onlyNames {
-		return err
-	}
-
-	if !m || err != nil {
-		return
-	}
-
-	rec := make([]interface{}, 4)
-	di, err := ctx.db.info()
-	if err != nil {
-		return err
-	}
-
-	var id int64
-	for _, ti := range di.Tables {
-		rec[0] = ti.Name
-		var ix int64
-		for _, ci := range ti.Columns {
-			ix++
-			rec[1] = ix
-			rec[2] = ci.Name
-			rec[3] = ci.Type.String()
-			id++
-			m, err := f(id, rec)
-			if !m || err != nil {
-				return err
-			}
-		}
-	}
-	return
-}
-
-func (r tableRset) doSysIndex(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	flds := []*fld{&fld{name: "TableName"}, &fld{name: "ColumnName"}, &fld{name: "Name"}, &fld{name: "IsUnique"}}
-	m, err := f(nil, []interface{}{flds})
-	if onlyNames {
-		return err
-	}
-
-	if !m || err != nil {
-		return
-	}
-
-	rec := make([]interface{}, 4)
-	di, err := ctx.db.info()
-	if err != nil {
-		return err
-	}
-
-	var id int64
-	for _, xi := range di.Indices {
-		rec[0] = xi.Table
-		rec[1] = xi.Column
-		rec[2] = xi.Name
-		rec[3] = xi.Unique
-		id++
-		m, err := f(id, rec)
-		if !m || err != nil {
-			return err
-		}
-	}
-	return
-}
-
-func (r tableRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
+func (r tableRset) plan(ctx *execCtx) (plan, error) {
 	switch r {
 	case "__Table":
-		return r.doSysTable(ctx, onlyNames, f)
+		return &sysTableDefaultPlan{}, nil
 	case "__Column":
-		return r.doSysColumn(ctx, onlyNames, f)
+		return &sysColumnDefaultPlan{}, nil
 	case "__Index":
-		return r.doSysIndex(ctx, onlyNames, f)
+		return &sysIndexDefaultPlan{}, nil
 	}
 
 	t, ok := ctx.db.root.tables[string(r)]
-	var x *indexedCol
 	if !ok && isTesting {
-		if _, x = ctx.db.root.findIndexByName(string(r)); x != nil {
-			return r.doIndex(x, ctx, onlyNames, f)
+		if _, x0 := ctx.db.root.findIndexByName(string(r)); x0 != nil {
+			return &selectIndexDefaultPlan{nm: string(r), x: x0}, nil
 		}
 	}
 
 	if !ok {
-		return fmt.Errorf("table %s does not exist", r)
+		return nil, fmt.Errorf("table %s does not exist", r)
 	}
 
-	m, err := f(nil, []interface{}{t.flds()})
-	if onlyNames {
-		return err
+	rs := &tableDefaultPlan{t: t}
+	for _, col := range t.cols {
+		rs.fields = append(rs.fields, col.name)
 	}
-
-	if !m || err != nil {
-		return
-	}
-
-	for h := t.head; h > 0 && err == nil; h, err = r.doOne(t, h, f) {
-	}
-	return
-}
-
-type crossJoinRset struct {
-	sources []interface{}
-}
-
-func (r *crossJoinRset) tables() []struct {
-	i            int
-	name, rename string
-} {
-	var ret []struct {
-		i            int
-		name, rename string
-	}
-	//dbg("---- %p", r)
-	for i, pair0 := range r.sources {
-		//dbg("%d/%d, %#v", i, len(r.sources), pair0)
-		pair := pair0.([]interface{})
-		altName := pair[1].(string)
-		switch x := pair[0].(type) {
-		case string: // table name
-			if altName == "" {
-				altName = x
-			}
-			ret = append(ret, struct {
-				i            int
-				name, rename string
-			}{i, x, altName})
-		}
-	}
-	return ret
-}
-
-func (r *crossJoinRset) String() string {
-	a := make([]string, len(r.sources))
-	for i, pair0 := range r.sources {
-		pair := pair0.([]interface{})
-		altName := pair[1].(string)
-		switch x := pair[0].(type) {
-		case string: // table name
-			switch {
-			case altName == "":
-				a[i] = x
-			default:
-				a[i] = fmt.Sprintf("%s AS %s", x, altName)
-			}
-		case *selectStmt:
-			switch {
-			case altName == "":
-				a[i] = fmt.Sprintf("(%s)", x)
-			default:
-				a[i] = fmt.Sprintf("(%s) AS %s", x, altName)
-			}
-		default:
-			log.Panic("internal error 054")
-		}
-	}
-	return strings.Join(a, ", ")
-}
-
-func (r *crossJoinRset) isSingleTable() (string, bool) {
-	sources := r.sources
-	if len(sources) != 1 {
-		return "", false
-	}
-
-	pair := sources[0].([]interface{})
-	s, ok := pair[0].(string)
-	return s, ok
-}
-
-func (r *crossJoinRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) (err error) {
-	rsets := make([]rset, len(r.sources))
-	altNames := make([]string, len(r.sources))
-	//dbg(".... %p", r)
-	for i, pair0 := range r.sources {
-		pair := pair0.([]interface{})
-		//dbg("%d: %#v", len(pair), pair)
-		altName := pair[1].(string)
-		switch x := pair[0].(type) {
-		case string: // table name
-			rsets[i] = tableRset(x)
-			if altName == "" {
-				altName = x
-			}
-		case *selectStmt:
-			rsets[i] = x
-		default:
-			log.Panic("internal error 055")
-		}
-		altNames[i] = altName
-	}
-
-	if len(rsets) == 1 {
-		return rsets[0].do(ctx, onlyNames, f)
-	}
-
-	var flds []*fld
-	fldsSent := false
-	iq := 0
-	stop := false
-	ids := map[string]interface{}{}
-	var g func([]interface{}, []rset, int) error
-	g = func(prefix []interface{}, rsets []rset, x int) (err error) {
-		rset := rsets[0]
-		rsets = rsets[1:]
-		ok := false
-		return rset.do(ctx, onlyNames, func(id interface{}, in []interface{}) (more bool, err error) {
-			if onlyNames && fldsSent {
-				stop = true
-				return false, nil
-			}
-
-			if ok {
-				ids[altNames[x]] = id
-				if len(rsets) != 0 {
-					return true, g(append(prefix, in...), rsets, x+1)
-				}
-
-				m, err := f(ids, append(prefix, in...))
-				if !m {
-					stop = true
-				}
-				return m && !stop, err
-			}
-
-			ok = true
-			if !fldsSent {
-				f0 := append([]*fld(nil), in[0].([]*fld)...)
-				q := altNames[iq]
-				for i, elem := range f0 {
-					nf := &fld{}
-					*nf = *elem
-					switch {
-					case q == "":
-						nf.name = ""
-					case nf.name != "":
-						nf.name = fmt.Sprintf("%s.%s", altNames[iq], nf.name)
-					}
-					f0[i] = nf
-				}
-				iq++
-				flds = append(flds, f0...)
-			}
-			if len(rsets) == 0 && !fldsSent {
-				fldsSent = true
-				more, err = f(nil, []interface{}{flds})
-				if !more {
-					stop = true
-				}
-				return more && !stop, err
-			}
-
-			return !stop, nil
-		})
-	}
-	return g(nil, rsets, 0)
-}
-
-type fld struct {
-	expr expression
-	name string
+	return rs, nil
 }
 
 func findFldIndex(fields []*fld, name string) int {
@@ -1572,6 +695,8 @@ type col struct {
 	dflt       expression
 }
 
+var idCol = &col{name: "id()", typ: qInt64}
+
 func findCol(cols []*col, name string) (c *col) {
 	for _, c = range cols {
 		if c.name == name {
@@ -1580,6 +705,16 @@ func findCol(cols []*col, name string) (c *col) {
 	}
 
 	return nil
+}
+
+func (f *col) clone() *col {
+	var r col
+	r = *f
+	r.constraint = f.constraint.clone()
+	if f.dflt != nil {
+		r.dflt, _ = r.dflt.clone(nil)
+	}
+	return &r
 }
 
 func (f *col) typeCheck(x interface{}) (ok bool) { //NTYPE
@@ -1640,25 +775,237 @@ func cols2meta(f []*col) (s string) {
 
 // DB represent the database capable of executing QL statements.
 type DB struct {
-	cc    *TCtx // Current transaction context
-	isMem bool
-	mu    sync.Mutex
-	root  *root
-	rw    bool // DB FSM
-	rwmu  sync.RWMutex
-	store storage
-	tnl   int // Transaction nesting level
+	cc          *TCtx // Current transaction context
+	isMem       bool
+	mu          sync.Mutex
+	root        *root
+	rw          bool // DB FSM
+	rwmu        sync.RWMutex
+	store       storage
+	tnl         int // Transaction nesting level
+	exprCache   map[string]expression
+	exprCacheMu sync.Mutex
+	hasIndex2   int // 0: nope, 1: in progress, 2: yes.
 }
+
+var selIndex2Expr = MustCompile("select Expr from __Index2_Expr where Index2_ID == $1")
 
 func newDB(store storage) (db *DB, err error) {
 	db0 := &DB{
-		store: store,
+		exprCache: map[string]expression{},
+		store:     store,
 	}
 	if db0.root, err = newRoot(store); err != nil {
 		return
 	}
 
+	ctx := &execCtx{db: db0}
+	for _, t := range db0.root.tables {
+		if err := t.constraintsAndDefaults(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	if !db0.hasAllIndex2() {
+		return db0, nil
+	}
+
+	db0.hasIndex2 = 2
+	rss, _, err := db0.Run(nil, "select id(), TableName, IndexName, IsUnique, Root from __Index2 where !IsSimple")
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := rss[0].Rows(-1, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range rows {
+		defer func() {
+			if e := recover(); e != nil {
+				err = fmt.Errorf("error loading DB indices: %v", e)
+			}
+		}()
+
+		id := row[0].(int64)
+		tn := row[1].(string)
+		xn := row[2].(string)
+		unique := row[3].(bool)
+		xroot := row[4].(int64)
+
+		t := db0.root.tables[tn]
+		if t == nil {
+			return nil, fmt.Errorf("DB index refers to nonexistent table: %s", tn)
+		}
+
+		x, err := store.OpenIndex(unique, xroot)
+		if err != nil {
+			return nil, err
+		}
+
+		if v := t.indices2[xn]; v != nil {
+			return nil, fmt.Errorf("duplicate DB index: %s", xn)
+		}
+
+		ix := &index2{
+			unique: unique,
+			x:      x,
+			xroot:  xroot,
+		}
+
+		rss, _, err := db0.Execute(nil, selIndex2Expr, id)
+		if err != nil {
+			return nil, err
+		}
+
+		rows, err := rss[0].Rows(-1, 0)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(rows) == 0 {
+			return nil, fmt.Errorf("index has no expression: %s", xn)
+		}
+
+		var sources []string
+		var list []expression
+		for _, row := range rows {
+			src, ok := row[0].(string)
+			if !ok {
+				return nil, fmt.Errorf("index %s: expression of type %T", xn, row[0])
+			}
+
+			expr, err := db0.str2expr(src)
+			if err != nil {
+				return nil, fmt.Errorf("index %s: expression error: %v", xn, err)
+			}
+
+			sources = append(sources, src)
+			list = append(list, expr)
+		}
+
+		ix.sources = sources
+		ix.exprList = list
+		if t.indices2 == nil {
+			t.indices2 = map[string]*index2{}
+		}
+		t.indices2[xn] = ix
+	}
 	return db0, nil
+}
+
+func (db *DB) deleteIndex2ByIndexName(nm string) error {
+	for _, s := range deleteIndex2ByIndexName.l {
+		if _, err := s.exec(&execCtx{db: db, arg: []interface{}{nm}}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (db *DB) deleteIndex2ByTableName(nm string) error {
+	for _, s := range deleteIndex2ByTableName.l {
+		if _, err := s.exec(&execCtx{db: db, arg: []interface{}{nm}}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (db *DB) createIndex2() error {
+	if db.hasIndex2 != 0 {
+		return nil
+	}
+
+	db.hasIndex2 = 1
+	ctx := execCtx{db: db}
+	for _, s := range createIndex2.l {
+		if _, err := s.exec(&ctx); err != nil {
+			db.hasIndex2 = 0
+			return err
+		}
+	}
+
+	for t := db.root.thead; t != nil; t = t.tnext {
+		for i, index := range t.indices {
+			if index == nil {
+				continue
+			}
+
+			expr := "id()"
+			if i != 0 {
+				expr = t.cols[i-1].name
+			}
+
+			if err := db.insertIndex2(t.name, index.name, []string{expr}, index.unique, true, index.xroot); err != nil {
+				db.hasIndex2 = 0
+				return err
+			}
+		}
+	}
+
+	db.hasIndex2 = 2
+	return nil
+}
+
+func (db *DB) insertIndex2(tableName, indexName string, expr []string, unique, isSimple bool, h int64) error {
+	ctx := execCtx{db: db}
+	ctx.arg = []interface{}{
+		tableName,
+		indexName,
+		unique,
+		isSimple,
+		h,
+	}
+	if _, err := insertIndex2.l[0].exec(&ctx); err != nil {
+		return err
+	}
+
+	id := db.root.lastInsertID
+	for _, e := range expr {
+		ctx.arg = []interface{}{id, e}
+		if _, err := insertIndex2Expr.l[0].exec(&ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (db *DB) hasAllIndex2() bool {
+	t := db.root.tables
+	if _, ok := t["__Index2"]; !ok {
+		return false
+	}
+
+	_, ok := t["__Index2_Expr"]
+	return ok
+}
+
+func (db *DB) str2expr(expr string) (expression, error) {
+	db.exprCacheMu.Lock()
+	e := db.exprCache[expr]
+	db.exprCacheMu.Unlock()
+	if e != nil {
+		return e, nil
+	}
+
+	e, err := compileExpr(expr)
+	if err != nil {
+		return nil, err
+	}
+
+	db.exprCacheMu.Lock()
+	for k := range db.exprCache {
+		if len(db.exprCache) < 1000 {
+			break
+		}
+
+		delete(db.exprCache, k)
+	}
+	db.exprCache[expr] = e
+	db.exprCacheMu.Unlock()
+	return e, nil
 }
 
 // Name returns the name of the DB.
@@ -1699,6 +1046,16 @@ func Compile(src string) (List, error) {
 	}
 
 	return List{l.list, l.params}, nil
+}
+
+func compileExpr(src string) (expression, error) {
+	l := newLexer(src)
+	l.inj = parseExpression
+	if yyParse(l) != 0 {
+		return nil, l.errs[0]
+	}
+
+	return l.expr, nil
 }
 
 func compile(src string) (List, error) {
@@ -1830,17 +1187,17 @@ func (db *DB) Execute(ctx *TCtx, l List, arg ...interface{}) (rs []Recordset, in
 		}
 	}
 
-	tnl0 := -1
+	tnl0 := db.tnl
 	if ctx != nil {
 		ctx.LastInsertID, ctx.RowsAffected = 0, 0
 	}
 
-	var s stmt
-	for index, s = range l.l {
-		r, err := db.run1(ctx, &tnl0, s, arg...)
+	list := l.l
+	for _, s := range list {
+		r, err := db.run1(ctx, s, arg...)
 		if err != nil {
-			for tnl0 >= 0 && db.tnl > tnl0 {
-				if _, e2 := db.run1(ctx, &tnl0, rollbackStmt{}); e2 != nil {
+			for db.tnl > tnl0 {
+				if _, e2 := db.run1(ctx, rollbackStmt{}); e2 != nil {
 					err = e2
 				}
 			}
@@ -1854,8 +1211,7 @@ func (db *DB) Execute(ctx *TCtx, l List, arg ...interface{}) (rs []Recordset, in
 	return
 }
 
-func (db *DB) run1(pc *TCtx, tnl0 *int, s stmt, arg ...interface{}) (rs Recordset, err error) {
-	//dbg("%v", s)
+func (db *DB) run1(pc *TCtx, s stmt, arg ...interface{}) (rs Recordset, err error) {
 	db.mu.Lock()
 	switch db.rw {
 	case false:
@@ -1873,7 +1229,6 @@ func (db *DB) run1(pc *TCtx, tnl0 *int, s stmt, arg ...interface{}) (rs Recordse
 			db.beginTransaction()
 			db.rwmu.Lock()
 			db.cc = pc
-			*tnl0 = db.tnl // 0
 			db.tnl++
 			db.rw = true
 			return
@@ -1911,7 +1266,6 @@ func (db *DB) run1(pc *TCtx, tnl0 *int, s stmt, arg ...interface{}) (rs Recordse
 
 				db.rw = true
 				db.rwmu.Lock()
-				*tnl0 = db.tnl // 0
 			}
 
 			if err = db.store.BeginTransaction(); err != nil {
@@ -1976,15 +1330,7 @@ func (db *DB) run1(pc *TCtx, tnl0 *int, s stmt, arg ...interface{}) (rs Recordse
 				return nil, fmt.Errorf("invalid passed transaction context")
 			}
 
-			if !s.isUpdating() {
-				return s.exec(&execCtx{db, arg})
-			}
-
-			if rs, err = s.exec(&execCtx{db, arg}); err != nil {
-				return
-			}
-
-			return rs, nil
+			return s.exec(&execCtx{db, arg})
 		}
 	}
 }
@@ -2017,7 +1363,7 @@ func (db *DB) Close() error {
 	return err
 }
 
-func (db *DB) do(r recordset, names int, f func(data []interface{}) (more bool, err error)) (err error) {
+func (db *DB) do(r recordset, f func(data []interface{}) (bool, error)) (err error) {
 	db.mu.Lock()
 	switch db.rw {
 	case false:
@@ -2038,58 +1384,33 @@ func (db *DB) do(r recordset, names int, f func(data []interface{}) (more bool, 
 		}
 	}
 
-	ok := false
-	return r.do(r.ctx, names == onlyNames, func(id interface{}, data []interface{}) (more bool, err error) {
-		if ok {
-			if err = expand(data); err != nil {
-				return
-			}
-
-			return f(data)
+	return r.do(r.ctx, func(id interface{}, data []interface{}) (bool, error) {
+		if err = expand(data); err != nil {
+			return false, err
 		}
 
-		ok = true
-		done := false
-		switch names {
-		case noNames:
-			return true, nil
-		case onlyNames:
-			done = true
-			fallthrough
-		default: // returnNames
-			flds := data[0].([]*fld)
-			a := make([]interface{}, len(flds))
-			for i, v := range flds {
-				a[i] = v.name
-			}
-			more, err := f(a)
-			return more && !done, err
-
-		}
+		return f(data)
 	})
 }
 
 func (db *DB) beginTransaction() { //TODO Rewrite, must use much smaller undo info!
-	oldRoot := db.root
-	newRoot := &root{}
-	*newRoot = *oldRoot
-	newRoot.parent = oldRoot
-	a := make([]*table, 0, len(oldRoot.tables))
-	newRoot.tables = make(map[string]*table, len(oldRoot.tables))
-	for k, v := range oldRoot.tables {
-		c := v.clone()
-		a = append(a, c)
-		newRoot.tables[k] = c
+	root := *db.root
+	root.parent = db.root
+	root.tables = make(map[string]*table, len(db.root.tables))
+	var tprev *table
+	for t := db.root.thead; t != nil; t = t.tnext {
+		t2 := t.clone()
+		root.tables[t2.name] = t2
+		t2.tprev = tprev
+		switch {
+		case tprev == nil:
+			root.thead = t2
+		default:
+			tprev.tnext = t2
+		}
+		tprev = t2
 	}
-	for i := 0; i < len(a)-1; i++ {
-		l, p := a[i], a[i+1]
-		l.tnext = p
-		p.tprev = l
-	}
-	if len(a) != 0 {
-		newRoot.thead = a[0]
-	}
-	db.root = newRoot
+	db.root = &root
 }
 
 func (db *DB) rollback() {
@@ -2133,8 +1454,11 @@ func (t Type) String() string {
 
 // ColumnInfo provides meta data describing a table column.
 type ColumnInfo struct {
-	Name string // Column name.
-	Type Type   // Column type (BigInt, BigRat, ...).
+	Name       string // Column name.
+	Type       Type   // Column type (BigInt, BigRat, ...).
+	NotNull    bool   // Column cannot be NULL.
+	Constraint string // Constraint expression, if any.
+	Default    string // Default expression, if any.
 }
 
 // TableInfo provides meta data describing a DB table.
@@ -2152,10 +1476,11 @@ type TableInfo struct {
 //
 //	CREATE INDEX Name ON Table (Column);
 type IndexInfo struct {
-	Name   string // Index name
-	Table  string // Table name.
-	Column string // Column name.
-	Unique bool   // Wheter the index is unique.
+	Name           string   // Index name
+	Table          string   // Table name.
+	Column         string   // Column name.
+	Unique         bool     // Wheter the index is unique.
+	ExpressionList []string // Index expression list.
 }
 
 // DbInfo provides meta data describing a DB.
@@ -2166,11 +1491,36 @@ type DbInfo struct {
 }
 
 func (db *DB) info() (r *DbInfo, err error) {
+	_, hasColumn2 := db.root.tables["__Column2"]
 	r = &DbInfo{Name: db.Name()}
 	for nm, t := range db.root.tables {
 		ti := TableInfo{Name: nm}
+		m := map[string]*ColumnInfo{}
+		if hasColumn2 {
+			rs, err := selectColumn2.l[0].exec(&execCtx{db: db, arg: []interface{}{nm}})
+			if err != nil {
+				return nil, err
+			}
+
+			if err := rs.(recordset).do(
+				&execCtx{db: db, arg: []interface{}{nm}},
+				func(id interface{}, data []interface{}) (bool, error) {
+					ci := &ColumnInfo{NotNull: data[1].(bool), Constraint: data[2].(string), Default: data[3].(string)}
+					m[data[0].(string)] = ci
+					return true, nil
+				},
+			); err != nil {
+				return nil, err
+			}
+		}
 		for _, c := range t.cols {
-			ti.Columns = append(ti.Columns, ColumnInfo{Name: c.name, Type: Type(c.typ)})
+			ci := ColumnInfo{Name: c.name, Type: Type(c.typ)}
+			if c2 := m[c.name]; c2 != nil {
+				ci.NotNull = c2.NotNull
+				ci.Constraint = c2.Constraint
+				ci.Default = c2.Default
+			}
+			ti.Columns = append(ti.Columns, ci)
 		}
 		r.Tables = append(r.Tables, ti)
 		for i, x := range t.indices {
@@ -2185,7 +1535,19 @@ func (db *DB) info() (r *DbInfo, err error) {
 			default:
 				cn = t.cols0[i-1].name
 			}
-			r.Indices = append(r.Indices, IndexInfo{x.name, nm, cn, x.unique})
+			r.Indices = append(r.Indices, IndexInfo{x.name, nm, cn, x.unique, []string{cn}})
+		}
+		var a []string
+		for k := range t.indices2 {
+			a = append(a, k)
+		}
+		for _, k := range a {
+			x := t.indices2[k]
+			a = a[:0]
+			for _, e := range x.exprList {
+				a = append(a, e.String())
+			}
+			r.Indices = append(r.Indices, IndexInfo{k, nm, "", x.unique, a})
 		}
 	}
 	return
@@ -2203,232 +1565,143 @@ type constraint struct {
 	expr expression // If expr == nil: constraint is 'NOT NULL'
 }
 
-type outerJoinRset struct {
-	typ       int // leftJoin, rightJoin, fullJoin
-	crossJoin *crossJoinRset
-	source    []interface{}
-	on        expression
+func (c *constraint) clone() *constraint {
+	if c == nil {
+		return nil
+	}
+
+	var e expression
+	if c.expr != nil {
+		e, _ = c.expr.clone(nil)
+	}
+	return &constraint{e}
 }
 
-func (o *outerJoinRset) do(ctx *execCtx, onlyNames bool, f func(id interface{}, data []interface{}) (more bool, err error)) error {
-	sources := append(o.crossJoin.sources, o.source)
-	var b3 *b.Tree
-	switch o.typ {
-	case rightJoin: // switch last two sources
-		n := len(sources)
-		sources[n-2], sources[n-1] = sources[n-1], sources[n-2]
-	case fullJoin:
-		b3 = b.TreeNew(func(a, b interface{}) int {
-			x := a.(int64)
-			y := b.(int64)
-			if x < y {
-				return -1
-			}
+type joinRset struct {
+	sources []interface{}
+	typ     int
+	on      expression
+}
 
-			if x == y {
-				return 0
-			}
-
-			return 1
-		})
-	}
-	rsets := make([]rset, len(sources))
-	altNames := make([]string, len(sources))
-	for i, pair0 := range sources {
+func (r *joinRset) String() string {
+	a := make([]string, len(r.sources))
+	for i, pair0 := range r.sources {
 		pair := pair0.([]interface{})
 		altName := pair[1].(string)
 		switch x := pair[0].(type) {
 		case string: // table name
-			rsets[i] = tableRset(x)
-			if altName == "" {
-				altName = x
+			switch {
+			case altName == "":
+				a[i] = x
+			default:
+				a[i] = fmt.Sprintf("%s AS %s", x, altName)
 			}
 		case *selectStmt:
-			rsets[i] = x
+			switch {
+			case altName == "":
+				a[i] = fmt.Sprintf("(%s)", x)
+			default:
+				a[i] = fmt.Sprintf("(%s) AS %s", x, altName)
+			}
 		default:
-			log.Panic("internal error")
-		}
-		altNames[i] = altName
-	}
-
-	var flds, leftFlds, rightFlds []*fld
-	var nF, nP, nL, nR int
-	fldsSent := false
-	iq := 0
-	stop := false
-	ids := map[string]interface{}{}
-	m := map[interface{}]interface{}{}
-	var g func([]interface{}, []rset, int) error
-	var match bool
-	var rid int64
-	firstR := true
-	g = func(prefix []interface{}, rsets []rset, x int) (err error) {
-		rset := rsets[0]
-		rsets = rsets[1:]
-		ok := false
-		return rset.do(ctx, onlyNames, func(id interface{}, in []interface{}) (bool, error) {
-			if onlyNames && fldsSent {
-				stop = true
-				return false, nil
-			}
-
-			if ok {
-				ids[altNames[x]] = id
-				if len(rsets) != 0 {
-					newPrefix := append(prefix, in...)
-					match = false
-					rid = 0
-					if err := g(newPrefix, rsets, x+1); err != nil {
-						return false, err
-					}
-
-					if len(newPrefix) < nP+nL {
-						return true, nil
-					}
-
-					firstR = false
-					if match {
-						return true, nil
-					}
-
-					row := append(newPrefix, make([]interface{}, len(rightFlds))...)
-					switch o.typ {
-					case rightJoin:
-						row2 := row[:nP:nP]
-						row2 = append(row2, row[nP+nL:]...)
-						row2 = append(row2, row[nP:nP+nL]...)
-						row = row2
-					}
-					more, err := f(ids, row)
-					if !more {
-						stop = true
-					}
-					return more && !stop, err
-				}
-
-				// prefix: left "table" row
-				// in: right "table" row
-				row := append(prefix, in...)
-				switch o.typ {
-				case rightJoin:
-					row2 := row[:nP:nP]
-					row2 = append(row2, row[nP+nL:]...)
-					row2 = append(row2, row[nP:nP+nL]...)
-					row = row2
-				case fullJoin:
-					rid++
-					if !firstR {
-						break
-					}
-
-					b3.Set(rid, in)
-				}
-				for i, fld := range flds {
-					if nm := fld.name; nm != "" {
-						m[nm] = row[i]
-					}
-				}
-
-				val, err := o.on.eval(ctx, m, ctx.arg)
-				if err != nil {
-					return false, err
-				}
-
-				if val == nil {
-					return true && !stop, nil
-				}
-
-				x, ok := val.(bool)
-				if !ok {
-					return false, fmt.Errorf("invalid ON expression %s (value of type %T)", val, val)
-				}
-
-				if !x {
-					return true && !stop, nil
-				}
-
-				match = true
-				if o.typ == fullJoin {
-					b3.Delete(rid)
-				}
-				more, err := f(ids, row)
-				if !more {
-					stop = true
-				}
-				return more && !stop, err
-			}
-
-			ok = true
-			if !fldsSent {
-				f0 := append([]*fld(nil), in[0].([]*fld)...)
-				q := altNames[iq]
-				for i, elem := range f0 {
-					nf := &fld{}
-					*nf = *elem
-					switch {
-					case q == "":
-						nf.name = ""
-					case nf.name != "":
-						nf.name = fmt.Sprintf("%s.%s", altNames[iq], nf.name)
-					}
-					f0[i] = nf
-				}
-				iq++
-				flds = append(flds, f0...)
-				leftFlds = append([]*fld(nil), rightFlds...)
-				rightFlds = append([]*fld(nil), f0...)
-			}
-			if len(rsets) == 0 && !fldsSent {
-				fldsSent = true
-				nF = len(flds)
-				nL = len(leftFlds)
-				nR = len(rightFlds)
-				nP = nF - nL - nR
-				x := flds
-				switch o.typ {
-				case rightJoin:
-					x = x[:nP:nP]
-					x = append(x, rightFlds...)
-					x = append(x, leftFlds...)
-					flds = x
-				}
-				more, err := f(nil, []interface{}{x})
-				if !more {
-					stop = true
-				}
-				return more && !stop, err
-			}
-
-			return !stop, nil
-		})
-	}
-	if err := g(nil, rsets, 0); err != nil {
-		return err
-	}
-
-	if o.typ != fullJoin {
-		return nil
-	}
-
-	it, err := b3.SeekFirst()
-	if err != nil {
-		return err
-	}
-
-	pref := make([]interface{}, nP+nL)
-	for {
-		_, v, err := it.Next()
-		if err != nil { // No more items
-			return nil
-		}
-
-		more, err := f(nil, append(pref, v.([]interface{})...))
-		if err != nil {
-			return err
-		}
-
-		if !more {
-			return nil
+			panic("internal error 054")
 		}
 	}
+	n := len(a)
+	a2 := a[:n-1]
+	j := a[n-1]
+	var s string
+	switch r.typ {
+	case crossJoin:
+		return strings.Join(a, ", ")
+	case leftJoin:
+		s = strings.Join(a2, ",") + " LEFT"
+	case rightJoin:
+		s = strings.Join(a2, ",") + " RIGHT"
+	case fullJoin:
+		s = strings.Join(a2, ",") + " FULL"
+	}
+	s += " OUTER JOIN " + j + " ON " + r.on.String()
+	return s
+}
+
+func (r *joinRset) plan(ctx *execCtx) (plan, error) {
+	rsets := make([]plan, len(r.sources))
+	names := make([]string, len(r.sources))
+	var err error
+	m := map[string]bool{}
+	var fields []string
+	for i, v := range r.sources {
+		pair := v.([]interface{})
+		src := pair[0]
+		nm := pair[1].(string)
+		if s, ok := src.(string); ok {
+			src = tableRset(s)
+			if nm == "" {
+				nm = s
+			}
+		}
+		if m[nm] {
+			return nil, fmt.Errorf("%s: duplicate name %s", r.String(), nm)
+		}
+
+		if nm != "" {
+			m[nm] = true
+		}
+		names[i] = nm
+		var q plan
+		switch x := src.(type) {
+		case rset:
+			if q, err = x.plan(ctx); err != nil {
+				return nil, err
+			}
+		case plan:
+			q = x
+		default:
+			panic("internal error 008")
+		}
+
+		switch {
+		case len(r.sources) == 1:
+			fields = q.fieldNames()
+		default:
+			for _, f := range q.fieldNames() {
+				if strings.Contains(f, ".") {
+					return nil, fmt.Errorf("cannot join on recordset with already qualified field names (use the AS clause): %s", f)
+				}
+
+				if f != "" && nm != "" {
+					f = fmt.Sprintf("%s.%s", nm, f)
+				}
+				if nm == "" {
+					f = ""
+				}
+				fields = append(fields, f)
+			}
+		}
+		rsets[i] = q
+	}
+
+	if len(rsets) == 1 {
+		return rsets[0], nil
+	}
+
+	right := len(rsets[len(rsets)-1].fieldNames())
+	switch r.typ {
+	case crossJoin:
+		return &crossJoinDefaultPlan{rsets: rsets, names: names, fields: fields}, nil
+	case leftJoin:
+		return &leftJoinDefaultPlan{rsets: rsets, names: names, fields: fields, on: r.on, right: right}, nil
+	case rightJoin:
+		return &rightJoinDefaultPlan{leftJoinDefaultPlan{rsets: rsets, names: names, fields: fields, on: r.on, right: right}}, nil
+	case fullJoin:
+		return &fullJoinDefaultPlan{leftJoinDefaultPlan{rsets: rsets, names: names, fields: fields, on: r.on, right: right}}, nil
+	default:
+		panic("internal error 010")
+	}
+}
+
+type fld struct {
+	expr expression
+	name string
 }

@@ -28,6 +28,8 @@
 //			If no non flag arguments are present, ql reads from stdin.
 //			The list is wrapped into an automatic transaction.
 //
+//	-t		Report and measure time to execute, including creating/opening and closing the DB.
+//
 // Example:
 //
 //	$ ql 'create table t (i int, s string)'
@@ -58,6 +60,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/ql"
 )
@@ -86,7 +89,15 @@ func do() (err error) {
 	oFlds := flag.Bool("fld", false, "Show recordset's field names.")
 	oSchema := flag.String("schema", "", "If non empty, show the CREATE statements of matching tables and exit.")
 	oTables := flag.String("tables", "", "If non empty, list matching table names and exit.")
+	oTime := flag.Bool("t", false, "Measure and report time to execute the statement(s) including DB create/open/close.")
 	flag.Parse()
+
+	t0 := time.Now()
+	if *oTime {
+		defer func() {
+			fmt.Fprintf(os.Stderr, "%s\n", time.Since(t0))
+		}()
+	}
 
 	db, err := ql.OpenFile(*oDB, &ql.Options{CanCreate: true})
 	if err != nil {
@@ -193,8 +204,16 @@ func do() (err error) {
 		return
 	}
 
-	return rs[len(rs)-1].Do(*oFlds, func(data []interface{}) (bool, error) {
-		fmt.Println(str(data))
-		return true, nil
-	})
+	switch {
+	case l.IsExplainStmt():
+		return rs[len(rs)-1].Do(*oFlds, func(data []interface{}) (bool, error) {
+			fmt.Println(data[0])
+			return true, nil
+		})
+	default:
+		return rs[len(rs)-1].Do(*oFlds, func(data []interface{}) (bool, error) {
+			fmt.Println(str(data))
+			return true, nil
+		})
+	}
 }

@@ -118,7 +118,7 @@ func TestImageRm(t *testing.T) {
 }
 
 func getImageId(ctx *rktRunCtx, name string) (string, error) {
-	cmd := fmt.Sprintf(`/bin/sh -c "%s image list --fields=key,appname --no-legend | grep %s | awk '{print $1}'"`, ctx.cmd(), name)
+	cmd := fmt.Sprintf(`/bin/sh -c "%s image list --fields=key,name --no-legend | grep %s | awk '{print $1}'"`, ctx.cmd(), name)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		return "", fmt.Errorf("Cannot exec rkt: %v", err)
