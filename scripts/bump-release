@@ -16,18 +16,18 @@ fi
 
 function replace_all() {
 	REPLACE=$(sed -e 's/[]\/$*.^|[]/\\&/g'<<< $1)
-	git ls-files | xargs sed -i -e "s/$REPLACE/$2/g"
+	git ls-files | grep -Ev "(CHANGELOG.md|Godeps)" | xargs sed -i -e "s/$REPLACE/$2/g"
 }
 
 function replace_version() {
 	REPLACE=$(sed -e 's/[]\/$*.^|[]/\\&/g'<<< $1)
-	sed -i -e "s/$REPLACE/$2/g" version/version.go
+	sed -i -e "s/$REPLACE/$2/g" configure.ac
 }
 
 NEXT=${1:1} 	        # 0.2.3
 NEXTGIT="${NEXT}+git"   # 0.2.3+git
 
-PREVGIT=$(awk -F '"' '/const Version/ { print $2 }' version/version.go) # 0.1.2+git
+PREVGIT=$(grep -Po 'AC_INIT\(\[rkt\], \[\K[^\]]*(?=])' configure.ac) # 0.1.2+git
 PREV=${PREVGIT::-4}     # 0.1.2
 
 replace_version $PREVGIT $NEXT
