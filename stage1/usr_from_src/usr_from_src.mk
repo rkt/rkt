@@ -4,7 +4,7 @@ UFS_SYSTEMD_SRCDIR := $(UFS_SYSTEMDDIR)/src
 UFS_SYSTEMD_BUILDDIR := $(UFS_SYSTEMDDIR)/build
 
 $(call setup-dep-file,UFS_PATCHES_DEPMK,$(UFS_SYSTEMD_DESC)-systemd-patches)
-$(call setup-dep-file,UFS_MAIN_STAMP_DEPMK,$(UFS_SYSTEMD_DESC)-systemd-install)
+$(call setup-dep-file,UFS_ROOTFS_DEPMK,$(UFS_SYSTEMD_DESC)-systemd-install)
 
 UFS_ROOTFSDIR := $(UFS_SYSTEMDDIR)/rootfs
 
@@ -20,9 +20,11 @@ UFS_PATCHES_DIR := $(MK_SRCDIR)/patches/$(RKT_STAGE1_SYSTEMD_VER)
 UFS_LIB_SYMLINK := $(ACIROOTFSDIR)/lib
 UFS_LIB64_SYMLINK := $(ACIROOTFSDIR)/lib64
 
-$(call setup-stamp-file,UFS_STAMP)
+$(call setup-stamp-file,UFS_STAMP,/systemd/$(UFS_SYSTEMD_DESC))
+$(call setup-stamp-file,UFS_ROOTFS_STAMP,/systemd-rootfs/$(UFS_SYSTEMD_DESC))
 $(call setup-stamp-file,UFS_SYSTEMD_CLONE_AND_PATCH_STAMP,/systemd_clone_and_patch/$(UFS_SYSTEMD_DESC))
 $(call setup-stamp-file,UFS_SYSTEMD_BUILD_STAMP,/systemd_build/$(UFS_SYSTEMD_DESC))
+$(call setup-stamp-file,UFS_SYSTEMD_INSTALL_STAMP,/systemd_install/$(UFS_SYSTEMD_DESC))
 
 STAGE1_USR_STAMPS += $(UFS_STAMP)
 # INSTALL_SYMLINKS += usr/lib:$(UFS_LIB_SYMLINK) usr/lib64:$(UFS_LIB64_SYMLINK)
@@ -30,21 +32,31 @@ STAGE1_COPY_SO_DEPS := yes
 
 $(call inc-one,bash.mk)
 
--include $(UFS_MAIN_STAMP_DEPMK)
-$(call forward-vars,$(UFS_STAMP), \
+$(UFS_STAMP): $(UFS_ROOTFS_STAMP)
+	touch "$@"
+
+-include $(UFS_ROOTFS_DEPMK)
+$(call forward-vars,$(UFS_ROOTFS_STAMP), \
 	UFS_ROOTFSDIR ACIROOTFSDIR RKT_STAGE1_SYSTEMD_VER DEPSGENTOOL \
-	UFS_MAIN_STAMP_DEPMK)
-# $(UFS_STAMP): | $(UFS_LIB_SYMLINK) $(UFS_LIB64_SYMLINK)
-$(UFS_STAMP): $(UFS_SYSTEMD_BUILD_STAMP) $(DEPSGENTOOL_STAMP) | $(ACIROOTFSDIR)
+	UFS_ROOTFS_DEPMK)
+# $(UFS_ROOTFS_STAMP): | $(UFS_LIB_SYMLINK) $(UFS_LIB64_SYMLINK)
+$(UFS_ROOTFS_STAMP): $(UFS_SYSTEMD_INSTALL_STAMP) $(DEPSGENTOOL_STAMP) | $(ACIROOTFSDIR)
 	set -e; \
 	cp -af "$(UFS_ROOTFSDIR)/." "$(ACIROOTFSDIR)"; \
 	ln -sf 'src' "$(ACIROOTFSDIR)/flavor"; \
 	echo "$(RKT_STAGE1_SYSTEMD_VER)" >"$(ACIROOTFSDIR)/systemd-version"; \
-	"$(DEPSGENTOOL)" glob --target='$$(UFS_STAMP)' $$(find "$(UFS_ROOTFSDIR)" -type f) >"$(UFS_MAIN_STAMP_DEPMK)"; \
+	"$(DEPSGENTOOL)" glob --target='$$(UFS_STAMP)' $$(find "$(UFS_ROOTFSDIR)" -type f) >"$(UFS_ROOTFS_DEPMK)"; \
+	touch "$@"
+
+$(call forward-vars,$(UFS_SYSTEMD_INSTALL_STAMP), \
+	UFS_SYSTEMD_BUILDDIR UFS_ROOTFSDIR MAKE)
+$(UFS_SYSTEMD_INSTALL_STAMP): $(UFS_SYSTEMD_BUILD_STAMP)
+	set -e; \
+	DESTDIR="$(abspath $(UFS_ROOTFSDIR))" $(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" install-strip; \
 	touch "$@"
 
 $(call forward-vars,$(UFS_SYSTEMD_BUILD_STAMP), \
-	UFS_SYSTEMD_BUILDDIR UFS_SYSTEMD_SRCDIR MAKE UFS_ROOTFSDIR)
+	UFS_SYSTEMD_BUILDDIR UFS_SYSTEMD_SRCDIR MAKE)
 $(UFS_SYSTEMD_BUILD_STAMP): $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP)
 	set -e; \
 	rm -Rf "$(UFS_SYSTEMD_BUILDDIR)"; \
@@ -97,7 +109,6 @@ $(UFS_SYSTEMD_BUILD_STAMP): $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP)
 		--disable-firstboot \
 		--enable-seccomp; \
 	$(MAKE) all; \
-	DESTDIR="$(abspath $(UFS_ROOTFSDIR))" $(MAKE) install-strip; \
 	popd; \
 	touch "$@"
 
