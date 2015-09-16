@@ -225,14 +225,25 @@ func installAssets() error {
 	if err != nil {
 		return err
 	}
+	systemdJournaldBin, err := lookupPath("systemd-journald", "/usr/lib/systemd:/lib/systemd")
+	if err != nil {
+		return err
+	}
 
-	assets := []string{}
-	assets = append(assets, proj2aci.GetAssetString("/usr/lib/systemd/systemd", systemdBin))
-	assets = append(assets, proj2aci.GetAssetString("/usr/bin/systemctl", systemctlBin))
-	assets = append(assets, proj2aci.GetAssetString("/usr/bin/bash", bashBin))
-	// systemd-shutdown has to be installed at the same path as on the host
-	// because it depends on systemd build flag -DSYSTEMD_SHUTDOWN_BINARY_PATH=
-	assets = append(assets, proj2aci.GetAssetString(systemdShutdownBin, systemdShutdownBin))
+	systemdUnitsPath := "/usr/lib/systemd/system"
+	assets := []string{
+		proj2aci.GetAssetString("/usr/lib/systemd/systemd", systemdBin),
+		proj2aci.GetAssetString("/usr/bin/systemctl", systemctlBin),
+		proj2aci.GetAssetString("/usr/lib/systemd/systemd-journald", systemdJournaldBin),
+		proj2aci.GetAssetString("/usr/bin/bash", bashBin),
+		proj2aci.GetAssetString(fmt.Sprintf("%s/systemd-journald.service", systemdUnitsPath), fmt.Sprintf("%s/systemd-journald.service", systemdUnitsPath)),
+		proj2aci.GetAssetString(fmt.Sprintf("%s/systemd-journald.socket", systemdUnitsPath), fmt.Sprintf("%s/systemd-journald.socket", systemdUnitsPath)),
+		proj2aci.GetAssetString(fmt.Sprintf("%s/systemd-journald-dev-log.socket", systemdUnitsPath), fmt.Sprintf("%s/systemd-journald-dev-log.socket", systemdUnitsPath)),
+		proj2aci.GetAssetString(fmt.Sprintf("%s/systemd-journald-audit.socket", systemdUnitsPath), fmt.Sprintf("%s/systemd-journald-audit.socket", systemdUnitsPath)),
+		// systemd-shutdown has to be installed at the same path as on the host
+		// because it depends on systemd build flag -DSYSTEMD_SHUTDOWN_BINARY_PATH=
+		proj2aci.GetAssetString(systemdShutdownBin, systemdShutdownBin),
+	}
 
 	return proj2aci.PrepareAssets(assets, "./stage1/rootfs/", nil)
 }
