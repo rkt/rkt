@@ -159,7 +159,12 @@ AS_VAR_IF([RKT_STAGE1_USR_FROM], [none],
                       RKT_STAGE1_DEFAULT_VERSION=auto])])
 
 AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
-          [RKT_STAGE1_DEFAULT_NAME="coreos.com/rkt/stage1-${RKT_STAGE1_USR_FROM}"])
+          [AS_CASE([$RKT_STAGE1_USR_FROM],
+	           dnl for src flavor, we also append systemd version to stage1 name
+	           [src],
+		           [RKT_STAGE1_DEFAULT_NAME="coreos.com/rkt/stage1-${RKT_STAGE1_USR_FROM}-${RKT_STAGE1_SYSTEMD_VER}"],
+		   dnl other flavors get only flavor name
+                   [RKT_STAGE1_DEFAULT_NAME="coreos.com/rkt/stage1-${RKT_STAGE1_USR_FROM}"])])
 AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
           [RKT_STAGE1_DEFAULT_VERSION=${RKT_VERSION}])
 
