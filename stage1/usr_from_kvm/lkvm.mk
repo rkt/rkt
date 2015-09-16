@@ -8,8 +8,10 @@ LKVM_GIT := https://kernel.googlesource.com/pub/scm/linux/kernel/git/will/kvmtoo
 LKVM_VERSION := efcf862611f2498d7b500e46a73d8a008e04325f
 
 LKVM_STUFFDIR := $(MK_SRCDIR)/lkvm
-LKVM_PATCHES := $(abspath $(LKVM_STUFFDIR)/patches/*.patch)
+LKVM_PATCHESDIR := $(LKVM_STUFFDIR)/patches
+LKVM_PATCHES := $(abspath $(LKVM_PATCHESDIR)/*.patch)
 
+$(call setup-stamp-file,LKVM_BUILD_STAMP,/build)
 $(call setup-stamp-file,LKVM_PATCH_STAMP,/patch_lkvm)
 $(call setup-dep-file,LKVM_PATCHES_DEPMK)
 
@@ -17,14 +19,17 @@ UFK_STAMPS += $(LKVM_STAMP)
 INSTALL_FILES += $(LKVM_BINARY):$(LKVM_ACI_BINARY):-
 CREATE_DIRS += $(LKVM_TMP)
 
-
 $(LKVM_STAMP): $(LKVM_ACI_BINARY)
 	touch "$@"
 
-$(call forward-vars,$(LKVM_BINARY), \
+$(LKVM_BINARY): $(LKVM_BUILD_STAMP)
+
+$(call forward-vars,$(LKVM_BUILD_STAMP), \
 	MAKE LKVM_SRCDIR)
-$(LKVM_BINARY): $(LKVM_PATCH_STAMP)
-	$(MAKE) -C "$(LKVM_SRCDIR)" lkvm-static
+$(LKVM_BUILD_STAMP): $(LKVM_PATCH_STAMP)
+	set -e; \
+	$(MAKE) -C "$(LKVM_SRCDIR)" lkvm-static; \
+	touch "$@"
 
 -include $(LKVM_PATCHES_DEPMK)
 $(call forward-vars,$(LKVM_PATCH_STAMP), \
