@@ -81,47 +81,6 @@ AS_CASE([${RKT_STAGE1_USR_FROM}],
 
 AC_SUBST(RKT_STAGE1_USR_FROM)
 
-AC_ARG_WITH(stage1-default-name,
-            [AS_HELP_STRING([--with-stage1-default-name],
-                            [default name of stage1, default: 'coreos.com/rkt/stage1-${flavor}'])],
-            [RKT_STAGE1_DEFAULT_NAME="${withval}"],
-            [RKT_STAGE1_DEFAULT_NAME=auto])
-
-AC_ARG_WITH(stage1-default-version,
-            [AS_HELP_STRING([--with-stage1-default-version],
-                            [default version of stage1, default: same as rkt version])],
-            [RKT_STAGE1_DEFAULT_VERSION="${withval}"],
-            [RKT_STAGE1_DEFAULT_VERSION=auto])
-
-dnl warn if we specified above flags for other flavors than none
-AS_VAR_IF([RKT_STAGE1_USR_FROM], [none],
-          dnl none flavor
-          [],
-          dnl not none flavor
-          [AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
-                     dnl default
-                     [],
-                     dnl not default
-                     [AC_MSG_WARN([* --with-stage1-default-name is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
-                      RKT_STAGE1_DEFAULT_NAME=auto])
-           AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
-                     dnl default
-                     [],
-                     dnl not default
-                     [AC_MSG_WARN([* --with-stage1-default-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
-                      RKT_STAGE1_DEFAULT_VERSION=auto])])
-
-AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
-          [RKT_STAGE1_DEFAULT_NAME="coreos.com/rkt/stage1-${RKT_STAGE1_USR_FROM}"])
-AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
-          [RKT_STAGE1_DEFAULT_VERSION=${RKT_VERSION}])
-
-RKT_STAGE1_DEFAULT_ACI_LDFLAGS="`RKT_XF main.defaultStage1Name "${RKT_STAGE1_DEFAULT_NAME}"` `RKT_XF main.defaultStage1Version "${RKT_STAGE1_DEFAULT_VERSION}"`"
-
-AC_SUBST(RKT_STAGE1_DEFAULT_NAME)
-AC_SUBST(RKT_STAGE1_DEFAULT_VERSION)
-AC_SUBST(RKT_STAGE1_DEFAULT_ACI_LDFLAGS)
-
 ## STAGE1: Systemd git path and version for src flavor
 
 AC_ARG_WITH([stage1-systemd-src],
@@ -168,6 +127,47 @@ AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [HEAD],
 
 AC_SUBST(RKT_STAGE1_SYSTEMD_SRC)
 AC_SUBST(RKT_STAGE1_SYSTEMD_VER)
+
+AC_ARG_WITH(stage1-default-name,
+            [AS_HELP_STRING([--with-stage1-default-name],
+                            [default name of stage1, default: 'coreos.com/rkt/stage1-${flavor}'])],
+            [RKT_STAGE1_DEFAULT_NAME="${withval}"],
+            [RKT_STAGE1_DEFAULT_NAME=auto])
+
+AC_ARG_WITH(stage1-default-version,
+            [AS_HELP_STRING([--with-stage1-default-version],
+                            [default version of stage1, default: same as rkt version])],
+            [RKT_STAGE1_DEFAULT_VERSION="${withval}"],
+            [RKT_STAGE1_DEFAULT_VERSION=auto])
+
+dnl warn if we specified above flags for other flavors than none
+AS_VAR_IF([RKT_STAGE1_USR_FROM], [none],
+          dnl none flavor
+          [],
+          dnl not none flavor
+          [AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
+                     dnl default
+                     [],
+                     dnl not default
+                     [AC_MSG_WARN([* --with-stage1-default-name is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
+                      RKT_STAGE1_DEFAULT_NAME=auto])
+           AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
+                     dnl default
+                     [],
+                     dnl not default
+                     [AC_MSG_WARN([* --with-stage1-default-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
+                      RKT_STAGE1_DEFAULT_VERSION=auto])])
+
+AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
+          [RKT_STAGE1_DEFAULT_NAME="coreos.com/rkt/stage1-${RKT_STAGE1_USR_FROM}"])
+AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
+          [RKT_STAGE1_DEFAULT_VERSION=${RKT_VERSION}])
+
+RKT_STAGE1_DEFAULT_ACI_LDFLAGS="`RKT_XF main.defaultStage1Name "${RKT_STAGE1_DEFAULT_NAME}"` `RKT_XF main.defaultStage1Version "${RKT_STAGE1_DEFAULT_VERSION}"`"
+
+AC_SUBST(RKT_STAGE1_DEFAULT_NAME)
+AC_SUBST(RKT_STAGE1_DEFAULT_VERSION)
+AC_SUBST(RKT_STAGE1_DEFAULT_ACI_LDFLAGS)
 
 ## STAGE1: linker-defined custom STAGE1 image path
 AC_ARG_WITH([stage1-image-path],
