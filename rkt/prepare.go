@@ -33,7 +33,7 @@ var (
 	cmdPrepare = &cobra.Command{
 		Use:   "prepare [--volume=name,kind=host,...] [--quiet] IMAGE [-- image-args...[---]]...",
 		Short: "Prepare to run image(s) in a pod in rkt",
-		Long: `Image should be a string referencing an image; either a hash, local file on disk, or URL.
+		Long: `IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
 They will be checked in that order and the first match will be used.
 
 An "--" may be used to inhibit rkt prepare's parsing of subsequent arguments,
