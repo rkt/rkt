@@ -17,7 +17,7 @@ UFC_STAMP := $(STAMPSDIR)/$(call path-to-stamp,$(MK_PATH))
 
 $(call setup-stamp-file,UFC_STAMP)
 $(call setup-stamp-file,UFC_MKBASE_STAMP,/mkbase)
-$(call setup-stamp-file,UFC_ACI_ROOTFS_STAMP,/aci_rootfs)
+$(call setup-stamp-file,UFC_ACI_ROOTFS_STAMP,/acirootfs)
 
 ifneq ($(RKT_LOCAL_COREOS_PXE_IMAGE_PATH),)
 
@@ -37,22 +37,12 @@ STAGE1_USR_STAMPS += $(UFC_STAMP)
 $(UFC_STAMP): $(UFC_ACI_ROOTFS_STAMP)
 	touch "$@"
 
--include $(UFC_DEPMK)
 $(call forward-vars,$(UFC_ACI_ROOTFS_STAMP), \
-	UFC_ROOTFS ACIROOTFSDIR UFC_DEPMK UFC_FILELIST UFC_SYSTEMD_VERSION)
+	ACIROOTFSDIR UFC_ROOTFS UFC_SYSTEMD_VERSION)
 $(UFC_ACI_ROOTFS_STAMP): $(UFC_MKBASE_STAMP) $(UFC_FILELIST)
 	set -e; \
+	rm -rf "$(ACIROOTFSDIR)"; \
 	cp -af "$(UFC_ROOTFS)/." "$(ACIROOTFSDIR)"; \
-	 \
-	truncate --size=0 "$(UFC_DEPMK).tmp"; \
-	for l in $$(cat "$(UFC_FILELIST)"); do \
-		fl="$(ACIROOTFSDIR)/usr/$${l}"; \
-		ft=$$(stat --format="%F" "$${fl}"); \
-		if [[ "$${ft}" = 'regular file' ]]; then \
-			echo '$$(UFC_ACI_ROOTFS_STAMP): '"$${fl}" >>"$(UFC_DEPMK).tmp"; \
-		fi; \
-	done; \
-	mv "$(UFC_DEPMK).tmp" "$(UFC_DEPMK)"; \
 	 \
 	ln -sf 'coreos' "$(ACIROOTFSDIR)/flavor"; \
 	ln -sf 'usr/lib64' "$(ACIROOTFSDIR)/lib64"; \
@@ -64,9 +54,10 @@ $(UFC_ACI_ROOTFS_STAMP): $(UFC_MKBASE_STAMP) $(UFC_FILELIST)
 $(call forward-vars,$(UFC_MKBASE_STAMP), \
 	UFC_ROOTFS UFC_FILELIST UFC_SQUASHFS)
 $(UFC_MKBASE_STAMP): $(UFC_SQUASHFS) $(UFC_FILELIST)
-	rm -rf "$(UFC_ROOTFS)"
-	mkdir -p "$(UFC_ROOTFS)"
-	unsquashfs -d "$(UFC_ROOTFS)/usr" -ef "$(UFC_FILELIST)" "$(UFC_SQUASHFS)"
+	set -e; \
+	rm -rf "$(UFC_ROOTFS)"; \
+	mkdir -p "$(UFC_ROOTFS)"; \
+	unsquashfs -d "$(UFC_ROOTFS)/usr" -ef "$(UFC_FILELIST)" "$(UFC_SQUASHFS)"; \
 	touch "$@"
 
 $(call forward-vars,$(UFC_SQUASHFS), \
