@@ -141,7 +141,7 @@ Start the metadata service from your init system or simply from another terminal
 # rkt metadata-service
 ```
 
-rkt will register pods with the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/metadata-service.md) so they can introspect their environment.
+rkt will register pods with the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md) so they can introspect their environment.
 
 ### Launch a local application image
 
