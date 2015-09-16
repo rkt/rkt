@@ -1,4 +1,5 @@
 # inputs cleared after including this file:
+# BGB_STAMP
 # BGB_BINARY
 # BGB_GO_FLAGS
 # BGB_PKG_IN_REPO
@@ -63,6 +64,8 @@ $(BGB_BINARY): $(_BGB_PATH_) $(_BGB_RKT_SYMLINK_STAMP_) | $(DEPSDIR)
 	$(GO_ENV) "$(DEPSGENTOOL)$(_BGB_DEPSGEN_SUFFIX_)" go --repo "$(REPO_PATH)" --module "$(BGB_PKG_IN_REPO)" --target '$$(BGB_BINARY)' >"$(_BGB_DEPMK)"; \
 	"$(DEPSGENTOOL)$(_BGB_DEPSGEN_SUFFIX_)" kv --target '$$(BGB_BINARY)' BGB_GO_FLAGS $(_ESCAPED_BGB_GO_FLAGS_) >"$(_BGB_KV_DEPMK)"; \
 	mv "$@.tmp" "$@"
+
+$(BGB_STAMP): $(BGB_BINARY)
 
 # _BGB_RKT_SYMLINK_STAMP_ is deliberately not cleared - it needs to
 # stay defined to make sure that the gopath symlink rule is generated
