@@ -362,3 +362,29 @@ $(strip \
 	$(eval $(call generate-stamp-rule,$1,$(_MISC_GLDF_DEP_) $5,$(DEPSDIR),shopt -s nullglob; "$(DEPSGENTOOL)" glob --target "$2 $1" --suffix="$4" --filelist="$5" $(foreach m,$6,--map-to="$m") $(_MISC_GLDF_GLOB_)>"$3.tmp"; $(call bash-cond-rename,$3.tmp,$3))) \
 	$(call undefine-namespaces,_MISC_GLDF))
 endef
+
+# Returns a list of directories starting from a subdirectory of given
+# base up to the full path made of the given base and a rest. So, if
+# base is "base" and rest is "r/e/s/t" then the returned list is
+# "base/r base/r/e base/r/e/s base/r/e/s/t".
+#
+# Useful for getting a list of directories to be removed.
+# 1 - a base
+# 2 - a dir (or dirs) in base
+#
+# Example: CREATE_DIRS += $(call dir-chain,$(BASE),src/foo/bar/baz)
+define dir-chain
+$(strip \
+	$(eval _MISC_DC_DIRS_ := $(subst /, ,$2)) \
+	$(eval _MISC_DC_PATHS_ :=) \
+	$(eval _MISC_DC_LIST_ :=) \
+	$(eval $(foreach d,$(_MISC_DC_DIRS_), \
+		$(eval _MISC_DC_LAST_ := $(lastword $(_MISC_DC_PATHS_))) \
+		$(eval $(if $(_MISC_DC_LAST_), \
+			$(eval _MISC_DC_PATHS_ += $(_MISC_DC_LAST_)/$d), \
+			$(eval _MISC_DC_PATHS_ := $d))))) \
+	$(eval $(foreach d,$(_MISC_DC_PATHS_), \
+		$(eval _MISC_DC_LIST_ += $1/$d))) \
+	$(_MISC_DC_LIST_) \
+	$(call undefine-namespaces,_MISC_DC))
+endef
