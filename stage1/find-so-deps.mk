@@ -1,6 +1,8 @@
+$(call setup-tmp-dir,STAGE1_FSD_TMPDIR)
+
 # This is where libraries from host are copied too, so we can prepare
 # an exact filelist of what exactly was copied.
-STAGE1_FSD_LIBSDIR := $(BUILDDIR)/tmp/find-so-deps/libs
+STAGE1_FSD_LIBSDIR := $(STAGE1_FSD_TMPDIR)/libs
 
 $(call setup-stamp-file,STAGE1_FSD_STAMP)
 $(call setup-stamp-file,STAGE1_FSD_COPY_STAMP,/fsd_copy)

@@ -2,16 +2,17 @@ UFC_SYSTEMD_VERSION := "v222"
 UFC_IMG_RELEASE := "794.1.0"
 UFC_IMG_URL := "http://alpha.release.core-os.net/amd64-usr/$(UFC_IMG_RELEASE)/coreos_production_pxe_image.cpio.gz"
 
-UFC_ITMP := $(BUILDDIR)/tmp/usr_from_coreos
-UFC_ROOTFS := $(UFC_ITMP)/rootfs
-UFC_FILELIST := $(UFC_ITMP)/manifest.txt
+$(call setup-tmp-dir,UFC_TMPDIR)
+
+UFC_ROOTFS := $(UFC_TMPDIR)/rootfs
+UFC_FILELIST := $(UFC_TMPDIR)/manifest.txt
 UFC_MANIFESTS := $(wildcard $(MK_SRCDIR)/manifest.d/*)
 
 $(call setup-dep-file,UFC_DEPMK,manifests)
 
-UFC_PXE := $(UFC_ITMP)/pxe.img
+UFC_PXE := $(UFC_TMPDIR)/pxe.img
 UFC_SQUASHFS_BASE := usr.squashfs
-UFC_SQUASHFS := $(UFC_ITMP)/$(UFC_SQUASHFS_BASE)
+UFC_SQUASHFS := $(UFC_TMPDIR)/$(UFC_SQUASHFS_BASE)
 UFC_CACHE_SH := $(MK_SRCDIR)/cache.sh
 UFC_STAMP := $(STAMPSDIR)/$(call path-to-stamp,$(MK_PATH))
 
@@ -89,11 +90,11 @@ $(UFC_DETAILED_FILELIST): $(UFC_MKBASE_STAMP)
 $(call generate-deep-filelist,$(UFC_DETAILED_FILELIST),$(UFC_ROOTFS))
 
 $(call forward-vars,$(UFC_SQUASHFS), \
-	UFC_ITMP UFC_PXE UFC_SQUASHFS_BASE)
-$(UFC_SQUASHFS): $(UFC_PXE) | $(UFC_ITMP)
-	cd "$(UFC_ITMP)" && gzip -cd "$(UFC_PXE)" | cpio --unconditional --extract "$(UFC_SQUASHFS_BASE)"
+	UFC_TMPDIR UFC_PXE UFC_SQUASHFS_BASE)
+$(UFC_SQUASHFS): $(UFC_PXE) | $(UFC_TMPDIR)
+	cd "$(UFC_TMPDIR)" && gzip -cd "$(UFC_PXE)" | cpio --unconditional --extract "$(UFC_SQUASHFS_BASE)"
 
-$(UFC_FILELIST): $(UFC_MANIFESTS) | $(UFC_ITMP)
+$(UFC_FILELIST): $(UFC_MANIFESTS) | $(UFC_TMPDIR)
 	cat $^ | sort -u > "$@.tmp"
 	cmp "$@.tmp" "$@" || mv "$@.tmp" "$@"
 	rm -f "$@.tmp"
@@ -101,9 +102,9 @@ $(UFC_FILELIST): $(UFC_MANIFESTS) | $(UFC_ITMP)
 ifeq ($(RKT_LOCAL_COREOS_PXE_IMAGE_PATH),)
 
 $(call forward-vars,$(UFC_PXE), \
-	UFC_ITMP UFC_IMG_URL BASH_SHELL UFC_CACHE_SH)
-$(UFC_PXE): $(UFC_CACHE_SH) | $(UFC_ITMP)
-	ITMP="$(UFC_ITMP)" IMG_URL="$(UFC_IMG_URL)" $(BASH_SHELL) $(UFC_CACHE_SH)
+	UFC_TMPDIR UFC_IMG_URL BASH_SHELL UFC_CACHE_SH)
+$(UFC_PXE): $(UFC_CACHE_SH) | $(UFC_TMPDIR)
+	ITMP="$(UFC_TMPDIR)" IMG_URL="$(UFC_IMG_URL)" $(BASH_SHELL) $(UFC_CACHE_SH)
 
 endif
 

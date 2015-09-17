@@ -4,6 +4,7 @@ UFK_INCLUDES := \
 	kernel.mk \
 	lkvm.mk
 $(call setup-stamp-file,UFK_REPLACE_FLAVOR_STAMP)
+$(call setup-tmp-dir,UFK_TMPDIR)
 
 $(call inc-many,$(UFK_INCLUDES))
 

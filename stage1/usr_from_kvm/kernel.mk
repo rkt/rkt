@@ -1,11 +1,11 @@
 # custom kernel compilation
 KERNEL_VERSION := 4.1.3
-KERNEL_TMP := $(BUILDDIR)/tmp/usr_from_kvm/kernel
+KERNEL_TMPDIR := $(UFK_TMPDIR)/kernel
 KERNEL_NAME := linux-$(KERNEL_VERSION)
 KERNEL_TARBALL := $(KERNEL_NAME).tar.xz
-KERNEL_TARGET_FILE := $(KERNEL_TMP)/$(KERNEL_TARBALL)
-KERNEL_SRCDIR := $(KERNEL_TMP)/$(KERNEL_NAME)
-KERNEL_BUILDDIR := $(abspath $(KERNEL_TMP)/build-$(KERNEL_VERSION))
+KERNEL_TARGET_FILE := $(KERNEL_TMPDIR)/$(KERNEL_TARBALL)
+KERNEL_SRCDIR := $(KERNEL_TMPDIR)/$(KERNEL_NAME)
+KERNEL_BUILDDIR := $(abspath $(KERNEL_TMPDIR)/build-$(KERNEL_VERSION))
 KERNEL_URL := https://www.kernel.org/pub/linux/kernel/v4.x/$(KERNEL_TARBALL)
 KERNEL_MAKEFILE := $(KERNEL_SRCDIR)/Makefile
 KERNEL_STUFFDIR := $(MK_SRCDIR)/kernel
@@ -25,7 +25,7 @@ $(call setup-filelist-file,KERNEL_PATCHES_FILELIST,/patches)
 $(call setup-filelist-file,KERNEL_BUILD_FILELIST,/build)
 $(call setup-filelist-file,KERNEL_SRC_FILELIST,/src)
 
-CREATE_DIRS += $(KERNEL_TMP) $(KERNEL_BUILDDIR)
+CREATE_DIRS += $(KERNEL_TMPDIR) $(KERNEL_BUILDDIR)
 CLEAN_DIRS += $(KERNEL_SRCDIR)
 INSTALL_FILES += \
 	$(KERNEL_SRC_CONFIG):$(KERNEL_BUILD_CONFIG):- \
@@ -90,15 +90,15 @@ endif
 $(call generate-glob-deps,$(KERNEL_DEPS_STAMP),$(KERNEL_MAKEFILE),$(KERNEL_PATCHES_DEPMK),.patch,$(KERNEL_PATCHES_FILELIST),$(KERNEL_PATCHESDIR),normal)
 
 $(call forward-vars,$(KERNEL_MAKEFILE), \
-	KERNEL_SRCDIR KERNEL_TMP)
+	KERNEL_SRCDIR KERNEL_TMPDIR)
 $(KERNEL_MAKEFILE): $(KERNEL_TARGET_FILE)
 	set -e; \
 	rm -rf "$(KERNEL_SRCDIR)"; \
-	tar --extract --xz --touch --file="$<" --directory="$(KERNEL_TMP)"
+	tar --extract --xz --touch --file="$<" --directory="$(KERNEL_TMPDIR)"
 
 $(call forward-vars,$(KERNEL_TARGET_FILE), \
 	KERNEL_URL)
-$(KERNEL_TARGET_FILE): | $(KERNEL_TMP)
+$(KERNEL_TARGET_FILE): | $(KERNEL_TMPDIR)
 	wget --tries=20 --output-document="$@" "$(KERNEL_URL)"
 
 $(call undefine-namespaces,KERNEL)
