@@ -79,6 +79,7 @@ ACTOOL := $(BINDIR)/actool
 DEPSGENTOOL := $(TOOLSDIR)/depsgen
 FILELISTGENTOOL := $(TOOLSDIR)/filelistgen
 CLEANGENTOOL := $(TOOLSDIR)/cleangen
+QUICKRMTOOL := $(TOOLSDIR)/quickrm
 
 # test-related variables
 GO_TEST_PACKAGES ?= ./...
