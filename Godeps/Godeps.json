@@ -6,11 +6,6 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "code.google.com/p/go-uuid/uuid",
-			"Comment": "null-12",
-			"Rev": "7dda39b2e7d5e265014674c5af696ba4186679e9"
-		},
-		{
 			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/api/resource",
 			"Comment": "v0.12.0-270-g53ec66c",
 			"Rev": "53ec66caf4e952a1384ec93b9f0cde37616e4caf"
@@ -226,6 +221,10 @@
 			"ImportPath": "github.com/kr/pty",
 			"Comment": "release.r56-25-g05017fc",
 			"Rev": "05017fcccf23c823bfdea560dcc958a136e54fb7"
+		},
+		{
+			"ImportPath": "github.com/pborman/uuid/uuid",
+			"Rev": "ed3ca8a15a931b141440a7e98e4f716eec255f7d"
 		},
 		{
 			"ImportPath": "github.com/petar/GoLLRB/llrb",
