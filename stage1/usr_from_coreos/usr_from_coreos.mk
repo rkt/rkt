@@ -9,6 +9,8 @@ UFC_FILELIST := $(UFC_TMPDIR)/manifest.txt
 UFC_MANIFESTS := $(wildcard $(MK_SRCDIR)/manifest.d/*)
 
 $(call setup-dep-file,UFC_DEPMK,manifests)
+$(call setup-clean-file,UFC_ROOTFSDIR_CLEANMK,/rootfs)
+$(call setup-clean-file,UFC_ACIROOTFSDIR_CLEANMK,/acirootfs)
 
 UFC_PXE := $(UFC_TMPDIR)/pxe.img
 UFC_SQUASHFS_BASE := usr.squashfs
@@ -20,6 +22,8 @@ $(call setup-stamp-file,UFC_STAMP)
 $(call setup-stamp-file,UFC_MKBASE_STAMP,/mkbase)
 $(call setup-stamp-file,UFC_ACI_ROOTFS_STAMP,/acirootfs)
 $(call setup-stamp-file,UFC_ACIROOTFS_DEPS_STAMP,/acirootfs-deps)
+$(call setup-stamp-file,UFC_ROOTFS_CLEAN_STAMP,/rootfs-clean)
+$(call setup-stamp-file,UFC_ACIROOTFS_CLEAN_STAMP,/acirootfs-clean)
 
 $(call setup-filelist-file,UFC_DETAILED_FILELIST)
 
@@ -54,7 +58,7 @@ CLEAN_SYMLINKS += \
 CLEAN_DIRS += \
 	$(UFC_ROOTFS)
 
-$(UFC_STAMP): $(UFC_ACI_ROOTFS_STAMP) $(UFC_ACIROOTFS_DEPS_STAMP)
+$(UFC_STAMP): $(UFC_ACI_ROOTFS_STAMP) $(UFC_ACIROOTFS_DEPS_STAMP) $(UFC_ACIROOTFS_CLEAN_STAMP) $(UFC_ROOTFS_CLEAN_STAMP)
 	touch "$@"
 
 $(call forward-vars,$(UFC_ACI_ROOTFS_STAMP), \
@@ -75,6 +79,10 @@ $(UFC_ACI_ROOTFS_STAMP): $(UFC_MKBASE_STAMP) $(UFC_FILELIST)
 $(UFC_ACIROOTFS_DEPS_STAMP): $(UFC_DETAILED_FILELIST)
 $(call generate-glob-deps,$(UFC_ACIROOTFS_DEPS_STAMP),$(UFC_ACI_ROOTFS_STAMP),$(UFC_DEPMK),,$(UFC_DETAILED_FILELIST),$(UFC_ROOTFS))
 
+# This cleanmk can be created only when detailed filelist is generated
+$(UFC_ACIROOTFS_CLEAN_STAMP): $(UFC_DETAILED_FILELIST)
+$(call generate-clean-mk,$(UFC_ACIROOTFS_CLEAN_STAMP),$(UFC_ACIROOTFSDIR_CLEANMK),$(UFC_DETAILED_FILELIST),$(ACIROOTFSDIR))
+
 $(call forward-vars,$(UFC_MKBASE_STAMP), \
 	UFC_ROOTFS UFC_FILELIST UFC_SQUASHFS)
 $(UFC_MKBASE_STAMP): $(UFC_SQUASHFS) $(UFC_FILELIST)
@@ -88,6 +96,11 @@ $(UFC_MKBASE_STAMP): $(UFC_SQUASHFS) $(UFC_FILELIST)
 # unpackaged and unsquashed
 $(UFC_DETAILED_FILELIST): $(UFC_MKBASE_STAMP)
 $(call generate-deep-filelist,$(UFC_DETAILED_FILELIST),$(UFC_ROOTFS))
+
+# This cleanmk can be generated only after the detailed filelist was
+# generated.
+$(UFC_ROOTFS_CLEAN_STAMP): $(UFC_DETAILED_FILELIST)
+$(call generate-clean-mk,$(UFC_ROOTFS_CLEAN_STAMP),$(UFC_ROOTFSDIR_CLEANMK),$(UFC_DETAILED_FILELIST),$(UFC_ROOTFS))
 
 $(call forward-vars,$(UFC_SQUASHFS), \
 	UFC_TMPDIR UFC_PXE UFC_SQUASHFS_BASE)
