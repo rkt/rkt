@@ -91,6 +91,16 @@ $(eval $4 := $(word 3,$(_FILE_OPS_S_SPLITTED_))) \
 $(call undefine-namespaces,_FILE_OPS_S)
 endef
 
+# Special dir for storing lists of removed stuff. Sometimes the lists
+# are too long for bash, so they need to be stored in files.
+_FILE_OPS_DIR_ := $(BUILDDIR)/file_ops
+_FILE_OPS_FILES_ := $(_FILE_OPS_DIR_)/files
+_FILE_OPS_SYMLINKS_ := $(_FILE_OPS_DIR_)/symlinks
+_FILE_OPS_DIRS_ := $(_FILE_OPS_DIR_)/dirs
+
+CREATE_DIRS += $(_FILE_OPS_DIR_)
+CLEAN_FILES += $(_FILE_OPS_FILES_) $(_FILE_OPS_SYMLINKS_) $(_FILE_OPS_DIRS_)
+
 # generate rule for mkdir
 $(eval $(call _FILE_OPS_CREATE_DIRS_RULE_,$(CREATE_DIRS)))
 
@@ -106,9 +116,21 @@ $(foreach f,$(sort $(INSTALL_FILES)), \
 $(foreach s,$(sort $(INSTALL_SYMLINKS)), \
         $(eval $(call _FILE_OPS_CREATE_INSTALL_SYMLINK_RULE_,$s)))
 
-_file_ops_mk_clean_:
-	rm -f $(sort $(CLEAN_FILES))
-	rmdir -p $(sort $(CLEAN_DIRS))
+$(call forward-vars,_file_ops_mk_clean_, \
+	_FILE_OPS_FILES_ _FILE_OPS_SYMLINKS_ _FILE_OPS_DIRS_ QUICKRMTOOL)
+_file_ops_mk_clean_: $(QUICKRMTOOL_STAMP) | $(_FILE_OPS_DIR_)
+	$(info writing files)
+	$(file >$(_FILE_OPS_FILES_),$(words $(CLEAN_FILES)))
+	$(file >>$(_FILE_OPS_FILES_),$(CLEAN_FILES))
+	$(info writing symlinks)
+	$(file >$(_FILE_OPS_SYMLINKS_),$(words $(CLEAN_SYMLINKS)))
+	$(file >>$(_FILE_OPS_SYMLINKS_),$(CLEAN_SYMLINKS))
+	$(info writing dirs)
+	$(file >$(_FILE_OPS_DIRS_),$(words $(CLEAN_DIRS)))
+	$(file >>$(_FILE_OPS_DIRS_),$(CLEAN_DIRS))
+	set -e; \
+	echo "Removing everything"; \
+	"$(QUICKRMTOOL)" --files="$(_FILE_OPS_FILES_)" --symlinks="$(_FILE_OPS_SYMLINKS_)" --dirs="$(_FILE_OPS_DIRS_)"
 
 clean: _file_ops_mk_clean_
 
