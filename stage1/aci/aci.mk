@@ -2,9 +2,9 @@ LOCAL_ETCDIR := $(ACIROOTFSDIR)/etc
 LOCAL_ACI_OS_RELEASE := $(LOCAL_ETCDIR)/os-release
 LOCAL_ACI_DIRS := \
 	$(LOCAL_ETCDIR) \
-	$(ACIROOTFSDIR)/opt/stage2 \
-	$(ACIROOTFSDIR)/rkt/status \
-	$(ACIROOTFSDIR)/rkt/env
+	$(call dir-chain,$(ACIROOTFSDIR),opt/stage2) \
+	$(call dir-chain,$(ACIROOTFSDIR),rkt/status) \
+	$(call dir-chain,$(ACIROOTFSDIR),rkt/env)
 LOCAL_ACI_MANIFEST := $(ACIDIR)/manifest
 
 $(call setup-stamp-file,LOCAL_STAMP)

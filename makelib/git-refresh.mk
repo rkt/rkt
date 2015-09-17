@@ -14,14 +14,16 @@ _GR_SPACE_ +=
 _GR_PREREQS_ := $(subst $(_GR_SPACE_),/,$(_GR_ESCAPED_PREREQS_))
 _GR_ESCAPED_TARGET_ := $(call escape-for-file,$(GR_TARGET))
 
-_GR_REVDIR_ := $(REVSDIR)/$(_GR_ESCAPED_TARGET_)/$(_GR_PREREQS_)
+_GR_DIR_BASE_ := $(REVSDIR)
+_GR_DIR_REST_ := $(_GR_ESCAPED_TARGET_)/$(_GR_PREREQS_)
+_GR_REVDIR_ := $(_GR_DIR_BASE_)/$(_GR_DIR_REST_)
 # To avoid too long filenames, rev file is stored inside
 # <builddir>/revs/<escaped_target>/<escaped_prereq_1>/<escaped_prereq_2>/.../<escaped_prereq_last>/git-rev
 _GR_REVFILE_ := $(_GR_REVDIR_)/git-rev
 _GR_REVFILE_TMP_ := $(_GR_REVFILE_).tmp
 _GR_REVFILE_REFRESH_TARGET_ := $(_GR_REVDIR_)/REVFILE_REFRESH
 
-CREATE_DIRS += $(_GR_REVDIR_)
+CREATE_DIRS += $(call dir-chain,$(_GR_DIR_BASE_),$(_GR_DIR_REST_))
 CLEAN_FILES += $(_GR_REVFILE_)
 
 $(GR_TARGET): $(_GR_REVFILE_)

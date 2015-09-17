@@ -24,7 +24,8 @@ ifeq ($(_BGB_RKT_SYMLINK_STAMP_),)
 
 # the symlink stamp wasn't yet generated, do it now.
 
-_BGB_RKT_SYMLINK_NAME_ := $(GOPATH)/src/$(REPO_PATH)
+_BGB_RKT_BASE_SYMLINK_ := src/$(REPO_PATH)
+_BGB_RKT_SYMLINK_NAME_ := $(GOPATH)/$(_BGB_RKT_BASE_SYMLINK_)
 
 $(call setup-custom-stamp-file,_BGB_RKT_SYMLINK_STAMP_,$(_BGB_PATH_)/rkt-symlink)
 
@@ -32,7 +33,7 @@ $(_BGB_RKT_SYMLINK_STAMP_): | $(_BGB_RKT_SYMLINK_NAME_)
 	touch "$@"
 
 INSTALL_SYMLINKS += $(MK_TOPLEVEL_ABS_SRCDIR):$(_BGB_RKT_SYMLINK_NAME_)
-CREATE_DIRS += $(call to-dir,$(_BGB_RKT_SYMLINK_NAME_))
+CREATE_DIRS += $(call dir-chain,$(GOPATH),$(call to-dir,$(_BGB_RKT_BASE_SYMLINK_)))
 
 endif
 

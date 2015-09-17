@@ -1,8 +1,11 @@
-LOCAL_UNITDIR := $(ACIROOTFSDIR)/usr/lib/systemd/system
-LOCAL_UNIT_DIRS := \
-        $(LOCAL_UNITDIR) \
-        $(ACIROOTFSDIR)/usr/lib/systemd/system/default.target.wants \
-        $(ACIROOTFSDIR)/usr/lib/systemd/system/sockets.target.wants
+LOCAL_UNITDIR_BASE := $(ACIROOTFSDIR)
+LOCAL_UNITDIR_REST := usr/lib/systemd/system
+LOCAL_UNITDIR_RESTS := \
+        $(LOCAL_UNITDIR_REST) \
+        $(LOCAL_UNITDIR_REST)/default.target.wants \
+        $(LOCAL_UNITDIR_REST)/sockets.target.wants
+LOCAL_UNITDIR := $(LOCAL_UNITDIR_BASE)/$(LOCAL_UNITDIR_REST)
+LOCAL_UNIT_DIRS := $(foreach d,$(LOCAL_UNITDIR_RESTS),$(LOCAL_UNITDIR_BASE)/$d)
 LOCAL_UNIT_FILES := \
         $(MK_SRCDIR)/units/default.target \
         $(MK_SRCDIR)/units/exit-watcher.service \
@@ -34,7 +37,7 @@ $(LOCAL_STAMP): $(LOCAL_ACI_UNIT_FILES) | $(LOCAL_UNIT_DIRS) $(LOCAL_CTRL_ALT_DE
 
 STAGE1_INSTALL_FILES += $(LOCAL_INSTALL_TRIPLETS)
 STAGE1_INSTALL_SYMLINKS += $(LOCAL_UNIT_SYMLINKS)
-STAGE1_INSTALL_DIRS += $(foreach d,$(LOCAL_UNIT_DIRS),$d:0755)
+STAGE1_INSTALL_DIRS += $(foreach d,$(LOCAL_UNITDIR_RESTS),$(foreach d2,$(call dir-chain,$(LOCAL_UNITDIR_BASE),$d),$(d2):0755))
 STAGE1_STAMPS += $(LOCAL_STAMP)
 
 $(call undefine-namespaces,LOCAL _UNITS_MK)
