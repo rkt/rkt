@@ -36,6 +36,12 @@ $(call setup-stamp-file,UFS_SYSTEMD_INSTALL_STAMP,/systemd_install/$(UFS_SYSTEMD
 STAGE1_USR_STAMPS += $(UFS_STAMP)
 # INSTALL_SYMLINKS += usr/lib:$(UFS_LIB_SYMLINK) usr/lib64:$(UFS_LIB64_SYMLINK)
 STAGE1_COPY_SO_DEPS := yes
+CLEAN_FILES += \
+	$(ACIROOTFSDIR)/systemd-version
+CLEAN_DIRS += \
+	$(UFS_SYSTEMD_SRCDIR) \
+	$(UFS_SYSTEMD_BUILDDIR) \
+	$(UFS_ROOTFSDIR)
 
 $(call inc-one,bash.mk)
 
