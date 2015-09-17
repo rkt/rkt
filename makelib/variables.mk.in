@@ -73,10 +73,12 @@ ACIDIR := $(BUILDDIR)/aci-for-$(RKT_STAGE1_USR_FROM)-flavor
 ACIROOTFSDIR := $(ACIDIR)/rootfs
 FILELISTDIR := $(BUILDDIR)/filelists
 TMPDIR := $(BUILDDIR)/tmp
+CLEANDIR := $(BUILDDIR)/clean
 
 ACTOOL := $(BINDIR)/actool
 DEPSGENTOOL := $(TOOLSDIR)/depsgen
 FILELISTGENTOOL := $(TOOLSDIR)/filelistgen
+CLEANGENTOOL := $(TOOLSDIR)/cleangen
 
 # test-related variables
 GO_TEST_PACKAGES ?= ./...
@@ -95,4 +97,5 @@ CREATE_DIRS += \
 	$(ACIDIR) \
 	$(ACIROOTFSDIR) \
 	$(FILELISTDIR) \
-	$(TMPDIR)
+	$(TMPDIR) \
+	$(CLEANDIR)
