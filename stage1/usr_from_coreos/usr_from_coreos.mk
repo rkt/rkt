@@ -18,6 +18,7 @@ UFC_STAMP := $(STAMPSDIR)/$(call path-to-stamp,$(MK_PATH))
 $(call setup-stamp-file,UFC_STAMP)
 $(call setup-stamp-file,UFC_MKBASE_STAMP,/mkbase)
 $(call setup-stamp-file,UFC_ACI_ROOTFS_STAMP,/acirootfs)
+$(call setup-stamp-file,UFC_ACIROOTFS_DEPS_STAMP,/acirootfs-deps)
 
 $(call setup-filelist-file,UFC_DETAILED_FILELIST)
 
@@ -36,7 +37,7 @@ endif
 INSTALL_DIRS += $(UFC_ITMP):-
 STAGE1_USR_STAMPS += $(UFC_STAMP)
 
-$(UFC_STAMP): $(UFC_ACI_ROOTFS_STAMP)
+$(UFC_STAMP): $(UFC_ACI_ROOTFS_STAMP) $(UFC_ACIROOTFS_DEPS_STAMP)
 	touch "$@"
 
 $(call forward-vars,$(UFC_ACI_ROOTFS_STAMP), \
@@ -52,6 +53,10 @@ $(UFC_ACI_ROOTFS_STAMP): $(UFC_MKBASE_STAMP) $(UFC_FILELIST)
 	ln -sf 'usr/bin' "$(ACIROOTFSDIR)/bin"; \
 	echo "$(UFC_SYSTEMD_VERSION)" >"$(ACIROOTFSDIR)/systemd-version"; \
 	touch "$@"
+
+# This depmk can be created only when detailed filelist is generated
+$(UFC_ACIROOTFS_DEPS_STAMP): $(UFC_DETAILED_FILELIST)
+$(call generate-glob-deps,$(UFC_ACIROOTFS_DEPS_STAMP),$(UFC_ACI_ROOTFS_STAMP),$(UFC_DEPMK),,$(UFC_DETAILED_FILELIST),$(UFC_ROOTFS))
 
 $(call forward-vars,$(UFC_MKBASE_STAMP), \
 	UFC_ROOTFS UFC_FILELIST UFC_SQUASHFS)
