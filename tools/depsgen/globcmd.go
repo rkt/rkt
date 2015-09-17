@@ -51,9 +51,7 @@ const (
 type globArgs struct {
 	target   string
 	suffix   string
-	files    []string
 	mode     globMode
-	fMode    string
 	filelist string
 	mapTo    []string
 }
@@ -75,8 +73,7 @@ func globGetArgs(args []string) globArgs {
 	f, target := standardFlags(globCmd)
 	suffix := f.String("suffix", "", "File suffix (example: .go)")
 	globbingMode := f.String("glob-mode", "all", "Which files to glob (normal, dot-files, all [default])")
-	filesMode := f.String("mode", "args", "How to get files, either 'filelist' mode or 'args' [default]")
-	filelist := f.String("filelist", "", "For filelist mode, read all the files from this file")
+	filelist := f.String("filelist", "", "Read all the files from this file")
 	mapTo := []string{}
 	mapToWrapper := common.StringSliceWrapper{Slice: &mapTo}
 	f.Var(&mapToWrapper, "map-to", "Map contents of filelist to this directory, can be used multiple times")
@@ -86,28 +83,16 @@ func globGetArgs(args []string) globArgs {
 		common.Die("--target parameter must be specified and cannot be empty")
 	}
 	mode := globModeFromString(*globbingMode)
-	switch *filesMode {
-	case "filelist":
-		if *filelist == "" {
-			common.Die("--filelist parameter must be specified and cannot be empty")
-		}
-		if len(mapTo) < 1 {
-			common.Die("--map-to parameter must be specified at least once")
-		}
-	case "args":
-		if *filelist != "" {
-			common.Warn("--filelist parameter is ignored in args mode")
-		}
-		if len(mapTo) > 0 {
-			common.Warn("--map-to parameter is ignored in args mode")
-		}
+	if *filelist == "" {
+		common.Die("--filelist parameter must be specified and cannot be empty")
+	}
+	if len(mapTo) < 1 {
+		common.Die("--map-to parameter must be specified at least once")
 	}
 	return globArgs{
 		target:   *target,
 		suffix:   *suffix,
-		files:    f.Args(),
 		mode:     mode,
-		fMode:    *filesMode,
 		filelist: *filelist,
 		mapTo:    mapTo,
 	}
@@ -128,9 +113,6 @@ func globModeFromString(mode string) globMode {
 }
 
 func globGetFiles(args globArgs) []string {
-	if args.fMode == "args" {
-		return args.files
-	}
 	f, err := globGetFilesFromFilelist(args.filelist)
 	if err != nil {
 		common.Die("Failed to get files from filelist %q: %v", args.filelist, err)
