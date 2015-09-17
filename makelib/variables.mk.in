@@ -71,9 +71,11 @@ DEPSDIR := $(BUILDDIR)/deps
 REVSDIR := $(BUILDDIR)/revs
 ACIDIR := $(BUILDDIR)/aci-for-$(RKT_STAGE1_USR_FROM)-flavor
 ACIROOTFSDIR := $(ACIDIR)/rootfs
+FILELISTDIR := $(BUILDDIR)/filelists
 
 ACTOOL := $(BINDIR)/actool
 DEPSGENTOOL := $(TOOLSDIR)/depsgen
+FILELISTGENTOOL := $(TOOLSDIR)/filelistgen
 
 # test-related variables
 GO_TEST_PACKAGES ?= ./...
@@ -90,4 +92,5 @@ CREATE_DIRS += \
 	$(DEPSDIR) \
 	$(REVSDIR) \
 	$(ACIDIR) \
-	$(ACIROOTFSDIR)
+	$(ACIROOTFSDIR) \
+	$(FILELISTDIR)
