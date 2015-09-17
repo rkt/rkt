@@ -14,7 +14,9 @@ LKVM_PATCHES := $(abspath $(LKVM_PATCHESDIR)/*.patch)
 $(call setup-stamp-file,LKVM_BUILD_STAMP,/build)
 $(call setup-stamp-file,LKVM_PATCH_STAMP,/patch_lkvm)
 $(call setup-stamp-file,LKVM_DEPS_STAMP,/deps)
+$(call setup-stamp-file,LKVM_DIR_CLEAN_STAMP,/dir-clean)
 $(call setup-dep-file,LKVM_PATCHES_DEPMK)
+$(call setup-clean-file,LKVM_CLEANMK,/src)
 $(call setup-filelist-file,LKVM_DIR_FILELIST,/dir)
 $(call setup-filelist-file,LKVM_PATCHES_FILELIST,/patches)
 
@@ -23,7 +25,7 @@ INSTALL_FILES += $(LKVM_BINARY):$(LKVM_ACI_BINARY):-
 CREATE_DIRS += $(LKVM_TMPDIR)
 CLEAN_DIRS += $(LKVM_SRCDIR)
 
-$(LKVM_STAMP): $(LKVM_ACI_BINARY) $(LKVM_DEPS_STAMP)
+$(LKVM_STAMP): $(LKVM_ACI_BINARY) $(LKVM_DEPS_STAMP) $(LKVM_DIR_CLEAN_STAMP)
 	touch "$@"
 
 $(LKVM_BINARY): $(LKVM_BUILD_STAMP)
@@ -39,6 +41,9 @@ $(LKVM_BUILD_STAMP): $(LKVM_PATCH_STAMP)
 # builddir). Can happen after build finished.
 $(LKVM_DIR_FILELIST): $(LKVM_BUILD_STAMP)
 $(call generate-deep-filelist,$(LKVM_DIR_FILELIST),$(LKVM_SRCDIR))
+
+# Generate clean.mk cleaning lkvm directory
+$(call generate-clean-mk,$(LKVM_DIR_CLEAN_STAMP),$(LKVM_CLEANMK),$(LKVM_DIR_FILELIST),$(LKVM_SRCDIR))
 
 $(call forward-vars,$(LKVM_PATCH_STAMP), \
 	LKVM_PATCHES LKVM_SRCDIR)
