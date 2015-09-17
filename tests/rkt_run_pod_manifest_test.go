@@ -541,29 +541,11 @@ func TestPodManifest(t *testing.T) {
 		verifyHostFile(t, tmpdir, "file", i, tt.expectedResult)
 
 		// 2. Test 'rkt prepare' + 'rkt run-prepared'.
-		child, err = gexpect.Spawn(fmt.Sprintf("%s --insecure-skip-verify prepare --pod-manifest=%s",
-			ctx.cmd(), manifestFile))
-		if err != nil {
-			t.Fatalf("Cannot exec rkt: %v", err)
-		}
+		rktCmd := fmt.Sprintf("%s --insecure-skip-verify prepare --pod-manifest=%s",
+			ctx.cmd(), manifestFile)
+		uuid := runRktAndGetUUID(t, rktCmd)
 
-		// Read out the UUID.
-		result, out, err := expectRegexWithOutput(child, "\n[0-9a-f-]{36}")
-		if err != nil || len(result) != 1 {
-			t.Fatalf("Error: %v\nOutput: %v", err, out)
-		}
-
-		err = child.Wait()
-		if err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
-		}
-		podIDStr := strings.TrimSpace(result[0])
-		podID, err := types.NewUUID(podIDStr)
-		if err != nil {
-			t.Fatalf("%q is not a valid UUID: %v", podIDStr, err)
-		}
-
-		runPreparedCmd := fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.cmd(), podID.String())
+		runPreparedCmd := fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.cmd(), uuid)
 		t.Logf("Running 'run' test #%v: %v", i, runPreparedCmd)
 		child, err = gexpect.Spawn(runPreparedCmd)
 		if err != nil {

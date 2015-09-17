@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
@@ -327,4 +328,28 @@ func removeFromCas(t *testing.T, ctx *rktRunCtx, hash string) {
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
+}
+
+func runRktAndGetUUID(t *testing.T, rktCmd string) string {
+	child, err := gexpect.Spawn(rktCmd)
+	if err != nil {
+		t.Fatalf("cannot exec rkt: %v", err)
+	}
+
+	result, out, err := expectRegexWithOutput(child, "\n[0-9a-f-]{36}")
+	if err != nil || len(result) != 1 {
+		t.Fatalf("Error: %v\nOutput: %v", err, out)
+	}
+
+	if err = child.Wait(); err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+
+	podIDStr := strings.TrimSpace(result[0])
+	podID, err := types.NewUUID(podIDStr)
+	if err != nil {
+		t.Fatalf("%q is not a valid UUID: %v", podIDStr, err)
+	}
+
+	return podID.String()
 }
