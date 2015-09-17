@@ -19,6 +19,8 @@ $(call setup-stamp-file,UFC_STAMP)
 $(call setup-stamp-file,UFC_MKBASE_STAMP,/mkbase)
 $(call setup-stamp-file,UFC_ACI_ROOTFS_STAMP,/acirootfs)
 
+$(call setup-filelist-file,UFC_DETAILED_FILELIST)
+
 ifneq ($(RKT_LOCAL_COREOS_PXE_IMAGE_PATH),)
 
 UFC_PXE := $(abspath $(RKT_LOCAL_COREOS_PXE_IMAGE_PATH))
@@ -59,6 +61,11 @@ $(UFC_MKBASE_STAMP): $(UFC_SQUASHFS) $(UFC_FILELIST)
 	mkdir -p "$(UFC_ROOTFS)"; \
 	unsquashfs -d "$(UFC_ROOTFS)/usr" -ef "$(UFC_FILELIST)" "$(UFC_SQUASHFS)"; \
 	touch "$@"
+
+# This filelist can be generated only after the pxe image was
+# unpackaged and unsquashed
+$(UFC_DETAILED_FILELIST): $(UFC_MKBASE_STAMP)
+$(call generate-deep-filelist,$(UFC_DETAILED_FILELIST),$(UFC_ROOTFS))
 
 $(call forward-vars,$(UFC_SQUASHFS), \
 	UFC_ITMP UFC_PXE UFC_SQUASHFS_BASE)
