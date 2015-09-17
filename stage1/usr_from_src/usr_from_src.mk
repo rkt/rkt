@@ -42,6 +42,7 @@ CLEAN_DIRS += \
 	$(UFS_SYSTEMD_SRCDIR) \
 	$(UFS_SYSTEMD_BUILDDIR) \
 	$(UFS_ROOTFSDIR)
+CLEAN_SYMLINKS += $(ACIROOTFSDIR)/flavor
 
 $(call inc-one,bash.mk)
 

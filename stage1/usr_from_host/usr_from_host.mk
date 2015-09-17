@@ -8,4 +8,6 @@ $(UFH_STAMP): | $(ACIROOTFSDIR)
 	ln -sf 'host' "$(ACIROOTFSDIR)/flavor"
 	touch "$@"
 
+CLEAN_SYMLINKS += $(ACIROOTFSDIR)/flavor
+
 $(call undefine-namespaces,UFH)

@@ -40,12 +40,16 @@ endif
 
 INSTALL_DIRS += $(UFC_ITMP):-
 STAGE1_USR_STAMPS += $(UFC_STAMP)
-
 CLEAN_FILES += \
 	$(UFC_FILELIST) \
 	$(UFC_PXE).*.sig \
 	$(UFC_SQUASHFS) \
 	$(ACIROOTFSDIR)/systemd-version
+CLEAN_SYMLINKS += \
+	$(ACIROOTFSDIR)/flavor \
+	$(ACIROOTFSDIR)/lib64 \
+	$(ACIROOTFSDIR)/lib \
+	$(ACIROOTFSDIR)/bin
 CLEAN_DIRS += \
 	$(UFC_ROOTFS)
 
