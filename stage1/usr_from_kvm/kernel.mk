@@ -20,6 +20,9 @@ $(call setup-stamp-file,KERNEL_STAMP,/build_kernel)
 $(call setup-stamp-file,KERNEL_BZIMAGE_STAMP,/bzimage)
 $(call setup-stamp-file,KERNEL_PATCH_STAMP,/patch_kernel)
 $(call setup-dep-file,KERNEL_PATCHES_DEPMK)
+$(call setup-filelist-file,KERNEL_PATCHES_FILELIST,/patches)
+$(call setup-filelist-file,KERNEL_BUILD_FILELIST,/build)
+$(call setup-filelist-file,KERNEL_SRC_FILELIST,/src)
 
 CREATE_DIRS += $(KERNEL_TMP) $(KERNEL_BUILDDIR)
 INSTALL_FILES += \
@@ -42,6 +45,11 @@ $(KERNEL_BZIMAGE_STAMP): $(KERNEL_BUILD_CONFIG) $(KERNEL_PATCH_STAMP)
 	$(MAKE) -C "$(KERNEL_SRCDIR)" O="$(KERNEL_BUILDDIR)" bzImage; \
 	touch "$@"
 
+# Generate filelist of a builddir. Can happen only after the building
+# finished.
+$(KERNEL_BUILD_FILELIST): $(KERNEL_BZIMAGE_STAMP)
+$(call generate-deep-filelist,$(KERNEL_BUILD_FILELIST),$(KERNEL_BUILDDIR))
+
 -include $(KERNEL_PATCHES_DEPMK)
 $(call forward-vars,$(KERNEL_PATCH_STAMP), \
 	DEPSGENTOOL KERNEL_PATCHES KERNEL_PATCHES_DEPMK KERNEL_SRCDIR)
@@ -53,6 +61,28 @@ $(KERNEL_PATCH_STAMP): $(KERNEL_MAKEFILE) $(DEPSGENTOOL_STAMP)
 		patch --directory="$(KERNEL_SRCDIR)" --strip=1 --forward <"$${p}"; \
 	done; \
 	touch "$@"
+
+# Generate a filelist of srcdir. Can happen after the sources were
+# patched.
+$(KERNEL_SRC_FILELIST): $(KERNEL_PATCH_STAMP)
+$(call generate-deep-filelist,$(KERNEL_SRC_FILELIST),$(KERNEL_SRCDIR))
+
+# This is a special case - normally, when generating filelists, we
+# require the directory to exist. In this case, the patches directory
+# may not exist and it is fine. We generate an empty filelist.
+KERNEL_GOT_PATCHES := $(shell test -d "$(KERNEL_PATCHESDIR)" && echo yes)
+
+ifeq ($(KERNEL_GOT_PATCHES),yes)
+
+# Generate a filelist of patches. Can happen anytime.
+$(call generate-shallow-filelist,$(KERNEL_PATCHES_FILELIST),$(KERNEL_PATCHESDIR),.patch)
+
+else
+
+# Generate empty filelist of patches. This can happen anytime.
+$(call generate-empty-filelist,$(KERNEL_PATCHES_FILELIST))
+
+endif
 
 $(call forward-vars,$(KERNEL_MAKEFILE), \
 	KERNEL_SRCDIR KERNEL_TMP)
