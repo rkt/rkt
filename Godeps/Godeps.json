@@ -223,8 +223,8 @@
 			"Rev": "05017fcccf23c823bfdea560dcc958a136e54fb7"
 		},
 		{
-			"ImportPath": "github.com/pborman/uuid/uuid",
-			"Rev": "ed3ca8a15a931b141440a7e98e4f716eec255f7d"
+			"ImportPath": "github.com/pborman/uuid",
+			"Rev": "cccd189d45f7ac3368a0d127efb7f4d08ae0b655"
 		},
 		{
 			"ImportPath": "github.com/petar/GoLLRB/llrb",
