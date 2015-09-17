@@ -1,3 +1,5 @@
+$(call setup-clean-file,STAGE1_FSD_SOLIBS_CLEANMK,/solibs)
+
 $(call setup-tmp-dir,STAGE1_FSD_TMPDIR)
 
 # This is where libraries from host are copied too, so we can prepare
@@ -6,6 +8,7 @@ STAGE1_FSD_LIBSDIR := $(STAGE1_FSD_TMPDIR)/libs
 
 $(call setup-stamp-file,STAGE1_FSD_STAMP)
 $(call setup-stamp-file,STAGE1_FSD_COPY_STAMP,/fsd_copy)
+$(call setup-stamp-file,STAGE1_FSD_CLEAN_STAMP,/fsd_clean)
 
 $(call setup-filelist-file,STAGE1_FSD_FILELIST,/fsd)
 
@@ -19,7 +22,7 @@ endif
 
 CREATE_DIRS += $(STAGE1_FSD_LIBSDIR)
 
-$(STAGE1_FSD_STAMP): $(STAGE1_FSD_COPY_STAMP)
+$(STAGE1_FSD_STAMP): $(STAGE1_FSD_COPY_STAMP) $(STAGE1_FSD_CLEAN_STAMP)
 	touch "$@"
 
 $(call forward-vars,$(STAGE1_FSD_COPY_STAMP), \
@@ -36,6 +39,10 @@ $(STAGE1_FSD_COPY_STAMP): $(STAGE1_STAMPS) | $(STAGE1_FSD_LIBSDIR)
 # This filelist can be generated only after the files were copied.
 $(STAGE1_FSD_FILELIST): $(STAGE1_FSD_COPY_STAMP)
 $(call generate-deep-filelist,$(STAGE1_FSD_FILELIST),$(STAGE1_FSD_LIBSDIR))
+
+# Generate clean.mk file cleaning libraries copied from host to both
+# temporary directory and ACI rootfs directory.
+$(call generate-clean-mk,$(STAGE1_FSD_CLEAN_STAMP),$(STAGE1_FSD_SOLIBS_CLEANMK),$(STAGE1_FSD_FILELIST),$(STAGE1_FSD_LIBSDIR) $(ACIROOTFSDIR))
 
 # STAGE1_FSD_STAMP is deliberately not cleared - it will be used in
 # stage1.mk to create stage1.aci's dependency on the stamp.
