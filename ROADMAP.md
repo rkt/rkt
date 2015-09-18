@@ -6,8 +6,9 @@ This document defines a high level roadmap for rkt development.
 The dates below should not be considered authoritative, but rather indicative of the projected timeline of the project.
 The [milestones defined in GitHub](https://github.com/coreos/rkt/milestones) represent the most up-to-date state of affairs.
 
-rkt is an implementation of the [App Container spec](https://github.com/appc/spec), which is still under active development on an approximately similar timeframe.
-Until the specification reaches version 1.0, rkt's major/minor versions will trail that of the spec.
+rkt is an implementation of the [App Container spec](https://github.com/appc/spec), which is still under active development on an approximately similar timeframe. 
+The version of the spec that rkt implements can be seen in the output of `rkt version`.
+
 
 ### rkt 0.9 (September)
 - stable on-disk format [#1132](https://github.com/coreos/rkt/issues/1132)
