@@ -56,7 +56,7 @@ func TestRunOverrideExec(t *testing.T) {
 		},
 		{
 			// Test overriding the entrypoint with a missing app section
-			rktCmd:       fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s --exec /inspect -- --print-exec", ctx.cmd(), execImage),
+			rktCmd:       fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s --exec /inspect -- --print-exec", ctx.cmd(), noappImage),
 			expectedLine: "inspect execed as: /inspect",
 		},
 	} {
