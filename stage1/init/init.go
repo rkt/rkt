@@ -758,6 +758,15 @@ func getContainerSubCgroup(machineID string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("could not get own cgroup path: %v", err)
 			}
+			// systemd-nspawn won't work unless we're in a subcgroup. If we're
+			// in the root cgroup, we create a "rkt" subcgroup and we add
+			// ourselves to it
+			if ownCgroupPath == "/" {
+				ownCgroupPath = "/rkt"
+				if err := cgroup.JoinSubcgroup("systemd", ownCgroupPath); err != nil {
+					return "", fmt.Errorf("error joining %s subcgroup: %v", ownCgroupPath, err)
+				}
+			}
 			subcgroup = filepath.Join(ownCgroupPath, "system.slice")
 		}
 	}

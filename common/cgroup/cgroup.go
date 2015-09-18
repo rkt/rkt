@@ -215,6 +215,21 @@ func GetOwnCgroupPath(controller string) (string, error) {
 	return parts[2], nil
 }
 
+// JoinCgroup makes the calling process join the subcgroup hierarchy on a
+// particular controller
+func JoinSubcgroup(controller string, subcgroup string) error {
+	subcgroupPath := filepath.Join("/sys/fs/cgroup", controller, subcgroup)
+	if err := os.MkdirAll(subcgroupPath, 0600); err != nil {
+		return fmt.Errorf("error creating %q subcgroup: %v", subcgroup, err)
+	}
+	pidBytes := []byte(strconv.Itoa(os.Getpid()))
+	if err := ioutil.WriteFile(filepath.Join(subcgroupPath, "cgroup.procs"), pidBytes, 0600); err != nil {
+		return fmt.Errorf("error adding ourselves to the %q subcgroup: %v", subcgroup, err)
+	}
+
+	return nil
+}
+
 // If /system.slice does not exist in the cpuset controller, create it and
 // configure it.
 // Since this is a workaround, we ignore errors
