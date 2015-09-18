@@ -16,9 +16,16 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strconv"
+	"strings"
+	"sync"
 	"testing"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/tests/testutils"
 )
 
@@ -167,4 +174,218 @@ func testFetchNoStore(t *testing.T, args string, image string, finalURL string) 
 		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}
 	child.Wait()
+}
+
+type synchronizedBool struct {
+	value bool
+	lock  sync.Mutex
+}
+
+func (b *synchronizedBool) Read() bool {
+	b.lock.Lock()
+	value := b.value
+	b.lock.Unlock()
+	return value
+}
+
+func (b *synchronizedBool) Write(value bool) {
+	b.lock.Lock()
+	b.value = value
+	b.lock.Unlock()
+}
+
+func TestResumedFetch(t *testing.T) {
+	image := "rkt-inspect-implicit-fetch.aci"
+	imagePath := patchTestACI(image, "--exec=/inspect")
+
+	hash := types.ShortHash("sha512-" + getHashOrPanic(imagePath))
+
+	defer os.Remove(imagePath)
+
+	kill := make(chan struct{})
+	reportkill := make(chan struct{})
+
+	shouldInterrupt := &synchronizedBool{}
+	shouldInterrupt.Write(true)
+
+	server := httptest.NewServer(testServerHandler(t, shouldInterrupt, imagePath, kill, reportkill))
+	defer server.Close()
+
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	cmd := fmt.Sprintf("%s --no-store --insecure-skip-verify fetch %s", ctx.Cmd(), server.URL)
+	child := spawnOrFail(t, cmd)
+	<-kill
+	err := child.Close()
+	if err != nil {
+		panic(err)
+	}
+	reportkill <- struct{}{}
+
+	// rkt has fetched the first half of the image
+	// If it fetches the first half again these channels will be written to.
+	// Closing them to make the test panic if they're written to.
+	close(kill)
+	close(reportkill)
+
+	child = spawnOrFail(t, cmd)
+	if _, _, err := expectRegexWithOutput(child, ".*"+hash); err != nil {
+		t.Fatalf("hash didn't match: %v", err)
+	}
+	err = child.Wait()
+	if err != nil {
+		t.Errorf("rkt didn't exit cleanly: %v", err)
+	}
+}
+
+func TestResumedFetchInvalidCache(t *testing.T) {
+	image := "rkt-inspect-implicit-fetch.aci"
+	imagePath := patchTestACI(image, "--exec=/inspect")
+	defer os.Remove(imagePath)
+
+	hash := types.ShortHash("sha512-" + getHashOrPanic(imagePath))
+
+	kill := make(chan struct{})
+	reportkill := make(chan struct{})
+
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	shouldInterrupt := &synchronizedBool{}
+	shouldInterrupt.Write(true)
+
+	// Fetch the first half of the image, and kill rkt once it reaches halfway.
+	server := httptest.NewServer(testServerHandler(t, shouldInterrupt, imagePath, kill, reportkill))
+	defer server.Close()
+	cmd := fmt.Sprintf("%s --no-store --insecure-skip-verify fetch %s", ctx.Cmd(), server.URL)
+	child := spawnOrFail(t, cmd)
+	<-kill
+	err := child.Close()
+	if err != nil {
+		panic(err)
+	}
+	reportkill <- struct{}{}
+
+	// Fetch the image again. The server doesn't support Etags or the
+	// Last-Modified header, so the cached version should be invalidated. If
+	// rkt tries to use the cache, the hash won't check out.
+	shouldInterrupt.Write(false)
+	child = spawnOrFail(t, cmd)
+	if _, s, err := expectRegexWithOutput(child, ".*"+hash); err != nil {
+		t.Fatalf("hash didn't match: %v\nin: %s", err, s)
+	}
+	err = child.Wait()
+	if err != nil {
+		t.Errorf("rkt didn't exit cleanly: %v", err)
+	}
+}
+
+func testServerHandler(t *testing.T, shouldInterrupt *synchronizedBool, imagePath string, kill, waitforkill chan struct{}) http.HandlerFunc {
+	interruptingHandler := testInterruptingServerHandler(t, imagePath, kill, waitforkill)
+	simpleHandler := testSimpleServerHandler(t, imagePath)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if shouldInterrupt.Read() {
+			interruptingHandler(w, r)
+		} else {
+			simpleHandler(w, r)
+		}
+	}
+}
+
+func testInterruptingServerHandler(t *testing.T, imagePath string, kill, waitforkill chan struct{}) http.HandlerFunc {
+	finfo, err := os.Stat(imagePath)
+	if err != nil {
+		panic(err)
+	}
+	cutoff := finfo.Size() / 2
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "HEAD" {
+			headers := w.Header()
+			headers["Accept-Ranges"] = []string{"bytes"}
+			headers["Last-Modified"] = []string{"Mon, 02 Jan 2006 15:04:05 MST"}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if r.Method != "GET" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		file, err := os.Open(imagePath)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+
+		rangeHeaders, ok := r.Header["Range"]
+		if ok && len(rangeHeaders) == 1 && strings.HasPrefix(rangeHeaders[0], "bytes=") {
+			rangeHeader := rangeHeaders[0][6:] // The first (and only) range header, with len("bytes=") characters chopped off the front
+			tokens := strings.Split(rangeHeader, "-")
+			if len(tokens) != 2 {
+				t.Fatalf("couldn't parse range header: %q", rangeHeader)
+			}
+
+			start, err := strconv.Atoi(tokens[0])
+			if err != nil {
+				if tokens[0] == "" {
+					start = 0 // If start wasn't specified, start at the beginning
+				} else {
+					t.Fatalf("requested non-int starting location: %s", tokens[0])
+				}
+			}
+			end, err := strconv.Atoi(tokens[1])
+			if err != nil {
+				if tokens[1] == "" {
+					end = int(finfo.Size()) - 1 // If end wasn't specified, end at the end
+				} else {
+					t.Fatalf("requested non-int ending location: %s", tokens[0])
+				}
+			}
+
+			_, err = file.Seek(int64(start), os.SEEK_SET)
+			if err != nil {
+				panic(err)
+			}
+
+			_, err = io.CopyN(w, file, int64(end-start+1))
+			if err != nil {
+				panic(err)
+			}
+
+			return
+		}
+
+		_, err = io.CopyN(w, file, cutoff)
+		if err != nil {
+			panic(err)
+		}
+
+		kill <- struct{}{}
+		<-waitforkill
+	}
+}
+func testSimpleServerHandler(t *testing.T, imagePath string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "HEAD" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if r.Method != "GET" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		file, err := os.Open(imagePath)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+
+		_, err = io.Copy(w, file)
+		if err != nil {
+			panic(err)
+		}
+	}
 }

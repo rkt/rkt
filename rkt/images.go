@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"container/list"
+	"crypto/sha512"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -517,7 +518,11 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 			return nil, nil, nil, fmt.Errorf("error opening ACI file: %v", err)
 		}
 	} else {
-		aciFile, err = f.s.TmpFile()
+		h := sha512.New()
+		h.Write([]byte(aciURL))
+		aciURLHash := f.s.HashToKey(h)
+
+		aciFile, err = f.s.TmpNamedFile(aciURLHash)
 		if err != nil {
 			return nil, aciFile, nil, fmt.Errorf("error setting up temporary file: %v", err)
 		}
@@ -599,6 +604,10 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 		}
 	}
 
+	var etagFilePath string
+	var amountAlreadyHere int64
+	byteRangeSupported := false
+
 	client := &http.Client{Transport: transport}
 	f.setHTTPHeaders(req, etag)
 
@@ -607,7 +616,79 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 			return fmt.Errorf("too many redirects")
 		}
 		f.setHTTPHeaders(req, etag)
+		if amountAlreadyHere > 0 && byteRangeSupported {
+			req.Header.Add("Range", fmt.Sprintf("bytes=%d-", amountAlreadyHere))
+		}
 		return nil
+	}
+
+	if f, ok := out.(*os.File); ok {
+		finfo, err := f.Stat()
+		if err != nil {
+			return nil, err
+		}
+
+		etagFilePath = f.Name() + ".etag"
+
+		amountAlreadyHere = finfo.Size()
+		if amountAlreadyHere > 0 {
+			// There's already some data in the file we're going to write the
+			// aci to. We're going to send an HTTP HEAD request to see if the
+			// server accepts Range requests. If so, just request the
+			// remaining data. If not, seek to the beginning of the file.
+			resp, err := client.Head(url)
+			if err != nil {
+				return nil, err
+			}
+			if resp.StatusCode != http.StatusOK {
+				stderr("bad HTTP status code from HEAD request: %d",
+					resp.StatusCode)
+			} else {
+				var modOK bool
+				var etagOK bool
+				lastModified := resp.Header.Get("Last-Modified")
+				etag := resp.Header.Get("ETag")
+				acceptRanges, rangeOK := resp.Header["Accept-Ranges"]
+				if lastModified != "" {
+					t, err := time.Parse("Mon, 02 Jan 2006 15:04:05 MST",
+						lastModified)
+					if err == nil && t.Before(finfo.ModTime()) {
+						modOK = true
+					}
+				}
+				if etag != "" {
+					savedEtag, err := ioutil.ReadFile(etagFilePath)
+					if err == nil && string(savedEtag) == etag {
+						etagOK = true
+					}
+				}
+				if rangeOK && (modOK || etagOK) {
+					for _, rng := range acceptRanges {
+						if rng == "bytes" {
+							byteRangeSupported = true
+							req.Header.Add("Range",
+								fmt.Sprintf("bytes=%d-", amountAlreadyHere))
+						}
+					}
+				}
+				if !byteRangeSupported {
+					if rangeOK {
+						stderr("Can't use cached partial download, resource updated.")
+					} else {
+						stderr("Can't use cached partial download, range request unsupported.")
+					}
+					amountAlreadyHere = 0
+					_, err := f.Seek(0, os.SEEK_SET)
+					if err != nil {
+						return nil, err
+					}
+					err = f.Truncate(0)
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
 	}
 
 	res, err := client.Do(req)
@@ -623,7 +704,7 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 		// If the server returns Status Accepted (HTTP 202), we should retry
 		// downloading the signature later.
 		return nil, errStatusAccepted
-	case http.StatusOK:
+	case http.StatusOK, http.StatusPartialContent:
 		fallthrough
 	case http.StatusNotModified:
 		cd.etag = res.Header.Get("ETag")
@@ -632,9 +713,31 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 		if cd.useCached {
 			return cd, nil
 		}
+	case http.StatusRequestedRangeNotSatisfiable:
+		if file, ok := out.(*os.File); ok {
+			finfo, err := file.Stat()
+			if err != nil {
+				return nil, err
+			}
+			if finfo.Size() != 0 {
+				_, err = file.Seek(0, os.SEEK_SET)
+				if err != nil {
+					return nil, err
+				}
+				err = file.Truncate(0)
+				if err != nil {
+					return nil, err
+				}
+				os.Remove(etagFilePath)
+				return f.downloadHTTP(url, label, out, etag)
+			}
+		}
+		fallthrough
 	default:
 		return nil, fmt.Errorf("bad HTTP status code: %d", res.StatusCode)
 	}
+
+	_ = ioutil.WriteFile(etagFilePath, []byte(res.Header.Get("ETag")), 0644)
 
 	prefix := "Downloading " + label
 	fmtBytesSize := 18
@@ -671,6 +774,8 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 	if err := out.Sync(); err != nil {
 		return nil, fmt.Errorf("error writing %s: %v", label, err)
 	}
+
+	os.Remove(etagFilePath)
 
 	return cd, nil
 }

@@ -239,6 +239,26 @@ func (s *Store) TmpFile() (*os.File, error) {
 	return ioutil.TempFile(dir, "")
 }
 
+// TmpNamedFile returns an *os.File with the specified name local to the same
+// filesystem as the Store, or any error encountered. If the file already
+// exists it will return the existing file in read/write mode with the cursor
+// at the end of the file.
+func (s Store) TmpNamedFile(name string) (*os.File, error) {
+	dir, err := s.TmpDir()
+	if err != nil {
+		return nil, err
+	}
+	fname := filepath.Join(dir, name)
+	_, err = os.Stat(fname)
+	if os.IsNotExist(err) {
+		return os.Create(fname)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return os.OpenFile(fname, os.O_RDWR|os.O_APPEND, 0644)
+}
+
 // TmpDir creates and returns dir local to the same filesystem as the Store,
 // or any error encountered
 func (s *Store) TmpDir() (string, error) {
