@@ -154,7 +154,7 @@ Note that `--insecure-skip-verify` is required because, by default, rkt expects 
 At this point our hello app is running on port 5000 and ready to handle HTTP
 requests.
 
-### Testing with curl
+### Test with curl
 
 Open a new terminal and run the following command:
 
