@@ -191,3 +191,12 @@ func httpRequest(method, pth string, body io.Reader) error {
 
 	return err
 }
+
+func CheckMdsAvailability() error {
+	if conn, err := net.Dial("unix", common.MetadataServiceRegSock); err != nil {
+		return errUnreachable
+	} else {
+		conn.Close()
+		return nil
+	}
+}

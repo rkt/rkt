@@ -98,6 +98,16 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		}
 	}
 
+	// Make sure we have a metadata service available before we move to
+	// run state so that the user can rerun the command without needing
+	// to prepare the image again.
+	if flagMDSRegister {
+		if err := stage0.CheckMdsAvailability(); err != nil {
+			stderr("prepare-run: %v", err)
+			return 1
+		}
+	}
+
 	if err := p.xToRun(); err != nil {
 		stderr("prepared-run: cannot transition to run: %v", err)
 		return 1
