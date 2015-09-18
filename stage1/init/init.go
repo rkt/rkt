@@ -637,8 +637,8 @@ func stage1() int {
 	machineID := p.GetMachineID()
 	subcgroup, err := getContainerSubCgroup(machineID)
 	if err == nil {
-		if err := cgroup.CreateCgroups(s1Root, subcgroup, serviceNames); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating cgroups: %v\n", err)
+		if err := mountContainerCgroups(s1Root, subcgroup, serviceNames); err != nil {
+			fmt.Fprintf(os.Stderr, "Couldn't mount the container cgroups: %v\n", err)
 			return 5
 		}
 	} else {
@@ -659,6 +659,17 @@ func stage1() int {
 	}
 
 	return 0
+}
+
+func mountContainerCgroups(s1Root string, subcgroup string, serviceNames []string) error {
+	if err := cgroup.CreateCgroups(s1Root); err != nil {
+		return fmt.Errorf("error creating container cgroups: %v\n", err)
+	}
+	if err := cgroup.RemountCgroupsRO(s1Root, subcgroup, serviceNames); err != nil {
+		return fmt.Errorf("error restricting container cgroups: %v\n", err)
+	}
+
+	return nil
 }
 
 func getContainerSubCgroup(machineID string) (string, error) {

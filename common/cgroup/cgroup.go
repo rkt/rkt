@@ -122,6 +122,21 @@ func parseCgroups(f io.Reader) (map[int][]string, error) {
 	return cgroups, nil
 }
 
+func getCgroups() (map[int][]string, error) {
+	cgroupsFile, err := os.Open("/proc/cgroups")
+	if err != nil {
+		return nil, err
+	}
+	defer cgroupsFile.Close()
+
+	cgroups, err := parseCgroups(cgroupsFile)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing /proc/cgroups: %v", err)
+	}
+
+	return cgroups, nil
+}
+
 func getControllers(cgroups map[int][]string) []string {
 	var controllers []string
 	for _, cs := range cgroups {
@@ -225,23 +240,14 @@ func fixCpusetKnobs(cpusetPath string) {
 	}
 }
 
-// CreateCgroups mounts the cgroup controllers hierarchy for the container but
-// leaves the subcgroup for each app read-write so the systemd inside stage1
-// can apply isolators to them
-func CreateCgroups(root string, subcgroup string, serviceNames []string) error {
-	cgroupsFile, err := os.Open("/proc/cgroups")
+// CreateCgroups mounts the cgroup controllers hierarchy in /sys/fs/cgroup
+// under root
+func CreateCgroups(root string) error {
+	cgroups, err := getCgroups()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting cgroups: %v", err)
 	}
-	defer cgroupsFile.Close()
-
-	cgroups, err := parseCgroups(cgroupsFile)
-	if err != nil {
-		return fmt.Errorf("error parsing /proc/cgroups: %v", err)
-	}
-
 	controllers := getControllers(cgroups)
-
 	var flags uintptr
 
 	// 1. Mount /sys read-only
@@ -285,8 +291,37 @@ func CreateCgroups(root string, subcgroup string, serviceNames []string) error {
 		if err := syscall.Mount("cgroup", cPath, "cgroup", flags, c); err != nil {
 			return fmt.Errorf("error mounting %q: %v", cPath, err)
 		}
+	}
 
-		// 3b. Check if we're running from a unit to know which subcgroup
+	// 4. Create symlinks for combined controllers
+	symlinks := getControllerSymlinks(cgroups)
+	for ln, tgt := range symlinks {
+		lnPath := filepath.Join(cgroupTmpfs, ln)
+		if err := os.Symlink(tgt, lnPath); err != nil {
+			return fmt.Errorf("error creating symlink: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// RemountCgroupsRO remounts the cgroup hierarchy under root read-only, leaving
+// the subcgroup for each app read-write so the systemd inside stage1 can apply
+// isolators to them
+func RemountCgroupsRO(root string, subcgroup string, serviceNames []string) error {
+	cgroups, err := getCgroups()
+	if err != nil {
+		return fmt.Errorf("error getting cgroups: %v", err)
+	}
+	controllers := getControllers(cgroups)
+	cgroupTmpfs := filepath.Join(root, "/sys/fs/cgroup")
+
+	var flags uintptr
+
+	// 1. Mount RW knobs we need to make the enabled isolators work
+	for _, c := range controllers {
+		cPath := filepath.Join(cgroupTmpfs, c)
+		// 1a. Check if we're running from a unit to know which subcgroup
 		// directories to mount read-write
 		subcgroupPath := filepath.Join(cPath, subcgroup)
 
@@ -295,7 +330,7 @@ func CreateCgroups(root string, subcgroup string, serviceNames []string) error {
 			fixCpusetKnobs(cPath)
 		}
 
-		// 3c. Create cgroup directories and mount the files we need over
+		// 1b. Create cgroup directories and mount the files we need over
 		// themselves so they stay read-write
 		for _, serviceName := range serviceNames {
 			appCgroup := filepath.Join(subcgroupPath, serviceName)
@@ -315,7 +350,7 @@ func CreateCgroups(root string, subcgroup string, serviceNames []string) error {
 			}
 		}
 
-		// 3d. Re-mount controller read-only to prevent the container modifying host controllers
+		// 1c. Re-mount controller read-only to prevent the container modifying host controllers
 		flags = syscall.MS_BIND |
 			syscall.MS_REMOUNT |
 			syscall.MS_NOSUID |
@@ -327,23 +362,15 @@ func CreateCgroups(root string, subcgroup string, serviceNames []string) error {
 		}
 	}
 
-	// 4. Create symlinks for combined controllers
-	symlinks := getControllerSymlinks(cgroups)
-	for ln, tgt := range symlinks {
-		lnPath := filepath.Join(cgroupTmpfs, ln)
-		if err := os.Symlink(tgt, lnPath); err != nil {
-			return fmt.Errorf("error creating symlink: %v", err)
-		}
-	}
-
-	// 5. Create systemd cgroup directory
+	systemdControllerPath := filepath.Join(cgroupTmpfs, "systemd")
+	// 2. Create systemd cgroup directory
 	// We're letting systemd-nspawn create the systemd cgroup but later we're
 	// remounting /sys/fs/cgroup read-only so we create the directory here.
-	if err := os.MkdirAll(filepath.Join(cgroupTmpfs, "systemd"), 0700); err != nil {
+	if err := os.MkdirAll(systemdControllerPath, 0700); err != nil {
 		return err
 	}
 
-	// 6. Bind-mount cgroup filesystem read-only
+	// 3. Bind-mount cgroup filesystem read-only
 	flags = syscall.MS_BIND |
 		syscall.MS_REMOUNT |
 		syscall.MS_NOSUID |
