@@ -629,6 +629,18 @@ func stage1() int {
 		log.Fatalf("Error making / a shared and slave mount: %v", err)
 	}
 
+	enabledCgroups, err := cgroup.GetEnabledCgroups()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting cgroups: %v", err)
+		return 5
+	}
+
+	// mount host cgroups in the rkt mount namespace
+	if err := mountHostCgroups(enabledCgroups); err != nil {
+		log.Fatalf("Couldn't mount the host cgroups: %v\n", err)
+		return 5
+	}
+
 	var serviceNames []string
 	for _, app := range p.Manifest.Apps {
 		serviceNames = append(serviceNames, ServiceUnitName(app.Name))
@@ -637,7 +649,7 @@ func stage1() int {
 	machineID := p.GetMachineID()
 	subcgroup, err := getContainerSubCgroup(machineID)
 	if err == nil {
-		if err := mountContainerCgroups(s1Root, subcgroup, serviceNames); err != nil {
+		if err := mountContainerCgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
 			fmt.Fprintf(os.Stderr, "Couldn't mount the container cgroups: %v\n", err)
 			return 5
 		}
@@ -661,11 +673,50 @@ func stage1() int {
 	return 0
 }
 
-func mountContainerCgroups(s1Root string, subcgroup string, serviceNames []string) error {
-	if err := cgroup.CreateCgroups(s1Root); err != nil {
+func areHostCgroupsMounted(enabledCgroups map[int][]string) bool {
+	controllers := cgroup.GetControllerDirs(enabledCgroups)
+	for _, c := range controllers {
+		if !cgroup.IsControllerMounted(c) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// mountHostCgroups mounts the host cgroup hierarchy as required by
+// systemd-nspawn. We need this because some distributions don't have the
+// "name=systemd" cgroup or don't mount the cgroup controllers in
+// "/sys/fs/cgroup", and systemd-nspawn needs this. Since this is mounted
+// inside the rkt mount namespace, it doesn't affect the host.
+func mountHostCgroups(enabledCgroups map[int][]string) error {
+	systemdControllerPath := "/sys/fs/cgroup/systemd"
+	if !areHostCgroupsMounted(enabledCgroups) {
+		if err := cgroup.CreateCgroups("/", enabledCgroups); err != nil {
+			return fmt.Errorf("error creating host cgroups: %v\n", err)
+		}
+	}
+
+	if !cgroup.IsControllerMounted("systemd") {
+		if err := os.MkdirAll(systemdControllerPath, 0700); err != nil {
+			return err
+		}
+		if err := syscall.Mount("cgroup", systemdControllerPath, "cgroup", 0, "none,name=systemd"); err != nil {
+			return fmt.Errorf("error mounting name=systemd hierarchy on %q: %v", systemdControllerPath, err)
+		}
+	}
+
+	return nil
+}
+
+// mountContainerCgroups mounts the cgroup controllers hierarchy in the container's
+// namespace read-only, leaving the needed knobs in the subcgroup for each-app
+// read-write so systemd inside stage1 can apply isolators to them
+func mountContainerCgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
+	if err := cgroup.CreateCgroups(s1Root, enabledCgroups); err != nil {
 		return fmt.Errorf("error creating container cgroups: %v\n", err)
 	}
-	if err := cgroup.RemountCgroupsRO(s1Root, subcgroup, serviceNames); err != nil {
+	if err := cgroup.RemountCgroupsRO(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
 		return fmt.Errorf("error restricting container cgroups: %v\n", err)
 	}
 
