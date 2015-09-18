@@ -16,13 +16,25 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
+const (
+	noappManifestStr = `{"acKind":"ImageManifest","acVersion":"0.6.1","name":"coreos.com/rkt-inspect","labels":[{"name":"version","value":"1.0.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}]}`
+)
+
 func TestRunOverrideExec(t *testing.T) {
+	noappManifestFile := "noapp-manifest.json"
+	if err := ioutil.WriteFile(noappManifestFile, []byte(noappManifestStr), 0600); err != nil {
+		t.Fatalf("Cannot write noapp manifest: %v", err)
+	}
+	defer os.Remove(noappManifestFile)
+	noappImage := patchTestACI("rkt-image-without-exec.aci", fmt.Sprintf("--manifest=%s", noappManifestFile))
+	defer os.Remove(noappImage)
 	execImage := patchTestACI("rkt-exec-override.aci", "--exec=/inspect")
 	defer os.Remove(execImage)
 	ctx := newRktRunCtx()
@@ -41,6 +53,11 @@ func TestRunOverrideExec(t *testing.T) {
 			// Now test overriding the entrypoint (which is a symlink to /inspect so should behave identically)
 			rktCmd:       fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s --exec /inspect-link -- --print-exec", ctx.cmd(), execImage),
 			expectedLine: "inspect execed as: /inspect-link",
+		},
+		{
+			// Test overriding the entrypoint with a missing app section
+			rktCmd:       fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s --exec /inspect -- --print-exec", ctx.cmd(), execImage),
+			expectedLine: "inspect execed as: /inspect",
 		},
 	} {
 		runRktAndCheckOutput(t, tt.rktCmd, tt.expectedLine)

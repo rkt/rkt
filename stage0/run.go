@@ -32,6 +32,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -152,8 +153,8 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		if pm.Apps.Get(*appName) != nil {
 			return fmt.Errorf("error: multiple apps with name %s", am.Name)
 		}
-		if am.App == nil {
-			return fmt.Errorf("error: image %s has no app section", img)
+		if am.App == nil && app.Exec == "" {
+			return fmt.Errorf("error: image %s has no app section and --exec argument is not provided", img)
 		}
 		ra := schema.RuntimeApp{
 			// TODO(vc): leverage RuntimeApp.Name for disambiguating the apps
@@ -167,6 +168,13 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		}
 
 		if execOverride := app.Exec; execOverride != "" {
+			// Create a minimal App section if not present
+			if am.App == nil {
+				ra.App = &types.App{
+					User:  strconv.Itoa(os.Getuid()),
+					Group: strconv.Itoa(os.Getgid()),
+				}
+			}
 			ra.App.Exec = []string{execOverride}
 		}
 
