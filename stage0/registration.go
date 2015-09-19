@@ -47,7 +47,7 @@ var errUnreachable = errors.New(`could not reach the metadata service.
 Make sure metadata service is currently running or use
 "rkt run --mds-register=false" to skip pod registration.
 For more information on running metadata service,
-see https://github.com/coreos/rkt/blob/master/Documentation/metadata-service.md`)
+see https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md`)
 
 // registerPod registers pod with metadata service.
 // Returns authentication token to be passed in the URL

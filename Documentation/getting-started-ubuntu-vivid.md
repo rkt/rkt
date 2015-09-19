@@ -59,7 +59,7 @@ For more on this and other ways to retrieve ACIs, check out the `rkt fetch` sect
 
 ## Start the metadata service
 
-Before running the ACI we need to start the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/metadata-service.md), which helps running apps introspect their execution environment and assert their pod identity.
+Before running the ACI we need to start the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md), which helps running apps introspect their execution environment and assert their pod identity.
 
 For simplicity, we'll start it as a background process and ignore its output but for real setups you should start it as a system service.
 
