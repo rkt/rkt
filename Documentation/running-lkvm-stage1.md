@@ -123,20 +123,3 @@ host OS
           └─ chroot
             └─ user-app1
 ```
-
-## Troubleshooting
-
-### Undefined $HOME
-
-Symptoms:
-
-```
-bind: No such file or directory
-  Error: Failed adding socket to epoll
-  Warning: Failed init: kvm_ipc__init
-```
-
-The LKVM stage1 currently requires $HOME to be defined
-(see [issue #1393](https://github.com/coreos/rkt/issues/1393)).
-When started from a systemd unit file, use `User=root`.
-When started from systemd-run, use `--uid=0`.
