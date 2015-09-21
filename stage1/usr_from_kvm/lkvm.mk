@@ -1,6 +1,6 @@
 $(call setup-stamp-file,LKVM_STAMP)
-LKVM_TMP := $(BUILDDIR)/tmp/usr_from_kvm/lkvm
-LKVM_SRCDIR := $(LKVM_TMP)/src
+LKVM_TMPDIR := $(UFK_TMPDIR)/lkvm
+LKVM_SRCDIR := $(LKVM_TMPDIR)/src
 LKVM_BINARY := $(LKVM_SRCDIR)/lkvm-static
 LKVM_ACI_BINARY := $(ACIROOTFSDIR)/lkvm
 LKVM_GIT := https://kernel.googlesource.com/pub/scm/linux/kernel/git/will/kvmtool
@@ -20,7 +20,8 @@ $(call setup-filelist-file,LKVM_PATCHES_FILELIST,/patches)
 
 UFK_STAMPS += $(LKVM_STAMP)
 INSTALL_FILES += $(LKVM_BINARY):$(LKVM_ACI_BINARY):-
-CREATE_DIRS += $(LKVM_TMP)
+CREATE_DIRS += $(LKVM_TMPDIR)
+CLEAN_DIRS += $(LKVM_SRCDIR)
 
 $(LKVM_STAMP): $(LKVM_ACI_BINARY) $(LKVM_DEPS_STAMP)
 	touch "$@"
@@ -74,7 +75,7 @@ $(call generate-glob-deps,$(LKVM_DEPS_STAMP),$(LKVM_SRCDIR)/Makefile,$(LKVM_PATC
 # don't fetch existing (commit cannot change)
 $(call forward-vars,$(LKVM_SRCDIR)/Makefile, \
 	LKVM_SRCDIR LKVM_GIT LKVM_VERSION)
-$(LKVM_SRCDIR)/Makefile: | $(LKVM_TMP)
+$(LKVM_SRCDIR)/Makefile: | $(LKVM_TMPDIR)
 	set -e; \
 	mkdir -p $(LKVM_SRCDIR); cd $(LKVM_SRCDIR); \
 	git init; \

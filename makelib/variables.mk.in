@@ -72,6 +72,7 @@ REVSDIR := $(BUILDDIR)/revs
 ACIDIR := $(BUILDDIR)/aci-for-$(RKT_STAGE1_USR_FROM)-flavor
 ACIROOTFSDIR := $(ACIDIR)/rootfs
 FILELISTDIR := $(BUILDDIR)/filelists
+TMPDIR := $(BUILDDIR)/tmp
 
 ACTOOL := $(BINDIR)/actool
 DEPSGENTOOL := $(TOOLSDIR)/depsgen
@@ -93,4 +94,5 @@ CREATE_DIRS += \
 	$(REVSDIR) \
 	$(ACIDIR) \
 	$(ACIROOTFSDIR) \
-	$(FILELISTDIR)
+	$(FILELISTDIR) \
+	$(TMPDIR)
