@@ -33,7 +33,9 @@ UFC_PXE := $(abspath $(RKT_LOCAL_COREOS_PXE_IMAGE_PATH))
 
 else
 
-CLEAN_FILES += $(UFC_PXE)
+CLEAN_FILES += \
+	$(UFC_PXE) \
+	$(UFC_PXE).$(firstword $(shell echo -n $(UFC_IMG_URL) | md5sum)).sig
 
 endif
 
@@ -47,7 +49,6 @@ INSTALL_DIRS += $(UFC_ITMP):-
 STAGE1_USR_STAMPS += $(UFC_STAMP)
 CLEAN_FILES += \
 	$(UFC_FILELIST) \
-	$(UFC_PXE).*.sig \
 	$(UFC_SQUASHFS) \
 	$(ACIROOTFSDIR)/systemd-version
 CLEAN_SYMLINKS += \
