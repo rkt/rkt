@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
 	cnitypes "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
@@ -30,6 +31,17 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/tuntap"
 )
+
+const (
+	defaultBrName = "kvm-cni0"
+	defaultMTU    = 1500
+)
+
+type BridgeNetConf struct {
+	NetConf
+	BrName string `json:"bridge"`
+	IsGw   bool   `json:"isGateway"`
+}
 
 // setupTapDevice creates persistent tap device
 // and returns a newly created netlink.Link structure
@@ -79,6 +91,70 @@ func kvmSetupNetAddressing(network *Networking, n activeNet, ifName string) erro
 	return nil
 }
 
+func ensureHasAddr(link netlink.Link, ipn *net.IPNet) error {
+	addrs, err := netlink.AddrList(link, syscall.AF_INET)
+	if err != nil && err != syscall.ENOENT {
+		return fmt.Errorf("could not get list of IP addresses: %v", err)
+	}
+
+	// if there're no addresses on the interface, it's ok -- we'll add one
+	if len(addrs) > 0 {
+		ipnStr := ipn.String()
+		for _, a := range addrs {
+			// string comp is actually easiest for doing IPNet comps
+			if a.IPNet.String() == ipnStr {
+				return nil
+			}
+		}
+		return fmt.Errorf("%q already has an IP address different from %v", link.Attrs().Name, ipn.String())
+	}
+
+	addr := &netlink.Addr{IPNet: ipn, Label: link.Attrs().Name}
+	if err := netlink.AddrAdd(link, addr); err != nil {
+		return fmt.Errorf("could not add IP address to %q: %v", link.Attrs().Name, err)
+	}
+	return nil
+}
+
+func bridgeByName(name string) (*netlink.Bridge, error) {
+	l, err := netlink.LinkByName(name)
+	if err != nil {
+		return nil, fmt.Errorf("could not lookup %q: %v", name, err)
+	}
+	br, ok := l.(*netlink.Bridge)
+	if !ok {
+		return nil, fmt.Errorf("%q already exists but is not a bridge", name)
+	}
+	return br, nil
+}
+
+func ensureBridgeIsUp(brName string, mtu int) (*netlink.Bridge, error) {
+	br := &netlink.Bridge{
+		LinkAttrs: netlink.LinkAttrs{
+			Name: brName,
+			MTU:  mtu,
+		},
+	}
+
+	if err := netlink.LinkAdd(br); err != nil {
+		if err != syscall.EEXIST {
+			return nil, fmt.Errorf("could not add %q: %v", brName, err)
+		}
+
+		// it's ok if the device already exists as long as config is similar
+		br, err = bridgeByName(brName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := netlink.LinkSetUp(br); err != nil {
+		return nil, err
+	}
+
+	return br, nil
+}
+
 // kvmSetup prepare new Networking to be used in kvm environment based on tuntap pair interfaces
 // to allow communication with virtual machine created by lkvm tool
 // right now it only supports default "ptp" network type (other types ends with error)
@@ -113,22 +189,68 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 			}
 
 			// add address to host tap device
-			err = netlink.AddrAdd(
+			err = ensureHasAddr(
 				link,
-				&netlink.Addr{
-					IPNet: &net.IPNet{
+				&net.IPNet{
+					IP:   n.runtime.HostIP,
+					Mask: net.IPMask(n.runtime.Mask),
+				},
+			)
+			if err != nil {
+				return nil, fmt.Errorf("cannot add address to host tap device %q: %v", ifName, err)
+			}
+
+		case "bridge":
+			config := BridgeNetConf{
+				NetConf: NetConf{
+					MTU: defaultMTU,
+				},
+				BrName: defaultBrName,
+			}
+			if err := json.Unmarshal(n.confBytes, &config); err != nil {
+				return nil, fmt.Errorf("error parsing %q result: %v", n.conf.Name, err)
+			}
+
+			br, err := ensureBridgeIsUp(config.BrName, config.MTU)
+			if err != nil {
+				return nil, fmt.Errorf("error in time of bridge setup: %v", err)
+			}
+			link, err := setupTapDevice(podID)
+			if err != nil {
+				return nil, fmt.Errorf("can not setup tap device: %v", err)
+			}
+			err = netlink.LinkSetMaster(link, br)
+			if err != nil {
+				// TODO: cleanup tap interface
+				return nil, fmt.Errorf("can not add tap interface to bridge: %v", err)
+			}
+
+			ifName := link.Attrs().Name
+			n.runtime.IfName = ifName
+
+			err = kvmSetupNetAddressing(&network, n, ifName)
+			if err != nil {
+				return nil, err
+			}
+
+			if config.IsGw {
+				// add address to host bridge device
+				err = ensureHasAddr(
+					br,
+					&net.IPNet{
 						IP:   n.runtime.HostIP,
 						Mask: net.IPMask(n.runtime.Mask),
 					},
-					Label: ifName,
-				})
-			if err != nil {
-				return nil, fmt.Errorf("cannot add address to host tap device %q: %v", ifName, err)
+				)
+				if err != nil {
+					return nil, fmt.Errorf("cannot add address to host bridge device %q: %v", br.Name, err)
+				}
 			}
 
 		default:
 			return nil, fmt.Errorf("network %q have unsupported type: %q", n.conf.Name, n.conf.Type)
 		}
+
 		if n.conf.IPMasq {
 			h := sha512.Sum512([]byte(podID.String()))
 			chain := fmt.Sprintf("CNI-%s-%x", n.conf.Name, h[:8])
@@ -157,7 +279,7 @@ extend Networking struct with methods to clean up kvm specific network configura
 func (n *Networking) teardownKvmNets() {
 	for _, an := range n.nets {
 		switch an.conf.Type {
-		case "ptp":
+		case "ptp", "bridge":
 			// remove tuntap interface
 			tuntap.RemovePersistentIface(an.runtime.IfName, tuntap.Tap)
 

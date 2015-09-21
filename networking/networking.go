@@ -56,6 +56,7 @@ type Networking struct {
 type NetConf struct {
 	cnitypes.NetConf
 	IPMasq bool `json:"ipMasq"`
+	MTU    int  `json:"mtu"`
 }
 
 // Setup creates a new networking namespace and executes network plugins to
