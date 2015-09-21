@@ -14,6 +14,8 @@ LKVM_PATCHES := $(abspath $(LKVM_PATCHESDIR)/*.patch)
 $(call setup-stamp-file,LKVM_BUILD_STAMP,/build)
 $(call setup-stamp-file,LKVM_PATCH_STAMP,/patch_lkvm)
 $(call setup-dep-file,LKVM_PATCHES_DEPMK)
+$(call setup-filelist-file,LKVM_DIR_FILELIST,/dir)
+$(call setup-filelist-file,LKVM_PATCHES_FILELIST,/patches)
 
 UFK_STAMPS += $(LKVM_STAMP)
 INSTALL_FILES += $(LKVM_BINARY):$(LKVM_ACI_BINARY):-
@@ -31,6 +33,11 @@ $(LKVM_BUILD_STAMP): $(LKVM_PATCH_STAMP)
 	$(MAKE) -C "$(LKVM_SRCDIR)" lkvm-static; \
 	touch "$@"
 
+# Generate filelist of lkvm directory (this is both srcdir and
+# builddir). Can happen after build finished.
+$(LKVM_DIR_FILELIST): $(LKVM_BUILD_STAMP)
+$(call generate-deep-filelist,$(LKVM_DIR_FILELIST),$(LKVM_SRCDIR))
+
 -include $(LKVM_PATCHES_DEPMK)
 $(call forward-vars,$(LKVM_PATCH_STAMP), \
 	DEPSGENTOOL LKVM_PATCHES LKVM_PATCHES_DEPMK LKVM_SRCDIR)
@@ -42,6 +49,23 @@ $(LKVM_PATCH_STAMP): $(LKVM_SRCDIR)/Makefile $(DEPSGENTOOL_STAMP)
 		patch --directory="$(LKVM_SRCDIR)" --strip=1 --forward <"$${p}"; \
 	done; \
 	touch "$@"
+
+# This is a special case - normally, when generating filelists, we
+# require the directory to exist. In this case, the patches directory
+# may not exist and it is fine. We generate an empty filelist.
+LKVM_GOT_PATCHES := $(shell test -d "$(LKVM_PATCHESDIR)" && echo yes)
+
+ifeq ($(KERNEL_GOT_PATCHES),yes)
+
+# Generate shallow filelist of patches. Can happen anytime.
+$(call generate-shallow-filelist,$(LKVM_PATCHES_FILELIST),$(LKVM_PATCHESDIR),.patch)
+
+else
+
+# Generate empty filelist of patches. This can happen anytime.
+$(call generate-empty-filelist,$(LKVM_PATCHES_FILELIST))
+
+endif
 
 # add remote only if not added
 # don't fetch existing (commit cannot change)

@@ -308,3 +308,35 @@ $(strip \
 	$(eval $(call generate-stamp-rule,$1,$(_MISC_GKD_DEP_),$(DEPSDIR),"$(DEPSGENTOOL)" kv --target '$2 $1' $(_MISC_GKD_KV_) >"$3.tmp"; $(call bash-cond-rename,$3.tmp,$3))) \
 	$(call undefine-namespaces,_MISC_GKD))
 endef
+
+define filelist-file
+$(FILELISTDIR)/$(call path-to-file-with-suffix,$1,filelist)
+endef
+
+define setup-custom-filelist-file
+$(eval $1 := $(call filelist-file,$2)) \
+$(eval $($1): | $$(call to-dir,$($1))) \
+$(eval CLEAN_FILES += $($1))
+endef
+
+define setup-filelist-file
+$(eval $(call setup-custom-filelist-file,$1,$(MK_PATH)$2))
+endef
+
+# 1 - filelist
+define generate-empty-filelist
+$(eval $(call generate-strict-rule,$1,$(FILELISTGENTOOL_STAMP),$(FILELISTDIR),"$(FILELISTGENTOOL)" --empty >"$1.tmp"; $(call bash-cond-rename,$1.tmp,$1)))
+endef
+
+# 1 - filelist
+# 2 - directory
+define generate-deep-filelist
+$(eval $(call generate-strict-rule,$1,$(FILELISTGENTOOL_STAMP),$(FILELISTDIR),"$(FILELISTGENTOOL)" --directory="$2" >"$1.tmp"; $(call bash-cond-rename,$1.tmp,$1)))
+endef
+
+# 1 - filelist
+# 2 - a directory
+# 3 - a suffix
+define generate-shallow-filelist
+$(eval $(call generate-strict-rule,$1,$(FILELISTGENTOOL_STAMP),$(FILELISTDIR),"$(FILELISTGENTOOL)" --directory="$2" --suffix="$3" >"$1.tmp"; $(call bash-cond-rename,$1.tmp,$1)))
+endef

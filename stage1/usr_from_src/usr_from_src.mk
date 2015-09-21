@@ -8,6 +8,11 @@ $(call setup-dep-file,UFS_ROOTFS_DEPMK,$(UFS_SYSTEMD_DESC)-systemd-install)
 
 UFS_ROOTFSDIR := $(UFS_SYSTEMDDIR)/rootfs
 
+$(call setup-filelist-file,UFS_SYSTEMD_SRCDIR_FILELIST,/src/$(UFS_SYSTEMD_DESC))
+$(call setup-filelist-file,UFS_SYSTEMD_BUILDDIR_FILELIST,/build/$(UFS_SYSTEMD_DESC))
+$(call setup-filelist-file,UFS_ROOTFSDIR_FILELIST,/rootfs/$(UFS_SYSTEMD_DESC))
+$(call setup-filelist-file,UFS_PATCHES_FILELIST,/patches/$(UFS_SYSTEMD_DESC))
+
 # We assume that the name passed to --stage1-systemd-version that
 # matches a regexp '^v\d+$' (name starts with a v followed by a
 # number, like v211) is a name of tag. Otherwise it's a branch. `expr
@@ -54,6 +59,11 @@ $(UFS_SYSTEMD_INSTALL_STAMP): $(UFS_SYSTEMD_BUILD_STAMP)
 	set -e; \
 	DESTDIR="$(abspath $(UFS_ROOTFSDIR))" $(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" install-strip; \
 	touch "$@"
+
+# This filelist can be generated only after the installation of
+# systemd to temporary rootfs was performed
+$(UFS_ROOTFSDIR_FILELIST): $(UFS_SYSTEMD_INSTALL_STAMP)
+$(call generate-deep-filelist,$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR))
 
 $(call forward-vars,$(UFS_SYSTEMD_BUILD_STAMP), \
 	UFS_SYSTEMD_BUILDDIR UFS_SYSTEMD_SRCDIR MAKE)
@@ -112,6 +122,11 @@ $(UFS_SYSTEMD_BUILD_STAMP): $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP)
 	popd; \
 	touch "$@"
 
+# Generate filelist of a build directory. This can be done only after
+# building systemd was finished.
+$(UFS_SYSTEMD_BUILDDIR_FILELIST): $(UFS_SYSTEMD_BUILD_STAMP)
+$(call generate-deep-filelist,$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUILDDIR))
+
 $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP): $(UFS_SYSTEMD_SRCDIR)/configure
 	touch "$@"
 
@@ -130,6 +145,28 @@ $(UFS_SYSTEMD_SRCDIR)/configure: $(DEPSGENTOOL_STAMP)
 	pushd "$(UFS_SYSTEMD_SRCDIR)"; \
 	./autogen.sh; \
 	popd
+
+# Generate the filelist of systemd's srcdir. This can be done only
+# after it was cloned, patched and configure script was generated.
+$(UFS_SYSTEMD_SRCDIR_FILELIST): $(UFS_SYSTEMD_SRCDIR)/configure
+$(call generate-deep-filelist,$(UFS_SYSTEMD_SRCDIR_FILELIST),$(UFS_SYSTEMD_SRCDIR))
+
+# This is a special case - normally, when generating filelists, we
+# require the directory to exist. In this case, the patches directory
+# may not exist and it is fine. We generate an empty filelist.
+UFS_GOT_PATCHES := $(shell test -d "$(UFS_PATCHES_DIR)" && echo yes)
+
+ifeq ($(UFS_GOT_PATCHES),yes)
+
+# Generate shallow filelist of patches. This can happen anytime.
+$(call generate-shallow-filelist,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR),.patch)
+
+else
+
+# Generate empty filelist of patches. This can happen anytime.
+$(call generate-empty-filelist,$(UFS_PATCHES_FILELIST))
+
+endif
 
 $(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure.ac, \
 	GIT RKT_STAGE1_SYSTEMD_VER RKT_STAGE1_SYSTEMD_SRC UFS_SYSTEMD_SRCDIR)
