@@ -26,6 +26,8 @@ UFS_LIB_SYMLINK := $(ACIROOTFSDIR)/lib
 UFS_LIB64_SYMLINK := $(ACIROOTFSDIR)/lib64
 
 $(call setup-stamp-file,UFS_STAMP,/systemd/$(UFS_SYSTEMD_DESC))
+$(call setup-stamp-file,UFS_PATCHES_DEPS_STAMP,$(UFS_SYSTEMD_DESC)-systemd-patches-deps)
+$(call setup-stamp-file,UFS_ROOTFS_DEPS_STAMP,$(UFS_SYSTEMD_DESC)-systemd-install-deps)
 $(call setup-stamp-file,UFS_ROOTFS_STAMP,/systemd-rootfs/$(UFS_SYSTEMD_DESC))
 $(call setup-stamp-file,UFS_SYSTEMD_CLONE_AND_PATCH_STAMP,/systemd_clone_and_patch/$(UFS_SYSTEMD_DESC))
 $(call setup-stamp-file,UFS_SYSTEMD_BUILD_STAMP,/systemd_build/$(UFS_SYSTEMD_DESC))
@@ -37,20 +39,17 @@ STAGE1_COPY_SO_DEPS := yes
 
 $(call inc-one,bash.mk)
 
-$(UFS_STAMP): $(UFS_ROOTFS_STAMP)
+$(UFS_STAMP): $(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_STAMP)
 	touch "$@"
 
--include $(UFS_ROOTFS_DEPMK)
 $(call forward-vars,$(UFS_ROOTFS_STAMP), \
-	UFS_ROOTFSDIR ACIROOTFSDIR RKT_STAGE1_SYSTEMD_VER DEPSGENTOOL \
-	UFS_ROOTFS_DEPMK)
+	UFS_ROOTFSDIR ACIROOTFSDIR RKT_STAGE1_SYSTEMD_VER)
 # $(UFS_ROOTFS_STAMP): | $(UFS_LIB_SYMLINK) $(UFS_LIB64_SYMLINK)
-$(UFS_ROOTFS_STAMP): $(UFS_SYSTEMD_INSTALL_STAMP) $(DEPSGENTOOL_STAMP) | $(ACIROOTFSDIR)
+$(UFS_ROOTFS_STAMP): $(UFS_SYSTEMD_INSTALL_STAMP) | $(ACIROOTFSDIR)
 	set -e; \
 	cp -af "$(UFS_ROOTFSDIR)/." "$(ACIROOTFSDIR)"; \
 	ln -sf 'src' "$(ACIROOTFSDIR)/flavor"; \
 	echo "$(RKT_STAGE1_SYSTEMD_VER)" >"$(ACIROOTFSDIR)/systemd-version"; \
-	"$(DEPSGENTOOL)" glob --target='$$(UFS_STAMP)' $$(find "$(UFS_ROOTFSDIR)" -type f) >"$(UFS_ROOTFS_DEPMK)"; \
 	touch "$@"
 
 $(call forward-vars,$(UFS_SYSTEMD_INSTALL_STAMP), \
@@ -64,6 +63,10 @@ $(UFS_SYSTEMD_INSTALL_STAMP): $(UFS_SYSTEMD_BUILD_STAMP)
 # systemd to temporary rootfs was performed
 $(UFS_ROOTFSDIR_FILELIST): $(UFS_SYSTEMD_INSTALL_STAMP)
 $(call generate-deep-filelist,$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR))
+
+# Generate dep.mk file which will cause the initial ACI rootfs to be
+# recreated if any file in temporary rootfs changes.
+$(call generate-glob-deps,$(UFS_ROOTFS_DEPS_STAMP),$(UFS_ROOTFS_STAMP),$(UFS_ROOTFS_DEPMK),,$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR))
 
 $(call forward-vars,$(UFS_SYSTEMD_BUILD_STAMP), \
 	UFS_SYSTEMD_BUILDDIR UFS_SYSTEMD_SRCDIR MAKE)
@@ -130,10 +133,9 @@ $(call generate-deep-filelist,$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUI
 $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP): $(UFS_SYSTEMD_SRCDIR)/configure
 	touch "$@"
 
--include $(UFS_PATCHES_DEPMK)
 $(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure, \
-	UFS_PATCHES_DIR GIT UFS_SYSTEMD_SRCDIR DEPSGENTOOL UFS_PATCHES_DEPMK)
-$(UFS_SYSTEMD_SRCDIR)/configure: $(DEPSGENTOOL_STAMP)
+	UFS_PATCHES_DIR GIT UFS_SYSTEMD_SRCDIR)
+$(UFS_SYSTEMD_SRCDIR)/configure:
 	@set -e; \
 	shopt -s nullglob ; \
 	if [ -d "$(UFS_PATCHES_DIR)" ]; then \
@@ -141,7 +143,6 @@ $(UFS_SYSTEMD_SRCDIR)/configure: $(DEPSGENTOOL_STAMP)
 			"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" am "$${p}"; \
 		done; \
 	fi; \
-	"$(DEPSGENTOOL)" glob --target='$$(UFS_SYSTEMD_SRCDIR)/configure' --suffix=.patch "$(UFS_PATCHES_DIR)"/*.patch >"$(UFS_PATCHES_DEPMK)"; \
 	pushd "$(UFS_SYSTEMD_SRCDIR)"; \
 	./autogen.sh; \
 	popd
@@ -167,6 +168,14 @@ else
 $(call generate-empty-filelist,$(UFS_PATCHES_FILELIST))
 
 endif
+
+# Generate a dep.mk on those patches, so if patches change, the
+# project should be reset and repatched, and configure script
+# regenerated.
+# TODO: It does not work as comment says. When patches are changed we
+# try to apply them again, but instead we should do a hard reset to
+# original branch and then reapply the patches.
+$(call generate-glob-deps,$(UFS_PATCHES_DEPS_STAMP),$(UFS_SYSTEMD_SRCDIR)/configure,$(UFS_PATCHES_DEPMK),.patch,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR),normal)
 
 $(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure.ac, \
 	GIT RKT_STAGE1_SYSTEMD_VER RKT_STAGE1_SYSTEMD_SRC UFS_SYSTEMD_SRCDIR)

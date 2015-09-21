@@ -13,6 +13,7 @@ LKVM_PATCHES := $(abspath $(LKVM_PATCHESDIR)/*.patch)
 
 $(call setup-stamp-file,LKVM_BUILD_STAMP,/build)
 $(call setup-stamp-file,LKVM_PATCH_STAMP,/patch_lkvm)
+$(call setup-stamp-file,LKVM_DEPS_STAMP,/deps)
 $(call setup-dep-file,LKVM_PATCHES_DEPMK)
 $(call setup-filelist-file,LKVM_DIR_FILELIST,/dir)
 $(call setup-filelist-file,LKVM_PATCHES_FILELIST,/patches)
@@ -21,7 +22,7 @@ UFK_STAMPS += $(LKVM_STAMP)
 INSTALL_FILES += $(LKVM_BINARY):$(LKVM_ACI_BINARY):-
 CREATE_DIRS += $(LKVM_TMP)
 
-$(LKVM_STAMP): $(LKVM_ACI_BINARY)
+$(LKVM_STAMP): $(LKVM_ACI_BINARY) $(LKVM_DEPS_STAMP)
 	touch "$@"
 
 $(LKVM_BINARY): $(LKVM_BUILD_STAMP)
@@ -38,13 +39,11 @@ $(LKVM_BUILD_STAMP): $(LKVM_PATCH_STAMP)
 $(LKVM_DIR_FILELIST): $(LKVM_BUILD_STAMP)
 $(call generate-deep-filelist,$(LKVM_DIR_FILELIST),$(LKVM_SRCDIR))
 
--include $(LKVM_PATCHES_DEPMK)
 $(call forward-vars,$(LKVM_PATCH_STAMP), \
-	DEPSGENTOOL LKVM_PATCHES LKVM_PATCHES_DEPMK LKVM_SRCDIR)
-$(LKVM_PATCH_STAMP): $(LKVM_SRCDIR)/Makefile $(DEPSGENTOOL_STAMP)
+	LKVM_PATCHES LKVM_SRCDIR)
+$(LKVM_PATCH_STAMP): $(LKVM_SRCDIR)/Makefile
 	set -e; \
 	shopt -s nullglob; \
-	"$(DEPSGENTOOL)" glob --target '$$(LKVM_SRCDIR)/Makefile' --suffix=.patch $(LKVM_PATCHES) >"$(LKVM_PATCHES_DEPMK)"; \
 	for p in $(LKVM_PATCHES); do \
 		patch --directory="$(LKVM_SRCDIR)" --strip=1 --forward <"$${p}"; \
 	done; \
@@ -66,6 +65,10 @@ else
 $(call generate-empty-filelist,$(LKVM_PATCHES_FILELIST))
 
 endif
+
+# Generate dep.mk on patches, so if they change, the project has to be
+# reset to original checkout and patches reapplied.
+$(call generate-glob-deps,$(LKVM_DEPS_STAMP),$(LKVM_SRCDIR)/Makefile,$(LKVM_PATCHES_DEPMK),.patch,$(LKVM_PATCHES_FILELIST),$(LKVM_PATCHESDIR),normal)
 
 # add remote only if not added
 # don't fetch existing (commit cannot change)

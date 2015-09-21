@@ -340,3 +340,25 @@ endef
 define generate-shallow-filelist
 $(eval $(call generate-strict-rule,$1,$(FILELISTGENTOOL_STAMP),$(FILELISTDIR),"$(FILELISTGENTOOL)" --directory="$2" --suffix="$3" >"$1.tmp"; $(call bash-cond-rename,$1.tmp,$1)))
 endef
+
+# Generates a rule for generating a glob depmk for a given target
+# based on a given filelist. This is up to you to ensure that every
+# file in a filelist ends with a given suffix.
+# 1 - a stamp file
+# 2 - a target
+# 3 - depmk name
+# 4 - a suffix
+# 5 - a filelist
+# 6 - a list of directories to map the files from filelist to
+# 7 - glob mode, can be all, dot-files, normal (empty means all)
+define generate-glob-deps
+$(strip \
+	$(if $(call equal,$2,$(DEPSGENTOOL)), \
+		$(eval _MISC_GLDF_DEP_ := $(DEPSGENTOOL)), \
+		$(eval _MISC_GLDF_DEP_ := $(DEPSGENTOOL_STAMP))) \
+	$(if $(strip $7), \
+		$(eval _MISC_GLDF_GLOB_ := --glob-mode="$(strip $7)")) \
+	$(eval -include $3) \
+	$(eval $(call generate-stamp-rule,$1,$(_MISC_GLDF_DEP_) $5,$(DEPSDIR),shopt -s nullglob; "$(DEPSGENTOOL)" glob --target "$2 $1" --suffix="$4" --filelist="$5" $(foreach m,$6,--map-to="$m") $(_MISC_GLDF_GLOB_)>"$3.tmp"; $(call bash-cond-rename,$3.tmp,$3))) \
+	$(call undefine-namespaces,_MISC_GLDF))
+endef
