@@ -116,18 +116,69 @@ $(foreach f,$(sort $(INSTALL_FILES)), \
 $(foreach s,$(sort $(INSTALL_SYMLINKS)), \
         $(eval $(call _FILE_OPS_CREATE_INSTALL_SYMLINK_RULE_,$s)))
 
+# $(file ...) function was introduced in GNU Make 4.0, but it received
+# no entry in .FEATURES variable. So instead, we check the major
+# version of GNU Make. If it is 3, then we will use some slower path
+# for removing files. If it is 4, we will use the faster one.
+
+_FILE_OPS_M_VERSION_ := $(strip $(shell $(MAKE) --version | grep '^GNU Make' | grep -o ' [[:digit:]]\+'))
+
+# _FILE_OPS_WRITE_VAR_TO_FILE_ function
+# 1 - variable
+# 2 - filename
+
+ifeq ($(_FILE_OPS_M_VERSION_),3)
+
+# Ew.
+define _FILE_OPS_WRITE_VAR_TO_FILE_
+$(strip \
+	$(eval list := $1) \
+	$(eval file := $2) \
+	$(eval count := $(words $(list))) \
+	$(eval chunksize := 50) \
+	$(eval fullchunknum := $(shell expr '$(count)' '/' '$(chunksize)')) \
+	$(eval format := $(strip $(shell printf '%%s %0.s' {1..$(chunksize)}))) \
+	$(shell printf '%d\n' '$(count)' >'$(file)') \
+	$(foreach i,$(shell seq 1 '$(fullchunknum)'), \
+		$(eval s := $(shell expr '(' '$i' - 1 ')' '*' '$(chunksize)' + 1)) \
+		$(eval e := $(shell expr '$i' '*' '$(chunksize)')) \
+		$(eval l := $(wordlist $s,$e,$(list))) \
+		$(shell printf '$(format) ' $l >>'$(file)')) \
+	$(eval rest := $(shell expr '$(count)' % '$(chunksize)')) \
+	$(eval nonzero := $(shell expr '$(rest)' '>' 0)) \
+	$(if $(filter 1,$(nonzero)), \
+		$(eval format := $(strip $(shell printf '%%s %0.s' {1..$(rest)}))) \
+		$(eval s := $(shell expr '$(count)' - '$(rest)' + 1)) \
+		$(eval e := $(count)) \
+		$(eval l := $(wordlist $s,$e,$(list))) \
+		$(shell printf '$(format)' $l >>'$(file)')) \
+	$(shell printf '\n' >>'$(file)'))
+endef
+
+else ifeq ($(_FILE_OPS_M_VERSION_),4)
+
+define _FILE_OPS_WRITE_VAR_TO_FILE_
+$(strip \
+	$(eval \
+		$(file >$2,$(words $1)) \
+		$(file >>$2,$1)))
+endef
+
+else
+
+$(error Unsupported major version of make: $(_FILE_OPS_M_VERSION_))
+
+endif
+
 $(call forward-vars,_file_ops_mk_clean_, \
 	_FILE_OPS_FILES_ _FILE_OPS_SYMLINKS_ _FILE_OPS_DIRS_ QUICKRMTOOL)
 _file_ops_mk_clean_: $(QUICKRMTOOL_STAMP) | $(_FILE_OPS_DIR_)
 	$(info writing files)
-	$(file >$(_FILE_OPS_FILES_),$(words $(CLEAN_FILES)))
-	$(file >>$(_FILE_OPS_FILES_),$(CLEAN_FILES))
+	$(call _FILE_OPS_WRITE_VAR_TO_FILE_,$(CLEAN_FILES),$(_FILE_OPS_FILES_))
 	$(info writing symlinks)
-	$(file >$(_FILE_OPS_SYMLINKS_),$(words $(CLEAN_SYMLINKS)))
-	$(file >>$(_FILE_OPS_SYMLINKS_),$(CLEAN_SYMLINKS))
+	$(call _FILE_OPS_WRITE_VAR_TO_FILE_,$(CLEAN_SYMLINKS),$(_FILE_OPS_SYMLINKS_))
 	$(info writing dirs)
-	$(file >$(_FILE_OPS_DIRS_),$(words $(CLEAN_DIRS)))
-	$(file >>$(_FILE_OPS_DIRS_),$(CLEAN_DIRS))
+	$(call _FILE_OPS_WRITE_VAR_TO_FILE_,$(CLEAN_DIRS),$(_FILE_OPS_DIRS_))
 	set -e; \
 	echo "Removing everything"; \
 	"$(QUICKRMTOOL)" --files="$(_FILE_OPS_FILES_)" --symlinks="$(_FILE_OPS_SYMLINKS_)" --dirs="$(_FILE_OPS_DIRS_)"
@@ -141,7 +192,9 @@ _FILE_OPS_ALL_DIRS_ := \
 
 .PHONY: $(_FILE_OPS_ALL_DIRS_) _file_ops_mk_clean_
 
-# Excluding _FILE_OPS_BAIL_OUT_IF_NOT_DIR_ and _FILE_OPS_DASH_M_
-# because they are used inside recipes. Undefining them here would
-# mean that inside recipes they would return empty value.
-$(call undefine-namespaces,_FILE_OPS,_FILE_OPS_BAIL_OUT_IF_NOT_DIR_ _FILE_OPS_DASH_M_)
+# Excluding _FILE_OPS_BAIL_OUT_IF_NOT_DIR_, _FILE_OPS_DASH_M_ and
+# _FILE_OPS_WRITE_VAR_TO_FILE_ because they are used inside
+# recipes. Undefining them here would mean that inside recipes they
+# would return empty value.
+$(call undefine-namespaces,_FILE_OPS,_FILE_OPS_BAIL_OUT_IF_NOT_DIR_ \
+	_FILE_OPS_DASH_M_ _FILE_OPS_WRITE_VAR_TO_FILE_)
