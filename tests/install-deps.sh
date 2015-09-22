@@ -20,6 +20,7 @@ if [ "${CI-}" == true ] ; then
 		# uncomment the following line and add "sudo apt-get
 		# install -y <dep>" after it.
 
-		# sudo apt-get update -qq || true
+		sudo apt-get update -qq || true
+		sudo apt-get install -y golang-go
 	fi
 fi
