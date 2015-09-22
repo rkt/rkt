@@ -49,6 +49,7 @@ func (lb *FileBackend) BuildACI(layerID string, dockerURL *types.ParsedDockerURL
 	if err != nil {
 		return "", nil, fmt.Errorf("error creating dir: %v", err)
 	}
+	defer os.RemoveAll(tmpDir)
 
 	j, err := getJson(lb.file, layerID)
 	if err != nil {

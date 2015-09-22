@@ -6,11 +6,6 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/api/resource",
-			"Comment": "v0.12.0-270-g53ec66c",
-			"Rev": "53ec66caf4e952a1384ec93b9f0cde37616e4caf"
-		},
-		{
 			"ImportPath": "github.com/appc/cni/pkg/ip",
 			"Comment": "v0.1.0-16-gfb9b8ad",
 			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
@@ -67,11 +62,11 @@
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
-			"Rev": "5a59e6910929afdeb54913c301692194d3160d09"
+			"Rev": "9c1b472ce804899a5db94a98fb2ad791f4bce2b2"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/tarball",
-			"Rev": "5a59e6910929afdeb54913c301692194d3160d09"
+			"Rev": "9c1b472ce804899a5db94a98fb2ad791f4bce2b2"
 		},
 		{
 			"ImportPath": "github.com/appc/goaci/proj2aci",
@@ -79,38 +74,38 @@
 		},
 		{
 			"ImportPath": "github.com/appc/spec/aci",
-			"Comment": "v0.6.1",
-			"Rev": "25f997957b604657dd558fe5da664a8f1b2a12b7"
+			"Comment": "v0.7.0",
+			"Rev": "579892dede84d04e54945c949be834e4facd7a0a"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/actool",
-			"Comment": "v0.6.1",
-			"Rev": "25f997957b604657dd558fe5da664a8f1b2a12b7"
+			"Comment": "v0.7.0",
+			"Rev": "579892dede84d04e54945c949be834e4facd7a0a"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/discovery",
-			"Comment": "v0.6.1",
-			"Rev": "25f997957b604657dd558fe5da664a8f1b2a12b7"
+			"Comment": "v0.7.0",
+			"Rev": "579892dede84d04e54945c949be834e4facd7a0a"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/acirenderer",
-			"Comment": "v0.6.1",
-			"Rev": "25f997957b604657dd558fe5da664a8f1b2a12b7"
+			"Comment": "v0.7.0",
+			"Rev": "579892dede84d04e54945c949be834e4facd7a0a"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/device",
-			"Comment": "v0.6.1",
-			"Rev": "25f997957b604657dd558fe5da664a8f1b2a12b7"
+			"Comment": "v0.7.0",
+			"Rev": "579892dede84d04e54945c949be834e4facd7a0a"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/tarheader",
-			"Comment": "v0.6.1",
-			"Rev": "25f997957b604657dd558fe5da664a8f1b2a12b7"
+			"Comment": "v0.7.0",
+			"Rev": "579892dede84d04e54945c949be834e4facd7a0a"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema",
-			"Comment": "v0.6.1",
-			"Rev": "25f997957b604657dd558fe5da664a8f1b2a12b7"
+			"Comment": "v0.7.0",
+			"Rev": "579892dede84d04e54945c949be834e4facd7a0a"
 		},
 		{
 			"ImportPath": "github.com/camlistore/lock",
@@ -146,7 +141,7 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/ioprogress",
-			"Rev": "326b3ee6276a33c8bdcf480ca9c99228942ab970"
+			"Rev": "e7fc03058804de5488baed8df5b89f3924b9ec9a"
 		},
 		{
 			"ImportPath": "github.com/cznic/b",
@@ -263,6 +258,10 @@
 			"Rev": "a7ead6ddf06233883deca151dffaef2effbf498f"
 		},
 		{
+			"ImportPath": "golang.org/x/crypto/ssh/terminal",
+			"Rev": "a7ead6ddf06233883deca151dffaef2effbf498f"
+		},
+		{
 			"ImportPath": "golang.org/x/net/html",
 			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
 		},
@@ -273,6 +272,11 @@
 		{
 			"ImportPath": "golang.org/x/tools/go/vcs",
 			"Rev": "27e692e6ec36d8f48be794f32553e1400c70dbf2"
+		},
+		{
+			"ImportPath": "k8s.io/kubernetes/pkg/api/resource",
+			"Comment": "v0.12.0-270-g53ec66caf4e9",
+			"Rev": "53ec66caf4e952a1384ec93b9f0cde37616e4caf"
 		},
 		{
 			"ImportPath": "speter.net/go/exp/math/dec/inf",
