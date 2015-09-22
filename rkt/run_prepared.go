@@ -125,6 +125,12 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
+	rktgid, err := lookupGid(rktGroup)
+	if err != nil {
+		stderr("prepared-run: group %q not found, will use default gid when rendering images")
+		rktgid = -1
+	}
+
 	rcfg := stage0.RunConfig{
 		CommonConfig: stage0.CommonConfig{
 			Store: s,
@@ -136,6 +142,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		Interactive: flagInteractive,
 		MDSRegister: flagMDSRegister,
 		Apps:        apps,
+		RktGid:      rktgid,
 	}
 	stage0.Run(rcfg, p.path()) // execs, never returns
 	return 1

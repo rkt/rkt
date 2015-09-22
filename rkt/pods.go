@@ -93,7 +93,7 @@ func initPods() error {
 	if !podsInitialized {
 		dirs := []string{embryoDir(), prepareDir(), preparedDir(), runDir(), exitedGarbageDir(), garbageDir()}
 		for _, d := range dirs {
-			if err := os.MkdirAll(d, 0700); err != nil {
+			if err := os.MkdirAll(d, 0750); err != nil {
 				return fmt.Errorf("error creating directory: %v", err)
 			}
 		}
@@ -166,7 +166,7 @@ func newPod() (*pod, error) {
 		return nil, fmt.Errorf("error creating UUID: %v", err)
 	}
 
-	err = os.Mkdir(p.embryoPath(), 0700)
+	err = os.Mkdir(p.embryoPath(), 0750)
 	if err != nil {
 		return nil, err
 	}
