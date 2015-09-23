@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/ssh/terminal"
 )
 
 // DrawFunc is the callback type for drawing progress.
@@ -18,6 +20,14 @@ var defaultDrawFunc DrawFunc
 
 func init() {
 	defaultDrawFunc = DrawTerminal(os.Stdout)
+}
+
+// isTerminal returns True when w is going to a tty, and false otherwise.
+func isTerminal(w io.Writer) bool {
+	if f, ok := w.(*os.File); ok {
+		return terminal.IsTerminal(int(f.Fd()))
+	}
+	return false
 }
 
 // DrawTerminal returns a DrawFunc that draws a progress bar to an io.Writer
@@ -50,7 +60,11 @@ func DrawTerminalf(w io.Writer, f DrawTextFormatFunc) DrawFunc {
 		}
 		maxLength = len(line)
 
-		_, err := fmt.Fprint(w, line+"\r")
+		terminate := "\r"
+		if !isTerminal(w) {
+			terminate = "\n"
+		}
+		_, err := fmt.Fprint(w, line+terminate)
 		return err
 	}
 }
@@ -77,6 +91,19 @@ func DrawTextFormatBytes(progress, total int64) string {
 //     }
 //
 func DrawTextFormatBar(width int64) DrawTextFormatFunc {
+	return DrawTextFormatBarForW(width, nil)
+}
+
+// DrawTextFormatBarForW returns a DrawTextFormatFunc as described in the docs
+// for DrawTextFormatBar, however if the io.Writer passed in is not a tty then
+// the returned function will always return "".
+func DrawTextFormatBarForW(width int64, w io.Writer) DrawTextFormatFunc {
+	if w != nil && !isTerminal(w) {
+		return func(progress, total int64) string {
+			return ""
+		}
+	}
+
 	width -= 2
 
 	return func(progress, total int64) string {

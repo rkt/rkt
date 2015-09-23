@@ -289,7 +289,7 @@ func getLayer(imgID, registry string, repoData *RepoData, imgSize int64, tmpDir 
 	prefix := "Downloading " + imgID[:12]
 	fmtBytesSize := 18
 	barSize := int64(80 - len(prefix) - fmtBytesSize)
-	bar := ioprogress.DrawTextFormatBar(barSize)
+	bar := ioprogress.DrawTextFormatBarForW(barSize, os.Stderr)
 	fmtfunc := func(progress, total int64) string {
 		return fmt.Sprintf(
 			"%s: %s %s",
