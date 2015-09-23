@@ -45,7 +45,7 @@ var (
 	ImagesFieldHeaderMap = map[string]string{
 		keyField:        "KEY",
 		nameField:       "NAME",
-		importTimeField: "IMPORTTIME",
+		importTimeField: "IMPORT TIME",
 		latestField:     "LATEST",
 	}
 
