@@ -176,9 +176,24 @@ func serverHandler(t *testing.T, server *taas.Server) {
 // useful for ensuring that image name is unique and for descriptive
 // purposes.
 func expectedRunRkt(ctx *rktRunCtx, t *testing.T, host, dir, line string) {
-	cmd := fmt.Sprintf(`%s --debug --insecure-skip-verify run --mds-register=false %s/%s/prog.aci`, ctx.cmd(), host, dir)
+	// First, check that --insecure-skip-verify is required
+	// The server does not provide signatures for now.
+	cmd := fmt.Sprintf(`%s --debug run --mds-register=false %s/%s/prog.aci`, ctx.cmd(), host, dir)
 	t.Logf("Running rkt: %s", cmd)
 	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Failed to run rkt: %v", err)
+	}
+	defer child.Wait()
+	signatureErrorLine := "error downloading the signature file"
+	if err := expectWithOutput(child, signatureErrorLine); err != nil {
+		t.Fatalf("Didn't receive expected output %q: %v", signatureErrorLine, err)
+	}
+
+	// Then, run with --insecure-skip-verify
+	cmd = fmt.Sprintf(`%s --debug --insecure-skip-verify run --mds-register=false %s/%s/prog.aci`, ctx.cmd(), host, dir)
+	t.Logf("Running rkt: %s", cmd)
+	child, err = gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Failed to run rkt: %v", err)
 	}
