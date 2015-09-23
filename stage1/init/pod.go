@@ -131,6 +131,33 @@ func quoteExec(exec []string) string {
 	return strings.Join(qexec, " ")
 }
 
+func (p *Pod) WriteDefaultTarget() error {
+	opts := []*unit.UnitOption{
+		unit.NewUnitOption("Unit", "Description", "rkt apps target"),
+		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
+	}
+
+	for i := range p.Manifest.Apps {
+		ra := &p.Manifest.Apps[i]
+		serviceName := ServiceUnitName(ra.Name)
+		opts = append(opts, unit.NewUnitOption("Unit", "After", serviceName))
+		opts = append(opts, unit.NewUnitOption("Unit", "Wants", serviceName))
+	}
+
+	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), unitsDir)
+	file, err := os.OpenFile(filepath.Join(unitsPath, "default.target"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (p *Pod) WritePrepareAppTemplate() error {
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", "Prepare minimum environment for chrooted applications"),
@@ -148,6 +175,34 @@ func (p *Pod) WritePrepareAppTemplate() error {
 
 	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), unitsDir)
 	file, err := os.OpenFile(filepath.Join(unitsPath, "prepare-app@.service"), os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create service unit file: %v", err)
+	}
+	defer file.Close()
+
+	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
+		return fmt.Errorf("failed to write service unit file: %v", err)
+	}
+
+	return nil
+}
+
+func (p *Pod) writeAppReaper(appName string) error {
+	opts := []*unit.UnitOption{
+		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("%s Reaper", appName)),
+		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
+		unit.NewUnitOption("Unit", "StopWhenUnneeded", "yes"),
+		unit.NewUnitOption("Unit", "Wants", "shutdown.service"),
+		unit.NewUnitOption("Unit", "After", "shutdown.service"),
+		unit.NewUnitOption("Unit", "Conflicts", "exit.target"),
+		unit.NewUnitOption("Unit", "Conflicts", "halt.target"),
+		unit.NewUnitOption("Unit", "Conflicts", "poweroff.target"),
+		unit.NewUnitOption("Service", "RemainAfterExit", "yes"),
+		unit.NewUnitOption("Service", "ExecStop", fmt.Sprintf("/reaper.sh %s", appName)),
+	}
+
+	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), unitsDir)
+	file, err := os.OpenFile(filepath.Join(unitsPath, fmt.Sprintf("reaper-%s.service", appName)), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create service unit file: %v", err)
 	}
@@ -211,8 +266,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v", appName, imgName)),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
-		unit.NewUnitOption("Unit", "OnFailure", "reaper.service"),
-		unit.NewUnitOption("Unit", "Wants", "exit-watcher.service"),
+		unit.NewUnitOption("Unit", "Wants", fmt.Sprintf("reaper-%s.service", appName)),
 		unit.NewUnitOption("Service", "Restart", "no"),
 		unit.NewUnitOption("Service", "ExecStart", execStart),
 		unit.NewUnitOption("Service", "User", "0"),
@@ -228,6 +282,9 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
 		opts = append(opts, unit.NewUnitOption("Service", "SyslogIdentifier", filepath.Base(app.Exec[0])))
 	}
+
+	// When an app fails, we shut down the pod
+	opts = append(opts, unit.NewUnitOption("Unit", "OnFailure", "halt.target"))
 
 	for _, eh := range app.EventHandlers {
 		var typ string
@@ -327,6 +384,10 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 			return fmt.Errorf("failed to prepare mount units: %v", err)
 		}
 
+	}
+
+	if err = p.writeAppReaper(appName.String()); err != nil {
+		return fmt.Errorf("Failed to write app %q reaper service: %v\n", appName, err)
 	}
 
 	return nil

@@ -7,10 +7,8 @@ LOCAL_UNITDIR_RESTS := \
 LOCAL_UNITDIR := $(LOCAL_UNITDIR_BASE)/$(LOCAL_UNITDIR_REST)
 LOCAL_UNIT_DIRS := $(foreach d,$(LOCAL_UNITDIR_RESTS),$(LOCAL_UNITDIR_BASE)/$d)
 LOCAL_UNIT_FILES := \
-        $(MK_SRCDIR)/units/default-rkt.target \
-        $(MK_SRCDIR)/units/exit-watcher.service \
         $(MK_SRCDIR)/units/local-fs.target \
-        $(MK_SRCDIR)/units/reaper.service \
+        $(MK_SRCDIR)/units/shutdown.service \
         $(MK_SRCDIR)/units/sockets.target \
         $(MK_SRCDIR)/units/halt.target \
         $(MK_SRCDIR)/units/systemd-reboot.service \

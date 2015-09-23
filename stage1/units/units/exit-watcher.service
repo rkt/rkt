@@ -1,8 +1,0 @@
-[Unit]
-Description=Graceful exit watcher
-StopWhenUnneeded=true
-DefaultDependencies=false
-
-[Service]
-RemainAfterExit=yes
-ExecStop=/usr/bin/systemctl isolate reaper.service
