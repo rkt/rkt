@@ -282,6 +282,7 @@ func (s Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error decompressing image: %v", err)
 	}
+	defer dr.Close()
 
 	// Write the decompressed image (tar) to a temporary file on disk, and
 	// tee so we can generate the hash
