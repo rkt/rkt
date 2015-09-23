@@ -326,6 +326,12 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		nsargs := kvm.VolumesToKvmDiskArgs(p.Manifest.Volumes)
 		args = append(args, nsargs...)
 
+		// lkvm requires $HOME to be defined,
+		// see https://github.com/coreos/rkt/issues/1393
+		if os.Getenv("HOME") == "" {
+			env = append(env, "HOME=/root")
+		}
+
 		return args, env, nil
 
 	case "coreos":

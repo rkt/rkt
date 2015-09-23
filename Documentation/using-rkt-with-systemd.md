@@ -15,11 +15,9 @@ Consequently, standard `systemd` idioms like `systemctl start` and `systemctl st
 To start a daemonized container from the command line, use [`systemd-run`](http://www.freedesktop.org/software/systemd/man/systemd-run.html):
 
 ```
-# systemd-run --uid=0 rkt run --mds-register=false coreos.com/etcd:v2.0.10
+# systemd-run rkt run --mds-register=false coreos.com/etcd:v2.0.10
 Running as unit run-29075.service.
 ```
-
-Note: `--uid=0` (or `User=root` below) is a workaround for [issue #1393](https://github.com/coreos/rkt/issues/1393).
 
 This creates a transient systemd unit on which you can use standard systemd tools:
 
@@ -65,7 +63,6 @@ Description=etcd
 ExecStart=/usr/bin/rkt --insecure-skip-verify run --mds-register=false coreos.com/etcd:v2.0.10
 KillMode=mixed
 Restart=always
-User=root
 ```
 
 This unit can now be managed using the standard `systemctl` commands:
@@ -114,7 +111,6 @@ ExecStartPre=/usr/bin/rkt fetch myapp.com/myapp-1.3.4
 ExecStart=/usr/bin/rkt run --inherit-env --private-net --port=http:8888 myapp.com/myapp-1.3.4
 KillMode=mixed
 Restart=always
-User=root
 ```
 
 ## Socket-activated service
@@ -155,7 +151,6 @@ Description=My socket-activated app
 [Service]
 ExecStart=/usr/bin/rkt run myapp.com/my-socket-activated-app:v1.0
 KillMode=mixed
-User=root
 ```
 
 ```
