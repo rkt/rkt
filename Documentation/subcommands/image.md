@@ -2,13 +2,21 @@
 
 ## rkt image list
 
-You can get a list of images in the local store with their keys, app names and import times.
+You can get a list of images in the local store with their keys, names and import times.
 
 ```
 # rkt image list
-KEY                                                                     APPNAME                         IMPORTTIME                              LATEST
-sha512-fa1cb92dc276b0f9bedf87981e61ecde93cc16432d2441f23aa006a42bb873df coreos.com/etcd:v2.0.0          2015-07-10 10:14:37.323 +0200 CEST      false
-sha512-a03f6bad952b30ca1875b1b179ab34a0f556cfbf3893950f59c408992d1bc891 coreos.com/rkt/stage1:0.7.0     2015-07-12 20:27:56.041 +0200 CEST      false
+KEY                      NAME                            IMPORT TIME            LATEST
+sha512-91e98d7f1679      coreos.com/etcd:v2.0.9          6 days ago             false
+sha512-a03f6bad952b      coreos.com/rkt/stage1:0.7.0     55 minutes ago         false
+```
+
+A more detailed output can be had by adding the `--full` flag
+
+```
+KEY                                                                       NAME               IMPORT TIME                          LATEST
+sha512-b843248e28fa9132e23e1e763142049d17a61bab7873dff1e1ff105f9ddb2708   redis:latest       2015-09-17 13:27:04.24 +0200 CEST    true
+sha512-fb6b47cc9e7ee29f67422c6585c8f517c16e0e0ee9f4cf8b8cafd8e1c1d29233   redis:latest       2015-09-17 14:57:36.779 +0200 CEST   true
 ```
 
 ## rkt image rm
@@ -16,8 +24,8 @@ sha512-a03f6bad952b30ca1875b1b179ab34a0f556cfbf3893950f59c408992d1bc891 coreos.c
 Given an image key you can remove it from the local store.
 
 ```
-# rkt image rm sha512-a03f6bad952b30ca1875b1b179ab34a0f556cfbf3893950f59c408992d1bc891
-rkt: successfully removed aci for imageID: "sha512-a03f6bad952b30ca1875b1b179ab34a0f556cfbf3893950f59c408992d1bc891"
+# rkt image rm sha512-a03f6bad952b
+rkt: successfully removed aci for imageID: "sha512-a03f6bad952b"
 rkt: 1 image(s) successfully remove
 ```
 
