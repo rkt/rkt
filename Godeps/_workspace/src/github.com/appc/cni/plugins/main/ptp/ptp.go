@@ -26,9 +26,10 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ipam"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 )
 
 func init() {
@@ -39,12 +40,23 @@ func init() {
 }
 
 type NetConf struct {
-	plugin.NetConf
+	types.NetConf
 	IPMasq bool `json:"ipMasq"`
 	MTU    int  `json:"mtu"`
 }
 
-func setupContainerVeth(netns, ifName string, mtu int, pr *plugin.Result) (string, error) {
+func setupContainerVeth(netns, ifName string, mtu int, pr *types.Result) (string, error) {
+	// The IPAM result will be something like IP=192.168.3.5/24, GW=192.168.3.1.
+	// What we want is really a point-to-point link but veth does not support IFF_POINTOPONT.
+	// Next best thing would be to let it ARP but set interface to 192.168.3.5/32 and
+	// add a route like "192.168.3.0/24 via 192.168.3.1 dev $ifName".
+	// Unfortunately that won't work as the GW will be outside the interface's subnet.
+
+	// Our solution is to configure the interface with 192.168.3.5/24, then delete the
+	// "192.168.3.0/24 dev $ifName" route that was automatically added. Then we add
+	// "192.168.3.1/32 dev $ifName" and "192.168.3.0/24 via 192.168.3.1 dev $ifName".
+	// In other words we force all traffic to ARP via the gateway except for GW itself.
+
 	var hostVethName string
 	err := ns.WithNetNSPath(netns, false, func(hostNS *os.File) error {
 		hostVeth, _, err := ip.SetupVeth(ifName, mtu, hostNS)
@@ -52,9 +64,54 @@ func setupContainerVeth(netns, ifName string, mtu int, pr *plugin.Result) (strin
 			return err
 		}
 
-		err = plugin.ConfigureIface(ifName, pr)
+		if err = ipam.ConfigureIface(ifName, pr); err != nil {
+			return err
+		}
+
+		contVeth, err := netlink.LinkByName(ifName)
 		if err != nil {
 			return err
+		}
+
+		// Delete the route that was automatically added
+		route := netlink.Route{
+			LinkIndex: contVeth.Attrs().Index,
+			Dst: &net.IPNet{
+				IP:   pr.IP4.IP.IP.Mask(pr.IP4.IP.Mask),
+				Mask: pr.IP4.IP.Mask,
+			},
+			Scope: netlink.SCOPE_LINK,
+			Src:   pr.IP4.IP.IP,
+		}
+
+		if err := netlink.RouteDel(&route); err != nil {
+			return err
+		}
+
+		for _, r := range []netlink.Route{
+			netlink.Route{
+				LinkIndex: contVeth.Attrs().Index,
+				Dst: &net.IPNet{
+					IP:   pr.IP4.Gateway,
+					Mask: net.CIDRMask(32, 32),
+				},
+				Scope: netlink.SCOPE_LINK,
+				Src:   pr.IP4.IP.IP,
+			},
+			netlink.Route{
+				LinkIndex: contVeth.Attrs().Index,
+				Dst: &net.IPNet{
+					IP:   pr.IP4.IP.IP.Mask(pr.IP4.IP.Mask),
+					Mask: pr.IP4.IP.Mask,
+				},
+				Scope: netlink.SCOPE_UNIVERSE,
+				Gw:    pr.IP4.Gateway,
+				Src:   pr.IP4.IP.IP,
+			},
+		} {
+			if err := netlink.RouteAdd(&r); err != nil {
+				return err
+			}
 		}
 
 		hostVethName = hostVeth.Attrs().Name
@@ -64,7 +121,7 @@ func setupContainerVeth(netns, ifName string, mtu int, pr *plugin.Result) (strin
 	return hostVethName, err
 }
 
-func setupHostVeth(vethName string, ipConf *plugin.IPConfig) error {
+func setupHostVeth(vethName string, ipConf *types.IPConfig) error {
 	// hostVeth moved namespaces and may have a new ifindex
 	veth, err := netlink.LinkByName(vethName)
 	if err != nil {
@@ -74,13 +131,17 @@ func setupHostVeth(vethName string, ipConf *plugin.IPConfig) error {
 	// TODO(eyakubovich): IPv6
 	ipn := &net.IPNet{
 		IP:   ipConf.Gateway,
-		Mask: net.CIDRMask(31, 32),
+		Mask: net.CIDRMask(32, 32),
 	}
 	addr := &netlink.Addr{IPNet: ipn, Label: ""}
 	if err = netlink.AddrAdd(veth, addr); err != nil {
 		return fmt.Errorf("failed to add IP addr (%#v) to veth: %v", ipn, err)
 	}
 
+	ipn = &net.IPNet{
+		IP:   ipConf.IP.IP,
+		Mask: net.CIDRMask(32, 32),
+	}
 	// dst happens to be the same as IP/net of host veth
 	if err = ip.AddHostRoute(ipn, nil, veth); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("failed to add route on host: %v", err)
@@ -100,7 +161,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	// run the IPAM plugin and get back the config to apply
-	result, err := plugin.ExecAdd(conf.IPAM.Type, args.StdinData)
+	result, err := ipam.ExecAdd(conf.IPAM.Type, args.StdinData)
 	if err != nil {
 		return err
 	}
@@ -152,7 +213,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		}
 	}
 
-	return plugin.ExecDel(conf.IPAM.Type, args.StdinData)
+	return ipam.ExecDel(conf.IPAM.Type, args.StdinData)
 }
 
 func main() {

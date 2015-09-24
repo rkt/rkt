@@ -19,20 +19,19 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 )
 
 // IPAMConfig represents the IP related network configuration.
 type IPAMConfig struct {
 	Name       string
-	Type       string         `json:"type"`
-	RangeStart net.IP         `json:"rangeStart"`
-	RangeEnd   net.IP         `json:"rangeEnd"`
-	Subnet     ip.IPNet       `json:"subnet"`
-	Gateway    net.IP         `json:"gateway"`
-	Routes     []plugin.Route `json:"routes"`
-	Args       *IPAMArgs      `json:"-"`
+	Type       string        `json:"type"`
+	RangeStart net.IP        `json:"rangeStart"`
+	RangeEnd   net.IP        `json:"rangeEnd"`
+	Subnet     types.IPNet   `json:"subnet"`
+	Gateway    net.IP        `json:"gateway"`
+	Routes     []types.Route `json:"routes"`
+	Args       *IPAMArgs     `json:"-"`
 }
 
 type IPAMArgs struct {
@@ -53,7 +52,7 @@ func LoadIPAMConfig(bytes []byte, args string) (*IPAMConfig, error) {
 
 	if args != "" {
 		ipamArgs := IPAMArgs{}
-		err := plugin.LoadArgs(args, &ipamArgs)
+		err := types.LoadArgs(args, &ipamArgs)
 		if err != nil {
 			return nil, err
 		}

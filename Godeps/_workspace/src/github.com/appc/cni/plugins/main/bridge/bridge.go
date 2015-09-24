@@ -24,16 +24,17 @@ import (
 	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ipam"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 )
 
 const defaultBrName = "cni0"
 
 type NetConf struct {
-	plugin.NetConf
+	types.NetConf
 	BrName string `json:"bridge"`
 	IsGW   bool   `json:"isGateway"`
 	IPMasq bool   `json:"ipMasq"`
@@ -183,7 +184,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	// run the IPAM plugin and get back the config to apply
-	result, err := plugin.ExecAdd(n.IPAM.Type, args.StdinData)
+	result, err := ipam.ExecAdd(n.IPAM.Type, args.StdinData)
 	if err != nil {
 		return err
 	}
@@ -197,7 +198,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	err = ns.WithNetNSPath(args.Netns, false, func(hostNS *os.File) error {
-		return plugin.ConfigureIface(args.IfName, result)
+		return ipam.ConfigureIface(args.IfName, result)
 	})
 	if err != nil {
 		return err
@@ -234,7 +235,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		return err
 	}
 
-	err = plugin.ExecDel(n.IPAM.Type, args.StdinData)
+	err = ipam.ExecDel(n.IPAM.Type, args.StdinData)
 	if err != nil {
 		return err
 	}

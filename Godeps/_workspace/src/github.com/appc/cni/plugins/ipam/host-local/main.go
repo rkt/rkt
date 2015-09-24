@@ -15,12 +15,10 @@
 package main
 
 import (
-	"errors"
-
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/ipam/host-local/backend/disk"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 )
 
 func main() {
@@ -40,7 +38,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	defer store.Close()
 
 	ipamArgs := IPAMArgs{}
-	err = plugin.LoadArgs(args.Args, &ipamArgs)
+	err = types.LoadArgs(args.Args, &ipamArgs)
 	if err != nil {
 		return err
 	}
@@ -51,22 +49,12 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return err
 	}
 
-	var ipConf *plugin.IPConfig
-
-	switch ipamConf.Type {
-	case "host-local":
-		ipConf, err = allocator.Get(args.ContainerID)
-	case "host-local-ptp":
-		ipConf, err = allocator.GetPtP(args.ContainerID)
-	default:
-		return errors.New("Unsupported IPAM plugin type")
-	}
-
+	ipConf, err := allocator.Get(args.ContainerID)
 	if err != nil {
 		return err
 	}
 
-	r := &plugin.Result{
+	r := &types.Result{
 		IP4: ipConf,
 	}
 	return r.Print()

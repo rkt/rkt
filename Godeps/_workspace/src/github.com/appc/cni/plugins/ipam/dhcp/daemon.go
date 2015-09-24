@@ -27,8 +27,8 @@ import (
 	"runtime"
 	"sync"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/activation"
 )
 
@@ -50,8 +50,8 @@ func newDHCP() *DHCP {
 
 // Allocate acquires an IP from a DHCP server for a specified container.
 // The acquired lease will be maintained until Release() is called.
-func (d *DHCP) Allocate(args *skel.CmdArgs, result *plugin.Result) error {
-	conf := plugin.NetConf{}
+func (d *DHCP) Allocate(args *skel.CmdArgs, result *types.Result) error {
+	conf := types.NetConf{}
 	if err := json.Unmarshal(args.StdinData, &conf); err != nil {
 		return fmt.Errorf("error parsing netconf: %v", err)
 	}
@@ -70,7 +70,7 @@ func (d *DHCP) Allocate(args *skel.CmdArgs, result *plugin.Result) error {
 
 	d.setLease(args.ContainerID, conf.Name, l)
 
-	result.IP4 = &plugin.IPConfig{
+	result.IP4 = &types.IPConfig{
 		IP:      *ipn,
 		Gateway: l.Gateway(),
 		Routes:  l.Routes(),
@@ -82,7 +82,7 @@ func (d *DHCP) Allocate(args *skel.CmdArgs, result *plugin.Result) error {
 // Release stops maintenance of the lease acquired in Allocate()
 // and sends a release msg to the DHCP server.
 func (d *DHCP) Release(args *skel.CmdArgs, reply *struct{}) error {
-	conf := plugin.NetConf{}
+	conf := types.NetConf{}
 	if err := json.Unmarshal(args.StdinData, &conf); err != nil {
 		return fmt.Errorf("error parsing netconf: %v", err)
 	}

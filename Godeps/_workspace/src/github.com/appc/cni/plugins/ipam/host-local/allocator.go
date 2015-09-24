@@ -19,7 +19,7 @@ import (
 	"net"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/ipam/host-local/backend"
 )
 
@@ -69,7 +69,7 @@ func validateRangeIP(ip net.IP, ipnet *net.IPNet) error {
 }
 
 // Returns newly allocated IP along with its config
-func (a *IPAllocator) Get(id string) (*plugin.IPConfig, error) {
+func (a *IPAllocator) Get(id string) (*types.IPConfig, error) {
 	a.store.Lock()
 	defer a.store.Unlock()
 
@@ -103,7 +103,7 @@ func (a *IPAllocator) Get(id string) (*plugin.IPConfig, error) {
 		}
 
 		if reserved {
-			return &plugin.IPConfig{
+			return &types.IPConfig{
 				IP:      net.IPNet{requestedIP, a.conf.Subnet.Mask},
 				Gateway: gw,
 				Routes:  a.conf.Routes,
@@ -123,7 +123,7 @@ func (a *IPAllocator) Get(id string) (*plugin.IPConfig, error) {
 			return nil, err
 		}
 		if reserved {
-			return &plugin.IPConfig{
+			return &types.IPConfig{
 				IP:      net.IPNet{cur, a.conf.Subnet.Mask},
 				Gateway: gw,
 				Routes:  a.conf.Routes,
@@ -131,50 +131,6 @@ func (a *IPAllocator) Get(id string) (*plugin.IPConfig, error) {
 		}
 	}
 	return nil, fmt.Errorf("no IP addresses available in network: %s", a.conf.Name)
-}
-
-// Allocates both an IP and the Gateway IP, i.e. a /31
-// This is used for Point-to-Point links
-func (a *IPAllocator) GetPtP(id string) (*plugin.IPConfig, error) {
-	a.store.Lock()
-	defer a.store.Unlock()
-
-	for cur := a.start; !cur.Equal(a.end); cur = ip.NextIP(cur) {
-		// we're looking for unreserved even, odd pair
-		if !evenIP(cur) {
-			continue
-		}
-
-		gw := cur
-		reserved, err := a.store.Reserve(id, gw)
-		if err != nil {
-			return nil, err
-		}
-		if reserved {
-			cur = ip.NextIP(cur)
-			if cur.Equal(a.end) {
-				break
-			}
-
-			reserved, err := a.store.Reserve(id, cur)
-			if err != nil {
-				return nil, err
-			}
-			if reserved {
-				// found them both!
-				_, bits := a.conf.Subnet.Mask.Size()
-				mask := net.CIDRMask(bits-1, bits)
-
-				return &plugin.IPConfig{
-					IP:      net.IPNet{cur, mask},
-					Gateway: gw,
-					Routes:  a.conf.Routes,
-				}, nil
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("no ip addresses available in network: %s", a.conf.Name)
 }
 
 // Releases all IPs allocated for the container with given ID
@@ -203,16 +159,4 @@ func networkRange(ipnet *net.IPNet) (net.IP, net.IP, error) {
 		end = append(end, ip[i]|^ipnet.Mask[i])
 	}
 	return ipnet.IP, end, nil
-}
-
-func evenIP(ip net.IP) bool {
-	i := ip.To4()
-	if i == nil {
-		i = ip.To16()
-		if i == nil {
-			panic("IP is not v4 or v6")
-		}
-	}
-
-	return i[len(i)-1]%2 == 0
 }

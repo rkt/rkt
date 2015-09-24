@@ -29,8 +29,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ipam"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 )
 
 const (
@@ -39,7 +40,7 @@ const (
 )
 
 type NetConf struct {
-	plugin.NetConf
+	types.NetConf
 	SubnetFile string                 `json:"subnetFile"`
 	Delegate   map[string]interface{} `json:"delegate"`
 }
@@ -130,7 +131,7 @@ func delegateAdd(cid string, netconf map[string]interface{}) error {
 		return err
 	}
 
-	result, err := plugin.ExecAdd(netconf["type"].(string), netconfBytes)
+	result, err := ipam.ExecAdd(netconf["type"].(string), netconfBytes)
 	if err != nil {
 		return err
 	}
@@ -199,8 +200,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 	n.Delegate["ipam"] = map[string]interface{}{
 		"type":   "host-local",
 		"subnet": fenv.sn.String(),
-		"routes": []plugin.Route{
-			plugin.Route{
+		"routes": []types.Route{
+			types.Route{
 				Dst: *fenv.nw,
 			},
 		},
@@ -215,12 +216,12 @@ func cmdDel(args *skel.CmdArgs) error {
 		return err
 	}
 
-	n := &plugin.NetConf{}
+	n := &types.NetConf{}
 	if err = json.Unmarshal(netconfBytes, n); err != nil {
 		return fmt.Errorf("failed to parse netconf: %v", err)
 	}
 
-	return plugin.ExecDel(n.Type, netconfBytes)
+	return ipam.ExecDel(n.Type, netconfBytes)
 }
 
 func main() {

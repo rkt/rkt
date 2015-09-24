@@ -22,7 +22,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 )
 
 // CmdArgs captures all the arguments passed in to the plugin
@@ -93,7 +93,7 @@ func PluginMain(cmdAdd, cmdDel func(_ *CmdArgs) error) {
 	}
 
 	if err != nil {
-		if e, ok := err.(*plugin.Error); ok {
+		if e, ok := err.(*types.Error); ok {
 			// don't wrap Error in Error
 			dieErr(e)
 		}
@@ -102,14 +102,14 @@ func PluginMain(cmdAdd, cmdDel func(_ *CmdArgs) error) {
 }
 
 func dieMsg(f string, args ...interface{}) {
-	e := &plugin.Error{
+	e := &types.Error{
 		Code: 100,
 		Msg:  fmt.Sprintf(f, args...),
 	}
 	dieErr(e)
 }
 
-func dieErr(e *plugin.Error) {
+func dieErr(e *types.Error) {
 	if err := e.Print(); err != nil {
 		log.Print("Error writing error JSON to stdout: ", err)
 	}
