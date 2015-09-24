@@ -93,49 +93,46 @@ func GetGWv6(iface string) (string, error) {
 	return GetGW(iface, netlink.FAMILY_V4)
 }
 
-func GetNonLoIfaceWithAddrs() (iface net.Interface, err error) {
+func GetNonLoIfaceWithAddrs(ipFamily int) (iface net.Interface, addrs []string, err error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return iface, err
+		return iface, nil, err
 	}
 
 	for _, i := range ifaces {
 		if i.Flags&net.FlagLoopback == 0 {
-			ifaceNameLower := strings.ToLower(i.Name)
-			// Don't use rkt's interfaces
-			if strings.HasSuffix(ifaceNameLower, "cni") ||
-				strings.HasSuffix(ifaceNameLower, "veth") {
+			addrs, err = GetIPs(i.Name, ipFamily)
+			if err != nil {
+				return iface, addrs, fmt.Errorf("Cannot get IP address for interface %v: %v", i.Name, err)
+			}
+
+			if len(addrs) == 0 {
 				continue
 			}
-			addrs, err := i.Addrs()
-			if err != nil {
-				return iface, fmt.Errorf("Cannot get IPV4 address for interface %v: %v", i.Name, err)
+			iface = i
+
+			ifaceNameLower := strings.ToLower(i.Name)
+			// Don't use rkt's interfaces
+			if strings.Contains(ifaceNameLower, "cni") ||
+				strings.Contains(ifaceNameLower, "veth") {
+				continue
 			}
-			if len(addrs) > 0 {
-				iface = i
-				break
-			}
+			break
 		}
 	}
-	return iface, err
+	return iface, addrs, err
 }
 
 func GetNonLoIfaceIPv4() (string, error) {
-	iface, err := GetNonLoIfaceWithAddrs()
+	iface, ifaceIPsv4, err := GetNonLoIfaceWithAddrs(netlink.FAMILY_V4)
 	if err != nil {
 		return "", fmt.Errorf("Error while getting non-lo host interface: %v\n", err)
 	}
-	if iface.Name == "" {
+
+	if iface.Name == "" || ifaceIPsv4 == nil {
 		return "", nil
 	}
 
-	ifaceIPsv4, err := GetIPsv4(iface.Name)
-	if err != nil {
-		return "", fmt.Errorf("Cannot get IPV4 address for interface %v: %v", iface.Name, err)
-	}
-	if len(ifaceIPsv4) == 0 {
-		return "", nil
-	}
 	return ifaceIPsv4[0], nil
 }
 
