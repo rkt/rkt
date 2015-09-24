@@ -81,15 +81,11 @@ func TestVolumes(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	tmpdir, err := ioutil.TempDir("", "rkt-tests.")
-	if err != nil {
-		t.Fatalf("Cannot create temporary directory: %v", err)
-	}
+	tmpdir := createTempDirOrPanic("rkt-tests.")
 	defer os.RemoveAll(tmpdir)
 
 	tmpfile := filepath.Join(tmpdir, "file")
-	err = ioutil.WriteFile(tmpfile, []byte("host"), 0600)
-	if err != nil {
+	if err := ioutil.WriteFile(tmpfile, []byte("host"), 0600); err != nil {
 		t.Fatalf("Cannot create temporary file: %v", err)
 	}
 
