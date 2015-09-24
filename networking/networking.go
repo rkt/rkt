@@ -22,7 +22,7 @@ import (
 	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	cnitypes "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
@@ -51,10 +51,10 @@ type Networking struct {
 	nets   []activeNet
 }
 
-// NetConf local struct extends plugin.NetConf with information about masquerading
+// NetConf local struct extends cnitypes.NetConf with information about masquerading
 // similar to CNI plugins
 type NetConf struct {
-	plugin.NetConf
+	cnitypes.NetConf
 	IPMasq bool `json:"ipMasq"`
 }
 

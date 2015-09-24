@@ -23,7 +23,7 @@ import (
 	"net"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	cnitypes "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
@@ -66,7 +66,7 @@ func kvmSetupNetAddressing(network *Networking, n activeNet, ifName string) erro
 		return fmt.Errorf("problem executing network plugin %q (%q): %v", n.conf.Type, ifName, err)
 	}
 
-	result := plugin.Result{}
+	result := cnitypes.Result{}
 	if err = json.Unmarshal(output, &result); err != nil {
 		return fmt.Errorf("error parsing %q result: %v", n.conf.Name, err)
 	}
