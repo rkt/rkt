@@ -262,7 +262,7 @@
 		},
 		{
 			"ImportPath": "github.com/vishvananda/netlink",
-			"Rev": "ae3e7dba57271b4e976c4f91637861ee477135e2"
+			"Rev": "ecf47fd5739b3d2c3daf7c89c4b9715a2605c21b"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/cast5",

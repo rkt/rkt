@@ -19,13 +19,20 @@ type (
 type LinkAttrs struct {
 	Index        int
 	MTU          int
-	TxQLen       uint32 // Transmit Queue Length
+	TxQLen       int // Transmit Queue Length
 	Name         string
 	HardwareAddr net.HardwareAddr
 	Flags        net.Flags
 	ParentIndex  int         // index of the parent link device
 	MasterIndex  int         // must be the index of a bridge
 	Namespace    interface{} // nil | NsPid | NsFd
+}
+
+// NewLinkAttrs returns LinkAttrs structure filled with default values
+func NewLinkAttrs() LinkAttrs {
+	return LinkAttrs{
+		TxQLen: -1,
+	}
 }
 
 // Device links cannot be created via netlink. These links
@@ -53,6 +60,19 @@ func (dummy *Dummy) Attrs() *LinkAttrs {
 
 func (dummy *Dummy) Type() string {
 	return "dummy"
+}
+
+// Ifb links are advanced dummy devices for packet filtering
+type Ifb struct {
+	LinkAttrs
+}
+
+func (ifb *Ifb) Attrs() *LinkAttrs {
+	return &ifb.LinkAttrs
+}
+
+func (ifb *Ifb) Type() string {
+	return "ifb"
 }
 
 // Bridge links are simple linux bridges
@@ -107,6 +127,15 @@ func (macvlan *Macvlan) Type() string {
 	return "macvlan"
 }
 
+// Macvtap - macvtap is a virtual interfaces based on macvlan
+type Macvtap struct {
+	Macvlan
+}
+
+func (macvtap Macvtap) Type() string {
+	return "macvtap"
+}
+
 // Veth devices must specify PeerName on create
 type Veth struct {
 	LinkAttrs
@@ -121,18 +150,18 @@ func (veth *Veth) Type() string {
 	return "veth"
 }
 
-// Generic links represent types that are not currently understood
+// GenericLink links represent types that are not currently understood
 // by this netlink library.
-type Generic struct {
+type GenericLink struct {
 	LinkAttrs
 	LinkType string
 }
 
-func (generic *Generic) Attrs() *LinkAttrs {
+func (generic *GenericLink) Attrs() *LinkAttrs {
 	return &generic.LinkAttrs
 }
 
-func (generic *Generic) Type() string {
+func (generic *GenericLink) Type() string {
 	return generic.LinkType
 }
 
@@ -150,6 +179,7 @@ type Vxlan struct {
 	L2miss       bool
 	L3miss       bool
 	NoAge        bool
+	GBP          bool
 	Age          int
 	Limit        int
 	Port         int
