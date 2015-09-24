@@ -2,6 +2,12 @@
 
 set -e
 
+# Setup go environment on semaphore
+if [ -f /opt/change-go-version.sh ]; then
+    . /opt/change-go-version.sh
+    change-go-version 1.4
+fi
+
 RKT_STAGE1_USR_FROM="${1}"
 RKT_STAGE1_SYSTEMD_VER="${2}"
 
