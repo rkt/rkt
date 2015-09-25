@@ -392,7 +392,7 @@ endef
 # 1 - variable for dirname
 define setup-tmp-dir
 $(strip \
-	$(eval _MISC_TMP_DIR_ := $(TMPDIR)/$(subst .mk,,$(MK_FILENAME)))
+	$(eval _MISC_TMP_DIR_ := $(MAINTEMPDIR)/$(subst .mk,,$(MK_FILENAME)))
 	$(eval CREATE_DIRS += $(_MISC_TMP_DIR_)) \
 	$(eval $1 := $(_MISC_TMP_DIR_)) \
 	$(call undefine-namespaces,_MISC_TMP))
