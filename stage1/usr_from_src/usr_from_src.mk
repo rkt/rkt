@@ -37,6 +37,14 @@ $(call setup-stamp-file,UFS_SYSTEMD_CLONE_AND_PATCH_STAMP,/systemd_clone_and_pat
 $(call setup-stamp-file,UFS_SYSTEMD_BUILD_STAMP,/systemd_build/$(UFS_SYSTEMD_DESC))
 $(call setup-stamp-file,UFS_SYSTEMD_INSTALL_STAMP,/systemd_install/$(UFS_SYSTEMD_DESC))
 
+$(call setup-clean-file,UFS_SYSTEMD_SRCDIR_CLEANMK,/src-$(UFS_SYSTEMD_DESC))
+$(call setup-clean-file,UFS_SYSTEMD_BUILDDIR_CLEANMK,/build-$(UFS_SYSTEMD_DESC))
+$(call setup-clean-file,UFS_ROOTFSDIR_CLEANMK,/install-$(UFS_SYSTEMD_DESC))
+
+$(call setup-stamp-file,UFS_SYSTEMD_SRCDIR_CLEAN_STAMP,$(UFS_SYSTEMD_DESC)-src-clean)
+$(call setup-stamp-file,UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP,$(UFS_SYSTEMD_DESC)-build-clean)
+$(call setup-stamp-file,UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP,$(UFS_SYSTEMD_DESC)-rootfs-clean)
+
 STAGE1_USR_STAMPS += $(UFS_STAMP)
 # INSTALL_SYMLINKS += usr/lib:$(UFS_LIB_SYMLINK) usr/lib64:$(UFS_LIB64_SYMLINK)
 STAGE1_COPY_SO_DEPS := yes
@@ -52,7 +60,7 @@ CLEAN_SYMLINKS += $(ACIROOTFSDIR)/flavor
 
 $(call inc-one,bash.mk)
 
-$(UFS_STAMP): $(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_STAMP)
+$(UFS_STAMP): $(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_STAMP) $(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP) $(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP) $(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP)
 	touch "$@"
 
 $(call forward-vars,$(UFS_ROOTFS_STAMP), \
@@ -80,6 +88,11 @@ $(call generate-deep-filelist,$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR))
 # Generate dep.mk file which will cause the initial ACI rootfs to be
 # recreated if any file in temporary rootfs changes.
 $(call generate-glob-deps,$(UFS_ROOTFS_DEPS_STAMP),$(UFS_ROOTFS_STAMP),$(UFS_ROOTFS_DEPMK),,$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR))
+
+# Generate a clean.mk files for cleaning everything that systemd's
+# "make install" put in a temporary rootfs and for the same files in
+# ACI rootfs.
+$(call generate-clean-mk,$(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP),$(UFS_ROOTFSDIR_CLEANMK),$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR) $(ACIROOTFSDIR))
 
 $(call forward-vars,$(UFS_SYSTEMD_BUILD_STAMP), \
 	UFS_SYSTEMD_BUILDDIR UFS_SYSTEMD_SRCDIR MAKE)
@@ -143,6 +156,10 @@ $(UFS_SYSTEMD_BUILD_STAMP): $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP)
 $(UFS_SYSTEMD_BUILDDIR_FILELIST): $(UFS_SYSTEMD_BUILD_STAMP)
 $(call generate-deep-filelist,$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUILDDIR))
 
+# Generate clean.mk for cleaning all files created during "make all"
+# in systemd.
+$(call generate-clean-mk,$(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP),$(UFS_SYSTEMD_BUILDDIR_CLEANMK),$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUILDDIR))
+
 $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP): $(UFS_SYSTEMD_SRCDIR)/configure
 	touch "$@"
 
@@ -164,6 +181,9 @@ $(UFS_SYSTEMD_SRCDIR)/configure:
 # after it was cloned, patched and configure script was generated.
 $(UFS_SYSTEMD_SRCDIR_FILELIST): $(UFS_SYSTEMD_SRCDIR)/configure
 $(call generate-deep-filelist,$(UFS_SYSTEMD_SRCDIR_FILELIST),$(UFS_SYSTEMD_SRCDIR))
+
+# Generate clean.mk file for cleaning all files in srcdir.
+$(call generate-clean-mk,$(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP),$(UFS_SYSTEMD_SRCDIR_CLEANMK),$(UFS_SYSTEMD_SRCDIR_FILELIST),$(UFS_SYSTEMD_SRCDIR))
 
 # This is a special case - normally, when generating filelists, we
 # require the directory to exist. In this case, the patches directory

@@ -47,7 +47,7 @@ CORES=$(grep -c ^processor /proc/cpuinfo)
 echo "Running make with ${CORES} threads"
 make "-j${CORES}"
 make check
-
+make "-j${CORES}" clean
 cd ..
 
 # Make sure there is enough disk space for the next build

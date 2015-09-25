@@ -397,3 +397,27 @@ $(strip \
 	$(eval $1 := $(_MISC_TMP_DIR_)) \
 	$(call undefine-namespaces,_MISC_TMP))
 endef
+
+define clean-file
+$(CLEANDIR)/$(call path-to-file-with-suffix,$1,clean.mk)
+endef
+
+define setup-custom-clean-file
+$(eval $1 := $(call clean-file,$2)) \
+$(eval $($1): | $$(call to-dir,$($1))) \
+$(eval CLEAN_FILES += $($1))
+endef
+
+define setup-clean-file
+$(eval $(call setup-custom-clean-file,$1,$(MK_PATH)$2))
+endef
+
+# 1 - stamp file
+# 2 - cleanmk file
+# 3 - filelist name
+# 4 - a list of directory mappings
+define generate-clean-mk
+$(strip \
+	$(eval -include $2) \
+	$(eval $(call generate-stamp-rule,$1,$(CLEANGENTOOL_STAMP) $3,$(CLEANDIR),"$(CLEANGENTOOL)" --filelist="$3" $(foreach m,$4,--map-to="$m") >"$2.tmp"; $(call bash-cond-rename,$2.tmp,$2))))
+endef
