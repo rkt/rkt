@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,24 +27,13 @@ import (
 // image with the inspect binary, extract it with rkt image extract and check
 // that the exported /inspect hash matches the original inspect binary hash
 func TestImageExtract(t *testing.T) {
-	testImage := os.Getenv("RKT_INSPECT_IMAGE")
-	if testImage == "" {
-		panic("Empty RKT_INSPECT_IMAGE environment variable")
-	}
+	testImage := getInspectImagePath()
 	testImageName := "coreos.com/rkt-inspect"
-	inspectFile := os.Getenv("INSPECT_BINARY")
-	if inspectFile == "" {
-		panic("Empty INSPECT_BINARY environment variable")
-	}
-	inspectHash, err := getHash(inspectFile)
-	if err != nil {
-		panic("Cannot get inspect binary's hash")
-	}
 
-	tmpDir, err := ioutil.TempDir("", "rkt-TestImageRender-")
-	if err != nil {
-		panic(fmt.Sprintf("Cannot create temp dir: %v", err))
-	}
+	inspectFile := getValueFromEnvOrPanic("INSPECT_BINARY")
+	inspectHash := getHashOrPanic(inspectFile)
+
+	tmpDir := createTempDirOrPanic("rkt-TestImageRender-")
 	defer os.RemoveAll(tmpDir)
 
 	ctx := newRktRunCtx()

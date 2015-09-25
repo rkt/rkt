@@ -35,10 +35,7 @@ import (
 const baseAppName = "rkt-inspect"
 
 func generatePodManifestFile(t *testing.T, manifest *schema.PodManifest) string {
-	tmpDir := os.Getenv("FUNCTIONAL_TMP")
-	if tmpDir == "" {
-		panic("Cannot create ACI: FUNCTIONAL_TMP env var is not specified")
-	}
+	tmpDir := getValueFromEnvOrPanic("FUNCTIONAL_TMP")
 	f, err := ioutil.TempFile(tmpDir, "rkt-test-manifest-")
 	if err != nil {
 		t.Fatalf("Cannot create tmp pod manifest: %v", err)
@@ -96,10 +93,7 @@ func TestPodManifest(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	tmpdir, err := ioutil.TempDir("", "rkt-tests.")
-	if err != nil {
-		t.Fatalf("Cannot create temporary directory: %v", err)
-	}
+	tmpdir := createTempDirOrPanic("rkt-tests.")
 	defer os.RemoveAll(tmpdir)
 
 	boolFalse, boolTrue := false, true

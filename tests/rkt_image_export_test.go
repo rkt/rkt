@@ -36,10 +36,7 @@ func TestImageExport(t *testing.T) {
 	testImageName := "coreos.com/rkt-image-export-test"
 	expectManifest := strings.Replace(manifestExportTemplate, "IMG_NAME", testImageName, -1)
 
-	tmpDir, err := ioutil.TempDir("", "rkt-TestImageExport-")
-	if err != nil {
-		panic(fmt.Sprintf("Cannot create temp dir: %v", err))
-	}
+	tmpDir := createTempDirOrPanic("rkt-TestImageExport-")
 	defer os.RemoveAll(tmpDir)
 
 	tmpManifest, err := ioutil.TempFile(tmpDir, "manifest")

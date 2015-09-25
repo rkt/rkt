@@ -165,10 +165,7 @@ func (ctx *rktRunCtx) cmd() string {
 }
 
 func (ctx *rktRunCtx) rktBin() string {
-	rkt := os.Getenv("RKT")
-	if rkt == "" {
-		panic("Cannot run rkt: RKT env var is not specified")
-	}
+	rkt := getValueFromEnvOrPanic("RKT")
 	abs, err := filepath.Abs(rkt)
 	if err != nil {
 		abs = rkt
@@ -226,14 +223,9 @@ func expectTimeoutWithOutput(p *gexpect.ExpectSubprocess, searchString string, t
 func patchACI(inputFileName, newFileName string, args ...string) string {
 	var allArgs []string
 
-	actool := os.Getenv("ACTOOL")
-	if actool == "" {
-		panic("Cannot create ACI: ACTOOL env var is not specified")
-	}
-	tmpDir := os.Getenv("FUNCTIONAL_TMP")
-	if tmpDir == "" {
-		panic("Cannot create ACI: FUNCTIONAL_TMP env var is not specified")
-	}
+	actool := getValueFromEnvOrPanic("ACTOOL")
+	tmpDir := getValueFromEnvOrPanic("FUNCTIONAL_TMP")
+
 	imagePath, err := filepath.Abs(filepath.Join(tmpDir, newFileName))
 	if err != nil {
 		panic(fmt.Sprintf("Cannot create ACI: %v\n", err))
@@ -253,11 +245,32 @@ func patchACI(inputFileName, newFileName string, args ...string) string {
 }
 
 func patchTestACI(newFileName string, args ...string) string {
-	image := os.Getenv("RKT_INSPECT_IMAGE")
-	if image == "" {
-		panic("Cannot create ACI: RKT_INSPECT_IMAGE env var is not specified")
-	}
+	image := getInspectImagePath()
 	return patchACI(image, newFileName, args...)
+}
+
+func getValueFromEnvOrPanic(envVar string) string {
+	path := os.Getenv(envVar)
+	if path == "" {
+		panic(fmt.Sprintf("Empty %v environment variable\n", envVar))
+	}
+	return path
+}
+
+func getEmptyImagePath() string {
+	return getValueFromEnvOrPanic("RKT_EMPTY_IMAGE")
+}
+
+func getInspectImagePath() string {
+	return getValueFromEnvOrPanic("RKT_INSPECT_IMAGE")
+}
+
+func getHashOrPanic(path string) string {
+	hash, err := getHash(path)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot get hash from file located at %v", path))
+	}
+	return hash
 }
 
 func getHash(filePath string) (string, error) {
@@ -274,6 +287,14 @@ func getHash(filePath string) (string, error) {
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func createTempDirOrPanic(dirName string) string {
+	tmpDir, err := ioutil.TempDir("", dirName)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot create temp dir: %v", err))
+	}
+	return tmpDir
 }
 
 func importImageAndFetchHash(t *testing.T, ctx *rktRunCtx, img string) string {

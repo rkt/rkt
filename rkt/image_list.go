@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/dustin/go-humanize"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/store"
 )
@@ -44,7 +45,7 @@ var (
 	ImagesFieldHeaderMap = map[string]string{
 		keyField:        "KEY",
 		nameField:       "NAME",
-		importTimeField: "IMPORTTIME",
+		importTimeField: "IMPORT TIME",
 		latestField:     "LATEST",
 	}
 
@@ -172,6 +173,7 @@ func init() {
 	cmdImageList.Flags().Var(&flagImagesSortFields, "sort", `sort the output according to the provided comma separated list of fields. Accepted values: "name", "importtime"`)
 	cmdImageList.Flags().Var(&flagImagesSortAsc, "order", `choose the sorting order if at least one sort field is provided (--sort). Accepted values: "asc", "desc"`)
 	cmdImageList.Flags().BoolVar(&flagNoLegend, "no-legend", false, "suppress a legend with the list")
+	cmdImageList.Flags().BoolVar(&flagFullOutput, "full", false, "Use long output format")
 }
 
 func runImages(cmd *cobra.Command, args []string) (exit int) {
@@ -209,14 +211,28 @@ func runImages(cmd *cobra.Command, args []string) (exit int) {
 		for _, f := range flagImagesFields {
 			switch f {
 			case keyField:
-				fmt.Fprintf(tabOut, "%s", aciInfo.BlobKey)
+				hashKey := aciInfo.BlobKey
+				if !flagFullOutput {
+					// The short hash form is [HASH_ALGO]-[FIRST 12 CHAR]
+					// For example, sha512-123456789012
+					pos := strings.Index(hashKey, "-")
+					trimLength := pos + 13
+					if pos > 0 && trimLength < len(hashKey) {
+						hashKey = hashKey[:trimLength]
+					}
+				}
+				fmt.Fprintf(tabOut, "%s", hashKey)
 			case nameField:
 				fmt.Fprintf(tabOut, "%s", aciInfo.Name)
 				if ok {
 					fmt.Fprintf(tabOut, ":%s", version)
 				}
 			case importTimeField:
-				fmt.Fprintf(tabOut, "%s", aciInfo.ImportTime.Format(defaultTimeLayout))
+				if flagFullOutput {
+					fmt.Fprintf(tabOut, "%s", aciInfo.ImportTime.Format(defaultTimeLayout))
+				} else {
+					fmt.Fprintf(tabOut, "%s", humanize.Time(aciInfo.ImportTime))
+				}
 			case latestField:
 				fmt.Fprintf(tabOut, "%t", aciInfo.Latest)
 			}

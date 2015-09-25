@@ -17,7 +17,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -42,10 +41,8 @@ func TestServiceFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	imageFile := os.Getenv("RKT_INSPECT_IMAGE")
-	if imageFile == "" {
-		t.Fatal("RKT_INSPECT_IMAGE is not set")
-	}
+	imageFile := getInspectImagePath()
+
 	image, err := filepath.Abs(imageFile)
 	if err != nil {
 		t.Fatal(err)
