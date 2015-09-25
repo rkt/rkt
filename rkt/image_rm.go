@@ -44,7 +44,6 @@ func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	//TODO(sgotti) Which return code to use when the removal fails only for some images?
 	done := 0
 	errors := 0
 	staleErrors := 0
@@ -82,11 +81,17 @@ func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 	if done > 0 {
 		stderr("rkt: %d image(s) successfully removed", done)
 	}
-	if errors > 0 {
-		stderr("rkt: %d image(s) cannot be removed", errors)
+
+	// If anything didn't complete, return exit status of 1
+	if (errors + staleErrors) > 0 {
+		if staleErrors > 0 {
+			stderr("rkt: %d image(s) removed but left some stale files", staleErrors)
+		}
+		if errors > 0 {
+			stderr("rkt: %d image(s) cannot be removed", errors)
+		}
+		return 1
 	}
-	if staleErrors > 0 {
-		stderr("rkt: %d image(s) removed but left some stale files", staleErrors)
-	}
+
 	return 0
 }
