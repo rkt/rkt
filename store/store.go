@@ -65,6 +65,17 @@ var (
 	ErrKeyNotFound = errors.New("no keys found")
 )
 
+// ACINotFoundError is returned when an ACI cannot be found by GetACI
+// Useful to distinguish a generic error from an aci not found.
+type ACINotFoundError struct {
+	name   types.ACIdentifier
+	labels types.Labels
+}
+
+func (e ACINotFoundError) Error() string {
+	return fmt.Sprintf("cannot find aci satisfying name: %q and labels: %s in the local store", e.name, labelsToString(e.labels))
+}
+
 // StoreRemovalError defines an error removing a non transactional store (like
 // a diskv store or the tree store).
 // When this happen there's the possibility that the store is left in an
@@ -582,7 +593,7 @@ nextKey:
 	if curaciinfo != nil {
 		return curaciinfo.BlobKey, nil
 	}
-	return "", fmt.Errorf("cannot find aci satisfying name: %q and labels: %s in the local store", name, labelsToString(labels))
+	return "", ACINotFoundError{name: name, labels: labels}
 }
 
 func (ds Store) GetAllACIInfos(sortfields []string, ascending bool) ([]*ACIInfo, error) {

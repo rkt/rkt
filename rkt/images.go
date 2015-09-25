@@ -59,14 +59,15 @@ type imageActionData struct {
 
 type finder struct {
 	imageActionData
-	local    bool
-	withDeps bool
+	storeOnly bool
+	noStore   bool
+	withDeps  bool
 }
 
-// findImages uses findImage to attain a list of image hashes using discovery if necessary
+// findImages uses findImage to attain a list of image hashes
 func (f *finder) findImages(al *apps.Apps) error {
 	return al.Walk(func(app *apps.App) error {
-		h, err := f.findImage(app.Image, app.Asc, true)
+		h, err := f.findImage(app.Image, app.Asc)
 		if err != nil {
 			return err
 		}
@@ -75,9 +76,9 @@ func (f *finder) findImages(al *apps.Apps) error {
 	})
 }
 
-// findImage will recognize a ACI hash and use that, import a local file, use
-// discovery or download an ACI directly.
-func (f *finder) findImage(img string, asc string, discover bool) (*types.Hash, error) {
+// findImage will recognize a ACI hash and use that or will fetch using the
+// provided img (image name string, local file, URL).
+func (f *finder) findImage(img string, asc string) (*types.Hash, error) {
 	// check if it is a valid hash, if so let it pass through
 	h, err := types.NewHash(img)
 	if err == nil {
@@ -96,10 +97,11 @@ func (f *finder) findImage(img string, asc string, discover bool) (*types.Hash, 
 	// try fetching the image, potentially remotely
 	ft := &fetcher{
 		imageActionData: f.imageActionData,
-		local:           f.local,
+		storeOnly:       f.storeOnly,
+		noStore:         f.noStore,
 		withDeps:        f.withDeps,
 	}
-	key, err := ft.fetchImage(img, asc, discover)
+	key, err := ft.fetchImage(img, asc)
 	if err != nil {
 		return nil, err
 	}
@@ -116,20 +118,17 @@ var errStatusAccepted = errors.New("server is still processing the request")
 
 type fetcher struct {
 	imageActionData
-	local    bool
-	withDeps bool
+	storeOnly bool
+	noStore   bool
+	withDeps  bool
 }
 
 // fetchImage will take an image as either a URL or a name string and import it
-// into the store if found. If discover is true meta-discovery is enabled. If
-// asc is not "", it must exist as a local file and will be used
-// as the signature file for verification, unless verification is disabled.
-// If f.withDeps is true also image dependencies are fetched.
-func (f *fetcher) fetchImage(img string, asc string, discover bool) (string, error) {
-	if f.withDeps && !discover {
-		return "", fmt.Errorf("cannot fetch image's dependencies with discovery disabled")
-	}
-	hash, err := f.fetchSingleImage(img, asc, discover)
+// into the store if found. If asc is not "", it must exist as a local file and
+// will be used as the signature file for verification, unless verification is
+// disabled. If f.withDeps is true also image dependencies are fetched.
+func (f *fetcher) fetchImage(img string, asc string) (string, error) {
+	hash, err := f.fetchSingleImage(img, asc)
 	if err != nil {
 		return "", err
 	}
@@ -180,7 +179,7 @@ func (f *fetcher) fetchImageDeps(hash string) error {
 	f.addImageDeps(hash, imgsl, seen)
 	for el := imgsl.Front(); el != nil; el = el.Next() {
 		img := el.Value.(string)
-		hash, err := f.fetchSingleImage(img, "", true)
+		hash, err := f.fetchSingleImage(img, "")
 		if err != nil {
 			return err
 		}
@@ -190,14 +189,13 @@ func (f *fetcher) fetchImageDeps(hash string) error {
 }
 
 // fetchSingleImage will take an image as either a URL or a name string and
-// import it into the store if found.  If discover is true meta-discovery is
-// enabled.  If asc is not "", it must exist as a local file and will be used
-// as the signature file for verification, unless verification is disabled.
-func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (string, error) {
+// import it into the store if found. If asc is not "", it must exist as a
+// local file and will be used as the signature file for verification, unless
+// verification is disabled.
+func (f *fetcher) fetchSingleImage(img string, asc string) (string, error) {
 	var (
 		ascFile *os.File
 		err     error
-		latest  bool
 	)
 	if asc != "" && f.ks != nil {
 		ascFile, err = os.Open(asc)
@@ -224,49 +222,94 @@ func (f *fetcher) fetchSingleImage(img string, asc string, discover bool) (strin
 		return "", fmt.Errorf("unable to access %q: %v", img, err)
 	}
 
-	if discover && u.Scheme == "" {
-		if app := newDiscoveryApp(img); app != nil {
-			var discoveryError error
-			if !f.local {
-				stderr("rkt: searching for app image %s", img)
-				ep, err := discoverApp(app, true)
-				if err != nil {
-					discoveryError = err
-				} else {
-					// No specified version label, mark it as latest
-					if _, ok := app.Labels["version"]; !ok {
-						latest = true
-					}
-					return f.fetchImageFromEndpoints(app.Name.String(), ep, ascFile, latest)
-				}
-			}
-			if discoveryError != nil {
-				stderr("discovery failed for %q: %v. Trying to find image in the store.", img, discoveryError)
-			}
-			if f.local || discoveryError != nil {
-				return f.fetchImageFromStore(img)
-			}
-		}
+	switch u.Scheme {
+	case "":
+		return f.fetchImageByName(img, ascFile)
+	case "http", "https", "file", "docker":
+		return f.fetchImageByURL(u, ascFile)
 	}
 
-	switch u.Scheme {
-	case "http", "https", "file":
-	case "docker":
-		dockerURL := common.ParseDockerURL(path.Join(u.Host, u.Path))
-		if dockerURL.Tag == "latest" {
-			latest = true
-		}
-	default:
-		return "", fmt.Errorf("rkt only supports http, https, docker or file URLs (%s)", img)
-	}
-	return f.fetchImageFromURL(u.String(), u.Scheme, ascFile, latest)
+	return "", fmt.Errorf("rkt only supports fetching for image name and http, https, docker or file URLs (%s)", img)
 }
 
-func (f *fetcher) fetchImageFromStore(img string) (string, error) {
-	return getStoreKeyFromApp(f.s, img)
+// fetchImageByName will try to fetch an image using an image name string.
+func (f *fetcher) fetchImageByName(img string, ascFile *os.File) (string, error) {
+	// check the store
+	if !f.noStore {
+		key, err := getStoreKeyFromApp(f.s, img)
+		if err == nil {
+			stderr("rkt: using image from local store for image name %s", img)
+			return key, nil
+		}
+		switch err.(type) {
+		// ignore the error if it's a store.ACINotFoundError
+		case store.ACINotFoundError:
+		default:
+			return "", err
+		}
+	}
+
+	// do remote fetching
+	if !f.storeOnly {
+		// Do image discovery
+		app := newDiscoveryApp(img)
+		if app == nil {
+			return "", fmt.Errorf("invalid image name for discovery: %s", img)
+		}
+		stderr("rkt: searching for app image %s", img)
+		ep, err := discoverApp(app, true)
+		if err != nil {
+			return "", fmt.Errorf("discovery failed for %q: %v", img, err)
+		}
+		latest := false
+		// No specified version label, mark it as latest
+		if _, ok := app.Labels["version"]; !ok {
+			latest = true
+		}
+		return f.fetchImageFromEndpoints(app.Name.String(), ep, ascFile, latest)
+	}
+
+	return "", fmt.Errorf("unable to fetch image for image name: %s", img)
+}
+
+// fetchImageByURL will try fetch an image using an URL.
+func (f *fetcher) fetchImageByURL(u *url.URL, ascFile *os.File) (string, error) {
+	// Always fetch if it's a file
+	if u.Scheme == "file" {
+		stderr("rkt: using image from file %s", u.Path)
+		return f.fetchImageFromURL(u.String(), u.Scheme, ascFile, false)
+	}
+
+	// check the store
+	if !f.noStore {
+		rem, ok, err := f.s.GetRemote(u.String())
+		if err != nil {
+			return "", err
+		}
+		if ok {
+			stderr("rkt: using image from local store for url %s", u.String())
+			return rem.BlobKey, nil
+		}
+	}
+
+	// do remote fetching
+	if !f.storeOnly {
+		latest := false
+		if u.Scheme == "docker" {
+			dockerURL := common.ParseDockerURL(path.Join(u.Host, u.Path))
+			if dockerURL.Tag == "latest" {
+				latest = true
+			}
+		}
+		stderr("rkt: remote fetching from url %s", u.String())
+		return f.fetchImageFromURL(u.String(), u.Scheme, ascFile, latest)
+	}
+
+	return "", fmt.Errorf("unable to fetch image for url %s", u.String())
 }
 
 func (f *fetcher) fetchImageFromEndpoints(appName string, ep *discovery.Endpoints, ascFile *os.File, latest bool) (string, error) {
+	stderr("rkt: remote fetching from url %s", ep.ACIEndpoints[0].ACI)
 	return f.fetchImageFrom(appName, ep.ACIEndpoints[0].ACI, ep.ACIEndpoints[0].ASC, "", ascFile, latest)
 }
 
@@ -275,41 +318,26 @@ func (f *fetcher) fetchImageFromURL(imgurl string, scheme string, ascFile *os.Fi
 }
 
 // fetchImageFrom fetches an image from the aciURL.
-// If the aciURL is a file path (scheme == 'file'), then we bypass the on-disk store.
-// If the `--local` flag is provided, then we will only fetch from the on-disk store (unless aciURL is a file path).
-// If the label is 'latest', then we will bypass the on-disk store (unless '--local' is specified).
-// Otherwise if '--local' is false, aciURL is not a file path, and the label is not 'latest' or empty, we will first
-// try to fetch from the on-disk store, if not found, then fetch from the internet.
 func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, ascFile *os.File, latest bool) (string, error) {
 	var rem *store.Remote
 
-	if f.insecureSkipVerify {
-		if f.ks != nil {
-			stderr("rkt: warning: TLS verification and signature verification has been disabled")
-		}
-	} else if scheme == "docker" {
+	if f.insecureSkipVerify && f.ks != nil {
+		stderr("rkt: warning: TLS verification and signature verification has been disabled")
+	}
+	if !f.insecureSkipVerify && scheme == "docker" {
 		return "", fmt.Errorf("signature verification for docker images is not supported (try --insecure-skip-verify)")
 	}
 
-	if (f.local && scheme != "file") || (scheme != "file" && !latest) {
+	if scheme != "file" {
 		var err error
 		ok := false
 		rem, ok, err = f.s.GetRemote(aciURL)
 		if err != nil {
 			return "", err
 		}
-		if ok {
-			if f.local {
-				stderr("rkt: using image in local store for app %s", appName)
-				return rem.BlobKey, nil
-			}
-			if useCached(rem.DownloadTime, rem.CacheMaxAge) {
-				stderr("rkt: found image in local store, skipping fetching from %s", aciURL)
-				return rem.BlobKey, nil
-			}
-		}
-		if f.local {
-			return "", fmt.Errorf("url %s not available in local store", aciURL)
+		if ok && useCached(rem.DownloadTime, rem.CacheMaxAge) {
+			stderr("rkt: using cached image from local store")
+			return rem.BlobKey, nil
 		}
 	}
 
@@ -711,7 +739,12 @@ func getStoreKeyFromApp(s *store.Store, img string) (string, error) {
 	}
 	key, err := s.GetACI(app.Name, labels)
 	if err != nil {
-		return "", fmt.Errorf("cannot find image: %v", err)
+		switch err.(type) {
+		case store.ACINotFoundError:
+			return "", err
+		default:
+			return "", fmt.Errorf("cannot find image: %v", err)
+		}
 	}
 	return key, nil
 }

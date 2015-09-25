@@ -55,7 +55,8 @@ func init() {
 	cmdPrepare.Flags().BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	cmdPrepare.Flags().BoolVar(&flagPrivateUsers, "private-users", false, "Run within user namespaces (experimental).")
 	cmdPrepare.Flags().Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
-	cmdPrepare.Flags().BoolVar(&flagLocal, "local", false, "use only local images (do not discover or download from remote URLs)")
+	cmdPrepare.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
+	cmdPrepare.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
 	cmdPrepare.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--quiet' and '--no-overlay' will have effects")
 	cmdPrepare.Flags().Var((*appExec)(&rktApps), "exec", "override the exec command for the preceding image")
 
@@ -76,6 +77,11 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		}
 	}
 
+	if flagStoreOnly && flagNoStore {
+		stderr("both --store-only and --no-store specified")
+		return 1
+	}
+
 	if flagPrivateUsers {
 		if !common.SupportsUserNS() {
 			stderr("prepare: --private-users is not supported, kernel compiled without user namespace support")
@@ -89,7 +95,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	if len(flagPodManifest) > 0 && (len(flagVolumes) > 0 || len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || flagLocal) {
+	if len(flagPodManifest) > 0 && (len(flagVolumes) > 0 || len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || flagStoreOnly || flagNoStore) {
 		stderr("prepare: conflicting flags set with --pod-manifest (see --help)")
 		return 1
 	}
@@ -127,8 +133,9 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
 		},
-		local:    flagLocal,
-		withDeps: false,
+		storeOnly: flagStoreOnly,
+		noStore:   flagNoStore,
+		withDeps:  false,
 	}
 
 	s1img, err := getStage1Hash(s, cmd)

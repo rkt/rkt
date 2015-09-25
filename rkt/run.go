@@ -52,7 +52,8 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 	flagExplicitEnv  envMap
 	flagInteractive  bool
 	flagNoOverlay    bool
-	flagLocal        bool
+	flagStoreOnly    bool
+	flagNoStore      bool
 	flagPodManifest  string
 	flagMDSRegister  bool
 	flagUUIDFileSave string
@@ -71,7 +72,8 @@ func init() {
 	cmdRun.Flags().BoolVar(&flagPrivateUsers, "private-users", false, "Run within user namespaces (experimental).")
 	cmdRun.Flags().Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 	cmdRun.Flags().BoolVar(&flagInteractive, "interactive", false, "run pod interactively. If true, only one image may be supplied.")
-	cmdRun.Flags().BoolVar(&flagLocal, "local", false, "use only local images (do not discover or download from remote URLs)")
+	cmdRun.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
+	cmdRun.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
 	cmdRun.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--private-net', '--no-overlay' and '--interactive' will have effects")
 	cmdRun.Flags().BoolVar(&flagMDSRegister, "mds-register", true, "register pod with metadata service")
 	cmdRun.Flags().StringVar(&flagUUIDFileSave, "uuid-file-save", "", "write out pod UUID to specified file")
@@ -97,6 +99,11 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
+	if flagStoreOnly && flagNoStore {
+		stderr("both --store-only and --no-store specified")
+		return 1
+	}
+
 	if flagPrivateUsers {
 		if !common.SupportsUserNS() {
 			stderr("run: --private-users is not supported, kernel compiled without user namespace support")
@@ -110,7 +117,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	if len(flagPodManifest) > 0 && (len(flagVolumes) > 0 || len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagLocal) {
+	if len(flagPodManifest) > 0 && (len(flagVolumes) > 0 || len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagStoreOnly || flagNoStore) {
 		stderr("conflicting flags set with --pod-manifest (see --help)")
 		return 1
 	}
@@ -154,8 +161,9 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
 		},
-		local:    flagLocal,
-		withDeps: false,
+		storeOnly: flagStoreOnly,
+		noStore:   flagNoStore,
+		withDeps:  false,
 	}
 
 	s1img, err := getStage1Hash(s, cmd)

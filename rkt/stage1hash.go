@@ -82,8 +82,9 @@ func getStage1Hash(s *store.Store, cmd *cobra.Command) (*types.Hash, error) {
 		imageActionData: imageActionData{
 			s: s,
 		},
-		local:    true,
-		withDeps: false,
+		storeOnly: true,
+		noStore:   false,
+		withDeps:  false,
 	}
 
 	imageFlag := cmd.Flags().Lookup(stage1ImageFlagName)
@@ -117,7 +118,7 @@ func getDefaultStage1HashFromStore(fn *finder) *types.Hash {
 	// otherwise we don't know if something changed
 	if !strings.HasSuffix(defaultStage1Version, "-dirty") {
 		stage1AppName := fmt.Sprintf("%s:%s", defaultStage1Name, url.QueryEscape(defaultStage1Version))
-		s1img, _ := fn.findImage(stage1AppName, "", true)
+		s1img, _ := fn.findImage(stage1AppName, "")
 		return s1img
 	}
 	return nil
@@ -151,7 +152,7 @@ func getLocalDefaultStage1Hash(fn *finder) (*types.Hash, error) {
 	// parameter to configure script, so it defaulted to desired
 	// filename like "stuff/yadda/stage1-lkvm.aci" (or something).
 	if filepath.IsAbs(defaultStage1Image) {
-		s1img, err := fn.findImage(defaultStage1Image, "", false)
+		s1img, err := fn.findImage(defaultStage1Image, "")
 		if s1img != nil {
 			return s1img, nil
 		}
@@ -170,7 +171,7 @@ func getLocalDefaultStage1Hash(fn *finder) (*types.Hash, error) {
 		}
 	}
 	fallbackPath := filepath.Join(filepath.Dir(exePath), imgBase)
-	s1img, err := fn.findImage(fallbackPath, "", false)
+	s1img, err := fn.findImage(fallbackPath, "")
 	if err != nil {
 		if firstErr != nil {
 			return nil, fmt.Errorf("error finding stage1 images %q and %q: %v and %v", defaultStage1Image, fallbackPath, firstErr, err)
@@ -182,7 +183,7 @@ func getLocalDefaultStage1Hash(fn *finder) (*types.Hash, error) {
 }
 
 func getCustomStage1Hash(fn *finder, path string) (*types.Hash, error) {
-	s1img, err := fn.findImage(path, "", false)
+	s1img, err := fn.findImage(path, "")
 	if err != nil {
 		return nil, fmt.Errorf("error finding stage1 image %q: %v", path, err)
 	}

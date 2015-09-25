@@ -35,7 +35,7 @@ const (
 var (
 	cmdFetch = &cobra.Command{
 		Use:   "fetch IMAGE_URL...",
-		Short: "Fetch image(s) and store them in the local cache",
+		Short: "Fetch image(s) and store them in the local store",
 		Run:   runWrapper(runFetch),
 	}
 )
@@ -48,6 +48,8 @@ func init() {
 	cmdFetch.Flags().SetInterspersed(false)
 
 	cmdFetch.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
+	cmdFetch.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
+	cmdFetch.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
 }
 
 func runFetch(cmd *cobra.Command, args []string) (exit int) {
@@ -55,8 +57,14 @@ func runFetch(cmd *cobra.Command, args []string) (exit int) {
 		stderr("fetch: unable to parse arguments: %v", err)
 		return 1
 	}
+
 	if rktApps.Count() < 1 {
 		stderr("fetch: must provide at least one image")
+		return 1
+	}
+
+	if flagStoreOnly && flagNoStore {
+		stderr("both --store-only and --no-store specified")
 		return 1
 	}
 
@@ -80,11 +88,13 @@ func runFetch(cmd *cobra.Command, args []string) (exit int) {
 			insecureSkipVerify: globalFlags.InsecureSkipVerify,
 			debug:              globalFlags.Debug,
 		},
-		withDeps: true,
+		storeOnly: flagStoreOnly,
+		noStore:   flagNoStore,
+		withDeps:  true,
 	}
 
 	err = rktApps.Walk(func(app *apps.App) error {
-		hash, err := ft.fetchImage(app.Image, app.Asc, true)
+		hash, err := ft.fetchImage(app.Image, app.Asc)
 		if err != nil {
 			return err
 		}
