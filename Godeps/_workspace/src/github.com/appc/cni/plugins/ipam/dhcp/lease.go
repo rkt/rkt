@@ -28,7 +28,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 )
 
 // RFC 2131 suggests using exponential backoff, starting with 4sec
@@ -285,7 +285,7 @@ func (l *DHCPLease) Gateway() net.IP {
 	return parseRouter(l.opts)
 }
 
-func (l *DHCPLease) Routes() []plugin.Route {
+func (l *DHCPLease) Routes() []types.Route {
 	routes := parseRoutes(l.opts)
 	return append(routes, parseCIDRRoutes(l.opts)...)
 }

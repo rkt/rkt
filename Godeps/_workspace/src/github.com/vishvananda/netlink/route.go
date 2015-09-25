@@ -33,3 +33,9 @@ func (r Route) String() string {
 	return fmt.Sprintf("{Ifindex: %d Dst: %s Src: %s Gw: %s}", r.LinkIndex, r.Dst,
 		r.Src, r.Gw)
 }
+
+// RouteUpdate is sent when a route changes - type is RTM_NEWROUTE or RTM_DELROUTE
+type RouteUpdate struct {
+	Type uint16
+	Route
+}

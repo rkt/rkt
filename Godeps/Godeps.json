@@ -1,64 +1,79 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.4",
 	"Packages": [
 		"./..."
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/GoogleCloudPlatform/kubernetes/pkg/api/resource",
+			"Comment": "v0.12.0-270-g53ec66c",
+			"Rev": "53ec66caf4e952a1384ec93b9f0cde37616e4caf"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/pkg/invoke",
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
+		},
+		{
 			"ImportPath": "github.com/appc/cni/pkg/ip",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/pkg/ipam",
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/ns",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/pkg/plugin",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/skel",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/pkg/types",
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/ipam/dhcp",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/bridge",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/ipvlan",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/macvlan",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/ptp",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/meta/flannel",
-			"Comment": "v0.1.0-16-gfb9b8ad",
-			"Rev": "fb9b8ad1bc721681e992dc2b87441648991a96d8"
+			"Comment": "v0.1.0-35-g5b7aa09",
+			"Rev": "5b7aa09e52da1c490ace2ec2c940fe5ef1575d27"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
@@ -247,7 +262,7 @@
 		},
 		{
 			"ImportPath": "github.com/vishvananda/netlink",
-			"Rev": "ae3e7dba57271b4e976c4f91637861ee477135e2"
+			"Rev": "ecf47fd5739b3d2c3daf7c89c4b9715a2605c21b"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/cast5",

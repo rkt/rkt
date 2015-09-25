@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 	"github.com/coreos/rkt/tests/testutils"
 )
 
@@ -368,7 +369,7 @@ func TestPrivateNetTemplates(t *testing.T) {
 		Name: "ptp0",
 		Type: "ptp",
 		Ipam: ipamTemplateT{
-			Type:   "host-local-ptp",
+			Type:   "host-local",
 			Subnet: "10.1.3.0/24",
 			Routes: []map[string]string{{"dst": "0.0.0.0/0"}},
 		},
@@ -378,7 +379,7 @@ func TestPrivateNetTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
-	expected := `{"Name":"ptp0","Type":"ptp","IpMasq":false,"IsGateway":false,"Ipam":{"Type":"host-local-ptp","subnet":"10.1.3.0/24","routes":[{"dst":"0.0.0.0/0"}]}}`
+	expected := `{"Name":"ptp0","Type":"ptp","IpMasq":false,"IsGateway":false,"Ipam":{"Type":"host-local","subnet":"10.1.3.0/24","routes":[{"dst":"0.0.0.0/0"}]}}`
 	if string(b) != expected {
 		t.Fatalf("Template extected:\n%v\ngot:\n%v\n", expected, string(b))
 	}
@@ -586,7 +587,7 @@ func TestPrivateNetCustomPtp(t *testing.T) {
 		Type:   "ptp",
 		IpMasq: true,
 		Ipam: ipamTemplateT{
-			Type:   "host-local-ptp",
+			Type:   "host-local",
 			Subnet: "10.1.1.0/24",
 			Routes: []map[string]string{
 				{"dst": "0.0.0.0/0"},
@@ -598,7 +599,7 @@ func TestPrivateNetCustomPtp(t *testing.T) {
 }
 
 func TestPrivateNetCustomMacvlan(t *testing.T) {
-	iface, err := testutils.GetNonLoIfaceWithAddrs()
+	iface, _, err := testutils.GetNonLoIfaceWithAddrs(netlink.FAMILY_V4)
 	if err != nil {
 		t.Fatalf("Error while getting non-lo host interface: %v\n", err)
 	}
@@ -619,7 +620,7 @@ func TestPrivateNetCustomMacvlan(t *testing.T) {
 }
 
 func TestPrivateNetCustomBridge(t *testing.T) {
-	iface, err := testutils.GetNonLoIfaceWithAddrs()
+	iface, _, err := testutils.GetNonLoIfaceWithAddrs(netlink.FAMILY_V4)
 	if err != nil {
 		t.Fatalf("Error while getting non-lo host interface: %v\n", err)
 	}
@@ -650,7 +651,7 @@ func TestPrivateNetOverride(t *testing.T) {
 	defer ctx.cleanup()
 	defer ctx.reset()
 
-	iface, err := testutils.GetNonLoIfaceWithAddrs()
+	iface, _, err := testutils.GetNonLoIfaceWithAddrs(netlink.FAMILY_V4)
 	if err != nil {
 		t.Fatalf("Error while getting non-lo host interface: %v\n", err)
 	}

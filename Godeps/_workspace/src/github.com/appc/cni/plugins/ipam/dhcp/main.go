@@ -20,8 +20,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 )
 
 const socketPath = "/run/cni/dhcp.sock"
@@ -35,7 +35,7 @@ func main() {
 }
 
 func cmdAdd(args *skel.CmdArgs) error {
-	result := plugin.Result{}
+	result := types.Result{}
 	if err := rpcCall("DHCP.Allocate", args, &result); err != nil {
 		return err
 	}

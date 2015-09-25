@@ -20,6 +20,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 )
 
@@ -78,7 +79,8 @@ func RandomVethName() (string, error) {
 }
 
 // SetupVeth sets up a virtual ethernet link.
-// Should be in container netns.
+// Should be in container netns, and will switch back to hostNS to set the host
+// veth end up.
 func SetupVeth(contVethName string, mtu int, hostNS *os.File) (hostVeth, contVeth netlink.Link, err error) {
 	var hostVethName string
 	hostVethName, contVeth, err = makeVeth(contVethName, mtu)
@@ -97,16 +99,22 @@ func SetupVeth(contVethName string, mtu int, hostNS *os.File) (hostVeth, contVet
 		return
 	}
 
-	if err = netlink.LinkSetUp(hostVeth); err != nil {
-		err = fmt.Errorf("failed to set %q up: %v", contVethName, err)
-		return
-	}
-
 	if err = netlink.LinkSetNsFd(hostVeth, int(hostNS.Fd())); err != nil {
 		err = fmt.Errorf("failed to move veth to host netns: %v", err)
 		return
 	}
 
+	err = ns.WithNetNS(hostNS, false, func(_ *os.File) error {
+		hostVeth, err := netlink.LinkByName(hostVethName)
+		if err != nil {
+			return fmt.Errorf("failed to lookup %q in %q: %v", hostVethName, hostNS.Name(), err)
+		}
+
+		if err = netlink.LinkSetUp(hostVeth); err != nil {
+			return fmt.Errorf("failed to set %q up: %v", hostVethName, err)
+		}
+		return nil
+	})
 	return
 }
 

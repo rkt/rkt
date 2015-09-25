@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	cnitypes "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 
 	"github.com/coreos/rkt/common"
 )
@@ -35,7 +35,7 @@ const BuiltinNetPluginsPath = "usr/lib/rkt/plugins/net"
 
 func pluginErr(err error, output []byte) error {
 	if _, ok := err.(*exec.ExitError); ok {
-		emsg := plugin.Error{}
+		emsg := cnitypes.Error{}
 		if perr := json.Unmarshal(output, &emsg); perr != nil {
 			return fmt.Errorf("netplugin failed but error parsing its diagnostic message %q: %v", string(output), perr)
 		}
@@ -55,7 +55,7 @@ func (e *podEnv) netPluginAdd(n *activeNet, netns string) (ip, hostIP net.IP, er
 		return nil, nil, pluginErr(err, output)
 	}
 
-	pr := plugin.Result{}
+	pr := cnitypes.Result{}
 	if err = json.Unmarshal(output, &pr); err != nil {
 		return nil, nil, fmt.Errorf("error parsing %q result: %v", n.conf.Name, err)
 	}

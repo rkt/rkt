@@ -22,17 +22,17 @@ import (
 	"runtime"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ipam"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 )
 
 type NetConf struct {
-	plugin.NetConf
+	types.NetConf
 	Master string `json:"master"`
 	Mode   string `json:"mode"`
-	IPMasq bool   `json:"ipMasq"`
 	MTU    int    `json:"mtu"`
 }
 
@@ -127,7 +127,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	// run the IPAM plugin and get back the config to apply
-	result, err := plugin.ExecAdd(n.IPAM.Type, args.StdinData)
+	result, err := ipam.ExecAdd(n.IPAM.Type, args.StdinData)
 	if err != nil {
 		return err
 	}
@@ -136,17 +136,10 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	err = ns.WithNetNS(netns, false, func(_ *os.File) error {
-		return plugin.ConfigureIface(args.IfName, result)
+		return ipam.ConfigureIface(args.IfName, result)
 	})
 	if err != nil {
 		return err
-	}
-
-	if n.IPMasq {
-		chain := "CNI-" + n.Name
-		if err = ip.SetupIPMasq(ip.Network(&result.IP4.IP), chain); err != nil {
-			return err
-		}
 	}
 
 	return result.Print()
@@ -158,7 +151,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		return err
 	}
 
-	err = plugin.ExecDel(n.IPAM.Type, args.StdinData)
+	err = ipam.ExecDel(n.IPAM.Type, args.StdinData)
 	if err != nil {
 		return err
 	}

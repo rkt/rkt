@@ -20,7 +20,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/plugin"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/d2g/dhcp4"
 )
 
@@ -40,17 +40,17 @@ func classfulSubnet(sn net.IP) net.IPNet {
 	}
 }
 
-func parseRoutes(opts dhcp4.Options) []plugin.Route {
+func parseRoutes(opts dhcp4.Options) []types.Route {
 	// StaticRoutes format: pairs of:
 	// Dest = 4 bytes; Classful IP subnet
 	// Router = 4 bytes; IP address of router
 
-	routes := []plugin.Route{}
+	routes := []types.Route{}
 	if opt, ok := opts[dhcp4.OptionStaticRoute]; ok {
 		for len(opt) >= 8 {
 			sn := opt[0:4]
 			r := opt[4:8]
-			rt := plugin.Route{
+			rt := types.Route{
 				Dst: classfulSubnet(sn),
 				GW:  r,
 			}
@@ -62,10 +62,10 @@ func parseRoutes(opts dhcp4.Options) []plugin.Route {
 	return routes
 }
 
-func parseCIDRRoutes(opts dhcp4.Options) []plugin.Route {
+func parseCIDRRoutes(opts dhcp4.Options) []types.Route {
 	// See RFC4332 for format (http://tools.ietf.org/html/rfc3442)
 
-	routes := []plugin.Route{}
+	routes := []types.Route{}
 	if opt, ok := opts[dhcp4.OptionClasslessRouteFormat]; ok {
 		for len(opt) >= 5 {
 			width := int(opt[0])
@@ -89,7 +89,7 @@ func parseCIDRRoutes(opts dhcp4.Options) []plugin.Route {
 
 			gw := net.IP(opt[octets+1 : octets+5])
 
-			rt := plugin.Route{
+			rt := types.Route{
 				Dst: net.IPNet{
 					IP:   net.IP(sn),
 					Mask: net.CIDRMask(width, 32),
