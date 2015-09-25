@@ -19,8 +19,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
 const (
@@ -60,7 +58,7 @@ func TestRunOverrideExec(t *testing.T) {
 			expectedLine: "inspect execed as: /inspect",
 		},
 	} {
-		runRktAndCheckOutput(t, tt.rktCmd, tt.expectedLine)
+		runRktAndCheckOutput(t, tt.rktCmd, tt.expectedLine, false)
 	}
 }
 
@@ -78,7 +76,7 @@ func TestRunPreparedOverrideExec(t *testing.T) {
 
 	rktCmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.cmd(), uuid)
 	expected = "inspect execed as: /inspect"
-	runRktAndCheckOutput(t, rktCmd, expected)
+	runRktAndCheckOutput(t, rktCmd, expected, false)
 
 	// Now test overriding the entrypoint (which is a symlink to /inspect so should behave identically)
 	rktCmd = fmt.Sprintf("%s prepare --insecure-skip-verify %s --exec /inspect-link -- --print-exec", ctx.cmd(), execImage)
@@ -86,20 +84,5 @@ func TestRunPreparedOverrideExec(t *testing.T) {
 
 	rktCmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.cmd(), uuid)
 	expected = "inspect execed as: /inspect-link"
-	runRktAndCheckOutput(t, rktCmd, expected)
-}
-
-func runRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string) {
-	child, err := gexpect.Spawn(rktCmd)
-	if err != nil {
-		t.Fatalf("cannot exec rkt: %v", err)
-	}
-
-	if err = expectWithOutput(child, expectedLine); err != nil {
-		t.Fatalf("didn't receive expected output %q: %v", expectedLine, err)
-	}
-
-	if err = child.Wait(); err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	runRktAndCheckOutput(t, rktCmd, expected, false)
 }

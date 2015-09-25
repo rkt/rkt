@@ -374,3 +374,18 @@ func runRktAndGetUUID(t *testing.T, rktCmd string) string {
 
 	return podID.String()
 }
+
+func runRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool) {
+	child, err := gexpect.Spawn(rktCmd)
+	if err != nil {
+		t.Fatalf("cannot exec rkt: %v", err)
+	}
+
+	if err = expectWithOutput(child, expectedLine); err != nil {
+		t.Fatalf("didn't receive expected output %q: %v", expectedLine, err)
+	}
+
+	if err = child.Wait(); err != nil && !expectError {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+}
