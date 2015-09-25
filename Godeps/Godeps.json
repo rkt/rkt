@@ -88,6 +88,11 @@
 			"Rev": "333820b419dc7930374b38e40660a45156a7b4c8"
 		},
 		{
+			"ImportPath": "github.com/appc/spec/ace",
+			"Comment": "v0.7.0",
+			"Rev": "579892dede84d04e54945c949be834e4facd7a0a"
+		},
+		{
 			"ImportPath": "github.com/appc/spec/aci",
 			"Comment": "v0.7.0",
 			"Rev": "579892dede84d04e54945c949be834e4facd7a0a"
