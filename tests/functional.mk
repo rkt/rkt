@@ -95,6 +95,7 @@ $1: $2/manifest $2/rootfs/ace-validator | $2/rootfs/opt/acvalidator
 
 CREATE_DIRS += $2 $$(call dir-chain,$2,rootfs/opt/acvalidator)
 INSTALL_FILES += $3:$2/rootfs/ace-validator:-
+CLEAN_FILES += $1
 endef
 
 $(eval $(call FTST_GENERATE_ACE_IMAGE,$(FTST_ACE_MAIN_IMAGE),$(FTST_ACE_MAIN_IMAGE_DIR),$(FTST_ACE_BINARY)))
