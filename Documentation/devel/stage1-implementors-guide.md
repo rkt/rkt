@@ -86,7 +86,7 @@ Examples
 ```
 {
     "acKind": "ImageManifest",
-    "acVersion": "0.7.0",
+    "acVersion": "0.2.0",
     "name": "foo.com/rkt/stage1",
     "labels": [
         {   
