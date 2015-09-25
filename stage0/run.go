@@ -408,22 +408,6 @@ func Run(cfg RunConfig, dir string) {
 func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cdir string, useOverlay bool) error {
 	log.Println("Loading image", img.String())
 
-	am, err := cfg.Store.GetImageManifest(img.String())
-	if err != nil {
-		return fmt.Errorf("error getting the manifest: %v", err)
-	}
-
-	if _, hasOS := am.Labels.Get("os"); !hasOS {
-		return fmt.Errorf("missing os label in the image manifest")
-	}
-	if _, hasArch := am.Labels.Get("arch"); !hasArch {
-		return fmt.Errorf("missing arch label in the image manifest")
-	}
-
-	if err := types.IsValidOSArch(am.Labels.ToMap(), ValidOSArch); err != nil {
-		return err
-	}
-
 	if useOverlay {
 		if cfg.PrivateUsers.Shift > 0 {
 			return fmt.Errorf("cannot use both overlay and user namespace: not implemented yet. (Try --no-overlay)")

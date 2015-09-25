@@ -226,7 +226,7 @@ func TestDownloading(t *testing.T) {
 
 	imj := `{
 			"acKind": "ImageManifest",
-			"acVersion": "0.7.0",
+			"acVersion": "0.5.2",
 			"name": "example.com/test01"
 		}`
 

@@ -55,7 +55,7 @@ Edit: manifest.json
 ```
 {
     "acKind": "ImageManifest",
-    "acVersion": "0.7.0",
+    "acVersion": "0.5.1",
     "name": "example.com/hello",
     "labels": [
         {

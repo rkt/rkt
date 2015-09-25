@@ -82,7 +82,7 @@ For debugging or inspection you may want to extract an ACI manifest to stdout.
 ```
 # rkt image cat-manifest --pretty-print coreos.com/etcd
 {
-  "acVersion": "0.7.0",
+  "acVersion": "0.6.1",
   "acKind": "ImageManifest",
 ...
 ```
