@@ -144,3 +144,7 @@ func getKeystore() *keystore.Keystore {
 func getConfig() (*config.Config, error) {
 	return config.GetConfigFrom(globalFlags.SystemConfigDir, globalFlags.LocalConfigDir)
 }
+
+func lockDir() string {
+	return filepath.Join(globalFlags.Dir, "locks")
+}
