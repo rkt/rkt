@@ -338,6 +338,19 @@ func runGC(t *testing.T, ctx *rktRunCtx) {
 	}
 }
 
+func runImageGC(t *testing.T, ctx *rktRunCtx) {
+	cmd := fmt.Sprintf("%s image gc", ctx.cmd())
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+
+	err = child.Wait()
+	if err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+}
+
 func removeFromCas(t *testing.T, ctx *rktRunCtx, hash string) {
 	cmd := fmt.Sprintf("%s image rm %s", ctx.cmd(), hash)
 	child, err := gexpect.Spawn(cmd)

@@ -24,6 +24,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
@@ -180,10 +181,17 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		pcfg.Apps = &rktApps
 	}
 
-	if err = stage0.Prepare(pcfg, p.path(), p.uuid); err != nil {
-		stderr("prepare: error setting up stage0: %v", err)
+	keyLock, err := lock.SharedKeyLock(lockDir(), common.PrepareLock)
+	if err != nil {
+		stderr("rkt: cannot get shared prepare lock: %v", err)
 		return 1
 	}
+	if err = stage0.Prepare(pcfg, p.path(), p.uuid); err != nil {
+		stderr("prepare: error setting up stage0: %v", err)
+		keyLock.Close()
+		return 1
+	}
+	keyLock.Close()
 
 	if err := p.sync(); err != nil {
 		stderr("prepare: error syncing pod data: %v", err)

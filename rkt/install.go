@@ -46,6 +46,7 @@ var (
 		".":                        os.FileMode(0755),
 		"tmp":                      os.FileMode(0775),
 		"pods":                     os.FileMode(0700),
+		"locks":                    os.FileMode(0700),
 		"cas":                      os.FileMode(0775),
 		"cas/db":                   os.FileMode(0775),
 		"cas/imagelocks":           os.FileMode(0775),

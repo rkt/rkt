@@ -27,6 +27,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/label"
+	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
@@ -225,11 +226,18 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		pcfg.Apps = &rktApps
 	}
 
+	keyLock, err := lock.SharedKeyLock(lockDir(), common.PrepareLock)
+	if err != nil {
+		stderr("rkt: cannot get shared prepare lock: %v", err)
+		return 1
+	}
 	err = stage0.Prepare(pcfg, p.path(), p.uuid)
 	if err != nil {
 		stderr("run: error setting up stage0: %v", err)
+		keyLock.Close()
 		return 1
 	}
+	keyLock.Close()
 
 	// get the lock fd for run
 	lfd, err := p.Fd()

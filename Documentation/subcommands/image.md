@@ -29,6 +29,16 @@ rkt: successfully removed aci for imageID: "sha512-a03f6bad952b"
 rkt: 1 image(s) successfully remove
 ```
 
+## rkt image gc
+
+You can garbage collect the rkt store to cleanup unused internal data and remove old images (this one to be implemented).
+
+```
+# rkt image gc
+rkt: removed treestore "deps-sha512-120e20cf5c4588b9ed9727e9963f87cc587bec8f23e26fb607cb6adf6d3953f2"
+```
+
+
 ## rkt image export
 
 There are cases where you might want to export the ACI from the store to copy to another machine, file server, etc.

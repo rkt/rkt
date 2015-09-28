@@ -33,7 +33,7 @@ import (
 const (
 	stage1Dir   = "/stage1"
 	stage2Dir   = "/opt/stage2"
-	appsInfoDir = "/appsinfo"
+	AppsInfoDir = "/appsinfo"
 
 	EnvLockFd                    = "RKT_LOCK_FD"
 	SELinuxContext               = "RKT_SELINUX_CONTEXT"
@@ -41,6 +41,8 @@ const (
 	AppTreeStoreIDFilename       = "treeStoreID"
 	OverlayPreparedFilename      = "overlay-prepared"
 	PrivateUsersPreparedFilename = "private-users-prepared"
+
+	PrepareLock = "prepareLock"
 
 	MetadataServicePort    = 18112
 	MetadataServiceRegSock = "/run/rkt/metadata-svc.sock"
@@ -102,7 +104,7 @@ func ImageManifestPath(root string, appName types.ACName) string {
 
 // AppsInfoPath returns the path to the appsinfo directory inside a pod.
 func AppsInfoPath(root string) string {
-	return filepath.Join(root, appsInfoDir)
+	return filepath.Join(root, AppsInfoDir)
 }
 
 // AppInfoPath returns the path to the app's appsinfo directory inside a pod.

@@ -850,6 +850,32 @@ func (p *pod) getStage1TreeStoreID() (string, error) {
 	return string(s1IDb), nil
 }
 
+// getAppTreeStoreIDs returns the treeStoreIDs of the apps images used in
+// this pod
+func (p *pod) getAppsTreeStoreIDs() ([]string, error) {
+	treeStoreIDs := []string{}
+	apps, err := p.getApps()
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range apps {
+		path, err := filepath.Rel("/", filepath.Join(common.AppsInfoDir, a.Name.String(), common.AppTreeStoreIDFilename))
+		if err != nil {
+			return nil, err
+		}
+		treeStoreID, err := p.readFile(path)
+		if err != nil {
+			// When not using overlayfs, apps don't have a treeStoreID file
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, err
+		}
+		treeStoreIDs = append(treeStoreIDs, string(treeStoreID))
+	}
+	return treeStoreIDs, nil
+}
+
 // getAppsHashes returns a list of the app hashes in the pod
 func (p *pod) getAppsHashes() ([]types.Hash, error) {
 	apps, err := p.getApps()
