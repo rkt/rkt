@@ -329,6 +329,7 @@ RKT_REQ_PROG([FILE],[file],[file])
 RKT_REQ_PROG([GIT],[git],[git])
 RKT_REQ_PROG([GOBINARY],[go],[go])
 RKT_REQ_PROG([GOFMTBINARY],[gofmt],[gofmt])
+RKT_REQ_PROG([GPG],[gpg],[gpg])
 
 AC_CONFIG_FILES([makelib/variables.mk
                  stage1/aci/aci-manifest.test:stage1/aci/aci-manifest.in])
