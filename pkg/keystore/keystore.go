@@ -149,21 +149,28 @@ func (ks *Keystore) TrustedKeyPrefixExists(prefix string, r io.ReadSeeker) (bool
 	pubKey := entityList[0].PrimaryKey
 	fileName := fingerprintToFilename(pubKey.Fingerprint)
 
-	acidentifier, err := types.NewACIdentifier(prefix)
-	if err != nil {
-		return false, err
-	}
-
-	pathNames := []string{
-		// example: /etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
-		path.Join(ks.LocalPrefixPath, acidentifier.String(), fileName),
-		// example: /usr/lib/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
-		path.Join(ks.SystemPrefixPath, acidentifier.String(), fileName),
+	pathNamesRoot := []string{
 		// example: /etc/rkt/trustedkeys/root.d/8b86de38890ddb7291867b025210bd8888182190
 		path.Join(ks.LocalRootPath, fileName),
 		// example: /usr/lib/rkt/trustedkeys/root.d/8b86de38890ddb7291867b025210bd8888182190
 		path.Join(ks.SystemRootPath, fileName),
 	}
+
+	var pathNamesPrefix []string
+	if prefix != "" {
+		acidentifier, err := types.NewACIdentifier(prefix)
+		if err != nil {
+			return false, err
+		}
+		pathNamesPrefix = []string{
+			// example: /etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
+			path.Join(ks.LocalPrefixPath, acidentifier.String(), fileName),
+			// example: /usr/lib/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
+			path.Join(ks.SystemPrefixPath, acidentifier.String(), fileName),
+		}
+	}
+
+	pathNames := append(pathNamesRoot, pathNamesPrefix...)
 	for _, p := range pathNames {
 		_, err := os.Stat(p)
 		if err == nil {
