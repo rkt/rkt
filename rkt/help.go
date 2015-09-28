@@ -15,6 +15,7 @@
 package main
 
 import (
+	"os"
 	"strings"
 	"text/template"
 
@@ -101,6 +102,7 @@ func getSubCommands(cmd *cobra.Command) []*cobra.Command {
 
 func usageFunc(cmd *cobra.Command) error {
 	subCommands := getSubCommands(cmd)
+	tabOut := getTabOutWithWriter(os.Stdout)
 	commandUsageTemplate.Execute(tabOut, struct {
 		Executable  string
 		Cmd         *cobra.Command

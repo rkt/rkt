@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,10 +66,13 @@ func init() {
 }
 
 func init() {
-	tabOut = new(tabwriter.Writer)
-	tabOut.Init(os.Stdout, 0, 8, 1, '\t', 0)
-
 	cobra.EnablePrefixMatching = true
+}
+
+func getTabOutWithWriter(writer io.Writer) *tabwriter.Writer {
+	aTabOut := new(tabwriter.Writer)
+	aTabOut.Init(writer, 0, 8, 1, '\t', 0)
+	return aTabOut
 }
 
 // runWrapper return a func(cmd *cobra.Command, args []string) that internally
