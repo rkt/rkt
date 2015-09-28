@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/dustin/go-humanize"
@@ -177,6 +178,8 @@ func init() {
 }
 
 func runImages(cmd *cobra.Command, args []string) int {
+	tabOut := getTabOutWithWriter(os.Stdout)
+
 	if !flagNoLegend {
 		headerFields := []string{}
 		for _, f := range flagImagesFields {

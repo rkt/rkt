@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
@@ -49,6 +50,8 @@ func runList(cmd *cobra.Command, args []string) int {
 		stderr("list: cannot open store: %v", err)
 		return 1
 	}
+
+	tabOut := getTabOutWithWriter(os.Stdout)
 
 	if !flagNoLegend {
 		fmt.Fprintf(tabOut, "UUID\tAPP\tACI\tSTATE\tNETWORKS\n")
