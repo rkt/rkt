@@ -275,7 +275,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		kernelPath := filepath.Join(common.Stage1RootfsPath(p.Root), "bzImage")
 		lkvmPath := filepath.Join(common.Stage1RootfsPath(p.Root), "lkvm")
 		netDescriptions := kvm.GetNetworkDescriptions(n)
-		lkvmNetArgs, kernelNetParams, err := kvm.GetKVMNetArgs(netDescriptions)
+		lkvmNetArgs, err := kvm.GetKVMNetArgs(netDescriptions)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -291,7 +291,6 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 			"noreplace-smp",
 			"systemd.default_standard_error=journal+console",
 			"systemd.default_standard_output=journal+console",
-			strings.Join(kernelNetParams, " "),
 			// "systemd.default_standard_output=tty",
 			"tsc=reliable",
 			"MACHINEID=" + p.UUID.String(),
@@ -608,7 +607,7 @@ func stage1() int {
 		return 2
 	}
 
-	if err = p.PodToSystemd(interactive, flavor, privateUsers); err != nil {
+	if err = p.PodToSystemd(interactive, flavor, privateUsers, n); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
 		return 2
 	}
