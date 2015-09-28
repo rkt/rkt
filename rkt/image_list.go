@@ -176,7 +176,7 @@ func init() {
 	cmdImageList.Flags().BoolVar(&flagFullOutput, "full", false, "Use long output format")
 }
 
-func runImages(cmd *cobra.Command, args []string) (exit int) {
+func runImages(cmd *cobra.Command, args []string) int {
 	if !flagNoLegend {
 		headerFields := []string{}
 		for _, f := range flagImagesFields {
@@ -198,7 +198,7 @@ func runImages(cmd *cobra.Command, args []string) (exit int) {
 	aciInfos, err := s.GetAllACIInfos(sortAciinfoFields, bool(flagImagesSortAsc))
 	if err != nil {
 		stderr("images: unable to get aci infos: %v", err)
-		return
+		return 1
 	}
 
 	for _, aciInfo := range aciInfos {

@@ -43,7 +43,7 @@ func init() {
 	cmdList.Flags().BoolVar(&flagFullOutput, "full", false, "use long output format")
 }
 
-func runList(cmd *cobra.Command, args []string) (exit int) {
+func runList(cmd *cobra.Command, args []string) int {
 	s, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
 		stderr("list: cannot open store: %v", err)
