@@ -171,12 +171,6 @@ func TestShortHash(t *testing.T) {
 			false,
 			"Writing pod manifest",
 		},
-		// Test that we can't remove referenced image
-		{
-			fmt.Sprintf("image rm %s", hash0),
-			false, // For some reason this exits with 0 when failing.
-			"cannot be removed",
-		},
 		// Test that 12-char hash works with image rm
 		{
 			fmt.Sprintf("image rm %s", hash1),

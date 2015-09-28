@@ -840,18 +840,14 @@ func (p *pod) getPID() (pid int, err error) {
 	}
 }
 
-// getStage1Hash returns the hash of the stage1 image used in this pod
-func (p *pod) getStage1Hash() (*types.Hash, error) {
-	s1IDb, err := p.readFile(common.Stage1IDFilename)
+// getStage1TreeStoreID returns the treeStoreID of the stage1 image used in
+// this pod
+func (p *pod) getStage1TreeStoreID() (string, error) {
+	s1IDb, err := p.readFile(common.Stage1TreeStoreIDFilename)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	s1img, err := types.NewHash(string(s1IDb))
-	if err != nil {
-		return nil, err
-	}
-
-	return s1img, nil
+	return string(s1IDb), nil
 }
 
 // getAppsHashes returns a list of the app hashes in the pod
@@ -927,11 +923,11 @@ func (p *pod) getStatusDir() (string, error) {
 		// the pod uses overlay. Since the mount is in another mount
 		// namespace (or gone), return the status directory from the overlay
 		// upper layer
-		stage1Hash, err := p.getStage1Hash()
+		stage1TreeStoreID, err := p.getStage1TreeStoreID()
 		if err != nil {
 			return "", err
 		}
-		overlayStatusDir := fmt.Sprintf(overlayStatusDirTemplate, stage1Hash.String())
+		overlayStatusDir := fmt.Sprintf(overlayStatusDirTemplate, stage1TreeStoreID)
 
 		return overlayStatusDir, nil
 	}

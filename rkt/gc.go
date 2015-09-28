@@ -190,12 +190,12 @@ func deletePod(p *pod) {
 			stderr("Cannot open store: %v", err)
 			return
 		}
-		stage1ID, err := p.getStage1Hash()
+		stage1TreeStoreID, err := p.getStage1TreeStoreID()
 		if err != nil {
-			stderr("Error getting stage1 hash")
+			stderr("Error getting stage1 treeStoreID")
 			return
 		}
-		stage1RootFS := s.GetTreeStoreRootFS(stage1ID.String())
+		stage1RootFS := s.GetTreeStoreRootFS(stage1TreeStoreID)
 
 		// execute stage1's GC
 		if err := stage0.GC(p.path(), p.uuid, stage1RootFS, globalFlags.Debug); err != nil {

@@ -420,47 +420,52 @@ func TestTreeStore(t *testing.T) {
 	}
 
 	// Ask the store to render the treestore
-	err = s.RenderTreeStore(key, false)
+	id, err := s.RenderTreeStore(key, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Verify image Hash. Should be the same.
-	err = s.CheckTreeStore(key)
+	err = s.CheckTreeStore(id)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Change a file permission
-	rootfs := s.GetTreeStoreRootFS(key)
+	rootfs := s.GetTreeStoreRootFS(id)
 	err = os.Chmod(filepath.Join(rootfs, "a"), 0600)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Verify image Hash. Should be different
-	err = s.CheckTreeStore(key)
+	err = s.CheckTreeStore(id)
 	if err == nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Errorf("expected non-nil error!")
 	}
 
 	// rebuild the tree
-	err = s.RenderTreeStore(key, true)
+	prevID := id
+	id, err = s.RenderTreeStore(key, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	if id != prevID {
+		t.Fatalf("unexpected different IDs. prevID: %s, id: %s", prevID, id)
+	}
+
 	// Add a file
-	rootfs = s.GetTreeStoreRootFS(key)
+	rootfs = s.GetTreeStoreRootFS(id)
 	err = ioutil.WriteFile(filepath.Join(rootfs, "newfile"), []byte("newfile"), 0644)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Verify image Hash. Should be different
-	err = s.CheckTreeStore(key)
+	err = s.CheckTreeStore(id)
 	if err == nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Errorf("expected non-nil error!")
 	}
 }
 

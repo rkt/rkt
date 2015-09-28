@@ -18,9 +18,11 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
@@ -29,13 +31,13 @@ const (
 	rmImageOk         = "rkt: successfully removed aci for imageID:"
 
 	unreferencedACI = "rkt-unreferencedACI.aci"
-	unreferencedApp = "coreos.com/rkt-unreferenced.aci"
+	unreferencedApp = "coreos.com/rkt-unreferenced"
 	referencedApp   = "coreos.com/rkt-inspect"
 
 	stage1App = "coreos.com/rkt/stage1"
 )
 
-func TestImageRm(t *testing.T) {
+func TestImageRunRm(t *testing.T) {
 	imageFile := patchTestACI(unreferencedACI, fmt.Sprintf("--name=%s", unreferencedApp))
 	defer os.Remove(imageFile)
 	ctx := newRktRunCtx()
@@ -81,13 +83,13 @@ func TestImageRm(t *testing.T) {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 
-	t.Logf("Removing stage1 image (should fail as referenced)")
-	if err := removeImageId(ctx, stage1ImageID, false); err != nil {
+	t.Logf("Removing stage1 image (should work)")
+	if err := removeImageId(ctx, stage1ImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	t.Logf("Removing image for app %s (should fail as referenced)", referencedApp)
-	if err := removeImageId(ctx, referencedImageID, false); err != nil {
+	t.Logf("Removing image for app %s (should work)", referencedApp)
+	if err := removeImageId(ctx, referencedImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -95,14 +97,55 @@ func TestImageRm(t *testing.T) {
 	if err := removeImageId(ctx, unreferencedImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+}
 
-	cmd = fmt.Sprintf("%s gc --grace-period=0s", ctx.cmd())
-	t.Logf("Running gc: %v", cmd)
-	child, err = gexpect.Spawn(cmd)
+func TestImagePrepareRmRun(t *testing.T) {
+	imageFile := patchTestACI(unreferencedACI, fmt.Sprintf("--name=%s", unreferencedApp))
+	defer os.Remove(imageFile)
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
+	cmd := fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmd(), imageFile)
+	t.Logf("Fetching %s: %v", imageFile, cmd)
+	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Cannot exec: %v", err)
 	}
 	if err := child.Wait(); err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+
+	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
+	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
+	cmds := strings.Fields(ctx.cmd())
+	prepareCmd := exec.Command(cmds[0], cmds[1:]...)
+	prepareCmd.Args = append(prepareCmd.Args, "--insecure-skip-verify", "prepare", referencedACI)
+	output, err := prepareCmd.Output()
+	if err != nil {
+		t.Fatalf("Cannot read the output: %v", err)
+	}
+
+	podIDStr := strings.TrimSpace(string(output))
+	podID, err := types.NewUUID(podIDStr)
+	if err != nil {
+		t.Fatalf("%q is not a valid UUID: %v", podIDStr, err)
+	}
+
+	t.Logf("Retrieving stage1 imageID")
+	stage1ImageID, err := getImageId(ctx, stage1App)
+	if err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+
+	t.Logf("Retrieving %s imageID", referencedApp)
+	referencedImageID, err := getImageId(ctx, referencedApp)
+	if err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+
+	t.Logf("Retrieving %s imageID", unreferencedApp)
+	unreferencedImageID, err := getImageId(ctx, unreferencedApp)
+	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 
@@ -114,6 +157,21 @@ func TestImageRm(t *testing.T) {
 	t.Logf("Removing image for app %s (should work)", referencedApp)
 	if err := removeImageId(ctx, referencedImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+
+	t.Logf("Removing image for app %s (should work)", unreferencedApp)
+	if err := removeImageId(ctx, unreferencedImageID, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.cmd(), podID.String())
+	t.Logf("Running %s: %v", referencedACI, cmd)
+	child, err = gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec: %v", err)
+	}
+	if err := child.Wait(); err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 }
 

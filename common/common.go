@@ -31,12 +31,14 @@ import (
 )
 
 const (
-	stage1Dir = "/stage1"
-	stage2Dir = "/opt/stage2"
+	stage1Dir   = "/stage1"
+	stage2Dir   = "/opt/stage2"
+	appsInfoDir = "/appsinfo"
 
 	EnvLockFd                    = "RKT_LOCK_FD"
 	SELinuxContext               = "RKT_SELINUX_CONTEXT"
-	Stage1IDFilename             = "stage1ID"
+	Stage1TreeStoreIDFilename    = "stage1TreeStoreID"
+	AppTreeStoreIDFilename       = "treeStoreID"
 	OverlayPreparedFilename      = "overlay-prepared"
 	PrivateUsersPreparedFilename = "private-users-prepared"
 
@@ -96,6 +98,21 @@ func RelAppRootfsPath(appName types.ACName) string {
 // ImageManifestPath returns the path to the app's manifest file inside a pod.
 func ImageManifestPath(root string, appName types.ACName) string {
 	return filepath.Join(AppPath(root, appName), aci.ManifestFile)
+}
+
+// AppsInfoPath returns the path to the appsinfo directory inside a pod.
+func AppsInfoPath(root string) string {
+	return filepath.Join(root, appsInfoDir)
+}
+
+// AppInfoPath returns the path to the app's appsinfo directory inside a pod.
+func AppInfoPath(root string, appName types.ACName) string {
+	return filepath.Join(AppsInfoPath(root), appName.String())
+}
+
+// AppTreeStoreIDPath returns the path to the app's treeStoreID file inside a pod.
+func AppTreeStoreIDPath(root string, appName types.ACName) string {
+	return filepath.Join(AppInfoPath(root, appName), AppTreeStoreIDFilename)
 }
 
 // MetadataServicePublicURL returns the public URL used to host the metadata service

@@ -119,12 +119,6 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	s1img, err := p.getStage1Hash()
-	if err != nil {
-		stderr("prepared-run: unable to get stage1 Hash: %v", err)
-		return 1
-	}
-
 	apps, err := p.getApps()
 	if err != nil {
 		stderr("prepared-run: unable to get app list: %v", err)
@@ -133,10 +127,9 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 
 	rcfg := stage0.RunConfig{
 		CommonConfig: stage0.CommonConfig{
-			Store:       s,
-			Stage1Image: *s1img,
-			UUID:        p.uuid,
-			Debug:       globalFlags.Debug,
+			Store: s,
+			UUID:  p.uuid,
+			Debug: globalFlags.Debug,
 		},
 		PrivateNet:  flagPrivateNet,
 		LockFd:      lfd,

@@ -27,7 +27,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/device"
 )
 
-func copyRegularFile(src, dest string) (err error) {
+func CopyRegularFile(src, dest string) (err error) {
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
@@ -49,7 +49,7 @@ func copyRegularFile(src, dest string) (err error) {
 	return nil
 }
 
-func copySymlink(src, dest string) error {
+func CopySymlink(src, dest string) error {
 	symTarget, err := os.Readlink(src)
 	if err != nil {
 		return err
@@ -86,11 +86,11 @@ func CopyTree(src, dest string, uidRange *uid.UidRange) error {
 			}
 			dir.Close()
 		case mode.IsRegular():
-			if err := copyRegularFile(path, target); err != nil {
+			if err := CopyRegularFile(path, target); err != nil {
 				return err
 			}
 		case mode&os.ModeSymlink == os.ModeSymlink:
-			if err := copySymlink(path, target); err != nil {
+			if err := CopySymlink(path, target); err != nil {
 				return err
 			}
 		case mode&os.ModeCharDevice == os.ModeCharDevice:

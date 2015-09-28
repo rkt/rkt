@@ -63,13 +63,15 @@ func runImageRender(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	if err := s.RenderTreeStore(key, false); err != nil {
+	id, err := s.RenderTreeStore(key, false)
+	if err != nil {
 		stderr("image render: error rendering ACI: %v", err)
 		return 1
 	}
-	if err := s.CheckTreeStore(key); err != nil {
+	if err := s.CheckTreeStore(id); err != nil {
 		stderr("image render: warning: tree cache is in a bad state. Rebuilding...")
-		if err := s.RenderTreeStore(key, true); err != nil {
+		var err error
+		if id, err = s.RenderTreeStore(key, true); err != nil {
 			stderr("image render: error rendering ACI: %v", err)
 			return 1
 		}
@@ -118,7 +120,7 @@ func runImageRender(cmd *cobra.Command, args []string) (exit int) {
 		}
 	}
 
-	cachedTreePath := s.GetTreeStoreRootFS(key)
+	cachedTreePath := s.GetTreeStoreRootFS(id)
 	if err := fileutil.CopyTree(cachedTreePath, rootfsOutDir, uid.NewBlankUidRange()); err != nil {
 		stderr("image render: error copying ACI rootfs: %v", err)
 		return 1

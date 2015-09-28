@@ -31,6 +31,7 @@ import (
 	"github.com/coreos/rkt/pkg/lock"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/acirenderer"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 
@@ -406,77 +407,104 @@ func (ds Store) RemoveACI(key string) error {
 	return nil
 }
 
+// GetTreeStoreID calculates the treestore ID for the given image key.
+// The treeStoreID is computed as an hash of the flattened dependency tree
+// image keys. In this way the ID may change for the same key if the image's
+// dependencies change.
+func (s Store) GetTreeStoreID(key string) (string, error) {
+	hash, err := types.NewHash(key)
+	if err != nil {
+		return "", err
+	}
+	images, err := acirenderer.CreateDepListFromImageID(*hash, s)
+	if err != nil {
+		return "", err
+	}
+
+	keys := []string{}
+	for _, image := range images {
+		keys = append(keys, image.Key)
+	}
+	imagesString := strings.Join(keys, ",")
+	h := sha512.New()
+	h.Write([]byte(imagesString))
+	return "deps-" + hashToKey(h), nil
+}
+
 // RenderTreeStore renders a treestore for the given image key if it's not
 // already fully rendered.
 // Users of treestore should call s.RenderTreeStore before using it to ensure
 // that the treestore is completely rendered.
-func (s Store) RenderTreeStore(key string, rebuild bool) error {
-	// this lock references the treestore dir for the specified key. This
-	// is different from a lock on an image key as internally
-	// treestore.Write calls the acirenderer functions that use GetACI and
-	// GetImageManifest which are taking the image(s) lock.
-	treeStoreKeyLock, err := lock.ExclusiveKeyLock(s.treeStoreLockDir, key)
+// Returns the id of the rendered treestore.
+func (s Store) RenderTreeStore(key string, rebuild bool) (string, error) {
+	id, err := s.GetTreeStoreID(key)
 	if err != nil {
-		return fmt.Errorf("error locking tree store: %v", err)
+		return "", fmt.Errorf("cannot calculate treestore id: %v", err)
+	}
+
+	// this lock references the treestore dir for the specified id.
+	treeStoreKeyLock, err := lock.ExclusiveKeyLock(s.treeStoreLockDir, id)
+	if err != nil {
+		return "", fmt.Errorf("error locking tree store: %v", err)
 	}
 	defer treeStoreKeyLock.Close()
 
 	if !rebuild {
-		rendered, err := s.treestore.IsRendered(key)
+		rendered, err := s.treestore.IsRendered(id)
 		if err != nil {
-			return fmt.Errorf("cannot determine if tree is already rendered: %v", err)
+			return "", fmt.Errorf("cannot determine if tree is already rendered: %v", err)
 		}
 		if rendered {
-			return nil
+			return id, nil
 		}
 	}
 	// Firstly remove a possible partial treestore if existing.
 	// This is needed as a previous ACI removal operation could have failed
 	// cleaning the tree store leaving some stale files.
-	if err := s.treestore.Remove(key); err != nil {
-		return err
+	if err := s.treestore.Remove(id); err != nil {
+		return "", err
 	}
-	if err := s.treestore.Write(key, &s); err != nil {
-		return err
+	if err := s.treestore.Write(id, key, &s); err != nil {
+		return "", err
 	}
-	return nil
+	return id, nil
 }
 
-// CheckTreeStore verifies the treestore consistency for the specified key.
-func (s Store) CheckTreeStore(key string) error {
-	treeStoreKeyLock, err := lock.SharedKeyLock(s.treeStoreLockDir, key)
+// CheckTreeStore verifies the treestore consistency for the specified id.
+func (s Store) CheckTreeStore(id string) error {
+	treeStoreKeyLock, err := lock.SharedKeyLock(s.treeStoreLockDir, id)
 	if err != nil {
 		return fmt.Errorf("error locking tree store: %v", err)
 	}
 	defer treeStoreKeyLock.Close()
 
-	return s.treestore.Check(key)
+	return s.treestore.Check(id)
 }
 
-// GetTreeStorePath returns the absolute path of the treestore for the specified key.
+// GetTreeStorePath returns the absolute path of the treestore for the specified id.
 // It doesn't ensure that the path exists and is fully rendered. This should
 // be done calling IsRendered()
-func (s Store) GetTreeStorePath(key string) string {
-	return s.treestore.GetPath(key)
+func (s Store) GetTreeStorePath(id string) string {
+	return s.treestore.GetPath(id)
 }
 
 // GetTreeStoreRootFS returns the absolute path of the rootfs in the treestore
-// for specified key.
+// for specified id.
 // It doesn't ensure that the rootfs exists and is fully rendered. This should
 // be done calling IsRendered()
-func (s Store) GetTreeStoreRootFS(key string) string {
-	return s.treestore.GetRootFS(key)
+func (s Store) GetTreeStoreRootFS(id string) string {
+	return s.treestore.GetRootFS(id)
 }
 
-// RemoveTreeStore removes the rendered image in tree store with the given key.
-func (ds Store) RemoveTreeStore(key string) error {
-	treeStoreKeyLock, err := lock.ExclusiveKeyLock(ds.treeStoreLockDir, key)
+// RemoveTreeStore removes the rendered image in tree store with the given id.
+func (ds Store) RemoveTreeStore(id string) error {
+	treeStoreKeyLock, err := lock.ExclusiveKeyLock(ds.treeStoreLockDir, id)
 	if err != nil {
 		return fmt.Errorf("error locking tree store: %v", err)
 	}
 	defer treeStoreKeyLock.Close()
 
-	if err := ds.treestore.Remove(key); err != nil {
+	if err := ds.treestore.Remove(id); err != nil {
 		return fmt.Errorf("error removing the tree store: %v", err)
 	}
 	return nil

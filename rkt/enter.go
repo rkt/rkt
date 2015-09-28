@@ -99,13 +99,13 @@ func runEnter(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	stage1ID, err := p.getStage1Hash()
+	stage1TreeStoreID, err := p.getStage1TreeStoreID()
 	if err != nil {
-		stderr("Error getting stage1 hash")
+		stderr("Error getting stage1 treeStoreID")
 		return 1
 	}
 
-	stage1RootFS := s.GetTreeStoreRootFS(stage1ID.String())
+	stage1RootFS := s.GetTreeStoreRootFS(stage1TreeStoreID)
 
 	if err = stage0.Enter(p.path(), podPID, *appName, stage1RootFS, argv); err != nil {
 		stderr("Enter failed: %v", err)
