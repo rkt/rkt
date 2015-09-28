@@ -211,7 +211,9 @@ func runImages(cmd *cobra.Command, args []string) int {
 			continue
 		}
 		version, ok := im.Labels.Get("version")
+		fieldValues := []string{}
 		for _, f := range flagImagesFields {
+			fieldValue := ""
 			switch f {
 			case keyField:
 				hashKey := aciInfo.BlobKey
@@ -224,25 +226,25 @@ func runImages(cmd *cobra.Command, args []string) int {
 						hashKey = hashKey[:trimLength]
 					}
 				}
-				fmt.Fprintf(tabOut, "%s", hashKey)
+				fieldValue = hashKey
 			case nameField:
-				fmt.Fprintf(tabOut, "%s", aciInfo.Name)
+				fieldValue = aciInfo.Name
 				if ok {
-					fmt.Fprintf(tabOut, ":%s", version)
+					fieldValue = fmt.Sprintf("%s:%s", fieldValue, version)
 				}
 			case importTimeField:
 				if flagFullOutput {
-					fmt.Fprintf(tabOut, "%s", aciInfo.ImportTime.Format(defaultTimeLayout))
+					fieldValue = aciInfo.ImportTime.Format(defaultTimeLayout)
 				} else {
-					fmt.Fprintf(tabOut, "%s", humanize.Time(aciInfo.ImportTime))
+					fieldValue = humanize.Time(aciInfo.ImportTime)
 				}
 			case latestField:
-				fmt.Fprintf(tabOut, "%t", aciInfo.Latest)
+				fieldValue = fmt.Sprintf("%t", aciInfo.Latest)
 			}
-			fmt.Fprintf(tabOut, "\t")
+			fieldValues = append(fieldValues, fieldValue)
 
 		}
-		fmt.Fprintf(tabOut, "\n")
+		fmt.Fprintf(tabOut, "%s\n", strings.Join(fieldValues, "\t"))
 	}
 
 	tabOut.Flush()
