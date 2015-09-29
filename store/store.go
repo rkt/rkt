@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/coreos/rkt/pkg/lock"
@@ -366,6 +367,23 @@ func (ds Store) RemoveACI(key string) error {
 		return fmt.Errorf("error locking image: %v", err)
 	}
 	defer imageKeyLock.Close()
+
+	// Try to see if we are the owner of the images, if not, returns not enough permission error.
+	for _, s := range ds.stores {
+		// XXX: The construction of 'path' depends on the implementation of diskv.
+		path := filepath.Join(s.BasePath, filepath.Join(s.Transform(key)...))
+		fi, err := os.Stat(path)
+		if err != nil {
+			return fmt.Errorf("cannot get the stat of the image directory: %v", err)
+		}
+
+		uid := os.Getuid()
+		dirUid := int(fi.Sys().(*syscall.Stat_t).Uid)
+
+		if uid != dirUid && uid != 0 {
+			return fmt.Errorf("permission denied, are you root or the owner of the image?")
+		}
+	}
 
 	// Firstly remove aciinfo and remote from the db in an unique transaction.
 	// remote needs to be removed or a GetRemote will return a blobKey not
