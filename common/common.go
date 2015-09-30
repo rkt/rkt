@@ -48,6 +48,8 @@ const (
 	MetadataServicePort    = 18112
 	MetadataServiceRegSock = "/run/rkt/metadata-svc.sock"
 
+	APIServiceListenClientURL = "localhost:15441"
+
 	DefaultLocalConfigDir  = "/etc/rkt"
 	DefaultSystemConfigDir = "/usr/lib/rkt"
 )
