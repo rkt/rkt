@@ -98,22 +98,22 @@ func RelAppRootfsPath(appName types.ACName) string {
 	return filepath.Join(RelAppPath(appName), aci.RootfsDir)
 }
 
-// ImageManifestPath returns the path to the app's manifest file inside a pod.
+// ImageManifestPath returns the path to the app's manifest file of a pod.
 func ImageManifestPath(root string, appName types.ACName) string {
 	return filepath.Join(AppPath(root, appName), aci.ManifestFile)
 }
 
-// AppsInfoPath returns the path to the appsinfo directory inside a pod.
+// AppsInfoPath returns the path to the appsinfo directory of a pod.
 func AppsInfoPath(root string) string {
 	return filepath.Join(root, AppsInfoDir)
 }
 
-// AppInfoPath returns the path to the app's appsinfo directory inside a pod.
+// AppInfoPath returns the path to the app's appsinfo directory of a pod.
 func AppInfoPath(root string, appName types.ACName) string {
 	return filepath.Join(AppsInfoPath(root), appName.String())
 }
 
-// AppTreeStoreIDPath returns the path to the app's treeStoreID file inside a pod.
+// AppTreeStoreIDPath returns the path to the app's treeStoreID file of a pod.
 func AppTreeStoreIDPath(root string, appName types.ACName) string {
 	return filepath.Join(AppInfoPath(root, appName), AppTreeStoreIDFilename)
 }
