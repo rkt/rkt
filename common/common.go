@@ -52,7 +52,7 @@ const (
 	DefaultSystemConfigDir = "/usr/lib/rkt"
 )
 
-// Stage1SharedVolumesDir returns the path where shared (empty) volumes exist on the host.
+// Stage1SharedVolumesDir returns the path where shared (empty) volumes exist inside a pod.
 func Stage1SharedVolumesDir(root string) string {
 	return filepath.Join(root, sharedVolumesDir)
 }
