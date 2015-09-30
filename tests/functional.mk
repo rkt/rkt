@@ -84,14 +84,10 @@ include makelib/build_go_bin.mk
 # 2 - aci directory
 # 3 - ace validator
 define FTST_GENERATE_ACE_IMAGE
+
 $$(call forward-vars,$1,ACTOOL)
 $1: $2/manifest $2/rootfs/ace-validator | $2/rootfs/opt/acvalidator
-	# Set a consistent timestamp so we get a consistent hash
-	# TODO(jonboulle): make this cleaner..
-	for path in "$2/rootfs" $2/rootfs/ace-validator; do \
-		touch -a -m -d 1970-01-01T00:00:00Z "$$$${path}"; \
-	done
-	"$(ACTOOL)" build --overwrite "$2" "$1"
+	"$$(ACTOOL)" build --overwrite "$2" "$1"
 
 CREATE_DIRS += $2 $$(call dir-chain,$2,rootfs/opt/acvalidator)
 INSTALL_FILES += $3:$2/rootfs/ace-validator:-
