@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package v1 is a generated protocol buffer package.
+Package v1_alpha is a generated protocol buffer package.
 
 It is generated from these files:
 	api.proto
@@ -35,7 +35,7 @@ It has these top-level messages:
 	GetLogsRequest
 	GetLogsResponse
 */
-package v1
+package v1_alpha
 
 import proto "github.com/coreos/rkt/Godeps/_workspace/src/github.com/golang/protobuf/proto"
 import fmt "fmt"
@@ -200,7 +200,7 @@ func (x EventType) String() string {
 // ImageFormat defines the format of the image.
 type ImageFormat struct {
 	// Type of the image, required.
-	Type ImageType `protobuf:"varint,1,opt,name=type,enum=v1.ImageType" json:"type,omitempty"`
+	Type ImageType `protobuf:"varint,1,opt,name=type,enum=v1_alpha.ImageType" json:"type,omitempty"`
 	// Version of the image format, required.
 	Version string `protobuf:"bytes,2,opt,name=version" json:"version,omitempty"`
 }
@@ -261,7 +261,7 @@ type App struct {
 	// if it is returned by ListPods().
 	Image *Image `protobuf:"bytes,2,opt,name=image" json:"image,omitempty"`
 	// State of the app. optional, non-empty only if it's returned by InspectPod().
-	State AppState `protobuf:"varint,3,opt,name=state,enum=v1.AppState" json:"state,omitempty"`
+	State AppState `protobuf:"varint,3,opt,name=state,enum=v1_alpha.AppState" json:"state,omitempty"`
 	// Exit code of the app. optional, only valid if it's returned by InspectPod() and
 	// the app has already exited.
 	ExitCode int32 `protobuf:"zigzag32,4,opt,name=exit_code" json:"exit_code,omitempty"`
@@ -285,7 +285,7 @@ type Pod struct {
 	// PID of the pod, optional, only valid if it's returned by InspectPod(). A negative value means the pod has exited.
 	Pid int32 `protobuf:"zigzag32,2,opt,name=pid" json:"pid,omitempty"`
 	// State of the pod, required.
-	State PodState `protobuf:"varint,3,opt,name=state,enum=v1.PodState" json:"state,omitempty"`
+	State PodState `protobuf:"varint,3,opt,name=state,enum=v1_alpha.PodState" json:"state,omitempty"`
 	// List of apps in the pod, required.
 	Apps []*App `protobuf:"bytes,4,rep,name=apps" json:"apps,omitempty"`
 	// Network information of the pod, optional, non-empty if the pod is running in private net.
@@ -315,7 +315,7 @@ func (m *Pod) GetNetworks() []*Network {
 
 type KeyValue struct {
 	// Key part of the key-value pair.
-	Key string `protobuf:"bytes,1,opt" json:"Key,omitempty"`
+	Key string `protobuf:"bytes,1,opt,name=Key" json:"Key,omitempty"`
 	// Value part of the key-value pair.
 	Value string `protobuf:"bytes,2,opt,name=value" json:"value,omitempty"`
 }
@@ -328,7 +328,7 @@ func (*KeyValue) ProtoMessage()    {}
 // The conditions are combined by 'AND'.
 type PodFilter struct {
 	// If not empty, then the returned pods must be in one of these states.
-	States []PodState `protobuf:"varint,1,rep,name=states,enum=v1.PodState" json:"states,omitempty"`
+	States []PodState `protobuf:"varint,1,rep,name=states,enum=v1_alpha.PodState" json:"states,omitempty"`
 	// If not empty, then the returned pods must have one of these names in the apps.
 	AppNames []string `protobuf:"bytes,2,rep,name=app_names" json:"app_names,omitempty"`
 	// If not empty, then the returned pods must contain at least one of these image names in the apps.
@@ -409,7 +409,7 @@ func (*Info) ProtoMessage()    {}
 // Event describes the events that will be received via ListenEvents().
 type Event struct {
 	// Type of the event, required.
-	Type EventType `protobuf:"varint,1,opt,name=type,enum=v1.EventType" json:"type,omitempty"`
+	Type EventType `protobuf:"varint,1,opt,name=type,enum=v1_alpha.EventType" json:"type,omitempty"`
 	// ID of the subject that causes the event, required.
 	// If the event is a pod or app event, the id is the pod's uuid.
 	// If the event is an image event, the id is the image's id.
@@ -440,7 +440,7 @@ func (m *Event) GetData() []*KeyValue {
 // The condition are combined by 'AND'.
 type EventFilter struct {
 	// If not empty, then only returns the events that have the listed types.
-	Types []EventType `protobuf:"varint,1,rep,name=types,enum=v1.EventType" json:"types,omitempty"`
+	Types []EventType `protobuf:"varint,1,rep,name=types,enum=v1_alpha.EventType" json:"types,omitempty"`
 	// If not empty, then only returns the events whose 'id' is included in the listed ids.
 	Ids []string `protobuf:"bytes,2,rep,name=ids" json:"ids,omitempty"`
 	// If not empty, then only returns the events whose 'from' is included in the listed names.
@@ -666,10 +666,10 @@ func (m *GetLogsResponse) String() string { return proto.CompactTextString(m) }
 func (*GetLogsResponse) ProtoMessage()    {}
 
 func init() {
-	proto.RegisterEnum("v1.ImageType", ImageType_name, ImageType_value)
-	proto.RegisterEnum("v1.AppState", AppState_name, AppState_value)
-	proto.RegisterEnum("v1.PodState", PodState_name, PodState_value)
-	proto.RegisterEnum("v1.EventType", EventType_name, EventType_value)
+	proto.RegisterEnum("v1_alpha.ImageType", ImageType_name, ImageType_value)
+	proto.RegisterEnum("v1_alpha.AppState", AppState_name, AppState_value)
+	proto.RegisterEnum("v1_alpha.PodState", PodState_name, PodState_value)
+	proto.RegisterEnum("v1_alpha.EventType", EventType_name, EventType_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -711,7 +711,7 @@ func NewPublicAPIClient(cc *grpc.ClientConn) PublicAPIClient {
 
 func (c *publicAPIClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error) {
 	out := new(GetInfoResponse)
-	err := grpc.Invoke(ctx, "/v1.PublicAPI/GetInfo", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/v1_alpha.PublicAPI/GetInfo", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -720,7 +720,7 @@ func (c *publicAPIClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts 
 
 func (c *publicAPIClient) ListPods(ctx context.Context, in *ListPodsRequest, opts ...grpc.CallOption) (*ListPodsResponse, error) {
 	out := new(ListPodsResponse)
-	err := grpc.Invoke(ctx, "/v1.PublicAPI/ListPods", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/v1_alpha.PublicAPI/ListPods", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -729,7 +729,7 @@ func (c *publicAPIClient) ListPods(ctx context.Context, in *ListPodsRequest, opt
 
 func (c *publicAPIClient) InspectPod(ctx context.Context, in *InspectPodRequest, opts ...grpc.CallOption) (*InspectPodResponse, error) {
 	out := new(InspectPodResponse)
-	err := grpc.Invoke(ctx, "/v1.PublicAPI/InspectPod", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/v1_alpha.PublicAPI/InspectPod", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -738,7 +738,7 @@ func (c *publicAPIClient) InspectPod(ctx context.Context, in *InspectPodRequest,
 
 func (c *publicAPIClient) ListImages(ctx context.Context, in *ListImagesRequest, opts ...grpc.CallOption) (*ListImagesResponse, error) {
 	out := new(ListImagesResponse)
-	err := grpc.Invoke(ctx, "/v1.PublicAPI/ListImages", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/v1_alpha.PublicAPI/ListImages", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -747,7 +747,7 @@ func (c *publicAPIClient) ListImages(ctx context.Context, in *ListImagesRequest,
 
 func (c *publicAPIClient) InspectImage(ctx context.Context, in *InspectImageRequest, opts ...grpc.CallOption) (*InspectImageResponse, error) {
 	out := new(InspectImageResponse)
-	err := grpc.Invoke(ctx, "/v1.PublicAPI/InspectImage", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/v1_alpha.PublicAPI/InspectImage", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -755,7 +755,7 @@ func (c *publicAPIClient) InspectImage(ctx context.Context, in *InspectImageRequ
 }
 
 func (c *publicAPIClient) ListenEvents(ctx context.Context, in *ListenEventsRequest, opts ...grpc.CallOption) (PublicAPI_ListenEventsClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_PublicAPI_serviceDesc.Streams[0], c.cc, "/v1.PublicAPI/ListenEvents", opts...)
+	stream, err := grpc.NewClientStream(ctx, &_PublicAPI_serviceDesc.Streams[0], c.cc, "/v1_alpha.PublicAPI/ListenEvents", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -787,7 +787,7 @@ func (x *publicAPIListenEventsClient) Recv() (*ListenEventsResponse, error) {
 }
 
 func (c *publicAPIClient) GetLogs(ctx context.Context, in *GetLogsRequest, opts ...grpc.CallOption) (PublicAPI_GetLogsClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_PublicAPI_serviceDesc.Streams[1], c.cc, "/v1.PublicAPI/GetLogs", opts...)
+	stream, err := grpc.NewClientStream(ctx, &_PublicAPI_serviceDesc.Streams[1], c.cc, "/v1_alpha.PublicAPI/GetLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -950,7 +950,7 @@ func (x *publicAPIGetLogsServer) Send(m *GetLogsResponse) error {
 }
 
 var _PublicAPI_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "v1.PublicAPI",
+	ServiceName: "v1_alpha.PublicAPI",
 	HandlerType: (*PublicAPIServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
