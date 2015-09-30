@@ -215,6 +215,14 @@ func (p *Pod) writeAppReaper(appName string) error {
 	return nil
 }
 
+func generateGidArg(gid int, supplGid []int) string {
+	arg := []string{strconv.Itoa(gid)}
+	for _, sg := range supplGid {
+		arg = append(arg, strconv.Itoa(sg))
+	}
+	return strings.Join(arg, ",")
+}
+
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
 func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string) error {
 	app := ra.App
@@ -261,7 +269,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 		}
 	}
 
-	execWrap := []string{"/diagexec", common.RelAppRootfsPath(appName), workDir, RelEnvFilePath(appName), strconv.Itoa(uid), strconv.Itoa(gid)}
+	execWrap := []string{"/diagexec", common.RelAppRootfsPath(appName), workDir, RelEnvFilePath(appName), strconv.Itoa(uid), generateGidArg(gid, app.SupplementaryGIDs)}
 	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v", appName, imgName)),
