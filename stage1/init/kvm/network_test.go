@@ -17,6 +17,8 @@ package kvm
 import (
 	"net"
 	"testing"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
 )
 
 type testNetDescriber struct {
@@ -28,18 +30,19 @@ type testNetDescriber struct {
 	ipMasq  bool
 }
 
-func (t testNetDescriber) HostIP() net.IP  { return t.hostIP }
-func (t testNetDescriber) GuestIP() net.IP { return t.guestIP }
-func (t testNetDescriber) Mask() net.IP    { return t.mask }
-func (t testNetDescriber) IfName() string  { return t.ifName }
-func (t testNetDescriber) IPMasq() bool    { return t.ipMasq }
-func (t testNetDescriber) Name() string    { return t.name }
+func (t testNetDescriber) HostIP() net.IP        { return t.hostIP }
+func (t testNetDescriber) GuestIP() net.IP       { return t.guestIP }
+func (t testNetDescriber) Mask() net.IP          { return t.mask }
+func (t testNetDescriber) IfName() string        { return t.ifName }
+func (t testNetDescriber) IPMasq() bool          { return t.ipMasq }
+func (t testNetDescriber) Name() string          { return t.name }
+func (t testNetDescriber) Gateway() net.IP       { return net.IP{1, 1, 1, 1} }
+func (t testNetDescriber) Routes() []types.Route { return []types.Route{} }
 
 func TestGetKVMNetArgs(t *testing.T) {
 	tests := []struct {
 		netDescriptions []netDescriber
 		expectedLkvm    []string
-		expectedKernel  []string
 	}{
 		{ // without Masquerading - not gw passed to kernel
 			netDescriptions: []netDescriber{
@@ -52,8 +55,7 @@ func TestGetKVMNetArgs(t *testing.T) {
 					false,
 				},
 			},
-			expectedLkvm:   []string{"--network", "mode=tap,tapif=fooInt,host_ip=1.1.1.1,guest_ip=2.2.2.2"},
-			expectedKernel: []string{"ip=2.2.2.2:::255.255.255.0::eth0:::"},
+			expectedLkvm: []string{"--network", "mode=tap,tapif=fooInt,host_ip=1.1.1.1,guest_ip=2.2.2.2"},
 		},
 		{ // extra gw passed to kernel on (thrid position)
 			netDescriptions: []netDescriber{
@@ -66,8 +68,7 @@ func TestGetKVMNetArgs(t *testing.T) {
 					true,
 				},
 			},
-			expectedLkvm:   []string{"--network", "mode=tap,tapif=barInt,host_ip=1.1.1.1,guest_ip=2.2.2.2"},
-			expectedKernel: []string{"ip=2.2.2.2::1.1.1.1:255.255.255.0::eth0:::"},
+			expectedLkvm: []string{"--network", "mode=tap,tapif=barInt,host_ip=1.1.1.1,guest_ip=2.2.2.2"},
 		},
 		{ // two networks
 			netDescriptions: []netDescriber{
@@ -91,10 +92,6 @@ func TestGetKVMNetArgs(t *testing.T) {
 			expectedLkvm: []string{
 				"--network", "mode=tap,tapif=fooInt,host_ip=1.1.1.1,guest_ip=2.2.2.2",
 				"--network", "mode=tap,tapif=barInt,host_ip=1.1.1.1,guest_ip=2.2.2.2",
-			},
-			expectedKernel: []string{
-				"ip=2.2.2.2:::255.255.255.0::eth0:::",
-				"ip=2.2.2.2::1.1.1.1:255.255.255.0::eth1:::",
 			},
 		},
 	}

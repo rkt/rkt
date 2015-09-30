@@ -607,7 +607,14 @@ func stage1() int {
 		return 2
 	}
 
-	if err = p.PodToSystemd(interactive, flavor, privateUsers, n); err != nil {
+	if flavor == "kvm" {
+		if err := p.KvmPodToSystemd(n); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to configure systemd for kvm: %v\n", err)
+			return 2
+		}
+	}
+
+	if err = p.PodToSystemd(interactive, flavor, privateUsers); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
 		return 2
 	}
