@@ -475,7 +475,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	for _, v := range p.Manifest.Volumes {
 		vols[v.Name] = v
 		if v.Kind == "empty" {
-			if err := os.MkdirAll(filepath.Join(common.Stage1SharedVolumesDir(p.Root), v.Name.String()), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Join(common.SharedVolumesPath(p.Root), v.Name.String()), 0755); err != nil {
 				return nil, fmt.Errorf("could not create shared volume %q: %v", v.Name, err)
 			}
 		}
@@ -519,7 +519,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("cannot get pod's root absolute path: %v\n", err)
 			}
-			opt[1] = filepath.Join(common.Stage1SharedVolumesDir(absRoot), vol.Name.String())
+			opt[1] = filepath.Join(common.SharedVolumesPath(absRoot), vol.Name.String())
 		default:
 			return nil, fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty".`, vol.Kind)
 		}

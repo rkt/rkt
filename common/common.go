@@ -52,11 +52,6 @@ const (
 	DefaultSystemConfigDir = "/usr/lib/rkt"
 )
 
-// Stage1SharedVolumesDir returns the path where shared (empty) volumes exist inside a pod.
-func Stage1SharedVolumesDir(root string) string {
-	return filepath.Join(root, sharedVolumesDir)
-}
-
 // Stage1ImagePath returns the path where the stage1 app image (unpacked ACI) is rooted,
 // (i.e. where its contents are extracted during stage0).
 func Stage1ImagePath(root string) string {
@@ -121,6 +116,11 @@ func AppInfoPath(root string, appName types.ACName) string {
 // AppTreeStoreIDPath returns the path to the app's treeStoreID file inside a pod.
 func AppTreeStoreIDPath(root string, appName types.ACName) string {
 	return filepath.Join(AppInfoPath(root, appName), AppTreeStoreIDFilename)
+}
+
+// SharedVolumesPath returns the path to the shared (empty) volumes of a pod.
+func SharedVolumesPath(root string) string {
+	return filepath.Join(root, sharedVolumesDir)
 }
 
 // MetadataServicePublicURL returns the public URL used to host the metadata service
