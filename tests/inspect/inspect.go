@@ -16,11 +16,13 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -42,6 +44,7 @@ var (
 		PrintEnv          string
 		PrintCapsPid      int
 		PrintUser         bool
+		PrintGroups       bool
 		CheckCwd          string
 		ExitCode          int
 		ReadFile          bool
@@ -75,6 +78,7 @@ func init() {
 	globalFlagset.StringVar(&globalFlags.PrintEnv, "print-env", "", "Print the specified environment variable")
 	globalFlagset.IntVar(&globalFlags.PrintCapsPid, "print-caps-pid", -1, "Print capabilities of the specified pid (or current process if pid=0)")
 	globalFlagset.BoolVar(&globalFlags.PrintUser, "print-user", false, "Print uid and gid")
+	globalFlagset.BoolVar(&globalFlags.PrintGroups, "print-groups", false, "Print all gids")
 	globalFlagset.IntVar(&globalFlags.ExitCode, "exit-code", 0, "Return this exit code")
 	globalFlagset.BoolVar(&globalFlags.ReadFile, "read-file", false, "Print the content of the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
@@ -95,6 +99,15 @@ func init() {
 	globalFlagset.StringVar(&globalFlags.GetHttp, "get-http", "", "HTTP-Get from the given address")
 	globalFlagset.StringVar(&globalFlags.ServeHttp, "serve-http", "", "Serve the hostname via HTTP on the given address:port")
 	globalFlagset.IntVar(&globalFlags.ServeHttpTimeout, "serve-http-timeout", 30, "HTTP Timeout to wait for a client connection")
+}
+
+func in(list []int, el int) bool {
+	for _, x := range list {
+		if el == x {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
@@ -152,7 +165,6 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot get caps: %v\n", err)
 			os.Exit(1)
-			return
 		}
 		fmt.Printf("Capability set: effective: %s\n", caps.StringCap(capability.EFFECTIVE))
 		fmt.Printf("Capability set: permitted: %s\n", caps.StringCap(capability.PERMITTED))
@@ -164,7 +176,6 @@ func main() {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Environment variable $CAPABILITY is not a valid capability number: %v\n", err)
 				os.Exit(1)
-				return
 			}
 			c := capability.Cap(capInt)
 			if caps.Get(capability.BOUNDING, c) {
@@ -177,6 +188,28 @@ func main() {
 
 	if globalFlags.PrintUser {
 		fmt.Printf("User: uid=%d euid=%d gid=%d egid=%d\n", os.Getuid(), os.Geteuid(), os.Getgid(), os.Getegid())
+	}
+
+	if globalFlags.PrintGroups {
+		gids, err := os.Getgroups()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting groups: %v\n", err)
+			os.Exit(1)
+		}
+		// getgroups(2): It is unspecified whether the effective group ID of
+		// the calling process is included in the returned list. (Thus, an
+		// application should also call getegid(2) and add or remove the
+		// resulting value.)
+		egid := os.Getegid()
+		if !in(gids, egid) {
+			gids = append(gids, egid)
+			sort.Ints(gids)
+		}
+		var b bytes.Buffer
+		for _, gid := range gids {
+			b.WriteString(fmt.Sprintf("%d ", gid))
+		}
+		fmt.Printf("Groups: %s\n", b.String())
 	}
 
 	if globalFlags.WriteFile {
@@ -193,7 +226,6 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot write to file %q: %v\n", fileName, err)
 			os.Exit(1)
-			return
 		}
 	}
 
@@ -207,7 +239,6 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot read file %q: %v\n", fileName, err)
 			os.Exit(1)
-			return
 		}
 		fmt.Print("<<<")
 		fmt.Print(string(dat))
