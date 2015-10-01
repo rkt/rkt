@@ -137,6 +137,6 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		MDSRegister: flagMDSRegister,
 		Apps:        apps,
 	}
-	stage0.Run(rcfg, p.path()) // execs, never returns
+	stage0.Run(rcfg, p.path(), globalFlags.Dir) // execs, never returns
 	return 1
 }

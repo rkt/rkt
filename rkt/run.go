@@ -267,7 +267,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 	rcfg.Apps = apps
-	stage0.Run(rcfg, p.path()) // execs, never returns
+	stage0.Run(rcfg, p.path(), globalFlags.Dir) // execs, never returns
 
 	return 1
 }
