@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -38,12 +37,6 @@ func TestAceValidator(t *testing.T) {
 		t.Fatalf("Cannot launch metadata service: %v", err)
 	}
 
-	tmpDir, err := ioutil.TempDir("", "rkt-TestAceValidator-")
-	if err != nil {
-		t.Fatalf("Cannot create temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
 	aceMain := os.Getenv("RKT_ACE_MAIN_IMAGE")
 	if aceMain == "" {
 		panic("empty RKT_ACE_MAIN_IMAGE env var")
@@ -53,8 +46,8 @@ func TestAceValidator(t *testing.T) {
 		panic("empty RKT_ACE_SIDEKICK_IMAGE env var")
 	}
 
-	rktArgs := fmt.Sprintf("--debug --insecure-skip-verify run --volume database,kind=host,source=%s %s %s",
-		tmpDir, aceMain, aceSidekick)
+	rktArgs := fmt.Sprintf("--debug --insecure-skip-verify run --volume database,kind=empty %s %s",
+		aceMain, aceSidekick)
 	rktCmd := fmt.Sprintf("%s %s", ctx.cmd(), rktArgs)
 
 	t.Logf("Command: %v", rktCmd)

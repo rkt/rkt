@@ -474,6 +474,11 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 
 	for _, v := range p.Manifest.Volumes {
 		vols[v.Name] = v
+		if v.Kind == "empty" {
+			if err := os.MkdirAll(filepath.Join(common.SharedVolumesPath(p.Root), v.Name.String()), 0755); err != nil {
+				return nil, fmt.Errorf("could not create shared volume %q: %v", v.Name, err)
+			}
+		}
 	}
 
 	for _, mp := range app.MountPoints {
@@ -506,7 +511,18 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 			opt[0] = "--bind="
 		}
 
-		opt[1] = vol.Source
+		switch vol.Kind {
+		case "host":
+			opt[1] = vol.Source
+		case "empty":
+			absRoot, err := filepath.Abs(p.Root)
+			if err != nil {
+				return nil, fmt.Errorf("cannot get pod's root absolute path: %v\n", err)
+			}
+			opt[1] = filepath.Join(common.SharedVolumesPath(absRoot), vol.Name.String())
+		default:
+			return nil, fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty".`, vol.Kind)
+		}
 		opt[2] = ":"
 		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), mp.Path)
 
