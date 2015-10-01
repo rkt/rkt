@@ -117,7 +117,7 @@ func getDefaultStage1HashFromStore(fn *finder) *types.Hash {
 	// we make sure we've built rkt with a clean git tree,
 	// otherwise we don't know if something changed
 	if !strings.HasSuffix(defaultStage1Version, "-dirty") {
-		stage1AppName := fmt.Sprintf("%s:%s", defaultStage1Name, url.QueryEscape(defaultStage1Version))
+		stage1AppName := fmt.Sprintf("%s:%s", defaultStage1Name, defaultStage1Version)
 		s1img, _ := fn.findImage(stage1AppName, "")
 		return s1img
 	}
