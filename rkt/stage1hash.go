@@ -131,7 +131,7 @@ func getDefaultStage1HashFromUrl(fn *finder, overridden bool) (*types.Hash, erro
 		return getCustomStage1Hash(fn, defaultStage1Image)
 	}
 	if url, err := url.Parse(defaultStage1Image); err != nil {
-		return nil, fmt.Errorf("failed ot parse %q as URL: %v", defaultStage1Image, err)
+		return nil, fmt.Errorf("failed to parse %q as URL: %v", defaultStage1Image, err)
 	} else if url.Scheme != "" {
 		// default stage1 image path is some schemed path,
 		// just try to get it
