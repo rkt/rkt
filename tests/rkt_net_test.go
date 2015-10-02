@@ -33,7 +33,7 @@ import (
  * ---
  * Container must have the same network namespace as the host
  */
-func TestPrivateNetOmittedNetNS(t *testing.T) {
+func TestNetOmittedNetNS(t *testing.T) {
 	testImageArgs := []string{"--exec=/inspect --print-netns"}
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 	defer os.Remove(testImage)
@@ -75,7 +75,7 @@ func TestPrivateNetOmittedNetNS(t *testing.T) {
  * Container launches http server which must be reachable by the host via the
  * localhost address
  */
-func TestPrivateNetOmittedConnectivity(t *testing.T) {
+func TestNetOmittedConnectivity(t *testing.T) {
 
 	httpPort, err := testutils.GetNextFreePort4()
 	if err != nil {
@@ -136,7 +136,7 @@ func TestPrivateNetOmittedConnectivity(t *testing.T) {
  * ---
  * Container must be in a separate network namespace with private-net
  */
-func TestPrivateNetDefaultNetNS(t *testing.T) {
+func TestNetDefaultNetNS(t *testing.T) {
 	testImageArgs := []string{"--exec=/inspect --print-netns"}
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 	defer os.Remove(testImage)
@@ -180,7 +180,7 @@ func TestPrivateNetDefaultNetNS(t *testing.T) {
  * default network, which is NATed
  * TODO: test connection to host on an outside interface
  */
-func TestPrivateNetDefaultConnectivity(t *testing.T) {
+func TestNetDefaultConnectivity(t *testing.T) {
 	httpPort, err := testutils.GetNextFreePort4()
 	if err != nil {
 		t.Fatalf("%v", err)
@@ -258,7 +258,7 @@ func TestPrivateNetDefaultConnectivity(t *testing.T) {
  * eth0's IPv4
  * TODO: verify that the container isn't NATed
  */
-func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
+func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 	httpPort, err := testutils.GetNextFreePort4()
 	if err != nil {
 		t.Fatalf("%v", err)
@@ -359,7 +359,7 @@ type ipamTemplateT struct {
 	Routes []map[string]string `json:"routes,omitempty"`
 }
 
-func TestPrivateNetTemplates(t *testing.T) {
+func TestNetTemplates(t *testing.T) {
 	net := networkTemplateT{
 		Name: "ptp0",
 		Type: "ptp",
@@ -574,7 +574,7 @@ func testPrivateNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 	ga.Wait()
 }
 
-func TestPrivateNetCustomPtp(t *testing.T) {
+func TestNetCustomPtp(t *testing.T) {
 	nt := networkTemplateT{
 		Name:   "ptp0",
 		Type:   "ptp",
@@ -591,7 +591,7 @@ func TestPrivateNetCustomPtp(t *testing.T) {
 	testPrivateNetCustomDual(t, nt)
 }
 
-func TestPrivateNetCustomMacvlan(t *testing.T) {
+func TestNetCustomMacvlan(t *testing.T) {
 	iface, _, err := testutils.GetNonLoIfaceWithAddrs(netlink.FAMILY_V4)
 	if err != nil {
 		t.Fatalf("Error while getting non-lo host interface: %v\n", err)
@@ -612,7 +612,7 @@ func TestPrivateNetCustomMacvlan(t *testing.T) {
 	testPrivateNetCustomDual(t, nt)
 }
 
-func TestPrivateNetCustomBridge(t *testing.T) {
+func TestNetCustomBridge(t *testing.T) {
 	iface, _, err := testutils.GetNonLoIfaceWithAddrs(netlink.FAMILY_V4)
 	if err != nil {
 		t.Fatalf("Error while getting non-lo host interface: %v\n", err)
@@ -639,7 +639,7 @@ func TestPrivateNetCustomBridge(t *testing.T) {
 	testPrivateNetCustomDual(t, nt)
 }
 
-func TestPrivateNetOverride(t *testing.T) {
+func TestNetOverride(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 

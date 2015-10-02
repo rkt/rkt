@@ -273,7 +273,7 @@ func getPod(uuid *types.UUID) (*pod, error) {
 			return nil, fmt.Errorf("error acquiring pod %v dir fd: %v", uuid, err)
 		}
 		p.nets, err = netinfo.LoadAt(cfd)
-		// ENOENT is ok -- assume running without --private-net
+		// ENOENT is ok -- assume running with --net=host
 		if err != nil && !os.IsNotExist(err) {
 			return nil, fmt.Errorf("error opening pod %v netinfo: %v", uuid, err)
 		}
