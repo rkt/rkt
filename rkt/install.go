@@ -15,24 +15,18 @@
 package main
 
 import (
-	"bufio"
 	"crypto/sha1"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/store"
 )
 
-const (
-	rktGroup      = "rkt"
-	groupFilePath = "/etc/group"
-	casDbPerm     = os.FileMode(0660)
-)
+const casDbPerm = os.FileMode(0660)
 
 var (
 	cmdInstall = &cobra.Command{
@@ -70,91 +64,8 @@ var (
 	}
 )
 
-type Group struct {
-	Name  string
-	Pass  string
-	Gid   int
-	Users []string
-}
-
 func init() {
 	cmdRkt.AddCommand(cmdInstall)
-}
-
-func parseGroupLine(line string, group *Group) {
-	const (
-		NameIdx = iota
-		PassIdx
-		GidIdx
-		UsersIdx
-	)
-
-	if line == "" {
-		return
-	}
-
-	splits := strings.Split(line, ":")
-	if len(splits) < 4 {
-		return
-	}
-
-	group.Name = splits[NameIdx]
-	group.Pass = splits[PassIdx]
-	group.Gid, _ = strconv.Atoi(splits[GidIdx])
-
-	u := splits[UsersIdx]
-	if u != "" {
-		group.Users = strings.Split(u, ",")
-	} else {
-		group.Users = []string{}
-	}
-}
-
-func parseGroupFile(path string) (group map[string]Group, err error) {
-	groupFile, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer groupFile.Close()
-
-	return parseGroups(groupFile)
-}
-
-func parseGroups(r io.Reader) (group map[string]Group, err error) {
-	s := bufio.NewScanner(r)
-	out := make(map[string]Group)
-
-	for s.Scan() {
-		if err := s.Err(); err != nil {
-			return nil, err
-		}
-
-		text := s.Text()
-		if text == "" {
-			continue
-		}
-
-		p := Group{}
-		parseGroupLine(text, &p)
-
-		out[p.Name] = p
-	}
-
-	return out, nil
-}
-
-func lookupGid(groupName string) (gid int, err error) {
-	groups, err := parseGroupFile(groupFilePath)
-	if err != nil {
-		return -1, fmt.Errorf("error parsing %q file: %v", groupFilePath, err)
-	}
-
-	group, ok := groups[groupName]
-	if !ok {
-		return -1, fmt.Errorf("%q group not found", groupName)
-	}
-
-	return group.Gid, nil
 }
 
 func createFileWithPermissions(path string, uid int, gid int, perm os.FileMode) error {
@@ -238,7 +149,7 @@ func createDbFiles(casDbPath string, gid int, perm os.FileMode) error {
 }
 
 func runInstall(cmd *cobra.Command, args []string) (exit int) {
-	gid, err := lookupGid(rktGroup)
+	gid, err := common.LookupGid(common.RktGroup)
 	if err != nil {
 		stderr("install: error looking up rkt gid: %v", err)
 		return 1

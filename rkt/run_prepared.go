@@ -21,6 +21,7 @@ import (
 	"log"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 )
@@ -125,7 +126,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	rktgid, err := lookupGid(rktGroup)
+	rktgid, err := common.LookupGid(common.RktGroup)
 	if err != nil {
 		stderr("prepared-run: group %q not found, will use default gid when rendering images")
 		rktgid = -1

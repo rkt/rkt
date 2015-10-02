@@ -252,7 +252,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	rktgid, err := lookupGid(rktGroup)
+	rktgid, err := common.LookupGid(common.RktGroup)
 	if err != nil {
 		stderr("run: group %q not found, will use default gid when rendering images")
 		rktgid = -1
