@@ -1,17 +1,17 @@
-AC_PREREQ([2.68])
+AC_PREREQ([2.63])
 AC_INIT([rkt], [0.8.1+git], [https://github.com/coreos/rkt/issues])
 
 AC_DEFUN([RKT_REQ_PROG],
          [AS_VAR_IF([$1], [],
                     [AC_CHECK_PROG($@)
-                     AS_VAR_IF([$1], [$3], [], AC_MSG_ERROR([*** $2 not found]))],
-                    [])])
+                     AS_VAR_IF([$1], [$3], [:], AC_MSG_ERROR([*** $2 not found]))],
+                    [:])])
 
 AC_DEFUN([RKT_REQ_ABS_PROG],
          [AS_VAR_IF([$1], [],
                     [AC_PATH_PROG($@)
                      AS_IF([test "x$]$1[" = 'x'], [AC_MSG_ERROR([*** $2 not found])])],
-                    [])])
+                    [:])])
 
 # STAGE1 build settings
 # We assume having bash in lots of places, so check it in the
@@ -101,12 +101,12 @@ AS_CASE([$RKT_STAGE1_USR_FROM],
                            dnl systemd source not specified, use default
                            [RKT_STAGE1_SYSTEMD_SRC='https://github.com/systemd/systemd.git'],
                            dnl systemd source specified, use it
-                           [])
+                           [:])
                  AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [auto],
                            dnl systemd version not specified, use default
                            [RKT_STAGE1_SYSTEMD_VER='v222'],
                            dnl systemd version specified, use it
-                           [])],
+                           [:])],
         dnl other flavors
         [AS_VAR_IF([RKT_STAGE1_SYSTEMD_SRC], [auto],
                    dnl systemd source not specified, alright, zero the value just in case
@@ -123,7 +123,7 @@ dnl warn if version is HEAD, just use master
 AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [HEAD],
           [AC_MSG_WARN([* 'HEAD' is not a systemd version, setting it to 'master' instead])
            RKT_STAGE1_SYSTEMD_VER='master'],
-          [])
+          [:])
 
 AC_SUBST(RKT_STAGE1_SYSTEMD_SRC)
 AC_SUBST(RKT_STAGE1_SYSTEMD_VER)
@@ -143,17 +143,17 @@ AC_ARG_WITH(stage1-default-version,
 dnl warn if we specified above flags for other flavors than none
 AS_VAR_IF([RKT_STAGE1_USR_FROM], [none],
           dnl none flavor
-          [],
+          [:],
           dnl not none flavor
           [AS_VAR_IF([RKT_STAGE1_DEFAULT_NAME], [auto],
                      dnl default
-                     [],
+                     [:],
                      dnl not default
                      [AC_MSG_WARN([* --with-stage1-default-name is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
                       RKT_STAGE1_DEFAULT_NAME=auto])
            AS_VAR_IF([RKT_STAGE1_DEFAULT_VERSION], [auto],
                      dnl default
-                     [],
+                     [:],
                      dnl not default
                      [AC_MSG_WARN([* --with-stage1-default-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
                       RKT_STAGE1_DEFAULT_VERSION=auto])])
@@ -215,7 +215,7 @@ AS_CASE([$RKT_STAGE1_USR_FROM],
                            dnl no local coreos pxe image path specified
                            [AS_VAR_IF([RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER],[],
                                       dnl no version specified, alright, keep quiet
-                                      [],
+                                      [:],
                                       dnl version specified, warn about it being ignored
                                       [AC_MSG_WARN([* --with-coreos-local-pxe-image-systemd-version is ignored, because --with-coreos-local-pxe-image-path was not specified])
                                        RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER=''])],
@@ -224,17 +224,17 @@ AS_CASE([$RKT_STAGE1_USR_FROM],
                                       dnl no version specified, bail out, version is required
                                       [AC_MSG_ERROR([*** No systemd version for local CoreOS PXE image specified, use --with-coreos-local-pxe-image-systemd-version])],
                                       dnl version specified, alright, keep quiet
-                                      [])])],
+                                      [:])])],
         dnl for other flavors just warn if either is specified
         [AS_VAR_IF([RKT_LOCAL_COREOS_PXE_IMAGE_PATH], [],
                    dnl empty value, alright
-                   [],
+                   [:],
                    dnl not empty, warn about it, zero it just in case
                    [AC_MSG_WARN([* --with-coreos-local-pxe-image-path is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
                     RKT_LOCAL_COREOS_PXE_IMAGE_PATH=''])
          AS_VAR_IF([RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER], [],
                    dnl empty value, alright
-                   [],
+                   [:],
                    dnl not empty, warn about it, zero it just in case
                    [AC_MSG_WARN([* --with-coreos-local-pxe-image-systemd-version is ignored by ${RKT_STAGE1_USR_FROM} stage1 flavor])
                     RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER=''])])
@@ -311,7 +311,7 @@ AC_PROG_INSTALL
 # check for libc generally
 AC_CHECK_LIB([c], [fork],
              dnl libc is there
-             [],
+             [:],
              dnl libc is not there
              [AC_MSG_ERROR([*** No libc found. Try to install glibc-devel or libc6-dev.])])
 
@@ -320,7 +320,7 @@ SAVE_LDFLAGS="$LDFLAGS"
 LDFLAGS="-static $LDFLAGS"
 AC_CHECK_LIB([c], [printf],
              dnl static libc is there
-             [],
+             [:],
              dnl static libc is not there
              [AC_MSG_ERROR([*** No static libc found. Try to install glibc-static or libc6-dev.])])
 LDFLAGS="$SAVE_LDFLAGS"
