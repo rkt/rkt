@@ -388,8 +388,8 @@ func TestPodManifest(t *testing.T) {
 			// Multiple apps (with same images) in the pod. The first app will read out the content
 			// written by the second app.
 			[]imagePatch{
-				{"rkt-test-run-pod-manifest-app.aci", []string{}},
-				{"rkt-test-run-pod-manifest-app.aci", []string{}},
+				{"rkt-test-run-pod-manifest-app.aci", []string{"--name=aci1"}},
+				{"rkt-test-run-pod-manifest-app.aci", []string{"--name=aci2"}},
 			},
 			&schema.PodManifest{
 				Apps: []schema.RuntimeApp{
