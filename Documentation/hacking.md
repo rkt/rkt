@@ -20,6 +20,7 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
   * squashfs-tools
   * realpath
   * gpg
+  * autoconf
 * Go 1.4+
 
 Once the requirements have been met you can build rkt by running the following commands:
