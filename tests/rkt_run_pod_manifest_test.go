@@ -540,7 +540,7 @@ func TestPodManifest(t *testing.T) {
 		uuid := runRktAndGetUUID(t, rktCmd)
 
 		runPreparedCmd := fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.cmd(), uuid)
-		t.Logf("Running 'run' test #%v: %v", i, runPreparedCmd)
+		t.Logf("Running 'run-prepared' test #%v: %v", i, runPreparedCmd)
 		child, err = gexpect.Spawn(runPreparedCmd)
 		if err != nil {
 			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
