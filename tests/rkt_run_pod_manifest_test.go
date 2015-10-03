@@ -102,7 +102,7 @@ func TestPodManifest(t *testing.T) {
 		// [image name]:[image patches]
 		images         []imagePatch
 		podManifest    *schema.PodManifest
-		shouldSuccess  bool
+		shouldSucceed  bool
 		expectedResult string
 		cgroup         string
 	}{
@@ -528,7 +528,7 @@ func TestPodManifest(t *testing.T) {
 			}
 		}
 		if err := child.Wait(); err != nil {
-			if tt.shouldSuccess {
+			if tt.shouldSucceed {
 				t.Fatalf("rkt didn't terminate correctly: %v", err)
 			}
 		}
@@ -552,7 +552,7 @@ func TestPodManifest(t *testing.T) {
 			}
 		}
 		if err := child.Wait(); err != nil {
-			if tt.shouldSuccess {
+			if tt.shouldSucceed {
 				t.Fatalf("rkt didn't terminate correctly: %v", err)
 			}
 		}
