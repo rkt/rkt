@@ -1,4 +1,3 @@
-UFK_STAMPS :=
 UFK_INCLUDES := \
 	../usr_from_coreos/usr_from_coreos.mk \
 	kernel.mk \
@@ -10,14 +9,14 @@ $(call setup-tmp-dir,UFK_TMPDIR)
 UFC_MANIFESTS_DIR := $(MK_SRCDIR)/manifest.d
 $(call inc-many,$(UFK_INCLUDES))
 
-STAGE1_STAMPS += $(UFK_REPLACE_FLAVOR_STAMP) $(UFK_STAMPS)
+S1_RF_SECONDARY_STAMPS += $(UFK_REPLACE_FLAVOR_STAMP)
 
 $(call forward-vars,$(UFK_REPLACE_FLAVOR_STAMP), \
-	ACIROOTFSDIR)
+	S1_RF_ACIROOTFSDIR)
 $(UFK_REPLACE_FLAVOR_STAMP):
-	rm -f "$(ACIROOTFSDIR)/flavor"
-	ln -sf 'kvm' "$(ACIROOTFSDIR)/flavor"
-	ln -sf 'enter_kvm' "$(ACIROOTFSDIR)/enter"
+	rm -f "$(S1_RF_ACIROOTFSDIR)/flavor"
+	ln -sf 'kvm' "$(S1_RF_ACIROOTFSDIR)/flavor"
+	ln -sf 'enter_kvm' "$(S1_RF_ACIROOTFSDIR)/enter"
 	touch "$@"
 
 CLEAN_SYMLINKS += $(ACIROOTFSDIR)/enter
