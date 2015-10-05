@@ -1,21 +1,27 @@
+$(call setup-stamp-file,UFK_CBU_STAMP,cbu)
+$(call setup-tmp-dir,UFK_TMPDIR)
+
 UFK_INCLUDES := \
-	../usr_from_coreos/usr_from_coreos.mk \
 	kernel.mk \
 	files.mk \
 	lkvm.mk
-$(call setup-stamp-file,UFK_REPLACE_FLAVOR_STAMP)
-$(call setup-tmp-dir,UFK_TMPDIR)
+# This directory will be used by the build-usr.mk
+UFK_CBUDIR := $(UFK_TMPDIR)/cbu
 
-UFC_MANIFESTS_DIR := $(MK_SRCDIR)/manifest.d
+S1_RF_USR_STAMPS += $(UFK_CBU_STAMP)
+INSTALL_DIRS += $(UFK_CBUDIR):-
+
 $(call inc-many,$(UFK_INCLUDES))
 
-S1_RF_SECONDARY_STAMPS += $(UFK_REPLACE_FLAVOR_STAMP)
+# Some input variables for building the ACI rootfs from CoreOS image
+# (build-usr.mk).
+CBU_MANIFESTS_DIR := $(MK_SRCDIR)/manifest.d
+CBU_TMPDIR := $(UFK_CBUDIR)
+CBU_DIFF := for-usr-from-kvm-mk
+CBU_STAMP := $(UFK_CBU_STAMP)
+CBU_ACIROOTFSDIR := $(S1_RF_ACIROOTFSDIR)
+CBU_FLAVOR := kvm
 
-$(call forward-vars,$(UFK_REPLACE_FLAVOR_STAMP), \
-	S1_RF_ACIROOTFSDIR)
-$(UFK_REPLACE_FLAVOR_STAMP):
-	rm -f "$(S1_RF_ACIROOTFSDIR)/flavor"
-	ln -sf 'kvm' "$(S1_RF_ACIROOTFSDIR)/flavor"
-	touch "$@"
+$(call inc-one,../usr_from_coreos/build-usr.mk)
 
 $(call undefine-namespaces,UFK)
