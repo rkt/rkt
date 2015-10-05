@@ -71,8 +71,6 @@ BINDIR := $(BUILDDIR)/bin
 GOPATH := $(BUILDDIR)/gopath
 DEPSDIR := $(BUILDDIR)/deps
 REVSDIR := $(BUILDDIR)/revs
-ACIDIR := $(BUILDDIR)/aci-for-$(RKT_STAGE1_USR_FROM)-flavor
-ACIROOTFSDIR := $(ACIDIR)/rootfs
 FILELISTDIR := $(BUILDDIR)/filelists
 MAINTEMPDIR := $(BUILDDIR)/tmp
 CLEANDIR := $(BUILDDIR)/clean
@@ -89,9 +87,6 @@ GO_TEST_FUNC_ARGS ?=
 
 GO_ENV := $(strip GOPATH="$(GOPATH)" $(if $(strip $(GOROOT)),GOROOT=$(strip $(GOROOT))))
 
-INSTALL_DIRS += \
-	$(ACIROOTFSDIR):0750
-
 CREATE_DIRS += \
 	$(BUILDDIR) \
 	$(STAMPSDIR) \
@@ -100,7 +95,6 @@ CREATE_DIRS += \
 	$(GOPATH) \
 	$(DEPSDIR) \
 	$(REVSDIR) \
-	$(ACIDIR) \
 	$(FILELISTDIR) \
 	$(MAINTEMPDIR) \
 	$(CLEANDIR)

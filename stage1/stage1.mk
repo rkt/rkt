@@ -35,6 +35,13 @@ STAGE1_INSTALL_SYMLINKS :=
 STAGE1_INSTALL_DIRS :=
 STAGE1_CREATE_DIRS :=
 
+ACIDIR := $(BUILDDIR)/aci-for-$(RKT_STAGE1_USR_FROM)-flavor
+ACIROOTFSDIR := $(ACIDIR)/rootfs
+
+INSTALL_DIRS += \
+	$(ACIDIR):- \
+	$(ACIROOTFSDIR):0750
+
 $(call setup-stamp-file,_STAGE1_ASSEMBLE_ACI_STAMP_,/assemble_aci)
 
 $(call inc-many,$(foreach sd,$(_STAGE1_SUBDIRS_),$(sd)/$(sd).mk))
