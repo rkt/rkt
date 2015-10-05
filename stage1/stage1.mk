@@ -19,16 +19,11 @@
 # and packages this all into the aci image
 #
 
-STAGE1_STAMPS :=
-STAGE1_USR_STAMPS :=
-_STAGE1_SUBDIRS_ := appexec prepare-app net-plugins net init gc reaper units aci usr_from_$(RKT_STAGE1_USR_FROM)
-ifeq ($(RKT_STAGE1_USR_FROM),kvm)
-_STAGE1_SUBDIRS_ += enter_kvm
-else
-_STAGE1_SUBDIRS_ += enter
-endif
-
 _STAGE1_ACI_ := $(BINDIR)/stage1-$(RKT_STAGE1_USR_FROM).aci
+
+STAGE1_FLAVORS := $(RKT_STAGE1_USR_FROM)
+STAGE1_USR_STAMPS :=
+STAGE1_STAMPS :=
 STAGE1_COPY_SO_DEPS :=
 STAGE1_INSTALL_FILES :=
 STAGE1_INSTALL_SYMLINKS :=
@@ -38,13 +33,12 @@ STAGE1_CREATE_DIRS :=
 ACIDIR := $(BUILDDIR)/aci-for-$(RKT_STAGE1_USR_FROM)-flavor
 ACIROOTFSDIR := $(ACIDIR)/rootfs
 
-INSTALL_DIRS += \
-	$(ACIDIR):- \
-	$(ACIROOTFSDIR):0750
-
 $(call setup-stamp-file,_STAGE1_ASSEMBLE_ACI_STAMP_,/assemble_aci)
 
-$(call inc-many,$(foreach sd,$(_STAGE1_SUBDIRS_),$(sd)/$(sd).mk))
+# variable for rootfs.mk
+S1_RF_FLAVOR := $(RKT_STAGE1_USR_FROM)
+$(call inc-one,rootfs.mk)
+$(call inc-one,secondary-stuff.mk)
 
 # var name,whether it has to be split,if yes which word is the created
 # file
