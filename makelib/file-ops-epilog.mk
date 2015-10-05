@@ -3,7 +3,8 @@
 define _FILE_OPS_CREATE_DIRS_RULE_
 CLEAN_DIRS += $1
 $1:
-	[[ -e "$$@" ]] || mkdir -p "$$@"
+	set -e; \
+	[[ -e "$$@" ]] || mkdir -p "$$@"; \
 	$$(call _FILE_OPS_BAIL_OUT_IF_NOT_DIR_,$$@)
 endef
 
@@ -18,7 +19,8 @@ $$(call forward-vars,$$(_FILE_OPS_CIDR_DIR_), \
 # TODO: Create a proper dependency on parent directory
 # $$(_FILE_OPS_CIDR_DIR_): | $$(call to-dir,$$(_FILE_OPS_CIDR_DIR_))
 $$(_FILE_OPS_CIDR_DIR_):
-	[[ -e "$$@" ]] || $$(INSTALL) $$(call _FILE_OPS_DASH_M_,$$(_FILE_OPS_CIDR_MODE_)) -d "$$@"
+	set -e; \
+	[[ -e "$$@" ]] || $$(INSTALL) $$(call _FILE_OPS_DASH_M_,$$(_FILE_OPS_CIDR_MODE_)) -d "$$@"; \
 	$$(call _FILE_OPS_BAIL_OUT_IF_NOT_DIR_,$$@)
 $$(call undefine-namespaces,_FILE_OPS_CIDR)
 endef
