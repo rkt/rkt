@@ -45,25 +45,13 @@ func TestImageRunRm(t *testing.T) {
 
 	cmd := fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmd(), imageFile)
 	t.Logf("Fetching %s: %v", imageFile, cmd)
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec: %v", err)
-	}
-	if err := child.Wait(); err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	spawnAndWaitOrFail(t, cmd, true)
 
 	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
 	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
 	cmd = fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), referencedACI)
 	t.Logf("Running %s: %v", referencedACI, cmd)
-	child, err = gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec: %v", err)
-	}
-	if err := child.Wait(); err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	spawnAndWaitOrFail(t, cmd, true)
 
 	t.Logf("Retrieving stage1 image ID")
 	stage1ImageID, err := getImageId(ctx, stage1App)
@@ -107,13 +95,7 @@ func TestImagePrepareRmRun(t *testing.T) {
 
 	cmd := fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmd(), imageFile)
 	t.Logf("Fetching %s: %v", imageFile, cmd)
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec: %v", err)
-	}
-	if err := child.Wait(); err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	spawnAndWaitOrFail(t, cmd, true)
 
 	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
 	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
@@ -166,13 +148,7 @@ func TestImagePrepareRmRun(t *testing.T) {
 
 	cmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.cmd(), podID.String())
 	t.Logf("Running %s: %v", referencedACI, cmd)
-	child, err = gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec: %v", err)
-	}
-	if err := child.Wait(); err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	spawnAndWaitOrFail(t, cmd, true)
 }
 
 func getImageId(ctx *rktRunCtx, name string) (string, error) {

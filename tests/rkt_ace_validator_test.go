@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"os"
 	"testing"
-
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
 var expectedResults = []string{
@@ -50,21 +48,12 @@ func TestAceValidator(t *testing.T) {
 		aceMain, aceSidekick)
 	rktCmd := fmt.Sprintf("%s %s", ctx.cmd(), rktArgs)
 
-	t.Logf("Command: %v", rktCmd)
-	child, err := gexpect.Spawn(rktCmd)
-	if err != nil {
-		t.Fatalf("Cannot exec rkt: %v", err)
-	}
+	child := spawnOrFail(t, rktCmd)
+	defer waitOrFail(t, child, true)
 
 	for _, e := range expectedResults {
-		err = expectWithOutput(child, e)
-		if err != nil {
+		if err := expectWithOutput(child, e); err != nil {
 			t.Fatalf("Expected %q but not found: %v", e, err)
 		}
-	}
-
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 }

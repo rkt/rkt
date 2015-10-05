@@ -262,6 +262,32 @@ func patchTestACI(newFileName string, args ...string) string {
 	return patchACI(image, newFileName, args...)
 }
 
+func spawnOrFail(t *testing.T, cmd string) *gexpect.ExpectSubprocess {
+	t.Logf("Command: %v", cmd)
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt: %v", err)
+	}
+	return child
+}
+
+func waitOrFail(t *testing.T, child *gexpect.ExpectSubprocess, shouldSucceed bool) {
+	err := child.Wait()
+	switch {
+	case !shouldSucceed && err == nil:
+		t.Fatalf("Expected test to fail but it didn't")
+	case shouldSucceed && err != nil:
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	case err != nil && err.Error() != "exit status 1":
+		t.Fatalf("rkt terminated with unexpected error: %v", err)
+	}
+}
+
+func spawnAndWaitOrFail(t *testing.T, cmd string, shouldSucceed bool) {
+	child := spawnOrFail(t, cmd)
+	waitOrFail(t, child, shouldSucceed)
+}
+
 func getValueFromEnvOrPanic(envVar string) string {
 	path := os.Getenv(envVar)
 	if path == "" {
@@ -340,10 +366,7 @@ func importImageAndFetchHashAsGid(t *testing.T, ctx *rktRunCtx, img string, gid 
 		t.Fatalf("Error: %v\nOutput: %v", err, out)
 	}
 
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	waitOrFail(t, child, true)
 
 	return result[0]
 }
@@ -361,56 +384,26 @@ func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *
 
 func runGC(t *testing.T, ctx *rktRunCtx) {
 	cmd := fmt.Sprintf("%s gc --grace-period=0s", ctx.cmd())
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec rkt: %v", err)
-	}
-
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	spawnAndWaitOrFail(t, cmd, true)
 }
 
 func runImageGC(t *testing.T, ctx *rktRunCtx) {
 	cmd := fmt.Sprintf("%s image gc", ctx.cmd())
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec rkt: %v", err)
-	}
-
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	spawnAndWaitOrFail(t, cmd, true)
 }
 
 func removeFromCas(t *testing.T, ctx *rktRunCtx, hash string) {
 	cmd := fmt.Sprintf("%s image rm %s", ctx.cmd(), hash)
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec rkt: %v", err)
-	}
-
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	spawnAndWaitOrFail(t, cmd, true)
 }
 
 func runRktAndGetUUID(t *testing.T, rktCmd string) string {
-	child, err := gexpect.Spawn(rktCmd)
-	if err != nil {
-		t.Fatalf("cannot exec rkt: %v", err)
-	}
+	child := spawnOrFail(t, rktCmd)
+	defer waitOrFail(t, child, true)
 
 	result, out, err := expectRegexWithOutput(child, "\n[0-9a-f-]{36}")
 	if err != nil || len(result) != 1 {
 		t.Fatalf("Error: %v\nOutput: %v", err, out)
-	}
-
-	if err = child.Wait(); err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 
 	podIDStr := strings.TrimSpace(result[0])
@@ -436,13 +429,22 @@ func runRktAsGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expect
 	if err != nil {
 		t.Fatalf("cannot exec rkt: %v", err)
 	}
+	defer waitOrFail(t, child, !expectError)
 
-	if err = expectWithOutput(child, expectedLine); err != nil {
-		t.Fatalf("didn't receive expected output %q: %v", expectedLine, err)
+	if expectedLine != "" {
+		if err := expectWithOutput(child, expectedLine); err != nil {
+			t.Fatalf("didn't receive expected output %q: %v", expectedLine, err)
+		}
 	}
+}
 
-	if err = child.Wait(); err != nil && !expectError {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
+func runRktAndCheckRegexOutput(t *testing.T, rktCmd, match string) {
+	child := spawnOrFail(t, rktCmd)
+	defer child.Wait()
+
+	result, out, err := expectRegexWithOutput(child, match)
+	if err != nil || len(result) != 1 {
+		t.Fatalf("%q regex must be found one time, Error: %v\nOutput: %v", match, err, out)
 	}
 }
 
@@ -465,14 +467,11 @@ func checkAppStatus(t *testing.T, ctx *rktRunCtx, multiApps bool, appName, expec
 			ctx.cmd(), ctx.cmd(), appName)
 	}
 
-	t.Logf("Get status for app %s: %s\n", appName, cmd)
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec rkt")
-	}
+	t.Logf("Get status for app %s\n", appName)
+	child := spawnOrFail(t, cmd)
+	defer waitOrFail(t, child, true)
 
-	err = expectWithOutput(child, expected)
-	if err != nil {
+	if err := expectWithOutput(child, expected); err != nil {
 		// For debugging purposes, print the full output of
 		// "rkt list" and "rkt status"
 		cmd := fmt.Sprintf(`%s list --full ;`+
@@ -488,10 +487,5 @@ func checkAppStatus(t *testing.T, ctx *rktRunCtx, multiApps bool, appName, expec
 
 		t.Fatalf("Failed to get the status for app %s: expected: %s. %v",
 			appName, expected, err)
-	}
-
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 }

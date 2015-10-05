@@ -19,8 +19,6 @@ import (
 	"os"
 	"testing"
 	"time"
-
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
 // TestExitCodeSimple is testing a few exit codes on 1 pod containing just 1 app
@@ -35,15 +33,7 @@ func TestExitCodeSimple(t *testing.T) {
 		cmd := fmt.Sprintf(`%s --debug --insecure-skip-verify run --mds-register=false %s`,
 			ctx.cmd(), imageFile)
 		t.Logf("%s\n", cmd)
-		child, err := gexpect.Spawn(cmd)
-		if err != nil {
-			t.Fatalf("Cannot exec rkt")
-		}
-		err = child.Wait()
-		if err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
-		}
-
+		spawnAndWaitOrFail(t, cmd, true)
 		checkAppStatus(t, ctx, false, "rkt-inspect", fmt.Sprintf("status=%d", i))
 	}
 }
@@ -68,17 +58,12 @@ func TestExitCodeWithSeveralApps(t *testing.T) {
 
 	cmd := fmt.Sprintf(`%s --debug --insecure-skip-verify run --mds-register=false %s %s %s`,
 		ctx.cmd(), image0File, image1File, image2File)
-	t.Logf("%s\n", cmd)
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec rkt")
-	}
+	child := spawnOrFail(t, cmd)
 
 	for i := 0; i < 3; i++ {
 		// The 3 apps print the same message. We don't have any ordering
 		// guarantee but we don't need it.
-		err = expectTimeoutWithOutput(child, "HelloWorld", time.Minute)
-		if err != nil {
+		if err := expectTimeoutWithOutput(child, "HelloWorld", time.Minute); err != nil {
 			t.Fatalf("Could not start the app (#%d): %v", i, err)
 		}
 	}
@@ -97,10 +82,7 @@ func TestExitCodeWithSeveralApps(t *testing.T) {
 	checkAppStatus(t, ctx, true, "hello2", "status=0")
 
 	t.Logf("Waiting pod termination\n")
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	waitOrFail(t, child, true)
 
 	t.Logf("Check final status\n")
 
