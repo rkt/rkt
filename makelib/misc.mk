@@ -223,10 +223,17 @@ $(strip \
 		$(eval $1: $v := $($v))))
 endef
 
+# Returns a colon (:) if passed value is empty. Useful for avoiding
+# shell errors about an empty body.
+# 1 - bash code
+define colon-if-empty
+$(if $(strip $1),$1,:)
+endef
+
 # Used by generate-simple-rule, see its docs.
 define simple-rule-template
 $1: $2 $(if $(strip $3),| $3)
-	$(if $(strip $4),$4,:)
+	$(call colon-if-empty,$4)
 endef
 
 # Generates a simple rule - without variable forwarding and with only
@@ -245,7 +252,7 @@ endef
 # 3 - order-only reqs
 # 4 - recipe placed after 'set -e'
 define generate-strict-rule
-$(call generate-simple-rule,$1,$2,$3,set -e; $(if $(strip $4),$4,:))
+$(call generate-simple-rule,$1,$2,$3,set -e; $(call colon-if-empty,$4))
 endef
 
 # Generates a rule for creating a stamp with additional actions to be
@@ -255,7 +262,7 @@ endef
 # 3 - order-only reqs
 # 4 - recipe placed between 'set -e' and 'touch "$@"'
 define generate-stamp-rule
-$(call generate-strict-rule,$1,$2,$3,$4; touch "$$@")
+$(call generate-strict-rule,$1,$2,$3,$(call colon-if-empty,$4); touch "$$@")
 endef
 
 # 1 - from
