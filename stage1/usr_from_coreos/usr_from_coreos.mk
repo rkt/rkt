@@ -7,7 +7,7 @@ $(call setup-tmp-dir,UFC_TMPDIR)
 UFC_ROOTFS := $(UFC_TMPDIR)/rootfs
 UFC_FILELIST := $(UFC_TMPDIR)/manifest.txt
 UFC_MANIFESTS_DIR ?= $(MK_SRCDIR)/manifest.d
-UFC_MANIFESTS := $(wildcard $(UFC_MANIFESTS_DIR)/*)
+UFC_MANIFESTS := $(wildcard $(UFC_MANIFESTS_DIR)/*.manifest)
 
 $(call setup-dep-file,UFC_DEPMK,manifests)
 $(call setup-clean-file,UFC_ROOTFSDIR_CLEANMK,/rootfs)
