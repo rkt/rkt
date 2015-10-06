@@ -90,7 +90,7 @@ endif
 $(call forward-vars,$(_STAGE1_ACI_), \
 	ACTOOL ACIDIR)
 $(_STAGE1_ACI_): $(ACTOOL_STAMP) | $(BINDIR)
-	"$(ACTOOL)" build --overwrite "$(ACIDIR)" "$@"
+	"$(ACTOOL)" build --owner-root --overwrite "$(ACIDIR)" "$@"
 
 $(STAGE1_STAMPS): $(STAGE1_USR_STAMPS)
 
