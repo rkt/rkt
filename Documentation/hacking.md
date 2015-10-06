@@ -78,6 +78,13 @@ To build, use `--with-stage1=kvm` flag in `./configure`
 
 This will generate stage1 with embedded kernel and kvmtool to start pod in virtual machine.
 
+Additional build dependencies for the stage1 kvm follow. If building with docker, these must be added to the `apt-get install` command.
+
+* wget
+* xz-utils
+* patch
+* bc
+
 ### Alternative stage1 paths
 
 rkt is designed and intended to be modular, using a [staged architecture](devel/architecture.md).
