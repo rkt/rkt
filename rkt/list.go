@@ -234,7 +234,7 @@ func newPodListImageLoadFailure(p *pod, err error, pm *schema.PodManifest, imj [
 func degradeRuntimeApp(app schema.RuntimeApp) lastditch.RuntimeApp {
 	return lastditch.RuntimeApp{
 		Name: app.Name.String(),
-		Image: lastditch.Image{
+		Image: lastditch.RuntimeImage{
 			Name: app.Image.Name.String(),
 			ID:   app.Image.ID.String(),
 		},
