@@ -16,11 +16,15 @@
 package networking
 
 import (
+	"bufio"
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
@@ -29,12 +33,14 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/coreos/rkt/networking/tuntap"
 )
 
 const (
-	defaultBrName = "kvm-cni0"
-	defaultMTU    = 1500
+	defaultBrName     = "kvm-cni0"
+	defaultSubnetFile = "/run/flannel/subnet.env"
+	defaultMTU        = 1500
 )
 
 type BridgeNetConf struct {
@@ -89,6 +95,7 @@ func kvmSetupNetAddressing(network *Networking, n activeNet, ifName string) erro
 	}
 
 	n.runtime.IP, n.runtime.Mask, n.runtime.HostIP, n.runtime.IP4 = result.IP4.IP.IP, net.IP(result.IP4.IP.Mask), result.IP4.Gateway, result.IP4
+
 	return nil
 }
 
@@ -188,9 +195,163 @@ func getChainName(podUUIDString, confName string) string {
 	return fmt.Sprintf("CNI-%s-%x", confName, h[:8])
 }
 
+type FlannelNetConf struct {
+	NetConf
+
+	SubnetFile string                 `json:"subnetFile"`
+	Delegate   map[string]interface{} `json:"delegate"`
+}
+
+func loadFlannelNetConf(bytes []byte) (*FlannelNetConf, error) {
+	n := &FlannelNetConf{
+		SubnetFile: defaultSubnetFile,
+	}
+	if err := json.Unmarshal(bytes, n); err != nil {
+		return nil, fmt.Errorf("failed to load netconf: %v", err)
+	}
+	return n, nil
+}
+
+type subnetEnv struct {
+	nw     *net.IPNet
+	sn     *net.IPNet
+	mtu    int
+	ipmasq bool
+}
+
+func loadFlannelSubnetEnv(fn string) (*subnetEnv, error) {
+	f, err := os.Open(fn)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	se := &subnetEnv{}
+
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		parts := strings.SplitN(s.Text(), "=", 2)
+		switch parts[0] {
+		case "FLANNEL_NETWORK":
+			_, se.nw, err = net.ParseCIDR(parts[1])
+			if err != nil {
+				return nil, err
+			}
+
+		case "FLANNEL_SUBNET":
+			_, se.sn, err = net.ParseCIDR(parts[1])
+			if err != nil {
+				return nil, err
+			}
+
+		case "FLANNEL_MTU":
+			mtu, err := strconv.ParseUint(parts[1], 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			se.mtu = int(mtu)
+
+		case "FLANNEL_IPMASQ":
+			se.ipmasq = parts[1] == "true"
+		}
+	}
+	if err := s.Err(); err != nil {
+		return nil, err
+	}
+
+	return se, nil
+}
+
+func hasKey(m map[string]interface{}, k string) bool {
+	_, ok := m[k]
+	return ok
+}
+
+func isString(i interface{}) bool {
+	_, ok := i.(string)
+	return ok
+}
+
+func kvmTransformFlannelNetwork(net *activeNet) error {
+	n, err := loadFlannelNetConf(net.confBytes)
+	if err != nil {
+		return err
+	}
+
+	fenv, err := loadFlannelSubnetEnv(n.SubnetFile)
+	if err != nil {
+		return err
+	}
+
+	if n.Delegate == nil {
+		n.Delegate = make(map[string]interface{})
+	} else {
+		if hasKey(n.Delegate, "type") && !isString(n.Delegate["type"]) {
+			return fmt.Errorf("'delegate' dictionary, if present, must have (string) 'type' field")
+		}
+		if hasKey(n.Delegate, "name") {
+			return fmt.Errorf("'delegate' dictionary must not have 'name' field, it'll be set by flannel")
+		}
+		if hasKey(n.Delegate, "ipam") {
+			return fmt.Errorf("'delegate' dictionary must not have 'ipam' field, it'll be set by flannel")
+		}
+	}
+
+	n.Delegate["name"] = n.Name
+
+	if !hasKey(n.Delegate, "type") {
+		n.Delegate["type"] = "bridge"
+	}
+
+	if !hasKey(n.Delegate, "ipMasq") {
+		// if flannel is not doing ipmasq, we should
+		ipmasq := !fenv.ipmasq
+		n.Delegate["ipMasq"] = ipmasq
+	}
+
+	if !hasKey(n.Delegate, "mtu") {
+		mtu := fenv.mtu
+		n.Delegate["mtu"] = mtu
+	}
+
+	if n.Delegate["type"].(string) == "bridge" {
+		if !hasKey(n.Delegate, "isGateway") {
+			n.Delegate["isGateway"] = true
+		}
+	}
+
+	n.Delegate["ipam"] = map[string]interface{}{
+		"type":   "host-local",
+		"subnet": fenv.sn.String(),
+		"routes": []cnitypes.Route{
+			cnitypes.Route{
+				Dst: *fenv.nw,
+			},
+		},
+	}
+
+	bytes, err := json.Marshal(n.Delegate)
+	if err != nil {
+		return fmt.Errorf("error in marshaling generated network settings: %v", err)
+	}
+
+	*net = activeNet{
+		confBytes: bytes,
+		conf:      &NetConf{},
+		runtime: &netinfo.NetInfo{
+			IP4: &cnitypes.IPConfig{},
+		},
+	}
+	net.conf.Name = n.Name
+	net.conf.Type = n.Delegate["type"].(string)
+	net.conf.IPMasq = n.Delegate["ipMasq"].(bool)
+	net.conf.MTU = n.Delegate["mtu"].(int)
+	net.conf.IPAM.Type = "host-local"
+	return nil
+}
+
 // kvmSetup prepare new Networking to be used in kvm environment based on tuntap pair interfaces
 // to allow communication with virtual machine created by lkvm tool
-// right now it only supports default "ptp" network type (other types ends with error)
 func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common.NetList, localConfig string) (*Networking, error) {
 	network := Networking{
 		podEnv: podEnv{
@@ -206,7 +367,12 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 		return nil, fmt.Errorf("error loading network definitions: %v", e)
 	}
 
-	for _, n := range network.nets {
+	for i, n := range network.nets {
+		if n.conf.Type == "flannel" {
+			if err := kvmTransformFlannelNetwork(&n); err != nil {
+				return nil, fmt.Errorf("cannot transform flannel network into basic network: %v", err)
+			}
+		}
 		switch n.conf.Type {
 		case "ptp":
 			link, err := setupTapDevice(podID)
@@ -301,6 +467,7 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 				return nil, err
 			}
 		}
+		network.nets[i] = n
 	}
 	err := network.forwardPorts(fps, network.GetDefaultIP())
 	if err != nil {
@@ -355,7 +522,6 @@ func (n *Networking) kvmTeardown() {
 		log.Printf("Error removing forwarded ports (kvm): %v", err)
 	}
 	n.teardownKvmNets()
-
 }
 
 // Following methods implements behavior of netDescriber by activeNet
