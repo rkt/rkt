@@ -308,6 +308,9 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 		opts = append(opts, unit.NewUnitOption("Service", typ, exec))
 	}
 
+	// Some pre-start jobs take a long time, set the timeout to 0
+	opts = append(opts, unit.NewUnitOption("Service", "TimeoutStartSec", "0"))
+
 	saPorts := []types.Port{}
 	for _, p := range app.Ports {
 		if p.SocketActivated {
