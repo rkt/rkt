@@ -252,6 +252,12 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
+	rktgid, err := common.LookupGid(common.RktGroup)
+	if err != nil {
+		stderr("run: group %q not found, will use default gid when rendering images")
+		rktgid = -1
+	}
+
 	rcfg := stage0.RunConfig{
 		CommonConfig: cfg,
 		PrivateNet:   flagPrivateNet,
@@ -259,6 +265,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		Interactive:  flagInteractive,
 		MDSRegister:  flagMDSRegister,
 		LocalConfig:  globalFlags.LocalConfigDir,
+		RktGid:       rktgid,
 	}
 
 	apps, err := p.getApps()

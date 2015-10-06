@@ -402,3 +402,49 @@ func runRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 }
+
+func checkAppStatus(t *testing.T, ctx *rktRunCtx, multiApps bool, appName, expected string) {
+	cmd := fmt.Sprintf(`/bin/sh -c "`+
+		`UUID=$(%s list --full|grep '%s'|awk '{print $1}') ;`+
+		`echo -n 'status=' ;`+
+		`%s status $UUID|grep '^app-%s.*=[0-9]*$'|cut -d= -f2"`,
+		ctx.cmd(), appName, ctx.cmd(), appName)
+
+	if multiApps {
+		cmd = fmt.Sprintf(`/bin/sh -c "`+
+			`UUID=$(%s list --full|grep '^[a-f0-9]'|awk '{print $1}') ;`+
+			`echo -n 'status=' ;`+
+			`%s status $UUID|grep '^app-%s.*=[0-9]*$'|cut -d= -f2"`,
+			ctx.cmd(), ctx.cmd(), appName)
+	}
+
+	t.Logf("Get status for app %s: %s\n", appName, cmd)
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		t.Fatalf("Cannot exec rkt")
+	}
+
+	err = expectWithOutput(child, expected)
+	if err != nil {
+		// For debugging purposes, print the full output of
+		// "rkt list" and "rkt status"
+		cmd := fmt.Sprintf(`%s list --full ;`+
+			`UUID=$(%s list --full|grep  '^[a-f0-9]'|awk '{print $1}') ;`+
+			`%s status $UUID`,
+			ctx.cmd(), ctx.cmd(), ctx.cmd())
+		out, err2 := exec.Command("/bin/sh", "-c", cmd).CombinedOutput()
+		if err2 != nil {
+			t.Logf("Could not run rkt status: %v. %s", err2, out)
+		} else {
+			t.Logf("%s\n", out)
+		}
+
+		t.Fatalf("Failed to get the status for app %s: expected: %s. %v",
+			appName, expected, err)
+	}
+
+	err = child.Wait()
+	if err != nil {
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+}
