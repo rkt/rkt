@@ -73,7 +73,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	privateUsers := uid.NewBlankUidRange()
 	if flagQuiet {
 		if os.Stdout, err = os.Open("/dev/null"); err != nil {
-			stderr("prepare: unable to open /dev/null")
+			stderr("prepare: unable to open /dev/null: %v", err)
 			return 1
 		}
 	}

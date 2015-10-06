@@ -60,7 +60,7 @@ func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 			continue
 		}
 		if key == "" {
-			stderr("rkt: imageID %q doesn't exists", pkey)
+			stderr("rkt: imageID %q doesn't exist", pkey)
 			continue
 		}
 
