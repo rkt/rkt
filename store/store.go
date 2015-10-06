@@ -64,7 +64,7 @@ var diskvStores = [...]string{
 }
 
 var (
-	ErrKeyNotFound = errors.New("no keys found")
+	ErrKeyNotFound = errors.New("no image IDs found")
 )
 
 // ACINotFoundError is returned when an ACI cannot be found by GetACI
@@ -245,7 +245,7 @@ func (s Store) ResolveKey(key string) (string, error) {
 		return "", fmt.Errorf("wrong key prefix")
 	}
 	if len(key) < minlenKey {
-		return "", fmt.Errorf("key too short")
+		return "", fmt.Errorf("image ID too short")
 	}
 	if len(key) > lenKey {
 		key = key[:lenKey]
@@ -266,7 +266,7 @@ func (s Store) ResolveKey(key string) (string, error) {
 		return "", ErrKeyNotFound
 	}
 	if keyCount != 1 {
-		return "", fmt.Errorf("ambiguous key: %q", key)
+		return "", fmt.Errorf("ambiguous image ID: %q", key)
 	}
 	return aciInfos[0].BlobKey, nil
 }
@@ -274,7 +274,7 @@ func (s Store) ResolveKey(key string) (string, error) {
 func (s Store) ReadStream(key string) (io.ReadCloser, error) {
 	key, err := s.ResolveKey(key)
 	if err != nil {
-		return nil, fmt.Errorf("error resolving key: %v", err)
+		return nil, fmt.Errorf("error resolving image ID: %v", err)
 	}
 	keyLock, err := lock.SharedKeyLock(s.imageLockDir, key)
 	if err != nil {
@@ -404,7 +404,7 @@ func (ds Store) RemoveACI(key string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("cannot remove image with key: %s from db: %v", key, err)
+		return fmt.Errorf("cannot remove image with ID: %s from db: %v", key, err)
 	}
 
 	// Then remove non transactional entries from the blob, imageManifest
@@ -574,7 +574,7 @@ func (s Store) WriteRemote(remote *Remote) error {
 func (s Store) GetImageManifestJSON(key string) ([]byte, error) {
 	key, err := s.ResolveKey(key)
 	if err != nil {
-		return nil, fmt.Errorf("error resolving key: %v", err)
+		return nil, fmt.Errorf("error resolving image ID: %v", err)
 	}
 	keyLock, err := lock.SharedKeyLock(s.imageLockDir, key)
 	if err != nil {
@@ -700,7 +700,7 @@ func (s Store) Dump(hex bool) {
 			fmt.Printf("%s/%s: %s\n", s.BasePath, key, out)
 			keyCount++
 		}
-		fmt.Printf("%d total keys\n", keyCount)
+		fmt.Printf("%d total image ID(s)\n", keyCount)
 	}
 }
 
