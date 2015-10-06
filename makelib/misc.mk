@@ -432,3 +432,13 @@ endef
 define sed-replacement-escape
 $(strip $(shell echo $1 | sed -e 's/[\/&]/\\&/g'))
 endef
+
+define add-dependency-template
+$1: $2
+endef
+
+# 1 - a target
+# 2 - a dependency (or a prerequisite in makese)
+define add-dependency
+$(eval $(call add-dependency-template,$1,$2))
+endef

@@ -1,37 +1,55 @@
 # inputs cleared after including this file:
-# ASSCB_EXTRA_HEADERS - headers used
+#
+# ASSCB_EXTRA_HEADERS - additional local C headers used
+#
+# ASSCB_FLAVORS - which flavors want this app, set to STAGE1_FLAVORS
+# if empty
+#
 # ASSCB_EXTRA_CFLAGS - additional cflags
 
-# inputs left alone:
-# ACIROOTFSDIR - ACI rootfs directory
-# TOOLSDIR - location for compiled binary
-# STAMPSDIR - location for a stamp
-# MK_SRCDIR - directory where the sources are
-# MK_FILENAME - name of mk file including this file
-# MK_PATH - path of mk file including this file
+# There are two parts:
+#
+# 1. Building the binary - it is done only once.
+#
+# 2. Installing the binary into the ACI rootfs directory - this is
+# done once for each flavor.
 
+# Initial stuff
+
+# The path of this file. This file is included (or at least it should
+# be) with a standard include directive instead of our inc-one (or
+# inc-many), so the MK_PATH, MK_FILENAME and MK_SRCDIR are set to
+# values specific to the parent file (that is - including this one).
 _ASSCB_PATH_ := $(lastword $(MAKEFILE_LIST))
+# Name of a binary, deduced upon filename of a parent Makefile.
 _ASSCB_NAME_ := $(patsubst %.mk,%,$(MK_FILENAME))
-_ASSCB_ACI_BINARY_ := $(ACIROOTFSDIR)/$(_ASSCB_NAME_)
+# Path to built binary. Not the one in the ACI rootfs.
+_ASSCB_BINARY_ := $(TOOLSDIR)/$(_ASSCB_NAME_)
 
-$(call setup-stamp-file,_ASSCB_STAMP_)
+ifeq ($(ASSCB_FLAVORS),)
+
+ASSCB_FLAVORS := $(STAGE1_FLAVORS)
+
+endif
+
+# 1.
 
 # variables for build_static_c_bin.mk
-BSCB_BINARY := $(TOOLSDIR)/$(_ASSCB_NAME_)
+BSCB_BINARY := $(_ASSCB_BINARY_)
 BSCB_HEADERS := $(foreach h,$(ASSCB_EXTRA_HEADERS),$(MK_SRCDIR)/$h)
 BSCB_SOURCES := $(MK_SRCDIR)/$(_ASSCB_NAME_).c
 BSCB_ADDITIONAL_CFLAGS := -Wall -Os $(ASSCB_EXTRA_CFLAGS)
 
-CLEAN_FILES += $(BSCB_BINARY) $(_ASSCB_ACI_BINARY_)
-STAGE1_STAMPS += $(_ASSCB_STAMP_)
-STAGE1_INSTALL_FILES += $(BSCB_BINARY):$(_ASSCB_ACI_BINARY_):-
-
-$(BSCB_BINARY): $(_ASSCB_PATH_) | $(TOOLSDIR)
-$(_ASSCB_ACI_BINARY_) $(BSCB_BINARY): $(MK_PATH)
-
-$(_ASSCB_STAMP_): $(_ASSCB_ACI_BINARY_)
-	touch "$@"
+CLEAN_FILES += $(_ASSCB_BINARY_)
 
 include makelib/build_static_c_bin.mk
+
+$(_ASSCB_BINARY_): $(_ASSCB_PATH_) $(MK_PATH) | $(TOOLSDIR)
+
+# 2.
+
+AIB_FLAVORS := $(ASSCB_FLAVORS)
+AIB_BINARY := $(_ASSCB_BINARY_)
+include stage1/makelib/aci_install_bin.mk
 
 $(call undefine-namespaces,ASSCB _ASSCB)

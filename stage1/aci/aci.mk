@@ -21,7 +21,7 @@ endif
 
 LOCAL_SED_NAME := $(call sed-replacement-escape,$(LOCAL_NAME))
 LOCAL_SED_VERSION := $(call sed-replacement-escape,$(version))
-LOCAL_SED_ENTER := $(call sed-replacement-escape,$(STAGE1_ENTER_CMD))
+LOCAL_SED_ENTER := $(call sed-replacement-escape,$(STAGE1_ENTER_CMD_$(LOCAL_FLAVOR)))
 
 $(call setup-stamp-file,LOCAL_STAMP)
 $(call setup-stamp-file,LOCAL_MANIFEST_KV_DEPMK_STAMP,$(LOCAL_FLAVOR)-manifest-kv-dep)
