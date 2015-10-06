@@ -12,31 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package lastditch
 
-import "testing"
+import (
+	"encoding/json"
+)
 
-func TestExecValid(t *testing.T) {
-	tests := []Exec{
-		Exec{"/bin/httpd"},
-		Exec{"/app"},
-		Exec{"/app", "arg1", "arg2"},
-	}
-	for i, tt := range tests {
-		if err := tt.assertValid(); err != nil {
-			t.Errorf("#%d: err == %v, want nil", i, err)
-		}
-	}
+type Labels []Label
+
+// a type just to avoid a recursion during unmarshalling
+type labels Labels
+
+type Label struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
-func TestExecInvalid(t *testing.T) {
-	tests := []Exec{
-		Exec{},
-		Exec{"app"},
+func (l *Labels) UnmarshalJSON(data []byte) error {
+	var jl labels
+	if err := json.Unmarshal(data, &jl); err != nil {
+		return err
 	}
-	for i, tt := range tests {
-		if err := tt.assertValid(); err == nil {
-			t.Errorf("#%d: err == nil, want non-nil", i)
-		}
-	}
+	*l = Labels(jl)
+	return nil
 }
