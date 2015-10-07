@@ -125,7 +125,7 @@ func TestCaps(t *testing.T) {
 	}
 }
 
-func TestNonRootCaps(t *testing.T) {
+func TestCapsNonRoot(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
