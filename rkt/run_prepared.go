@@ -128,7 +128,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 
 	rktgid, err := common.LookupGid(common.RktGroup)
 	if err != nil {
-		stderr("prepared-run: group %q not found, will use default gid when rendering images")
+		stderr("prepared-run: group %q not found, will use default gid when rendering images", common.RktGroup)
 		rktgid = -1
 	}
 
