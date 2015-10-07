@@ -3,6 +3,7 @@
 ## Image Addressing
 
 Images can be run by either their name, their hash, an explicit transport address, or a Docker registry URL.
+rkt will automatically [fetch](fetch.md) them if they're not present in the local store.
 
 ```
 # Run by name
