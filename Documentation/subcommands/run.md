@@ -27,7 +27,7 @@ Images can be run by either their name, their hash, an explicit transport addres
 ## Overriding Executable to launch
 
 Application images include an `exec` field that specifies the executable to launch.
-This executable can be overriden by rkt using the `--exec` flag:
+This executable can be overridden by rkt using the `--exec` flag:
 
 ```
 # rkt --insecure-skip-verify run docker://busybox --exec /bin/date
