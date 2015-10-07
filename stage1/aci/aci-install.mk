@@ -51,7 +51,7 @@ endif
 # they can be safely used in the replacement part of sed's s///
 # command.
 AMI_SED_NAME := $(call sed-replacement-escape,$(AMI_NAME))
-AMI_SED_VERSION := $(call sed-replacement-escape,$(version))
+AMI_SED_VERSION := $(call sed-replacement-escape,$(RKT_VERSION))
 AMI_SED_ENTER := $(call sed-replacement-escape,$(STAGE1_ENTER_CMD_$(AMI_FLAVOR)))
 
 # main stamp ensures everything is done
