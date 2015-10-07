@@ -31,7 +31,7 @@ rkt: 1 image(s) successfully remove
 
 ## rkt image gc
 
-You can garbage collect the rkt store to cleanup unused internal data and remove old images (this one to be implemented).
+You can garbage collect the rkt store to clean up unused internal data and remove old images (this one to be implemented).
 
 ```
 # rkt image gc
