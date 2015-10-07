@@ -121,7 +121,7 @@ func PodToSystemdHostMountUnits(root string, volumes []types.Volume, appNames []
 		}
 
 		// serviceNames for ordering and requirements dependency for apps
-		serviceNames := []string{}
+		var serviceNames []string
 		for _, appName := range appNames {
 			serviceNames = append(serviceNames, serviceUnitName(appName))
 		}
@@ -201,7 +201,7 @@ func AppToSystemdMountUnits(root string, appName types.ACName, mountPoints []typ
 // shared volumes (only for "host" kind).
 // Example return is ["--9p,src/folder,9ptag"].
 func VolumesToKvmDiskArgs(volumes []types.Volume) []string {
-	args := []string{}
+	var args []string
 
 	for _, vol := range volumes {
 		mountTag := vol.Name.String() // tag/channel name for virtio

@@ -853,7 +853,7 @@ func (p *pod) getStage1TreeStoreID() (string, error) {
 // getAppTreeStoreIDs returns the treeStoreIDs of the apps images used in
 // this pod
 func (p *pod) getAppsTreeStoreIDs() ([]string, error) {
-	treeStoreIDs := []string{}
+	var treeStoreIDs []string
 	apps, err := p.getApps()
 	if err != nil {
 		return nil, err
@@ -883,7 +883,7 @@ func (p *pod) getAppsHashes() ([]types.Hash, error) {
 		return nil, err
 	}
 
-	hashes := []types.Hash{}
+	var hashes []types.Hash
 	for _, a := range apps {
 		hashes = append(hashes, a.Image.ID)
 	}

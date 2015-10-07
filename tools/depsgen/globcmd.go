@@ -74,7 +74,7 @@ func globGetArgs(args []string) globArgs {
 	suffix := f.String("suffix", "", "File suffix (example: .go)")
 	globbingMode := f.String("glob-mode", "all", "Which files to glob (normal, dot-files, all [default])")
 	filelist := f.String("filelist", "", "Read all the files from this file")
-	mapTo := []string{}
+	var mapTo []string
 	mapToWrapper := common.StringSliceWrapper{Slice: &mapTo}
 	f.Var(&mapToWrapper, "map-to", "Map contents of filelist to this directory, can be used multiple times")
 

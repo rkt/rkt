@@ -156,7 +156,7 @@ func listFiles(dir string) ([]string, error) {
 		return nil, err
 	}
 
-	files := []string{}
+	var files []string
 	for _, dent := range dirents {
 		if dent.IsDir() {
 			continue
@@ -276,7 +276,7 @@ func missingNets(defined common.NetList, loaded []activeNet) []string {
 		delete(diff, an.conf.Name)
 	}
 
-	missing := []string{}
+	var missing []string
 	for n, _ := range diff {
 		missing = append(missing, n)
 	}

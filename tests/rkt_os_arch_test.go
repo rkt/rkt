@@ -40,7 +40,7 @@ func osArchTestRemoveImages(tests []osArchTest) {
 }
 
 func getMissingOrInvalidTests(t *testing.T, ctx *rktRunCtx) []osArchTest {
-	tests := []osArchTest{}
+	var tests []osArchTest
 
 	defer osArchTestRemoveImages(tests)
 	testImageName := "coreos.com/rkt-missing-os-arch-test"

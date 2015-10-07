@@ -92,7 +92,7 @@ GLOBAL OPTIONS:
 }
 
 func getSubCommands(cmd *cobra.Command) []*cobra.Command {
-	subCommands := []*cobra.Command{}
+	var subCommands []*cobra.Command
 	for _, subCmd := range cmd.Commands() {
 		subCommands = append(subCommands, subCmd)
 		subCommands = append(subCommands, getSubCommands(subCmd)...)

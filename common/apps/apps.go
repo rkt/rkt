@@ -75,7 +75,7 @@ func (al *Apps) Walk(f func(*App) error) error {
 // GetImages returns a list of the images in al, one per app.
 // The order reflects the app order in al.
 func (al *Apps) GetImages() []string {
-	il := []string{}
+	var il []string
 	for _, a := range al.apps {
 		il = append(il, a.Image)
 	}
@@ -85,7 +85,7 @@ func (al *Apps) GetImages() []string {
 // GetArgs returns a list of lists of arguments in al, one list of args per app.
 // The order reflects the app order in al.
 func (al *Apps) GetArgs() [][]string {
-	aal := [][]string{}
+	var aal [][]string
 	for _, a := range al.apps {
 		aal = append(aal, a.Args)
 	}
@@ -95,7 +95,7 @@ func (al *Apps) GetArgs() [][]string {
 // GetImageIDs returns a list of the imageIDs in al, one per app.
 // The order reflects the app order in al.
 func (al *Apps) GetImageIDs() []types.Hash {
-	hl := []types.Hash{}
+	var hl []types.Hash
 	for _, a := range al.apps {
 		hl = append(hl, a.ImageID)
 	}

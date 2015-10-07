@@ -312,7 +312,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 	// Some pre-start jobs take a long time, set the timeout to 0
 	opts = append(opts, unit.NewUnitOption("Service", "TimeoutStartSec", "0"))
 
-	saPorts := []types.Port{}
+	var saPorts []types.Port
 	for _, p := range app.Ports {
 		if p.SocketActivated {
 			saPorts = append(saPorts, p)
@@ -447,7 +447,7 @@ func (p *Pod) PodToSystemd(interactive bool, flavor string, privateUsers string)
 	if flavor == "kvm" {
 		// prepare all applications names to become dependency for mount units
 		// all host-shared folder has to become available before applications starts
-		appNames := []types.ACName{}
+		var appNames []types.ACName
 		for _, runtimeApp := range p.Manifest.Apps {
 			appNames = append(appNames, runtimeApp.Name)
 		}
@@ -472,7 +472,7 @@ func (p *Pod) PodToSystemd(interactive bool, flavor string, privateUsers string)
 // appToNspawnArgs transforms the given app manifest, with the given associated
 // app name, into a subset of applicable systemd-nspawn argument
 func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
-	args := []string{}
+	var args []string
 	appName := ra.Name
 	id := ra.Image.ID
 	app := ra.App
