@@ -40,7 +40,6 @@ func TestPrivateNetOmittedNetNS(t *testing.T) {
 
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
-	defer ctx.reset()
 
 	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
 	t.Logf("Command: %v\n", cmd)
@@ -91,7 +90,6 @@ func TestPrivateNetOmittedConnectivity(t *testing.T) {
 
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
-	defer ctx.reset()
 
 	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
 	t.Logf("Command: %v\n", cmd)
@@ -145,7 +143,6 @@ func TestPrivateNetDefaultNetNS(t *testing.T) {
 
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
-	defer ctx.reset()
 
 	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=default --mds-register=false %s", ctx.cmd(), testImage)
 	t.Logf("Command: %v\n", cmd)
@@ -208,7 +205,6 @@ func TestPrivateNetDefaultConnectivity(t *testing.T) {
 
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
-	defer ctx.reset()
 
 	ga := testutils.NewGoroutineAssistant(t)
 
@@ -276,7 +272,6 @@ func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
 
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
-	defer ctx.reset()
 
 	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=default-restricted --mds-register=false %s", ctx.cmd(), testImage)
 	t.Logf("Command: %v\n", cmd)
@@ -414,7 +409,6 @@ func testPrivateNetCustomDual(t *testing.T, nt networkTemplateT) {
 
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
-	defer ctx.reset()
 
 	netdir := prepareTestNet(t, ctx, nt)
 	defer os.RemoveAll(netdir)
@@ -510,7 +504,6 @@ func testPrivateNetCustomDual(t *testing.T, nt networkTemplateT) {
 func testPrivateNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
-	defer ctx.reset()
 
 	netdir := prepareTestNet(t, ctx, nt)
 	defer os.RemoveAll(netdir)
@@ -649,7 +642,6 @@ func TestPrivateNetCustomBridge(t *testing.T) {
 func TestPrivateNetOverride(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
-	defer ctx.reset()
 
 	iface, _, err := testutils.GetNonLoIfaceWithAddrs(netlink.FAMILY_V4)
 	if err != nil {
