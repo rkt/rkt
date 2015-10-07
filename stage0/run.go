@@ -61,6 +61,8 @@ const (
 	defaultRegularDirPerm = os.FileMode(0750)
 )
 
+var debugEnabled bool
+
 // configuration parameters required by Prepare
 type PrepareConfig struct {
 	CommonConfig
@@ -101,6 +103,16 @@ func init() {
 	// since namespace ops (unshare, setns) are done for a single thread, we
 	// must ensure that the goroutine does not jump from OS thread to thread
 	runtime.LockOSThread()
+}
+
+func InitDebug() {
+	debugEnabled = true
+}
+
+func debug(format string, i ...interface{}) {
+	if debugEnabled {
+		log.Printf(format, i...)
+	}
 }
 
 // MergeEnvs amends appEnv setting variables in setEnv before setting anything new from os.Environ if inheritEnv = true
@@ -259,7 +271,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	if err := os.MkdirAll(common.AppsInfoPath(dir), defaultRegularDirPerm); err != nil {
 		return fmt.Errorf("error creating apps info directory: %v", err)
 	}
-	log.Printf("Preparing stage1")
+	debug("Preparing stage1")
 	if err := prepareStage1Image(cfg, cfg.Stage1Image, dir, cfg.UseOverlay); err != nil {
 		return fmt.Errorf("error preparing stage1: %v", err)
 	}
@@ -275,7 +287,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		return err
 	}
 
-	log.Printf("Writing pod manifest")
+	debug("Writing pod manifest")
 	fn := common.PodManifestPath(dir)
 	if err := ioutil.WriteFile(fn, pmb, defaultRegularFilePerm); err != nil {
 		return fmt.Errorf("error writing pod manifest: %v", err)
@@ -343,11 +355,11 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 		log.Fatalf("error: %v", err)
 	}
 
-	log.Printf("Setting up stage1")
+	debug("Setting up stage1")
 	if err := setupStage1Image(cfg, dir, useOverlay); err != nil {
 		log.Fatalf("error setting up stage1: %v", err)
 	}
-	log.Printf("Wrote filesystem to %s\n", dir)
+	debug("Wrote filesystem to %s\n", dir)
 
 	for _, app := range cfg.Apps {
 		if err := setupAppImage(cfg, app.Name, app.Image.ID, dir, useOverlay); err != nil {
@@ -375,7 +387,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 		log.Fatalf("setting SELinux context environment: %v", err)
 	}
 
-	log.Printf("Pivoting to filesystem %s", dir)
+	debug("Pivoting to filesystem %s", dir)
 	if err := os.Chdir(dir); err != nil {
 		log.Fatalf("failed changing to dir: %v", err)
 	}
@@ -385,7 +397,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 		log.Fatalf("error determining init entrypoint: %v", err)
 	}
 	args := []string{filepath.Join(destRootfs, ep)}
-	log.Printf("Execing %s", ep)
+	debug("Execing %s", ep)
 
 	if cfg.Debug {
 		args = append(args, "--debug")
@@ -428,7 +440,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 // corresponds to the given app name.
 // When useOverlay is false, it attempts to render and expand the app image
 func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cdir string, useOverlay bool) error {
-	log.Println("Loading image", img.String())
+	debug("Loading image", img.String())
 
 	am, err := cfg.Store.GetImageManifest(img.String())
 	if err != nil {
@@ -622,7 +634,7 @@ func writeManifest(cfg CommonConfig, img types.Hash, dest string) error {
 		return fmt.Errorf("error marshalling image manifest: %v", err)
 	}
 
-	log.Printf("Writing image manifest")
+	debug("Writing image manifest")
 	if err := ioutil.WriteFile(filepath.Join(dest, "manifest"), mb, defaultRegularFilePerm); err != nil {
 		return fmt.Errorf("error writing image manifest: %v", err)
 	}
