@@ -44,7 +44,7 @@ const (
 	imageManifestType
 
 	defaultPathPerm = os.FileMode(0770 | os.ModeSetgid)
-	defaultFilePerm = os.FileMode(0660 | os.ModeSetgid)
+	defaultFilePerm = os.FileMode(0660)
 
 	// To ameliorate excessively long paths, keys for the (blob)store use
 	// only the first half of a sha512 rather than the entire sum
