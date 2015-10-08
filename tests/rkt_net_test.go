@@ -29,11 +29,11 @@ import (
 )
 
 /*
- * No private net
+ * Host network
  * ---
  * Container must have the same network namespace as the host
  */
-func TestPrivateNetOmittedNetNS(t *testing.T) {
+func TestNetHost(t *testing.T) {
 	testImageArgs := []string{"--exec=/inspect --print-netns"}
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 	defer os.Remove(testImage)
@@ -41,7 +41,7 @@ func TestPrivateNetOmittedNetNS(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
+	cmd := fmt.Sprintf("%s --net=host --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
 	t.Logf("Command: %v\n", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
@@ -70,12 +70,12 @@ func TestPrivateNetOmittedNetNS(t *testing.T) {
 }
 
 /*
- * No private net
+ * Host networking
  * ---
  * Container launches http server which must be reachable by the host via the
  * localhost address
  */
-func TestPrivateNetOmittedConnectivity(t *testing.T) {
+func TestNetHostConnectivity(t *testing.T) {
 
 	httpPort, err := testutils.GetNextFreePort4()
 	if err != nil {
@@ -91,7 +91,7 @@ func TestPrivateNetOmittedConnectivity(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
+	cmd := fmt.Sprintf("%s --net=host --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
 	t.Logf("Command: %v\n", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
@@ -132,11 +132,11 @@ func TestPrivateNetOmittedConnectivity(t *testing.T) {
 }
 
 /*
- * Default private-net
+ * Default net
  * ---
- * Container must be in a separate network namespace with private-net
+ * Container must be in a separate network namespace
  */
-func TestPrivateNetDefaultNetNS(t *testing.T) {
+func TestNetDefaultNetNS(t *testing.T) {
 	testImageArgs := []string{"--exec=/inspect --print-netns"}
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 	defer os.Remove(testImage)
@@ -144,182 +144,198 @@ func TestPrivateNetDefaultNetNS(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=default --mds-register=false %s", ctx.cmd(), testImage)
-	t.Logf("Command: %v\n", cmd)
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec rkt: %v", err)
-	}
+	f := func(argument string) {
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.cmd(), argument, testImage)
+		t.Logf("Command: %v\n", cmd)
+		child, err := gexpect.Spawn(cmd)
+		if err != nil {
+			t.Fatalf("Cannot exec rkt: %v", err)
+		}
+		defer func() {
+			err = child.Wait()
+			if err != nil {
+				t.Fatalf("rkt didn't terminate correctly: %v", err)
+			}
+		}()
 
-	expectedRegex := `NetNS: (net:\[\d+\])`
-	result, out, err := expectRegexWithOutput(child, expectedRegex)
-	if err != nil {
-		t.Fatalf("Error: %v\nOutput: %v", err, out)
-	}
+		expectedRegex := `NetNS: (net:\[\d+\])`
+		result, out, err := expectRegexWithOutput(child, expectedRegex)
+		if err != nil {
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
+		}
 
-	ns, err := os.Readlink("/proc/self/ns/net")
-	if err != nil {
-		t.Fatalf("Cannot evaluate NetNS symlink: %v", err)
-	}
+		ns, err := os.Readlink("/proc/self/ns/net")
+		if err != nil {
+			t.Fatalf("Cannot evaluate NetNS symlink: %v", err)
+		}
 
-	if nsChanged := ns != result[1]; !nsChanged {
-		t.Fatalf("container did not leave host netns")
-	}
+		if nsChanged := ns != result[1]; !nsChanged {
+			t.Fatalf("container did not leave host netns")
+		}
 
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
+	f("--net=default")
+	f("")
 }
 
 /*
- * Default private-net
+ * Default net
  * ---
  * Host launches http server on all interfaces in the host netns
  * Container must be able to connect via any IP address of the host in the
  * default network, which is NATed
  * TODO: test connection to host on an outside interface
  */
-func TestPrivateNetDefaultConnectivity(t *testing.T) {
-	httpPort, err := testutils.GetNextFreePort4()
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
-	httpServeTimeout := 30
-
-	nonLoIPv4, err := testutils.GetNonLoIfaceIPv4()
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	if nonLoIPv4 == "" {
-		t.Skipf("Can not find any NAT'able IPv4 on the host, skipping..")
-	}
-
-	httpGetAddr := fmt.Sprintf("http://%v:%v", nonLoIPv4, httpPort)
-	t.Log("Telling the child to connect via", httpGetAddr)
-
-	testImageArgs := []string{fmt.Sprintf("--exec=/inspect --get-http=%v", httpGetAddr)}
-	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
-	defer os.Remove(testImage)
-
+func TestNetDefaultConnectivity(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	ga := testutils.NewGoroutineAssistant(t)
+	f := func(argument string) {
+		httpPort, err := testutils.GetNextFreePort4()
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
+		httpServeTimeout := 30
 
-	// Host opens the server
-	ga.Add(1)
-	go func() {
-		defer ga.Done()
-		err := testutils.HttpServe(httpServeAddr, httpServeTimeout)
+		nonLoIPv4, err := testutils.GetNonLoIfaceIPv4()
 		if err != nil {
-			t.Fatalf("Error during HttpServe: %v", err)
+			t.Fatalf("%v", err)
 		}
-	}()
-
-	// Child connects to host
-	ga.Add(1)
-	hostname, err := os.Hostname()
-	go func() {
-		defer ga.Done()
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=default --mds-register=false %s", ctx.cmd(), testImage)
-		t.Logf("Command: %v\n", cmd)
-		child, err := gexpect.Spawn(cmd)
-		if err != nil {
-			ga.Fatalf("Cannot exec rkt: %v", err)
-			return
-		}
-		expectedRegex := `HTTP-Get received: (.*)\r`
-		result, out, err := expectRegexWithOutput(child, expectedRegex)
-		if err != nil {
-			ga.Fatalf("Error: %v\nOutput: %v", err, out)
-			return
-		}
-		if result[1] != hostname {
-			ga.Fatalf("Hostname received by client `%v` doesn't match `%v`", result[1], hostname)
-			return
+		if nonLoIPv4 == "" {
+			t.Skipf("Can not find any NAT'able IPv4 on the host, skipping..")
 		}
 
-		err = child.Wait()
-		if err != nil {
-			ga.Fatalf("rkt didn't terminate correctly: %v", err)
-		}
-	}()
+		httpGetAddr := fmt.Sprintf("http://%v:%v", nonLoIPv4, httpPort)
+		t.Log("Telling the child to connect via", httpGetAddr)
 
-	ga.Wait()
+		testImageArgs := []string{fmt.Sprintf("--exec=/inspect --get-http=%v", httpGetAddr)}
+		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
+		defer os.Remove(testImage)
+		ga := testutils.NewGoroutineAssistant(t)
+
+		// Host opens the server
+		ga.Add(1)
+		go func() {
+			defer ga.Done()
+			err := testutils.HttpServe(httpServeAddr, httpServeTimeout)
+			if err != nil {
+				ga.Fatalf("Error during HttpServe: %v", err)
+			}
+		}()
+
+		// Child connects to host
+		ga.Add(1)
+		hostname, err := os.Hostname()
+		if err != nil {
+			ga.Fatalf("Error getting hostname: %v", err)
+		}
+		go func() {
+			defer ga.Done()
+			cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.cmd(), argument, testImage)
+			t.Logf("Command: %v\n", cmd)
+			child, err := gexpect.Spawn(cmd)
+			if err != nil {
+				ga.Fatalf("Cannot exec rkt: %v", err)
+				return
+			}
+			expectedRegex := `HTTP-Get received: (.*)\r`
+			result, out, err := expectRegexWithOutput(child, expectedRegex)
+			if err != nil {
+				ga.Fatalf("Error: %v\nOutput: %v", err, out)
+				return
+			}
+			if result[1] != hostname {
+				ga.Fatalf("Hostname received by client `%v` doesn't match `%v`", result[1], hostname)
+				return
+			}
+
+			err = child.Wait()
+			if err != nil {
+				ga.Fatalf("rkt didn't terminate correctly: %v", err)
+			}
+		}()
+
+		ga.Wait()
+	}
+	f("--net=default")
+	f("")
 }
 
 /*
- * Default-restricted private-net
+ * Default-restricted net
  * ---
  * Container launches http server on all its interfaces
  * Host must be able to connects to container's http server via container's
  * eth0's IPv4
  * TODO: verify that the container isn't NATed
  */
-func TestPrivateNetDefaultRestrictedConnectivity(t *testing.T) {
-	httpPort, err := testutils.GetNextFreePort4()
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
-	iface := "eth0"
-
-	testImageArgs := []string{fmt.Sprintf("--exec=/inspect --print-ipv4=%v --serve-http=%v", iface, httpServeAddr)}
-	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
-	defer os.Remove(testImage)
-
+func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=default-restricted --mds-register=false %s", ctx.cmd(), testImage)
-	t.Logf("Command: %v\n", cmd)
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec rkt: %v", err)
+	f := func(argument string) {
+		httpPort, err := testutils.GetNextFreePort4()
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
+		iface := "eth0"
+
+		testImageArgs := []string{fmt.Sprintf("--exec=/inspect --print-ipv4=%v --serve-http=%v", iface, httpServeAddr)}
+		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
+		defer os.Remove(testImage)
+
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.cmd(), argument, testImage)
+		t.Logf("Command: %v\n", cmd)
+		child, err := gexpect.Spawn(cmd)
+		if err != nil {
+			t.Fatalf("Cannot exec rkt: %v", err)
+		}
+
+		expectedRegex := `IPv4: (.*)\r`
+		result, out, err := expectRegexWithOutput(child, expectedRegex)
+		if err != nil {
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
+		}
+		httpGetAddr := fmt.Sprintf("http://%v:%v", result[1], httpPort)
+
+		ga := testutils.NewGoroutineAssistant(t)
+		// Child opens the server
+		ga.Add(1)
+		go func() {
+			defer ga.Done()
+			err = child.Wait()
+			if err != nil {
+				ga.Fatalf("rkt didn't terminate correctly: %v", err)
+			}
+		}()
+
+		// Host connects to the child
+		ga.Add(1)
+		go func() {
+			defer ga.Done()
+			expectedRegex := `serving on`
+			_, out, err := expectRegexWithOutput(child, expectedRegex)
+			if err != nil {
+				ga.Fatalf("Error: %v\nOutput: %v", err, out)
+				return
+			}
+			body, err := testutils.HttpGet(httpGetAddr)
+			if err != nil {
+				ga.Fatalf("%v\n", err)
+				return
+			}
+			log.Printf("HTTP-Get received: %s", body)
+			if err != nil {
+				ga.Fatalf("%v\n", err)
+			}
+		}()
+
+		ga.Wait()
 	}
-
-	expectedRegex := `IPv4: (.*)\r`
-	result, out, err := expectRegexWithOutput(child, expectedRegex)
-	if err != nil {
-		t.Fatalf("Error: %v\nOutput: %v", err, out)
-	}
-	httpGetAddr := fmt.Sprintf("http://%v:%v", result[1], httpPort)
-
-	ga := testutils.NewGoroutineAssistant(t)
-	// Child opens the server
-	ga.Add(1)
-	go func() {
-		defer ga.Done()
-		err = child.Wait()
-		if err != nil {
-			ga.Fatalf("rkt didn't terminate correctly: %v", err)
-		}
-	}()
-
-	// Host connects to the child
-	ga.Add(1)
-	go func() {
-		defer ga.Done()
-		expectedRegex := `serving on`
-		_, out, err := expectRegexWithOutput(child, expectedRegex)
-		if err != nil {
-			ga.Fatalf("Error: %v\nOutput: %v", err, out)
-			return
-		}
-		body, err := testutils.HttpGet(httpGetAddr)
-		if err != nil {
-			ga.Fatalf("%v\n", err)
-			return
-		}
-		log.Printf("HTTP-Get received: %s", body)
-		if err != nil {
-			ga.Fatalf("%v\n", err)
-		}
-	}()
-
-	ga.Wait()
+	f("--net=default-restricted")
+	f("--net=none")
 }
 
 func writeNetwork(t *testing.T, net networkTemplateT, netd string) error {
@@ -359,7 +375,7 @@ type ipamTemplateT struct {
 	Routes []map[string]string `json:"routes,omitempty"`
 }
 
-func TestPrivateNetTemplates(t *testing.T) {
+func TestNetTemplates(t *testing.T) {
 	net := networkTemplateT{
 		Name: "ptp0",
 		Type: "ptp",
@@ -401,7 +417,7 @@ func prepareTestNet(t *testing.T, ctx *rktRunCtx, nt networkTemplateT) (netdir s
  * Container 2 fires a HttpGet on it
  * The body of the HttpGet is Container 1's hostname, which must match
  */
-func testPrivateNetCustomDual(t *testing.T, nt networkTemplateT) {
+func testNetCustomDual(t *testing.T, nt networkTemplateT) {
 	httpPort, err := testutils.GetNextFreePort4()
 	if err != nil {
 		t.Fatalf("%v", err)
@@ -424,7 +440,7 @@ func testPrivateNetCustomDual(t *testing.T, nt networkTemplateT) {
 		testImage := patchTestACI("rkt-inspect-networking1.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
 		fmt.Printf("Command: %v\n", cmd)
 		child, err := gexpect.Spawn(cmd)
 		if err != nil {
@@ -464,7 +480,7 @@ func testPrivateNetCustomDual(t *testing.T, nt networkTemplateT) {
 		testImage := patchTestACI("rkt-inspect-networking2.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
 		fmt.Printf("Command: %v\n", cmd)
 		child, err := gexpect.Spawn(cmd)
 		if err != nil {
@@ -501,7 +517,7 @@ func testPrivateNetCustomDual(t *testing.T, nt networkTemplateT) {
  * macvlan network, which is NAT
  * TODO: test connection to host on an outside interface
  */
-func testPrivateNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
+func testNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
@@ -547,7 +563,7 @@ func testPrivateNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
 		t.Logf("Command: %v\n", cmd)
 		child, err := gexpect.Spawn(cmd)
 		if err != nil {
@@ -574,7 +590,7 @@ func testPrivateNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 	ga.Wait()
 }
 
-func TestPrivateNetCustomPtp(t *testing.T) {
+func TestNetCustomPtp(t *testing.T) {
 	nt := networkTemplateT{
 		Name:   "ptp0",
 		Type:   "ptp",
@@ -587,11 +603,11 @@ func TestPrivateNetCustomPtp(t *testing.T) {
 			},
 		},
 	}
-	testPrivateNetCustomNatConnectivity(t, nt)
-	testPrivateNetCustomDual(t, nt)
+	testNetCustomNatConnectivity(t, nt)
+	testNetCustomDual(t, nt)
 }
 
-func TestPrivateNetCustomMacvlan(t *testing.T) {
+func TestNetCustomMacvlan(t *testing.T) {
 	iface, _, err := testutils.GetNonLoIfaceWithAddrs(netlink.FAMILY_V4)
 	if err != nil {
 		t.Fatalf("Error while getting non-lo host interface: %v\n", err)
@@ -609,10 +625,10 @@ func TestPrivateNetCustomMacvlan(t *testing.T) {
 			Subnet: "10.1.2.0/24",
 		},
 	}
-	testPrivateNetCustomDual(t, nt)
+	testNetCustomDual(t, nt)
 }
 
-func TestPrivateNetCustomBridge(t *testing.T) {
+func TestNetCustomBridge(t *testing.T) {
 	iface, _, err := testutils.GetNonLoIfaceWithAddrs(netlink.FAMILY_V4)
 	if err != nil {
 		t.Fatalf("Error while getting non-lo host interface: %v\n", err)
@@ -635,11 +651,11 @@ func TestPrivateNetCustomBridge(t *testing.T) {
 			},
 		},
 	}
-	testPrivateNetCustomNatConnectivity(t, nt)
-	testPrivateNetCustomDual(t, nt)
+	testNetCustomNatConnectivity(t, nt)
+	testNetCustomDual(t, nt)
 }
 
-func TestPrivateNetOverride(t *testing.T) {
+func TestNetOverride(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
@@ -670,7 +686,7 @@ func TestPrivateNetOverride(t *testing.T) {
 
 	expectedIP := "10.1.4.244"
 
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --private-net=all --private-net=\"%s:IP=%s\" --mds-register=false %s", ctx.cmd(), nt.Name, expectedIP, testImage)
+	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=all --net=\"%s:IP=%s\" --mds-register=false %s", ctx.cmd(), nt.Name, expectedIP, testImage)
 	fmt.Printf("Command: %v\n", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {

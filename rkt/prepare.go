@@ -50,7 +50,7 @@ func init() {
 
 	addStage1ImageFlag(cmdPrepare.Flags())
 	cmdPrepare.Flags().Var(&flagVolumes, "volume", "volumes to mount into the pod")
-	cmdPrepare.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires --private-net)")
+	cmdPrepare.Flags().Var(&flagPorts, "port", "ports to expose on the host (needs contained networking with NAT)")
 	cmdPrepare.Flags().BoolVar(&flagQuiet, "quiet", false, "suppress superfluous output on stdout, print only the UUID on success")
 	cmdPrepare.Flags().BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	cmdPrepare.Flags().BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")

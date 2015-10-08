@@ -168,24 +168,32 @@ func SupportsUserNS() bool {
 	return false
 }
 
-// PrivateNetList implements the flag.Value interface to allow specification
-// of -private-net with and without values
-// Example: --private-net="all,net1:k1=v1;k2=v2,net2:l1=w1"
-type PrivateNetList struct {
+// NetList implements the flag.Value interface to allow specification of --net with and without values
+// Example: --net="all,net1:k1=v1;k2=v2,net2:l1=w1"
+type NetList struct {
 	mapping map[string]string
 }
 
-func (l *PrivateNetList) String() string {
+func (l *NetList) String() string {
 	return strings.Join(l.Strings(), ",")
 }
 
-func (l *PrivateNetList) Set(value string) error {
+func (l *NetList) Set(value string) error {
 	if l.mapping == nil {
 		l.mapping = make(map[string]string)
 	}
 	for _, s := range strings.Split(value, ",") {
 		netArgsPair := strings.Split(s, ":")
 		netName := netArgsPair[0]
+		var effectiveNetName string
+
+		// TODO (steveeJ): remove this case and allow none when mds-register=false
+		if netName == "none" {
+			// we still provide access to the host
+			effectiveNetName = "default-restricted"
+		} else {
+			effectiveNetName = netName
+		}
 
 		if netName == "" {
 			return fmt.Errorf("netname must not be empty")
@@ -196,12 +204,15 @@ func (l *PrivateNetList) Set(value string) error {
 
 		switch {
 		case len(netArgsPair) == 1:
-			l.mapping[netName] = ""
+			l.mapping[effectiveNetName] = ""
 		case len(netArgsPair) == 2:
-			if netName == "all" {
+			if netName == "all" ||
+				netName == "host" {
 				return fmt.Errorf("arguments are not supported by special netname %q", netName)
+			} else if netName == "none" {
+				return fmt.Errorf("%q is only a convenience name which is translated to %q internally. please use that instead when supplying arguments", netName, effectiveNetName)
 			}
-			l.mapping[netName] = netArgsPair[1]
+			l.mapping[effectiveNetName] = netArgsPair[1]
 		case len(netArgsPair) > 2:
 			return fmt.Errorf("network %q provided with invalid arguments: %v", netName, netArgsPair[1:])
 		default:
@@ -211,11 +222,15 @@ func (l *PrivateNetList) Set(value string) error {
 	return nil
 }
 
-func (l *PrivateNetList) Type() string {
-	return "privateNetList"
+func (l *NetList) Type() string {
+	return "netList"
 }
 
-func (l *PrivateNetList) Strings() []string {
+func (l *NetList) Strings() []string {
+	if len(l.mapping) == 0 {
+		return []string{"default"}
+	}
+
 	var list []string
 	for k, v := range l.mapping {
 		if v == "" {
@@ -227,7 +242,7 @@ func (l *PrivateNetList) Strings() []string {
 	return list
 }
 
-func (l *PrivateNetList) StringsOnlyNames() []string {
+func (l *NetList) StringsOnlyNames() []string {
 	var list []string
 	for k, _ := range l.mapping {
 		list = append(list, k)
@@ -235,19 +250,24 @@ func (l *PrivateNetList) StringsOnlyNames() []string {
 	return list
 }
 
-func (l *PrivateNetList) Any() bool {
-	return len(l.mapping) > 0
+func (l *NetList) Host() bool {
+	return l.Specific("host")
 }
 
-func (l *PrivateNetList) Specific(net string) bool {
+func (l *NetList) Any() bool {
+	any := !l.Host()
+	return any
+}
+
+func (l *NetList) Specific(net string) bool {
 	_, exists := l.mapping[net]
 	return exists
 }
 
-func (l *PrivateNetList) SpecificArgs(net string) string {
+func (l *NetList) SpecificArgs(net string) string {
 	return l.mapping[net]
 }
 
-func (l *PrivateNetList) All() bool {
+func (l *NetList) All() bool {
 	return l.Specific("all")
 }

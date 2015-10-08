@@ -23,7 +23,7 @@ gpg key fingerprint is: 8B86 DE38 890D DB72 9186  7B02 5210 BD88 8818 2190
 	CoreOS ACI Builder <release@coreos.com>
 Trusting "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg" for prefix "coreos.com/etcd" without fingerprint review.
 Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190"
-# rkt run --private-net=default coreos.com/etcd:v2.0.9
+# rkt run coreos.com/etcd:v2.0.9
 rkt: searching for app image coreos.com/etcd:v2.0.9
 prefix: "coreos.com/etcd"
 key: "https://coreos.com/dist/pubkeys/aci-pubkeys.gpg"
