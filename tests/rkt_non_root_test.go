@@ -47,7 +47,7 @@ func TestNonRootReadInfo(t *testing.T) {
 	}{
 		{name: "inspect-1", msg: "foo-1", exitCode: "1"},
 		{name: "inspect-2", msg: "foo-2", exitCode: "2"},
-		//{name: "inspect-3", msg: "foo-3", exitCode: "3"}, // Waiting for #1453 #1503.
+		{name: "inspect-3", msg: "foo-3", exitCode: "3"},
 	}
 
 	for i, img := range imgs {
@@ -57,14 +57,14 @@ func TestNonRootReadInfo(t *testing.T) {
 	}
 
 	runCmds := []string{
-		// Run with overlay, no private-users.
+		// Run with overlay, without private-users.
 		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), imgs[0].imgFile),
 
-		// Run without overlay, no private-users.
+		// Run without overlay, without private-users.
 		fmt.Sprintf("%s --insecure-skip-verify run --no-overlay --mds-register=false %s", ctx.cmd(), imgs[1].imgFile),
 
-		// Run without overlay and private-users.
-		//fmt.Sprintf("%s --insecure-skip-verify run --no-overlay --private-users --mds-register=false %s", ctx.cmd(), imgs[2].imgFile),
+		// Run without overlay, with private-users.
+		fmt.Sprintf("%s --insecure-skip-verify run --no-overlay --private-users --mds-register=false %s", ctx.cmd(), imgs[2].imgFile),
 	}
 
 	for i, cmd := range runCmds {
