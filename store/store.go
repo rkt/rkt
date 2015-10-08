@@ -43,7 +43,7 @@ const (
 	blobType int64 = iota
 	imageManifestType
 
-	defaultPathPerm os.FileMode = 0777
+	defaultPathPerm os.FileMode = 0770
 	defaultFilePerm os.FileMode = 0660
 
 	// To ameliorate excessively long paths, keys for the (blob)store use
@@ -113,6 +113,11 @@ type Store struct {
 }
 
 func NewStore(baseDir string) (*Store, error) {
+	// We need to allow the store's setgid bits (if any) to propagate, so
+	// disable umask
+	um := syscall.Umask(0)
+	defer syscall.Umask(um)
+
 	storeDir := filepath.Join(baseDir, "cas")
 
 	s := &Store{
@@ -140,6 +145,8 @@ func NewStore(baseDir string) (*Store, error) {
 
 	for i, p := range diskvStores {
 		s.stores[i] = diskv.New(diskv.Options{
+			PathPerm:  defaultPathPerm,
+			FilePerm:  defaultFilePerm,
 			BasePath:  filepath.Join(storeDir, p),
 			Transform: blockTransform,
 		})
@@ -291,6 +298,11 @@ func (s Store) ReadStream(key string) (io.ReadCloser, error) {
 // latest defines if the aci has to be marked as the latest. For example an ACI
 // discovered without asking for a specific version (latest pattern).
 func (s Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
+	// We need to allow the store's setgid bits (if any) to propagate, so
+	// disable umask
+	um := syscall.Umask(0)
+	defer syscall.Umask(um)
+
 	dr, err := aci.NewCompressedReader(r)
 	if err != nil {
 		return "", fmt.Errorf("error decompressing image: %v", err)
