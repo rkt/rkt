@@ -24,11 +24,16 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
+)
+
+const (
+	nobodyUid = uint32(65534)
 )
 
 // dirDesc structure manages one directory and provides an option for
@@ -161,6 +166,14 @@ func (ctx *rktRunCtx) cmd() string {
 	return fmt.Sprintf("%s %s",
 		ctx.rktBin(),
 		strings.Join(ctx.rktOptions(), " "),
+	)
+}
+
+// TODO(jonboulle): clean this up
+func (ctx *rktRunCtx) cmdNoConfig() string {
+	return fmt.Sprintf("%s %s",
+		ctx.rktBin(),
+		ctx.directories[0].rktOption(),
 	)
 }
 
@@ -297,11 +310,28 @@ func createTempDirOrPanic(dirName string) string {
 	return tmpDir
 }
 
-func importImageAndFetchHash(t *testing.T, ctx *rktRunCtx, img string) string {
+func importImageAndFetchHashAsGid(t *testing.T, ctx *rktRunCtx, img string, gid int) string {
 	// Import the test image into store manually.
-	child, err := gexpect.Spawn(fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmd(), img))
+	cmd := fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmd(), img)
+
+	// TODO(jonboulle): non-root user breaks trying to read root-written
+	// config directories. Should be a better way to approach this. Should
+	// config directories be readable by the rkt group too?
+	if gid != 0 {
+		cmd = fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmdNoConfig(), img)
+	}
+	child, err := gexpect.Command(cmd)
 	if err != nil {
-		t.Fatalf("Cannot exec rkt: %v", err)
+		t.Fatalf("cannot create rkt command: %v", err)
+	}
+	if gid != 0 {
+		child.Cmd.SysProcAttr = &syscall.SysProcAttr{}
+		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: nobodyUid, Gid: uint32(gid)}
+	}
+
+	err = child.Start()
+	if err != nil {
+		t.Fatalf("cannot exec rkt: %v", err)
 	}
 
 	// Read out the image hash.
@@ -316,6 +346,10 @@ func importImageAndFetchHash(t *testing.T, ctx *rktRunCtx, img string) string {
 	}
 
 	return result[0]
+}
+
+func importImageAndFetchHash(t *testing.T, ctx *rktRunCtx, img string) string {
+	return importImageAndFetchHashAsGid(t, ctx, img, 0)
 }
 
 func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *rktRunCtx) string {
@@ -388,8 +422,17 @@ func runRktAndGetUUID(t *testing.T, rktCmd string) string {
 	return podID.String()
 }
 
-func runRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool) {
-	child, err := gexpect.Spawn(rktCmd)
+func runRktAsGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool, gid int) {
+	child, err := gexpect.Command(rktCmd)
+	if err != nil {
+		t.Fatalf("cannot exec rkt: %v", err)
+	}
+	if gid != 0 {
+		child.Cmd.SysProcAttr = &syscall.SysProcAttr{}
+		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: nobodyUid, Gid: uint32(gid)}
+	}
+
+	err = child.Start()
 	if err != nil {
 		t.Fatalf("cannot exec rkt: %v", err)
 	}
@@ -401,6 +444,10 @@ func runRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError
 	if err = child.Wait(); err != nil && !expectError {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
+}
+
+func runRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool) {
+	runRktAsGidAndCheckOutput(t, rktCmd, expectedLine, expectError, 0)
 }
 
 func checkAppStatus(t *testing.T, ctx *rktRunCtx, multiApps bool, appName, expected string) {

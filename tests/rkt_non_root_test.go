@@ -17,8 +17,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
-	"syscall"
 	"testing"
 
 	"github.com/coreos/rkt/common"
@@ -49,7 +47,7 @@ func TestNonRootReadInfo(t *testing.T) {
 	}{
 		{name: "inspect-1", msg: "foo-1", exitCode: "1"},
 		{name: "inspect-2", msg: "foo-2", exitCode: "2"},
-		//{name: "inspect-3", msg: "foo-3", exitCode: "3"}, // Waiting for #1453 #1503.
+		{name: "inspect-3", msg: "foo-3", exitCode: "3"},
 	}
 
 	for i, img := range imgs {
@@ -59,14 +57,14 @@ func TestNonRootReadInfo(t *testing.T) {
 	}
 
 	runCmds := []string{
-		// Run with overlay, no private-users.
+		// Run with overlay, without private-users.
 		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), imgs[0].imgFile),
 
-		// Run without overlay, no private-users.
+		// Run without overlay, without private-users.
 		fmt.Sprintf("%s --insecure-skip-verify run --no-overlay --mds-register=false %s", ctx.cmd(), imgs[1].imgFile),
 
-		// Run without overlay and private-users.
-		//fmt.Sprintf("%s --insecure-skip-verify run --no-overlay --private-users --mds-register=false %s", ctx.cmd(), imgs[2].imgFile),
+		// Run without overlay, with private-users.
+		fmt.Sprintf("%s --insecure-skip-verify run --no-overlay --private-users --mds-register=false %s", ctx.cmd(), imgs[2].imgFile),
 	}
 
 	for i, cmd := range runCmds {
@@ -74,59 +72,13 @@ func TestNonRootReadInfo(t *testing.T) {
 		runRktAndCheckOutput(t, cmd, imgs[i].msg, false)
 	}
 
-	done := make(chan struct{})
-
-	// Go disables setuid/setgid because of its runtime model makes
-	// these syscall not effactive in most cases because:
-	// 1. setuid/setgid syscalls only affects the calling (kernel) thread.
-	// 2. Kernel thread is not binded to goroutine.
-	//
-	// Here we use LockOSThread() and Syscall() to work around this.
-	// Also we need to run in a groutine and destroy the kernel thread on exit
-	// so we are able to clean up the context in root.
-	// For more details, see: https://code.google.com/p/go/issues/detail?id=1435
-	go func() {
-		runtime.LockOSThread()
-		defer func() {
-			close(done)
-			// Destroy the thread so that other goroutines will not run in non-root.
-			syscall.Syscall(syscall.SYS_EXIT, uintptr(0), 0, 0)
-		}()
-
-		// Force runtime to create kernel thread for other goroutines if necessary.
-		// This reduces the chance that the runtime clones this thread after we setuid/setgid.
-		// (Hopefully, if no other goroutines are created during the execution of this goroutine,
-		// then no more kernel threads will be created).
-		runtime.Gosched()
-
-		// Setgid to 'rkt'.
-		_, _, e := syscall.Syscall(syscall.SYS_SETGID, uintptr(gid), 0, 0)
-		if e != 0 {
-			t.Fatalf("Cannot setgid: %v", e.Error())
-		}
-
-		// Setuid to 'nobody' (65534).
-		_, _, e = syscall.Syscall(syscall.SYS_SETUID, uintptr(65534), 0, 0)
-		if e != 0 {
-			t.Fatalf("Cannot setuid: %v", e.Error())
-		}
-
-		// Run rkt list/status to check status.
-		for _, img := range imgs {
-			checkAppStatus(t, ctx, false, img.name, fmt.Sprintf("status=%s", img.exitCode))
-		}
-
-		// Run rkt image list to check images.
-		imgListCmd := fmt.Sprintf("%s image list", ctx.cmd())
-		t.Logf("Running %s", imgListCmd)
-		runRktAndCheckOutput(t, imgListCmd, "inspect-", false)
-	}()
-
-	<-done
+	imgListCmd := fmt.Sprintf("%s image list", ctx.cmd())
+	t.Logf("Running %s", imgListCmd)
+	runRktAsGidAndCheckOutput(t, imgListCmd, "inspect-", false, gid)
 }
 
 // TestNonRootFetchRmGcImage tests that non-root users can remove images fetched by themselves but
-// can not remove images fetched by root, or gc any images.
+// cannot remove images fetched by root, or gc any images.
 func TestNonRootFetchRmGcImage(t *testing.T) {
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
@@ -136,7 +88,7 @@ func TestNonRootFetchRmGcImage(t *testing.T) {
 		t.Skipf("Skipping the test because there's no %q group", common.RktGroup)
 	}
 
-	// Do 'rkt install and fetch an image with root.
+	// Do `rkt install` and fetch an image with root.
 	cmd := fmt.Sprintf("%s install", ctx.cmd())
 	t.Logf("Running rkt install")
 	runRktAndCheckOutput(t, cmd, "rkt directory structure successfully created", false)
@@ -151,48 +103,22 @@ func TestNonRootFetchRmGcImage(t *testing.T) {
 
 	ctx.runGC()
 
-	done := make(chan struct{})
+	// Should not be able to do image gc.
+	imgGcCmd := fmt.Sprintf("%s image gc", ctx.cmd())
+	t.Logf("Running %s", imgGcCmd)
+	runRktAsGidAndCheckOutput(t, imgGcCmd, "permission denied", true, gid)
 
-	go func() {
-		runtime.LockOSThread()
-		defer func() {
-			close(done)
-			syscall.Syscall(syscall.SYS_EXIT, uintptr(0), 0, 0)
-		}()
+	// Should not be able to remove the image fetched by root.
+	imgRmCmd := fmt.Sprintf("%s image rm %s", ctx.cmd(), rootImgHash)
+	t.Logf("Running %s", imgRmCmd)
+	runRktAsGidAndCheckOutput(t, imgRmCmd, "permission denied", true, gid)
 
-		runtime.Gosched()
+	// Should be able to remove the image fetched by ourselves.
+	nonrootImg := patchTestACI("rkt-inspect-non-root-rm.aci", "--exec=/inspect")
+	defer os.Remove(nonrootImg)
+	nonrootImgHash := importImageAndFetchHashAsGid(t, ctx, nonrootImg, gid)
 
-		// Setgid to 'rkt'.
-		_, _, e := syscall.Syscall(syscall.SYS_SETGID, uintptr(gid), 0, 0)
-		if e != 0 {
-			t.Fatalf("Cannot setgid: %v", e.Error())
-		}
-
-		// Setuid to 'nobody' (65534).
-		_, _, e = syscall.Syscall(syscall.SYS_SETUID, uintptr(65534), 0, 0)
-		if e != 0 {
-			t.Fatalf("Cannot setuid: %v", e.Error())
-		}
-
-		// Should not be able to do image gc.
-		imgGcCmd := fmt.Sprintf("%s image gc", ctx.cmd())
-		t.Logf("Running %s", imgGcCmd)
-		runRktAndCheckOutput(t, imgGcCmd, "permission denied", true)
-
-		// Should not be able to remove the image fetched by root.
-		imgRmCmd := fmt.Sprintf("%s image rm %s", ctx.cmd(), rootImgHash)
-		t.Logf("Running %s", imgRmCmd)
-		runRktAndCheckOutput(t, imgRmCmd, "permission denied", true)
-
-		// Should be able to remove the image fetched by ourselves.
-		nonrootImg := patchTestACI("rkt-inspect-non-root-rm.aci", "--exec=/inspect")
-		defer os.Remove(nonrootImg)
-		nonrootImgHash := importImageAndFetchHash(t, ctx, nonrootImg)
-
-		imgRmCmd = fmt.Sprintf("%s image rm %s", ctx.cmd(), nonrootImgHash)
-		t.Logf("Running %s", imgRmCmd)
-		runRktAndCheckOutput(t, imgRmCmd, "successfully removed", false)
-	}()
-
-	<-done
+	imgRmCmd = fmt.Sprintf("%s image rm %s", ctx.cmd(), nonrootImgHash)
+	t.Logf("Running %s", imgRmCmd)
+	runRktAsGidAndCheckOutput(t, imgRmCmd, "successfully removed", false, gid)
 }
