@@ -246,7 +246,6 @@ func loadUserNets(localConfig string, netsLoadList common.NetList) ([]activeNet,
 			continue
 		}
 
-		// "default" is slightly special
 		if n.conf.Name == "default" ||
 			n.conf.Name == "default-restricted" {
 			log.Printf(`Overriding %q network with %v`, n.conf.Name, filename)
