@@ -99,7 +99,7 @@ func TestShortHash(t *testing.T) {
 	hash0 := fmt.Sprintf("sha512-%s", imageIds[0].hash[:12])
 	hash1 := fmt.Sprintf("sha512-%s", imageIds[1].hash[:12])
 	for _, hash := range []string{hash0, hash1} {
-		imageListCmd := fmt.Sprintf("%s image list --fields=key --no-legend", ctx.cmd())
+		imageListCmd := fmt.Sprintf("%s image list --fields=id --no-legend", ctx.cmd())
 		child, err := gexpect.Spawn(imageListCmd)
 		if err != nil {
 			t.Fatal("Cannot exec rkt image list")
@@ -123,23 +123,23 @@ func TestShortHash(t *testing.T) {
 		shouldFail bool
 		expect     string
 	}{
-		// Try invalid key
+		// Try invalid ID
 		{
 			"image cat-manifest sha512-12341234",
 			true,
-			"no keys found",
+			"no image IDs found",
 		},
 		// Try using one char hash
 		{
 			fmt.Sprintf("image cat-manifest %s", hash0[:len("sha512-")+1]),
 			true,
-			"key too short",
+			"image ID too short",
 		},
 		// Try short hash that collides
 		{
 			fmt.Sprintf("image cat-manifest %s", hash0[:len("sha512-")+2]),
 			true,
-			"ambiguous key",
+			"ambiguous image ID",
 		},
 		// Test that 12-char hash works with image cat-manifest
 		{
