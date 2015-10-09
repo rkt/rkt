@@ -39,7 +39,8 @@ var volTests = []struct {
 		`<<<host>>>`,
 	},
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1^VOL_RO_READ_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
+		`<<<host>>>`,
 	},
 	// Check that we can write to files in the ACI
 	{

@@ -28,7 +28,7 @@ type App struct {
 	Args   []string       // any arguments the user supplied for this app
 	Asc    string         // signature file override for image verification (if fetching occurs)
 	Exec   string         // exec override for image
-	Mounts []schema.Mount // mounts for this app (superceding any mounts in rktApps.mounts of same MountPoint)
+	Mounts []schema.Mount // mounts for this app (superseding any mounts in rktApps.mounts of same MountPoint)
 
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
 	ImageID types.Hash // resolved image identifier
@@ -74,7 +74,7 @@ func (al *Apps) Validate() error {
 		for _, m := range mnts {
 			_, ok := vs[m.Volume]
 			if !ok {
-				return fmt.Errorf("dangling mount point %q: volume %q not found", m.MountPoint, m.Volume)
+				return fmt.Errorf("dangling mount point %q: volume %q not found", m.Path, m.Volume)
 			}
 		}
 		return nil

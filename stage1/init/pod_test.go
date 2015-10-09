@@ -15,8 +15,16 @@
 package main
 
 import (
+	"io/ioutil"
+	"os"
+	"strings"
 	"testing"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
+
+const tstprefix = "pod-test"
 
 func TestQuoteExec(t *testing.T) {
 	tests := []struct {
@@ -99,17 +107,6 @@ func TestAppToNspawnArgsOverridesImageManifestReadOnly(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		imageManifest := &schema.ImageManifest{
-			App: &types.App{
-				MountPoints: []types.MountPoint{
-					{
-						Name:     "foo-mount",
-						Path:     "/app/foo",
-						ReadOnly: tt.imageManifestVolumeReadOnly,
-					},
-				},
-			},
-		}
 		podManifest := &schema.PodManifest{
 			Volumes: []types.Volume{
 				{
@@ -123,14 +120,32 @@ func TestAppToNspawnArgsOverridesImageManifestReadOnly(t *testing.T) {
 		appManifest := &schema.RuntimeApp{
 			Mounts: []schema.Mount{
 				{
-					Volume:     "foo-mount",
-					MountPoint: "foo-mount",
+					Volume: "foo-mount",
+					Path:   "/app/foo",
+				},
+			},
+			App: &types.App{
+				Exec:  []string{"/bin/foo"},
+				User:  "0",
+				Group: "0",
+				MountPoints: []types.MountPoint{
+					{
+						Name:     "foo-mount",
+						Path:     "/app/foo",
+						ReadOnly: tt.imageManifestVolumeReadOnly,
+					},
 				},
 			},
 		}
 
-		p := &Pod{Manifest: podManifest}
-		output, err := p.appToNspawnArgs(appManifest, imageManifest)
+		tmpDir, err := ioutil.TempDir("", tstprefix)
+		if err != nil {
+			t.Errorf("error creating tempdir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		p := &Pod{Manifest: podManifest, Root: tstprefix}
+		output, err := p.appToNspawnArgs(appManifest)
 		if err != nil {
 			t.Errorf("#%d: unexpected error: `%v`", i, err)
 		}

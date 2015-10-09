@@ -66,7 +66,6 @@ func init() {
 	cmdRkt.AddCommand(cmdRun)
 
 	addStage1ImageFlag(cmdRun.Flags())
-	cmdRun.Flags().Var(&flagVolumes, "volume", "volumes to mount into the pod")
 	cmdRun.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires --net)")
 	cmdRun.Flags().Var(&flagNet, "net", "configure the pod's networking and optionally pass a list of user-configured networks to load and arguments to pass to them. syntax: --net[=n[:args], ...]")
 	cmdRun.Flags().Lookup("net").NoOptDefVal = "default"
@@ -81,12 +80,11 @@ func init() {
 	cmdRun.Flags().BoolVar(&flagMDSRegister, "mds-register", true, "register pod with metadata service")
 	cmdRun.Flags().StringVar(&flagUUIDFileSave, "uuid-file-save", "", "write out pod UUID to specified file")
 
-	runFlags.Var((*appsVolume)(&rktApps), "volume", "volumes to make available in the pod")
-	runFlags.Var((*appMount)(&rktApps), "mount", "mount point binding a volume to a path within an app")
-
 	// per-app flags
 	cmdRun.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 	cmdRun.Flags().Var((*appExec)(&rktApps), "exec", "override the exec command for the preceding image")
+	cmdRun.Flags().Var((*appsVolume)(&rktApps), "volume", "volumes to make available in the pod")
+	cmdRun.Flags().Var((*appMount)(&rktApps), "mount", "mount point binding a volume to a path within an app")
 
 	flagPorts = portList{}
 
@@ -122,7 +120,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	if len(flagPodManifest) > 0 && (len(flagVolumes) > 0 || len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagStoreOnly || flagNoStore) {
+	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagStoreOnly || flagNoStore) {
 		stderr("conflicting flags set with --pod-manifest (see --help)")
 		return 1
 	}

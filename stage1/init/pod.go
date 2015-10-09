@@ -474,6 +474,16 @@ func (p *Pod) PodToSystemd(interactive bool, flavor string, privateUsers string)
 	return nil
 }
 
+func isMPReadOnly(mountPoints []types.MountPoint, name types.ACName) bool {
+	for _, mp := range mountPoints {
+		if mp.Name == name {
+			return mp.ReadOnly
+		}
+	}
+
+	return false
+}
+
 // appToNspawnArgs transforms the given app manifest, with the given associated
 // app name, into a subset of applicable systemd-nspawn argument
 func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
@@ -501,34 +511,33 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 		}
 	}
 
-	mnts := make(map[types.ACName]types.ACName)
-	for _, m := range ra.Mounts {
-		mnts[m.MountPoint] = m.Volume
+	if ra.Mounts == nil {
+		for _, mp := range app.MountPoints {
+			vol, ok := vols[mp.Name]
+			if !ok {
+				catCmd := fmt.Sprintf("sudo rkt image cat-manifest --pretty-print %v", id)
+				volumeCmd := ""
+				for _, mp := range app.MountPoints {
+					volumeCmd += fmt.Sprintf("--volume %s,kind=host,source=/some/path ", mp.Name)
+				}
+
+				return nil, fmt.Errorf("no volume for mountpoint %q:%q in app %q.\n"+
+					"You can inspect the volumes with:\n\t%v\n"+
+					"App %q requires the following volumes:\n\t%v",
+					mp.Name, mp.Path, appName, catCmd, appName, volumeCmd)
+			}
+			ra.Mounts = append(ra.Mounts, schema.Mount{Volume: vol.Name, Path: mp.Path})
+		}
 	}
 
-	for _, mp := range app.MountPoints {
-		key, ok := mnts[mp.Name]
-		if !ok {
-			return nil, fmt.Errorf("no mount for mountpoint %q in app %q", mp.Name, name)
-		}
-		vol, ok := vols[key]
-		if !ok {
-			catCmd := fmt.Sprintf("sudo rkt image cat-manifest --pretty-print %v", id)
-			volumeCmd := ""
-			for _, mp := range app.MountPoints {
-				volumeCmd += fmt.Sprintf("--volume %s,kind=host,source=/some/path ", mp.Name)
-			}
+	for _, m := range ra.Mounts {
+		vol := vols[m.Volume]
 
-			return nil, fmt.Errorf("no volume for mountpoint %q:%q in app %q.\n"+
-				"You can inspect the volumes with:\n\t%v\n"+
-				"App %q requires the following volumes:\n\t%v",
-				mp.Name, key, appName, catCmd, appName, volumeCmd)
-		}
 		opt := make([]string, 4)
 
 		// If the readonly flag in the pod manifest is not nil,
 		// then use it to override the readonly flag in the image manifest.
-		readOnly := mp.ReadOnly
+		readOnly := isMPReadOnly(app.MountPoints, vol.Name)
 		if vol.ReadOnly != nil {
 			readOnly = *vol.ReadOnly
 		}
@@ -552,7 +561,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 			return nil, fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty".`, vol.Kind)
 		}
 		opt[2] = ":"
-		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), mp.Path)
+		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), m.Path)
 
 		args = append(args, strings.Join(opt, ""))
 	}

@@ -151,15 +151,18 @@ func (ae *appExec) Set(s string) error {
 		return fmt.Errorf("--exec specified multiple times for the same image")
 	}
 	app.Exec = s
+
+	return nil
 }
 
-// appMount is for --mount flags in the form of: --mount volume=VOLNAME,target=MNTNAME
+// appMount is for --mount flags in the form of: --mount volume=VOLNAME,target=PATH
 type appMount apps.Apps
 
 func (al *appMount) Set(s string) error {
 	mount := schema.Mount{}
 
 	// this is intentionally made similar to types.VolumeFromString()
+	// TODO(iaguis) use MakeQueryString() when appc/spec#520 is merged
 	m, err := url.ParseQuery(strings.Replace(s, ",", "&", -1))
 	if err != nil {
 		return err
@@ -178,11 +181,7 @@ func (al *appMount) Set(s string) error {
 			}
 			mount.Volume = *mv
 		case "target":
-			mp, err := types.NewACName(val[0])
-			if err != nil {
-				return err
-			}
-			mount.MountPoint = *mp
+			mount.Path = val[0]
 		default:
 			return fmt.Errorf("unknown mount parameter %q", key)
 		}
@@ -214,9 +213,13 @@ func (ae *appExec) Type() string {
 func (al *appMount) String() string {
 	var ms []string
 	for _, m := range ((*apps.Apps)(al)).Mounts {
-		ms = append(ms, m.Volume.String(), ":", m.MountPoint.String())
+		ms = append(ms, m.Volume.String(), ":", m.Path)
 	}
 	return strings.Join(ms, " ")
+}
+
+func (al *appMount) Type() string {
+	return "appMount"
 }
 
 // appsVolume is for --volume flags in the form name,kind=host,source=/tmp,readOnly=true (defined by appc)
@@ -230,6 +233,10 @@ func (al *appsVolume) Set(s string) error {
 
 	(*apps.Apps)(al).Volumes = append((*apps.Apps)(al).Volumes, *vol)
 	return nil
+}
+
+func (al *appsVolume) Type() string {
+	return "appsVolume"
 }
 
 func (al *appsVolume) String() string {
