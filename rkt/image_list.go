@@ -133,7 +133,7 @@ func (isf *ImagesSortFields) Type() string {
 type ImagesSortAsc bool
 
 func (isa *ImagesSortAsc) Set(s string) error {
-	switch s {
+	switch strings.ToLower(s) {
 	case "asc":
 		*isa = true
 	case "desc":
