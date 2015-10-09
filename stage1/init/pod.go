@@ -49,7 +49,8 @@ type Pod struct {
 
 const (
 	// Name of the file storing the pod's flavor
-	flavorFile = "flavor"
+	flavorFile    = "flavor"
+	sharedVolPerm = os.FileMode(0755)
 )
 
 var (
@@ -483,10 +484,17 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	// introduce a --mount flag so they can control which mountPoint maps to
 	// which volume.
 
+	sharedVolPath := common.SharedVolumesPath(p.Root)
+	if err := os.MkdirAll(sharedVolPath, sharedVolPerm); err != nil {
+		return nil, fmt.Errorf("could not create shared volumes directory: %v", err)
+	}
+	if err := os.Chmod(sharedVolPath, sharedVolPerm); err != nil {
+		return nil, fmt.Errorf("could not change permissions of %q: %v", sharedVolPath, err)
+	}
 	for _, v := range p.Manifest.Volumes {
 		vols[v.Name] = v
 		if v.Kind == "empty" {
-			if err := os.MkdirAll(filepath.Join(common.SharedVolumesPath(p.Root), v.Name.String()), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Join(sharedVolPath, v.Name.String()), sharedVolPerm); err != nil {
 				return nil, fmt.Errorf("could not create shared volume %q: %v", v.Name, err)
 			}
 		}
