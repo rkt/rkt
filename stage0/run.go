@@ -144,12 +144,25 @@ func imageNameToAppName(name types.ACIdentifier) (*types.ACName, error) {
 	return types.MustACName(sn), nil
 }
 
+// deduplicateMPs removes mounts with duplicated paths. If there's more than
+// one mount with the same path, it keeps the first one encountered.
+func deduplicateMPs(mounts []schema.Mount) []schema.Mount {
+	var res []schema.Mount
+	seen := make(map[string]struct{})
+	for _, m := range mounts {
+		if _, ok := seen[m.Path]; !ok {
+			res = append(res, m)
+			seen[m.Path] = struct{}{}
+		}
+	}
+	return res
+}
+
 // MergeMounts combines the global and per-app mount slices
 func MergeMounts(mounts []schema.Mount, appMounts []schema.Mount) []schema.Mount {
 	ml := mounts
-	ml = append(ml, appMounts...)
-	// TODO(vc): deduplicate mountpoint collisions? (prioritize appMounts?)
-	return ml
+	ml = append(appMounts, ml...)
+	return deduplicateMPs(ml)
 }
 
 // generatePodManifest creates the pod manifest from the command line input.

@@ -493,6 +493,10 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	app := ra.App
 
 	vols := make(map[types.ACName]types.Volume)
+	mounts := make(map[string]schema.Mount)
+	for _, m := range ra.Mounts {
+		mounts[m.Path] = m
+	}
 
 	sharedVolPath := common.SharedVolumesPath(p.Root)
 	if err := os.MkdirAll(sharedVolPath, sharedVolPerm); err != nil {
@@ -511,23 +515,26 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 		}
 	}
 
-	if ra.Mounts == nil {
-		for _, mp := range app.MountPoints {
-			vol, ok := vols[mp.Name]
-			if !ok {
-				catCmd := fmt.Sprintf("sudo rkt image cat-manifest --pretty-print %v", id)
-				volumeCmd := ""
-				for _, mp := range app.MountPoints {
-					volumeCmd += fmt.Sprintf("--volume %s,kind=host,source=/some/path ", mp.Name)
-				}
-
-				return nil, fmt.Errorf("no volume for mountpoint %q:%q in app %q.\n"+
-					"You can inspect the volumes with:\n\t%v\n"+
-					"App %q requires the following volumes:\n\t%v",
-					mp.Name, mp.Path, appName, catCmd, appName, volumeCmd)
-			}
-			ra.Mounts = append(ra.Mounts, schema.Mount{Volume: vol.Name, Path: mp.Path})
+	for _, mp := range app.MountPoints {
+		_, ok := mounts[mp.Path]
+		// there's already an injected mount for this target path, skip
+		if ok {
+			continue
 		}
+		vol, ok := vols[mp.Name]
+		if !ok {
+			catCmd := fmt.Sprintf("sudo rkt image cat-manifest --pretty-print %v", id)
+			volumeCmd := ""
+			for _, mp := range app.MountPoints {
+				volumeCmd += fmt.Sprintf("--volume %s,kind=host,source=/some/path ", mp.Name)
+			}
+
+			return nil, fmt.Errorf("no volume for mountpoint %q:%q in app %q.\n"+
+				"You can inspect the volumes with:\n\t%v\n"+
+				"App %q requires the following volumes:\n\t%v",
+				mp.Name, mp.Path, appName, catCmd, appName, volumeCmd)
+		}
+		ra.Mounts = append(ra.Mounts, schema.Mount{Volume: vol.Name, Path: mp.Path})
 	}
 
 	for _, m := range ra.Mounts {

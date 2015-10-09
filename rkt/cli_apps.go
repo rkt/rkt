@@ -155,6 +155,47 @@ func (ae *appExec) Set(s string) error {
 	return nil
 }
 
+// appInjectVolume is for --inject-volume flags in the form of: --inject-volume source=PATH,target=PATH
+type appInjectVolume apps.Apps
+
+func (aam *appInjectVolume) Set(s string) error {
+	app := (*apps.Apps)(aam).Last()
+	if app == nil {
+		return fmt.Errorf("--inject-volume must follow an image")
+	}
+
+	p := strings.SplitN(s, ":", 2)
+	if len(p) != 2 {
+		return fmt.Errorf("must be SOURCE_PATH:TARGET_PATH")
+	}
+
+	volName, err := types.SanitizeACName(p[1])
+	if err != nil {
+		return fmt.Errorf("empty target in volume")
+	}
+
+	rVol := types.Volume{Name: *types.MustACName(volName), Source: p[0], Kind: "host"}
+	mount := schema.Mount{Volume: rVol.Name, Path: p[1]}
+
+	(*apps.Apps)(aam).Volumes = append((*apps.Apps)(aam).Volumes, rVol)
+	if (*apps.Apps)(aam).Count() == 0 {
+		(*apps.Apps)(aam).Mounts = append((*apps.Apps)(aam).Mounts, mount)
+	} else {
+		app := (*apps.Apps)(aam).Last()
+		app.Mounts = append(app.Mounts, mount)
+	}
+
+	return nil
+}
+
+func (aam *appInjectVolume) Type() string {
+	return "appInjectVolume"
+}
+
+func (aam *appInjectVolume) String() string {
+	return ""
+}
+
 // appMount is for --mount flags in the form of: --mount volume=VOLNAME,target=PATH
 type appMount apps.Apps
 
@@ -173,7 +214,6 @@ func (al *appMount) Set(s string) error {
 			return fmt.Errorf("label %s with multiple values %q", key, val)
 		}
 		switch key {
-		// FIXME(vc): ACName seems a bit restrictive for naming volumes and mountpoints...
 		case "volume":
 			mv, err := types.NewACName(val[0])
 			if err != nil {
@@ -187,10 +227,11 @@ func (al *appMount) Set(s string) error {
 		}
 	}
 
-	if (*apps.Apps)(al).Count() == 0 {
-		(*apps.Apps)(al).Mounts = append((*apps.Apps)(al).Mounts, mount)
+	as := (*apps.Apps)(al)
+	if as.Count() == 0 {
+		as.Mounts = append(as.Mounts, mount)
 	} else {
-		app := (*apps.Apps)(al).Last()
+		app := as.Last()
 		app.Mounts = append(app.Mounts, mount)
 	}
 
