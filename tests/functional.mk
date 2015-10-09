@@ -47,7 +47,7 @@ $(FTST_IMAGE): $(FTST_IMAGE_MANIFEST) $(FTST_ACI_INSPECT) $(FTST_ACI_ECHO_SERVER
 	echo -n dir1 >$(FTST_IMAGE_ROOTFSDIR)/dir1/file
 	echo -n dir2 >$(FTST_IMAGE_ROOTFSDIR)/dir2/file
 	ln -sf /inspect $(FTST_IMAGE_ROOTFSDIR)/inspect-link
-	"$(ACTOOL)" build --overwrite "$(FTST_IMAGE_DIR)" "$@"
+	"$(ACTOOL)" build --overwrite --owner-root "$(FTST_IMAGE_DIR)" "$@"
 
 # variables for makelib/build_go_bin.mk
 BGB_STAMP := $(FTST_FUNCTIONAL_TESTS_STAMP)
