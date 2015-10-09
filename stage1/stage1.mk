@@ -110,6 +110,9 @@ $(_STAGE1_ACI_): $(STAGE1_STAMPS)
 
 else
 
+# input parameters for find-so-deps.mk
+STAGE1_FSD_FLAVOR := $(RKT_STAGE1_USR_FROM)
+
 $(call inc-one,find-so-deps.mk)
 
 $(_STAGE1_ACI_): $(STAGE1_FSD_STAMP)
