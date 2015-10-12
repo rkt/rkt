@@ -19,8 +19,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
 type ImageId struct {
@@ -86,13 +84,7 @@ func TestShortHash(t *testing.T) {
 	for _, imageId := range imageIds {
 		cmd := fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmd(), imageId.path)
 		t.Logf("Fetching %s: %v", imageId.path, cmd)
-		child, err := gexpect.Spawn(cmd)
-		if err != nil {
-			t.Fatalf("Cannot exec: %v", err)
-		}
-		if err := child.Wait(); err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
-		}
+		spawnAndWaitOrFail(t, cmd, true)
 	}
 
 	// Get hash from 'rkt image list'
@@ -100,18 +92,7 @@ func TestShortHash(t *testing.T) {
 	hash1 := fmt.Sprintf("sha512-%s", imageIds[1].hash[:12])
 	for _, hash := range []string{hash0, hash1} {
 		imageListCmd := fmt.Sprintf("%s image list --fields=id --no-legend", ctx.cmd())
-		child, err := gexpect.Spawn(imageListCmd)
-		if err != nil {
-			t.Fatal("Cannot exec rkt image list")
-		}
-
-		if err = expectWithOutput(child, hash); err != nil {
-			t.Fatalf("Couldn't find %s in: %v", hash, err)
-		}
-
-		if err := child.Wait(); err != nil {
-			t.Fatalf("rkt image list didn't terminate correctly: %v", err)
-		}
+		runRktAndCheckOutput(t, imageListCmd, hash, false)
 	}
 
 	tmpDir := createTempDirOrPanic("rkt_image_list_test")
@@ -182,28 +163,7 @@ func TestShortHash(t *testing.T) {
 	// Run tests
 	for i, tt := range tests {
 		runCmd := fmt.Sprintf("%s %s", ctx.cmd(), tt.cmd)
-		t.Logf("executing test #%d: %v", i, runCmd)
-		child, err := gexpect.Spawn(runCmd)
-		if err != nil {
-			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
-		}
-
-		if tt.expect != "" {
-			if err = expectWithOutput(child, tt.expect); err != nil {
-				t.Fatalf("Expected but didn't find %q in %v", tt.expect, err)
-			}
-		}
-
-		err = child.Wait()
-		const exit1 = "exit status 1"
-		switch {
-		case tt.shouldFail && err == nil:
-			t.Fatalf("Expected test #%d to fail but it didn't", i)
-		case !tt.shouldFail && err != nil:
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
-		case err != nil && err.Error() != exit1:
-			t.Fatalf("rkt terminated with unexpected error: %v", err)
-		default:
-		}
+		t.Logf("Running test #%d", i)
+		runRktAndCheckOutput(t, runCmd, tt.expect, tt.shouldFail)
 	}
 }
