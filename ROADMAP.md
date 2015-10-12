@@ -21,6 +21,8 @@ Backwards-compatibility is a priority for the v1.0.0 release.
   - Debian [#1307](https://github.com/coreos/rkt/issues/1307) 
 
 ### rkt 1.0 (November?)
+- stable CLI interface
+- stable read-only API interface
 - fully integrated with `machinectl login` and `systemd-run` [#1463](https://github.com/coreos/rkt/issues/1463)
 - rkt can retrieve images via BitTorrent [#405](https://github.com/coreos/rkt/issues/405)
 - packaged for more distributions
@@ -28,4 +30,3 @@ Backwards-compatibility is a priority for the v1.0.0 release.
   - OpenSUSE [#1304](https://github.com/coreos/rkt/issues/1308) 
 - IPv6 support
 - rkt can run applications as non-root [#820](https://github.com/coreos/rkt/issues/820)
-- stable CLI interface
