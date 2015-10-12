@@ -1,7 +1,5 @@
 # rkt roadmap
 
-**work in progress**
-
 This document defines a high level roadmap for rkt development.
 The dates below should not be considered authoritative, but rather indicative of the projected timeline of the project.
 The [milestones defined in GitHub](https://github.com/coreos/rkt/milestones) represent the most up-to-date state of affairs.
