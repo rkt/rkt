@@ -76,15 +76,6 @@ Finally, let's run the application we just retrieved:
 ./rkt run coreos.com/etcd:v2.0.9
 rkt: searching for app image coreos.com/etcd:v2.0.9
 rkt: found image in local store, skipping fetching from https://github.com/coreos/etcd/releases/download/v2.0.9/etcd-v2.0.9-linux-amd64.aci
-2015/08/03 08:57:23 Preparing stage1
-2015/08/03 08:57:23 Loading image sha512-91e98d7f1679a097c878203c9659f2a26ae394656b3147963324c61fa3832f15
-2015/08/03 08:57:23 Writing pod manifest
-2015/08/03 08:57:23 Setting up stage1
-2015/08/03 08:57:23 Writing image manifest
-2015/08/03 08:57:23 Wrote filesystem to /var/lib/rkt/pods/run/94ea7891-8bea-4e15-8e12-ccf3beb4a459
-2015/08/03 08:57:23 Writing image manifest
-2015/08/03 08:57:23 Pivoting to filesystem /var/lib/rkt/pods/run/94ea7891-8bea-4e15-8e12-ccf3beb4a459
-2015/08/03 08:57:23 Execing /init
 [  489.734930] etcd[4]: 2015/08/03 08:57:23 etcd: no data-dir provided, using default data-dir ./default.etcd
 [  489.739297] etcd[4]: 2015/08/03 08:57:23 etcd: listening for peers on http://localhost:2380
 [  489.740653] etcd[4]: 2015/08/03 08:57:23 etcd: listening for peers on http://localhost:7001

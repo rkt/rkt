@@ -25,10 +25,5 @@ Downloading signature: [=======================================] 819 B/819 B
 Downloading ACI: [=============================================] 3.79 MB/3.79 MB
 rkt: signature verified:
   CoreOS ACI Builder <release@coreos.com>
-2015/10/01 16:40:06 Preparing stage1
-2015/10/01 16:40:08 Writing image manifest
-2015/10/01 16:40:08 Loading image sha512-c03b055d02e51e36f44a2be436eb77d5b0fbbbe37c00851188d8798912e8508a
-2015/10/01 16:40:08 Writing image manifest
-2015/10/01 16:40:08 Writing pod manifest
 c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 ```
