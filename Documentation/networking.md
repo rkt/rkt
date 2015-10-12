@@ -19,7 +19,7 @@ The network setup for the pod's network namespace depends on the available CNI c
 ### Network selection
 Every network must have a unique name and can only be joined once by every pod.
 Passing a list of comma separated network as in `--net=net1,net2,net3,...` tells rkt which networks should be joined.
-This is useful for grouping certain pods networks together while separating others.
+This is useful for grouping certain pod networks together while separating others.
 There is also the possibility to load all configured networks by using  `--net=all`.
 
 ### Builtin networks
@@ -215,7 +215,7 @@ $ sudo ./dhcp daemon
 
 It is now possible to use the DHCP type by specifying it in the ipam section of the network configuration file:
 
-```
+```json
 {
 	"name": "lan",
 	"type": "macvlan",
@@ -250,7 +250,7 @@ Doing so allows services inside the pods to be reachable through the host's IP a
 
 The example below demonstrates an image manifest snippet declaring a single port:
 
-```
+```json
 "ports": [
 	{
 		"name": "http",
