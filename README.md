@@ -22,7 +22,7 @@ rkt's native image format ([ACI](Documentation/app-container.md#ACI)) and runtim
 
 ## Project status
 
-rkt is at an early stage and under active development. We do not recommend its use in production, but we encourage you to try out rkt and provide feedback via issues and pull requests.
+rkt is maturing rapidly while under active development, and its interfaces are not yet considered stable. We do not recommend its use in production, but we encourage you to try out rkt and provide feedback via issues and pull requests.
 
 Check out the [roadmap](ROADMAP.md) for more details on the future of rkt.
 
