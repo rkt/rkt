@@ -145,6 +145,9 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		Apps:        apps,
 		RktGid:      rktgid,
 	}
+	if globalFlags.Debug {
+		stage0.InitDebug()
+	}
 	stage0.Run(rcfg, p.path(), globalFlags.Dir) // execs, never returns
 	return 1
 }

@@ -181,6 +181,10 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		pcfg.Apps = &rktApps
 	}
 
+	if globalFlags.Debug {
+		stage0.InitDebug()
+	}
+
 	keyLock, err := lock.SharedKeyLock(lockDir(), common.PrepareLock)
 	if err != nil {
 		stderr("rkt: cannot get shared prepare lock: %v", err)

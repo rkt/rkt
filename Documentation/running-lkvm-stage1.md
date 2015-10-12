@@ -35,15 +35,6 @@ Downloading signature: [=======================================] 819 B/819 B
 Downloading ACI: [=============================================] 3.79 MB/3.79 MB
 rkt: signature verified:
   CoreOS ACI Builder <release@coreos.com>
-2015/08/18 16:10:03 Preparing stage1
-2015/08/18 16:10:07 Loading image sha512-91e98d7f1679a097c878203c9659f2a26ae394656b3147963324c61fa3832f15
-2015/08/18 16:10:08 Writing pod manifest
-2015/08/18 16:10:08 Setting up stage1
-2015/08/18 16:10:08 Writing image manifest
-2015/08/18 16:10:08 Wrote filesystem to /var/lib/rkt/pods/run/6b85a91a-73b9-4f1b-96c2-009ae9dc45e1
-2015/08/18 16:10:08 Writing image manifest
-2015/08/18 16:10:08 Pivoting to filesystem /var/lib/rkt/pods/run/6b85a91a-73b9-4f1b-96c2-009ae9dc45e1
-2015/08/18 16:10:08 Execing /init
 [188748.162493] etcd[4]: 2015/08/18 14:10:08 etcd: no data-dir provided, using default data-dir ./default.etcd
 [188748.163213] etcd[4]: 2015/08/18 14:10:08 etcd: listening for peers on http://localhost:2380
 [188748.163674] etcd[4]: 2015/08/18 14:10:08 etcd: listening for peers on http://localhost:7001

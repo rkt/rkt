@@ -148,7 +148,7 @@ func TestShortHash(t *testing.T) {
 		},
 		// Test that 12-char hash works with prepare
 		{
-			fmt.Sprintf("prepare %s", hash0),
+			fmt.Sprintf("prepare --debug %s", hash0),
 			false,
 			"Writing pod manifest",
 		},
