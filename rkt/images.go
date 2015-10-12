@@ -267,7 +267,7 @@ func (f *fetcher) fetchImageByName(img string, ascFile *os.File) (string, error)
 			return "", fmt.Errorf("invalid image name for discovery: %s", img)
 		}
 		stderr("rkt: searching for app image %s", img)
-		ep, err := discoverApp(app, true)
+		ep, err := discoverApp(app, f.headers, true)
 		if err != nil {
 			return "", fmt.Errorf("discovery failed for %q: %v", img, err)
 		}
@@ -455,6 +455,7 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 	// attempt to automatically fetch the public key in case it is available on a TLS connection.
 	if globalFlags.TrustKeysFromHttps && !globalFlags.InsecureSkipVerify && appName != "" && f.ks != nil {
 		m := &pubkey.Manager{
+			AuthPerHost:        f.headers,
 			InsecureAllowHttp:  false,
 			TrustKeysFromHttps: true,
 			Ks:                 f.ks,
@@ -831,9 +832,8 @@ func newDiscoveryApp(img string) *discovery.App {
 	return app
 }
 
-func discoverApp(app *discovery.App, insecure bool) (*discovery.Endpoints, error) {
-	// FIXME: https://github.com/coreos/rkt/issues/1516
-	hostHeaders := make(map[string]http.Header)
+func discoverApp(app *discovery.App, headers map[string]config.Headerer, insecure bool) (*discovery.Endpoints, error) {
+	hostHeaders := config.ResolveAuthPerHost(headers)
 	ep, attempts, err := discovery.DiscoverEndpoints(*app, hostHeaders, insecure)
 	if globalFlags.Debug {
 		for _, a := range attempts {

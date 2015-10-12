@@ -25,12 +25,14 @@ import (
 	"strings"
 
 	"github.com/coreos/rkt/pkg/keystore"
+	"github.com/coreos/rkt/rkt/config"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
 
 type Manager struct {
+	AuthPerHost        map[string]config.Headerer
 	InsecureAllowHttp  bool
 	TrustKeysFromHttps bool
 	Ks                 *keystore.Keystore
@@ -143,10 +145,7 @@ func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 		return nil, err
 	}
 
-	// TODO(krnowak): we should probably apply credential headers
-	// from config here
-	// FIXME: https://github.com/coreos/rkt/issues/1516
-	hostHeaders := make(map[string]http.Header)
+	hostHeaders := config.ResolveAuthPerHost(m.AuthPerHost)
 	ep, attempts, err := discovery.DiscoverPublicKeys(*app, hostHeaders, m.InsecureAllowHttp)
 	if err != nil {
 		return nil, err
