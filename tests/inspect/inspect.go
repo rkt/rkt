@@ -49,6 +49,7 @@ var (
 		ExitCode          int
 		ReadFile          bool
 		WriteFile         bool
+		StatFile          bool
 		Sleep             int
 		PreSleep          int
 		PrintMemoryLimit  bool
@@ -82,6 +83,7 @@ func init() {
 	globalFlagset.IntVar(&globalFlags.ExitCode, "exit-code", 0, "Return this exit code")
 	globalFlagset.BoolVar(&globalFlags.ReadFile, "read-file", false, "Print the content of the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
+	globalFlagset.BoolVar(&globalFlags.StatFile, "stat-file", false, "Print the ownership and mode of the file $FILE")
 	globalFlagset.IntVar(&globalFlags.Sleep, "sleep", -1, "Sleep before exiting (in seconds)")
 	globalFlagset.IntVar(&globalFlags.PreSleep, "pre-sleep", -1, "Sleep before executing (in seconds)")
 	globalFlagset.BoolVar(&globalFlags.PrintMemoryLimit, "print-memorylimit", false, "Print cgroup memory limit")
@@ -243,6 +245,22 @@ func main() {
 		fmt.Print("<<<")
 		fmt.Print(string(dat))
 		fmt.Print(">>>\n")
+	}
+
+	if globalFlags.StatFile {
+		fileName := os.Getenv("FILE")
+		if globalFlags.FileName != "" {
+			fileName = globalFlags.FileName
+		}
+
+		fi, err := os.Stat(fileName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot stat file %q: %v\n", fileName, err)
+			os.Exit(1)
+		}
+		fmt.Printf("%s: mode: %s\n", fileName, fi.Mode().String())
+		fmt.Printf("%s: user: %v\n", fileName, fi.Sys().(*syscall.Stat_t).Uid)
+		fmt.Printf("%s: group: %v\n", fileName, fi.Sys().(*syscall.Stat_t).Gid)
 	}
 
 	if globalFlags.CheckCwd != "" {
