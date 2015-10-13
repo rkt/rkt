@@ -187,7 +187,7 @@ AS_VAR_IF([RKT_STAGE1_IMAGE],[auto],
                            [RKT_STAGE1_IMAGE=""
                             AC_MSG_WARN([* It will be necessary to pass --stage1-image flag to run rkt])],
                    dnl other flavors
-                   [RKT_STAGE1_IMAGE="directory/with/rkt/binary/stage1-${RKT_STAGE1_USR_FROM}.aci"])])
+                   [RKT_STAGE1_IMAGE="path/stage1-${RKT_STAGE1_USR_FROM}.aci"])])
 
 RKT_STAGE1_IMAGE_LDFLAGS=`RKT_XF main.defaultStage1Image "${RKT_STAGE1_IMAGE}"`
 
