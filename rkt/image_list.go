@@ -177,7 +177,7 @@ func init() {
 	cmdImageList.Flags().Var(&flagImagesSortFields, "sort", `sort the output according to the provided comma separated list of fields. Accepted values: "name", "importtime"`)
 	cmdImageList.Flags().Var(&flagImagesSortAsc, "order", `choose the sorting order if at least one sort field is provided (--sort). Accepted values: "asc", "desc"`)
 	cmdImageList.Flags().BoolVar(&flagNoLegend, "no-legend", false, "suppress a legend with the list")
-	cmdImageList.Flags().BoolVar(&flagFullOutput, "full", false, "Use long output format")
+	cmdImageList.Flags().BoolVar(&flagFullOutput, "full", false, "use long output format")
 }
 
 func runImages(cmd *cobra.Command, args []string) int {
