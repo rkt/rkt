@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// To compile, run 'protoc -I api/v1_alpha api/v1_alpha/api.proto --go_out=plugins=grpc:api/v1_alpha' in rkt root directory.
+// To compile, run 'protoc -I api/v1alpha api/v1alpha/api.proto --go_out=plugins=grpc:api/v1alpha' in rkt root directory.
 // The protoc version must be 3.0.0.
 
 // *************************************************** //
@@ -32,7 +32,7 @@
 
 syntax = "proto3";
 
-package v1_alpha;
+package v1alpha;
 
 // ImageType defines the supported image type.
 enum ImageType {
