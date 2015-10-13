@@ -216,11 +216,11 @@ type Image struct {
 	// ACI.
 	BaseFormat *ImageFormat `protobuf:"bytes,1,opt,name=base_format" json:"base_format,omitempty"`
 	// ID of the image, a string that can be used to uniquely identify the image,
-	// e.g. sha512 hash of the ACIs.
+	// e.g. sha512 hash of the ACIs, required.
 	Id string `protobuf:"bytes,2,opt,name=id" json:"id,omitempty"`
 	// Name of the image in the image manifest, e.g. 'coreos.com/etcd', optional.
 	Name string `protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
-	// Version of the image, e.g. 'latest', '2.0.10'. optional.
+	// Version of the image, e.g. 'latest', '2.0.10', optional.
 	Version string `protobuf:"bytes,4,opt,name=version" json:"version,omitempty"`
 	// Timestamp of when the image is imported, it is the seconds since epoch, optional.
 	ImportTimestamp int64 `protobuf:"varint,5,opt,name=import_timestamp" json:"import_timestamp,omitempty"`
@@ -327,16 +327,18 @@ func (*KeyValue) ProtoMessage()    {}
 // PodFilter defines the condition that the returned pods need to satisfy in ListPods().
 // The conditions are combined by 'AND'.
 type PodFilter struct {
-	// If not empty, then the returned pods must be in one of these states.
-	States []PodState `protobuf:"varint,1,rep,name=states,enum=v1alpha.PodState" json:"states,omitempty"`
-	// If not empty, then the returned pods must have one of these names in the apps.
-	AppNames []string `protobuf:"bytes,2,rep,name=app_names" json:"app_names,omitempty"`
-	// If not empty, then the returned pods must contain at least one of these image names in the apps.
-	ImageNames []string `protobuf:"bytes,3,rep,name=image_names" json:"image_names,omitempty"`
-	// If not empty, then the returned pods must be in at least one of these networks.
-	NetworkNames []string `protobuf:"bytes,4,rep,name=network_names" json:"network_names,omitempty"`
-	// If not empty, then the returned pods must contain all the listed annotations.
-	Annotations []*KeyValue `protobuf:"bytes,5,rep,name=annotations" json:"annotations,omitempty"`
+	// If not empty, the pods that have any of the ids will be returned.
+	Ids []string `protobuf:"bytes,1,rep,name=ids" json:"ids,omitempty"`
+	// If not empty, the pods that have any of the states will be returned.
+	States []PodState `protobuf:"varint,2,rep,name=states,enum=v1alpha.PodState" json:"states,omitempty"`
+	// If not empty, the pods that have any of the apps will be returned.
+	AppNames []string `protobuf:"bytes,3,rep,name=app_names" json:"app_names,omitempty"`
+	// If not empty, the pods that have any of the images(in the apps) will be returned
+	ImageIds []string `protobuf:"bytes,4,rep,name=image_ids" json:"image_ids,omitempty"`
+	// If not empty, the pods that are in any of the networks will be returned.
+	NetworkNames []string `protobuf:"bytes,5,rep,name=network_names" json:"network_names,omitempty"`
+	// If not empty, the pods that have any of the annotations will be returned.
+	Annotations []*KeyValue `protobuf:"bytes,6,rep,name=annotations" json:"annotations,omitempty"`
 }
 
 func (m *PodFilter) Reset()         { *m = PodFilter{} }
@@ -353,24 +355,24 @@ func (m *PodFilter) GetAnnotations() []*KeyValue {
 // ImageFilter defines the condition that the returned images need to satisfy in ListImages().
 // The conditions are combined by 'AND'.
 type ImageFilter struct {
-	// If not empty, then the returned images must have the listed ids.
+	// If not empty, the images that have any of the ids will be returned.
 	Ids []string `protobuf:"bytes,1,rep,name=ids" json:"ids,omitempty"`
-	// if not empty, then the returned images must have one of the listed prefixes.
+	// if not empty, the images that have any of the prefixes in the name will be returned.
 	Prefixes []string `protobuf:"bytes,2,rep,name=prefixes" json:"prefixes,omitempty"`
-	// If not empty, then the returned images must contain one of the listed names as the base name.
+	// If not empty, the images that have any of the base names will be returned.
 	// For example, both 'coreos.com/etcd' and 'k8s.io/etcd' will be returned if 'etcd' is included,
-	// however 'etcd-backup' will not be returned.
+	// however 'k8s.io/etcd-backup' will not be returned.
 	BaseNames []string `protobuf:"bytes,3,rep,name=base_names" json:"base_names,omitempty"`
-	// If not empty, then the returned images' names must contain one of the listed keywords.
+	// If not empty, the images that have any of the keywords in the name will be returned.
 	// For example, both 'kubernetes-etcd', 'etcd:latest' will be returned if 'etcd' is included,
 	Keywords []string `protobuf:"bytes,4,rep,name=keywords" json:"keywords,omitempty"`
-	// If not empty, then the returned images must have one of the listed labels.
+	// If not empty, the images that have any of the labels will be returned.
 	Labels []*KeyValue `protobuf:"bytes,5,rep,name=labels" json:"labels,omitempty"`
-	// If set, then the returned images must be imported after this timestamp.
+	// If set, the images that are imported after this timestamp will be returned.
 	ImportedAfter int64 `protobuf:"varint,6,opt,name=imported_after" json:"imported_after,omitempty"`
-	// If set, then the returned images must be imported before this timestamp.
+	// If set, the images that are imported before this timestamp will be returned.
 	ImportedBefore int64 `protobuf:"varint,7,opt,name=imported_before" json:"imported_before,omitempty"`
-	// If not empty, then the returned images must contain all the listed annotations.
+	// If not empty, the images that have any of the annotations will be returned.
 	Annotations []*KeyValue `protobuf:"bytes,8,rep,name=annotations" json:"annotations,omitempty"`
 }
 
@@ -394,12 +396,12 @@ func (m *ImageFilter) GetAnnotations() []*KeyValue {
 
 // Info describes the information of rkt on the machine.
 type Info struct {
-	// Version of rkt, required, in the form of Semantic Versioning (http://semver.org/).
+	// Version of rkt, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
 	RktVersion string `protobuf:"bytes,1,opt,name=rkt_version" json:"rkt_version,omitempty"`
-	// Version of appc, required, in the form of Semantic Versioning (http://semver.org/).
+	// Version of appc, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
 	AppcVersion string `protobuf:"bytes,2,opt,name=appc_version" json:"appc_version,omitempty"`
-	// Latest version of the api that's supported by the service, required, integer.
-	ApiVersion int32 `protobuf:"varint,3,opt,name=api_version" json:"api_version,omitempty"`
+	// Latest version of the api that's supported by the service, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
+	ApiVersion string `protobuf:"bytes,3,opt,name=api_version" json:"api_version,omitempty"`
 }
 
 func (m *Info) Reset()         { *m = Info{} }
