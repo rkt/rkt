@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
 
 type GoroutineAssistant struct {
@@ -54,4 +56,20 @@ func (a *GoroutineAssistant) Wait() {
 	if err != nil {
 		a.t.Fatal(err)
 	}
+}
+
+func (a *GoroutineAssistant) WaitOrFail(child *gexpect.ExpectSubprocess) {
+	err := child.Wait()
+	if err != nil {
+		a.Fatalf("rkt didn't terminate correctly: %v", err)
+	}
+}
+
+func (a *GoroutineAssistant) SpawnOrFail(cmd string) *gexpect.ExpectSubprocess {
+	a.t.Logf("Command: %v", cmd)
+	child, err := gexpect.Spawn(cmd)
+	if err != nil {
+		a.Fatalf("Cannot exec rkt: %v", err)
+	}
+	return child
 }
