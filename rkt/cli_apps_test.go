@@ -138,3 +138,55 @@ func TestParsePortFlag(t *testing.T) {
 		}
 	}
 }
+
+var options = []string{"zero", "one", "two"}
+
+func TestOptionList(t *testing.T) {
+	tests := []struct {
+		opts string
+		ex   string
+		err  bool
+	}{
+		{
+			opts: "zero,two",
+			ex:   "zero,two",
+			err:  false,
+		},
+		{ // Duplicate test
+			opts: "one,two,two",
+			ex:   "",
+			err:  true,
+		},
+		{ // Not permissible test
+			opts: "one,two,three",
+			ex:   "",
+			err:  true,
+		},
+		{ // Empty string
+			opts: "",
+			ex:   "",
+			err:  false,
+		},
+	}
+
+	for i, tt := range tests {
+		// test newOptionsList
+		if _, err := newOptionList(options, tt.opts); (err != nil) != tt.err {
+			t.Errorf("test %d: unexpected error in newOptionList: %v", i, err)
+		}
+
+		// test optionList.Set()
+		ol, err := newOptionList(options, strings.Join(options, ","))
+		if err != nil {
+			t.Errorf("test %d: unexpected error preparing test: %v", i, err)
+		}
+
+		if err := ol.Set(tt.opts); (err != nil) != tt.err {
+			t.Errorf("test %d: could not parse options as expected: %v", i, err)
+		}
+		if tt.ex != "" && tt.ex != ol.String() {
+			t.Errorf("test %d: resulting options not as expected: %s != %s",
+				i, tt.ex, ol.String())
+		}
+	}
+}

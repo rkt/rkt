@@ -246,3 +246,65 @@ func (al *appsVolume) String() string {
 	}
 	return strings.Join(vs, " ")
 }
+
+// optionList is a flag value type supporting a csv list of options
+type optionList struct {
+	options     []string
+	allOptions  []string
+	permissible map[string]struct{}
+	typeName    string
+}
+
+var _ pflag.Value = (*optionList)(nil)
+
+func newOptionList(permissibleOptions []string, defaultOptions string) (*optionList, error) {
+	permissible := make(map[string]struct{})
+	ol := &optionList{
+		allOptions:  permissibleOptions,
+		permissible: permissible,
+		typeName:    "optionList",
+	}
+
+	for _, o := range permissibleOptions {
+		ol.permissible[o] = struct{}{}
+	}
+
+	if err := ol.Set(defaultOptions); err != nil {
+		return nil, fmt.Errorf("problem setting defaults: %v", err)
+	}
+
+	return ol, nil
+}
+
+func (ol *optionList) Set(s string) error {
+	ol.options = nil
+	if s == "" {
+		return nil
+	}
+	options := strings.Split(strings.ToLower(s), ",")
+	seen := map[string]struct{}{}
+	for _, o := range options {
+		if _, ok := ol.permissible[o]; !ok {
+			return fmt.Errorf("unknown option %q", o)
+		}
+		if _, ok := seen[o]; ok {
+			return fmt.Errorf("duplicated option %q", o)
+		}
+		ol.options = append(ol.options, o)
+		seen[o] = struct{}{}
+	}
+
+	return nil
+}
+
+func (ol *optionList) String() string {
+	return strings.Join(ol.options, ",")
+}
+
+func (ol *optionList) Type() string {
+	return ol.typeName
+}
+
+func (ol *optionList) PermissibleString() string {
+	return fmt.Sprintf(`"%s"`, strings.Join(ol.allOptions, `", "`))
+}
