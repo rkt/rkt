@@ -83,7 +83,7 @@ Examples
 
 ### Stage1 ACI manifest
 
-```
+```json
 {
     "acKind": "ImageManifest",
     "acVersion": "0.7.0",
