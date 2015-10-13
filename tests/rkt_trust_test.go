@@ -60,7 +60,7 @@ func runRktTrust(t *testing.T, ctx *rktRunCtx, prefix string) {
 func runSignImage(t *testing.T, ctx *rktRunCtx, imageFile string) {
 	dir, err := os.Getwd()
 	if err != nil {
-		t.Fatalf("Cannot get current working directory")
+		t.Fatalf("Cannot get current working directory: %v", err)
 	}
 
 	cmd := fmt.Sprintf("gpg --no-default-keyring --secret-keyring %s/secring.gpg --keyring %s/pubring.gpg --default-key D9DCEF41 --output %s.asc --detach-sig %s",

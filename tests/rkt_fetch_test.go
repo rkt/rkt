@@ -60,7 +60,7 @@ func testFetchFromFile(t *testing.T, arg string, image string) {
 	// 1. Run cmd, should get $fetchFromFileMsg.
 	child := spawnOrFail(t, cmd)
 	if err := expectWithOutput(child, fetchFromFileMsg); err != nil {
-		t.Fatalf("%q should be found", fetchFromFileMsg)
+		t.Fatalf("%q should be found: %v", fetchFromFileMsg, err)
 	}
 	child.Wait()
 
@@ -120,7 +120,7 @@ func testFetchDefault(t *testing.T, arg string, image string, finalURL string) {
 	// 1. Run cmd with the image not available in the store, should get $remoteFetchMsg.
 	child := spawnOrFail(t, cmd)
 	if err := expectWithOutput(child, remoteFetchMsg); err != nil {
-		t.Fatalf("%q should be found", remoteFetchMsg)
+		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}
 	child.Wait()
 
@@ -162,7 +162,7 @@ func testFetchNoStore(t *testing.T, args string, image string, finalURL string) 
 	// 1. Run cmd with the image available in the store, should get $remoteFetchMsg.
 	child := spawnOrFail(t, cmd)
 	if err := expectWithOutput(child, remoteFetchMsg); err != nil {
-		t.Fatalf("%q should be found", remoteFetchMsg)
+		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}
 	child.Wait()
 }
