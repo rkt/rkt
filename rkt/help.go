@@ -139,17 +139,13 @@ func usageFunc(cmd *cobra.Command) error {
 	subCommands := getSubCommands(cmd)
 	tabOut := getTabOutWithWriter(os.Stdout)
 	commandUsageTemplate.Execute(tabOut, struct {
-		Executable  string
 		Cmd         *cobra.Command
-		CmdFlags    *pflag.FlagSet
 		LocalFlags  string
 		GlobalFlags string
 		SubCommands []*cobra.Command
 		Version     string
 	}{
-		cliName,
 		cmd,
-		cmd.Flags(),
 		rktFlagUsages(cmd.LocalFlags()),
 		rktFlagUsages(cmd.InheritedFlags()),
 		subCommands,
