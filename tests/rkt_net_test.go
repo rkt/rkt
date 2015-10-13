@@ -86,15 +86,15 @@ func TestNetHostConnectivity(t *testing.T) {
 	child := spawnOrFail(t, cmd)
 
 	ga := testutils.NewGoroutineAssistant(t)
+	ga.Add(2)
+
 	// Child opens the server
-	ga.Add(1)
 	go func() {
 		defer ga.Done()
 		waitOrFail(t, child, true)
 	}()
 
 	// Host connects to the child
-	ga.Add(1)
 	go func() {
 		defer ga.Done()
 		expectedRegex := `serving on`
@@ -187,9 +187,9 @@ func TestNetDefaultConnectivity(t *testing.T) {
 		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 		defer os.Remove(testImage)
 		ga := testutils.NewGoroutineAssistant(t)
+		ga.Add(2)
 
 		// Host opens the server
-		ga.Add(1)
 		go func() {
 			defer ga.Done()
 			err := testutils.HttpServe(httpServeAddr, httpServeTimeout)
@@ -199,7 +199,6 @@ func TestNetDefaultConnectivity(t *testing.T) {
 		}()
 
 		// Child connects to host
-		ga.Add(1)
 		hostname, err := os.Hostname()
 		if err != nil {
 			ga.Fatalf("Error getting hostname: %v", err)
@@ -263,15 +262,15 @@ func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 		httpGetAddr := fmt.Sprintf("http://%v:%v", result[1], httpPort)
 
 		ga := testutils.NewGoroutineAssistant(t)
+		ga.Add(2)
+
 		// Child opens the server
-		ga.Add(1)
 		go func() {
 			defer ga.Done()
 			waitOrFail(t, child, true)
 		}()
 
 		// Host connects to the child
-		ga.Add(1)
 		go func() {
 			defer ga.Done()
 			expectedRegex := `serving on`
@@ -390,8 +389,8 @@ func testNetCustomDual(t *testing.T, nt networkTemplateT) {
 
 	container1IPv4, container1Hostname := make(chan string), make(chan string)
 	ga := testutils.NewGoroutineAssistant(t)
+	ga.Add(2)
 
-	ga.Add(1)
 	go func() {
 		defer ga.Done()
 		httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
@@ -419,7 +418,6 @@ func testNetCustomDual(t *testing.T, nt networkTemplateT) {
 		container1Hostname <- result[1]
 	}()
 
-	ga.Add(1)
 	go func() {
 		defer ga.Done()
 
@@ -485,9 +483,9 @@ func testNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 	t.Log("Telling the child to connect via", httpGetAddr)
 
 	ga := testutils.NewGoroutineAssistant(t)
+	ga.Add(2)
 
 	// Host opens the server
-	ga.Add(1)
 	go func() {
 		defer ga.Done()
 		err := testutils.HttpServe(httpServeAddr, httpServeTimeout)
@@ -497,7 +495,6 @@ func testNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 	}()
 
 	// Child connects to host
-	ga.Add(1)
 	hostname, err := os.Hostname()
 	go func() {
 		defer ga.Done()
