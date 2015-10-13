@@ -2,6 +2,16 @@
 
 # Helper script for Continuous Integration Services
 
+# Check if the last commit message requests the CI to skip the build.
+git log HEAD~..HEAD > last-commit
+if grep -qE '[ci skip]|[skip ci]' last-commit ; then
+    cat last-commit
+    echo
+    echo "Build skipped as requested in the last commit."
+    touch ci-skip
+    exit 0
+fi
+
 if [ "${CI-}" == true ] ; then
 	# https://semaphoreci.com/
 	if [ "${SEMAPHORE-}" == true ] ; then
