@@ -440,7 +440,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 // corresponds to the given app name.
 // When useOverlay is false, it attempts to render and expand the app image
 func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cdir string, useOverlay bool) error {
-	debug("Loading image", img.String())
+	debug("Loading image %s", img.String())
 
 	am, err := cfg.Store.GetImageManifest(img.String())
 	if err != nil {
