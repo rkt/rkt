@@ -121,7 +121,7 @@ Note that your application needs to be able to accept sockets from systemd's nat
 
 To make socket activation work, you need to add to your application manifest a [socket-activated port](https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema):
 
-```
+```json
 ...
 {
 ...

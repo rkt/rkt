@@ -99,7 +99,7 @@ We also want this data to be available to a backup application that runs alongsi
 
 Below we show the abbreviated manifests for the respective applications (recall that the manifest is bundled into the application's ACI):
 
-```
+```json
 {
     "acKind": "ImageManifest",
     "name": "example.com/reduce-worker",
@@ -117,7 +117,7 @@ Below we show the abbreviated manifests for the respective applications (recall 
 }
 ```
 
-```
+```json
 {
     "acKind": "ImageManifest",
     "name": "example.com/worker-backup",
