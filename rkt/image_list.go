@@ -31,37 +31,45 @@ import (
 const (
 	defaultTimeLayout = "2006-01-02 15:04:05.999 -0700 MST"
 
-	idField           = "id"
-	nameField         = "name"
-	importTimeField   = "importtime"
-	lastUsedTimeField = "lastusedtime"
-	latestField       = "latest"
+	id         = "id"
+	name       = "name"
+	importTime = "import time"
+	lastUsed   = "last used"
+	latest     = "latest"
 )
+
+// Convenience methods for formatting fields
+func l(s string) string {
+	return strings.ToLower(strings.Replace(s, " ", "", -1))
+}
+func u(s string) string {
+	return strings.ToUpper(s)
+}
 
 var (
 	// map of valid fields and related header name
 	ImagesFieldHeaderMap = map[string]string{
-		idField:           "ID",
-		nameField:         "NAME",
-		importTimeField:   "IMPORT TIME",
-		lastUsedTimeField: "LAST USED",
-		latestField:       "LATEST",
+		l(id):         u(id),
+		l(name):       u(name),
+		l(importTime): u(importTime),
+		l(lastUsed):   u(lastUsed),
+		l(latest):     u(latest),
 	}
 
 	// map of valid sort fields containing the mapping between the provided field name
 	// and the related aciinfo's field name.
 	ImagesFieldAciInfoMap = map[string]string{
-		idField:           "blobkey",
-		nameField:         "name",
-		importTimeField:   "importtime",
-		lastUsedTimeField: "lastusedtime",
-		latestField:       "latest",
+		l(id):         "blobkey",
+		l(name):       l(name),
+		l(importTime): l(importTime),
+		l(lastUsed):   l(lastUsed),
+		l(latest):     l(latest),
 	}
 
 	ImagesSortableFields = map[string]struct{}{
-		nameField:         struct{}{},
-		importTimeField:   struct{}{},
-		lastUsedTimeField: struct{}{},
+		l(name):       struct{}{},
+		l(importTime): struct{}{},
+		l(lastUsed):   struct{}{},
 	}
 )
 
@@ -102,7 +110,8 @@ var (
 )
 
 func init() {
-	validFields := []string{idField, nameField, importTimeField, lastUsedTimeField, latestField}
+	sortFields := []string{l(name), l(importTime), l(lastUsed)}
+	fields := append([]string{l(id)}, append(sortFields, l(latest))...)
 
 	// Set defaults
 	var err error
@@ -173,7 +182,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 		for _, f := range flagImagesFields.options {
 			fieldValue := ""
 			switch f {
-			case idField:
+			case l(id):
 				hashKey := aciInfo.BlobKey
 				if !flagFullOutput {
 					// The short hash form is [HASH_ALGO]-[FIRST 12 CHAR]
@@ -185,25 +194,24 @@ func runImages(cmd *cobra.Command, args []string) int {
 					}
 				}
 				fieldValue = hashKey
-			case nameField:
+			case l(name):
 				fieldValue = aciInfo.Name
 				if ok {
 					fieldValue = fmt.Sprintf("%s:%s", fieldValue, version)
 				}
-			case importTimeField:
+			case l(importTime):
 				if flagFullOutput {
 					fieldValue = aciInfo.ImportTime.Format(defaultTimeLayout)
 				} else {
 					fieldValue = humanize.Time(aciInfo.ImportTime)
 				}
-			case lastUsedTimeField:
+			case l(lastUsed):
 				if flagFullOutput {
-					fieldValue = aciInfo.LastUsedTime.Format(defaultTimeLayout)
+					fieldValue = aciInfo.LastUsed.Format(defaultTimeLayout)
 				} else {
-					fieldValue = humanize.Time(aciInfo.LastUsedTime)
+					fieldValue = humanize.Time(aciInfo.LastUsed)
 				}
-
-			case latestField:
+			case l(latest):
 				fieldValue = fmt.Sprintf("%t", aciInfo.Latest)
 			}
 			fieldValues = append(fieldValues, fieldValue)

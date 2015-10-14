@@ -322,7 +322,7 @@ func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 			return fmt.Errorf("cannot find image with key: %s", key)
 		}
 
-		aciinfo.LastUsedTime = time.Now()
+		aciinfo.LastUsed = time.Now()
 
 		return WriteACIInfo(tx, aciinfo)
 	})
@@ -393,11 +393,11 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 	// Save aciinfo
 	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo := &ACIInfo{
-			BlobKey:      key,
-			Name:         im.Name.String(),
-			ImportTime:   time.Now(),
-			LastUsedTime: time.Now(),
-			Latest:       latest,
+			BlobKey:    key,
+			Name:       im.Name.String(),
+			ImportTime: time.Now(),
+			LastUsed:   time.Now(),
+			Latest:     latest,
 		}
 		return WriteACIInfo(tx, aciinfo)
 	}); err != nil {
