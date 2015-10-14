@@ -105,8 +105,9 @@ func TestNetHostConnectivity(t *testing.T) {
 		body, err := testutils.HttpGet(httpGetAddr)
 		if err != nil {
 			ga.Fatalf("%v\n", err)
+		} else {
+			log.Printf("HTTP-Get received: %s", body)
 		}
-		log.Printf("HTTP-Get received: %s", body)
 	}()
 
 	ga.Wait()
