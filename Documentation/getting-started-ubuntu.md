@@ -1,6 +1,6 @@
 # Getting Started with rkt on Ubuntu Vivid
 
-The following guide will show you how to build and run the sample [etcd ACI](https://github.com/coreos/etcd/releases/download/v2.0.9/etcd-v2.0.9-linux-amd64.aci) on the standard vagrantcloud.com [box for Ubuntu Vidid](https://vagrantcloud.com/ubuntu/boxes/vivid64).
+The following guide will show you how to build and run the sample [etcd ACI](https://github.com/coreos/etcd/releases/download/v2.0.9/etcd-v2.0.9-linux-amd64.aci) on the standard vagrantcloud.com [box for Ubuntu Vivid](https://vagrantcloud.com/ubuntu/boxes/vivid64).
 
 
 ## Download and start an Ubuntu Vivid box
