@@ -31,9 +31,7 @@ STAGE1_FSD_ACIROOTFSDIR := $(STAGE1_ACIROOTFSDIR_$(STAGE1_FSD_FLAVOR))
 # this is to get all stamps to make sure that the copying is done
 # after everything was put into the ACI rootfs and just before running
 # actool to create the ACI image
-STAGE1_FSD_ALL_STAMPS := \
-	$(STAGE1_USR_STAMPS_$(STAGE1_FSD_FLAVOR)) \
-	$(STAGE1_SECONDARY_STAMPS_$(STAGE1_FSD_FLAVOR))
+STAGE1_FSD_ALL_STAMPS := $(STAGE1_ALL_STAMPS_$(STAGE1_FSD_FLAVOR))
 
 # additions to LD_LIBRARY_PATH environment variable
 # TODO: we should somehow query the ACI image which libdirs it uses -
