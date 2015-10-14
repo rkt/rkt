@@ -281,9 +281,6 @@ func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 				ga.Fatalf("%v\n", err)
 			}
 			log.Printf("HTTP-Get received: %s", body)
-			if err != nil {
-				ga.Fatalf("%v\n", err)
-			}
 		}()
 
 		ga.Wait()

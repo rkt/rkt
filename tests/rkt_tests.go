@@ -263,7 +263,7 @@ func patchTestACI(newFileName string, args ...string) string {
 }
 
 func spawnOrFail(t *testing.T, cmd string) *gexpect.ExpectSubprocess {
-	t.Logf("Command: %v", cmd)
+	t.Logf("Running command: %v", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Cannot exec rkt: %v", err)

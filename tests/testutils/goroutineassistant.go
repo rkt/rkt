@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
 )
@@ -36,6 +37,7 @@ func NewGoroutineAssistant(t *testing.T) *GoroutineAssistant {
 }
 
 func (a *GoroutineAssistant) Fatalf(s string, args ...interface{}) {
+	a.wg.Done()
 	a.s <- fmt.Errorf(s, args...)
 }
 
@@ -53,8 +55,29 @@ func (a *GoroutineAssistant) Wait() {
 		a.s <- nil
 	}()
 	err := <-a.s
-	if err != nil {
-		a.t.Fatal(err)
+	if err == nil {
+		// success
+		return
+	}
+	// If we received an error, let's fatal with that one. But for clean
+	// test teardown, we need to allow the other goroutines to shut down.
+	// We log any other errors we encounter in the meantime.
+	a.t.Logf("Error encountered - shutting down")
+	defer a.t.Fatal(err)
+	teardown := time.After(5 * time.Minute)
+	for {
+		select {
+		case <-teardown:
+			a.t.Error("  timed out waiting for other goroutines to shut down!")
+			return
+		case err1 := <-a.s:
+			if err1 == nil {
+				// Clean shutdown!
+				return
+			}
+			// Otherwise, log the other error
+			a.t.Errorf("  additional error received while waiting for shutdown: %v", err1)
+		}
 	}
 }
 
