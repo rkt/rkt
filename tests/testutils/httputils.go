@@ -31,7 +31,6 @@ func HttpServe(addr string, timeout int) error {
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("%v: serving on %v\n", hostname, addr)
 
 	originalListener, err := net.Listen("tcp4", addr)
 	if err != nil {
@@ -44,6 +43,8 @@ func HttpServe(addr string, timeout int) error {
 
 	c := make(chan string)
 	go func() {
+		log.Printf("%v: serving on %v\n", hostname, addr)
+
 		// Wait for either timeout or connect from client
 		select {
 		case <-time.After(time.Duration(timeout) * time.Second):
