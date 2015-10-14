@@ -658,12 +658,17 @@ func copyAppManifest(cdir string, appName types.ACName, dest string) error {
 // overlay filesystem.
 // It mounts an overlay filesystem from the cached tree of the image as rootfs.
 func overlayRender(cfg RunConfig, treeStoreID string, cdir string, dest string, appName string) error {
-	destRootfs := path.Join(dest, "rootfs")
-	if err := os.MkdirAll(destRootfs, defaultRegularDirPerm); err != nil {
+	cachedTreePath := cfg.Store.GetTreeStoreRootFS(treeStoreID)
+	fi, err := os.Stat(cachedTreePath)
+	if err != nil {
 		return err
 	}
+	imgMode := fi.Mode()
 
-	cachedTreePath := cfg.Store.GetTreeStoreRootFS(treeStoreID)
+	destRootfs := path.Join(dest, "rootfs")
+	if err := os.MkdirAll(destRootfs, imgMode); err != nil {
+		return err
+	}
 
 	overlayDir := path.Join(cdir, "overlay")
 	if err := os.MkdirAll(overlayDir, defaultRegularDirPerm); err != nil {
@@ -692,7 +697,7 @@ func overlayRender(cfg RunConfig, treeStoreID string, cdir string, dest string, 
 	}
 
 	upperDir := path.Join(imgDir, "upper", appName)
-	if err := os.MkdirAll(upperDir, defaultRegularDirPerm); err != nil {
+	if err := os.MkdirAll(upperDir, imgMode); err != nil {
 		return err
 	}
 	if err := label.SetFileLabel(upperDir, cfg.MountLabel); err != nil {
