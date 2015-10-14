@@ -73,7 +73,7 @@ func (d *dirDesc) cleanup() {
 	if d.dir == "" {
 		return
 	}
-	if err := os.RemoveAll(d.dir); err != nil {
+	if err := os.RemoveAll(d.dir); err != nil && !os.IsNotExist(err) {
 		panic(fmt.Sprintf("Failed to remove temporary %s directory %q: %s", d.desc, d.dir, err))
 	}
 	d.dir = ""
