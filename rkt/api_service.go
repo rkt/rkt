@@ -574,6 +574,10 @@ func (s *v1AlphaAPIServer) ListenEvents(request *v1alpha.ListenEventsRequest, se
 }
 
 func runAPIService(cmd *cobra.Command, args []string) (exit int) {
+	// Set up the signal handler here so we can make sure the
+	// signals are caught after print the starting message.
+	signal.Notify(exitCh, syscall.SIGINT, syscall.SIGTERM)
+
 	log.Print("API service starting...")
 
 	tcpl, err := net.Listen("tcp", flagAPIServiceListenClientURL)
@@ -597,7 +601,6 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 
 	log.Printf("API service running on %v...", flagAPIServiceListenClientURL)
 
-	signal.Notify(exitCh, syscall.SIGINT, syscall.SIGTERM)
 	<-exitCh
 
 	log.Print("API service exiting...")
