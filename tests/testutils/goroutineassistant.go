@@ -16,6 +16,7 @@ package testutils
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"testing"
 
@@ -37,6 +38,7 @@ func NewGoroutineAssistant(t *testing.T) *GoroutineAssistant {
 
 func (a *GoroutineAssistant) Fatalf(s string, args ...interface{}) {
 	a.s <- fmt.Errorf(s, args...)
+	runtime.Goexit()
 }
 
 func (a *GoroutineAssistant) Add(n int) {
