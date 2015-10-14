@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package v1_alpha is a generated protocol buffer package.
+Package v1alpha is a generated protocol buffer package.
 
 It is generated from these files:
 	api.proto
@@ -35,7 +35,7 @@ It has these top-level messages:
 	GetLogsRequest
 	GetLogsResponse
 */
-package v1_alpha
+package v1alpha
 
 import proto "github.com/coreos/rkt/Godeps/_workspace/src/github.com/golang/protobuf/proto"
 import fmt "fmt"
@@ -200,7 +200,7 @@ func (x EventType) String() string {
 // ImageFormat defines the format of the image.
 type ImageFormat struct {
 	// Type of the image, required.
-	Type ImageType `protobuf:"varint,1,opt,name=type,enum=v1_alpha.ImageType" json:"type,omitempty"`
+	Type ImageType `protobuf:"varint,1,opt,name=type,enum=v1alpha.ImageType" json:"type,omitempty"`
 	// Version of the image format, required.
 	Version string `protobuf:"bytes,2,opt,name=version" json:"version,omitempty"`
 }
@@ -216,11 +216,11 @@ type Image struct {
 	// ACI.
 	BaseFormat *ImageFormat `protobuf:"bytes,1,opt,name=base_format" json:"base_format,omitempty"`
 	// ID of the image, a string that can be used to uniquely identify the image,
-	// e.g. sha512 hash of the ACIs.
+	// e.g. sha512 hash of the ACIs, required.
 	Id string `protobuf:"bytes,2,opt,name=id" json:"id,omitempty"`
 	// Name of the image in the image manifest, e.g. 'coreos.com/etcd', optional.
 	Name string `protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
-	// Version of the image, e.g. 'latest', '2.0.10'. optional.
+	// Version of the image, e.g. 'latest', '2.0.10', optional.
 	Version string `protobuf:"bytes,4,opt,name=version" json:"version,omitempty"`
 	// Timestamp of when the image is imported, it is the seconds since epoch, optional.
 	ImportTimestamp int64 `protobuf:"varint,5,opt,name=import_timestamp" json:"import_timestamp,omitempty"`
@@ -261,7 +261,7 @@ type App struct {
 	// if it is returned by ListPods().
 	Image *Image `protobuf:"bytes,2,opt,name=image" json:"image,omitempty"`
 	// State of the app. optional, non-empty only if it's returned by InspectPod().
-	State AppState `protobuf:"varint,3,opt,name=state,enum=v1_alpha.AppState" json:"state,omitempty"`
+	State AppState `protobuf:"varint,3,opt,name=state,enum=v1alpha.AppState" json:"state,omitempty"`
 	// Exit code of the app. optional, only valid if it's returned by InspectPod() and
 	// the app has already exited.
 	ExitCode int32 `protobuf:"zigzag32,4,opt,name=exit_code" json:"exit_code,omitempty"`
@@ -285,7 +285,7 @@ type Pod struct {
 	// PID of the pod, optional, only valid if it's returned by InspectPod(). A negative value means the pod has exited.
 	Pid int32 `protobuf:"zigzag32,2,opt,name=pid" json:"pid,omitempty"`
 	// State of the pod, required.
-	State PodState `protobuf:"varint,3,opt,name=state,enum=v1_alpha.PodState" json:"state,omitempty"`
+	State PodState `protobuf:"varint,3,opt,name=state,enum=v1alpha.PodState" json:"state,omitempty"`
 	// List of apps in the pod, required.
 	Apps []*App `protobuf:"bytes,4,rep,name=apps" json:"apps,omitempty"`
 	// Network information of the pod, optional, non-empty if the pod is running in private net.
@@ -315,7 +315,7 @@ func (m *Pod) GetNetworks() []*Network {
 
 type KeyValue struct {
 	// Key part of the key-value pair.
-	Key string `protobuf:"bytes,1,opt,name=Key" json:"Key,omitempty"`
+	Key string `protobuf:"bytes,1,opt" json:"Key,omitempty"`
 	// Value part of the key-value pair.
 	Value string `protobuf:"bytes,2,opt,name=value" json:"value,omitempty"`
 }
@@ -327,16 +327,18 @@ func (*KeyValue) ProtoMessage()    {}
 // PodFilter defines the condition that the returned pods need to satisfy in ListPods().
 // The conditions are combined by 'AND'.
 type PodFilter struct {
-	// If not empty, then the returned pods must be in one of these states.
-	States []PodState `protobuf:"varint,1,rep,name=states,enum=v1_alpha.PodState" json:"states,omitempty"`
-	// If not empty, then the returned pods must have one of these names in the apps.
-	AppNames []string `protobuf:"bytes,2,rep,name=app_names" json:"app_names,omitempty"`
-	// If not empty, then the returned pods must contain at least one of these image names in the apps.
-	ImageNames []string `protobuf:"bytes,3,rep,name=image_names" json:"image_names,omitempty"`
-	// If not empty, then the returned pods must be in at least one of these networks.
-	NetworkNames []string `protobuf:"bytes,4,rep,name=network_names" json:"network_names,omitempty"`
-	// If not empty, then the returned pods must contain all the listed annotations.
-	Annotations []*KeyValue `protobuf:"bytes,5,rep,name=annotations" json:"annotations,omitempty"`
+	// If not empty, the pods that have any of the ids will be returned.
+	Ids []string `protobuf:"bytes,1,rep,name=ids" json:"ids,omitempty"`
+	// If not empty, the pods that have any of the states will be returned.
+	States []PodState `protobuf:"varint,2,rep,name=states,enum=v1alpha.PodState" json:"states,omitempty"`
+	// If not empty, the pods that have any of the apps will be returned.
+	AppNames []string `protobuf:"bytes,3,rep,name=app_names" json:"app_names,omitempty"`
+	// If not empty, the pods that have any of the images(in the apps) will be returned
+	ImageIds []string `protobuf:"bytes,4,rep,name=image_ids" json:"image_ids,omitempty"`
+	// If not empty, the pods that are in any of the networks will be returned.
+	NetworkNames []string `protobuf:"bytes,5,rep,name=network_names" json:"network_names,omitempty"`
+	// If not empty, the pods that have any of the annotations will be returned.
+	Annotations []*KeyValue `protobuf:"bytes,6,rep,name=annotations" json:"annotations,omitempty"`
 }
 
 func (m *PodFilter) Reset()         { *m = PodFilter{} }
@@ -353,24 +355,24 @@ func (m *PodFilter) GetAnnotations() []*KeyValue {
 // ImageFilter defines the condition that the returned images need to satisfy in ListImages().
 // The conditions are combined by 'AND'.
 type ImageFilter struct {
-	// If not empty, then the returned images must have the listed ids.
+	// If not empty, the images that have any of the ids will be returned.
 	Ids []string `protobuf:"bytes,1,rep,name=ids" json:"ids,omitempty"`
-	// if not empty, then the returned images must have one of the listed prefixes.
+	// if not empty, the images that have any of the prefixes in the name will be returned.
 	Prefixes []string `protobuf:"bytes,2,rep,name=prefixes" json:"prefixes,omitempty"`
-	// If not empty, then the returned images must contain one of the listed names as the base name.
+	// If not empty, the images that have any of the base names will be returned.
 	// For example, both 'coreos.com/etcd' and 'k8s.io/etcd' will be returned if 'etcd' is included,
-	// however 'etcd-backup' will not be returned.
+	// however 'k8s.io/etcd-backup' will not be returned.
 	BaseNames []string `protobuf:"bytes,3,rep,name=base_names" json:"base_names,omitempty"`
-	// If not empty, then the returned images' names must contain one of the listed keywords.
+	// If not empty, the images that have any of the keywords in the name will be returned.
 	// For example, both 'kubernetes-etcd', 'etcd:latest' will be returned if 'etcd' is included,
 	Keywords []string `protobuf:"bytes,4,rep,name=keywords" json:"keywords,omitempty"`
-	// If not empty, then the returned images must have one of the listed labels.
+	// If not empty, the images that have any of the labels will be returned.
 	Labels []*KeyValue `protobuf:"bytes,5,rep,name=labels" json:"labels,omitempty"`
-	// If set, then the returned images must be imported after this timestamp.
+	// If set, the images that are imported after this timestamp will be returned.
 	ImportedAfter int64 `protobuf:"varint,6,opt,name=imported_after" json:"imported_after,omitempty"`
-	// If set, then the returned images must be imported before this timestamp.
+	// If set, the images that are imported before this timestamp will be returned.
 	ImportedBefore int64 `protobuf:"varint,7,opt,name=imported_before" json:"imported_before,omitempty"`
-	// If not empty, then the returned images must contain all the listed annotations.
+	// If not empty, the images that have any of the annotations will be returned.
 	Annotations []*KeyValue `protobuf:"bytes,8,rep,name=annotations" json:"annotations,omitempty"`
 }
 
@@ -394,12 +396,12 @@ func (m *ImageFilter) GetAnnotations() []*KeyValue {
 
 // Info describes the information of rkt on the machine.
 type Info struct {
-	// Version of rkt, required, in the form of Semantic Versioning (http://semver.org/).
+	// Version of rkt, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
 	RktVersion string `protobuf:"bytes,1,opt,name=rkt_version" json:"rkt_version,omitempty"`
-	// Version of appc, required, in the form of Semantic Versioning (http://semver.org/).
+	// Version of appc, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
 	AppcVersion string `protobuf:"bytes,2,opt,name=appc_version" json:"appc_version,omitempty"`
-	// Latest version of the api that's supported by the service, required, integer.
-	ApiVersion int32 `protobuf:"varint,3,opt,name=api_version" json:"api_version,omitempty"`
+	// Latest version of the api that's supported by the service, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
+	ApiVersion string `protobuf:"bytes,3,opt,name=api_version" json:"api_version,omitempty"`
 }
 
 func (m *Info) Reset()         { *m = Info{} }
@@ -409,7 +411,7 @@ func (*Info) ProtoMessage()    {}
 // Event describes the events that will be received via ListenEvents().
 type Event struct {
 	// Type of the event, required.
-	Type EventType `protobuf:"varint,1,opt,name=type,enum=v1_alpha.EventType" json:"type,omitempty"`
+	Type EventType `protobuf:"varint,1,opt,name=type,enum=v1alpha.EventType" json:"type,omitempty"`
 	// ID of the subject that causes the event, required.
 	// If the event is a pod or app event, the id is the pod's uuid.
 	// If the event is an image event, the id is the image's id.
@@ -440,7 +442,7 @@ func (m *Event) GetData() []*KeyValue {
 // The condition are combined by 'AND'.
 type EventFilter struct {
 	// If not empty, then only returns the events that have the listed types.
-	Types []EventType `protobuf:"varint,1,rep,name=types,enum=v1_alpha.EventType" json:"types,omitempty"`
+	Types []EventType `protobuf:"varint,1,rep,name=types,enum=v1alpha.EventType" json:"types,omitempty"`
 	// If not empty, then only returns the events whose 'id' is included in the listed ids.
 	Ids []string `protobuf:"bytes,2,rep,name=ids" json:"ids,omitempty"`
 	// If not empty, then only returns the events whose 'from' is included in the listed names.
@@ -666,10 +668,10 @@ func (m *GetLogsResponse) String() string { return proto.CompactTextString(m) }
 func (*GetLogsResponse) ProtoMessage()    {}
 
 func init() {
-	proto.RegisterEnum("v1_alpha.ImageType", ImageType_name, ImageType_value)
-	proto.RegisterEnum("v1_alpha.AppState", AppState_name, AppState_value)
-	proto.RegisterEnum("v1_alpha.PodState", PodState_name, PodState_value)
-	proto.RegisterEnum("v1_alpha.EventType", EventType_name, EventType_value)
+	proto.RegisterEnum("v1alpha.ImageType", ImageType_name, ImageType_value)
+	proto.RegisterEnum("v1alpha.AppState", AppState_name, AppState_value)
+	proto.RegisterEnum("v1alpha.PodState", PodState_name, PodState_value)
+	proto.RegisterEnum("v1alpha.EventType", EventType_name, EventType_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -711,7 +713,7 @@ func NewPublicAPIClient(cc *grpc.ClientConn) PublicAPIClient {
 
 func (c *publicAPIClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error) {
 	out := new(GetInfoResponse)
-	err := grpc.Invoke(ctx, "/v1_alpha.PublicAPI/GetInfo", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/v1alpha.PublicAPI/GetInfo", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -720,7 +722,7 @@ func (c *publicAPIClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts 
 
 func (c *publicAPIClient) ListPods(ctx context.Context, in *ListPodsRequest, opts ...grpc.CallOption) (*ListPodsResponse, error) {
 	out := new(ListPodsResponse)
-	err := grpc.Invoke(ctx, "/v1_alpha.PublicAPI/ListPods", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/v1alpha.PublicAPI/ListPods", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -729,7 +731,7 @@ func (c *publicAPIClient) ListPods(ctx context.Context, in *ListPodsRequest, opt
 
 func (c *publicAPIClient) InspectPod(ctx context.Context, in *InspectPodRequest, opts ...grpc.CallOption) (*InspectPodResponse, error) {
 	out := new(InspectPodResponse)
-	err := grpc.Invoke(ctx, "/v1_alpha.PublicAPI/InspectPod", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/v1alpha.PublicAPI/InspectPod", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -738,7 +740,7 @@ func (c *publicAPIClient) InspectPod(ctx context.Context, in *InspectPodRequest,
 
 func (c *publicAPIClient) ListImages(ctx context.Context, in *ListImagesRequest, opts ...grpc.CallOption) (*ListImagesResponse, error) {
 	out := new(ListImagesResponse)
-	err := grpc.Invoke(ctx, "/v1_alpha.PublicAPI/ListImages", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/v1alpha.PublicAPI/ListImages", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -747,7 +749,7 @@ func (c *publicAPIClient) ListImages(ctx context.Context, in *ListImagesRequest,
 
 func (c *publicAPIClient) InspectImage(ctx context.Context, in *InspectImageRequest, opts ...grpc.CallOption) (*InspectImageResponse, error) {
 	out := new(InspectImageResponse)
-	err := grpc.Invoke(ctx, "/v1_alpha.PublicAPI/InspectImage", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/v1alpha.PublicAPI/InspectImage", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -755,7 +757,7 @@ func (c *publicAPIClient) InspectImage(ctx context.Context, in *InspectImageRequ
 }
 
 func (c *publicAPIClient) ListenEvents(ctx context.Context, in *ListenEventsRequest, opts ...grpc.CallOption) (PublicAPI_ListenEventsClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_PublicAPI_serviceDesc.Streams[0], c.cc, "/v1_alpha.PublicAPI/ListenEvents", opts...)
+	stream, err := grpc.NewClientStream(ctx, &_PublicAPI_serviceDesc.Streams[0], c.cc, "/v1alpha.PublicAPI/ListenEvents", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -787,7 +789,7 @@ func (x *publicAPIListenEventsClient) Recv() (*ListenEventsResponse, error) {
 }
 
 func (c *publicAPIClient) GetLogs(ctx context.Context, in *GetLogsRequest, opts ...grpc.CallOption) (PublicAPI_GetLogsClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_PublicAPI_serviceDesc.Streams[1], c.cc, "/v1_alpha.PublicAPI/GetLogs", opts...)
+	stream, err := grpc.NewClientStream(ctx, &_PublicAPI_serviceDesc.Streams[1], c.cc, "/v1alpha.PublicAPI/GetLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -950,7 +952,7 @@ func (x *publicAPIGetLogsServer) Send(m *GetLogsResponse) error {
 }
 
 var _PublicAPI_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "v1_alpha.PublicAPI",
+	ServiceName: "v1alpha.PublicAPI",
 	HandlerType: (*PublicAPIServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

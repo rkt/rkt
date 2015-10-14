@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// To compile, run 'protoc -I api/v1_alpha api/v1_alpha/api.proto --go_out=plugins=grpc:api/v1_alpha' in rkt root directory.
+// To compile, run 'protoc -I api/v1alpha api/v1alpha/api.proto --go_out=plugins=grpc:api/v1alpha' in rkt root directory.
 // The protoc version must be 3.0.0.
 
 // *************************************************** //
@@ -32,7 +32,7 @@
 
 syntax = "proto3";
 
-package v1_alpha;
+package v1alpha;
 
 // ImageType defines the supported image type.
 enum ImageType {
@@ -59,13 +59,13 @@ message Image {
         ImageFormat base_format = 1;
 
         // ID of the image, a string that can be used to uniquely identify the image,
-        // e.g. sha512 hash of the ACIs.
+        // e.g. sha512 hash of the ACIs, required.
         string id = 2;
 
         // Name of the image in the image manifest, e.g. 'coreos.com/etcd', optional.
         string name = 3;
 
-        // Version of the image, e.g. 'latest', '2.0.10'. optional.
+        // Version of the image, e.g. 'latest', '2.0.10', optional.
         string version = 4;
 
         // Timestamp of when the image is imported, it is the seconds since epoch, optional.
@@ -164,63 +164,66 @@ message KeyValue {
 // PodFilter defines the condition that the returned pods need to satisfy in ListPods().
 // The conditions are combined by 'AND'.
 message PodFilter {
-        // If not empty, then the returned pods must be in one of these states.
-        repeated PodState states = 1;
+        // If not empty, the pods that have any of the ids will be returned.
+        repeated string ids = 1;
 
-        // If not empty, then the returned pods must have one of these names in the apps.
-        repeated string app_names = 2;
+        // If not empty, the pods that have any of the states will be returned.
+        repeated PodState states = 2;
 
-        // If not empty, then the returned pods must contain at least one of these image names in the apps.
-        repeated string image_names = 3;
+        // If not empty, the pods that have any of the apps will be returned.
+        repeated string app_names = 3;
 
-        // If not empty, then the returned pods must be in at least one of these networks.
-        repeated string network_names = 4;
+        // If not empty, the pods that have any of the images(in the apps) will be returned
+        repeated string image_ids = 4;
 
-        // If not empty, then the returned pods must contain all the listed annotations.
-        repeated KeyValue annotations = 5;
+        // If not empty, the pods that are in any of the networks will be returned.
+        repeated string network_names = 5;
+
+        // If not empty, the pods that have any of the annotations will be returned.
+        repeated KeyValue annotations = 6;
 }
 
 // ImageFilter defines the condition that the returned images need to satisfy in ListImages().
 // The conditions are combined by 'AND'.
 message ImageFilter {
-        // If not empty, then the returned images must have the listed ids.
+        // If not empty, the images that have any of the ids will be returned.
         repeated string ids = 1;
 
-        // if not empty, then the returned images must have one of the listed prefixes.
+        // if not empty, the images that have any of the prefixes in the name will be returned.
         repeated string prefixes = 2;
 
-        // If not empty, then the returned images must contain one of the listed names as the base name.
+        // If not empty, the images that have any of the base names will be returned.
         // For example, both 'coreos.com/etcd' and 'k8s.io/etcd' will be returned if 'etcd' is included,
-        // however 'etcd-backup' will not be returned.
+        // however 'k8s.io/etcd-backup' will not be returned.
         repeated string base_names = 3;
 
-        // If not empty, then the returned images' names must contain one of the listed keywords.
+        // If not empty, the images that have any of the keywords in the name will be returned.
         // For example, both 'kubernetes-etcd', 'etcd:latest' will be returned if 'etcd' is included,
         repeated string keywords = 4;
 
-        // If not empty, then the returned images must have one of the listed labels.
+        // If not empty, the images that have any of the labels will be returned.
         repeated KeyValue labels = 5;
 
-        // If set, then the returned images must be imported after this timestamp.
+        // If set, the images that are imported after this timestamp will be returned.
         int64 imported_after = 6;
 
-        // If set, then the returned images must be imported before this timestamp.
+        // If set, the images that are imported before this timestamp will be returned.
         int64 imported_before = 7;
 
-        // If not empty, then the returned images must contain all the listed annotations.
+        // If not empty, the images that have any of the annotations will be returned.
         repeated KeyValue annotations = 8;
 }
 
 // Info describes the information of rkt on the machine.
 message Info {
-        // Version of rkt, required, in the form of Semantic Versioning (http://semver.org/).
+        // Version of rkt, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
         string rkt_version = 1;
 
-        // Version of appc, required, in the form of Semantic Versioning (http://semver.org/).
+        // Version of appc, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
         string appc_version = 2;
 
-        // Latest version of the api that's supported by the service, required, integer.
-        int32 api_version = 3;
+        // Latest version of the api that's supported by the service, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
+        string api_version = 3;
 }
 
 // EventType defines the type of the events that will be received via ListenEvents().
