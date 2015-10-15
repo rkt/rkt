@@ -17,8 +17,6 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -104,15 +102,6 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	if rktApps.Count() < 1 && len(flagPodManifest) == 0 {
 		stderr("prepare: must provide at least one image or specify the pod manifest")
 		return 1
-	}
-
-	if globalFlags.Dir == "" {
-		log.Printf("dir unset - using temporary directory")
-		globalFlags.Dir, err = ioutil.TempDir("", "rkt")
-		if err != nil {
-			stderr("prepare: error creating temporary directory: %v", err)
-			return 1
-		}
 	}
 
 	s, err := store.NewStore(globalFlags.Dir)
