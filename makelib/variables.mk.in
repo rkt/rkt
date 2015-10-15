@@ -89,6 +89,9 @@ GO_TEST_FUNC_ARGS ?=
 
 GO_ENV := $(strip GOPATH="$(GOPATH)" $(if $(strip $(GOROOT)),GOROOT=$(strip $(GOROOT))))
 
+INSTALL_DIRS += \
+	$(ACIROOTFSDIR):0750
+
 CREATE_DIRS += \
 	$(BUILDDIR) \
 	$(STAMPSDIR) \
@@ -98,7 +101,6 @@ CREATE_DIRS += \
 	$(DEPSDIR) \
 	$(REVSDIR) \
 	$(ACIDIR) \
-	$(ACIROOTFSDIR) \
 	$(FILELISTDIR) \
 	$(MAINTEMPDIR) \
 	$(CLEANDIR)

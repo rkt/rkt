@@ -90,7 +90,7 @@ $(call forward-vars,$(UFC_MKBASE_STAMP), \
 $(UFC_MKBASE_STAMP): $(UFC_SQUASHFS) $(UFC_FILELIST)
 	set -e; \
 	rm -rf "$(UFC_ROOTFS)"; \
-	mkdir -p "$(UFC_ROOTFS)"; \
+	install -m 0750 -d "$(UFC_ROOTFS)"; \
 	unsquashfs -d "$(UFC_ROOTFS)/usr" -ef "$(UFC_FILELIST)" "$(UFC_SQUASHFS)"; \
 	touch "$@"
 
