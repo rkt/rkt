@@ -36,6 +36,29 @@ const (
 	defaultDataDir = "/var/lib/rkt"
 )
 
+type absDir string
+
+func (d *absDir) String() string {
+	return (string)(*d)
+}
+
+func (d *absDir) Set(str string) error {
+	if str == "" {
+		return fmt.Errorf(`"" is not a valid directory`)
+	}
+
+	dir, err := filepath.Abs(str)
+	if err != nil {
+		return err
+	}
+	*d = (absDir)(dir)
+	return nil
+}
+
+func (d *absDir) Type() string {
+	return "absolute-directory"
+}
+
 var (
 	tabOut      *tabwriter.Writer
 	globalFlags = struct {
@@ -46,7 +69,11 @@ var (
 		Help               bool
 		InsecureSkipVerify bool
 		TrustKeysFromHttps bool
-	}{}
+	}{
+		Dir:             defaultDataDir,
+		SystemConfigDir: common.DefaultSystemConfigDir,
+		LocalConfigDir:  common.DefaultLocalConfigDir,
+	}
 
 	cmdExitCode int
 )
@@ -58,9 +85,9 @@ var cmdRkt = &cobra.Command{
 
 func init() {
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.Debug, "debug", false, "print out more debug information to stderr")
-	cmdRkt.PersistentFlags().StringVar(&globalFlags.Dir, "dir", defaultDataDir, "rkt data directory")
-	cmdRkt.PersistentFlags().StringVar(&globalFlags.SystemConfigDir, "system-config", common.DefaultSystemConfigDir, "system configuration directory")
-	cmdRkt.PersistentFlags().StringVar(&globalFlags.LocalConfigDir, "local-config", common.DefaultLocalConfigDir, "local configuration directory")
+	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.Dir), "dir", "rkt data directory")
+	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.SystemConfigDir), "system-config", "system configuration directory")
+	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.LocalConfigDir), "local-config", "local configuration directory")
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip all TLS, image or fingerprint verification")
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.TrustKeysFromHttps, "trust-keys-from-https", true, "automatically trust gpg keys fetched from https")
 }

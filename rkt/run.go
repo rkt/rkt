@@ -18,8 +18,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
 	"strconv"
 	"strings"
 
@@ -121,16 +119,6 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	if len(flagPodManifest) > 0 && (len(flagVolumes) > 0 || len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagStoreOnly || flagNoStore) {
 		stderr("conflicting flags set with --pod-manifest (see --help)")
 		return 1
-	}
-
-	if globalFlags.Dir == "" {
-		log.Printf("dir unset - using temporary directory")
-		var err error
-		globalFlags.Dir, err = ioutil.TempDir("", "rkt")
-		if err != nil {
-			stderr("error creating temporary directory: %v", err)
-			return 1
-		}
 	}
 
 	if flagInteractive && rktApps.Count() > 1 {

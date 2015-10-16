@@ -17,9 +17,6 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
-
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
@@ -58,16 +55,6 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 	if err != nil {
 		stderr("Unable to resolve UUID: %v", err)
 		return 1
-	}
-
-	if globalFlags.Dir == "" {
-		log.Printf("dir unset - using temporary directory")
-		var err error
-		globalFlags.Dir, err = ioutil.TempDir("", "rkt")
-		if err != nil {
-			stderr("error creating temporary directory: %v", err)
-			return 1
-		}
 	}
 
 	s, err := store.NewStore(globalFlags.Dir)
