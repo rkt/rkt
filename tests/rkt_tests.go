@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -95,6 +96,7 @@ type rktRunCtx struct {
 	directories []*dirDesc
 	useDefaults bool
 	mds         *exec.Cmd
+	children    []*gexpect.ExpectSubprocess
 }
 
 func newRktRunCtx() *rktRunCtx {
@@ -133,9 +135,18 @@ func (ctx *rktRunCtx) dir(idx int) string {
 }
 
 func (ctx *rktRunCtx) reset() {
+	ctx.cleanupChildren()
 	ctx.runGC()
 	for _, d := range ctx.directories {
 		d.reset()
+	}
+}
+
+func (ctx *rktRunCtx) cleanupChildren() {
+	for _, child := range ctx.children {
+		log.Printf("Shutting down %q", child.Cmd.Path)
+		child.Cmd.Process.Kill()
+		child.Cmd.Process.Wait()
 	}
 }
 
@@ -145,7 +156,7 @@ func (ctx *rktRunCtx) cleanup() {
 		ctx.mds.Wait()
 		os.Remove("/run/rkt/metadata-svc.sock")
 	}
-
+	ctx.cleanupChildren()
 	ctx.runGC()
 	for _, d := range ctx.directories {
 		d.cleanup()
@@ -199,6 +210,10 @@ func (ctx *rktRunCtx) ensureValid() {
 	for _, d := range ctx.directories {
 		d.ensureValid()
 	}
+}
+
+func (ctx *rktRunCtx) RegisterChild(child *gexpect.ExpectSubprocess) {
+	ctx.children = append(ctx.children, child)
 }
 
 func expectCommon(p *gexpect.ExpectSubprocess, searchString string, timeout time.Duration) error {
