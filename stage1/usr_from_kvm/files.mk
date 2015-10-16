@@ -21,7 +21,6 @@ S1_RF_INSTALL_FILES += $(call install-file-triplets,$(UFKF_SRC_FILES),$(UFKF_ACI
 S1_RF_INSTALL_DIRS += \
 	$(addsuffix :0755,$(UFKF_DIR_CHAIN) $(sort $(call to-dir,$(UFKF_ACI_FILES))))
 
-$(UFKF_STAMP): $(UFKF_ACI_FILES) | $(UFKF_VAR_RUN)
-	touch "$@"
+$(call generate-stamp-rule,$(UFKF_STAMP),$(UFKF_ACI_FILES),$(UFKF_VAR_RUN))
 
 $(call undefine-namespaces,UFKF)

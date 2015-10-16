@@ -25,17 +25,12 @@ S1_RF_INSTALL_FILES += $(LKVM_BINARY):$(LKVM_ACI_BINARY):-
 CREATE_DIRS += $(LKVM_TMPDIR)
 CLEAN_DIRS += $(LKVM_SRCDIR)
 
-$(LKVM_STAMP): $(LKVM_ACI_BINARY) $(LKVM_DEPS_STAMP) $(LKVM_DIR_CLEAN_STAMP)
-	touch "$@"
+$(call generate-stamp-rule,$(LKVM_STAMP),$(LKVM_ACI_BINARY) $(LKVM_DEPS_STAMP) $(LKVM_DIR_CLEAN_STAMP))
 
 $(LKVM_BINARY): $(LKVM_BUILD_STAMP)
 
-$(call forward-vars,$(LKVM_BUILD_STAMP), \
-	MAKE LKVM_SRCDIR)
-$(LKVM_BUILD_STAMP): $(LKVM_PATCH_STAMP)
-	set -e; \
-	$(MAKE) -C "$(LKVM_SRCDIR)" lkvm-static; \
-	touch "$@"
+$(call generate-stamp-rule,$(LKVM_BUILD_STAMP),$(LKVM_PATCH_STAMP),, \
+	$$(MAKE) -C "$(LKVM_SRCDIR)" lkvm-static)
 
 # Generate filelist of lkvm directory (this is both srcdir and
 # builddir). Can happen after build finished.
@@ -45,15 +40,11 @@ $(call generate-deep-filelist,$(LKVM_DIR_FILELIST),$(LKVM_SRCDIR))
 # Generate clean.mk cleaning lkvm directory
 $(call generate-clean-mk,$(LKVM_DIR_CLEAN_STAMP),$(LKVM_CLEANMK),$(LKVM_DIR_FILELIST),$(LKVM_SRCDIR))
 
-$(call forward-vars,$(LKVM_PATCH_STAMP), \
-	LKVM_PATCHES LKVM_SRCDIR)
-$(LKVM_PATCH_STAMP): $(LKVM_SRCDIR)/Makefile
-	set -e; \
+$(call generate-stamp-rule,$(LKVM_PATCH_STAMP),$(LKVM_SRCDIR)/Makefile,, \
 	shopt -s nullglob; \
 	for p in $(LKVM_PATCHES); do \
-		patch --directory="$(LKVM_SRCDIR)" --strip=1 --forward <"$${p}"; \
-	done; \
-	touch "$@"
+		patch --directory="$(LKVM_SRCDIR)" --strip=1 --forward <"$$$${p}"; \
+	done)
 
 # This is a special case - normally, when generating filelists, we
 # require the directory to exist. In this case, the patches directory

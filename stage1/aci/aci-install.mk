@@ -72,8 +72,7 @@ $(call setup-stamp-file,AMI_RMDIR_STAMP,$(AMI_FLAVOR)-acirootfs-remove)
 
 # main stamp rule - makes sure that os-release, manifest and specific
 # directories are inside the ACI rootfs
-$(AMI_STAMP): $(AMI_INSTALLED_FILES) | $(AMI_ACI_INSTALLED_DIRS)
-	touch "$@"
+$(call generate-stamp-rule,$(AMI_STAMP),$(AMI_INSTALLED_FILES),$(AMI_ACI_INSTALLED_DIRS))
 
 # this rule generates a manifest
 $(call forward-vars,$(AMI_GEN_MANIFEST), \
@@ -95,10 +94,8 @@ $(call generate-kv-deps,$(AMI_MANIFEST_KV_DEPMK_STAMP),$(AMI_GEN_MANIFEST),$(AMI
 $(AMI_ACIROOTFSDIR): $(AMI_RMDIR_STAMP)
 
 # this removes the ACI rootfs dir
-$(call forward-vars,$(AMI_RMDIR_STAMP), \
-	AMI_ACIROOTFSDIR)
-$(AMI_RMDIR_STAMP):
-	set -e; rm -rf $(AMI_ACIROOTFSDIR); touch "$@"
+$(call generate-stamp-rule,$(AMI_RMDIR_STAMP),,, \
+	rm -rf $(AMI_ACIROOTFSDIR))
 
 # invalidate the ACI rootfs removing stamp if installed files change
 $(call generate-kv-deps,$(AMI_INSTALLED_KV_DEPMK_STAMP),$(AMI_RMDIR_STAMP),$(AMI_INSTALLED_KV_DEPMK),AMI_INSTALLED_FILES AMI_ACI_INSTALLED_DIRS)

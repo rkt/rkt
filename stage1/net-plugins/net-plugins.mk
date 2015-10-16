@@ -42,8 +42,7 @@ include makelib/build_go_bin.mk
 
 $$(NPM_PLUGIN): | $$(TOOLSDIR)
 
-$$(NPM_STAMP):
-	touch "$$@"
+$$(call generate-stamp-rule,$$(NPM_STAMP))
 
 CLEAN_FILES += $$(NPM_PLUGIN)
 NPM_BUILT_PLUGINS += $$(NPM_PLUGIN)

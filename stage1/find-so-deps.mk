@@ -51,22 +51,17 @@ endif
 INSTALL_DIRS += $(STAGE1_FSD_LIBSDIR):-
 
 # this makes sure that everything is done
-$(STAGE1_FSD_STAMP): $(STAGE1_FSD_COPY_STAMP) $(STAGE1_FSD_CLEAN_STAMP)
-	touch "$@"
+$(call generate-stamp-rule,$(STAGE1_FSD_STAMP),$(STAGE1_FSD_COPY_STAMP) $(STAGE1_FSD_CLEAN_STAMP))
 
 # this detects which libs need to be copied and copies them into two
 # places - the libdirs in the ACI rootfs and a temporary directory at
 # the same time.
-$(call forward-vars,$(STAGE1_FSD_COPY_STAMP), \
-	STAGE1_FSD_ACIROOTFSDIR STAGE1_FSD_LD_LIBRARY_PATH INSTALL STAGE1_FSD_LIBSDIR)
-$(STAGE1_FSD_COPY_STAMP): $(STAGE1_FSD_ALL_STAMPS) | $(STAGE1_FSD_LIBSDIR)
-	set -e; \
-	all_libs=$$(find "$(STAGE1_FSD_ACIROOTFSDIR)" -type f | xargs file | grep ELF | cut -f1 -d: | LD_LIBRARY_PATH="$(STAGE1_FSD_LD_LIBRARY_PATH)" xargs ldd | grep -v '^[^[:space:]]' | grep '/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*(0x[0-9a-fA-F]*)//' -e 's/.*=>[[:space:]]*//' | grep -Fve "$(STAGE1_FSD_ACIROOTFSDIR)" | sort -u); \
-	for f in $${all_libs}; do \
-		$(INSTALL) -D "$${f}" "$(STAGE1_FSD_ACIROOTFSDIR)$${f}"; \
-		$(INSTALL) -D "$${f}" "$(STAGE1_FSD_LIBSDIR)$${f}"; \
-	done; \
-	touch "$@"
+$(call generate-stamp-rule,$(STAGE1_FSD_COPY_STAMP),$(STAGE1_FSD_ALL_STAMPS),$(STAGE1_FSD_LIBSDIR), \
+	all_libs=$$$$(find "$(STAGE1_FSD_ACIROOTFSDIR)" -type f | xargs file | grep ELF | cut -f1 -d: | LD_LIBRARY_PATH="$(STAGE1_FSD_LD_LIBRARY_PATH)" xargs ldd | grep -v '^[^[:space:]]' | grep '/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*(0x[0-9a-fA-F]*)//' -e 's/.*=>[[:space:]]*//' | grep -Fve "$(STAGE1_FSD_ACIROOTFSDIR)" | sort -u); \
+	for f in $$$${all_libs}; do \
+		$(INSTALL) -D "$$$${f}" "$(STAGE1_FSD_ACIROOTFSDIR)$$$${f}"; \
+		$(INSTALL) -D "$$$${f}" "$(STAGE1_FSD_LIBSDIR)$$$${f}"; \
+	done)
 
 # This filelist can be generated only after the files were copied.
 $(STAGE1_FSD_FILELIST): $(STAGE1_FSD_COPY_STAMP)

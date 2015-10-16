@@ -13,8 +13,7 @@ BGB_GO_FLAGS := $(strip -ldflags "$(RKT_STAGE1_DEFAULT_NAME_LDFLAGS) $(RKT_STAGE
 CLEAN_FILES += $(BGB_BINARY)
 TOPLEVEL_STAMPS += $(RKT_STAMP)
 
-$(RKT_STAMP):
-	touch "$@"
+$(call generate-stamp-rule,$(RKT_STAMP))
 
 $(BGB_BINARY): $(MK_PATH) | $(BINDIR)
 

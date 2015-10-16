@@ -106,13 +106,11 @@ INSTALL_SYMLINKS += \
 
 # The main stamp - makes sure that ACI rootfs directory is prepared
 # with initial contents and all deps/clean files are generated.
-$(CBU_STAMP): $(CBU_ACI_ROOTFS_STAMP) $(CBU_DEPS_AND_CLEAN_STAMPS)
-	touch "$@"
+$(call generate-stamp-rule,$(CBU_STAMP),$(CBU_ACI_ROOTFS_STAMP) $(CBU_DEPS_AND_CLEAN_STAMPS))
 
 # This stamp makes sure that ACI rootfs is fully populated - stuff is
 # copied, symlinks and systemd-version file are created.
-$(CBU_ACI_ROOTFS_STAMP): $(CBU_ROOTFS_COPY_STAMP) $(CBU_SYSTEMD_VERSION_FILE) | $(CBU_ACIROOTFS_SYMLINKS)
-	touch "$@"
+$(call generate-stamp-rule,$(CBU_ACI_ROOTFS_STAMP),$(CBU_ROOTFS_COPY_STAMP) $(CBU_SYSTEMD_VERSION_FILE),$(CBU_ACIROOTFS_SYMLINKS))
 
 # This generates the systemd-version file in ACI rootfs.
 $(call forward-vars,$(CBU_SYSTEMD_VERSION_FILE), \
@@ -128,12 +126,8 @@ $(call generate-kv-deps,$(CBU_ACIROOTFS_SYSTEMD_VERSION_KV_DEPMK_STAMP),$(CBU_SY
 $(CBU_ACIROOTFS_SYMLINKS): $(CBU_ROOTFS_COPY_STAMP)
 
 # This copies tmp rootfs to ACI rootfs
-$(call forward-vars,$(CBU_ROOTFS_COPY_STAMP), \
-	CBU_ROOTFS CBU_ACIROOTFSDIR)
-$(CBU_ROOTFS_COPY_STAMP): $(CBU_MKBASE_STAMP) | $(CBU_ACIROOTFSDIR)
-	set -e; \
-	cp -af "$(CBU_ROOTFS)/." "$(CBU_ACIROOTFSDIR)"; \
-	touch "$@"
+$(call generate-stamp-rule,$(CBU_ROOTFS_COPY_STAMP),$(CBU_MKBASE_STAMP),$(CBU_ACIROOTFSDIR), \
+	cp -af "$(CBU_ROOTFS)/." "$(CBU_ACIROOTFSDIR)")
 
 # The ACI rootfs directory might be removed with its contents are
 # outdated.
@@ -141,10 +135,8 @@ $(CBU_ACIROOTFSDIR): $(CBU_REMOVE_ACIROOTFSDIR_STAMP)
 
 # This removes the ACI rootfs directory if it holds outdated initial
 # contents (mostly happens when squashfs changes).
-$(call forward-vars,$(CBU_REMOVE_ACIROOTFSDIR_STAMP), \
-	CBU_ACIROOTFSDIR)
-$(CBU_REMOVE_ACIROOTFSDIR_STAMP): $(CBU_MKBASE_STAMP)
-	set -e; rm -rf "$(CBU_ACIROOTFSDIR)"; touch "$@"
+$(call generate-stamp-rule,$(CBU_REMOVE_ACIROOTFSDIR_STAMP),$(CBU_MKBASE_STAMP),, \
+	rm -rf "$(CBU_ACIROOTFSDIR)")
 
 # This depmk forces the removal of ACI rootfs dir and its repopulation
 # if any of the symlinks to be created by the stamp populating ACI
@@ -161,12 +153,8 @@ $(call generate-glob-deps,$(CBU_TMPROOTFS_DEPMK_STAMP),$(CBU_REMOVE_ACIROOTFSDIR
 $(call generate-clean-mk,$(CBU_ROOTFS_CLEAN_STAMP),$(CBU_ROOTFSDIR_CLEANMK),$(CBU_DETAILED_FILELIST),$(CBU_ACIROOTFSDIR) $(CBU_ROOTFS))
 
 # This unpacks squashfs image to a temporary rootfs.
-$(call forward-vars,$(CBU_MKBASE_STAMP), \
-	CBU_ROOTFS CBU_COMPLETE_MANIFEST CCN_SQUASHFS)
-$(CBU_MKBASE_STAMP): $(CCN_SQUASHFS) $(CBU_COMPLETE_MANIFEST) | $(CBU_ROOTFS)
-	set -e; \
-	unsquashfs -d "$(CBU_ROOTFS)/usr" -ef "$(CBU_COMPLETE_MANIFEST)" "$(CCN_SQUASHFS)"; \
-	touch "$@"
+$(call generate-stamp-rule,$(CBU_MKBASE_STAMP),$(CCN_SQUASHFS) $(CBU_COMPLETE_MANIFEST),$(CBU_ROOTFS), \
+	unsquashfs -d "$(CBU_ROOTFS)/usr" -ef "$(CBU_COMPLETE_MANIFEST)" "$(CCN_SQUASHFS)")
 
 # The temporary rootfs directory might be removed before its creation
 # if it has outdated contents.
@@ -175,10 +163,8 @@ $(CBU_ROOTFS): $(CBU_REMOVE_TMPROOTFSDIR_STAMP)
 # If either squashfs file or the concatenated manifest file changes we
 # need to unpack the squashfs file again. Clean the directory holding
 # the old contents beforehand.
-$(call forward-vars,$(CBU_REMOVE_TMPROOTFSDIR_STAMP), \
-	CBU_ROOTFS)
-$(CBU_REMOVE_TMPROOTFSDIR_STAMP): $(CCN_SQUASHFS) $(CBU_COMPLETE_MANIFEST)
-	set -e; rm -rf "$(CBU_ROOTFS)"; touch "$@"
+$(call generate-stamp-rule,$(CBU_REMOVE_TMPROOTFSDIR_STAMP),$(CCN_SQUASHFS) $(CBU_COMPLETE_MANIFEST),, \
+	rm -rf "$(CBU_ROOTFS)")
 
 # This filelist can be generated only after the pxe image was
 # unsquashed to a temporary rootfs.

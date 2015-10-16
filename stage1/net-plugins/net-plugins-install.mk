@@ -35,18 +35,15 @@ NPI_INSTALL_DIRS_PAIRS := $(foreach d,$(call dir-chain,$(NPI_PLUGINSDIR_BASE),$(
 
 # main stamp which makes sure that all the plugins are installed in
 # the plugins directory in the ACI rootfs
-$(NPI_STAMP): $(NPI_ACI_PLUGINS)
-	touch "$@"
+$(call generate-stamp-rule,$(NPI_STAMP),$(NPI_ACI_PLUGINS))
 
 # plugins directory depends on a stamp which may remove the plugins
 # directory before it is created
 $(NPI_PLUGINSDIR): $(NPI_RMDIR_STAMP)
 
 # this removes the plugins directory
-$(call forward-vars,$(NPI_RMDIR_STAMP), \
-	NPI_PLUGINSDIR)
-$(NPI_RMDIR_STAMP):
-	set -e; rm -rf "$(NPI_PLUGINSDIR)"; touch "$@"
+$(call generate-stamp-rule,$(NPI_RMDIR_STAMP),,, \
+	rm -rf "$(NPI_PLUGINSDIR)")
 
 # invalidate the directory-removing stamp when a list of built plugins
 # changes

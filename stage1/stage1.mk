@@ -91,8 +91,7 @@ $(call inc-one,secondary-stuff.mk)
 TOPLEVEL_STAMPS += $(_STAGE1_ALL_ACI_STAMP_)
 CLEAN_FILES += $(_STAGE1_ALL_ACI_)
 
-$(_STAGE1_ALL_ACI_STAMP_): $(_STAGE1_ALL_ACI_)
-	touch "$@"
+$(call generate-stamp-rule,$(_STAGE1_ALL_ACI_STAMP_),$(_STAGE1_ALL_ACI_))
 
 # A rule template for building an ACI image. To build the ACI image we
 # need to have the /usr contents prepared and the additional stuff in
