@@ -1,7 +1,7 @@
 # Getting Started with rkt
 
 The following guide will show you how to build and run a self-contained Go app using
-rkt, the reference implementation of the [App Container Specification](https://github.com/appc/spec).
+rkt, the reference implementation of the [App Container Specification](https://github.com/appc/spec). If you're not on linux, you should do all of this inside the rkt Vagrant.
 
 ## Create a hello go application
 
@@ -140,6 +140,7 @@ Start the metadata service from your init system or simply from another terminal
 ```
 # rkt metadata-service
 ```
+Notice that the `#` indicates that this should be run as root.
 
 rkt will register pods with the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md) so they can introspect their environment.
 
@@ -160,5 +161,28 @@ Open a new terminal and run the following command:
 
 ```
 $ curl 127.0.0.1:5000
+hello
+```
+
+#### When curl Fails to Connect
+
+If you're running in Vagrant, the above may not work. You might see this instead:
+
+```
+$ curl 127.0.0.1:5000
+curl: (7) Failed to connect to 127.0.0.1 port 5000: Connection refused
+```
+
+Instead, use `rkt list` to find out what IP to use:
+
+```
+# rkt list
+UUID		APP	IMAGE NAME		STATE	NETWORKS
+885876b0	hello	example.com/hello:0.0.1	running	default:ip4=172.16.28.2
+```
+
+Then you can `curl` that IP:
+```
+$ curl 172.16.28.2:5000
 hello
 ```
