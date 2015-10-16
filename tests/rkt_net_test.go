@@ -42,6 +42,7 @@ func TestNetHost(t *testing.T) {
 
 	cmd := fmt.Sprintf("%s --net=host --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
 	child := spawnOrFail(t, cmd)
+	ctx.RegisterChild(child)
 	defer waitOrFail(t, child, true)
 
 	expectedRegex := `NetNS: (net:\[\d+\])`
@@ -84,6 +85,7 @@ func TestNetHostConnectivity(t *testing.T) {
 
 	cmd := fmt.Sprintf("%s --net=host --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
 	child := spawnOrFail(t, cmd)
+	ctx.RegisterChild(child)
 
 	ga := testutils.NewGoroutineAssistant(t)
 	ga.Add(2)
