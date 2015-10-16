@@ -4,7 +4,7 @@
 
 # Check if the last commit message requests the CI to skip the build.
 git log HEAD~..HEAD > last-commit
-if grep -qE '[ci skip]|[skip ci]' last-commit ; then
+if grep -qE '\[ci skip\]|\[skip ci\]' last-commit ; then
     cat last-commit
     echo
     echo "Build skipped as requested in the last commit."
