@@ -20,4 +20,6 @@ $(UFK_REPLACE_FLAVOR_STAMP):
 	ln -sf 'enter_kvm' "$(ACIROOTFSDIR)/enter"
 	touch "$@"
 
+CLEAN_SYMLINKS += $(ACIROOTFSDIR)/enter
+
 $(call undefine-namespaces,UFK)
