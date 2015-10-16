@@ -25,16 +25,25 @@ func TestQuoteExec(t *testing.T) {
 	}{
 		{
 			input:  []string{`path`, `"arg1"`, `"'arg2'"`, `'arg3'`},
-			output: `path "\"arg1\"" "\"\'arg2\'\"" "\'arg3\'"`,
+			output: `"path" "\"arg1\"" "\"\'arg2\'\"" "\'arg3\'"`,
 		}, {
 			input:  []string{`path`},
-			output: `path`,
+			output: `"path"`,
 		}, {
 			input:  []string{`path`, ``, `arg2`},
-			output: `path "" "arg2"`,
+			output: `"path" "" "arg2"`,
 		}, {
 			input:  []string{`path`, `"foo\bar"`, `\`},
-			output: `path "\"foo\\bar\"" "\\"`,
+			output: `"path" "\"foo\\bar\"" "\\"`,
+		}, {
+			input:  []string{`path with spaces`, `"foo\bar"`, `\`},
+			output: `"path with spaces" "\"foo\\bar\"" "\\"`,
+		}, {
+			input:  []string{`path with "quo't'es" and \slashes`, `"arg"`, `\`},
+			output: `"path with \"quo\'t\'es\" and \\slashes" "\"arg\"" "\\"`,
+		}, {
+			input:  []string{`$path$`},
+			output: `"$path$"`,
 		},
 	}
 
