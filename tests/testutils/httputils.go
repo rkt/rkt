@@ -17,13 +17,13 @@ package testutils
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/hydrogen18/stoppableListener"
+	"github.com/coreos/rkt/tests/testutils/logger"
 )
 
 func HttpServe(addr string, timeout int) error {
@@ -43,17 +43,17 @@ func HttpServe(addr string, timeout int) error {
 
 	c := make(chan string)
 	go func() {
-		log.Printf("%v: serving on %v\n", hostname, addr)
+		logger.Logf("%v: serving on %v\n", hostname, addr)
 
 		// Wait for either timeout or connect from client
 		select {
 		case <-time.After(time.Duration(timeout) * time.Second):
 			{
-				log.Printf("%v: Serve timed out after %v seconds\n", hostname, timeout)
+				logger.Logf("%v: Serve timed out after %v seconds\n", hostname, timeout)
 			}
 		case client := (<-c):
 			{
-				log.Printf("%v: Serve got a connection from %v\n", hostname, client)
+				logger.Logf("%v: Serve got a connection from %v\n", hostname, client)
 			}
 		}
 		sl.Stop()
@@ -61,7 +61,7 @@ func HttpServe(addr string, timeout int) error {
 
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("%v: Serve got a connection from %v\n", hostname, r.RemoteAddr)
+		logger.Logf("%v: Serve got a connection from %v\n", hostname, r.RemoteAddr)
 		fmt.Fprintf(w, "%v", hostname)
 		c <- r.RemoteAddr
 	})
@@ -73,7 +73,7 @@ func HttpServe(addr string, timeout int) error {
 }
 
 func HttpGet(addr string) (string, error) {
-	log.Printf("Connecting to %v", addr)
+	logger.Logf("Connecting to %v", addr)
 	res, err := http.Get(fmt.Sprintf("%v", addr))
 	if err != nil {
 		return "", err

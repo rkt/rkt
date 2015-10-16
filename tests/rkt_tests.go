@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,6 +30,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
+	"github.com/coreos/rkt/tests/testutils/logger"
 )
 
 const (
@@ -142,12 +142,21 @@ func (ctx *rktRunCtx) reset() {
 	}
 }
 
-func (ctx *rktRunCtx) cleanupChildren() {
+func (ctx *rktRunCtx) cleanupChildren() error {
 	for _, child := range ctx.children {
-		log.Printf("Shutting down %q", child.Cmd.Path)
-		child.Cmd.Process.Kill()
-		child.Cmd.Process.Wait()
+		if child.Cmd.ProcessState.Exited() {
+			logger.Logf("Child %q already exited", child.Cmd.Path)
+			continue
+		}
+		logger.Logf("Shutting down child %q", child.Cmd.Path)
+		if err := child.Cmd.Process.Kill(); err != nil {
+			return err
+		}
+		if _, err := child.Cmd.Process.Wait(); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (ctx *rktRunCtx) cleanup() {
@@ -156,7 +165,9 @@ func (ctx *rktRunCtx) cleanup() {
 		ctx.mds.Wait()
 		os.Remove("/run/rkt/metadata-svc.sock")
 	}
-	ctx.cleanupChildren()
+	if err := ctx.cleanupChildren(); err != nil {
+		logger.Logf("Error during child cleanup: %v", err)
+	}
 	ctx.runGC()
 	for _, d := range ctx.directories {
 		d.cleanup()

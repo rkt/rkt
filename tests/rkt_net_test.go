@@ -17,7 +17,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 	"github.com/coreos/rkt/tests/testutils"
+	"github.com/coreos/rkt/tests/testutils/logger"
 )
 
 /*
@@ -68,6 +68,7 @@ func TestNetHost(t *testing.T) {
  * localhost address
  */
 func TestNetHostConnectivity(t *testing.T) {
+	logger.SetLogger(t)
 
 	httpPort, err := testutils.GetNextFreePort4()
 	if err != nil {
@@ -108,7 +109,7 @@ func TestNetHostConnectivity(t *testing.T) {
 		if err != nil {
 			ga.Fatalf("%v\n", err)
 		}
-		log.Printf("HTTP-Get received: %s", body)
+		t.Logf("HTTP-Get received: %s", body)
 	}()
 
 	ga.Wait()
@@ -282,7 +283,7 @@ func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 			if err != nil {
 				ga.Fatalf("%v\n", err)
 			}
-			log.Printf("HTTP-Get received: %s", body)
+			t.Logf("HTTP-Get received: %s", body)
 		}()
 
 		ga.Wait()
