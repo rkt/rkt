@@ -2,6 +2,14 @@
 
 set -e
 
+# Skip build if requested
+if test -e ci-skip ; then
+    cat last-commit
+    echo
+    echo "Build skipped as requested in the last commit."
+    exit 0
+fi
+
 # Setup go environment on semaphore
 if [ -f /opt/change-go-version.sh ]; then
     . /opt/change-go-version.sh

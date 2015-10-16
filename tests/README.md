@@ -9,6 +9,10 @@ The tests run on the [Semaphore](https://semaphoreci.com/) CI system through the
 This user is authorized against the corresponding [`rktbot`](https://github.com/rktbot) GitHub account.
 The credentials for `rktbot` are currently managed by CoreOS.
 
+The tests are executed on Semaphore at each Pull Request (PR). Each GitHub PR page should have a link to the [test results on Semaphore](https://semaphoreci.com/coreos/rkt).
+
+Developers can disable the tests by adding `[skip ci]` in the last commit message of the PR.
+
 ### Build settings
 
 Use "Other" language and the following build commands:
