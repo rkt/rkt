@@ -21,7 +21,7 @@
 
 STAGE1_STAMPS :=
 STAGE1_USR_STAMPS :=
-_STAGE1_SUBDIRS_ := diagexec prepare-app net-plugins net init gc reaper units aci usr_from_$(RKT_STAGE1_USR_FROM)
+_STAGE1_SUBDIRS_ := appexec prepare-app net-plugins net init gc reaper units aci usr_from_$(RKT_STAGE1_USR_FROM)
 ifeq ($(RKT_STAGE1_USR_FROM),kvm)
 _STAGE1_SUBDIRS_ += enter_kvm
 else

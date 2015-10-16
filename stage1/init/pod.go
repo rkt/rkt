@@ -110,7 +110,7 @@ func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 // quoteExec returns an array of quoted strings appropriate for systemd execStart usage
 func quoteExec(exec []string) string {
 	if len(exec) == 0 {
-		// existing callers prefix {"/diagexec", "/app/root", "/work/dir", "/env/file"} so this shouldn't occur.
+		// existing callers prefix {"/appexec", "/app/root", "/work/dir", "/env/file"} so this shouldn't occur.
 		panic("empty exec")
 	}
 
@@ -270,7 +270,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 		}
 	}
 
-	execWrap := []string{"/diagexec", common.RelAppRootfsPath(appName), workDir, RelEnvFilePath(appName), strconv.Itoa(uid), generateGidArg(gid, app.SupplementaryGIDs)}
+	execWrap := []string{"/appexec", common.RelAppRootfsPath(appName), workDir, RelEnvFilePath(appName), strconv.Itoa(uid), generateGidArg(gid, app.SupplementaryGIDs)}
 	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v", appName, imgName)),
