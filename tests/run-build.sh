@@ -10,22 +10,26 @@ if test -e ci-skip ; then
     exit 0
 fi
 
-# Setup go environment on semaphore
-if [ -f /opt/change-go-version.sh ]; then
-    . /opt/change-go-version.sh
-    change-go-version 1.4
-fi
-
 RKT_STAGE1_USR_FROM="${1}"
 RKT_STAGE1_SYSTEMD_VER="${2}"
-
 BUILD_DIR="build-rkt-${RKT_STAGE1_USR_FROM}-${RKT_STAGE1_SYSTEMD_VER}"
+
+if [ "${CI-}" == true ] ; then
+	# https://semaphoreci.com/docs/available-environment-variables.html
+	if [ "${SEMAPHORE-}" == true ] ; then
+        # Setup go environment on semaphore
+        if [ -f /opt/change-go-version.sh ]; then
+            . /opt/change-go-version.sh
+            change-go-version 1.4
+        fi
+
+        # Semaphore does not clean git subtrees between each build.
+        sudo rm -rf "${BUILD_DIR}"
+    fi
+fi
 
 mkdir -p builds
 cd builds
-
-# Semaphore does not clean git subtrees between each build.
-sudo rm -rf "${BUILD_DIR}"
 
 git clone ../ "${BUILD_DIR}"
 
