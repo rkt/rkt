@@ -28,7 +28,10 @@ const (
 	globCmd = "glob"
 	// globMakeFunction is a template for generating all files for
 	// given set of wildcards. See globMakeWildcard.
-	globMakeFunction = `$(shell stat --format "%n: %F" !!!WILDCARDS!!! | grep -e 'regular file$$' | cut -f1 -d:)`
+	globMakeFunction = `$(strip \
+        $(eval _DEPS_GEN_FG_ := $(strip !!!WILDCARDS!!!)) \
+        $(if $(_DEPS_GEN_FG_),$(shell stat --format "%n: %F" $(_DEPS_GEN_FG_) | grep -e 'regular file$$' | cut -f1 -d:)))
+`
 	// globMakeWildcard is a template for call wildcard function
 	// for in a given directory with a given suffix. This wildcard
 	// is for normal files.
