@@ -42,7 +42,7 @@ func init() {
 	cmdRunPrepared.Flags().Var(&flagNet, "net", "configure the pod's networking. optionally pass a list of user-configured networks to load and arguments to pass to them. syntax: --net[=n[:args]][,]")
 	cmdRunPrepared.Flags().Lookup("net").NoOptDefVal = "default"
 	cmdRunPrepared.Flags().BoolVar(&flagInteractive, "interactive", false, "the pod is interactive")
-	cmdRunPrepared.Flags().BoolVar(&flagMDSRegister, "mds-register", true, "register pod with metadata service")
+	cmdRunPrepared.Flags().BoolVar(&flagMDSRegister, "mds-register", false, "register pod with metadata service")
 }
 
 func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
