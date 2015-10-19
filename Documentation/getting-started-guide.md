@@ -1,7 +1,8 @@
 # Getting Started with rkt
 
 The following guide will show you how to build and run a self-contained Go app using
-rkt, the reference implementation of the [App Container Specification](https://github.com/appc/spec). If you're not on linux, you should do all of this inside the rkt Vagrant.
+rkt, the reference implementation of the [App Container Specification](https://github.com/appc/spec).
+If you're not on Linux, you should do all of this inside [the rkt Vagrant](https://github.com/coreos/rkt#trying-out-rkt-using-vagrant).
 
 ## Create a hello go application
 
