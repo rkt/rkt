@@ -428,3 +428,7 @@ $(strip \
 	$(eval -include $2) \
 	$(eval $(call generate-stamp-rule,$1,$(CLEANGENTOOL_STAMP) $3,$(CLEANDIR),"$(CLEANGENTOOL)" --filelist="$3" $(foreach m,$4,--map-to="$m") >"$2.tmp"; $(call bash-cond-rename,$2.tmp,$2))))
 endef
+
+define sed-replacement-escape
+$(strip $(shell echo $1 | sed -e 's/[\/&]/\\&/g'))
+endef
