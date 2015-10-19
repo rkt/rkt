@@ -30,6 +30,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
+	"github.com/coreos/rkt/tests/testutils/logger"
 )
 
 const (
@@ -73,7 +74,7 @@ func (d *dirDesc) cleanup() {
 	if d.dir == "" {
 		return
 	}
-	if err := os.RemoveAll(d.dir); err != nil {
+	if err := os.RemoveAll(d.dir); err != nil && !os.IsNotExist(err) {
 		panic(fmt.Sprintf("Failed to remove temporary %s directory %q: %s", d.desc, d.dir, err))
 	}
 	d.dir = ""
@@ -95,6 +96,7 @@ type rktRunCtx struct {
 	directories []*dirDesc
 	useDefaults bool
 	mds         *exec.Cmd
+	children    []*gexpect.ExpectSubprocess
 }
 
 func newRktRunCtx() *rktRunCtx {
@@ -133,10 +135,28 @@ func (ctx *rktRunCtx) dir(idx int) string {
 }
 
 func (ctx *rktRunCtx) reset() {
+	ctx.cleanupChildren()
 	ctx.runGC()
 	for _, d := range ctx.directories {
 		d.reset()
 	}
+}
+
+func (ctx *rktRunCtx) cleanupChildren() error {
+	for _, child := range ctx.children {
+		if child.Cmd.ProcessState.Exited() {
+			logger.Logf("Child %q already exited", child.Cmd.Path)
+			continue
+		}
+		logger.Logf("Shutting down child %q", child.Cmd.Path)
+		if err := child.Cmd.Process.Kill(); err != nil {
+			return err
+		}
+		if _, err := child.Cmd.Process.Wait(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (ctx *rktRunCtx) cleanup() {
@@ -145,7 +165,9 @@ func (ctx *rktRunCtx) cleanup() {
 		ctx.mds.Wait()
 		os.Remove("/run/rkt/metadata-svc.sock")
 	}
-
+	if err := ctx.cleanupChildren(); err != nil {
+		logger.Logf("Error during child cleanup: %v", err)
+	}
 	ctx.runGC()
 	for _, d := range ctx.directories {
 		d.cleanup()
@@ -199,6 +221,10 @@ func (ctx *rktRunCtx) ensureValid() {
 	for _, d := range ctx.directories {
 		d.ensureValid()
 	}
+}
+
+func (ctx *rktRunCtx) RegisterChild(child *gexpect.ExpectSubprocess) {
+	ctx.children = append(ctx.children, child)
 }
 
 func expectCommon(p *gexpect.ExpectSubprocess, searchString string, timeout time.Duration) error {
@@ -263,7 +289,7 @@ func patchTestACI(newFileName string, args ...string) string {
 }
 
 func spawnOrFail(t *testing.T, cmd string) *gexpect.ExpectSubprocess {
-	t.Logf("Command: %v", cmd)
+	t.Logf("Running command: %v", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Cannot exec rkt: %v", err)
