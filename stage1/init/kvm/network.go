@@ -24,7 +24,7 @@ import (
 // GetNetworkDescriptions explicitly convert slice of activeNets to slice of netDescribers
 // which is slice required by GetKVMNetArgs
 func GetNetworkDescriptions(n *networking.Networking) []netDescriber {
-	nds := []netDescriber{}
+	var nds []netDescriber
 	for _, an := range n.GetActiveNetworks() {
 		nds = append(nds, an)
 	}
@@ -46,8 +46,8 @@ type netDescriber interface {
 // and essentially from activeNets that expose netDescriber behavior
 func GetKVMNetArgs(nds []netDescriber) ([]string, []string, error) {
 
-	lkvmArgs := []string{}
-	kernelParams := []string{}
+	var lkvmArgs []string
+	var kernelParams []string
 
 	for i, nd := range nds {
 		// https://www.kernel.org/doc/Documentation/filesystems/nfs/nfsroot.txt

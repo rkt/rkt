@@ -303,7 +303,7 @@ func TestGetAci(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		keys := []string{}
+		var keys []string
 		// Create ACIs
 		for _, ad := range tt.acidefs {
 			aci, err := aci.NewACI(dir, ad.imj, nil)

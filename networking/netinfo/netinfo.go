@@ -42,7 +42,7 @@ func LoadAt(cdirfd int) ([]NetInfo, error) {
 
 	f := os.NewFile(uintptr(fd), filename)
 
-	info := []NetInfo{}
+	var info []NetInfo
 	err = json.NewDecoder(f).Decode(&info)
 	return info, err
 }

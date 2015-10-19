@@ -250,7 +250,7 @@ func installAssets() error {
 
 // getArgsEnv returns the nspawn or lkvm args and env according to the flavor used
 func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]string, []string, error) {
-	args := []string{}
+	var args []string
 	env := os.Environ()
 
 	// We store the pod's flavor so we can later garbage collect it correctly
@@ -467,7 +467,7 @@ func withClearedCloExec(lfd int, f func() error) error {
 }
 
 func forwardedPorts(pod *Pod) ([]networking.ForwardedPort, error) {
-	fps := []networking.ForwardedPort{}
+	var fps []networking.ForwardedPort
 
 	for _, ep := range pod.Manifest.Ports {
 		n := ""

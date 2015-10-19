@@ -45,7 +45,7 @@ func extractTar(tr *tar.Reader, overwrite bool, pwl PathWhitelistMap, uidRange *
 	um := syscall.Umask(0)
 	defer syscall.Umask(um)
 
-	dirhdrs := []*tar.Header{}
+	var dirhdrs []*tar.Header
 Tar:
 	for {
 		hdr, err := tr.Next()

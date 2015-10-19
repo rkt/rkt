@@ -50,7 +50,7 @@ func aciinfoRowScan(rows *sql.Rows, aciinfo *ACIInfo) error {
 
 // GetAciInfosWithKeyPrefix returns all the ACIInfos with a blobkey starting with the given prefix.
 func GetACIInfosWithKeyPrefix(tx *sql.Tx, prefix string) ([]*ACIInfo, error) {
-	aciinfos := []*ACIInfo{}
+	var aciinfos []*ACIInfo
 	rows, err := tx.Query("SELECT * from aciinfo WHERE hasPrefix(blobkey, $1)", prefix)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func GetACIInfosWithKeyPrefix(tx *sql.Tx, prefix string) ([]*ACIInfo, error) {
 // GetAciInfosWithName returns all the ACIInfos for a given name. found will be
 // false if no aciinfo exists.
 func GetACIInfosWithName(tx *sql.Tx, name string) ([]*ACIInfo, bool, error) {
-	aciinfos := []*ACIInfo{}
+	var aciinfos []*ACIInfo
 	found := false
 	rows, err := tx.Query("SELECT * from aciinfo WHERE name == $1", name)
 	if err != nil {
@@ -117,7 +117,7 @@ func GetACIInfoWithBlobKey(tx *sql.Tx, blobKey string) (*ACIInfo, bool, error) {
 // GetAllACIInfos returns all the ACIInfos sorted by optional sortfields and
 // with ascending or descending order.
 func GetAllACIInfos(tx *sql.Tx, sortfields []string, ascending bool) ([]*ACIInfo, error) {
-	aciinfos := []*ACIInfo{}
+	var aciinfos []*ACIInfo
 	query := "SELECT * from aciinfo"
 	if len(sortfields) > 0 {
 		query += fmt.Sprintf(" ORDER BY %s ", strings.Join(sortfields, ", "))

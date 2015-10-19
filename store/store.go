@@ -258,7 +258,7 @@ func (s Store) ResolveKey(key string) (string, error) {
 		key = key[:lenKey]
 	}
 
-	aciInfos := []*ACIInfo{}
+	var aciInfos []*ACIInfo
 	err := s.db.Do(func(tx *sql.Tx) error {
 		var err error
 		aciInfos, err = GetACIInfosWithKeyPrefix(tx, key)
@@ -424,7 +424,7 @@ func (ds Store) RemoveACI(key string) error {
 	// TODO(sgotti). Now that the ACIInfo is removed the image doesn't
 	// exists anymore, but errors removing non transactional entries can
 	// leave stale data that will require a cas GC to be implemented.
-	storeErrors := []error{}
+	var storeErrors []error
 	for _, s := range ds.stores {
 		if err := s.Erase(key); err != nil {
 			// If there's an error save it and continue with the other stores
@@ -451,7 +451,7 @@ func (s Store) GetTreeStoreID(key string) (string, error) {
 		return "", err
 	}
 
-	keys := []string{}
+	var keys []string
 	for _, image := range images {
 		keys = append(keys, image.Key)
 	}
@@ -543,7 +543,7 @@ func (ds Store) RemoveTreeStore(id string) error {
 // GetTreeStoreIDs returns a slice containing all the treeStore's IDs available
 // (both fully or partially rendered).
 func (ds Store) GetTreeStoreIDs() ([]string, error) {
-	treeStoreIDs := []string{}
+	var treeStoreIDs []string
 	ls, err := ioutil.ReadDir(ds.treestore.path)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -685,7 +685,7 @@ nextKey:
 }
 
 func (ds Store) GetAllACIInfos(sortfields []string, ascending bool) ([]*ACIInfo, error) {
-	aciInfos := []*ACIInfo{}
+	var aciInfos []*ACIInfo
 	err := ds.db.Do(func(tx *sql.Tx) error {
 		var err error
 		aciInfos, err = GetAllACIInfos(tx, sortfields, ascending)

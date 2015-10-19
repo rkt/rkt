@@ -181,12 +181,12 @@ func init() {
 }
 
 func runImages(cmd *cobra.Command, args []string) int {
-	errors := []error{}
+	var errors []error
 	tabBuffer := new(bytes.Buffer)
 	tabOut := getTabOutWithWriter(tabBuffer)
 
 	if !flagNoLegend {
-		headerFields := []string{}
+		var headerFields []string
 		for _, f := range flagImagesFields {
 			headerFields = append(headerFields, ImagesFieldHeaderMap[f])
 		}
@@ -199,7 +199,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 		return 1
 	}
 
-	sortAciinfoFields := []string{}
+	var sortAciinfoFields []string
 	for _, f := range flagImagesSortFields {
 		sortAciinfoFields = append(sortAciinfoFields, ImagesFieldAciInfoMap[f])
 	}
@@ -221,7 +221,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 			continue
 		}
 		version, ok := im.Labels.Get("version")
-		fieldValues := []string{}
+		var fieldValues []string
 		for _, f := range flagImagesFields {
 			fieldValue := ""
 			switch f {
@@ -276,7 +276,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 }
 
 func newImgListLoadError(err error, imj []byte, blobKey string) error {
-	lines := []string{}
+	var lines []string
 	im := lastditch.ImageManifest{}
 	imErr := im.UnmarshalJSON(imj)
 	if imErr == nil {

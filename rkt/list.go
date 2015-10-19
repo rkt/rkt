@@ -53,7 +53,7 @@ func runList(cmd *cobra.Command, args []string) int {
 		return 1
 	}
 
-	errors := []error{}
+	var errors []error
 	tabBuffer := new(bytes.Buffer)
 	tabOut := getTabOutWithWriter(tabBuffer)
 
@@ -96,7 +96,7 @@ func runList(cmd *cobra.Command, args []string) int {
 			nets    string
 		}
 
-		appsToPrint := []printedApp{}
+		var appsToPrint []printedApp
 		uuid := p.uuid.String()
 		state := p.getState()
 		nets := fmtNets(p.nets)
@@ -267,7 +267,7 @@ func appLine(app lastditch.RuntimeApp) string {
 }
 
 func fmtNets(nis []netinfo.NetInfo) string {
-	parts := []string{}
+	var parts []string
 	for _, ni := range nis {
 		// there will be IPv6 support soon so distinguish between v4 and v6
 		parts = append(parts, fmt.Sprintf("%v:ip4=%v", ni.NetName, ni.IP))
