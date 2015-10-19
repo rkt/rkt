@@ -113,6 +113,8 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 			stdout("Garbage collecting pod %q", p.uuid)
 
 			deletePod(p)
+		} else {
+			stderr("Pod %q not removed: still within grace period (%s)", p.uuid, gracePeriod)
 		}
 	}); err != nil {
 		return err
