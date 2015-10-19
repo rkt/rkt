@@ -16,9 +16,6 @@ $(call forward-vars,$(UFK_REPLACE_FLAVOR_STAMP), \
 $(UFK_REPLACE_FLAVOR_STAMP):
 	rm -f "$(S1_RF_ACIROOTFSDIR)/flavor"
 	ln -sf 'kvm' "$(S1_RF_ACIROOTFSDIR)/flavor"
-	ln -sf 'enter_kvm' "$(S1_RF_ACIROOTFSDIR)/enter"
 	touch "$@"
-
-CLEAN_SYMLINKS += $(ACIROOTFSDIR)/enter
 
 $(call undefine-namespaces,UFK)

@@ -21,23 +21,25 @@ endif
 
 LOCAL_SED_NAME := $(call sed-replacement-escape,$(LOCAL_NAME))
 LOCAL_SED_VERSION := $(call sed-replacement-escape,$(version))
+LOCAL_SED_ENTER := $(call sed-replacement-escape,$(STAGE1_ENTER_CMD))
 
 $(call setup-stamp-file,LOCAL_STAMP)
 $(call setup-stamp-file,LOCAL_MANIFEST_KV_DEPMK_STAMP,$(LOCAL_FLAVOR)-manifest-kv-dep)
 $(call setup-dep-file,LOCAL_MANIFEST_KV_DEPMK,$(LOCAL_FLAVOR)-manifest-kv-dep)
 # invalidate generated manifest if name, version or enter cmd changes
-$(call generate-kv-deps,$(LOCAL_MANIFEST_KV_DEPMK_STAMP),$(LOCAL_GEN_MANIFEST),$(LOCAL_MANIFEST_KV_DEPMK),LOCAL_SED_NAME LOCAL_SED_VERSION)
+$(call generate-kv-deps,$(LOCAL_MANIFEST_KV_DEPMK_STAMP),$(LOCAL_GEN_MANIFEST),$(LOCAL_MANIFEST_KV_DEPMK),LOCAL_SED_NAME LOCAL_SED_VERSION LOCAL_SED_ENTER)
 
 $(LOCAL_STAMP): $(LOCAL_ACI_OS_RELEASE) $(LOCAL_ACI_MANIFEST) | $(LOCAL_ACI_DIRS)
 	touch "$@"
 
 $(call forward-vars,$(LOCAL_GEN_MANIFEST), \
-	LOCAL_SED_NAME LOCAL_SED_VERSION)
+	LOCAL_SED_NAME LOCAL_SED_VERSION LOCAL_SED_ENTER)
 $(LOCAL_GEN_MANIFEST): $(LOCAL_SRC_MANIFEST) | $(LOCAL_TMPDIR)
 	set -e; \
 	sed \
 		-e 's/@RKT_STAGE1_NAME@/$(LOCAL_SED_NAME)/g' \
 		-e 's/@RKT_STAGE1_VERSION@/$(LOCAL_SED_VERSION)/g' \
+		-e 's/@RKT_STAGE1_ENTER@/$(LOCAL_SED_ENTER)/g' \
 	"$<" >"$@.tmp"; \
 	$(call bash-cond-rename,$@.tmp,$@)
 
