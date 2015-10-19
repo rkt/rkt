@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -113,6 +114,52 @@ func TestNetHostConnectivity(t *testing.T) {
 	}()
 
 	ga.Wait()
+}
+
+/*
+ * None networking
+ * ---
+ * must be in an empty netns
+ */
+func TestNetNone(t *testing.T) {
+	testImageArgs := []string{"--exec=/inspect --print-netns --print-iface-count"}
+	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
+	defer os.Remove(testImage)
+
+	ctx := newRktRunCtx()
+	defer ctx.cleanup()
+
+	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=none --mds-register=false %s", ctx.cmd(), testImage)
+
+	child := spawnOrFail(t, cmd)
+	defer waitOrFail(t, child, true)
+	expectedRegex := `NetNS: (net:\[\d+\])`
+	result, out, err := expectRegexWithOutput(child, expectedRegex)
+	if err != nil {
+		t.Fatalf("Error: %v\nOutput: %v", err, out)
+	}
+
+	ns, err := os.Readlink("/proc/self/ns/net")
+	if err != nil {
+		t.Fatalf("Cannot evaluate NetNS symlink: %v", err)
+	}
+
+	if nsChanged := ns != result[1]; !nsChanged {
+		t.Fatalf("container did not leave host netns")
+	}
+
+	expectedRegex = `Interface count: (\d+)`
+	result, out, err = expectRegexWithOutput(child, expectedRegex)
+	if err != nil {
+		t.Fatalf("Error: %v\nOutput: %v", err, out)
+	}
+	ifaceCount, err := strconv.Atoi(result[1])
+	if err != nil {
+		t.Fatalf("Error parsing interface count: %v\nOutput: %v", err, out)
+	}
+	if ifaceCount != 1 {
+		t.Fatalf("Interface count must be 1 not %q", ifaceCount)
+	}
 }
 
 /*
@@ -289,7 +336,6 @@ func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 		ga.Wait()
 	}
 	f("--net=default-restricted")
-	f("--net=none")
 }
 
 func writeNetwork(t *testing.T, net networkTemplateT, netd string) error {
