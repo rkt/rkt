@@ -117,8 +117,17 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		privateUsers.SetRandomUidRange(uid.DefaultRangeCount)
 	}
 
-	if len(flagPorts) > 0 && !flagNet.Any() {
-		stderr("--port flag requires --net")
+	if len(flagPorts) > 0 && flagNet.None() {
+		stderr("--port flag does not work with 'none' networking")
+		return 1
+	}
+	if len(flagPorts) > 0 && flagNet.Host() {
+		stderr("--port flag does not work with 'host' networking")
+		return 1
+	}
+
+	if flagMDSRegister && flagNet.None() {
+		stderr("--mds-register flag does not work with --net=none. Please use 'host', 'default' or an equivalent network")
 		return 1
 	}
 
