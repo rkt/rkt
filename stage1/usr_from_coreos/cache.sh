@@ -1,8 +1,9 @@
+set -e;
+
 # maintain a cached copy of coreos pxe image
 
-if [ -z "${IMG_URL}" -o -z "${ITMP}" ]
-then
-    exit 1
+if [ -z "${IMG_URL}" -o -z "${ITMP}" ]; then
+	exit 1
 fi
 
 # coreos gpg signing key
@@ -153,23 +154,50 @@ X8FjXVJ/8MWi91Z0pHcLzhYZYn2IACvaaUh06HyyAIiDlgWRC7zgMQ==
 
 # gpg verify a file using the provided key
 function gpg_verify() {
+	local file	#file to verify
+	local sigfile	#signature file (assumed to be suffixed form of file to verify)
+	local key	#signing key
+	local keyid	#signing key signature
+
+	local gpghome
+
 	file=$1
-	sigfile=$2	#signature file (assumed to be suffixed form of file to verify)
-	key=$3		#signing key
-	keyid=$4	#signing key signature
+	sigfile=$2
+	key=$3
+	keyid=$4
 
 	gpghome=$(mktemp -d)
-	gpg --homedir="${gpghome}" --batch --quiet --import <<<"${key}"
-	gpg --homedir="${gpghome}" --batch --trusted-key "${keyid}" --verify "${sigfile}" "${cache}"
-	RES=$?
+	trap "{ rm -rf '${gpghome}'; }" RETURN EXIT
+	if ! gpg --homedir="${gpghome}" --batch --quiet --import <<<"${key}"; then
+		return 1
+	fi
+	if ! gpg --homedir="${gpghome}" --batch --trusted-key "${keyid}" --verify "${sigfile}" "${file}"; then
+		return 1
+	fi
+	return 0
+}
 
-	rm -Rf "${gpghome}"
+function do_wget() {
+	local out	#output file
+	local url	#url of a file to be downloaded
 
-	return ${RES}
+	out=$1
+	url=$2
+
+	wget --tries=20 --output-document="${out}" "${url}" # the wget default for retries is 20 times.
 }
 
 # maintain an gpg-verified url cache, assumes signature available @ $url.sig
 function cache_url() {
+	local cache	#verified cache, will be downloaded from the url if bad or missing
+	local url	#url of the file to be downloaded
+	local key	#key used for verification
+	local keyid	#id of a key used for verification
+
+	local urlhash
+	local sigfile
+	local sigurl
+
 	cache=$1
 	url=$2
 	key=$3
@@ -179,21 +207,17 @@ function cache_url() {
 	sigfile="${cache}.${urlhash%% *}.sig"
 	sigurl="${url}.sig"
 
-	# ensure the cache directory exists
-	mkdir -p $(dirname "${cache}")
-
 	# verify the cached copy if it exists
 	if ! gpg_verify "${cache}" "${sigfile}" "${key}" "${keyid}"; then
-
 		# refresh the cache on failure, and verify it again
-		wget --tries=20 --output-document="${cache}" "${url}" # the wget default for retries is 20 times.
-		wget --tries=20 --output-document="${sigfile}" "${sigurl}"
+		do_wget "${cache}" "${url}" "${verbosity}"
+		do_wget "${sigfile}" "${sigurl}" "${verbosity}"
 
-		gpg_verify "${cache}" "${sigfile}" "${key}" "${keyid}" || return 1
+		gpg_verify "${cache}" "${sigfile}" "${key}" "${keyid}"
 	fi
 
 	# file $cache exists and can be trusted
-	touch ${cache}
+	touch "${cache}"
 }
 
 # cache pxe image
