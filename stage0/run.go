@@ -623,14 +623,9 @@ func setupStage1Image(cfg RunConfig, cdir string, useOverlay bool) error {
 
 // writeManifest takes an img ID and writes the corresponding manifest in dest
 func writeManifest(cfg CommonConfig, img types.Hash, dest string) error {
-	manifest, err := cfg.Store.GetImageManifest(img.String())
+	mb, err := cfg.Store.GetImageManifestJSON(img.String())
 	if err != nil {
 		return err
-	}
-
-	mb, err := json.Marshal(manifest)
-	if err != nil {
-		return fmt.Errorf("error marshalling image manifest: %v", err)
 	}
 
 	debug("Writing image manifest")
