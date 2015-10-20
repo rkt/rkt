@@ -26,8 +26,8 @@ $(call setup-filelist-file,UFS_PATCHES_FILELIST,/patches/$(UFS_SYSTEMD_DESC))
 UFS_SYSTEMD_TAG_MATCH := $(shell expr "$(RKT_STAGE1_SYSTEMD_VER)" : 'v[[:digit:]]\+')
 UFS_SYSTEMD_TAG_LENGTH := $(shell expr length "$(RKT_STAGE1_SYSTEMD_VER)")
 UFS_PATCHES_DIR := $(MK_SRCDIR)/patches/$(RKT_STAGE1_SYSTEMD_VER)
-UFS_LIB_SYMLINK := $(ACIROOTFSDIR)/lib
-UFS_LIB64_SYMLINK := $(ACIROOTFSDIR)/lib64
+UFS_LIB_SYMLINK := $(S1_RF_ACIROOTFSDIR)/lib
+UFS_LIB64_SYMLINK := $(S1_RF_ACIROOTFSDIR)/lib64
 
 $(call setup-stamp-file,UFS_STAMP,/systemd/$(UFS_SYSTEMD_DESC))
 $(call setup-stamp-file,UFS_PATCHES_DEPS_STAMP,$(UFS_SYSTEMD_DESC)-systemd-patches-deps)
@@ -45,18 +45,18 @@ $(call setup-stamp-file,UFS_SYSTEMD_SRCDIR_CLEAN_STAMP,$(UFS_SYSTEMD_DESC)-src-c
 $(call setup-stamp-file,UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP,$(UFS_SYSTEMD_DESC)-build-clean)
 $(call setup-stamp-file,UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP,$(UFS_SYSTEMD_DESC)-rootfs-clean)
 
-STAGE1_USR_STAMPS += $(UFS_STAMP)
+S1_RF_USR_STAMPS += $(UFS_STAMP)
 # INSTALL_SYMLINKS += usr/lib:$(UFS_LIB_SYMLINK) usr/lib64:$(UFS_LIB64_SYMLINK)
-STAGE1_COPY_SO_DEPS := yes
+S1_RF_COPY_SO_DEPS := yes
 CREATE_DIRS += \
 	$(call dir-chain,$(UFS_TMPDIR),$(UFS_SYSTEMDDIR_REST))
 CLEAN_FILES += \
-	$(ACIROOTFSDIR)/systemd-version
+	$(S1_RF_ACIROOTFSDIR)/systemd-version
 CLEAN_DIRS += \
 	$(UFS_SYSTEMD_SRCDIR) \
 	$(UFS_SYSTEMD_BUILDDIR) \
 	$(UFS_ROOTFSDIR)
-CLEAN_SYMLINKS += $(ACIROOTFSDIR)/flavor
+CLEAN_SYMLINKS += $(S1_RF_ACIROOTFSDIR)/flavor
 
 $(call inc-one,bash.mk)
 
@@ -64,13 +64,13 @@ $(UFS_STAMP): $(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_ST
 	touch "$@"
 
 $(call forward-vars,$(UFS_ROOTFS_STAMP), \
-	UFS_ROOTFSDIR ACIROOTFSDIR RKT_STAGE1_SYSTEMD_VER)
+	UFS_ROOTFSDIR S1_RF_ACIROOTFSDIR RKT_STAGE1_SYSTEMD_VER)
 # $(UFS_ROOTFS_STAMP): | $(UFS_LIB_SYMLINK) $(UFS_LIB64_SYMLINK)
-$(UFS_ROOTFS_STAMP): $(UFS_SYSTEMD_INSTALL_STAMP) | $(ACIROOTFSDIR)
+$(UFS_ROOTFS_STAMP): $(UFS_SYSTEMD_INSTALL_STAMP) | $(S1_RF_ACIROOTFSDIR)
 	set -e; \
-	cp -af "$(UFS_ROOTFSDIR)/." "$(ACIROOTFSDIR)"; \
-	ln -sf 'src' "$(ACIROOTFSDIR)/flavor"; \
-	echo "$(RKT_STAGE1_SYSTEMD_VER)" >"$(ACIROOTFSDIR)/systemd-version"; \
+	cp -af "$(UFS_ROOTFSDIR)/." "$(S1_RF_ACIROOTFSDIR)"; \
+	ln -sf 'src' "$(S1_RF_ACIROOTFSDIR)/flavor"; \
+	echo "$(RKT_STAGE1_SYSTEMD_VER)" >"$(S1_RF_ACIROOTFSDIR)/systemd-version"; \
 	touch "$@"
 
 $(call forward-vars,$(UFS_SYSTEMD_INSTALL_STAMP), \
@@ -93,7 +93,7 @@ $(call generate-glob-deps,$(UFS_ROOTFS_DEPS_STAMP),$(UFS_ROOTFS_STAMP),$(UFS_ROO
 # Generate a clean.mk files for cleaning everything that systemd's
 # "make install" put in a temporary rootfs and for the same files in
 # ACI rootfs.
-$(call generate-clean-mk,$(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP),$(UFS_ROOTFSDIR_CLEANMK),$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR) $(ACIROOTFSDIR))
+$(call generate-clean-mk,$(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP),$(UFS_ROOTFSDIR_CLEANMK),$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR) $(S1_RF_ACIROOTFSDIR))
 
 $(call forward-vars,$(UFS_SYSTEMD_BUILD_STAMP), \
 	UFS_SYSTEMD_BUILDDIR UFS_SYSTEMD_SRCDIR MAKE)
