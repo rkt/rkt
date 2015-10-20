@@ -461,3 +461,18 @@ $(strip \
 	$(subst $(_MISC_CTS_COMMA_),$(_MISC_CTS_SPACE_),$1) \
 	$(call undefine-namespaces,_MISC_CTS))
 endef
+
+# Generates a rule for given stamp which removes given directory and
+# adds a dependency to the directory on a given stamp. That way, the
+# directory will be removed before it is created if the stamp does not
+# exist or is invalidated. Additional dependencies for the stamp can
+# be specified by using usual make syntax ($(stamp): $(dep)).
+#
+# 1 - stamp
+# 2 - directory to remove
+define generate-rm-dir-rule
+$(strip \
+	$(call add-dependency,$2,$1) \
+	$(call generate-stamp-rule,$1,,, \
+		rm -rf $2))
+endef

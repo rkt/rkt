@@ -33,14 +33,9 @@ NMI_TRIPLETS := $(call install-file-triplets,$(NMI_SRC_CONFFILES),$(NMI_CONFFILE
 # this makes sure that config files were copied to the ACI rootfs
 $(call generate-stamp-rule,$(NMI_COPY_STAMP),$(NMI_CONFFILES) $(NMI_CONF_DEPS_STAMP))
 
-# this makes sure that old installed configuration is removed when
-# source config files change
-$(NMI_CONFDIR): $(NMI_CLEAN_DIR_STAMP)
-
 # this removes the config directory in the ACI rootfs, will be invalidated
 # when something changes in source config files
-$(call generate-stamp-rule,$(NMI_CLEAN_DIR_STAMP),,, \
-	rm -rf "$(NMI_CONFDIR)")
+$(call generate-rm-dir-rule,$(NMI_CLEAN_DIR_STAMP),$(NMI_CONFDIR))
 
 STAGE1_INSTALL_DIRS_$(NMI_FLAVOR) += $(foreach d,$(NMI_DIR_CHAIN),$d:0755)
 STAGE1_INSTALL_FILES_$(NMI_FLAVOR) += $(NMI_TRIPLETS)

@@ -129,14 +129,10 @@ $(CBU_ACIROOTFS_SYMLINKS): $(CBU_ROOTFS_COPY_STAMP)
 $(call generate-stamp-rule,$(CBU_ROOTFS_COPY_STAMP),$(CBU_MKBASE_STAMP),$(CBU_ACIROOTFSDIR), \
 	cp -af "$(CBU_ROOTFS)/." "$(CBU_ACIROOTFSDIR)")
 
-# The ACI rootfs directory might be removed with its contents are
-# outdated.
-$(CBU_ACIROOTFSDIR): $(CBU_REMOVE_ACIROOTFSDIR_STAMP)
-
 # This removes the ACI rootfs directory if it holds outdated initial
 # contents (mostly happens when squashfs changes).
-$(call generate-stamp-rule,$(CBU_REMOVE_ACIROOTFSDIR_STAMP),$(CBU_MKBASE_STAMP),, \
-	rm -rf "$(CBU_ACIROOTFSDIR)")
+$(CBU_REMOVE_ACIROOTFSDIR_STAMP): $(CBU_MKBASE_STAMP)
+$(call generate-rm-dir-rule,$(CBU_REMOVE_ACIROOTFSDIR_STAMP),$(CBU_ACIROOTFSDIR))
 
 # This depmk forces the removal of ACI rootfs dir and its repopulation
 # if any of the symlinks to be created by the stamp populating ACI
@@ -156,15 +152,11 @@ $(call generate-clean-mk,$(CBU_ROOTFS_CLEAN_STAMP),$(CBU_ROOTFSDIR_CLEANMK),$(CB
 $(call generate-stamp-rule,$(CBU_MKBASE_STAMP),$(CCN_SQUASHFS) $(CBU_COMPLETE_MANIFEST),$(CBU_ROOTFS), \
 	unsquashfs -d "$(CBU_ROOTFS)/usr" -ef "$(CBU_COMPLETE_MANIFEST)" "$(CCN_SQUASHFS)")
 
-# The temporary rootfs directory might be removed before its creation
-# if it has outdated contents.
-$(CBU_ROOTFS): $(CBU_REMOVE_TMPROOTFSDIR_STAMP)
-
 # If either squashfs file or the concatenated manifest file changes we
 # need to unpack the squashfs file again. Clean the directory holding
 # the old contents beforehand.
-$(call generate-stamp-rule,$(CBU_REMOVE_TMPROOTFSDIR_STAMP),$(CCN_SQUASHFS) $(CBU_COMPLETE_MANIFEST),, \
-	rm -rf "$(CBU_ROOTFS)")
+$(CBU_REMOVE_TMPROOTFSDIR_STAMP): $(CCN_SQUASHFS) $(CBU_COMPLETE_MANIFEST)
+$(call generate-rm-dir-rule,$(CBU_REMOVE_TMPROOTFSDIR_STAMP),$(CBU_ROOTFS))
 
 # This filelist can be generated only after the pxe image was
 # unsquashed to a temporary rootfs.

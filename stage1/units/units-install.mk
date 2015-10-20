@@ -78,14 +78,8 @@ $(call generate-stamp-rule,$(UNI_STAMP),$(UNI_COPY_STAMP) $(UNI_UNIT_TARGET_DEPS
 # this stamp makes sure that everything is copied
 $(call generate-stamp-rule,$(UNI_COPY_STAMP),$(UNI_UNITS),$(UNI_SYMLINKS) $(UNI_UNIT_DIRS))
 
-# The main unit dir depends on the removing stamp, the removing stamp
-# will be invalidated if local unit files are changed. This will force
-# build system to put fresh unit into the ACI rootfs.
-$(UNI_ACIROOTFSDIR): $(UNI_REMOVE_ACIROOTFSDIR_STAMP)
-
-# this removes the unit directory in the ACI rootfs
-$(call generate-stamp-rule,$(UNI_REMOVE_ACIROOTFSDIR_STAMP),,, \
-	rm -rf "$(UNI_ACIROOTFSDIR)")
+# this removes the ACI rootfs directory
+$(call generate-rm-dir-rule,$(UNI_REMOVE_ACIROOTFSDIR_STAMP),$(UNI_ACIROOTFSDIR))
 
 STAGE1_INSTALL_FILES_$(UNI_FLAVOR) += $(UNI_INSTALL_FILES_TRIPLETS)
 STAGE1_INSTALL_DIRS_$(UNI_FLAVOR) += $(UNI_INSTALL_DIRS_PAIRS)
