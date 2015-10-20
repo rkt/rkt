@@ -107,6 +107,14 @@ func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 	return p, nil
 }
 
+func simpleEscape(str string) string {
+	esc := strings.Replace(str, `\`, `\\`, -1)
+	esc = strings.Replace(esc, `"`, `\"`, -1)
+	esc = strings.Replace(esc, `'`, `\'`, -1)
+
+	return esc
+}
+
 // quoteExec returns an array of quoted strings appropriate for systemd execStart usage
 func quoteExec(exec []string) string {
 	if len(exec) == 0 {
@@ -115,15 +123,12 @@ func quoteExec(exec []string) string {
 	}
 
 	var qexec []string
-	qexec = append(qexec, exec[0])
-	// FIXME(vc): systemd gets angry if qexec[0] is quoted
-	// https://bugs.freedesktop.org/show_bug.cgi?id=86171
+	escExec := simpleEscape(exec[0])
+	qexec = append(qexec, `"`+escExec+`"`)
 
 	if len(exec) > 1 {
 		for _, arg := range exec[1:] {
-			escArg := strings.Replace(arg, `\`, `\\`, -1)
-			escArg = strings.Replace(escArg, `"`, `\"`, -1)
-			escArg = strings.Replace(escArg, `'`, `\'`, -1)
+			escArg := simpleEscape(arg)
 			escArg = strings.Replace(escArg, `$`, `$$`, -1)
 			qexec = append(qexec, `"`+escArg+`"`)
 		}
