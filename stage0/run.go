@@ -394,7 +394,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 
 	ep, err := getStage1Entrypoint(dir, runEntrypoint)
 	if err != nil {
-		log.Fatalf("error determining init entrypoint: %v", err)
+		log.Fatalf("error determining 'run' entrypoint: %v", err)
 	}
 	args := []string{filepath.Join(destRootfs, ep)}
 	debug("Execing %s", ep)
