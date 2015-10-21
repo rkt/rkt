@@ -17,7 +17,7 @@ package main
 import (
 	"io/ioutil"
 	"os"
-	"strings"
+	"regexp"
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
@@ -110,7 +110,7 @@ func TestAppToNspawnArgsOverridesImageManifestReadOnly(t *testing.T) {
 		podManifest := &schema.PodManifest{
 			Volumes: []types.Volume{
 				{
-					Name:     "foo-mount",
+					Name:     *types.MustACName("foo-mount"),
 					Kind:     "host",
 					Source:   "/host/foo",
 					ReadOnly: tt.podManifestVolumeReadOnly,
@@ -120,7 +120,7 @@ func TestAppToNspawnArgsOverridesImageManifestReadOnly(t *testing.T) {
 		appManifest := &schema.RuntimeApp{
 			Mounts: []schema.Mount{
 				{
-					Volume: "foo-mount",
+					Volume: *types.MustACName("foo-mount"),
 					Path:   "/app/foo",
 				},
 			},
@@ -130,7 +130,7 @@ func TestAppToNspawnArgsOverridesImageManifestReadOnly(t *testing.T) {
 				Group: "0",
 				MountPoints: []types.MountPoint{
 					{
-						Name:     "foo-mount",
+						Name:     *types.MustACName("foo-mount"),
 						Path:     "/app/foo",
 						ReadOnly: tt.imageManifestVolumeReadOnly,
 					},
@@ -144,13 +144,24 @@ func TestAppToNspawnArgsOverridesImageManifestReadOnly(t *testing.T) {
 		}
 		defer os.RemoveAll(tmpDir)
 
-		p := &Pod{Manifest: podManifest, Root: tstprefix}
+		p := &Pod{Manifest: podManifest, Root: tmpDir}
 		output, err := p.appToNspawnArgs(appManifest)
 		if err != nil {
 			t.Errorf("#%d: unexpected error: `%v`", i, err)
 		}
-		if ro := strings.HasPrefix(output[0], "--bind-ro"); ro != tt.expectReadOnly {
+
+		if ro := hasBindROArg(output); ro != tt.expectReadOnly {
 			t.Errorf("#%d: expected: readOnly: %v, saw: %v", i, tt.expectReadOnly, ro)
 		}
 	}
+}
+
+func hasBindROArg(output []string) bool {
+	roRegexp := regexp.MustCompile("^--bind-ro=/host/foo:.*/app/foo$")
+	for i := len(output) - 1; i >= 0; i-- {
+		if roRegexp.MatchString(output[i]) {
+			return true
+		}
+	}
+	return false
 }

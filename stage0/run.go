@@ -144,8 +144,8 @@ func imageNameToAppName(name types.ACIdentifier) (*types.ACName, error) {
 	return types.MustACName(sn), nil
 }
 
-// deduplicateMPs removes mounts with duplicated paths. If there's more than
-// one mount with the same path, it keeps the first one encountered.
+// deduplicateMPs removes Mounts with duplicated paths. If there's more than
+// one Mount with the same path, it keeps the first one encountered.
 func deduplicateMPs(mounts []schema.Mount) []schema.Mount {
 	var res []schema.Mount
 	seen := make(map[string]struct{})
@@ -160,8 +160,7 @@ func deduplicateMPs(mounts []schema.Mount) []schema.Mount {
 
 // MergeMounts combines the global and per-app mount slices
 func MergeMounts(mounts []schema.Mount, appMounts []schema.Mount) []schema.Mount {
-	ml := mounts
-	ml = append(appMounts, ml...)
+	ml := append(appMounts, mounts...)
 	return deduplicateMPs(ml)
 }
 

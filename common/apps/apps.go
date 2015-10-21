@@ -72,8 +72,7 @@ func (al *Apps) Validate() error {
 
 	f := func(mnts []schema.Mount) error {
 		for _, m := range mnts {
-			_, ok := vs[m.Volume]
-			if !ok {
+			if _, ok := vs[m.Volume]; !ok {
 				return fmt.Errorf("dangling mount point %q: volume %q not found", m.Path, m.Volume)
 			}
 		}

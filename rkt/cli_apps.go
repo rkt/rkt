@@ -174,16 +174,15 @@ func (aam *appInjectVolume) Set(s string) error {
 		return fmt.Errorf("empty target in volume")
 	}
 
+	if volName != p[1] {
+		stderr("Changed volume target %q to %q", p[1], volName)
+	}
+
 	rVol := types.Volume{Name: *types.MustACName(volName), Source: p[0], Kind: "host"}
 	mount := schema.Mount{Volume: rVol.Name, Path: p[1]}
 
 	(*apps.Apps)(aam).Volumes = append((*apps.Apps)(aam).Volumes, rVol)
-	if (*apps.Apps)(aam).Count() == 0 {
-		(*apps.Apps)(aam).Mounts = append((*apps.Apps)(aam).Mounts, mount)
-	} else {
-		app := (*apps.Apps)(aam).Last()
-		app.Mounts = append(app.Mounts, mount)
-	}
+	app.Mounts = append(app.Mounts, mount)
 
 	return nil
 }
@@ -217,7 +216,7 @@ func (al *appMount) Set(s string) error {
 		case "volume":
 			mv, err := types.NewACName(val[0])
 			if err != nil {
-				return err
+				return fmt.Errorf("invalid volume name %q in --mount flag %q: %v", val[0], s, err)
 			}
 			mount.Volume = *mv
 		case "target":
@@ -250,7 +249,7 @@ func (ae *appExec) Type() string {
 	return "appExec"
 }
 
-// TODO(vc): --mount, --set-env, etc.
+// TODO(vc): --set-env should also be per-app and should implement the flags.Value interface.
 func (al *appMount) String() string {
 	var ms []string
 	for _, m := range ((*apps.Apps)(al)).Mounts {
@@ -269,7 +268,7 @@ type appsVolume apps.Apps
 func (al *appsVolume) Set(s string) error {
 	vol, err := types.VolumeFromString(s)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid value in --volume flag %q: %v", s, err)
 	}
 
 	(*apps.Apps)(al).Volumes = append((*apps.Apps)(al).Volumes, *vol)

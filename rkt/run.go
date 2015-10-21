@@ -41,7 +41,8 @@ They will be checked in that order and the first match will be used.
 Volumes are made available to the container via --volume.
 Mounts bind volumes into each image's root within the container via --mount.
 --mount is position-sensitive; occuring before any images applies to all images,
-occuring after any images applies only to the nearest preceding image.
+occuring after any images applies only to the nearest preceding image. Per-app
+mounts take precedence over global ones if they have the same path.
 
 An "--" may be used to inhibit rkt run's parsing of subsequent arguments,
 which will instead be appended to the preceding image app's exec arguments.

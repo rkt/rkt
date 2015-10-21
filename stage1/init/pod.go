@@ -516,9 +516,8 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	}
 
 	for _, mp := range app.MountPoints {
-		_, ok := mounts[mp.Path]
 		// there's already an injected mount for this target path, skip
-		if ok {
+		if _, ok := mounts[mp.Path]; ok {
 			continue
 		}
 		vol, ok := vols[mp.Name]
