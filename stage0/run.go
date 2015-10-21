@@ -618,29 +618,7 @@ func setupStage1Image(cfg RunConfig, cdir string, useOverlay bool) error {
 		}
 	}
 
-	// Chown the 'rootfs' directory, so that rkt list/rkt status can access it.
-	if err := os.Chown(filepath.Join(s1, "rootfs"), -1, cfg.RktGid); err != nil {
-		return err
-	}
-
-	// Chown the 'rootfs/rkt' and its sub-directory, so that rkt list/rkt status can
-	// access it.
-	// Also set 'S_ISGID' bit on the mode so that when the app writes exit status to
-	// 'rootfs/rkt/status/$app', the file has the group ID set to 'rkt'.
-	chownWalker := func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if err := os.Chown(path, -1, cfg.RktGid); err != nil {
-			return err
-		}
-		if err := os.Chmod(path, info.Mode()|os.ModeSetgid); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	return filepath.Walk(filepath.Join(s1, "rootfs", "rkt"), chownWalker)
+	return nil
 }
 
 // writeManifest takes an img ID and writes the corresponding manifest in dest
