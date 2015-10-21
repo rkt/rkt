@@ -204,8 +204,9 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 			Name: *appName,
 			App:  am.App,
 			Image: schema.RuntimeImage{
-				Name: &am.Name,
-				ID:   img,
+				Name:   &am.Name,
+				ID:     img,
+				Labels: am.Labels,
 			},
 			Annotations: am.Annotations,
 			Mounts:      MergeMounts(cfg.Apps.Mounts, app.Mounts),
