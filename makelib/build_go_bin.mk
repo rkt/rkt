@@ -44,6 +44,7 @@ $(call setup-dep-file,_BGB_KV_DEPMK,$(_BGB_PKG_NAME_)/kv)
 $(call forward-vars,$(BGB_BINARY), \
 	BGB_ADDITIONAL_GO_ENV GO_ENV GO BGB_GO_FLAGS _BGB_PKG_NAME_)
 $(BGB_BINARY): $(_BGB_PATH_) $(_BGB_RKT_SYMLINK_STAMP_)
+	$(VQ) \
 	$(BGB_ADDITIONAL_GO_ENV) $(GO_ENV) "$(GO)" build -o "$@" $(BGB_GO_FLAGS) "$(_BGB_PKG_NAME_)"
 
 $(call generate-go-deps,$(_BGB_GO_DEPMK_STAMP_),$(BGB_BINARY),$(_BGB_GO_DEPMK),$(BGB_PKG_IN_REPO))

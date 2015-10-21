@@ -92,6 +92,7 @@ $(call generate-glob-deps,$(KERNEL_DEPS_STAMP),$(KERNEL_MAKEFILE),$(KERNEL_PATCH
 $(call forward-vars,$(KERNEL_MAKEFILE), \
 	KERNEL_SRCDIR KERNEL_TMPDIR)
 $(KERNEL_MAKEFILE): $(KERNEL_TARGET_FILE)
+	$(VQ) \
 	set -e; \
 	rm -rf "$(KERNEL_SRCDIR)"; \
 	tar --extract --xz --touch --file="$<" --directory="$(KERNEL_TMPDIR)"
@@ -99,6 +100,7 @@ $(KERNEL_MAKEFILE): $(KERNEL_TARGET_FILE)
 $(call forward-vars,$(KERNEL_TARGET_FILE), \
 	KERNEL_URL)
 $(KERNEL_TARGET_FILE): | $(KERNEL_TMPDIR)
+	$(VQ) \
 	wget --tries=20 --output-document="$@" "$(KERNEL_URL)"
 
 $(call undefine-namespaces,KERNEL)

@@ -130,6 +130,7 @@ endif
 $$(call forward-vars,$$(STAGE1_ACI_IMAGE_$1), \
 	ACTOOL STAGE1_ACIDIR_$1)
 $$(STAGE1_ACI_IMAGE_$1): $$(ACTOOL_STAMP) | $$(BINDIR)
+	$(VQ) \
 	"$$(ACTOOL)" build --overwrite --owner-root "$$(STAGE1_ACIDIR_$1)" "$$@"
 
 endef

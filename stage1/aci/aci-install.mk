@@ -78,6 +78,7 @@ $(call generate-stamp-rule,$(AMI_STAMP),$(AMI_INSTALLED_FILES),$(AMI_ACI_INSTALL
 $(call forward-vars,$(AMI_GEN_MANIFEST), \
 	AMI_SED_NAME AMI_SED_VERSION AMI_SED_ENTER)
 $(AMI_GEN_MANIFEST): $(AMI_SRC_MANIFEST) | $(AMI_TMPDIR)
+	$(VQ) \
 	set -e; \
 	sed \
 		-e 's/@RKT_STAGE1_NAME@/$(AMI_SED_NAME)/g' \

@@ -3,6 +3,7 @@
 define _FILE_OPS_CREATE_DIRS_RULE_
 CLEAN_DIRS += $1
 $1:
+	$(VQ) \
 	set -e; \
 	[[ -e "$$@" ]] || mkdir -p "$$@"; \
 	$$(call _FILE_OPS_BAIL_OUT_IF_NOT_DIR_,$$@)
@@ -19,6 +20,7 @@ $$(call forward-vars,$$(_FILE_OPS_CIDR_DIR_), \
 # TODO: Create a proper dependency on parent directory
 # $$(_FILE_OPS_CIDR_DIR_): | $$(call to-dir,$$(_FILE_OPS_CIDR_DIR_))
 $$(_FILE_OPS_CIDR_DIR_):
+	$(VQ) \
 	set -e; \
 	[[ -e "$$@" ]] || $$(INSTALL) $$(call _FILE_OPS_DASH_M_,$$(_FILE_OPS_CIDR_MODE_)) -d "$$@"; \
 	$$(call _FILE_OPS_BAIL_OUT_IF_NOT_DIR_,$$@)
@@ -35,6 +37,7 @@ CLEAN_FILES += $$(_FILE_OPS_CIFR_DEST_)
 $$(call forward-vars,$$(_FILE_OPS_CIFR_DEST_), \
 	INSTALL _FILE_OPS_CIFR_MODE_)
 $$(_FILE_OPS_CIFR_DEST_): $$(_FILE_OPS_CIFR_SRC_) | $$(call to-dir,$$(_FILE_OPS_CIFR_DEST_))
+	$(VQ) \
 	$$(INSTALL) $$(call _FILE_OPS_DASH_M_,$$(_FILE_OPS_CIFR_MODE_)) "$$<" "$$@"
 $$(call undefine-namespaces,_FILE_OPS_CIFR)
 endef
@@ -48,6 +51,7 @@ CLEAN_SYMLINKS += $$(_FILE_OPS_CISR_LINK_NAME_)
 $$(call forward-vars,$$(_FILE_OPS_CISR_LINK_NAME_), \
 	_FILE_OPS_CISR_TARGET_)
 $$(_FILE_OPS_CISR_LINK_NAME_): | $$(call to-dir,$$(_FILE_OPS_CISR_LINK_NAME_))
+	$(VQ) \
 	set -e; \
 	if [ -h "$$@" ]; then \
 		tgt=$$$$(readlink "$$@"); \

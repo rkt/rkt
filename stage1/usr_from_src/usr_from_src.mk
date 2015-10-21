@@ -153,7 +153,8 @@ $(call generate-stamp-rule,$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),$(UFS_SYSTEMD_SR
 $(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure, \
 	UFS_PATCHES_DIR GIT UFS_SYSTEMD_SRCDIR)
 $(UFS_SYSTEMD_SRCDIR)/configure:
-	@set -e; \
+	$(VQ) \
+	set -e; \
 	shopt -s nullglob ; \
 	if [ -d "$(UFS_PATCHES_DIR)" ]; then \
 		for p in "$(abspath $(UFS_PATCHES_DIR))"/*.patch; do \
@@ -200,6 +201,7 @@ $(call generate-glob-deps,$(UFS_PATCHES_DEPS_STAMP),$(UFS_SYSTEMD_SRCDIR)/config
 $(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure.ac, \
 	GIT RKT_STAGE1_SYSTEMD_VER RKT_STAGE1_SYSTEMD_SRC UFS_SYSTEMD_SRCDIR)
 $(UFS_SYSTEMD_SRCDIR)/configure.ac:
+	$(VQ) \
 	"$(GIT)" clone --depth 1 --branch "$(RKT_STAGE1_SYSTEMD_VER)" "$(RKT_STAGE1_SYSTEMD_SRC)" "$(UFS_SYSTEMD_SRCDIR)"
 
 ifneq ($(UFS_SYSTEMD_TAG_MATCH),$(UFS_SYSTEMD_TAG_LENGTH))

@@ -44,6 +44,7 @@ CLEAN_FILES += $(CCN_SQUASHFS)
 $(call forward-vars,$(CCN_SQUASHFS), \
 	CCN_TMPDIR CCN_PXE CCN_SQUASHFS_BASE)
 $(CCN_SQUASHFS): $(CCN_PXE) | $(CCN_TMPDIR)
+	$(VQ) \
 	cd "$(CCN_TMPDIR)" && gzip -cd "$(CCN_PXE)" | cpio --unconditional --extract "$(CCN_SQUASHFS_BASE)"
 
 ifeq ($(RKT_LOCAL_COREOS_PXE_IMAGE_PATH),)
@@ -51,6 +52,7 @@ ifeq ($(RKT_LOCAL_COREOS_PXE_IMAGE_PATH),)
 $(call forward-vars,$(CCN_PXE), \
 	CCN_TMPDIR CCN_IMG_URL BASH_SHELL CCN_CACHE_SH)
 $(CCN_PXE): $(CCN_CACHE_SH) | $(CCN_TMPDIR)
+	$(VQ) \
 	ITMP="$(CCN_TMPDIR)" IMG_URL="$(CCN_IMG_URL)" $(BASH_SHELL) $(CCN_CACHE_SH)
 
 endif

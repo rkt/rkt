@@ -252,7 +252,7 @@ endef
 # 3 - order-only reqs
 # 4 - recipe placed after 'set -e'
 define generate-strict-rule
-$(call generate-simple-rule,$1,$2,$3,set -e; $(call colon-if-empty,$4))
+$(call generate-simple-rule,$1,$2,$3,$(VQ)set -e; $(call colon-if-empty,$4))
 endef
 
 # Generates a rule for creating a stamp with additional actions to be

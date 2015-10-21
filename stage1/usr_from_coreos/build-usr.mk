@@ -116,6 +116,7 @@ $(call generate-stamp-rule,$(CBU_ACI_ROOTFS_STAMP),$(CBU_ROOTFS_COPY_STAMP) $(CB
 $(call forward-vars,$(CBU_SYSTEMD_VERSION_FILE), \
 	CCN_SYSTEMD_VERSION CBU_SYSTEMD_VERSION_FILE)
 $(CBU_SYSTEMD_VERSION_FILE): $(CBU_ROOTFS_COPY_STAMP)
+	$(VQ) \
 	echo "$(CCN_SYSTEMD_VERSION)" >"$(CBU_SYSTEMD_VERSION_FILE)"
 
 # This depmk forces systemd-version file recreation if systemd version
@@ -165,6 +166,7 @@ $(call generate-deep-filelist,$(CBU_DETAILED_FILELIST),$(CBU_ROOTFS))
 
 # This concatenates all manifests into one file.
 $(CBU_COMPLETE_MANIFEST): $(CBU_MANIFESTS) | $(CBU_TMPDIR)
+	$(VQ) \
 	set -e; \
 	cat $^ | sort -u > "$@.tmp"; \
 	$(call bash-cond-rename,$@.tmp,$@)

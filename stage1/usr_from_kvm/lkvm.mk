@@ -72,6 +72,7 @@ $(call generate-glob-deps,$(LKVM_DEPS_STAMP),$(LKVM_SRCDIR)/Makefile,$(LKVM_PATC
 $(call forward-vars,$(LKVM_SRCDIR)/Makefile, \
 	LKVM_SRCDIR LKVM_GIT LKVM_VERSION)
 $(LKVM_SRCDIR)/Makefile: | $(LKVM_TMPDIR)
+	$(VQ) \
 	set -e; \
 	mkdir -p $(LKVM_SRCDIR); cd $(LKVM_SRCDIR); \
 	git init; \
