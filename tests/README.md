@@ -15,22 +15,53 @@ Developers can disable the tests by adding `[skip ci]` in the last commit messag
 
 ### Build settings
 
-Use "Other" language and the following build commands:
+Select the "Other" language.
+We don't use "Go" language setting, because rkt is not a typical go project (building it with a go get won't get you too far).
+Also, the "Go" setting is creating a proper GOPATH directory structure with some symlinks on top, which rkt does not need at all and some go tools we use do not like the symlinks in GOPATH at all.
+
+The tests will run on two VMs. The "Setup" and "Post thread" sections will be executed on both VMs. The "Thread 1" and "Thread 2" will be executed in parallel in separate VMs.
+
+#### Setup
 
 ```
-./tests/install-deps.sh            # Setup
-./tests/run-build.sh none          # Thread 1
-./tests/run-build.sh src v222      # Thread 1
-./tests/run-build.sh host          # Thread 1
-./tests/run-build.sh coreos        # Thread 2
-./tests/run-build.sh src master    # Thread 2
-./tests/run-build.sh kvm           # Thread 2
-git clean -ffdx                    # Post Thread
+sudo groupadd rkt
+sudo gpasswd -a runner rkt
+./tests/install-deps.sh
+```
+
+#### Thread 1
+
+```
+./tests/run-build.sh none
+./tests/run-build.sh src v222
+```
+
+#### Thread 2
+
+```
+./tests/run-build.sh coreos
+./tests/run-build.sh host
+```
+
+#### Post thread
+
+```
+git clean -ffdx
+```
+
+#### Other possible commands
+
+The LKVM stage1 or other versions of systemd are not currently tested. It would be possible to add more tests with the following commands:
+
+```
+./tests/run-build.sh src v227
+./tests/run-build.sh src master
+./tests/run-build.sh kvm
 ```
 
 ### Platform
 
-Select `Ubuntu 14.04 LTS v1503 (beta with Docker support)`.
+Select `Ubuntu 14.04 LTS v1503 (beta with Docker support)`. The platform with *Docker support* means the tests will run in a VM.
 
 ## Manually running the functional tests
 
