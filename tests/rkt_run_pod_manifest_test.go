@@ -107,6 +107,27 @@ func TestPodManifest(t *testing.T) {
 		cgroup         string
 	}{
 		{
+			// Special characters
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-special-characters.aci", []string{}},
+			},
+			&schema.PodManifest{
+				Apps: []schema.RuntimeApp{
+					{
+						Name: baseAppName,
+						App: &types.App{
+							Exec:  []string{"/inspect", "--print-msg=\n'\"$"},
+							User:  "0",
+							Group: "0",
+						},
+					},
+				},
+			},
+			true,
+			"'\"$",
+			"",
+		},
+		{
 			// Simple read.
 			[]imagePatch{
 				{"rkt-test-run-pod-manifest-read.aci", []string{}},
