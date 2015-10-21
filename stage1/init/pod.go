@@ -25,6 +25,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -108,12 +109,26 @@ func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 	return p, nil
 }
 
-func simpleEscape(str string) string {
-	esc := strings.Replace(str, `\`, `\\`, -1)
-	esc = strings.Replace(esc, `"`, `\"`, -1)
-	esc = strings.Replace(esc, `'`, `\'`, -1)
+// execEscape uses Golang's string quoting for ", \, \n, and regex for special cases
+func execEscape(i int, str string) string {
+	escapeMap := map[string]string{
+		`'`: `\`,
+	}
 
-	return esc
+	if i > 0 { // These are escaped only after the first argument
+		escapeMap[`$`] = `$`
+	}
+
+	escArg := fmt.Sprintf("%q", str)
+	for k, _ := range escapeMap {
+		reStr := `([` + regexp.QuoteMeta(k) + `])`
+		re := regexp.MustCompile(reStr)
+		escArg = re.ReplaceAllStringFunc(escArg, func(s string) string {
+			escaped := escapeMap[s] + s
+			return escaped
+		})
+	}
+	return escArg
 }
 
 // quoteExec returns an array of quoted strings appropriate for systemd execStart usage
@@ -124,17 +139,10 @@ func quoteExec(exec []string) string {
 	}
 
 	var qexec []string
-	escExec := simpleEscape(exec[0])
-	qexec = append(qexec, `"`+escExec+`"`)
-
-	if len(exec) > 1 {
-		for _, arg := range exec[1:] {
-			escArg := simpleEscape(arg)
-			escArg = strings.Replace(escArg, `$`, `$$`, -1)
-			qexec = append(qexec, `"`+escArg+`"`)
-		}
+	for i, arg := range exec {
+		escArg := execEscape(i, arg)
+		qexec = append(qexec, escArg)
 	}
-
 	return strings.Join(qexec, " ")
 }
 
