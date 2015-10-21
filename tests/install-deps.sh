@@ -29,6 +29,12 @@ if [ "${CI-}" == true ] ; then
 
 		#sudo apt-get update -qq || true
 
+		# Fix for go 1.4.3: see https://github.com/coreos/rkt/issues
+		# GOPATH is only needed to allow go to work; the actual
+		# binaries are installed in GOROOT for these commands
+		sudo -E GOPATH=/tmp go get golang.org/x/tools/cmd/vet
+		sudo -E GOPATH=/tmp go get golang.org/x/tools/cmd/cover
+
 		# libmount: https://github.com/systemd/systemd/pull/986#issuecomment-138451264
 		# sudo add-apt-repository --yes ppa:pitti/systemd-semaphore
 		# sudo apt-get update -qq || true
