@@ -44,7 +44,8 @@ $(KERNEL_BZIMAGE): $(KERNEL_BZIMAGE_STAMP)
 
 # This stamp is to make sure that building linux kernel has finished.
 $(call generate-stamp-rule,$(KERNEL_BZIMAGE_STAMP),$(KERNEL_BUILD_CONFIG) $(KERNEL_PATCH_STAMP),, \
-	$$(MAKE) -C "$(KERNEL_SRCDIR)" O="$(KERNEL_BUILDDIR)" bzImage)
+	$(call vb,vt,BUILD EXT,bzImage) \
+	$$(MAKE) $(call vl2,--silent) -C "$(KERNEL_SRCDIR)" O="$(KERNEL_BUILDDIR)" V=0 bzImage $(call vl2,>/dev/null))
 
 # Generate filelist of a builddir. Can happen only after the building
 # finished.
@@ -57,7 +58,8 @@ $(call generate-clean-mk,$(KERNEL_BUILD_CLEAN_STAMP),$(KERNEL_BUILD_CLEANMK),$(K
 $(call generate-stamp-rule,$(KERNEL_PATCH_STAMP),$(KERNEL_MAKEFILE),, \
 	shopt -s nullglob; \
 	for p in $(KERNEL_PATCHES); do \
-		patch --directory="$(KERNEL_SRCDIR)" --strip=1 --forward <"$$$${p}"; \
+		$(call vb,v2,PATCH,$$$${p#$(MK_TOPLEVEL_ABS_SRCDIR)/}) \
+		patch $(call vl3,--silent )--directory="$(KERNEL_SRCDIR)" --strip=1 --forward <"$$$${p}"; \
 	done)
 
 # Generate a filelist of srcdir. Can happen after the sources were
@@ -95,12 +97,14 @@ $(KERNEL_MAKEFILE): $(KERNEL_TARGET_FILE)
 	$(VQ) \
 	set -e; \
 	rm -rf "$(KERNEL_SRCDIR)"; \
+	$(call vb,vt,UNTAR,$(call vsp,$<) => $(call vsp,$(KERNEL_TMPDIR))) \
 	tar --extract --xz --touch --file="$<" --directory="$(KERNEL_TMPDIR)"
 
 $(call forward-vars,$(KERNEL_TARGET_FILE), \
 	KERNEL_URL)
 $(KERNEL_TARGET_FILE): | $(KERNEL_TMPDIR)
 	$(VQ) \
-	wget --tries=20 --output-document="$@" "$(KERNEL_URL)"
+	$(call vb,vt,WGET,$(KERNEL_URL) => $(call vsp,$@)) \
+	wget $(call vl3,--quiet) --tries=20 --output-document="$@" "$(KERNEL_URL)"
 
 $(call undefine-namespaces,KERNEL)
