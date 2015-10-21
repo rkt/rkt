@@ -476,3 +476,7 @@ $(strip \
 	$(call generate-stamp-rule,$1,,, \
 		rm -rf $2))
 endef
+
+define go-pkg-from-dir
+$(subst $(MK_TOPLEVEL_SRCDIR)/,,$(MK_SRCDIR))
+endef

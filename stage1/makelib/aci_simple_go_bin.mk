@@ -35,7 +35,7 @@ $(call setup-stamp-file,_ASGB_BUILD_STAMP_,binary-build)
 # variables for makelib/build_go_bin.mk
 BGB_STAMP := $(_ASGB_BUILD_STAMP_)
 BGB_BINARY := $(_ASGB_BINARY_)
-BGB_PKG_IN_REPO := $(subst $(MK_TOPLEVEL_SRCDIR)/,,$(MK_SRCDIR))
+BGB_PKG_IN_REPO := $(call go-pkg-from-dir)
 
 include makelib/build_go_bin.mk
 
