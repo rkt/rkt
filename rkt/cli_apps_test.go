@@ -190,3 +190,63 @@ func TestOptionList(t *testing.T) {
 		}
 	}
 }
+
+var bfMap = map[string]int{
+	options[0]: 0,
+	options[1]: 1,
+	options[2]: 1 << 1,
+}
+
+func TestBitFlags(t *testing.T) {
+	tests := []struct {
+		opts     string
+		ex       int
+		parseErr bool
+		logicErr bool
+	}{
+		{
+			opts: "one,two",
+			ex:   3,
+		},
+		{ // Duplicate test
+			opts:     "zero,two,two",
+			ex:       -1,
+			parseErr: true,
+		},
+		{ // Not included test
+			opts:     "zero,two,three",
+			ex:       -1,
+			parseErr: true,
+		},
+		{ // Test 10 in 11
+			opts: "one,two",
+			ex:   1,
+		},
+		{ // Test 11 not in 01
+			opts:     "one",
+			ex:       3,
+			logicErr: true,
+		},
+	}
+
+	for i, tt := range tests {
+		// test NewBitFlags
+		if _, err := newBitFlags(options, tt.opts, bfMap); (err != nil) != tt.parseErr {
+			t.Errorf("test %d: unexpected error in newBitFlag: %v", i, err)
+		}
+
+		bf, err := newBitFlags(options, strings.Join(options, ","), bfMap)
+		if err != nil {
+			t.Errorf("test %d: unexpected error preparing test: %v", i, err)
+		}
+
+		// test BitFlags.Set()
+		if err := bf.Set(tt.opts); (err != nil) != tt.parseErr {
+			t.Errorf("test %d: Could not parse options as expected: %v", i, err)
+		}
+		if tt.ex >= 0 && bf.hasFlag(tt.ex) == tt.logicErr {
+			t.Errorf("test %d: Result was unexpected: %d != %d",
+				i, tt.ex, bf.flags)
+		}
+	}
+}

@@ -92,18 +92,18 @@ func TestFetch(t *testing.T) {
 		imageArgs string
 		finalURL  string
 	}{
-		{"--insecure-skip-verify fetch", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-skip-verify fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
-		{"--insecure-skip-verify fetch", "docker://busybox", "", ""},
-		{"--insecure-skip-verify fetch", "docker://busybox:latest", "", ""},
-		{"--insecure-skip-verify run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /dev/null", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-skip-verify run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /dev/null", ""},
-		{"--insecure-skip-verify run --mds-register=false", "docker://busybox", "", ""},
-		{"--insecure-skip-verify run --mds-register=false", "docker://busybox:latest", "", ""},
-		{"--insecure-skip-verify prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
-		{"--insecure-skip-verify prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-skip-verify prepare", "docker://busybox", "", ""},
-		{"--insecure-skip-verify prepare", "docker://busybox:latest", "", ""},
+		{"--insecure-options=image fetch", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
+		{"--insecure-options=image fetch", "docker://busybox", "", ""},
+		{"--insecure-options=image fetch", "docker://busybox:latest", "", ""},
+		{"--insecure-options=image run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /dev/null", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /dev/null", ""},
+		{"--insecure-options=image run --mds-register=false", "docker://busybox", "", ""},
+		{"--insecure-options=image run --mds-register=false", "docker://busybox:latest", "", ""},
+		{"--insecure-options=image prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
+		{"--insecure-options=image prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image prepare", "docker://busybox", "", ""},
+		{"--insecure-options=image prepare", "docker://busybox:latest", "", ""},
 	}
 
 	for _, tt := range tests {

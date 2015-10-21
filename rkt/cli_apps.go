@@ -308,3 +308,48 @@ func (ol *optionList) Type() string {
 func (ol *optionList) PermissibleString() string {
 	return fmt.Sprintf(`"%s"`, strings.Join(ol.allOptions, `", "`))
 }
+
+// bitFlags is a flag value type supporting a csv list of options stored as bits
+type bitFlags struct {
+	*optionList
+	flags   int
+	flagMap map[string]int
+}
+
+func newBitFlags(permissibleOptions []string, defaultOptions string, flagMap map[string]int) (*bitFlags, error) {
+	ol, err := newOptionList(permissibleOptions, defaultOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	bf := &bitFlags{
+		optionList: ol,
+		flagMap:    flagMap,
+	}
+	bf.typeName = "bitFlags"
+
+	if err := bf.Set(defaultOptions); err != nil {
+		return nil, fmt.Errorf("problem setting defaults: %v", err)
+	}
+
+	return bf, nil
+}
+
+func (bf *bitFlags) Set(s string) error {
+	if err := bf.optionList.Set(s); err != nil {
+		return err
+	}
+	bf.flags = 0
+	for _, o := range bf.options {
+		if b, ok := bf.flagMap[o]; ok {
+			bf.flags |= b
+		} else {
+			return fmt.Errorf("couldn't find flag for %v", o)
+		}
+	}
+	return nil
+}
+
+func (bf *bitFlags) hasFlag(f int) bool {
+	return (bf.flags & f) == f
+}

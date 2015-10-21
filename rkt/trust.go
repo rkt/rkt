@@ -28,7 +28,7 @@ import (
 
 var (
 	cmdTrust = &cobra.Command{
-		Use:   "trust [--prefix=PREFIX] [--insecure-allow-http] [--root] [PUBKEY ...]",
+		Use:   "trust [--prefix=PREFIX] [--insecure-allow-http] [--skip-fingerprint-review] [--root] [PUBKEY ...]",
 		Short: "Trust a key for image verification",
 		Long: `Adds keys to the local keystore for use in verifying signed images.
 PUBKEY may be either a local file or URL,
@@ -37,25 +37,21 @@ Meta discovery of PUBKEY at PREFIX will be attempted if no PUBKEY is specified.
 --root must be specified to add keys with no prefix; path to a key file must be given (no discovery).`,
 		Run: runWrapper(runTrust),
 	}
-	flagPrefix    string
-	flagRoot      bool
-	flagAllowHTTP bool
+	flagPrefix                string
+	flagRoot                  bool
+	flagAllowHTTP             bool
+	flagSkipFingerprintReview bool
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdTrust)
 	cmdTrust.Flags().StringVar(&flagPrefix, "prefix", "", "prefix to limit trust to")
 	cmdTrust.Flags().BoolVar(&flagRoot, "root", false, "add root key from filesystem without a prefix")
+	cmdTrust.Flags().BoolVar(&flagSkipFingerprintReview, "skip-fingerprint-review", false, "accept key without fingerprint confirmation")
 	cmdTrust.Flags().BoolVar(&flagAllowHTTP, "insecure-allow-http", false, "allow HTTP use for key discovery and/or retrieval")
 }
 
 func runTrust(cmd *cobra.Command, args []string) (exit int) {
-	if globalFlags.InsecureSkipVerify {
-		// --insecure-skip-verify disable the keystore but we need it for rkt trust
-		stderr("--insecure-skip-verify cannot be used with rkt trust")
-		return 1
-	}
-
 	if flagPrefix == "" && !flagRoot {
 		if len(args) != 0 {
 			stderr("--root required for non-prefixed (root) keys")
@@ -99,7 +95,7 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	acceptOpt := pubkey.AcceptAsk
-	if globalFlags.InsecureSkipVerify {
+	if flagSkipFingerprintReview {
 		acceptOpt = pubkey.AcceptForce
 	}
 	if err := m.AddKeys(pkls, flagPrefix, acceptOpt, pubkey.OverrideDeny); err != nil {
