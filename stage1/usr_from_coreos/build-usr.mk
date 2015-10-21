@@ -117,6 +117,7 @@ $(call forward-vars,$(CBU_SYSTEMD_VERSION_FILE), \
 	CCN_SYSTEMD_VERSION CBU_SYSTEMD_VERSION_FILE)
 $(CBU_SYSTEMD_VERSION_FILE): $(CBU_ROOTFS_COPY_STAMP)
 	$(VQ) \
+	$(call vb,v2,GEN,$(call vsp,$(CBU_SYSTEMD_VERSION_FILE))) \
 	echo "$(CCN_SYSTEMD_VERSION)" >"$(CBU_SYSTEMD_VERSION_FILE)"
 
 # This depmk forces systemd-version file recreation if systemd version
@@ -128,6 +129,7 @@ $(CBU_ACIROOTFS_SYMLINKS): $(CBU_ROOTFS_COPY_STAMP)
 
 # This copies tmp rootfs to ACI rootfs
 $(call generate-stamp-rule,$(CBU_ROOTFS_COPY_STAMP),$(CBU_MKBASE_STAMP),$(CBU_ACIROOTFSDIR), \
+	$(call vb,v2,CP TREE,$(call vsp,$(CBU_ROOTFS)/.) => $(call vsp,$(CBU_ACIROOTFSDIR))) \
 	cp -af "$(CBU_ROOTFS)/." "$(CBU_ACIROOTFSDIR)")
 
 # This removes the ACI rootfs directory if it holds outdated initial
@@ -151,7 +153,8 @@ $(call generate-clean-mk,$(CBU_ROOTFS_CLEAN_STAMP),$(CBU_ROOTFSDIR_CLEANMK),$(CB
 
 # This unpacks squashfs image to a temporary rootfs.
 $(call generate-stamp-rule,$(CBU_MKBASE_STAMP),$(CCN_SQUASHFS) $(CBU_COMPLETE_MANIFEST),$(CBU_ROOTFS), \
-	unsquashfs -d "$(CBU_ROOTFS)/usr" -ef "$(CBU_COMPLETE_MANIFEST)" "$(CCN_SQUASHFS)")
+	$(call vb,vt,UNSQUASHFS,$(call vsp,$(CCN_SQUASHFS)) => $(call vsp,$(CBU_ROOTFS)/usr)) \
+	unsquashfs -dest "$(CBU_ROOTFS)/usr" -ef "$(CBU_COMPLETE_MANIFEST)" "$(CCN_SQUASHFS)"$(call vl3, >/dev/null))
 
 # If either squashfs file or the concatenated manifest file changes we
 # need to unpack the squashfs file again. Clean the directory holding
@@ -168,6 +171,7 @@ $(call generate-deep-filelist,$(CBU_DETAILED_FILELIST),$(CBU_ROOTFS))
 $(CBU_COMPLETE_MANIFEST): $(CBU_MANIFESTS) | $(CBU_TMPDIR)
 	$(VQ) \
 	set -e; \
+	$(call vb,v2,GEN,$(call vsp,$@)) \
 	cat $^ | sort -u > "$@.tmp"; \
 	$(call bash-cond-rename,$@.tmp,$@)
 
