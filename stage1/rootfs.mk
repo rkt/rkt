@@ -12,7 +12,7 @@ _S1_RF_NAME_ := usr_from_$(S1_RF_FLAVOR)
 
 INSTALL_DIRS += \
 	$(S1_RF_ACIDIR):- \
-	$(S1_RF_ACIROOTFSDIR):0750
+	$(S1_RF_ACIROOTFSDIR):0755
 
 $(call inc-one,$(_S1_RF_NAME_)/$(_S1_RF_NAME_).mk)
 

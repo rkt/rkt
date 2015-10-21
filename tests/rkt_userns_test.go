@@ -39,7 +39,7 @@ var usernsTests = []struct {
 	{
 		`^RKT_BIN^ --debug --insecure-skip-verify run ^USERNS^ --no-overlay --set-env=FILE=^FILE^ --mds-register=false ^IMAGE^`,
 		"/proc/1/root/", // stage1 rootfs ($POD/stage1/rootfs)
-		"drwxr-x---",
+		"drwxr-xr-x",
 		"0",
 		"", // no check: it could be 0 but also the gid of 'rkt', see https://github.com/coreos/rkt/pull/1452
 	},
