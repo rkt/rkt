@@ -33,17 +33,22 @@ import (
 
 var (
 	cmdRun = &cobra.Command{
-		Use:   "run [--volume=name,kind=host,...] IMAGE [-- image-args...[---]]...",
+		Use:   "run [--volume=name,kind=host,...] [--mount volume=VOL,target=PATH] IMAGE [-- image-args...[---]]...",
 		Short: "Run image(s) in a pod in rkt",
 		Long: `IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
 They will be checked in that order and the first match will be used.
+
+Volumes are made available to the container via --volume.
+Mounts bind volumes into each image's root within the container via --mount.
+--mount is position-sensitive; occuring before any images applies to all images,
+occuring after any images applies only to the nearest preceding image. Per-app
+mounts take precedence over global ones if they have the same path.
 
 An "--" may be used to inhibit rkt run's parsing of subsequent arguments,
 which will instead be appended to the preceding image app's exec arguments.
 End the image arguments with a lone "---" to resume argument parsing.`,
 		Run: runWrapper(runRun),
 	}
-	flagVolumes      volumeList
 	flagPorts        portList
 	flagNet          common.NetList
 	flagPrivateUsers bool
@@ -62,7 +67,6 @@ func init() {
 	cmdRkt.AddCommand(cmdRun)
 
 	addStage1ImageFlag(cmdRun.Flags())
-	cmdRun.Flags().Var(&flagVolumes, "volume", "volumes to mount into the pod")
 	cmdRun.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires --net)")
 	cmdRun.Flags().Var(&flagNet, "net", "configure the pod's networking and optionally pass a list of user-configured networks to load and arguments to pass to them. syntax: --net[=n[:args], ...]")
 	cmdRun.Flags().Lookup("net").NoOptDefVal = "default"
@@ -76,12 +80,14 @@ func init() {
 	cmdRun.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--net', '--no-overlay' and '--interactive' will have effects")
 	cmdRun.Flags().BoolVar(&flagMDSRegister, "mds-register", true, "register pod with metadata service")
 	cmdRun.Flags().StringVar(&flagUUIDFileSave, "uuid-file-save", "", "write out pod UUID to specified file")
+	cmdRun.Flags().Var((*appsVolume)(&rktApps), "volume", "volumes to make available in the pod")
 
 	// per-app flags
 	cmdRun.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 	cmdRun.Flags().Var((*appExec)(&rktApps), "exec", "override the exec command for the preceding image")
+	cmdRun.Flags().Var((*appMount)(&rktApps), "mount", "mount point binding a volume to a path within an app")
+	cmdRun.Flags().Var((*appInjectVolume)(&rktApps), "inject-volume", "inject a volume into an app. Syntax: --inject-volume=SOURCE:TARGET")
 
-	flagVolumes = volumeList{}
 	flagPorts = portList{}
 
 	// Disable interspersed flags to stop parsing after the first non flag
@@ -116,7 +122,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	if len(flagPodManifest) > 0 && (len(flagVolumes) > 0 || len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagStoreOnly || flagNoStore) {
+	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagStoreOnly || flagNoStore) {
 		stderr("conflicting flags set with --pod-manifest (see --help)")
 		return 1
 	}
@@ -207,7 +213,6 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	if len(flagPodManifest) > 0 {
 		pcfg.PodManifest = flagPodManifest
 	} else {
-		pcfg.Volumes = []types.Volume(flagVolumes)
 		pcfg.Ports = []types.ExposedPort(flagPorts)
 		pcfg.InheritEnv = flagInheritEnv
 		pcfg.ExplicitEnv = flagExplicitEnv.Strings()
@@ -269,32 +274,6 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	stage0.Run(rcfg, p.path(), globalFlags.Dir) // execs, never returns
 
 	return 1
-}
-
-// volumeList implements the flag.Value interface to contain a set of mappings
-// from mount label --> mount path
-type volumeList []types.Volume
-
-func (vl *volumeList) Set(s string) error {
-	vol, err := types.VolumeFromString(s)
-	if err != nil {
-		return err
-	}
-
-	*vl = append(*vl, *vol)
-	return nil
-}
-
-func (vl *volumeList) String() string {
-	var vs []string
-	for _, v := range []types.Volume(*vl) {
-		vs = append(vs, v.String())
-	}
-	return strings.Join(vs, " ")
-}
-
-func (vl *volumeList) Type() string {
-	return "volumeList"
 }
 
 // portList implements the flag.Value interface to contain a set of mappings

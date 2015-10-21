@@ -35,11 +35,11 @@ var volTests = []struct {
 	},
 	// Check that we can read files from a volume (both ro and rw)
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_RW_READ_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RW_READ_FILE^"`,
 		`<<<host>>>`,
 	},
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_RO_READ_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
 		`<<<host>>>`,
 	},
 	// Check that we can write to files in the ACI
@@ -49,17 +49,27 @@ var volTests = []struct {
 	},
 	// Check that we can write files to a volume (both ro and rw)
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=2 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_RW_WRITE_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=2 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RW_WRITE_FILE^"`,
 		`<<<2>>>`,
 	},
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=3 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_RO_WRITE_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=3 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_WRITE_FILE^"`,
 		`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
 	},
 	// Check that the volume still contain the file previously written
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_RO_READ_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
 		`<<<2>>>`,
+	},
+	// Check that inject-volume works without any mountpoint in the image
+	{
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true ^INJECT_RW^" --inject-volume=^TMPDIR^:dir1`,
+		`<<<1>>>`,
+	},
+	// Check that inject-volume works with a ro mountpoint in the image
+	{
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true ^INJECT_RO^ --inject-volume=^TMPDIR^:/dir1"`,
+		`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
 	},
 }
 
@@ -76,6 +86,10 @@ func TestVolumes(t *testing.T) {
 	defer os.Remove(volRoReadFileImage)
 	volRoWriteFileImage := patchTestACI("rkt-inspect-vol-ro-write-file.aci", "--exec=/inspect --write-file --read-file", "--mounts=dir1,path=/dir1,readOnly=true")
 	defer os.Remove(volRoWriteFileImage)
+	injectImageRW := patchTestACI("rkt-inspect-inject-rw.aci", "--exec=/inspect --write-file --read-file")
+	defer os.Remove(injectImageRW)
+	injectImageRO := patchTestACI("rkt-inspect-inject-ro.aci", "--exec=/inspect --write-file --read-file", "--mounts=dir1,path=/dir1,readOnly=true")
+	defer os.Remove(injectImageRO)
 	ctx := newRktRunCtx()
 	defer ctx.cleanup()
 
@@ -96,6 +110,8 @@ func TestVolumes(t *testing.T) {
 		cmd = strings.Replace(cmd, "^VOL_RO_WRITE_FILE^", volRoWriteFileImage, -1)
 		cmd = strings.Replace(cmd, "^VOL_RW_READ_FILE^", volRwReadFileImage, -1)
 		cmd = strings.Replace(cmd, "^VOL_RW_WRITE_FILE^", volRwWriteFileImage, -1)
+		cmd = strings.Replace(cmd, "^INJECT_RW^", injectImageRW, -1)
+		cmd = strings.Replace(cmd, "^INJECT_RO^", injectImageRO, -1)
 
 		t.Logf("Running test #%v", i)
 		child := spawnOrFail(t, cmd)

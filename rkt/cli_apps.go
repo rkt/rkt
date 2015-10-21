@@ -18,10 +18,15 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"path/filepath"
+	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
 	"github.com/coreos/rkt/common/apps"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
 )
 
 var (
@@ -98,7 +103,7 @@ func parseApps(al *apps.Apps, args []string, flags *pflag.FlagSet, allowAppArgs 
 		}
 	}
 
-	return nil
+	return al.Validate()
 }
 
 // Value interface implementations for the various per-app fields we provide flags for
@@ -150,6 +155,88 @@ func (ae *appExec) Set(s string) error {
 	return nil
 }
 
+// appInjectVolume is for --inject-volume flags in the form of: --inject-volume source=PATH,target=PATH
+type appInjectVolume apps.Apps
+
+func (aam *appInjectVolume) Set(s string) error {
+	app := (*apps.Apps)(aam).Last()
+	if app == nil {
+		return fmt.Errorf("--inject-volume must follow an image")
+	}
+
+	p := strings.SplitN(s, ":", 2)
+	if len(p) != 2 {
+		return fmt.Errorf("must be SOURCE_PATH:TARGET_PATH")
+	}
+
+	volName, err := types.SanitizeACName(p[1])
+	if err != nil {
+		return fmt.Errorf("empty target in volume")
+	}
+
+	if volName != p[1] {
+		stderr("Changed volume target %q to %q", p[1], volName)
+	}
+
+	rVol := types.Volume{Name: *types.MustACName(volName), Source: p[0], Kind: "host"}
+	mount := schema.Mount{Volume: rVol.Name, Path: p[1]}
+
+	(*apps.Apps)(aam).Volumes = append((*apps.Apps)(aam).Volumes, rVol)
+	app.Mounts = append(app.Mounts, mount)
+
+	return nil
+}
+
+func (aam *appInjectVolume) Type() string {
+	return "appInjectVolume"
+}
+
+func (aam *appInjectVolume) String() string {
+	return ""
+}
+
+// appMount is for --mount flags in the form of: --mount volume=VOLNAME,target=PATH
+type appMount apps.Apps
+
+func (al *appMount) Set(s string) error {
+	mount := schema.Mount{}
+
+	// this is intentionally made similar to types.VolumeFromString()
+	// TODO(iaguis) use MakeQueryString() when appc/spec#520 is merged
+	m, err := url.ParseQuery(strings.Replace(s, ",", "&", -1))
+	if err != nil {
+		return err
+	}
+
+	for key, val := range m {
+		if len(val) > 1 {
+			return fmt.Errorf("label %s with multiple values %q", key, val)
+		}
+		switch key {
+		case "volume":
+			mv, err := types.NewACName(val[0])
+			if err != nil {
+				return fmt.Errorf("invalid volume name %q in --mount flag %q: %v", val[0], s, err)
+			}
+			mount.Volume = *mv
+		case "target":
+			mount.Path = val[0]
+		default:
+			return fmt.Errorf("unknown mount parameter %q", key)
+		}
+	}
+
+	as := (*apps.Apps)(al)
+	if as.Count() == 0 {
+		as.Mounts = append(as.Mounts, mount)
+	} else {
+		app := as.Last()
+		app.Mounts = append(app.Mounts, mount)
+	}
+
+	return nil
+}
+
 func (ae *appExec) String() string {
 	app := (*apps.Apps)(ae).Last()
 	if app == nil {
@@ -162,4 +249,40 @@ func (ae *appExec) Type() string {
 	return "appExec"
 }
 
-// TODO(vc): --mount, --set-env, etc.
+// TODO(vc): --set-env should also be per-app and should implement the flags.Value interface.
+func (al *appMount) String() string {
+	var ms []string
+	for _, m := range ((*apps.Apps)(al)).Mounts {
+		ms = append(ms, m.Volume.String(), ":", m.Path)
+	}
+	return strings.Join(ms, " ")
+}
+
+func (al *appMount) Type() string {
+	return "appMount"
+}
+
+// appsVolume is for --volume flags in the form name,kind=host,source=/tmp,readOnly=true (defined by appc)
+type appsVolume apps.Apps
+
+func (al *appsVolume) Set(s string) error {
+	vol, err := types.VolumeFromString(s)
+	if err != nil {
+		return fmt.Errorf("invalid value in --volume flag %q: %v", s, err)
+	}
+
+	(*apps.Apps)(al).Volumes = append((*apps.Apps)(al).Volumes, *vol)
+	return nil
+}
+
+func (al *appsVolume) Type() string {
+	return "appsVolume"
+}
+
+func (al *appsVolume) String() string {
+	var vs []string
+	for _, v := range (*apps.Apps)(al).Volumes {
+		vs = append(vs, v.String())
+	}
+	return strings.Join(vs, " ")
+}

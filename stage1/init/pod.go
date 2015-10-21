@@ -474,6 +474,16 @@ func (p *Pod) PodToSystemd(interactive bool, flavor string, privateUsers string)
 	return nil
 }
 
+func isMPReadOnly(mountPoints []types.MountPoint, name types.ACName) bool {
+	for _, mp := range mountPoints {
+		if mp.Name == name {
+			return mp.ReadOnly
+		}
+	}
+
+	return false
+}
+
 // appToNspawnArgs transforms the given app manifest, with the given associated
 // app name, into a subset of applicable systemd-nspawn argument
 func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
@@ -483,11 +493,10 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	app := ra.App
 
 	vols := make(map[types.ACName]types.Volume)
-
-	// TODO(philips): this is implicitly creating a mapping from MountPoint
-	// to volumes. This is a nice convenience for users but we will need to
-	// introduce a --mount flag so they can control which mountPoint maps to
-	// which volume.
+	mounts := make(map[string]schema.Mount)
+	for _, m := range ra.Mounts {
+		mounts[m.Path] = m
+	}
 
 	sharedVolPath := common.SharedVolumesPath(p.Root)
 	if err := os.MkdirAll(sharedVolPath, sharedVolPerm); err != nil {
@@ -496,6 +505,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	if err := os.Chmod(sharedVolPath, sharedVolPerm); err != nil {
 		return nil, fmt.Errorf("could not change permissions of %q: %v", sharedVolPath, err)
 	}
+	// Here we bind the volumes to the mountpoints via runtime mounts (--mount)
 	for _, v := range p.Manifest.Volumes {
 		vols[v.Name] = v
 		if v.Kind == "empty" {
@@ -506,8 +516,11 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	}
 
 	for _, mp := range app.MountPoints {
-		key := mp.Name
-		vol, ok := vols[key]
+		// there's already an injected mount for this target path, skip
+		if _, ok := mounts[mp.Path]; ok {
+			continue
+		}
+		vol, ok := vols[mp.Name]
 		if !ok {
 			catCmd := fmt.Sprintf("sudo rkt image cat-manifest --pretty-print %v", id)
 			volumeCmd := ""
@@ -515,16 +528,22 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 				volumeCmd += fmt.Sprintf("--volume %s,kind=host,source=/some/path ", mp.Name)
 			}
 
-			return nil, fmt.Errorf("no volume for mountpoint %q in app %q.\n"+
+			return nil, fmt.Errorf("no volume for mountpoint %q:%q in app %q.\n"+
 				"You can inspect the volumes with:\n\t%v\n"+
 				"App %q requires the following volumes:\n\t%v",
-				key, appName, catCmd, appName, volumeCmd)
+				mp.Name, mp.Path, appName, catCmd, appName, volumeCmd)
 		}
+		ra.Mounts = append(ra.Mounts, schema.Mount{Volume: vol.Name, Path: mp.Path})
+	}
+
+	for _, m := range ra.Mounts {
+		vol := vols[m.Volume]
+
 		opt := make([]string, 4)
 
 		// If the readonly flag in the pod manifest is not nil,
 		// then use it to override the readonly flag in the image manifest.
-		readOnly := mp.ReadOnly
+		readOnly := isMPReadOnly(app.MountPoints, vol.Name)
 		if vol.ReadOnly != nil {
 			readOnly = *vol.ReadOnly
 		}
@@ -548,7 +567,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 			return nil, fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty".`, vol.Kind)
 		}
 		opt[2] = ":"
-		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), mp.Path)
+		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), m.Path)
 
 		args = append(args, strings.Join(opt, ""))
 	}
