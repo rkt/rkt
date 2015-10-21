@@ -35,12 +35,13 @@ $(call forward-vars,$(_GR_REVFILE_REFRESH_TARGET_), \
 $(_GR_REVFILE_REFRESH_TARGET_): $(GR_PREREQS) | $(_GR_REVDIR_)
 	$(VQ) \
 	set -e; \
-	"$(GIT)" -C "$(GR_SRCDIR)" fetch origin "$(GR_BRANCH)"; \
+	$(call vb,vt,GIT CHECK,$(GR_BRANCH)) \
+	"$(GIT)" -C "$(GR_SRCDIR)" fetch $(call vl3,--quiet) origin "$(GR_BRANCH)"; \
 	"$(GIT)" -C "$(GR_SRCDIR)" rev-parse "origin/$(GR_BRANCH)" >"$(_GR_REVFILE_TMP_)"; \
 	if cmp --silent "$(_GR_REVFILE_)" "$(_GR_REVFILE_TMP_)"; then \
 		rm -f "$(_GR_REVFILE_TMP_)"; \
 	else \
-		"$(GIT)" -C "$(GR_SRCDIR)" reset --hard "origin/$(GR_BRANCH)"; \
+		"$(GIT)" -C "$(GR_SRCDIR)" reset --hard $(call vl3,--quiet) "origin/$(GR_BRANCH)"; \
 		mv "$(_GR_REVFILE_TMP_)" "$(_GR_REVFILE_)"; \
 	fi
 

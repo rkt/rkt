@@ -15,6 +15,7 @@ $(call forward-vars,$(BSCB_BINARY), \
 $(BSCB_BINARY): $(BSCB_SOURCES) $(BSCB_HEADERS)
 $(BSCB_BINARY): $(_BSCB_PATH_)
 	$(VQ) \
+	$(call vb,vt,CC,$(call vsp,$@)) \
 	$(CC) $(CFLAGS) $(BSCB_ADDITIONAL_CFLAGS) -o "$@" $(BSCB_SOURCES) -static -s
 
 CLEAN_FILES += $(BSCB_BINARY)
