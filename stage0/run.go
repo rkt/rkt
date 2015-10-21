@@ -404,7 +404,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 		log.Fatalf("setting lock fd environment: %v", err)
 	}
 
-	if err := os.Setenv(common.SELinuxContext, fmt.Sprintf("%v", cfg.ProcessLabel)); err != nil {
+	if err := os.Setenv(common.EnvSELinuxContext, fmt.Sprintf("%v", cfg.ProcessLabel)); err != nil {
 		log.Fatalf("setting SELinux context environment: %v", err)
 	}
 

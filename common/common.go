@@ -37,7 +37,7 @@ const (
 	AppsInfoDir      = "/appsinfo"
 
 	EnvLockFd                    = "RKT_LOCK_FD"
-	SELinuxContext               = "RKT_SELINUX_CONTEXT"
+	EnvSELinuxContext            = "RKT_SELINUX_CONTEXT"
 	Stage1TreeStoreIDFilename    = "stage1TreeStoreID"
 	AppTreeStoreIDFilename       = "treeStoreID"
 	OverlayPreparedFilename      = "overlay-prepared"

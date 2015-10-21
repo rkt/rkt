@@ -339,7 +339,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
 
-		if context := os.Getenv(common.SELinuxContext); context != "" {
+		if context := os.Getenv(common.EnvSELinuxContext); context != "" {
 			args = append(args, fmt.Sprintf("-Z%s", context))
 		}
 
@@ -356,7 +356,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
 
-		if context := os.Getenv(common.SELinuxContext); context != "" {
+		if context := os.Getenv(common.EnvSELinuxContext); context != "" {
 			args = append(args, fmt.Sprintf("-Z%s", context))
 		}
 
@@ -397,7 +397,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		args = append(args, "--boot") // Launch systemd in the pod
 		args = append(args, fmt.Sprintf("--register=true"))
 
-		if context := os.Getenv(common.SELinuxContext); context != "" {
+		if context := os.Getenv(common.EnvSELinuxContext); context != "" {
 			args = append(args, fmt.Sprintf("-Z%s", context))
 		}
 
