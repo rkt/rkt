@@ -78,7 +78,7 @@ func init() {
 	cmdRun.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
 	cmdRun.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
 	cmdRun.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--net', '--no-overlay' and '--interactive' will have effects")
-	cmdRun.Flags().BoolVar(&flagMDSRegister, "mds-register", true, "register pod with metadata service")
+	cmdRun.Flags().BoolVar(&flagMDSRegister, "mds-register", false, "register pod with metadata service. needs network connectivity to the host (--net=(default|default-restricted|host)")
 	cmdRun.Flags().StringVar(&flagUUIDFileSave, "uuid-file-save", "", "write out pod UUID to specified file")
 	cmdRun.Flags().Var((*appsVolume)(&rktApps), "volume", "volumes to make available in the pod")
 
@@ -117,8 +117,17 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		privateUsers.SetRandomUidRange(uid.DefaultRangeCount)
 	}
 
-	if len(flagPorts) > 0 && !flagNet.Any() {
-		stderr("--port flag requires --net")
+	if len(flagPorts) > 0 && flagNet.None() {
+		stderr("--port flag does not work with 'none' networking")
+		return 1
+	}
+	if len(flagPorts) > 0 && flagNet.Host() {
+		stderr("--port flag does not work with 'host' networking")
+		return 1
+	}
+
+	if flagMDSRegister && flagNet.None() {
+		stderr("--mds-register flag does not work with --net=none. Please use 'host', 'default' or an equivalent network")
 		return 1
 	}
 

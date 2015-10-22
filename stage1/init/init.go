@@ -552,7 +552,7 @@ func stage1() int {
 	}
 
 	var n *networking.Networking
-	if netList.Any() {
+	if netList.Contained() {
 		fps, err := forwardedPorts(p)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())

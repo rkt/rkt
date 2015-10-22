@@ -64,6 +64,10 @@ func (e *podEnv) loadNets() ([]activeNet, error) {
 		return nil, err
 	}
 
+	if e.netsLoadList.None() {
+		return nets, nil
+	}
+
 	if !netExists(nets, "default") && !netExists(nets, "default-restricted") {
 		var defaultNet string
 		if e.netsLoadList.Specific("default") || e.netsLoadList.All() {
@@ -218,16 +222,19 @@ func copyFileToDir(src, dstdir string) (string, error) {
 }
 
 func loadUserNets(localConfig string, netsLoadList common.NetList) ([]activeNet, error) {
+	if netsLoadList.None() {
+		log.Printf("Networking namespace with loopback only")
+		return nil, nil
+	}
+
 	userNetPath := filepath.Join(localConfig, UserNetPathSuffix)
-	log.Printf("Loading networks from %v\n", userNetPath)
+	log.Printf("Loading networks from %v", userNetPath)
 
 	files, err := listFiles(userNetPath)
 	if err != nil {
 		return nil, err
 	}
-
 	sort.Strings(files)
-
 	nets := make([]activeNet, 0, len(files))
 
 	for _, filename := range files {

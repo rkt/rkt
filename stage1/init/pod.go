@@ -248,7 +248,9 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 	env := app.Environment
 
 	env.Set("AC_APP_NAME", appName.String())
-	env.Set("AC_METADATA_URL", p.MetadataServiceURL)
+	if p.MetadataServiceURL != "" {
+		env.Set("AC_METADATA_URL", p.MetadataServiceURL)
+	}
 
 	if err := p.writeEnvFile(env, appName, privateUsers); err != nil {
 		return fmt.Errorf("unable to write environment file: %v", err)
