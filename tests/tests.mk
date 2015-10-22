@@ -27,10 +27,21 @@ $(TST_SHORT_TESTS_STAMP):
 	$(GO_ENV) "$(GO)" test -timeout 60s -cover $(RKT_TAGS) $(TST_GO_TEST_PACKAGES) --race
 
 TOPLEVEL_CHECK_STAMPS += $(TST_SHORT_TESTS_STAMP)
+TOPLEVEL_UNIT_CHECK_STAMPS += $(TST_SHORT_TESTS_STAMP)
 
 ifeq ($(RKT_RUN_FUNCTIONAL_TESTS),yes)
 
 $(call inc-one,functional.mk)
+
+else
+
+$(call setup-stamp-file,TST_FUNC_TESTS_DISABLED_STAMP,/func-test-disabled)
+
+TOPLEVEL_FUNCTIONAL_CHECK_STAMPS += $(TST_FUNC_TESTS_DISABLED_STAMP)
+
+$(TST_FUNC_TESTS_DISABLED_STAMP):
+	echo 'Functional tests are disabled, pass --enable-functional-tests to configure script to enable them.' >&2; \
+	false
 
 endif
 
