@@ -25,9 +25,10 @@ To validate that `rkt` successfully implements the ACE part of the spec, use the
 ```
 # rkt metadata-service &  # Make sure metadata service is running
 # rkt --insecure-skip-verify run \
+	--mds-register \
 	--volume=database,kind=host,source=/tmp \
-	https://github.com/appc/spec/releases/download/v0.5.1/ace-validator-main.aci \
-	https://github.com/appc/spec/releases/download/v0.5.1/ace-validator-sidekick.aci
+	https://github.com/appc/spec/releases/download/v0.7.0/ace-validator-main.aci \
+	https://github.com/appc/spec/releases/download/v0.7.0/ace-validator-sidekick.aci
 ```
 
 [appc-repo]: https://github.com/appc/spec/
