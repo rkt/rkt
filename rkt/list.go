@@ -96,9 +96,12 @@ func runList(cmd *cobra.Command, args []string) int {
 			uuid = uuid[:8]
 		}
 		for _, app := range pm.Apps {
-			imageName := app.Image.Name.String()
-			if version, ok := app.Image.Labels.Get("version"); ok {
-				imageName = fmt.Sprintf("%s:%s", imageName, version)
+			imageName := "--"
+			if app.Image.Name != nil {
+				imageName = app.Image.Name.String()
+				if version, ok := app.Image.Labels.Get("version"); ok {
+					imageName = fmt.Sprintf("%s:%s", imageName, version)
+				}
 			}
 
 			var imageID string
