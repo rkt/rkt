@@ -10,15 +10,14 @@ The version of the spec that rkt implements can be seen in the output of `rkt ve
 **Note that until communicated otherwise, the rkt CLI and API are considered unstable and subject to change.**
 Backwards-compatibility is a priority for the v1.0.0 release.
 
-### rkt v0.10 (October)
-- different shared namespace execution modes [#1433](https://github.com/coreos/rkt/issues/1433)
-- CLI exposes fine-grained security controls [#1568](https://github.com/coreos/rkt/issues/#1568) [#912](https://github.com/coreos/rkt/issues/912)
+### rkt v0.11 (November)
+- CLI exposes fine-grained security controls [#1568](https://github.com/coreos/rkt/issues/1568) [#912](https://github.com/coreos/rkt/issues/912)
 - API service to expose read-only information about rkt pods [#1208](https://github.com/coreos/rkt/issues/1208)
-- packaged for other distributions 
-  - Fedora [#1304](https://github.com/coreos/rkt/issues/1304) 
-  - Debian [#1307](https://github.com/coreos/rkt/issues/1307) 
 
-### rkt 1.0 (November?)
+### rkt v0.12 (November)
+- different shared namespace execution modes [#1433](https://github.com/coreos/rkt/issues/1433)
+
+### rkt 1.0
 - stable CLI interface
 - stable read-only API interface
 - fully integrated with `machinectl login` and `systemd-run` [#1463](https://github.com/coreos/rkt/issues/1463)
@@ -28,3 +27,6 @@ Backwards-compatibility is a priority for the v1.0.0 release.
   - OpenSUSE [#1304](https://github.com/coreos/rkt/issues/1308) 
 - IPv6 support
 - rkt can run applications as non-root [#820](https://github.com/coreos/rkt/issues/820)
+- packaged for other distributions
+  - Fedora [#1304](https://github.com/coreos/rkt/issues/1304)
+  - Debian [#1307](https://github.com/coreos/rkt/issues/1307)
