@@ -1,6 +1,6 @@
 {
     "acKind": "ImageManifest",
-    "acVersion": "0.7.0",
+    "acVersion": "0.7.1",
     "name": "@RKT_STAGE1_NAME@",
     "labels": [
         {
