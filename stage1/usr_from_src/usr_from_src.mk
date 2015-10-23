@@ -51,6 +51,8 @@ S1_RF_USR_STAMPS += $(UFS_STAMP)
 S1_RF_COPY_SO_DEPS := yes
 CREATE_DIRS += \
 	$(call dir-chain,$(UFS_TMPDIR),$(UFS_SYSTEMDDIR_REST))
+INSTALL_DIRS += \
+	$(UFS_SYSTEMD_SRCDIR):-
 CLEAN_FILES += \
 	$(S1_RF_ACIROOTFSDIR)/systemd-version \
 	$(UFS_AG_OUT)
@@ -211,37 +213,29 @@ endif
 # Generate a dep.mk on those patches, so if patches change, the
 # project should be reset and repatched, and configure script
 # regenerated.
-# TODO: It does not work as comment says. When patches are changed we
-# try to apply them again, but instead we should do a hard reset to
-# original branch and then reapply the patches.
-$(call generate-glob-deps,$(UFS_PATCHES_DEPS_STAMP),$(UFS_SYSTEMD_SRCDIR)/configure,$(UFS_PATCHES_DEPMK),.patch,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR),normal)
+$(call generate-glob-deps,$(UFS_PATCHES_DEPS_STAMP),$(UFS_SYSTEMD_SRCDIR)/configure.ac,$(UFS_PATCHES_DEPMK),.patch,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR),normal)
 
-$(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure.ac, \
-	GIT RKT_STAGE1_SYSTEMD_VER RKT_STAGE1_SYSTEMD_SRC UFS_SYSTEMD_SRCDIR)
-$(UFS_SYSTEMD_SRCDIR)/configure.ac:
-	$(VQ) \
-	set -e; \
-	$(call vb,vt,GIT CLONE,$(RKT_STAGE1_SYSTEMD_SRC)) \
-	"$(GIT)" clone $(call vl3,--quiet) --depth 1 --no-checkout --branch "$(RKT_STAGE1_SYSTEMD_VER)" "$(RKT_STAGE1_SYSTEMD_SRC)" "$(UFS_SYSTEMD_SRCDIR)"; \
-	"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" checkout --quiet "$(RKT_STAGE1_SYSTEMD_VER)"
+# parameters for makelib/git.mk
+GCL_REPOSITORY := $(RKT_STAGE1_SYSTEMD_SRC)
+GCL_DIRECTORY := $(UFS_SYSTEMD_SRCDIR)
+GCL_COMMITTISH := $(RKT_STAGE1_SYSTEMD_VER)
+GCL_EXPECTED_FILE := configure.ac
+GCL_TARGET := $(UFS_SYSTEMD_SRCDIR)/configure
 
 ifneq ($(UFS_SYSTEMD_TAG_MATCH),$(UFS_SYSTEMD_TAG_LENGTH))
 
 # If the name is not a tag then we try to pull new changes from upstream.
 
-GR_TARGET := $(UFS_SYSTEMD_SRCDIR)/configure
-GR_SRCDIR := $(UFS_SYSTEMD_SRCDIR)
-GR_BRANCH := $(RKT_STAGE1_SYSTEMD_VER)
-GR_PREREQS := $(UFS_SYSTEMD_SRCDIR)/configure.ac
-
-include makelib/git-refresh.mk
+GCL_DO_CHECK := yes
 
 else
 
 # The name is a tag, so we do not refresh the git repository.
 
-$(UFS_SYSTEMD_SRCDIR)/configure: $(UFS_SYSTEMD_SRCDIR)/configure.ac
+GCL_DO_CHECK :=
 
 endif
+
+include makelib/git.mk
 
 $(call undefine-namespaces,UFS)
