@@ -64,7 +64,7 @@ acbuild port add www tcp 5000
 acbuild label add version 0.0.1
 acbuild label add arch amd64
 acbuild label add os linux
-acbuild annotation add authors "Kelsey Hightower <kelsey.hightower@gmail.com>"
+acbuild annotation add authors "Carly Container <carly.container@gmail.com>"
 acbuild write hello-0.0.1-linux-amd64.aci
 acbuild end
 ```
