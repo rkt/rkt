@@ -105,7 +105,7 @@ Each ACI can define a [list of mount points](https://github.com/appc/spec/blob/m
 }
 ```
 
-To fulfill these mount points, volumes are used. A volume is asigned to a mount point if they both have the same name.
+To fulfill these mount points, volumes are used. A volume is assigned to a mount point if they both have the same name.
 There are today two kinds of volumes:
 - `host` volumes that can expose a directory or a file from the host to the pod
 - `empty` volumes that initialize an empty storage to be accessed locally within the pod.
