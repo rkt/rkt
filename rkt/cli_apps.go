@@ -174,10 +174,6 @@ func (aam *appInjectVolume) Set(s string) error {
 		return fmt.Errorf("empty target in volume")
 	}
 
-	if volName != p[1] {
-		stderr("Changed volume target %q to %q", p[1], volName)
-	}
-
 	rVol := types.Volume{Name: *types.MustACName(volName), Source: p[0], Kind: "host"}
 	mount := schema.Mount{Volume: rVol.Name, Path: p[1]}
 
