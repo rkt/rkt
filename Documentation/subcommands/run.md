@@ -84,16 +84,81 @@ rkt: warning: signature verification has been disabled
 
 ## Mount Volumes into a Pod
 
-Volumes are defined in each ACI and are referenced by name. Volumes can be exposed from the host into the pod (`host`) or initialized as empty storage to be accessed locally within the pod (`empty` pending [rkt #378][rkt #378]). Each volume can be selectively mounted into each application at differing mount points or not mounted into specific apps at all.
+Each ACI can define a [list of mount points](https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema) that the app is expecting external data to be mounted into:
 
-[rkt #378]: https://github.com/coreos/rkt/issues/378
+```json
+{
+    "acKind": "ImageManifest",
+    "name": "example.com/app1",
+    ...
+    "app": {
+        ...
+        "mountPoints": [
+            {
+                "name": "data",
+                "path": "/var/data",
+                "readOnly": false
+            }
+        ]
+    }
+    ...
+}
+```
 
+To fulfill these mount points, volumes are used. A volume is asigned to a mount point if they both have the same name.
+There are today two kinds of volumes:
+- `host` volumes that can expose a directory or a file from the host to the pod
+- `empty` volumes that initialize an empty storage to be accessed locally within the pod.
 
-### Mounting Host Volumes
+Each volume can be selectively mounted into each application at differing mount points. Note that any volumes that are specified but do not have a matching mount point will be silently ignored.
 
-For `host` volumes, the `--volume` flag allows you to specify each mount, its type and the location on the host. The volume is then mounted into each app running to the pod based on information defined in the ACI manifest.
+### Mounting Volumes
 
-For example, let's say we want to read data from the host directory `/opt/tenant1/work` to power a MapReduce-style worker. We'll call this app `example.com/reduce-worker`.
+For `host` volumes, the `--volume` flag allows you to specify each mount, its type, the location on the host, and whether the volume is read-only or not. In the following example, we make the host's `/srv/data` accessible to app1 on `/var/data`:
+
+```
+# rkt run --volume data,kind=host,source=/srv/data,readOnly=false example.com/app1
+```
+
+If you don’t intend to persist the data and you just want to have a volume shared between all the apps in the pod, you can use an `empty` volume:
+
+```
+# rkt run --volume data,kind=empty,readOnly=false example.com/app1
+```
+
+The volume is then mounted into each app running to the pod based on information defined in the ACI manifest.
+
+### Mounting Volumes without Mount Points
+
+If the ACI doesn’t have any mount points defined in its manifest, you can still mount volumes using the `--mount` or `--inject-volume` flags.
+
+With `--mount` you define a mapping between volumes and a path in the app. This will override any mount points in the image manifest.
+In the following example, the `--mount` option is positioned after the app name; it defines the mount only in that app:
+
+```
+# rkt run --volume logs,kind=host,source=/srv/logs \
+        example.com/app1 --mount volume=logs,target=/var/log \
+        example.com/app2 --mount volume=logs,target=/opt/log
+```
+
+In the following example, the `--mount` option is positioned before the app names.
+It defines mounts on all apps: both app1 and app2 will have `/srv/logs` accessible on `/var/log`.
+
+```
+# rkt run --volume logs,kind=host,source=/srv/logs \
+       --mount volume=data,target=/var/log \
+        example.com/app1 example.com/app2
+```
+
+`--inject-volume` is convenient when you don’t want to share volumes between the apps in the pod. It simply maps a path in the host to a path in the app:
+
+```
+# rkt run example.com/app1 --inject-volume /srv/data:/var/data
+```
+
+### MapReduce Example
+
+Let's say we want to read data from the host directory `/opt/tenant1/work` to power a MapReduce-style worker. We'll call this app `example.com/reduce-worker`.
 
 We also want this data to be available to a backup application that runs alongside the worker (in the same pod). We'll call this app 'example.com/worker-backup`. The backup application only needs read-only access to the data.
 
@@ -113,6 +178,8 @@ Below we show the abbreviated manifests for the respective applications (recall 
                 "readOnly": false
             }
         ],
+        ...
+    }
     ...
 }
 ```
@@ -131,11 +198,13 @@ Below we show the abbreviated manifests for the respective applications (recall 
                 "readOnly": true
             }
         ],
+        ...
+    }
     ...
 }
 ```
 
-In this case, both apps reference a volume they call "work", and expect it to be made available at `/var/lib/work` and `/backup` within their respective root filesystems. 
+In this case, both apps reference a volume they call "work", and expect it to be made available at `/var/lib/work` and `/backup` within their respective root filesystems.
 
 Since they reference the volume using an abstract name rather than a specific source path, the same image can be used on a variety of different hosts without being coupled to the host's filesystem layout.
 
@@ -145,6 +214,14 @@ To tie it all together, we use the `rkt run` command-line to provide them with a
 # rkt run --volume=work,kind=host,source=/opt/tenant1/work \
   example.com/reduce-worker \
   example.com/worker-backup
+```
+
+If the image didn’t have any mount points, you can achieve a similar effect with the `--mount` flag (note that both would be read-write though):
+
+```
+# rkt run --volume=work,kind=host,source=/opt/tenant1/work \
+  example.com/reduce-worker --mount volume=work,target=/var/lib/work \
+  example.com/worker-backup --mount volume=work,target=/backup
 ```
 
 Now when the pod is running, the two apps will see the host's `/opt/tenant1/work` directory made available at their expected locations.
