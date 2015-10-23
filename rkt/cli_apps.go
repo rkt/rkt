@@ -155,42 +155,6 @@ func (ae *appExec) Set(s string) error {
 	return nil
 }
 
-// appInjectVolume is for --inject-volume flags in the form of: --inject-volume source=PATH,target=PATH
-type appInjectVolume apps.Apps
-
-func (aam *appInjectVolume) Set(s string) error {
-	app := (*apps.Apps)(aam).Last()
-	if app == nil {
-		return fmt.Errorf("--inject-volume must follow an image")
-	}
-
-	p := strings.SplitN(s, ":", 2)
-	if len(p) != 2 {
-		return fmt.Errorf("must be SOURCE_PATH:TARGET_PATH")
-	}
-
-	volName, err := types.SanitizeACName(p[1])
-	if err != nil {
-		return fmt.Errorf("empty target in volume")
-	}
-
-	rVol := types.Volume{Name: *types.MustACName(volName), Source: p[0], Kind: "host"}
-	mount := schema.Mount{Volume: rVol.Name, Path: p[1]}
-
-	(*apps.Apps)(aam).Volumes = append((*apps.Apps)(aam).Volumes, rVol)
-	app.Mounts = append(app.Mounts, mount)
-
-	return nil
-}
-
-func (aam *appInjectVolume) Type() string {
-	return "appInjectVolume"
-}
-
-func (aam *appInjectVolume) String() string {
-	return ""
-}
-
 // appMount is for --mount flags in the form of: --mount volume=VOLNAME,target=PATH
 type appMount apps.Apps
 

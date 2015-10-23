@@ -130,9 +130,9 @@ The volume is then mounted into each app running to the pod based on information
 
 ### Mounting Volumes without Mount Points
 
-If the ACI doesn't have any mount points defined in its manifest, you can still mount volumes using the `--mount` or `--inject-volume` flags.
+If the ACI doesn't have any mount points defined in its manifest, you can still mount volumes using the `--mount` flag.
 
-With `--mount` you define a mapping between volumes and a path in the app. This will override any mount points in the image manifest.
+With `--mount` you define a mapping between volumes and a path in the app. This will supplement and override any mount points in the image manifest.
 In the following example, the `--mount` option is positioned after the app name; it defines the mount only in that app:
 
 ```
@@ -148,12 +148,6 @@ It defines mounts on all apps: both app1 and app2 will have `/srv/logs` accessib
 # rkt run --volume logs,kind=host,source=/srv/logs \
        --mount volume=data,target=/var/log \
         example.com/app1 example.com/app2
-```
-
-`--inject-volume` is convenient when you don't want to share volumes between the apps in the pod. It simply maps a path in the host to a path in the app:
-
-```
-# rkt run example.com/app1 --inject-volume /srv/data:/var/data
 ```
 
 ### MapReduce Example
