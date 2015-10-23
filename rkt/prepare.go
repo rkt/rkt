@@ -61,7 +61,7 @@ func init() {
 	// per-app flags
 	cmdPrepare.Flags().Var((*appExec)(&rktApps), "exec", "override the exec command for the preceding image")
 	cmdPrepare.Flags().Var((*appMount)(&rktApps), "mount", "mount point binding a volume to a path within an app")
-	cmdPrepare.Flags().Var((*appInjectVolume)(&rktApps), "inject-volume", "inject a volume into an app. Syntax: --inject-volume=SOURCE:TARGET")
+
 	// Disable interspersed flags to stop parsing after the first non flag
 	// argument. This is need to permit to correctly handle
 	// multiple "IMAGE -- imageargs ---"  options
