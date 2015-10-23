@@ -152,7 +152,7 @@ Now when the pod is running, the two apps will see the host's `/opt/tenant1/work
 ## Disabling metadata service registration
 
 By default, `rkt run` will register the pod with the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md).
-If the metadata service is not running, it is possible to disable this behavior with `--register-mds=false` command line option.
+If the metadata service is not running, it is possible to disable this behavior with `--mds-register=false` command line option.
 
 ## Pod Networking
 
