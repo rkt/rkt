@@ -43,9 +43,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 	"github.com/coreos/rkt/common"
+	s1common "github.com/coreos/rkt/stage1/common"
 )
 
 const (
@@ -147,36 +149,53 @@ func PodToSystemdHostMountUnits(root string, volumes []types.Volume, appNames []
 
 // AppToSystemdMountUnits prepare bind mount unit for empty or host kind mounting
 // between stage1 rootfs and chrooted filesystem for application
-func AppToSystemdMountUnits(root string, appName types.ACName, mountPoints []types.MountPoint, unitsDir string) error {
+func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.Volume, ra *schema.RuntimeApp, unitsDir string) error {
+	app := ra.App
 
-	for _, mountPoint := range mountPoints {
+	vols := make(map[types.ACName]types.Volume)
+	for _, v := range volumes {
+		vols[v.Name] = v
+	}
 
-		name := mountPoint.Name.String()
+	mounts, err := s1common.GenerateMounts(ra, vols)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range mounts {
+		vol := vols[m.Volume]
+
 		// source relative to stage1 rootfs to relative pod root
-		whatPath := filepath.Join(stage1MntDir, name)
+		whatPath := filepath.Join(stage1MntDir, vol.Name.String())
 		whatFullPath := filepath.Join(root, whatPath)
 
 		// destination relative to stage1 rootfs and relative to pod root
-		wherePath := filepath.Join(common.RelAppRootfsPath(appName), mountPoint.Path)
+		wherePath := filepath.Join(common.RelAppRootfsPath(appName), m.Path)
 		whereFullPath := filepath.Join(root, wherePath)
 
-		// readOnly
 		mountOptions := "bind"
-		if mountPoint.ReadOnly {
+		var readOnly bool
+		if vol.ReadOnly != nil {
+			readOnly = *vol.ReadOnly
+		} else {
+			readOnly = s1common.IsMPReadOnly(app.MountPoints, vol.Name)
+		}
+
+		if readOnly {
 			mountOptions += ",ro"
 		}
 
-		// assertion to make sure that "what" exists (created earlier by podToSystemdHostMountUnits)
+		// assertion to make sure that "what" exists (created earlier by PodToSystemdHostMountUnits)
 		log.Printf("checking required source path: %q", whatFullPath)
 		if _, err := os.Stat(whatFullPath); os.IsNotExist(err) {
-			return fmt.Errorf("app requires a volume that is not defined in Pod (try adding --volume=%s,kind=empty)!", name)
+			return fmt.Errorf("bug: missing source for volume %v", vol.Name)
 		}
 
 		// optionally prepare app directory
 		log.Printf("optionally preparing destination path: %q", whereFullPath)
 		err := os.MkdirAll(whereFullPath, 0700)
 		if err != nil {
-			return fmt.Errorf("failed to prepare dir for mountPoint %v: %v", mountPoint.Name, err)
+			return fmt.Errorf("failed to prepare dir for mount %v: %v", m.Volume, err)
 		}
 
 		// install new mount unit for bind mount /mnt/volumeName -> /opt/stage2/{app-id}/rootfs/{{mountPoint.Path}}
