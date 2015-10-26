@@ -71,17 +71,6 @@ acbuild end
 
 ## Run
 
-### Launch the metadata service
-
-Start the metadata service from your init system or simply from another terminal:
-
-```
-# rkt metadata-service
-```
-Notice that the `#` indicates that this should be run as root.
-
-rkt will register pods with the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md) so they can introspect their environment.
-
 ### Launch a local application image
 
 ```
@@ -92,6 +81,8 @@ Note that `--insecure-skip-verify` is required because, by default, rkt expects 
 
 At this point our hello app is running on port 5000 and ready to handle HTTP
 requests.
+
+You can also [run rkt as a daemon](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#run-rkt-as-a-daemon).
 
 ### Test with curl
 

@@ -17,7 +17,7 @@ ACIs are named with a URL-like structure. This naming scheme allows for a decent
 ## Running Pods
 
 rkt can run ACIs based on name, hash, local file on disk or URL. If an ACI hasn't been cached on disk, rkt will attempt to find and download it.
-Prior to running pods, ensure that the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md) is running.
+If you want to use the [metadata service](https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service), make sure [it is running](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md) and you enable registration with the `--mds-register` flag.
 
 * [run](/Documentation/subcommands/run.md)
 * [enter](/Documentation/subcommands/enter.md)

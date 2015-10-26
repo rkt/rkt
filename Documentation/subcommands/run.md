@@ -220,10 +220,10 @@ If the image didn't have any mount points, you can achieve a similar effect with
 
 Now when the pod is running, the two apps will see the host's `/opt/tenant1/work` directory made available at their expected locations.
 
-## Disabling metadata service registration
+## Enabling metadata service registration
 
-By default, `rkt run` will register the pod with the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md).
-If the metadata service is not running, it is possible to disable this behavior with `--mds-register=false` command line option.
+By default, `rkt run` will not register the pod with the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md).
+You can enable registration with the `--mds-register` command line option.
 
 ## Pod Networking
 
@@ -247,3 +247,12 @@ Strictly seen, this is only true when `rkt run` is invoked on the host directly,
 ### Other Networking Examples
 
 More details about rkt's networking options and examples can be found in the [networking documentation](https://github.com/coreos/rkt/blob/master/Documentation/networking.md)
+
+## Run rkt as a Daemon
+
+rkt doesn't include any built-in support for running as a daemon.
+However, since it is a regular process, you can use your init system to achieve the same effect.
+
+For example, if you use systemd, you can [run rkt using `systemd-run`](https://github.com/coreos/rkt/blob/master/Documentation/using-rkt-with-systemd.md#systemd-run).
+
+If you don't use systemd, you can use [daemon](http://www.libslack.org/daemon/) as an alternative.
