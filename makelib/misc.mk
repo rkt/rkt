@@ -432,3 +432,23 @@ endef
 define sed-replacement-escape
 $(strip $(shell echo $1 | sed -e 's/[\/&]/\\&/g'))
 endef
+
+define add-dependency-template
+$1: $2
+endef
+
+# 1 - a target
+# 2 - a dependency (or a prerequisite in makese)
+define add-dependency
+$(eval $(call add-dependency-template,$1,$2))
+endef
+
+# Formats given lists of source and destination files for the
+# INSTALL_FILES variable.
+#
+# 1 - list of src files
+# 2 - list of target files
+# 3 - mode
+define install-file-triplets
+$(strip $(join $(addsuffix :,$1),$(addsuffix :$3,$2)))
+endef

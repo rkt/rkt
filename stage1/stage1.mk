@@ -22,6 +22,21 @@
 _STAGE1_ACI_ := $(BINDIR)/stage1-$(RKT_STAGE1_USR_FROM).aci
 
 STAGE1_FLAVORS := $(RKT_STAGE1_USR_FROM)
+
+# per-flavor variables (for now there is only one flavor possible)
+$(foreach f,$(STAGE1_FLAVORS), \
+	$(eval STAGE1_COPY_SO_DEPS_$f :=) \
+	$(eval STAGE1_USR_STAMPS_$f :=) \
+	$(eval STAGE1_SECONDARY_STAMPS_$f :=) \
+	$(eval STAGE1_ACIDIR_$f := $(BUILDDIR)/aci-for-$f-flavor) \
+	$(eval STAGE1_ACIROOTFSDIR_$f := $(STAGE1_ACIDIR_$f)/rootfs) \
+	$(eval STAGE1_INSTALL_FILES_$f :=) \
+	$(eval STAGE1_INSTALL_SYMLINKS_$f :=) \
+	$(eval STAGE1_INSTALL_DIRS_$f :=) \
+	$(eval STAGE1_CREATE_DIRS_$f :=) \
+	$(eval STAGE1_ENTER_CMD_$f :=))
+
+
 STAGE1_USR_STAMPS :=
 STAGE1_STAMPS :=
 STAGE1_COPY_SO_DEPS :=
@@ -31,8 +46,8 @@ STAGE1_INSTALL_DIRS :=
 STAGE1_CREATE_DIRS :=
 STAGE1_ENTER_CMD :=
 
-ACIDIR := $(BUILDDIR)/aci-for-$(RKT_STAGE1_USR_FROM)-flavor
-ACIROOTFSDIR := $(ACIDIR)/rootfs
+ACIDIR := $(STAGE1_ACIDIR_$(RKT_STAGE1_USR_FROM))
+ACIROOTFSDIR := $(STAGE1_ACIROOTFSDIR_$(RKT_STAGE1_USR_FROM))
 
 $(call setup-stamp-file,_STAGE1_ASSEMBLE_ACI_STAMP_,/assemble_aci)
 
@@ -40,6 +55,18 @@ $(call setup-stamp-file,_STAGE1_ASSEMBLE_ACI_STAMP_,/assemble_aci)
 S1_RF_FLAVOR := $(RKT_STAGE1_USR_FROM)
 $(call inc-one,rootfs.mk)
 $(call inc-one,secondary-stuff.mk)
+
+# put back values from per-flavor variables back into global variables
+$(foreach f,$(STAGE1_FLAVORS), \
+	$(eval STAGE1_COPY_SO_DEPS += $(STAGE1_COPY_SO_DEPS_$f)) \
+	$(eval STAGE1_USR_STAMPS += $(STAGE1_USR_STAMPS_$f)) \
+	$(eval STAGE1_STAMPS += $(STAGE1_SECONDARY_STAMPS_$f)) \
+	$(eval STAGE1_INSTALL_FILES += $(STAGE1_INSTALL_FILES_$f)) \
+	$(eval STAGE1_INSTALL_SYMLINKS += $(STAGE1_INSTALL_SYMLINKS_$f)) \
+	$(eval STAGE1_INSTALL_DIRS += $(STAGE1_INSTALL_DIRS_$f)) \
+	$(eval STAGE1_CREATE_DIRS += $(STAGE1_CREATE_DIRS_$f)) \
+	$(eval STAGE1_ENTER_CMD += $(STAGE1_ENTER_CMD_$f)))
+
 
 # var name,whether it has to be split,if yes which word is the created
 # file

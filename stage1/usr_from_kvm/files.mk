@@ -17,7 +17,7 @@ UFKF_ACI_FILES := \
 UFKF_SRC_FILES := $(addprefix $(UFKF_DIR)/,$(notdir $(UFKF_ACI_FILES)))
 
 S1_RF_SECONDARY_STAMPS += $(UFKF_STAMP)
-S1_RF_INSTALL_FILES += $(join $(addsuffix :,$(UFKF_SRC_FILES)),$(addsuffix :0644,$(UFKF_ACI_FILES)))
+S1_RF_INSTALL_FILES += $(call install-file-triplets,$(UFKF_SRC_FILES),$(UFKF_ACI_FILES),0644)
 S1_RF_INSTALL_DIRS += \
 	$(addsuffix :0755,$(UFKF_DIR_CHAIN) $(sort $(call to-dir,$(UFKF_ACI_FILES))))
 
