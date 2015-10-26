@@ -12,7 +12,7 @@ Let's get started:
 - Update the [roadmap](https://github.com/coreos/rkt/blob/master/ROADMAP.md) to remove the release you're performing, if necessary
 - Branch from the latest master, make sure your git status is clean
 - Ensure the build is clean!
-  - `./autogen.sh && ./configure --enable-functional-tests && make && make check` should work
+  - `git clean -ffdx && ./autogen.sh && ./configure --enable-functional-tests && make && make check` should work
   - Integration tests on CI should be green
 - Update the [release notes](https://github.com/coreos/rkt/blob/master/CHANGELOG.md). Try to capture most of the salient changes since the last release, but don't go into unnecessary detail (better to link/reference the documentation wherever possible).
 
@@ -25,9 +25,10 @@ The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/b
 - Ensure the CI on the release PR is green!
 
 After merging and going back to master branch, we check out the release version and tag it:
-- `git checkout HEAD^` should work; sanity check the second line in configure.ac after doing this
-- Build rkt twice - once to build `coreos` stage1 and once to build `kvm` stage1, we'll use this in a minute:
-  - `./autogen.sh && ./configure --with-stage1=kvm && make BUILDDIR=release-build && ./configure && make BUILDDIR=release-build`
+- `git checkout HEAD^` should work; sanity check configure.ac (2nd line) after doing this
+- Build rkt, we'll use this in a minute:
+  - `git clean -ffdx && ./autogen.sh && ./configure && make BUILDDIR=release-build`
+    - This will build both `coreos` and `kvm` flavors and make `coreos` the default
     - Use make's `-j` parameter as you see fit
   - Sanity check `release-build/bin/rkt version`
 - Add a signed tag: `git tag -s v0.7.0`. (We previously used tags for release notes, but now we store them in CHANGELOG.md, so a short tag with the release name is fine).

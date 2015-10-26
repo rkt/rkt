@@ -5,10 +5,10 @@ That is, rkt will start a virtual machine with full hypervisor isolation instead
 
 ## Getting started
 
-You can either use `stage1-lkvm.aci` from the official release, or build rkt yourself with the right options:
+You can either use `stage1-kvm.aci` (or `stage1-lkvm.aci`) from the official release, or build rkt yourself with the right options:
 
 ```
-$ ./autogen.sh && ./configure --with-stage1=kvm && make
+$ ./autogen.sh && ./configure --with-stage1-flavors=kvm && make
 ```
 
 This will build the rkt binary and the LKVM stage1.aci in `build-rkt-0.10.0+git/bin/`.

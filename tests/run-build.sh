@@ -34,20 +34,30 @@ cd "${BUILD_DIR}"
 ./autogen.sh
 case "${RKT_STAGE1_USR_FROM}" in
     coreos|kvm)
-	./configure --with-stage1="${RKT_STAGE1_USR_FROM}" \
+	./configure --with-stage1-flavors="${RKT_STAGE1_USR_FROM}" \
+		    --with-stage1-default-flavor="${RKT_STAGE1_USR_FROM}" \
 		    --enable-functional-tests
 	;;
-    host|usr-from-host)
-	./configure --with-stage1=host \
+    host)
+	./configure --with-stage1-flavors=host \
+		    --with-default-stage1-flavor=host \
 		    --enable-functional-tests=auto
 	;;
     src)
-	./configure --with-stage1="${RKT_STAGE1_USR_FROM}" \
+	./configure --with-stage1-flavors="${RKT_STAGE1_USR_FROM}" \
+		    --with-stage1-default-flavor="${RKT_STAGE1_USR_FROM}" \
 		    --with-stage1-systemd-version="${RKT_STAGE1_SYSTEMD_VER}" \
 		    --enable-functional-tests
 	;;
+    none)
+	# Not a flavor per se, so perform a detailed setup for some
+	# hypothetical 3rd party stage1 image
+	./configure --with-stage1-default-name="example.com/some-stage1-for-rkt" \
+		    --with-stage1-default-version="0.0.1"
+	;;
     *)
-	./configure --with-stage1="${RKT_STAGE1_USR_FROM}"
+	echo "Unknown flavor: ${RKT_STAGE1_USR_FROM}"
+	exit 1
 	;;
 esac
 

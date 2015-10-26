@@ -53,7 +53,7 @@
 #
 # STAGE1_ENTER_CMD_$(flavor) - an enter command in stage1 to be used
 # for the "rkt enter" command.
-STAGE1_FLAVORS := $(call commas-to-spaces,$(RKT_STAGE1_USR_FROM))
+STAGE1_FLAVORS := $(call commas-to-spaces,$(RKT_STAGE1_FLAVORS))
 $(foreach f,$(STAGE1_FLAVORS), \
 	$(eval STAGE1_COPY_SO_DEPS_$f :=) \
 	$(eval STAGE1_USR_STAMPS_$f :=) \

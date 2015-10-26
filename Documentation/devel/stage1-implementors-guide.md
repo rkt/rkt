@@ -89,25 +89,25 @@ Examples
     "acVersion": "0.7.1",
     "name": "foo.com/rkt/stage1",
     "labels": [
-        {   
+        {
             "name": "version",
             "value": "0.0.1"
         },
-        {   
+        {
             "name": "arch",
             "value": "amd64"
         },
-        {   
+        {
             "name": "os",
             "value": "linux"
         }
     ],
     "annotations": [
-        {   
+        {
             "name": "coreos.com/rkt/stage1/run",
             "value": "/ex/run"
         },
-        {   
+        {
             "name": "coreos.com/rkt/stage1/enter",
             "value": "/ex/enter"
         },

@@ -24,7 +24,7 @@ cd rkt-v0.10.0
 
 ## Trust the CoreOS signing key
 
-This shows how to trust the CoreOS signing key using the [`rkt trust` command](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#rkt-trust). 
+This shows how to trust the CoreOS signing key using the [`rkt trust` command](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#rkt-trust).
 
 ```
 ./rkt trust --prefix=coreos.com/etcd
@@ -45,12 +45,12 @@ For more details on how signature verification works in rkt, see the [Signing an
 The simplest way to retrieve the etcd ACI is to use image discovery:
 
 ```
-./rkt fetch coreos.com/etcd:v2.0.9 
+./rkt fetch coreos.com/etcd:v2.0.9
 rkt: searching for app image coreos.com/etcd:v2.0.9
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.9/etcd-v2.0.9-linux-amd64.aci
 Downloading signature from https://github.com/coreos/etcd/releases/download/v2.0.9/etcd-v2.0.9-linux-amd64.aci.asc
 Downloading ACI: [================================             ] 2.71 MB/3.79 MB
-rkt: signature verified: 
+rkt: signature verified:
   CoreOS ACI Builder <release@coreos.com>
   sha512-91e98d7f1679a097c878203c9659f2a2
 ```
