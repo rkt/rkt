@@ -15,7 +15,7 @@ Consequently, standard `systemd` idioms like `systemctl start` and `systemctl st
 To start a daemonized container from the command line, use [`systemd-run`](http://www.freedesktop.org/software/systemd/man/systemd-run.html):
 
 ```
-# systemd-run rkt run --mds-register=false coreos.com/etcd:v2.0.10
+# systemd-run rkt run coreos.com/etcd:v2.0.10
 Running as unit run-29075.service.
 ```
 
@@ -23,7 +23,7 @@ This creates a transient systemd unit on which you can use standard systemd tool
 
 ```
 $ systemctl status run-29075.service
-● run-29075.service - /usr/bin/rkt run --mds-register=false coreos.com/etcd:v2.0.10
+● run-29075.service - /usr/bin/rkt run coreos.com/etcd:v2.0.10
    Loaded: loaded (/run/systemd/system/run-29075.service; static; vendor preset: disabled)
   Drop-In: /run/systemd/system/run-29075.service.d
            └─50-Description.conf, 50-ExecStart.conf

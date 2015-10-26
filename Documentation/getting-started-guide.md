@@ -71,17 +71,6 @@ acbuild end
 
 ## Run
 
-### Launch the metadata service
-
-Start the metadata service from your init system or simply from another terminal:
-
-```
-# rkt metadata-service
-```
-Notice that the `#` indicates that this should be run as root.
-
-rkt will register pods with the [metadata service](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md) so they can introspect their environment.
-
 ### Launch a local application image
 
 ```
