@@ -452,3 +452,12 @@ endef
 define install-file-triplets
 $(strip $(join $(addsuffix :,$1),$(addsuffix :$3,$2)))
 endef
+
+define commas-to-spaces
+$(strip \
+	$(eval _MISC_CTS_COMMA_ := ,) \
+	$(eval _MISC_CTS_SPACE_ := ) \
+	$(eval _MISC_CTS_SPACE_ += ) \
+	$(subst $(_MISC_CTS_COMMA_),$(_MISC_CTS_SPACE_),$1) \
+	$(call undefine-namespaces,_MISC_CTS))
+endef
