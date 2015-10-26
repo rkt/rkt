@@ -82,6 +82,8 @@ Note that `--insecure-skip-verify` is required because, by default, rkt expects 
 At this point our hello app is running on port 5000 and ready to handle HTTP
 requests.
 
+You can also [run rkt as a daemon](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#run-rkt-as-a-daemon).
+
 ### Test with curl
 
 Open a new terminal and run the following command:

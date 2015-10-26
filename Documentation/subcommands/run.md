@@ -247,3 +247,12 @@ Strictly seen, this is only true when `rkt run` is invoked on the host directly,
 ### Other Networking Examples
 
 More details about rkt's networking options and examples can be found in the [networking documentation](https://github.com/coreos/rkt/blob/master/Documentation/networking.md)
+
+## Run rkt as a Daemon
+
+rkt doesn't include any built-in support for running as a daemon.
+However, since it is a regular process, you can use your init system to achieve the same effect.
+
+For example, if you use systemd, you can [run rkt using `systemd-run`](https://github.com/coreos/rkt/blob/master/Documentation/using-rkt-with-systemd.md#systemd-run).
+
+If you don't use systemd, you can use [daemon](http://www.libslack.org/daemon/) as an alternative.
