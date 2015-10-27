@@ -31,6 +31,15 @@ cd rkt
 ./autogen.sh && ./configure && make
 ```
 
+Build verbosity can be controlled with the V variable.
+Set V to 0 to have a silent build.
+Set V to either 1 or 2 to get short messages about what is being done (level 2 prints more of them).
+Set V to 3 to get raw output.
+Instead of a number, english words can be used.
+`quiet` or `silent` for level 0, `info` for level 1, `all` for level 2 and `raw` for level 3. Example:
+
+`make V=raw`
+
 ### Run-time requirements
 
 rkt is statically linked and does not require any dynamic libraries to be installed. However, it requires the following kernel features:
