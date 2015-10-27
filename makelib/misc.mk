@@ -366,7 +366,7 @@ $(strip \
 	$(if $(strip $7), \
 		$(eval _MISC_GLDF_GLOB_ := --glob-mode="$(strip $7)")) \
 	$(eval -include $3) \
-	$(eval $(call generate-stamp-rule,$1,$(_MISC_GLDF_DEP_) $5,$(DEPSDIR),shopt -s nullglob; "$(DEPSGENTOOL)" glob --target "$2 $1" --suffix="$4" --filelist="$5" $(foreach m,$6,--map-to="$m") $(_MISC_GLDF_GLOB_)>"$3.tmp"; $(call bash-cond-rename,$3.tmp,$3))) \
+	$(eval $(call generate-stamp-rule,$1,$(_MISC_GLDF_DEP_) $5,$(DEPSDIR),"$(DEPSGENTOOL)" glob --target "$2 $1" --suffix="$4" --filelist="$5" $(foreach m,$6,--map-to="$m") $(_MISC_GLDF_GLOB_)>"$3.tmp"; $(call bash-cond-rename,$3.tmp,$3))) \
 	$(call undefine-namespaces,_MISC_GLDF))
 endef
 
@@ -460,4 +460,23 @@ $(strip \
 	$(eval _MISC_CTS_SPACE_ += ) \
 	$(subst $(_MISC_CTS_COMMA_),$(_MISC_CTS_SPACE_),$1) \
 	$(call undefine-namespaces,_MISC_CTS))
+endef
+
+# Generates a rule for given stamp which removes given directory and
+# adds a dependency to the directory on a given stamp. That way, the
+# directory will be removed before it is created if the stamp does not
+# exist or is invalidated. Additional dependencies for the stamp can
+# be specified by using usual make syntax ($(stamp): $(dep)).
+#
+# 1 - stamp
+# 2 - directory to remove
+define generate-rm-dir-rule
+$(strip \
+	$(call add-dependency,$2,$1) \
+	$(call generate-stamp-rule,$1,,, \
+		rm -rf $2))
+endef
+
+define go-pkg-from-dir
+$(subst $(MK_TOPLEVEL_SRCDIR)/,,$(MK_SRCDIR))
 endef

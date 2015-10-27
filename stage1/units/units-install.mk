@@ -73,23 +73,13 @@ $(call setup-dep-file,UNI_UNIT_SYMLINKS_KV_DEPMK,$(UNI_FLAVOR)-symlinks-kv)
 
 # this stamp makes sure that everything was copied and deps were
 # generated
-$(UNI_STAMP): $(UNI_COPY_STAMP) $(UNI_UNIT_TARGET_DEPS_STAMP) $(UNI_UNIT_SERVICE_DEPS_STAMP) $(UNI_UNIT_SYMLINKS_KV_DEPS_STAMP)
-	touch "$@"
+$(call generate-stamp-rule,$(UNI_STAMP),$(UNI_COPY_STAMP) $(UNI_UNIT_TARGET_DEPS_STAMP) $(UNI_UNIT_SERVICE_DEPS_STAMP) $(UNI_UNIT_SYMLINKS_KV_DEPS_STAMP))
 
 # this stamp makes sure that everything is copied
-$(UNI_COPY_STAMP): $(UNI_UNITS) | $(UNI_SYMLINKS) $(UNI_UNIT_DIRS)
-	touch "$@"
+$(call generate-stamp-rule,$(UNI_COPY_STAMP),$(UNI_UNITS),$(UNI_SYMLINKS) $(UNI_UNIT_DIRS))
 
-# The main unit dir depends on the removing stamp, the removing stamp
-# will be invalidated if local unit files are changed. This will force
-# build system to put fresh unit into the ACI rootfs.
-$(UNI_ACIROOTFSDIR): $(UNI_REMOVE_ACIROOTFSDIR_STAMP)
-
-# this removes the unit directory in the ACI rootfs
-$(call forward-vars,$(UNI_REMOVE_ACIROOTFSDIR_STAMP), \
-	UNI_ACIROOTFSDIR)
-$(UNI_REMOVE_ACIROOTFSDIR_STAMP):
-	set -e; rm -rf "$(UNI_ACIROOTFSDIR)"; touch "$@"
+# this removes the ACI rootfs directory
+$(call generate-rm-dir-rule,$(UNI_REMOVE_ACIROOTFSDIR_STAMP),$(UNI_ACIROOTFSDIR))
 
 STAGE1_INSTALL_FILES_$(UNI_FLAVOR) += $(UNI_INSTALL_FILES_TRIPLETS)
 STAGE1_INSTALL_DIRS_$(UNI_FLAVOR) += $(UNI_INSTALL_DIRS_PAIRS)

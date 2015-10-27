@@ -60,26 +60,17 @@ CLEAN_SYMLINKS += $(S1_RF_ACIROOTFSDIR)/flavor
 
 $(call inc-one,bash.mk)
 
-$(UFS_STAMP): $(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_STAMP) $(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP) $(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP) $(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP)
-	touch "$@"
+$(call generate-stamp-rule,$(UFS_STAMP),$(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_STAMP) $(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP) $(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP) $(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP))
 
-$(call forward-vars,$(UFS_ROOTFS_STAMP), \
-	UFS_ROOTFSDIR S1_RF_ACIROOTFSDIR RKT_STAGE1_SYSTEMD_VER)
 # $(UFS_ROOTFS_STAMP): | $(UFS_LIB_SYMLINK) $(UFS_LIB64_SYMLINK)
-$(UFS_ROOTFS_STAMP): $(UFS_SYSTEMD_INSTALL_STAMP) | $(S1_RF_ACIROOTFSDIR)
-	set -e; \
+$(call generate-stamp-rule,$(UFS_ROOTFS_STAMP),$(UFS_SYSTEMD_INSTALL_STAMP),$(S1_RF_ACIROOTFSDIR), \
 	cp -af "$(UFS_ROOTFSDIR)/." "$(S1_RF_ACIROOTFSDIR)"; \
 	ln -sf 'src' "$(S1_RF_ACIROOTFSDIR)/flavor"; \
-	echo "$(RKT_STAGE1_SYSTEMD_VER)" >"$(S1_RF_ACIROOTFSDIR)/systemd-version"; \
-	touch "$@"
+	echo "$(RKT_STAGE1_SYSTEMD_VER)" >"$(S1_RF_ACIROOTFSDIR)/systemd-version")
 
-$(call forward-vars,$(UFS_SYSTEMD_INSTALL_STAMP), \
-	UFS_SYSTEMD_BUILDDIR UFS_ROOTFSDIR MAKE)
-$(UFS_SYSTEMD_INSTALL_STAMP): $(UFS_SYSTEMD_BUILD_STAMP)
-	set -e; \
-	DESTDIR="$(abspath $(UFS_ROOTFSDIR))" $(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" install-strip; \
-	chmod 0755 "$(UFS_ROOTFSDIR)"; \
-	touch "$@"
+$(call generate-stamp-rule,$(UFS_SYSTEMD_INSTALL_STAMP),$(UFS_SYSTEMD_BUILD_STAMP),, \
+	DESTDIR="$(abspath $(UFS_ROOTFSDIR))" $$(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" install-strip; \
+	chmod 0755 "$(UFS_ROOTFSDIR)")
 
 # This filelist can be generated only after the installation of
 # systemd to temporary rootfs was performed
@@ -95,10 +86,7 @@ $(call generate-glob-deps,$(UFS_ROOTFS_DEPS_STAMP),$(UFS_ROOTFS_STAMP),$(UFS_ROO
 # ACI rootfs.
 $(call generate-clean-mk,$(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP),$(UFS_ROOTFSDIR_CLEANMK),$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR) $(S1_RF_ACIROOTFSDIR))
 
-$(call forward-vars,$(UFS_SYSTEMD_BUILD_STAMP), \
-	UFS_SYSTEMD_BUILDDIR UFS_SYSTEMD_SRCDIR MAKE)
-$(UFS_SYSTEMD_BUILD_STAMP): $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP)
-	set -e; \
+$(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),, \
 	rm -Rf "$(UFS_SYSTEMD_BUILDDIR)"; \
 	mkdir -p "$(UFS_SYSTEMD_BUILDDIR)"; \
 	pushd "$(UFS_SYSTEMD_BUILDDIR)"; \
@@ -148,9 +136,8 @@ $(UFS_SYSTEMD_BUILD_STAMP): $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP)
 		--disable-importd \
 		--disable-firstboot \
 		--enable-seccomp; \
-	$(MAKE) all; \
 	popd; \
-	touch "$@"
+	$$(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" all)
 
 # Generate filelist of a build directory. This can be done only after
 # building systemd was finished.
@@ -161,8 +148,7 @@ $(call generate-deep-filelist,$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUI
 # in systemd.
 $(call generate-clean-mk,$(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP),$(UFS_SYSTEMD_BUILDDIR_CLEANMK),$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUILDDIR))
 
-$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP): $(UFS_SYSTEMD_SRCDIR)/configure
-	touch "$@"
+$(call generate-stamp-rule,$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),$(UFS_SYSTEMD_SRCDIR)/configure)
 
 $(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure, \
 	UFS_PATCHES_DIR GIT UFS_SYSTEMD_SRCDIR)

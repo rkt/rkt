@@ -36,20 +36,15 @@ S1_RF_INSTALL_FILES += $(KERNEL_BZIMAGE):$(KERNEL_ACI_BZIMAGE):-
 S1_RF_SECONDARY_STAMPS += $(KERNEL_STAMP)
 CLEAN_FILES += $(KERNEL_TARGET_FILE)
 
-$(KERNEL_STAMP): $(KERNEL_ACI_BZIMAGE) $(KERNEL_DEPS_STAMP) $(KERNEL_BUILD_CLEAN_STAMP) $(KERNEL_SRC_CLEAN_STAMP)
-	touch "$@"
+$(call generate-stamp-rule,$(KERNEL_STAMP),$(KERNEL_ACI_BZIMAGE) $(KERNEL_DEPS_STAMP) $(KERNEL_BUILD_CLEAN_STAMP) $(KERNEL_SRC_CLEAN_STAMP))
 
 # $(KERNEL_ACI_BZIMAGE) has a dependency on $(KERNEL_BZIMAGE), which
 # is actually provided by $(KERNEL_BZIMAGE_STAMP)
 $(KERNEL_BZIMAGE): $(KERNEL_BZIMAGE_STAMP)
 
 # This stamp is to make sure that building linux kernel has finished.
-$(call forward-vars,$(KERNEL_BZIMAGE), \
-	MAKE KERNEL_SRCDIR KERNEL_BUILDDIR)
-$(KERNEL_BZIMAGE_STAMP): $(KERNEL_BUILD_CONFIG) $(KERNEL_PATCH_STAMP)
-	set -e; \
-	$(MAKE) -C "$(KERNEL_SRCDIR)" O="$(KERNEL_BUILDDIR)" bzImage; \
-	touch "$@"
+$(call generate-stamp-rule,$(KERNEL_BZIMAGE_STAMP),$(KERNEL_BUILD_CONFIG) $(KERNEL_PATCH_STAMP),, \
+	$$(MAKE) -C "$(KERNEL_SRCDIR)" O="$(KERNEL_BUILDDIR)" bzImage)
 
 # Generate filelist of a builddir. Can happen only after the building
 # finished.
@@ -59,15 +54,11 @@ $(call generate-deep-filelist,$(KERNEL_BUILD_FILELIST),$(KERNEL_BUILDDIR))
 # Generate clean.mk cleaning builddir.
 $(call generate-clean-mk,$(KERNEL_BUILD_CLEAN_STAMP),$(KERNEL_BUILD_CLEANMK),$(KERNEL_BUILD_FILELIST),$(KERNEL_BUILDDIR))
 
-$(call forward-vars,$(KERNEL_PATCH_STAMP), \
-	KERNEL_PATCHES KERNEL_SRCDIR)
-$(KERNEL_PATCH_STAMP): $(KERNEL_MAKEFILE)
-	set -e; \
+$(call generate-stamp-rule,$(KERNEL_PATCH_STAMP),$(KERNEL_MAKEFILE),, \
 	shopt -s nullglob; \
 	for p in $(KERNEL_PATCHES); do \
-		patch --directory="$(KERNEL_SRCDIR)" --strip=1 --forward <"$${p}"; \
-	done; \
-	touch "$@"
+		patch --directory="$(KERNEL_SRCDIR)" --strip=1 --forward <"$$$${p}"; \
+	done)
 
 # Generate a filelist of srcdir. Can happen after the sources were
 # patched.
