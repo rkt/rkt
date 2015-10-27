@@ -49,22 +49,8 @@ $(call generate-stamp-rule,$(LKVM_PATCH_STAMP),,, \
 		patch $(call vl3,--silent) --directory="$(LKVM_SRCDIR)" --strip=1 --forward <"$$$${p}"; \
 	done)
 
-# This is a special case - normally, when generating filelists, we
-# require the directory to exist. In this case, the patches directory
-# may not exist and it is fine. We generate an empty filelist.
-LKVM_GOT_PATCHES := $(shell test -d "$(LKVM_PATCHESDIR)" && echo yes)
-
-ifeq ($(KERNEL_GOT_PATCHES),yes)
-
-# Generate shallow filelist of patches. Can happen anytime.
-$(call generate-shallow-filelist,$(LKVM_PATCHES_FILELIST),$(LKVM_PATCHESDIR),.patch)
-
-else
-
-# Generate empty filelist of patches. This can happen anytime.
-$(call generate-empty-filelist,$(LKVM_PATCHES_FILELIST))
-
-endif
+# Generate a filelist of patches. Can happen anytime.
+$(call generate-patches-filelist,$(LKVM_PATCHES_FILELIST),$(LKVM_PATCHESDIR))
 
 # Generate dep.mk on patches, so if they change, the project has to be
 # reset to original checkout and patches reapplied.

@@ -193,22 +193,8 @@ $(call generate-deep-filelist,$(UFS_SYSTEMD_SRCDIR_FILELIST),$(UFS_SYSTEMD_SRCDI
 # Generate clean.mk file for cleaning all files in srcdir.
 $(call generate-clean-mk,$(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP),$(UFS_SYSTEMD_SRCDIR_CLEANMK),$(UFS_SYSTEMD_SRCDIR_FILELIST),$(UFS_SYSTEMD_SRCDIR))
 
-# This is a special case - normally, when generating filelists, we
-# require the directory to exist. In this case, the patches directory
-# may not exist and it is fine. We generate an empty filelist.
-UFS_GOT_PATCHES := $(shell test -d "$(UFS_PATCHES_DIR)" && echo yes)
-
-ifeq ($(UFS_GOT_PATCHES),yes)
-
-# Generate shallow filelist of patches. This can happen anytime.
-$(call generate-shallow-filelist,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR),.patch)
-
-else
-
-# Generate empty filelist of patches. This can happen anytime.
-$(call generate-empty-filelist,$(UFS_PATCHES_FILELIST))
-
-endif
+# Generate a filelist of patches. Can happen anytime.
+$(call generate-patches-filelist,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR))
 
 # Generate a dep.mk on those patches, so if patches change, the
 # project should be reset and repatched, and configure script

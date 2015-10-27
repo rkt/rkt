@@ -496,3 +496,20 @@ endef
 define go-pkg-from-dir
 $(subst $(MK_TOPLEVEL_SRCDIR)/,,$(MK_SRCDIR))
 endef
+
+# Generate a filelist for patches. Usually, when generating filelists,
+# we require the directory to exist. In this case, the patches
+# directory may not exist and it is fine. We generate an empty
+# filelist.
+#
+# 1 - patches filelist
+# 2 - patches dir
+define generate-patches-filelist
+$(strip \
+	$(eval _MISC_GPF_FILELIST := $(strip $1)) \
+	$(eval _MISC_GPF_DIR := $(strip $2)) \
+	$(eval $(if $(shell test -d "$(_MISC_GPF_DIR)" && echo yes), \
+		$(call generate-shallow-filelist,$(_MISC_GPF_FILELIST),$(_MISC_GPF_DIR),.patch), \
+		$(call generate-empty-filelist,$(_MISC_GPF_FILELIST)))) \
+	$(call undefine-namespaces,_MISC_GPF))
+endef
