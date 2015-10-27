@@ -57,6 +57,7 @@ $(call generate-stamp-rule,$(STAGE1_FSD_STAMP),$(STAGE1_FSD_COPY_STAMP) $(STAGE1
 # places - the libdirs in the ACI rootfs and a temporary directory at
 # the same time.
 $(call generate-stamp-rule,$(STAGE1_FSD_COPY_STAMP),$(STAGE1_FSD_ALL_STAMPS),$(STAGE1_FSD_LIBSDIR), \
+	$(call vb,vt,FIND SO DEPS,$(STAGE1_FSD_FLAVOR)) \
 	all_libs=$$$$(find "$(STAGE1_FSD_ACIROOTFSDIR)" -type f | xargs file | grep ELF | cut -f1 -d: | LD_LIBRARY_PATH="$(STAGE1_FSD_LD_LIBRARY_PATH)" xargs ldd | grep -v '^[^[:space:]]' | grep '/' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*(0x[0-9a-fA-F]*)//' -e 's/.*=>[[:space:]]*//' | grep -Fve "$(STAGE1_FSD_ACIROOTFSDIR)" | sort -u); \
 	for f in $$$${all_libs}; do \
 		$(INSTALL) -D "$$$${f}" "$(STAGE1_FSD_ACIROOTFSDIR)$$$${f}"; \

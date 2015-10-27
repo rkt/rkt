@@ -30,7 +30,8 @@ $(call generate-stamp-rule,$(LKVM_STAMP),$(LKVM_ACI_BINARY) $(LKVM_DEPS_STAMP) $
 $(LKVM_BINARY): $(LKVM_BUILD_STAMP)
 
 $(call generate-stamp-rule,$(LKVM_BUILD_STAMP),$(LKVM_PATCH_STAMP),, \
-	$$(MAKE) -C "$(LKVM_SRCDIR)" lkvm-static)
+	$(call vb,vt,BUILD EXT,lkvm) \
+	$$(MAKE) $(call vl2,--silent) -C "$(LKVM_SRCDIR)" V= lkvm-static $(call vl2,>/dev/null))
 
 # Generate filelist of lkvm directory (this is both srcdir and
 # builddir). Can happen after build finished.
@@ -43,7 +44,8 @@ $(call generate-clean-mk,$(LKVM_DIR_CLEAN_STAMP),$(LKVM_CLEANMK),$(LKVM_DIR_FILE
 $(call generate-stamp-rule,$(LKVM_PATCH_STAMP),$(LKVM_SRCDIR)/Makefile,, \
 	shopt -s nullglob; \
 	for p in $(LKVM_PATCHES); do \
-		patch --directory="$(LKVM_SRCDIR)" --strip=1 --forward <"$$$${p}"; \
+		$(call vb,v2,PATCH,$$$${p#$(MK_TOPLEVEL_ABS_SRCDIR)/}) \
+		patch $(call vl3,--silent) --directory="$(LKVM_SRCDIR)" --strip=1 --forward <"$$$${p}"; \
 	done)
 
 # This is a special case - normally, when generating filelists, we
@@ -72,13 +74,18 @@ $(call generate-glob-deps,$(LKVM_DEPS_STAMP),$(LKVM_SRCDIR)/Makefile,$(LKVM_PATC
 $(call forward-vars,$(LKVM_SRCDIR)/Makefile, \
 	LKVM_SRCDIR LKVM_GIT LKVM_VERSION)
 $(LKVM_SRCDIR)/Makefile: | $(LKVM_TMPDIR)
+	$(VQ) \
 	set -e; \
 	mkdir -p $(LKVM_SRCDIR); cd $(LKVM_SRCDIR); \
-	git init; \
+	git init $(call vl3,--quiet); \
 	git remote | grep --silent origin || git remote add origin "$(LKVM_GIT)"; \
-	git rev-parse --quiet --verify HEAD >/dev/null || git fetch --depth=1 origin $(LKVM_VERSION) && git checkout --quiet $(LKVM_VERSION); \
-	git reset --hard; \
-	git clean -ffdx; \
+	if ! git rev-parse --quiet --verify HEAD >/dev/null; then \
+		$(call vb,vt,GIT CLONE,$(LKVM_GIT)) \
+		git fetch $(call vl3,--quiet) --depth=1 origin $(LKVM_VERSION); \
+		git checkout --quiet $(LKVM_VERSION); \
+	fi; \
+	git reset --hard $(call vl3,--quiet); \
+	git clean -ffdx $(call vl3,--quiet); \
 	touch "$@"
 
 $(call undefine-namespaces,LKVM)

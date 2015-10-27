@@ -13,6 +13,7 @@ $(call forward-vars,$(TST_SHORT_TESTS_STAMP), \
 	GOFMT TST_GOFMT_DIRS GO_ENV GO TST_GO_VET_PACKAGES RKT_TAGS \
 	TST_GO_TEST_PACKAGES)
 $(TST_SHORT_TESTS_STAMP):
+	$(VQ) \
 	set -e; \
 	res=$$($(GOFMT) -l $(TST_GOFMT_DIRS)); \
 	if [ -n "$${res}" ]; then echo -e "gofmt checking failed:\n$${res}"; exit 1; fi; \
@@ -40,6 +41,7 @@ $(call setup-stamp-file,TST_FUNC_TESTS_DISABLED_STAMP,/func-test-disabled)
 TOPLEVEL_FUNCTIONAL_CHECK_STAMPS += $(TST_FUNC_TESTS_DISABLED_STAMP)
 
 $(TST_FUNC_TESTS_DISABLED_STAMP):
+	$(VQ) \
 	echo 'Functional tests are disabled, pass --enable-functional-tests to configure script to enable them.' >&2; \
 	false
 

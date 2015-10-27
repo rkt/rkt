@@ -3,6 +3,7 @@ all:
 
 # makelib/inc.mk must be included first!
 include makelib/inc.mk
+include makelib/verbosity.mk
 include makelib/file-ops-prolog.mk
 include makelib/variables.mk
 include makelib/misc.mk

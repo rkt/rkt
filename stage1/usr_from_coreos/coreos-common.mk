@@ -44,14 +44,17 @@ CLEAN_FILES += $(CCN_SQUASHFS)
 $(call forward-vars,$(CCN_SQUASHFS), \
 	CCN_TMPDIR CCN_PXE CCN_SQUASHFS_BASE)
 $(CCN_SQUASHFS): $(CCN_PXE) | $(CCN_TMPDIR)
-	cd "$(CCN_TMPDIR)" && gzip -cd "$(CCN_PXE)" | cpio --unconditional --extract "$(CCN_SQUASHFS_BASE)"
+	$(VQ) \
+	$(call vb,vt,EXTRACT,$(call vsp,$(CCN_PXE)) => $(call vsp,$@)) \
+	cd "$(CCN_TMPDIR)" && gzip --to-stdout --decompress "$(CCN_PXE)" | cpio $(call vl3,--quiet )--unconditional --extract "$(CCN_SQUASHFS_BASE)"
 
 ifeq ($(RKT_LOCAL_COREOS_PXE_IMAGE_PATH),)
 
 $(call forward-vars,$(CCN_PXE), \
 	CCN_TMPDIR CCN_IMG_URL BASH_SHELL CCN_CACHE_SH)
 $(CCN_PXE): $(CCN_CACHE_SH) | $(CCN_TMPDIR)
-	ITMP="$(CCN_TMPDIR)" IMG_URL="$(CCN_IMG_URL)" $(BASH_SHELL) $(CCN_CACHE_SH)
+	$(VQ) \
+	ITMP="$(CCN_TMPDIR)" IMG_URL="$(CCN_IMG_URL)" V="$(V)" $(BASH_SHELL) $(CCN_CACHE_SH)
 
 endif
 

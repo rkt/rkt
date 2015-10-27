@@ -28,6 +28,7 @@ UFS_SYSTEMD_TAG_LENGTH := $(shell expr length "$(RKT_STAGE1_SYSTEMD_VER)")
 UFS_PATCHES_DIR := $(MK_SRCDIR)/patches/$(RKT_STAGE1_SYSTEMD_VER)
 UFS_LIB_SYMLINK := $(S1_RF_ACIROOTFSDIR)/lib
 UFS_LIB64_SYMLINK := $(S1_RF_ACIROOTFSDIR)/lib64
+UFS_AG_OUT := $(UFS_TMPDIR)/ag_out
 
 $(call setup-stamp-file,UFS_STAMP,/systemd/$(UFS_SYSTEMD_DESC))
 $(call setup-stamp-file,UFS_PATCHES_DEPS_STAMP,$(UFS_SYSTEMD_DESC)-systemd-patches-deps)
@@ -51,7 +52,8 @@ S1_RF_COPY_SO_DEPS := yes
 CREATE_DIRS += \
 	$(call dir-chain,$(UFS_TMPDIR),$(UFS_SYSTEMDDIR_REST))
 CLEAN_FILES += \
-	$(S1_RF_ACIROOTFSDIR)/systemd-version
+	$(S1_RF_ACIROOTFSDIR)/systemd-version \
+	$(UFS_AG_OUT)
 CLEAN_DIRS += \
 	$(UFS_SYSTEMD_SRCDIR) \
 	$(UFS_SYSTEMD_BUILDDIR) \
@@ -64,12 +66,16 @@ $(call generate-stamp-rule,$(UFS_STAMP),$(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_ST
 
 # $(UFS_ROOTFS_STAMP): | $(UFS_LIB_SYMLINK) $(UFS_LIB64_SYMLINK)
 $(call generate-stamp-rule,$(UFS_ROOTFS_STAMP),$(UFS_SYSTEMD_INSTALL_STAMP),$(S1_RF_ACIROOTFSDIR), \
+	$(call vb,v2,CP TREE,$(call vsp,$(UFS_ROOTFSDIR)/.) => $(call vsp,$(S1_RF_ACIROOTFSDIR))) \
 	cp -af "$(UFS_ROOTFSDIR)/." "$(S1_RF_ACIROOTFSDIR)"; \
+	$(call vb,v2,LN SF,src,$(call vsp,$(S1_RF_ACIROOTFSDIR)/flavor)) \
 	ln -sf 'src' "$(S1_RF_ACIROOTFSDIR)/flavor"; \
+	$(call vb,v2,GEN,$(call vsp,$(S1_RF_ACIROOTFSDIR)/systemd-version)) \
 	echo "$(RKT_STAGE1_SYSTEMD_VER)" >"$(S1_RF_ACIROOTFSDIR)/systemd-version")
 
 $(call generate-stamp-rule,$(UFS_SYSTEMD_INSTALL_STAMP),$(UFS_SYSTEMD_BUILD_STAMP),, \
-	DESTDIR="$(abspath $(UFS_ROOTFSDIR))" $$(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" install-strip; \
+	$(call vb,v2,INSTALL,systemd) \
+	DESTDIR="$(abspath $(UFS_ROOTFSDIR))" $$(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" V=0 install-strip $(call vl2,>/dev/null); \
 	chmod 0755 "$(UFS_ROOTFSDIR)")
 
 # This filelist can be generated only after the installation of
@@ -87,10 +93,14 @@ $(call generate-glob-deps,$(UFS_ROOTFS_DEPS_STAMP),$(UFS_ROOTFS_STAMP),$(UFS_ROO
 $(call generate-clean-mk,$(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP),$(UFS_ROOTFSDIR_CLEANMK),$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR) $(S1_RF_ACIROOTFSDIR))
 
 $(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),, \
+	$(call vb,v2,RM RF,$(call vsp,$(UFS_SYSTEMD_BUILDDIR))) \
 	rm -Rf "$(UFS_SYSTEMD_BUILDDIR)"; \
+	$(call vb,v2,MKDIR,$(call vsp,$(UFS_SYSTEMD_BUILDDIR))) \
 	mkdir -p "$(UFS_SYSTEMD_BUILDDIR)"; \
-	pushd "$(UFS_SYSTEMD_BUILDDIR)"; \
+	pushd "$(UFS_SYSTEMD_BUILDDIR)" $(call vl3,>/dev/null); \
+	$(call vb,v2,CONFIGURE,systemd) \
 	"$(abspath $(UFS_SYSTEMD_SRCDIR))/configure" \
+		$(call vl3,--quiet) \
 		--disable-dbus \
 		--disable-python-devel \
 		--disable-kmod \
@@ -136,8 +146,9 @@ $(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PA
 		--disable-importd \
 		--disable-firstboot \
 		--enable-seccomp; \
-	popd; \
-	$$(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" all)
+	popd $(call vl3,>/dev/null); \
+	$(call vb,v2,BUILD EXT,systemd) \
+	$$(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" all V=0 $(call vl2,>/dev/null))
 
 # Generate filelist of a build directory. This can be done only after
 # building systemd was finished.
@@ -151,18 +162,26 @@ $(call generate-clean-mk,$(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP),$(UFS_SYSTEMD_BUILD
 $(call generate-stamp-rule,$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),$(UFS_SYSTEMD_SRCDIR)/configure)
 
 $(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure, \
-	UFS_PATCHES_DIR GIT UFS_SYSTEMD_SRCDIR)
+	UFS_PATCHES_DIR GIT UFS_SYSTEMD_SRCDIR UFS_AG_OUT)
 $(UFS_SYSTEMD_SRCDIR)/configure:
-	@set -e; \
+	$(VQ) \
+	set -e; \
 	shopt -s nullglob ; \
 	if [ -d "$(UFS_PATCHES_DIR)" ]; then \
 		for p in "$(abspath $(UFS_PATCHES_DIR))"/*.patch; do \
-			"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" am "$${p}"; \
+			$(call vb,v2,PATCH,$${p#$(MK_TOPLEVEL_ABS_SRCDIR)/}) \
+			"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" am $(call vl3,--quiet) "$${p}"; \
 		done; \
 	fi; \
-	pushd "$(UFS_SYSTEMD_SRCDIR)"; \
-	./autogen.sh; \
-	popd
+	pushd "$(UFS_SYSTEMD_SRCDIR)" $(call vl3,>/dev/null); \
+	$(call vb,v1,BUILD EXT,systemd) \
+	$(call vb,v2,AUTOGEN,systemd) \
+	$(call v3,./autogen.sh) \
+	$(call vl3, \
+		if ! ./autogen.sh 2>$(UFS_AG_OUT) >/dev/null; then \
+			cat $(UFS_AG_OUT) >&2; \
+		fi); \
+	popd $(call vl3,>/dev/null)
 
 # Generate the filelist of systemd's srcdir. This can be done only
 # after it was cloned, patched and configure script was generated.
@@ -200,7 +219,11 @@ $(call generate-glob-deps,$(UFS_PATCHES_DEPS_STAMP),$(UFS_SYSTEMD_SRCDIR)/config
 $(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure.ac, \
 	GIT RKT_STAGE1_SYSTEMD_VER RKT_STAGE1_SYSTEMD_SRC UFS_SYSTEMD_SRCDIR)
 $(UFS_SYSTEMD_SRCDIR)/configure.ac:
-	"$(GIT)" clone --depth 1 --branch "$(RKT_STAGE1_SYSTEMD_VER)" "$(RKT_STAGE1_SYSTEMD_SRC)" "$(UFS_SYSTEMD_SRCDIR)"
+	$(VQ) \
+	set -e; \
+	$(call vb,vt,GIT CLONE,$(RKT_STAGE1_SYSTEMD_SRC)) \
+	"$(GIT)" clone $(call vl3,--quiet) --depth 1 --no-checkout --branch "$(RKT_STAGE1_SYSTEMD_VER)" "$(RKT_STAGE1_SYSTEMD_SRC)" "$(UFS_SYSTEMD_SRCDIR)"; \
+	"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" checkout --quiet "$(RKT_STAGE1_SYSTEMD_VER)"
 
 ifneq ($(UFS_SYSTEMD_TAG_MATCH),$(UFS_SYSTEMD_TAG_LENGTH))
 

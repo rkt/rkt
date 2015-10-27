@@ -76,9 +76,11 @@ $(call generate-stamp-rule,$(AMI_STAMP),$(AMI_INSTALLED_FILES),$(AMI_ACI_INSTALL
 
 # this rule generates a manifest
 $(call forward-vars,$(AMI_GEN_MANIFEST), \
-	AMI_SED_NAME AMI_SED_VERSION AMI_SED_ENTER)
+	AMI_FLAVOR AMI_SED_NAME AMI_SED_VERSION AMI_SED_ENTER)
 $(AMI_GEN_MANIFEST): $(AMI_SRC_MANIFEST) | $(AMI_TMPDIR)
+	$(VQ) \
 	set -e; \
+	$(call vb,vt,MANIFEST,$(AMI_FLAVOR)) \
 	sed \
 		-e 's/@RKT_STAGE1_NAME@/$(AMI_SED_NAME)/g' \
 		-e 's/@RKT_STAGE1_VERSION@/$(AMI_SED_VERSION)/g' \
