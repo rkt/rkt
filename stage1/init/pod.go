@@ -34,6 +34,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/uid"
+	s1common "github.com/coreos/rkt/stage1/common"
 	"github.com/coreos/rkt/stage1/init/kvm"
 )
 
@@ -398,7 +399,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 
 	if flavor == "kvm" {
 		// bind mount all shared volumes from /mnt/volumeName (we don't use mechanism for bind-mounting given by nspawn)
-		err := kvm.AppToSystemdMountUnits(common.Stage1RootfsPath(p.Root), appName, app.MountPoints, unitsDir)
+		err := kvm.AppToSystemdMountUnits(common.Stage1RootfsPath(p.Root), appName, p.Manifest.Volumes, ra, unitsDir)
 		if err != nil {
 			return fmt.Errorf("failed to prepare mount units: %v", err)
 		}
@@ -476,29 +477,12 @@ func (p *Pod) PodToSystemd(interactive bool, flavor string, privateUsers string)
 	return nil
 }
 
-func isMPReadOnly(mountPoints []types.MountPoint, name types.ACName) bool {
-	for _, mp := range mountPoints {
-		if mp.Name == name {
-			return mp.ReadOnly
-		}
-	}
-
-	return false
-}
-
 // appToNspawnArgs transforms the given app manifest, with the given associated
 // app name, into a subset of applicable systemd-nspawn argument
 func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	var args []string
 	appName := ra.Name
-	id := ra.Image.ID
 	app := ra.App
-
-	vols := make(map[types.ACName]types.Volume)
-	mounts := make(map[string]schema.Mount)
-	for _, m := range ra.Mounts {
-		mounts[m.Path] = m
-	}
 
 	sharedVolPath := common.SharedVolumesPath(p.Root)
 	if err := os.MkdirAll(sharedVolPath, sharedVolPerm); err != nil {
@@ -507,9 +491,11 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	if err := os.Chmod(sharedVolPath, sharedVolPerm); err != nil {
 		return nil, fmt.Errorf("could not change permissions of %q: %v", sharedVolPath, err)
 	}
-	// Here we bind the volumes to the mountpoints via runtime mounts (--mount)
+
+	vols := make(map[types.ACName]types.Volume)
 	for _, v := range p.Manifest.Volumes {
 		vols[v.Name] = v
+
 		if v.Kind == "empty" {
 			if err := os.MkdirAll(filepath.Join(sharedVolPath, v.Name.String()), sharedVolPerm); err != nil {
 				return nil, fmt.Errorf("could not create shared volume %q: %v", v.Name, err)
@@ -517,39 +503,17 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 		}
 	}
 
-	for _, mp := range app.MountPoints {
-		// there's already an injected mount for this target path, skip
-		if _, ok := mounts[mp.Path]; ok {
-			continue
-		}
-		vol, ok := vols[mp.Name]
-		if !ok {
-			catCmd := fmt.Sprintf("sudo rkt image cat-manifest --pretty-print %v", id)
-			volumeCmd := ""
-			for _, mp := range app.MountPoints {
-				volumeCmd += fmt.Sprintf("--volume %s,kind=host,source=/some/path ", mp.Name)
-			}
-
-			return nil, fmt.Errorf("no volume for mountpoint %q:%q in app %q.\n"+
-				"You can inspect the volumes with:\n\t%v\n"+
-				"App %q requires the following volumes:\n\t%v",
-				mp.Name, mp.Path, appName, catCmd, appName, volumeCmd)
-		}
-		ra.Mounts = append(ra.Mounts, schema.Mount{Volume: vol.Name, Path: mp.Path})
+	mounts, err := s1common.GenerateMounts(ra, vols)
+	if err != nil {
+		return nil, err
 	}
 
-	for _, m := range ra.Mounts {
+	for _, m := range mounts {
 		vol := vols[m.Volume]
 
 		opt := make([]string, 4)
 
-		// If the readonly flag in the pod manifest is not nil,
-		// then use it to override the readonly flag in the image manifest.
-		readOnly := isMPReadOnly(app.MountPoints, vol.Name)
-		if vol.ReadOnly != nil {
-			readOnly = *vol.ReadOnly
-		}
-
+		readOnly := s1common.IsMountReadOnly(vol, app.MountPoints)
 		if readOnly {
 			opt[0] = "--bind-ro="
 		} else {
