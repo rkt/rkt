@@ -35,14 +35,11 @@ func isMPReadOnly(mountPoints []types.MountPoint, name types.ACName) bool {
 // If the readOnly flag in the pod manifest is not nil, it overrides the
 // readOnly flag in the image manifest.
 func IsMountReadOnly(vol types.Volume, mountPoints []types.MountPoint) bool {
-	var readOnly bool
 	if vol.ReadOnly != nil {
-		readOnly = *vol.ReadOnly
-	} else {
-		readOnly = isMPReadOnly(mountPoints, vol.Name)
+		return *vol.ReadOnly
 	}
 
-	return readOnly
+	return isMPReadOnly(mountPoints, vol.Name)
 }
 
 func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume) ([]schema.Mount, error) {

@@ -513,8 +513,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 
 		opt := make([]string, 4)
 
-		readOnly := initcommon.IsMountReadOnly(vol, app.MountPoints)
-		if readOnly {
+		if initcommon.IsMountReadOnly(vol, app.MountPoints) {
 			opt[0] = "--bind-ro="
 		} else {
 			opt[0] = "--bind="
