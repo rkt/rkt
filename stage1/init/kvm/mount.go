@@ -47,7 +47,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 	"github.com/coreos/rkt/common"
-	s1common "github.com/coreos/rkt/stage1/common"
+	initcommon "github.com/coreos/rkt/stage1/init/common"
 )
 
 const (
@@ -164,7 +164,7 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 		vols[v.Name] = v
 	}
 
-	mounts, err := s1common.GenerateMounts(ra, vols)
+	mounts, err := initcommon.GenerateMounts(ra, vols)
 	if err != nil {
 		return err
 	}
@@ -207,11 +207,10 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 			return fmt.Errorf("cannot install new mount unit for app %q: %v", appName.String(), err)
 		}
 
-		readOnly := s1common.IsMountReadOnly(vol, app.MountPoints)
 		// TODO(iaguis) when we update util-linux to 2.27, this code can go
 		// away and we can bind-mount RO with one unit file.
 		// http://ftp.kernel.org/pub/linux/utils/util-linux/v2.27/v2.27-ReleaseNotes
-		if readOnly {
+		if initcommon.IsMountReadOnly(vol, app.MountPoints) {
 			opts := []*unit.UnitOption{
 				unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Remount read-only unit for %s", wherePath)),
 				unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
