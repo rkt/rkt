@@ -4,6 +4,9 @@
 # installed in their ACI rootfs
 #
 # AIB_BINARY - a binary to install
+#
+# AIB_BUILD_STAMP - a stamp used to build the go binary and generate
+# the deps file in the meantime
 
 # In detail for each flavor - generate a stamp which depends on a
 # binary in the ACI rootfs directory. The binary will be copied to the
@@ -21,7 +24,7 @@ $(foreach flavor,$(AIB_FLAVORS), \
 	$(eval _AIB_ACI_BINARY_ := $(STAGE1_ACIROOTFSDIR_$(flavor))/$(_AIB_NAME_)) \
 	$(eval STAGE1_SECONDARY_STAMPS_$(flavor) += $(_AIB_STAMP_)) \
 	$(eval STAGE1_INSTALL_FILES_$(flavor) += $(AIB_BINARY):$(_AIB_ACI_BINARY_):-) \
-	$(call add-dependency,$(_AIB_ACI_BINARY_),$(MK_PATH) $(_AIB_PATH_)) \
+	$(call add-dependency,$(_AIB_ACI_BINARY_),$(MK_PATH) $(_AIB_PATH_) $(AIB_BUILD_STAMP)) \
 	$(call generate-stamp-rule,$(_AIB_STAMP_),$(_AIB_ACI_BINARY_),,,))
 
 $(call undefine-namespaces,AIB _AIB)

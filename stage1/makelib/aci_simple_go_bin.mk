@@ -46,6 +46,7 @@ $(_ASGB_BINARY_): $(_ASGB_PATH_) $(MK_PATH) | $(TOOLSDIR)
 # 2.
 
 AIB_FLAVORS := $(ASGB_FLAVORS)
+AIB_BUILD_STAMP := $(_ASGB_BUILD_STAMP_)
 AIB_BINARY := $(_ASGB_BINARY_)
 include stage1/makelib/aci_install_bin.mk
 
