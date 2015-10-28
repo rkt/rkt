@@ -31,6 +31,7 @@ endif
 # 1.
 
 $(call setup-stamp-file,_ASGB_BUILD_STAMP_,binary-build)
+$(call generate-stamp-rule,$(_ASGB_BUILD_STAMP_))
 
 # variables for makelib/build_go_bin.mk
 BGB_STAMP := $(_ASGB_BUILD_STAMP_)
