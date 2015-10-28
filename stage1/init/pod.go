@@ -34,7 +34,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/uid"
-	s1common "github.com/coreos/rkt/stage1/common"
+	initcommon "github.com/coreos/rkt/stage1/init/common"
 	"github.com/coreos/rkt/stage1/init/kvm"
 )
 
@@ -503,7 +503,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 		}
 	}
 
-	mounts, err := s1common.GenerateMounts(ra, vols)
+	mounts, err := initcommon.GenerateMounts(ra, vols)
 	if err != nil {
 		return nil, err
 	}
@@ -513,7 +513,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 
 		opt := make([]string, 4)
 
-		readOnly := s1common.IsMountReadOnly(vol, app.MountPoints)
+		readOnly := initcommon.IsMountReadOnly(vol, app.MountPoints)
 		if readOnly {
 			opt[0] = "--bind-ro="
 		} else {
