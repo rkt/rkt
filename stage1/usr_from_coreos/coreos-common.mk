@@ -8,9 +8,9 @@ _CCN_INCLUDED_ := x
 
 $(call setup-tmp-dir,CCN_TMPDIR)
 
-CCN_SYSTEMD_VERSION := "v222"
-CCN_IMG_RELEASE := "794.1.0"
-CCN_IMG_URL := "http://alpha.release.core-os.net/amd64-usr/$(CCN_IMG_RELEASE)/coreos_production_pxe_image.cpio.gz"
+CCN_SYSTEMD_VERSION := v222
+CCN_IMG_RELEASE := 794.1.0
+CCN_IMG_URL := http://alpha.release.core-os.net/amd64-usr/$(CCN_IMG_RELEASE)/coreos_production_pxe_image.cpio.gz
 CCN_DOWNLOADED_PXE := $(CCN_TMPDIR)/pxe.img
 CLEAN_FILES += \
 	$(CCN_DOWNLOADED_PXE) \
@@ -24,6 +24,8 @@ endif
 
 $(call setup-stamp-file,CCN_INVALIDATE_SQUASHFS_DEPMK_STAMP,invalidate-squashfs)
 $(call setup-depmk-file,CCN_INVALIDATE_SQUASHFS_DEPMK,invalidate-squashfs)
+$(call setup-stamp-file,CCN_INVALIDATE_DOWNLOADED_PXE_IMG_DEPMK_STAMP,invalidate-dl-pxe-img)
+$(call setup-depmk-file,CCN_INVALIDATE_DOWNLOADED_PXE_IMG_DEPMK,invalidate-dl-pxe-img)
 
 CCN_SQUASHFS_BASE := usr.squashfs
 CCN_SQUASHFS := $(CCN_TMPDIR)/$(CCN_SQUASHFS_BASE)
@@ -46,6 +48,10 @@ endif
 # This depmk forces the squashfs file recreation if the path to the
 # pxe.img file (in the CCN_PXE variable) changes.
 $(call generate-kv-deps,$(CCN_INVALIDATE_SQUASHFS_DEPMK_STAMP),$(CCN_SQUASHFS),$(CCN_INVALIDATE_SQUASHFS_DEPMK),CCN_PXE)
+
+# This depmk forces the pxe.img file redownloading if the url to the
+# pxe.img file (in the CCN_IMG_URL variable) changes.
+$(call generate-kv-deps,$(CCN_INVALIDATE_DOWNLOADED_PXE_IMG_DEPMK_STAMP),$(CCN_DOWNLOADED_PXE_IMG),$(CCN_INVALIDATE_DOWNLOADED_PXE_IMG_DEPMK),CCN_IMG_URL)
 
 CLEAN_FILES += $(CCN_SQUASHFS)
 
