@@ -294,6 +294,22 @@ func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 	}
 	defer keyLock.Close()
 
+	err = s.db.Do(func(tx *sql.Tx) error {
+		aciinfo, found, err := GetACIInfoWithBlobKey(tx, key)
+		if err != nil {
+			return fmt.Errorf("error getting aciinfo: %v", err)
+		} else if !found {
+			return fmt.Errorf("cannot find image with key: %s", key)
+		}
+
+		aciinfo.LastUsedTime = time.Now()
+
+		return WriteACIInfo(tx, aciinfo)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot remove image with ID: %s from db: %v", key, err)
+	}
+
 	return s.stores[blobType].ReadStream(key, false)
 }
 
@@ -357,10 +373,11 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 	// Save aciinfo
 	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo := &ACIInfo{
-			BlobKey:    key,
-			Name:       im.Name.String(),
-			ImportTime: time.Now(),
-			Latest:     latest,
+			BlobKey:      key,
+			Name:         im.Name.String(),
+			ImportTime:   time.Now(),
+			LastUsedTime: time.Now(),
+			Latest:       latest,
 		}
 		return WriteACIInfo(tx, aciinfo)
 	}); err != nil {
