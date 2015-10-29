@@ -13,11 +13,7 @@ TOPLEVEL_STAMPS :=
 TOPLEVEL_CHECK_STAMPS :=
 TOPLEVEL_UNIT_CHECK_STAMPS :=
 TOPLEVEL_FUNCTIONAL_CHECK_STAMPS :=
-TOPLEVEL_SUBDIRS := rkt tests
-
-ifneq ($(strip $(RKT_STAGE1_FLAVORS)),)
-TOPLEVEL_SUBDIRS += stage1
-endif
+TOPLEVEL_SUBDIRS := rkt tests stage1
 
 $(call inc-one,tools/tools.mk)
 $(call inc-many,$(foreach sd,$(TOPLEVEL_SUBDIRS),$(sd)/$(sd).mk))
