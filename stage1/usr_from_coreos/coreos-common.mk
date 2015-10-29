@@ -8,9 +8,13 @@ _CCN_INCLUDED_ := x
 
 $(call setup-tmp-dir,CCN_TMPDIR)
 
+# systemd version in coreos image
 CCN_SYSTEMD_VERSION := v222
+# coreos image version
 CCN_IMG_RELEASE := 794.1.0
+# coreos image URL
 CCN_IMG_URL := http://alpha.release.core-os.net/amd64-usr/$(CCN_IMG_RELEASE)/coreos_production_pxe_image.cpio.gz
+# path to downloaded pxe image
 CCN_DOWNLOADED_PXE := $(CCN_TMPDIR)/pxe.img
 CLEAN_FILES += \
 	$(CCN_DOWNLOADED_PXE) \
@@ -22,13 +26,17 @@ CCN_SYSTEMD_VERSION := $(RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER)
 
 endif
 
+# stamp and depmk for invalidating the usr.squashfs file
 $(call setup-stamp-file,CCN_INVALIDATE_SQUASHFS_DEPMK_STAMP,invalidate-squashfs)
 $(call setup-depmk-file,CCN_INVALIDATE_SQUASHFS_DEPMK,invalidate-squashfs)
+# stamp and depmk for invalidating the downloaded pxe.img file
 $(call setup-stamp-file,CCN_INVALIDATE_DOWNLOADED_PXE_IMG_DEPMK_STAMP,invalidate-dl-pxe-img)
 $(call setup-depmk-file,CCN_INVALIDATE_DOWNLOADED_PXE_IMG_DEPMK,invalidate-dl-pxe-img)
 
 CCN_SQUASHFS_BASE := usr.squashfs
+# path to the squashfs file extracted from pxe.img
 CCN_SQUASHFS := $(CCN_TMPDIR)/$(CCN_SQUASHFS_BASE)
+# path to script performing the downloading and verifying pxe.img
 CCN_CACHE_SH := $(MK_SRCDIR)/cache.sh
 
 ifneq ($(RKT_LOCAL_COREOS_PXE_IMAGE_PATH),)
@@ -55,6 +63,7 @@ $(call generate-kv-deps,$(CCN_INVALIDATE_DOWNLOADED_PXE_IMG_DEPMK_STAMP),$(CCN_D
 
 CLEAN_FILES += $(CCN_SQUASHFS)
 
+# This extracts the pxe image to get the squashfs file
 $(call forward-vars,$(CCN_SQUASHFS), \
 	CCN_TMPDIR CCN_PXE CCN_SQUASHFS_BASE)
 $(CCN_SQUASHFS): $(CCN_PXE) | $(CCN_TMPDIR)
@@ -62,6 +71,7 @@ $(CCN_SQUASHFS): $(CCN_PXE) | $(CCN_TMPDIR)
 	$(call vb,vt,EXTRACT,$(call vsp,$(CCN_PXE)) => $(call vsp,$@)) \
 	cd "$(CCN_TMPDIR)" && gzip --to-stdout --decompress "$(CCN_PXE)" | cpio $(call vl3,--quiet )--unconditional --extract "$(CCN_SQUASHFS_BASE)"
 
+# This downloads the pxe image
 $(call forward-vars,$(CCN_DOWNLOADED_PXE), \
 	CCN_TMPDIR CCN_IMG_URL BASH_SHELL CCN_CACHE_SH)
 $(CCN_DOWNLOADED_PXE): $(CCN_CACHE_SH) | $(CCN_TMPDIR)
