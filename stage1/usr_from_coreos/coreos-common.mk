@@ -22,6 +22,9 @@ CCN_SYSTEMD_VERSION := $(RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER)
 
 endif
 
+$(call setup-stamp-file,CCN_INVALIDATE_SQUASHFS_DEPMK_STAMP,invalidate-squashfs)
+$(call setup-depmk-file,CCN_INVALIDATE_SQUASHFS_DEPMK,invalidate-squashfs)
+
 CCN_SQUASHFS_BASE := usr.squashfs
 CCN_SQUASHFS := $(CCN_TMPDIR)/$(CCN_SQUASHFS_BASE)
 CCN_CACHE_SH := $(MK_SRCDIR)/cache.sh
@@ -39,6 +42,10 @@ else
 CCN_PXE := $(CCN_DOWNLOADED_PXE)
 
 endif
+
+# This depmk forces the squashfs file recreation if the path to the
+# pxe.img file (in the CCN_PXE variable) changes.
+$(call generate-kv-deps,$(CCN_INVALIDATE_SQUASHFS_DEPMK_STAMP),$(CCN_SQUASHFS),$(CCN_INVALIDATE_SQUASHFS_DEPMK),CCN_PXE)
 
 CLEAN_FILES += $(CCN_SQUASHFS)
 
