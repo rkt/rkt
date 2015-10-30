@@ -799,8 +799,17 @@ func getChildPID(ppid int) (int, error) {
 	return -1, ErrChildNotReady{}
 }
 
-// getPID returns the pid of the pod.
-func (p *pod) getPID() (pid int, err error) {
+// getPID returns the pid of the stage1 process that started the pod.
+func (p *pod) getPID() (int, error) {
+	pid, err := p.readIntFromFile("ppid")
+	if err != nil {
+		return -1, err
+	}
+	return pid, nil
+}
+
+// getContainerPID1 returns the pid of the process with pid 1 in the pod.
+func (p *pod) getContainerPID1() (pid int, err error) {
 	// rkt supports two methods to find the container's PID 1:
 	// the pid file and the ppid file.
 	// See Documentation/devel/stage1-implementors-guide.md

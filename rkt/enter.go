@@ -75,7 +75,7 @@ func runEnter(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	podPID, err := p.getPID()
+	podPID, err := p.getContainerPID1()
 	if err != nil {
 		stderr("Unable to determine the pid for pod %q: %v", podUUID, err)
 		return 1
