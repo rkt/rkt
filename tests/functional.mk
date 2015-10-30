@@ -42,6 +42,7 @@ $(call forward-vars,$(FTST_FUNCTIONAL_TESTS_STAMP), \
 	FTST_ACE_MAIN_IMAGE FTST_ACE_SIDEKICK_IMAGE)
 $(FTST_FUNCTIONAL_TESTS_STAMP): $(FTST_IMAGE) $(FTST_EMPTY_IMAGE) $(ACTOOL_STAMP) $(RKT_STAMP) $(FTST_ACE_MAIN_IMAGE) $(FTST_ACE_SIDEKICK_IMAGE) | $(FTST_TEST_TMP)
 	$(VQ) \
+	$(call vb,vt,GO TEST,$(REPO_PATH)/tests) \
 	sudo RKT="$(RKT_BINARY)" ACTOOL="$(ACTOOL)" RKT_INSPECT_IMAGE="$(FTST_IMAGE)" RKT_EMPTY_IMAGE="$(FTST_EMPTY_IMAGE)" RKT_ACE_MAIN_IMAGE=$(FTST_ACE_MAIN_IMAGE) RKT_ACE_SIDEKICK_IMAGE=$(FTST_ACE_SIDEKICK_IMAGE) FUNCTIONAL_TMP="$(FTST_TEST_TMP)" GO="$(ABS_GO)" INSPECT_BINARY="$(FTST_INSPECT_BINARY)" $(GO_ENV) "$(ABS_GO)" test -timeout 30m -v $(GO_TEST_FUNC_ARGS) $(REPO_PATH)/tests
 
 $(call forward-vars,$(FTST_IMAGE), \
@@ -49,9 +50,13 @@ $(call forward-vars,$(FTST_IMAGE), \
 $(FTST_IMAGE): $(FTST_IMAGE_MANIFEST) $(FTST_ACI_INSPECT) $(FTST_ACI_ECHO_SERVER) | $(FTST_IMAGE_TEST_DIRS)
 	$(VQ) \
 	set -e; \
+	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/dir1/file)) \
 	echo -n dir1 >$(FTST_IMAGE_ROOTFSDIR)/dir1/file; \
+	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/dir2/file)) \
 	echo -n dir2 >$(FTST_IMAGE_ROOTFSDIR)/dir2/file; \
+	$(call vb,v2,LN SF,/inspect $(call vsp,$(FTST_IMAGE_ROOTFSDIR)/inspect-link)) \
 	ln -sf /inspect $(FTST_IMAGE_ROOTFSDIR)/inspect-link; \
+	$(call vb,vt,ACTOOL,$(call vsp,$@)) \
 	"$(ACTOOL)" build --overwrite --owner-root "$(FTST_IMAGE_DIR)" "$@"
 
 # variables for makelib/build_go_bin.mk
@@ -75,6 +80,7 @@ $(call forward-vars,$(FTST_EMPTY_IMAGE), \
 	ACTOOL FTST_EMPTY_IMAGE_DIR)
 $(FTST_EMPTY_IMAGE): $(FTST_EMPTY_IMAGE_MANIFEST) | $(FTST_EMPTY_IMAGE_ROOTFSDIR)
 	$(VQ) \
+	$(call vb,vt,ACTOOL,$(call vsp,$@)) \
 	"$(ACTOOL)" build --overwrite "$(FTST_EMPTY_IMAGE_DIR)" "$@"
 
 # variables for makelib/build_go_bin.mk
@@ -94,6 +100,7 @@ define FTST_GENERATE_ACE_IMAGE
 $$(call forward-vars,$1,ACTOOL)
 $1: $2/manifest $2/rootfs/ace-validator | $2/rootfs/opt/acvalidator
 	$$(VQ) \
+	$$(call vb,vt,ACTOOL,$$(call vsp,$$@)) \
 	"$$(ACTOOL)" build --overwrite "$2" "$1"
 
 CREATE_DIRS += $2 $$(call dir-chain,$2,rootfs/opt/acvalidator)
