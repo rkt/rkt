@@ -890,6 +890,34 @@ func (p *pod) getAppsHashes() ([]types.Hash, error) {
 	return hashes, nil
 }
 
+type AppsImageManifests map[types.ACName]*schema.ImageManifest
+
+// getAppsImageManifests returns a map of ImageManifests keyed to the
+// corresponding App name.
+func (p *pod) getAppsImageManifests() (AppsImageManifests, error) {
+	apps, err := p.getApps()
+	if err != nil {
+		return nil, err
+	}
+
+	aim := make(AppsImageManifests)
+	for _, a := range apps {
+		imb, err := ioutil.ReadFile(common.AppInfoImageManifestPath(p.path(), a.Name))
+		if err != nil {
+			return nil, err
+		}
+
+		im := &schema.ImageManifest{}
+		if err := im.UnmarshalJSON(imb); err != nil {
+			return nil, err
+		}
+
+		aim[a.Name] = im
+	}
+
+	return aim, nil
+}
+
 // getApps returns a list of apps in the pod
 func (p *pod) getApps() (schema.AppList, error) {
 	pmb, err := p.readFile("pod")
