@@ -20,6 +20,7 @@ package main
 // #include <stdlib.h>
 // #include <dlfcn.h>
 // #include <sys/types.h>
+// #include <unistd.h>
 //
 // int
 // my_sd_pid_get_owner_uid(void *f, pid_t pid, uid_t *uid)
@@ -48,6 +49,11 @@ package main
 //   return sd_pid_get_slice(pid, slice);
 // }
 //
+// int
+// am_session_leader()
+// {
+//   return (getsid(0) == getpid());
+// }
 import "C"
 
 // this implements /init of stage1/nspawn+systemd
@@ -853,7 +859,6 @@ func isRunningFromUnitFile() (ret bool, err error) {
 	if handle == nil {
 		// we can't open libsystemd.so so we assume systemd is not
 		// installed and we're not running from a unit file
-		ret = false
 		return
 	}
 	defer func() {
@@ -874,15 +879,14 @@ func isRunningFromUnitFile() (ret bool, err error) {
 	// ENOENT (systemd <220) or ENXIO (systemd >=220)
 	switch {
 	case errno >= 0:
-		ret = false
-		return
 	case syscall.Errno(-errno) == syscall.ENOENT || syscall.Errno(-errno) == syscall.ENXIO:
-		ret = true
-		return
+		if C.am_session_leader() == 1 {
+			ret = true
+		}
 	default:
 		err = fmt.Errorf("error calling sd_pid_get_owner_uid: %v", syscall.Errno(-errno))
-		return
 	}
+	return
 }
 
 func main() {
