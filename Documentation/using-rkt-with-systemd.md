@@ -130,6 +130,16 @@ KillMode=mixed
 Restart=always
 ```
 
+rkt must be the main process of the service in order to support [isolators](https://github.com/appc/spec/blob/master/spec/ace.md#isolators) correctly and to be well-integrated with [systemd-machined](http://www.freedesktop.org/software/systemd/man/systemd-machined.service.html).
+To ensure that rkt is the main process of the service, the pattern `/bin/sh -c "foo ; rkt run ..."` should be avoided because in that case the main process would be sh.
+
+In most cases, the parameters `Environment=` and `ExecStartPre=` can simply be used instead of starting a shell.
+If it is not possible, use exec to ensure rkt is not started as a new process:
+
+```
+ExecStart=/bin/sh -c "foo ; exec rkt run ..."
+```
+
 ## Socket-activated service
 
 `rkt` supports [socket-activated services](http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html).
