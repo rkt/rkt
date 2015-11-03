@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 var expectedResults = []string{
@@ -28,10 +30,10 @@ var expectedResults = []string{
 }
 
 func TestAceValidator(t *testing.T) {
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
-	if err := ctx.launchMDS(); err != nil {
+	if err := ctx.LaunchMDS(); err != nil {
 		t.Fatalf("Cannot launch metadata service: %v", err)
 	}
 
@@ -46,7 +48,7 @@ func TestAceValidator(t *testing.T) {
 
 	rktArgs := fmt.Sprintf("--debug --insecure-skip-verify run --mds-register --volume database,kind=empty %s %s",
 		aceMain, aceSidekick)
-	rktCmd := fmt.Sprintf("%s %s", ctx.cmd(), rktArgs)
+	rktCmd := fmt.Sprintf("%s %s", ctx.Cmd(), rktArgs)
 
 	child := spawnOrFail(t, rktCmd)
 	defer waitOrFail(t, child, true)

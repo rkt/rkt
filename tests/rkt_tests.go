@@ -30,202 +30,12 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
-	"github.com/coreos/rkt/tests/testutils/logger"
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 const (
 	nobodyUid = uint32(65534)
 )
-
-// dirDesc structure manages one directory and provides an option for
-// rkt invocations
-type dirDesc struct {
-	dir    string // directory path
-	desc   string // directory description, mostly for failure cases
-	prefix string // temporary directory prefix
-	option string // rkt option for given directory
-}
-
-// newDirDesc creates dirDesc instance managing a temporary directory.
-func newDirDesc(prefix, desc, option string) *dirDesc {
-	dir := &dirDesc{
-		dir:    "",
-		desc:   desc,
-		prefix: prefix,
-		option: option,
-	}
-	dir.reset()
-	return dir
-}
-
-// reset removes the managed directory and recreates it
-func (d *dirDesc) reset() {
-	d.cleanup()
-	dir, err := ioutil.TempDir("", d.prefix)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create temporary %s directory: %v", d.desc, err))
-	}
-	d.dir = dir
-}
-
-// cleanup removes the managed directory. After cleanup this instance
-// cannot be used for anything, until it is reset.
-func (d *dirDesc) cleanup() {
-	if d.dir == "" {
-		return
-	}
-	if err := os.RemoveAll(d.dir); err != nil && !os.IsNotExist(err) {
-		panic(fmt.Sprintf("Failed to remove temporary %s directory %q: %s", d.desc, d.dir, err))
-	}
-	d.dir = ""
-}
-
-// rktOption returns option for rkt invocation
-func (d *dirDesc) rktOption() string {
-	d.ensureValid()
-	return fmt.Sprintf("--%s=%s", d.option, d.dir)
-}
-
-func (d *dirDesc) ensureValid() {
-	if d.dir == "" {
-		panic(fmt.Sprintf("A temporary %s directory is not set up", d.desc))
-	}
-}
-
-type rktRunCtx struct {
-	directories []*dirDesc
-	useDefaults bool
-	mds         *exec.Cmd
-	children    []*gexpect.ExpectSubprocess
-}
-
-func newRktRunCtx() *rktRunCtx {
-	return &rktRunCtx{
-		directories: []*dirDesc{
-			newDirDesc("datadir-", "data", "dir"),
-			newDirDesc("localdir-", "local configuration", "local-config"),
-			newDirDesc("systemdir-", "system configuration", "system-config"),
-		},
-	}
-}
-
-func (ctx *rktRunCtx) launchMDS() error {
-	ctx.mds = exec.Command(ctx.rktBin(), "metadata-service")
-	return ctx.mds.Start()
-}
-
-func (ctx *rktRunCtx) dataDir() string {
-	return ctx.dir(0)
-}
-
-func (ctx *rktRunCtx) localDir() string {
-	return ctx.dir(1)
-}
-
-func (ctx *rktRunCtx) systemDir() string {
-	return ctx.dir(2)
-}
-
-func (ctx *rktRunCtx) dir(idx int) string {
-	ctx.ensureValid()
-	if idx < len(ctx.directories) {
-		return ctx.directories[idx].dir
-	}
-	panic("Directory index out of bounds")
-}
-
-func (ctx *rktRunCtx) reset() {
-	ctx.cleanupChildren()
-	ctx.runGC()
-	for _, d := range ctx.directories {
-		d.reset()
-	}
-}
-
-func (ctx *rktRunCtx) cleanupChildren() error {
-	for _, child := range ctx.children {
-		if child.Cmd.ProcessState.Exited() {
-			logger.Logf("Child %q already exited", child.Cmd.Path)
-			continue
-		}
-		logger.Logf("Shutting down child %q", child.Cmd.Path)
-		if err := child.Cmd.Process.Kill(); err != nil {
-			return err
-		}
-		if _, err := child.Cmd.Process.Wait(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (ctx *rktRunCtx) cleanup() {
-	if ctx.mds != nil {
-		ctx.mds.Process.Kill()
-		ctx.mds.Wait()
-		os.Remove("/run/rkt/metadata-svc.sock")
-	}
-	if err := ctx.cleanupChildren(); err != nil {
-		logger.Logf("Error during child cleanup: %v", err)
-	}
-	ctx.runGC()
-	for _, d := range ctx.directories {
-		d.cleanup()
-	}
-}
-
-func (ctx *rktRunCtx) runGC() {
-	rktArgs := append(ctx.rktOptions(),
-		"gc",
-		"--grace-period=0s",
-	)
-	if err := exec.Command(ctx.rktBin(), rktArgs...).Run(); err != nil {
-		panic(fmt.Sprintf("Failed to run gc: %v", err))
-	}
-}
-
-func (ctx *rktRunCtx) cmd() string {
-	return fmt.Sprintf("%s %s",
-		ctx.rktBin(),
-		strings.Join(ctx.rktOptions(), " "),
-	)
-}
-
-// TODO(jonboulle): clean this up
-func (ctx *rktRunCtx) cmdNoConfig() string {
-	return fmt.Sprintf("%s %s",
-		ctx.rktBin(),
-		ctx.directories[0].rktOption(),
-	)
-}
-
-func (ctx *rktRunCtx) rktBin() string {
-	rkt := getValueFromEnvOrPanic("RKT")
-	abs, err := filepath.Abs(rkt)
-	if err != nil {
-		abs = rkt
-	}
-	return abs
-}
-
-func (ctx *rktRunCtx) rktOptions() []string {
-	ctx.ensureValid()
-	opts := make([]string, 0, len(ctx.directories))
-	for _, d := range ctx.directories {
-		opts = append(opts, d.rktOption())
-	}
-	return opts
-}
-
-func (ctx *rktRunCtx) ensureValid() {
-	for _, d := range ctx.directories {
-		d.ensureValid()
-	}
-}
-
-func (ctx *rktRunCtx) RegisterChild(child *gexpect.ExpectSubprocess) {
-	ctx.children = append(ctx.children, child)
-}
 
 func expectCommon(p *gexpect.ExpectSubprocess, searchString string, timeout time.Duration) error {
 	var err error
@@ -262,8 +72,8 @@ func expectTimeoutWithOutput(p *gexpect.ExpectSubprocess, searchString string, t
 func patchACI(inputFileName, newFileName string, args ...string) string {
 	var allArgs []string
 
-	actool := getValueFromEnvOrPanic("ACTOOL")
-	tmpDir := getValueFromEnvOrPanic("FUNCTIONAL_TMP")
+	actool := testutils.GetValueFromEnvOrPanic("ACTOOL")
+	tmpDir := testutils.GetValueFromEnvOrPanic("FUNCTIONAL_TMP")
 
 	imagePath, err := filepath.Abs(filepath.Join(tmpDir, newFileName))
 	if err != nil {
@@ -314,20 +124,12 @@ func spawnAndWaitOrFail(t *testing.T, cmd string, shouldSucceed bool) {
 	waitOrFail(t, child, shouldSucceed)
 }
 
-func getValueFromEnvOrPanic(envVar string) string {
-	path := os.Getenv(envVar)
-	if path == "" {
-		panic(fmt.Sprintf("Empty %v environment variable\n", envVar))
-	}
-	return path
-}
-
 func getEmptyImagePath() string {
-	return getValueFromEnvOrPanic("RKT_EMPTY_IMAGE")
+	return testutils.GetValueFromEnvOrPanic("RKT_EMPTY_IMAGE")
 }
 
 func getInspectImagePath() string {
-	return getValueFromEnvOrPanic("RKT_INSPECT_IMAGE")
+	return testutils.GetValueFromEnvOrPanic("RKT_INSPECT_IMAGE")
 }
 
 func getHashOrPanic(path string) string {
@@ -362,15 +164,15 @@ func createTempDirOrPanic(dirName string) string {
 	return tmpDir
 }
 
-func importImageAndFetchHashAsGid(t *testing.T, ctx *rktRunCtx, img string, gid int) string {
+func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img string, gid int) string {
 	// Import the test image into store manually.
-	cmd := fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmd(), img)
+	cmd := fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.Cmd(), img)
 
 	// TODO(jonboulle): non-root user breaks trying to read root-written
 	// config directories. Should be a better way to approach this. Should
 	// config directories be readable by the rkt group too?
 	if gid != 0 {
-		cmd = fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.cmdNoConfig(), img)
+		cmd = fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.CmdNoConfig(), img)
 	}
 	child, err := gexpect.Command(cmd)
 	if err != nil {
@@ -397,29 +199,29 @@ func importImageAndFetchHashAsGid(t *testing.T, ctx *rktRunCtx, img string, gid 
 	return result[0]
 }
 
-func importImageAndFetchHash(t *testing.T, ctx *rktRunCtx, img string) string {
+func importImageAndFetchHash(t *testing.T, ctx *testutils.RktRunCtx, img string) string {
 	return importImageAndFetchHashAsGid(t, ctx, img, 0)
 }
 
-func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *rktRunCtx) string {
+func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *testutils.RktRunCtx) string {
 	imagePath := patchTestACI(image, patches...)
 	defer os.Remove(imagePath)
 
 	return importImageAndFetchHash(t, ctx, imagePath)
 }
 
-func runGC(t *testing.T, ctx *rktRunCtx) {
-	cmd := fmt.Sprintf("%s gc --grace-period=0s", ctx.cmd())
+func runGC(t *testing.T, ctx *testutils.RktRunCtx) {
+	cmd := fmt.Sprintf("%s gc --grace-period=0s", ctx.Cmd())
 	spawnAndWaitOrFail(t, cmd, true)
 }
 
-func runImageGC(t *testing.T, ctx *rktRunCtx) {
-	cmd := fmt.Sprintf("%s image gc", ctx.cmd())
+func runImageGC(t *testing.T, ctx *testutils.RktRunCtx) {
+	cmd := fmt.Sprintf("%s image gc", ctx.Cmd())
 	spawnAndWaitOrFail(t, cmd, true)
 }
 
-func removeFromCas(t *testing.T, ctx *rktRunCtx, hash string) {
-	cmd := fmt.Sprintf("%s image rm %s", ctx.cmd(), hash)
+func removeFromCas(t *testing.T, ctx *testutils.RktRunCtx, hash string) {
+	cmd := fmt.Sprintf("%s image rm %s", ctx.Cmd(), hash)
 	spawnAndWaitOrFail(t, cmd, true)
 }
 
@@ -478,19 +280,19 @@ func runRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError
 	runRktAsGidAndCheckOutput(t, rktCmd, expectedLine, expectError, 0)
 }
 
-func checkAppStatus(t *testing.T, ctx *rktRunCtx, multiApps bool, appName, expected string) {
+func checkAppStatus(t *testing.T, ctx *testutils.RktRunCtx, multiApps bool, appName, expected string) {
 	cmd := fmt.Sprintf(`/bin/sh -c "`+
 		`UUID=$(%s list --full|grep '%s'|awk '{print $1}') ;`+
 		`echo -n 'status=' ;`+
 		`%s status $UUID|grep '^app-%s.*=[0-9]*$'|cut -d= -f2"`,
-		ctx.cmd(), appName, ctx.cmd(), appName)
+		ctx.Cmd(), appName, ctx.Cmd(), appName)
 
 	if multiApps {
 		cmd = fmt.Sprintf(`/bin/sh -c "`+
 			`UUID=$(%s list --full|grep '^[a-f0-9]'|awk '{print $1}') ;`+
 			`echo -n 'status=' ;`+
 			`%s status $UUID|grep '^app-%s.*=[0-9]*$'|cut -d= -f2"`,
-			ctx.cmd(), ctx.cmd(), appName)
+			ctx.Cmd(), ctx.Cmd(), appName)
 	}
 
 	t.Logf("Get status for app %s\n", appName)
@@ -503,7 +305,7 @@ func checkAppStatus(t *testing.T, ctx *rktRunCtx, multiApps bool, appName, expec
 		cmd := fmt.Sprintf(`%s list --full ;`+
 			`UUID=$(%s list --full|grep  '^[a-f0-9]'|awk '{print $1}') ;`+
 			`%s status $UUID`,
-			ctx.cmd(), ctx.cmd(), ctx.cmd())
+			ctx.Cmd(), ctx.Cmd(), ctx.Cmd())
 		out, err2 := exec.Command("/bin/sh", "-c", cmd).CombinedOutput()
 		if err2 != nil {
 			t.Logf("Could not run rkt status: %v. %s", err2, out)

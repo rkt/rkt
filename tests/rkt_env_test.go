@@ -18,6 +18,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 var envTests = []struct {
@@ -71,12 +73,12 @@ func TestEnv(t *testing.T) {
 	defer os.Remove(printVarOtherImage)
 	sleepImage := patchTestACI("rkt-inspect-sleep.aci", "--exec=/inspect --read-stdin")
 	defer os.Remove(sleepImage)
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	replacePlaceholders := func(cmd string) string {
 		fixed := cmd
-		fixed = strings.Replace(fixed, "^RKT_BIN^", ctx.cmd(), -1)
+		fixed = strings.Replace(fixed, "^RKT_BIN^", ctx.Cmd(), -1)
 		fixed = strings.Replace(fixed, "^PRINT_VAR_FROM_MANIFEST^", printVarFromManifestImage, -1)
 		fixed = strings.Replace(fixed, "^PRINT_VAR_OTHER^", printVarOtherImage, -1)
 		fixed = strings.Replace(fixed, "^SLEEP^", sleepImage, -1)
@@ -115,6 +117,6 @@ func TestEnv(t *testing.T) {
 		}
 
 		waitOrFail(t, child, true)
-		ctx.reset()
+		ctx.Reset()
 	}
 }

@@ -29,6 +29,7 @@ import (
 
 	sd_dbus "github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/dbus"
 	sd_util "github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/util"
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 func randomFreePort(t *testing.T) (int, error) {
@@ -66,8 +67,8 @@ func TestSocketActivation(t *testing.T) {
 		fmt.Sprintf("--ports=%d-tcp,protocol=tcp,port=%d,socketActivated=true", port, port))
 	defer os.Remove(echoImage)
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	conn, err := sd_dbus.New()
 	if err != nil {
@@ -85,7 +86,7 @@ func TestSocketActivation(t *testing.T) {
 
 	rnd := r.Int()
 
-	cmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), echoImage)
+	cmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), echoImage)
 	serviceContent := fmt.Sprintf(rktTestingEchoService, cmd)
 	serviceTarget := fmt.Sprintf("rkt-testing-socket-activation-%d.service", rnd)
 

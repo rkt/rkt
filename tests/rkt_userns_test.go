@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 var usernsTests = []struct {
@@ -50,14 +51,14 @@ var usernsTests = []struct {
 func TestUserns(t *testing.T) {
 	image := patchTestACI("rkt-inspect-stat.aci", "--exec=/inspect --stat-file")
 	defer os.Remove(image)
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	for i, tt := range usernsTests {
 		for _, userNsOpt := range []string{"", "--private-users"} {
 			runCmd := tt.runCmd
 			runCmd = strings.Replace(runCmd, "^IMAGE^", image, -1)
-			runCmd = strings.Replace(runCmd, "^RKT_BIN^", ctx.cmd(), -1)
+			runCmd = strings.Replace(runCmd, "^RKT_BIN^", ctx.Cmd(), -1)
 			runCmd = strings.Replace(runCmd, "^FILE^", tt.file, -1)
 			runCmd = strings.Replace(runCmd, "^USERNS^", userNsOpt, -1)
 
@@ -85,7 +86,7 @@ func TestUserns(t *testing.T) {
 				t.Fatalf("rkt didn't terminate correctly: %v", err)
 			}
 
-			ctx.reset()
+			ctx.Reset()
 		}
 	}
 }

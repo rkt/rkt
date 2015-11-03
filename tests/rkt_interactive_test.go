@@ -20,6 +20,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 var interactiveTests = []struct {
@@ -74,8 +76,8 @@ var interactiveTests = []struct {
 }
 
 func TestInteractive(t *testing.T) {
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	for i, tt := range interactiveTests {
 		t.Logf("Running test #%v: %v", i, tt.testName)
@@ -83,7 +85,7 @@ func TestInteractive(t *testing.T) {
 		aciFileName := patchTestACI("rkt-inspect-interactive.aci", tt.aciBuildArgs...)
 		defer os.Remove(aciFileName)
 
-		rktCmd := fmt.Sprintf("%s %s", ctx.cmd(), tt.rktArgs)
+		rktCmd := fmt.Sprintf("%s %s", ctx.Cmd(), tt.rktArgs)
 		rktCmd = strings.Replace(rktCmd, "^INTERACTIVE^", aciFileName, -1)
 		child := spawnOrFail(t, rktCmd)
 		if tt.say != "" {

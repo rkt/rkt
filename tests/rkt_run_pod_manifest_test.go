@@ -27,6 +27,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/syndtr/gocapability/capability"
+	"github.com/coreos/rkt/tests/testutils"
 
 	"github.com/coreos/rkt/common/cgroup"
 )
@@ -34,7 +35,7 @@ import (
 const baseAppName = "rkt-inspect"
 
 func generatePodManifestFile(t *testing.T, manifest *schema.PodManifest) string {
-	tmpDir := getValueFromEnvOrPanic("FUNCTIONAL_TMP")
+	tmpDir := testutils.GetValueFromEnvOrPanic("FUNCTIONAL_TMP")
 	f, err := ioutil.TempFile(tmpDir, "rkt-test-manifest-")
 	if err != nil {
 		t.Fatalf("Cannot create tmp pod manifest: %v", err)
@@ -89,8 +90,8 @@ type imagePatch struct {
 // Test running pod manifests that contains just one app.
 // TODO(yifan): Figure out a way to test port mapping on single host.
 func TestPodManifest(t *testing.T) {
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	tmpdir := createTempDirOrPanic("rkt-tests.")
 	defer os.RemoveAll(tmpdir)
@@ -514,7 +515,7 @@ func TestPodManifest(t *testing.T) {
 		defer os.Remove(manifestFile)
 
 		// 1. Test 'rkt run'.
-		runCmd := fmt.Sprintf("%s run --mds-register=false --pod-manifest=%s", ctx.cmd(), manifestFile)
+		runCmd := fmt.Sprintf("%s run --mds-register=false --pod-manifest=%s", ctx.Cmd(), manifestFile)
 		t.Logf("Running 'run' test #%v", i)
 		child := spawnOrFail(t, runCmd)
 
@@ -532,10 +533,10 @@ func TestPodManifest(t *testing.T) {
 
 		// 2. Test 'rkt prepare' + 'rkt run-prepared'.
 		rktCmd := fmt.Sprintf("%s --insecure-skip-verify prepare --pod-manifest=%s",
-			ctx.cmd(), manifestFile)
+			ctx.Cmd(), manifestFile)
 		uuid := runRktAndGetUUID(t, rktCmd)
 
-		runPreparedCmd := fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.cmd(), uuid)
+		runPreparedCmd := fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), uuid)
 		t.Logf("Running 'run-prepared' test #%v", i)
 		child = spawnOrFail(t, runPreparedCmd)
 

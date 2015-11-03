@@ -12,26 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package testutils
 
 import (
 	"fmt"
 	"os"
-	"testing"
-
-	"github.com/coreos/rkt/tests/testutils"
 )
 
-func TestSupplementaryGIDs(t *testing.T) {
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
-
-	printSupplGroups := patchTestACI("rkt-inspect-print-supplementary-groups.aci",
-		"--supplementary-groups=400,500,1200",
-		"--exec=/inspect --print-groups")
-	defer os.Remove(printSupplGroups)
-
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), printSupplGroups)
-	t.Logf("Command: %v", cmd)
-	runRktAndCheckOutput(t, cmd, "Groups: 0 400 500 1200", false)
+func GetValueFromEnvOrPanic(envVar string) string {
+	path := os.Getenv(envVar)
+	if path == "" {
+		panic(fmt.Sprintf("Empty %v environment variable\n", envVar))
+	}
+	return path
 }

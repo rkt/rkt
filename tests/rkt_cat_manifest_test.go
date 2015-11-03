@@ -20,6 +20,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 const (
@@ -48,8 +50,8 @@ func TestCatManifest(t *testing.T) {
 
 	testImage := patchTestACI("rkt-inspect-image-cat-manifest.aci", "--manifest", tmpManifest.Name())
 	defer os.Remove(testImage)
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	testImageHash := importImageAndFetchHash(t, ctx, testImage)
 
@@ -81,7 +83,7 @@ func TestCatManifest(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		runCmd := fmt.Sprintf("%s image cat-manifest %s", ctx.cmd(), tt.image)
+		runCmd := fmt.Sprintf("%s image cat-manifest %s", ctx.Cmd(), tt.image)
 		t.Logf("Running test #%d", i)
 		runRktAndCheckOutput(t, runCmd, tt.expect, !tt.shouldFind)
 	}
