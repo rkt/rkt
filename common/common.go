@@ -120,6 +120,11 @@ func AppTreeStoreIDPath(root string, appName types.ACName) string {
 	return filepath.Join(AppInfoPath(root, appName), AppTreeStoreIDFilename)
 }
 
+// AppImageManifestPath returns the path to the app's ImageManifest file
+func AppInfoImageManifestPath(root string, appName types.ACName) string {
+	return filepath.Join(AppInfoPath(root, appName), aci.ManifestFile)
+}
+
 // SharedVolumesPath returns the path to the shared (empty) volumes of a pod.
 func SharedVolumesPath(root string) string {
 	return filepath.Join(root, sharedVolumesDir)

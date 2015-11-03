@@ -23,6 +23,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/lastditch"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	common "github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
@@ -96,12 +97,10 @@ func runList(cmd *cobra.Command, args []string) int {
 			uuid = uuid[:8]
 		}
 		for _, app := range pm.Apps {
-			imageName := "--"
-			if app.Image.Name != nil {
-				imageName = app.Image.Name.String()
-				if version, ok := app.Image.Labels.Get("version"); ok {
-					imageName = fmt.Sprintf("%s:%s", imageName, version)
-				}
+			imageName, err := getImageName(p, app.Name)
+			if err != nil {
+				errors = append(errors, newPodListLoadImageManifestError(p, err))
+				imageName = "--"
 			}
 
 			var imageID string
@@ -194,6 +193,10 @@ func newPodListZeroAppsError(p *pod) error {
 	return fmt.Errorf("Pod %s contains zero apps", p.uuid.String())
 }
 
+func newPodListLoadImageManifestError(p *pod, err error) error {
+	return fmt.Errorf("pod %s ImageManifest could not be loaded: %v", p.uuid.String(), err)
+}
+
 func appLine(app lastditch.RuntimeApp) string {
 	return fmt.Sprintf("App: %q from image %q (%s)",
 		app.Name, app.Image.Name, app.Image.ID)
@@ -206,4 +209,23 @@ func fmtNets(nis []netinfo.NetInfo) string {
 		parts = append(parts, fmt.Sprintf("%v:ip4=%v", ni.NetName, ni.IP))
 	}
 	return strings.Join(parts, ", ")
+}
+
+func getImageName(p *pod, appName types.ACName) (string, error) {
+	aim, err := p.getAppsImageManifests()
+	if err != nil {
+		return "", fmt.Errorf("problem retrieving ImageManifests from pod: %v", err)
+	}
+
+	im, ok := aim[appName]
+	if !ok {
+		return "", fmt.Errorf("could not find appName in pod: %v", err)
+	}
+
+	imageName := im.Name.String()
+	if version, ok := im.Labels.Get("version"); ok {
+		imageName = fmt.Sprintf("%s:%s", imageName, version)
+	}
+
+	return imageName, nil
 }
