@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 func TestRktList(t *testing.T) {
@@ -29,11 +31,11 @@ func TestRktList(t *testing.T) {
 	imageHash := getHashOrPanic(image)
 	imgID := ImageId{image, imageHash}
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	// Prepare image
-	cmd := fmt.Sprintf("%s --insecure-skip-verify prepare %s", ctx.cmd(), imgID.path)
+	cmd := fmt.Sprintf("%s --insecure-skip-verify prepare %s", ctx.Cmd(), imgID.path)
 	podUuid := runRktAndGetUUID(t, cmd)
 
 	// Get hash
@@ -88,7 +90,7 @@ func TestRktList(t *testing.T) {
 
 	// Run tests
 	for i, tt := range tests {
-		runCmd := fmt.Sprintf("%s %s", ctx.cmd(), tt.cmd)
+		runCmd := fmt.Sprintf("%s %s", ctx.Cmd(), tt.cmd)
 		t.Logf("Running test #%d, %s", i, runCmd)
 		runRktAndCheckOutput(t, runCmd, tt.expect, !tt.shouldSucceed)
 	}
