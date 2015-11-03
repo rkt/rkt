@@ -347,6 +347,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 		}
 
 		if !filterPod(pod, manifest, request.Filter) {
+			pod.Manifest = nil // Do not return pod manifest in ListPods().
 			pods = append(pods, pod)
 		}
 	}); err != nil {
@@ -356,8 +357,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 	return &v1alpha.ListPodsResponse{Pods: pods}, nil
 }
 
-// getImageInfo for a given image ID, returns a *v1alpha.Image object
-// on success.
+// getImageInfo for a given image ID, returns the *v1alpha.Image object.
 //
 // FIXME(yifan): We should get the image manifest from the tree store.
 // See https://github.com/coreos/rkt/issues/1659
@@ -390,6 +390,7 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 		if err != nil {
 			return err
 		}
+		image.Manifest = nil // Do not return image manifest in ListPod()/InspectPod().
 		app.Image = image
 
 		// Fill app's state and exit code.
@@ -447,21 +448,22 @@ func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.Insp
 	return &v1alpha.InspectPodResponse{Pod: pod}, nil
 }
 
-// aciInfoToV1AlphaAPIImage takes an aciInfo object and construct the v1alpha.Image
-// object. It will also get and return the image manifest.
-// Note that v1alpha.Image.Manifest field is not set by this function.
+// aciInfoToV1AlphaAPIImage takes an aciInfo object and construct the v1alpha.Image object.
+// It also returns the image manifest of the image.
 func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1alpha.Image, *schema.ImageManifest, error) {
-	imgManifest, err := store.GetImageManifest(aciInfo.BlobKey)
+	manifest, err := store.GetImageManifestJSON(aciInfo.BlobKey)
 	if err != nil {
+		log.Printf("Failed to read the image manifest: %v", err)
 		return nil, nil, err
 	}
 
-	data, err := json.Marshal(imgManifest)
-	if err != nil {
+	var im schema.ImageManifest
+	if err = json.Unmarshal(manifest, &im); err != nil {
+		log.Printf("Failed to unmarshal image manifest: %v", err)
 		return nil, nil, err
 	}
 
-	version, ok := imgManifest.Labels.Get("version")
+	version, ok := im.Labels.Get("version")
 	if !ok {
 		version = "latest"
 	}
@@ -474,11 +476,11 @@ func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1al
 			Version: schema.AppContainerVersion.String(),
 		},
 		Id:              aciInfo.BlobKey,
-		Name:            imgManifest.Name.String(),
+		Name:            im.Name.String(),
 		Version:         version,
 		ImportTimestamp: aciInfo.ImportTime.Unix(),
-		Manifest:        data,
-	}, imgManifest, nil
+		Manifest:        manifest,
+	}, &im, nil
 }
 
 // filterImage returns true if the image doesn't satisfy the filter, which means
@@ -561,12 +563,11 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 		if err != nil {
 			continue
 		}
-
 		if !filterImage(image, manifest, request.Filter) {
+			image.Manifest = nil // Do not return image manifest in ListImages().
 			images = append(images, image)
 		}
 	}
-
 	return &v1alpha.ListImagesResponse{Images: images}, nil
 }
 
