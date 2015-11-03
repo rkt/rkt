@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 const (
@@ -50,8 +52,8 @@ func TestImageExport(t *testing.T) {
 
 	testImage := patchTestACI("rkt-inspect-image-export.aci", "--manifest", tmpManifestName)
 	defer os.Remove(testImage)
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	testImageId := importImageAndFetchHash(t, ctx, testImage)
 
@@ -89,7 +91,7 @@ func TestImageExport(t *testing.T) {
 
 	for i, tt := range tests {
 		outputAciPath := filepath.Join(tmpDir, fmt.Sprintf("exported-%d.aci", i))
-		runCmd := fmt.Sprintf("%s image export %s %s", ctx.cmd(), tt.image, outputAciPath)
+		runCmd := fmt.Sprintf("%s image export %s %s", ctx.Cmd(), tt.image, outputAciPath)
 		t.Logf("Running 'image export' test #%v: %v", i, runCmd)
 		spawnAndWaitOrFail(t, runCmd, tt.shouldFind)
 

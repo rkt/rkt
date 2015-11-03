@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 // TestFetchFromFile tests that 'rkt fetch/run/prepare' for a file will always
@@ -52,10 +54,10 @@ func TestFetchFromFile(t *testing.T) {
 func testFetchFromFile(t *testing.T, arg string, image string) {
 	fetchFromFileMsg := fmt.Sprintf("using image from file %s", image)
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s %s %s", ctx.cmd(), arg, image)
+	cmd := fmt.Sprintf("%s %s %s", ctx.Cmd(), arg, image)
 
 	// 1. Run cmd, should get $fetchFromFileMsg.
 	child := spawnOrFail(t, cmd)
@@ -112,10 +114,10 @@ func testFetchDefault(t *testing.T, arg string, image string, finalURL string) {
 	remoteFetchMsg := fmt.Sprintf(remoteFetchMsgTpl, finalURL)
 	storeMsg := fmt.Sprintf(storeMsgTpl, image)
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s %s %s", ctx.cmd(), arg, image)
+	cmd := fmt.Sprintf("%s %s %s", ctx.Cmd(), arg, image)
 
 	// 1. Run cmd with the image not available in the store, should get $remoteFetchMsg.
 	child := spawnOrFail(t, cmd)
@@ -134,10 +136,10 @@ func testFetchStoreOnly(t *testing.T, args string, image string, finalURL string
 	cannotFetchMsg := fmt.Sprintf(cannotFetchMsgTpl, image)
 	storeMsg := fmt.Sprintf(storeMsgTpl, image)
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --store-only %s %s", ctx.cmd(), args, image)
+	cmd := fmt.Sprintf("%s --store-only %s %s", ctx.Cmd(), args, image)
 
 	// 1. Run cmd with the image not available in the store should get $cannotFetchMsg.
 	runRktAndCheckRegexOutput(t, cmd, cannotFetchMsg)
@@ -152,12 +154,12 @@ func testFetchNoStore(t *testing.T, args string, image string, finalURL string) 
 	remoteFetchMsgTpl := `remote fetching from url %s`
 	remoteFetchMsg := fmt.Sprintf(remoteFetchMsgTpl, finalURL)
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	importImageAndFetchHash(t, ctx, image)
 
-	cmd := fmt.Sprintf("%s --no-store %s %s", ctx.cmd(), args, image)
+	cmd := fmt.Sprintf("%s --no-store %s %s", ctx.Cmd(), args, image)
 
 	// 1. Run cmd with the image available in the store, should get $remoteFetchMsg.
 	child := spawnOrFail(t, cmd)

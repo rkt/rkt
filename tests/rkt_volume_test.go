@@ -22,6 +22,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 var volTests = []struct {
@@ -90,8 +92,8 @@ func TestVolumes(t *testing.T) {
 	defer os.Remove(volAddMountRwImage)
 	volAddMountRoImage := patchTestACI("rkt-inspect-vol-add-mount-ro.aci", "--exec=/inspect --write-file --read-file")
 	defer os.Remove(volAddMountRoImage)
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	tmpdir := createTempDirOrPanic("rkt-tests.")
 	defer os.RemoveAll(tmpdir)
@@ -103,7 +105,7 @@ func TestVolumes(t *testing.T) {
 
 	for i, tt := range volTests {
 		cmd := strings.Replace(tt.rktCmd, "^TMPDIR^", tmpdir, -1)
-		cmd = strings.Replace(cmd, "^RKT_BIN^", ctx.cmd(), -1)
+		cmd = strings.Replace(cmd, "^RKT_BIN^", ctx.Cmd(), -1)
 		cmd = strings.Replace(cmd, "^READ_FILE^", readFileImage, -1)
 		cmd = strings.Replace(cmd, "^WRITE_FILE^", writeFileImage, -1)
 		cmd = strings.Replace(cmd, "^VOL_RO_READ_FILE^", volRoReadFileImage, -1)

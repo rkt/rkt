@@ -38,10 +38,10 @@ func TestNetHost(t *testing.T) {
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 	defer os.Remove(testImage)
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --net=host --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
+	cmd := fmt.Sprintf("%s --net=host --debug --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), testImage)
 	child := spawnOrFail(t, cmd)
 	ctx.RegisterChild(child)
 	defer waitOrFail(t, child, true)
@@ -82,10 +82,10 @@ func TestNetHostConnectivity(t *testing.T) {
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 	defer os.Remove(testImage)
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --net=host --debug --insecure-skip-verify run --mds-register=false %s", ctx.cmd(), testImage)
+	cmd := fmt.Sprintf("%s --net=host --debug --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), testImage)
 	child := spawnOrFail(t, cmd)
 	ctx.RegisterChild(child)
 
@@ -126,10 +126,10 @@ func TestNetNone(t *testing.T) {
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 	defer os.Remove(testImage)
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=none --mds-register=false %s", ctx.cmd(), testImage)
+	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=none --mds-register=false %s", ctx.Cmd(), testImage)
 
 	child := spawnOrFail(t, cmd)
 	defer waitOrFail(t, child, true)
@@ -172,11 +172,11 @@ func TestNetDefaultNetNS(t *testing.T) {
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 	defer os.Remove(testImage)
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	f := func(argument string) {
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.cmd(), argument, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
 		child := spawnOrFail(t, cmd)
 		defer waitOrFail(t, child, true)
 
@@ -209,8 +209,8 @@ func TestNetDefaultNetNS(t *testing.T) {
  * TODO: test connection to host on an outside interface
  */
 func TestNetDefaultConnectivity(t *testing.T) {
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	f := func(argument string) {
 		httpPort, err := testutils.GetNextFreePort4()
@@ -255,7 +255,7 @@ func TestNetDefaultConnectivity(t *testing.T) {
 		// Child connects to host
 		go func() {
 			defer ga.Done()
-			cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.cmd(), argument, testImage)
+			cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
 			child := ga.SpawnOrFail(cmd)
 			defer ga.WaitOrFail(child)
 
@@ -284,8 +284,8 @@ func TestNetDefaultConnectivity(t *testing.T) {
  * TODO: verify that the container isn't NATed
  */
 func TestNetDefaultRestrictedConnectivity(t *testing.T) {
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	f := func(argument string) {
 		httpPort, err := testutils.GetNextFreePort4()
@@ -299,7 +299,7 @@ func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.cmd(), argument, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
 		child := spawnOrFail(t, cmd)
 
 		expectedRegex := `IPv4: (.*)\r`
@@ -396,8 +396,8 @@ func TestNetTemplates(t *testing.T) {
 	}
 }
 
-func prepareTestNet(t *testing.T, ctx *rktRunCtx, nt networkTemplateT) (netdir string) {
-	configdir := ctx.directories[1].dir
+func prepareTestNet(t *testing.T, ctx *testutils.RktRunCtx, nt networkTemplateT) (netdir string) {
+	configdir := ctx.LocalDir()
 	netdir = filepath.Join(configdir, "net.d")
 	err := os.MkdirAll(netdir, 0644)
 	if err != nil {
@@ -423,8 +423,8 @@ func testNetCustomDual(t *testing.T, nt networkTemplateT) {
 		t.Fatalf("%v", err)
 	}
 
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	netdir := prepareTestNet(t, ctx, nt)
 	defer os.RemoveAll(netdir)
@@ -440,7 +440,7 @@ func testNetCustomDual(t *testing.T, nt networkTemplateT) {
 		testImage := patchTestACI("rkt-inspect-networking1.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.Cmd(), nt.Name, testImage)
 		child := ga.SpawnOrFail(cmd)
 		defer ga.WaitOrFail(child)
 
@@ -468,7 +468,7 @@ func testNetCustomDual(t *testing.T, nt networkTemplateT) {
 		testImage := patchTestACI("rkt-inspect-networking2.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.Cmd(), nt.Name, testImage)
 		child := ga.SpawnOrFail(cmd)
 		defer ga.WaitOrFail(child)
 
@@ -496,8 +496,8 @@ func testNetCustomDual(t *testing.T, nt networkTemplateT) {
  * TODO: test connection to host on an outside interface
  */
 func testNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	netdir := prepareTestNet(t, ctx, nt)
 	defer os.RemoveAll(netdir)
@@ -540,7 +540,7 @@ func testNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.cmd(), nt.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.Cmd(), nt.Name, testImage)
 		child := ga.SpawnOrFail(cmd)
 		defer ga.WaitOrFail(child)
 
@@ -623,8 +623,8 @@ func TestNetCustomBridge(t *testing.T) {
 }
 
 func TestNetOverride(t *testing.T) {
-	ctx := newRktRunCtx()
-	defer ctx.cleanup()
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	iface, _, err := testutils.GetNonLoIfaceWithAddrs(netlink.FAMILY_V4)
 	if err != nil {
@@ -653,7 +653,7 @@ func TestNetOverride(t *testing.T) {
 
 	expectedIP := "10.1.4.244"
 
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=all --net=\"%s:IP=%s\" --mds-register=false %s", ctx.cmd(), nt.Name, expectedIP, testImage)
+	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=all --net=\"%s:IP=%s\" --mds-register=false %s", ctx.Cmd(), nt.Name, expectedIP, testImage)
 	child := spawnOrFail(t, cmd)
 	defer waitOrFail(t, child, true)
 
