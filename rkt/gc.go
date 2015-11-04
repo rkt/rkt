@@ -192,6 +192,7 @@ func deletePod(p *pod) {
 			stderr("Cannot open store: %v", err)
 			return
 		}
+		defer s.Close()
 		stage1TreeStoreID, err := p.getStage1TreeStoreID()
 		if err != nil {
 			stderr("Error getting stage1 treeStoreID: %v", err)
