@@ -140,7 +140,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	fn.ks = getKeystore()
 	fn.withDeps = true
 	if err := fn.findImages(&rktApps); err != nil {
-		stderr("%v", err)
+		stderr("prepare: %v", err)
 		return 1
 	}
 

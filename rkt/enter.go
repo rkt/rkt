@@ -132,7 +132,7 @@ func getAppName(p *pod) (*types.ACName, error) {
 
 	m := schema.PodManifest{}
 	if err = m.UnmarshalJSON(b); err != nil {
-		return nil, fmt.Errorf("unable to load manifest: %v", err)
+		return nil, fmt.Errorf("invalid pod manifest: %v", err)
 	}
 
 	switch len(m.Apps) {
