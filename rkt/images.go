@@ -539,7 +539,7 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 
 	manifest, err := aci.ManifestFromImage(aciFile)
 	if err != nil {
-		return nil, aciFile, nil, err
+		return nil, aciFile, nil, fmt.Errorf("invalid image manifest: %v", err)
 	}
 	// Check if the downloaded ACI has the correct app name.
 	// The check is only performed when the aci is downloaded through the

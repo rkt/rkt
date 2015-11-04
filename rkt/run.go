@@ -171,14 +171,14 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 
 	s1img, err := getStage1Hash(s, cmd)
 	if err != nil {
-		stderr("%v", err)
+		stderr("run: %v", err)
 		return 1
 	}
 
 	fn.ks = getKeystore()
 	fn.withDeps = true
 	if err := fn.findImages(&rktApps); err != nil {
-		stderr("%v", err)
+		stderr("run: %v", err)
 		return 1
 	}
 

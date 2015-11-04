@@ -918,7 +918,7 @@ func (p *pod) getAppsImageManifests() (AppsImageManifests, error) {
 
 		im := &schema.ImageManifest{}
 		if err := im.UnmarshalJSON(imb); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid image manifest for app %q: %v", a.Name.String(), err)
 		}
 
 		aim[a.Name] = im
@@ -935,7 +935,7 @@ func (p *pod) getApps() (schema.AppList, error) {
 	}
 	pm := new(schema.PodManifest)
 	if err = pm.UnmarshalJSON(pmb); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid pod manifest: %v", err)
 	}
 	return pm.Apps, nil
 }

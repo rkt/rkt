@@ -116,7 +116,7 @@ func NewBasicACI(dir string, name string) (*os.File, error) {
 func NewACI(dir string, manifest string, entries []*ACIEntry) (*os.File, error) {
 	var im schema.ImageManifest
 	if err := im.UnmarshalJSON([]byte(manifest)); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid image manifest: %v", err)
 	}
 
 	tf, err := ioutil.TempFile(dir, "")
