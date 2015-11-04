@@ -53,7 +53,8 @@
 #
 # STAGE1_ENTER_CMD_$(flavor) - an enter command in stage1 to be used
 # for the "rkt enter" command.
-STAGE1_FLAVORS := $(call commas-to-spaces,$(RKT_STAGE1_FLAVORS))
+STAGE1_FLAVORS := $(call commas-to-spaces,$(RKT_STAGE1_ALL_FLAVORS))
+STAGE1_BUILT_FLAVORS := $(call commas-to-spaces,$(RKT_STAGE1_FLAVORS))
 $(foreach f,$(STAGE1_FLAVORS), \
 	$(eval STAGE1_COPY_SO_DEPS_$f :=) \
 	$(eval STAGE1_USR_STAMPS_$f :=) \
@@ -68,10 +69,11 @@ $(foreach f,$(STAGE1_FLAVORS), \
 	$(eval STAGE1_ENTER_CMD_$f :=))
 
 # Main stamp that tells whether all the ACI images have been built.
-$(call setup-stamp-file,_STAGE1_ALL_ACI_STAMP_,/all_aci)
+$(call setup-stamp-file,_STAGE1_BUILT_ACI_STAMP_,built_aci)
 
 # List of all the ACI images that the build system will build
 _STAGE1_ALL_ACI_ := $(foreach f,$(STAGE1_FLAVORS),$(STAGE1_ACI_IMAGE_$f))
+_STAGE1_BUILT_ACI_ := $(foreach f,$(STAGE1_BUILT_FLAVORS),$(STAGE1_ACI_IMAGE_$f))
 
 # The rootfs.mk file takes care of preparing the initial /usr contents
 # of the ACI rootfs of a specific flavor. Basically fills
@@ -88,10 +90,10 @@ $(foreach flavor,$(STAGE1_FLAVORS), \
 # variables.
 $(call inc-one,secondary-stuff.mk)
 
-TOPLEVEL_STAMPS += $(_STAGE1_ALL_ACI_STAMP_)
+TOPLEVEL_STAMPS += $(_STAGE1_BUILT_ACI_STAMP_)
 CLEAN_FILES += $(_STAGE1_ALL_ACI_)
 
-$(call generate-stamp-rule,$(_STAGE1_ALL_ACI_STAMP_),$(_STAGE1_ALL_ACI_))
+$(call generate-stamp-rule,$(_STAGE1_BUILT_ACI_STAMP_),$(_STAGE1_BUILT_ACI_))
 
 # A rule template for building an ACI image. To build the ACI image we
 # need to have the /usr contents prepared and the additional stuff in

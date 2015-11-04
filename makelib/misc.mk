@@ -356,7 +356,7 @@ $(strip \
 	$(eval _MISC_NDO_COMMA_ := ,) \
 	$(eval _MISC_NDO_SPACE_ := ) \
 	$(eval _MISC_NDO_SPACE_ += ) \
-	$(eval _MISC_NDO_DIRS_ := ($(subst $(_MISC_NDO_SPACE_),$(_MISC_NDO_COMMA_),$(call vsp,$6)))) \
+	$(eval _MISC_NDO_DIRS_ := ($(subst $(_MISC_NDO_SPACE_),$(_MISC_NDO_COMMA_),$(call vsp,$1)))) \
 	$(_MISC_NDO_DIRS_) \
 	$(call undefine-namespaces,_MISC_NDO))
 endef
@@ -440,7 +440,7 @@ endef
 define generate-clean-mk
 $(strip \
 	$(eval -include $2) \
-	$(eval _MISC_GCM_DIRS_ := $(call nice-dirs-output,$6)) \
+	$(eval _MISC_GCM_DIRS_ := $(call nice-dirs-output,$4)) \
 	$(eval $(call generate-stamp-rule,$1,$(CLEANGENTOOL_STAMP) $3,$(CLEANDIR),$(call vb,v2,CLEANFILE,$(_MISC_GCM_DIRS_) $(call vsp,$3) => $(call vsp,$2))"$(CLEANGENTOOL)" --filelist="$3" $(foreach m,$4,--map-to="$m") >"$2.tmp"; $(call bash-cond-rename,$2.tmp,$2))) \
 	$(call undefine-namespaces,_MISC_GCM))
 endef
@@ -495,4 +495,21 @@ endef
 
 define go-pkg-from-dir
 $(subst $(MK_TOPLEVEL_SRCDIR)/,,$(MK_SRCDIR))
+endef
+
+# Generate a filelist for patches. Usually, when generating filelists,
+# we require the directory to exist. In this case, the patches
+# directory may not exist and it is fine. We generate an empty
+# filelist.
+#
+# 1 - patches filelist
+# 2 - patches dir
+define generate-patches-filelist
+$(strip \
+	$(eval _MISC_GPF_FILELIST := $(strip $1)) \
+	$(eval _MISC_GPF_DIR := $(strip $2)) \
+	$(eval $(if $(shell test -d "$(_MISC_GPF_DIR)" && echo yes), \
+		$(call generate-shallow-filelist,$(_MISC_GPF_FILELIST),$(_MISC_GPF_DIR),.patch), \
+		$(call generate-empty-filelist,$(_MISC_GPF_FILELIST)))) \
+	$(call undefine-namespaces,_MISC_GPF))
 endef

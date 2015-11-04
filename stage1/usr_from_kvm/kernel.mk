@@ -70,22 +70,8 @@ $(call generate-deep-filelist,$(KERNEL_SRC_FILELIST),$(KERNEL_SRCDIR))
 # Generate clean.mk cleaning the sources.
 $(call generate-clean-mk,$(KERNEL_SRC_CLEAN_STAMP),$(KERNEL_SRC_CLEANMK),$(KERNEL_SRC_FILELIST),$(KERNEL_SRCDIR))
 
-# This is a special case - normally, when generating filelists, we
-# require the directory to exist. In this case, the patches directory
-# may not exist and it is fine. We generate an empty filelist.
-KERNEL_GOT_PATCHES := $(shell test -d "$(KERNEL_PATCHESDIR)" && echo yes)
-
-ifeq ($(KERNEL_GOT_PATCHES),yes)
-
 # Generate a filelist of patches. Can happen anytime.
-$(call generate-shallow-filelist,$(KERNEL_PATCHES_FILELIST),$(KERNEL_PATCHESDIR),.patch)
-
-else
-
-# Generate empty filelist of patches. This can happen anytime.
-$(call generate-empty-filelist,$(KERNEL_PATCHES_FILELIST))
-
-endif
+$(call generate-patches-filelist,$(KERNEL_PATCHES_FILELIST),$(KERNEL_PATCHESDIR))
 
 # Generate a dep.mk on those patches, so if patches change, sources
 # are removed, extracted again and repatched.

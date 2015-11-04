@@ -1,70 +1,116 @@
-UFS_SYSTEMD_DESC := $(RKT_STAGE1_SYSTEMD_SRC)/$(RKT_STAGE1_SYSTEMD_VER)
+# This file prepares the initial ACI rootfs contents from systemd
+# sources. The libraries required by systemd are taken from the build
+# host.
 
+# tmp dir for this flavor
 $(call setup-tmp-dir,UFS_TMPDIR)
-
-UFS_SYSTEMDDIR_REST := systemd/$(call escape-for-file,$(UFS_SYSTEMD_DESC))
-UFS_SYSTEMDDIR := $(UFS_TMPDIR)/$(UFS_SYSTEMDDIR_REST)
+# directory for systemd stuff (srcdir, builddir, installdir)
+UFS_SYSTEMDDIR := $(UFS_TMPDIR)/systemd
+# systemd src dir
 UFS_SYSTEMD_SRCDIR := $(UFS_SYSTEMDDIR)/src
+# systemd build dir
 UFS_SYSTEMD_BUILDDIR := $(UFS_SYSTEMDDIR)/build
-
-$(call setup-dep-file,UFS_PATCHES_DEPMK,$(UFS_SYSTEMD_DESC)-systemd-patches)
-$(call setup-dep-file,UFS_ROOTFS_DEPMK,$(UFS_SYSTEMD_DESC)-systemd-install)
-
+# systemd install dir, also serves as a temporary rootfs
 UFS_ROOTFSDIR := $(UFS_SYSTEMDDIR)/rootfs
 
-$(call setup-filelist-file,UFS_SYSTEMD_SRCDIR_FILELIST,/src/$(UFS_SYSTEMD_DESC))
-$(call setup-filelist-file,UFS_SYSTEMD_BUILDDIR_FILELIST,/build/$(UFS_SYSTEMD_DESC))
-$(call setup-filelist-file,UFS_ROOTFSDIR_FILELIST,/rootfs/$(UFS_SYSTEMD_DESC))
-$(call setup-filelist-file,UFS_PATCHES_FILELIST,/patches/$(UFS_SYSTEMD_DESC))
+# main stamp, makes sure that initial rootfs contents are prepared and
+# clean/deps/filelist are generated
+$(call setup-stamp-file,UFS_STAMP,systemd)
+# stamp for generating initial ACI rootfs contents
+$(call setup-stamp-file,UFS_ROOTFS_STAMP,systemd-rootfs)
+# stamp for installing systemd into tmp rootfs
+$(call setup-stamp-file,UFS_SYSTEMD_INSTALL_STAMP,systemd-install)
+# stamp for building systemd
+$(call setup-stamp-file,UFS_SYSTEMD_BUILD_STAMP,systemd-build)
+# stamp for cloning the git repo and patching it
+$(call setup-stamp-file,UFS_SYSTEMD_CLONE_AND_PATCH_STAMP,systemd-clone-and-patch)
+
+# stamp for generating dep file on install/tmp rootfs dir
+$(call setup-stamp-file,UFS_ROOTFS_DEPS_STAMP,systemd-rootfs-deps)
+# dep.mk for install/tmp rootfs dir contents, will cause ACI rootfs
+# removal if they change
+$(call setup-dep-file,UFS_ROOTFS_DEPMK,systemd-rootfs)
+# stamp for generating install/tmp rootfs dir clean file
+$(call setup-stamp-file,UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP,systemd-rootfs-clean)
+# clean file for installdir/tmp rootfs dir
+$(call setup-clean-file,UFS_ROOTFSDIR_CLEANMK,systemd-rootfs)
+# install/tmp rootfs dir filelist
+$(call setup-filelist-file,UFS_ROOTFSDIR_FILELIST,systemd-rootfs)
+
+# stamp for generating build dir clean file
+$(call setup-stamp-file,UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP,systemd-build-clean)
+# clean file for build dir
+$(call setup-clean-file,UFS_SYSTEMD_BUILDDIR_CLEANMK,systemd-build)
+# build dir filelist
+$(call setup-filelist-file,UFS_SYSTEMD_BUILDDIR_FILELIST,systemd-build)
+
+# stamp for generating dep file on patches dir
+$(call setup-stamp-file,UFS_PATCHES_DEPS_STAMP,systemd-patches-deps)
+# dep.mk file for patches dir, will cause git repo reset and clean if
+# they change
+$(call setup-dep-file,UFS_PATCHES_DEPMK,systemd-patches)
+# patches dir filelist
+$(call setup-filelist-file,UFS_PATCHES_FILELIST,systemd-patches)
+
+# stamp for generating src dir clean file
+$(call setup-stamp-file,UFS_SYSTEMD_SRCDIR_CLEAN_STAMP,systemd-src-clean)
+# clean file for src dir
+$(call setup-clean-file,UFS_SYSTEMD_SRCDIR_CLEANMK,systemd-src)
+# src dir filelist
+$(call setup-filelist-file,UFS_SYSTEMD_SRCDIR_FILELIST,systemd-src)
+
+# stamp for removing builddir
+$(call setup-stamp-file,UFS_SYSTEMD_RM_BUILDDIR_STAMP,systemd-rm-build)
+# stamp for removing installdir
+$(call setup-stamp-file,UFS_SYSTEMD_RM_ROOTFSDIR_STAMP,systemd-rm-rootfs)
+# stamp for removing ACI rootfsdir
+$(call setup-stamp-file,UFS_SYSTEMD_RM_ACIROOTFSDIR_STAMP,systemd-rm-acirootfs)
 
 # We assume that the name passed to --stage1-systemd-version that
-# matches a regexp '^v\d+$' (name starts with a v followed by a
-# number, like v211) is a name of tag. Otherwise it's a branch. `expr
-# string : regexp` returns a number of characters that matched, so if
-# that number is equal to string length then it means that string
-# matched the regexp.
+# matches a regexp '^v\d+$' (a name starts with a v followed by a
+# number, like v211) is a name of a tag. Otherwise it is a branch.
+# `expr string : regexp` returns a number of characters that matched
+# the regexp, so if that number is equal to the string length then it
+# means that the string matched the regexp.
 UFS_SYSTEMD_TAG_MATCH := $(shell expr "$(RKT_STAGE1_SYSTEMD_VER)" : 'v[[:digit:]]\+')
 UFS_SYSTEMD_TAG_LENGTH := $(shell expr length "$(RKT_STAGE1_SYSTEMD_VER)")
+# patches dir
 UFS_PATCHES_DIR := $(MK_SRCDIR)/patches/$(RKT_STAGE1_SYSTEMD_VER)
-UFS_LIB_SYMLINK := $(S1_RF_ACIROOTFSDIR)/lib
-UFS_LIB64_SYMLINK := $(S1_RF_ACIROOTFSDIR)/lib64
+# output file for autogen.sh, used for the truncated verbosity
 UFS_AG_OUT := $(UFS_TMPDIR)/ag_out
+# systemd configure script
+UFS_SYSTEMD_CONFIGURE := $(UFS_SYSTEMD_SRCDIR)/configure
+UFS_SYSTEMD_CONFIGURE_AC := $(UFS_SYSTEMD_CONFIGURE).ac
 
-$(call setup-stamp-file,UFS_STAMP,/systemd/$(UFS_SYSTEMD_DESC))
-$(call setup-stamp-file,UFS_PATCHES_DEPS_STAMP,$(UFS_SYSTEMD_DESC)-systemd-patches-deps)
-$(call setup-stamp-file,UFS_ROOTFS_DEPS_STAMP,$(UFS_SYSTEMD_DESC)-systemd-install-deps)
-$(call setup-stamp-file,UFS_ROOTFS_STAMP,/systemd-rootfs/$(UFS_SYSTEMD_DESC))
-$(call setup-stamp-file,UFS_SYSTEMD_CLONE_AND_PATCH_STAMP,/systemd_clone_and_patch/$(UFS_SYSTEMD_DESC))
-$(call setup-stamp-file,UFS_SYSTEMD_BUILD_STAMP,/systemd_build/$(UFS_SYSTEMD_DESC))
-$(call setup-stamp-file,UFS_SYSTEMD_INSTALL_STAMP,/systemd_install/$(UFS_SYSTEMD_DESC))
-
-$(call setup-clean-file,UFS_SYSTEMD_SRCDIR_CLEANMK,/src-$(UFS_SYSTEMD_DESC))
-$(call setup-clean-file,UFS_SYSTEMD_BUILDDIR_CLEANMK,/build-$(UFS_SYSTEMD_DESC))
-$(call setup-clean-file,UFS_ROOTFSDIR_CLEANMK,/install-$(UFS_SYSTEMD_DESC))
-
-$(call setup-stamp-file,UFS_SYSTEMD_SRCDIR_CLEAN_STAMP,$(UFS_SYSTEMD_DESC)-src-clean)
-$(call setup-stamp-file,UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP,$(UFS_SYSTEMD_DESC)-build-clean)
-$(call setup-stamp-file,UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP,$(UFS_SYSTEMD_DESC)-rootfs-clean)
+# TODO: the symlinks should be build-host specific, instead of hardcoded
+# UFS_LIB_SYMLINK := $(S1_RF_ACIROOTFSDIR)/lib
+# UFS_LIB64_SYMLINK := $(S1_RF_ACIROOTFSDIR)/lib64
+# INSTALL_SYMLINKS += usr/lib:$(UFS_LIB_SYMLINK) usr/lib64:$(UFS_LIB64_SYMLINK)
+# $(UFS_ROOTFS_STAMP): | $(UFS_LIB_SYMLINK) $(UFS_LIB64_SYMLINK)
 
 S1_RF_USR_STAMPS += $(UFS_STAMP)
-# INSTALL_SYMLINKS += usr/lib:$(UFS_LIB_SYMLINK) usr/lib64:$(UFS_LIB64_SYMLINK)
 S1_RF_COPY_SO_DEPS := yes
-CREATE_DIRS += \
-	$(call dir-chain,$(UFS_TMPDIR),$(UFS_SYSTEMDDIR_REST))
+INSTALL_DIRS += \
+	$(UFS_SYSTEMDDIR):- \
+	$(UFS_SYSTEMD_SRCDIR):- \
+	$(UFS_SYSTEMD_BUILDDIR):- \
+	$(UFS_ROOTFSDIR):0755
 CLEAN_FILES += \
 	$(S1_RF_ACIROOTFSDIR)/systemd-version \
 	$(UFS_AG_OUT)
 CLEAN_DIRS += \
-	$(UFS_SYSTEMD_SRCDIR) \
 	$(UFS_SYSTEMD_BUILDDIR) \
 	$(UFS_ROOTFSDIR)
 CLEAN_SYMLINKS += $(S1_RF_ACIROOTFSDIR)/flavor
 
 $(call inc-one,bash.mk)
 
+# this makes sure everything is done - ACI rootfs is populated,
+# clean/deps/filelist are generated
 $(call generate-stamp-rule,$(UFS_STAMP),$(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_STAMP) $(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP) $(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP) $(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP))
 
-# $(UFS_ROOTFS_STAMP): | $(UFS_LIB_SYMLINK) $(UFS_LIB64_SYMLINK)
+# this copies the temporary rootfs contents to ACI rootfs and adds
+# some misc files
 $(call generate-stamp-rule,$(UFS_ROOTFS_STAMP),$(UFS_SYSTEMD_INSTALL_STAMP),$(S1_RF_ACIROOTFSDIR), \
 	$(call vb,v2,CP TREE,$(call vsp,$(UFS_ROOTFSDIR)/.) => $(call vsp,$(S1_RF_ACIROOTFSDIR))) \
 	cp -af "$(UFS_ROOTFSDIR)/." "$(S1_RF_ACIROOTFSDIR)"; \
@@ -73,10 +119,10 @@ $(call generate-stamp-rule,$(UFS_ROOTFS_STAMP),$(UFS_SYSTEMD_INSTALL_STAMP),$(S1
 	$(call vb,v2,GEN,$(call vsp,$(S1_RF_ACIROOTFSDIR)/systemd-version)) \
 	echo "$(RKT_STAGE1_SYSTEMD_VER)" >"$(S1_RF_ACIROOTFSDIR)/systemd-version")
 
-$(call generate-stamp-rule,$(UFS_SYSTEMD_INSTALL_STAMP),$(UFS_SYSTEMD_BUILD_STAMP),, \
+# this installs systemd into temporary rootfs
+$(call generate-stamp-rule,$(UFS_SYSTEMD_INSTALL_STAMP),$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_ROOTFSDIR), \
 	$(call vb,v2,INSTALL,systemd) \
-	DESTDIR="$(abspath $(UFS_ROOTFSDIR))" $$(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" V=0 install-strip $(call vl2,>/dev/null); \
-	chmod 0755 "$(UFS_ROOTFSDIR)")
+	DESTDIR="$(abspath $(UFS_ROOTFSDIR))" $$(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" V=0 install-strip $(call vl2,>/dev/null))
 
 # This filelist can be generated only after the installation of
 # systemd to temporary rootfs was performed
@@ -85,18 +131,15 @@ $(call generate-deep-filelist,$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR))
 
 # Generate dep.mk file which will cause the initial ACI rootfs to be
 # recreated if any file in temporary rootfs changes.
-$(call generate-glob-deps,$(UFS_ROOTFS_DEPS_STAMP),$(UFS_ROOTFS_STAMP),$(UFS_ROOTFS_DEPMK),,$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR))
+$(call generate-glob-deps,$(UFS_ROOTFS_DEPS_STAMP),$(UFS_SYSTEMD_RM_ACIROOTFSDIR_STAMP),$(UFS_ROOTFS_DEPMK),,$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR))
 
 # Generate a clean.mk files for cleaning everything that systemd's
 # "make install" put in a temporary rootfs and for the same files in
 # ACI rootfs.
 $(call generate-clean-mk,$(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP),$(UFS_ROOTFSDIR_CLEANMK),$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR) $(S1_RF_ACIROOTFSDIR))
 
-$(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),, \
-	$(call vb,v2,RM RF,$(call vsp,$(UFS_SYSTEMD_BUILDDIR))) \
-	rm -Rf "$(UFS_SYSTEMD_BUILDDIR)"; \
-	$(call vb,v2,MKDIR,$(call vsp,$(UFS_SYSTEMD_BUILDDIR))) \
-	mkdir -p "$(UFS_SYSTEMD_BUILDDIR)"; \
+# this builds systemd
+$(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),$(UFS_SYSTEMD_BUILDDIR), \
 	pushd "$(UFS_SYSTEMD_BUILDDIR)" $(call vl3,>/dev/null); \
 	$(call vb,v2,CONFIGURE,systemd) \
 	"$(abspath $(UFS_SYSTEMD_SRCDIR))/configure" \
@@ -159,11 +202,13 @@ $(call generate-deep-filelist,$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUI
 # in systemd.
 $(call generate-clean-mk,$(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP),$(UFS_SYSTEMD_BUILDDIR_CLEANMK),$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUILDDIR))
 
-$(call generate-stamp-rule,$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),$(UFS_SYSTEMD_SRCDIR)/configure)
+# this patch makes sure that systemd git repo was cloned and patched
+$(call generate-stamp-rule,$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),$(UFS_SYSTEMD_CONFIGURE))
 
-$(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure, \
+# this patches the git repo and generates the configure script
+$(call forward-vars,$(UFS_SYSTEMD_CONFIGURE), \
 	UFS_PATCHES_DIR GIT UFS_SYSTEMD_SRCDIR UFS_AG_OUT)
-$(UFS_SYSTEMD_SRCDIR)/configure:
+$(UFS_SYSTEMD_CONFIGURE):
 	$(VQ) \
 	set -e; \
 	shopt -s nullglob ; \
@@ -185,63 +230,55 @@ $(UFS_SYSTEMD_SRCDIR)/configure:
 
 # Generate the filelist of systemd's srcdir. This can be done only
 # after it was cloned, patched and configure script was generated.
-$(UFS_SYSTEMD_SRCDIR_FILELIST): $(UFS_SYSTEMD_SRCDIR)/configure
+$(UFS_SYSTEMD_SRCDIR_FILELIST): $(UFS_SYSTEMD_CONFIGURE)
 $(call generate-deep-filelist,$(UFS_SYSTEMD_SRCDIR_FILELIST),$(UFS_SYSTEMD_SRCDIR))
 
 # Generate clean.mk file for cleaning all files in srcdir.
 $(call generate-clean-mk,$(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP),$(UFS_SYSTEMD_SRCDIR_CLEANMK),$(UFS_SYSTEMD_SRCDIR_FILELIST),$(UFS_SYSTEMD_SRCDIR))
 
-# This is a special case - normally, when generating filelists, we
-# require the directory to exist. In this case, the patches directory
-# may not exist and it is fine. We generate an empty filelist.
-UFS_GOT_PATCHES := $(shell test -d "$(UFS_PATCHES_DIR)" && echo yes)
-
-ifeq ($(UFS_GOT_PATCHES),yes)
-
-# Generate shallow filelist of patches. This can happen anytime.
-$(call generate-shallow-filelist,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR),.patch)
-
-else
-
-# Generate empty filelist of patches. This can happen anytime.
-$(call generate-empty-filelist,$(UFS_PATCHES_FILELIST))
-
-endif
+# Generate a filelist of patches. Can happen anytime.
+$(call generate-patches-filelist,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR))
 
 # Generate a dep.mk on those patches, so if patches change, the
 # project should be reset and repatched, and configure script
 # regenerated.
-# TODO: It does not work as comment says. When patches are changed we
-# try to apply them again, but instead we should do a hard reset to
-# original branch and then reapply the patches.
-$(call generate-glob-deps,$(UFS_PATCHES_DEPS_STAMP),$(UFS_SYSTEMD_SRCDIR)/configure,$(UFS_PATCHES_DEPMK),.patch,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR),normal)
+$(call generate-glob-deps,$(UFS_PATCHES_DEPS_STAMP),$(UFS_SYSTEMD_CONFIGURE_AC),$(UFS_PATCHES_DEPMK),.patch,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR),normal)
 
-$(call forward-vars,$(UFS_SYSTEMD_SRCDIR)/configure.ac, \
-	GIT RKT_STAGE1_SYSTEMD_VER RKT_STAGE1_SYSTEMD_SRC UFS_SYSTEMD_SRCDIR)
-$(UFS_SYSTEMD_SRCDIR)/configure.ac:
-	$(VQ) \
-	set -e; \
-	$(call vb,vt,GIT CLONE,$(RKT_STAGE1_SYSTEMD_SRC)) \
-	"$(GIT)" clone $(call vl3,--quiet) --depth 1 --no-checkout --branch "$(RKT_STAGE1_SYSTEMD_VER)" "$(RKT_STAGE1_SYSTEMD_SRC)" "$(UFS_SYSTEMD_SRCDIR)"; \
-	"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" checkout --quiet "$(RKT_STAGE1_SYSTEMD_VER)"
+# parameters for makelib/git.mk
+GCL_REPOSITORY := $(RKT_STAGE1_SYSTEMD_SRC)
+GCL_DIRECTORY := $(UFS_SYSTEMD_SRCDIR)
+GCL_COMMITTISH := $(RKT_STAGE1_SYSTEMD_VER)
+GCL_EXPECTED_FILE := $(notdir $(UFS_SYSTEMD_CONFIGURE_AC))
+GCL_TARGET := $(UFS_SYSTEMD_CONFIGURE)
 
 ifneq ($(UFS_SYSTEMD_TAG_MATCH),$(UFS_SYSTEMD_TAG_LENGTH))
 
 # If the name is not a tag then we try to pull new changes from upstream.
 
-GR_TARGET := $(UFS_SYSTEMD_SRCDIR)/configure
-GR_SRCDIR := $(UFS_SYSTEMD_SRCDIR)
-GR_BRANCH := $(RKT_STAGE1_SYSTEMD_VER)
-GR_PREREQS := $(UFS_SYSTEMD_SRCDIR)/configure.ac
-
-include makelib/git-refresh.mk
+GCL_DO_CHECK := yes
 
 else
 
 # The name is a tag, so we do not refresh the git repository.
 
-$(UFS_SYSTEMD_SRCDIR)/configure: $(UFS_SYSTEMD_SRCDIR)/configure.ac
+GCL_DO_CHECK :=
 
 endif
+
+include makelib/git.mk
+
+# Remove the build directory if there were some changes in sources
+# (like different branch or repository, or a change in patches)
+$(UFS_SYSTEMD_RM_BUILDDIR_STAMP): $(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP)
+$(generate-rm-dir-rule,$(UFS_SYSTEMD_RM_BUILDDIR_STAMP),$(UFS_SYSTEMD_BUILDDIR))
+
+# Remove the install/tmp rootfs directory if there were some changes
+# in build.
+$(UFS_SYSTEMD_RM_ROOTFSDIR_STAMP): $(UFS_SYSTEMD_BUILD_STAMP)
+$(generate-rm-dir-rule,$(UFS_SYSTEMD_RM_ROOTFSDIR_STAMP),$(UFS_ROOTFSDIR))
+
+# Remove the ACI rootfs if something changes in install.
+$(UFS_SYSTEMD_RM_ACIROOTFSDIR_STAMP): $(UFS_SYSTEMD_INSTALL_STAMP)
+$(generate-rm-dir-rule,$(UFS_SYSTEMD_RM_ACIROOTFSDIR_STAMP),$(S1_RF_ACIROOTFSDIR))
 
 $(call undefine-namespaces,UFS)

@@ -156,6 +156,9 @@ AS_CASE([${RKT_STAGE1_SETUP_KIND}],
 
 ## Built stage1 flavors verification
 
+dnl a list of all flavors
+RKT_STAGE1_ALL_FLAVORS=coreos,kvm,host,src
+
 dnl RKT_ITERATE_FLAVORS iterates all comma-separated flavors stored in
 dnl $1 using an iterator variable $2 and executes body $3.
 AC_DEFUN([RKT_ITERATE_FLAVORS],
@@ -478,6 +481,7 @@ AC_SUBST(RKT_VERSION)
 AC_SUBST(RKT_STAGE1_DEFAULT_NAME)
 AC_SUBST(RKT_STAGE1_DEFAULT_VERSION)
 
+AC_SUBST(RKT_STAGE1_ALL_FLAVORS)
 AC_SUBST(RKT_STAGE1_FLAVORS)
 AC_SUBST(RKT_STAGE1_DEFAULT_FLAVOR)
 
