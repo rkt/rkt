@@ -48,6 +48,7 @@ func TestBlobStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	defer s.Close()
 	for _, valueStr := range []string{
 		"I am a manually placed object",
 	} {
@@ -67,6 +68,7 @@ func TestResolveKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	defer s.Close()
 
 	// Return a hash key buffer from a hex string
 	str2key := func(s string) *bytes.Buffer {
@@ -159,6 +161,7 @@ func TestGetImageManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	defer s.Close()
 
 	imj := `{
 			"acKind": "ImageManifest",
@@ -216,6 +219,7 @@ func TestGetAci(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
+	defer s.Close()
 
 	tests := []struct {
 		acidefs []acidef
@@ -356,6 +360,7 @@ func TestTreeStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	defer s.Close()
 
 	imj := `
 		{
@@ -479,6 +484,7 @@ func TestRemoveACI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	defer ds.Close()
 
 	imj := `{
                     "acKind": "ImageManifest",

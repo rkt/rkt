@@ -218,6 +218,11 @@ func NewStore(baseDir string) (*Store, error) {
 	return s, nil
 }
 
+// Close closes a Store opened with NewStore().
+func (s *Store) Close() error {
+	return s.storeLock.Close()
+}
+
 // backupDB backs up current database.
 func (s Store) backupDB() error {
 	backupsDir := filepath.Join(s.dir, "db-backups")
