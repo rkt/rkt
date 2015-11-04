@@ -378,17 +378,17 @@ func (s Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 // infos inside the db, then it tries to remove the non transactional data.
 // If some error occurs removing some non transactional data a
 // StoreRemovalError is returned.
-func (ds Store) RemoveACI(key string) error {
-	imageKeyLock, err := lock.ExclusiveKeyLock(ds.imageLockDir, key)
+func (s Store) RemoveACI(key string) error {
+	imageKeyLock, err := lock.ExclusiveKeyLock(s.imageLockDir, key)
 	if err != nil {
 		return fmt.Errorf("error locking image: %v", err)
 	}
 	defer imageKeyLock.Close()
 
 	// Try to see if we are the owner of the images, if not, returns not enough permission error.
-	for _, s := range ds.stores {
+	for _, ds := range s.stores {
 		// XXX: The construction of 'path' depends on the implementation of diskv.
-		path := filepath.Join(s.BasePath, filepath.Join(s.Transform(key)...))
+		path := filepath.Join(ds.BasePath, filepath.Join(ds.Transform(key)...))
 		fi, err := os.Stat(path)
 		if err != nil {
 			return fmt.Errorf("cannot get the stat of the image directory: %v", err)
@@ -405,7 +405,7 @@ func (ds Store) RemoveACI(key string) error {
 	// Firstly remove aciinfo and remote from the db in an unique transaction.
 	// remote needs to be removed or a GetRemote will return a blobKey not
 	// referenced by any ACIInfo.
-	err = ds.db.Do(func(tx *sql.Tx) error {
+	err = s.db.Do(func(tx *sql.Tx) error {
 		if _, found, err := GetACIInfoWithBlobKey(tx, key); err != nil {
 			return fmt.Errorf("error getting aciinfo: %v", err)
 		} else if !found {
@@ -430,8 +430,8 @@ func (ds Store) RemoveACI(key string) error {
 	// exists anymore, but errors removing non transactional entries can
 	// leave stale data that will require a cas GC to be implemented.
 	var storeErrors []error
-	for _, s := range ds.stores {
-		if err := s.Erase(key); err != nil {
+	for _, ds := range s.stores {
+		if err := ds.Erase(key); err != nil {
 			// If there's an error save it and continue with the other stores
 			storeErrors = append(storeErrors, err)
 		}
@@ -532,14 +532,14 @@ func (s Store) GetTreeStoreRootFS(id string) string {
 }
 
 // RemoveTreeStore removes the rendered image in tree store with the given id.
-func (ds Store) RemoveTreeStore(id string) error {
-	treeStoreKeyLock, err := lock.ExclusiveKeyLock(ds.treeStoreLockDir, id)
+func (s Store) RemoveTreeStore(id string) error {
+	treeStoreKeyLock, err := lock.ExclusiveKeyLock(s.treeStoreLockDir, id)
 	if err != nil {
 		return fmt.Errorf("error locking tree store: %v", err)
 	}
 	defer treeStoreKeyLock.Close()
 
-	if err := ds.treestore.Remove(id); err != nil {
+	if err := s.treestore.Remove(id); err != nil {
 		return fmt.Errorf("error removing the tree store: %v", err)
 	}
 	return nil
@@ -547,9 +547,9 @@ func (ds Store) RemoveTreeStore(id string) error {
 
 // GetTreeStoreIDs returns a slice containing all the treeStore's IDs available
 // (both fully or partially rendered).
-func (ds Store) GetTreeStoreIDs() ([]string, error) {
+func (s Store) GetTreeStoreIDs() ([]string, error) {
 	var treeStoreIDs []string
-	ls, err := ioutil.ReadDir(ds.treestore.path)
+	ls, err := ioutil.ReadDir(s.treestore.path)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, fmt.Errorf("cannot read treestore directory: %v", err)
@@ -689,9 +689,9 @@ nextKey:
 	return "", ACINotFoundError{name: name, labels: labels}
 }
 
-func (ds Store) GetAllACIInfos(sortfields []string, ascending bool) ([]*ACIInfo, error) {
+func (s Store) GetAllACIInfos(sortfields []string, ascending bool) ([]*ACIInfo, error) {
 	var aciInfos []*ACIInfo
-	err := ds.db.Do(func(tx *sql.Tx) error {
+	err := s.db.Do(func(tx *sql.Tx) error {
 		var err error
 		aciInfos, err = GetAllACIInfos(tx, sortfields, ascending)
 		return err
@@ -699,10 +699,10 @@ func (ds Store) GetAllACIInfos(sortfields []string, ascending bool) ([]*ACIInfo,
 	return aciInfos, err
 }
 
-func (ds Store) GetACIInfoWithBlobKey(blobKey string) (*ACIInfo, error) {
+func (s Store) GetACIInfoWithBlobKey(blobKey string) (*ACIInfo, error) {
 	var aciInfo *ACIInfo
 	var found bool
-	err := ds.db.Do(func(tx *sql.Tx) error {
+	err := s.db.Do(func(tx *sql.Tx) error {
 		var err error
 		aciInfo, found, err = GetACIInfoWithBlobKey(tx, blobKey)
 		return err
@@ -714,10 +714,10 @@ func (ds Store) GetACIInfoWithBlobKey(blobKey string) (*ACIInfo, error) {
 }
 
 func (s Store) Dump(hex bool) {
-	for _, s := range s.stores {
+	for _, ds := range s.stores {
 		var keyCount int
-		for key := range s.Keys(nil) {
-			val, err := s.Read(key)
+		for key := range ds.Keys(nil) {
+			val, err := ds.Read(key)
 			if err != nil {
 				panic(fmt.Sprintf("key %s had no value", key))
 			}
@@ -728,7 +728,7 @@ func (s Store) Dump(hex bool) {
 			if hex {
 				out = fmt.Sprintf("%x", val)
 			}
-			fmt.Printf("%s/%s: %s\n", s.BasePath, key, out)
+			fmt.Printf("%s/%s: %s\n", ds.BasePath, key, out)
 			keyCount++
 		}
 		fmt.Printf("%d total image ID(s)\n", keyCount)

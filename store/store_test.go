@@ -480,11 +480,11 @@ func TestRemoveACI(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	ds, err := NewStore(dir)
+	s, err := NewStore(dir)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	defer ds.Close()
+	defer s.Close()
 
 	imj := `{
                     "acKind": "ImageManifest",
@@ -500,7 +500,7 @@ func TestRemoveACI(t *testing.T) {
 	if _, err := aciFile.Seek(0, 0); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	key, err := ds.WriteACI(aciFile, false)
+	key, err := s.WriteACI(aciFile, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -508,15 +508,15 @@ func TestRemoveACI(t *testing.T) {
 	// Create our first Remote, and simulate Store() to create row in the table
 	na := NewRemote(aciURL, "")
 	na.BlobKey = key
-	ds.WriteRemote(na)
+	s.WriteRemote(na)
 
-	err = ds.RemoveACI(key)
+	err = s.RemoveACI(key)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Verify that no remote for the specified key exists
-	_, found, err := ds.GetRemote(aciURL)
+	_, found, err := s.GetRemote(aciURL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -525,7 +525,7 @@ func TestRemoveACI(t *testing.T) {
 	}
 
 	// Try to remove a non-existent key
-	err = ds.RemoveACI("sha512-aaaaaaaaaaaaaaaaa")
+	err = s.RemoveACI("sha512-aaaaaaaaaaaaaaaaa")
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -545,7 +545,7 @@ func TestRemoveACI(t *testing.T) {
 	if _, err := aciFile.Seek(0, 0); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	key, err = ds.WriteACI(aciFile, false)
+	key, err = s.WriteACI(aciFile, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -553,14 +553,14 @@ func TestRemoveACI(t *testing.T) {
 	// Create our first Remote, and simulate Store() to create row in the table
 	na = NewRemote(aciURL, "")
 	na.BlobKey = key
-	ds.WriteRemote(na)
+	s.WriteRemote(na)
 
 	err = os.Remove(filepath.Join(dir, "cas", "blob", blockTransform(key)[0], blockTransform(key)[1], key))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	err = ds.RemoveACI(key)
+	err = s.RemoveACI(key)
 	if err == nil {
 		t.Fatalf("expected error: %v", err)
 	}
