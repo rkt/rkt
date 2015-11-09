@@ -430,6 +430,8 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		env = append(env, "SYSTEMD_LOG_LEVEL=err") // silence log_warning too
 	}
 
+	env = append(env, "SYSTEMD_NSPAWN_CONTAINER_SERVICE=rkt")
+
 	if len(privateUsers) > 0 {
 		args = append(args, "--private-users="+privateUsers)
 	}
