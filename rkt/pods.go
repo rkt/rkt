@@ -506,6 +506,11 @@ func (p *pod) isRunning() bool {
 		!p.isExited && !p.isExitedGarbage && !p.isExitedDeleting && !p.isGarbage && !p.isDeleting && !p.isGone
 }
 
+// afterRun tests if a pod is in a post-running state
+func (p *pod) afterRun() bool {
+	return p.isExitedDeleting || p.isDeleting || p.isExited || p.isGarbage
+}
+
 // listPods returns a list of pod uuids in string form.
 func listPods(include includeMask) ([]string, error) {
 	// uniqued due to the possibility of a pod being renamed from across directories during the list operation
@@ -747,6 +752,52 @@ func (p *pod) getState() string {
 	}
 
 	return state
+}
+
+func (p *pod) getModTime(path string) (time.Time, error) {
+	f, err := p.openFile(path, syscall.O_RDONLY)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	fi, err := f.Stat()
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return fi.ModTime(), nil
+}
+
+// getCreationTime returns the time when the pod was created.
+// This happens at prepare time.
+func (p *pod) getCreationTime() (time.Time, error) {
+	if p.isPrepared || p.isRunning() || p.afterRun() {
+		return p.getModTime("pod")
+	}
+	return time.Time{}, nil
+}
+
+// getStartTime returns the time when the pod was started.
+func (p *pod) getStartTime() (time.Time, error) {
+	var (
+		t   time.Time
+		err error
+	)
+	if p.isRunning() || p.afterRun() {
+		// check pid and ppid files, since stage1 implementations can choose
+		// which one to implement.
+		t, err = p.getModTime("pid")
+		if os.IsNotExist(err) {
+			t, err = p.getModTime("ppid")
+			// if there's an error starting the pod, it can be "exited" without
+			// the "ppid" (or "pid") files being created, return an error only
+			// if it's different than ENOENT.
+			if os.IsNotExist(err) {
+				err = nil
+			}
+		}
+	}
+	return t, err
 }
 
 type ErrChildNotReady struct {

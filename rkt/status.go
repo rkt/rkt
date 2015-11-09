@@ -16,7 +16,11 @@
 
 package main
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+)
 
 var (
 	cmdStatus = &cobra.Command{
@@ -69,6 +73,24 @@ func runStatus(cmd *cobra.Command, args []string) (exit int) {
 // printStatus prints the pod's pid and per-app status codes
 func printStatus(p *pod) error {
 	stdout("state=%s", p.getState())
+
+	created, err := p.getCreationTime()
+	if err != nil {
+		return fmt.Errorf("unable to get creation time for pod %q: %v", p.uuid, err)
+	}
+	createdStr := created.Format(defaultTimeLayout)
+
+	stdout("created=%s", createdStr)
+
+	started, err := p.getStartTime()
+	if err != nil {
+		return fmt.Errorf("unable to get start time for pod %q: %v", p.uuid, err)
+	}
+	var startedStr string
+	if !started.IsZero() {
+		startedStr = started.Format(defaultTimeLayout)
+		stdout("started=%s", startedStr)
+	}
 
 	if p.isRunning() {
 		stdout("networks=%s", fmtNets(p.nets))
