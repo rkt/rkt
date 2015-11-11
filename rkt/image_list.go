@@ -30,41 +30,46 @@ import (
 const (
 	defaultTimeLayout = "2006-01-02 15:04:05.999 -0700 MST"
 
-	idField         = "id"
-	nameField       = "name"
-	importTimeField = "importtime"
-	latestField     = "latest"
+	idField           = "id"
+	nameField         = "name"
+	importTimeField   = "importtime"
+	lastUsedTimeField = "lastusedtime"
+	latestField       = "latest"
 )
 
 var (
 	// map of valid fields and related flag value
 	imagesAllFields = map[string]struct{}{
-		idField:         struct{}{},
-		nameField:       struct{}{},
-		importTimeField: struct{}{},
-		latestField:     struct{}{},
+		idField:           struct{}{},
+		nameField:         struct{}{},
+		importTimeField:   struct{}{},
+		lastUsedTimeField: struct{}{},
+		latestField:       struct{}{},
 	}
 
 	// map of valid fields and related header name
 	ImagesFieldHeaderMap = map[string]string{
-		idField:         "ID",
-		nameField:       "NAME",
-		importTimeField: "IMPORT TIME",
-		latestField:     "LATEST",
+		idField:           "ID",
+		nameField:         "NAME",
+		importTimeField:   "IMPORT TIME",
+		lastUsedTimeField: "LAST USED",
+		latestField:       "LATEST",
 	}
 
 	// map of valid sort fields containing the mapping between the provided field name
 	// and the related aciinfo's field name.
 	ImagesFieldAciInfoMap = map[string]string{
-		idField:         "blobkey",
-		nameField:       "name",
-		importTimeField: "importtime",
-		latestField:     "latest",
+		idField:           "blobkey",
+		nameField:         "name",
+		importTimeField:   "importtime",
+		lastUsedTimeField: "lastusedtime",
+		latestField:       "latest",
 	}
 
 	ImagesSortableFields = map[string]struct{}{
-		nameField:       struct{}{},
-		importTimeField: struct{}{},
+		nameField:         struct{}{},
+		importTimeField:   struct{}{},
+		lastUsedTimeField: struct{}{},
 	}
 )
 
@@ -168,13 +173,13 @@ var (
 
 func init() {
 	// Set defaults
-	flagImagesFields = []string{idField, nameField, importTimeField, latestField}
+	flagImagesFields = []string{idField, nameField, importTimeField, lastUsedTimeField, latestField}
 	flagImagesSortFields = []string{importTimeField}
 	flagImagesSortAsc = true
 
 	cmdImage.AddCommand(cmdImageList)
-	cmdImageList.Flags().Var(&flagImagesFields, "fields", `comma separated list of fields to display. Accepted values: "id", "name", "importtime", "latest"`)
-	cmdImageList.Flags().Var(&flagImagesSortFields, "sort", `sort the output according to the provided comma separated list of fields. Accepted values: "name", "importtime"`)
+	cmdImageList.Flags().Var(&flagImagesFields, "fields", `comma separated list of fields to display. Accepted values: "id", "name", "importtime", "lastusedtime", "latest"`)
+	cmdImageList.Flags().Var(&flagImagesSortFields, "sort", `sort the output according to the provided comma separated list of fields. Accepted values: "name", "importtime", "lastusedtime"`)
 	cmdImageList.Flags().Var(&flagImagesSortAsc, "order", `choose the sorting order if at least one sort field is provided (--sort). Accepted values: "asc", "desc"`)
 	cmdImageList.Flags().BoolVar(&flagNoLegend, "no-legend", false, "suppress a legend with the list")
 	cmdImageList.Flags().BoolVar(&flagFullOutput, "full", false, "use long output format")
@@ -248,6 +253,13 @@ func runImages(cmd *cobra.Command, args []string) int {
 				} else {
 					fieldValue = humanize.Time(aciInfo.ImportTime)
 				}
+			case lastUsedTimeField:
+				if flagFullOutput {
+					fieldValue = aciInfo.LastUsedTime.Format(defaultTimeLayout)
+				} else {
+					fieldValue = humanize.Time(aciInfo.LastUsedTime)
+				}
+
 			case latestField:
 				fieldValue = fmt.Sprintf("%t", aciInfo.Latest)
 			}
