@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package pubkey
 
 import (
 	"bufio"
@@ -24,17 +24,39 @@ import (
 	"os"
 	"strings"
 
+	"github.com/coreos/rkt/pkg/keystore"
+
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
 
-// getPubKeyLocations discovers one location at prefix
-func getPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, error) {
+type Manager struct {
+	InsecureAllowHttp  bool
+	TrustKeysFromHttps bool
+	Ks                 *keystore.Keystore
+	Debug              bool
+}
+
+type AcceptOption int
+type OverrideOption int
+
+const (
+	AcceptForce AcceptOption = iota
+	AcceptAsk
+)
+
+const (
+	OverrideAllow OverrideOption = iota
+	OverrideDeny
+)
+
+// GetPubKeyLocations discovers one location at prefix
+func (m *Manager) GetPubKeyLocations(prefix string) ([]string, error) {
 	if prefix == "" {
 		return nil, fmt.Errorf("empty prefix")
 	}
 
-	kls, err := metaDiscoverPubKeyLocations(prefix, allowHTTP, debug)
+	kls, err := m.metaDiscoverPubKeyLocations(prefix)
 	if err != nil {
 		return nil, fmt.Errorf("prefix meta discovery error: %v", err)
 	}
@@ -46,11 +68,10 @@ func getPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, er
 	return kls, nil
 }
 
-// addKeys adds the keys listed in pkls at prefix
-func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride bool) error {
-	ks := getKeystore()
-	if ks == nil {
-		panic("could not get the key store")
+// AddKeys adds the keys listed in pkls at prefix
+func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, override OverrideOption) error {
+	if m.Ks == nil {
+		return fmt.Errorf("no keystore available to add keys to")
 	}
 
 	for _, pkl := range pkls {
@@ -58,13 +79,13 @@ func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride
 		if err != nil {
 			return err
 		}
-		pk, err := getPubKey(u.Scheme, pkl, allowHTTP)
+		pk, err := m.getPubKey(u)
 		if err != nil {
 			return fmt.Errorf("error accessing the key %s: %v", pkl, err)
 		}
 		defer pk.Close()
 
-		exists, err := ks.TrustedKeyPrefixExists(prefix, pk)
+		exists, err := m.Ks.TrustedKeyPrefixExists(prefix, pk)
 		if err != nil {
 			return fmt.Errorf("error reading the key %s: %v", pkl, err)
 		}
@@ -72,16 +93,16 @@ func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride
 		if err != nil {
 			return fmt.Errorf("error displaying the key %s: %v", pkl, err)
 		}
-		if exists && !allowOverride {
+		if exists && override == OverrideDeny {
 			stderr("Key %q already in the keystore", pkl)
 			continue
 		}
 
-		if globalFlags.TrustKeysFromHttps && u.Scheme == "https" {
-			forceAccept = true
+		if m.TrustKeysFromHttps && u.Scheme == "https" {
+			accept = AcceptForce
 		}
 
-		if !forceAccept {
+		if accept == AcceptAsk {
 			accepted, err := reviewKey()
 			if err != nil {
 				return fmt.Errorf("error reviewing key: %v", err)
@@ -92,20 +113,20 @@ func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride
 			}
 		}
 
-		if forceAccept {
+		if accept == AcceptForce {
 			stderr("Trusting %q for prefix %q without fingerprint review.", pkl, prefix)
 		} else {
 			stderr("Trusting %q for prefix %q after fingerprint review.", pkl, prefix)
 		}
 
 		if prefix == "" {
-			path, err := ks.StoreTrustedKeyRoot(pk)
+			path, err := m.Ks.StoreTrustedKeyRoot(pk)
 			if err != nil {
 				return fmt.Errorf("Error adding root key: %v", err)
 			}
 			stderr("Added root key at %q", path)
 		} else {
-			path, err := ks.StoreTrustedKeyPrefix(prefix, pk)
+			path, err := m.Ks.StoreTrustedKeyPrefix(prefix, pk)
 			if err != nil {
 				return fmt.Errorf("Error adding key for prefix %q: %v", prefix, err)
 			}
@@ -116,18 +137,20 @@ func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride
 }
 
 // metaDiscoverPubKeyLocations discovers the public key through ACDiscovery by applying prefix as an ACApp
-func metaDiscoverPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, error) {
+func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 	app, err := discovery.NewAppFromString(prefix)
 	if err != nil {
 		return nil, err
 	}
 
-	ep, attempts, err := discovery.DiscoverPublicKeys(*app, allowHTTP)
+	// TODO(krnowak): we should probably apply credential headers
+	// from config here
+	ep, attempts, err := discovery.DiscoverPublicKeys(*app, m.InsecureAllowHttp)
 	if err != nil {
 		return nil, err
 	}
 
-	if debug {
+	if m.Debug {
 		for _, a := range attempts {
 			stderr("meta tag 'ac-discovery-pubkeys' not found on %s: %v", a.Prefix, a.Error)
 		}
@@ -137,24 +160,24 @@ func metaDiscoverPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]s
 }
 
 // getPubKey retrieves a public key (if remote), and verifies it's a gpg key
-func getPubKey(scheme, location string, allowHTTP bool) (*os.File, error) {
-	switch scheme {
+func (m *Manager) getPubKey(u *url.URL) (*os.File, error) {
+	switch u.Scheme {
 	case "":
-		return os.Open(location)
+		return os.Open(u.Path)
 	case "http":
-		if !allowHTTP {
+		if !m.InsecureAllowHttp {
 			return nil, fmt.Errorf("--insecure-allow-http required for http URLs")
 		}
 		fallthrough
 	case "https":
-		return downloadKey(location)
+		return downloadKey(u)
 	}
 
-	return nil, fmt.Errorf("only http and https urls supported")
+	return nil, fmt.Errorf("only local files and http or https URLs supported")
 }
 
 // downloadKey retrieves the file, storing it in a deleted tempfile
-func downloadKey(url string) (*os.File, error) {
+func downloadKey(u *url.URL) (*os.File, error) {
 	tf, err := ioutil.TempFile("", "")
 	if err != nil {
 		return nil, fmt.Errorf("error creating tempfile: %v", err)
@@ -162,12 +185,14 @@ func downloadKey(url string) (*os.File, error) {
 	os.Remove(tf.Name()) // no need to keep the tempfile around
 
 	defer func() {
-		if err != nil {
+		if tf != nil {
 			tf.Close()
 		}
 	}()
 
-	res, err := http.Get(url)
+	// TODO(krnowak): we should probably apply credential headers
+	// from config here
+	res, err := http.Get(u.String())
 	if err != nil {
 		return nil, fmt.Errorf("error getting key: %v", err)
 	}
@@ -185,11 +210,13 @@ func downloadKey(url string) (*os.File, error) {
 		return nil, fmt.Errorf("error seeking: %v", err)
 	}
 
-	return tf, nil
+	retTf := tf
+	tf = nil
+	return retTf, nil
 }
 
 // displayKey shows the key summary
-func displayKey(prefix string, location string, key *os.File) error {
+func displayKey(prefix, location string, key *os.File) error {
 	defer key.Seek(0, os.SEEK_SET)
 
 	kr, err := openpgp.ReadArmoredKeyRing(key)
@@ -242,4 +269,9 @@ func fingerToString(fpr [20]byte) string {
 		str += strings.ToUpper(fmt.Sprintf("%.2x", b))
 	}
 	return str
+}
+
+func stderr(format string, a ...interface{}) {
+	out := fmt.Sprintf(format, a...)
+	fmt.Fprintln(os.Stderr, strings.TrimSuffix(out, "\n"))
 }
