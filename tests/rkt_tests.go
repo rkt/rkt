@@ -111,11 +111,11 @@ func waitOrFail(t *testing.T, child *gexpect.ExpectSubprocess, shouldSucceed boo
 	err := child.Wait()
 	switch {
 	case !shouldSucceed && err == nil:
-		t.Fatalf("Expected test to fail but it didn't")
+		t.Fatalf("Expected test to fail but it didn't\nOutput:\n%s", child.Collect())
 	case shouldSucceed && err != nil:
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
+		t.Fatalf("rkt didn't terminate correctly: %v\nOutput:\n%s", err, child.Collect())
 	case err != nil && err.Error() != "exit status 1":
-		t.Fatalf("rkt terminated with unexpected error: %v", err)
+		t.Fatalf("rkt terminated with unexpected error: %v\nOutput:\n%s", err, child.Collect())
 	}
 }
 
