@@ -50,8 +50,14 @@ func TestQuoteExec(t *testing.T) {
 			input:  []string{`path with "quo't'es" and \slashes`, `"arg"`, `\`},
 			output: `"path with \"quo\'t\'es\" and \\slashes" "\"arg\"" "\\"`,
 		}, {
-			input:  []string{`$path$`},
-			output: `"$path$"`,
+			input:  []string{`$path$`, `$argument`},
+			output: `"$path$" "$$argument"`,
+		}, {
+			input:  []string{`path`, `Args\nwith\nnewlines`},
+			output: `"path" "Args\\nwith\\nnewlines"`,
+		}, {
+			input:  []string{`path`, "Args\nwith\nnewlines"},
+			output: `"path" "Args\nwith\nnewlines"`,
 		},
 	}
 
