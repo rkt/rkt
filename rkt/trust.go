@@ -21,6 +21,8 @@ package main
 import (
 	"net/url"
 
+	"github.com/coreos/rkt/rkt/pubkey"
+
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 )
 
@@ -68,6 +70,12 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
+	ks := getKeystore()
+	if ks == nil {
+		stderr("could not get the keystore")
+		return 1
+	}
+
 	// if the user included a scheme with the prefix, error on it
 	u, err := url.Parse(flagPrefix)
 	if err == nil && u.Scheme != "" {
@@ -76,16 +84,25 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	pkls := args
+	m := &pubkey.Manager{
+		InsecureAllowHttp:  flagAllowHTTP,
+		TrustKeysFromHttps: globalFlags.TrustKeysFromHttps,
+		Ks:                 ks,
+		Debug:              globalFlags.Debug,
+	}
 	if len(pkls) == 0 {
-		pkls, err = getPubKeyLocations(flagPrefix, flagAllowHTTP, globalFlags.Debug)
+		pkls, err = m.GetPubKeyLocations(flagPrefix)
 		if err != nil {
 			stderr("Error determining key location: %v", err)
 			return 1
 		}
 	}
 
-	// allow override
-	if err := addKeys(pkls, flagPrefix, flagAllowHTTP, globalFlags.InsecureSkipVerify, true); err != nil {
+	acceptOpt := pubkey.AcceptAsk
+	if globalFlags.InsecureSkipVerify {
+		acceptOpt = pubkey.AcceptForce
+	}
+	if err := m.AddKeys(pkls, flagPrefix, acceptOpt, pubkey.OverrideDeny); err != nil {
 		stderr("Error adding keys: %v", err)
 		return 1
 	}
