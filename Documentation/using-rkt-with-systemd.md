@@ -77,7 +77,7 @@ The following is a simple example of a unit file using `rkt` to run an `etcd` in
 Description=etcd
 
 [Service]
-ExecStart=/usr/bin/rkt --insecure-skip-verify run --mds-register=false coreos.com/etcd:v2.0.10
+ExecStart=/usr/bin/rkt run --mds-register=false coreos.com/etcd:v2.0.10
 KillMode=mixed
 Restart=always
 ```

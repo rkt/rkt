@@ -22,7 +22,7 @@ rkt will automatically [fetch](fetch.md) them if they're not present in the loca
 
 ```
 # Run by Docker registry
-# rkt --insecure-skip-verify run docker://quay.io/coreos/etcd:v2.0.0
+# rkt --insecure-options=image run docker://quay.io/coreos/etcd:v2.0.0
 ```
 
 ## Overriding Executable to launch
@@ -31,7 +31,7 @@ Application images include an `exec` field that specifies the executable to laun
 This executable can be overridden by rkt using the `--exec` flag:
 
 ```
-# rkt --insecure-skip-verify run docker://busybox --exec /bin/date
+# rkt --insecure-options=image run docker://busybox --exec /bin/date
 ```
 
 ## Passing Arguments
@@ -72,10 +72,10 @@ EXAMPLE_OVERRIDE=over
 
 ## Disable Signature Verification
 
-If desired, `--insecure-skip-verify` can be used to disable this security check:
+If desired, `--insecure-options=image` can be used to disable this security check:
 
 ```
-# rkt --insecure-skip-verify run coreos.com/etcd:v2.0.0
+# rkt --insecure-options=image run coreos.com/etcd:v2.0.0
 rkt: searching for app image coreos.com/etcd:v2.0.0
 rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.0.0/etcd-v2.0.0-linux-amd64.aci
 rkt: warning: signature verification has been disabled
