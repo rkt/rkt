@@ -29,7 +29,7 @@ import (
 
 func preparePidFileRace(t *testing.T, ctx *testutils.RktRunCtx, sleepImage string) (*gexpect.ExpectSubprocess, *gexpect.ExpectSubprocess, string, string) {
 	// Start the pod
-	runCmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false --interactive %s", ctx.Cmd(), sleepImage)
+	runCmd := fmt.Sprintf("%s --debug --insecure-options=image run --mds-register=false --interactive %s", ctx.Cmd(), sleepImage)
 	runChild := spawnOrFail(t, runCmd)
 
 	if err := expectWithOutput(runChild, "Enter text:"); err != nil {

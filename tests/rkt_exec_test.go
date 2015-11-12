@@ -46,17 +46,17 @@ func TestRunOverrideExec(t *testing.T) {
 	}{
 		{
 			// Sanity check - make sure no --exec override prints the expected exec invocation
-			rktCmd:       fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s -- --print-exec", ctx.Cmd(), execImage),
+			rktCmd:       fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s -- --print-exec", ctx.Cmd(), execImage),
 			expectedLine: "inspect execed as: /inspect",
 		},
 		{
 			// Now test overriding the entrypoint (which is a symlink to /inspect so should behave identically)
-			rktCmd:       fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s --exec /inspect-link -- --print-exec", ctx.Cmd(), execImage),
+			rktCmd:       fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s --exec /inspect-link -- --print-exec", ctx.Cmd(), execImage),
 			expectedLine: "inspect execed as: /inspect-link",
 		},
 		{
 			// Test overriding the entrypoint with a missing app section
-			rktCmd:       fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s --exec /inspect -- --print-exec", ctx.Cmd(), noappImage),
+			rktCmd:       fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s --exec /inspect -- --print-exec", ctx.Cmd(), noappImage),
 			expectedLine: "inspect execed as: /inspect",
 		},
 	} {
@@ -73,7 +73,7 @@ func TestRunPreparedOverrideExec(t *testing.T) {
 	var rktCmd, uuid, expected string
 
 	// Sanity check - make sure no --exec override prints the expected exec invocation
-	rktCmd = fmt.Sprintf("%s prepare --insecure-skip-verify %s -- --print-exec", ctx.Cmd(), execImage)
+	rktCmd = fmt.Sprintf("%s prepare --insecure-options=image %s -- --print-exec", ctx.Cmd(), execImage)
 	uuid = runRktAndGetUUID(t, rktCmd)
 
 	rktCmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), uuid)
@@ -81,7 +81,7 @@ func TestRunPreparedOverrideExec(t *testing.T) {
 	runRktAndCheckOutput(t, rktCmd, expected, false)
 
 	// Now test overriding the entrypoint (which is a symlink to /inspect so should behave identically)
-	rktCmd = fmt.Sprintf("%s prepare --insecure-skip-verify %s --exec /inspect-link -- --print-exec", ctx.Cmd(), execImage)
+	rktCmd = fmt.Sprintf("%s prepare --insecure-options=image %s --exec /inspect-link -- --print-exec", ctx.Cmd(), execImage)
 	uuid = runRktAndGetUUID(t, rktCmd)
 
 	rktCmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), uuid)

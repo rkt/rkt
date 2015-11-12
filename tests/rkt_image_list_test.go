@@ -84,7 +84,7 @@ func TestShortHash(t *testing.T) {
 
 	// Pull the 2 images with matching first 2 hash chars into cas
 	for _, imageId := range imageIds {
-		cmd := fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.Cmd(), imageId.path)
+		cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageId.path)
 		t.Logf("Fetching %s: %v", imageId.path, cmd)
 		spawnAndWaitOrFail(t, cmd, true)
 	}

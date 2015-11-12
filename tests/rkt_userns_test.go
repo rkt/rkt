@@ -31,14 +31,14 @@ var usernsTests = []struct {
 	expectGid  string
 }{
 	{
-		`^RKT_BIN^ --debug --insecure-skip-verify run ^USERNS^ --no-overlay --set-env=FILE=^FILE^ --mds-register=false ^IMAGE^`,
+		`^RKT_BIN^ --debug --insecure-options=image run ^USERNS^ --no-overlay --set-env=FILE=^FILE^ --mds-register=false ^IMAGE^`,
 		"/", // stage2 rootfs ($POD/stage1/rootfs/opt/stage2/rkt-inspect)
 		"drwxr-xr-x",
 		"0",
 		"0",
 	},
 	{
-		`^RKT_BIN^ --debug --insecure-skip-verify run ^USERNS^ --no-overlay --set-env=FILE=^FILE^ --mds-register=false ^IMAGE^`,
+		`^RKT_BIN^ --debug --insecure-options=image run ^USERNS^ --no-overlay --set-env=FILE=^FILE^ --mds-register=false ^IMAGE^`,
 		"/proc/1/root/", // stage1 rootfs ($POD/stage1/rootfs)
 		"drwxr-xr-x",
 		"0",

@@ -44,13 +44,13 @@ func TestImageRunRm(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.Cmd(), imageFile)
+	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
 	t.Logf("Fetching %s: %v", imageFile, cmd)
 	spawnAndWaitOrFail(t, cmd, true)
 
 	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
 	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
-	cmd = fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), referencedACI)
+	cmd = fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), referencedACI)
 	t.Logf("Running %s: %v", referencedACI, cmd)
 	spawnAndWaitOrFail(t, cmd, true)
 
@@ -94,7 +94,7 @@ func TestImagePrepareRmRun(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --insecure-skip-verify fetch %s", ctx.Cmd(), imageFile)
+	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
 	t.Logf("Fetching %s: %v", imageFile, cmd)
 	spawnAndWaitOrFail(t, cmd, true)
 
@@ -102,7 +102,7 @@ func TestImagePrepareRmRun(t *testing.T) {
 	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
 	cmds := strings.Fields(ctx.Cmd())
 	prepareCmd := exec.Command(cmds[0], cmds[1:]...)
-	prepareCmd.Args = append(prepareCmd.Args, "--insecure-skip-verify", "prepare", referencedACI)
+	prepareCmd.Args = append(prepareCmd.Args, "--insecure-options=image", "prepare", referencedACI)
 	output, err := prepareCmd.Output()
 	if err != nil {
 		t.Fatalf("Cannot read the output: %v", err)

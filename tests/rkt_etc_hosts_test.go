@@ -33,11 +33,11 @@ var etcHostsTests = []struct {
 	expectRegEx string
 }{
 	{
-		`/bin/sh -c "export FILE=/etc/hosts; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true ^ETC_HOSTS_CREATE^"`,
+		`/bin/sh -c "export FILE=/etc/hosts; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^ETC_HOSTS_CREATE^"`,
 		`127\.0\.0\.1.*`,
 	},
 	{
-		`/bin/sh -c "export FILE=/etc/hosts; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=etc,kind=host,source=^TMPETC^ ^ETC_HOSTS_EXISTS^"`,
+		`/bin/sh -c "export FILE=/etc/hosts; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=etc,kind=host,source=^TMPETC^ ^ETC_HOSTS_EXISTS^"`,
 		`<<<preexisting etc>>>`,
 	},
 }

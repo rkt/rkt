@@ -38,7 +38,7 @@ func TestImageGCTreeStore(t *testing.T) {
 
 	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
 	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
-	cmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), referencedACI)
+	cmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), referencedACI)
 	t.Logf("Running %s: %v", referencedACI, cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {

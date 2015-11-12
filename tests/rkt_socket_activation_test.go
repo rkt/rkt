@@ -91,7 +91,7 @@ func TestSocketActivation(t *testing.T) {
 	// systemd v219 as it does not work with absolute paths.
 	unitsDir := "/run/systemd/system"
 
-	cmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), echoImage)
+	cmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), echoImage)
 	serviceContent := fmt.Sprintf(rktTestingEchoService, cmd)
 	serviceTargetBase := fmt.Sprintf("rkt-testing-socket-activation-%d.service", rnd)
 	serviceTarget := filepath.Join(unitsDir, serviceTargetBase)

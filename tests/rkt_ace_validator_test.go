@@ -46,7 +46,7 @@ func TestAceValidator(t *testing.T) {
 		panic("empty RKT_ACE_SIDEKICK_IMAGE env var")
 	}
 
-	rktArgs := fmt.Sprintf("--debug --insecure-skip-verify run --mds-register --volume database,kind=empty %s %s",
+	rktArgs := fmt.Sprintf("--debug --insecure-options=image run --mds-register --volume database,kind=empty %s %s",
 		aceMain, aceSidekick)
 	rktCmd := fmt.Sprintf("%s %s", ctx.Cmd(), rktArgs)
 
