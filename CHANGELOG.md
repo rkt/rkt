@@ -1,3 +1,45 @@
+## v0.11.0
+
+rkt v0.11.0 is an incremental release with mostly bug fixes and testing improvements.
+
+#### New features and UX changes
+
+- support resuming ACI downloads (#1444)
+- `rkt image gc` now also removes images from the store (#1697)
+
+#### Build
+
+- handle building multiple flavors (#1683)
+- verbosity control (#1685, #1686)
+- fix bugs in `make clean` (#1695)
+
+#### Improved testing
+
+- nicer output in tests (#1698)
+- refactor test code (#1709)
+- skip CI tests when the source was not modified (#1619)
+- better output when tests fail (#1728)
+- fix tests in `10.*` IP range (#1736)
+- document how to run functional tests (#1736)
+
+#### Improved documentation
+
+- add some help on how to run rkt as a daemon (#1684)
+
+#### API service
+
+- do not return manifest in `ListPods()` and `ListImages()` (#1688)
+
+#### Bug fixes
+
+- parameter `--mount` fixed in kvm flavour (#1687)
+- fix rkt leaking containers in machinectl on CoreOS (#1694, #1704)
+- `rkt status` now returns the stage1 pid (#1699)
+- fix crash in `rkt status` when an image is removed (#1701)
+- fix fd leak in store (#1716)
+- fix exec line parsing in ACI manifest (#1652)
+- fix build on 32-bit systems (#1729)
+
 ## v0.10.0
 
 rkt v0.10.0 is an incremental release with numerous bug fixes and a few small new features and UX improvements.
