@@ -10,12 +10,11 @@ The version of the spec that rkt implements can be seen in the output of `rkt ve
 **Note that until communicated otherwise, the rkt CLI and API are considered unstable and subject to change.**
 Backwards-compatibility is a priority for the v1.0.0 release.
 
-### rkt v0.11 (November)
-- CLI exposes fine-grained security controls [#1568](https://github.com/coreos/rkt/issues/1568) [#912](https://github.com/coreos/rkt/issues/912)
-- API service to expose read-only information about rkt pods [#1208](https://github.com/coreos/rkt/issues/1208)
-
 ### rkt v0.12 (November)
+- CLI exposes fine-grained security controls [#1568](https://github.com/coreos/rkt/issues/1568) [#912](https://github.com/coreos/rkt/issues/912)
 - different shared namespace execution modes [#1433](https://github.com/coreos/rkt/issues/1433)
+
+### rkt v0.13 (November)
 
 ### rkt 1.0
 - stable CLI interface
