@@ -70,10 +70,25 @@ The platform with *Docker support* means the tests will run in a VM.
 
 ## Manually running the functional tests
 
-Make sure that `--enable-functional-tests` is passed to configure script, then, after building the project, functional tests can be run.
+Make sure to pass `--enable-functional-tests` to the configure script, then, after building the project, you can run the tests.
 
 ```
 ./configure --enable-functional-tests
 make -j4
-make check GO_TEST_FUNC_ARGS='-run NameOfTheTest'
+make check
 ```
+
+The snippet above will run both unit and functional tests.
+If you want to run only functional tests, use `make functional-check`.
+There is also a counterpart target for running unit tests only - it is named `unit-check`.
+
+You can use a `GO_TEST_FUNC_ARGS` variable to pass additional parameters to `go test`.
+This is mostly useful for running only the selected functional tests.
+The variable is ignored in unit tests.
+
+```
+make check GO_TEST_FUNC_ARGS='-run NameOfTheTest'
+make functional-check GO_TEST_FUNC_ARGS='-run NameOfTheTest'
+```
+
+Run `go help testflag` to get more informations about possible flags accepted by `go test`.
