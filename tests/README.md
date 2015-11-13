@@ -9,7 +9,8 @@ The tests run on the [Semaphore](https://semaphoreci.com/) CI system through the
 This user is authorized against the corresponding [`rktbot`](https://github.com/rktbot) GitHub account.
 The credentials for `rktbot` are currently managed by CoreOS.
 
-The tests are executed on Semaphore at each Pull Request (PR). Each GitHub PR page should have a link to the [test results on Semaphore](https://semaphoreci.com/coreos/rkt).
+The tests are executed on Semaphore at each Pull Request (PR).
+Each GitHub PR page should have a link to the [test results on Semaphore](https://semaphoreci.com/coreos/rkt).
 
 Developers can disable the tests by adding `[skip ci]` in the last commit message of the PR.
 
@@ -19,7 +20,9 @@ Select the "Other" language.
 We don't use "Go" language setting, because rkt is not a typical go project (building it with a go get won't get you too far).
 Also, the "Go" setting is creating a proper GOPATH directory structure with some symlinks on top, which rkt does not need at all and some go tools we use do not like the symlinks in GOPATH at all.
 
-The tests will run on two VMs. The "Setup" and "Post thread" sections will be executed on both VMs. The "Thread 1" and "Thread 2" will be executed in parallel in separate VMs.
+The tests will run on two VMs.
+The "Setup" and "Post thread" sections will be executed on both VMs.
+The "Thread 1" and "Thread 2" will be executed in parallel in separate VMs.
 
 #### Setup
 
@@ -51,7 +54,8 @@ git clean -ffdx
 
 #### Other possible commands
 
-The LKVM stage1 or other versions of systemd are not currently tested. It would be possible to add more tests with the following commands:
+The LKVM stage1 or other versions of systemd are not currently tested.
+It would be possible to add more tests with the following commands:
 
 ```
 ./tests/run-build.sh src v227
@@ -61,12 +65,12 @@ The LKVM stage1 or other versions of systemd are not currently tested. It would 
 
 ### Platform
 
-Select `Ubuntu 14.04 LTS v1503 (beta with Docker support)`. The platform with *Docker support* means the tests will run in a VM.
+Select `Ubuntu 14.04 LTS v1503 (beta with Docker support)`.
+The platform with *Docker support* means the tests will run in a VM.
 
 ## Manually running the functional tests
 
-Make sure that `--enable-functional-tests` is passed to configure
-script, then, after building the project, functional tests can be run.
+Make sure that `--enable-functional-tests` is passed to configure script, then, after building the project, functional tests can be run.
 
 ```
 ./configure --enable-functional-tests
