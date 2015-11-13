@@ -46,6 +46,75 @@ func getPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, er
 	return kls, nil
 }
 
+// addKeys adds the keys listed in pkls at prefix
+func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride bool) error {
+	ks := getKeystore()
+	if ks == nil {
+		panic("could not get the key store")
+	}
+
+	for _, pkl := range pkls {
+		u, err := url.Parse(pkl)
+		if err != nil {
+			return err
+		}
+		pk, err := getPubKey(u.Scheme, pkl, allowHTTP)
+		if err != nil {
+			return fmt.Errorf("error accessing the key %s: %v", pkl, err)
+		}
+		defer pk.Close()
+
+		exists, err := ks.TrustedKeyPrefixExists(prefix, pk)
+		if err != nil {
+			return fmt.Errorf("error reading the key %s: %v", pkl, err)
+		}
+		err = displayKey(prefix, pkl, pk)
+		if err != nil {
+			return fmt.Errorf("error displaying the key %s: %v", pkl, err)
+		}
+		if exists && !allowOverride {
+			stderr("Key %q already in the keystore", pkl)
+			continue
+		}
+
+		if globalFlags.TrustKeysFromHttps && u.Scheme == "https" {
+			forceAccept = true
+		}
+
+		if !forceAccept {
+			accepted, err := reviewKey()
+			if err != nil {
+				return fmt.Errorf("error reviewing key: %v", err)
+			}
+			if !accepted {
+				stderr("Not trusting %q", pkl)
+				continue
+			}
+		}
+
+		if forceAccept {
+			stderr("Trusting %q for prefix %q without fingerprint review.", pkl, prefix)
+		} else {
+			stderr("Trusting %q for prefix %q after fingerprint review.", pkl, prefix)
+		}
+
+		if prefix == "" {
+			path, err := ks.StoreTrustedKeyRoot(pk)
+			if err != nil {
+				return fmt.Errorf("Error adding root key: %v", err)
+			}
+			stderr("Added root key at %q", path)
+		} else {
+			path, err := ks.StoreTrustedKeyPrefix(prefix, pk)
+			if err != nil {
+				return fmt.Errorf("Error adding key for prefix %q: %v", prefix, err)
+			}
+			stderr("Added key for prefix %q at %q", prefix, path)
+		}
+	}
+	return nil
+}
+
 // metaDiscoverPubKeyLocations discovers the public key through ACDiscovery by applying prefix as an ACApp
 func metaDiscoverPubKeyLocations(prefix string, allowHTTP bool, debug bool) ([]string, error) {
 	app, err := discovery.NewAppFromString(prefix)
@@ -117,75 +186,6 @@ func downloadKey(url string) (*os.File, error) {
 	}
 
 	return tf, nil
-}
-
-// addKeys adds the keys listed in pkls at prefix
-func addKeys(pkls []string, prefix string, allowHTTP, forceAccept, allowOverride bool) error {
-	ks := getKeystore()
-	if ks == nil {
-		panic("could not get the key store")
-	}
-
-	for _, pkl := range pkls {
-		u, err := url.Parse(pkl)
-		if err != nil {
-			return err
-		}
-		pk, err := getPubKey(u.Scheme, pkl, allowHTTP)
-		if err != nil {
-			return fmt.Errorf("error accessing the key %s: %v", pkl, err)
-		}
-		defer pk.Close()
-
-		exists, err := ks.TrustedKeyPrefixExists(prefix, pk)
-		if err != nil {
-			return fmt.Errorf("error reading the key %s: %v", pkl, err)
-		}
-		err = displayKey(prefix, pkl, pk)
-		if err != nil {
-			return fmt.Errorf("error displaying the key %s: %v", pkl, err)
-		}
-		if exists && !allowOverride {
-			stderr("Key %q already in the keystore", pkl)
-			continue
-		}
-
-		if globalFlags.TrustKeysFromHttps && u.Scheme == "https" {
-			forceAccept = true
-		}
-
-		if !forceAccept {
-			accepted, err := reviewKey()
-			if err != nil {
-				return fmt.Errorf("error reviewing key: %v", err)
-			}
-			if !accepted {
-				stderr("Not trusting %q", pkl)
-				continue
-			}
-		}
-
-		if forceAccept {
-			stderr("Trusting %q for prefix %q without fingerprint review.", pkl, prefix)
-		} else {
-			stderr("Trusting %q for prefix %q after fingerprint review.", pkl, prefix)
-		}
-
-		if prefix == "" {
-			path, err := ks.StoreTrustedKeyRoot(pk)
-			if err != nil {
-				return fmt.Errorf("Error adding root key: %v", err)
-			}
-			stderr("Added root key at %q", path)
-		} else {
-			path, err := ks.StoreTrustedKeyPrefix(prefix, pk)
-			if err != nil {
-				return fmt.Errorf("Error adding key for prefix %q: %v", prefix, err)
-			}
-			stderr("Added key for prefix %q at %q", prefix, path)
-		}
-	}
-	return nil
 }
 
 // displayKey shows the key summary
