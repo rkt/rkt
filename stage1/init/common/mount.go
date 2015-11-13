@@ -16,6 +16,7 @@ package common
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -42,9 +43,8 @@ func IsMountReadOnly(vol types.Volume, mountPoints []types.MountPoint) bool {
 	return isMPReadOnly(mountPoints, vol.Name)
 }
 
-func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume) ([]schema.Mount, error) {
-	appName := ra.Name
-	id := ra.Image.ID
+// GenerateMounts maps MountPoint paths to volumes, returning a list of Mounts.
+func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume) []schema.Mount {
 	app := ra.App
 
 	mnts := make(map[string]schema.Mount)
@@ -58,20 +58,22 @@ func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume
 			continue
 		}
 		vol, ok := volumes[mp.Name]
+		// there is no volume for this mount point, creating an "empty" volume
+		// implicitly
 		if !ok {
-			catCmd := fmt.Sprintf("sudo rkt image cat-manifest --pretty-print %v", id)
-			volumeCmd := ""
-			for _, mp := range app.MountPoints {
-				volumeCmd += fmt.Sprintf("--volume %s,kind=host,source=/some/path ", mp.Name)
+			emptyVol := types.Volume{
+				Name: mp.Name,
+				Kind: "empty",
 			}
 
-			return nil, fmt.Errorf("no volume for mountpoint %q:%q in app %q.\n"+
-				"You can inspect the volumes with:\n\t%v\n"+
-				"App %q requires the following volumes:\n\t%v",
-				mp.Name, mp.Path, appName, catCmd, appName, volumeCmd)
+			fmt.Fprintf(os.Stderr, "rkt: warning: no volume specified for mount point %q, implicitly creating an \"empty\" volume. This volume will be removed when the pod is garbage-collected.\n", mp.Name)
+
+			volumes[mp.Name] = emptyVol
+			ra.Mounts = append(ra.Mounts, schema.Mount{Volume: mp.Name, Path: mp.Path})
+		} else {
+			ra.Mounts = append(ra.Mounts, schema.Mount{Volume: vol.Name, Path: mp.Path})
 		}
-		ra.Mounts = append(ra.Mounts, schema.Mount{Volume: vol.Name, Path: mp.Path})
 	}
 
-	return ra.Mounts, nil
+	return ra.Mounts
 }

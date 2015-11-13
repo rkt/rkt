@@ -503,21 +503,17 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 	vols := make(map[types.ACName]types.Volume)
 	for _, v := range p.Manifest.Volumes {
 		vols[v.Name] = v
-
-		if v.Kind == "empty" {
-			if err := os.MkdirAll(filepath.Join(sharedVolPath, v.Name.String()), sharedVolPerm); err != nil {
-				return nil, fmt.Errorf("could not create shared volume %q: %v", v.Name, err)
-			}
-		}
 	}
 
-	mounts, err := initcommon.GenerateMounts(ra, vols)
-	if err != nil {
-		return nil, err
-	}
-
+	mounts := initcommon.GenerateMounts(ra, vols)
 	for _, m := range mounts {
 		vol := vols[m.Volume]
+
+		if vol.Kind == "empty" {
+			if err := os.MkdirAll(filepath.Join(sharedVolPath, vol.Name.String()), sharedVolPerm); err != nil {
+				return nil, fmt.Errorf("could not create shared volume %q: %v", vol.Name, err)
+			}
+		}
 
 		opt := make([]string, 4)
 
