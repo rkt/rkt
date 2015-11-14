@@ -943,15 +943,24 @@ func (p *pod) getAppsImageManifests() (AppsImageManifests, error) {
 	return aim, nil
 }
 
-// getApps returns a list of apps in the pod
-func (p *pod) getApps() (schema.AppList, error) {
+// getManifest returns the PodManifest of the pod
+func (p *pod) getManifest() (*schema.PodManifest, error) {
 	pmb, err := p.readFile("pod")
 	if err != nil {
 		return nil, fmt.Errorf("error reading pod manifest: %v", err)
 	}
-	pm := new(schema.PodManifest)
+	pm := &schema.PodManifest{}
 	if err = pm.UnmarshalJSON(pmb); err != nil {
 		return nil, fmt.Errorf("invalid pod manifest: %v", err)
+	}
+	return pm, nil
+}
+
+// getApps returns a list of apps in the pod
+func (p *pod) getApps() (schema.AppList, error) {
+	pm, err := p.getManifest()
+	if err != nil {
+		return nil, err
 	}
 	return pm.Apps, nil
 }
