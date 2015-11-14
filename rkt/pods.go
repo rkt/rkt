@@ -281,6 +281,22 @@ func getPod(uuid *types.UUID) (*pod, error) {
 	return p, nil
 }
 
+// getPodFromUUIDString attempts to resolve the supplied UUID and return a pod.
+// The pod must be closed using pod.Close()
+func getPodFromUUIDString(uuid string) (*pod, error) {
+	podUUID, err := resolveUUID(uuid)
+	if err != nil {
+		return nil, fmt.Errorf("unable to resolve UUID: %v", err)
+	}
+
+	p, err := getPod(podUUID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get pod: %v", err)
+	}
+
+	return p, nil
+}
+
 // path returns the path to the pod according to the current (cached) state.
 func (p *pod) path() string {
 	if p.isEmbryo {
