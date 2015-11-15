@@ -13,9 +13,11 @@ fi
 SRC_CHANGES=1 # run functional tests by default
 DOC_CHANGES=1 # process docs by default
 DOC_CHANGE_PATTERN="\
-    -e '^Documentation/' \
-    -e 'README|ROADMAP|CONTRIBUTING|CHANGELOG|\.md' \
+        -e ^Documentation/ \
+        -e ^(README|ROADMAP|CONTRIBUTING|CHANGELOG)$ \
+        -e \.md$\
 "
+
 RKT_STAGE1_USR_FROM="${1}"
 RKT_STAGE1_SYSTEMD_VER="${2}"
 BUILD_DIR="build-rkt-${RKT_STAGE1_USR_FROM}-${RKT_STAGE1_SYSTEMD_VER}"
@@ -24,11 +26,11 @@ BUILD_DIR="build-rkt-${RKT_STAGE1_USR_FROM}-${RKT_STAGE1_SYSTEMD_VER}"
 if [ "${SEMAPHORE-}" == true ] ; then
         # We might not need to run functional tests
         ( 
-		# Ensure origin is updated
-		git fetch
-		SRC_CHANGES=`git diff-tree --no-commit-id --name-only -r HEAD..origin/master | grep -cEv ${DOC_CHANGE_PATTERN}`
-		# We might not need to process the docs
-		DOC_CHANGES=`git diff-tree --no-commit-id --name-only -r HEAD..origin/master | grep -cE ${DOC_CHANGE_PATTERN}`
+                # Ensure origin is updated
+                git fetch
+                SRC_CHANGES=`git diff-tree --no-commit-id --name-only -r HEAD..origin/master | grep -cEv ${DOC_CHANGE_PATTERN}`
+                # We might not need to process the docs
+                DOC_CHANGES=`git diff-tree --no-commit-id --name-only -r HEAD..origin/master | grep -cE ${DOC_CHANGE_PATTERN}`
         ) || true # let the checks not fail the script
 
         # Setup go environment on semaphore
