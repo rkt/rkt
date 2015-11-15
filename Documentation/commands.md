@@ -47,13 +47,13 @@ The metadata service helps running apps introspect their execution environment a
 
 ## Logging
 
-By default, rkt will send logs directly to stdout/stderr, allowing them to be caputered by the invoking process.
+By default, rkt will send logs directly to stdout/stderr, allowing them to be captured by the invoking process.
 On host systems running systemd, rkt will attempt to integrate with journald on the host.
 In this case, the logs can be accessed directly via journalctl.
 
 #### Accessing logs via journalctl
 
-To get the logs of a running pod you need to get pod's machine name. You can use machinectl
+To get the logs of a running pod, you need to get the pod's machine name. You can use machinectl:
 
 ```
 $ machinectl
