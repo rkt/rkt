@@ -20,14 +20,15 @@ RKT_STAGE1_USR_FROM="${1}"
 RKT_STAGE1_SYSTEMD_VER="${2}"
 BUILD_DIR="build-rkt-${RKT_STAGE1_USR_FROM}-${RKT_STAGE1_SYSTEMD_VER}"
 
-if [ "${CI-}" == true ] ; then
-	# https://semaphoreci.com/docs/available-environment-variables.html
-	if [ "${SEMAPHORE-}" == true ] ; then
+# https://semaphoreci.com/docs/available-environment-variables.html
+if [ "${SEMAPHORE-}" == true ] ; then
         # We might not need to run functional tests
         ( 
-        SRC_CHANGES=`git diff-tree --no-commit-id --name-only -r HEAD..origin/master | grep -cEv ${DOC_CHANGE_PATTERN}`
-        # We might not need to process the docs
-        DOC_CHANGES=`git diff-tree --no-commit-id --name-only -r HEAD..origin/master | grep -cE ${DOC_CHANGE_PATTERN}`
+		# Ensure origin is updated
+		git fetch
+		SRC_CHANGES=`git diff-tree --no-commit-id --name-only -r HEAD..origin/master | grep -cEv ${DOC_CHANGE_PATTERN}`
+		# We might not need to process the docs
+		DOC_CHANGES=`git diff-tree --no-commit-id --name-only -r HEAD..origin/master | grep -cE ${DOC_CHANGE_PATTERN}`
         ) || true # let the checks not fail the script
 
         # Setup go environment on semaphore
@@ -35,7 +36,6 @@ if [ "${CI-}" == true ] ; then
             . /opt/change-go-version.sh
             change-go-version 1.4
         fi
-    fi
 fi
 
 if [ ${SRC_CHANGES} -eq 0 ] && [ ${DOC_CHANGES} -eq 0 ]; then
