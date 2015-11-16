@@ -11,39 +11,39 @@ rkt runs applications packaged as [Application Container Images (ACI)][aci-image
 
 ACIs are named with a URL-like structure. This naming scheme allows for a decentralized discovery of ACIs, related signatures and public keys. rkt uses these hints to execute [meta discovery][appc-discovery].
 
-* [trust](/Documentation/subcommands/trust.md)
-* [fetch](/Documentation/subcommands/fetch.md)
+* [trust](subcommands/trust.md)
+* [fetch](subcommands/fetch.md)
 
 ## Running Pods
 
 rkt can run ACIs based on name, hash, local file on disk or URL. If an ACI hasn't been cached on disk, rkt will attempt to find and download it.
-If you want to use the [metadata service](https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service), make sure [it is running](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/metadata-service.md) and you enable registration with the `--mds-register` flag.
+If you want to use the [metadata service](https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service), make sure [it is running](https://github.com/coreos/rkt/blob/mastersubcommands/metadata-service.md) and you enable registration with the `--mds-register` flag.
 
-* [run](/Documentation/subcommands/run.md)
-* [enter](/Documentation/subcommands/enter.md)
-* [prepare](/Documentation/subcommands/prepare.md)
-* [run-prepared](/Documentation/subcommands/run-prepared.md)
+* [run](subcommands/run.md)
+* [enter](subcommands/enter.md)
+* [prepare](subcommands/prepare.md)
+* [run-prepared](subcommands/run-prepared.md)
 
 ## Pod inspection and management
 
 rkt provides subcommands to list, get status, and clean its pods.
 
-* [list](/Documentation/subcommands/list.md)
-* [status](/Documentation/subcommands/status.md)
-* [gc](/Documentation/subcommands/gc.md)
-* [rm](/Documentation/subcommands/rm.md)
+* [list](subcommands/list.md)
+* [status](subcommands/status.md)
+* [gc](subcommands/gc.md)
+* [rm](subcommands/rm.md)
 
 ## Interacting with the local image store
 
 rkt provides subcommands to list, inspect and export images in its local store.
 
-* [image](/Documentation/subcommands/image.md)
+* [image](subcommands/image.md)
 
 ## Metadata Service
 
 The metadata service helps running apps introspect their execution environment and assert their pod identity.
 
-* [metadata-service](/Documentation/subcommands/metadata-service.md)
+* [metadata-service](subcommands/metadata-service.md)
 
 ## Logging
 
