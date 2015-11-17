@@ -65,7 +65,7 @@ var debugEnabled bool
 
 // configuration parameters required by Prepare
 type PrepareConfig struct {
-	CommonConfig
+	*CommonConfig
 	Apps               *apps.Apps          // apps to prepare
 	InheritEnv         bool                // inherit parent environment into apps
 	ExplicitEnv        []string            // always set these environment variables for all the apps
@@ -78,7 +78,7 @@ type PrepareConfig struct {
 
 // configuration parameters needed by Run
 type RunConfig struct {
-	CommonConfig
+	*CommonConfig
 	Net         common.NetList // pod should have its own network stack
 	LockFd      int            // lock file descriptor
 	Interactive bool           // whether the pod is interactive or not
@@ -526,7 +526,7 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 			return fmt.Errorf("error rendering ACI: %v", err)
 		}
 	}
-	if err := writeManifest(cfg.CommonConfig, img, appInfoDir); err != nil {
+	if err := writeManifest(*cfg.CommonConfig, img, appInfoDir); err != nil {
 		return err
 	}
 	return nil
@@ -581,7 +581,7 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 		}
 	}
 
-	if err := writeManifest(cfg.CommonConfig, img, s1); err != nil {
+	if err := writeManifest(*cfg.CommonConfig, img, s1); err != nil {
 		return fmt.Errorf("error writing manifest: %v", err)
 	}
 

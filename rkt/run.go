@@ -213,7 +213,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	pcfg := stage0.PrepareConfig{
-		CommonConfig:       cfg,
+		CommonConfig:       &cfg,
 		UseOverlay:         !flagNoOverlay && common.SupportsOverlay(),
 		PrivateUsers:       privateUsers,
 		SkipTreeStoreCheck: globalFlags.InsecureFlags.SkipOnDiskCheck(),
@@ -265,7 +265,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	rcfg := stage0.RunConfig{
-		CommonConfig: cfg,
+		CommonConfig: &cfg,
 		Net:          flagNet,
 		LockFd:       lfd,
 		Interactive:  flagInteractive,
