@@ -425,7 +425,7 @@ func TestTreeStore(t *testing.T) {
 	}
 
 	// Ask the store to render the treestore
-	id, err := s.RenderTreeStore(key, false)
+	id, _, err := s.RenderTreeStore(key, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -451,7 +451,7 @@ func TestTreeStore(t *testing.T) {
 
 	// rebuild the tree
 	prevID := id
-	id, err = s.RenderTreeStore(key, true)
+	id, _, err = s.RenderTreeStore(key, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -49,51 +49,51 @@ type TreeStore struct {
 // Write, to avoid having a rendered ACI with old stale files, requires that
 // the destination directory doesn't exist (usually Remove should be called
 // before Write)
-func (ts *TreeStore) Write(id string, key string, s *Store) error {
+func (ts *TreeStore) Write(id string, key string, s *Store) (string, error) {
 	treepath := ts.GetPath(id)
 	fi, _ := os.Stat(treepath)
 	if fi != nil {
-		return fmt.Errorf("treestore: path %s already exists", treepath)
+		return "", fmt.Errorf("treestore: path %s already exists", treepath)
 	}
 	imageID, err := types.NewHash(key)
 	if err != nil {
-		return fmt.Errorf("treestore: cannot convert key to imageID: %v", err)
+		return "", fmt.Errorf("treestore: cannot convert key to imageID: %v", err)
 	}
 	if err := os.MkdirAll(treepath, 0755); err != nil {
-		return fmt.Errorf("treestore: cannot create treestore directory %s: %v", treepath, err)
+		return "", fmt.Errorf("treestore: cannot create treestore directory %s: %v", treepath, err)
 	}
 	err = aci.RenderACIWithImageID(*imageID, treepath, s, uid.NewBlankUidRange())
 	if err != nil {
-		return fmt.Errorf("treestore: cannot render aci: %v", err)
+		return "", fmt.Errorf("treestore: cannot render aci: %v", err)
 	}
 	hash, err := ts.Hash(id)
 	if err != nil {
-		return fmt.Errorf("treestore: cannot calculate tree hash: %v", err)
+		return "", fmt.Errorf("treestore: cannot calculate tree hash: %v", err)
 	}
 	err = ioutil.WriteFile(filepath.Join(treepath, hashfilename), []byte(hash), 0644)
 	if err != nil {
-		return fmt.Errorf("treestore: cannot write hash file: %v", err)
+		return "", fmt.Errorf("treestore: cannot write hash file: %v", err)
 	}
 	// before creating the "rendered" flag file we need to ensure that all data is fsynced
 	dfd, err := syscall.Open(treepath, syscall.O_RDONLY, 0)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer syscall.Close(dfd)
 	if err := sys.Syncfs(dfd); err != nil {
-		return fmt.Errorf("treestore: failed to sync data: %v", err)
+		return "", fmt.Errorf("treestore: failed to sync data: %v", err)
 	}
 	// Create rendered file
 	f, err := os.Create(filepath.Join(treepath, renderedfilename))
 	if err != nil {
-		return fmt.Errorf("treestore: failed to write rendered file: %v", err)
+		return "", fmt.Errorf("treestore: failed to write rendered file: %v", err)
 	}
 	f.Close()
 
 	if err := syscall.Fsync(dfd); err != nil {
-		return fmt.Errorf("treestore: failed to sync tree store directory: %v", err)
+		return "", fmt.Errorf("treestore: failed to sync tree store directory: %v", err)
 	}
-	return nil
+	return string(hash), nil
 }
 
 // Remove cleans the directory for the provided id

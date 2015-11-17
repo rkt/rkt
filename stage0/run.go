@@ -489,7 +489,7 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 		if cfg.PrivateUsers.Shift > 0 {
 			return fmt.Errorf("cannot use both overlay and user namespace: not implemented yet. (Try --no-overlay)")
 		}
-		treeStoreID, err := cfg.Store.RenderTreeStore(img.String(), false)
+		treeStoreID, _, err := cfg.Store.RenderTreeStore(img.String(), false)
 		if err != nil {
 			return fmt.Errorf("error rendering tree image: %v", err)
 		}
@@ -497,7 +497,7 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 			if _, err := cfg.Store.CheckTreeStore(treeStoreID); err != nil {
 				log.Printf("Warning: tree cache is in a bad state: %v. Rebuilding...", err)
 				var err error
-				if treeStoreID, err = cfg.Store.RenderTreeStore(img.String(), true); err != nil {
+				if treeStoreID, _, err = cfg.Store.RenderTreeStore(img.String(), true); err != nil {
 					return fmt.Errorf("error rendering tree image: %v", err)
 				}
 			}
@@ -566,7 +566,7 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 		return fmt.Errorf("error creating stage1 directory: %v", err)
 	}
 
-	treeStoreID, err := cfg.Store.RenderTreeStore(img.String(), false)
+	treeStoreID, _, err := cfg.Store.RenderTreeStore(img.String(), false)
 	if err != nil {
 		return fmt.Errorf("error rendering tree image: %v", err)
 	}
@@ -575,7 +575,7 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 		if _, err := cfg.Store.CheckTreeStore(treeStoreID); err != nil {
 			log.Printf("Warning: tree cache is in a bad state: %v. Rebuilding...", err)
 			var err error
-			if treeStoreID, err = cfg.Store.RenderTreeStore(img.String(), true); err != nil {
+			if treeStoreID, _, err = cfg.Store.RenderTreeStore(img.String(), true); err != nil {
 				return fmt.Errorf("error rendering tree image: %v", err)
 			}
 		}

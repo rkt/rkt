@@ -63,7 +63,7 @@ func runImageRender(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	id, err := s.RenderTreeStore(key, false)
+	id, _, err := s.RenderTreeStore(key, false)
 	if err != nil {
 		stderr("image render: error rendering ACI: %v", err)
 		return 1
@@ -71,7 +71,7 @@ func runImageRender(cmd *cobra.Command, args []string) (exit int) {
 	if _, err := s.CheckTreeStore(id); err != nil {
 		stderr("image render: warning: tree cache is in a bad state. Rebuilding...")
 		var err error
-		if id, err = s.RenderTreeStore(key, true); err != nil {
+		if id, _, err = s.RenderTreeStore(key, true); err != nil {
 			stderr("image render: error rendering ACI: %v", err)
 			return 1
 		}
