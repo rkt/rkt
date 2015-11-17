@@ -37,6 +37,7 @@ import (
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
+	"github.com/coreos/rkt/rkt/pubkey"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
@@ -452,13 +453,18 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 	}
 
 	// attempt to automatically fetch the public key in case it is available on a TLS connection.
-	if globalFlags.TrustKeysFromHttps && !globalFlags.InsecureSkipVerify && appName != "" {
-		pkls, err := getPubKeyLocations(appName, false, globalFlags.Debug)
+	if globalFlags.TrustKeysFromHttps && !globalFlags.InsecureSkipVerify && appName != "" && f.ks != nil {
+		m := &pubkey.Manager{
+			InsecureAllowHttp:  false,
+			TrustKeysFromHttps: true,
+			Ks:                 f.ks,
+			Debug:              globalFlags.Debug,
+		}
+		pkls, err := m.GetPubKeyLocations(appName)
 		if err != nil {
 			stderr("Error determining key location: %v", err)
 		} else {
-			// no http, don't ask user for accepting the key, no overriding
-			if err := addKeys(pkls, appName, false, true, false); err != nil {
+			if err := m.AddKeys(pkls, appName, pubkey.AcceptForce, pubkey.OverrideDeny); err != nil {
 				stderr("Error adding keys: %v", err)
 			}
 		}
