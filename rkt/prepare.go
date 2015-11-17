@@ -24,6 +24,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 )
@@ -118,18 +119,6 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		stderr("prepare: cannot get configuration: %v", err)
 		return 1
 	}
-	fn := &finder{
-		imageActionData: imageActionData{
-			s:             s,
-			headers:       config.AuthPerHost,
-			dockerAuth:    config.DockerCredentialsPerRegistry,
-			insecureFlags: globalFlags.InsecureFlags,
-			debug:         globalFlags.Debug,
-		},
-		storeOnly: flagStoreOnly,
-		noStore:   flagNoStore,
-		withDeps:  false,
-	}
 
 	s1img, err := getStage1Hash(s, cmd)
 	if err != nil {
@@ -137,9 +126,20 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	fn.ks = getKeystore()
-	fn.withDeps = true
-	if err := fn.findImages(&rktApps); err != nil {
+	fn := &image.Finder{
+		S:                  s,
+		Ks:                 getKeystore(),
+		Headers:            config.AuthPerHost,
+		DockerAuth:         config.DockerCredentialsPerRegistry,
+		InsecureFlags:      globalFlags.InsecureFlags,
+		Debug:              globalFlags.Debug,
+		TrustKeysFromHttps: globalFlags.TrustKeysFromHttps,
+
+		StoreOnly: flagStoreOnly,
+		NoStore:   flagNoStore,
+		WithDeps:  true,
+	}
+	if err := fn.FindImages(&rktApps); err != nil {
 		stderr("prepare: %v", err)
 		return 1
 	}

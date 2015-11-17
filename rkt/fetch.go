@@ -19,6 +19,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common/apps"
+	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/store"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
@@ -76,22 +77,22 @@ func runFetch(cmd *cobra.Command, args []string) (exit int) {
 		stderr("fetch: cannot get configuration: %v", err)
 		return 1
 	}
-	ft := &fetcher{
-		imageActionData: imageActionData{
-			s:             s,
-			ks:            ks,
-			headers:       config.AuthPerHost,
-			dockerAuth:    config.DockerCredentialsPerRegistry,
-			insecureFlags: globalFlags.InsecureFlags,
-			debug:         globalFlags.Debug,
-		},
-		storeOnly: flagStoreOnly,
-		noStore:   flagNoStore,
-		withDeps:  true,
+	ft := &image.Fetcher{
+		S:                  s,
+		Ks:                 ks,
+		Headers:            config.AuthPerHost,
+		DockerAuth:         config.DockerCredentialsPerRegistry,
+		InsecureFlags:      globalFlags.InsecureFlags,
+		Debug:              globalFlags.Debug,
+		TrustKeysFromHttps: globalFlags.TrustKeysFromHttps,
+
+		StoreOnly: flagStoreOnly,
+		NoStore:   flagNoStore,
+		WithDeps:  true,
 	}
 
 	err = rktApps.Walk(func(app *apps.App) error {
-		hash, err := ft.fetchImage(app.Image, app.Asc)
+		hash, err := ft.FetchImage(app.Image, app.Asc, app.ImType)
 		if err != nil {
 			return err
 		}
