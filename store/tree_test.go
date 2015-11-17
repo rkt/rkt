@@ -118,7 +118,7 @@ func TestTreeStoreWrite(t *testing.T) {
 	}
 
 	// Verify image Hash. Should be the same.
-	err = s.treestore.Check(id)
+	_, err = s.treestore.Check(id)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

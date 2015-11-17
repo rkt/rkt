@@ -431,7 +431,7 @@ func TestTreeStore(t *testing.T) {
 	}
 
 	// Verify image Hash. Should be the same.
-	err = s.CheckTreeStore(id)
+	_, err = s.CheckTreeStore(id)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -444,7 +444,7 @@ func TestTreeStore(t *testing.T) {
 	}
 
 	// Verify image Hash. Should be different
-	err = s.CheckTreeStore(id)
+	_, err = s.CheckTreeStore(id)
 	if err == nil {
 		t.Errorf("expected non-nil error!")
 	}
@@ -468,7 +468,7 @@ func TestTreeStore(t *testing.T) {
 	}
 
 	// Verify image Hash. Should be different
-	err = s.CheckTreeStore(id)
+	_, err = s.CheckTreeStore(id)
 	if err == nil {
 		t.Errorf("expected non-nil error!")
 	}

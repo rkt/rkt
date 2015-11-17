@@ -543,10 +543,10 @@ func (s *Store) RenderTreeStore(key string, rebuild bool) (string, error) {
 }
 
 // CheckTreeStore verifies the treestore consistency for the specified id.
-func (s *Store) CheckTreeStore(id string) error {
+func (s *Store) CheckTreeStore(id string) (string, error) {
 	treeStoreKeyLock, err := lock.SharedKeyLock(s.treeStoreLockDir, id)
 	if err != nil {
-		return fmt.Errorf("error locking tree store: %v", err)
+		return "", fmt.Errorf("error locking tree store: %v", err)
 	}
 	defer treeStoreKeyLock.Close()
 

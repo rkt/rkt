@@ -181,21 +181,21 @@ func (ts *TreeStore) Hash(id string) (string, error) {
 }
 
 // Check calculates the actual rendered ACI's hash and verifies that it matches
-// the saved value.
-func (ts *TreeStore) Check(id string) error {
+// the saved value. Returns the calculated hash.
+func (ts *TreeStore) Check(id string) (string, error) {
 	treepath := ts.GetPath(id)
 	hash, err := ioutil.ReadFile(filepath.Join(treepath, hashfilename))
 	if err != nil {
-		return fmt.Errorf("treestore: cannot read hash file: %v", err)
+		return "", fmt.Errorf("treestore: cannot read hash file: %v", err)
 	}
 	curhash, err := ts.Hash(id)
 	if err != nil {
-		return fmt.Errorf("treestore: cannot calculate tree hash: %v", err)
+		return "", fmt.Errorf("treestore: cannot calculate tree hash: %v", err)
 	}
 	if curhash != string(hash) {
-		return fmt.Errorf("treestore: wrong tree hash: %s, expected: %s", curhash, hash)
+		return "", fmt.Errorf("treestore: wrong tree hash: %s, expected: %s", curhash, hash)
 	}
-	return nil
+	return curhash, nil
 }
 
 type xattr struct {
