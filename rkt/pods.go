@@ -281,6 +281,22 @@ func getPod(uuid *types.UUID) (*pod, error) {
 	return p, nil
 }
 
+// getPodFromUUIDString attempts to resolve the supplied UUID and return a pod.
+// The pod must be closed using pod.Close()
+func getPodFromUUIDString(uuid string) (*pod, error) {
+	podUUID, err := resolveUUID(uuid)
+	if err != nil {
+		return nil, fmt.Errorf("unable to resolve UUID: %v", err)
+	}
+
+	p, err := getPod(podUUID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get pod: %v", err)
+	}
+
+	return p, nil
+}
+
 // path returns the path to the pod according to the current (cached) state.
 func (p *pod) path() string {
 	if p.isEmbryo {
@@ -927,15 +943,24 @@ func (p *pod) getAppsImageManifests() (AppsImageManifests, error) {
 	return aim, nil
 }
 
-// getApps returns a list of apps in the pod
-func (p *pod) getApps() (schema.AppList, error) {
+// getManifest returns the PodManifest of the pod
+func (p *pod) getManifest() (*schema.PodManifest, error) {
 	pmb, err := p.readFile("pod")
 	if err != nil {
 		return nil, fmt.Errorf("error reading pod manifest: %v", err)
 	}
-	pm := new(schema.PodManifest)
+	pm := &schema.PodManifest{}
 	if err = pm.UnmarshalJSON(pmb); err != nil {
 		return nil, fmt.Errorf("invalid pod manifest: %v", err)
+	}
+	return pm, nil
+}
+
+// getApps returns a list of apps in the pod
+func (p *pod) getApps() (schema.AppList, error) {
+	pm, err := p.getManifest()
+	if err != nil {
+		return nil, err
 	}
 	return pm.Apps, nil
 }

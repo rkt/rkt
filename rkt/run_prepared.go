@@ -51,11 +51,12 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	podUUID, err := resolveUUID(args[0])
+	p, err := getPodFromUUIDString(args[0])
 	if err != nil {
-		stderr("Unable to resolve UUID: %v", err)
+		stderr("prepared-run: problem retrieving pod: %v", err)
 		return 1
 	}
+	defer p.Close()
 
 	s, err := store.NewStore(globalFlags.Dir)
 	if err != nil {
@@ -63,14 +64,8 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	p, err := getPod(podUUID)
-	if err != nil {
-		stderr("prepared-run: cannot get pod: %v", err)
-		return 1
-	}
-
 	if !p.isPrepared {
-		stderr("prepared-run: pod %q is not prepared", podUUID.String())
+		stderr("prepared-run: pod %q is not prepared", p.uuid)
 		return 1
 	}
 

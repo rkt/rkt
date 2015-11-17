@@ -32,6 +32,7 @@ rkt provides subcommands to list, get status, and clean its pods.
 * [status](subcommands/status.md)
 * [gc](subcommands/gc.md)
 * [rm](subcommands/rm.md)
+* [cat-manifest](subcommands/cat-manifest.md)
 
 ## Interacting with the local image store
 
