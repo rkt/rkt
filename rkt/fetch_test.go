@@ -26,20 +26,17 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
-	"time"
 
+	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/pkg/keystore/keystoretest"
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
+	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/store"
-
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
 type httpError struct {
@@ -151,85 +148,6 @@ type testHeaderer struct {
 
 func (h *testHeaderer) Header() http.Header {
 	return h.h
-}
-
-func TestNewDiscoveryApp(t *testing.T) {
-	tests := []struct {
-		in string
-
-		w *discovery.App
-	}{
-		// not a valid AC name
-		{
-			"bad AC name",
-			nil,
-		},
-		// simple case - default arch, os should be substituted
-		{
-			"foo.com/bar",
-			&discovery.App{
-				Name: "foo.com/bar",
-				Labels: map[types.ACIdentifier]string{
-					"arch": defaultArch,
-					"os":   defaultOS,
-				},
-			},
-		},
-		// overriding arch, os should work
-		{
-			"www.abc.xyz/my/app,os=freebsd,arch=i386",
-			&discovery.App{
-				Name: "www.abc.xyz/my/app",
-				Labels: map[types.ACIdentifier]string{
-					"arch": "i386",
-					"os":   "freebsd",
-				},
-			},
-		},
-		// setting version should work
-		{
-			"yes.com/no:v1.2.3",
-			&discovery.App{
-				Name: "yes.com/no",
-				Labels: map[types.ACIdentifier]string{
-					"version": "v1.2.3",
-					"arch":    defaultArch,
-					"os":      defaultOS,
-				},
-			},
-		},
-		// arbitrary user-supplied labels
-		{
-			"example.com/foo/haha,val=one",
-			&discovery.App{
-				Name: "example.com/foo/haha",
-				Labels: map[types.ACIdentifier]string{
-					"val":  "one",
-					"arch": defaultArch,
-					"os":   defaultOS,
-				},
-			},
-		},
-		// combinations
-		{
-			"one.two/appname:three,os=four,foo=five,arch=six",
-			&discovery.App{
-				Name: "one.two/appname",
-				Labels: map[types.ACIdentifier]string{
-					"version": "three",
-					"os":      "four",
-					"foo":     "five",
-					"arch":    "six",
-				},
-			},
-		},
-	}
-	for i, tt := range tests {
-		g := newDiscoveryApp(tt.in)
-		if !reflect.DeepEqual(g, tt.w) {
-			t.Errorf("#%d: got %v, want %v", i, g, tt.w)
-		}
-	}
 }
 
 func TestDownloading(t *testing.T) {
@@ -353,37 +271,17 @@ func TestDownloading(t *testing.T) {
 		headers := map[string]config.Headerer{
 			parsed.Host: &testHeaderer{tt.options},
 		}
-
-		ft := &fetcher{
-			imageActionData: imageActionData{
-				s:             s,
-				headers:       headers,
-				insecureFlags: insecureFlags,
-			},
+		ft := &image.Fetcher{
+			S:             s,
+			Headers:       headers,
+			InsecureFlags: insecureFlags,
 		}
-		_, aciFile, _, err := ft.fetch("", tt.ACIURL, "", nil, "")
-		if err == nil {
-			defer os.Remove(aciFile.Name())
-		}
+		_, err = ft.FetchImage(tt.ACIURL, "", apps.AppImageURL)
 		if err != nil && !tt.authFail {
 			t.Fatalf("expected download to succeed, it failed: %v (server: %q, headers: `%v`)", err, urlToName[tt.ACIURL], tt.options)
 		}
 		if err == nil && tt.authFail {
 			t.Fatalf("expected download to fail, it succeeded (server: %q, headers: `%v`)", urlToName[tt.ACIURL], tt.options)
-		}
-		if err != nil {
-			continue
-		}
-
-		key, err := s.WriteACI(aciFile, false)
-		if err != nil {
-			t.Fatalf("unexpected err: %v", err)
-		}
-		rem := store.NewRemote(tt.ACIURL, "")
-		rem.BlobKey = key
-		err = s.WriteRemote(rem)
-		if err != nil {
-			t.Fatalf("unexpected err: %v", err)
 		}
 	}
 
@@ -446,14 +344,12 @@ func TestFetchImage(t *testing.T) {
 		}
 	}))
 	defer ts.Close()
-	ft := &fetcher{
-		imageActionData: imageActionData{
-			s:             s,
-			ks:            ks,
-			insecureFlags: secureFlags,
-		},
+	ft := &image.Fetcher{
+		S:             s,
+		Ks:            ks,
+		InsecureFlags: secureFlags,
 	}
-	_, err = ft.fetchImage(fmt.Sprintf("%s/app.aci", ts.URL), "")
+	_, err = ft.FetchImage(fmt.Sprintf("%s/app.aci", ts.URL), "", apps.AppImageURL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -635,16 +531,14 @@ func TestFetchImageCache(t *testing.T) {
 			defer redirectingTS.Close()
 			aciURL = fmt.Sprintf("%s/app.aci", redirectingTS.URL)
 		}
-		ft := &fetcher{
-			imageActionData: imageActionData{
-				s:             s,
-				ks:            ks,
-				insecureFlags: secureFlags,
-			},
+		ft := &image.Fetcher{
+			S:             s,
+			Ks:            ks,
+			InsecureFlags: secureFlags,
 			// Skip local store
-			noStore: true,
+			NoStore: true,
 		}
-		_, err = ft.fetchImage(aciURL, "")
+		_, err = ft.FetchImage(aciURL, "", apps.AppImageURL)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -660,7 +554,7 @@ func TestFetchImageCache(t *testing.T) {
 		}
 
 		downloadTime := rem.DownloadTime
-		_, err = ft.fetchImage(aciURL, "")
+		_, err = ft.FetchImage(aciURL, "", apps.AppImageURL)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -676,7 +570,7 @@ func TestFetchImageCache(t *testing.T) {
 		}
 		if tt.shouldUseCached {
 			if downloadTime != rem.DownloadTime {
-				t.Errorf("expected current download time to be the same of the previous one (no download) but they differ")
+				t.Errorf("expected current download time to be the same as the previous one (no download) but they differ")
 			}
 		} else {
 			if downloadTime == rem.DownloadTime {
@@ -698,49 +592,5 @@ func TestFetchImageCache(t *testing.T) {
 		for _, tt := range tests {
 			testFn(tt, useRedirect)
 		}
-	}
-}
-
-func TestSigURLFromImgURL(t *testing.T) {
-	tests := []struct {
-		in, out string
-	}{
-		{
-			"http://localhost/aci-latest-linux-amd64.aci",
-			"http://localhost/aci-latest-linux-amd64.aci.asc",
-		},
-	}
-	for i, tt := range tests {
-		out := ascURLFromImgURL(tt.in)
-		if out != tt.out {
-			t.Errorf("#%d: got %v, want %v", i, out, tt.out)
-		}
-	}
-}
-
-func TestGetMaxAge(t *testing.T) {
-	ma := getMaxAge("max-age=10")
-	if ma != 10 {
-		t.Errorf("got max-age: %d, want %d", ma, 10)
-	}
-	ma = getMaxAge("no-cache")
-	if ma != 0 {
-		t.Errorf("got max-age: %d, want %d", ma, 0)
-	}
-	ma = getMaxAge("no-store")
-	if ma != 0 {
-		t.Errorf("got max-age: %d, want %d", ma, 0)
-	}
-}
-
-func TestUseCached(t *testing.T) {
-	ma := 10
-	t1 := time.Now().Add(-11 * time.Second)
-	if useCached(t1, ma) {
-		t.Errorf("expected useCached to return false")
-	}
-	t1 = time.Now().Add(-1 * time.Second)
-	if !useCached(t1, ma) {
-		t.Errorf("expected useCached to return true")
 	}
 }
