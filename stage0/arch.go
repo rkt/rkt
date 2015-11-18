@@ -15,5 +15,5 @@
 package stage0
 
 var ValidOSArch = map[string][]string{
-	"linux": []string{"amd64"},
+	"linux": []string{"amd64", "i386", "aarch64", "aarch64_be", "armv6l", "armv7l", "armv7b"},
 }
