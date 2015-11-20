@@ -68,8 +68,12 @@ If you want to see the kernel and boot messages, run rkt with the `--debug` flag
 
 You can exit pressing `<Ctrl-a x>`.
 
-Notes-cpus: By default containers start working on all cpus if at least one app does not have specfied cpus. In the other case, container will be working on aggregate amount of cpus. 
-Notes-memory: Container memory is a sum of memory required by each app in pod and additional 128MB required by system. If memory of some app is not specified, app memory will be set on default value (128MB).
+#### CPU usage
+By default, processes will start working on all CPUs if at least one app does not have specfied CPUs. 
+In the other case, container will be working on aggregate amount of CPUs. 
+
+#### Memory
+Currently, the memory allocated to the virtual machine is a sum of memory required by each app in pod and additional 128MB required by system. If memory of some app is not specified, app memory will be set on default value (128MB).
 
 ### Selecting stage1 at runtime
 
