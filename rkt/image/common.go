@@ -16,8 +16,13 @@ package image
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"reflect"
+	"strings"
+	"time"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
 
 // isReallyNil makes sure that the passed value is really really
@@ -57,4 +62,37 @@ func stderr(format string, a ...interface{}) {
 	prefixedFormat := fmt.Sprintf("rkt: %s", format)
 	out := fmt.Sprintf(prefixedFormat, a...)
 	fmt.Fprintln(os.Stderr, strings.TrimSuffix(out, "\n"))
+}
+
+// useCached checks if downloadTime plus maxAge is before/after the current time.
+// return true if the cached image should be used, false otherwise.
+func useCached(downloadTime time.Time, maxAge int) bool {
+	freshnessLifetime := int(time.Now().Sub(downloadTime).Seconds())
+	if maxAge > 0 && freshnessLifetime < maxAge {
+		return true
+	}
+	return false
+}
+
+// ascURLFromImgURL creates a URL to a signature file from passed URL
+// to an image.
+func ascURLFromImgURL(u *url.URL) *url.URL {
+	copy := *u
+	copy.Path = ascPathFromImgPath(copy.Path)
+	return &copy
+}
+
+// ascPathFromImgPath creates a path to a signature file from passed
+// path to an image.
+func ascPathFromImgPath(path string) string {
+	return fmt.Sprintf("%s.aci.asc", strings.TrimSuffix(path, ".aci"))
+}
+
+// printIdentities prints a message that signature was verified.
+func printIdentities(entity *openpgp.Entity) {
+	lines := []string{"signature verified:"}
+	for _, v := range entity.Identities {
+		lines = append(lines, fmt.Sprintf("  %s", v.Name))
+	}
+	stderr("%s", strings.Join(lines, "\n"))
 }
