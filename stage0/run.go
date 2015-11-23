@@ -45,6 +45,7 @@ import (
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/label"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/pkg/tpm"
 	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
@@ -93,6 +94,8 @@ type CommonConfig struct {
 	Store        *store.Store // store containing all of the configured application images
 	Stage1Image  types.Hash   // stage1 image containing usable /init and /enter entrypoints
 	UUID         *types.UUID  // UUID of the pod
+	RootHash     string       // Hash of the root filesystem
+	ManifestData string       // The pod manifest data
 	Debug        bool
 	MountLabel   string // selinux label to use for fs
 	ProcessLabel string // selinux label to use for process
@@ -309,6 +312,8 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		return err
 	}
 
+	cfg.CommonConfig.ManifestData = string(pmb)
+
 	debug("Writing pod manifest")
 	fn := common.PodManifestPath(dir)
 	if err := ioutil.WriteFile(fn, pmb, defaultRegularFilePerm); err != nil {
@@ -453,6 +458,12 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 		log.Fatalf("error clearing FD_CLOEXEC on lock fd")
 	}
 
+	tpmEvent := fmt.Sprintf("rkt: Rootfs: %s Manifest: %s Stage 1 args: %s", cfg.CommonConfig.RootHash, cfg.CommonConfig.ManifestData, strings.Join(args, " "))
+	// If there's no TPM available or there's a failure for some other
+	// reason, ignore it and continue anyway. Long term we'll want policy
+	// that enforces TPM behaviour, but we don't have any infrastructure
+	// around that yet.
+	_ = tpm.Extend(tpmEvent)
 	if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
 		log.Fatalf("error execing init: %v", err)
 	}
@@ -493,14 +504,18 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 		if err != nil {
 			return fmt.Errorf("error rendering tree image: %v", err)
 		}
+
 		if !cfg.SkipTreeStoreCheck {
-			if _, err := cfg.Store.CheckTreeStore(treeStoreID); err != nil {
+			hash, err := cfg.Store.CheckTreeStore(treeStoreID)
+			if err != nil {
 				log.Printf("Warning: tree cache is in a bad state: %v. Rebuilding...", err)
 				var err error
-				if treeStoreID, _, err = cfg.Store.RenderTreeStore(img.String(), true); err != nil {
+				treeStoreID, hash, err = cfg.Store.RenderTreeStore(img.String(), true)
+				if err != nil {
 					return fmt.Errorf("error rendering tree image: %v", err)
 				}
 			}
+			cfg.CommonConfig.RootHash = hash
 		}
 
 		if err := ioutil.WriteFile(common.AppTreeStoreIDPath(cdir, appName), []byte(treeStoreID), defaultRegularFilePerm); err != nil {
@@ -572,13 +587,16 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 	}
 
 	if !cfg.SkipTreeStoreCheck {
-		if _, err := cfg.Store.CheckTreeStore(treeStoreID); err != nil {
+		hash, err := cfg.Store.CheckTreeStore(treeStoreID)
+		if err != nil {
 			log.Printf("Warning: tree cache is in a bad state: %v. Rebuilding...", err)
 			var err error
-			if treeStoreID, _, err = cfg.Store.RenderTreeStore(img.String(), true); err != nil {
+			treeStoreID, hash, err = cfg.Store.RenderTreeStore(img.String(), true)
+			if err != nil {
 				return fmt.Errorf("error rendering tree image: %v", err)
 			}
 		}
+		cfg.CommonConfig.RootHash = hash
 	}
 
 	if err := writeManifest(*cfg.CommonConfig, img, s1); err != nil {
