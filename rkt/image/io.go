@@ -15,10 +15,14 @@
 package image
 
 import (
+	"crypto/sha512"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/coreos/rkt/store"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/ioprogress"
 )
@@ -27,6 +31,13 @@ import (
 type writeSyncer interface {
 	io.Writer
 	Sync() error
+}
+
+// readSeekCloser is an interface that wraps io.ReadSeeker and
+// io.Closer
+type readSeekCloser interface {
+	io.ReadSeeker
+	io.Closer
 }
 
 // getIoProgressReader returns a reader that wraps the HTTP response
@@ -57,5 +68,58 @@ func getIoProgressReader(label string, res *http.Response) io.Reader {
 		Size:         res.ContentLength,
 		DrawFunc:     ioprogress.DrawTerminalf(os.Stderr, fmtfunc),
 		DrawInterval: time.Second,
+	}
+}
+
+// removeOnClose is a wrapper around os.File that removes the file
+// when closing it. removeOnClose implements a readSeekCloser
+// interface.
+type removeOnClose struct {
+	// File is a wrapped os.File
+	File *os.File
+}
+
+func (f *removeOnClose) Read(p []byte) (int, error) {
+	return f.File.Read(p)
+}
+
+func (f *removeOnClose) Seek(offset int64, whence int) (int64, error) {
+	return f.File.Seek(offset, whence)
+}
+
+// Close closes the file and then removes it from disk. No error is
+// returned if the file did not exist at the point of removal.
+func (f *removeOnClose) Close() error {
+	name := f.File.Name()
+	if err := f.File.Close(); err != nil {
+		return err
+	}
+	if err := os.Remove(name); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+// getTmpROC returns a removeOnClose instance wrapping a temporary
+// file provided by passed store. The actual file name is based on a
+// hash of passed path.
+func getTmpROC(s *store.Store, path string) (*removeOnClose, error) {
+	h := sha512.New()
+	h.Write([]byte(path))
+	pathHash := s.HashToKey(h)
+
+	tmp, err := s.TmpNamedFile(pathHash)
+	if err != nil {
+		return nil, fmt.Errorf("error setting up temporary file: %v", err)
+	}
+	roc := &removeOnClose{File: tmp}
+	return roc, nil
+}
+
+// maybeClose is a convenient function for closing io.Closers if they
+// are not nil. Useful in defers.
+func maybeClose(c io.Closer) {
+	if !isReallyNil(c) {
+		c.Close()
 	}
 }
