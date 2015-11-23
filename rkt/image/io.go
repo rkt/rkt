@@ -101,8 +101,8 @@ func (f *removeOnClose) Close() error {
 }
 
 // getTmpROC returns a removeOnClose instance wrapping a temporary
-// file provided by passed store. The actual file name is based on a
-// hash of passed path.
+// file provided by the passed store. The actual file name is based on
+// a hash of the passed path.
 func getTmpROC(s *store.Store, path string) (*removeOnClose, error) {
 	h := sha512.New()
 	h.Write([]byte(path))
