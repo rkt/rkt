@@ -38,8 +38,13 @@ if [ "${SEMAPHORE-}" == true ] ; then
         fi
 fi
 
-if [ ${SRC_CHANGES} -eq 0 ] && [ ${DOC_CHANGES} -eq 0 ]; then
-    echo No changes detected.
+HEAD=`git rev-parse HEAD`
+MASTER=`git rev-parse origin/master`
+if [[ ${HEAD} == ${MASTER} ]]; then
+    SRC_CHANGES=1
+    DOC_CHANGES=1
+elif [[ ${SRC_CHANGES} -eq 0 && ${DOC_CHANGES} -eq 0 ]]; then
+    echo No changes detected and HEAD is not origin/master
     exit 0
 fi
 
