@@ -15,6 +15,8 @@
 package image
 
 import (
+	"fmt"
+	"os"
 	"reflect"
 )
 
@@ -46,4 +48,13 @@ func isReallyNil(iface interface{}) bool {
 		return v.IsNil()
 	}
 	return false
+}
+
+// stderr prints messages to standard error. There is no need to add a
+// trailing newline as it will be added automatically. Also, this
+// function prepends a "rkt: " string to the message.
+func stderr(format string, a ...interface{}) {
+	prefixedFormat := fmt.Sprintf("rkt: %s", format)
+	out := fmt.Sprintf(prefixedFormat, a...)
+	fmt.Fprintln(os.Stderr, strings.TrimSuffix(out, "\n"))
 }
