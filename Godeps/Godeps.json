@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.4.3",
 	"Packages": [
 		"./..."
 	],
@@ -72,11 +72,11 @@
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
-			"Rev": "9c1b472ce804899a5db94a98fb2ad791f4bce2b2"
+			"Rev": "fce83d1375e33a840e455f51a102491111984924"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/tarball",
-			"Rev": "9c1b472ce804899a5db94a98fb2ad791f4bce2b2"
+			"Rev": "fce83d1375e33a840e455f51a102491111984924"
 		},
 		{
 			"ImportPath": "github.com/appc/goaci/proj2aci",
