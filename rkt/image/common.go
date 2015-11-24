@@ -18,12 +18,58 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
 
+	"github.com/coreos/rkt/common/apps"
+	"github.com/coreos/rkt/pkg/keystore"
+	"github.com/coreos/rkt/rkt/config"
+	rktflag "github.com/coreos/rkt/rkt/flag"
+	"github.com/coreos/rkt/store"
+
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
 )
+
+// action is a common type for Finder and Fetcher
+type action struct {
+	// S is a store where images will be looked for or stored.
+	S *store.Store
+	// Ks is a keystore used for verification of the image
+	Ks *keystore.Keystore
+	// Headers is a map of headers which might be used for
+	// downloading via https protocol.
+	Headers map[string]config.Headerer
+	// DockerAuth is used for authenticating when fetching docker
+	// images.
+	DockerAuth map[string]config.BasicCredentials
+	// InsecureFlags is a set of flags for enabling some insecure
+	// functionality. For now it is mostly skipping image
+	// signature verification and TLS certificate verification.
+	InsecureFlags *rktflag.SecFlags
+	// Debug tells whether additional debug messages should be
+	// printed.
+	Debug bool
+	// TrustKeysFromHttps tells whether discovered keys downloaded
+	// via the https protocol can be trusted
+	TrustKeysFromHttps bool
+
+	// StoreOnly tells whether to avoid getting images from a
+	// local filesystem or a remote location.
+	StoreOnly bool
+	// NoStore tells whether to avoid getting images from the
+	// store. Note that the store can be still used as a cache.
+	NoStore bool
+	// NoCache tells to avoid getting images from the store
+	// completely.
+	NoCache bool
+	// WithDeps tells whether image dependencies should be
+	// downloaded too.
+	WithDeps bool
+}
 
 // isReallyNil makes sure that the passed value is really really
 // nil. So it returns true if value is plain nil or if it is e.g. an
@@ -95,4 +141,51 @@ func printIdentities(entity *openpgp.Entity) {
 		lines = append(lines, fmt.Sprintf("  %s", v.Name))
 	}
 	stderr("%s", strings.Join(lines, "\n"))
+}
+
+func guessImageType(image string) apps.AppImageType {
+	if _, err := types.NewHash(image); err == nil {
+		return apps.AppImageHash
+	}
+	if u, err := url.Parse(image); err == nil && u.Scheme != "" {
+		return apps.AppImageURL
+	}
+	if filepath.IsAbs(image) {
+		return apps.AppImagePath
+	}
+
+	// Well, at this point is basically heuristics time. The image
+	// parameter can be either a relative path or an image name.
+
+	// First, let's check if there is a colon in the image
+	// parameter. Colon often serves as a paths separator (like in
+	// the PATH environment variable), so if it exists, then it is
+	// highly unlikely that the image parameter is a path. Colon
+	// in this context is often used for specifying a version of
+	// an image, like in "example.com/reduce-worker:1.0.0".
+	if strings.ContainsRune(image, ':') {
+		return apps.AppImageName
+	}
+
+	// Second, let's check if there is a dot followed by a slash
+	// (./) - if so, it is likely that the image parameter is path
+	// like ./aci-in-this-dir or ../aci-in-parent-dir
+	if strings.Contains(image, "./") {
+		return apps.AppImagePath
+	}
+
+	// Third, let's check if the image parameter has an .aci
+	// extension. If so, likely a path like "stage1-coreos.aci".
+	if filepath.Ext(image) == schema.ACIExtension {
+		return apps.AppImagePath
+	}
+
+	// At this point, if the image parameter is something like
+	// "coreos.com/rkt/stage1-coreos" and you have a directory
+	// tree "coreos.com/rkt" in the current working directory and
+	// you meant the image parameter to point to the file
+	// "stage1-coreos" in this directory tree, then you better be
+	// off prepending the parameter with "./", because I'm gonna
+	// treat this as an image name otherwise.
+	return apps.AppImageName
 }
