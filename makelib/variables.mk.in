@@ -18,7 +18,7 @@ REPO_PATH := $(ORG_PATH)/rkt
 # [STAGE1] build settings
 
 # selinux tags for rkt and functional tests
-RKT_TAGS := -tags selinux
+RKT_TAGS := -tags "selinux @TPM_TAGS@"
 # stage1 build mode
 
 RKT_VERSION := @RKT_VERSION@
