@@ -20,6 +20,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
+
 const (
 	defaultMem        = 128 // MB
 	systemMemOverhead = 128 // MB
@@ -44,7 +45,7 @@ func findResources(isolators types.Isolators) (mem, cpus int64) {
 // Function expects a podmanifest apps.
 // Return aggregate quantity of mem (in MB) and cpus.
 func GetAppsResources(apps schema.AppList) (totalCpus, totalMem int64) {
-	cpusSpecified  := false
+	cpusSpecified := false
 	for i := range apps {
 		ra := &apps[i]
 		app := ra.App
