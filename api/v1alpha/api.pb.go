@@ -487,6 +487,7 @@ func (m *GetInfoResponse) GetInfo() *Info {
 // Request for ListPods().
 type ListPodsRequest struct {
 	Filter *PodFilter `protobuf:"bytes,1,opt,name=filter" json:"filter,omitempty"`
+	Detail bool       `protobuf:"varint,2,opt,name=detail" json:"detail,omitempty"`
 }
 
 func (m *ListPodsRequest) Reset()         { *m = ListPodsRequest{} }
@@ -545,6 +546,7 @@ func (m *InspectPodResponse) GetPod() *Pod {
 // Request for ListImages().
 type ListImagesRequest struct {
 	Filter *ImageFilter `protobuf:"bytes,1,opt,name=filter" json:"filter,omitempty"`
+	Detail bool         `protobuf:"varint,2,opt,name=detail" json:"detail,omitempty"`
 }
 
 func (m *ListImagesRequest) Reset()         { *m = ListImagesRequest{} }

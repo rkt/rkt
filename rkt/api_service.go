@@ -332,10 +332,18 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 			return
 		}
 
-		if !filterPod(pod, manifest, request.Filter) {
-			pod.Manifest = nil // Do not return pod manifest in ListPods().
-			pods = append(pods, pod)
+		if filterPod(pod, manifest, request.Filter) {
+			return
 		}
+
+		if request.Detail {
+			if err := fillAppInfo(s.store, p, pod); err != nil { // Do not return partial pods.
+				return
+			}
+		} else {
+			pod.Manifest = nil // Do not return pod manifest in ListPods().
+		}
+		pods = append(pods, pod)
 	}); err != nil {
 		log.Printf("Failed to list pod: %v", err)
 		return nil, err
@@ -426,7 +434,7 @@ func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.Insp
 		return nil, err
 	}
 
-	// Fill the extra pod info that is not available in ListPods().
+	// Fill the extra pod info that is not available in ListPods(detail=false).
 	if err := fillAppInfo(s.store, p, pod); err != nil {
 		return nil, err
 	}
@@ -549,8 +557,10 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 		if err != nil {
 			continue
 		}
+		if !request.Detail {
+			image.Manifest = nil // Do not return image manifest in ListImages(detail=false).
+		}
 		if !filterImage(image, manifest, request.Filter) {
-			image.Manifest = nil // Do not return image manifest in ListImages().
 			images = append(images, image)
 		}
 	}

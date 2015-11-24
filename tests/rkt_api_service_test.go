@@ -229,6 +229,7 @@ func TestAPIServiceListInspectPods(t *testing.T) {
 
 	patchImportAndRun("rkt-inspect-print.aci", []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=42"}, t, ctx)
 
+	// ListPods(detail=false).
 	resp, err = c.ListPods(context.Background(), &v1alpha.ListPodsRequest{})
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -247,6 +248,20 @@ func TestAPIServiceListInspectPods(t *testing.T) {
 			t.Fatalf("Unexpected error: %v", err)
 		}
 		checkPodDetails(t, ctx, inspectResp.Pod)
+	}
+
+	// ListPods(detail=true).
+	resp, err = c.ListPods(context.Background(), &v1alpha.ListPodsRequest{Detail: true})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(resp.Pods) == 0 {
+		t.Errorf("Unexpected result: %v, should see non-zero pods", resp.Pods)
+	}
+
+	for _, p := range resp.Pods {
+		checkPodDetails(t, ctx, p)
 	}
 }
 
@@ -271,6 +286,7 @@ func TestAPIServiceListInspectImages(t *testing.T) {
 
 	patchImportAndFetchHash("rkt-inspect-sleep.aci", []string{"--exec=/inspect"}, t, ctx)
 
+	// ListImages(detail=false).
 	resp, err = c.ListImages(context.Background(), &v1alpha.ListImagesRequest{})
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -289,5 +305,19 @@ func TestAPIServiceListInspectImages(t *testing.T) {
 			t.Fatalf("Unexpected error: %v", err)
 		}
 		checkImageDetails(t, ctx, inspectResp.Image)
+	}
+
+	// ListImages(detail=true).
+	resp, err = c.ListImages(context.Background(), &v1alpha.ListImagesRequest{Detail: true})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(resp.Images) == 0 {
+		t.Errorf("Unexpected result: %v, should see non-zero images", resp.Images)
+	}
+
+	for _, m := range resp.Images {
+		checkImageDetails(t, ctx, m)
 	}
 }
