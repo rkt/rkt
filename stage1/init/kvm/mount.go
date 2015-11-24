@@ -119,15 +119,6 @@ func PodToSystemdHostMountUnits(root string, volumes []types.Volume, appNames []
 		// only host shared volumes
 
 		name := vol.Name.String() // acts as a mount tag 9p
-		// /var/lib/.../pod/run/rootfs/mnt/{volumeName}
-		mountPoint := filepath.Join(root, stage1MntDir, name)
-
-		// for kind "empty" that will be shared among applications
-		log.Printf("creating an empty volume folder for sharing: %q", mountPoint)
-		err := os.MkdirAll(mountPoint, 0700)
-		if err != nil {
-			return err
-		}
 
 		// serviceNames for ordering and requirements dependency for apps
 		var serviceNames []string
@@ -137,6 +128,13 @@ func PodToSystemdHostMountUnits(root string, volumes []types.Volume, appNames []
 
 		// for host kind we create a mount unit to mount host shared folder
 		if vol.Kind == "host" {
+			// /var/lib/.../pod/run/rootfs/mnt/{volumeName}
+			mountPoint := filepath.Join(root, stage1MntDir, name)
+			err := os.MkdirAll(mountPoint, 0700)
+			if err != nil {
+				return err
+			}
+
 			_, err = installNewMountUnit(root,
 				name, // what (source) in 9p it is a channel tag which equals to volume.Name/mountPoint.name
 				filepath.Join(stage1MntDir, name), // where - destination
@@ -164,17 +162,21 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 		vols[v.Name] = v
 	}
 
-	mounts, err := initcommon.GenerateMounts(ra, vols)
-	if err != nil {
-		return err
-	}
-
+	mounts := initcommon.GenerateMounts(ra, vols)
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
 		// source relative to stage1 rootfs to relative pod root
 		whatPath := filepath.Join(stage1MntDir, vol.Name.String())
 		whatFullPath := filepath.Join(root, whatPath)
+
+		if vol.Kind == "empty" {
+			log.Printf("creating an empty volume folder for sharing: %q", whatFullPath)
+			err := os.MkdirAll(whatFullPath, 0700)
+			if err != nil {
+				return err
+			}
+		}
 
 		// destination relative to stage1 rootfs and relative to pod root
 		wherePath := filepath.Join(common.RelAppRootfsPath(appName), m.Path)

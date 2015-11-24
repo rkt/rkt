@@ -87,32 +87,33 @@ func TestFetch(t *testing.T) {
 	defer os.Remove(imagePath)
 
 	tests := []struct {
-		args     string
-		image    string
-		finalURL string
+		args      string
+		image     string
+		imageArgs string
+		finalURL  string
 	}{
-		{"--insecure-skip-verify fetch", "coreos.com/etcd:v2.1.2", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-skip-verify fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", ""},
-		{"--insecure-skip-verify fetch", "docker://busybox", ""},
-		{"--insecure-skip-verify fetch", "docker://busybox:latest", ""},
-		{"--insecure-skip-verify run --mds-register=false", "coreos.com/etcd:v2.1.2", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-skip-verify run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", ""},
-		{"--insecure-skip-verify run --mds-register=false", "docker://busybox", ""},
-		{"--insecure-skip-verify run --mds-register=false", "docker://busybox:latest", ""},
-		{"--insecure-skip-verify prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", ""},
-		{"--insecure-skip-verify prepare", "coreos.com/etcd:v2.1.2", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-skip-verify prepare", "docker://busybox", ""},
-		{"--insecure-skip-verify prepare", "docker://busybox:latest", ""},
+		{"--insecure-skip-verify fetch", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-skip-verify fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
+		{"--insecure-skip-verify fetch", "docker://busybox", "", ""},
+		{"--insecure-skip-verify fetch", "docker://busybox:latest", "", ""},
+		{"--insecure-skip-verify run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /dev/null", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-skip-verify run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /dev/null", ""},
+		{"--insecure-skip-verify run --mds-register=false", "docker://busybox", "", ""},
+		{"--insecure-skip-verify run --mds-register=false", "docker://busybox:latest", "", ""},
+		{"--insecure-skip-verify prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
+		{"--insecure-skip-verify prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-skip-verify prepare", "docker://busybox", "", ""},
+		{"--insecure-skip-verify prepare", "docker://busybox:latest", "", ""},
 	}
 
 	for _, tt := range tests {
-		testFetchDefault(t, tt.args, tt.image, tt.finalURL)
-		testFetchStoreOnly(t, tt.args, tt.image, tt.finalURL)
-		testFetchNoStore(t, tt.args, tt.image, tt.finalURL)
+		testFetchDefault(t, tt.args, tt.image, tt.imageArgs, tt.finalURL)
+		testFetchStoreOnly(t, tt.args, tt.image, tt.imageArgs, tt.finalURL)
+		testFetchNoStore(t, tt.args, tt.image, tt.imageArgs, tt.finalURL)
 	}
 }
 
-func testFetchDefault(t *testing.T, arg string, image string, finalURL string) {
+func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, finalURL string) {
 	remoteFetchMsgTpl := `remote fetching from url %s`
 	storeMsgTpl := `using image from local store for .* %s`
 	if finalURL == "" {
@@ -124,7 +125,7 @@ func testFetchDefault(t *testing.T, arg string, image string, finalURL string) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s %s %s", ctx.Cmd(), arg, image)
+	cmd := fmt.Sprintf("%s %s %s %s", ctx.Cmd(), arg, image, imageArgs)
 
 	// 1. Run cmd with the image not available in the store, should get $remoteFetchMsg.
 	child := spawnOrFail(t, cmd)
@@ -137,7 +138,7 @@ func testFetchDefault(t *testing.T, arg string, image string, finalURL string) {
 	runRktAndCheckRegexOutput(t, cmd, storeMsg)
 }
 
-func testFetchStoreOnly(t *testing.T, args string, image string, finalURL string) {
+func testFetchStoreOnly(t *testing.T, args string, image string, imageArgs string, finalURL string) {
 	cannotFetchMsgTpl := `unable to fetch image for .* %s`
 	storeMsgTpl := `using image from local store for .* %s`
 	cannotFetchMsg := fmt.Sprintf(cannotFetchMsgTpl, image)
@@ -146,7 +147,7 @@ func testFetchStoreOnly(t *testing.T, args string, image string, finalURL string
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --store-only %s %s", ctx.Cmd(), args, image)
+	cmd := fmt.Sprintf("%s --store-only %s %s %s", ctx.Cmd(), args, image, imageArgs)
 
 	// 1. Run cmd with the image not available in the store should get $cannotFetchMsg.
 	runRktAndCheckRegexOutput(t, cmd, cannotFetchMsg)
@@ -157,7 +158,7 @@ func testFetchStoreOnly(t *testing.T, args string, image string, finalURL string
 	runRktAndCheckRegexOutput(t, cmd, storeMsg)
 }
 
-func testFetchNoStore(t *testing.T, args string, image string, finalURL string) {
+func testFetchNoStore(t *testing.T, args string, image string, imageArgs string, finalURL string) {
 	remoteFetchMsgTpl := `remote fetching from url %s`
 	remoteFetchMsg := fmt.Sprintf(remoteFetchMsgTpl, finalURL)
 
@@ -166,7 +167,7 @@ func testFetchNoStore(t *testing.T, args string, image string, finalURL string) 
 
 	importImageAndFetchHash(t, ctx, image)
 
-	cmd := fmt.Sprintf("%s --no-store %s %s", ctx.Cmd(), args, image)
+	cmd := fmt.Sprintf("%s --no-store %s %s %s", ctx.Cmd(), args, image, imageArgs)
 
 	// 1. Run cmd with the image available in the store, should get $remoteFetchMsg.
 	child := spawnOrFail(t, cmd)
