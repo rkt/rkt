@@ -92,3 +92,13 @@ make functional-check GO_TEST_FUNC_ARGS='-run NameOfTheTest'
 ```
 
 Run `go help testflag` to get more informations about possible flags accepted by `go test`.
+
+## Running the benchmark
+
+Running the benchmark is similar to running the other tests, we just need to pass additional
+parameters to `go test`:
+
+```
+make check GO_TEST_FUNC_ARGS='-bench=. -run=Benchmark'
+make functional-check GO_TEST_FUNC_ARGS='-bench=. -run=Benchmark'
+```
