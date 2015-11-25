@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -183,7 +184,7 @@ func emptyGarbage() error {
 // or Garbage state
 func deletePod(p *pod) {
 	if !p.isExitedGarbage && !p.isGarbage {
-		panic("logic error: deletePod called with non-garbage pod")
+		panic(fmt.Sprintf("logic error: deletePod called with non-garbage pod %q (status %q)", p.uuid, p.getState()))
 	}
 
 	if p.isExitedGarbage {
