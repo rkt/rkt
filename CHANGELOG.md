@@ -1,3 +1,23 @@
+## vUNRELEASED
+
+The next version of rkt will have the following.
+
+#### New features and UX changes
+
+- implement `rkt cat-manifest` for pods ([#1744](https://github.com/coreos/rkt/pull/1744))
+- generate an empty volume if a required one is not provided ([#1753](https://github.com/coreos/rkt/pull/1753))
+
+#### Bug fixes
+
+- store used MCS contexts on the filesystem ([#1742](https://github.com/coreos/rkt/pull/1742))
+- fix Docker images with whiteout-ed hard links ([#1653](https://github.com/coreos/rkt/pull/1653))
+- fix Docker images relying on /dev/stdout ([#1617](https://github.com/coreos/rkt/pull/1617))
+
+#### Improved testing
+
+- add functional tests for rkt api service ([#1761](https://github.com/coreos/rkt/pull/1761))
+- fix TestSocketActivation on systemd-v219 ([#1768](https://github.com/coreos/rkt/pull/1768))
+
 ## v0.11.0
 
 rkt v0.11.0 is an incremental release with mostly bug fixes and testing improvements.
