@@ -20,7 +20,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/context"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/common"

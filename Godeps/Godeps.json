@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
-	"GoVersion": "go1.4.3",
+	"GoVersion": "go1.4.2",
 	"Packages": [
 		"./..."
 	],
@@ -129,6 +129,10 @@
 		{
 			"ImportPath": "github.com/camlistore/lock",
 			"Rev": "ae27720f340952636b826119b58130b9c1a847a0"
+		},
+		{
+			"ImportPath": "github.com/coreos/gexpect",
+			"Rev": "24c1b4ce32873119bd2cb2bc1f6fdc8fc33f5f48"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-iptables/iptables",
@@ -263,10 +267,6 @@
 		{
 			"ImportPath": "github.com/spf13/pflag",
 			"Rev": "67cbc198fd11dab704b214c1e629a97af392c085"
-		},
-		{
-			"ImportPath": "github.com/steveeJ/gexpect",
-			"Rev": "d56b2c62c0a0ba2733c18b27024a961195f10a17"
 		},
 		{
 			"ImportPath": "github.com/syndtr/gocapability/capability",
