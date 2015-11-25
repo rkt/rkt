@@ -9,6 +9,7 @@ It covers dependencies, file ownership and permissions, and tips to observe pack
 
 - autoconf
 - GNU Make
+- glibc-static
 - bash
 - go
 - gofmt
