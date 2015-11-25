@@ -132,7 +132,7 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/gexpect",
-			"Rev": "24c1b4ce32873119bd2cb2bc1f6fdc8fc33f5f48"
+			"Rev": "5173270e159f5aa8fbc999dc7e3dcb50f4098a69"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-iptables/iptables",
