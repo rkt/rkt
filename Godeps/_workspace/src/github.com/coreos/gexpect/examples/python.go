@@ -1,6 +1,6 @@
 package main
 
-import "github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
+import "github.com/steveeJ/gexpect"
 import "fmt"
 
 func main() {

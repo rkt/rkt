@@ -20,7 +20,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/steveeJ/gexpect"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
 )
 
 type GoroutineAssistant struct {

@@ -214,7 +214,7 @@ func (expect *ExpectSubprocess) expectTimeoutRegexFind(regex string, timeout tim
 	}()
 	go func() {
 		time.Sleep(timeout)
-		err = fmt.Errorf("ExpectRegex timed out after %v finding '%v'.", timeout, regex)
+		err = fmt.Errorf("ExpectRegex timed out after %v finding '%v'.\nOutput:\n%s", timeout, regex, expect.Collect())
 		t <- true
 	}()
 	<-t
@@ -276,7 +276,7 @@ func (expect *ExpectSubprocess) ExpectTimeout(searchString string, timeout time.
 	select {
 	case e = <-result:
 	case <-time.After(timeout):
-		e = fmt.Errorf("Expect timed out after %v waiting for '%v'.", timeout, searchString)
+		e = fmt.Errorf("Expect timed out after %v waiting for '%v'.\nOutput:\n%s", timeout, searchString, expect.Collect())
 	}
 	return e
 }
