@@ -145,7 +145,9 @@ func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 
 	// TODO(krnowak): we should probably apply credential headers
 	// from config here
-	ep, attempts, err := discovery.DiscoverPublicKeys(*app, m.InsecureAllowHttp)
+	// FIXME: https://github.com/coreos/rkt/issues/1516
+	hostHeaders := make(map[string]http.Header)
+	ep, attempts, err := discovery.DiscoverPublicKeys(*app, hostHeaders, m.InsecureAllowHttp)
 	if err != nil {
 		return nil, err
 	}

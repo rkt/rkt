@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.4.3",
 	"Packages": [
 		"./..."
 	],
@@ -84,47 +84,51 @@
 		},
 		{
 			"ImportPath": "github.com/appc/spec/ace",
-			"Comment": "v0.7.1",
-			"Rev": "818ac4d0073424f4e0a46f45abaa147ccc1b5a24"
+			"Comment": "v0.7.3",
+			"Rev": "bd945b97e7b02aabbea5b772d3375aa44a100dcd"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/aci",
-			"Comment": "v0.7.1",
-			"Rev": "818ac4d0073424f4e0a46f45abaa147ccc1b5a24"
+			"Comment": "v0.7.3",
+			"Rev": "bd945b97e7b02aabbea5b772d3375aa44a100dcd"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/actool",
-			"Comment": "v0.7.1",
-			"Rev": "818ac4d0073424f4e0a46f45abaa147ccc1b5a24"
+			"Comment": "v0.7.3",
+			"Rev": "bd945b97e7b02aabbea5b772d3375aa44a100dcd"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/discovery",
-			"Comment": "v0.7.1",
-			"Rev": "818ac4d0073424f4e0a46f45abaa147ccc1b5a24"
+			"Comment": "v0.7.3",
+			"Rev": "bd945b97e7b02aabbea5b772d3375aa44a100dcd"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/acirenderer",
-			"Comment": "v0.7.1",
-			"Rev": "818ac4d0073424f4e0a46f45abaa147ccc1b5a24"
+			"Comment": "v0.7.3",
+			"Rev": "bd945b97e7b02aabbea5b772d3375aa44a100dcd"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/device",
-			"Comment": "v0.7.1",
-			"Rev": "818ac4d0073424f4e0a46f45abaa147ccc1b5a24"
+			"Comment": "v0.7.3",
+			"Rev": "bd945b97e7b02aabbea5b772d3375aa44a100dcd"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/tarheader",
-			"Comment": "v0.7.1",
-			"Rev": "818ac4d0073424f4e0a46f45abaa147ccc1b5a24"
+			"Comment": "v0.7.3",
+			"Rev": "bd945b97e7b02aabbea5b772d3375aa44a100dcd"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema",
-			"Comment": "v0.7.1",
-			"Rev": "818ac4d0073424f4e0a46f45abaa147ccc1b5a24"
+			"Comment": "v0.7.3",
+			"Rev": "bd945b97e7b02aabbea5b772d3375aa44a100dcd"
 		},
 		{
 			"ImportPath": "github.com/bradfitz/http2",
 			"Rev": "f8202bc903bda493ebba4aa54922d78430c2c42f"
+		},
+		{
+			"ImportPath": "github.com/camlistore/camlistore/pkg/errorutil",
+			"Rev": "9868aa0f8d8a93ff0b30ff0de46cc351b6b88b30"
 		},
 		{
 			"ImportPath": "github.com/camlistore/lock",
