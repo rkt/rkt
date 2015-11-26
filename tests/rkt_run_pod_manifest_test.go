@@ -175,7 +175,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil},
+					{"dir1", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
 			true,
@@ -206,7 +206,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil},
+					{"dir1", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
 			false,
@@ -239,7 +239,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, &boolTrue},
+					{"dir1", "host", tmpdir, &boolTrue, nil, nil, nil},
 				},
 			},
 			false,
@@ -271,7 +271,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil},
+					{"dir1", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
 			true,
@@ -294,7 +294,7 @@ func TestPodManifest(t *testing.T) {
 					{Name: baseAppName},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil},
+					{"dir1", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
 			true,
@@ -319,7 +319,7 @@ func TestPodManifest(t *testing.T) {
 					{Name: baseAppName},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, &boolFalse},
+					{"dir1", "host", tmpdir, &boolFalse, nil, nil, nil},
 				},
 			},
 			true,
@@ -343,7 +343,7 @@ func TestPodManifest(t *testing.T) {
 					{Name: baseAppName},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, &boolTrue},
+					{"dir1", "host", tmpdir, &boolTrue, nil, nil, nil},
 				},
 			},
 			false,
@@ -445,7 +445,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir", "host", tmpdir, nil},
+					{"dir", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
 			true,

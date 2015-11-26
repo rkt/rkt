@@ -832,7 +832,9 @@ func newDiscoveryApp(img string) *discovery.App {
 }
 
 func discoverApp(app *discovery.App, insecure bool) (*discovery.Endpoints, error) {
-	ep, attempts, err := discovery.DiscoverEndpoints(*app, insecure)
+	// FIXME: https://github.com/coreos/rkt/issues/1516
+	hostHeaders := make(map[string]http.Header)
+	ep, attempts, err := discovery.DiscoverEndpoints(*app, hostHeaders, insecure)
 	if globalFlags.Debug {
 		for _, a := range attempts {
 			stderr("meta tag 'ac-discovery' not found on %s: %v", a.Prefix, a.Error)
