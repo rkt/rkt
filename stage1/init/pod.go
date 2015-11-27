@@ -460,22 +460,6 @@ func (p *Pod) writeEnvFile(env types.Environment, appName types.ACName, privateU
 // all the constituent apps of the Pod
 func (p *Pod) PodToSystemd(interactive bool, flavor string, privateUsers string) error {
 
-	if flavor == "kvm" {
-		// prepare all applications names to become dependency for mount units
-		// all host-shared folder has to become available before applications starts
-		var appNames []types.ACName
-		for _, runtimeApp := range p.Manifest.Apps {
-			appNames = append(appNames, runtimeApp.Name)
-		}
-
-		// mount host volumes through some remote file system e.g. 9p to /mnt/volumeName location
-		// order is important here: podToSystemHostMountUnits prepares folders that are checked by each appToSystemdMountUnits later
-		err := kvm.PodToSystemdHostMountUnits(common.Stage1RootfsPath(p.Root), p.Manifest.Volumes, appNames, unitsDir)
-		if err != nil {
-			return fmt.Errorf("failed to transform pod volumes into mount units: %v", err)
-		}
-	}
-
 	for i := range p.Manifest.Apps {
 		ra := &p.Manifest.Apps[i]
 		if err := p.appToSystemd(ra, interactive, flavor, privateUsers); err != nil {
