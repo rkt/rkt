@@ -13,6 +13,7 @@ The next version of rkt will have the following.
 - store used MCS contexts on the filesystem ([#1742](https://github.com/coreos/rkt/pull/1742))
 - fix Docker images with whiteout-ed hard links ([#1653](https://github.com/coreos/rkt/pull/1653))
 - fix Docker images relying on /dev/stdout ([#1617](https://github.com/coreos/rkt/pull/1617))
+- use authentication for discovery and trust ([#1801](https://github.com/coreos/rkt/pull/1801))
 
 #### Improved testing
 
