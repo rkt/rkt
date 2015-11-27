@@ -16,7 +16,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/coreos/rkt/tests/testutils"
@@ -37,14 +36,8 @@ func TestAceValidator(t *testing.T) {
 		t.Fatalf("Cannot launch metadata service: %v", err)
 	}
 
-	aceMain := os.Getenv("RKT_ACE_MAIN_IMAGE")
-	if aceMain == "" {
-		panic("empty RKT_ACE_MAIN_IMAGE env var")
-	}
-	aceSidekick := os.Getenv("RKT_ACE_SIDEKICK_IMAGE")
-	if aceSidekick == "" {
-		panic("empty RKT_ACE_SIDEKICK_IMAGE env var")
-	}
+	aceMain := testutils.GetValueFromEnvOrPanic("RKT_ACE_MAIN_IMAGE")
+	aceSidekick := testutils.GetValueFromEnvOrPanic("RKT_ACE_SIDEKICK_IMAGE")
 
 	rktArgs := fmt.Sprintf("--debug --insecure-skip-verify run --mds-register --volume database,kind=empty %s %s",
 		aceMain, aceSidekick)
