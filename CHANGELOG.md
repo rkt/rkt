@@ -16,11 +16,17 @@ The next version of rkt will have the following.
 - fix Docker images with whiteout-ed hard links ([#1653](https://github.com/coreos/rkt/pull/1653))
 - fix Docker images relying on /dev/stdout ([#1617](https://github.com/coreos/rkt/pull/1617))
 - use authentication for discovery and trust ([#1801](https://github.com/coreos/rkt/pull/1801))
+- fix build in Docker ([#1798](https://github.com/coreos/rkt/pull/1798))
+- fix kvm networking ([#1530](https://github.com/coreos/rkt/pull/1530))
 
 #### Improved testing
 
 - add functional tests for rkt api service ([#1761](https://github.com/coreos/rkt/pull/1761))
 - fix TestSocketActivation on systemd-v219 ([#1768](https://github.com/coreos/rkt/pull/1768))
+- fix the ACE validator test ([#1802](https://github.com/coreos/rkt/pull/1802))
+
+#### Other changes
+- Bumped appc spec to 0.7.3 ([#1800](https://github.com/coreos/rkt/pull/1800))
 
 ## v0.11.0
 
