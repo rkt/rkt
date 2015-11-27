@@ -75,7 +75,7 @@ var volTests = []struct {
 	},
 	// Check that an implicit empty volume is created if the user didn't provide it but there's a mount point in the app
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^WRITE_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^VOL_RW_WRITE_FILE^"`,
 		`<<<1>>>`,
 	},
 }
