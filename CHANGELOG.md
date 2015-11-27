@@ -7,6 +7,7 @@ The next version of rkt will have the following.
 - implement `rkt cat-manifest` for pods ([#1744](https://github.com/coreos/rkt/pull/1744))
 - generate an empty volume if a required one is not provided ([#1753](https://github.com/coreos/rkt/pull/1753))
 - make disabling security features granular; `--insecure-skip-verify` is now `--insecure-options={feature(s)-to-disable}` ([#1738](https://github.com/coreos/rkt/pull/1738)). See rkt's [Global Options](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#global-options) documentation.
+- allow skipping the on-disk integrity check using `--insecure-options=ondisk`. This greatly speeds up start time. ([#1804](https://github.com/coreos/rkt/pull/1804))
 
 #### Bug fixes
 
