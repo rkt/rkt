@@ -494,8 +494,19 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 		vol := vols[m.Volume]
 
 		if vol.Kind == "empty" {
-			if err := os.MkdirAll(filepath.Join(sharedVolPath, vol.Name.String()), sharedVolPerm); err != nil {
+			p := filepath.Join(sharedVolPath, vol.Name.String())
+			if err := os.MkdirAll(p, sharedVolPerm); err != nil {
 				return nil, fmt.Errorf("could not create shared volume %q: %v", vol.Name, err)
+			}
+			if err := os.Chown(p, *vol.UID, *vol.GID); err != nil {
+				return nil, fmt.Errorf("could not change owner of %q: %v", p, err)
+			}
+			mod, err := strconv.ParseUint(*vol.Mode, 8, 32)
+			if err != nil {
+				return nil, fmt.Errorf("invalid mode %q for volume %q: %v", *vol.Mode, vol.Name, err)
+			}
+			if err := os.Chmod(p, os.FileMode(mod)); err != nil {
+				return nil, fmt.Errorf("could not change permissions of %q: %v", p, err)
 			}
 		}
 
