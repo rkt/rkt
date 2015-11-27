@@ -61,9 +61,15 @@ func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume
 		// there is no volume for this mount point, creating an "empty" volume
 		// implicitly
 		if !ok {
+			defaultMode := "0755"
+			defaultUID := 0
+			defaultGID := 0
 			emptyVol := types.Volume{
 				Name: mp.Name,
 				Kind: "empty",
+				Mode: &defaultMode,
+				UID:  &defaultUID,
+				GID:  &defaultGID,
 			}
 
 			fmt.Fprintf(os.Stderr, "rkt: warning: no volume specified for mount point %q, implicitly creating an \"empty\" volume. This volume will be removed when the pod is garbage-collected.\n", mp.Name)
