@@ -32,7 +32,7 @@ func TestExitCodeSimple(t *testing.T) {
 		ctx := testutils.NewRktRunCtx()
 		defer ctx.Cleanup()
 
-		cmd := fmt.Sprintf(`%s --debug --insecure-skip-verify run --mds-register=false %s`,
+		cmd := fmt.Sprintf(`%s --debug --insecure-options=image run --mds-register=false %s`,
 			ctx.Cmd(), imageFile)
 		t.Logf("%s\n", cmd)
 		spawnAndWaitOrFail(t, cmd, true)
@@ -58,7 +58,7 @@ func TestExitCodeWithSeveralApps(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf(`%s --debug --insecure-skip-verify run --mds-register=false %s %s %s`,
+	cmd := fmt.Sprintf(`%s --debug --insecure-options=image run --mds-register=false %s %s %s`,
 		ctx.Cmd(), image0File, image1File, image2File)
 	child := spawnOrFail(t, cmd)
 

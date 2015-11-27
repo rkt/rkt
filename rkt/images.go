@@ -53,12 +53,12 @@ import (
 )
 
 type imageActionData struct {
-	s                  *store.Store
-	ks                 *keystore.Keystore
-	headers            map[string]config.Headerer
-	dockerAuth         map[string]config.BasicCredentials
-	insecureSkipVerify bool
-	debug              bool
+	s             *store.Store
+	ks            *keystore.Keystore
+	headers       map[string]config.Headerer
+	dockerAuth    map[string]config.BasicCredentials
+	insecureFlags *secFlags
+	debug         bool
 }
 
 type finder struct {
@@ -331,11 +331,16 @@ func (f *fetcher) fetchImageFromURL(imgurl string, scheme string, ascFile *os.Fi
 func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, ascFile *os.File, latest bool) (string, error) {
 	var rem *store.Remote
 
-	if f.insecureSkipVerify && f.ks != nil {
-		stderr("rkt: warning: TLS verification and signature verification has been disabled")
+	if f.insecureFlags.SkipTlsCheck() && f.ks != nil {
+		stderr("rkt: warning: TLS verification has been disabled")
 	}
-	if !f.insecureSkipVerify && scheme == "docker" {
-		return "", fmt.Errorf("signature verification for docker images is not supported (try --insecure-skip-verify)")
+
+	if f.insecureFlags.SkipImageCheck() && f.ks != nil {
+		stderr("rkt: warning: image signature verification has been disabled")
+	}
+
+	if !f.insecureFlags.SkipImageCheck() && scheme == "docker" {
+		return "", fmt.Errorf("signature verification for docker images is not supported (try --insecure-options=image)")
 	}
 
 	if scheme != "file" {
@@ -375,7 +380,7 @@ func (f *fetcher) fetchImageFrom(appName string, aciURL, ascURL, scheme string, 
 		defer os.Remove(aciFile.Name())
 	}
 
-	if entity != nil && !f.insecureSkipVerify {
+	if entity != nil && !f.insecureFlags.SkipImageCheck() {
 		stderr("rkt: signature verified:")
 		for _, v := range entity.Identities {
 			stderr("  %s", v.Name)
@@ -453,7 +458,7 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 	}
 
 	// attempt to automatically fetch the public key in case it is available on a TLS connection.
-	if globalFlags.TrustKeysFromHttps && !globalFlags.InsecureSkipVerify && appName != "" && f.ks != nil {
+	if globalFlags.TrustKeysFromHttps && !globalFlags.InsecureFlags.SkipTlsCheck() && appName != "" && f.ks != nil {
 		m := &pubkey.Manager{
 			InsecureAllowHttp:  false,
 			TrustKeysFromHttps: true,
@@ -604,7 +609,7 @@ func (f *fetcher) downloadHTTP(url, label string, out writeSyncer, etag string) 
 		return nil, err
 	}
 	transport := http.DefaultTransport
-	if f.insecureSkipVerify {
+	if f.insecureFlags.SkipTlsCheck() {
 		transport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}

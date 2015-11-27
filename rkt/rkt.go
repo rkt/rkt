@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -35,6 +36,55 @@ const (
 
 	defaultDataDir = "/var/lib/rkt"
 )
+
+const (
+	insecureNone  = 0
+	insecureImage = 1 << (iota - 1)
+	insecureTls
+
+	insecureAll = (insecureImage | insecureTls)
+)
+
+var (
+	insecureOptions = []string{"none", "image", "tls", "all"}
+
+	insecureOptionsMap = map[string]int{
+		insecureOptions[0]: insecureNone,
+		insecureOptions[1]: insecureImage,
+		insecureOptions[2]: insecureTls,
+		insecureOptions[3]: insecureAll,
+	}
+)
+
+// flagInsecureSkipVerify is a deprecated flag that is equivalent to setting
+// "--insecure-options" to 'all' when true and 'none' when false.
+// TODO: Remove before 1.0 release
+type skipVerify struct{}
+
+func (sv *skipVerify) Set(s string) error {
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		return err
+	}
+
+	switch v {
+	case false:
+		err = (*bitFlags)(globalFlags.InsecureFlags).Set("none")
+	case true:
+		err = (*bitFlags)(globalFlags.InsecureFlags).Set("all")
+	}
+	return err
+}
+
+func (sv *skipVerify) String() string {
+	return fmt.Sprintf("%v", *sv)
+}
+
+func (sv *skipVerify) Type() string {
+	// Must return "bool" in order to place naked flag before subcommand.
+	// For example, rkt --insecure-skip-verify run docker://image
+	return "bool"
+}
 
 type absDir string
 
@@ -59,6 +109,24 @@ func (d *absDir) Type() string {
 	return "absolute-directory"
 }
 
+type secFlags bitFlags
+
+func (sf *secFlags) SkipImageCheck() bool {
+	return (*bitFlags)(sf).hasFlag(insecureImage)
+}
+
+func (sf *secFlags) SkipTlsCheck() bool {
+	return (*bitFlags)(sf).hasFlag(insecureTls)
+}
+
+func (sf *secFlags) SkipAllSecurityChecks() bool {
+	return (*bitFlags)(sf).hasFlag(insecureAll)
+}
+
+func (sf *secFlags) SkipAnySecurityChecks() bool {
+	return (*bitFlags)(sf).flags != 0
+}
+
 var (
 	tabOut      *tabwriter.Writer
 	globalFlags = struct {
@@ -67,7 +135,7 @@ var (
 		LocalConfigDir     string
 		Debug              bool
 		Help               bool
-		InsecureSkipVerify bool
+		InsecureFlags      *secFlags
 		TrustKeysFromHttps bool
 	}{
 		Dir:             defaultDataDir,
@@ -84,12 +152,31 @@ var cmdRkt = &cobra.Command{
 }
 
 func init() {
+	bf, err := newBitFlags(insecureOptions, "none", insecureOptionsMap)
+	if err != nil {
+		stderr("rkt: problem initializing: %v", err)
+		os.Exit(1)
+	}
+
+	globalFlags.InsecureFlags = (*secFlags)(bf)
+	skipVerify := new(skipVerify)
+
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.Debug, "debug", false, "print out more debug information to stderr")
 	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.Dir), "dir", "rkt data directory")
 	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.SystemConfigDir), "system-config", "system configuration directory")
 	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.LocalConfigDir), "local-config", "local configuration directory")
-	cmdRkt.PersistentFlags().BoolVar(&globalFlags.InsecureSkipVerify, "insecure-skip-verify", false, "skip all TLS, image or fingerprint verification")
-	cmdRkt.PersistentFlags().BoolVar(&globalFlags.TrustKeysFromHttps, "trust-keys-from-https", true, "automatically trust gpg keys fetched from https")
+	cmdRkt.PersistentFlags().Var((*bitFlags)(globalFlags.InsecureFlags), "insecure-options",
+		fmt.Sprintf("comma-separated list of security features to disable. Allowed values: %s",
+			globalFlags.InsecureFlags.PermissibleString()))
+	cmdRkt.PersistentFlags().BoolVar(&globalFlags.TrustKeysFromHttps, "trust-keys-from-https",
+		true, "automatically trust gpg keys fetched from https")
+
+	// TODO: Remove before 1.0
+	svFlag := cmdRkt.PersistentFlags().VarPF(skipVerify, "insecure-skip-verify", "", "DEPRECATED")
+	svFlag.DefValue = "false"
+	svFlag.NoOptDefVal = "true"
+	svFlag.Hidden = true
+	svFlag.Deprecated = "please use --insecure-options."
 }
 
 func init() {
@@ -165,7 +252,7 @@ func garbageDir() string {
 }
 
 func getKeystore() *keystore.Keystore {
-	if globalFlags.InsecureSkipVerify {
+	if globalFlags.InsecureFlags.SkipImageCheck() {
 		return nil
 	}
 	config := keystore.NewConfig(globalFlags.SystemConfigDir, globalFlags.LocalConfigDir)

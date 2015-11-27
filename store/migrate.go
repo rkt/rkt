@@ -129,3 +129,5 @@ func migrateToV4(tx *sql.Tx) error {
 	}
 	return nil
 }
+
+//TODO:  With next schema change rename 'lastusedtime' to 'lastused'.

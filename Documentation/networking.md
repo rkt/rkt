@@ -204,7 +204,7 @@ The DHCP plugin binary can be executed in the daemon mode by launching it with `
 However the DHCP plugin is bundled in stage1.aci so this requires extracting the binary from it:
 
 ```
-$ sudo ./rkt fetch --insecure-skip-verify ./stage1.aci
+$ sudo ./rkt fetch --insecure-options=image ./stage1.aci
 $ sudo ./rkt image extract coreos.com/rkt/stage1 /tmp/stage1
 $ sudo cp /tmp/stage1/rootfs/usr/lib/rkt/plugins/net/dhcp .
 ```

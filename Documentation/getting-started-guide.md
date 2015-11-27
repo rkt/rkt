@@ -74,10 +74,10 @@ acbuild end
 ### Launch a local application image
 
 ```
-# rkt --insecure-skip-verify run hello-0.0.1-linux-amd64.aci
+# rkt --insecure-options=image run hello-0.0.1-linux-amd64.aci
 ```
 
-Note that `--insecure-skip-verify` is required because, by default, rkt expects our signature to be signed. See the [Signing and Verification Guide](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md) for more details.
+Note that `--insecure-options=image` is required because, by default, rkt expects our images to be signed. See the [Signing and Verification Guide](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md) for more details.
 
 At this point our hello app is running on port 5000 and ready to handle HTTP
 requests.

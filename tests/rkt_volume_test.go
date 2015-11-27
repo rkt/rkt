@@ -32,50 +32,50 @@ var volTests = []struct {
 }{
 	// Check that we can read files in the ACI
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true ^READ_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^READ_FILE^"`,
 		`<<<dir1>>>`,
 	},
 	// Check that we can read files from a volume (both ro and rw)
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RW_READ_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RW_READ_FILE^"`,
 		`<<<host>>>`,
 	},
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
 		`<<<host>>>`,
 	},
 	// Check that we can write to files in the ACI
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true ^WRITE_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^WRITE_FILE^"`,
 		`<<<1>>>`,
 	},
 	// Check that we can write files to a volume (both ro and rw)
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=2 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RW_WRITE_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=2 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RW_WRITE_FILE^"`,
 		`<<<2>>>`,
 	},
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=3 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_WRITE_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=3 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_WRITE_FILE^"`,
 		`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
 	},
 	// Check that the volume still contains the file previously written
 	{
-		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
 		`<<<2>>>`,
 	},
 	// Check that injecting a rw mount/volume works without any mountpoint in the image manifest
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_ADD_MOUNT_RW^ --mount=volume=dir1,target=dir1"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_ADD_MOUNT_RW^ --mount=volume=dir1,target=dir1"`,
 		`<<<1>>>`,
 	},
 	// Check that injecting a ro mount/volume works without any mountpoint in the image manifest
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^,readOnly=true ^VOL_ADD_MOUNT_RO^ --mount=volume=dir1,target=dir1"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^,readOnly=true ^VOL_ADD_MOUNT_RO^ --mount=volume=dir1,target=dir1"`,
 		`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
 	},
 	// Check that an implicit empty volume is created if the user didn't provide it but there's a mount point in the app
 	{
-		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-skip-verify run --mds-register=false --inherit-env=true ^WRITE_FILE^"`,
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^WRITE_FILE^"`,
 		`<<<1>>>`,
 	},
 }

@@ -68,7 +68,7 @@ func TestAppIsolatorMemory(t *testing.T) {
 	aciFileName := patchTestACI("rkt-inspect-isolators.aci", memoryTest.aciBuildArgs...)
 	defer os.Remove(aciFileName)
 
-	rktCmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), aciFileName)
+	rktCmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), aciFileName)
 	expectedLine := "Memory Limit: " + strconv.Itoa(maxMemoryUsage)
 	runRktAndCheckOutput(t, rktCmd, expectedLine, false)
 }
@@ -87,7 +87,7 @@ func TestAppIsolatorCPU(t *testing.T) {
 	aciFileName := patchTestACI("rkt-inspect-isolators.aci", cpuTest.aciBuildArgs...)
 	defer os.Remove(aciFileName)
 
-	rktCmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), aciFileName)
+	rktCmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), aciFileName)
 	expectedLine := "CPU Quota: " + strconv.Itoa(CPUQuota)
 	runRktAndCheckOutput(t, rktCmd, expectedLine, false)
 }
@@ -101,7 +101,7 @@ func TestCgroups(t *testing.T) {
 	aciFileName := patchTestACI("rkt-inspect-isolators.aci", cgroupsTest.aciBuildArgs...)
 	defer os.Remove(aciFileName)
 
-	rktCmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), aciFileName)
+	rktCmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), aciFileName)
 	expectedLine := "check-cgroups: SUCCESS"
 	runRktAndCheckOutput(t, rktCmd, expectedLine, false)
 }

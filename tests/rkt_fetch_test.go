@@ -42,15 +42,15 @@ func TestFetchFromFile(t *testing.T) {
 		args  string
 		image string
 	}{
-		{"--insecure-skip-verify fetch", imagePath},
-		{"--insecure-skip-verify fetch --store-only", imagePath},
-		{"--insecure-skip-verify fetch --no-store", imagePath},
-		{"--insecure-skip-verify run --mds-register=false", imagePath},
-		{"--insecure-skip-verify run --mds-register=false --store-only", imagePath},
-		{"--insecure-skip-verify run --mds-register=false --no-store", imagePath},
-		{"--insecure-skip-verify prepare", imagePath},
-		{"--insecure-skip-verify prepare --store-only", imagePath},
-		{"--insecure-skip-verify prepare --no-store", imagePath},
+		{"--insecure-options=image fetch", imagePath},
+		{"--insecure-options=image fetch --store-only", imagePath},
+		{"--insecure-options=image fetch --no-store", imagePath},
+		{"--insecure-options=image run --mds-register=false", imagePath},
+		{"--insecure-options=image run --mds-register=false --store-only", imagePath},
+		{"--insecure-options=image run --mds-register=false --no-store", imagePath},
+		{"--insecure-options=image prepare", imagePath},
+		{"--insecure-options=image prepare --store-only", imagePath},
+		{"--insecure-options=image prepare --no-store", imagePath},
 	}
 
 	for _, tt := range tests {
@@ -92,18 +92,18 @@ func TestFetch(t *testing.T) {
 		imageArgs string
 		finalURL  string
 	}{
-		{"--insecure-skip-verify fetch", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-skip-verify fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
-		{"--insecure-skip-verify fetch", "docker://busybox", "", ""},
-		{"--insecure-skip-verify fetch", "docker://busybox:latest", "", ""},
-		{"--insecure-skip-verify run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /dev/null", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-skip-verify run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /dev/null", ""},
-		{"--insecure-skip-verify run --mds-register=false", "docker://busybox", "", ""},
-		{"--insecure-skip-verify run --mds-register=false", "docker://busybox:latest", "", ""},
-		{"--insecure-skip-verify prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
-		{"--insecure-skip-verify prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-skip-verify prepare", "docker://busybox", "", ""},
-		{"--insecure-skip-verify prepare", "docker://busybox:latest", "", ""},
+		{"--insecure-options=image fetch", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
+		{"--insecure-options=image fetch", "docker://busybox", "", ""},
+		{"--insecure-options=image fetch", "docker://busybox:latest", "", ""},
+		{"--insecure-options=image run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /dev/null", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /dev/null", ""},
+		{"--insecure-options=image run --mds-register=false", "docker://busybox", "", ""},
+		{"--insecure-options=image run --mds-register=false", "docker://busybox:latest", "", ""},
+		{"--insecure-options=image prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
+		{"--insecure-options=image prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image prepare", "docker://busybox", "", ""},
+		{"--insecure-options=image prepare", "docker://busybox:latest", "", ""},
 	}
 
 	for _, tt := range tests {
@@ -215,7 +215,7 @@ func TestResumedFetch(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --no-store --insecure-skip-verify fetch %s", ctx.Cmd(), server.URL)
+	cmd := fmt.Sprintf("%s --no-store --insecure-options=image fetch %s", ctx.Cmd(), server.URL)
 	child := spawnOrFail(t, cmd)
 	<-kill
 	err := child.Close()
@@ -259,7 +259,7 @@ func TestResumedFetchInvalidCache(t *testing.T) {
 	// Fetch the first half of the image, and kill rkt once it reaches halfway.
 	server := httptest.NewServer(testServerHandler(t, shouldInterrupt, imagePath, kill, reportkill))
 	defer server.Close()
-	cmd := fmt.Sprintf("%s --no-store --insecure-skip-verify fetch %s", ctx.Cmd(), server.URL)
+	cmd := fmt.Sprintf("%s --no-store --insecure-options=image fetch %s", ctx.Cmd(), server.URL)
 	child := spawnOrFail(t, cmd)
 	<-kill
 	err := child.Close()

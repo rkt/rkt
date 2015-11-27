@@ -31,7 +31,7 @@ func TestSupplementaryGIDs(t *testing.T) {
 		"--exec=/inspect --print-groups")
 	defer os.Remove(printSupplGroups)
 
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), printSupplGroups)
+	cmd := fmt.Sprintf("%s --debug --insecure-options=image run --mds-register=false %s", ctx.Cmd(), printSupplGroups)
 	t.Logf("Command: %v", cmd)
 	runRktAndCheckOutput(t, cmd, "Groups: 0 400 500 1200", false)
 }

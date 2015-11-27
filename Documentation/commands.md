@@ -46,6 +46,19 @@ The metadata service helps running apps introspect their execution environment a
 
 * [metadata-service](subcommands/metadata-service.md)
 
+##Global Options
+
+In addition to the flags used by individual `rkt` commands, `rkt` has a set of global options that are applicable to all commands.
+
+| Flag | Default | Options | Desription |
+| --- | --- | --- | --- |
+| `--debug` |  `false` | `true` or `false` | Prints out more debug information to `stderr` |
+| `--dir` | `/var/lib/rkt` | A directory path | Path to the `rkt` data directory |
+| `--insecure-options` |  none | <ul><li>**none**: All security features are enabled</li><li>**image**: Disables verifying image signatures</li><li>**tls**: Accept any certificate from the server and any host name in that certificate</li><li>**all**: Disables all security checks</li></ul>  | Comma-separated list of security features to disable |
+| `--local-config` |  `/etc/rkt` | A directory path | Path to the local configuration directory |
+| `--system-config` |  `/usr/lib/rkt` | A directory path | Path to the system configuration directory |
+| `--trust-keys-from-https` |  `true` | `true` or `false` | Automatically trust gpg keys fetched from https || Flag | Default | Options | Desription |
+
 ## Logging
 
 By default, rkt will send logs directly to stdout/stderr, allowing them to be captured by the invoking process.

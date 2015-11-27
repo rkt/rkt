@@ -553,7 +553,7 @@ func TestPodManifest(t *testing.T) {
 		verifyHostFile(t, tmpdir, "file", i, tt.expectedResult)
 
 		// 2. Test 'rkt prepare' + 'rkt run-prepared'.
-		rktCmd := fmt.Sprintf("%s --insecure-skip-verify prepare --pod-manifest=%s",
+		rktCmd := fmt.Sprintf("%s --insecure-options=image prepare --pod-manifest=%s",
 			ctx.Cmd(), manifestFile)
 		uuid := runRktAndGetUUID(t, rktCmd)
 

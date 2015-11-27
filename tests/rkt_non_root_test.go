@@ -59,13 +59,13 @@ func TestNonRootReadInfo(t *testing.T) {
 
 	runCmds := []string{
 		// Run with overlay, without private-users.
-		fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), imgs[0].imgFile),
+		fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), imgs[0].imgFile),
 
 		// Run without overlay, without private-users.
-		fmt.Sprintf("%s --insecure-skip-verify run --no-overlay --mds-register=false %s", ctx.Cmd(), imgs[1].imgFile),
+		fmt.Sprintf("%s --insecure-options=image run --no-overlay --mds-register=false %s", ctx.Cmd(), imgs[1].imgFile),
 
 		// Run without overlay, with private-users.
-		fmt.Sprintf("%s --insecure-skip-verify run --no-overlay --private-users --mds-register=false %s", ctx.Cmd(), imgs[2].imgFile),
+		fmt.Sprintf("%s --insecure-options=image run --no-overlay --private-users --mds-register=false %s", ctx.Cmd(), imgs[2].imgFile),
 	}
 
 	for i, cmd := range runCmds {
@@ -99,7 +99,7 @@ func TestNonRootFetchRmGcImage(t *testing.T) {
 	rootImgHash := importImageAndFetchHash(t, ctx, rootImg)
 
 	// Launch/gc a pod so we can test non-root image gc.
-	runCmd := fmt.Sprintf("%s --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), rootImg)
+	runCmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), rootImg)
 	runRktAndCheckOutput(t, runCmd, "foobar", false)
 
 	ctx.RunGC()

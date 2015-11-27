@@ -41,7 +41,7 @@ func TestNetHost(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --net=host --debug --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), testImage)
+	cmd := fmt.Sprintf("%s --net=host --debug --insecure-options=image run --mds-register=false %s", ctx.Cmd(), testImage)
 	child := spawnOrFail(t, cmd)
 	ctx.RegisterChild(child)
 	defer waitOrFail(t, child, true)
@@ -85,7 +85,7 @@ func TestNetHostConnectivity(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --net=host --debug --insecure-skip-verify run --mds-register=false %s", ctx.Cmd(), testImage)
+	cmd := fmt.Sprintf("%s --net=host --debug --insecure-options=image run --mds-register=false %s", ctx.Cmd(), testImage)
 	child := spawnOrFail(t, cmd)
 	ctx.RegisterChild(child)
 
@@ -129,7 +129,7 @@ func TestNetNone(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=none --mds-register=false %s", ctx.Cmd(), testImage)
+	cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=none --mds-register=false %s", ctx.Cmd(), testImage)
 
 	child := spawnOrFail(t, cmd)
 	defer waitOrFail(t, child, true)
@@ -176,7 +176,7 @@ func TestNetDefaultNetNS(t *testing.T) {
 	defer ctx.Cleanup()
 
 	f := func(argument string) {
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
 		child := spawnOrFail(t, cmd)
 		defer waitOrFail(t, child, true)
 
@@ -255,7 +255,7 @@ func TestNetDefaultConnectivity(t *testing.T) {
 		// Child connects to host
 		go func() {
 			defer ga.Done()
-			cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
+			cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
 			child := ga.SpawnOrFail(cmd)
 			defer ga.WaitOrFail(child)
 
@@ -299,7 +299,7 @@ func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
 		child := spawnOrFail(t, cmd)
 
 		expectedRegex := `IPv4: (.*)\r`
@@ -440,7 +440,7 @@ func testNetCustomDual(t *testing.T, nt networkTemplateT) {
 		testImage := patchTestACI("rkt-inspect-networking1.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.Cmd(), nt.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=%v --mds-register=false %s", ctx.Cmd(), nt.Name, testImage)
 		child := ga.SpawnOrFail(cmd)
 		defer ga.WaitOrFail(child)
 
@@ -468,7 +468,7 @@ func testNetCustomDual(t *testing.T, nt networkTemplateT) {
 		testImage := patchTestACI("rkt-inspect-networking2.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.Cmd(), nt.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=%v --mds-register=false %s", ctx.Cmd(), nt.Name, testImage)
 		child := ga.SpawnOrFail(cmd)
 		defer ga.WaitOrFail(child)
 
@@ -540,7 +540,7 @@ func testNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 		defer os.Remove(testImage)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=%v --mds-register=false %s", ctx.Cmd(), nt.Name, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=%v --mds-register=false %s", ctx.Cmd(), nt.Name, testImage)
 		child := ga.SpawnOrFail(cmd)
 		defer ga.WaitOrFail(child)
 
@@ -653,7 +653,7 @@ func TestNetOverride(t *testing.T) {
 
 	expectedIP := "11.11.4.244"
 
-	cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --net=all --net=\"%s:IP=%s\" --mds-register=false %s", ctx.Cmd(), nt.Name, expectedIP, testImage)
+	cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=all --net=\"%s:IP=%s\" --mds-register=false %s", ctx.Cmd(), nt.Name, expectedIP, testImage)
 	child := spawnOrFail(t, cmd)
 	defer waitOrFail(t, child, true)
 

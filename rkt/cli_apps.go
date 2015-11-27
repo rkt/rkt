@@ -246,3 +246,110 @@ func (al *appsVolume) String() string {
 	}
 	return strings.Join(vs, " ")
 }
+
+// optionList is a flag value type supporting a csv list of options
+type optionList struct {
+	options     []string
+	allOptions  []string
+	permissible map[string]struct{}
+	typeName    string
+}
+
+var _ pflag.Value = (*optionList)(nil)
+
+func newOptionList(permissibleOptions []string, defaultOptions string) (*optionList, error) {
+	permissible := make(map[string]struct{})
+	ol := &optionList{
+		allOptions:  permissibleOptions,
+		permissible: permissible,
+		typeName:    "optionList",
+	}
+
+	for _, o := range permissibleOptions {
+		ol.permissible[o] = struct{}{}
+	}
+
+	if err := ol.Set(defaultOptions); err != nil {
+		return nil, fmt.Errorf("problem setting defaults: %v", err)
+	}
+
+	return ol, nil
+}
+
+func (ol *optionList) Set(s string) error {
+	ol.options = nil
+	if s == "" {
+		return nil
+	}
+	options := strings.Split(strings.ToLower(s), ",")
+	seen := map[string]struct{}{}
+	for _, o := range options {
+		if _, ok := ol.permissible[o]; !ok {
+			return fmt.Errorf("unknown option %q", o)
+		}
+		if _, ok := seen[o]; ok {
+			return fmt.Errorf("duplicated option %q", o)
+		}
+		ol.options = append(ol.options, o)
+		seen[o] = struct{}{}
+	}
+
+	return nil
+}
+
+func (ol *optionList) String() string {
+	return strings.Join(ol.options, ",")
+}
+
+func (ol *optionList) Type() string {
+	return ol.typeName
+}
+
+func (ol *optionList) PermissibleString() string {
+	return fmt.Sprintf(`"%s"`, strings.Join(ol.allOptions, `", "`))
+}
+
+// bitFlags is a flag value type supporting a csv list of options stored as bits
+type bitFlags struct {
+	*optionList
+	flags   int
+	flagMap map[string]int
+}
+
+func newBitFlags(permissibleOptions []string, defaultOptions string, flagMap map[string]int) (*bitFlags, error) {
+	ol, err := newOptionList(permissibleOptions, defaultOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	bf := &bitFlags{
+		optionList: ol,
+		flagMap:    flagMap,
+	}
+	bf.typeName = "bitFlags"
+
+	if err := bf.Set(defaultOptions); err != nil {
+		return nil, fmt.Errorf("problem setting defaults: %v", err)
+	}
+
+	return bf, nil
+}
+
+func (bf *bitFlags) Set(s string) error {
+	if err := bf.optionList.Set(s); err != nil {
+		return err
+	}
+	bf.flags = 0
+	for _, o := range bf.options {
+		if b, ok := bf.flagMap[o]; ok {
+			bf.flags |= b
+		} else {
+			return fmt.Errorf("couldn't find flag for %v", o)
+		}
+	}
+	return nil
+}
+
+func (bf *bitFlags) hasFlag(f int) bool {
+	return (bf.flags & f) == f
+}

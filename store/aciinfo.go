@@ -30,8 +30,8 @@ type ACIInfo struct {
 	Name string
 	// ImportTime is the time this ACI was imported in the store.
 	ImportTime time.Time
-	// LastUsedTime is the last time this image was read
-	LastUsedTime time.Time
+	// LastUsed is the last time this image was read
+	LastUsed time.Time
 	// Latest defines if the ACI was imported using the latest pattern (no
 	// version label was provided on ACI discovery)
 	Latest bool
@@ -39,16 +39,16 @@ type ACIInfo struct {
 
 func NewACIInfo(blobKey string, latest bool, t time.Time) *ACIInfo {
 	return &ACIInfo{
-		BlobKey:      blobKey,
-		Latest:       latest,
-		ImportTime:   t,
-		LastUsedTime: time.Now(),
+		BlobKey:    blobKey,
+		Latest:     latest,
+		ImportTime: t,
+		LastUsed:   time.Now(),
 	}
 }
 
 func aciinfoRowScan(rows *sql.Rows, aciinfo *ACIInfo) error {
 	// This ordering MUST match that in schema.go
-	return rows.Scan(&aciinfo.BlobKey, &aciinfo.Name, &aciinfo.ImportTime, &aciinfo.LastUsedTime, &aciinfo.Latest)
+	return rows.Scan(&aciinfo.BlobKey, &aciinfo.Name, &aciinfo.ImportTime, &aciinfo.LastUsed, &aciinfo.Latest)
 }
 
 // GetAciInfosWithKeyPrefix returns all the ACIInfos with a blobkey starting with the given prefix.
@@ -155,7 +155,7 @@ func WriteACIInfo(tx *sql.Tx, aciinfo *ACIInfo) error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec("INSERT into aciinfo (blobkey, name, importtime, lastusedtime, latest) VALUES ($1, $2, $3, $4, $5)", aciinfo.BlobKey, aciinfo.Name, aciinfo.ImportTime, aciinfo.LastUsedTime, aciinfo.Latest)
+	_, err = tx.Exec("INSERT into aciinfo (blobkey, name, importtime, lastusedtime, latest) VALUES ($1, $2, $3, $4, $5)", aciinfo.BlobKey, aciinfo.Name, aciinfo.ImportTime, aciinfo.LastUsed, aciinfo.Latest)
 	if err != nil {
 		return err
 	}

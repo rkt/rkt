@@ -131,7 +131,7 @@ func gcStore(s *store.Store, gracePeriod time.Duration) error {
 		return fmt.Errorf("Failed to get aciinfos: %v", err)
 	}
 	for _, ai := range aciinfos {
-		if time.Now().Sub(ai.LastUsedTime) <= gracePeriod {
+		if time.Now().Sub(ai.LastUsed) <= gracePeriod {
 			break
 		}
 		imagesToRemove = append(imagesToRemove, ai.BlobKey)

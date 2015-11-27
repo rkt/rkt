@@ -97,11 +97,11 @@ func rktFlagUsages(flagSet *pflag.FlagSet) string {
 	x := new(bytes.Buffer)
 
 	flagSet.VisitAll(func(flag *pflag.Flag) {
-		if len(flag.Deprecated) > 0 {
+		if len(flag.Deprecated) > 0 || flag.Hidden {
 			return
 		}
 		format := ""
-		if len(flag.Shorthand) > 0 {
+		if len(flag.Shorthand) > 0 && len(flag.ShorthandDeprecated) == 0 {
 			format = "  -%s, --%s"
 		} else {
 			format = "   %s   --%s"

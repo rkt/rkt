@@ -158,11 +158,11 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	}
 	fn := &finder{
 		imageActionData: imageActionData{
-			s:                  s,
-			headers:            config.AuthPerHost,
-			dockerAuth:         config.DockerCredentialsPerRegistry,
-			insecureSkipVerify: globalFlags.InsecureSkipVerify,
-			debug:              globalFlags.Debug,
+			s:             s,
+			headers:       config.AuthPerHost,
+			dockerAuth:    config.DockerCredentialsPerRegistry,
+			insecureFlags: globalFlags.InsecureFlags,
+			debug:         globalFlags.Debug,
 		},
 		storeOnly: flagStoreOnly,
 		noStore:   flagNoStore,

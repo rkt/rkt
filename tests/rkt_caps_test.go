@@ -93,7 +93,7 @@ func TestCaps(t *testing.T) {
 		for _, stage := range []int{1, 2} {
 			t.Logf("Running test #%v: %v [stage %v]", i, tt.testName, stage)
 
-			cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false --set-env=CAPABILITY=%d %s", ctx.Cmd(), int(tt.capa), stageFileNames[stage-1])
+			cmd := fmt.Sprintf("%s --debug --insecure-options=image run --mds-register=false --set-env=CAPABILITY=%d %s", ctx.Cmd(), int(tt.capa), stageFileNames[stage-1])
 			child := spawnOrFail(t, cmd)
 
 			expectedLine := tt.capa.String()
@@ -129,7 +129,7 @@ func TestCapsNonRoot(t *testing.T) {
 
 		t.Logf("Running test #%v: %v [non-root]", i, tt.testName)
 
-		cmd := fmt.Sprintf("%s --debug --insecure-skip-verify run --mds-register=false --set-env=CAPABILITY=%d %s", ctx.Cmd(), int(tt.capa), fileName)
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --mds-register=false --set-env=CAPABILITY=%d %s", ctx.Cmd(), int(tt.capa), fileName)
 		child := spawnOrFail(t, cmd)
 
 		expectedLine := tt.capa.String()

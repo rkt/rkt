@@ -172,7 +172,7 @@ func serverHandler(t *testing.T, server *taas.Server) {
 // useful for ensuring that image name is unique and for descriptive
 // purposes.
 func expectedRunRkt(ctx *testutils.RktRunCtx, t *testing.T, host, dir, line string) {
-	// First, check that --insecure-skip-verify is required
+	// First, check that --insecure-options=image,tls is required
 	// The server does not provide signatures for now.
 	cmd := fmt.Sprintf(`%s --debug run --mds-register=false %s/%s/prog.aci`, ctx.Cmd(), host, dir)
 	child := spawnOrFail(t, cmd)
@@ -182,8 +182,8 @@ func expectedRunRkt(ctx *testutils.RktRunCtx, t *testing.T, host, dir, line stri
 		t.Fatalf("Didn't receive expected output %q: %v", signatureErrorLine, err)
 	}
 
-	// Then, run with --insecure-skip-verify
-	cmd = fmt.Sprintf(`%s --debug --insecure-skip-verify run --mds-register=false %s/%s/prog.aci`, ctx.Cmd(), host, dir)
+	// Then, run with --insecure-options=image,tls
+	cmd = fmt.Sprintf(`%s --debug --insecure-options=image,tls run --mds-register=false %s/%s/prog.aci`, ctx.Cmd(), host, dir)
 	child = spawnOrFail(t, cmd)
 	defer child.Wait()
 	if err := expectWithOutput(child, line); err != nil {
