@@ -1,3 +1,9 @@
+## vUNRELEASED
+
+#### New features and UX changes
+
+- make data directory configurable with a config file ([#1806](https://github.com/coreos/rkt/pull/1806))
+
 ## v0.13.0
 
 The primary motivation for this release is to add support for fetching images on the Docker Registry 2.0. It also includes other small improvements.
