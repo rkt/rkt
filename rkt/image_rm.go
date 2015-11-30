@@ -100,7 +100,7 @@ func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	if err := rmImages(s, args); err != nil {
-		stderr("rKt: %v", err)
+		stderr("rkt: %v", err)
 		return 1
 	}
 
