@@ -27,20 +27,47 @@ func PrepareAssets(assets []string, rootfs string, placeholderMapping map[string
 		assetsToProcess := newAssets
 		newAssets = nil
 		for _, asset := range assetsToProcess {
+			splitAsset := filepath.SplitList(asset)
+			if len(splitAsset) != 2 {
+				return fmt.Errorf("Malformed asset option: '%v' - expected two absolute paths separated with %v", asset, listSeparator())
+			}
+			evalSrc, srcErr := evalPath(splitAsset[0])
+			if srcErr != nil {
+				return fmt.Errorf("Could not evaluate symlinks in source asset %q: %v", evalSrc, srcErr)
+			}
+			evalDest, destErr := evalPath(splitAsset[1])
+			asset = getAssetString(evalSrc, evalDest)
 			Debug("Processing asset:", asset)
 			if _, ok := processedAssets[asset]; ok {
 				Debug("  skipped")
 				continue
 			}
-			processedAssets[asset] = struct{}{}
 			additionalAssets, err := processAsset(asset, rootfs, placeholderMapping)
+			if destErr != nil {
+				evalDest, destErr = evalPath(evalDest)
+				if destErr != nil {
+					return fmt.Errorf("Could not evaluate symlinks in destination asset %q, even after it was copied to: %v", evalDest, destErr)
+				}
+				asset = getAssetString(evalSrc, evalDest)
+			}
 			if err != nil {
 				return err
 			}
+			processedAssets[asset] = struct{}{}
 			newAssets = append(newAssets, additionalAssets...)
 		}
 	}
 	return nil
+}
+
+func evalPath(path string) (string, error) {
+	symlinkDir := filepath.Dir(path)
+	symlinkBase := filepath.Base(path)
+	realSymlinkDir, err := filepath.EvalSymlinks(symlinkDir)
+	if err != nil {
+		return path, err
+	}
+	return filepath.Join(realSymlinkDir, symlinkBase), nil
 }
 
 // processAsset validates an asset, replaces placeholders with real

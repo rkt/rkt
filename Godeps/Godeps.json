@@ -80,7 +80,7 @@
 		},
 		{
 			"ImportPath": "github.com/appc/goaci/proj2aci",
-			"Rev": "f8124610a7fb34aa80e8cdf02361180b524193d6"
+			"Rev": "ba7b591f930783c0ab75f5bbfd6ff65c7bd011bf"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/ace",
