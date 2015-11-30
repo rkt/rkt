@@ -236,7 +236,7 @@ func installAssets() error {
 		return err
 	}
 
-	systemdUnitsPath := "/usr/lib/systemd/system"
+	systemdUnitsPath := "/lib/systemd/system"
 	assets := []string{
 		proj2aci.GetAssetString("/usr/lib/systemd/systemd", systemdBin),
 		proj2aci.GetAssetString("/usr/bin/systemctl", systemctlBin),
