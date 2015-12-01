@@ -36,17 +36,17 @@ var (
 )
 
 type SecFlags struct {
-	*BitFlags
+	*bitFlags
 }
 
 func NewSecFlags(defOpts string) (*SecFlags, error) {
-	bf, err := NewBitFlags(insecureOptions, defOpts, insecureOptionsMap)
+	bf, err := newBitFlags(insecureOptions, defOpts, insecureOptionsMap)
 	if err != nil {
 		return nil, err
 	}
 
 	sf := &SecFlags{
-		BitFlags: bf,
+		bitFlags: bf,
 	}
 	return sf, nil
 }

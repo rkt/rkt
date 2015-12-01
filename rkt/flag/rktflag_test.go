@@ -110,17 +110,17 @@ func TestBitFlags(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		// test NewBitFlags
-		if _, err := NewBitFlags(options, tt.opts, bfMap); (err != nil) != tt.parseErr {
-			t.Errorf("test %d: unexpected error in NewBitFlags: %v", i, err)
+		// test newBitFlags
+		if _, err := newBitFlags(options, tt.opts, bfMap); (err != nil) != tt.parseErr {
+			t.Errorf("test %d: unexpected error in newBitFlags: %v", i, err)
 		}
 
-		bf, err := NewBitFlags(options, strings.Join(options, ","), bfMap)
+		bf, err := newBitFlags(options, strings.Join(options, ","), bfMap)
 		if err != nil {
 			t.Errorf("test %d: unexpected error preparing test: %v", i, err)
 		}
 
-		// test BitFlags.Set()
+		// test bitFlags.Set()
 		if err := bf.Set(tt.opts); (err != nil) != tt.parseErr {
 			t.Errorf("test %d: Could not parse options as expected: %v", i, err)
 		}

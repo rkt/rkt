@@ -18,24 +18,24 @@ import (
 	"fmt"
 )
 
-// BitFlags is a flag value type supporting a csv list of options stored as bits
-type BitFlags struct {
+// bitFlags is a flag value type supporting a csv list of options stored as bits
+type bitFlags struct {
 	*OptionList
 	flags   int
 	flagMap map[string]int
 }
 
-func NewBitFlags(permissibleOptions []string, defaultOptions string, flagMap map[string]int) (*BitFlags, error) {
+func newBitFlags(permissibleOptions []string, defaultOptions string, flagMap map[string]int) (*bitFlags, error) {
 	ol, err := NewOptionList(permissibleOptions, defaultOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	bf := &BitFlags{
+	bf := &bitFlags{
 		OptionList: ol,
 		flagMap:    flagMap,
 	}
-	bf.typeName = "BitFlags"
+	bf.typeName = "bitFlags"
 
 	if err := bf.Set(defaultOptions); err != nil {
 		return nil, fmt.Errorf("problem setting defaults: %v", err)
@@ -44,7 +44,7 @@ func NewBitFlags(permissibleOptions []string, defaultOptions string, flagMap map
 	return bf, nil
 }
 
-func (bf *BitFlags) Set(s string) error {
+func (bf *bitFlags) Set(s string) error {
 	if err := bf.OptionList.Set(s); err != nil {
 		return err
 	}
@@ -59,6 +59,6 @@ func (bf *BitFlags) Set(s string) error {
 	return nil
 }
 
-func (bf *BitFlags) hasFlag(f int) bool {
+func (bf *bitFlags) hasFlag(f int) bool {
 	return (bf.flags & f) == f
 }
