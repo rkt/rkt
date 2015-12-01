@@ -1,4 +1,4 @@
-// Copyright 2015 CoreOS, Inc.
+// Copyright 2015 CNI authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -117,6 +117,13 @@ func (l *DHCPLease) acquire() error {
 		return err
 	}
 	defer c.Close()
+
+	if (l.link.Attrs().Flags & net.FlagUp) != net.FlagUp {
+		log.Printf("Link %q down. Attempting to set up", l.link.Attrs().Name)
+		if err = netlink.LinkSetUp(l.link); err != nil {
+			return err
+		}
+	}
 
 	pkt, err := backoffRetry(func() (*dhcp4.Packet, error) {
 		ok, ack, err := c.Request()

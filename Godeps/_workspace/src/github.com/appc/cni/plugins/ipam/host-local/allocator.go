@@ -1,4 +1,4 @@
-// Copyright 2015 CoreOS, Inc.
+// Copyright 2015 CNI authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -142,6 +142,9 @@ func (a *IPAllocator) Release(id string) error {
 }
 
 func networkRange(ipnet *net.IPNet) (net.IP, net.IP, error) {
+	if ipnet.IP == nil {
+		return nil, nil, fmt.Errorf("missing field %q in IPAM configuration", "subnet")
+	}
 	ip := ipnet.IP.To4()
 	if ip == nil {
 		ip = ipnet.IP.To16()
