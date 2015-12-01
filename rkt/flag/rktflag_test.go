@@ -130,3 +130,88 @@ func TestBitFlags(t *testing.T) {
 		}
 	}
 }
+
+func TestSecFlags(t *testing.T) {
+	tests := []struct {
+		opts   string
+		image  bool
+		tls    bool
+		onDisk bool
+		err    bool
+	}{
+		{
+			opts:   "none",
+			image:  false,
+			tls:    false,
+			onDisk: false,
+		},
+		{
+			opts:   "image",
+			image:  true,
+			tls:    false,
+			onDisk: false,
+		},
+		{
+			opts:   "tls",
+			image:  false,
+			tls:    true,
+			onDisk: false,
+		},
+		{
+			opts:   "onDisk",
+			image:  false,
+			tls:    false,
+			onDisk: true,
+		},
+		{
+			opts:   "all",
+			image:  true,
+			tls:    true,
+			onDisk: true,
+		},
+		{
+			opts:   "image,tls",
+			image:  true,
+			tls:    true,
+			onDisk: false,
+		},
+		{
+			opts: "i-am-sure-we-will-not-get-this-insecure-flag",
+			err:  true,
+		},
+	}
+
+	for i, tt := range tests {
+		sf, err := NewSecFlags(tt.opts)
+		if err != nil && !tt.err {
+			t.Errorf("test %d: unexpected error in NewSecFlags: %v", i, err)
+		} else if err == nil && tt.err {
+			t.Errorf("test %d: unexpected success in NewSecFlags for options %q", i, tt.opts)
+		}
+		if err != nil {
+			continue
+		}
+
+		if got := sf.SkipImageCheck(); tt.image != got {
+			t.Errorf("test %d: expected image skip to be %v, got %v", i, tt.image, got)
+		}
+
+		if got := sf.SkipTlsCheck(); tt.tls != got {
+			t.Errorf("test %d: expected tls skip to be %v, got %v", i, tt.tls, got)
+		}
+
+		if got := sf.SkipOnDiskCheck(); tt.onDisk != got {
+			t.Errorf("test %d: expected on disk skip to be %v, got %v", i, tt.onDisk, got)
+		}
+
+		all := tt.onDisk && tt.tls && tt.image
+		if got := sf.SkipAllSecurityChecks(); all != got {
+			t.Errorf("test %d: expected all skip to be %v, got %v", i, all, got)
+		}
+
+		any := tt.onDisk || tt.tls || tt.image
+		if got := sf.SkipAnySecurityChecks(); any != got {
+			t.Errorf("test %d: expected all skip to be %v, got %v", i, any, got)
+		}
+	}
+}
