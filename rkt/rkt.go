@@ -19,7 +19,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -37,36 +36,6 @@ const (
 
 	defaultDataDir = "/var/lib/rkt"
 )
-
-// flagInsecureSkipVerify is a deprecated flag that is equivalent to setting
-// "--insecure-options" to 'all' when true and 'none' when false.
-// TODO: Remove before 1.0 release
-type skipVerify struct{}
-
-func (sv *skipVerify) Set(s string) error {
-	v, err := strconv.ParseBool(s)
-	if err != nil {
-		return err
-	}
-
-	switch v {
-	case false:
-		err = (*rktflag.BitFlags)(globalFlags.InsecureFlags).Set("none")
-	case true:
-		err = (*rktflag.BitFlags)(globalFlags.InsecureFlags).Set("all")
-	}
-	return err
-}
-
-func (sv *skipVerify) String() string {
-	return fmt.Sprintf("%v", *sv)
-}
-
-func (sv *skipVerify) Type() string {
-	// Must return "bool" in order to place naked flag before subcommand.
-	// For example, rkt --insecure-skip-verify run docker://image
-	return "bool"
-}
 
 type absDir string
 
@@ -123,7 +92,6 @@ func init() {
 	}
 
 	globalFlags.InsecureFlags = sf
-	skipVerify := new(skipVerify)
 
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.Debug, "debug", false, "print out more debug information to stderr")
 	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.Dir), "dir", "rkt data directory")
@@ -136,11 +104,7 @@ func init() {
 		true, "automatically trust gpg keys fetched from https")
 
 	// TODO: Remove before 1.0
-	svFlag := cmdRkt.PersistentFlags().VarPF(skipVerify, "insecure-skip-verify", "", "DEPRECATED")
-	svFlag.DefValue = "false"
-	svFlag.NoOptDefVal = "true"
-	svFlag.Hidden = true
-	svFlag.Deprecated = "please use --insecure-options."
+	rktflag.InstallDeprecatedSkipVerify(cmdRkt.PersistentFlags(), sf)
 }
 
 func init() {
