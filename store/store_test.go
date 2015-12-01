@@ -425,13 +425,13 @@ func TestTreeStore(t *testing.T) {
 	}
 
 	// Ask the store to render the treestore
-	id, err := s.RenderTreeStore(key, false)
+	id, _, err := s.RenderTreeStore(key, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Verify image Hash. Should be the same.
-	err = s.CheckTreeStore(id)
+	_, err = s.CheckTreeStore(id)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -444,14 +444,14 @@ func TestTreeStore(t *testing.T) {
 	}
 
 	// Verify image Hash. Should be different
-	err = s.CheckTreeStore(id)
+	_, err = s.CheckTreeStore(id)
 	if err == nil {
 		t.Errorf("expected non-nil error!")
 	}
 
 	// rebuild the tree
 	prevID := id
-	id, err = s.RenderTreeStore(key, true)
+	id, _, err = s.RenderTreeStore(key, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -468,7 +468,7 @@ func TestTreeStore(t *testing.T) {
 	}
 
 	// Verify image Hash. Should be different
-	err = s.CheckTreeStore(id)
+	_, err = s.CheckTreeStore(id)
 	if err == nil {
 		t.Errorf("expected non-nil error!")
 	}

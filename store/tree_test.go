@@ -112,13 +112,13 @@ func TestTreeStoreWrite(t *testing.T) {
 	id := "treestoreid01"
 
 	// Ask the store to render the treestore
-	err = s.treestore.Write(id, key, s)
+	_, err = s.treestore.Write(id, key, s)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Verify image Hash. Should be the same.
-	err = s.treestore.Check(id)
+	_, err = s.treestore.Check(id)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestTreeStoreRemove(t *testing.T) {
 	}
 
 	// Test rendered tree
-	err = s.treestore.Write(id, key, s)
+	_, err = s.treestore.Write(id, key, s)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

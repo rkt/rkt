@@ -386,7 +386,7 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error marshalling image manifest: %v", err)
 	}
-	if err = s.stores[imageManifestType].Write(key, imj); err != nil {
+	if err := s.stores[imageManifestType].Write(key, imj); err != nil {
 		return "", fmt.Errorf("error importing image manifest: %v", err)
 	}
 
@@ -507,46 +507,47 @@ func (s *Store) GetTreeStoreID(key string) (string, error) {
 // already fully rendered.
 // Users of treestore should call s.RenderTreeStore before using it to ensure
 // that the treestore is completely rendered.
-// Returns the id of the rendered treestore.
-func (s *Store) RenderTreeStore(key string, rebuild bool) (string, error) {
-	id, err := s.GetTreeStoreID(key)
+// Returns the id and hash of the rendered treestore if it is newly rendered,
+// and only the id if it is already rendered.
+func (s *Store) RenderTreeStore(key string, rebuild bool) (id string, hash string, err error) {
+	id, err = s.GetTreeStoreID(key)
 	if err != nil {
-		return "", fmt.Errorf("cannot calculate treestore id: %v", err)
+		return "", "", fmt.Errorf("cannot calculate treestore id: %v", err)
 	}
 
 	// this lock references the treestore dir for the specified id.
 	treeStoreKeyLock, err := lock.ExclusiveKeyLock(s.treeStoreLockDir, id)
 	if err != nil {
-		return "", fmt.Errorf("error locking tree store: %v", err)
+		return "", "", fmt.Errorf("error locking tree store: %v", err)
 	}
 	defer treeStoreKeyLock.Close()
 
 	if !rebuild {
 		rendered, err := s.treestore.IsRendered(id)
 		if err != nil {
-			return "", fmt.Errorf("cannot determine if tree is already rendered: %v", err)
+			return "", "", fmt.Errorf("cannot determine if tree is already rendered: %v", err)
 		}
 		if rendered {
-			return id, nil
+			return id, "", nil
 		}
 	}
 	// Firstly remove a possible partial treestore if existing.
 	// This is needed as a previous ACI removal operation could have failed
 	// cleaning the tree store leaving some stale files.
 	if err := s.treestore.Remove(id); err != nil {
-		return "", err
+		return "", "", err
 	}
-	if err := s.treestore.Write(id, key, s); err != nil {
-		return "", err
+	if hash, err = s.treestore.Write(id, key, s); err != nil {
+		return "", "", err
 	}
-	return id, nil
+	return id, hash, nil
 }
 
 // CheckTreeStore verifies the treestore consistency for the specified id.
-func (s *Store) CheckTreeStore(id string) error {
+func (s *Store) CheckTreeStore(id string) (string, error) {
 	treeStoreKeyLock, err := lock.SharedKeyLock(s.treeStoreLockDir, id)
 	if err != nil {
-		return fmt.Errorf("error locking tree store: %v", err)
+		return "", fmt.Errorf("error locking tree store: %v", err)
 	}
 	defer treeStoreKeyLock.Close()
 

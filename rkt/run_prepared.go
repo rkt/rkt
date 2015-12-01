@@ -115,7 +115,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	rcfg := stage0.RunConfig{
-		CommonConfig: stage0.CommonConfig{
+		CommonConfig: &stage0.CommonConfig{
 			Store: s,
 			UUID:  p.uuid,
 			Debug: globalFlags.Debug,
