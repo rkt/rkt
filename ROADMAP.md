@@ -19,6 +19,7 @@ Backwards-compatibility is a priority for the v1.0.0 release.
 ### rkt 1.0
 - stable CLI interface
 - stable read-only API interface
+- stable on-disk format (all upgrades should be backwards-compatible)
 - fully integrated with `machinectl login` and `systemd-run` [#1463](https://github.com/coreos/rkt/issues/1463)
 - packaged for more distributions
   - CentOS [#1305](https://github.com/coreos/rkt/issues/1305)
