@@ -63,6 +63,12 @@ AC_ARG_WITH([stage1-flavors],
             [RKT_STAGE1_FLAVORS="${withval}"],
             [RKT_STAGE1_FLAVORS=auto])
 
+AC_ARG_WITH([stage1-flavors-version-override],
+            [AS_HELP_STRING([--with-stage1-flavors-version-override],
+                            [override the version of stage1 with a custom one; it also changes the default stage1 version in flavor setup])],
+            [RKT_STAGE1_FLAVORS_VERSION_OVERRIDE="${withval}"],
+            [RKT_STAGE1_FLAVORS_VERSION_OVERRIDE=auto])
+
 AC_ARG_WITH(stage1-default-location,
             [AS_HELP_STRING([--with-stage1-default-location],
                             [default location of stage1, default: none])],
@@ -153,6 +159,15 @@ AS_CASE([${RKT_STAGE1_SETUP_KIND}],
                    RKT_STAGE1_DEFAULT_NAME=''
                    RKT_STAGE1_DEFAULT_VERSION=''],
         [AC_MSG_ERROR([*** Unknown setup kind, should not happen])])
+
+## Stage1 flavor version override verification
+
+AS_VAR_IF([RKT_STAGE1_FLAVORS_VERSION_OVERRIDE], [auto],
+          dnl no override, no checking
+          [RKT_STAGE1_FLAVORS_VERSION_OVERRIDE=''],
+          dnl check if we override the version, even if we build no flavors at all
+          [AS_VAR_IF([RKT_STAGE1_FLAVORS], [],
+                     [AC_MSG_WARN([* overriding stage1 version, but no stage1 flavors are built])])])
 
 ## Built stage1 flavors verification
 
@@ -297,7 +312,7 @@ RKT_IF_HAS_FLAVOR([${RKT_STAGE1_FLAVORS}],[coreos,kvm],
                              [AC_MSG_WARN([* --with-coreos-local-pxe-image-systemd-version is ignored by ${RKT_STAGE1_DEFAULT_FLAVOR} stage1 flavor])
                               RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER=''])])
 
-## Setup default name, version and location
+## Setup default name, version and location, take version override into account for flavored setup
 
 AS_CASE([${RKT_STAGE1_SETUP_KIND}],
         [detailed],
@@ -316,7 +331,9 @@ AS_CASE([${RKT_STAGE1_SETUP_KIND}],
                                            [RKT_STAGE1_DEFAULT_NAME="coreos.com/rkt/stage1-${RKT_STAGE1_DEFAULT_FLAVOR}-${RKT_STAGE1_SYSTEMD_VER}"],
                                    dnl other flavors get only flavor name
                                    [RKT_STAGE1_DEFAULT_NAME="coreos.com/rkt/stage1-${RKT_STAGE1_DEFAULT_FLAVOR}"])
-                   RKT_STAGE1_DEFAULT_VERSION="${RKT_VERSION}"
+                   AS_VAR_IF([RKT_STAGE1_FLAVORS_VERSION_OVERRIDE], [],
+                             [RKT_STAGE1_DEFAULT_VERSION="${RKT_VERSION}"],
+                             [RKT_STAGE1_DEFAULT_VERSION="${RKT_STAGE1_FLAVORS_VERSION_OVERRIDE}"])
                    AS_VAR_IF([RKT_STAGE1_DEFAULT_LOCATION],[auto],
                              [RKT_STAGE1_DEFAULT_LOCATION="path/stage1-${RKT_STAGE1_DEFAULT_FLAVOR}.aci"])],
         [AC_MSG_ERROR([*** Unknown setup kind, should not happen])])
@@ -482,6 +499,7 @@ RKT_VERSION_LDFLAGS=`RKT_XF github.com/coreos/rkt/version.Version "${RKT_VERSION
 #### SUBSTITUTIONS
 
 AC_SUBST(RKT_VERSION)
+AC_SUBST(RKT_STAGE1_FLAVORS_VERSION_OVERRIDE)
 
 AC_SUBST(RKT_STAGE1_DEFAULT_NAME)
 AC_SUBST(RKT_STAGE1_DEFAULT_VERSION)
@@ -525,8 +543,12 @@ AS_CASE([${RKT_STAGE1_SETUP_KIND}],
                 [AC_MSG_RESULT([
         built stage1 flavors:                   '${RKT_STAGE1_FLAVORS}'
         default stage1 flavor:                  '${RKT_STAGE1_DEFAULT_FLAVOR}'
-        implied default stage1 name:            '${RKT_STAGE1_DEFAULT_NAME}'
+        implied default stage1 name:            '${RKT_STAGE1_DEFAULT_NAME}'])
+                 AS_VAR_IF([RKT_STAGE1_FLAVORS_VERSION_OVERRIDE], [],
+                           [AC_MSG_RESULT([dnl
         implied default stage1 version:         '${RKT_STAGE1_DEFAULT_VERSION}'])],
+                           [AC_MSG_RESULT([dnl
+        overridden default stage1 version:      '${RKT_STAGE1_DEFAULT_VERSION}'])])],
         [detailed],
                 [AC_MSG_RESULT([
         default stage1 name:                    '${RKT_STAGE1_DEFAULT_NAME}'
