@@ -35,7 +35,9 @@ var (
 	}
 )
 
-type SecFlags BitFlags
+type SecFlags struct {
+	*BitFlags
+}
 
 func NewSecFlags(defOpts string) (*SecFlags, error) {
 	bf, err := NewBitFlags(insecureOptions, defOpts, insecureOptionsMap)
@@ -43,25 +45,28 @@ func NewSecFlags(defOpts string) (*SecFlags, error) {
 		return nil, err
 	}
 
-	return (*SecFlags)(bf), nil
+	sf := &SecFlags{
+		BitFlags: bf,
+	}
+	return sf, nil
 }
 
 func (sf *SecFlags) SkipImageCheck() bool {
-	return (*BitFlags)(sf).hasFlag(insecureImage)
+	return sf.hasFlag(insecureImage)
 }
 
 func (sf *SecFlags) SkipTlsCheck() bool {
-	return (*BitFlags)(sf).hasFlag(insecureTls)
+	return sf.hasFlag(insecureTls)
 }
 
 func (sf *SecFlags) SkipOnDiskCheck() bool {
-	return (*BitFlags)(sf).hasFlag(insecureOnDisk)
+	return sf.hasFlag(insecureOnDisk)
 }
 
 func (sf *SecFlags) SkipAllSecurityChecks() bool {
-	return (*BitFlags)(sf).hasFlag(insecureAll)
+	return sf.hasFlag(insecureAll)
 }
 
 func (sf *SecFlags) SkipAnySecurityChecks() bool {
-	return (*BitFlags)(sf).flags != 0
+	return sf.flags != 0
 }

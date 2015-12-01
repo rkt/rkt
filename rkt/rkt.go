@@ -97,7 +97,7 @@ func init() {
 	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.Dir), "dir", "rkt data directory")
 	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.SystemConfigDir), "system-config", "system configuration directory")
 	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.LocalConfigDir), "local-config", "local configuration directory")
-	cmdRkt.PersistentFlags().Var((*rktflag.BitFlags)(globalFlags.InsecureFlags), "insecure-options",
+	cmdRkt.PersistentFlags().Var(globalFlags.InsecureFlags, "insecure-options",
 		fmt.Sprintf("comma-separated list of security features to disable. Allowed values: %s",
 			globalFlags.InsecureFlags.PermissibleString()))
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.TrustKeysFromHttps, "trust-keys-from-https",

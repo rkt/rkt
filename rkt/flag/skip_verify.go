@@ -48,9 +48,9 @@ func (sv *skipVerify) Set(s string) error {
 
 	switch v {
 	case false:
-		err = (*BitFlags)(sv.flags).Set("none")
+		err = sv.flags.Set("none")
 	case true:
-		err = (*BitFlags)(sv.flags).Set("all")
+		err = sv.flags.Set("all")
 	}
 	return err
 }
