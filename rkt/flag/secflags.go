@@ -24,18 +24,27 @@ const (
 )
 
 var (
-	InsecureOptions = []string{"none", "image", "tls", "ondisk", "all"}
+	insecureOptions = []string{"none", "image", "tls", "ondisk", "all"}
 
-	InsecureOptionsMap = map[string]int{
-		InsecureOptions[0]: insecureNone,
-		InsecureOptions[1]: insecureImage,
-		InsecureOptions[2]: insecureTls,
-		InsecureOptions[3]: insecureOnDisk,
-		InsecureOptions[4]: insecureAll,
+	insecureOptionsMap = map[string]int{
+		insecureOptions[0]: insecureNone,
+		insecureOptions[1]: insecureImage,
+		insecureOptions[2]: insecureTls,
+		insecureOptions[3]: insecureOnDisk,
+		insecureOptions[4]: insecureAll,
 	}
 )
 
 type SecFlags BitFlags
+
+func NewSecFlags(defOpts string) (*SecFlags, error) {
+	bf, err := NewBitFlags(insecureOptions, defOpts, insecureOptionsMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return (*SecFlags)(bf), nil
+}
 
 func (sf *SecFlags) SkipImageCheck() bool {
 	return (*BitFlags)(sf).hasFlag(insecureImage)

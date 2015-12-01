@@ -57,18 +57,18 @@ type serverHandler struct {
 	auth string
 }
 
-func getSecFlags(opts []string, defOpts string, fm map[string]int) *rktflag.SecFlags {
-	bf, err := rktflag.NewBitFlags(opts, defOpts, fm)
+func getSecFlags(defOpts string) *rktflag.SecFlags {
+	sf, err := rktflag.NewSecFlags(defOpts)
 	if err != nil {
 		panic(fmt.Sprintf("fetch-test: problem initializing flags: %v", err))
 	}
 
-	return (*rktflag.SecFlags)(bf)
+	return sf
 }
 
 var (
-	insecureFlags = getSecFlags(rktflag.InsecureOptions, "image,tls", rktflag.InsecureOptionsMap)
-	secureFlags   = getSecFlags(rktflag.InsecureOptions, "none", rktflag.InsecureOptionsMap)
+	insecureFlags = getSecFlags("image,tls")
+	secureFlags   = getSecFlags("none")
 )
 
 func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

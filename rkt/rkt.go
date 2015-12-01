@@ -116,13 +116,13 @@ var cmdRkt = &cobra.Command{
 }
 
 func init() {
-	bf, err := rktflag.NewBitFlags(rktflag.InsecureOptions, "none", rktflag.InsecureOptionsMap)
+	sf, err := rktflag.NewSecFlags("none")
 	if err != nil {
 		stderr("rkt: problem initializing: %v", err)
 		os.Exit(1)
 	}
 
-	globalFlags.InsecureFlags = (*rktflag.SecFlags)(bf)
+	globalFlags.InsecureFlags = sf
 	skipVerify := new(skipVerify)
 
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.Debug, "debug", false, "print out more debug information to stderr")
