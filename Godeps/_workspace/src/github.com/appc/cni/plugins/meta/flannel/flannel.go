@@ -1,4 +1,4 @@
-// Copyright 2015 CNI Authors.
+// Copyright 2015 CNI authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,8 +48,26 @@ type NetConf struct {
 type subnetEnv struct {
 	nw     *net.IPNet
 	sn     *net.IPNet
-	mtu    uint
-	ipmasq bool
+	mtu    *uint
+	ipmasq *bool
+}
+
+func (se *subnetEnv) missing() string {
+	m := []string{}
+
+	if se.nw == nil {
+		m = append(m, "FLANNEL_NETWORK")
+	}
+	if se.sn == nil {
+		m = append(m, "FLANNEL_SUBNET")
+	}
+	if se.mtu == nil {
+		m = append(m, "FLANNEL_MTU")
+	}
+	if se.ipmasq == nil {
+		m = append(m, "FLANNEL_IPMASQ")
+	}
+	return strings.Join(m, ", ")
 }
 
 func loadFlannelNetConf(bytes []byte) (*NetConf, error) {
@@ -92,14 +110,20 @@ func loadFlannelSubnetEnv(fn string) (*subnetEnv, error) {
 			if err != nil {
 				return nil, err
 			}
-			se.mtu = uint(mtu)
+			se.mtu = new(uint)
+			*se.mtu = uint(mtu)
 
 		case "FLANNEL_IPMASQ":
-			se.ipmasq = parts[1] == "true"
+			ipmasq := parts[1] == "true"
+			se.ipmasq = &ipmasq
 		}
 	}
 	if err := s.Err(); err != nil {
 		return nil, err
+	}
+
+	if m := se.missing(); m != "" {
+		return nil, fmt.Errorf("%v is missing %v", fn, m)
 	}
 
 	return se, nil
@@ -182,7 +206,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	if !hasKey(n.Delegate, "ipMasq") {
 		// if flannel is not doing ipmasq, we should
-		ipmasq := !fenv.ipmasq
+		ipmasq := !*fenv.ipmasq
 		n.Delegate["ipMasq"] = ipmasq
 	}
 

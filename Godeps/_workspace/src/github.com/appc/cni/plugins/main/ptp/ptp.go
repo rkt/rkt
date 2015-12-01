@@ -1,4 +1,4 @@
-// Copyright 2015 CoreOS, Inc.
+// Copyright 2015 CNI authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ func setupContainerVeth(netns, ifName string, mtu int, pr *types.Result) (string
 
 		contVeth, err := netlink.LinkByName(ifName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to look up %q: %v", ifName, err)
 		}
 
 		// Delete the route that was automatically added
@@ -80,12 +80,11 @@ func setupContainerVeth(netns, ifName string, mtu int, pr *types.Result) (string
 				IP:   pr.IP4.IP.IP.Mask(pr.IP4.IP.Mask),
 				Mask: pr.IP4.IP.Mask,
 			},
-			Scope: netlink.SCOPE_LINK,
-			Src:   pr.IP4.IP.IP,
+			Scope: netlink.SCOPE_NOWHERE,
 		}
 
 		if err := netlink.RouteDel(&route); err != nil {
-			return err
+			return fmt.Errorf("failed to delete route %v: %v", route, err)
 		}
 
 		for _, r := range []netlink.Route{
@@ -110,7 +109,7 @@ func setupContainerVeth(netns, ifName string, mtu int, pr *types.Result) (string
 			},
 		} {
 			if err := netlink.RouteAdd(&r); err != nil {
-				return err
+				return fmt.Errorf("failed to add route %v: %v", r, err)
 			}
 		}
 
