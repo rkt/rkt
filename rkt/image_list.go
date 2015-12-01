@@ -21,11 +21,13 @@ import (
 	"os"
 	"strings"
 
+	rktflag "github.com/coreos/rkt/rkt/flag"
+	"github.com/coreos/rkt/store"
+
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/lastditch"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/dustin/go-humanize"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
-	"github.com/coreos/rkt/store"
 )
 
 const (
@@ -104,8 +106,8 @@ var (
 		Short: "List images in the local store",
 		Run:   runWrapper(runImages),
 	}
-	flagImagesFields     *optionList
-	flagImagesSortFields *optionList
+	flagImagesFields     *rktflag.OptionList
+	flagImagesSortFields *rktflag.OptionList
 	flagImagesSortAsc    ImagesSortAsc
 )
 
@@ -115,12 +117,12 @@ func init() {
 
 	// Set defaults
 	var err error
-	flagImagesFields, err = newOptionList(fields, strings.Join(fields, ","))
+	flagImagesFields, err = rktflag.NewOptionList(fields, strings.Join(fields, ","))
 	if err != nil {
 		stderr("image-list: %v", err)
 		os.Exit(1)
 	}
-	flagImagesSortFields, err = newOptionList(sortFields, l(importTime))
+	flagImagesSortFields, err = rktflag.NewOptionList(sortFields, l(importTime))
 	if err != nil {
 		stderr("image-list: %v", err)
 		os.Exit(1)
@@ -144,7 +146,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 
 	if !flagNoLegend {
 		var headerFields []string
-		for _, f := range flagImagesFields.options {
+		for _, f := range flagImagesFields.Options {
 			headerFields = append(headerFields, ImagesFieldHeaderMap[f])
 		}
 		fmt.Fprintf(tabOut, "%s\n", strings.Join(headerFields, "\t"))
@@ -157,7 +159,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 	}
 
 	var sortAciinfoFields []string
-	for _, f := range flagImagesSortFields.options {
+	for _, f := range flagImagesSortFields.Options {
 		sortAciinfoFields = append(sortAciinfoFields, ImagesFieldAciInfoMap[f])
 	}
 	aciInfos, err := s.GetAllACIInfos(sortAciinfoFields, bool(flagImagesSortAsc))
@@ -179,7 +181,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 		}
 		version, ok := im.Labels.Get("version")
 		var fieldValues []string
-		for _, f := range flagImagesFields.options {
+		for _, f := range flagImagesFields.Options {
 			fieldValue := ""
 			switch f {
 			case l(id):

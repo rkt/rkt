@@ -35,6 +35,7 @@ import (
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/pkg/keystore/keystoretest"
 	"github.com/coreos/rkt/rkt/config"
+	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
@@ -56,19 +57,18 @@ type serverHandler struct {
 	auth string
 }
 
-func getSecFlags(opts []string, defOpts string, fm map[string]int) *secFlags {
-	bf, err := newBitFlags(opts, defOpts, fm)
+func getSecFlags(opts []string, defOpts string, fm map[string]int) *rktflag.SecFlags {
+	bf, err := rktflag.NewBitFlags(opts, defOpts, fm)
 	if err != nil {
-		panic(fmt.Sprintf("fetch-test: problem initializing flags: %s", err))
+		panic(fmt.Sprintf("fetch-test: problem initializing flags: %v", err))
 	}
 
-	return (*secFlags)(bf)
+	return (*rktflag.SecFlags)(bf)
 }
 
 var (
-	insecParams   = "image,tls"
-	insecureFlags = getSecFlags(insecureOptions, insecParams, insecureOptionsMap)
-	secureFlags   = getSecFlags(insecureOptions, "none", insecureOptionsMap)
+	insecureFlags = getSecFlags(rktflag.InsecureOptions, "image,tls", rktflag.InsecureOptionsMap)
+	secureFlags   = getSecFlags(rktflag.InsecureOptions, "none", rktflag.InsecureOptionsMap)
 )
 
 func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

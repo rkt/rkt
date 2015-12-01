@@ -37,6 +37,7 @@ import (
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
+	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/rkt/pubkey"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
@@ -57,7 +58,7 @@ type imageActionData struct {
 	ks            *keystore.Keystore
 	headers       map[string]config.Headerer
 	dockerAuth    map[string]config.BasicCredentials
-	insecureFlags *secFlags
+	insecureFlags *rktflag.SecFlags
 	debug         bool
 }
 
