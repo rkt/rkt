@@ -40,6 +40,8 @@ func findResources(isolators types.Isolators) (mem, cpus int64) {
 			// cpus = cpusQuantity
 		}
 	}
+	return mem, cpus
+}
 
 // GetAppsResources returns values specfied by user in pod-manifest.
 // Function expects a podmanifest apps.
@@ -50,13 +52,13 @@ func GetAppsResources(apps schema.AppList) (totalCpus, totalMem int64) {
 		ra := &apps[i]
 		app := ra.App
 		mem, cpus := findResources(app.Isolators)
-		cpusSpecified = cpusSpecified && cpus != 0
+		cpusSpecified = cpusSpecified || cpus != 0
 		totalCpus += cpus
 		totalMem += mem
 	}
 	// If user doesn't specify cpus for at least one app, we set no limit for
 	// whole pod.
-	if cpusSpecified {
+	if !cpusSpecified {
 		totalCpus = int64(runtime.NumCPU())
 	}
 
