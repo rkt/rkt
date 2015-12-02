@@ -47,8 +47,9 @@ Instead of a number, english words can be used.
 
 ### Run-time requirements
 
-rkt is statically linked and does not require any dynamic libraries to be installed.
-However, it requires the following kernel features:
+rkt ideally should be statically linked, so it would not require any dynamic libraries to be installed, but some C libraries do not support static linking.
+So, if rkt is dynamically linked, then the only thing it will depend on is a C library.
+Also, it requires the following kernel features:
 
 * `CONFIG_CGROUPS`
 * `CONFIG_NAMESPACES`
