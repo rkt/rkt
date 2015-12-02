@@ -69,13 +69,13 @@ systemd falls in this category, as Debian and Fedora already package systemd and
 In order to avoid build-dependency on systemd in rkt, a build option was added to build stage1 without including binaries that are build from external sources.
 
 ```
-./configure --with-stage1=host
+./configure --with-stage1-flavors=host
 ```
 
 The generated archive `stage1.aci` will not contain bash, systemd that comes from external sources.
 The only binaries in the archive are built from the sources in the rkt git repository.
 Since stage1.aci needs external binaries, they will be taken from the host at run-time.
-Packages using the `--with-stage1=host` option must therefore add a run-time dependency on systemd and bash.
+Packages using the `--with-stage1-flavors=host` option must therefore add a run-time dependency on systemd and bash.
 Whenever systemd and bash are upgraded on the host, rkt will use the new version at run time.
 It becomes the packager responsibility to test the rkt package whenever a new version of systemd is packaged.
 
