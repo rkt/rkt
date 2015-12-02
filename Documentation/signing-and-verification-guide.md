@@ -28,9 +28,9 @@ Key-Type: RSA
 Key-Length: 2048
 Subkey-Type: RSA
 Subkey-Length: 2048
-Name-Real: Kelsey Hightower
+Name-Real: Carly Container
 Name-Comment: ACI signing key
-Name-Email: kelsey.hightower@coreos.com
+Name-Email: carly@example.com
 Expire-Date: 0
 Passphrase: rkt
 %pubring rkt.pub
@@ -53,7 +53,7 @@ $ gpg --no-default-keyring \
 ./rkt.pub
 ------------
 pub   2048R/26EF7A14 2015-01-09
-uid       [ unknown] Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
+uid       [ unknown] Carly Container (ACI signing key) <carly@example.com>
 sub   2048R/B9C074CD 2015-01-09
 ```
 
@@ -81,7 +81,7 @@ Secret key is available.
 pub  2048R/26EF7A14  created: 2015-01-09  expires: never       usage: SC
                      trust: unknown       validity: unknown
 sub  2048R/B9C074CD  created: 2015-01-09  expires: never       usage: E
-[ unknown] (1). Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
+[ unknown] (1). Carly Container (ACI signing key) <carly@example.com>
 
 Please decide how far you trust this user to correctly verify other users' keys
 (by looking at passports, checking fingerprints from different sources, etc.)
@@ -99,7 +99,7 @@ Do you really want to set this key to ultimate trust? (y/N) y
 pub  2048R/26EF7A14  created: 2015-01-09  expires: never       usage: SC
                      trust: ultimate      validity: unknown
 sub  2048R/B9C074CD  created: 2015-01-09  expires: never       usage: E
-[ unknown] (1). Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
+[ unknown] (1). Carly Container (ACI signing key) <carly@example.com>
 Please note that the shown key validity is not necessarily correct
 unless you restart the program.
 
@@ -111,7 +111,7 @@ gpg> quit
 ```
 $ gpg --no-default-keyring --armor \
 --secret-keyring ./rkt.sec --keyring ./rkt.pub \
---export kelsey.hightower@coreos.com > pubkeys.gpg
+--export carly@example.com > pubkeys.gpg
 ```
 
 ### Signing the ACI
@@ -130,7 +130,7 @@ $ gpg --no-default-keyring \
 --secret-keyring ./rkt.sec --keyring ./rkt.pub \
 --verify hello-0.0.1-linux-amd64.aci.asc hello-0.0.1-linux-amd64.aci
 gpg: Signature made Fri Jan  9 05:01:49 2015 PST using RSA key ID 26EF7A14
-gpg: Good signature from "Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>" [ultimate]
+gpg: Good signature from "Carly Container (ACI signing key) <carly@example.com>" [ultimate]
 ```
 
 At this point you should have the following three files:
@@ -240,7 +240,7 @@ $ rkt trust --prefix=example.com/hello https://example.com/pubkeys.gpg
 Prefix: "example.com/hello"
 Key: "https://example.com/aci-pubkeys.gpg"
 GPG key fingerprint is: B346 E31D E7E3 C6F9 D1D4  603F 4DFB 61BF 26EF 7A14
-	Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
+	Carly Container (ACI signing key) <carly@example.com>
 	Are you sure you want to trust this key (yes/no)? yes
 	Trusting "https://example.com/aci-pubkeys.gpg" for prefix "example.com/hello".
 	Added key for prefix "example.com/hello" at "/etc/rkt/trustedkeys/prefix.d/example.com/hello/b346e31de7e3c6f9d1d4603f4dfb61bf26ef7a14"
@@ -262,10 +262,10 @@ $ curl -O https://example.com/pubkeys.gpg
 ###### Capture the public key fingerprint
 
 ```
-$ gpg --no-default-keyring --fingerprint --keyring ./pubkeys.gpg kelsey.hightower@coreos.com
+$ gpg --no-default-keyring --fingerprint --keyring ./pubkeys.gpg carly@example.com
 pub   2048R/26EF7A14 2015-01-09
       Key fingerprint = B346 E31D E7E3 C6F9 D1D4  603F 4DFB 61BF 26EF 7A14
-uid       [ unknown] Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
+uid       [ unknown] Carly Container (ACI signing key) <carly@example.com>
 sub   2048R/B9C074CD 2015-01-09
 ```
 
@@ -310,7 +310,7 @@ rkt: starting to discover app img example.com/hello:0.0.1
 rkt: starting to fetch img from http://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
 Downloading aci: [                                             ] 7.24 KB/1.26 MB
 rkt: example.com/hello:0.0.1 verified signed by:
-  Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
+  Carly Container (ACI signing key) <carly@example.com>
 /etc/localtime is not a symlink, not updating container timezone.
 ^]^]Container stage1 terminated by signal KILL.
 ```
@@ -344,7 +344,7 @@ rkt: starting to discover app img example.com/hello:0.0.1
 rkt: starting to fetch img from http://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
 Downloading aci: [                                             ] 14.5 KB/1.26 MB
 rkt: example.com/hello:0.0.1 verified signed by:
-  Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
+  Carly Container (ACI signing key) <carly@example.com>
 sha512-b3f138e10482d4b5f334294d69ae5c40
 ```
 
