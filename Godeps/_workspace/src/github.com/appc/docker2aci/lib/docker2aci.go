@@ -39,7 +39,7 @@ import (
 
 type Docker2ACIBackend interface {
 	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
-	BuildACI(layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compress bool) (string, *schema.ImageManifest, error)
+	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compress bool) (string, *schema.ImageManifest, error)
 }
 
 // Convert generates ACI images from docker registry URLs.
@@ -56,8 +56,8 @@ type Docker2ACIBackend interface {
 // temporary directory if tmpDir is "".
 // username and password can be passed if the image needs authentication.
 // It returns the list of generated ACI paths.
-func Convert(dockerURL string, squash bool, outputDir string, tmpDir string, username string, password string) ([]string, error) {
-	repositoryBackend := repository.NewRepositoryBackend(username, password)
+func Convert(dockerURL string, squash bool, outputDir string, tmpDir string, username string, password string, insecure bool) ([]string, error) {
+	repositoryBackend := repository.NewRepositoryBackend(username, password, insecure)
 	return convertReal(repositoryBackend, dockerURL, squash, outputDir, tmpDir)
 }
 
@@ -123,7 +123,7 @@ func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outpu
 		layerID := ancestry[i]
 
 		// only compress individual layers if we're not squashing
-		aciPath, manifest, err := backend.BuildACI(layerID, parsedDockerURL, layersOutputDir, tmpDir, curPwl, !squash)
+		aciPath, manifest, err := backend.BuildACI(i, layerID, parsedDockerURL, layersOutputDir, tmpDir, curPwl, !squash)
 		if err != nil {
 			return nil, fmt.Errorf("error building layer: %v", err)
 		}

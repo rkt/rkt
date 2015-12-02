@@ -44,7 +44,7 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDo
 	return ancestry, parsedDockerURL, nil
 }
 
-func (lb *FileBackend) BuildACI(layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
+func (lb *FileBackend) BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
 	tmpDir, err := ioutil.TempDir(tmpBaseDir, "docker2aci-")
 	if err != nil {
 		return "", nil, fmt.Errorf("error creating dir: %v", err)
@@ -71,7 +71,7 @@ func (lb *FileBackend) BuildACI(layerID string, dockerURL *types.ParsedDockerURL
 	defer layerFile.Close()
 
 	util.Debug("Generating layer ACI...")
-	aciPath, manifest, err := common.GenerateACI(layerData, dockerURL, outputDir, layerFile, curPwl, compress)
+	aciPath, manifest, err := common.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compress)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating ACI: %v", err)
 	}
