@@ -1,22 +1,27 @@
 # rkt Commands
 
-Work in progress. Please contribute if you see an area that needs more detail.
+Work in progress.
+Please contribute if you see an area that needs more detail.
 
 ## Downloading Images (ACIs)
 
 [aci-images]: https://github.com/appc/spec/blob/master/spec/aci.md#app-container-image
 [appc-discovery]: https://github.com/appc/spec/blob/master/spec/discovery.md#app-container-image-discovery
 
-rkt runs applications packaged as [Application Container Images (ACI)][aci-images] an open-source specification. ACIs consist of the root filesystem of the application container, a manifest and an optional signature.
+rkt runs applications packaged as [Application Container Images (ACI)][aci-images] an open-source specification.
+ACIs consist of the root filesystem of the application container, a manifest and an optional signature.
 
-ACIs are named with a URL-like structure. This naming scheme allows for a decentralized discovery of ACIs, related signatures and public keys. rkt uses these hints to execute [meta discovery][appc-discovery].
+ACIs are named with a URL-like structure.
+This naming scheme allows for a decentralized discovery of ACIs, related signatures and public keys.
+rkt uses these hints to execute [meta discovery][appc-discovery].
 
 * [trust](subcommands/trust.md)
 * [fetch](subcommands/fetch.md)
 
 ## Running Pods
 
-rkt can run ACIs based on name, hash, local file on disk or URL. If an ACI hasn't been cached on disk, rkt will attempt to find and download it.
+rkt can run ACIs based on name, hash, local file on disk or URL.
+If an ACI hasn't been cached on disk, rkt will attempt to find and download it.
 If you want to use the [metadata service](https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service), make sure [it is running](https://github.com/coreos/rkt/blob/mastersubcommands/metadata-service.md) and you enable registration with the `--mds-register` flag.
 
 * [run](subcommands/run.md)
@@ -46,7 +51,7 @@ The metadata service helps running apps introspect their execution environment a
 
 * [metadata-service](subcommands/metadata-service.md)
 
-##Global Options
+## Global Options
 
 In addition to the flags used by individual `rkt` commands, `rkt` has a set of global options that are applicable to all commands.
 
@@ -67,7 +72,8 @@ In this case, the logs can be accessed directly via journalctl.
 
 #### Accessing logs via journalctl
 
-To get the logs of a running pod, you need to get the pod's machine name. You can use machinectl:
+To get the logs of a running pod, you need to get the pod's machine name.
+You can use machinectl:
 
 ```
 $ machinectl

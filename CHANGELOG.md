@@ -38,6 +38,7 @@ rkt v0.12.0 is an incremental release with UX improvements like fine-grained sec
 - fix the ACE validator test ([#1802](https://github.com/coreos/rkt/pull/1802))
 
 #### Other changes
+
 - Bumped appc spec to 0.7.3 ([#1800](https://github.com/coreos/rkt/pull/1800))
 
 ## v0.11.0

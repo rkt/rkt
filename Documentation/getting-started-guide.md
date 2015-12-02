@@ -1,7 +1,6 @@
 # Getting Started with rkt
 
-The following guide will show you how to build and run a self-contained Go app using
-rkt, the reference implementation of the [App Container Specification](https://github.com/appc/spec).
+The following guide will show you how to build and run a self-contained Go app using rkt, the reference implementation of the [App Container Specification](https://github.com/appc/spec).
 If you're not on Linux, you should do all of this inside [the rkt Vagrant](https://github.com/coreos/rkt#trying-out-rkt-using-vagrant).
 
 ## Create a hello go application
@@ -25,8 +24,8 @@ func main() {
 
 ### Build a statically linked Go binary
 
-Next we need to build our application. We are going to statically link our app
-so we can ship an App Container Image with no external dependencies.
+Next we need to build our application.
+We are going to statically link our app so we can ship an App Container Image with no external dependencies.
 
 With [Go 1.4](https://github.com/golang/go/issues/9344#issuecomment-69944514):
 
@@ -77,10 +76,10 @@ acbuild end
 # rkt --insecure-options=image run hello-0.0.1-linux-amd64.aci
 ```
 
-Note that `--insecure-options=image` is required because, by default, rkt expects our images to be signed. See the [Signing and Verification Guide](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md) for more details.
+Note that `--insecure-options=image` is required because, by default, rkt expects our images to be signed.
+See the [Signing and Verification Guide](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md) for more details.
 
-At this point our hello app is running on port 5000 and ready to handle HTTP
-requests.
+At this point our hello app is running on port 5000 and ready to handle HTTP requests.
 
 You can also [run rkt as a daemon](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#run-rkt-as-a-daemon).
 
@@ -95,7 +94,8 @@ hello
 
 #### When curl Fails to Connect
 
-If you're running in Vagrant, the above may not work. You might see this instead:
+If you're running in Vagrant, the above may not work.
+You might see this instead:
 
 ```
 $ curl 127.0.0.1:5000

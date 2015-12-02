@@ -11,7 +11,7 @@ sha512-91e98d7f1679      coreos.com/etcd:v2.0.9          6 days ago             
 sha512-a03f6bad952b      coreos.com/rkt/stage1:0.7.0     55 minutes ago         false
 ```
 
-A more detailed output can be had by adding the `--full` flag
+A more detailed output can be had by adding the `--full` flag:
 
 ```
 ID                                                                        NAME               IMPORT TIME                          LATEST
@@ -33,7 +33,8 @@ rkt: 1 image(s) successfully remove
 
 You can garbage collect the rkt store to clean up unused internal data and remove old images.
 
-By default, images not used in the last 24h will be removed. This can be configured with the `--grace-period` flag.
+By default, images not used in the last 24h will be removed.
+This can be configured with the `--grace-period` flag.
 
 ```
 # rkt image gc --grace-period 48h
@@ -54,13 +55,14 @@ $ tar xvf etcd.aci
 ```
 
 NOTES:
+
 - A matching image must be fetched before doing this operation, rkt will not attempt to download an image first, this subcommand will incur no-network I/O.
 - The exported ACI file might be different than the original one because rkt image export always returns uncompressed ACIs.
 
-
 ## rkt image extract/render
 
-For debugging or inspection you may want to extract an ACI to a directory on disk. There are a few different options depending on your use case but the basic command looks like this:
+For debugging or inspection you may want to extract an ACI to a directory on disk.
+There are a few different options depending on your use case but the basic command looks like this:
 
 ```
 # rkt image extract coreos.com/etcd etcd-extracted
@@ -88,7 +90,9 @@ etcd-extracted/etcdctl
 ...
 ```
 
-If you want the image rendered as it would look ready-to-run inside of the rkt stage2 then use `rkt image render`. NOTE: this will not use overlayfs or any other mechanism. This is to simplify the cleanup: to remove the extracted files you can run a simple `rm -Rf`.
+If you want the image rendered as it would look ready-to-run inside of the rkt stage2 then use `rkt image render`.
+NOTE: this will not use overlayfs or any other mechanism.
+This is to simplify the cleanup: to remove the extracted files you can run a simple `rm -Rf`.
 
 ## rkt image cat-manifest
 

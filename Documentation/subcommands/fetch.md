@@ -1,10 +1,13 @@
 # rkt fetch
 
-rkt uses HTTPS to locate and download remote ACIs and their attached signatures. If the ACI exists locally, it won't be re-downloaded.
+rkt uses HTTPS to locate and download remote ACIs and their attached signatures.
+If the ACI exists locally, it won't be re-downloaded.
 
 ## Fetch with Meta Discovery
 
-The easiest way to fetch an ACI is through meta discovery. rkt will find and download the ACI and signature from a location that the creator has published on their website. This process is detailed in the [Application Container specification][appc-discovery].
+The easiest way to fetch an ACI is through meta discovery.
+rkt will find and download the ACI and signature from a location that the creator has published on their website.
+This process is detailed in the [Application Container specification][appc-discovery].
 
 If you have previously trusted the image creator, it will be downloaded and verified:
 
@@ -46,7 +49,8 @@ sha512-fa1cb92dc276b0f9bedf87981e61ecde
 
 ## Fetch from a Docker registry
 
-If you want to run an existing Docker image, you can fetch from a Docker registry. rkt will download and convert the image to ACI.
+If you want to run an existing Docker image, you can fetch from a Docker registry.
+rkt will download and convert the image to ACI.
 
 ```
 # rkt --insecure-options=image fetch docker://busybox
@@ -71,4 +75,8 @@ Their meanings are detailed in the [image fetching behavior](../image-fetching-b
 
 ## Authentication
 
-If you want to download an image from a private repository, then you will often need to pass credentials to be able to access it. rkt currently supports authentication for fetching images via https:// or docker:// protocols. To specify credentials you will have to write some configuration files. You can find the format of the configuration file and examples in the [configuration documentation](../configuration.md). Note that the configuration kind for images downloaded via https:// and images downloaded via docker:// is different.
+If you want to download an image from a private repository, then you will often need to pass credentials to be able to access it.
+rkt currently supports authentication for fetching images via https:// or docker:// protocols.
+To specify credentials you will have to write some configuration files.
+You can find the format of the configuration file and examples in the [configuration documentation](../configuration.md).
+Note that the configuration kind for images downloaded via https:// and images downloaded via docker:// is different.

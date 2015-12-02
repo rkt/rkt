@@ -14,7 +14,9 @@ hello-0.0.1-linux-amd64.aci
 
 ## Signing ACIs
 
-By default rkt requires ACIs to be signed using a gpg detached signature. The following steps will walk you through the creation of a gpg keypair suitable for signing an ACI. If you have an existing gpg signing key skip to the [Signing the ACI](#signing-the-aci) step.  
+By default rkt requires ACIs to be signed using a gpg detached signature.
+The following steps will walk you through the creation of a gpg keypair suitable for signing an ACI.
+If you have an existing gpg signing key skip to the [Signing the ACI](#signing-the-aci) step.
 
 ### Generate a gpg signing key
 
@@ -22,9 +24,9 @@ Create a file named `gpg-batch`
 
 ```
 %echo Generating a default key
-Key-Type: RSA 
+Key-Type: RSA
 Key-Length: 2048
-Subkey-Type: RSA 
+Subkey-Type: RSA
 Subkey-Length: 2048
 Name-Real: Kelsey Hightower
 Name-Comment: ACI signing key
@@ -46,9 +48,8 @@ $ gpg --batch --gen-key gpg-batch
 #### List the keys
 
 ```
-$ gpg --no-default-keyring --secret-keyring ./rkt.sec --keyring ./rkt.pub --list-keys
-```
-```
+$ gpg --no-default-keyring \
+--secret-keyring ./rkt.sec --keyring ./rkt.pub --list-keys
 ./rkt.pub
 ------------
 pub   2048R/26EF7A14 2015-01-09
@@ -56,7 +57,8 @@ uid       [ unknown] Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos
 sub   2048R/B9C074CD 2015-01-09
 ```
 
-From the output above the level of trust for the signing key is unknown. This will cause the following warning if we attempt to validate an ACI signed with this key using the gpg cli:
+From the output above the level of trust for the signing key is unknown.
+This will cause the following warning if we attempt to validate an ACI signed with this key using the gpg cli:
 
 ```
 gpg: WARNING: This key is not certified with a trusted signature!
@@ -65,16 +67,20 @@ gpg: WARNING: This key is not certified with a trusted signature!
 Since we know exactly where this key came from let's trust it:
 
 ```
-$ gpg --no-default-keyring --secret-keyring ./rkt.sec --keyring ./rkt.pub --edit-key 26EF7A14 trust
+$ gpg --no-default-keyring \
+--secret-keyring ./rkt.sec \
+--keyring ./rkt.pub \
+--edit-key 26EF7A14 \
+trust
 gpg (GnuPG/MacGPG2) 2.0.22; Copyright (C) 2013 Free Software Foundation, Inc.
 This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 
 Secret key is available.
 
-pub  2048R/26EF7A14  created: 2015-01-09  expires: never       usage: SC  
+pub  2048R/26EF7A14  created: 2015-01-09  expires: never       usage: SC
                      trust: unknown       validity: unknown
-sub  2048R/B9C074CD  created: 2015-01-09  expires: never       usage: E   
+sub  2048R/B9C074CD  created: 2015-01-09  expires: never       usage: E
 [ unknown] (1). Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
 
 Please decide how far you trust this user to correctly verify other users' keys
@@ -89,10 +95,10 @@ Please decide how far you trust this user to correctly verify other users' keys
 
 Your decision? 5
 Do you really want to set this key to ultimate trust? (y/N) y
-                                                             
-pub  2048R/26EF7A14  created: 2015-01-09  expires: never       usage: SC  
+
+pub  2048R/26EF7A14  created: 2015-01-09  expires: never       usage: SC
                      trust: ultimate      validity: unknown
-sub  2048R/B9C074CD  created: 2015-01-09  expires: never       usage: E   
+sub  2048R/B9C074CD  created: 2015-01-09  expires: never       usage: E
 [ unknown] (1). Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
 Please note that the shown key validity is not necessarily correct
 unless you restart the program.
@@ -123,8 +129,6 @@ $ gpg --no-default-keyring --armor \
 $ gpg --no-default-keyring \
 --secret-keyring ./rkt.sec --keyring ./rkt.pub \
 --verify hello-0.0.1-linux-amd64.aci.asc hello-0.0.1-linux-amd64.aci
-```
-```
 gpg: Signature made Fri Jan  9 05:01:49 2015 PST using RSA key ID 26EF7A14
 gpg: Good signature from "Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>" [ultimate]
 ```
@@ -187,13 +191,15 @@ rkt populates the `{os}` and `{arch}` based on the current running system.
 The `{version}` will be taken from the tag given on the command line or "latest" if not supplied.
 The `{ext}` will be substituted appropriately depending on artifact being retrieved: .aci will be used for ACI images and .aci.asc will be used for detached signatures.
 
-Once the ACI image has been downloaded rkt will extract the image's name from the image metadata. The image's name will be used to locate trusted public keys in the rkt keystore and perform signature validation.
+Once the ACI image has been downloaded rkt will extract the image's name from the image metadata.
+The image's name will be used to locate trusted public keys in the rkt keystore and perform signature validation.
 
 ## Verifying Images with rkt
 
 ### Establishing Trust
 
-By default rkt does not trust any signing keys. Trust is established by storing public keys in the rkt keystore.
+By default rkt does not trust any signing keys.
+Trust is established by storing public keys in the rkt keystore.
 This can be done using `rkt trust` or manually, using the procedures described in the next section.
 
 The following directories make up the default rkt keystore layout:
@@ -226,7 +232,8 @@ As an example, let's look at how we can trust a key used to sign images of the p
 
 #### Using rkt trust
 
-The easiest way to trust a key is to use the `rkt trust` subcommand. In this case, we directly pass it the URI containing the public key we wish to trust:
+The easiest way to trust a key is to use the `rkt trust` subcommand.
+In this case, we directly pass it the URI containing the public key we wish to trust:
 
 ```
 $ rkt trust --prefix=example.com/hello https://example.com/pubkeys.gpg
@@ -256,9 +263,6 @@ $ curl -O https://example.com/pubkeys.gpg
 
 ```
 $ gpg --no-default-keyring --fingerprint --keyring ./pubkeys.gpg kelsey.hightower@coreos.com
-```
-
-```
 pub   2048R/26EF7A14 2015-01-09
       Key fingerprint = B346 E31D E7E3 C6F9 D1D4  603F 4DFB 61BF 26EF 7A14
 uid       [ unknown] Kelsey Hightower (ACI signing key) <kelsey.hightower@coreos.com>
@@ -271,6 +275,7 @@ Remove white spaces and convert to lowercase:
 $ echo "B346 E31D E7E3 C6F9 D1D4  603F 4DFB 61BF 26EF 7A14" | \
   tr -d "[:space:]" | tr '[:upper:]' '[:lower:]'
 ```
+
 ```
 b346e31de7e3c6f9d1d4603f4dfb61bf26ef7a14
 ```

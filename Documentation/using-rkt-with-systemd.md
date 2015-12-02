@@ -169,7 +169,6 @@ To make socket activation work, you need to add to your application manifest a [
 
 Then you will need a pair of service and socket unit files. The socket unit file will have the same port you've set in the image manifest of your app and the service unit file will just run `rkt`:
 
-
 ```
 # my-socket-activated-app.service
 [Unit]
@@ -204,7 +203,6 @@ Jul 30 12:24:50 locke-work systemd[1]: Starting My socket-activated app's socket
 ```
 
 From this point, whenever you get a connection to port 8080 your container will start and handle it transparently.
-
 
 ## Using (not only) systemd tools
 
@@ -336,7 +334,10 @@ Jul 17 12:38:29 rkt-6d0d9608-a744-4333-be21-942145a97a5a etcd[4]: 2015/07/17 10:
 
 **TODO**: Extend this documentation with output snippets and remove this TODO and the WARNING when dbus and required tools (like agetty and login) are also in stage1.
 
-To login to a pod, use `machinectl login <machine-id>`. You can get the machine id from `machinectl list`. Note that `stage1` may not have all the tools you are used to (not even `ls`). It may not even have a shell, so in this case logging in to the pod is impossible.
+To login to a pod, use `machinectl login <machine-id>`.
+You can get the machine id from `machinectl list`.
+Note that `stage1` may not have all the tools you are used to (not even `ls`).
+It may not even have a shell, so in this case logging in to the pod is impossible.
 
 ## systemd-run -M
 
@@ -344,4 +345,5 @@ To login to a pod, use `machinectl login <machine-id>`. You can get the machine 
 
 **TODO**: Extend this documentation with output snippets and remove this TODO and the WARNING when dbus is also in stage1.
 
-To run a program inside a pod, use `systemd-run -M <machine-id> <program-and-args>`. Note that `program` must exist inside `stage1`.
+To run a program inside a pod, use `systemd-run -M <machine-id> <program-and-args>`.
+Note that `program` must exist inside `stage1`.

@@ -72,4 +72,3 @@ After the image has been retrieved, it can be run by referencing this hash:
 
 rkt leverages the [`docker2aci`](https://github.com/appc/docker2aci) library to transparently convert Docker images into rkt's native ACI format.
 To convert Docker images to ACI without necessarily having to run them, refer to the [docker2aci documentation](https://github.com/appc/docker2aci/blob/master/README.md).
-

@@ -47,7 +47,8 @@ Instead of a number, english words can be used.
 
 ### Run-time requirements
 
-rkt is statically linked and does not require any dynamic libraries to be installed. However, it requires the following kernel features:
+rkt is statically linked and does not require any dynamic libraries to be installed.
+However, it requires the following kernel features:
 
 * `CONFIG_CGROUPS`
 * `CONFIG_NAMESPACES`
@@ -71,7 +72,8 @@ Replace $SRC with the absolute path to your rkt source code:
 
 ### Building systemd in stage1 from the sources
 
-By default, rkt gets systemd from a CoreOS image to generate stage1. But it's also possible to build systemd from the sources.
+By default, rkt gets systemd from a CoreOS image to generate stage1.
+But it's also possible to build systemd from the sources.
 After running `./autogen.sh` you can select the following options:
 
 * `./configure --with-stage1-flavors=coreos,src,host,kvm`: choose which flavors to build (default: 'coreos,kvm') (kvm also uses systemd from CoreOS, the difference is in the execution engine, see next section)
@@ -93,7 +95,8 @@ To build, use `--with-stage1-flavors=kvm` flag in `./configure`
 
 This will generate stage1 with embedded kernel and kvmtool to start pod in virtual machine.
 
-Additional build dependencies for the stage1 kvm follow. If building with docker, these must be added to the `apt-get install` command.
+Additional build dependencies for the stage1 kvm follow.
+If building with docker, these must be added to the `apt-get install` command.
 
 * wget
 * xz-utils
@@ -105,7 +108,8 @@ Additional build dependencies for the stage1 kvm follow. If building with docker
 rkt is designed and intended to be modular, using a [staged architecture](devel/architecture.md).
 
 `rkt run` determines the stage1 image it should use via its `-stage1-image` flag.
-By default, if this flag is unset at runtime, rkt will default to the configure-time settings. It usually means that rkt will look for a file called `stage1-<default flavor>.aci` that is in the same directory as the rkt binary itself.
+By default, if this flag is unset at runtime, rkt will default to the configure-time settings.
+It usually means that rkt will look for a file called `stage1-<default flavor>.aci` that is in the same directory as the rkt binary itself.
 
 However, a default value can be set for this parameter at build time by setting the option `--with-stage1-default-location` when invoking `./configure`
 This is useful for those packaging rkt for distribution who will provide the stage1 in a fixed/known location.
@@ -117,7 +121,6 @@ The option should be set to the fully qualified path at which rkt can find the s
 ```
 
 rkt will then use this environment variable to set the default value for the `stage1-image` flag.
-
 
 ## Managing Dependencies
 

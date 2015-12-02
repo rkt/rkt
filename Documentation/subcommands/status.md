@@ -1,6 +1,7 @@
 # rkt status
 
-Given a pod UUID, you can get the exit status of its apps. Note that the apps are prefixed by `app-`.
+Given a pod UUID, you can get the exit status of its apps.
+Note that the apps are prefixed by `app-`.
 
 ```
 # rkt status 5bc080ca

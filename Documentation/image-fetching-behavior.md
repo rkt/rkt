@@ -29,4 +29,3 @@ remote       | file://            | Use the specified file
 remote       | http(s)://         | Search in the store if the URL is available. If it's available and the saved Cache-Control maxage > 0 determine if the image should be downloaded. If it's not expired use the image. Otherwise download (sending if available the saved ETag). If the download returns a `304 Not Modified` use the image already saved in the local store.
 remote       | docker://          | Fetch using docker2aci.
 remote       | image name         | Execute [discovery logic](https://github.com/appc/spec/blob/master/spec/discovery.md#app-container-image-discovery). If discovery is successful use the discovered URL doing the above `remote` http(s):// image case. If there's a file in the current directory named like the image name, use that file instead.
-
