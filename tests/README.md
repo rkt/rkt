@@ -78,6 +78,7 @@ make -j4
 make check
 ```
 
+For more details about the `--enable-functional-tests` parameter, see [configure script parameters documentation](build-configure.md).
 The snippet above will run both unit and functional tests.
 If you want to run only functional tests, use `make functional-check`.
 There is also a counterpart target for running unit tests only - it is named `unit-check`.
