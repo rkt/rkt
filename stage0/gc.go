@@ -17,11 +17,16 @@
 package stage0
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
+	"strings"
+	"syscall"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
@@ -54,4 +59,76 @@ func GC(pdir string, uuid *types.UUID, stage1Path string, debug bool) error {
 		Dir:    pdir,
 	}
 	return c.Run()
+}
+
+type mount struct {
+	id         int
+	parentId   int
+	mountPoint string
+}
+
+type mounts []*mount
+
+// Less ensures that mounts are sorted in an order we can unmount; child before
+// parent. This works by pushing all child mounts up to the front. Parent
+// mounts are halted once they encounter a child. The actual sequential order
+// of the mounts doesn't matter; only that children are in front of parents.
+func (m mounts) Less(i, j int) bool { return m[i].id != m[j].parentId }
+func (m mounts) Len() int           { return len(m) }
+func (m mounts) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+
+// getMountsForPrefix parses mi (/proc/PID/mountinfo) and returns mounts for path prefix
+func getMountsForPrefix(path string, mi io.Reader) (mounts, error) {
+	var podMounts mounts
+	sc := bufio.NewScanner(mi)
+	for sc.Scan() {
+		var (
+			mountId    int
+			parentId   int
+			discard    string
+			mountPoint string
+		)
+
+		_, err := fmt.Sscanf(sc.Text(), "%d %d %s %s %s",
+			&mountId, &parentId, &discard, &discard, &mountPoint)
+		if err != nil {
+			return nil, err
+		}
+
+		if strings.HasPrefix(mountPoint, path) {
+			mnt := &mount{
+				id:         mountId,
+				parentId:   parentId,
+				mountPoint: mountPoint,
+			}
+			podMounts = append(podMounts, mnt)
+		}
+	}
+	if sc.Err() != nil {
+		return nil, fmt.Errorf("problem parsing mountinfo: %v", sc.Err())
+	}
+
+	sort.Sort(podMounts)
+	return podMounts, nil
+}
+
+// ForceMountGC removes mounts from pods that couldn't be GCed cleanly.
+func ForceMountGC(path, uuid string) error {
+	mi, err := os.Open("/proc/self/mountinfo")
+	if err != nil {
+		return err
+	}
+	defer mi.Close()
+
+	mnts, err := getMountsForPrefix(path, mi)
+	if err != nil {
+		return fmt.Errorf("error getting mounts for pod %s from mountinfo: %v", uuid, err)
+	}
+
+	for _, mnt := range mnts {
+		if err := syscall.Unmount(mnt.mountPoint, 0); err != nil {
+			return fmt.Errorf("could not unmount at %v: %v", mnt.mountPoint, err)
+		}
+	}
+	return nil
 }
