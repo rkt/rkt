@@ -15,11 +15,29 @@
 package main
 
 import (
+	"flag"
+	"io/ioutil"
 	"log"
-	"os"
 )
 
+const (
+	mountinfoPath = "/proc/self/mountinfo"
+)
+
+var (
+	debug bool
+)
+
+func init() {
+	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
+}
+
 func main() {
-	log.Printf("Not doing anything here! (%+v)", os.Args)
+	flag.Parse()
+
+	if !debug {
+		log.SetOutput(ioutil.Discard)
+	}
+	log.Printf("Not doing anything since stage0 is cleaning up the mounts")
 	return
 }
