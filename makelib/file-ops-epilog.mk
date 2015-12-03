@@ -116,7 +116,7 @@ CREATE_DIRS += $(_FILE_OPS_DIR_)
 CLEAN_FILES += $(_FILE_OPS_FILES_) $(_FILE_OPS_SYMLINKS_) $(_FILE_OPS_DIRS_)
 
 # generate rule for mkdir
-$(eval $(call _FILE_OPS_CREATE_DIRS_RULE_,$(CREATE_DIRS)))
+$(eval $(call _FILE_OPS_CREATE_DIRS_RULE_,$(sort $(CREATE_DIRS))))
 
 # generate rules for installing directories
 $(foreach d,$(sort $(INSTALL_DIRS)), \
