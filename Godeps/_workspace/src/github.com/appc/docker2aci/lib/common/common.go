@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -22,13 +23,14 @@ import (
 )
 
 const (
-	defaultTag                = "latest"
-	schemaVersion             = "0.7.0"
-	appcDockerV1RegistryURL   = "appc.io/docker/v1/registryurl"
-	appcDockerV1Repository    = "appc.io/docker/v1/repository"
-	appcDockerV1Tag           = "appc.io/docker/v1/tag"
-	appcDockerV1ImageID       = "appc.io/docker/v1/imageid"
-	appcDockerV1ParentImageID = "appc.io/docker/v1/parentimageid"
+	defaultTag              = "latest"
+	defaultIndexURL         = "registry-1.docker.io"
+	schemaVersion           = "0.7.0"
+	appcDockerRegistryURL   = "appc.io/docker/registryurl"
+	appcDockerRepository    = "appc.io/docker/repository"
+	appcDockerTag           = "appc.io/docker/tag"
+	appcDockerImageID       = "appc.io/docker/imageid"
+	appcDockerParentImageID = "appc.io/docker/parentimageid"
 )
 
 func ParseDockerURL(arg string) *types.ParsedDockerURL {
@@ -42,6 +44,14 @@ func ParseDockerURL(arg string) *types.ParsedDockerURL {
 	}
 	indexURL, imageName := SplitReposName(taglessRemote)
 
+	if indexURL == "" && !strings.Contains(imageName, "/") {
+		imageName = "library/" + imageName
+	}
+
+	if indexURL == "" {
+		indexURL = defaultIndexURL
+	}
+
 	return &types.ParsedDockerURL{
 		IndexURL:  indexURL,
 		ImageName: imageName,
@@ -49,7 +59,7 @@ func ParseDockerURL(arg string) *types.ParsedDockerURL {
 	}
 }
 
-func GenerateACI(layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
+func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
 	manifest, err := GenerateManifest(layerData, dockerURL)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating the manifest: %v", err)
@@ -66,6 +76,7 @@ func GenerateACI(layerData types.DockerImageData, dockerURL *types.ParsedDockerU
 			aciPath += "-" + layerData.Architecture
 		}
 	}
+	aciPath += "-" + strconv.Itoa(layerNumber)
 	aciPath += ".aci"
 
 	aciPath = path.Join(outputDir, aciPath)
@@ -106,10 +117,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	genManifest := &schema.ImageManifest{}
 
 	appURL := ""
-	// omit docker hub index URL in app name
-	if dockerURL.IndexURL != defaultIndex {
-		appURL = dockerURL.IndexURL + "/"
-	}
+	appURL = dockerURL.IndexURL + "/"
 	appURL += dockerURL.ImageName + "-" + layerData.ID
 	appURL, err := appctypes.SanitizeACIdentifier(appURL)
 	if err != nil {
@@ -165,10 +173,12 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		annotations = append(annotations, appctypes.Annotation{Name: *commentKey, Value: layerData.Comment})
 	}
 
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1RegistryURL), Value: dockerURL.IndexURL})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1Repository), Value: dockerURL.ImageName})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1ImageID), Value: layerData.ID})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1ParentImageID), Value: layerData.Parent})
+	if dockerURL.IndexURL != "" {
+		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerRegistryURL), Value: dockerURL.IndexURL})
+	}
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerRepository), Value: dockerURL.ImageName})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerImageID), Value: layerData.ID})
+	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerParentImageID), Value: layerData.Parent})
 
 	genManifest.Labels = labels
 	genManifest.Annotations = annotations
@@ -207,9 +217,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	if layerData.Parent != "" {
 		indexPrefix := ""
 		// omit docker hub index URL in app name
-		if dockerURL.IndexURL != defaultIndex {
-			indexPrefix = dockerURL.IndexURL + "/"
-		}
+		indexPrefix = dockerURL.IndexURL + "/"
 		parentImageNameString := indexPrefix + dockerURL.ImageName + "-" + layerData.Parent
 		parentImageNameString, err := appctypes.SanitizeACIdentifier(parentImageNameString)
 		if err != nil {
@@ -219,10 +227,24 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{ImageName: *parentImageName, Labels: parentLabels})
 
-		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerV1Tag), Value: dockerURL.Tag})
+		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerTag), Value: dockerURL.Tag})
 	}
 
 	return genManifest, nil
+}
+
+type appcPortSorter []appctypes.Port
+
+func (s appcPortSorter) Len() int {
+	return len(s)
+}
+
+func (s appcPortSorter) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s appcPortSorter) Less(i, j int) bool {
+	return s[i].Name.String() < s[j].Name.String()
 }
 
 func convertPorts(dockerExposedPorts map[string]struct{}, dockerPortSpecs []string) ([]appctypes.Port, error) {
@@ -246,6 +268,8 @@ func convertPorts(dockerExposedPorts map[string]struct{}, dockerPortSpecs []stri
 			ports = append(ports, *appcPort)
 		}
 	}
+
+	sort.Sort(appcPortSorter(ports))
 
 	return ports, nil
 }
@@ -280,6 +304,20 @@ func parseDockerPort(dockerPort string) (*appctypes.Port, error) {
 	return appcPort, nil
 }
 
+type appcVolSorter []appctypes.MountPoint
+
+func (s appcVolSorter) Len() int {
+	return len(s)
+}
+
+func (s appcVolSorter) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s appcVolSorter) Less(i, j int) bool {
+	return s[i].Name.String() < s[j].Name.String()
+}
+
 func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPoint, error) {
 	mps := []appctypes.MountPoint{}
 	dup := make(map[string]int)
@@ -306,6 +344,8 @@ func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPo
 
 		mps = append(mps, mp)
 	}
+
+	sort.Sort(appcVolSorter(mps))
 
 	return mps, nil
 }
@@ -447,6 +487,8 @@ func subtractWhiteouts(pathWhitelist []string, whiteouts []string) []string {
 		}
 	}
 
+	sort.Sort(sort.StringSlice(pathWhitelist))
+
 	return pathWhitelist
 }
 
@@ -482,21 +524,28 @@ func WriteRootfsDir(tarWriter *tar.Writer) error {
 	return tarWriter.WriteHeader(hdr)
 }
 
+type symlink struct {
+	linkname string
+	target   string
+}
+
 // writeStdioSymlinks adds the /dev/stdin, /dev/stdout, /dev/stderr, and
 // /dev/fd symlinks expected by Docker to the converted ACIs so apps can find
 // them as expected
 func writeStdioSymlinks(tarWriter *tar.Writer, fileMap map[string]struct{}, pwl []string) ([]string, error) {
-	stdioSymlinks := map[string]string{
-		"/dev/stdin": "/proc/self/fd/0",
+	stdioSymlinks := []symlink{
+		{"/dev/stdin", "/proc/self/fd/0"},
 		// Docker makes /dev/{stdout,stderr} point to /proc/self/fd/{1,2} but
 		// we point to /dev/console instead in order to support the case when
 		// stdout/stderr is a Unix socket (e.g. for the journal).
-		"/dev/stdout": "/dev/console",
-		"/dev/stderr": "/dev/console",
-		"/dev/fd":     "/proc/self/fd",
+		{"/dev/stdout", "/dev/console"},
+		{"/dev/stderr", "/dev/console"},
+		{"/dev/fd", "/proc/self/fd"},
 	}
 
-	for name, target := range stdioSymlinks {
+	for _, s := range stdioSymlinks {
+		name := s.linkname
+		target := s.target
 		if _, exists := fileMap[name]; exists {
 			continue
 		}

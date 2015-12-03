@@ -444,7 +444,7 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 			user = creds.User
 			password = creds.Password
 		}
-		acis, err := docker2aci.Convert(registryURL, true, tmpDir, tmpDir, user, password)
+		acis, err := docker2aci.Convert(registryURL, true, tmpDir, tmpDir, user, password, globalFlags.InsecureFlags.SkipTlsCheck())
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("error converting docker image to ACI: %v", err)
 		}
