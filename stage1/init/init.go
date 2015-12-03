@@ -39,6 +39,10 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus/introspect"
 
+	stage1common "github.com/coreos/rkt/stage1/common"
+	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
+	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
+
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/networking"
@@ -214,12 +218,12 @@ func installAssets() error {
 }
 
 // getArgsEnv returns the nspawn or lkvm args and env according to the flavor used
-func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]string, []string, error) {
+func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networking.Networking) ([]string, []string, error) {
 	var args []string
 	env := os.Environ()
 
 	// We store the pod's flavor so we can later garbage collect it correctly
-	if err := os.Symlink(flavor, filepath.Join(p.Root, flavorFile)); err != nil {
+	if err := os.Symlink(flavor, filepath.Join(p.Root, stage1initcommon.FlavorFile)); err != nil {
 		return nil, nil, fmt.Errorf("failed to create flavor symlink: %v", err)
 	}
 
@@ -285,7 +289,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		}
 
 		// host volume sharing with 9p
-		nsargs := kvm.VolumesToKvmDiskArgs(p.Manifest.Volumes)
+		nsargs := stage1initcommon.VolumesToKvmDiskArgs(p.Manifest.Volumes)
 		args = append(args, nsargs...)
 
 		// lkvm requires $HOME to be defined,
@@ -405,7 +409,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		args = append(args, "--private-users="+privateUsers)
 	}
 
-	nsargs, err := p.PodToNspawnArgs()
+	nsargs, err := stage1initcommon.PodToNspawnArgs(p)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to generate nspawn args: %v", err)
 	}
@@ -424,17 +428,7 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 	return args, env, nil
 }
 
-func withClearedCloExec(lfd int, f func() error) error {
-	err := sys.CloseOnExec(lfd, false)
-	if err != nil {
-		return err
-	}
-	defer sys.CloseOnExec(lfd, true)
-
-	return f()
-}
-
-func forwardedPorts(pod *Pod) ([]networking.ForwardedPort, error) {
+func forwardedPorts(pod *stage1commontypes.Pod) ([]networking.ForwardedPort, error) {
 	var fps []networking.ForwardedPort
 
 	for _, ep := range pod.Manifest.Ports {
@@ -468,22 +462,6 @@ func forwardedPorts(pod *Pod) ([]networking.ForwardedPort, error) {
 	return fps, nil
 }
 
-func writePpid(pid int) error {
-	// write ppid file as specified in
-	// Documentation/devel/stage1-implementors-guide.md
-	out, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("Cannot get current working directory: %v\n", err)
-	}
-	// we are the parent of the process that is PID 1 in the container so we write our PID to "ppid"
-	err = ioutil.WriteFile(filepath.Join(out, "ppid"),
-		[]byte(fmt.Sprintf("%d\n", pid)), 0644)
-	if err != nil {
-		return fmt.Errorf("Cannot write ppid file: %v\n", err)
-	}
-	return nil
-}
-
 func stage1() int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
@@ -492,7 +470,7 @@ func stage1() int {
 	}
 
 	root := "."
-	p, err := LoadPod(root, uuid)
+	p, err := stage1commontypes.LoadPod(root, uuid)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load pod: %v\n", err)
 		return 1
@@ -513,7 +491,7 @@ func stage1() int {
 
 	mirrorLocalZoneInfo(p.Root)
 
-	flavor, _, err := p.getFlavor()
+	flavor, _, err := stage1initcommon.GetFlavor(p)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get stage1 flavor: %v\n", err)
 		return 3
@@ -558,24 +536,24 @@ func stage1() int {
 		}
 	}
 
-	if err = p.WriteDefaultTarget(); err != nil {
+	if err = stage1initcommon.WriteDefaultTarget(p); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write default.target: %v\n", err)
 		return 2
 	}
 
-	if err = p.WritePrepareAppTemplate(); err != nil {
+	if err = stage1initcommon.WritePrepareAppTemplate(p); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write prepare-app service template: %v\n", err)
 		return 2
 	}
 
 	if flavor == "kvm" {
-		if err := p.KvmPodToSystemd(n); err != nil {
+		if err := KvmPodToSystemd(p, n); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to configure systemd for kvm: %v\n", err)
 			return 2
 		}
 	}
 
-	if err = p.PodToSystemd(interactive, flavor, privateUsers); err != nil {
+	if err = stage1initcommon.PodToSystemd(p, interactive, flavor, privateUsers); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
 		return 2
 	}
@@ -618,10 +596,10 @@ func stage1() int {
 
 	var serviceNames []string
 	for _, app := range p.Manifest.Apps {
-		serviceNames = append(serviceNames, ServiceUnitName(app.Name))
+		serviceNames = append(serviceNames, stage1initcommon.ServiceUnitName(app.Name))
 	}
 	s1Root := common.Stage1RootfsPath(p.Root)
-	machineID := p.GetMachineID()
+	machineID := stage1initcommon.GetMachineID(p)
 	subcgroup, err := getContainerSubCgroup(machineID)
 	if err == nil {
 		if err := mountContainerCgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
@@ -632,12 +610,12 @@ func stage1() int {
 		fmt.Fprintf(os.Stderr, "Continuing with per-app isolators disabled: %v\n", err)
 	}
 
-	if err = writePpid(os.Getpid()); err != nil {
+	if err = stage1common.WritePpid(os.Getpid()); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return 4
 	}
 
-	err = withClearedCloExec(lfd, func() error {
+	err = stage1common.WithClearedCloExec(lfd, func() error {
 		return syscall.Exec(args[0], args, env)
 	})
 	if err != nil {
