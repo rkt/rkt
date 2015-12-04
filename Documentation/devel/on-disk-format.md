@@ -1,7 +1,9 @@
 On disk format
 ==============
 
-The data directory is `/var/lib/rkt` by default. The `--dir` command line option can be used to change this location.
+The data directory is `/var/lib/rkt`, unless configured otherwise.
+For details, see [the `paths` kind in configuration documentation](../configuration.md#rktkind-paths).
+The `--dir` command line option can be used to change this location.
 
 #### CAS database
 
