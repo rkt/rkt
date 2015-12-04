@@ -102,7 +102,9 @@ func TestFetch(t *testing.T) {
 		{"--insecure-options=image run --mds-register=false", "docker://busybox:latest", "", ""},
 		{"--insecure-options=image prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
 		{"--insecure-options=image prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image prepare", "docker://busybox", "", ""},
+		// test --insecure-options=tls to make sure
+		// https://github.com/coreos/rkt/issues/1829 is not an issue anymore
+		{"--insecure-options=image,tls prepare", "docker://busybox", "", ""},
 		{"--insecure-options=image prepare", "docker://busybox:latest", "", ""},
 	}
 
