@@ -445,7 +445,8 @@ func (f *fetcher) fetch(appName string, aciURL, ascURL string, ascFile *os.File,
 			user = creds.User
 			password = creds.Password
 		}
-		acis, err := docker2aci.Convert(registryURL, true, tmpDir, tmpDir, user, password, globalFlags.InsecureFlags.SkipTlsCheck())
+		// for now, always use https:// when fetching docker images
+		acis, err := docker2aci.Convert(registryURL, true /* squash */, tmpDir, tmpDir, user, password, false /* insecure */)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("error converting docker image to ACI: %v", err)
 		}
