@@ -1,3 +1,14 @@
+## v0.13.0
+
+The primary motivation for this release is to add support for fetching images on the Docker Registry 2.0. It also includes other small improvements.
+
+- docker2aci: support Docker Registry 2.0 ([#1826](https://github.com/coreos/rkt/pull/1826))
+- always use https:// when fetching docker images ([#1837](https://github.com/coreos/rkt/pull/1837))
+- stage0: add container hash data into TPM ([#1775](https://github.com/coreos/rkt/pull/1775))
+- host flavor: fix systemd copying into stage1 for Debian packaging ([#1811](https://github.com/coreos/rkt/pull/1811))
+- clarify network error messages ([#1707](https://github.com/coreos/rkt/pull/1707))
+- documentation: add more build-time requirements ([#1834](https://github.com/coreos/rkt/pull/1834))
+
 ## v0.12.0
 
 rkt v0.12.0 is an incremental release with UX improvements like fine-grained security controls and implicit generation of empty volumes, performance improvements, bug fixes and testing enhancements.
