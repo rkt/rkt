@@ -10,10 +10,10 @@ The version of the spec that rkt implements can be seen in the output of `rkt ve
 **Note that until communicated otherwise, the rkt CLI and API are considered unstable and subject to change.**
 Backwards-compatibility is a priority for the v1.0.0 release.
 
-### rkt v0.13 (December)
+### rkt v0.14 (December)
 - different shared namespace execution modes [#1433](https://github.com/coreos/rkt/issues/1433)
 
-### rkt v0.14 (December)
+### rkt v0.15 (January)
 - per-user credentials configuration [#1568](https://github.com/coreos/rkt/issues/1568)
 
 ### rkt 1.0
