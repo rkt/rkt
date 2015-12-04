@@ -13,14 +13,19 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
 ### Build-time requirements
 
 * Linux 3.8+
-  * make
+  * autoconf
+  * automake
+  * bc
+  * cpio
   * gcc
   * glibc development and static pieces (on Fedora/RHEL/Centos: glibc-devel and glibc-static packages, on Debian/Ubuntu libc6-dev package)
-  * cpio
-  * squashfs-tools
-  * realpath
   * gpg
-  * autoconf
+  * make
+  * openssl
+  * patch
+  * realpath
+  * squashfs-tools
+  * wget
 * Go 1.4+
 
 Once the requirements have been met you can build rkt by running the following commands:
