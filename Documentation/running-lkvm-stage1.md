@@ -68,6 +68,13 @@ If you want to see the kernel and boot messages, run rkt with the `--debug` flag
 
 You can exit pressing `<Ctrl-a x>`.
 
+#### CPU usage
+By default, processes will start working on all CPUs if at least one app does not have specfied CPUs. 
+In the other case, container will be working on aggregate amount of CPUs. 
+
+#### Memory
+Currently, the memory allocated to the virtual machine is a sum of memory required by each app in pod and additional 128MB required by system. If memory of some app is not specified, app memory will be set on default value (128MB).
+
 ### Selecting stage1 at runtime
 
 If you want to run software that requires hypervisor isolation along with trusted software that only needs container isolation, you can [choose which stage1.aci to use at runtime](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#use-a-custom-stage-1).
