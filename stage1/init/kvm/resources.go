@@ -37,7 +37,6 @@ func findResources(isolators types.Isolators) (mem, cpus int64) {
 			mem /= 1024 * 1024
 		case *types.ResourceCPU:
 			cpus = v.Limit().Value()
-			// cpus = cpusQuantity
 		}
 	}
 	return mem, cpus
