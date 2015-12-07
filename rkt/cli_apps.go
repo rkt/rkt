@@ -246,3 +246,65 @@ func (al *appsVolume) String() string {
 	}
 	return strings.Join(vs, " ")
 }
+
+// appMemoryLimit is for --memory flags in the form of: --memory=128M
+type appMemoryLimit apps.Apps
+
+func (aml *appMemoryLimit) Set(s string) error {
+	app := (*apps.Apps)(aml).Last()
+	if app == nil {
+		return fmt.Errorf("--memory must follow an image")
+	}
+	isolator, err := types.NewResourceMemoryIsolator(s, s)
+	if err != nil {
+		return err
+	}
+	// Just don't accept anything less than 4Ki. It's not reasonable and
+	// it's most likely a mistake from the user, such as passing
+	// --memory=16m (milli-bytes!) instead of --memory=16M (megabytes).
+	if isolator.Limit().Value() < 4096 {
+		return fmt.Errorf("memory limit of %d bytes too low. Try a reasonable value, such as --memory=16M", isolator.Limit().Value())
+	}
+	app.MemoryLimit = isolator
+	return nil
+}
+
+func (aml *appMemoryLimit) String() string {
+	app := (*apps.Apps)(aml).Last()
+	if app == nil {
+		return ""
+	}
+	return app.MemoryLimit.String()
+}
+
+func (aml *appMemoryLimit) Type() string {
+	return "appMemoryLimit"
+}
+
+// appCPULimit is for --cpu flags in the form of: --cpu=500m
+type appCPULimit apps.Apps
+
+func (aml *appCPULimit) Set(s string) error {
+	app := (*apps.Apps)(aml).Last()
+	if app == nil {
+		return fmt.Errorf("--cpu must follow an image")
+	}
+	isolator, err := types.NewResourceCPUIsolator(s, s)
+	if err != nil {
+		return err
+	}
+	app.CPULimit = isolator
+	return nil
+}
+
+func (aml *appCPULimit) String() string {
+	app := (*apps.Apps)(aml).Last()
+	if app == nil {
+		return ""
+	}
+	return app.CPULimit.String()
+}
+
+func (aml *appCPULimit) Type() string {
+	return "appCPULimit"
+}

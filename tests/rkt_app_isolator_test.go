@@ -71,6 +71,10 @@ func TestAppIsolatorMemory(t *testing.T) {
 	rktCmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), aciFileName)
 	expectedLine := "Memory Limit: " + strconv.Itoa(maxMemoryUsage)
 	runRktAndCheckOutput(t, rktCmd, expectedLine, false)
+
+	rktCmd = fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s --memory 42Mi", ctx.Cmd(), aciFileName)
+	expectedLine = "Memory Limit: " + strconv.Itoa(42*1024*1024)
+	runRktAndCheckOutput(t, rktCmd, expectedLine, false)
 }
 
 func TestAppIsolatorCPU(t *testing.T) {
@@ -89,6 +93,10 @@ func TestAppIsolatorCPU(t *testing.T) {
 
 	rktCmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), aciFileName)
 	expectedLine := "CPU Quota: " + strconv.Itoa(CPUQuota)
+	runRktAndCheckOutput(t, rktCmd, expectedLine, false)
+
+	rktCmd = fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s --cpu 900m", ctx.Cmd(), aciFileName)
+	expectedLine = "CPU Quota: " + strconv.Itoa(900)
 	runRktAndCheckOutput(t, rktCmd, expectedLine, false)
 }
 

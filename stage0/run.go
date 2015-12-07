@@ -231,6 +231,16 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 			ra.App.Exec = append(ra.App.Exec, execAppends...)
 		}
 
+		if memoryOverride := app.MemoryLimit; memoryOverride != nil {
+			isolator := memoryOverride.AsIsolator()
+			ra.App.Isolators = append(ra.App.Isolators, isolator)
+		}
+
+		if cpuOverride := app.CPULimit; cpuOverride != nil {
+			isolator := cpuOverride.AsIsolator()
+			ra.App.Isolators = append(ra.App.Isolators, isolator)
+		}
+
 		if cfg.InheritEnv || len(cfg.ExplicitEnv) > 0 {
 			MergeEnvs(&ra.App.Environment, cfg.InheritEnv, cfg.ExplicitEnv)
 		}
