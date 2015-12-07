@@ -1,8 +1,21 @@
 ## vUNRELEASED
 
+rkt vUNRELEASED is an incremental release with UX improvements, bug fixes and improved documentation.
+
 #### New features and UX changes
 
-- make data directory configurable with a config file ([#1806](https://github.com/coreos/rkt/pull/1806))
+- make data directory configurable with a config file ([#1806](https://github.com/coreos/rkt/pull/1806)). See rkt's [paths configuration](https://github.com/coreos/rkt/blob/master/Documentation/configuration.md#rktkind-paths) documentation.
+- kvm: resource isolators ([#1404](https://github.com/coreos/rkt/pull/1404))
+
+#### Bug fixes
+
+- build: Add missing deps generation ([#1838](https://github.com/coreos/rkt/pull/1838))
+- stage1: return an error if an app has empty exec ([#1843](https://github.com/coreos/rkt/pull/1843))
+- stage1: fix cgroup slices when machined is not used ([#1844](https://github.com/coreos/rkt/pull/1844))
+
+#### Improved documentation
+
+- Documentation: fix formatting, typos, outdated info ([#1824](https://github.com/coreos/rkt/pull/1824))
 
 ## v0.13.0
 
