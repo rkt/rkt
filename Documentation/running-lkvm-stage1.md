@@ -11,7 +11,7 @@ You can either use `stage1-kvm.aci` (or `stage1-lkvm.aci`) from the official rel
 $ ./autogen.sh && ./configure --with-stage1-flavors=kvm && make
 ```
 
-This will build the rkt binary and the LKVM stage1.aci in `build-rkt-0.13.0+git/bin/`.
+This will build the rkt binary and the LKVM stage1-kvm.aci in `build-rkt-0.13.0+git/bin/`.
 
 Provided you have hardware virtualization support and the [kernel KVM module](http://www.linux-kvm.org/page/Getting_the_kvm_kernel_modules) loaded (refer to your distribution for instructions), you can then run an image like you would normally do with rkt:
 
@@ -79,12 +79,12 @@ Currently, the memory allocated to the virtual machine is a sum of memory requir
 
 If you want to run software that requires hypervisor isolation along with trusted software that only needs container isolation, you can [choose which stage1.aci to use at runtime](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#use-a-custom-stage-1).
 
-For example, if you have a container stage1 named `stage1.aci` and a lkvm stage1 named `stage1-lkvm.aci` in `/usr/local/rkt/`:
+For example, if you have a container stage1 named `stage1-coreos.aci` and a lkvm stage1 named `stage1-kvm.aci` in `/usr/local/rkt/`:
 
 ```
-# rkt run --stage1-image=/usr/local/rkt/stage1.aci coreos.com/etcd:v2.0.9
+# rkt run --stage1-image=/usr/local/rkt/stage1-coreos.aci coreos.com/etcd:v2.0.9
 ...
-# rkt run --stage1-image=/usr/local/rkt/stage1-lkvm.aci coreos.com/etcd:v2.0.9
+# rkt run --stage1-image=/usr/local/rkt/stage1-kvm.aci coreos.com/etcd:v2.0.9
 ...
 ```
 

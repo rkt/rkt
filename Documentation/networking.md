@@ -7,27 +7,32 @@ The various options can be grouped by two categories:
 * [contained mode (default)](#contained mode)
 
 ## Host mode
+
 When `--net=host` is passed the pod's apps will inherit the network namespace of the process that is invoking rkt.
 
 If rkt is directly called from the host the apps within the pod will share the network stack and the interfaces with the host machine.
 This means that every network service that runs in the pod has the same connectivity as if it was started on the host directly.
 
 ## Contained mode
+
 If anything other than `host` is passed to `--net=`, the pod will live in a separate network namespace with the help of [CNI](https://github.com/appc/cni) and its plugin system.
 The network setup for the pod's network namespace depends on the available CNI configuration files that are shipped with rkt and also configured by the user.
 
 ### Network selection
+
 Every network must have a unique name and can only be joined once by every pod.
 Passing a list of comma separated network as in `--net=net1,net2,net3,...` tells rkt which networks should be joined.
 This is useful for grouping certain pod networks together while separating others.
 There is also the possibility to load all configured networks by using  `--net=all`.
 
 ### Builtin networks
+
 rkt ships with two built in networks, named *default* and *default-restricted*.
 
-
 ### The default network
-The *default* network is loaded automatically in three cases: 
+
+The *default* network is loaded automatically in three cases:
+
 * `--net` is not present on the command line
 * `--net` is passed with no options
 * `--net=default`is passed
@@ -43,22 +48,26 @@ Finally, it will enable IP masquerading on the host to NAT the egress traffic.
 Example: If you want default networking and two more networks you need to pass `--net=default,net1,net2`.
 
 ### The default-restricted network
+
 The *default-restricted* network does not set up the default route and IP masquerading.
 It only allows communication with the host via the veth interface and thus enables the pod to communicate with the metadata service which runs on the host.
 If *default* is not among the specified networks, the *default-restricted* network will be added to the list of networks automatically.
 It can also be loaded directly by explicitly passing `--net=default-restricted`.
 
 ### No (loopback only) networking
+
 The passing of `--net=none` will put the pod in a network namespace with only the loopback networking.
 This can be used to completely isolate the pods network.
 
 ### Setting up additional networks
+
 In addition to the default network (veth) described in the previous sections, rkt pods can be configured to join additional networks.
 Each additional network will result in an new interface being setup in the pod.
 The type of network interface, IP, routes, etc is controlled via a configuration file residing in `/etc/rkt/net.d` directory.
-The network configuration files are executed in lexicographically sorted order. Each file consists of a JSON dictionary as shown below:
+The network configuration files are executed in lexicographically sorted order.
+Each file consists of a JSON dictionary as shown below:
 
-```sh
+```json
 $ cat /etc/rkt/net.d/10-containers.conf
 {
 	"name": "containers",
@@ -74,8 +83,11 @@ This configuration file defines a linux-bridge based network on 10.1.0.0/16 subn
 The following fields apply to all configuration files.
 Additional fields are specified for various types.
 
-- **name** (string): An arbitrary label for the network. By convention the conf file is labeled with a leading ordinal, dash, network name, and .conf extension.
-- **type** (string): The type of network/interface to create. The type actually names a network plugin. rkt is bundled with few built-in plugins.
+- **name** (string): an arbitrary label for the network.
+  By convention the conf file is named with a leading ordinal, dash, network name, and .conf extension.
+- **type** (string): the type of network/interface to create.
+  The type actually names a network plugin.
+  rkt is bundled with some built-in plugins.
 - **ipam** (dict): IP Address Management -- controls the settings related to IP address assignment, gateway, and routes.
 
 ### Built-in network types
@@ -84,6 +96,7 @@ Additional fields are specified for various types.
 
 ptp is probably the simplest type of networking and is used to set up default network.
 It creates a virtual ethernet pair (akin to a pipe) and places one end into pod and the other on the host.
+
 `ptp` specific configuration fields are:
 
 - **mtu** (integer): the size of the MTU in bytes.
@@ -91,11 +104,15 @@ It creates a virtual ethernet pair (akin to a pipe) and places one end into pod 
 
 #### bridge
 
-Like the ptp type, `bridge` will also create a veth pair and place one end into the pod. However the host end of the veth will be plugged into a linux-bridge.
+Like the ptp type, `bridge` will create a veth pair and attach one end to the pod.
+However the host end of the veth will be plugged into a linux-bridge.
 The configuration file specifies the bridge name and if the bridge does not exist, it will be created.
-The bridge can optionally be setup to act as the gateway for the network. `bridge` specific configuration fields are:
+The bridge can optionally be configured to act as the gateway for the network.
 
-- **bridge** (string): the name of the bridge to create and/or plug into. Defaults to `rkt0`.
+`bridge` specific configuration fields are:
+
+- **bridge** (string): the name of the bridge to create and/or plug into.
+  Defaults to `rkt0`.
 - **isGateway** (boolean): whether the bridge should be assigned an IP and act as a gateway.
 - **mtu** (integer): the size of the MTU in bytes for bridge and veths.
 - **ipMasq** (boolean): whether to setup IP masquerading on the host.
@@ -112,14 +129,21 @@ This is because traffic that is sent by the pod onto the macvlan interface is by
 Before traffic gets sent to the underlying network it can be evaluated within the macvlan driver, allowing it to communicate with all other pods that created their macvlan interface from the same master interface.
 
 `macvlan` specific configuration fields are:
-- **master** (string): the name of the host interface to copy. This field is required.
-- **mode** (string): One of "bridge", "private", "vepa", or "passthru". This controls how traffic is handled between different macvlan interfaces on the same host. See [this guide](http://www.pocketnix.org/posts/Linux%20Networking:%20MAC%20VLANs%20and%20Virtual%20Ethernets) for discussion of modes. Defaults to "bridge".
-- **mtu** (integer): the size of the MTU in bytes for the macvlan interface. Defaults to MTU of the master device.
-- **ipMasq** (boolean): whether to setup IP masquerading on the host. Defaults to false.
+
+- **master** (string): the name of the host interface to copy.
+  This field is required.
+- **mode** (string): one of "bridge", "private", "vepa", or "passthru".
+  This controls how traffic is handled between different macvlan interfaces on the same host.
+  See [this guide](http://www.pocketnix.org/posts/Linux%20Networking:%20MAC%20VLANs%20and%20Virtual%20Ethernets) for discussion of modes.
+  Defaults to "bridge".
+- **mtu** (integer): the size of the MTU in bytes for the macvlan interface.
+  Defaults to MTU of the master device.
+- **ipMasq** (boolean): whether to setup IP masquerading on the host.
+  Defaults to false.
 
 #### ipvlan
 
-ipvlan behaves very similar to macvlan but does not provide distinct MAC addresses for pods. 
+ipvlan behaves very similar to macvlan but does not provide distinct MAC addresses for pods.
 macvlan and ipvlan can't be used on the same master device together.
 
 ipvlan creates virtual copies of interfaces like macvlan but does not assign a new MAC address to the copied interface.
@@ -129,21 +153,26 @@ ipvlan also solves the problem of MAC address exhaustion that can occur with a l
 ipvlan interfaces are able to have different IP addresses than the master interface and will therefore have the needed distinction for most use-cases.
 
 `ipvlan` specific configuration fields are:
-- **master** (string): the name of the host interface to copy. This field is required.
-- **mode** (string): One of "l2", "l3". See [kernel documentation on ipvlan](https://www.kernel.org/doc/Documentation/networking/ipvlan.txt). Defaults to "l2".
-- **mtu** (integer): the size of the MTU in bytes for the ipvlan interface. Defaults to MTU of the master device.
-- **ipMasq** (boolean): whether to setup IP masquerading on the host. Defaults to false.
+- **master** (string): the name of the host interface to copy.
+  This field is required.
+- **mode** (string): one of "l2", "l3".
+  See [kernel documentation on ipvlan](https://www.kernel.org/doc/Documentation/networking/ipvlan.txt).
+  Defaults to "l2".
+- **mtu** (integer): the size of the MTU in bytes for the ipvlan interface.
+  Defaults to MTU of the master device.
+- **ipMasq** (boolean): whether to setup IP masquerading on the host.
+  Defaults to false.
 
 **Notes**
-* ipvlan can cause problems with duplicated IPv6 link-local addresses since they
-  are partially constructed using the MAC address. This issue is being currently
-  [addressed by the ipvlan kernel module developers](http://thread.gmane.org/gmane.linux.network/363346/focus=363345)
 
+* ipvlan can cause problems with duplicated IPv6 link-local addresses since they are partially constructed using the MAC address.
+  This issue is being currently [addressed by the ipvlan kernel module developers](http://thread.gmane.org/gmane.linux.network/363346/focus=363345)
 
 ## IP Address Management
 
 The policy for IP address allocation, associated gateway and routes is separately configurable via the `ipam` section of the configuration file.
-rkt currently ships with two IPAM types: host-local and DHCP. Like the network types, IPAM types can be implemented by third-parties via plugins.
+rkt currently ships with two IPAM types: host-local and DHCP.
+Like the network types, IPAM types can be implemented by third-parties via plugins.
 
 ### host-local
 
@@ -151,7 +180,7 @@ host-local type allocates IPs out of specified network range, much like a DHCP s
 The difference is that while DHCP uses a central server, this type uses a static configuration.
 Consider the following conf:
 
-```sh
+```json
 $ cat /etc/rkt/net.d/10-containers.conf
 {
 	"name": "containers",
@@ -169,14 +198,17 @@ Since the subnet is defined as `10.1.0.0/16`, rkt will assign individual IPs out
 The first pod will be assigned 10.1.0.2/16, next one 10.1.0.3/16, etc (it reserves 10.1.0.1/16 for gateway).
 Additional configuration fields:
 
-- **subnet** (string): Subnet in CIDR notation for the network.
-- **rangeStart** (string): First IP address from which to start allocating IPs. Defaults to second IP in `subnet` range.
-- **rangeEnd** (string): Last IP address in the allocatable range. Defaults to last IP in `subnet` range.
-- **gateway** (string): The IP address of the gateway in this subnet.
-- **routes** (list of strings): List of IP routes in CIDR notation. The routes get added to pod namespace with next-hop set to the gateway of the network.
+- **subnet** (string): subnet in CIDR notation for the network.
+- **rangeStart** (string): first IP address from which to start allocating IPs.
+  Defaults to second IP in `subnet` range.
+- **rangeEnd** (string): last IP address in the allocatable range.
+  Defaults to last IP in `subnet` range.
+- **gateway** (string): the IP address of the gateway in this subnet.
+- **routes** (list of strings): list of IP routes in CIDR notation.
+  The routes get added to pod namespace with next-hop set to the gateway of the network.
 
-The following shows a more complex IPv6 example in combination with the ipvlan plugin. The gateway is configured for the default
-route, allowing the pod to access external networks via the ipvlan interface.
+The following shows a more complex IPv6 example in combination with the ipvlan plugin.
+The gateway is configured for the default route, allowing the pod to access external networks via the ipvlan interface.
 
 ```json
 {
@@ -233,8 +265,10 @@ For more information about DHCP plugin, see [CNI docs](https://github.com/appc/c
 ## Other plugins
 
 ### flannel
+
 This plugin is designed to work in conjunction with flannel, a network fabric for containers.
 The basic network configuration is as follows:
+
 ```json
 {
 	"name": "containers",
@@ -246,6 +280,7 @@ This will setup a linux-bridge, connect the container to the bridge and assign c
 For more information included advanced configuration options, see [CNI docs](https://github.com/appc/cni/blob/master/Documentation/flannel.md).
 
 ## Exposing container ports on the host
+
 Apps declare their public ports in the image manifest file.
 A user can expose some or all of these ports to the host when running a pod.
 Doing so allows services inside the pods to be reachable through the host's IP address.
@@ -271,28 +306,31 @@ The pod's TCP port 80 can be mapped to an arbitrary port on the host during rkt 
 Now, any traffic arriving on host's TCP port 8888 will be forwarded to the pod on port 80.
 
 ## Overriding default network
-If a network has a name "default", it will override the default network added
-by rkt. It is strongly recommended that such network also has type "veth" as
-it protects from the pod spoofing its IP address and defeating identity
-management provided by the metadata service.
+
+If a network has a name "default", it will override the default network added by rkt.
+It is strongly recommended that such network also has type "veth" as it protects from the pod spoofing its IP address and defeating identity management provided by the metadata service.
 
 ## Overriding network settings
+
 The network backend CNI allows the passing of [arguments as plugin parameters](https://github.com/appc/cni/blob/master/SPEC.md#parameters), specifically `CNI_ARGS`, at runtime.
 These arguments can be used to reconfigure a network without changing the configuration file.
-rkt supports the `CNI_ARGS` variable through the command line argument `--net`. 
+rkt supports the `CNI_ARGS` variable through the command line argument `--net`.
 
 ### Syntax
+
 The syntax for passing arguments to a network looks like `--net="$networkname1:$arg1=$val1;$arg2=val2"`.
-The usage of `"` is mandatory due to the `;` being used as separator within the arguments for a single network.
+The usage of double quotes is mandatory due to the `;` being used as separator within the arguments for a single network.
 To allow the passing of arguments to different networks simply append the arguments to the network name with a colon (`:`), and separate the arguments by semicolon (`;`).
 All arguments can either be given in a single instance of the `--net`, or can be spread across multiple uses of `--net`.
 *Reminder:* the separator for the networks (and their arguments) within one `--net` instance is the comma `,`.
 A network name must not be passed more than once, not within the same nor throughout multiple instances of `--net`.
 
 ### Passing arguments to selected networks while loading all networks
-If all networks should be loaded but it's not necessary to pass arguments to all, add `all` to the list of networks. 
+
+If all networks should be loaded but it's not necessary to pass arguments to all, add `all` to the list of networks.
 
 ### Example: load all networks and override IPs for two different networks
+
 This example will load all configured networks and override the IP addresses for *net1* and *net2*.
 
 ```bash
@@ -300,5 +338,6 @@ rkt run --net="all,net1:IP=1.2.3.4" --net="net2:IP=1.2.4.5" pod.aci
 ```
 
 ### Supported CNI_ARGS
+
 This is not documented yet.
 Please follow [this issue on CNI](https://github.com/appc/cni/issues/56) to track the progress of the documentation.

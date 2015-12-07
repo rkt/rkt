@@ -2,7 +2,6 @@
 
 The following guide will show you how to build and run the sample [etcd ACI](https://github.com/coreos/etcd/releases/download/v2.0.9/etcd-v2.0.9-linux-amd64.aci) on the standard vagrantcloud.com [box for Ubuntu Vivid](https://vagrantcloud.com/ubuntu/boxes/vivid64).
 
-
 ## Download and start an Ubuntu Vivid box
 
 ```
@@ -10,7 +9,7 @@ vagrant init ubuntu/vivid64
 vagrant up --provider virtualbox
 ```
 
-## SSH into the VM and Install rkt
+## SSH into the VM and install rkt
 
 ```
 vagrant ssh
@@ -93,5 +92,6 @@ rkt: found image in local store, skipping fetching from https://github.com/coreo
 [  491.054883] etcd[4]: 2015/08/03 08:57:25 etcdserver: published {Name:default ClientURLs:[http://localhost:2379 http://localhost:4001]} to cluster 7e27652122e8b2ae
 ```
 
-Congratulations! You've run your first application with rkt.
+Congratulations!
+You've run your first application with rkt.
 For more on how to use rkt, check out the [commands guide](https://github.com/coreos/rkt/blob/master/Documentation/commands.md).

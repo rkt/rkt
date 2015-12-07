@@ -1,6 +1,8 @@
 # rkt prepare
 
-rkt can prepare images to run in a pod. This means it will fetch (if necessary) the images, extract them in its internal tree store, and allocate a pod UUID. If overlay fs is not supported or disabled, it will also copy the tree in the pod rootfs.
+rkt can prepare images to run in a pod.
+This means it will fetch (if necessary) the images, extract them in its internal tree store, and allocate a pod UUID.
+If overlay fs is not supported or disabled, it will also copy the tree in the pod rootfs.
 
 In this way, the pod is ready to be launched immediately by the [run-prepared](run-prepared.md) command.
 

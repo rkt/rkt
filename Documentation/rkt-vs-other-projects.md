@@ -14,7 +14,8 @@ This document describes how rkt compares to various other projects in the contai
 
 ## rkt vs Docker
 
-The Docker Engine, or simply Docker, is an application container runtime system that runs as a centralized API daemon. Docker can take a ["Docker Image"](https://github.com/docker/docker/blob/master/image/spec/v1.md) name, such as `quay.io/coreos/etcd`, and download, execute, and monitor the application.
+The Docker Engine is an application container runtime implemented as a central monolithic API daemon.
+Docker can resolve a ["Docker Image"](https://github.com/docker/docker/blob/master/image/spec/v1.md) name, such as `quay.io/coreos/etcd`, and download, execute, and monitor the application container.
 Functionally, this is all similar to rkt; however, along with "Docker Images", rkt can also download and run "App Container Images" (ACIs) specified by the [App Container Specification](https://github.com/appc/spec) (appc).
 
 Besides also supporting ACIs, rkt has a substantially different architecture that is designed with composability and security in mind.
@@ -29,14 +30,12 @@ rkt has no centralized "init" daemon, instead launching containers directly from
 
 ![rkt-vs-docker-process-model](rkt-vs-docker-process-model.png)
 
-
 #### Privilege Separation
 
 rkt uses standard Unix group permissions to allow privilege separation between different operations.
 Once the rkt data directory is correctly set up (for example, by `rkt install`), the container image downloads and signature verification can run as a non-privileged user.
 
 ![rkt-vs-docker-fetch](rkt-vs-docker-fetch.png)
-
 
 ## rkt vs runC
 
@@ -69,7 +68,6 @@ rkt can download, cryptographically verify, and run application container images
 It is not designed to run "full system containers" but instead individual applications such as web apps, databases, or caches.
 As rkt does not have a centralized daemon it can be integrated with init systems such as upstart and systemd.
 
-
 ## rkt vs OpenVZ
 
 OpenVZ is a system container runtime designed to execute "full system containers" which are generally a full system image.
@@ -80,7 +78,6 @@ OpenVZ does not have a central daemon and can integrate with init systems such a
 rkt can download, cryptographically verify, and run application container images.
 It is not designed to run "full system containers" but instead individual applications such as web apps, databases, or caches.
 As rkt does not have a centralized daemon it can be integrated with init systems such as upstart and systemd.
-
 
 ## rkt vs systemd-nspawn
 
@@ -106,7 +103,6 @@ However, in being more oriented towards applications, rkt abstracts the pod life
 rkt also provides a more configurable and advanced workflow around discovering, downloading and verifying images, as well as supporting more image types.
 Unlike machinectl, rkt execs systemd-nspawn directly instead of creating a systemd service, allowing it to integrate cleanly with any supervisor system.
 Furthermore, in addition to namespace isolation, rkt can set up various other kinds of isolation (e.g. resources) defined in the appc specification.
-
 
 ## rkt vs qemu-kvm, lkvm
 

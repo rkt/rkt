@@ -9,6 +9,7 @@
 rkt (pronounced _"rock-it"_) is a CLI for running app containers on Linux. rkt is designed to be composable, secure, and fast.
 
 Some of rkt's key features and goals include:
+
 - First-class integration with init systems ([systemd](Documentation/using-rkt-with-systemd.md), upstart) and cluster orchestration tools (fleet, Kubernetes)
 - Compatibility with other container software (e.g. rkt can run [Docker images](Documentation/running-docker-images.md))
 - Modular and extensible architecture ([network configuration plugins](Documentation/networking.md), swappable execution engines based on systemd or QEMU/KVM)
@@ -22,7 +23,8 @@ rkt's native image format ([ACI](Documentation/app-container.md#ACI)) and runtim
 
 ## Project status
 
-rkt is maturing rapidly while under active development, and its interfaces are not yet considered stable. We do not recommend its use in production, but we encourage you to try out rkt and provide feedback via issues and pull requests.
+rkt is maturing rapidly while under active development, and its interfaces are not yet considered stable.
+We do not recommend its use in production, but we encourage you to try out rkt and provide feedback via issues and pull requests.
 
 Check out the [roadmap](ROADMAP.md) for more details on the future of rkt.
 
@@ -30,7 +32,9 @@ Check out the [roadmap](ROADMAP.md) for more details on the future of rkt.
 
 ### Using rkt on Linux
 
-`rkt` consists of a single self-contained CLI, and is currently supported on amd64 Linux. A modern kernel is required but there should be no other system dependencies. We recommend booting up a fresh virtual machine to test out rkt.
+`rkt` consists of a single self-contained CLI, and is currently supported on amd64 Linux.
+A modern kernel is required but there should be no other system dependencies.
+We recommend booting up a fresh virtual machine to test out rkt.
 
 To download the `rkt` binary, simply grab the latest release directly from GitHub:
 
@@ -43,7 +47,10 @@ cd rkt-v0.13.0
 
 ### Trying out rkt using Vagrant
 
-For Mac (and other Vagrant) users we have set up a `Vagrantfile`: clone this repository and make sure you have [Vagrant](https://www.vagrantup.com/) 1.5.x or greater installed. `vagrant up` starts up a Linux box and installs via some scripts `rkt` and `actool`. With a subsequent `vagrant ssh` you are ready to go:
+For Mac (and other Vagrant) users we have set up a `Vagrantfile`: clone this repository and make sure you have [Vagrant](https://www.vagrantup.com/) 1.5.x or greater installed.
+`vagrant up` starts up a Linux box and installs via some scripts `rkt` and `actool`.
+With a subsequent `vagrant ssh` you are ready to go:
+
 ```
 git clone https://github.com/coreos/rkt
 cd rkt
@@ -66,7 +73,9 @@ The example below uses a pre-built ACI for [etcd](https://github.com/coreos/etcd
 
 ### Downloading an App Container Image (ACI)
 
-rkt uses content addressable storage (CAS) for storing an ACI on disk. In this example, the image is downloaded and added to the CAS. Downloading an image before running it is not strictly necessary (if it is not present, rkt will automatically retrieve it), but useful to illustrate how rkt works.
+rkt uses content addressable storage (CAS) for storing an ACI on disk.
+In this example, the image is downloaded and added to the CAS.
+Downloading an image before running it is not strictly necessary (if it is not present, rkt will automatically retrieve it), but useful to illustrate how rkt works.
 
 Since rkt verifies signatures by default, you will need to first [trust](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md#establishing-trust) the [CoreOS public key](https://coreos.com/dist/pubkeys/aci-pubkeys.gpg) used to sign the image, using `rkt trust`:
 
@@ -96,7 +105,10 @@ rkt: signature verified:
 sha512-1eba37d9b344b33d272181e176da111e
 ```
 
-Sometimes you will want to download an image from a private repository. This usually involves passing usernames and passwords or other kinds of credentials to the server. rkt currently supports authentication via configuration files. You can find configuration file format description (with examples!) in [configuration documentation](Documentation/configuration.md).
+Sometimes you will want to download an image from a private repository.
+This usually involves passing usernames and passwords or other kinds of credentials to the server.
+rkt currently supports authentication via configuration files.
+You can find configuration file format description (with examples!) in [configuration documentation](Documentation/configuration.md).
 
 For the curious, we can see the files written to disk in rkt's CAS:
 
@@ -120,7 +132,8 @@ $ sha512sum etcd-v2.0.4-linux-amd64.tar
 
 ### Launching an ACI
 
-After it has been retrieved and stored locally, an ACI can be run by pointing `rkt run` at either the original image reference (in this case, "coreos.com/etcd:v2.0.4"), the full URL of the ACI, or the ACI hash. Hence, the following three examples are equivalent:
+After it has been retrieved and stored locally, an ACI can be run by pointing `rkt run` at either the original image reference (in this case, "coreos.com/etcd:v2.0.4"), the full URL of the ACI, or the ACI hash.
+Hence, the following three examples are equivalent:
 
 ```
 # Example of running via ACI name:version
@@ -145,7 +158,9 @@ Press ^] three times to kill container
 
 In the latter case, `rkt` will do the appropriate ETag checking on the URL to make sure it has the most up to date version of the image.
 
-Note that the escape character ```^]``` is generated by ```Ctrl-]``` on a US keyboard. The required key combination will differ on other keyboard layouts. For example, the Swedish keyboard layout uses ```Ctrl-å``` on OS X and ```Ctrl-^``` on Windows to generate the ```^]``` escape character.
+Note that the escape character ```^]``` is generated by ```Ctrl-]``` on a US keyboard.
+The required key combination will differ on other keyboard layouts.
+For example, the Swedish keyboard layout uses ```Ctrl-å``` on OS X and ```Ctrl-^``` on Windows to generate the ```^]``` escape character.
 
 ## Known issues
 

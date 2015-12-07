@@ -10,7 +10,7 @@ UUID        APP     IMAGE NAME               STATE      NETWORKS
 3089337c    nginx   nginx                    exited
 ```
 
-You can view the full UUID as well as the image's ID by using the `--full` flag
+You can view the full UUID as well as the image's ID by using the `--full` flag.
 
 ```
 # rkt list --full

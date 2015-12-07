@@ -105,18 +105,22 @@ Each ACI can define a [list of mount points](https://github.com/appc/spec/blob/m
 }
 ```
 
-To fulfill these mount points, volumes are used. A volume is assigned to a mount point if they both have the same name.
+To fulfill these mount points, volumes are used.
+A volume is assigned to a mount point if they both have the same name.
 There are today two kinds of volumes:
-- `host` volumes that can expose a directory or a file from the host to the pod
+
+- `host` volumes that can expose a directory or a file from the host to the pod.
 - `empty` volumes that initialize an empty storage to be accessed locally within the pod. When the pod is garbage collected, it will be removed.
 
-Each volume can be selectively mounted into each application at differing mount points. Note that any volumes that are specified but do not have a matching mount point (or [`--mount` flag](#mounting-volumes-without-mount-points)) will be silently ignored.
+Each volume can be selectively mounted into each application at differing mount points.
+Note that any volumes that are specified but do not have a matching mount point (or [`--mount` flag](#mounting-volumes-without-mount-points)) will be silently ignored.
 
 If a mount point is specified in the image manifest but no matching volume is found, an implicit `empty` volume will be created automatically.
 
 ### Mounting Volumes
 
-For `host` volumes, the `--volume` flag allows you to specify each mount, its type, the location on the host, and whether the volume is read-only or not. In the following example, we make the host's `/srv/data` accessible to app1 on `/var/data`:
+For `host` volumes, the `--volume` flag allows you to specify each mount, its type, the location on the host, and whether the volume is read-only or not.
+In the following example, we make the host's `/srv/data` accessible to app1 on `/var/data`:
 
 ```
 # rkt run --volume data,kind=host,source=/srv/data,readOnly=false example.com/app1
@@ -134,7 +138,8 @@ The volume is then mounted into each app running to the pod based on information
 
 If the ACI doesn't have any mount points defined in its manifest, you can still mount volumes using the `--mount` flag.
 
-With `--mount` you define a mapping between volumes and a path in the app. This will supplement and override any mount points in the image manifest.
+With `--mount` you define a mapping between volumes and a path in the app.
+This will supplement and override any mount points in the image manifest.
 In the following example, the `--mount` option is positioned after the app name; it defines the mount only in that app:
 
 ```
@@ -154,9 +159,12 @@ It defines mounts on all apps: both app1 and app2 will have `/srv/logs` accessib
 
 ### MapReduce Example
 
-Let's say we want to read data from the host directory `/opt/tenant1/work` to power a MapReduce-style worker. We'll call this app `example.com/reduce-worker`.
+Let's say we want to read data from the host directory `/opt/tenant1/work` to power a MapReduce-style worker.
+We'll call this app `example.com/reduce-worker`.
 
-We also want this data to be available to a backup application that runs alongside the worker (in the same pod). We'll call this app 'example.com/worker-backup`. The backup application only needs read-only access to the data.
+We also want this data to be available to a backup application that runs alongside the worker (in the same pod).
+We'll call this app 'example.com/worker-backup`.
+The backup application only needs read-only access to the data.
 
 Below we show the abbreviated manifests for the respective applications (recall that the manifest is bundled into the application's ACI):
 
@@ -244,7 +252,6 @@ Simplified, with `--net=host` the apps within the pod will share the network sta
 ```
 
 Strictly seen, this is only true when `rkt run` is invoked on the host directly, because the network stack will be inherited from the process that is invoking the `rkt run` command.
-
 
 ### Other Networking Examples
 
