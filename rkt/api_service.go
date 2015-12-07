@@ -61,7 +61,7 @@ type v1AlphaAPIServer struct {
 var _ v1alpha.PublicAPIServer = &v1AlphaAPIServer{}
 
 func newV1AlphaAPIServer() (*v1AlphaAPIServer, error) {
-	s, err := store.NewStore(globalFlags.Dir)
+	s, err := store.NewStore(getDataDir())
 	if err != nil {
 		return nil, err
 	}
