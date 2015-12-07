@@ -2,7 +2,7 @@
 
 ## Overview
 
-rkt consists only of a command-line tool, `rkt`, and does not have a daemon.
+rkt's primary interface is a command-line tool, `rkt`, which does not require a long running daemon.
 This architecture allows rkt to be updated in-place without affecting application containers which are currently running.
 It also means that levels of privilege can be separated out between different operations.
 

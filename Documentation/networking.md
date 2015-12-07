@@ -84,10 +84,10 @@ The following fields apply to all configuration files.
 Additional fields are specified for various types.
 
 - **name** (string): an arbitrary label for the network.
-  By convention the conf file is labeled with a leading ordinal, dash, network name, and .conf extension.
+  By convention the conf file is named with a leading ordinal, dash, network name, and .conf extension.
 - **type** (string): the type of network/interface to create.
   The type actually names a network plugin.
-  rkt is bundled with few built-in plugins.
+  rkt is bundled with some built-in plugins.
 - **ipam** (dict): IP Address Management -- controls the settings related to IP address assignment, gateway, and routes.
 
 ### Built-in network types
@@ -104,10 +104,10 @@ It creates a virtual ethernet pair (akin to a pipe) and places one end into pod 
 
 #### bridge
 
-Like the ptp type, `bridge` will also create a veth pair and place one end into the pod.
+Like the ptp type, `bridge` will create a veth pair and attach one end to the pod.
 However the host end of the veth will be plugged into a linux-bridge.
 The configuration file specifies the bridge name and if the bridge does not exist, it will be created.
-The bridge can optionally be setup to act as the gateway for the network.
+The bridge can optionally be configured to act as the gateway for the network.
 
 `bridge` specific configuration fields are:
 

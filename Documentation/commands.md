@@ -8,8 +8,8 @@ Please contribute if you see an area that needs more detail.
 [aci-images]: https://github.com/appc/spec/blob/master/spec/aci.md#app-container-image
 [appc-discovery]: https://github.com/appc/spec/blob/master/spec/discovery.md#app-container-image-discovery
 
-rkt runs applications packaged as [Application Container Images (ACI)][aci-images] an open-source specification.
-ACIs consist of the root filesystem of the application container, a manifest and an optional signature.
+rkt runs applications packaged according to the open-source [App Container Image][aci-images] specification.
+ACIs consist of the root filesystem of the application container, a manifest, and an optional signature.
 
 ACIs are named with a URL-like structure.
 This naming scheme allows for a decentralized discovery of ACIs, related signatures and public keys.
@@ -20,9 +20,12 @@ rkt uses these hints to execute [meta discovery][appc-discovery].
 
 ## Running Pods
 
-rkt can run ACIs based on name, hash, local file on disk or URL.
+[metadata-spec]: https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service
+[rkt-mds]: subcommands/metadata-service.md
+
+rkt can execute ACIs identified by name, hash, local file path, or URL.
 If an ACI hasn't been cached on disk, rkt will attempt to find and download it.
-If you want to use the [metadata service](https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service), make sure [it is running](https://github.com/coreos/rkt/blob/mastersubcommands/metadata-service.md) and you enable registration with the `--mds-register` flag.
+To use rkt's [metadata service][metadata-spec], enable registration with the `--mds-register` flag when [invoking it][rkt-mds].
 
 * [run](subcommands/run.md)
 * [enter](subcommands/enter.md)
@@ -55,14 +58,14 @@ The metadata service helps running apps introspect their execution environment a
 
 In addition to the flags used by individual `rkt` commands, `rkt` has a set of global options that are applicable to all commands.
 
-| Flag | Default | Options | Desription |
+| Flag | Default | Options | Description |
 | --- | --- | --- | --- |
 | `--debug` |  `false` | `true` or `false` | Prints out more debug information to `stderr` |
 | `--dir` | `/var/lib/rkt` | A directory path | Path to the `rkt` data directory |
 | `--insecure-options` |  none | <ul><li>**none**: All security features are enabled</li><li>**image**: Disables verifying image signatures</li><li>**tls**: Accept any certificate from the server and any host name in that certificate</li><li>**ondisk**: Disables verifying the integrity of the on-disk, rendered image before running. This significantly speeds up start time.</li><li>**all**: Disables all security checks</li></ul>  | Comma-separated list of security features to disable |
 | `--local-config` |  `/etc/rkt` | A directory path | Path to the local configuration directory |
 | `--system-config` |  `/usr/lib/rkt` | A directory path | Path to the system configuration directory |
-| `--trust-keys-from-https` |  `true` | `true` or `false` | Automatically trust gpg keys fetched from https || Flag | Default | Options | Desription |
+| `--trust-keys-from-https` |  `true` | `true` or `false` | Automatically trust gpg keys fetched from https |
 
 ## Logging
 
@@ -72,8 +75,7 @@ In this case, the logs can be accessed directly via journalctl.
 
 #### Accessing logs via journalctl
 
-To get the logs of a running pod, you need to get the pod's machine name.
-You can use machinectl:
+To read the logs of a running pod, get the pod's machine name from `machinectl`:
 
 ```
 $ machinectl
@@ -91,9 +93,8 @@ UUID					APP	IMAGE NAME		IMAGE ID		STATE	NETWORKS
 132f9d56-0e3f-4d1e-ba86-68efd488bb62	etcd	coreos.com/etcd:v2.0.10 sha512-c03b055d02e5	running
 ```
 
-Pod's machine name will be the pod's UUID with a `rkt-` prefix.
-
-Then you can use systemd's journalctl:
+The pod's machine name will be the pod's UUID prefixed with `rkt-`.
+Given this machine name, logs can be retrieved by `journalctl`:
 
 ```
 # journalctl -M rkt-132f9d56-0e3f-4d1e-ba86-68efd488bb62

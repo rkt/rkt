@@ -92,7 +92,7 @@ Example:
 
 The stage1 kvm image is based on CoreOS, but with additional components for running containers on top of a hypervisor.
 
-To build, use `--with-stage1-flavors=kvm` flag in `./configure`
+To build, pass `kvm` to `--with-stage1-flavors` parameter in `./configure`
 
 This will generate stage1 with embedded kernel and kvmtool to start pod in virtual machine.
 
@@ -109,7 +109,7 @@ If building with docker, these must be added to the `apt-get install` command.
 rkt is designed and intended to be modular, using a [staged architecture](devel/architecture.md).
 
 `rkt run` determines the stage1 image it should use via its `-stage1-image` flag.
-By default, if this flag is unset at runtime, rkt will default to the configure-time settings.
+If this flag is not given to rkt, the stage1 image will default to the settings configured when rkt was built from source.
 It usually means that rkt will look for a file called `stage1-<default flavor>.aci` that is in the same directory as the rkt binary itself.
 
 However, a default value can be set for this parameter at build time by setting the option `--with-stage1-default-location` when invoking `./configure`

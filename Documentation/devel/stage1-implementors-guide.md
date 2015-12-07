@@ -18,10 +18,12 @@ This separation of concerns is reflected in the file-system and layout of the co
 
 The stage 1 implementation is what creates the execution environment for the contained applications.
 This occurs via entrypoints from stage 0 on behalf of `rkt run` and `rkt enter`.
-These entrypoints are nothing more than executable programs located via Annotations from within the stage 1 ACI manifest, and executed from within the stage 1 of a given pod at "/var/lib/rkt/pods/$uuid/stage1/rootfs".
+These entrypoints are executable programs located via Annotations from within the stage 1 ACI manifest, and executed from within the stage 1 of a given pod at `/var/lib/rkt/pods/$uuid/stage1/rootfs`.
 
-Stage 2 is the destination application images and stage 1 is the vehicle for getting us there from stage 0.
-For any given pod instance, the stage 1 may be completely different, allowing for flexibility in containment strategies employed within the same host while utilizing reusable application ACIs.
+Stage 2 is the deployed application image.
+Stage 1 is the vehicle for getting there from stage 0.
+For any given pod instance, stage 1 may be replaced by a completely different implementation.
+This allows users to employ different containment strategies on the same host running the same interchangeable ACIs.
 
 Entrypoints
 -----------
@@ -56,7 +58,7 @@ rkt supports two ways of doing that, stage1 implementors must pick one:
 #### Arguments
 * `--debug` to activate debugging
 * `--net[=$NET1,$NET2,...]` to configure the creation of a contained network.
-  Please take the [network documentation](../networking.md) into account
+  See the [rkt networking documentation](../networking.md) for details.
 * `--mds-token=$TOKEN` passes the auth token to the apps via `AC_METADATA_URL` env var
 * `--interactive` to run a pod interactively, that is, pass standard input to the application (only for pods with one application)
 * `--local-config=$PATH` to override the local configuration directory
@@ -68,8 +70,9 @@ rkt supports two ways of doing that, stage1 implementors must pick one:
 2. resolves the "coreos.com/rkt/stage1/enter" entrypoint via Annotations found within "/var/lib/rkt/pods/$uuid/stage1/manifest"
 3. executes the resolved entrypoint relative to "/var/lib/rkt/pods/$uuid/stage1/rootfs"
 
-In the bundled rkt stage 1 the entrypoint is a statically-linked C program found at "/enter" within the stage 1 ACI rootfs.
-This program enters the namespaces of the systemd-nspawn container's PID 1 before executing the "/appexec" program which then chroots into the specific application's rootfs loading the application's environment variables as well.
+In the bundled rkt stage 1, the entrypoint is a statically-linked C program found at `/enter` within the stage 1 ACI rootfs.
+This program enters the namespaces of the systemd-nspawn container's PID 1 before executing the `/appexec` program.
+`appexec` then `chroot`s into the ACI's rootfs, loading the application and its environment.
 
 An alternative stage 1 would need to do whatever is appropriate for entering the application's environment created by its own "coreos.com/rkt/stage1/run" entrypoint.
 
@@ -84,7 +87,7 @@ An alternative stage 1 would need to do whatever is appropriate for entering the
 
 ### `rkt gc` => "coreos.com/rkt/stage1/gc"
 
-It deals with garbage collecting resources allocated by stage1.
+The gc entrypoint deals with garbage collecting resources allocated by stage1.
 For example, it removes the network namespace of a pod.
 
 #### Arguments

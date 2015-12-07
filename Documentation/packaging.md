@@ -59,7 +59,7 @@ To solve this, you can download the CoreOS PXE image before starting the build p
 
 ## Bundling with systemd
 
-Most Linux distributions don't allow to use pre-build binaries or to reuse copy of code that is already otherwise packaged.
+Most Linux distributions don't allow the use of prebuilt binaries, or reuse of code that is already otherwise packaged.
 systemd falls in this category, as Debian and Fedora already package systemd and rkt needs systemd.
 
 - [Debian Policy Manual, section 4.13 Convenience copies of code](https://www.debian.org/doc/debian-policy/ch-source.html#s-embeddedfiles)
@@ -72,12 +72,12 @@ In order to avoid build-dependency on systemd in rkt, a build option was added t
 ./configure --with-stage1-flavors=host
 ```
 
-The generated archive `stage1.aci` will not contain bash, systemd that comes from external sources.
-The only binaries in the archive are built from the sources in the rkt git repository.
-Since stage1.aci needs external binaries, they will be taken from the host at run-time.
+The generated archive `stage1.aci` will not contain bash, systemd, or any other binaries from external sources.
+The binaries embedded in the stage1 archive are all built from the sources in the rkt git repository.
+The external binaries needed by `stage1.aci` are copied from the host at run time.
 Packages using the `--with-stage1-flavors=host` option must therefore add a run-time dependency on systemd and bash.
 Whenever systemd and bash are upgraded on the host, rkt will use the new version at run time.
-It becomes the packager responsibility to test the rkt package whenever a new version of systemd is packaged.
+It becomes the packager's responsibility to test the rkt package whenever a new version of systemd is packaged.
 
 # Other code bundle
 

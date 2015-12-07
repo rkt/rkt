@@ -14,8 +14,8 @@ This document describes how rkt compares to various other projects in the contai
 
 ## rkt vs Docker
 
-The Docker Engine, or simply Docker, is an application container runtime system that runs as a centralized API daemon.
-Docker can take a ["Docker Image"](https://github.com/docker/docker/blob/master/image/spec/v1.md) name, such as `quay.io/coreos/etcd`, and download, execute, and monitor the application.
+The Docker Engine is an application container runtime implemented as a central monolithic API daemon.
+Docker can resolve a ["Docker Image"](https://github.com/docker/docker/blob/master/image/spec/v1.md) name, such as `quay.io/coreos/etcd`, and download, execute, and monitor the application container.
 Functionally, this is all similar to rkt; however, along with "Docker Images", rkt can also download and run "App Container Images" (ACIs) specified by the [App Container Specification](https://github.com/appc/spec) (appc).
 
 Besides also supporting ACIs, rkt has a substantially different architecture that is designed with composability and security in mind.
