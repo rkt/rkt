@@ -105,9 +105,7 @@ func init() {
 
 	// TODO: Remove before 1.0
 	rktflag.InstallDeprecatedSkipVerify(cmdRkt.PersistentFlags(), sf)
-}
 
-func init() {
 	cobra.EnablePrefixMatching = true
 }
 
