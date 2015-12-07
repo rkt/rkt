@@ -756,28 +756,26 @@ func getContainerSubCgroup(machineID string) (string, error) {
 		}
 		subcgroup = filepath.Join(slicePath, unit, "system.slice")
 	} else {
+		escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
+		machineDir := "machine-" + escapedmID + ".scope"
 		if machinedRegister() {
 			// we are not in the final cgroup yet: systemd-nspawn will move us
 			// to the correct cgroup later during registration so we can't
 			// look it up in /proc/self/cgroup
-			escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
-			machineDir := "machine-" + escapedmID + ".scope"
 			subcgroup = filepath.Join("machine.slice", machineDir, "system.slice")
 		} else {
 			// when registration is disabled the container will be directly
-			// under rkt's cgroup so we can look it up in /proc/self/cgroup
+			// under the current cgroup so we can look it up in /proc/self/cgroup
 			ownCgroupPath, err := cgroup.GetOwnCgroupPath("name=systemd")
 			if err != nil {
 				return "", fmt.Errorf("could not get own cgroup path: %v", err)
 			}
-			// systemd-nspawn won't work unless we're in a subcgroup. If we're
-			// in the root cgroup, we create a "rkt" subcgroup and we add
-			// ourselves to it
-			if ownCgroupPath == "/" {
-				ownCgroupPath = "/rkt"
-				if err := cgroup.JoinSubcgroup("systemd", ownCgroupPath); err != nil {
-					return "", fmt.Errorf("error joining %s subcgroup: %v", ownCgroupPath, err)
-				}
+			// systemd-nspawn won't work if we are in the root cgroup. In addition,
+			// we want all rkt instances to be in distinct cgroups. Create a
+			// subcgroup and add ourselves to it.
+			ownCgroupPath = filepath.Join(ownCgroupPath, machineDir)
+			if err := cgroup.JoinSubcgroup("systemd", ownCgroupPath); err != nil {
+				return "", fmt.Errorf("error joining %s subcgroup: %v", ownCgroupPath, err)
 			}
 			subcgroup = filepath.Join(ownCgroupPath, "system.slice")
 		}
