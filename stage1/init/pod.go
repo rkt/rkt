@@ -249,6 +249,10 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 	}
 	imgName := image.Name
 
+	if len(app.Exec) == 0 {
+		return fmt.Errorf(`image %q has an empty "exec" (try --exec=BINARY)`, imgName)
+	}
+
 	workDir := "/"
 	if app.WorkingDirectory != "" {
 		workDir = app.WorkingDirectory
