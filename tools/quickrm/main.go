@@ -18,10 +18,12 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/coreos/rkt/tools/common"
 )
@@ -80,6 +82,13 @@ func main() {
 				}
 				common.Warn("Failed to remove %s %q: %v", i.kind, el, err)
 				failed = true
+				if infos, err := ioutil.ReadDir(el); err == nil {
+					var contents []string
+					for _, fi := range infos {
+						contents = append(contents, fi.Name())
+					}
+					common.Warn("  Contents of the directory: %s", strings.Join(contents, ", "))
+				}
 			}
 		}
 	}
