@@ -8,3 +8,4 @@
 /makelib/variables.mk
 /build-rkt*
 .vagrant
+/tags
