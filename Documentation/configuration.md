@@ -55,6 +55,8 @@ To use this type, define `type` as `basic` and the `credentials` field as a map 
 These fields must be specified and cannot be empty.
 For example:
 
+`/etc/rkt/auth.d/coreos-basic.json`:
+
 ```json
 {
 	"rktKind": "auth",
@@ -72,6 +74,8 @@ OAuth Bearer Token authentication requires only a token.
 To use this type, define `type` as `oauth` and the `credentials` field as a map with only one key - `token`.
 This field must be specified and cannot be empty.
 For example:
+
+`/etc/rkt/auth.d/coreos-oauth.json`:
 
 ```json
 {
@@ -173,6 +177,8 @@ Some popular Docker registries:
 
 Example `dockerAuth` configuration:
 
+`/etc/rkt/auth.d/docker.json`:
+
 ```json
 {
 	"rktKind": "dockerAuth",
@@ -258,7 +264,8 @@ If its value is not overridden, it is `/var/lib/rkt` by default.
 
 For example, to store images in your home partition instead of the root partition:
 
-`/etc/rkt/paths.d/paths.json`
+`/etc/rkt/paths.d/paths.json`:
+
 ```json
 {
 	"rktKind": "paths",
