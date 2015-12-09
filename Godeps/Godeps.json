@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
-	"GoVersion": "go1.4.3",
+	"GoVersion": "go1.4.2",
 	"Packages": [
 		"./..."
 	],
@@ -168,15 +168,15 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/attestation",
-			"Rev": "9c5928e0350d9829e4d144b461884a259a176dbc"
+			"Rev": "5b86c15a590e0dd6de7ae28357bbc20c3a1dbb49"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/tpmclient",
-			"Rev": "9c5928e0350d9829e4d144b461884a259a176dbc"
+			"Rev": "5b86c15a590e0dd6de7ae28357bbc20c3a1dbb49"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/tspi",
-			"Rev": "9c5928e0350d9829e4d144b461884a259a176dbc"
+			"Rev": "5b86c15a590e0dd6de7ae28357bbc20c3a1dbb49"
 		},
 		{
 			"ImportPath": "github.com/coreos/ioprogress",
