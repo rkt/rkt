@@ -12,8 +12,14 @@ Backwards-compatibility is a priority for the v1.0.0 release.
 
 ### rkt v0.14 (December)
 - different shared namespace execution modes [#1433](https://github.com/coreos/rkt/issues/1433)
+  - `rkt fly`, suitable for running Kubelet
+- Go 1.5 support [#1521](https://github.com/coreos/rkt/issues/1521)
+- Configuration of per-app isolators from CLI [#1851](https://github.com/coreos/rkt/issues/1851)
+- stage1 benchmarking [#1788](https://github.com/coreos/rkt/issues/1788)
+- more advanced stage1 image configuration [#1425](https://github.com/coreos/rkt/issues/1425)
 
 ### rkt v0.15 (January)
+- expose more information on rkt images [#1814](https://github.com/coreos/rkt/issues/1814)
 - per-user credentials configuration [#1568](https://github.com/coreos/rkt/issues/1568)
 
 ### rkt 1.0
