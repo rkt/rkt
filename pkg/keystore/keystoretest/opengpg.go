@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package keystoretest provides utilities for ACI keystore testing.
-//go:generate go run keygen.go
+//go:generate go run ./keygen/keygen.go
 package keystoretest
 
 import (
