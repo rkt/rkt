@@ -112,6 +112,82 @@ type Store struct {
 	treeStoreLockDir string
 }
 
+func (s *Store) UpdateSize(key string, newSize int64) error {
+	return s.db.Do(func(tx *sql.Tx) error {
+		_, err := tx.Exec("UPDATE aciinfo SET size = $1 WHERE blobkey == $2", newSize, key)
+		return err
+	})
+}
+
+func (s *Store) UpdateTreeStoreSize(key string, newSize int64) error {
+	return s.db.Do(func(tx *sql.Tx) error {
+		_, err := tx.Exec("UPDATE aciinfo SET treestoresize = $1 WHERE blobkey == $2", newSize, key)
+		return err
+	})
+}
+
+func (s *Store) populateSize() error {
+	var ais []*ACIInfo
+	err := s.db.Do(func(tx *sql.Tx) error {
+		var err error
+		ais, err = GetACIInfosWithKeyPrefix(tx, "")
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("populateSize(): error retrieving ACI Infos: %v", err)
+	}
+
+	aciSizes := make(map[string]int64)
+	tsSizes := make(map[string]int64)
+	for _, ai := range ais {
+		key := ai.BlobKey
+
+		im, err := s.ReadStream(key)
+		if err != nil {
+			return err
+		}
+
+		rd, err := io.Copy(ioutil.Discard, im)
+		if err != nil {
+			return err
+		}
+		aciSizes[key] = rd
+
+		id, err := s.GetTreeStoreID(key)
+		if err != nil {
+			return err
+		}
+
+		tsR, err := s.treestore.IsRendered(id)
+		if err != nil {
+			return fmt.Errorf("error determining whether the tree store is rendered: %v", err)
+		}
+		if tsR {
+			// We associate a tree store with an image by writing the image
+			// hash to a file. We need this so we can update the image size
+			// when we remove the rendered tree store.
+			treepath := s.treestore.GetPath(id)
+			if err := ioutil.WriteFile(filepath.Join(treepath, imagefilename), []byte(key), 0644); err != nil {
+				return fmt.Errorf("error writing app treeStoreID: %v", err)
+			}
+
+			tsSize, err := s.treestore.Size(id)
+			if err != nil {
+				return err
+			}
+
+			tsSizes[key] = tsSize
+		}
+	}
+
+	for k, _ := range aciSizes {
+		s.UpdateSize(k, aciSizes[k])
+		s.UpdateTreeStoreSize(k, tsSizes[k])
+	}
+
+	return nil
+}
+
 func NewStore(baseDir string) (*Store, error) {
 	// We need to allow the store's setgid bits (if any) to propagate, so
 	// disable umask
@@ -160,6 +236,7 @@ func NewStore(baseDir string) (*Store, error) {
 	s.treestore = &TreeStore{path: filepath.Join(storeDir, "tree")}
 
 	needsMigrate := false
+	needsSizePopulation := false
 	fn := func(tx *sql.Tx) error {
 		var err error
 		ok, err := dbIsPopulated(tx)
@@ -187,6 +264,9 @@ func NewStore(baseDir string) (*Store, error) {
 		if version > dbVersion {
 			return fmt.Errorf("Current store db version: %d greater than the current rkt expected version: %d", version, dbVersion)
 		}
+		if version < 5 {
+			needsSizePopulation = true
+		}
 		return nil
 	}
 	if err = db.Do(fn); err != nil {
@@ -212,6 +292,12 @@ func NewStore(baseDir string) (*Store, error) {
 		}
 		if err = db.Do(fn); err != nil {
 			return nil, err
+		}
+
+		if needsSizePopulation {
+			if err := s.populateSize(); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -327,7 +413,7 @@ func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 		return WriteACIInfo(tx, aciinfo)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("cannot remove image with ID: %s from db: %v", key, err)
+		return nil, fmt.Errorf("cannot get image info for %q from db: %v", key, err)
 	}
 
 	return s.stores[blobType].ReadStream(key, false)
@@ -358,7 +444,8 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error creating image: %v", err)
 	}
-	if _, err := io.Copy(fh, tr); err != nil {
+	sz, err := io.Copy(fh, tr)
+	if err != nil {
 		return "", fmt.Errorf("error copying image: %v", err)
 	}
 	im, err := aci.ManifestFromImage(fh)
@@ -398,6 +485,7 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 			ImportTime: time.Now(),
 			LastUsed:   time.Now(),
 			Latest:     latest,
+			Size:       sz,
 		}
 		return WriteACIInfo(tx, aciinfo)
 	}); err != nil {
@@ -534,12 +622,13 @@ func (s *Store) RenderTreeStore(key string, rebuild bool) (id string, hash strin
 	// Firstly remove a possible partial treestore if existing.
 	// This is needed as a previous ACI removal operation could have failed
 	// cleaning the tree store leaving some stale files.
-	if err := s.treestore.Remove(id); err != nil {
+	if err := s.treestore.Remove(id, s); err != nil {
 		return "", "", err
 	}
 	if hash, err = s.treestore.Write(id, key, s); err != nil {
 		return "", "", err
 	}
+
 	return id, hash, nil
 }
 
@@ -577,9 +666,10 @@ func (s *Store) RemoveTreeStore(id string) error {
 	}
 	defer treeStoreKeyLock.Close()
 
-	if err := s.treestore.Remove(id); err != nil {
+	if err := s.treestore.Remove(id, s); err != nil {
 		return fmt.Errorf("error removing the tree store: %v", err)
 	}
+
 	return nil
 }
 

@@ -30,6 +30,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/tarheader"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/uid"
 )
@@ -37,6 +38,7 @@ import (
 const (
 	hashfilename     = "hash"
 	renderedfilename = "rendered"
+	imagefilename    = "image"
 )
 
 // TreeStore represents a store of rendered ACIs
@@ -90,14 +92,30 @@ func (ts *TreeStore) Write(id string, key string, s *Store) (string, error) {
 	}
 	f.Close()
 
+	// Write the hash of the image that will use this tree store
+	err = ioutil.WriteFile(filepath.Join(treepath, imagefilename), []byte(key), 0644)
+	if err != nil {
+		return "", fmt.Errorf("treestore: cannot write image file: %v", err)
+	}
+
 	if err := syscall.Fsync(dfd); err != nil {
 		return "", fmt.Errorf("treestore: failed to sync tree store directory: %v", err)
 	}
+
+	treeSize, err := ts.Size(id)
+	if err != nil {
+		return "", err
+	}
+
+	if err := s.UpdateTreeStoreSize(key, treeSize); err != nil {
+		return "", err
+	}
+
 	return string(hash), nil
 }
 
 // Remove cleans the directory for the provided id
-func (ts *TreeStore) Remove(id string) error {
+func (ts *TreeStore) Remove(id string, s *Store) error {
 	treepath := ts.GetPath(id)
 	// If tree path doesn't exist we're done
 	_, err := os.Stat(treepath)
@@ -130,7 +148,17 @@ func (ts *TreeStore) Remove(id string) error {
 			return fmt.Errorf("treestore: failed to sync tree store directory: %v", err)
 		}
 	}
-	return os.RemoveAll(treepath)
+
+	key, err := ts.GetImageHash(id)
+	if err != nil {
+		return err
+	}
+
+	if err := os.RemoveAll(treepath); err != nil {
+		return err
+	}
+
+	return s.UpdateTreeStoreSize(key, 0)
 }
 
 // IsRendered checks if the tree store with the provided id is fully rendered
@@ -198,6 +226,29 @@ func (ts *TreeStore) Check(id string) (string, error) {
 	return curhash, nil
 }
 
+// Size returns the size of the rootfs for the provided id. It is a relatively
+// expensive operation, it goes through all the files and adds up their size.
+func (ts *TreeStore) Size(id string) (int64, error) {
+	sz, err := fileutil.DirSize(ts.GetPath(id))
+	if err != nil {
+		return -1, fmt.Errorf("treestore: error calculating size: %v", err)
+	}
+	return sz, nil
+}
+
+// GetImageHash returns the hash of the image that uses the tree store
+// identified by id.
+func (ts *TreeStore) GetImageHash(id string) (string, error) {
+	treepath := ts.GetPath(id)
+
+	imgHash, err := ioutil.ReadFile(filepath.Join(treepath, imagefilename))
+	if err != nil {
+		return "", fmt.Errorf("treestore: cannot read image file: %v", err)
+	}
+
+	return string(imgHash), nil
+}
+
 type xattr struct {
 	Name  string
 	Value string
@@ -251,7 +302,7 @@ func FileInfoFromHeader(hdr *tar.Header) *fileInfo {
 }
 
 // TODO(sgotti) this func is copied from appcs/spec/aci/build.go but also
-// removes the hashfile and the renderedfile. Find a way to reuse it.
+// removes the hash, rendered and image files. Find a way to reuse it.
 func buildWalker(root string, aw specaci.ArchiveWriter) filepath.WalkFunc {
 	// cache of inode -> filepath, used to leverage hard links in the archive
 	inos := map[uint64]string{}
@@ -266,7 +317,10 @@ func buildWalker(root string, aw specaci.ArchiveWriter) filepath.WalkFunc {
 		if relpath == "." {
 			return nil
 		}
-		if relpath == specaci.ManifestFile || relpath == hashfilename || relpath == renderedfilename {
+		if relpath == specaci.ManifestFile ||
+			relpath == hashfilename ||
+			relpath == renderedfilename ||
+			relpath == imagefilename {
 			// ignore; this will be written by the archive writer
 			// TODO(jonboulle): does this make sense? maybe just remove from archivewriter?
 			return nil
