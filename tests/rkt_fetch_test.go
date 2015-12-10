@@ -93,19 +93,19 @@ func TestFetch(t *testing.T) {
 		finalURL  string
 	}{
 		{"--insecure-options=image fetch", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
-		{"--insecure-options=image fetch", "docker://busybox", "", ""},
-		{"--insecure-options=image fetch", "docker://busybox:latest", "", ""},
+		{"--insecure-options=image fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image fetch", "docker://busybox", "", "docker://busybox"},
+		{"--insecure-options=image fetch", "docker://busybox:latest", "", "docker://busybox:latest"},
 		{"--insecure-options=image run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /dev/null", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /dev/null", ""},
-		{"--insecure-options=image run --mds-register=false", "docker://busybox", "", ""},
-		{"--insecure-options=image run --mds-register=false", "docker://busybox:latest", "", ""},
-		{"--insecure-options=image prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", ""},
+		{"--insecure-options=image run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /dev/null", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image run --mds-register=false", "docker://busybox", "", "docker://busybox"},
+		{"--insecure-options=image run --mds-register=false", "docker://busybox:latest", "", "docker://busybox:latest"},
+		{"--insecure-options=image prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
 		{"--insecure-options=image prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
 		// test --insecure-options=tls to make sure
 		// https://github.com/coreos/rkt/issues/1829 is not an issue anymore
-		{"--insecure-options=image,tls prepare", "docker://busybox", "", ""},
-		{"--insecure-options=image prepare", "docker://busybox:latest", "", ""},
+		{"--insecure-options=image,tls prepare", "docker://busybox", "", "docker://busybox"},
+		{"--insecure-options=image prepare", "docker://busybox:latest", "", "docker://busybox:latest"},
 	}
 
 	for _, tt := range tests {
@@ -116,7 +116,7 @@ func TestFetch(t *testing.T) {
 }
 
 func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, finalURL string) {
-	remoteFetchMsgTpl := `remote fetching from url %s`
+	remoteFetchMsgTpl := `remote fetching from URL %q`
 	storeMsgTpl := `using image from local store for .* %s`
 	if finalURL == "" {
 		finalURL = image
@@ -141,7 +141,7 @@ func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, 
 }
 
 func testFetchStoreOnly(t *testing.T, args string, image string, imageArgs string, finalURL string) {
-	cannotFetchMsgTpl := `unable to fetch image for .* %s`
+	cannotFetchMsgTpl := `unable to fetch.* image from .* %q`
 	storeMsgTpl := `using image from local store for .* %s`
 	cannotFetchMsg := fmt.Sprintf(cannotFetchMsgTpl, image)
 	storeMsg := fmt.Sprintf(storeMsgTpl, image)
@@ -161,7 +161,7 @@ func testFetchStoreOnly(t *testing.T, args string, image string, imageArgs strin
 }
 
 func testFetchNoStore(t *testing.T, args string, image string, imageArgs string, finalURL string) {
-	remoteFetchMsgTpl := `remote fetching from url %s`
+	remoteFetchMsgTpl := `remote fetching from URL %q`
 	remoteFetchMsg := fmt.Sprintf(remoteFetchMsgTpl, finalURL)
 
 	ctx := testutils.NewRktRunCtx()
@@ -200,10 +200,9 @@ func (b *synchronizedBool) Write(value bool) {
 func TestResumedFetch(t *testing.T) {
 	image := "rkt-inspect-implicit-fetch.aci"
 	imagePath := patchTestACI(image, "--exec=/inspect")
+	defer os.Remove(imagePath)
 
 	hash := types.ShortHash("sha512-" + getHashOrPanic(imagePath))
-
-	defer os.Remove(imagePath)
 
 	kill := make(chan struct{})
 	reportkill := make(chan struct{})
@@ -236,10 +235,7 @@ func TestResumedFetch(t *testing.T) {
 	if _, _, err := expectRegexWithOutput(child, ".*"+hash); err != nil {
 		t.Fatalf("hash didn't match: %v", err)
 	}
-	err = child.Wait()
-	if err != nil {
-		t.Errorf("rkt didn't exit cleanly: %v", err)
-	}
+	waitOrFail(t, child, true)
 }
 
 func TestResumedFetchInvalidCache(t *testing.T) {
@@ -278,10 +274,7 @@ func TestResumedFetchInvalidCache(t *testing.T) {
 	if _, s, err := expectRegexWithOutput(child, ".*"+hash); err != nil {
 		t.Fatalf("hash didn't match: %v\nin: %s", err, s)
 	}
-	err = child.Wait()
-	if err != nil {
-		t.Errorf("rkt didn't exit cleanly: %v", err)
-	}
+	waitOrFail(t, child, true)
 }
 
 func testServerHandler(t *testing.T, shouldInterrupt *synchronizedBool, imagePath string, kill, waitforkill chan struct{}) http.HandlerFunc {

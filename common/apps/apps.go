@@ -23,8 +23,23 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 )
 
+// AppImageType describes a type of an image reference. The reference
+// can either be guessed or be a hash, a URL, a path, or a name. The
+// first option means that the application will have to deduce the
+// actual type (one of the last four).
+type AppImageType int
+
+const (
+	AppImageGuess AppImageType = iota // image type to be guessed
+	AppImageHash                      // image hash
+	AppImageURL                       // image URL with a scheme
+	AppImagePath                      // absolute or relative path
+	AppImageName                      // image name
+)
+
 type App struct {
 	Image  string         // the image reference as supplied by the user on the cli
+	ImType AppImageType   // the type of the image reference (to be guessed, url, path or hash)
 	Args   []string       // any arguments the user supplied for this app
 	Asc    string         // signature file override for image verification (if fetching occurs)
 	Exec   string         // exec override for image

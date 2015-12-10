@@ -26,6 +26,8 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
+	"github.com/coreos/rkt/common/apps"
+	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/store"
 )
 
@@ -78,14 +80,14 @@ func stage1ImageFlagHelp() string {
 //
 // The passed command must have "stage1-image" string flag registered.
 func getStage1Hash(s *store.Store, cmd *cobra.Command) (*types.Hash, error) {
-	fn := &finder{
-		imageActionData: imageActionData{
-			s:             s,
-			insecureFlags: globalFlags.InsecureFlags,
-		},
-		storeOnly: false,
-		noStore:   false,
-		withDeps:  false,
+	fn := &image.Finder{
+		S:                  s,
+		InsecureFlags:      globalFlags.InsecureFlags,
+		TrustKeysFromHttps: globalFlags.TrustKeysFromHttps,
+
+		StoreOnly: false,
+		NoStore:   false,
+		WithDeps:  false,
 	}
 
 	imageFlag := cmd.Flags().Lookup(stage1ImageFlagName)
@@ -99,7 +101,7 @@ func getStage1Hash(s *store.Store, cmd *cobra.Command) (*types.Hash, error) {
 	return getCustomStage1Hash(fn, path)
 }
 
-func getDefaultStage1Hash(fn *finder, overridden bool) (*types.Hash, error) {
+func getDefaultStage1Hash(fn *image.Finder, overridden bool) (*types.Hash, error) {
 	// just fail if default stage1 image path is empty - might
 	// happen for none flavor
 	if defaultStage1Image == "" {
@@ -114,20 +116,20 @@ func getDefaultStage1Hash(fn *finder, overridden bool) (*types.Hash, error) {
 	return getDefaultStage1HashFromUrl(fn, overridden)
 }
 
-func getDefaultStage1HashFromStore(fn *finder) *types.Hash {
+func getDefaultStage1HashFromStore(fn *image.Finder) *types.Hash {
 	// we make sure we've built rkt with a clean git tree,
 	// otherwise we don't know if something changed
 	if !strings.HasSuffix(defaultStage1Version, "-dirty") {
 		stage1AppName := fmt.Sprintf("%s:%s", defaultStage1Name, defaultStage1Version)
-		fn.storeOnly = true
-		s1img, _ := fn.findImage(stage1AppName, "")
-		fn.storeOnly = false
+		fn.StoreOnly = true
+		s1img, _ := fn.FindImage(stage1AppName, "", apps.AppImageName)
+		fn.StoreOnly = false
 		return s1img
 	}
 	return nil
 }
 
-func getDefaultStage1HashFromUrl(fn *finder, overridden bool) (*types.Hash, error) {
+func getDefaultStage1HashFromUrl(fn *image.Finder, overridden bool) (*types.Hash, error) {
 	if overridden {
 		// we specified --stage1-image parameter explicitly,
 		// so just try to get it without further or more ado
@@ -145,7 +147,7 @@ func getDefaultStage1HashFromUrl(fn *finder, overridden bool) (*types.Hash, erro
 	return getLocalDefaultStage1Hash(fn)
 }
 
-func getLocalDefaultStage1Hash(fn *finder) (*types.Hash, error) {
+func getLocalDefaultStage1Hash(fn *image.Finder) (*types.Hash, error) {
 	var firstErr error = nil
 	// Guard against relative path to default stage1 image. It
 	// could be fine for some custom stage1 path passed via
@@ -155,7 +157,7 @@ func getLocalDefaultStage1Hash(fn *finder) (*types.Hash, error) {
 	// parameter to configure script, so it defaulted to desired
 	// filename like "stuff/yadda/stage1-lkvm.aci" (or something).
 	if filepath.IsAbs(defaultStage1Image) {
-		s1img, err := fn.findImage(defaultStage1Image, "")
+		s1img, err := fn.FindImage(defaultStage1Image, "", apps.AppImagePath)
 		if s1img != nil {
 			return s1img, nil
 		}
@@ -174,7 +176,7 @@ func getLocalDefaultStage1Hash(fn *finder) (*types.Hash, error) {
 		}
 	}
 	fallbackPath := filepath.Join(filepath.Dir(exePath), imgBase)
-	s1img, err := fn.findImage(fallbackPath, "")
+	s1img, err := fn.FindImage(fallbackPath, "", apps.AppImagePath)
 	if err != nil {
 		if firstErr != nil {
 			return nil, fmt.Errorf("error finding stage1 images %q and %q: %v and %v", defaultStage1Image, fallbackPath, firstErr, err)
@@ -185,8 +187,8 @@ func getLocalDefaultStage1Hash(fn *finder) (*types.Hash, error) {
 	return s1img, nil
 }
 
-func getCustomStage1Hash(fn *finder, path string) (*types.Hash, error) {
-	s1img, err := fn.findImage(path, "")
+func getCustomStage1Hash(fn *image.Finder, path string) (*types.Hash, error) {
+	s1img, err := fn.FindImage(path, "", apps.AppImageGuess)
 	if err != nil {
 		return nil, fmt.Errorf("error finding stage1 image %q: %v", path, err)
 	}
