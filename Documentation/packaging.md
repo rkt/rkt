@@ -21,6 +21,10 @@ It covers dependencies, file ownership and permissions, and tips to observe pack
 
 wget, gpg, mktemp, md5sum, cpio, gzip, unsquashfs, sort
 
+#### Additional build-time dependencies for the kvm flavor
+
+patch, bc
+
 #### Additional build-time dependencies for the src flavor
 
 intltoolize, libtoolize and all systemd dependencies.
