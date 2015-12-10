@@ -211,7 +211,9 @@ RKT_ITERATE_FLAVORS([${RKT_STAGE1_FLAVORS}],[flavor],
                                       RKT_REQ_PROG([UNSQUASHFS],[unsquashfs],[unsquashfs])
                                       RKT_REQ_PROG([SORT],[sort],[sort])],
                              [kvm],
-                                     [AC_MSG_WARN([* kvm is an experimental stage1 implementation, some features are missing])],
+                                     [AC_MSG_WARN([* kvm is an experimental stage1 implementation, some features are missing])
+                                      RKT_REQ_PROG([PATCH],[patch],[patch])
+                                      RKT_REQ_PROG([BC],[bc],[bc])],
                              [host],
                                      [],
                              [AC_MSG_ERROR([*** Unhandled flavor "${flavor}", should not happen])])])
