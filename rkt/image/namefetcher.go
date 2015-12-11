@@ -59,13 +59,18 @@ func (f *nameFetcher) GetHash(app *discovery.App, a *asc) (string, error) {
 }
 
 func (f *nameFetcher) discoverApp(app *discovery.App) (*discovery.Endpoints, error) {
-	// TODO(krnowak): Instead of hardcoding true, we probably
+	// TODO(krnowak): Instead of hardcoding InsecureHttp, we probably
 	// should use f.InsecureFlags.AllowHttp and
 	// f.InsecureFlags.AllowHttpCredentials (if they are
 	// introduced) on it. Needs some work first on appc/spec side.
 	// https://github.com/appc/spec/issues/545
+	// https://github.com/coreos/rkt/issues/1836
+	insecure := discovery.InsecureHttp
+	if f.InsecureFlags.SkipTlsCheck() {
+		insecure = insecure | discovery.InsecureTls
+	}
 	hostHeaders := config.ResolveAuthPerHost(f.Headers)
-	ep, attempts, err := discovery.DiscoverEndpoints(*app, hostHeaders, true)
+	ep, attempts, err := discovery.DiscoverEndpoints(*app, hostHeaders, insecure)
 	if f.Debug {
 		for _, a := range attempts {
 			stderr("meta tag 'ac-discovery' not found on %s: %v", a.Prefix, a.Error)
