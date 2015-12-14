@@ -47,11 +47,21 @@ AMI_NAME := $(AMI_NAME)-$(RKT_STAGE1_SYSTEMD_VER)
 
 endif
 
+# stage1 version, usually the same as rkt version, unless we override
+# it with something else
+AMI_STAGE1_VERSION := $(RKT_VERSION)
+
+ifneq ($(RKT_STAGE1_VERSION_OVERRIDE),)
+
+AMI_STAGE1_VERSION := $(RKT_STAGE1_VERSION_OVERRIDE)
+
+endif
+
 # escaped values of the ACI image name, version and enter command, so
 # they can be safely used in the replacement part of sed's s///
 # command.
 AMI_SED_NAME := $(call sed-replacement-escape,$(AMI_NAME))
-AMI_SED_VERSION := $(call sed-replacement-escape,$(RKT_VERSION))
+AMI_SED_VERSION := $(call sed-replacement-escape,$(AMI_STAGE1_VERSION))
 AMI_SED_ENTER := $(call sed-replacement-escape,$(STAGE1_ENTER_CMD_$(AMI_FLAVOR)))
 
 # main stamp ensures everything is done

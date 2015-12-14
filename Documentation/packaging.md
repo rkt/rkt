@@ -55,11 +55,8 @@ However, `root` is still required to run pods.
 By default, rkt compilation will download a CoreOS PXE image from internet and extract some binaries such as `systemd-nspawn` and `bash`.
 However, some packaging environments don't allow internet access during the build.
 
-To solve this, you can download the CoreOS PXE image before starting the build process and use the following options:
-
-```
-./configure --with-coreos-local-pxe-image-path=/data/coreos_production_pxe_image.cpio.gz --with-coreos-local-pxe-image-systemd-version=v222
-```
+To solve this, you can download the CoreOS PXE image before starting the build process and use the `--with-coreos-local-pxe-image-path` and `--with-coreos-local-pxe-image-systemd-version` parameters.
+For more details, see [configure script parameters documentation](build-configure.md).
 
 ## Bundling with systemd
 
@@ -76,6 +73,7 @@ In order to avoid build-dependency on systemd in rkt, a build option was added t
 ./configure --with-stage1-flavors=host
 ```
 
+For more details about configure parameters, see [configure script parameters documentation](build-configure.md).
 The generated archive `stage1.aci` will not contain bash, systemd, or any other binaries from external sources.
 The binaries embedded in the stage1 archive are all built from the sources in the rkt git repository.
 The external binaries needed by `stage1.aci` are copied from the host at run time.

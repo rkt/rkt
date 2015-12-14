@@ -75,13 +75,14 @@ Replace $SRC with the absolute path to your rkt source code:
 
 By default, rkt gets systemd from a CoreOS image to generate stage1.
 But it's also possible to build systemd from the sources.
-After running `./autogen.sh` you can select the following options:
+To do this, use the following configure parameters after running `./autogen.sh`:
 
-* `./configure --with-stage1-flavors=coreos,src,host,kvm`: choose which flavors to build (default: 'coreos,kvm') (kvm also uses systemd from CoreOS, the difference is in the execution engine, see next section)
-* `./configure --with-stage1-default-flavor=coreos|src|host|kvm`: choose which built flavor should be the default (default: first from the flavors list)
-* `./configure --with-stage1-systemd-version=version`: if 'src' flavor is built, choose the systemd branch or tag to build (default: 'v222')
-* `./configure --with-stage1-systemd-src=git-path`: if 'src' flavor is built, systemd git repository's address (default: 'https://github.com/systemd/systemd.git')
+- `--with-stage1-flavors`
+- `--with-stage1-default-flavor` (optional)
+- `--with-stage1-systemd-version`
+- `--with-stage1-systemd-src`
 
+For more details, see [configure script parameters documentation](build-configure.md).
 Example:
 
 ```
@@ -112,16 +113,8 @@ rkt is designed and intended to be modular, using a [staged architecture](devel/
 If this flag is not given to rkt, the stage1 image will default to the settings configured when rkt was built from source.
 It usually means that rkt will look for a file called `stage1-<default flavor>.aci` that is in the same directory as the rkt binary itself.
 
-However, a default value can be set for this parameter at build time by setting the option `--with-stage1-default-location` when invoking `./configure`
-This is useful for those packaging rkt for distribution who will provide the stage1 in a fixed/known location.
-
-The option should be set to the fully qualified path at which rkt can find the stage1 image - for example:
-
-```
-./autogen.sh && ./configure --with-stage1-default-location=/usr/lib/rkt/stage1.aci && make
-```
-
-rkt will then use this environment variable to set the default value for the `stage1-image` flag.
+However, a default value can be set for this parameter at build time by setting the option `--with-stage1-default-location` when invoking `./configure`.
+For more details, see [configure script parameters documentation](build-configure.md).
 
 ## Managing Dependencies
 
