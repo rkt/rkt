@@ -291,7 +291,6 @@ message EventFilter {
         int64 until_time = 5;
 }
 
-
 // Request for GetInfo().
 message GetInfoRequest {}
 
@@ -303,6 +302,7 @@ message GetInfoResponse {
 // Request for ListPods().
 message ListPodsRequest {
         PodFilter filter = 1; // Optional.
+        bool detail = 2; // Optional.
 }
 
 // Response for ListPods().
@@ -324,6 +324,7 @@ message InspectPodResponse {
 // Request for ListImages().
 message ListImagesRequest {
         ImageFilter filter = 1; // Optional.
+        bool detail = 2; // Optional.
 }
 
 // Response for ListImages().
