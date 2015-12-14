@@ -126,7 +126,7 @@ func getReferencedTreeStoreIDs() (map[string]struct{}, error) {
 
 func gcStore(s *store.Store, gracePeriod time.Duration) error {
 	var imagesToRemove []string
-	aciinfos, err := s.GetAllACIInfos([]string{"lastusedtime"}, true)
+	aciinfos, err := s.GetAllACIInfos([]string{"lastused"}, true)
 	if err != nil {
 		return fmt.Errorf("Failed to get aciinfos: %v", err)
 	}

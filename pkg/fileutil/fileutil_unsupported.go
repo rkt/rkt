@@ -14,9 +14,23 @@
 
 // +build !linux
 
+package fileutil
+
+import "syscall"
+
+func hasHardLinks(fi os.FileInfo) bool {
+	return false
+}
+
+func getInode(fi os.FileInfo) uint64 {
+	return 0
+}
+
 // These functions are from github.com/docker/docker/pkg/system
 
-package fileutil
+func LUtimesNano(path string, ts []syscall.Timespec) error {
+	return ErrNotSupportedPlatform
+}
 
 func Lgetxattr(path string, attr string) ([]byte, error) {
 	return nil, ErrNotSupportedPlatform

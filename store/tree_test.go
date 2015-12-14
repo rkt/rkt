@@ -147,7 +147,7 @@ func TestTreeStoreRemove(t *testing.T) {
 	id := "treestoreid01"
 
 	// Test non existent dir
-	err = s.treestore.Remove(id)
+	err = s.treestore.Remove(id, s)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestTreeStoreRemove(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	err = s.treestore.Remove(id)
+	err = s.treestore.Remove(id, s)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

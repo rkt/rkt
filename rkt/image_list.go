@@ -37,6 +37,7 @@ const (
 	name       = "name"
 	importTime = "import time"
 	lastUsed   = "last used"
+	size       = "size"
 	latest     = "latest"
 )
 
@@ -56,6 +57,7 @@ var (
 		l(importTime): u(importTime),
 		l(lastUsed):   u(lastUsed),
 		l(latest):     u(latest),
+		l(size):       u(size),
 	}
 
 	// map of valid sort fields containing the mapping between the provided field name
@@ -66,12 +68,14 @@ var (
 		l(importTime): l(importTime),
 		l(lastUsed):   l(lastUsed),
 		l(latest):     l(latest),
+		l(size):       l(size),
 	}
 
 	ImagesSortableFields = map[string]struct{}{
 		l(name):       struct{}{},
 		l(importTime): struct{}{},
 		l(lastUsed):   struct{}{},
+		l(size):       struct{}{},
 	}
 )
 
@@ -112,7 +116,7 @@ var (
 )
 
 func init() {
-	sortFields := []string{l(name), l(importTime), l(lastUsed)}
+	sortFields := []string{l(name), l(importTime), l(lastUsed), l(size)}
 	fields := append([]string{l(id)}, append(sortFields, l(latest))...)
 
 	// Set defaults
@@ -212,6 +216,13 @@ func runImages(cmd *cobra.Command, args []string) int {
 					fieldValue = aciInfo.LastUsed.Format(defaultTimeLayout)
 				} else {
 					fieldValue = humanize.Time(aciInfo.LastUsed)
+				}
+			case l(size):
+				totalSize := aciInfo.Size + aciInfo.TreeStoreSize
+				if flagFullOutput {
+					fieldValue = fmt.Sprintf("%d", totalSize)
+				} else {
+					fieldValue = humanize.IBytes(uint64(totalSize))
 				}
 			case l(latest):
 				fieldValue = fmt.Sprintf("%t", aciInfo.Latest)

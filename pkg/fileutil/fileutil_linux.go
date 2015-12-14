@@ -14,14 +14,44 @@
 
 // +build linux
 
-// These functions are from github.com/docker/docker/pkg/system
-
 package fileutil
 
 import (
+	"os"
 	"syscall"
 	"unsafe"
 )
+
+func hasHardLinks(fi os.FileInfo) bool {
+	// On directories, Nlink doesn't make sense when checking for hard links
+	return !fi.IsDir() && fi.Sys().(*syscall.Stat_t).Nlink > 1
+}
+
+func getInode(fi os.FileInfo) uint64 {
+	return fi.Sys().(*syscall.Stat_t).Ino
+}
+
+// These functions are from github.com/docker/docker/pkg/system
+
+// TODO(sgotti) waiting for a utimensat functions accepting flags and a
+// LUtimesNano using it in https://github.com/golang/sys/
+func LUtimesNano(path string, ts []syscall.Timespec) error {
+	// These are not currently available in syscall
+	AT_FDCWD := -100
+	AT_SYMLINK_NOFOLLOW := 0x100
+
+	var _path *byte
+	_path, err := syscall.BytePtrFromString(path)
+	if err != nil {
+		return err
+	}
+
+	if _, _, err := syscall.Syscall6(syscall.SYS_UTIMENSAT, uintptr(AT_FDCWD), uintptr(unsafe.Pointer(_path)), uintptr(unsafe.Pointer(&ts[0])), uintptr(AT_SYMLINK_NOFOLLOW), 0, 0); err != 0 && err != syscall.ENOSYS {
+		return err
+	}
+
+	return nil
+}
 
 // Returns a nil slice and nil error if the xattr is not set
 func Lgetxattr(path string, attr string) ([]byte, error) {
