@@ -6,17 +6,16 @@ You can get a list of images in the local store with their keys, names and impor
 
 ```
 # rkt image list
-ID                       NAME                            IMPORT TIME            LATEST
-sha512-91e98d7f1679      coreos.com/etcd:v2.0.9          6 days ago             false
-sha512-a03f6bad952b      coreos.com/rkt/stage1:0.7.0     55 minutes ago         false
+ID                       NAME                            IMPORT TIME     LAST USED      SIZE    LATEST
+sha512-91e98d7f1679      coreos.com/etcd:v2.0.9          6 days ago      2 minutes ago  12MiB   false
+sha512-a03f6bad952b      coreos.com/rkt/stage1:0.7.0     55 minutes ago  2 minutes ago  143MiB  false
 ```
 
 A more detailed output can be had by adding the `--full` flag:
 
 ```
-ID                                                                        NAME               IMPORT TIME                          LATEST
-sha512-b843248e28fa9132e23e1e763142049d17a61bab7873dff1e1ff105f9ddb2708   redis:latest       2015-09-17 13:27:04.24 +0200 CEST    true
-sha512-fb6b47cc9e7ee29f67422c6585c8f517c16e0e0ee9f4cf8b8cafd8e1c1d29233   redis:latest       2015-09-17 14:57:36.779 +0200 CEST   true
+ID                                                                        NAME                                         IMPORT TIME                          LAST USED                           SIZE       LATEST
+sha512-96323da393621d846c632e71551b77089ac0b004ceb5c2362be4f5ced2212db9   registry-1.docker.io/library/redis:latest    2015-12-14 12:30:33.652 +0100 CET    2015-12-14 12:33:40.812 +0100 CET   113309184  true
 ```
 
 ## rkt image rm
