@@ -88,8 +88,8 @@ rkt run \
     --volume src-dir,kind=host,source=$SRC_DIR \
     --mount volume=src-dir,target=/opt/rkt \
     --interactive \
-    --insecure-skip-verify \
-docker://debian:sid \
+    --insecure-options=image \
+    docker://debian:sid \
     --exec /bin/bash \
     -- -c 'apt-get update && apt-get install -y --no-install-recommends ca-certificates gcc libc6-dev make automake wget git golang-go coreutils cpio squashfs-tools realpath autoconf file xz-utils patch bc locales && update-ca-certificates && cd /opt/rkt && ./autogen.sh && ./configure && make'
 ```
@@ -100,8 +100,8 @@ rkt run \
     --volume src-dir,kind=host,source=$SRC_DIR \
     --mount volume=src-dir,target=/opt/rkt \
     --interactive \
-    --insecure-skip-verify \
-docker://fedora:22 \
+    --insecure-options=image \
+    docker://fedora:22 \
     --exec /bin/bash \
     -- -c 'dnf install -y make gcc glibc-devel glibc-static cpio squashfs-tools gpg autoconf make automake golang file git wget tar xz patch bc hostname findutils openssl && cd /opt/rkt && ./autogen.sh && ./configure && make'
 ```
