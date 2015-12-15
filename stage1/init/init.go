@@ -785,16 +785,16 @@ func getContainerSubCgroup(machineID string) (string, error) {
 }
 
 func getUnitFileName() (unit string, err error) {
-	libname := C.CString("libsystemd.so")
+	libname := C.CString("libsystemd.so.0")
 	defer C.free(unsafe.Pointer(libname))
 	handle := C.dlopen(libname, C.RTLD_LAZY)
 	if handle == nil {
-		err = fmt.Errorf("error opening libsystemd.so")
+		err = fmt.Errorf("error opening libsystemd.so.0")
 		return
 	}
 	defer func() {
 		if r := C.dlclose(handle); r != 0 {
-			err = fmt.Errorf("error closing libsystemd.so")
+			err = fmt.Errorf("error closing libsystemd.so.0")
 		}
 	}()
 
@@ -821,16 +821,16 @@ func getUnitFileName() (unit string, err error) {
 }
 
 func getSlice() (slice string, err error) {
-	libname := C.CString("libsystemd.so")
+	libname := C.CString("libsystemd.so.0")
 	defer C.free(unsafe.Pointer(libname))
 	handle := C.dlopen(libname, C.RTLD_LAZY)
 	if handle == nil {
-		err = fmt.Errorf("error opening libsystemd.so")
+		err = fmt.Errorf("error opening libsystemd.so.0")
 		return
 	}
 	defer func() {
 		if r := C.dlclose(handle); r != 0 {
-			err = fmt.Errorf("error closing libsystemd.so")
+			err = fmt.Errorf("error closing libsystemd.so.0")
 		}
 	}()
 
@@ -857,12 +857,14 @@ func getSlice() (slice string, err error) {
 }
 
 func isRunningFromUnitFile() (ret bool, err error) {
-	libname := C.CString("libsystemd.so")
+	if !util.IsRunningSystemd() {
+		return
+	}
+	libname := C.CString("libsystemd.so.0")
 	defer C.free(unsafe.Pointer(libname))
 	handle := C.dlopen(libname, C.RTLD_LAZY)
 	if handle == nil {
-		// we can't open libsystemd.so so we assume systemd is not
-		// installed and we're not running from a unit file
+		err = fmt.Errorf("error opening libsystemd.so.0")
 		return
 	}
 	defer func() {
