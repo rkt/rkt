@@ -90,10 +90,10 @@ func (f *Fetcher) addImageDeps(hash string, imgsl *list.List, seen map[string]st
 			return fmt.Errorf("one of image ID's %q dependencies (image %q) is invalid: %v", hash, imgName, err)
 		}
 		appStr := app.String()
-		imgsl.PushBack(appStr)
 		if _, ok := seen[appStr]; ok {
-			return fmt.Errorf("dependency %q specified multiple times in the dependency tree for image ID %q", appStr, hash)
+			continue
 		}
+		imgsl.PushBack(app.String())
 		seen[appStr] = struct{}{}
 	}
 	return nil
