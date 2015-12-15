@@ -38,12 +38,14 @@ const (
 )
 
 type App struct {
-	Image  string         // the image reference as supplied by the user on the cli
-	ImType AppImageType   // the type of the image reference (to be guessed, url, path or hash)
-	Args   []string       // any arguments the user supplied for this app
-	Asc    string         // signature file override for image verification (if fetching occurs)
-	Exec   string         // exec override for image
-	Mounts []schema.Mount // mounts for this app (superseding any mounts in rktApps.mounts of same MountPoint)
+	Image       string                // the image reference as supplied by the user on the cli
+	ImType      AppImageType          // the type of the image reference (to be guessed, url, path or hash)
+	Args        []string              // any arguments the user supplied for this app
+	Asc         string                // signature file override for image verification (if fetching occurs)
+	Exec        string                // exec override for image
+	Mounts      []schema.Mount        // mounts for this app (superseding any mounts in rktApps.mounts of same MountPoint)
+	MemoryLimit *types.ResourceMemory // memory isolator override
+	CPULimit    *types.ResourceCPU    // cpu isolator override
 
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
 	ImageID types.Hash // resolved image identifier
