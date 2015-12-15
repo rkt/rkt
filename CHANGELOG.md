@@ -8,6 +8,7 @@ rkt vUNRELEASED is an incremental release with UX improvements, bug fixes and im
 - kvm: resource isolators ([#1404](https://github.com/coreos/rkt/pull/1404))
 - fallback to forced GC when pod dir is in inconsistent state ([#1828](https://github.com/coreos/rkt/pull/1828))
 - override memory and cpu isolators on the command line ([#1851](https://github.com/coreos/rkt/pull/1851)). See rkt's [overriding isolators](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#overriding-isolators) documentation.
+- rkt: add image size to rkt image list ([#1865](https://github.com/coreos/rkt/pull/1865)).
 
 #### Bug fixes
 
