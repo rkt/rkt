@@ -34,6 +34,16 @@ This executable can be overridden by rkt using the `--exec` flag:
 # rkt --insecure-options=image run docker://busybox --exec /bin/date
 ```
 
+## Overriding Isolators
+
+Application images can include per-app isolators and some of them can be overridden by rkt.
+The units come from [the Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html).
+In the following example, the CPU isolator is defined to 750 milli-cores and the memory isolator limits the memory usage to 128MB.
+
+```
+# rkt run coreos.com/etcd:v2.0.0 --cpu=750m --memory=128M
+```
+
 ## Passing Arguments
 
 To pass additional arguments to images use the pattern of `image1 -- [image1 flags] --- image2 -- [image2 flags]`.

@@ -7,6 +7,7 @@ rkt vUNRELEASED is an incremental release with UX improvements, bug fixes and im
 - make data directory configurable with a config file ([#1806](https://github.com/coreos/rkt/pull/1806)). See rkt's [paths configuration](https://github.com/coreos/rkt/blob/master/Documentation/configuration.md#rktkind-paths) documentation.
 - kvm: resource isolators ([#1404](https://github.com/coreos/rkt/pull/1404))
 - fallback to forced GC when pod dir is in inconsistent state ([#1828](https://github.com/coreos/rkt/pull/1828))
+- override memory and cpu isolators on the command line ([#1851](https://github.com/coreos/rkt/pull/1851)). See rkt's [overriding isolators](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#overriding-isolators) documentation.
 
 #### Bug fixes
 
