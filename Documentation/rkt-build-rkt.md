@@ -1,7 +1,7 @@
 # coreos.com/rkt/builder
 
-This container contains all build-time dependencies in order to build rkt. It
-currently can be built in one of two flavors: _Debian Sid_ or _Fedora 22_.
+This container contains all build-time dependencies in order to build rkt.
+It currently can be built in one of two flavors: _Debian Sid_ or _Fedora 22_.
 
 All commands assume you are running them in your local git checkout of rkt.
 
@@ -11,13 +11,11 @@ Requirements:
 - Go or `docker2aci`
 - rkt
 
-The file `scripts/acbuild-rkt-builder.sh` contains a simple bash script which
-will download a base docker image which is then converted into an ACI. Once the
-ACI has been downloaded, the manifest is patched. Next acbuild is run which
-creates an ACI that has all the required build dependencies for compiling `rkt`.
+The file `scripts/acbuild-rkt-builder.sh` contains a simple bash script which will download a base docker image which is then converted into an ACI.
+Once the ACI has been downloaded, the manifest is patched.
+Next acbuild is run which creates an ACI that has all the required build dependencies for compiling `rkt`.
 
-If you want to change the base OS you can set it by using one of the following sets of
-variables:
+If you want to change the base OS you can set it by using one of the following sets of variables:
 
 ```
 export IMG=fedora
@@ -36,21 +34,18 @@ Running the build script:
 ./scripts/acbuild-rkt-builder.sh
 ```
 
-Once that is finished there should be a `rkt-builder.aci` file in the current
-directory.
+Once that is finished there should be a `rkt-builder.aci` file in the current directory.
 
 ## Building rkt in rkt
 
-Now that `rkt-builder.aci` has been built you have a container which will
-compile `rkt`.
+Now that `rkt-builder.aci` has been built you have a container which will compile `rkt`.
 
 Put it into the rkt CAS:
 ```
 rkt fetch --insecure-options=image ./rkt-builder.aci
 ```
 
-Configure the path to your git checkout of `rkt` and the build output
-directory respectively:
+Configure the path to your git checkout of `rkt` and the build output directory respectively:
 
 ```
 export SRC_DIR=
@@ -63,24 +58,20 @@ Start the container which will compile rkt:
 ./scripts/build-rir.sh
 ```
 
-You should see rkt building in your rkt container, and once it's finished, the
-output should be in `$BUILD_DIR` on your host.
-
+You should see rkt building in your rkt container, and once it's finished, the output should be in `$BUILD_DIR` on your host.
 
 # Building rkt in rkt one liners (sort of)
 
-If you don't want to bother with acbuild and want a simple one liner that uses
-rkt to build rkt,  you can install all the dependencies and build rkt from
-source in one line using bash in a container.
+If you don't want to bother with acbuild and want a simple one liner that uses rkt to build rkt,  you can install all the dependencies and build rkt from source in one line using bash in a container.
 
-Set `SRC_DIR` to the absolute path to your git checkout of `rkt`.
+Set `SRC_DIR` to the absolute path to your git checkout of `rkt`:
 
 ```
 export SRC_DIR=
 ```
 
-Now pick a base OS you want to use, and run the appropriate command. The build
-output will be in `${SRC_DIR}/build-rkt-${RKT_VERSION}+git`.
+Now pick a base OS you want to use, and run the appropriate command.
+The build output will be in `${SRC_DIR}/build-rkt-${RKT_VERSION}+git`.
 
 ## Debian Sid
 ```
