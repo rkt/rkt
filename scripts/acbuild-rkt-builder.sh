@@ -19,7 +19,7 @@ ACI_NAME=${ACI_NAME:-"coreos.com/rkt/builder"}
 BUILDDIR=/opt/build-rkt
 SRC_DIR=/opt/rkt
 ACI_GOPATH=/go
-VERSION=${VERSION:-"v0.11.0+git"}
+VERSION=${VERSION:-"v0.13.0+git"}
 echo "Version: $VERSION"
 
 echo "Building $ACI_FILE"
