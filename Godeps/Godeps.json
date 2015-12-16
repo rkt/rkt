@@ -258,6 +258,10 @@
 			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
 		},
 		{
+			"ImportPath": "github.com/hashicorp/errwrap",
+			"Rev": "7554cd9344cec97297fa6649b055a8c98c2a1e55"
+		},
+		{
 			"ImportPath": "github.com/hydrogen18/stoppableListener",
 			"Rev": "2eebd04b47ff393f4bc50b7fcacf8f048994c6fd"
 		},
