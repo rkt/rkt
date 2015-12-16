@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
@@ -43,10 +44,11 @@ func (e *httpError) Error() string {
 }
 
 type serverHandler struct {
-	auth  Type
-	stop  chan<- struct{}
-	msg   chan<- string
-	tools *aciToolkit
+	auth    Type
+	stop    chan<- struct{}
+	msg     chan<- string
+	tools   *aciToolkit
+	fileSet map[string]string
 }
 
 func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -107,6 +109,10 @@ func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	h.sendMsg(fmt.Sprintf("Trying to serve %q", r.URL.String()))
 	switch filepath.Base(r.URL.Path) {
+	case "/":
+		indexHTML := `<meta name="ac-discovery" content="localhost https://localhost/{name}.{ext}">`
+		w.Write([]byte(indexHTML))
+		h.sendMsg(fmt.Sprintf("    done."))
 	case "prog.aci":
 		h.sendMsg(fmt.Sprintf("  serving"))
 		if data, err := h.tools.prepareACI(); err != nil {
@@ -117,8 +123,20 @@ func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.sendMsg(fmt.Sprintf("    done."))
 		}
 	default:
-		h.sendMsg(fmt.Sprintf("  not found."))
-		w.WriteHeader(http.StatusNotFound)
+		path, ok := h.fileSet[filepath.Base(r.URL.Path)]
+		if ok {
+			contents, err := ioutil.ReadFile(path)
+			if err == nil {
+				w.Write(contents)
+				h.sendMsg(fmt.Sprintf("    done."))
+			} else {
+				h.sendMsg(fmt.Sprintf("  not found."))
+				w.WriteHeader(http.StatusNotFound)
+			}
+		} else {
+			h.sendMsg(fmt.Sprintf("  not found."))
+			w.WriteHeader(http.StatusNotFound)
+		}
 	}
 }
 
@@ -171,6 +189,10 @@ func (s *Server) Close() {
 	close(s.handler.stop)
 }
 
+func (s *Server) UpdateFileSet(fileSet map[string]string) {
+	s.handler.fileSet = fileSet
+}
+
 func NewServer(auth Type, msgCapacity int) (*Server, error) {
 	return NewServerWithPaths(auth, msgCapacity, "actool", "go")
 }
@@ -203,6 +225,7 @@ func NewServerWithPaths(auth Type, msgCapacity int, acTool, goTool string) (*Ser
 				acTool: acTool,
 				goTool: goTool,
 			},
+			fileSet: make(map[string]string),
 		},
 	}
 	server.http = httptest.NewUnstartedServer(server.handler)

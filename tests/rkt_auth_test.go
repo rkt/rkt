@@ -143,30 +143,6 @@ func testAuthIgnoreSubdirectories(t *testing.T, server *taas.Server) {
 	expectedRunRkt(ctx, t, server.URL, "oauth-subdirectories", authFailedDownload)
 }
 
-func runServer(t *testing.T, auth taas.Type) *taas.Server {
-	actool := testutils.GetValueFromEnvOrPanic("ACTOOL")
-	gotool := testutils.GetValueFromEnvOrPanic("GO")
-	server, err := taas.NewServerWithPaths(auth, 20, actool, gotool)
-	if err != nil {
-		t.Fatalf("Could not start server: %v", err)
-	}
-	go serverHandler(t, server)
-	return server
-}
-
-func serverHandler(t *testing.T, server *taas.Server) {
-	for {
-		select {
-		case msg, ok := <-server.Msg:
-			if ok {
-				t.Logf("server: %v", msg)
-			}
-		case <-server.Stop:
-			return
-		}
-	}
-}
-
 // expectedRunRkt tries to fetch and run a prog.aci from host within
 // given directory on host. Note that directory can be anything - it's
 // useful for ensuring that image name is unique and for descriptive

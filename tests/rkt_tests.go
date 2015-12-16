@@ -38,6 +38,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
 	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc"
 	"github.com/coreos/rkt/api/v1alpha"
+	taas "github.com/coreos/rkt/tests/test-auth-server/aci"
 	"github.com/coreos/rkt/tests/testutils"
 )
 
@@ -175,13 +176,13 @@ func createTempDirOrPanic(dirName string) string {
 
 func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img string, gid int) string {
 	// Import the test image into store manually.
-	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), img)
+	cmd := fmt.Sprintf("%s --insecure-options=image,tls fetch %s", ctx.Cmd(), img)
 
 	// TODO(jonboulle): non-root user breaks trying to read root-written
 	// config directories. Should be a better way to approach this. Should
 	// config directories be readable by the rkt group too?
 	if gid != 0 {
-		cmd = fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.CmdNoConfig(), img)
+		cmd = fmt.Sprintf("%s --insecure-options=image,tls fetch %s", ctx.CmdNoConfig(), img)
 	}
 	child, err := gexpect.Command(cmd)
 	if err != nil {
@@ -555,4 +556,28 @@ func newAPIClientOrFail(t *testing.T, address string) (v1alpha.PublicAPIClient, 
 	}
 	c := v1alpha.NewPublicAPIClient(conn)
 	return c, conn
+}
+
+func runServer(t *testing.T, auth taas.Type) *taas.Server {
+	actool := testutils.GetValueFromEnvOrPanic("ACTOOL")
+	gotool := testutils.GetValueFromEnvOrPanic("GO")
+	server, err := taas.NewServerWithPaths(auth, 20, actool, gotool)
+	if err != nil {
+		t.Fatalf("Could not start server: %v", err)
+	}
+	go serverHandler(t, server)
+	return server
+}
+
+func serverHandler(t *testing.T, server *taas.Server) {
+	for {
+		select {
+		case msg, ok := <-server.Msg:
+			if ok {
+				t.Logf("server: %v", msg)
+			}
+		case <-server.Stop:
+			return
+		}
+	}
 }
