@@ -15,7 +15,7 @@
 package image
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"net/url"
 	"time"
@@ -24,6 +24,7 @@ import (
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 )
 
 // httpFetcher is used to download images from http or https URLs.
@@ -164,7 +165,7 @@ func (f *httpFetcher) validate(aciFile, ascFile io.ReadSeeker) error {
 		return err
 	}
 	if _, err := aciFile.Seek(0, 0); err != nil {
-		return fmt.Errorf("error seeking ACI file: %v", err)
+		return errwrap.Wrap(errors.New("error seeking ACI file"), err)
 	}
 
 	printIdentities(entity)

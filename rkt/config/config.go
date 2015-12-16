@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/coreos/rkt/common"
+	"github.com/hashicorp/errwrap"
 )
 
 // Headerer is an interface for getting additional HTTP headers to use
@@ -273,7 +274,7 @@ func parseConfigFile(config *Config, path string, kinds []string) error {
 		return err
 	}
 	if err := parser.parse(config, raw); err != nil {
-		return fmt.Errorf("failed to parse %q: %v", path, err)
+		return errwrap.Wrap(fmt.Errorf("failed to parse %q", path), err)
 	}
 	return nil
 }

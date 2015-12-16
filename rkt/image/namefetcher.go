@@ -16,6 +16,7 @@ package image
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -26,6 +27,7 @@ import (
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/rkt/pubkey"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/discovery"
 	pgperrors "golang.org/x/crypto/openpgp/errors"
@@ -48,7 +50,7 @@ func (f *nameFetcher) GetHash(app *discovery.App, a *asc) (string, error) {
 	stderr("searching for app image %s", name)
 	ep, err := f.discoverApp(app)
 	if err != nil {
-		return "", fmt.Errorf("discovery failed for %q: %v", name, err)
+		return "", errwrap.Wrap(fmt.Errorf("discovery failed for %q", name), err)
 	}
 	latest := false
 	// No specified version label, mark it as latest
@@ -132,7 +134,7 @@ func (f *nameFetcher) fetch(app *discovery.App, aciURL string, a *asc) (readSeek
 
 	u, err := url.Parse(aciURL)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error parsing ACI url: %v", err)
+		return nil, nil, errwrap.Wrap(errors.New("error parsing ACI url"), err)
 	}
 
 	if f.InsecureFlags.SkipImageCheck() || f.Ks == nil {
@@ -210,7 +212,7 @@ func (f *nameFetcher) maybeFetchPubKeys(appName string) {
 
 func (f *nameFetcher) checkIdentity(appName string, ascFile io.ReadSeeker) error {
 	if _, err := ascFile.Seek(0, 0); err != nil {
-		return fmt.Errorf("error seeking signature file: %v", err)
+		return errwrap.Wrap(errors.New("error seeking signature file"), err)
 	}
 	empty := bytes.NewReader([]byte{})
 	if _, err := f.Ks.CheckSignature(appName, empty, ascFile); err != nil {
@@ -237,7 +239,7 @@ func (f *nameFetcher) validate(appName string, aciFile, ascFile io.ReadSeeker) e
 	}
 
 	if _, err := aciFile.Seek(0, 0); err != nil {
-		return fmt.Errorf("error seeking ACI file: %v", err)
+		return errwrap.Wrap(errors.New("error seeking ACI file"), err)
 	}
 
 	printIdentities(entity)

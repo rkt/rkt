@@ -37,6 +37,7 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
 	"github.com/gorilla/mux"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -574,7 +575,7 @@ func unixListener() (net.Listener, error) {
 		// socket activated
 		lfds, err := strconv.ParseInt(s, 10, 16)
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing LISTEN_FDS env var: %v", err)
+			return nil, errwrap.Wrap(errors.New("Error parsing LISTEN_FDS env var"), err)
 		}
 		if lfds < 1 {
 			return nil, fmt.Errorf("LISTEN_FDS < 1")
@@ -585,7 +586,7 @@ func unixListener() (net.Listener, error) {
 		dir := filepath.Dir(common.MetadataServiceRegSock)
 		err := os.MkdirAll(dir, 0755)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to create %v: %v", dir, err)
+			return nil, errwrap.Wrap(fmt.Errorf("Failed to create %v", dir), err)
 		}
 
 		return net.ListenUnix("unix", &net.UnixAddr{

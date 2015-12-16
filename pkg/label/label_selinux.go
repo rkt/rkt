@@ -18,10 +18,12 @@
 package label
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/coreos/rkt/pkg/selinux"
+	"github.com/hashicorp/errwrap"
 )
 
 // InitLabels returns the process label and file labels to be used within
@@ -51,7 +53,7 @@ func InitLabels(options []string) (string, string, error) {
 			if con[0] == "mcsdir" {
 				err := selinux.SetMCSDir(con[1])
 				if err != nil {
-					return "", "", fmt.Errorf("Unable to configure MCS storage directory: %v", err)
+					return "", "", errwrap.Wrap(errors.New("Unable to configure MCS storage directory"), err)
 				}
 			}
 		}

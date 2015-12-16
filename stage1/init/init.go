@@ -19,6 +19,7 @@ package main
 // this implements /init of stage1/nspawn+systemd
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -38,6 +39,7 @@ import (
 	"github.com/coreos/go-systemd/util"
 	"github.com/godbus/dbus"
 	"github.com/godbus/dbus/introspect"
+	"github.com/hashicorp/errwrap"
 
 	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
@@ -224,7 +226,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 
 	// We store the pod's flavor so we can later garbage collect it correctly
 	if err := os.Symlink(flavor, filepath.Join(p.Root, stage1initcommon.FlavorFile)); err != nil {
-		return nil, nil, fmt.Errorf("failed to create flavor symlink: %v", err)
+		return nil, nil, errwrap.Wrap(errors.New("failed to create flavor symlink"), err)
 	}
 
 	switch flavor {
@@ -342,7 +344,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		// Support version >= 220
 		versionBytes, err := exec.Command(hostNspawnBin, "--version").CombinedOutput()
 		if err != nil {
-			return nil, nil, fmt.Errorf("unable to probe %s version: %v", hostNspawnBin, err)
+			return nil, nil, errwrap.Wrap(fmt.Errorf("unable to probe %s version", hostNspawnBin), err)
 		}
 		versionStr := strings.SplitN(string(versionBytes), "\n", 2)[0]
 		var version int
@@ -356,7 +358,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 
 		// Copy systemd, bash, etc. in stage1 at run-time
 		if err := installAssets(); err != nil {
-			return nil, nil, fmt.Errorf("cannot install assets from the host: %v", err)
+			return nil, nil, errwrap.Wrap(errors.New("cannot install assets from the host"), err)
 		}
 
 		args = append(args, hostNspawnBin)
@@ -411,7 +413,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 
 	nsargs, err := stage1initcommon.PodToNspawnArgs(p)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to generate nspawn args: %v", err)
+		return nil, nil, errwrap.Wrap(errors.New("failed to generate nspawn args"), err)
 	}
 	args = append(args, nsargs...)
 
@@ -650,7 +652,7 @@ func mountHostCgroups(enabledCgroups map[int][]string) error {
 	systemdControllerPath := "/sys/fs/cgroup/systemd"
 	if !areHostCgroupsMounted(enabledCgroups) {
 		if err := cgroup.CreateCgroups("/", enabledCgroups); err != nil {
-			return fmt.Errorf("error creating host cgroups: %v\n", err)
+			return errwrap.Wrap(errors.New("error creating host cgroups"), err)
 		}
 	}
 
@@ -659,7 +661,7 @@ func mountHostCgroups(enabledCgroups map[int][]string) error {
 			return err
 		}
 		if err := syscall.Mount("cgroup", systemdControllerPath, "cgroup", 0, "none,name=systemd"); err != nil {
-			return fmt.Errorf("error mounting name=systemd hierarchy on %q: %v", systemdControllerPath, err)
+			return errwrap.Wrap(fmt.Errorf("error mounting name=systemd hierarchy on %q", systemdControllerPath), err)
 		}
 	}
 
@@ -671,10 +673,10 @@ func mountHostCgroups(enabledCgroups map[int][]string) error {
 // read-write so systemd inside stage1 can apply isolators to them
 func mountContainerCgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
 	if err := cgroup.CreateCgroups(s1Root, enabledCgroups); err != nil {
-		return fmt.Errorf("error creating container cgroups: %v\n", err)
+		return errwrap.Wrap(errors.New("error creating container cgroups"), err)
 	}
 	if err := cgroup.RemountCgroupsRO(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
-		return fmt.Errorf("error restricting container cgroups: %v\n", err)
+		return errwrap.Wrap(errors.New("error restricting container cgroups"), err)
 	}
 
 	return nil
@@ -684,20 +686,20 @@ func getContainerSubCgroup(machineID string) (string, error) {
 	var subcgroup string
 	fromUnit, err := util.RunningFromSystemService()
 	if err != nil {
-		return "", fmt.Errorf("could not determine if we're running from a unit file: %v", err)
+		return "", errwrap.Wrap(errors.New("could not determine if we're running from a unit file"), err)
 	}
 	if fromUnit {
 		slice, err := util.GetRunningSlice()
 		if err != nil {
-			return "", fmt.Errorf("could not get slice name: %v", err)
+			return "", errwrap.Wrap(errors.New("could not get slice name"), err)
 		}
 		slicePath, err := common.SliceToPath(slice)
 		if err != nil {
-			return "", fmt.Errorf("could not convert slice name to path: %v", err)
+			return "", errwrap.Wrap(errors.New("could not convert slice name to path"), err)
 		}
 		unit, err := util.CurrentUnitName()
 		if err != nil {
-			return "", fmt.Errorf("could not get unit name: %v", err)
+			return "", errwrap.Wrap(errors.New("could not get unit name"), err)
 		}
 		subcgroup = filepath.Join(slicePath, unit, "system.slice")
 	} else {
@@ -713,14 +715,14 @@ func getContainerSubCgroup(machineID string) (string, error) {
 			// under the current cgroup so we can look it up in /proc/self/cgroup
 			ownCgroupPath, err := cgroup.GetOwnCgroupPath("name=systemd")
 			if err != nil {
-				return "", fmt.Errorf("could not get own cgroup path: %v", err)
+				return "", errwrap.Wrap(errors.New("could not get own cgroup path"), err)
 			}
 			// systemd-nspawn won't work if we are in the root cgroup. In addition,
 			// we want all rkt instances to be in distinct cgroups. Create a
 			// subcgroup and add ourselves to it.
 			ownCgroupPath = filepath.Join(ownCgroupPath, machineDir)
 			if err := cgroup.JoinSubcgroup("systemd", ownCgroupPath); err != nil {
-				return "", fmt.Errorf("error joining %s subcgroup: %v", ownCgroupPath, err)
+				return "", errwrap.Wrap(fmt.Errorf("error joining %s subcgroup", ownCgroupPath), err)
 			}
 			subcgroup = filepath.Join(ownCgroupPath, "system.slice")
 		}

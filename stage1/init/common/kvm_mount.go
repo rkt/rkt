@@ -46,6 +46,7 @@ import (
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/go-systemd/unit"
+	"github.com/hashicorp/errwrap"
 	"github.com/coreos/rkt/common"
 )
 
@@ -94,12 +95,12 @@ func installNewMountUnit(root, what, where, fsType, options, beforeAndrequiredBy
 func writeUnit(opts []*unit.UnitOption, unitPath string) error {
 	unitBytes, err := ioutil.ReadAll(unit.Serialize(opts))
 	if err != nil {
-		return fmt.Errorf("failed to serialize mount unit file to bytes %q: %v", unitPath, err)
+		return errwrap.Wrap(fmt.Errorf("failed to serialize mount unit file to bytes %q", unitPath), err)
 	}
 
 	err = ioutil.WriteFile(unitPath, unitBytes, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to create mount unit file %q: %v", unitPath, err)
+		return errwrap.Wrap(fmt.Errorf("failed to create mount unit file %q", unitPath), err)
 	}
 
 	return nil
@@ -191,7 +192,7 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 		log.Printf("optionally preparing destination path: %q", whereFullPath)
 		err := os.MkdirAll(whereFullPath, 0700)
 		if err != nil {
-			return fmt.Errorf("failed to prepare dir for mount %v: %v", m.Volume, err)
+			return errwrap.Wrap(fmt.Errorf("failed to prepare dir for mount %v", m.Volume), err)
 		}
 
 		// install new mount unit for bind mount /mnt/volumeName -> /opt/stage2/{app-id}/rootfs/{{mountPoint.Path}}
@@ -205,7 +206,7 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 			unitsDir,
 		)
 		if err != nil {
-			return fmt.Errorf("cannot install new mount unit for app %q: %v", appName.String(), err)
+			return errwrap.Wrap(fmt.Errorf("cannot install new mount unit for app %q", appName.String()), err)
 		}
 
 		// TODO(iaguis) when we update util-linux to 2.27, this code can go

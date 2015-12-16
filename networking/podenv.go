@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
@@ -120,12 +121,12 @@ func (e *podEnv) setupNets(nets []activeNet) error {
 
 		n.runtime.IfName = fmt.Sprintf(IfNamePattern, i)
 		if n.runtime.ConfPath, err = copyFileToDir(n.runtime.ConfPath, e.netDir()); err != nil {
-			return fmt.Errorf("error copying %q to %q: %v", n.runtime.ConfPath, e.netDir(), err)
+			return errwrap.Wrap(fmt.Errorf("error copying %q to %q", n.runtime.ConfPath, e.netDir()), err)
 		}
 
 		n.runtime.IP, n.runtime.HostIP, err = e.netPluginAdd(&n, nspath)
 		if err != nil {
-			return fmt.Errorf("error adding network %q: %v", n.conf.Name, err)
+			return errwrap.Wrap(fmt.Errorf("error adding network %q", n.conf.Name), err)
 		}
 	}
 	return nil
@@ -189,7 +190,7 @@ func loadNet(filepath string) (*activeNet, error) {
 
 	n := &NetConf{}
 	if err = json.Unmarshal(bytes, n); err != nil {
-		return nil, fmt.Errorf("error loading %v: %v", filepath, err)
+		return nil, errwrap.Wrap(fmt.Errorf("error loading %v", filepath), err)
 	}
 
 	return &activeNet{

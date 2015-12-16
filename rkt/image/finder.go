@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/coreos/rkt/common/apps"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/schema/types"
 )
@@ -67,11 +68,11 @@ func (f *Finder) FindImage(img string, asc string, imgType apps.AppImageType) (*
 func (f *Finder) getHashFromStore(img string) (*types.Hash, error) {
 	h, err := types.NewHash(img)
 	if err != nil {
-		return nil, fmt.Errorf("%q is not a valid hash: %v", img, err)
+		return nil, errwrap.Wrap(fmt.Errorf("%q is not a valid hash", img), err)
 	}
 	fullKey, err := f.S.ResolveKey(img)
 	if err != nil {
-		return nil, fmt.Errorf("could not resolve image ID %q: %v", img, err)
+		return nil, errwrap.Wrap(fmt.Errorf("could not resolve image ID %q", img), err)
 	}
 	h, err = types.NewHash(fullKey)
 	if err != nil {

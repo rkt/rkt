@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -26,6 +27,7 @@ import (
 	"runtime"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking"
@@ -73,7 +75,7 @@ func gcNetworking(podID *types.UUID) error {
 		// In that case we try to read it from the pod's root directory
 		flavor, err = os.Readlink("flavor")
 		if err != nil {
-			return fmt.Errorf("Failed to get stage1 flavor: %v\n", err)
+			return errwrap.Wrap(errors.New("Failed to get stage1 flavor"), err)
 		}
 	}
 
@@ -84,7 +86,7 @@ func gcNetworking(podID *types.UUID) error {
 	case os.IsNotExist(err):
 		// probably ran with --net=host
 	default:
-		return fmt.Errorf("Failed loading networking state: %v", err)
+		return errwrap.Wrap(errors.New("Failed loading networking state"), err)
 	}
 
 	return nil

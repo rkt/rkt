@@ -18,6 +18,7 @@ package stage0
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -30,6 +31,7 @@ import (
 	"syscall"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 )
 
 // GC enters the pod by fork/exec()ing the stage1's /gc similar to /init.
@@ -44,7 +46,7 @@ func GC(pdir string, uuid *types.UUID, stage1Path string, debug bool) error {
 
 	ep, err := getStage1Entrypoint(pdir, gcEntrypoint)
 	if err != nil {
-		return fmt.Errorf("error determining 'gc' entrypoint: %v", err)
+		return errwrap.Wrap(errors.New("error determining 'gc' entrypoint"), err)
 	}
 
 	args := []string{filepath.Join(stage1Path, ep)}
@@ -182,7 +184,7 @@ func MountGC(path, uuid string) error {
 
 	mnts, err := getMountsForPrefix(path, mi)
 	if err != nil {
-		return fmt.Errorf("error getting mounts for pod %s from mountinfo: %v", uuid, err)
+		return errwrap.Wrap(fmt.Errorf("error getting mounts for pod %s from mountinfo", uuid), err)
 	}
 
 	for i := len(mnts) - 1; i >= 0; i -= 1 {
@@ -197,7 +199,7 @@ func MountGC(path, uuid string) error {
 	for _, mnt := range mnts {
 		if err := syscall.Unmount(mnt.mountPoint, 0); err != nil {
 			if err != syscall.ENOENT && err != syscall.EINVAL {
-				return fmt.Errorf("error unmounting dest at %v: %v", mnt.mountPoint, err)
+				return errwrap.Wrap(fmt.Errorf("could not unmount at %v", mnt.mountPoint), err)
 			}
 		}
 	}

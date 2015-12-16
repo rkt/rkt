@@ -16,7 +16,10 @@
 
 package fileutil
 
-import "syscall"
+import (
+	"os"
+	"syscall"
+)
 
 func hasHardLinks(fi os.FileInfo) bool {
 	return false

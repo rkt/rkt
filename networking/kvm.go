@@ -19,6 +19,7 @@ import (
 	"bufio"
 	"crypto/sha512"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -30,6 +31,7 @@ import (
 	"github.com/appc/cni/pkg/ip"
 	cnitypes "github.com/appc/cni/pkg/types"
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 	"github.com/vishvananda/netlink"
 
 	"github.com/coreos/rkt/common"
@@ -57,16 +59,16 @@ func setupTapDevice(podID types.UUID) (netlink.Link, error) {
 	nameTemplate := fmt.Sprintf("rkt-%s-tap%%d", podID.String()[0:4])
 	ifName, err := tuntap.CreatePersistentIface(nameTemplate, tuntap.Tap)
 	if err != nil {
-		return nil, fmt.Errorf("tuntap persist %v", err)
+		return nil, errwrap.Wrap(errors.New("tuntap persist"), err)
 	}
 
 	link, err := netlink.LinkByName(ifName)
 	if err != nil {
-		return nil, fmt.Errorf("cannot find link %q: %v", ifName, err)
+		return nil, errwrap.Wrap(fmt.Errorf("cannot find link %q", ifName), err)
 	}
 
 	if err := netlink.LinkSetUp(link); err != nil {
-		return nil, fmt.Errorf("cannot set link up %q: %v", ifName, err)
+		return nil, errwrap.Wrap(fmt.Errorf("cannot set link up %q", ifName), err)
 	}
 	return link, nil
 }
@@ -82,7 +84,7 @@ type MacVTapNetConf struct {
 func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf) (netlink.Link, error) {
 	master, err := netlink.LinkByName(config.Master)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot find master device '%v': %v", config.Master, err)
+		return nil, errwrap.Wrap(fmt.Errorf("Cannot find master device '%v'", config.Master), err)
 	}
 	var mode netlink.MacvlanMode
 	switch config.Mode {
@@ -116,7 +118,7 @@ func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf) (netlink.Link, 
 	}
 
 	if err := netlink.LinkAdd(link); err != nil {
-		return nil, fmt.Errorf("Cannot create macvtap interface: %v", err)
+		return nil, errwrap.Wrap(errors.New("Cannot create macvtap interface"), err)
 	}
 	return link, nil
 }
@@ -127,17 +129,17 @@ func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf) (netlink.Link, 
 func kvmSetupNetAddressing(network *Networking, n activeNet, ifName string) error {
 	// TODO: very ugly hack, that go through upper plugin, down to ipam plugin
 	if err := ip.EnableIP4Forward(); err != nil {
-		return fmt.Errorf("failed to enable forwarding: %v", err)
+		return errwrap.Wrap(errors.New("failed to enable forwarding"), err)
 	}
 	n.conf.Type = n.conf.IPAM.Type
 	output, err := network.execNetPlugin("ADD", &n, ifName)
 	if err != nil {
-		return fmt.Errorf("problem executing network plugin %q (%q): %v", n.conf.Type, ifName, err)
+		return errwrap.Wrap(fmt.Errorf("problem executing network plugin %q (%q)", n.conf.Type, ifName), err)
 	}
 
 	result := cnitypes.Result{}
 	if err = json.Unmarshal(output, &result); err != nil {
-		return fmt.Errorf("error parsing %q result: %v", n.conf.Name, err)
+		return errwrap.Wrap(fmt.Errorf("error parsing %q result", n.conf.Name), err)
 	}
 
 	if result.IP4 == nil {
@@ -152,7 +154,7 @@ func kvmSetupNetAddressing(network *Networking, n activeNet, ifName string) erro
 func ensureHasAddr(link netlink.Link, ipn *net.IPNet) error {
 	addrs, err := netlink.AddrList(link, syscall.AF_INET)
 	if err != nil && err != syscall.ENOENT {
-		return fmt.Errorf("could not get list of IP addresses: %v", err)
+		return errwrap.Wrap(errors.New("could not get list of IP addresses"), err)
 	}
 
 	// if there're no addresses on the interface, it's ok -- we'll add one
@@ -169,7 +171,7 @@ func ensureHasAddr(link netlink.Link, ipn *net.IPNet) error {
 
 	addr := &netlink.Addr{IPNet: ipn, Label: link.Attrs().Name}
 	if err := netlink.AddrAdd(link, addr); err != nil {
-		return fmt.Errorf("could not add IP address to %q: %v", link.Attrs().Name, err)
+		return errwrap.Wrap(fmt.Errorf("could not add IP address to %q", link.Attrs().Name), err)
 	}
 	return nil
 }
@@ -177,7 +179,7 @@ func ensureHasAddr(link netlink.Link, ipn *net.IPNet) error {
 func bridgeByName(name string) (*netlink.Bridge, error) {
 	l, err := netlink.LinkByName(name)
 	if err != nil {
-		return nil, fmt.Errorf("could not lookup %q: %v", name, err)
+		return nil, errwrap.Wrap(fmt.Errorf("could not lookup %q", name), err)
 	}
 	br, ok := l.(*netlink.Bridge)
 	if !ok {
@@ -196,7 +198,7 @@ func ensureBridgeIsUp(brName string, mtu int) (*netlink.Bridge, error) {
 
 	if err := netlink.LinkAdd(br); err != nil {
 		if err != syscall.EEXIST {
-			return nil, fmt.Errorf("could not add %q: %v", brName, err)
+			return nil, errwrap.Wrap(fmt.Errorf("could not add %q", brName), err)
 		}
 
 		// it's ok if the device already exists as long as config is similar
@@ -228,12 +230,12 @@ func addRoute(link netlink.Link, podIP net.IP) error {
 func removeAllRoutesOnLink(link netlink.Link) error {
 	routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
 	if err != nil {
-		return fmt.Errorf("cannot list routes on link %q: %v", link.Attrs().Name, err)
+		return errwrap.Wrap(fmt.Errorf("cannot list routes on link %q", link.Attrs().Name), err)
 	}
 
 	for _, route := range routes {
 		if err := netlink.RouteDel(&route); err != nil {
-			return fmt.Errorf("error in time of route removal for route %q: %v", route, err)
+			return errwrap.Wrap(fmt.Errorf("error in time of route removal for route %q", route), err)
 		}
 	}
 
@@ -257,7 +259,7 @@ func loadFlannelNetConf(bytes []byte) (*FlannelNetConf, error) {
 		SubnetFile: defaultSubnetFile,
 	}
 	if err := json.Unmarshal(bytes, n); err != nil {
-		return nil, fmt.Errorf("failed to load netconf: %v", err)
+		return nil, errwrap.Wrap(errors.New("failed to load netconf"), err)
 	}
 	return n, nil
 }
@@ -382,7 +384,7 @@ func kvmTransformFlannelNetwork(net *activeNet) error {
 
 	bytes, err := json.Marshal(n.Delegate)
 	if err != nil {
-		return fmt.Errorf("error in marshaling generated network settings: %v", err)
+		return errwrap.Wrap(errors.New("error in marshaling generated network settings"), err)
 	}
 
 	*net = activeNet{
@@ -420,7 +422,7 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 	for i, n := range network.nets {
 		if n.conf.Type == "flannel" {
 			if err := kvmTransformFlannelNetwork(&n); err != nil {
-				return nil, fmt.Errorf("cannot transform flannel network into basic network: %v", err)
+				return nil, errwrap.Wrap(errors.New("cannot transform flannel network into basic network"), err)
 			}
 		}
 		switch n.conf.Type {
@@ -446,15 +448,15 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 				},
 			)
 			if err != nil {
-				return nil, fmt.Errorf("cannot add address to host tap device %q: %v", ifName, err)
+				return nil, errwrap.Wrap(fmt.Errorf("cannot add address to host tap device %q", ifName), err)
 			}
 
 			if err := removeAllRoutesOnLink(link); err != nil {
-				return nil, fmt.Errorf("cannot remove route on host tap device %q: %v", ifName, err)
+				return nil, errwrap.Wrap(fmt.Errorf("cannot remove route on host tap device %q", ifName), err)
 			}
 
 			if err := addRoute(link, n.runtime.IP); err != nil {
-				return nil, fmt.Errorf("cannot add on host direct route to pod: %v", err)
+				return nil, errwrap.Wrap(errors.New("cannot add on host direct route to pod"), err)
 			}
 
 		case "bridge":
@@ -465,16 +467,16 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 				BrName: defaultBrName,
 			}
 			if err := json.Unmarshal(n.confBytes, &config); err != nil {
-				return nil, fmt.Errorf("error parsing %q result: %v", n.conf.Name, err)
+				return nil, errwrap.Wrap(fmt.Errorf("error parsing %q result", n.conf.Name), err)
 			}
 
 			br, err := ensureBridgeIsUp(config.BrName, config.MTU)
 			if err != nil {
-				return nil, fmt.Errorf("error in time of bridge setup: %v", err)
+				return nil, errwrap.Wrap(errors.New("error in time of bridge setup"), err)
 			}
 			link, err := setupTapDevice(podID)
 			if err != nil {
-				return nil, fmt.Errorf("can not setup tap device: %v", err)
+				return nil, errwrap.Wrap(errors.New("can not setup tap device"), err)
 			}
 			err = netlink.LinkSetMaster(link, br)
 			if err != nil {
@@ -482,7 +484,7 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 				if rErr != nil {
 					log.Printf("Warning: could not cleanup tap interface: %v", rErr)
 				}
-				return nil, fmt.Errorf("can not add tap interface to bridge: %v", err)
+				return nil, errwrap.Wrap(errors.New("can not add tap interface to bridge"), err)
 			}
 
 			ifName := link.Attrs().Name
@@ -503,14 +505,14 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 				)
 
 				if err != nil {
-					return nil, fmt.Errorf("cannot add address to host bridge device %q: %v", br.Name, err)
+					return nil, errwrap.Wrap(fmt.Errorf("cannot add address to host bridge device %q", br.Name), err)
 				}
 			}
 
 		case "macvlan":
 			config := MacVTapNetConf{}
 			if err := json.Unmarshal(n.confBytes, &config); err != nil {
-				return nil, fmt.Errorf("error parsing %q result: %v", n.conf.Name, err)
+				return nil, errwrap.Wrap(fmt.Errorf("error parsing %q result", n.conf.Name), err)
 			}
 			link, err := setupMacVTapDevice(podID, config)
 			if err != nil {

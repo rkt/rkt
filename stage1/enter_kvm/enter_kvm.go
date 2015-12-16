@@ -15,6 +15,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -25,6 +26,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/coreos/rkt/pkg/lock"
@@ -189,21 +191,21 @@ func getAppexecArgs() []string {
 func execSSH() error {
 	workDir, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("cannot get working directory: %v", err)
+		return errwrap.Wrap(errors.New("cannot get working directory"), err)
 	}
 
 	podDefaultIP, err := getPodDefaultIP(workDir)
 	if err != nil {
-		return fmt.Errorf("cannot load networking configuration: %v", err)
+		return errwrap.Wrap(errors.New("cannot load networking configuration"), err)
 	}
 
 	// escape from running pod directory into base directory
 	if err = os.Chdir("../../.."); err != nil {
-		return fmt.Errorf("cannot change directory to rkt work directory: %v", err)
+		return errwrap.Wrap(errors.New("cannot change directory to rkt work directory"), err)
 	}
 
 	if err := kvmCheckSSHSetup(workDir); err != nil {
-		return fmt.Errorf("error setting up ssh keys: %v", err)
+		return errwrap.Wrap("error setting up ssh keys", err)
 	}
 
 	// prepare args for ssh invocation
@@ -223,7 +225,7 @@ func execSSH() error {
 
 	// this should not return in case of success
 	err = syscall.Exec(sshPath, args, os.Environ())
-	return fmt.Errorf("cannot exec to ssh: %v", err)
+	return errwrap.Wrap(errors.New("cannot exec to ssh"), err)
 }
 
 func main() {

@@ -16,6 +16,7 @@ package image
 
 import (
 	"crypto/sha512"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 	"time"
 
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/ioprogress"
 )
@@ -110,7 +112,7 @@ func getTmpROC(s *store.Store, path string) (*removeOnClose, error) {
 
 	tmp, err := s.TmpNamedFile(pathHash)
 	if err != nil {
-		return nil, fmt.Errorf("error setting up temporary file: %v", err)
+		return nil, errwrap.Wrap(errors.New("error setting up temporary file"), err)
 	}
 	roc := &removeOnClose{File: tmp}
 	return roc, nil

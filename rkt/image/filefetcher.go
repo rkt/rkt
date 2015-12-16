@@ -15,6 +15,7 @@
 package image
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,6 +23,7 @@ import (
 	"github.com/coreos/rkt/pkg/keystore"
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 )
 
 // fileFetcher is used to fetch files from a local filesystem
@@ -36,7 +38,7 @@ type fileFetcher struct {
 func (f *fileFetcher) GetHash(aciPath string, a *asc) (string, error) {
 	absPath, err := filepath.Abs(aciPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to get an absolute path for %q: %v", aciPath, err)
+		return "", errwrap.Wrap(fmt.Errorf("failed to get an absolute path for %q", aciPath), err)
 	}
 	aciPath = absPath
 
@@ -61,7 +63,7 @@ func (f *fileFetcher) getFile(aciPath string, a *asc) (*os.File, error) {
 	if f.InsecureFlags.SkipImageCheck() || f.Ks == nil {
 		aciFile, err := os.Open(aciPath)
 		if err != nil {
-			return nil, fmt.Errorf("error opening ACI file: %v", err)
+			return nil, errwrap.Wrap(errors.New("error opening ACI file"), err)
 		}
 		return aciFile, nil
 	}
@@ -77,13 +79,13 @@ func (f *fileFetcher) getVerifiedFile(aciPath string, a *asc) (*os.File, error) 
 	f.maybeOverrideAsc(aciPath, a)
 	ascFile, err := a.Get()
 	if err != nil {
-		return nil, fmt.Errorf("error opening signature file: %v", err)
+		return nil, errwrap.Wrap(errors.New("error opening signature file"), err)
 	}
 	defer func() { maybeClose(ascFile) }()
 
 	aciFile, err := os.Open(aciPath)
 	if err != nil {
-		return nil, fmt.Errorf("error opening ACI file: %v", err)
+		return nil, errwrap.Wrap(errors.New("error opening ACI file"), err)
 	}
 	defer func() { maybeClose(aciFile) }()
 
@@ -94,7 +96,7 @@ func (f *fileFetcher) getVerifiedFile(aciPath string, a *asc) (*os.File, error) 
 
 	entity, err := validator.ValidateWithSignature(f.Ks, ascFile)
 	if err != nil {
-		return nil, fmt.Errorf("image %q verification failed: %v", validator.GetImageName(), err)
+		return nil, errwrap.Wrap(fmt.Errorf("image %q verification failed", validator.GetImageName()), err)
 	}
 	printIdentities(entity)
 

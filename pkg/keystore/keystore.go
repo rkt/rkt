@@ -28,6 +28,7 @@ import (
 
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
+	"github.com/hashicorp/errwrap"
 	"golang.org/x/crypto/openpgp"
 )
 
@@ -85,17 +86,17 @@ func checkSignature(ks *Keystore, prefix string, signed, signature io.ReadSeeker
 	}
 	keyring, err := ks.loadKeyring(acidentifier.String())
 	if err != nil {
-		return nil, fmt.Errorf("keystore: error loading keyring %v", err)
+		return nil, errwrap.Wrap(errors.New("keystore: error loading keyring"), err)
 	}
 	entities, err := openpgp.CheckArmoredDetachedSignature(keyring, signed, signature)
 	if err == io.EOF {
 		// When the signature is binary instead of armored, the error is io.EOF.
 		// Let's try with binary signatures as well
 		if _, err := signed.Seek(0, 0); err != nil {
-			return nil, fmt.Errorf("error seeking ACI file: %v", err)
+			return nil, errwrap.Wrap(errors.New("error seeking ACI file"), err)
 		}
 		if _, err := signature.Seek(0, 0); err != nil {
-			return nil, fmt.Errorf("error seeking signature file: %v", err)
+			return nil, errwrap.Wrap(errors.New("error seeking signature file"), err)
 		}
 		entities, err = openpgp.CheckDetachedSignature(keyring, signed, signature)
 	}
@@ -176,7 +177,7 @@ func (ks *Keystore) TrustedKeyPrefixExists(prefix string, r io.ReadSeeker) (bool
 		if err == nil {
 			return true, nil
 		} else if !os.IsNotExist(err) {
-			return false, fmt.Errorf("cannot check file %q: %v", p, err)
+			return false, errwrap.Wrap(fmt.Errorf("cannot check file %q", p), err)
 		}
 	}
 

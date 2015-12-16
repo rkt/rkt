@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	cnitypes "github.com/appc/cni/pkg/types"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/rkt/common"
 )
@@ -37,7 +38,7 @@ func pluginErr(err error, output []byte) error {
 	if _, ok := err.(*exec.ExitError); ok {
 		emsg := cnitypes.Error{}
 		if perr := json.Unmarshal(output, &emsg); perr != nil {
-			return fmt.Errorf("netplugin failed but error parsing its diagnostic message %q: %v", string(output), perr)
+			return errwrap.Wrap(fmt.Errorf("netplugin failed but error parsing its diagnostic message %q", string(output)), perr)
 		}
 		details := ""
 		if emsg.Details != "" {
@@ -57,7 +58,7 @@ func (e *podEnv) netPluginAdd(n *activeNet, netns string) (ip, hostIP net.IP, er
 
 	pr := cnitypes.Result{}
 	if err = json.Unmarshal(output, &pr); err != nil {
-		return nil, nil, fmt.Errorf("error parsing %q result: %v", n.conf.Name, err)
+		return nil, nil, errwrap.Wrap(fmt.Errorf("error parsing %q result", n.conf.Name), err)
 	}
 
 	if pr.IP4 == nil {

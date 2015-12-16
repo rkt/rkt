@@ -18,6 +18,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -27,6 +28,7 @@ import (
 	common "github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/dustin/go-humanize"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -226,7 +228,7 @@ func newPodListZeroAppsError(p *pod) error {
 }
 
 func newPodListLoadImageManifestError(p *pod, err error) error {
-	return fmt.Errorf("pod %s ImageManifest could not be loaded: %v", p.uuid.String(), err)
+	return errwrap.Wrap(fmt.Errorf("pod %s ImageManifest could not be loaded", p.uuid.String()), err)
 }
 
 func appLine(app lastditch.RuntimeApp) string {
@@ -246,7 +248,7 @@ func fmtNets(nis []netinfo.NetInfo) string {
 func getImageName(p *pod, appName types.ACName) (string, error) {
 	aim, err := p.getAppImageManifest(appName)
 	if err != nil {
-		return "", fmt.Errorf("problem retrieving ImageManifests from pod: %v", err)
+		return "", errwrap.Wrap(errors.New("problem retrieving ImageManifests from pod"), err)
 	}
 
 	imageName := aim.Name.String()

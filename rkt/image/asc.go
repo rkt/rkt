@@ -15,11 +15,12 @@
 package image
 
 import (
-	"fmt"
+	"errors"
 	"net/url"
 	"os"
 
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 )
 
 // ascFetcher is an interface used by asc to get the desired signature
@@ -55,7 +56,7 @@ func (f *remoteAscFetcher) Get(location string) (readSeekCloser, error) {
 
 	u, err := url.Parse(location)
 	if err != nil {
-		return nil, fmt.Errorf("invalid signature location: %v", err)
+		return nil, errwrap.Wrap(errors.New("invalid signature location"), err)
 	}
 	if err := f.F(u, roc.File); err != nil {
 		return nil, err

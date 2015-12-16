@@ -15,9 +15,11 @@
 package flag
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/pflag"
 )
 
@@ -46,7 +48,7 @@ func NewOptionList(permissibleOptions []string, defaultOptions string) (*OptionL
 	}
 
 	if err := ol.Set(defaultOptions); err != nil {
-		return nil, fmt.Errorf("problem setting defaults: %v", err)
+		return nil, errwrap.Wrap(errors.New("problem setting defaults"), err)
 	}
 
 	return ol, nil

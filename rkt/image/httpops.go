@@ -15,6 +15,7 @@
 package image
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/coreos/rkt/rkt/config"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 )
 
 // httpOps is a kind of facade around a downloader and a
@@ -47,7 +49,7 @@ func (o *httpOps) DownloadSignature(a *asc) (readSeekCloser, bool, error) {
 		stderr("server requested deferring the signature download")
 		return nil, true, nil
 	}
-	return nil, false, fmt.Errorf("error downloading the signature file: %v", err)
+	return nil, false, errwrap.Wrap(errors.New("error downloading the signature file"), err)
 }
 
 // DownloadSignatureAgain does a similar thing to DownloadSignature,
@@ -89,7 +91,7 @@ func (o *httpOps) DownloadImageWithETag(u *url.URL, etag string) (readSeekCloser
 	session := o.getSession(u, aciFile.File, "ACI", etag)
 	dl := o.getDownloader(session)
 	if err := dl.Download(u, aciFile.File); err != nil {
-		return nil, nil, fmt.Errorf("error downloading ACI: %v", err)
+		return nil, nil, errwrap.Wrap(errors.New("error downloading ACI"), err)
 	}
 	if session.Cd.UseCached {
 		return nil, session.Cd, nil

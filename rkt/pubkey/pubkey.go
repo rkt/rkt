@@ -16,6 +16,7 @@ package pubkey
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/discovery"
 	"golang.org/x/crypto/openpgp"
@@ -60,7 +62,7 @@ func (m *Manager) GetPubKeyLocations(prefix string) ([]string, error) {
 
 	kls, err := m.metaDiscoverPubKeyLocations(prefix)
 	if err != nil {
-		return nil, fmt.Errorf("prefix meta discovery error: %v", err)
+		return nil, errwrap.Wrap(errors.New("prefix meta discovery error"), err)
 	}
 
 	if len(kls) == 0 {
@@ -83,17 +85,17 @@ func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, ove
 		}
 		pk, err := m.getPubKey(u)
 		if err != nil {
-			return fmt.Errorf("error accessing the key %s: %v", pkl, err)
+			return errwrap.Wrap(fmt.Errorf("error accessing the key %s", pkl), err)
 		}
 		defer pk.Close()
 
 		exists, err := m.Ks.TrustedKeyPrefixExists(prefix, pk)
 		if err != nil {
-			return fmt.Errorf("error reading the key %s: %v", pkl, err)
+			return errwrap.Wrap(fmt.Errorf("error reading the key %s", pkl), err)
 		}
 		err = displayKey(prefix, pkl, pk)
 		if err != nil {
-			return fmt.Errorf("error displaying the key %s: %v", pkl, err)
+			return errwrap.Wrap(fmt.Errorf("error displaying the key %s", pkl), err)
 		}
 		if exists && override == OverrideDeny {
 			stderr("Key %q already in the keystore", pkl)
@@ -107,7 +109,7 @@ func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, ove
 		if accept == AcceptAsk {
 			accepted, err := reviewKey()
 			if err != nil {
-				return fmt.Errorf("error reviewing key: %v", err)
+				return errwrap.Wrap(errors.New("error reviewing key"), err)
 			}
 			if !accepted {
 				stderr("Not trusting %q", pkl)
@@ -124,13 +126,13 @@ func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, ove
 		if prefix == "" {
 			path, err := m.Ks.StoreTrustedKeyRoot(pk)
 			if err != nil {
-				return fmt.Errorf("Error adding root key: %v", err)
+				return errwrap.Wrap(errors.New("Error adding root key"), err)
 			}
 			stderr("Added root key at %q", path)
 		} else {
 			path, err := m.Ks.StoreTrustedKeyPrefix(prefix, pk)
 			if err != nil {
-				return fmt.Errorf("Error adding key for prefix %q: %v", prefix, err)
+				return errwrap.Wrap(fmt.Errorf("Error adding key for prefix %q", prefix), err)
 			}
 			stderr("Added key for prefix %q at %q", prefix, path)
 		}
@@ -185,7 +187,7 @@ func (m *Manager) getPubKey(u *url.URL) (*os.File, error) {
 func downloadKey(u *url.URL) (*os.File, error) {
 	tf, err := ioutil.TempFile("", "")
 	if err != nil {
-		return nil, fmt.Errorf("error creating tempfile: %v", err)
+		return nil, errwrap.Wrap(errors.New("error creating tempfile"), err)
 	}
 	os.Remove(tf.Name()) // no need to keep the tempfile around
 
@@ -199,7 +201,7 @@ func downloadKey(u *url.URL) (*os.File, error) {
 	// from config here
 	res, err := http.Get(u.String())
 	if err != nil {
-		return nil, fmt.Errorf("error getting key: %v", err)
+		return nil, errwrap.Wrap(errors.New("error getting key"), err)
 	}
 	defer res.Body.Close()
 
@@ -208,11 +210,11 @@ func downloadKey(u *url.URL) (*os.File, error) {
 	}
 
 	if _, err := io.Copy(tf, res.Body); err != nil {
-		return nil, fmt.Errorf("error copying key: %v", err)
+		return nil, errwrap.Wrap(errors.New("error copying key"), err)
 	}
 
 	if _, err = tf.Seek(0, os.SEEK_SET); err != nil {
-		return nil, fmt.Errorf("error seeking: %v", err)
+		return nil, errwrap.Wrap(errors.New("error seeking"), err)
 	}
 
 	retTf := tf
@@ -226,7 +228,7 @@ func displayKey(prefix, location string, key *os.File) error {
 
 	kr, err := openpgp.ReadArmoredKeyRing(key)
 	if err != nil {
-		return fmt.Errorf("error reading key: %v", err)
+		return errwrap.Wrap(errors.New("error reading key"), err)
 	}
 
 	stderr("prefix: %q\nkey: %q", prefix, location)
@@ -249,7 +251,7 @@ func reviewKey() (bool, error) {
 		stderr("Are you sure you want to trust this key (yes/no)?")
 		input, err := in.ReadString('\n')
 		if err != nil {
-			return false, fmt.Errorf("error reading input: %v", err)
+			return false, errwrap.Wrap(errors.New("error reading input"), err)
 		}
 		switch input {
 		case "yes\n":

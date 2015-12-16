@@ -18,11 +18,13 @@ package stage0
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 
 	"github.com/appc/spec/schema"
 	"github.com/coreos/rkt/common"
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -35,12 +37,12 @@ const (
 func getStage1Entrypoint(cdir string, entrypoint string) (string, error) {
 	b, err := ioutil.ReadFile(common.Stage1ManifestPath(cdir))
 	if err != nil {
-		return "", fmt.Errorf("error reading pod manifest: %v", err)
+		return "", errwrap.Wrap(errors.New("error reading pod manifest"), err)
 	}
 
 	s1m := schema.ImageManifest{}
 	if err := json.Unmarshal(b, &s1m); err != nil {
-		return "", fmt.Errorf("error unmarshaling stage1 manifest: %v", err)
+		return "", errwrap.Wrap(errors.New("error unmarshaling stage1 manifest"), err)
 	}
 
 	if ep, ok := s1m.Annotations.Get(entrypoint); ok {

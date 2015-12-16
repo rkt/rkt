@@ -17,11 +17,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
@@ -121,12 +123,12 @@ func getAppName(p *pod) (*types.ACName, error) {
 	// figure out the app name, or show a list if multiple are present
 	b, err := ioutil.ReadFile(common.PodManifestPath(p.path()))
 	if err != nil {
-		return nil, fmt.Errorf("error reading pod manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("error reading pod manifest"), err)
 	}
 
 	m := schema.PodManifest{}
 	if err = m.UnmarshalJSON(b); err != nil {
-		return nil, fmt.Errorf("invalid pod manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("invalid pod manifest"), err)
 	}
 
 	switch len(m.Apps) {

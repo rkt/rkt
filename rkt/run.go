@@ -29,6 +29,7 @@ import (
 	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -122,7 +123,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 
 	if flagPrivateUsers {
 		if !common.SupportsUserNS() {
-			stderr("run: --private-users is not supported, kernel compiled without user namespace support")
+			stderr("--private-users is not supported, kernel compiled without user namespace support")
 			return 1
 		}
 		privateUsers.SetRandomUidRange(uid.DefaultRangeCount)
@@ -148,12 +149,12 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	if flagInteractive && rktApps.Count() > 1 {
-		stderr("run: interactive option only supports one image")
+		stderr("interactive option only supports one image")
 		return 1
 	}
 
 	if rktApps.Count() < 1 && len(flagPodManifest) == 0 {
-		stderr("run: must provide at least one image or specify the pod manifest")
+		stderr("must provide at least one image or specify the pod manifest")
 		return 1
 	}
 
@@ -311,7 +312,7 @@ func (pl *portList) Set(s string) error {
 
 	name, err := types.NewACName(parts[0])
 	if err != nil {
-		return fmt.Errorf("%q is not a valid port name: %v", parts[0], err)
+		return errwrap.Wrap(fmt.Errorf("%q is not a valid port name", parts[0]), err)
 	}
 
 	port, err := strconv.ParseUint(parts[1], 10, 16)

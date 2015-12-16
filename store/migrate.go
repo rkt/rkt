@@ -18,6 +18,8 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/hashicorp/errwrap"
 )
 
 type migrateFunc func(*sql.Tx) error
@@ -53,7 +55,7 @@ func migrate(tx *sql.Tx, finalVersion int) error {
 			updateDBVersion(tx, v)
 		}
 		if err != nil {
-			return fmt.Errorf("failed to migrate db to version %d: %v", v, err)
+			return errwrap.Wrap(fmt.Errorf("failed to migrate db to version %d", v), err)
 		}
 	}
 	return nil

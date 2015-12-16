@@ -17,12 +17,14 @@
 package stage0
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 )
 
 // Enter enters the pod/app by exec()ing the stage1's /enter similar to /init
@@ -31,12 +33,12 @@ import (
 // stage1Path is the path of the stage1 rootfs
 func Enter(cdir string, podPID int, appName types.ACName, stage1Path string, cmdline []string) error {
 	if err := os.Chdir(cdir); err != nil {
-		return fmt.Errorf("error changing to dir: %v", err)
+		return errwrap.Wrap(errors.New("error changing to dir"), err)
 	}
 
 	ep, err := getStage1Entrypoint(cdir, enterEntrypoint)
 	if err != nil {
-		return fmt.Errorf("error determining 'enter' entrypoint: %v", err)
+		return errwrap.Wrap(errors.New("error determining 'enter' entrypoint"), err)
 	}
 
 	argv := []string{filepath.Join(stage1Path, ep)}
@@ -45,7 +47,7 @@ func Enter(cdir string, podPID int, appName types.ACName, stage1Path string, cmd
 	argv = append(argv, "--")
 	argv = append(argv, cmdline...)
 	if err := syscall.Exec(argv[0], argv, os.Environ()); err != nil {
-		return fmt.Errorf("error execing enter: %v", err)
+		return errwrap.Wrap(errors.New("error execing enter"), err)
 	}
 
 	// never reached

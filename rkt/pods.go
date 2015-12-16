@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -34,6 +35,7 @@ import (
 	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/hashicorp/errwrap"
 	"github.com/pborman/uuid"
 )
 
@@ -93,7 +95,7 @@ func initPods() error {
 		dirs := []string{embryoDir(), prepareDir(), preparedDir(), runDir(), exitedGarbageDir(), garbageDir()}
 		for _, d := range dirs {
 			if err := os.MkdirAll(d, 0750); err != nil {
-				return fmt.Errorf("error creating directory: %v", err)
+				return errwrap.Wrap(errors.New("error creating directory"), err)
 			}
 		}
 		podsInitialized = true
@@ -109,7 +111,7 @@ func walkPods(include includeMask, f func(*pod)) error {
 
 	ls, err := listPods(include)
 	if err != nil {
-		return fmt.Errorf("failed to get pods: %v", err)
+		return errwrap.Wrap(errors.New("failed to get pods"), err)
 	}
 	sort.Strings(ls)
 
@@ -162,7 +164,7 @@ func newPod() (*pod, error) {
 	var err error
 	p.uuid, err = types.NewUUID(uuid.New())
 	if err != nil {
-		return nil, fmt.Errorf("error creating UUID: %v", err)
+		return nil, errwrap.Wrap(errors.New("error creating UUID"), err)
 	}
 
 	err = os.Mkdir(p.embryoPath(), 0750)
@@ -234,7 +236,7 @@ func getPod(uuid *types.UUID) (*pod, error) {
 	}
 
 	if err != nil && err != lock.ErrNotExist {
-		return nil, fmt.Errorf("error opening pod %q: %v", uuid, err)
+		return nil, errwrap.Wrap(fmt.Errorf("error opening pod %q", uuid), err)
 	}
 
 	if !p.isPrepared && !p.isEmbryo {
@@ -242,7 +244,7 @@ func getPod(uuid *types.UUID) (*pod, error) {
 		if err = l.TrySharedLock(); err != nil {
 			if err != lock.ErrLocked {
 				l.Close()
-				return nil, fmt.Errorf("unexpected lock error: %v", err)
+				return nil, errwrap.Wrap(errors.New("unexpected lock error"), err)
 			}
 			if p.isExitedGarbage {
 				// locked exitedGarbage is also being deleted
@@ -269,12 +271,12 @@ func getPod(uuid *types.UUID) (*pod, error) {
 	if p.isRunning() {
 		cfd, err := p.Fd()
 		if err != nil {
-			return nil, fmt.Errorf("error acquiring pod %v dir fd: %v", uuid, err)
+			return nil, errwrap.Wrap(fmt.Errorf("error acquiring pod %v dir fd", uuid), err)
 		}
 		p.nets, err = netinfo.LoadAt(cfd)
 		// ENOENT is ok -- assume running with --net=host
 		if err != nil && !os.IsNotExist(err) {
-			return nil, fmt.Errorf("error opening pod %v netinfo: %v", uuid, err)
+			return nil, errwrap.Wrap(fmt.Errorf("error opening pod %v netinfo", uuid), err)
 		}
 	}
 
@@ -286,12 +288,12 @@ func getPod(uuid *types.UUID) (*pod, error) {
 func getPodFromUUIDString(uuid string) (*pod, error) {
 	podUUID, err := resolveUUID(uuid)
 	if err != nil {
-		return nil, fmt.Errorf("unable to resolve UUID: %v", err)
+		return nil, errwrap.Wrap(errors.New("unable to resolve UUID"), err)
 	}
 
 	p, err := getPod(podUUID)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get pod: %v", err)
+		return nil, errwrap.Wrap(errors.New("unable to get pod"), err)
 	}
 
 	return p, nil
@@ -569,7 +571,7 @@ func listPodsFromDir(cdir string) ([]string, error) {
 		if os.IsNotExist(err) {
 			return ps, nil
 		}
-		return nil, fmt.Errorf("cannot read pods directory: %v", err)
+		return nil, errwrap.Wrap(errors.New("cannot read pods directory"), err)
 	}
 
 	for _, p := range ls {
@@ -636,7 +638,7 @@ func (p *pod) refreshState() error {
 	}
 
 	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("error refreshing state of pod %q: %v", p.uuid.String(), err)
+		return errwrap.Wrap(fmt.Errorf("error refreshing state of pod %q", p.uuid.String()), err)
 	}
 
 	if !p.isPrepared && !p.isEmbryo && !p.isGone {
@@ -644,7 +646,7 @@ func (p *pod) refreshState() error {
 		if err = p.TrySharedLock(); err != nil {
 			if err != lock.ErrLocked {
 				p.Close()
-				return fmt.Errorf("unexpected lock error: %v", err)
+				return errwrap.Wrap(errors.New("unexpected lock error"), err)
 			}
 			if p.isExitedGarbage {
 				// locked exitedGarbage is also being deleted
@@ -975,7 +977,7 @@ func (p *pod) getAppImageManifest(appName types.ACName) (*schema.ImageManifest, 
 
 	aim := &schema.ImageManifest{}
 	if err := aim.UnmarshalJSON(imb); err != nil {
-		return nil, fmt.Errorf("invalid image manifest for app %q: %v", appName.String(), err)
+		return nil, errwrap.Wrap(fmt.Errorf("invalid image manifest for app %q", a.Name.String()), err)
 	}
 
 	return aim, nil
@@ -985,11 +987,11 @@ func (p *pod) getAppImageManifest(appName types.ACName) (*schema.ImageManifest, 
 func (p *pod) getManifest() (*schema.PodManifest, error) {
 	pmb, err := p.readFile("pod")
 	if err != nil {
-		return nil, fmt.Errorf("error reading pod manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("error reading pod manifest"), err)
 	}
 	pm := &schema.PodManifest{}
 	if err = pm.UnmarshalJSON(pmb); err != nil {
-		return nil, fmt.Errorf("invalid pod manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("invalid pod manifest"), err)
 	}
 	return pm, nil
 }
@@ -1013,13 +1015,13 @@ func (p *pod) getAppCount() (int, error) {
 func (p *pod) getDirNames(path string) ([]string, error) {
 	dir, err := p.openFile(path, syscall.O_RDONLY|syscall.O_DIRECTORY)
 	if err != nil {
-		return nil, fmt.Errorf("unable to open directory: %v", err)
+		return nil, errwrap.Wrap(errors.New("unable to open directory"), err)
 	}
 	defer dir.Close()
 
 	ld, err := dir.Readdirnames(0)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read directory: %v", err)
+		return nil, errwrap.Wrap(errors.New("unable to read directory"), err)
 	}
 
 	return ld, nil
@@ -1052,11 +1054,11 @@ func (p *pod) getStatusDir() (string, error) {
 func (p *pod) getExitStatuses() (map[string]int, error) {
 	statusDir, err := p.getStatusDir()
 	if err != nil {
-		return nil, fmt.Errorf("unable to get status directory: %v", err)
+		return nil, errwrap.Wrap(errors.New("unable to get status directory"), err)
 	}
 	ls, err := p.getDirNames(statusDir)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read status directory: %v", err)
+		return nil, errwrap.Wrap(errors.New("unable to read status directory"), err)
 	}
 
 	stats := make(map[string]int)
@@ -1076,10 +1078,10 @@ func (p *pod) getExitStatuses() (map[string]int, error) {
 func (p *pod) sync() error {
 	cfd, err := p.Fd()
 	if err != nil {
-		return fmt.Errorf("error acquiring pod %v dir fd: %v", p.uuid.String(), err)
+		return errwrap.Wrap(fmt.Errorf("error acquiring pod %v dir fd", p.uuid.String()), err)
 	}
 	if err := sys.Syncfs(cfd); err != nil {
-		return fmt.Errorf("failed to sync pod %v data: %v", p.uuid.String(), err)
+		return errwrap.Wrap(fmt.Errorf("failed to sync pod %v data", p.uuid.String()), err)
 	}
 	return nil
 }

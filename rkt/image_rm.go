@@ -101,22 +101,22 @@ func rmImages(s *store.Store, images []string) error {
 				continue
 			}
 		}
-		stdout("rkt: successfully removed aci for image: %q (%q)", key, name)
+		stdout("successfully removed aci for image ID: %q", pkey)
 		errors--
 		done++
 	}
 
 	if done > 0 {
-		stderr("rkt: %d image(s) successfully removed", done)
+		stderr("image rm: %d image(s) successfully removed", done)
 	}
 
 	// If anything didn't complete, return exit status of 1
 	if (errors + staleErrors) > 0 {
 		if staleErrors > 0 {
-			stderr("rkt: %d image(s) removed but left some stale files", staleErrors)
+			stderr("image rm: %d image(s) removed but left some stale files", staleErrors)
 		}
 		if errors > 0 {
-			stderr("rkt: %d image(s) cannot be removed", errors)
+			stderr("image rm: %d image(s) cannot be removed", errors)
 		}
 		return fmt.Errorf("error(s) found while removing images")
 	}
@@ -126,7 +126,7 @@ func rmImages(s *store.Store, images []string) error {
 
 func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) < 1 {
-		stderr("rkt: Must provide at least one image ID")
+		stderr("image rm,: Must provide at least one image ID")
 		return 1
 	}
 

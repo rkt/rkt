@@ -15,9 +15,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/discovery"
 	"github.com/appc/spec/schema/types"
@@ -26,11 +28,11 @@ import (
 func getStoreKeyFromApp(s *store.Store, img string) (string, error) {
 	app, err := discovery.NewAppFromString(img)
 	if err != nil {
-		return "", fmt.Errorf("cannot parse the image name %q: %v", img, err)
+		return "", errwrap.Wrap(fmt.Errorf("cannot parse the image name %q", img), err)
 	}
 	labels, err := types.LabelsFromMap(app.Labels)
 	if err != nil {
-		return "", fmt.Errorf("invalid labels in the image %q: %v", img, err)
+		return "", errwrap.Wrap(fmt.Errorf("invalid labels in the image %q", img), err)
 	}
 	key, err := s.GetACI(app.Name, labels)
 	if err != nil {
@@ -38,7 +40,7 @@ func getStoreKeyFromApp(s *store.Store, img string) (string, error) {
 		case store.ACINotFoundError:
 			return "", err
 		default:
-			return "", fmt.Errorf("cannot find image %q: %v", img, err)
+			return "", errwrap.Wrap(fmt.Errorf("cannot find image %q", img), err)
 		}
 	}
 	return key, nil
@@ -49,12 +51,12 @@ func getStoreKeyFromAppOrHash(s *store.Store, input string) (string, error) {
 	if _, err := types.NewHash(input); err == nil {
 		key, err = s.ResolveKey(input)
 		if err != nil {
-			return "", fmt.Errorf("cannot resolve image ID: %v", err)
+			return "", errwrap.Wrap(errors.New("cannot resolve image ID"), err)
 		}
 	} else {
 		key, err = getStoreKeyFromApp(s, input)
 		if err != nil {
-			return "", fmt.Errorf("cannot find image: %v", err)
+			return "", errwrap.Wrap(errors.New("cannot find image"), err)
 		}
 	}
 	return key, nil

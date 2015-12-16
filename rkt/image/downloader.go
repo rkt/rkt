@@ -19,6 +19,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/hashicorp/errwrap"
 )
 
 // downloadSession is an interface used by downloader for controlling
@@ -74,11 +76,11 @@ func (d *downloader) Download(u *url.URL, out writeSyncer) error {
 		return err
 	}
 	if _, err := io.Copy(out, reader); err != nil {
-		return fmt.Errorf("failed to download %q: %v", u.String(), err)
+		return errwrap.Wrap(fmt.Errorf("failed to download %q", u.String()), err)
 	}
 
 	if err := out.Sync(); err != nil {
-		return fmt.Errorf("failed to sync data from %q to disk: %v", u.String(), err)
+		return errwrap.Wrap(fmt.Errorf("failed to sync data from %q to disk", u.String()), err)
 	}
 
 	return nil

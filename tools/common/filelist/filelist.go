@@ -16,10 +16,13 @@ package filelist
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/errwrap"
 )
 
 // Lists is a structure holding relative paths to files, symlinks and
@@ -63,7 +66,7 @@ func (list *Lists) ParseFilelist(filelist io.Reader) error {
 	for {
 		kind, count, err := parseHeader(scanner)
 		if err != nil {
-			return fmt.Errorf("Failed to parse filelist: %v", err)
+			return errwrap.Wrap(errors.New("Failed to parse filelist"), err)
 		}
 		if kind == "" {
 			break
@@ -74,7 +77,7 @@ func (list *Lists) ParseFilelist(filelist io.Reader) error {
 		}
 		items, err := parseList(scanner, count)
 		if err != nil {
-			return fmt.Errorf("Failed to parse filelist: %v", err)
+			return errwrap.Wrap(errors.New("Failed to parse filelist"), err)
 		}
 		*data = items
 	}

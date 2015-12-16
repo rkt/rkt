@@ -21,6 +21,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -41,7 +43,7 @@ type Group struct {
 func LookupGid(groupName string) (gid int, err error) {
 	groups, err := parseGroupFile(groupFilePath)
 	if err != nil {
-		return -1, fmt.Errorf("error parsing %q file: %v", groupFilePath, err)
+		return -1, errwrap.Wrap(fmt.Errorf("error parsing %q file", groupFilePath), err)
 	}
 
 	group, ok := groups[groupName]

@@ -21,6 +21,7 @@ import (
 	"bufio"
 	"crypto/rand"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -31,6 +32,7 @@ import (
 	"syscall"
 
 	"github.com/coreos/rkt/pkg/fileutil"
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -281,7 +283,7 @@ func mcsAdd(mcs string) error {
 		if os.IsExist(err) {
 			return fmt.Errorf("MCS label already exists")
 		} else {
-			return fmt.Errorf("unable to test MCS: %v", err)
+			return errwrap.Wrap(errors.New("unable to test MCS"), err)
 		}
 	}
 	file.Close()

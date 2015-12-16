@@ -27,6 +27,7 @@ import (
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -136,7 +137,7 @@ func getDefaultStage1HashFromURL(fn *image.Finder, overridden bool) (*types.Hash
 		return getCustomStage1Hash(fn, defaultStage1Image)
 	}
 	if url, err := url.Parse(defaultStage1Image); err != nil {
-		return nil, fmt.Errorf("failed to parse %q as URL: %v", defaultStage1Image, err)
+		return nil, errwrap.Wrap(fmt.Errorf("failed to parse %q as URL", defaultStage1Image), err)
 	} else if url.Scheme != "" {
 		// default stage1 image path is some schemed path,
 		// just try to get it
@@ -170,18 +171,20 @@ func getLocalDefaultStage1Hash(fn *image.Finder) (*types.Hash, error) {
 	exePath, err := os.Readlink("/proc/self/exe")
 	if err != nil {
 		if firstErr != nil {
-			return nil, fmt.Errorf("error finding stage1 images %q and %q in rkt binary directory: %v and %v", defaultStage1Image, imgBase, firstErr, err)
+			innerErr := errwrap.Wrap(firstErr, err)
+			return nil, errwrap.Wrap(fmt.Errorf("error finding stage1 images %q and %q in rkt binary directory", defaultStage1Image, imgBase), innerErr)
 		} else {
-			return nil, fmt.Errorf("error finding stage1 image %q in rkt binary directory: %v", imgBase, err)
+			return nil, errwrap.Wrap(fmt.Errorf("error finding stage1 image %q in rkt binary directory", imgBase), err)
 		}
 	}
 	fallbackPath := filepath.Join(filepath.Dir(exePath), imgBase)
 	s1img, err := fn.FindImage(fallbackPath, "", apps.AppImagePath)
 	if err != nil {
 		if firstErr != nil {
-			return nil, fmt.Errorf("error finding stage1 images %q and %q: %v and %v", defaultStage1Image, fallbackPath, firstErr, err)
+			innerErr := errwrap.Wrap(firstErr, err)
+			return nil, errwrap.Wrap(fmt.Errorf("error finding stage1 images %q and %q", defaultStage1Image, fallbackPath), innerErr)
 		} else {
-			return nil, fmt.Errorf("error finding stage1 image %q: %v", fallbackPath, err)
+			return nil, errwrap.Wrap(fmt.Errorf("error finding stage1 image %q", fallbackPath), err)
 		}
 	}
 	return s1img, nil
@@ -190,7 +193,7 @@ func getLocalDefaultStage1Hash(fn *image.Finder) (*types.Hash, error) {
 func getCustomStage1Hash(fn *image.Finder, path string) (*types.Hash, error) {
 	s1img, err := fn.FindImage(path, "", apps.AppImageGuess)
 	if err != nil {
-		return nil, fmt.Errorf("error finding stage1 image %q: %v", path, err)
+		return nil, errwrap.Wrap(fmt.Errorf("error finding stage1 image %q", path), err)
 	}
 	return s1img, nil
 }

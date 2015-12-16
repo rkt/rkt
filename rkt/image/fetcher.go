@@ -23,6 +23,7 @@ import (
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/discovery"
 	"github.com/appc/spec/schema/types"
@@ -81,13 +82,13 @@ func (f *Fetcher) fetchImageDeps(hash string) error {
 func (f *Fetcher) addImageDeps(hash string, imgsl *list.List, seen map[string]struct{}) error {
 	dependencies, err := f.getImageDeps(hash)
 	if err != nil {
-		return fmt.Errorf("failed to get dependencies for image ID %q: %v", hash, err)
+		return errwrap.Wrap(fmt.Errorf("failed to get dependencies for image ID %q", hash), err)
 	}
 	for _, d := range dependencies {
 		imgName := d.ImageName.String()
 		app, err := discovery.NewApp(imgName, d.Labels.ToMap())
 		if err != nil {
-			return fmt.Errorf("one of image ID's %q dependencies (image %q) is invalid: %v", hash, imgName, err)
+			return errwrap.Wrap(fmt.Errorf("one of image ID's %q dependencies (image %q) is invalid", hash, imgName), err)
 		}
 		appStr := app.String()
 		if _, ok := seen[appStr]; ok {
@@ -141,7 +142,7 @@ const (
 func (f *Fetcher) fetchSingleImageByURL(urlStr string, a *asc) (string, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
-		return "", fmt.Errorf("invalid image URL %q: %v", urlStr, err)
+		return "", errwrap.Wrap(fmt.Errorf("invalid image URL %q", urlStr), err)
 	}
 
 	switch u.Scheme {
@@ -194,7 +195,7 @@ func (f *Fetcher) getRemoteForURL(u *url.URL) (*store.Remote, error) {
 	}
 	urlStr := u.String()
 	if rem, ok, err := f.S.GetRemote(urlStr); err != nil {
-		return nil, fmt.Errorf("failed to fetch URL %q: %v", urlStr, err)
+		return nil, errwrap.Wrap(fmt.Errorf("failed to fetch URL %q", urlStr), err)
 	} else if ok {
 		return rem, nil
 	}
@@ -267,7 +268,7 @@ type appBundle struct {
 func newAppBundle(name string) (*appBundle, error) {
 	app, err := discovery.NewAppFromString(name)
 	if err != nil {
-		return nil, fmt.Errorf("invalid image name %q: %v", name, err)
+		return nil, errwrap.Wrap(fmt.Errorf("invalid image name %q", name), err)
 	}
 	if _, ok := app.Labels["arch"]; !ok {
 		app.Labels["arch"] = runtime.GOARCH
@@ -276,7 +277,7 @@ func newAppBundle(name string) (*appBundle, error) {
 		app.Labels["os"] = runtime.GOOS
 	}
 	if err := types.IsValidOSArch(app.Labels, stage0.ValidOSArch); err != nil {
-		return nil, fmt.Errorf("invalid image name %q: %v", name, err)
+		return nil, errwrap.Wrap(fmt.Errorf("invalid image name %q", name), err)
 	}
 	bundle := &appBundle{
 		App: app,
@@ -319,7 +320,7 @@ func (f *Fetcher) maybeCheckStoreForApp(app *appBundle) (string, error) {
 func (f *Fetcher) getStoreKeyFromApp(app *appBundle) (string, error) {
 	labels, err := types.LabelsFromMap(app.App.Labels)
 	if err != nil {
-		return "", fmt.Errorf("invalid labels in the name %q: %v", app.Str, err)
+		return "", errwrap.Wrap(fmt.Errorf("invalid labels in the name %q", app.Str), err)
 	}
 	key, err := f.S.GetACI(app.App.Name, labels)
 	if err != nil {
@@ -327,7 +328,7 @@ func (f *Fetcher) getStoreKeyFromApp(app *appBundle) (string, error) {
 		case store.ACINotFoundError:
 			return "", err
 		default:
-			return "", fmt.Errorf("cannot find image %q: %v", app.Str, err)
+			return "", errwrap.Wrap(fmt.Errorf("cannot find image %q", app.Str), err)
 		}
 	}
 	return key, nil

@@ -17,7 +17,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"path/filepath"
 
 	"github.com/appc/spec/schema/types"
@@ -27,6 +27,7 @@ import (
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
 	"github.com/coreos/rkt/stage1/init/kvm"
+	"github.com/hashicorp/errwrap"
 )
 
 // KvmPodToSystemd generates systemd unit files for a pod according to the manifest and network configuration
@@ -36,7 +37,7 @@ func KvmPodToSystemd(p *stage1commontypes.Pod, n *networking.Networking) error {
 	// networking
 	netDescriptions := kvm.GetNetworkDescriptions(n)
 	if err := kvm.GenerateNetworkInterfaceUnits(filepath.Join(podRoot, stage1initcommon.UnitsDir), netDescriptions); err != nil {
-		return fmt.Errorf("failed to transform networking to units: %v", err)
+		return errwrap.Wrap(errors.New("failed to transform networking to units"), err)
 	}
 
 	// volumes
@@ -49,7 +50,7 @@ func KvmPodToSystemd(p *stage1commontypes.Pod, n *networking.Networking) error {
 	// mount host volumes through some remote file system e.g. 9p to /mnt/volumeName location
 	// order is important here: PodToSystemHostMountUnits prepares folders that are checked by each appToSystemdMountUnits later
 	if err := stage1initcommon.PodToSystemdHostMountUnits(podRoot, p.Manifest.Volumes, appNames, stage1initcommon.UnitsDir); err != nil {
-		return fmt.Errorf("failed to transform pod volumes into mount units: %v", err)
+		return errwrap.Wrap(errors.New("failed to transform pod volumes into mount units"), err)
 	}
 
 	return nil

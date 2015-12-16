@@ -15,6 +15,7 @@
 package networking
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -24,6 +25,7 @@ import (
 	"github.com/appc/cni/pkg/ns"
 	cnitypes "github.com/appc/cni/pkg/types"
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 	"github.com/vishvananda/netlink"
 
 	"github.com/coreos/rkt/common"
@@ -100,7 +102,7 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common
 
 	n.nets, err = n.loadNets()
 	if err != nil {
-		return nil, fmt.Errorf("error loading network definitions: %v", err)
+		return nil, errwrap.Wrap(errors.New("error loading network definitions"), err)
 	}
 
 	err = withNetNS(podNS, hostNS, func() error {
@@ -122,7 +124,7 @@ func Load(podRoot string, podID *types.UUID) (*Networking, error) {
 	// the current directory is pod root
 	pdirfd, err := syscall.Open(podRoot, syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to open pod root directory (%v): %v", podRoot, err)
+		return nil, errwrap.Wrap(fmt.Errorf("Failed to open pod root directory (%v)", podRoot), err)
 	}
 	defer syscall.Close(pdirfd)
 
@@ -209,7 +211,7 @@ func (n *Networking) Teardown(flavor string) {
 func basicNetNS() (hostNS, podNS *os.File, err error) {
 	hostNS, podNS, err = newNetNS()
 	if err != nil {
-		err = fmt.Errorf("failed to create new netns: %v", err)
+		err = errwrap.Wrap(errors.New("failed to create new netns"), err)
 		return
 	}
 	// we're in podNS!!
@@ -289,11 +291,11 @@ func withNetNS(curNS, tgtNS *os.File, f func() error) error {
 func loUp() error {
 	lo, err := netlink.LinkByName("lo")
 	if err != nil {
-		return fmt.Errorf("failed to lookup lo: %v", err)
+		return errwrap.Wrap(errors.New("failed to lookup lo"), err)
 	}
 
 	if err := netlink.LinkSetUp(lo); err != nil {
-		return fmt.Errorf("failed to set lo up: %v", err)
+		return errwrap.Wrap(errors.New("failed to set lo up"), err)
 	}
 
 	return nil

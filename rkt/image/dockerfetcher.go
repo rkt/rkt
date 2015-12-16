@@ -15,6 +15,7 @@
 package image
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -26,6 +27,7 @@ import (
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 
 	docker2aci "github.com/appc/docker2aci/lib"
 	d2acommon "github.com/appc/docker2aci/lib/common"
@@ -99,12 +101,12 @@ func (f *dockerFetcher) fetch(u *url.URL) (*os.File, error) {
 	user, password := f.getCreds(registryURL)
 	acis, err := docker2aci.Convert(registryURL, true /* squash */, tmpDir, tmpDir, d2acommon.NoCompression, user, password, f.InsecureFlags.AllowHTTP())
 	if err != nil {
-		return nil, fmt.Errorf("error converting docker image to ACI: %v", err)
+		return nil, errwrap.Wrap(errors.New("error converting docker image to ACI"), err)
 	}
 
 	aciFile, err := os.Open(acis[0])
 	if err != nil {
-		return nil, fmt.Errorf("error opening squashed ACI file: %v", err)
+		return nil, errwrap.Wrap(errors.New("error opening squashed ACI file"), err)
 	}
 
 	return aciFile, nil
@@ -113,7 +115,7 @@ func (f *dockerFetcher) fetch(u *url.URL) (*os.File, error) {
 func (f *dockerFetcher) getTmpDir() (string, error) {
 	storeTmpDir, err := f.S.TmpDir()
 	if err != nil {
-		return "", fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
+		return "", errwrap.Wrap(errors.New("error creating temporary dir for docker to ACI conversion"), err)
 	}
 	return ioutil.TempDir(storeTmpDir, "docker2aci-")
 }

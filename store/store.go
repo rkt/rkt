@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/coreos/rkt/pkg/lock"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/pkg/acirenderer"
@@ -134,7 +135,7 @@ func (s *Store) populateSize() error {
 		return err
 	})
 	if err != nil {
-		return fmt.Errorf("populateSize(): error retrieving ACI Infos: %v", err)
+		return errwrap.Wrap(errors.New("populateSize(): error retrieving ACI Infos"), err)
 	}
 
 	aciSizes := make(map[string]int64)
@@ -160,7 +161,7 @@ func (s *Store) populateSize() error {
 
 		tsR, err := s.treestore.IsRendered(id)
 		if err != nil {
-			return fmt.Errorf("error determining whether the tree store is rendered: %v", err)
+			return errwrap.Wrap(errors.New("error determining whether the tree store is rendered"), err)
 		}
 		if tsR {
 			// We associate a tree store with an image by writing the image
@@ -168,7 +169,7 @@ func (s *Store) populateSize() error {
 			// when we remove the rendered tree store.
 			treepath := s.treestore.GetPath(id)
 			if err := ioutil.WriteFile(filepath.Join(treepath, imagefilename), []byte(key), 0644); err != nil {
-				return fmt.Errorf("error writing app treeStoreID: %v", err)
+				return errwrap.Wrap(errors.New("error writing app treeStoreID"), err)
 			}
 
 			tsSize, err := s.treestore.Size(id)
@@ -376,7 +377,7 @@ func (s *Store) ResolveKey(key string) (string, error) {
 		return err
 	})
 	if err != nil {
-		return "", fmt.Errorf("error retrieving ACI Infos: %v", err)
+		return "", errwrap.Wrap(errors.New("error retrieving ACI Infos"), err)
 	}
 
 	keyCount := len(aciInfos)
@@ -416,18 +417,18 @@ func (s *Store) ResolveName(name string) ([]string, bool, error) {
 func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 	key, err := s.ResolveKey(key)
 	if err != nil {
-		return nil, fmt.Errorf("error resolving image ID: %v", err)
+		return nil, errwrap.Wrap(errors.New("error resolving image ID"), err)
 	}
 	keyLock, err := lock.SharedKeyLock(s.imageLockDir, key)
 	if err != nil {
-		return nil, fmt.Errorf("error locking image: %v", err)
+		return nil, errwrap.Wrap(errors.New("error locking image"), err)
 	}
 	defer keyLock.Close()
 
 	err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo, found, err := GetACIInfoWithBlobKey(tx, key)
 		if err != nil {
-			return fmt.Errorf("error getting aciinfo: %v", err)
+			return errwrap.Wrap(errors.New("error getting aciinfo"), err)
 		} else if !found {
 			return fmt.Errorf("cannot find image with key: %s", key)
 		}
@@ -437,7 +438,7 @@ func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 		return WriteACIInfo(tx, aciinfo)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("cannot get image info for %q from db: %v", key, err)
+		return nil, errwrap.Wrap(fmt.Errorf("cannot get image info for %q from db", key), err)
 	}
 
 	return s.stores[blobType].ReadStream(key, false)
@@ -456,7 +457,7 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 
 	dr, err := aci.NewCompressedReader(r)
 	if err != nil {
-		return "", fmt.Errorf("error decompressing image: %v", err)
+		return "", errwrap.Wrap(errors.New("error decompressing image"), err)
 	}
 	defer dr.Close()
 
@@ -466,39 +467,39 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 	tr := io.TeeReader(dr, h)
 	fh, err := s.TmpFile()
 	if err != nil {
-		return "", fmt.Errorf("error creating image: %v", err)
+		return "", errwrap.Wrap(errors.New("error creating image"), err)
 	}
 	sz, err := io.Copy(fh, tr)
 	if err != nil {
-		return "", fmt.Errorf("error copying image: %v", err)
+		return "", errwrap.Wrap(errors.New("error copying image"), err)
 	}
 	im, err := aci.ManifestFromImage(fh)
 	if err != nil {
-		return "", fmt.Errorf("error extracting image manifest: %v", err)
+		return "", errwrap.Wrap(errors.New("error extracting image manifest"), err)
 	}
 	if err := fh.Close(); err != nil {
-		return "", fmt.Errorf("error closing image: %v", err)
+		return "", errwrap.Wrap(errors.New("error closing image"), err)
 	}
 
 	// Import the uncompressed image into the store at the real key
 	key := s.HashToKey(h)
 	keyLock, err := lock.ExclusiveKeyLock(s.imageLockDir, key)
 	if err != nil {
-		return "", fmt.Errorf("error locking image: %v", err)
+		return "", errwrap.Wrap(errors.New("error locking image"), err)
 	}
 	defer keyLock.Close()
 
 	if err = s.stores[blobType].Import(fh.Name(), key, true); err != nil {
-		return "", fmt.Errorf("error importing image: %v", err)
+		return "", errwrap.Wrap(errors.New("error importing image"), err)
 	}
 
 	// Save the imagemanifest using the same key used for the image
 	imj, err := json.Marshal(im)
 	if err != nil {
-		return "", fmt.Errorf("error marshalling image manifest: %v", err)
+		return "", errwrap.Wrap(errors.New("error marshalling image manifest"), err)
 	}
 	if err := s.stores[imageManifestType].Write(key, imj); err != nil {
-		return "", fmt.Errorf("error importing image manifest: %v", err)
+		return "", errwrap.Wrap(errors.New("error importing image manifest"), err)
 	}
 
 	// Save aciinfo
@@ -513,7 +514,7 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 		}
 		return WriteACIInfo(tx, aciinfo)
 	}); err != nil {
-		return "", fmt.Errorf("error writing ACI Info: %v", err)
+		return "", errwrap.Wrap(errors.New("error writing ACI Info"), err)
 	}
 
 	// The treestore for this ACI is not written here as ACIs downloaded as
@@ -530,7 +531,7 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 func (s *Store) RemoveACI(key string) error {
 	imageKeyLock, err := lock.ExclusiveKeyLock(s.imageLockDir, key)
 	if err != nil {
-		return fmt.Errorf("error locking image: %v", err)
+		return errwrap.Wrap(errors.New("error locking image"), err)
 	}
 	defer imageKeyLock.Close()
 
@@ -540,7 +541,7 @@ func (s *Store) RemoveACI(key string) error {
 		path := filepath.Join(ds.BasePath, filepath.Join(ds.Transform(key)...))
 		fi, err := os.Stat(path)
 		if err != nil {
-			return fmt.Errorf("cannot get the stat of the image directory: %v", err)
+			return errwrap.Wrap(errors.New("cannot get the stat of the image directory"), err)
 		}
 
 		uid := os.Getuid()
@@ -556,7 +557,7 @@ func (s *Store) RemoveACI(key string) error {
 	// referenced by any ACIInfo.
 	err = s.db.Do(func(tx *sql.Tx) error {
 		if _, found, err := GetACIInfoWithBlobKey(tx, key); err != nil {
-			return fmt.Errorf("error getting aciinfo: %v", err)
+			return errwrap.Wrap(errors.New("error getting aciinfo"), err)
 		} else if !found {
 			return fmt.Errorf("cannot find image with key: %s", key)
 		}
@@ -570,7 +571,7 @@ func (s *Store) RemoveACI(key string) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("cannot remove image with ID: %s from db: %v", key, err)
+		return errwrap.Wrap(fmt.Errorf("cannot remove image with ID: %s from db", key), err)
 	}
 
 	// Then remove non transactional entries from the blob, imageManifest
@@ -624,20 +625,20 @@ func (s *Store) GetTreeStoreID(key string) (string, error) {
 func (s *Store) RenderTreeStore(key string, rebuild bool) (id string, hash string, err error) {
 	id, err = s.GetTreeStoreID(key)
 	if err != nil {
-		return "", "", fmt.Errorf("cannot calculate treestore id: %v", err)
+		return "", "", errwrap.Wrap(errors.New("cannot calculate treestore id"), err)
 	}
 
 	// this lock references the treestore dir for the specified id.
 	treeStoreKeyLock, err := lock.ExclusiveKeyLock(s.treeStoreLockDir, id)
 	if err != nil {
-		return "", "", fmt.Errorf("error locking tree store: %v", err)
+		return "", "", errwrap.Wrap(errors.New("error locking tree store"), err)
 	}
 	defer treeStoreKeyLock.Close()
 
 	if !rebuild {
 		rendered, err := s.treestore.IsRendered(id)
 		if err != nil {
-			return "", "", fmt.Errorf("cannot determine if tree is already rendered: %v", err)
+			return "", "", errwrap.Wrap(errors.New("cannot determine if tree is already rendered"), err)
 		}
 		if rendered {
 			return id, "", nil
@@ -660,7 +661,7 @@ func (s *Store) RenderTreeStore(key string, rebuild bool) (id string, hash strin
 func (s *Store) CheckTreeStore(id string) (string, error) {
 	treeStoreKeyLock, err := lock.SharedKeyLock(s.treeStoreLockDir, id)
 	if err != nil {
-		return "", fmt.Errorf("error locking tree store: %v", err)
+		return "", errwrap.Wrap(errors.New("error locking tree store"), err)
 	}
 	defer treeStoreKeyLock.Close()
 
@@ -686,12 +687,12 @@ func (s *Store) GetTreeStoreRootFS(id string) string {
 func (s *Store) RemoveTreeStore(id string) error {
 	treeStoreKeyLock, err := lock.ExclusiveKeyLock(s.treeStoreLockDir, id)
 	if err != nil {
-		return fmt.Errorf("error locking tree store: %v", err)
+		return errwrap.Wrap(errors.New("error locking tree store"), err)
 	}
 	defer treeStoreKeyLock.Close()
 
 	if err := s.treestore.Remove(id, s); err != nil {
-		return fmt.Errorf("error removing the tree store: %v", err)
+		return errwrap.Wrap(errors.New("error removing the tree store"), err)
 	}
 
 	return nil
@@ -704,7 +705,7 @@ func (s *Store) GetTreeStoreIDs() ([]string, error) {
 	ls, err := ioutil.ReadDir(s.treestore.path)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("cannot read treestore directory: %v", err)
+			return nil, errwrap.Wrap(errors.New("cannot read treestore directory"), err)
 		}
 	}
 
@@ -743,17 +744,17 @@ func (s *Store) WriteRemote(remote *Remote) error {
 func (s *Store) GetImageManifestJSON(key string) ([]byte, error) {
 	key, err := s.ResolveKey(key)
 	if err != nil {
-		return nil, fmt.Errorf("error resolving image ID: %v", err)
+		return nil, errwrap.Wrap(errors.New("error resolving image ID"), err)
 	}
 	keyLock, err := lock.SharedKeyLock(s.imageLockDir, key)
 	if err != nil {
-		return nil, fmt.Errorf("error locking image: %v", err)
+		return nil, errwrap.Wrap(errors.New("error locking image"), err)
 	}
 	defer keyLock.Close()
 
 	imj, err := s.stores[imageManifestType].Read(key)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving image manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("error retrieving image manifest"), err)
 	}
 	return imj, nil
 }
@@ -766,7 +767,7 @@ func (s *Store) GetImageManifest(key string) (*schema.ImageManifest, error) {
 	}
 	var im *schema.ImageManifest
 	if err = json.Unmarshal(imj, &im); err != nil {
-		return nil, fmt.Errorf("error unmarshalling image manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("error unmarshalling image manifest"), err)
 	}
 	return im, nil
 }
@@ -798,7 +799,7 @@ nextKey:
 	for _, aciinfo := range aciinfos {
 		im, err := s.GetImageManifest(aciinfo.BlobKey)
 		if err != nil {
-			return "", fmt.Errorf("error getting image manifest: %v", err)
+			return "", errwrap.Wrap(errors.New("error getting image manifest"), err)
 		}
 
 		// The image manifest must have all the requested labels

@@ -16,12 +16,14 @@ package kvm
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"path/filepath"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/coreos/rkt/networking"
 
 	"github.com/appc/cni/pkg/types"
@@ -77,7 +79,7 @@ func generateMacAddress() (net.HardwareAddr, error) {
 
 	_, err := rand.Read(mac[3:6])
 	if err != nil {
-		return nil, fmt.Errorf("cannot generate random mac address: %v", err)
+		return nil, errwrap.Wrap(errors.New("cannot generate random mac address"), err)
 	}
 
 	return mac, nil
@@ -150,12 +152,12 @@ func GenerateNetworkInterfaceUnits(unitsPath string, netDescriptions []netDescri
 		unitName := fmt.Sprintf("interface-%s", ifName) + ".service"
 		unitBytes, err := ioutil.ReadAll(unit.Serialize(opts))
 		if err != nil {
-			return fmt.Errorf("failed to serialize network unit file to bytes %q: %v", unitName, err)
+			return errwrap.Wrap(fmt.Errorf("failed to serialize network unit file to bytes %q", unitName), err)
 		}
 
 		err = ioutil.WriteFile(filepath.Join(unitsPath, unitName), unitBytes, 0644)
 		if err != nil {
-			return fmt.Errorf("failed to create network unit file %q: %v", unitName, err)
+			return errwrap.Wrap(fmt.Errorf("failed to create network unit file %q", unitName), err)
 		}
 
 		log.Printf("network unit created: %q in %q (iface=%q, addr=%q)", unitName, unitsPath, ifName, address)

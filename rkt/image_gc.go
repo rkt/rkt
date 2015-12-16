@@ -15,12 +15,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -72,23 +74,23 @@ func gcTreeStore(s *store.Store) error {
 	// pods/treeStores being created/referenced
 	keyLock, err := lock.ExclusiveKeyLock(lockDir(), common.PrepareLock)
 	if err != nil {
-		return fmt.Errorf("cannot get exclusive prepare lock: %v", err)
+		return errwrap.Wrap(errors.New("cannot get exclusive prepare lock"), err)
 	}
 	defer keyLock.Close()
 	referencedTreeStoreIDs, err := getReferencedTreeStoreIDs()
 	if err != nil {
-		return fmt.Errorf("cannot get referenced treestoreIDs: %v", err)
+		return errwrap.Wrap(errors.New("cannot get referenced treestoreIDs"), err)
 	}
 	treeStoreIDs, err := s.GetTreeStoreIDs()
 	if err != nil {
-		return fmt.Errorf("cannot get treestoreIDs from the store: %v", err)
+		return errwrap.Wrap(errors.New("cannot get treestoreIDs from the store"), err)
 	}
 	for _, treeStoreID := range treeStoreIDs {
 		if _, ok := referencedTreeStoreIDs[treeStoreID]; !ok {
 			if err := s.RemoveTreeStore(treeStoreID); err != nil {
 				stderr("rkt: error removing treestore %q: %v", treeStoreID, err)
 			} else {
-				stderr("rkt: removed treestore %q", treeStoreID)
+				stderr("removed treestore %q", treeStoreID)
 			}
 		}
 	}
@@ -102,12 +104,12 @@ func getReferencedTreeStoreIDs() (map[string]struct{}, error) {
 	if err := walkPods(includeMostDirs, func(p *pod) {
 		stage1TreeStoreID, err := p.getStage1TreeStoreID()
 		if err != nil {
-			walkErr = fmt.Errorf("cannot get stage1 treestoreID for pod %s: %v", p.uuid, err)
+			walkErr = errwrap.Wrap(fmt.Errorf("cannot get stage1 treestoreID for pod %s", p.uuid), err)
 			return
 		}
 		appsTreeStoreIDs, err := p.getAppsTreeStoreIDs()
 		if err != nil {
-			walkErr = fmt.Errorf("cannot get apps treestoreIDs for pod %s: %v", p.uuid, err)
+			walkErr = errwrap.Wrap(fmt.Errorf("cannot get apps treestoreIDs for pod %s", p.uuid), err)
 			return
 		}
 		allTreeStoreIDs := append(appsTreeStoreIDs, stage1TreeStoreID)
@@ -116,7 +118,7 @@ func getReferencedTreeStoreIDs() (map[string]struct{}, error) {
 			treeStoreIDs[treeStoreID] = struct{}{}
 		}
 	}); err != nil {
-		return nil, fmt.Errorf("failed to get pod handles: %v", err)
+		return nil, errwrap.Wrap(errors.New("failed to get pod handles"), err)
 	}
 	if walkErr != nil {
 		return nil, walkErr
@@ -128,7 +130,7 @@ func gcStore(s *store.Store, gracePeriod time.Duration) error {
 	var imagesToRemove []string
 	aciinfos, err := s.GetAllACIInfos([]string{"lastused"}, true)
 	if err != nil {
-		return fmt.Errorf("Failed to get aciinfos: %v", err)
+		return errwrap.Wrap(errors.New("Failed to get aciinfos"), err)
 	}
 	for _, ai := range aciinfos {
 		if time.Now().Sub(ai.LastUsed) <= gracePeriod {
