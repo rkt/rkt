@@ -33,6 +33,7 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/set"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
 )
@@ -86,72 +87,48 @@ type valueGetter interface {
 	Get(string) (string, bool)
 }
 
-// containsKeyValue returns true if the actualKVs contains any of the key-value
+// containsAllKeyValues returns true if the actualKVs contains all of the key-value
 // pairs listed in requiredKVs, otherwise it returns false.
-func containsKeyValue(actualKVs valueGetter, requiredKVs []*v1alpha.KeyValue) bool {
+func containsAllKeyValues(actualKVs valueGetter, requiredKVs []*v1alpha.KeyValue) bool {
 	for _, requiredKV := range requiredKVs {
 		actualValue, ok := actualKVs.Get(requiredKV.Key)
-		if ok && actualValue == requiredKV.Value {
-			return true
+		if !ok || actualValue != requiredKV.Value {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
-// containsString tries to find a string in a string array which satisfies the checkFunc.
-// The checkFunc takes two strings, and returns whether the two strings satisfy the
-// given condition.
-func containsString(needle string, haystack []string, checkFunc func(a, b string) bool) bool {
-	for _, v := range haystack {
-		if checkFunc(needle, v) {
-			return true
-		}
-	}
-	return false
+// isBaseNameOf returns true if 'basename' is the basename of 's'.
+func isBaseNameOf(basename, s string) bool {
+	return basename == path.Base(s)
 }
 
-// stringsEqual returns true if two strings are equal.
-func stringsEqual(a, b string) bool {
-	return a == b
+// isPrefixOf returns true if 'prefix' is the prefix of 's'.
+func isPrefixOf(prefix, s string) bool {
+	return strings.HasPrefix(s, prefix)
 }
 
-// hasBaseName returns true if the second string is the base name of
-// the first string.
-func hasBaseName(name, baseName string) bool {
-	return path.Base(name) == baseName
+// isPartOf returns true if 'keyword' is part of 's'.
+func isPartOf(keyword, s string) bool {
+	return strings.Contains(s, keyword)
 }
 
-// hasIntersection returns true if there's any two-string pair from array a and
-// array b that satisfy the checkFunc.
-//
-// e.g. if a = {"a", "b", "c"}, b = {"c", "d", "e"} and c = {"e", "f", "g"},
-// then hasIntersection(a, b, stringsEqual) == true,
-//      hasIntersection(a, c, stringsEqual) == false,
-//      containsAnystring(b, c, stringsEqual) == true.
-//
-func hasIntersection(a, b []string, checkFunc func(a, b string) bool) bool {
-	for _, aa := range a {
-		if containsString(aa, b, checkFunc) {
-			return true
-		}
-	}
-	return false
-}
-
-// filterPod returns true if the pod doesn't satisfy the filter, which means
-// it should be filtered and not be returned.
-// It returns false if the filter is nil or the pod satisfies the filter, which
-// means it should be returned.
-func filterPod(pod *v1alpha.Pod, manifest *schema.PodManifest, filter *v1alpha.PodFilter) bool {
+// satisfiesPodFilter returns true if the pod satisfies the filter or the filter
+// is nil, which means the pod will be returned.
+// It returns false if the pod doesn't satisfy the filter, which means it will
+// not be returned.
+func satisfiesPodFilter(pod *v1alpha.Pod, manifest *schema.PodManifest, filter *v1alpha.PodFilter) bool {
 	// No filters, return directly.
 	if filter == nil {
-		return false
+		return true
 	}
 
 	// Filter according to the id.
 	if len(filter.Ids) > 0 {
-		if !containsString(pod.Id, filter.Ids, stringsEqual) {
-			return true
+		s := set.NewString(filter.Ids...)
+		if !s.Has(pod.Id) {
+			return false
 		}
 	}
 
@@ -165,50 +142,64 @@ func filterPod(pod *v1alpha.Pod, manifest *schema.PodManifest, filter *v1alpha.P
 			}
 		}
 		if !foundState {
-			return true
+			return false
 		}
 	}
 
 	// Filter according to the app names.
 	if len(filter.AppNames) > 0 {
-		var names []string
+		s := set.NewString()
 		for _, app := range pod.Apps {
-			names = append(names, app.Name)
+			s.Insert(app.Name)
 		}
-		if !hasIntersection(names, filter.AppNames, stringsEqual) {
-			return true
+		if !s.HasAll(filter.AppNames...) {
+			return false
 		}
 	}
 
 	// Filter according to the image IDs.
 	if len(filter.ImageIds) > 0 {
-		var ids []string
+		s := set.NewString()
 		for _, app := range pod.Apps {
-			ids = append(ids, app.Image.Id)
+			s.Insert(app.Image.Id)
 		}
-		if !hasIntersection(ids, filter.ImageIds, stringsEqual) {
-			return true
+		if !s.HasAll(filter.ImageIds...) {
+			return false
 		}
 	}
 
 	// Filter according to the network names.
 	if len(filter.NetworkNames) > 0 {
-		var names []string
+		s := set.NewString()
 		for _, network := range pod.Networks {
-			names = append(names, network.Name)
+			s.Insert(network.Name)
 		}
-		if !hasIntersection(names, filter.NetworkNames, stringsEqual) {
-			return true
+		if !s.HasAll(filter.NetworkNames...) {
+			return false
 		}
 	}
 
 	// Filter according to the annotations.
 	if len(filter.Annotations) > 0 {
-		if !containsKeyValue(manifest.Annotations, filter.Annotations) {
-			return true
+		if !containsAllKeyValues(manifest.Annotations, filter.Annotations) {
+			return false
 		}
 	}
 
+	return true
+}
+
+// satisfiesAnyPodFilters returns true if any of the filter conditions is satisfied
+// by the pod.
+func satisfiesAnyPodFilters(pod *v1alpha.Pod, manifest *schema.PodManifest, filters []*v1alpha.PodFilter) bool {
+	if len(filters) == 0 {
+		return true
+	}
+	for _, filter := range filters {
+		if satisfiesPodFilter(pod, manifest, filter) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -332,7 +323,8 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 			return
 		}
 
-		if filterPod(pod, manifest, request.Filter) {
+		// Filters are combined with 'OR'.
+		if !satisfiesAnyPodFilters(pod, manifest, request.Filters) {
 			return
 		}
 
@@ -341,7 +333,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 				return
 			}
 		} else {
-			pod.Manifest = nil // Do not return pod manifest in ListPods().
+			pod.Manifest = nil
 		}
 		pods = append(pods, pod)
 	}); err != nil {
@@ -477,70 +469,88 @@ func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1al
 	}, &im, nil
 }
 
-// filterImage returns true if the image doesn't satisfy the filter, which means
-// it should be filtered and not be returned.
-// It returns false if the filter is nil or the pod satisfies the filter, which means
-// it should be returned.
-func filterImage(image *v1alpha.Image, manifest *schema.ImageManifest, filter *v1alpha.ImageFilter) bool {
+// satisfiesImageFilter returns true if the image satisfies the filter or the filter
+// is nil, which means the image will be returned.
+// It returns false if the image doesn't satisfy the filter, which means it will
+// not be returned.
+func satisfiesImageFilter(image *v1alpha.Image, manifest *schema.ImageManifest, filter *v1alpha.ImageFilter) bool {
 	// No filters, return directly.
 	if filter == nil {
-		return false
+		return true
 	}
 
 	// Filter according to the IDs.
 	if len(filter.Ids) > 0 {
-		if !containsString(image.Id, filter.Ids, stringsEqual) {
-			return true
+		s := set.NewString(filter.Ids...)
+		if !s.Has(image.Id) {
+			return false
 		}
 	}
 
 	// Filter according to the image name prefixes.
 	if len(filter.Prefixes) > 0 {
-		if !containsString(image.Name, filter.Prefixes, strings.HasPrefix) {
-			return true
+		s := set.NewString(filter.Prefixes...)
+		if !s.ConditionalHas(isPrefixOf, image.Name) {
+			return false
 		}
 	}
 
 	// Filter according to the image base name.
 	if len(filter.BaseNames) > 0 {
-		if !containsString(image.Name, filter.BaseNames, hasBaseName) {
-			return true
+		s := set.NewString(filter.BaseNames...)
+		if !s.ConditionalHas(isBaseNameOf, image.Name) {
+			return false
 		}
 	}
 
 	// Filter according to the image keywords.
 	if len(filter.Keywords) > 0 {
-		if !containsString(image.Name, filter.Keywords, strings.Contains) {
-			return true
+		s := set.NewString(filter.Keywords...)
+		if !s.ConditionalHas(isPartOf, image.Name) {
+			return false
 		}
 	}
 
 	// Filter according to the imported time.
 	if filter.ImportedAfter > 0 {
 		if image.ImportTimestamp <= filter.ImportedAfter {
-			return true
+			return false
 		}
 	}
 	if filter.ImportedBefore > 0 {
 		if image.ImportTimestamp >= filter.ImportedBefore {
-			return true
+			return false
 		}
 	}
 
 	// Filter according to the image labels.
 	if len(filter.Labels) > 0 {
-		if !containsKeyValue(manifest.Labels, filter.Labels) {
-			return true
+		if !containsAllKeyValues(manifest.Labels, filter.Labels) {
+			return false
 		}
 	}
 
 	// Filter according to the annotations.
 	if len(filter.Annotations) > 0 {
-		if !containsKeyValue(manifest.Annotations, filter.Annotations) {
-			return true
+		if !containsAllKeyValues(manifest.Annotations, filter.Annotations) {
+			return false
 		}
 	}
 
+	return true
+}
+
+// satisfiesAnyImageFilters returns true if any of the filter conditions is satisfied
+// by the image.
+func satisfiesAnyImageFilters(image *v1alpha.Image, manifest *schema.ImageManifest, filters []*v1alpha.ImageFilter) bool {
+	if len(filters) == 0 {
+		return true
+	}
+	for _, filter := range filters {
+		if satisfiesImageFilter(image, manifest, filter) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -557,12 +567,13 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 		if err != nil {
 			continue
 		}
+		if !satisfiesAnyImageFilters(image, manifest, request.Filters) {
+			continue
+		}
 		if !request.Detail {
 			image.Manifest = nil // Do not return image manifest in ListImages(detail=false).
 		}
-		if !filterImage(image, manifest, request.Filter) {
-			images = append(images, image)
-		}
+		images = append(images, image)
 	}
 	return &v1alpha.ListImagesResponse{Images: images}, nil
 }

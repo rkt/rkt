@@ -27,7 +27,7 @@ func TestFilterPod(t *testing.T) {
 		pod      *v1alpha.Pod
 		manifest *schema.PodManifest
 		filter   *v1alpha.PodFilter
-		filtered bool
+		result   bool
 	}{
 		// Has the status.
 		{
@@ -38,7 +38,7 @@ func TestFilterPod(t *testing.T) {
 			&v1alpha.PodFilter{
 				States: []v1alpha.PodState{v1alpha.PodState_POD_STATE_RUNNING},
 			},
-			false,
+			true,
 		},
 		// Doesn't have the status.
 		{
@@ -49,96 +49,115 @@ func TestFilterPod(t *testing.T) {
 			&v1alpha.PodFilter{
 				States: []v1alpha.PodState{v1alpha.PodState_POD_STATE_RUNNING},
 			},
-			true,
+			false,
 		},
-		// Has the app name.
+		// Has all app names.
 		{
 			&v1alpha.Pod{
-				Apps: []*v1alpha.App{{Name: "app-foo"}},
+				Apps: []*v1alpha.App{
+					{Name: "app-foo"},
+					{Name: "app-bar"},
+				},
 			},
 			&schema.PodManifest{},
 			&v1alpha.PodFilter{
-				AppNames: []string{"app-first", "app-foo", "app-last"},
+				AppNames: []string{"app-foo", "app-bar"},
+			},
+			true,
+		},
+		// Doesn't have all app name.
+		{
+			&v1alpha.Pod{
+				Apps: []*v1alpha.App{
+					{Name: "app-foo"},
+					{Name: "app-bar"},
+				},
+			},
+			&schema.PodManifest{},
+			&v1alpha.PodFilter{
+				AppNames: []string{"app-foo", "app-bar", "app-baz"},
 			},
 			false,
 		},
-		// Doesn't have the app name.
+		// Has all network names.
 		{
 			&v1alpha.Pod{
-				Apps: []*v1alpha.App{{Name: "app-foo"}},
+				Networks: []*v1alpha.Network{
+					{Name: "network-foo"},
+					{Name: "network-bar"},
+				},
 			},
 			&schema.PodManifest{},
 			&v1alpha.PodFilter{
-				AppNames: []string{"app-first", "app-second", "app-last"},
+				NetworkNames: []string{"network-foo", "network-bar"},
 			},
 			true,
 		},
-		// Has the network name.
+		// Doesn't have all network names.
 		{
 			&v1alpha.Pod{
-				Networks: []*v1alpha.Network{{Name: "network-foo"}},
+				Networks: []*v1alpha.Network{
+					{Name: "network-foo"},
+					{Name: "network-bar"},
+				},
 			},
 			&schema.PodManifest{},
 			&v1alpha.PodFilter{
-				NetworkNames: []string{"network-first", "network-foo", "network-last"},
+				NetworkNames: []string{"network-foo", "network-bar", "network-baz"},
 			},
 			false,
 		},
-		// Doesn't have the network name.
-		{
-			&v1alpha.Pod{
-				Networks: []*v1alpha.Network{{Name: "network-foo"}},
-			},
-			&schema.PodManifest{},
-			&v1alpha.PodFilter{
-				NetworkNames: []string{"network-first", "network-second", "network-last"},
-			},
-			true,
-		},
-		// Has the annotation.
+		// Has all annotations.
 		{
 			&v1alpha.Pod{},
 			&schema.PodManifest{
-				Annotations: []types.Annotation{{"annotation-key-foo", "annotation-value-foo"}},
-			},
-			&v1alpha.PodFilter{
-				Annotations: []*v1alpha.KeyValue{
-					{"annotation-key-first", "annotation-value-first"},
+				Annotations: []types.Annotation{
 					{"annotation-key-foo", "annotation-value-foo"},
-					{"annotation-key-last", "annotation-value-last"},
+					{"annotation-key-bar", "annotation-value-bar"},
+				},
+			},
+			&v1alpha.PodFilter{
+				Annotations: []*v1alpha.KeyValue{
+					{"annotation-key-foo", "annotation-value-foo"},
+					{"annotation-key-bar", "annotation-value-bar"},
+				},
+			},
+			true,
+		},
+		// Doesn't have all annotation keys.
+		{
+			&v1alpha.Pod{},
+			&schema.PodManifest{
+				Annotations: []types.Annotation{
+					{"annotation-key-foo", "annotation-value-foo"},
+					{"annotation-key-bar", "annotation-value-bar"},
+				},
+			},
+			&v1alpha.PodFilter{
+				Annotations: []*v1alpha.KeyValue{
+					{"annotation-key-foo", "annotation-value-foo"},
+					{"annotation-key-bar", "annotation-value-bar"},
+					{"annotation-key-baz", "annotation-value-baz"},
 				},
 			},
 			false,
 		},
-		// Doesn't have the annotation key.
+		// Doesn't have all annotation values.
 		{
 			&v1alpha.Pod{},
 			&schema.PodManifest{
-				Annotations: []types.Annotation{{"annotation-key-foo", "annotation-value-foo"}},
+				Annotations: []types.Annotation{
+					{"annotation-key-foo", "annotation-value-foo"},
+					{"annotation-key-bar", "annotation-value-bar"},
+				},
 			},
 			&v1alpha.PodFilter{
 				Annotations: []*v1alpha.KeyValue{
-					{"annotation-key-first", "annotation-value-first"},
-					{"annotation-key-second", "annotation-value-foo"},
-					{"annotation-key-last", "annotation-value-last"},
+					{"annotation-key-foo", "annotation-value-foo"},
+					{"annotation-key-bar", "annotation-value-baz"},
 				},
 			},
-			true,
-		},
-		// Doesn't have the annotation value.
-		{
-			&v1alpha.Pod{},
-			&schema.PodManifest{
-				Annotations: []types.Annotation{{"annotation-key-foo", "annotation-value-foo"}},
-			},
-			&v1alpha.PodFilter{
-				Annotations: []*v1alpha.KeyValue{
-					{"annotation-key-first", "annotation-value-first"},
-					{"annotation-key-foo", "annotation-value-second"},
-					{"annotation-key-last", "annotation-value-last"},
-				},
-			},
-			true,
+			false,
 		},
 		// Doesn't satisfy any filter conditions.
 		{
@@ -154,7 +173,7 @@ func TestFilterPod(t *testing.T) {
 				NetworkNames: []string{"network-bar"},
 				Annotations:  []*v1alpha.KeyValue{{"annotation-key-foo", "annotation-value-bar"}},
 			},
-			true,
+			false,
 		},
 		// Satisfies some filter conditions.
 		{
@@ -170,7 +189,7 @@ func TestFilterPod(t *testing.T) {
 				NetworkNames: []string{"network-bar"},
 				Annotations:  []*v1alpha.KeyValue{{"annotation-key-bar", "annotation-value-bar"}},
 			},
-			true,
+			false,
 		},
 		// Satisfies all filter conditions.
 		{
@@ -182,18 +201,84 @@ func TestFilterPod(t *testing.T) {
 				Annotations: []types.Annotation{{"annotation-key-foo", "annotation-value-foo"}},
 			},
 			&v1alpha.PodFilter{
-				AppNames:     []string{"app-foo", "app-bar"},
-				NetworkNames: []string{"network-bar", "network-foo"},
-				Annotations:  []*v1alpha.KeyValue{{"annotation-key-bar", "annotation-value-bar"}, {"annotation-key-foo", "annotation-value-foo"}},
+				AppNames:     []string{"app-foo"},
+				NetworkNames: []string{"network-foo"},
+				Annotations:  []*v1alpha.KeyValue{{"annotation-key-foo", "annotation-value-foo"}},
+			},
+			true,
+		},
+	}
+
+	for i, tt := range tests {
+		result := satisfiesPodFilter(tt.pod, tt.manifest, tt.filter)
+		if result != tt.result {
+			t.Errorf("#%d: got %v, want %v", i, result, tt.result)
+		}
+	}
+}
+
+func TestFilterPodAny(t *testing.T) {
+	tests := []struct {
+		pod      *v1alpha.Pod
+		manifest *schema.PodManifest
+		filters  []*v1alpha.PodFilter
+		result   bool
+	}{
+		// No filters.
+		{
+			&v1alpha.Pod{
+				Apps:     []*v1alpha.App{{Name: "app-foo"}},
+				Networks: []*v1alpha.Network{{Name: "network-foo"}},
+			},
+			&schema.PodManifest{},
+			nil,
+			true,
+		},
+		// Satisfies all filters.
+		{
+			&v1alpha.Pod{
+				Apps:     []*v1alpha.App{{Name: "app-foo"}},
+				Networks: []*v1alpha.Network{{Name: "network-foo"}},
+			},
+			&schema.PodManifest{},
+			[]*v1alpha.PodFilter{
+				{AppNames: []string{"app-foo"}},
+				{NetworkNames: []string{"network-foo"}},
+			},
+			true,
+		},
+		// Satisfies any filters.
+		{
+			&v1alpha.Pod{
+				Apps:     []*v1alpha.App{{Name: "app-foo"}},
+				Networks: []*v1alpha.Network{{Name: "network-foo"}},
+			},
+			&schema.PodManifest{},
+			[]*v1alpha.PodFilter{
+				{AppNames: []string{"app-foo"}},
+				{NetworkNames: []string{"network-bar"}},
+			},
+			true,
+		},
+		// Satisfies none filters.
+		{
+			&v1alpha.Pod{
+				Apps:     []*v1alpha.App{{Name: "app-foo"}},
+				Networks: []*v1alpha.Network{{Name: "network-foo"}},
+			},
+			&schema.PodManifest{},
+			[]*v1alpha.PodFilter{
+				{AppNames: []string{"app-bar"}},
+				{NetworkNames: []string{"network-bar"}},
 			},
 			false,
 		},
 	}
 
 	for i, tt := range tests {
-		result := filterPod(tt.pod, tt.manifest, tt.filter)
-		if result != tt.filtered {
-			t.Errorf("#%d: got %v, want %v", i, result, tt.filtered)
+		result := satisfiesAnyPodFilters(tt.pod, tt.manifest, tt.filters)
+		if result != tt.result {
+			t.Errorf("#%d: got %v, want %v", i, result, tt.result)
 		}
 	}
 }
@@ -203,7 +288,7 @@ func TestFilterImage(t *testing.T) {
 		image    *v1alpha.Image
 		manifest *schema.ImageManifest
 		filter   *v1alpha.ImageFilter
-		filtered bool
+		result   bool
 	}{
 		// Has the id.
 		{
@@ -214,7 +299,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				Ids: []string{"id-first", "id-foo", "id-last"},
 			},
-			false,
+			true,
 		},
 		// Doesn't have the id.
 		{
@@ -225,7 +310,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				Ids: []string{"id-first", "id-second", "id-last"},
 			},
-			true,
+			false,
 		},
 		// Has the prefix in the name.
 		{
@@ -236,7 +321,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				Prefixes: []string{"prefix-first", "prefix-foo", "prefix-last"},
 			},
-			false,
+			true,
 		},
 		// Doesn't have the prefix in the name.
 		{
@@ -247,7 +332,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				Prefixes: []string{"prefix-first", "prefix-second", "prefix-last"},
 			},
-			true,
+			false,
 		},
 		// Has the base name in the name.
 		{
@@ -258,7 +343,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				BaseNames: []string{"basename-first", "basename-foo", "basename-last"},
 			},
-			false,
+			true,
 		},
 		// Doesn't have the base name in the name.
 		{
@@ -269,7 +354,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				BaseNames: []string{"basename-first", "basename-second", "basename-last"},
 			},
-			true,
+			false,
 		},
 		// Has the keyword in the name.
 		{
@@ -280,7 +365,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				Keywords: []string{"keyword-first", "keyword-foo", "keyword-last"},
 			},
-			false,
+			true,
 		},
 		// Doesn't have the keyword in the name.
 		{
@@ -291,97 +376,111 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				Keywords: []string{"keyword-first", "keyword-second", "keyword-last"},
 			},
-			true,
+			false,
 		},
-		// Has the label in the manifest.
+		// Has all the labels in the manifest.
 		{
 			&v1alpha.Image{},
 			&schema.ImageManifest{
-				Labels: []types.Label{{"label-key-foo", "label-value-foo"}},
-			},
-			&v1alpha.ImageFilter{
-				Labels: []*v1alpha.KeyValue{
-					{"label-key-first", "label-value-first"},
+				Labels: []types.Label{
 					{"label-key-foo", "label-value-foo"},
-					{"label-key-last", "label-value-last"},
+					{"label-key-bar", "label-value-bar"},
+				},
+			},
+			&v1alpha.ImageFilter{
+				Labels: []*v1alpha.KeyValue{
+					{"label-key-foo", "label-value-foo"},
+					{"label-key-bar", "label-value-bar"},
+				},
+			},
+			true,
+		},
+		// Doesn't have all the label keys in the manifest.
+		{
+			&v1alpha.Image{},
+			&schema.ImageManifest{
+				Labels: []types.Label{
+					{"label-key-foo", "label-value-foo"},
+					{"label-key-bar", "label-value-bar"},
+				},
+			},
+			&v1alpha.ImageFilter{
+				Labels: []*v1alpha.KeyValue{
+					{"label-key-foo", "label-value-foo"},
+					{"label-key-bar", "label-value-bar"},
+					{"label-key-baz", "label-value-baz"},
 				},
 			},
 			false,
 		},
-		// Doesn't have the label key in the manifest.
+		// Doesn't have all the label values in the manifest.
 		{
 			&v1alpha.Image{},
 			&schema.ImageManifest{
-				Labels: []types.Label{{"label-key-foo", "label-value-foo"}},
+				Labels: []types.Label{
+					{"label-key-foo", "label-value-foo"},
+					{"label-key-bar", "label-value-bar"},
+				},
 			},
 			&v1alpha.ImageFilter{
 				Labels: []*v1alpha.KeyValue{
-					{"label-key-first", "label-value-first"},
-					{"label-key-second", "label-value-foo"},
-					{"label-key-last", "label-value-last"},
+					{"label-key-foo", "label-value-foo"},
+					{"label-key-bar", "label-value-baz"},
 				},
 			},
-			true,
+			false,
 		},
-		// Doesn't have the label value in the manifest.
+		// Has all the annotation in the manifest.
 		{
 			&v1alpha.Image{},
 			&schema.ImageManifest{
-				Labels: []types.Label{{"label-key-foo", "label-value-foo"}},
-			},
-			&v1alpha.ImageFilter{
-				Labels: []*v1alpha.KeyValue{
-					{"label-key-first", "label-value-first"},
-					{"label-key-foo", "label-value-second"},
-					{"label-key-last", "label-value-last"},
-				},
-			},
-			true,
-		},
-		// Has the annotation in the manifest.
-		{
-			&v1alpha.Image{},
-			&schema.ImageManifest{
-				Annotations: []types.Annotation{{"annotation-key-foo", "annotation-value-foo"}},
-			},
-			&v1alpha.ImageFilter{
-				Annotations: []*v1alpha.KeyValue{
-					{"annotation-key-first", "annotation-value-first"},
+				Annotations: []types.Annotation{
 					{"annotation-key-foo", "annotation-value-foo"},
-					{"annotation-key-last", "annotation-value-last"},
+					{"annotation-key-bar", "annotation-value-bar"},
+				},
+			},
+			&v1alpha.ImageFilter{
+				Annotations: []*v1alpha.KeyValue{
+					{"annotation-key-foo", "annotation-value-foo"},
+					{"annotation-key-bar", "annotation-value-bar"},
+				},
+			},
+			true,
+		},
+		// Doesn't have all the annotation keys in the manifest.
+		{
+			&v1alpha.Image{},
+			&schema.ImageManifest{
+				Annotations: []types.Annotation{
+					{"annotation-key-foo", "annotation-value-foo"},
+					{"annotation-key-bar", "annotation-value-bar"},
+				},
+			},
+			&v1alpha.ImageFilter{
+				Annotations: []*v1alpha.KeyValue{
+					{"annotation-key-foo", "annotation-value-foo"},
+					{"annotation-key-bar", "annotation-value-bar"},
+					{"annotation-key-baz", "annotation-value-baz"},
 				},
 			},
 			false,
 		},
-		// Doesn't have the annotation key in the manifest.
+		// Doesn't have all the annotation values in the manifest.
 		{
 			&v1alpha.Image{},
 			&schema.ImageManifest{
-				Annotations: []types.Annotation{{"annotation-key-foo", "annotation-value-foo"}},
+				Annotations: []types.Annotation{
+					{"annotation-key-foo", "annotation-value-foo"},
+					{"annotation-key-bar", "annotation-value-bar"},
+				},
 			},
 			&v1alpha.ImageFilter{
 				Annotations: []*v1alpha.KeyValue{
-					{"annotation-key-first", "annotation-value-first"},
-					{"annotation-key-second", "annotation-value-foo"},
-					{"annotation-key-last", "annotation-value-last"},
+					{"annotation-key-foo", "annotation-value-foo"},
+					{"annotation-key-bar", "annotation-value-baz"},
 				},
 			},
-			true,
-		},
-		// Doesn't have the annotation value in the manifest.
-		{
-			&v1alpha.Image{},
-			&schema.ImageManifest{
-				Annotations: []types.Annotation{{"annotation-key-foo", "annotation-value-foo"}},
-			},
-			&v1alpha.ImageFilter{
-				Annotations: []*v1alpha.KeyValue{
-					{"annotation-key-first", "annotation-value-first"},
-					{"annotation-key-foo", "annotation-value-second"},
-					{"annotation-key-last", "annotation-value-last"},
-				},
-			},
-			true,
+			false,
 		},
 		// Satisfies 'imported after'.
 		{
@@ -390,7 +489,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				ImportedAfter: 1023,
 			},
-			false,
+			true,
 		},
 		// Doesn't satisfy 'imported after'.
 		{
@@ -399,7 +498,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				ImportedAfter: 1024,
 			},
-			true,
+			false,
 		},
 		// Satisfies 'imported before'.
 		{
@@ -408,7 +507,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				ImportedBefore: 1025,
 			},
-			false,
+			true,
 		},
 		// Doesn't satisfy 'imported before'.
 		{
@@ -417,7 +516,7 @@ func TestFilterImage(t *testing.T) {
 			&v1alpha.ImageFilter{
 				ImportedBefore: 1024,
 			},
-			true,
+			false,
 		},
 		// Doesn't satisfy any filter conditions.
 		{
@@ -441,7 +540,7 @@ func TestFilterImage(t *testing.T) {
 				ImportedBefore: 1024,
 				ImportedAfter:  1024,
 			},
-			true,
+			false,
 		},
 		// Satisfies some filter conditions.
 		{
@@ -465,7 +564,7 @@ func TestFilterImage(t *testing.T) {
 				ImportedBefore: 1024,
 				ImportedAfter:  1024,
 			},
-			true,
+			false,
 		},
 		// Satisfies all filter conditions.
 		{
@@ -484,19 +583,85 @@ func TestFilterImage(t *testing.T) {
 				Prefixes:       []string{"prefix-bar", "prefix-foo"},
 				BaseNames:      []string{"basename-bar", "basename-foo"},
 				Keywords:       []string{"keyword-bar", "keyword-foo"},
-				Labels:         []*v1alpha.KeyValue{{"label-key-bar", "label-value-bar"}, {"label-key-foo", "label-value-foo"}},
-				Annotations:    []*v1alpha.KeyValue{{"annotation-key-bar", "annotation-value-bar"}, {"annotation-key-foo", "annotation-value-foo"}},
+				Labels:         []*v1alpha.KeyValue{{"label-key-foo", "label-value-foo"}},
+				Annotations:    []*v1alpha.KeyValue{{"annotation-key-foo", "annotation-value-foo"}},
 				ImportedBefore: 1025,
 				ImportedAfter:  1023,
+			},
+			true,
+		},
+	}
+
+	for i, tt := range tests {
+		result := satisfiesImageFilter(tt.image, tt.manifest, tt.filter)
+		if result != tt.result {
+			t.Errorf("#%d: got %v, want %v", i, result, tt.result)
+		}
+	}
+}
+
+func TestFilterImageAny(t *testing.T) {
+	tests := []struct {
+		image    *v1alpha.Image
+		manifest *schema.ImageManifest
+		filters  []*v1alpha.ImageFilter
+		result   bool
+	}{
+		// No filters.
+		{
+			&v1alpha.Image{
+				Id:   "id-foo",
+				Name: "prefix-foo-keyword-foo/basename-foo",
+			},
+			&schema.ImageManifest{},
+			nil,
+			true,
+		},
+		// Satisfies all filters.
+		{
+			&v1alpha.Image{
+				Id:   "id-foo",
+				Name: "prefix-foo-keyword-foo/basename-foo",
+			},
+			&schema.ImageManifest{},
+			[]*v1alpha.ImageFilter{
+				{Ids: []string{"id-foo"}},
+				{BaseNames: []string{"basename-foo"}},
+			},
+			true,
+		},
+		// Satisfies any filters.
+		{
+			&v1alpha.Image{
+				Id:   "id-foo",
+				Name: "prefix-foo-keyword-foo/basename-foo",
+			},
+			&schema.ImageManifest{},
+			[]*v1alpha.ImageFilter{
+				{Ids: []string{"id-foo"}},
+				{BaseNames: []string{"basename-bar"}},
+			},
+			true,
+		},
+		// Satisfies none filters.
+		{
+			&v1alpha.Image{
+				Id:   "id-foo",
+				Name: "prefix-foo-keyword-foo/basename-foo",
+			},
+			&schema.ImageManifest{},
+			[]*v1alpha.ImageFilter{
+				{Ids: []string{"id-bar"}},
+				{BaseNames: []string{"basename-bar"}},
 			},
 			false,
 		},
 	}
 
 	for i, tt := range tests {
-		result := filterImage(tt.image, tt.manifest, tt.filter)
-		if result != tt.filtered {
-			t.Errorf("#%d: got %v, want %v", i, result, tt.filtered)
+		result := satisfiesAnyImageFilters(tt.image, tt.manifest, tt.filters)
+		if result != tt.result {
+			t.Errorf("#%d: got %v, want %v", i, result, tt.result)
 		}
 	}
 }
