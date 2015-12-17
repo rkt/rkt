@@ -379,6 +379,19 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		}
 
 		args = append(args, "--link-journal=try-guest")
+
+		keepUnit, err := util.RunningFromSystemService()
+		if err != nil {
+			if err == util.ErrSoNotFound {
+				fmt.Fprintln(os.Stderr, "Warning: libsystemd not found even though systemd is running. Cgroup limits set by the environment (e.g. a systemd service) won't be enforced.")
+			} else {
+				return nil, nil, fmt.Errorf("error determining if we're running from a system service: %v", err)
+			}
+		}
+
+		if keepUnit {
+			args = append(args, "--keep-unit")
+		}
 	}
 
 	if !debug {
@@ -390,15 +403,6 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 
 	if len(privateUsers) > 0 {
 		args = append(args, "--private-users="+privateUsers)
-	}
-
-	keepUnit, err := util.RunningFromSystemService()
-	if err != nil {
-		return nil, nil, fmt.Errorf("error determining if we're running from a system service: %v", err)
-	}
-
-	if keepUnit {
-		args = append(args, "--keep-unit")
 	}
 
 	nsargs, err := p.PodToNspawnArgs()
