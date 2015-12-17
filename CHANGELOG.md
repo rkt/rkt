@@ -10,6 +10,7 @@ rkt vUNRELEASED is an incremental release with UX improvements, bug fixes and im
 - override memory and cpu isolators on the command line ([#1851](https://github.com/coreos/rkt/pull/1851), [#1874](https://github.com/coreos/rkt/pull/1874)). See rkt's [overriding isolators](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#overriding-isolators) documentation.
 - rkt: add image size to rkt image list ([#1865](https://github.com/coreos/rkt/pull/1865)).
 - GC: always detect and unmount leftovers ([#1856](https://github.com/coreos/rkt/pull/1856))
+- add scripts for building rkt in rkt ([#1681](https://github.com/coreos/rkt/pull/1681))
 
 #### Bug fixes
 
