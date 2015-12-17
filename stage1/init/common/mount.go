@@ -15,8 +15,13 @@
 package common
 
 import (
+	"fmt"
+	"os"
+	"strconv"
+
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 )
 
 func isMPReadOnly(mountPoints []types.MountPoint, name types.ACName) bool {
@@ -79,4 +84,26 @@ func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume
 	}
 
 	return ra.Mounts
+}
+
+// PrepareMountpoints creates and sets permissions for volumes.
+func PrepareMountpoints(path string, vol *types.Volume) error {
+	if vol.Kind == "empty" {
+		diag.Printf("creating an empty volume folder for sharing: %q", path)
+		err := os.MkdirAll(path, sharedVolPerm)
+		if err != nil {
+			return errwrap.Wrap(fmt.Errorf("could not create mount point for volume %q", vol.Name), err)
+		}
+		if err := os.Chown(path, *vol.UID, *vol.GID); err != nil {
+			return errwrap.Wrap(fmt.Errorf("could not change owner of %q", path), err)
+		}
+		mod, err := strconv.ParseUint(*vol.Mode, 8, 32)
+		if err != nil {
+			return errwrap.Wrap(fmt.Errorf("invalid mode %q for volume %q", *vol.Mode, vol.Name), err)
+		}
+		if err := os.Chmod(path, os.FileMode(mod)); err != nil {
+			return errwrap.Wrap(fmt.Errorf("could not change permissions of %q", path), err)
+		}
+	}
+	return nil
 }
