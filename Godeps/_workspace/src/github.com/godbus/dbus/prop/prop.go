@@ -79,7 +79,7 @@ var IntrospectData = introspect.Interface{
 // The introspection data for the org.freedesktop.DBus.Properties interface, as
 // a string.
 const IntrospectDataString = `
-	<interface name="org.freedesktop.DBus.Introspectable">
+	<interface name="org.freedesktop.DBus.Properties">
 		<method name="Get">
 			<arg name="interface" direction="in" type="s"/>
 			<arg name="property" direction="in" type="s"/>

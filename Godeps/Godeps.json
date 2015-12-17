@@ -148,23 +148,23 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/activation",
-			"Comment": "v3",
-			"Rev": "be94bc700879ae8217780e9d141789a2defa302b"
+			"Comment": "v4-15-ga831f36",
+			"Rev": "a831f36d09de8f095c28eeee839df52e9de5031f"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
-			"Comment": "v3",
-			"Rev": "be94bc700879ae8217780e9d141789a2defa302b"
+			"Comment": "v4-15-ga831f36",
+			"Rev": "a831f36d09de8f095c28eeee839df52e9de5031f"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/unit",
-			"Comment": "v3",
-			"Rev": "be94bc700879ae8217780e9d141789a2defa302b"
+			"Comment": "v4-15-ga831f36",
+			"Rev": "a831f36d09de8f095c28eeee839df52e9de5031f"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/util",
-			"Comment": "v3",
-			"Rev": "be94bc700879ae8217780e9d141789a2defa302b"
+			"Comment": "v4-15-ga831f36",
+			"Rev": "a831f36d09de8f095c28eeee839df52e9de5031f"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/attestation",
@@ -237,8 +237,8 @@
 		},
 		{
 			"ImportPath": "github.com/godbus/dbus",
-			"Comment": "v2-3-g41608027bdce",
-			"Rev": "41608027bdce7bfa8959d653a00b954591220e67"
+			"Comment": "v3-6-ga1b8ba5",
+			"Rev": "a1b8ba5163b7f041b22761461eabd02b70d1f824"
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/proto",
