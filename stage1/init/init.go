@@ -16,46 +16,6 @@
 
 package main
 
-// #cgo LDFLAGS: -ldl
-// #include <stdlib.h>
-// #include <dlfcn.h>
-// #include <sys/types.h>
-// #include <unistd.h>
-//
-// int
-// my_sd_pid_get_owner_uid(void *f, pid_t pid, uid_t *uid)
-// {
-//   int (*sd_pid_get_owner_uid)(pid_t, uid_t *);
-//
-//   sd_pid_get_owner_uid = (int (*)(pid_t, uid_t *))f;
-//   return sd_pid_get_owner_uid(pid, uid);
-// }
-//
-// int
-// my_sd_pid_get_unit(void *f, pid_t pid, char **unit)
-// {
-//   int (*sd_pid_get_unit)(pid_t, char **);
-//
-//   sd_pid_get_unit = (int (*)(pid_t, char **))f;
-//   return sd_pid_get_unit(pid, unit);
-// }
-//
-// int
-// my_sd_pid_get_slice(void *f, pid_t pid, char **slice)
-// {
-//   int (*sd_pid_get_slice)(pid_t, char **);
-//
-//   sd_pid_get_slice = (int (*)(pid_t, char **))f;
-//   return sd_pid_get_slice(pid, slice);
-// }
-//
-// int
-// am_session_leader()
-// {
-//   return (getsid(0) == getpid());
-// }
-import "C"
-
 // this implements /init of stage1/nspawn+systemd
 
 import (
@@ -72,7 +32,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"unsafe"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/goaci/proj2aci"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -433,9 +392,9 @@ func getArgsEnv(p *Pod, flavor string, debug bool, n *networking.Networking) ([]
 		args = append(args, "--private-users="+privateUsers)
 	}
 
-	keepUnit, err := isRunningFromUnitFile()
+	keepUnit, err := util.RunningFromSystemService()
 	if err != nil {
-		return nil, nil, fmt.Errorf("error determining if we're running from a unit file: %v", err)
+		return nil, nil, fmt.Errorf("error determining if we're running from a system service: %v", err)
 	}
 
 	if keepUnit {
@@ -737,12 +696,12 @@ func mountContainerCgroups(s1Root string, enabledCgroups map[int][]string, subcg
 
 func getContainerSubCgroup(machineID string) (string, error) {
 	var subcgroup string
-	fromUnit, err := isRunningFromUnitFile()
+	fromUnit, err := util.RunningFromSystemService()
 	if err != nil {
 		return "", fmt.Errorf("could not determine if we're running from a unit file: %v", err)
 	}
 	if fromUnit {
-		slice, err := getSlice()
+		slice, err := util.GetRunningSlice()
 		if err != nil {
 			return "", fmt.Errorf("could not get slice name: %v", err)
 		}
@@ -750,7 +709,7 @@ func getContainerSubCgroup(machineID string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("could not convert slice name to path: %v", err)
 		}
-		unit, err := getUnitFileName()
+		unit, err := util.CurrentUnitName()
 		if err != nil {
 			return "", fmt.Errorf("could not get unit name: %v", err)
 		}
@@ -782,117 +741,6 @@ func getContainerSubCgroup(machineID string) (string, error) {
 	}
 
 	return subcgroup, nil
-}
-
-func getUnitFileName() (unit string, err error) {
-	libname := C.CString("libsystemd.so.0")
-	defer C.free(unsafe.Pointer(libname))
-	handle := C.dlopen(libname, C.RTLD_LAZY)
-	if handle == nil {
-		err = fmt.Errorf("error opening libsystemd.so.0")
-		return
-	}
-	defer func() {
-		if r := C.dlclose(handle); r != 0 {
-			err = fmt.Errorf("error closing libsystemd.so.0")
-		}
-	}()
-
-	sym := C.CString("sd_pid_get_unit")
-	defer C.free(unsafe.Pointer(sym))
-	sd_pid_get_unit := C.dlsym(handle, sym)
-	if sd_pid_get_unit == nil {
-		err = fmt.Errorf("error resolving sd_pid_get_unit function")
-		return
-	}
-
-	var s string
-	u := C.CString(s)
-	defer C.free(unsafe.Pointer(u))
-
-	ret := C.my_sd_pid_get_unit(sd_pid_get_unit, 0, &u)
-	if ret < 0 {
-		err = fmt.Errorf("error calling sd_pid_get_unit: %v", syscall.Errno(-ret))
-		return
-	}
-
-	unit = C.GoString(u)
-	return
-}
-
-func getSlice() (slice string, err error) {
-	libname := C.CString("libsystemd.so.0")
-	defer C.free(unsafe.Pointer(libname))
-	handle := C.dlopen(libname, C.RTLD_LAZY)
-	if handle == nil {
-		err = fmt.Errorf("error opening libsystemd.so.0")
-		return
-	}
-	defer func() {
-		if r := C.dlclose(handle); r != 0 {
-			err = fmt.Errorf("error closing libsystemd.so.0")
-		}
-	}()
-
-	sym := C.CString("sd_pid_get_slice")
-	defer C.free(unsafe.Pointer(sym))
-	sd_pid_get_slice := C.dlsym(handle, sym)
-	if sd_pid_get_slice == nil {
-		err = fmt.Errorf("error resolving sd_pid_get_slice function")
-		return
-	}
-
-	var s string
-	sl := C.CString(s)
-	defer C.free(unsafe.Pointer(sl))
-
-	ret := C.my_sd_pid_get_slice(sd_pid_get_slice, 0, &sl)
-	if ret < 0 {
-		err = fmt.Errorf("error calling sd_pid_get_slice: %v", syscall.Errno(-ret))
-		return
-	}
-
-	slice = C.GoString(sl)
-	return
-}
-
-func isRunningFromUnitFile() (ret bool, err error) {
-	if !util.IsRunningSystemd() {
-		return
-	}
-	libname := C.CString("libsystemd.so.0")
-	defer C.free(unsafe.Pointer(libname))
-	handle := C.dlopen(libname, C.RTLD_LAZY)
-	if handle == nil {
-		err = fmt.Errorf("error opening libsystemd.so.0")
-		return
-	}
-	defer func() {
-		if r := C.dlclose(handle); r != 0 {
-			err = fmt.Errorf("error closing libsystemd.so")
-		}
-	}()
-
-	sd_pid_get_owner_uid := C.dlsym(handle, C.CString("sd_pid_get_owner_uid"))
-	if sd_pid_get_owner_uid == nil {
-		err = fmt.Errorf("error resolving sd_pid_get_owner_uid function")
-		return
-	}
-
-	var uid C.uid_t
-	errno := C.my_sd_pid_get_owner_uid(sd_pid_get_owner_uid, 0, &uid)
-	// when we're running from a unit file, sd_pid_get_owner_uid returns
-	// ENOENT (systemd <220) or ENXIO (systemd >=220)
-	switch {
-	case errno >= 0:
-	case syscall.Errno(-errno) == syscall.ENOENT || syscall.Errno(-errno) == syscall.ENXIO:
-		if C.am_session_leader() == 1 {
-			ret = true
-		}
-	default:
-		err = fmt.Errorf("error calling sd_pid_get_owner_uid: %v", syscall.Errno(-errno))
-	}
-	return
 }
 
 func main() {
