@@ -15,9 +15,12 @@ Consequently, standard `systemd` idioms like `systemctl start` and `systemctl st
 To start a daemonized container from the command line, use [`systemd-run`](http://www.freedesktop.org/software/systemd/man/systemd-run.html):
 
 ```
-# systemd-run rkt run coreos.com/etcd:v2.0.10
+# systemd-run --slice=machine rkt run coreos.com/etcd:v2.0.10
 Running as unit run-29075.service.
 ```
+
+`--slice=machine` will place the service in `machine.slice` instead of `system.slice`.
+This is preferrable for containers.
 
 This creates a transient systemd unit on which you can use standard systemd tools:
 
@@ -115,7 +118,9 @@ Requires=network-online.target
 After=network-online.target
 
 [Service]
+Slice=machine.slice
 # Resource limits
+Delegate=true
 CPUShares=512
 MemoryLimit=1G
 # Env vars
