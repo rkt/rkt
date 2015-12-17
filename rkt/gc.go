@@ -19,12 +19,10 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
-	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 )
@@ -179,55 +177,12 @@ func emptyGarbage() error {
 	return nil
 }
 
-// cleanExitedGarbage prepares the pod's directory for removal. If anything
-// fails here then we can conclude that the pod's directory is in a bad state
-// and needs to be cleaned up forcibly.
-func cleanExitedGarbage(p *pod, s *store.Store) error {
-	stage1TreeStoreID, err := p.getStage1TreeStoreID()
-	if err != nil {
-		return fmt.Errorf("error getting stage1 treeStoreID: %v", err)
-	}
-	stage1RootFS := s.GetTreeStoreRootFS(stage1TreeStoreID)
-
-	// execute stage1's GC
-	if err := stage0.GC(p.path(), p.uuid, stage1RootFS, globalFlags.Debug); err != nil {
-		return fmt.Errorf("problem performing stage1 GC on %q: %v", p.uuid, err)
-	}
-
-	if p.usesOverlay() {
-		apps, err := p.getApps()
-		if err != nil {
-			return fmt.Errorf("error retrieving app hashes from pod manifest: %v", err)
-		}
-		for _, a := range apps {
-			dest := filepath.Join(common.AppPath(p.path(), a.Name), "rootfs")
-			if err := syscall.Unmount(dest, 0); err != nil {
-				// machine could have been rebooted and mounts lost.
-				// ignore "does not exist" and "not a mount point" errors
-				if err != syscall.ENOENT && err != syscall.EINVAL {
-					return fmt.Errorf("error unmounting dest at %v: %v", dest, err)
-				}
-			}
-		}
-
-		s1 := filepath.Join(common.Stage1ImagePath(p.path()), "rootfs")
-		if err := syscall.Unmount(s1, 0); err != nil {
-			// machine could have been rebooted and mounts lost.
-			// ignore "does not exist" and "not a mount point" errors
-			if err != syscall.ENOENT && err != syscall.EINVAL {
-				return fmt.Errorf("error unmounting s1 at %v: %v", s1, err)
-			}
-		}
-	}
-	return nil
-}
-
 // deletePod cleans up files and resource associated with the pod
 // pod must be under exclusive lock and be in either ExitedGarbage
 // or Garbage state
 func deletePod(p *pod) {
 	if !p.isExitedGarbage && !p.isGarbage {
-		panic(fmt.Sprintf("logic error: deletePod called with non-garbage pod %q (status %q)", p.uuid, p.getState()))
+		panic(fmt.Sprintf("Logic error: deletePod called with non-garbage pod %q (status %q)", p.uuid, p.getState()))
 	}
 
 	if p.isExitedGarbage {
@@ -238,18 +193,27 @@ func deletePod(p *pod) {
 		}
 		defer s.Close()
 
-		if err := cleanExitedGarbage(p, s); err != nil {
-			stderr("Received error performing GC for pod %q: %v", p.uuid, err)
-			stderr("Attempting forced GC of pod %q...", p.uuid)
-			if err := stage0.ForceMountGC(p.path(), p.uuid.String()); err != nil {
-				stderr("Forced GC of pod %q failed: %v\n", p.uuid, err)
-				return
+		// execute stage1's GC
+		stage1TreeStoreID, err := p.getStage1TreeStoreID()
+		if err != nil {
+			stderr("Error getting stage1 treeStoreID: %v", err)
+			stderr("Skipping stage1 GC")
+		} else {
+			stage1RootFS := s.GetTreeStoreRootFS(stage1TreeStoreID)
+			if err = stage0.GC(p.path(), p.uuid, stage1RootFS, globalFlags.Debug); err != nil {
+				stderr("Problem performing stage1 GC on %q: %v", p.uuid, err)
 			}
-			stderr("Forced GC of pod %q succeeded.", p.uuid)
+		}
+
+		// unmount all leftover mounts
+		if err := stage0.MountGC(p.path(), p.uuid.String()); err != nil {
+			stderr("GC of leftover mounts for pod %q failed: %v\n", p.uuid, err)
+			return
 		}
 	}
 
 	if err := os.RemoveAll(p.path()); err != nil {
 		stderr("Unable to remove pod %q: %v", p.uuid, err)
+		os.Exit(1)
 	}
 }

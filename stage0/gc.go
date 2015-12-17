@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -65,55 +66,114 @@ type mount struct {
 	id         int
 	parentId   int
 	mountPoint string
+	opt        map[string]struct{}
 }
 
 type mounts []*mount
 
-// Less ensures that mounts are sorted in an order we can unmount; child before
-// parent. This works by pushing all child mounts up to the front. Parent
-// mounts are halted once they encounter a child. The actual sequential order
-// of the mounts doesn't matter; only that children are in front of parents.
-func (m mounts) Less(i, j int) bool { return m[i].id != m[j].parentId }
-func (m mounts) Len() int           { return len(m) }
-func (m mounts) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+// getMountDepth determines and returns the number of ancestors of the mount at index i
+func (m mounts) getMountDepth(i int) int {
+	ancestorCount := 0
+	current := m[i]
+	for found := true; found; {
+		found = false
+		for _, mnt := range m {
+			if mnt.id == current.parentId {
+				ancestorCount += 1
+				current = mnt
+				found = true
+				break
+			}
+		}
+	}
+	return ancestorCount
+}
+
+// Less ensures that mounts are sorted in an order we can unmount; descendant before ancestor.
+// The requirement of transitivity for Less has to be fulfilled otherwise the sort algorithm will fail.
+func (m mounts) Less(i, j int) (result bool) { return m.getMountDepth(i) >= m.getMountDepth(j) }
+func (m mounts) Len() int                    { return len(m) }
+func (m mounts) Swap(i, j int)               { m[i], m[j] = m[j], m[i] }
 
 // getMountsForPrefix parses mi (/proc/PID/mountinfo) and returns mounts for path prefix
 func getMountsForPrefix(path string, mi io.Reader) (mounts, error) {
 	var podMounts mounts
 	sc := bufio.NewScanner(mi)
-	for sc.Scan() {
-		var (
-			mountId    int
-			parentId   int
-			discard    string
-			mountPoint string
-		)
+	var (
+		mountId    int
+		parentId   int
+		mountPoint string
+		opt        map[string]struct{}
+	)
 
-		_, err := fmt.Sscanf(sc.Text(), "%d %d %s %s %s",
-			&mountId, &parentId, &discard, &discard, &mountPoint)
-		if err != nil {
-			return nil, err
+	for sc.Scan() {
+		line := sc.Text()
+		lineResult := strings.Split(line, " ")
+		if len(lineResult) < 7 {
+			return nil, fmt.Errorf("Not enough fields from line %q: %+v", line, lineResult)
 		}
 
-		if strings.HasPrefix(mountPoint, path) {
+		opt = map[string]struct{}{}
+		for i, s := range lineResult {
+			if s == "-" {
+				break
+			}
+			var err error
+			switch i {
+			case 0:
+				mountId, err = strconv.Atoi(s)
+			case 1:
+				parentId, err = strconv.Atoi(s)
+			case 2, 3:
+			case 4:
+				mountPoint = s
+			default:
+				split := strings.Split(s, ":")
+				switch len(split) {
+				case 1:
+					// we ignore modes like rw, relatime, etc.
+				case 2:
+					opt[split[0]] = struct{}{}
+				default:
+					err = fmt.Errorf("found unexpected key:value field with more than two colons: %s", s)
+				}
+			}
+			if err != nil {
+				return nil, fmt.Errorf("could not parse mountinfo line %q: %v", line, err)
+			}
+		}
+
+		if strings.Contains(mountPoint, path) {
 			mnt := &mount{
 				id:         mountId,
 				parentId:   parentId,
 				mountPoint: mountPoint,
+				opt:        opt,
 			}
 			podMounts = append(podMounts, mnt)
 		}
 	}
-	if sc.Err() != nil {
-		return nil, fmt.Errorf("problem parsing mountinfo: %v", sc.Err())
+	if err := sc.Err(); err != nil {
+		return nil, fmt.Errorf("problem parsing mountinfo: %v", err)
 	}
-
 	sort.Sort(podMounts)
 	return podMounts, nil
 }
 
-// ForceMountGC removes mounts from pods that couldn't be GCed cleanly.
-func ForceMountGC(path, uuid string) error {
+func needsRemountPrivate(mnt *mount) bool {
+	for _, key := range []string{
+		"shared",
+		"master",
+	} {
+		if _, needsRemount := mnt.opt[key]; needsRemount {
+			return true
+		}
+	}
+	return false
+}
+
+// MountGC removes mounts from pods that couldn't be GCed cleanly.
+func MountGC(path, uuid string) error {
 	mi, err := os.Open("/proc/self/mountinfo")
 	if err != nil {
 		return err
@@ -125,9 +185,20 @@ func ForceMountGC(path, uuid string) error {
 		return fmt.Errorf("error getting mounts for pod %s from mountinfo: %v", uuid, err)
 	}
 
+	for i := len(mnts) - 1; i >= 0; i -= 1 {
+		mnt := mnts[i]
+		if needsRemountPrivate(mnt) {
+			if err := syscall.Mount("", mnt.mountPoint, "", syscall.MS_PRIVATE, ""); err != nil {
+				return fmt.Errorf("could not remount at %v: %v", mnt.mountPoint, err)
+			}
+		}
+	}
+
 	for _, mnt := range mnts {
 		if err := syscall.Unmount(mnt.mountPoint, 0); err != nil {
-			return fmt.Errorf("could not unmount at %v: %v", mnt.mountPoint, err)
+			if err != syscall.ENOENT && err != syscall.EINVAL {
+				return fmt.Errorf("error unmounting dest at %v: %v", mnt.mountPoint, err)
+			}
 		}
 	}
 	return nil
