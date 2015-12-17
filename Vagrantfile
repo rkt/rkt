@@ -10,9 +10,5 @@ Vagrant.configure('2') do |config|
         vb.customize ["modifyvm", :id, "--memory", "768"]
     end
 
-    # install Build Dependencies (GOLANG)
-    config.vm.provision :shell, :privileged => false, :path => "scripts/vagrant/install-go.sh"
-
-    # Install rkt
-    config.vm.provision :shell, :privileged => false, :path => "scripts/vagrant/install-rkt.sh"
+    config.vm.provision :shell, :privileged => true, :path => "scripts/install-vagrant.sh"
 end

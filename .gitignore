@@ -7,5 +7,7 @@
 /configure
 /makelib/variables.mk
 /build-rkt*
+/build-rir*
 .vagrant
 /tags
+/acbuild
