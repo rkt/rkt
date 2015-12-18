@@ -10,7 +10,7 @@ For a quick help of available parameters, run `./configure --help`.
 #### `--with-stage1-flavors`
 
 This parameter takes a comma-separated list of all the flavors that the build system should assemble.
-Depending on a default stage1 image setup, this list is by default either empty or set to `coreos,kvm` for, respectively, detailed setup and flavor setup.
+Depending on a default stage1 image setup, this list is by default either empty or set to `coreos,kvm,fly` for, respectively, detailed setup and flavor setup.
 Note that specifying this parameter does not necessarily mean that rkt will use them in the end.
 Available flavors are:
 
@@ -18,6 +18,7 @@ Available flavors are:
 - `kvm` - it takes systemd, bash and other binaries from a CoreOS PXE image; uses lkvm
 - `src` - it builds systemd, takes bash from the host at build time; uses built systemd-nspawn
 - `host` - it takes systemd and bash from host at runtime; uses systemd-nspawn from the host
+- `fly` - chroot-only approach for single-application minimal isolation containers; native Go implementation
 
 The `host` flavor is probably the best suited flavor for distributions that have strict rules about software sources.
 
