@@ -21,14 +21,15 @@ import (
 	"path/filepath"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking"
-	"github.com/coreos/rkt/stage1/init/kvm"
-
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
+	"github.com/coreos/rkt/stage1/init/kvm"
 )
 
+// KvmPodToSystemd generates systemd unit files for a pod according to the manifest and network configuration
 func KvmPodToSystemd(p *stage1commontypes.Pod, n *networking.Networking) error {
 	podRoot := common.Stage1RootfsPath(p.Root)
 
@@ -46,7 +47,7 @@ func KvmPodToSystemd(p *stage1commontypes.Pod, n *networking.Networking) error {
 		appNames = append(appNames, runtimeApp.Name)
 	}
 	// mount host volumes through some remote file system e.g. 9p to /mnt/volumeName location
-	// order is important here: podToSystemHostMountUnits prepares folders that are checked by each appToSystemdMountUnits later
+	// order is important here: PodToSystemHostMountUnits prepares folders that are checked by each appToSystemdMountUnits later
 	if err := stage1initcommon.PodToSystemdHostMountUnits(podRoot, p.Manifest.Volumes, appNames, stage1initcommon.UnitsDir); err != nil {
 		return fmt.Errorf("failed to transform pod volumes into mount units: %v", err)
 	}

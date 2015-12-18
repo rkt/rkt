@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// mount.go provides functions for creating mount units for managing
+// Package common and the file kvm_mount.go provide functions for creating mount units for managing
 // inner(kind=empty) and external(kind=host) volumes.
 // note: used only for kvm flavor (lkvm based)
 //
