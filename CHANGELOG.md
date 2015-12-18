@@ -1,47 +1,38 @@
 ## vUNRELEASED
 
-rkt vUNRELEASED is an incremental release with UX improvements, bug fixes and improved documentation.
+rkt vUNRELEASED is an important release with new features like resource isolators in the kvm stage1, bug fixes and improved documentation.
+The appc spec version has been updated to v0.7.4
 
 #### New features and UX changes
 
-- make data directory configurable with a config file ([#1806](https://github.com/coreos/rkt/pull/1806)). See rkt's [paths configuration](https://github.com/coreos/rkt/blob/master/Documentation/configuration.md#rktkind-paths) documentation.
-- kvm: resource isolators ([#1404](https://github.com/coreos/rkt/pull/1404))
-- fallback to forced GC when pod dir is in inconsistent state ([#1828](https://github.com/coreos/rkt/pull/1828))
-- override memory and cpu isolators on the command line ([#1851](https://github.com/coreos/rkt/pull/1851), [#1874](https://github.com/coreos/rkt/pull/1874)). See rkt's [overriding isolators](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#overriding-isolators) documentation.
-- rkt: add image size to rkt image list ([#1865](https://github.com/coreos/rkt/pull/1865)).
-- GC: always detect and unmount leftovers ([#1856](https://github.com/coreos/rkt/pull/1856))
-- add scripts for building rkt in rkt ([#1681](https://github.com/coreos/rkt/pull/1681))
+- The data directory that rkt uses can now be configured with a config file ([#1806](https://github.com/coreos/rkt/pull/1806)). See rkt's [paths configuration](https://github.com/coreos/rkt/blob/master/Documentation/configuration.md#rktkind-paths) documentation.
+- CPU and memory resource isolators can be specified on the command line to override the limits specified in the image manifest ([#1851](https://github.com/coreos/rkt/pull/1851), [#1874](https://github.com/coreos/rkt/pull/1874)). See rkt's [overriding isolators](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#overriding-isolators) documentation.
+- CPU and memory resource isolators can now be used within the kvm stage1 ([#1404](https://github.com/coreos/rkt/pull/1404))
+- The `rkt image list` command can now display the image size ([#1865](https://github.com/coreos/rkt/pull/1865)).
+
+#### Build improvements
+
+- It is now possible to build rkt inside rkt ([#1681](https://github.com/coreos/rkt/pull/1681)). This should improve the reproducibility of builds. This release does not use it yet but it is planned for future releases.
+- Linux distribution packagers can override the version of stage1 during the build ([#1821](https://github.com/coreos/rkt/pull/1821)). This is needed for any Linux distributions that might carry distro-specific patches along the upstream release. See rkt's documentation about [building stage1 flavors](https://github.com/coreos/rkt/blob/master/Documentation/build-configure.md#--with-stage1-flavors-version-override).
+- Smaller build improvements with dep generation ([#1838](https://github.com/coreos/rkt/pull/1838)), error messages on `make clean` ([#1850](https://github.com/coreos/rkt/pull/1850)), dependency checks in the kvm flavor ([#1860](https://github.com/coreos/rkt/pull/1860))
 
 #### Bug fixes
 
-- build: Add missing deps generation ([#1838](https://github.com/coreos/rkt/pull/1838))
-- stage1: return an error if an app has empty exec ([#1843](https://github.com/coreos/rkt/pull/1843))
-- stage1: fix cgroup slices when machined is not used ([#1844](https://github.com/coreos/rkt/pull/1844))
-- stage0: fix go file with 2 functions with the same name ([#1842](https://github.com/coreos/rkt/pull/1842))
-- tar: prefix hard link destination with extraction target (acbuild) ([#1852](https://github.com/coreos/rkt/pull/1852))
-- build: Print contents of the directory we failed to remove ([#1850](https://github.com/coreos/rkt/pull/1850))
-- stage1: fix unit file detection ([#1873](https://github.com/coreos/rkt/pull/1873))
-- fetcher: fix dependency issue, new test TestImageDependencies + disco ([#1822](https://github.com/coreos/rkt/pull/1822))
-
-#### API service
-
-- add 'detail' field in ListPods and ListImages request ([#1786](https://github.com/coreos/rkt/pull/1786))
-- replace single filter with multiple filters ([#1853](https://github.com/coreos/rkt/pull/1853))
-
-#### Other changes
-
-- Godeps: bump go-tspi to get license file ([#1855](https://github.com/coreos/rkt/pull/1855))
-- keystoretest: Move keygen.go to a separate directory ([#1848](https://github.com/coreos/rkt/pull/1848))
-- build: Check for patch and bc for kvm flavor ([#1860](https://github.com/coreos/rkt/pull/1860))
-- refactor image handling ([#1763](https://github.com/coreos/rkt/pull/1763))
-- bump appc to v0.7.4 and fix rkt code ([#1861](https://github.com/coreos/rkt/pull/1861))
-- build: Allow packagers to override stage1 version ([#1821](https://github.com/coreos/rkt/pull/1821))
+- rkt is now able to override the application command with `--exec` when the application manifest didn't specify any command ([#1843](https://github.com/coreos/rkt/pull/1843)).
+- In some cases, user namespaces were not working in Linux distributions without systemd, such as Ubuntu 14.04 LTS. This is fixed by creating a unique cgroup for each pod when systemd is not used ([#1844](https://github.com/coreos/rkt/pull/1844))
+- rkt's tar package didn't prefix the destination file correctly when using hard links in images. This was not a issue in rkt itself but was causing acbuild to misbehave ([#1852](https://github.com/coreos/rkt/pull/1852)).
+- ACIs with multiple dependencies can end up depending on the same base image through multiple paths. In some of those configuration with multiple dependencies, fetching the image via image discovery was not working. This is fixed and a new test ensures it will keep working ([#1822](https://github.com/coreos/rkt/pull/1822)).
+- The pod cgroups were misconfigured when systemd-devel is not installed. This was causing per-app CPU and memory isolators to be ineffective on those systems. This is now fixed but will require an additional fix for NixOS ([#1873](https://github.com/coreos/rkt/pull/1873)).
+- During the garbage collection of pods (`rkt gc`), all mounts will be umounted even when the pod is in an inconsistent state ([#1828](https://github.com/coreos/rkt/pull/1828), [#1856](https://github.com/coreos/rkt/pull/1856))
 
 #### Improved documentation
 
-- fix formatting, typos, outdated info ([#1824](https://github.com/coreos/rkt/pull/1824))
-- add paths to config examples ([#1847](https://github.com/coreos/rkt/pull/1847))
-- cgroup doc for developers ([#1870](https://github.com/coreos/rkt/pull/1870))
+- New documentation about configure flags ([#1824](https://github.com/coreos/rkt/pull/1824)). This also includes formatting and typos fixes and updates. The examples about rkt's configuration files are also clarified ([#1847](https://github.com/coreos/rkt/pull/1847)).
+- New documentation explaining [how cgroups are used by rkt](https://github.com/coreos/rkt/blob/master/Documentation/devel/cgroups.md) ([#1870](https://github.com/coreos/rkt/pull/1870)). This should make it easier for software developers to integrate rkt with monitoring software.
+
+#### API service
+
+- The API service is meant to be used by orchestration tools like Kubernetes. The performance of the API service was improved by reducing the round-trips in the ListPods and ListImages requests ([#1786](https://github.com/coreos/rkt/pull/1786)). Those requests also gained multiple filters for more flexibility ([#1853](https://github.com/coreos/rkt/pull/1853)).
 
 ## v0.13.0
 
