@@ -39,7 +39,10 @@ func rmImages(s *store.Store, images []string) error {
 	errors := 0
 	staleErrors := 0
 	for _, pkey := range images {
-		var keys []string
+		var (
+			keys []string
+			name string
+		)
 		errors++
 		h, err := types.NewHash(pkey)
 		if err != nil {
@@ -48,14 +51,15 @@ func rmImages(s *store.Store, images []string) error {
 			if len(keys) > 0 {
 				errors += len(keys) - 1
 			}
+			if err != nil {
+				stderr("rkt: %v", err)
+				continue
+			}
 			if !found {
 				stderr("rkt: image name %q not found", pkey)
 				continue
 			}
-			if err != nil {
-				stderr("rkt: image name %q not valid: %v", pkey, err)
-				continue
-			}
+			name = pkey
 		} else {
 			key, err := s.ResolveKey(h.String())
 			if err != nil {
@@ -67,6 +71,12 @@ func rmImages(s *store.Store, images []string) error {
 				continue
 			}
 
+			aciinfo, err := s.GetACIInfoWithBlobKey(key)
+			if err != nil {
+				stderr("rkt: error retrieving aci infos for image %q: %v", key, err)
+				continue
+			}
+			name = aciinfo.Name
 			keys = append(keys, key)
 		}
 
@@ -74,13 +84,13 @@ func rmImages(s *store.Store, images []string) error {
 			if err = s.RemoveACI(key); err != nil {
 				if serr, ok := err.(*store.StoreRemovalError); ok {
 					staleErrors++
-					stderr("rkt: some files cannot be removed for image %q: %v", pkey, serr)
+					stderr("rkt: some files cannot be removed for image %q (%q): %v", key, name, serr)
 				} else {
-					stderr("rkt: error removing aci for image %q: %v", pkey, err)
+					stderr("rkt: error removing aci for image %q (%q): %v", key, name, err)
 					continue
 				}
 			}
-			stdout("rkt: successfully removed aci for image: %q", pkey)
+			stdout("rkt: successfully removed aci for image: %q (%q)", key, name)
 			errors--
 			done++
 		}
