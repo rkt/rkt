@@ -13,7 +13,7 @@ TOPLEVEL_STAMPS :=
 TOPLEVEL_CHECK_STAMPS :=
 TOPLEVEL_UNIT_CHECK_STAMPS :=
 TOPLEVEL_FUNCTIONAL_CHECK_STAMPS :=
-TOPLEVEL_SUBDIRS := rkt tests stage1
+TOPLEVEL_SUBDIRS := rkt tests stage1 stage1_fly
 
 $(call inc-one,tools/tools.mk)
 $(call inc-many,$(foreach sd,$(TOPLEVEL_SUBDIRS),$(sd)/$(sd).mk))

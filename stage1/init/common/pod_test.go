@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package common
 
 import (
 	"io/ioutil"
 	"os"
 	"regexp"
 	"testing"
+
+	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
@@ -150,8 +152,8 @@ func TestAppToNspawnArgsOverridesImageManifestReadOnly(t *testing.T) {
 		}
 		defer os.RemoveAll(tmpDir)
 
-		p := &Pod{Manifest: podManifest, Root: tmpDir}
-		output, err := p.appToNspawnArgs(appManifest)
+		p := &stage1commontypes.Pod{Manifest: podManifest, Root: tmpDir}
+		output, err := appToNspawnArgs(p, appManifest)
 		if err != nil {
 			t.Errorf("#%d: unexpected error: `%v`", i, err)
 		}

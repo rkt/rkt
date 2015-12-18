@@ -59,7 +59,7 @@ AC_ARG_WITH([stage1-default-flavor],
 
 AC_ARG_WITH([stage1-flavors],
             [AS_HELP_STRING([--with-stage1-flavors],
-                            [comma-separated list of stage1 flavors; choose from 'src', 'coreos', 'host', 'kvm'; default: 'coreos,kvm'])],
+                            [comma-separated list of stage1 flavors; choose from 'src', 'coreos', 'host', 'kvm', 'fly'; default: 'coreos,kvm,fly'])],
             [RKT_STAGE1_FLAVORS="${withval}"],
             [RKT_STAGE1_FLAVORS=auto])
 
@@ -153,7 +153,7 @@ AS_CASE([${RKT_STAGE1_SETUP_KIND}],
                   dnl and set the first flavor in the list as a
                   dnl default unless specified.
                   [AS_VAR_IF([RKT_STAGE1_FLAVORS],[auto],
-                             [RKT_STAGE1_FLAVORS='coreos,kvm'])
+                             [RKT_STAGE1_FLAVORS='coreos,kvm,fly'])
                    AS_VAR_IF([RKT_STAGE1_DEFAULT_FLAVOR],[auto],
                              [RKT_STAGE1_DEFAULT_FLAVOR=`AS_ECHO([${RKT_STAGE1_FLAVORS}]) | cut -d, -f1`])
                    RKT_STAGE1_DEFAULT_NAME=''
@@ -172,7 +172,7 @@ AS_VAR_IF([RKT_STAGE1_FLAVORS_VERSION_OVERRIDE], [auto],
 ## Built stage1 flavors verification
 
 dnl a list of all flavors
-RKT_STAGE1_ALL_FLAVORS=coreos,kvm,host,src
+RKT_STAGE1_ALL_FLAVORS=coreos,kvm,host,src,fly
 
 dnl RKT_ITERATE_FLAVORS iterates all comma-separated flavors stored in
 dnl $1 using an iterator variable $2 and executes body $3.
@@ -188,7 +188,7 @@ dnl additional string to an error message.
 AC_DEFUN([RKT_IS_VALID_FLAVOR],
          [AS_CASE([$1],
                   dnl Correct flavor, nothing to do.
-                  [coreos|kvm|host|src],
+                  [coreos|kvm|host|src|fly],
                           [],
                   dnl Bogus flavor, bail out.
                   [AC_MSG_ERROR([*** unknown stage1 flavor "$1" $2])])])
@@ -231,6 +231,8 @@ RKT_ITERATE_FLAVORS([${RKT_STAGE1_FLAVORS}],[flavor],
                                       RKT_REQ_PROG([BC],[bc],[bc])],
                              [host],
                                      [],
+                             [fly],
+                                     [AC_MSG_WARN([* fly is an experimental stage1 implementation with almost no isolation and less features])],
                              [AC_MSG_ERROR([*** Unhandled flavor "${flavor}", should not happen])])])
 
 dnl Validate passed default flavor, it should be one of the built

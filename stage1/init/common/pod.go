@@ -14,11 +14,10 @@
 
 //+build linux
 
-package main
+package common
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,29 +28,19 @@ import (
 	"strconv"
 	"strings"
 
+	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
+
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/uid"
-	initcommon "github.com/coreos/rkt/stage1/init/common"
-	"github.com/coreos/rkt/stage1/init/kvm"
 )
-
-// Pod encapsulates a PodManifest and ImageManifests
-type Pod struct {
-	Root               string // root directory where the pod will be located
-	UUID               types.UUID
-	Manifest           *schema.PodManifest
-	Images             map[string]*schema.ImageManifest
-	MetadataServiceURL string
-	Networks           []string
-}
 
 const (
 	// Name of the file storing the pod's flavor
-	flavorFile    = "flavor"
+	FlavorFile    = "flavor"
 	sharedVolPerm = os.FileMode(0755)
 )
 
@@ -64,50 +53,6 @@ var (
 		"HOME":    "/root",
 	}
 )
-
-// LoadPod loads a Pod Manifest (as prepared by stage0) and
-// its associated Application Manifests, under $root/stage1/opt/stage1/$apphash
-func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
-	p := &Pod{
-		Root:   root,
-		UUID:   *uuid,
-		Images: make(map[string]*schema.ImageManifest),
-	}
-
-	buf, err := ioutil.ReadFile(common.PodManifestPath(p.Root))
-	if err != nil {
-		return nil, fmt.Errorf("failed reading pod manifest: %v", err)
-	}
-
-	pm := &schema.PodManifest{}
-	if err := json.Unmarshal(buf, pm); err != nil {
-		return nil, fmt.Errorf("failed unmarshalling pod manifest: %v", err)
-	}
-	p.Manifest = pm
-
-	for i, app := range p.Manifest.Apps {
-		ampath := common.ImageManifestPath(p.Root, app.Name)
-		buf, err := ioutil.ReadFile(ampath)
-		if err != nil {
-			return nil, fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
-		}
-
-		am := &schema.ImageManifest{}
-		if err = json.Unmarshal(buf, am); err != nil {
-			return nil, fmt.Errorf("failed unmarshalling app manifest %q: %v", ampath, err)
-		}
-
-		if _, ok := p.Images[app.Name.String()]; ok {
-			return nil, fmt.Errorf("got multiple definitions for app: %v", app.Name)
-		}
-		if app.App == nil {
-			p.Manifest.Apps[i].App = am.App
-		}
-		p.Images[app.Name.String()] = am
-	}
-
-	return p, nil
-}
 
 // execEscape uses Golang's string quoting for ", \, \n, and regex for special cases
 func execEscape(i int, str string) string {
@@ -146,7 +91,7 @@ func quoteExec(exec []string) string {
 	return strings.Join(qexec, " ")
 }
 
-func (p *Pod) WriteDefaultTarget() error {
+func WriteDefaultTarget(p *stage1commontypes.Pod) error {
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", "rkt apps target"),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
@@ -159,7 +104,7 @@ func (p *Pod) WriteDefaultTarget() error {
 		opts = append(opts, unit.NewUnitOption("Unit", "Wants", serviceName))
 	}
 
-	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), unitsDir)
+	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), UnitsDir)
 	file, err := os.OpenFile(filepath.Join(unitsPath, "default.target"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
@@ -173,7 +118,7 @@ func (p *Pod) WriteDefaultTarget() error {
 	return nil
 }
 
-func (p *Pod) WritePrepareAppTemplate() error {
+func WritePrepareAppTemplate(p *stage1commontypes.Pod) error {
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", "Prepare minimum environment for chrooted applications"),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
@@ -188,7 +133,7 @@ func (p *Pod) WritePrepareAppTemplate() error {
 		unit.NewUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE"),
 	}
 
-	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), unitsDir)
+	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), UnitsDir)
 	file, err := os.OpenFile(filepath.Join(unitsPath, "prepare-app@.service"), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create service unit file: %v", err)
@@ -202,7 +147,7 @@ func (p *Pod) WritePrepareAppTemplate() error {
 	return nil
 }
 
-func (p *Pod) writeAppReaper(appName string) error {
+func writeAppReaper(p *stage1commontypes.Pod, appName string) error {
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("%s Reaper", appName)),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
@@ -216,7 +161,7 @@ func (p *Pod) writeAppReaper(appName string) error {
 		unit.NewUnitOption("Service", "ExecStop", fmt.Sprintf("/reaper.sh %s", appName)),
 	}
 
-	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), unitsDir)
+	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), UnitsDir)
 	file, err := os.OpenFile(filepath.Join(unitsPath, fmt.Sprintf("reaper-%s.service", appName)), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to create service unit file: %v", err)
@@ -239,7 +184,7 @@ func generateGidArg(gid int, supplGid []int) string {
 }
 
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
-func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string) error {
+func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string) error {
 	app := ra.App
 	appName := ra.Name
 	image, ok := p.Images[appName.String()]
@@ -265,7 +210,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 		env.Set("AC_METADATA_URL", p.MetadataServiceURL)
 	}
 
-	if err := p.writeEnvFile(env, appName, privateUsers); err != nil {
+	if err := writeEnvFile(p, env, appName, privateUsers); err != nil {
 		return fmt.Errorf("unable to write environment file: %v", err)
 	}
 
@@ -411,14 +356,14 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 
 	if flavor == "kvm" {
 		// bind mount all shared volumes from /mnt/volumeName (we don't use mechanism for bind-mounting given by nspawn)
-		err := kvm.AppToSystemdMountUnits(common.Stage1RootfsPath(p.Root), appName, p.Manifest.Volumes, ra, unitsDir)
+		err := AppToSystemdMountUnits(common.Stage1RootfsPath(p.Root), appName, p.Manifest.Volumes, ra, UnitsDir)
 		if err != nil {
 			return fmt.Errorf("failed to prepare mount units: %v", err)
 		}
 
 	}
 
-	if err = p.writeAppReaper(appName.String()); err != nil {
+	if err = writeAppReaper(p, appName.String()); err != nil {
 		return fmt.Errorf("Failed to write app %q reaper service: %v\n", appName, err)
 	}
 
@@ -428,7 +373,7 @@ func (p *Pod) appToSystemd(ra *schema.RuntimeApp, interactive bool, flavor strin
 // writeEnvFile creates an environment file for given app name, the minimum
 // required environment variables by the appc spec will be set to sensible
 // defaults here if they're not provided by env.
-func (p *Pod) writeEnvFile(env types.Environment, appName types.ACName, privateUsers string) error {
+func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types.ACName, privateUsers string) error {
 	ef := bytes.Buffer{}
 
 	for dk, dv := range defaultEnv {
@@ -462,11 +407,11 @@ func (p *Pod) writeEnvFile(env types.Environment, appName types.ACName, privateU
 
 // PodToSystemd creates the appropriate systemd service unit files for
 // all the constituent apps of the Pod
-func (p *Pod) PodToSystemd(interactive bool, flavor string, privateUsers string) error {
+func PodToSystemd(p *stage1commontypes.Pod, interactive bool, flavor string, privateUsers string) error {
 
 	for i := range p.Manifest.Apps {
 		ra := &p.Manifest.Apps[i]
-		if err := p.appToSystemd(ra, interactive, flavor, privateUsers); err != nil {
+		if err := appToSystemd(p, ra, interactive, flavor, privateUsers); err != nil {
 			return fmt.Errorf("failed to transform app %q into systemd service: %v", ra.Name, err)
 		}
 	}
@@ -475,7 +420,7 @@ func (p *Pod) PodToSystemd(interactive bool, flavor string, privateUsers string)
 
 // appToNspawnArgs transforms the given app manifest, with the given associated
 // app name, into a subset of applicable systemd-nspawn argument
-func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
+func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string, error) {
 	var args []string
 	appName := ra.Name
 	app := ra.App
@@ -493,7 +438,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 		vols[v.Name] = v
 	}
 
-	mounts := initcommon.GenerateMounts(ra, vols)
+	mounts := GenerateMounts(ra, vols)
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
@@ -516,7 +461,7 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 
 		opt := make([]string, 4)
 
-		if initcommon.IsMountReadOnly(vol, app.MountPoints) {
+		if IsMountReadOnly(vol, app.MountPoints) {
 			opt[0] = "--bind-ro="
 		} else {
 			opt[0] = "--bind="
@@ -560,15 +505,15 @@ func (p *Pod) appToNspawnArgs(ra *schema.RuntimeApp) ([]string, error) {
 
 // PodToNspawnArgs renders a prepared Pod as a systemd-nspawn
 // argument list ready to be executed
-func (p *Pod) PodToNspawnArgs() ([]string, error) {
+func PodToNspawnArgs(p *stage1commontypes.Pod) ([]string, error) {
 	args := []string{
 		"--uuid=" + p.UUID.String(),
-		"--machine=" + p.GetMachineID(),
+		"--machine=" + GetMachineID(p),
 		"--directory=" + common.Stage1RootfsPath(p.Root),
 	}
 
 	for i := range p.Manifest.Apps {
-		aa, err := p.appToNspawnArgs(&p.Manifest.Apps[i])
+		aa, err := appToNspawnArgs(p, &p.Manifest.Apps[i])
 		if err != nil {
 			return nil, err
 		}
@@ -578,7 +523,7 @@ func (p *Pod) PodToNspawnArgs() ([]string, error) {
 	return args, nil
 }
 
-func (p *Pod) getFlavor() (flavor string, systemdVersion string, err error) {
+func GetFlavor(p *stage1commontypes.Pod) (flavor string, systemdVersion string, err error) {
 	flavor, err = os.Readlink(filepath.Join(common.Stage1RootfsPath(p.Root), "flavor"))
 	if err != nil {
 		return "", "", fmt.Errorf("unable to determine stage1 flavor: %v", err)
@@ -598,7 +543,7 @@ func (p *Pod) getFlavor() (flavor string, systemdVersion string, err error) {
 }
 
 // GetAppHashes returns a list of hashes of the apps in this pod
-func (p *Pod) GetAppHashes() []types.Hash {
+func GetAppHashes(p *stage1commontypes.Pod) []types.Hash {
 	var names []types.Hash
 	for _, a := range p.Manifest.Apps {
 		names = append(names, a.Image.ID)
@@ -609,6 +554,6 @@ func (p *Pod) GetAppHashes() []types.Hash {
 
 // GetMachineID returns the machine id string of the pod to be passed to
 // systemd-nspawn
-func (p *Pod) GetMachineID() string {
+func GetMachineID(p *stage1commontypes.Pod) string {
 	return "rkt-" + p.UUID.String()
 }

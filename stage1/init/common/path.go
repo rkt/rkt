@@ -14,7 +14,7 @@
 
 //+build linux
 
-package main
+package common
 
 import (
 	"path/filepath"
@@ -26,9 +26,9 @@ import (
 
 const (
 	envDir          = "/rkt/env" // TODO(vc): perhaps this doesn't belong in /rkt?
-	unitsDir        = "/usr/lib/systemd/system"
-	defaultWantsDir = unitsDir + "/default.target.wants"
-	socketsWantsDir = unitsDir + "/sockets.target.wants"
+	UnitsDir        = "/usr/lib/systemd/system"
+	defaultWantsDir = UnitsDir + "/default.target.wants"
+	socketsWantsDir = UnitsDir + "/sockets.target.wants"
 )
 
 // ServiceUnitName returns a systemd service unit name for the given app name.
@@ -39,7 +39,7 @@ func ServiceUnitName(appName types.ACName) string {
 // ServiceUnitPath returns the path to the systemd service file for the given
 // app name.
 func ServiceUnitPath(root string, appName types.ACName) string {
-	return filepath.Join(common.Stage1RootfsPath(root), unitsDir, ServiceUnitName(appName))
+	return filepath.Join(common.Stage1RootfsPath(root), UnitsDir, ServiceUnitName(appName))
 }
 
 // RelEnvFilePath returns the path to the environment file for the given app name
@@ -74,7 +74,7 @@ func SocketUnitName(appName types.ACName) string {
 
 // SocketUnitPath returns the path to the systemd socket file for the given app name.
 func SocketUnitPath(root string, appName types.ACName) string {
-	return filepath.Join(common.Stage1RootfsPath(root), unitsDir, SocketUnitName(appName))
+	return filepath.Join(common.Stage1RootfsPath(root), UnitsDir, SocketUnitName(appName))
 }
 
 // SocketWantPath returns the systemd sockets.target.wants symlink path for the

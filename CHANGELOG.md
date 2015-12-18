@@ -1,6 +1,6 @@
 ## vUNRELEASED
 
-rkt vUNRELEASED is an important release with new features like resource isolators in the kvm stage1, bug fixes and improved documentation.
+rkt vUNRELEASED is an important release with new features like resource isolators in the kvm stage1, a new stage1 flavor called *fly*, bug fixes and improved documentation.
 The appc spec version has been updated to v0.7.4
 
 #### New features and UX changes
@@ -9,6 +9,7 @@ The appc spec version has been updated to v0.7.4
 - CPU and memory resource isolators can be specified on the command line to override the limits specified in the image manifest ([#1851](https://github.com/coreos/rkt/pull/1851), [#1874](https://github.com/coreos/rkt/pull/1874)). See rkt's [overriding isolators](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#overriding-isolators) documentation.
 - CPU and memory resource isolators can now be used within the kvm stage1 ([#1404](https://github.com/coreos/rkt/pull/1404))
 - The `rkt image list` command can now display the image size ([#1865](https://github.com/coreos/rkt/pull/1865)).
+- A new stage1 flavor has been added: fly; and it represents the first experimental implementation of the upcoming rkt fly feature. ([#1833](https://github.com/coreos/rkt/pull/1833))
 
 #### Build improvements
 
