@@ -103,7 +103,7 @@ Examples
 ```json
 {
     "acKind": "ImageManifest",
-    "acVersion": "0.7.3",
+    "acVersion": "0.7.4",
     "name": "foo.com/rkt/stage1",
     "labels": [
         {

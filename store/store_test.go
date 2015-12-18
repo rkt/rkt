@@ -165,7 +165,7 @@ func TestGetImageManifest(t *testing.T) {
 
 	imj := `{
 			"acKind": "ImageManifest",
-			"acVersion": "0.7.3",
+			"acVersion": "0.7.4",
 			"name": "example.com/test01"
 		}`
 
@@ -230,7 +230,7 @@ func TestGetAci(t *testing.T) {
 				{
 					`{
 						"acKind": "ImageManifest",
-						"acVersion": "0.7.3",
+						"acVersion": "0.7.4",
 						"name": "example.com/test01"
 					}`,
 					false,
@@ -238,7 +238,7 @@ func TestGetAci(t *testing.T) {
 				{
 					`{
 						"acKind": "ImageManifest",
-						"acVersion": "0.7.3",
+						"acVersion": "0.7.4",
 						"name": "example.com/test02",
 						"labels": [
 							{
@@ -252,7 +252,7 @@ func TestGetAci(t *testing.T) {
 				{
 					`{
 						"acKind": "ImageManifest",
-						"acVersion": "0.7.3",
+						"acVersion": "0.7.4",
 						"name": "example.com/test02",
 						"labels": [
 							{
@@ -365,7 +365,7 @@ func TestTreeStore(t *testing.T) {
 	imj := `
 		{
 		    "acKind": "ImageManifest",
-		    "acVersion": "0.7.3",
+		    "acVersion": "0.7.4",
 		    "name": "example.com/test01"
 		}
 	`
@@ -488,7 +488,7 @@ func TestRemoveACI(t *testing.T) {
 
 	imj := `{
                     "acKind": "ImageManifest",
-                    "acVersion": "0.7.3",
+                    "acVersion": "0.7.4",
                     "name": "example.com/test01"
                 }`
 
@@ -533,7 +533,7 @@ func TestRemoveACI(t *testing.T) {
 	// Simulate error removing from the
 	imj = `{
                    "acKind": "ImageManifest",
-                   "acVersion": "0.7.3",
+                   "acVersion": "0.7.4",
                    "name": "example.com/test01"
                }`
 
