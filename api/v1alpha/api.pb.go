@@ -279,19 +279,29 @@ func (m *App) GetImage() *Image {
 }
 
 // Pod describes a pod's information.
+// If a pod is in Embryo, Preparing, AbortedPrepare state,
+// only id and state will be returned.
+//
+// If a pod is in other states, the pod manifest and
+// apps will be returned when 'detailed' is true in the request.
+//
+// A valid pid of the stage1 process of the pod will be returned
+// if the pod is Running has run once.
+//
+// Networks are only returned when a pod is in Running.
 type Pod struct {
-	// ID of the pod, in the form of a UUID, required.
+	// ID of the pod, in the form of a UUID.
 	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
-	// PID of the pod, optional, only valid if it's returned by InspectPod(). A negative value means the pod has exited.
+	// PID of the stage1 process of the pod.
 	Pid int32 `protobuf:"zigzag32,2,opt,name=pid" json:"pid,omitempty"`
-	// State of the pod, required.
+	// State of the pod.
 	State PodState `protobuf:"varint,3,opt,name=state,enum=v1alpha.PodState" json:"state,omitempty"`
-	// List of apps in the pod, required.
+	// List of apps in the pod.
 	Apps []*App `protobuf:"bytes,4,rep,name=apps" json:"apps,omitempty"`
-	// Network information of the pod, optional, non-empty if the pod is running in private net.
+	// Network information of the pod.
 	// Note that a pod can be in multiple networks.
 	Networks []*Network `protobuf:"bytes,5,rep,name=networks" json:"networks,omitempty"`
-	// JSON-encoded byte array that represents the pod manifest of the pod, required.
+	// JSON-encoded byte array that represents the pod manifest of the pod.
 	Manifest []byte `protobuf:"bytes,6,opt,name=manifest,proto3" json:"manifest,omitempty"`
 }
 
