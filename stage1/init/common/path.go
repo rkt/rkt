@@ -25,8 +25,9 @@ import (
 )
 
 const (
-	envDir          = "/rkt/env" // TODO(vc): perhaps this doesn't belong in /rkt?
+	// UnitsDir is the default path to systemd systemd unit directory
 	UnitsDir        = "/usr/lib/systemd/system"
+	envDir          = "/rkt/env" // TODO(vc): perhaps this doesn't belong in /rkt?
 	defaultWantsDir = UnitsDir + "/default.target.wants"
 	socketsWantsDir = UnitsDir + "/sockets.target.wants"
 )
@@ -63,8 +64,8 @@ func ServiceWantPath(root string, appName types.ACName) string {
 // instantiated for the given root.
 func InstantiatedPrepareAppUnitName(appName types.ACName) string {
 	// Naming respecting escaping rules, see systemd.unit(5) and systemd-escape(1)
-	escaped_root := unit.UnitNamePathEscape(common.RelAppRootfsPath(appName))
-	return "prepare-app@" + escaped_root + ".service"
+	escapedRoot := unit.UnitNamePathEscape(common.RelAppRootfsPath(appName))
+	return "prepare-app@" + escapedRoot + ".service"
 }
 
 // SocketUnitName returns a systemd socket unit name for the given app name.

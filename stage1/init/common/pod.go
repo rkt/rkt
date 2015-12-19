@@ -39,7 +39,7 @@ import (
 )
 
 const (
-	// Name of the file storing the pod's flavor
+	// FlavorFile names the file storing the pod's flavor
 	FlavorFile    = "flavor"
 	sharedVolPerm = os.FileMode(0755)
 )
@@ -65,7 +65,7 @@ func execEscape(i int, str string) string {
 	}
 
 	escArg := fmt.Sprintf("%q", str)
-	for k, _ := range escapeMap {
+	for k := range escapeMap {
 		reStr := `([` + regexp.QuoteMeta(k) + `])`
 		re := regexp.MustCompile(reStr)
 		escArg = re.ReplaceAllStringFunc(escArg, func(s string) string {
@@ -91,6 +91,8 @@ func quoteExec(exec []string) string {
 	return strings.Join(qexec, " ")
 }
 
+// WriteDefaultTarget writes the default.target unit file
+// which is responsible for bringing up the applications
 func WriteDefaultTarget(p *stage1commontypes.Pod) error {
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", "rkt apps target"),
@@ -118,6 +120,7 @@ func WriteDefaultTarget(p *stage1commontypes.Pod) error {
 	return nil
 }
 
+// WritePrepareAppTemplate writes service unit files for preparing the pod's applications
 func WritePrepareAppTemplate(p *stage1commontypes.Pod) error {
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", "Prepare minimum environment for chrooted applications"),
@@ -477,7 +480,7 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 			}
 			opt[1] = filepath.Join(common.SharedVolumesPath(absRoot), vol.Name.String())
 		default:
-			return nil, fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty".`, vol.Kind)
+			return nil, fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty"`, vol.Kind)
 		}
 		opt[2] = ":"
 		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), m.Path)
@@ -523,6 +526,7 @@ func PodToNspawnArgs(p *stage1commontypes.Pod) ([]string, error) {
 	return args, nil
 }
 
+// GetFlavor populates a flavor string based on the flavor itself and respectively the systemd version
 func GetFlavor(p *stage1commontypes.Pod) (flavor string, systemdVersion string, err error) {
 	flavor, err = os.Readlink(filepath.Join(common.Stage1RootfsPath(p.Root), "flavor"))
 	if err != nil {

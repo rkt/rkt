@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package stage1_common
+package common
 
 import (
 	"fmt"
@@ -23,6 +23,8 @@ import (
 	"github.com/coreos/rkt/pkg/sys"
 )
 
+// WithClearedCloExec executes a given function in between setting and unsetting the close-on-exit flag
+// on the given file descriptor
 func WithClearedCloExec(lfd int, f func() error) error {
 	err := sys.CloseOnExec(lfd, false)
 	if err != nil {
@@ -33,6 +35,7 @@ func WithClearedCloExec(lfd int, f func() error) error {
 	return f()
 }
 
+// WritePpid writes the pid's parent pid to $PWD/ppid
 func WritePpid(pid int) error {
 	// write ppid file as specified in
 	// Documentation/devel/stage1-implementors-guide.md

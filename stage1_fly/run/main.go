@@ -25,14 +25,13 @@ import (
 	"strings"
 	"syscall"
 
-	stage1common "github.com/coreos/rkt/stage1/common"
-	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
-
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/sys"
+	stage1common "github.com/coreos/rkt/stage1/common"
+	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 )
 
 const (
