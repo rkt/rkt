@@ -1,6 +1,6 @@
-## vUNRELEASED
+## v0.14.0
 
-rkt vUNRELEASED is an important release with new features like resource isolators in the kvm stage1, a new stage1 flavor called *fly*, bug fixes and improved documentation.
+rkt v0.14.0 brings new features like resource isolators in the kvm stage1, a new stage1 flavor called *fly*, bug fixes and improved documentation.
 The appc spec version has been updated to v0.7.4
 
 #### New features and UX changes

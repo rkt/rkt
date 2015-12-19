@@ -39,9 +39,9 @@ We recommend booting up a fresh virtual machine to test out rkt.
 To download the `rkt` binary, simply grab the latest release directly from GitHub:
 
 ```
-wget https://github.com/coreos/rkt/releases/download/v0.13.0/rkt-v0.13.0.tar.gz
-tar xzvf rkt-v0.13.0.tar.gz
-cd rkt-v0.13.0
+wget https://github.com/coreos/rkt/releases/download/v0.14.0/rkt-v0.14.0.tar.gz
+tar xzvf rkt-v0.14.0.tar.gz
+cd rkt-v0.14.0
 ./rkt help
 ```
 
