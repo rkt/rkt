@@ -210,7 +210,7 @@ func TestFilterPod(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		result := satisfiesPodFilter(tt.pod, tt.manifest, tt.filter)
+		result := satisfiesPodFilter(*tt.pod, *tt.manifest, *tt.filter)
 		if result != tt.result {
 			t.Errorf("#%d: got %v, want %v", i, result, tt.result)
 		}
@@ -593,7 +593,7 @@ func TestFilterImage(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		result := satisfiesImageFilter(tt.image, tt.manifest, tt.filter)
+		result := satisfiesImageFilter(*tt.image, *tt.manifest, *tt.filter)
 		if result != tt.result {
 			t.Errorf("#%d: got %v, want %v", i, result, tt.result)
 		}

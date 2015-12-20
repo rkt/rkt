@@ -114,16 +114,9 @@ func isPartOf(keyword, s string) bool {
 	return strings.Contains(s, keyword)
 }
 
-// satisfiesPodFilter returns true if the pod satisfies the filter or the filter
-// is nil, which means the pod will be returned.
-// It returns false if the pod doesn't satisfy the filter, which means it will
-// not be returned.
-func satisfiesPodFilter(pod *v1alpha.Pod, manifest *schema.PodManifest, filter *v1alpha.PodFilter) bool {
-	// No filters, return directly.
-	if filter == nil {
-		return true
-	}
-
+// satisfiesPodFilter returns true if the pod satisfies the filter.
+// The pod, manifest, filter must not be nil.
+func satisfiesPodFilter(pod v1alpha.Pod, manifest schema.PodManifest, filter v1alpha.PodFilter) bool {
 	// Filter according to the id.
 	if len(filter.Ids) > 0 {
 		s := set.NewString(filter.Ids...)
@@ -190,13 +183,20 @@ func satisfiesPodFilter(pod *v1alpha.Pod, manifest *schema.PodManifest, filter *
 }
 
 // satisfiesAnyPodFilters returns true if any of the filter conditions is satisfied
-// by the pod.
+// by the pod, or there's no filters.
 func satisfiesAnyPodFilters(pod *v1alpha.Pod, manifest *schema.PodManifest, filters []*v1alpha.PodFilter) bool {
+	// No filters, return true directly.
 	if len(filters) == 0 {
 		return true
 	}
+
+	// No manifest, but have filters, return false.
+	if manifest == nil {
+		return false
+	}
+
 	for _, filter := range filters {
-		if satisfiesPodFilter(pod, manifest, filter) {
+		if satisfiesPodFilter(*pod, *manifest, *filter) {
 			return true
 		}
 	}
@@ -218,30 +218,6 @@ func getPodManifest(p *pod) (*schema.PodManifest, []byte, error) {
 		return nil, nil, err
 	}
 	return &manifest, data, nil
-}
-
-// getPodState returns the pod's state.
-func getPodState(p *pod) v1alpha.PodState {
-	switch p.getState() {
-	case Embryo:
-		return v1alpha.PodState_POD_STATE_EMBRYO
-	case Preparing:
-		return v1alpha.PodState_POD_STATE_PREPARING
-	case AbortedPrepare:
-		return v1alpha.PodState_POD_STATE_ABORTED_PREPARE
-	case Prepared:
-		return v1alpha.PodState_POD_STATE_PREPARED
-	case Running:
-		return v1alpha.PodState_POD_STATE_RUNNING
-	case Deleting:
-		return v1alpha.PodState_POD_STATE_DELETING
-	case Exited:
-		return v1alpha.PodState_POD_STATE_EXITED
-	case Garbage:
-		return v1alpha.PodState_POD_STATE_GARBAGE
-	default:
-		return v1alpha.PodState_POD_STATE_UNDEFINED
-	}
 }
 
 // getApplist returns a list of apps in the pod.
@@ -290,12 +266,43 @@ func getNetworks(p *pod) []*v1alpha.Network {
 // getBasicPod returns *v1alpha.Pod with basic pod information, it also returns a *schema.PodManifest
 // object.
 func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
-	manifest, data, err := getPodManifest(p)
-	if err != nil {
-		return nil, nil, err
+	pod := &v1alpha.Pod{Id: p.uuid.String(), Pid: -1}
+
+	// If a pod is in Embryo, Preparing, AbortedPrepare state,
+	// only id and state will be returned.
+	//
+	// If a pod is in other states, the pod manifest and
+	// apps will be returned when 'detailed' is true in the request.
+	//
+	// Valid pid and networks are only returned when a pod is in Running.
+	switch p.getState() {
+	case Embryo:
+		pod.State = v1alpha.PodState_POD_STATE_EMBRYO
+		return pod, nil, nil
+	case Preparing:
+		pod.State = v1alpha.PodState_POD_STATE_PREPARING
+		return pod, nil, nil
+	case AbortedPrepare:
+		pod.State = v1alpha.PodState_POD_STATE_ABORTED_PREPARE
+		return pod, nil, nil
+	case Prepared:
+		pod.State = v1alpha.PodState_POD_STATE_PREPARED
+		return pod, nil, nil
+	case Running:
+		pod.State = v1alpha.PodState_POD_STATE_RUNNING
+		pod.Networks = getNetworks(p)
+	case Deleting:
+		pod.State = v1alpha.PodState_POD_STATE_DELETING
+	case Exited:
+		pod.State = v1alpha.PodState_POD_STATE_EXITED
+	case Garbage:
+		pod.State = v1alpha.PodState_POD_STATE_GARBAGE
+	default:
+		pod.State = v1alpha.PodState_POD_STATE_UNDEFINED
+		return pod, nil, nil
 	}
 
-	pid, err := p.getPID()
+	manifest, data, err := getPodManifest(p)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -305,14 +312,20 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
 		return nil, nil, err
 	}
 
-	return &v1alpha.Pod{
-		Id:       p.uuid.String(),
-		Pid:      int32(pid),
-		State:    getPodState(p), // Get pod's state.
-		Apps:     apps,
-		Manifest: data,
-		Networks: getNetworks(p), // Get pod's network.
-	}, manifest, nil
+	if pod.State == v1alpha.PodState_POD_STATE_RUNNING ||
+		pod.State == v1alpha.PodState_POD_STATE_DELETING ||
+		pod.State == v1alpha.PodState_POD_STATE_EXITED {
+		pid, err := p.getPID()
+		if err != nil {
+			return nil, nil, err
+		}
+		pod.Pid = int32(pid)
+	}
+
+	pod.Manifest = data
+	pod.Apps = apps
+
+	return pod, manifest, nil
 }
 
 func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPodsRequest) (*v1alpha.ListPodsResponse, error) {
@@ -469,16 +482,9 @@ func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1al
 	}, &im, nil
 }
 
-// satisfiesImageFilter returns true if the image satisfies the filter or the filter
-// is nil, which means the image will be returned.
-// It returns false if the image doesn't satisfy the filter, which means it will
-// not be returned.
-func satisfiesImageFilter(image *v1alpha.Image, manifest *schema.ImageManifest, filter *v1alpha.ImageFilter) bool {
-	// No filters, return directly.
-	if filter == nil {
-		return true
-	}
-
+// satisfiesImageFilter returns true if the image satisfies the filter.
+// The image, manifest, filter must not be nil.
+func satisfiesImageFilter(image v1alpha.Image, manifest schema.ImageManifest, filter v1alpha.ImageFilter) bool {
 	// Filter according to the IDs.
 	if len(filter.Ids) > 0 {
 		s := set.NewString(filter.Ids...)
@@ -541,13 +547,14 @@ func satisfiesImageFilter(image *v1alpha.Image, manifest *schema.ImageManifest, 
 }
 
 // satisfiesAnyImageFilters returns true if any of the filter conditions is satisfied
-// by the image.
+// by the image, or there's no filters.
 func satisfiesAnyImageFilters(image *v1alpha.Image, manifest *schema.ImageManifest, filters []*v1alpha.ImageFilter) bool {
+	// No filters, return true directly.
 	if len(filters) == 0 {
 		return true
 	}
 	for _, filter := range filters {
-		if satisfiesImageFilter(image, manifest, filter) {
+		if satisfiesImageFilter(*image, *manifest, *filter) {
 			return true
 		}
 	}
