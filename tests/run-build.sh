@@ -44,7 +44,7 @@ if [[ ${HEAD} == ${MASTER} ]]; then
     SRC_CHANGES=1
     DOC_CHANGES=1
 elif [[ ${SRC_CHANGES} -eq 0 && ${DOC_CHANGES} -eq 0 ]]; then
-    echo No changes detected and HEAD is not origin/master
+    echo "No changes detected and HEAD is not origin/master"
     exit 0
 fi
 
@@ -59,8 +59,8 @@ cd builds
 git clone ../ "${BUILD_DIR}"
 pushd "${BUILD_DIR}"
 
-if [ ${SRC_CHANGES} -gt 0 ]; then 
-    echo Changes in sources detected. Running functional tests.
+if [ ${SRC_CHANGES} -gt 0 ]; then
+    echo "Changes in sources detected. Running functional tests."
     ./autogen.sh
     case "${RKT_STAGE1_USR_FROM}" in
         coreos|kvm)
