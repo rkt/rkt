@@ -58,7 +58,7 @@ func (f *remoteAscFetcher) Get(location string) (readSeekCloser, error) {
 		return nil, fmt.Errorf("invalid signature location: %v", err)
 	}
 	if err := f.F(u, roc.File); err != nil {
-		return nil, fmt.Errorf("failed to download signature: %v", err)
+		return nil, err
 	}
 	retRoc := roc
 	roc = nil
