@@ -121,6 +121,17 @@ For more details, see [configure script parameters documentation](build-configur
 rkt uses [`godep`](https://github.com/tools/godep) to manage third-party dependencies.
 The build process is crafted to make this transparent to most users (i.e. if you're just building rkt from source, or modifying any of the codebase without changing dependencies, you should have no need to interact with godep).
 But occasionally the need arises to either a) add a new dependency or b) update/remove an existing dependency.
+There are two types of dependencies:
+
+- libraries - Go code imported by some Go source file in the repository
+- applications - Go code that we need to build to get some executable binary; this means that we want to "import" a "main" package.
+
+We might want to vendor an application for several reasons:
+
+- it will be used at build-time (like actool to build stage1 images)
+- it will be a part of a stage1 image (like CNI plugins for networking)
+- it will be used in functional tests (like ACE validator)
+
 At this point, the ramblings below from an experienced Godep victim^Wenthusiast might prove of use...
 
 ### Update godep
@@ -149,7 +160,7 @@ $ mkdir -p $GOPATH/src/github.com/coreos/rkt
 $ cd $GOPATH/src/github.com/coreos/rkt
 ```
 
-One benefit of this approach over the single-workspace workflow is that checking out different versions of dependencies in the `GOPATH` (as we are about to do) is guarnteed to not affect any other packages in the `GOPATH`.
+One benefit of this approach over the single-workspace workflow is that checking out different versions of dependencies in the `GOPATH` (as we are about to do) is guaranteed to not affect any other packages in the `GOPATH`.
 (Using [gvm](https://github.com/moovweb/gvm) or other such tomfoolery to manage `GOPATH`s is an exercise left for the reader.)
 
 ### Restoring the current state of dependencies
@@ -161,24 +172,39 @@ Now that we have a functional `GOPATH`, use `godep` to restore the full set of v
 $ godep restore # might take a while if it's the first time...
 ```
 
-At this stage, your path forks, depending on what exactly you want to do: add, update or remove a dependency.
-But in _all three cases_, the procedure finishes with the [same save command](#saving-the-set-of-dependencies).
+At this stage, your path forks, depending on what exactly you want to do: add, update or remove a dependency, or add, update or remove an application.
+But in _all six cases_, the procedure finishes with the [same save command](#saving-the-set-of-dependencies).
 
 #### Add a new dependency
 
 In this case you'll first need to retrieve the dependency you're working with into `GOPATH`.
-As a simple example, assuming we're adding `github.com/fizz/buzz`:
+As a simple example, assuming we're adding `github.com/fizz/buzz/tazz`:
 
 ```
 $ go get -d github.com/fizz/buzz
 ```
 
-Then add your new dependency into `godep`'s purview by simply importing the standard package name in one of your sources:
+##### If it is a library
+
+Add the new dependency into `godep`'s purview by simply importing the standard package name in one of your sources:
 
 ```
 $ vim $GOPATH/src/github.com/coreos/rkt/some/file.go
 ...
-import "github.com/fizz/buzz"
+import "github.com/fizz/buzz/tazz"
+...
+```
+
+Now, GOTO [saving](#saving-the-set-of-dependencies)
+
+##### If it is an application
+
+Add the new application to the `vendoredApps` file in the root of the repository:
+
+```
+$ vim vendoredApps
+...
+github.com/fizz/buzz/tazz
 ...
 ```
 
@@ -186,6 +212,7 @@ Now, GOTO [saving](#saving-the-set-of-dependencies)
 
 #### Update an existing dependency
 
+The steps here are the same for both libraries and applications.
 In this case, assuming we're updating `github.com/foo/bar`:
 
 ```
@@ -200,17 +227,27 @@ Now, GOTO [saving](#saving-the-set-of-dependencies)
 
 #### Removing an existing dependency
 
-This is the simplest case of all: simply remove all references to a dependency from the source files.
+This is the simplest case of all.
+
+##### If it is a library
+
+Simply remove all references to a dependency from the source files.
+
+Now, GOTO [saving](#saving-the-set-of-dependencies)
+
+##### If it is an application
+
+Simply remove the relevant line from the `vendoredApps` file.
 
 Now, GOTO [saving](#saving-the-set-of-dependencies)
 
 ### Saving the set of dependencies
 
 Finally, here we are, the magic command, the holy grail, the ultimate conclusion of all `godep` operations.
-Provided you have followed the preceding instructions, regardless of whether you are adding/removing/modifying dependencies, this command will cast the necessary spells to solve all of your dependency worries:
+Provided you have followed the preceding instructions, regardless of whether you are adding/removing/modifying dependencies, this innocuous script will cast the necessary spells to solve all of your dependency worries:
 
 ```
-$ godep save -r ./...
+$ ./scripts/godep-save
 ```
 
 ## Finishing up

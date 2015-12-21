@@ -1,8 +1,17 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.5",
 	"Packages": [
-		"./..."
+		"./...",
+		"github.com/appc/spec/actool",
+		"github.com/appc/cni/plugins/ipam/dhcp",
+		"github.com/appc/cni/plugins/ipam/host-local",
+		"github.com/appc/cni/plugins/main/bridge",
+		"github.com/appc/cni/plugins/main/ipvlan",
+		"github.com/appc/cni/plugins/main/macvlan",
+		"github.com/appc/cni/plugins/main/ptp",
+		"github.com/appc/cni/plugins/meta/flannel",
+		"github.com/appc/spec/ace"
 	],
 	"Deps": [
 		{

@@ -8,7 +8,13 @@
 #
 # YMMV, no disclaimer or warranty, etc.
 
-if ! [[ "$1" =~ ^v[[:digit:]]+.[[:digit:]]+.[[:digit:]]$ ]]; then 
+# make sure we are running in a toplevel directory
+if ! [[ "$0" =~ "scripts/bump-release" ]]; then
+	echo "This script must be run in a toplevel rkt directory"
+	exit 255
+fi
+
+if ! [[ "$1" =~ ^v[[:digit:]]+.[[:digit:]]+.[[:digit:]]$ ]]; then
 	echo "Usage: scripts/bump-release <VERSION>"
 	echo "   where VERSION must be vX.Y.Z"
 	exit 255
