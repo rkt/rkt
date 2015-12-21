@@ -34,7 +34,7 @@ if [ "${SEMAPHORE-}" == true ] ; then
         # Set up go environment on semaphore
         if [ -f /opt/change-go-version.sh ]; then
             . /opt/change-go-version.sh
-            change-go-version 1.4
+            change-go-version 1.5
         fi
 fi
 
