@@ -38,8 +38,8 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
 	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc"
 	"github.com/coreos/rkt/api/v1alpha"
-	taas "github.com/coreos/rkt/tests/test-auth-server/aci"
 	"github.com/coreos/rkt/tests/testutils"
+	taas "github.com/coreos/rkt/tests/testutils/aci-server"
 )
 
 const (
