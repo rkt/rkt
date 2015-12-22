@@ -576,9 +576,9 @@ func serverHandler(t *testing.T, server *taas.Server) {
 		case msg, ok := <-server.Msg:
 			if ok {
 				t.Logf("server: %v", msg)
+			} else {
+				return
 			}
-		case <-server.Stop:
-			return
 		}
 	}
 }

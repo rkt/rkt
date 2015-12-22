@@ -44,17 +44,12 @@ func (e *httpError) Error() string {
 
 type serverHandler struct {
 	auth    Type
-	stop    chan<- struct{}
 	msg     chan<- string
 	fileSet map[string]string
 }
 
 func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case "POST":
-		w.WriteHeader(http.StatusOK)
-		h.stop <- struct{}{}
-		return
 	case "GET":
 		// handled later
 	default:
@@ -164,7 +159,6 @@ func getAuthPayload(r *http.Request, authType string) (string, *httpError) {
 }
 
 type Server struct {
-	Stop    <-chan struct{}
 	Msg     <-chan string
 	Conf    string
 	URL     string
@@ -175,7 +169,6 @@ type Server struct {
 func (s *Server) Close() {
 	s.http.Close()
 	close(s.handler.msg)
-	close(s.handler.stop)
 }
 
 func (s *Server) UpdateFileSet(fileSet map[string]string) {
@@ -183,14 +176,11 @@ func (s *Server) UpdateFileSet(fileSet map[string]string) {
 }
 
 func NewServer(auth Type, msgCapacity int) *Server {
-	stop := make(chan struct{})
 	msg := make(chan string, msgCapacity)
 	server := &Server{
-		Stop: stop,
-		Msg:  msg,
+		Msg: msg,
 		handler: &serverHandler{
 			auth:    auth,
-			stop:    stop,
 			msg:     msg,
 			fileSet: make(map[string]string),
 		},
