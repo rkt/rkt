@@ -565,12 +565,7 @@ func newAPIClientOrFail(t *testing.T, address string) (v1alpha.PublicAPIClient, 
 }
 
 func runServer(t *testing.T, auth taas.Type) *taas.Server {
-	actool := testutils.GetValueFromEnvOrPanic("ACTOOL")
-	gotool := testutils.GetValueFromEnvOrPanic("GO")
-	server, err := taas.NewServerWithPaths(auth, 20, actool, gotool)
-	if err != nil {
-		t.Fatalf("Could not start server: %v", err)
-	}
+	server := taas.NewServer(auth, 20)
 	go serverHandler(t, server)
 	return server
 }

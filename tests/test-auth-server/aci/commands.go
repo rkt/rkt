@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-func StartServer(auth Type) (*Server, error) {
+func StartServer(auth Type) *Server {
 	return NewServer(auth, 10)
 }
 

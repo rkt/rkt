@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -47,7 +46,6 @@ type serverHandler struct {
 	auth    Type
 	stop    chan<- struct{}
 	msg     chan<- string
-	tools   *aciToolkit
 	fileSet map[string]string
 }
 
@@ -113,15 +111,6 @@ func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		indexHTML := `<meta name="ac-discovery" content="localhost https://localhost/{name}.{ext}">`
 		w.Write([]byte(indexHTML))
 		h.sendMsg(fmt.Sprintf("    done."))
-	case "prog.aci":
-		h.sendMsg(fmt.Sprintf("  serving"))
-		if data, err := h.tools.prepareACI(); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			h.sendMsg(fmt.Sprintf("    failed (%v)", err))
-		} else {
-			w.Write(data)
-			h.sendMsg(fmt.Sprintf("    done."))
-		}
 	default:
 		path, ok := h.fileSet[filepath.Base(r.URL.Path)]
 		if ok {
@@ -193,38 +182,16 @@ func (s *Server) UpdateFileSet(fileSet map[string]string) {
 	s.handler.fileSet = fileSet
 }
 
-func NewServer(auth Type, msgCapacity int) (*Server, error) {
-	return NewServerWithPaths(auth, msgCapacity, "actool", "go")
-}
-
-func NewServerWithPaths(auth Type, msgCapacity int, acTool, goTool string) (*Server, error) {
-	if !filepath.IsAbs(acTool) {
-		absAcTool, err := getTool(acTool)
-		if err != nil {
-			return nil, err
-		}
-		acTool = absAcTool
-	}
-	if !filepath.IsAbs(goTool) {
-		absGoTool, err := getTool(goTool)
-		if err != nil {
-			return nil, err
-		}
-		goTool = absGoTool
-	}
+func NewServer(auth Type, msgCapacity int) *Server {
 	stop := make(chan struct{})
 	msg := make(chan string, msgCapacity)
 	server := &Server{
 		Stop: stop,
 		Msg:  msg,
 		handler: &serverHandler{
-			auth: auth,
-			stop: stop,
-			msg:  msg,
-			tools: &aciToolkit{
-				acTool: acTool,
-				goTool: goTool,
-			},
+			auth:    auth,
+			stop:    stop,
+			msg:     msg,
 			fileSet: make(map[string]string),
 		},
 	}
@@ -246,19 +213,7 @@ func NewServerWithPaths(auth Type, msgCapacity int, acTool, goTool string) (*Ser
 	default:
 		panic("Woe is me!")
 	}
-	return server, nil
-}
-
-func getTool(tool string) (string, error) {
-	toolPath, err := exec.LookPath(tool)
-	if err != nil {
-		return "", fmt.Errorf("failed to find %s in $PATH: %v", tool, err)
-	}
-	absToolPath, err := filepath.Abs(toolPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to get absolute path of %s: %v", tool, err)
-	}
-	return absToolPath, nil
+	return server
 }
 
 func sprintCreds(host, auth, creds string) string {
