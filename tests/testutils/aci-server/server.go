@@ -33,6 +33,13 @@ const (
 	AuthOauth
 )
 
+type ServerType int
+
+const (
+	ServerOrdinary ServerType = iota
+	ServerQuay
+)
+
 type httpError struct {
 	code    int
 	message string
@@ -43,9 +50,11 @@ func (e *httpError) Error() string {
 }
 
 type serverHandler struct {
-	auth    AuthType
-	msg     chan<- string
-	fileSet map[string]string
+	serverType   ServerType
+	auth         AuthType
+	msg          chan<- string
+	fileSet      map[string]string
+	servedImages map[string]struct{}
 }
 
 func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -172,6 +181,9 @@ func (h *serverHandler) handleFile(w http.ResponseWriter, reqPath string) bool {
 		h.sendMsg("  not found.")
 		return false
 	}
+	if !h.canServe(reqPath, w) {
+		return false
+	}
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -179,7 +191,29 @@ func (h *serverHandler) handleFile(w http.ResponseWriter, reqPath string) bool {
 		return false
 	}
 	w.Write(contents)
+	reqImagePath, isAsc := isPathAnImageKey(reqPath)
+	if isAsc {
+		delete(h.servedImages, reqImagePath)
+	} else {
+		h.servedImages[reqPath] = struct{}{}
+	}
 	return true
+}
+
+func (h *serverHandler) canServe(reqPath string, w http.ResponseWriter) bool {
+	if h.serverType != ServerQuay {
+		return true
+	}
+	reqImagePath, isAsc := isPathAnImageKey(reqPath)
+	if !isAsc {
+		return true
+	}
+	if _, imageAlreadyServed := h.servedImages[reqImagePath]; imageAlreadyServed {
+		return true
+	}
+	w.WriteHeader(http.StatusAccepted)
+	h.sendMsg("  asking to defer the download")
+	return false
 }
 
 func (h *serverHandler) sendMsg(msg string) {
@@ -187,6 +221,14 @@ func (h *serverHandler) sendMsg(msg string) {
 	case h.msg <- msg:
 	default:
 	}
+}
+
+func isPathAnImageKey(path string) (string, bool) {
+	if strings.HasSuffix(path, ".asc") {
+		imagePath := strings.TrimSuffix(path, ".asc")
+		return imagePath, true
+	}
+	return "", false
 }
 
 type Server struct {
@@ -207,13 +249,23 @@ func (s *Server) UpdateFileSet(fileSet map[string]string) {
 }
 
 func NewServer(auth AuthType, msgCapacity int) *Server {
+	return NewServerFull(ServerQuay, auth, msgCapacity)
+}
+
+func NewQuayServer(auth AuthType, msgCapacity int) *Server {
+	return NewServerFull(ServerOrdinary, auth, msgCapacity)
+}
+
+func NewServerFull(serverType ServerType, auth AuthType, msgCapacity int) *Server {
 	msg := make(chan string, msgCapacity)
 	server := &Server{
 		Msg: msg,
 		handler: &serverHandler{
-			auth:    auth,
-			msg:     msg,
-			fileSet: make(map[string]string),
+			auth:         auth,
+			msg:          msg,
+			serverType:   serverType,
+			fileSet:      make(map[string]string),
+			servedImages: make(map[string]struct{}),
 		},
 	}
 	server.http = httptest.NewUnstartedServer(server.handler)
