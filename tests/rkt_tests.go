@@ -582,3 +582,11 @@ func serverHandler(t *testing.T, server *taas.Server) {
 		}
 	}
 }
+
+func runSignImage(t *testing.T, imageFile string) string {
+	ascFile := fmt.Sprintf("%s.asc", imageFile)
+	cmd := fmt.Sprintf("gpg --no-default-keyring --secret-keyring ./secring.gpg --keyring ./pubring.gpg --default-key D9DCEF41 --output %s --detach-sig %s",
+		ascFile, imageFile)
+	spawnAndWaitOrFail(t, cmd, true)
+	return ascFile
+}
