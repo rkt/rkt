@@ -621,3 +621,33 @@ func runDiscoveryServer(t *testing.T, serverType taas.ServerType, authType taas.
 	serverURL.Value.Set("")
 	return server
 }
+
+func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string) {
+	var cmd string
+	if prefix == "" {
+		cmd = fmt.Sprintf(`%s trust --root %s`, ctx.Cmd(), "key.gpg")
+	} else {
+		cmd = fmt.Sprintf(`%s trust --prefix %s %s`, ctx.Cmd(), prefix, "key.gpg")
+	}
+
+	child := spawnOrFail(t, cmd)
+	defer waitOrFail(t, child, true)
+
+	expected := "Are you sure you want to trust this key"
+	if err := expectWithOutput(child, expected); err != nil {
+		t.Fatalf("Expected but didn't find %q in %v", expected, err)
+	}
+
+	if err := child.SendLine("yes"); err != nil {
+		t.Fatalf("Cannot confirm rkt trust: %s", err)
+	}
+
+	if prefix == "" {
+		expected = "Added root key at"
+	} else {
+		expected = fmt.Sprintf(`Added key for prefix "%s" at`, prefix)
+	}
+	if err := expectWithOutput(child, expected); err != nil {
+		t.Fatalf("Expected but didn't find %q in %v", expected, err)
+	}
+}
