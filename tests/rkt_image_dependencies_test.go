@@ -96,7 +96,7 @@ func TestImageDependencies(t *testing.T) {
 	}
 	serverURL.Value.Set("127.0.0.1:443")
 
-	server := runServer(t, taas.None)
+	server := runServer(t, taas.AuthNone)
 	if server == nil {
 		panic("could not start the https test server")
 	}

@@ -564,7 +564,7 @@ func newAPIClientOrFail(t *testing.T, address string) (v1alpha.PublicAPIClient, 
 	return c, conn
 }
 
-func runServer(t *testing.T, auth taas.Type) *taas.Server {
+func runServer(t *testing.T, auth taas.AuthType) *taas.Server {
 	server := taas.NewServer(auth, 20)
 	go serverHandler(t, server)
 	return server

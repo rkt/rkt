@@ -29,7 +29,7 @@ import (
 func TestAuthSanity(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
-	server, image := runAuthServer(t, taas.None)
+	server, image := runAuthServer(t, taas.AuthNone)
 	defer authCleanup(server, image)
 	expectedRunRkt(ctx, t, server.URL, "sanity", authSuccessfulDownload)
 }
@@ -67,7 +67,7 @@ func TestAuthBasic(t *testing.T) {
 		{"basic-local-config", authConfDirLocal, authSuccessfulDownload},
 		{"basic-system-config", authConfDirSystem, authSuccessfulDownload},
 	}
-	testAuthGeneric(t, taas.Basic, tests)
+	testAuthGeneric(t, taas.AuthBasic, tests)
 }
 
 func TestAuthOauth(t *testing.T) {
@@ -76,10 +76,10 @@ func TestAuthOauth(t *testing.T) {
 		{"oauth-local-config", authConfDirLocal, authSuccessfulDownload},
 		{"oauth-system-config", authConfDirSystem, authSuccessfulDownload},
 	}
-	testAuthGeneric(t, taas.Oauth, tests)
+	testAuthGeneric(t, taas.AuthOauth, tests)
 }
 
-func testAuthGeneric(t *testing.T, auth taas.Type, tests []genericAuthTest) {
+func testAuthGeneric(t *testing.T, auth taas.AuthType, tests []genericAuthTest) {
 	server, image := runAuthServer(t, auth)
 	defer authCleanup(server, image)
 	ctx := testutils.NewRktRunCtx()
@@ -103,7 +103,7 @@ func testAuthGeneric(t *testing.T, auth taas.Type, tests []genericAuthTest) {
 func TestAuthOverride(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
-	server, image := runAuthServer(t, taas.Oauth)
+	server, image := runAuthServer(t, taas.AuthOauth)
 	defer authCleanup(server, image)
 	tests := []struct {
 		systemConfig         string
@@ -125,7 +125,7 @@ func TestAuthOverride(t *testing.T) {
 }
 
 func TestAuthIgnore(t *testing.T) {
-	server, image := runAuthServer(t, taas.Oauth)
+	server, image := runAuthServer(t, taas.AuthOauth)
 	defer authCleanup(server, image)
 	testAuthIgnoreBogusFiles(t, server)
 	testAuthIgnoreSubdirectories(t, server)
@@ -151,7 +151,7 @@ func testAuthIgnoreSubdirectories(t *testing.T, server *taas.Server) {
 	expectedRunRkt(ctx, t, server.URL, "oauth-subdirectories", authFailedDownload)
 }
 
-func runAuthServer(t *testing.T, auth taas.Type) (*taas.Server, string) {
+func runAuthServer(t *testing.T, auth taas.AuthType) (*taas.Server, string) {
 	server := runServer(t, auth)
 	image := patchTestACI(authACIName, fmt.Sprintf("--exec=/inspect --print-msg='%s'", authSuccessfulDownload))
 	fileSet := make(map[string]string, 1)

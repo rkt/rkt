@@ -25,12 +25,12 @@ import (
 	"strings"
 )
 
-type Type int
+type AuthType int
 
 const (
-	None Type = iota
-	Basic
-	Oauth
+	AuthNone AuthType = iota
+	AuthBasic
+	AuthOauth
 )
 
 type httpError struct {
@@ -43,7 +43,7 @@ func (e *httpError) Error() string {
 }
 
 type serverHandler struct {
-	auth    Type
+	auth    AuthType
 	msg     chan<- string
 	fileSet map[string]string
 }
@@ -62,12 +62,12 @@ func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *serverHandler) handleAuth(w http.ResponseWriter, r *http.Request) bool {
 	switch h.auth {
-	case None:
+	case AuthNone:
 		// no auth to do.
 		return true
-	case Basic:
+	case AuthBasic:
 		return h.handleBasicAuth(w, r)
-	case Oauth:
+	case AuthOauth:
 		return h.handleOauthAuth(w, r)
 	default:
 		panic("Woe is me!")
@@ -206,7 +206,7 @@ func (s *Server) UpdateFileSet(fileSet map[string]string) {
 	s.handler.fileSet = fileSet
 }
 
-func NewServer(auth Type, msgCapacity int) *Server {
+func NewServer(auth AuthType, msgCapacity int) *Server {
 	msg := make(chan string, msgCapacity)
 	server := &Server{
 		Msg: msg,
@@ -222,13 +222,13 @@ func NewServer(auth Type, msgCapacity int) *Server {
 	server.URL = server.http.URL
 	host := server.http.Listener.Addr().String()
 	switch auth {
-	case None:
+	case AuthNone:
 		// nothing to do
-	case Basic:
+	case AuthBasic:
 		creds := `"user": "bar",
 		"password": "baz"`
 		server.Conf = sprintCreds(host, "basic", creds)
-	case Oauth:
+	case AuthOauth:
 		creds := `"token": "sometoken"`
 		server.Conf = sprintCreds(host, "oauth", creds)
 	default:
