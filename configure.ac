@@ -476,24 +476,36 @@ RKT_REQ_ABS_PROG([ABS_GO], [go])
 
 #### LINKER FLAGS
 
-dnl Detect go version. Go 1.4 and earlier support only "-X variable
-dnl 'value'" format of assigning values to variables via linker
-dnl flags. Go 1.5 deprecates this format in favor of "-X
-dnl 'variable=value'" format. Drop this ugliness when we drop support
-dnl for Go older than 1.5.
-GO_VERSION=`$ABS_GO version | grep -o 'go@<:@@<:@:digit:@:>@@:>@\+\.@<:@@<:@:digit:@:>@@:>@\+' | grep -o '@<:@@<:@:digit:@:>@@:>@\+\.@<:@@<:@:digit:@:>@@:>@\+'`
-GO_MAJOR=`echo $GO_VERSION | grep -o '^@<:@@<:@:digit:@:>@@:>@\+'`
-GO_MINOR=`echo $GO_VERSION | grep -o '@<:@@<:@:digit:@:>@@:>@\+$'`
+dnl Digits regexp class. Square brackets are used by m4 for quoting,
+dnl so to get literal square brackets, m4 provides ugly @<:@ and @:>@
+dnl for [ and ].
+m4_define([DIGITS],[@<:@0-9@:>@])
 
-AS_IF([test $GO_MAJOR -gt 1 -o $GO_MINOR -gt 4],
-      dnl We have Go 1.5 or greater.
-      [RKT_XF() {
+dnl Detect go version. Go 1.4 support only "-X variable 'value'"
+dnl format of assigning values to variables via linker flags. Go 1.5
+dnl deprecates this format in favor of "-X 'variable=value'"
+dnl format. Drop this ugliness when we drop support for Go 1.4.
+GO_VERSION=`"${ABS_GO}" version | sed -e 's/^go version go\(DIGITS*\.DIGITS*\).*/\1/'`
+GO_MAJOR=`echo "${GO_VERSION}" | grep -o '^DIGITS\+'`
+GO_MINOR=`echo "${GO_VERSION}" | grep -o 'DIGITS\+$'`
+
+GO_BEST_MAJOR=1
+GO_BEST_MINOR=5
+GO_BEST_VERSION="${GO_BEST_MAJOR}.${GO_BEST_MINOR}"
+AC_MSG_CHECKING([whether we have go ${GO_BEST_VERSION} or newer])
+AS_IF([test "${GO_MAJOR}" -gt "${GO_BEST_MAJOR}" || test "${GO_MAJOR}" -eq "${GO_BEST_MAJOR}" -a "${GO_MINOR}" -ge "${GO_BEST_MINOR}"],
+      [AC_MSG_RESULT([yes])
+       RKT_XF() {
            echo "-X '$1=$2'"
        }],
-      dnl We have Go 1.4 or lesser.
-      [RKT_XF() {
-           echo "-X $1 '$2'"
-       }])
+      [AC_MSG_RESULT([no])
+       AC_MSG_CHECKING([whether we have go 1.4])
+       AS_VAR_IF([GO_VERSION],[1.4],
+                 [AC_MSG_RESULT([yes])
+                  RKT_XF() {
+                      echo "-X $1 '$2'"
+                  }],
+                 [AC_MSG_ERROR([*** go is too old (${GO_VERSION})])])])
 
 RKT_STAGE1_DEFAULT_NAME_LDFLAGS=`RKT_XF main.defaultStage1Name "${RKT_STAGE1_DEFAULT_NAME}"`
 RKT_STAGE1_DEFAULT_VERSION_LDFLAGS=`RKT_XF main.defaultStage1Version "${RKT_STAGE1_DEFAULT_VERSION}"`

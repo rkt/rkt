@@ -68,7 +68,7 @@ Alternatively, you can build rkt in a Docker container with the following comman
 Replace $SRC with the absolute path to your rkt source code:
 
 ```
-# docker run -v $SRC:/opt/rkt -i -t golang:1.4 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath autoconf file xz-utils patch bc && cd /opt/rkt && go get github.com/appc/spec/... && ./autogen.sh && ./configure && make"
+# docker run -v $SRC:/opt/rkt -i -t golang:1.5 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath autoconf file xz-utils patch bc && cd /opt/rkt && go get github.com/appc/spec/... && ./autogen.sh && ./configure && make"
 ```
 
 ### Building systemd in stage1 from the sources
