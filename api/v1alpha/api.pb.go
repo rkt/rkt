@@ -226,6 +226,8 @@ type Image struct {
 	ImportTimestamp int64 `protobuf:"varint,5,opt,name=import_timestamp" json:"import_timestamp,omitempty"`
 	// JSON-encoded byte array that represents the image manifest, optional.
 	Manifest []byte `protobuf:"bytes,6,opt,name=manifest,proto3" json:"manifest,omitempty"`
+	// Size of the image, (aci size) + (tree size).
+	Size int64 `protobuf:"varint,7,opt,name=size" json:"size,omitempty"`
 }
 
 func (m *Image) Reset()         { *m = Image{} }
