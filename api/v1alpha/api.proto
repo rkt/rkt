@@ -74,8 +74,8 @@ message Image {
         // JSON-encoded byte array that represents the image manifest, optional.
         bytes manifest = 6;
 
-	// Size of the image, (aci size) + (tree size).
-	int64 size = 7;
+        // Size is the size in bytes of this image in the store.
+        int64 size = 7;
 }
 
 // Network describes the network information of a pod.

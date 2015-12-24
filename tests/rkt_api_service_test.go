@@ -171,6 +171,9 @@ func checkImage(t *testing.T, ctx *testutils.RktRunCtx, m *v1alpha.Image, hasMan
 	if imgInfo.importTime != m.ImportTimestamp {
 		t.Errorf("Expected %q, saw %q", imgInfo.importTime, m.ImportTimestamp)
 	}
+	if imgInfo.size != m.Size {
+		t.Errorf("Expected size %d, saw %d", imgInfo.size, m.Size)
+	}
 
 	if hasManifest && !bytes.Equal(imgInfo.manifest, m.Manifest) {
 		t.Errorf("Expected %q, saw %q", string(imgInfo.manifest), string(m.Manifest))
