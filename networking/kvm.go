@@ -478,7 +478,10 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 			}
 			err = netlink.LinkSetMaster(link, br)
 			if err != nil {
-				// TODO: cleanup tap interface
+				rErr := tuntap.RemovePersistentIface(n.runtime.IfName, tuntap.Tap)
+				if rErr != nil {
+					log.Printf("Warning: could not cleanup tap interface: %v", rErr)
+				}
 				return nil, fmt.Errorf("can not add tap interface to bridge: %v", err)
 			}
 
