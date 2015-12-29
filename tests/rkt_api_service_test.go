@@ -16,10 +16,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"os"
 	"syscall"
 	"testing"
 
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
+	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
 	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/context"
 	"github.com/coreos/rkt/api/v1alpha"
@@ -141,6 +145,17 @@ func checkPod(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod, hasAppStat
 	checkPodApps(t, podInfo.apps, p.Apps, hasAppState)
 	checkPodNetworks(t, podInfo.networks, p.Networks)
 
+	if hasManifest {
+		var mfst schema.PodManifest
+		err := json.Unmarshal(podInfo.manifest, &mfst)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mfst.Annotations != nil {
+			checkAnnotations(t, mfst.Annotations, p.Annotations)
+		}
+	}
+
 	if hasManifest && !bytes.Equal(podInfo.manifest, p.Manifest) {
 		t.Errorf("Expected %q, saw %q", string(podInfo.manifest), string(p.Manifest))
 	} else if !hasManifest && p.Manifest != nil {
@@ -175,10 +190,36 @@ func checkImage(t *testing.T, ctx *testutils.RktRunCtx, m *v1alpha.Image, hasMan
 		t.Errorf("Expected size %d, saw %d", imgInfo.size, m.Size)
 	}
 
+	if hasManifest {
+		var mfst schema.ImageManifest
+		err := json.Unmarshal(imgInfo.manifest, &mfst)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mfst.Annotations != nil {
+			checkAnnotations(t, mfst.Annotations, m.Annotations)
+		}
+	}
+
 	if hasManifest && !bytes.Equal(imgInfo.manifest, m.Manifest) {
 		t.Errorf("Expected %q, saw %q", string(imgInfo.manifest), string(m.Manifest))
 	} else if !hasManifest && m.Manifest != nil {
 		t.Errorf("Expected nil manifest")
+	}
+}
+
+func checkAnnotations(t *testing.T, expected types.Annotations, actual []*v1alpha.KeyValue) {
+	if len(expected) != len(actual) {
+		t.Fatalf("Expected annotation counts to equal, expected %d, got %d", len(expected), len(actual))
+	}
+	for _, a := range actual {
+		val, ok := expected.Get(a.Key)
+		if !ok {
+			t.Fatalf("Expected annotation for key %q, got nothing", a.Key)
+		}
+		if val != a.Value {
+			t.Fatalf("Incorrect Annotation value, expected %q, got %q", val, a.Value)
+		}
 	}
 }
 
@@ -230,7 +271,40 @@ func TestAPIServiceListInspectPods(t *testing.T) {
 		t.Errorf("Unexpected result: %v, should see zero pods", resp.Pods)
 	}
 
-	patchImportAndRun("rkt-inspect-print.aci", []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=42"}, t, ctx)
+	patches := []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=42"}
+	patchImportAndFetchHash("rkt-inspect-print.aci", patches, t, ctx)
+	// TODO(derekparker) There is a bug where `patchImportAndFetchHash` does not
+	// return the full hash, which causes `InspectPod` to fail later in this test.
+	// So instead we list images to get the full, correct hash.
+	iresp, err := c.ListImages(context.Background(), &v1alpha.ListImagesRequest{})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(iresp.Images) == 0 {
+		t.Fatal("Expected non-zero images")
+	}
+	imgID, err := types.NewHash(iresp.Images[0].Id)
+	if err != nil {
+		t.Fatalf("Cannot generate types.Hash from %v: %v", iresp.Images[0].Id, err)
+	}
+	pm := schema.BlankPodManifest()
+	pm.Apps = schema.AppList{
+		schema.RuntimeApp{
+			Name: types.ACName("rkt-inspect"),
+			Image: schema.RuntimeImage{
+				Name: types.MustACIdentifier("coreos.com/rkt-inspect"),
+				ID:   *imgID,
+			},
+			Annotations: []types.Annotation{types.Annotation{Name: types.ACIdentifier("app-test"), Value: "app-test"}},
+		},
+	}
+	pm.Annotations = []types.Annotation{types.Annotation{Name: types.ACIdentifier("test"), Value: "test"}}
+	manifestFile := generatePodManifestFile(t, pm)
+	defer os.Remove(manifestFile)
+
+	runCmd := fmt.Sprintf("%s run --pod-manifest=%s", ctx.Cmd(), manifestFile)
+	esp := spawnOrFail(t, runCmd)
+	waitOrFail(t, esp, true)
 
 	// ListPods(detail=false).
 	resp, err = c.ListPods(context.Background(), &v1alpha.ListPodsRequest{})
@@ -251,6 +325,11 @@ func TestAPIServiceListInspectPods(t *testing.T) {
 			t.Fatalf("Unexpected error: %v", err)
 		}
 		checkPodDetails(t, ctx, inspectResp.Pod)
+
+		// Test Apps.
+		for i, app := range p.Apps {
+			checkAnnotations(t, pm.Apps[i].Annotations, app.Annotations)
+		}
 	}
 
 	// ListPods(detail=true).

@@ -242,8 +242,9 @@ func getApplist(p *pod) ([]*v1alpha.App, error) {
 		}
 
 		apps = append(apps, &v1alpha.App{
-			Name:  app.Name.String(),
-			Image: img,
+			Name:        app.Name.String(),
+			Image:       img,
+			Annotations: convertAnnotationsToKeyValue(app.Annotations),
 			// State and exit code are not returned in 'ListPods()'.
 		})
 	}
@@ -324,6 +325,7 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
 
 	pod.Manifest = data
 	pod.Apps = apps
+	pod.Annotations = convertAnnotationsToKeyValue(manifest.Annotations)
 
 	return pod, manifest, nil
 }
@@ -480,7 +482,20 @@ func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1al
 		ImportTimestamp: aciInfo.ImportTime.Unix(),
 		Manifest:        manifest,
 		Size:            aciInfo.Size,
+		Annotations:     convertAnnotationsToKeyValue(im.Annotations),
 	}, &im, nil
+}
+
+func convertAnnotationsToKeyValue(as types.Annotations) []*v1alpha.KeyValue {
+	kvs := make([]*v1alpha.KeyValue, 0, len(as))
+	for _, a := range as {
+		kv := &v1alpha.KeyValue{
+			Key:   string(a.Name),
+			Value: a.Value,
+		}
+		kvs = append(kvs, kv)
+	}
+	return kvs
 }
 
 // satisfiesImageFilter returns true if the image satisfies the filter.

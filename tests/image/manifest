@@ -49,5 +49,19 @@
         ],
         "ports": [
         ]
-    }
+    },
+    "annotations": [
+        {
+            "name": "coreos.com/rkt/stage1/run",
+            "value": "/ex/run"
+        },
+        {
+            "name": "coreos.com/rkt/stage1/enter",
+            "value": "/ex/enter"
+        },
+        {
+            "name": "coreos.com/rkt/stage1/gc",
+            "value": "/ex/gc"
+        }
+    ]
 }
