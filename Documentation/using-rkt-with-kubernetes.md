@@ -1,6 +1,6 @@
 # Using rkt with Kubernetes (aka "rktnetes")
 
-[Kubernetes](https://kubernetes.io) is a system for managing containerized applications across a cluster of machines.
+[Kubernetes](http://kubernetes.io) is a system for managing containerized applications across a cluster of machines.
 Kubernetes runs all applications in containers.
 In the default setup, this is performed using the Docker engine, but Kubernetes also features support for using rkt as its container runtime backend.
 This allows a Kubernetes cluster to leverage some of rkt's security features and native pod support.
