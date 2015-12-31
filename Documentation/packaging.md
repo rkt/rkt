@@ -34,7 +34,7 @@ The dependencies may differ depending on the version of built systemd.
 
 #### Basic run-time dependencies
 
-Linux configured with [suitable options](Documentation/hacking.md#run-time-requirements)
+Linux configured with [suitable options](hacking.md#run-time-requirements)
 
 #### Additional run-time dependencies for the host flavor
 
