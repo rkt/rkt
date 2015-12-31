@@ -471,7 +471,7 @@ This release also introduces a number of key features and minor changes:
 ## v0.4.2
 
 - First support for interactive containers, with the `rkt run --interactive`
-  flag. This is currently only supported if a container has one app. [#562](https://github.com/coreos/rkt/pull/562) #[601](//github.com/coreos/rkt/pull/601)
+  flag. This is currently only supported if a container has one app. [#562](https://github.com/coreos/rkt/pull/562) #[601](https://github.com/coreos/rkt/pull/601)
 - Add container IP address information to `rkt list`
 - Provide `/sys` and `/dev/shm` to apps (per spec)
 - Introduce "latest" pattern handling for local image index
