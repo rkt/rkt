@@ -18,7 +18,7 @@ boot  dev   etc            lib   media  opt  root  sbin  srv      tmp  var
 
 ## Use a Custom Stage 1
 
-rkt is designed and intended to be modular, using a [staged architecture](devel/architecture.md).
+rkt is designed and intended to be modular, using a [staged architecture](../devel/architecture.md).
 
 You can use a custom stage1 by using the `--stage1-image` flag.
 
@@ -26,7 +26,7 @@ You can use a custom stage1 by using the `--stage1-image` flag.
 # rkt --stage1-image=/tmp/stage1.aci run coreos.com/etcd:v2.0.0
 ```
 
-For more details see the [hacking documentation](hacking.md).
+For more details see the [hacking documentation](../hacking.md).
 
 ## Run a Pod in the Background
 
