@@ -1,7 +1,7 @@
 # Trying out rkt 
 
 This guide provides a short introduction to trying out rkt. 
-For a more in-depth guide of a full end-to-end workflow of building an application and running it using rkt, check out the [getting-started-guide][getting-started-guide.md]
+For a more in-depth guide of a full end-to-end workflow of building an application and running it using rkt, check out the [getting-started-guide](getting-started-guide.md)
 
 ## Using rkt on Linux
 
