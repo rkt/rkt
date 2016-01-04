@@ -24,8 +24,8 @@ Given an image ID or image name you can remove it from the local store.
 
 ```
 # rkt image rm sha512-a03f6bad952b coreos.com/etcd
-rkt: successfully removed aci for image: "sha512-a03f6bad952b"
-rkt: successfully removed aci for image: "coreos.com/etcd"
+rkt: successfully removed aci for image: "sha512-a03f6bad952bd548c2a57a5d2fbb46679aff697ccdacd6c62e1e1068d848a9d4" ("coreos.com/rkt/stage1")
+rkt: successfully removed aci for image: "sha512-91e98d7f167905b69cce91b163963ccd6a8e1c4bd34eeb44415f0462e4647e27" ("coreos.com/etcd")
 rkt: 2 image(s) successfully removed
 ```
 
@@ -40,8 +40,8 @@ This can be configured with the `--grace-period` flag.
 # rkt image gc --grace-period 48h
 rkt: removed treestore "deps-sha512-219204dd54481154aec8f6eafc0f2064d973c8a2c0537eab827b7414f0a36248"
 rkt: removed treestore "deps-sha512-3f2a1ad0e9739d977278f0019b6d7d9024a10a2b1166f6c9fdc98f77a357856d"
-rkt: successfully removed aci for image: "sha512-e39d4089a224718c41e6bef4c1ac692a6c1832c8c69cf28123e1f205a9355444"
-rkt: successfully removed aci for image: "sha512-0648aa44a37a8200147d41d1a9eff0757d0ac113a22411f27e4e03cbd1e84d0d"
+rkt: successfully removed aci for image: "sha512-e39d4089a224718c41e6bef4c1ac692a6c1832c8c69cf28123e1f205a9355444" ("coreos.com/rkt/stage1")
+rkt: successfully removed aci for image: "sha512-0648aa44a37a8200147d41d1a9eff0757d0ac113a22411f27e4e03cbd1e84d0d" ("coreos.com/etcd")
 rkt: 2 image(s) successfully removed
 ```
 

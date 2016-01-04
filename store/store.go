@@ -389,6 +389,8 @@ func (s *Store) ResolveKey(key string) (string, error) {
 	return aciInfos[0].BlobKey, nil
 }
 
+// ResolveName resolves an image name to a list of full keys and using the
+// store for resolution.
 func (s *Store) ResolveName(name string) ([]string, bool, error) {
 	var (
 		aciInfos []*ACIInfo
@@ -400,7 +402,7 @@ func (s *Store) ResolveName(name string) ([]string, bool, error) {
 		return err
 	})
 	if err != nil {
-		return []string{}, found, fmt.Errorf("error retrieving ACI Infos: %v", err)
+		return nil, found, fmt.Errorf("error retrieving ACI Infos: %v", err)
 	}
 
 	keys := make([]string, len(aciInfos))

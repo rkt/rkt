@@ -45,20 +45,15 @@ func TestImageRunRmName(t *testing.T) {
 	defer ctx.Cleanup()
 
 	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
-	t.Logf("Fetching %s: %v", imageFile, cmd)
 	spawnAndWaitOrFail(t, cmd, true)
 
 	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
 	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
 	cmd = fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), referencedACI)
-	t.Logf("Running %s: %v", referencedACI, cmd)
 	spawnAndWaitOrFail(t, cmd, true)
 
 	t.Logf("Retrieving stage1 image name")
-	stage1ImageName, err := getImageName(ctx, stage1App)
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	stage1ImageName := getImageName(t, ctx, stage1App)
 
 	t.Logf("Removing stage1 image (should work)")
 	if err := removeImage(ctx, stage1ImageName, true); err != nil {
@@ -83,13 +78,13 @@ func TestImageRunRmID(t *testing.T) {
 	defer ctx.Cleanup()
 
 	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
-	t.Logf("Fetching %s: %v", imageFile, cmd)
+	t.Logf("Fetching %s", imageFile)
 	spawnAndWaitOrFail(t, cmd, true)
 
 	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
 	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
 	cmd = fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), referencedACI)
-	t.Logf("Running %s: %v", referencedACI, cmd)
+	t.Logf("Running %s", referencedACI)
 	spawnAndWaitOrFail(t, cmd, true)
 
 	t.Logf("Retrieving stage1 image ID")
@@ -133,7 +128,7 @@ func TestImagePrepareRmNameRun(t *testing.T) {
 	defer ctx.Cleanup()
 
 	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
-	t.Logf("Fetching %s: %v", imageFile, cmd)
+	t.Logf("Fetching %s", imageFile)
 	spawnAndWaitOrFail(t, cmd, true)
 
 	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
@@ -153,10 +148,7 @@ func TestImagePrepareRmNameRun(t *testing.T) {
 	}
 
 	t.Logf("Retrieving stage1 image name")
-	stage1ImageName, err := getImageName(ctx, stage1App)
-	if err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	stage1ImageName := getImageName(t, ctx, stage1App)
 
 	t.Logf("Removing stage1 image (should work)")
 	if err := removeImage(ctx, stage1ImageName, true); err != nil {
@@ -174,7 +166,7 @@ func TestImagePrepareRmNameRun(t *testing.T) {
 	}
 
 	cmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), podID.String())
-	t.Logf("Running %s: %v", referencedACI, cmd)
+	t.Logf("Running %s", referencedACI)
 	spawnAndWaitOrFail(t, cmd, true)
 }
 
@@ -185,7 +177,7 @@ func TestImagePrepareRmIDRun(t *testing.T) {
 	defer ctx.Cleanup()
 
 	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
-	t.Logf("Fetching %s: %v", imageFile, cmd)
+	t.Logf("Fetching %s", imageFile)
 	spawnAndWaitOrFail(t, cmd, true)
 
 	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
@@ -238,26 +230,21 @@ func TestImagePrepareRmIDRun(t *testing.T) {
 	}
 
 	cmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), podID.String())
-	t.Logf("Running %s: %v", referencedACI, cmd)
+	t.Logf("Running %s", referencedACI)
 	spawnAndWaitOrFail(t, cmd, true)
 }
 
-func getImageName(ctx *testutils.RktRunCtx, name string) (string, error) {
+func getImageName(t *testing.T, ctx *testutils.RktRunCtx, name string) string {
 	cmd := fmt.Sprintf(`/bin/sh -c "%s image list --fields=name --no-legend | grep %s | cut -d: -f1"`, ctx.Cmd(), name)
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		return "", fmt.Errorf("Cannot exec rkt: %v", err)
-	}
+	child := spawnOrFail(t, cmd)
 	imageName, err := child.ReadLine()
 	imageName = strings.TrimSpace(imageName)
 	imageName = string(bytes.Trim([]byte(imageName), "\x00"))
 	if err != nil {
-		return "", fmt.Errorf("Cannot exec: %v", err)
+		t.Fatalf("Cannot exec: %v", err)
 	}
-	if err := child.Wait(); err != nil {
-		return "", fmt.Errorf("rkt didn't terminate correctly: %v", err)
-	}
-	return imageName, nil
+	waitOrFail(t, child, true)
+	return imageName
 }
 
 func getImageId(ctx *testutils.RktRunCtx, name string) (string, error) {
