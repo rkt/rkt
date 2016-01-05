@@ -248,15 +248,7 @@ func (s *Server) UpdateFileSet(fileSet map[string]string) {
 	s.handler.fileSet = fileSet
 }
 
-func NewServer(auth AuthType, msgCapacity int) *Server {
-	return NewServerFull(ServerQuay, auth, msgCapacity)
-}
-
-func NewQuayServer(auth AuthType, msgCapacity int) *Server {
-	return NewServerFull(ServerOrdinary, auth, msgCapacity)
-}
-
-func NewServerFull(serverType ServerType, auth AuthType, msgCapacity int) *Server {
+func NewServer(serverType ServerType, auth AuthType, msgCapacity int) *Server {
 	msg := make(chan string, msgCapacity)
 	server := &Server{
 		Msg: msg,

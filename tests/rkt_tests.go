@@ -565,8 +565,8 @@ func newAPIClientOrFail(t *testing.T, address string) (v1alpha.PublicAPIClient, 
 	return c, conn
 }
 
-func runServer(t *testing.T, auth taas.AuthType) *taas.Server {
-	server := taas.NewServer(auth, 20)
+func runServer(t *testing.T, serverType taas.ServerType, authType taas.AuthType) *taas.Server {
+	server := taas.NewServer(serverType, authType, 20)
 	go serverHandler(t, server)
 	return server
 }
@@ -613,13 +613,9 @@ func runDiscoveryServer(t *testing.T, serverType taas.ServerType, authType taas.
 		panic("could not find the httptest.serve flag")
 	}
 	serverURL.Value.Set("127.0.0.1:443")
-
-	server := taas.NewServerFull(serverType, authType, 20)
-	go serverHandler(t, server)
-
 	// reset httptest.serve to "" so we don't influence other tests
-	serverURL.Value.Set("")
-	return server
+	defer serverURL.Value.Set("")
+	return runServer(t, serverType, authType)
 }
 
 func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string) {
