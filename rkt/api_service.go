@@ -41,17 +41,17 @@ import (
 var (
 	supportedAPIVersion = "1.0.0-alpha"
 	cmdAPIService       = &cobra.Command{
-		Use:   "api-service [--listen-client-url=localhost:15441]",
+		Use:   `api-service [--listen="localhost:15441"]`,
 		Short: "Run API service (experimental, DO NOT USE IT)",
 		Run:   runWrapper(runAPIService),
 	}
 
-	flagAPIServiceListenClientURL string
+	flagAPIServiceListenAddr string
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdAPIService)
-	cmdAPIService.Flags().StringVar(&flagAPIServiceListenClientURL, "--listen-client-url", common.APIServiceListenClientURL, "address to listen on client API requests")
+	cmdAPIService.Flags().StringVar(&flagAPIServiceListenAddr, "listen", common.APIServiceListenAddr, "address to listen on client API requests")
 }
 
 // v1AlphaAPIServer implements v1Alpha.APIServer interface.
@@ -609,7 +609,7 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 
 	log.Print("API service starting...")
 
-	tcpl, err := net.Listen("tcp", flagAPIServiceListenClientURL)
+	tcpl, err := net.Listen("tcp", flagAPIServiceListenAddr)
 	if err != nil {
 		stderr("api-service: %v", err)
 		return 1
@@ -628,7 +628,7 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 
 	go publicServer.Serve(tcpl)
 
-	log.Printf("API service running on %v...", flagAPIServiceListenClientURL)
+	log.Printf("API service running on %v...", flagAPIServiceListenAddr)
 
 	<-exitCh
 

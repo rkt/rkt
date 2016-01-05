@@ -54,6 +54,12 @@ The metadata service helps running apps introspect their execution environment a
 
 * [metadata-service](subcommands/metadata-service.md)
 
+## API Service
+
+The API service allows clients to list and inspect pods and images running under rkt.
+
+* [api-service](subcommands/api-service.md)
+
 ## Global Options
 
 In addition to the flags used by individual `rkt` commands, `rkt` has a set of global options that are applicable to all commands.
