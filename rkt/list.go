@@ -212,18 +212,13 @@ func fmtNets(nis []netinfo.NetInfo) string {
 }
 
 func getImageName(p *pod, appName types.ACName) (string, error) {
-	aim, err := p.getAppsImageManifests()
+	aim, err := p.getAppImageManifest(appName)
 	if err != nil {
 		return "", fmt.Errorf("problem retrieving ImageManifests from pod: %v", err)
 	}
 
-	im, ok := aim[appName]
-	if !ok {
-		return "", fmt.Errorf("could not find appName in pod: %v", err)
-	}
-
-	imageName := im.Name.String()
-	if version, ok := im.Labels.Get("version"); ok {
+	imageName := aim.Name.String()
+	if version, ok := aim.Labels.Get("version"); ok {
 		imageName = fmt.Sprintf("%s:%s", imageName, version)
 	}
 
