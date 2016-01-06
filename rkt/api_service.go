@@ -358,25 +358,6 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 	return &v1alpha.ListPodsResponse{Pods: pods}, nil
 }
 
-// getImageInfo for a given image ID, returns the *v1alpha.Image object.
-//
-// FIXME(yifan): We should get the image manifest from the tree store.
-// See https://github.com/coreos/rkt/issues/1659
-func getImageInfo(store *store.Store, imageID string) (*v1alpha.Image, error) {
-	aciInfo, err := store.GetACIInfoWithBlobKey(imageID)
-	if err != nil {
-		log.Printf("Failed to get ACI info for image ID %q: %v", imageID, err)
-		return nil, err
-	}
-
-	image, _, err := aciInfoToV1AlphaAPIImage(store, aciInfo)
-	if err != nil {
-		log.Printf("Failed to convert ACI to v1alphaAPIImage for image ID %q: %v", imageID, err)
-		return nil, err
-	}
-	return image, nil
-}
-
 // fillAppInfo fills the apps' state and image info of the pod.
 func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 	statusDir, err := p.getStatusDir()
@@ -386,13 +367,37 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 	}
 
 	for _, app := range v1pod.Apps {
-		// Fill the image info in details.
-		image, err := getImageInfo(store, app.Image.Id)
+		// Fill app's image info (id, name, version).
+		fullImageID, err := store.ResolveKey(app.Image.Id)
 		if err != nil {
+			log.Printf("Failed to resolve the image ID %q: %v", app.Image.Id, err)
 			return err
 		}
-		image.Manifest = nil // Do not return image manifest in ListPod()/InspectPod().
-		app.Image = image
+
+		im, err := p.getAppImageManifest(*types.MustACName(app.Name))
+		if err != nil {
+			log.Printf("Failed to get image manifests for app %q: %v", app.Name, err)
+			return err
+		}
+
+		version, ok := im.Labels.Get("version")
+		if !ok {
+			version = "latest"
+		}
+
+		app.Image = &v1alpha.Image{
+			BaseFormat: &v1alpha.ImageFormat{
+				// Only support appc image now. If it's a docker image, then it
+				// will be transformed to appc before storing in the disk store.
+				Type:    v1alpha.ImageType_IMAGE_TYPE_APPC,
+				Version: schema.AppContainerVersion.String(),
+			},
+			Id:      fullImageID,
+			Name:    im.Name.String(),
+			Version: version,
+			// Other information are not available because they require the image
+			// info from store.
+		}
 
 		// Fill app's state and exit code.
 		value, err := p.readIntFromFile(filepath.Join(statusDir, app.Name))
@@ -599,6 +604,28 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 		images = append(images, image)
 	}
 	return &v1alpha.ListImagesResponse{Images: images}, nil
+}
+
+// getImageInfo for a given image ID, returns the *v1alpha.Image object.
+func getImageInfo(store *store.Store, imageID string) (*v1alpha.Image, error) {
+	key, err := store.ResolveKey(imageID)
+	if err != nil {
+		log.Printf("Failed to resolve the image ID %q: %v", imageID, err)
+		return nil, err
+	}
+
+	aciInfo, err := store.GetACIInfoWithBlobKey(key)
+	if err != nil {
+		log.Printf("Failed to get ACI info for image %q: %v", key, err)
+		return nil, err
+	}
+
+	image, _, err := aciInfoToV1AlphaAPIImage(store, aciInfo)
+	if err != nil {
+		log.Printf("Failed to convert ACI to v1alphaAPIImage for image %q: %v", key, err)
+		return nil, err
+	}
+	return image, nil
 }
 
 func (s *v1AlphaAPIServer) InspectImage(ctx context.Context, request *v1alpha.InspectImageRequest) (*v1alpha.InspectImageResponse, error) {

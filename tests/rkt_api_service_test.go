@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -105,8 +106,9 @@ func checkPodApps(t *testing.T, rawApps map[string]*appInfo, apiApps []*v1alpha.
 			if hasAppState && appInfo.exitCode != int(app.ExitCode) {
 				t.Errorf("Expected %v, saw %v", appInfo.exitCode, app.ExitCode)
 			}
-			if appInfo.image.id != app.Image.Id {
-				t.Errorf("Expected %q, saw %q", appInfo.image.id, app.Image.Id)
+			// Image hash in the pod manifest can be partial hash.
+			if !strings.HasPrefix(app.Image.Id, appInfo.image.id) {
+				t.Errorf("Expected partial hash of %q, saw %q", appInfo.image.id, app.Image.Id)
 			}
 		} else {
 			t.Errorf("Expected app (name: %q) in the app list", appInfo.name)
@@ -272,20 +274,10 @@ func TestAPIServiceListInspectPods(t *testing.T) {
 	}
 
 	patches := []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=42"}
-	patchImportAndFetchHash("rkt-inspect-print.aci", patches, t, ctx)
-	// TODO(derekparker) There is a bug where `patchImportAndFetchHash` does not
-	// return the full hash, which causes `InspectPod` to fail later in this test.
-	// So instead we list images to get the full, correct hash.
-	iresp, err := c.ListImages(context.Background(), &v1alpha.ListImagesRequest{})
+	imageHash := patchImportAndFetchHash("rkt-inspect-print.aci", patches, t, ctx)
+	imgID, err := types.NewHash(imageHash)
 	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-	if len(iresp.Images) == 0 {
-		t.Fatal("Expected non-zero images")
-	}
-	imgID, err := types.NewHash(iresp.Images[0].Id)
-	if err != nil {
-		t.Fatalf("Cannot generate types.Hash from %v: %v", iresp.Images[0].Id, err)
+		t.Fatalf("Cannot generate types.Hash from %v: %v", imageHash, err)
 	}
 	pm := schema.BlankPodManifest()
 	pm.Apps = schema.AppList{
