@@ -19,63 +19,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
 	"github.com/coreos/rkt/tests/testutils"
 )
 
 func runImage(t *testing.T, ctx *testutils.RktRunCtx, imageFile string, expected string, shouldFail bool) {
 	cmd := fmt.Sprintf(`%s --debug run --mds-register=false %s`, ctx.Cmd(), imageFile)
 	runRktAndCheckOutput(t, cmd, expected, shouldFail)
-}
-
-func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string) {
-	var cmd string
-	if prefix == "" {
-		cmd = fmt.Sprintf(`%s trust --root %s`, ctx.Cmd(), "key.gpg")
-	} else {
-		cmd = fmt.Sprintf(`%s trust --prefix %s %s`, ctx.Cmd(), prefix, "key.gpg")
-	}
-
-	child := spawnOrFail(t, cmd)
-	defer waitOrFail(t, child, true)
-
-	expected := "Are you sure you want to trust this key"
-	if err := expectWithOutput(child, expected); err != nil {
-		t.Fatalf("Expected but didn't find %q in %v", expected, err)
-	}
-
-	if err := child.SendLine("yes"); err != nil {
-		t.Fatalf("Cannot confirm rkt trust: %s", err)
-	}
-
-	if prefix == "" {
-		expected = "Added root key at"
-	} else {
-		expected = fmt.Sprintf(`Added key for prefix "%s" at`, prefix)
-	}
-	if err := expectWithOutput(child, expected); err != nil {
-		t.Fatalf("Expected but didn't find %q in %v", expected, err)
-	}
-}
-
-func runSignImage(t *testing.T, ctx *testutils.RktRunCtx, imageFile string) {
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Cannot get current working directory: %v", err)
-	}
-
-	cmd := fmt.Sprintf("gpg --no-default-keyring --secret-keyring %s/secring.gpg --keyring %s/pubring.gpg --default-key D9DCEF41 --output %s.asc --detach-sig %s",
-		dir, dir, imageFile, imageFile)
-	t.Logf("%s\n", cmd)
-	child, err := gexpect.Spawn(cmd)
-	if err != nil {
-		t.Fatalf("Cannot exec gpg: %s", err)
-	}
-
-	err = child.Wait()
-	if err != nil {
-		t.Fatalf("gpg terminate as expected: %v", err)
-	}
 }
 
 func TestTrust(t *testing.T) {
@@ -92,10 +41,10 @@ func TestTrust(t *testing.T) {
 	runImage(t, ctx, imageFile, "error opening signature file", true)
 
 	t.Logf("Sign the images\n")
-	runSignImage(t, ctx, imageFile)
-	defer os.Remove(imageFile + ".asc")
-	runSignImage(t, ctx, imageFile2)
-	defer os.Remove(imageFile2 + ".asc")
+	ascFile := runSignImage(t, imageFile)
+	defer os.Remove(ascFile)
+	ascFile = runSignImage(t, imageFile2)
+	defer os.Remove(ascFile)
 
 	t.Logf("Run the signed image without trusting the key: it should fail\n")
 	runImage(t, ctx, imageFile, "openpgp: signature made by unknown entity", true)

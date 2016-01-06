@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/tests/testutils"
+	taas "github.com/coreos/rkt/tests/testutils/aci-server"
 )
 
 // TestFetchFromFile tests that 'rkt fetch/run/prepare' for a file will always
@@ -362,6 +364,7 @@ func testInterruptingServerHandler(t *testing.T, imagePath string, kill, waitfor
 		<-waitforkill
 	}
 }
+
 func testSimpleServerHandler(t *testing.T, imagePath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "HEAD" {
@@ -382,6 +385,50 @@ func testSimpleServerHandler(t *testing.T, imagePath string) http.HandlerFunc {
 		_, err = io.Copy(w, file)
 		if err != nil {
 			panic(err)
+		}
+	}
+}
+
+func TestDeferredSignatureDownload(t *testing.T) {
+	imageName := "localhost/rkt-inspect-deferred-signature-download"
+	imageFileName := fmt.Sprintf("%s.aci", filepath.Base(imageName))
+	// no spaces between words, because of an actool limitation
+	successMsg := "deferredSignatureDownloadWasSuccessful"
+
+	args := []string{
+		fmt.Sprintf("--exec=/inspect --print-msg='%s'", successMsg),
+		fmt.Sprintf("--name=%s", imageName),
+	}
+	image := patchTestACI(imageFileName, args...)
+	defer os.Remove(image)
+
+	asc := runSignImage(t, image)
+	defer os.Remove(asc)
+	ascBase := filepath.Base(asc)
+
+	server := runDiscoveryServer(t, taas.ServerQuay, taas.AuthNone)
+	defer server.Close()
+	fileSet := make(map[string]string, 2)
+	fileSet[imageFileName] = image
+	fileSet[ascBase] = asc
+	server.UpdateFileSet(fileSet)
+
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	runRktTrust(t, ctx, "")
+
+	runCmd := fmt.Sprintf("%s --debug --insecure-options=tls run %s", ctx.Cmd(), imageName)
+	child := spawnOrFail(t, runCmd)
+	defer waitOrFail(t, child, true)
+
+	expectedMessages := []string{
+		"server requested deferring the signature download",
+		successMsg,
+	}
+	for _, msg := range expectedMessages {
+		if err := expectWithOutput(child, msg); err != nil {
+			t.Fatalf("Could not find expected msg %q, output follows:\n%v", msg, err)
 		}
 	}
 }

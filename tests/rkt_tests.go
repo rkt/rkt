@@ -19,6 +19,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -38,8 +39,8 @@ import (
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
 	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc"
 	"github.com/coreos/rkt/api/v1alpha"
-	taas "github.com/coreos/rkt/tests/test-auth-server/aci"
 	"github.com/coreos/rkt/tests/testutils"
+	taas "github.com/coreos/rkt/tests/testutils/aci-server"
 )
 
 const (
@@ -564,13 +565,8 @@ func newAPIClientOrFail(t *testing.T, address string) (v1alpha.PublicAPIClient, 
 	return c, conn
 }
 
-func runServer(t *testing.T, auth taas.Type) *taas.Server {
-	actool := testutils.GetValueFromEnvOrPanic("ACTOOL")
-	gotool := testutils.GetValueFromEnvOrPanic("GO")
-	server, err := taas.NewServerWithPaths(auth, 20, actool, gotool)
-	if err != nil {
-		t.Fatalf("Could not start server: %v", err)
-	}
+func runServer(t *testing.T, serverType taas.ServerType, authType taas.AuthType) *taas.Server {
+	server := taas.NewServer(serverType, authType, 20)
 	go serverHandler(t, server)
 	return server
 }
@@ -581,9 +577,73 @@ func serverHandler(t *testing.T, server *taas.Server) {
 		case msg, ok := <-server.Msg:
 			if ok {
 				t.Logf("server: %v", msg)
+			} else {
+				return
 			}
-		case <-server.Stop:
-			return
 		}
+	}
+}
+
+func runSignImage(t *testing.T, imageFile string) string {
+	ascFile := fmt.Sprintf("%s.asc", imageFile)
+	cmd := fmt.Sprintf("gpg --no-default-keyring --secret-keyring ./secring.gpg --keyring ./pubring.gpg --default-key D9DCEF41 --output %s --detach-sig %s",
+		ascFile, imageFile)
+	spawnAndWaitOrFail(t, cmd, true)
+	return ascFile
+}
+
+func runDiscoveryServer(t *testing.T, serverType taas.ServerType, authType taas.AuthType) *taas.Server {
+	// TODO: we can avoid setting the port manually when appc/spec gains
+	// the ability to specify ports for discovery.
+	// See https://github.com/appc/spec/pull/110
+	//
+	// httptest by default uses random ports. We override this via the
+	// "httptest.serve" flag.
+	//
+	// As long as we set the port via the "httptest.serve" flag, we have
+	// to use https rather than http because httptest.Start() would wait
+	// forever in "select {}", see
+	// https://golang.org/src/net/http/httptest/server.go?s=2768:2792#L92
+	//
+	// This means this test must:
+	// - use https only
+	// - ignore tls errors with --insecure-options=tls
+	serverURL := flag.Lookup("httptest.serve")
+	if serverURL == nil {
+		panic("could not find the httptest.serve flag")
+	}
+	serverURL.Value.Set("127.0.0.1:443")
+	// reset httptest.serve to "" so we don't influence other tests
+	defer serverURL.Value.Set("")
+	return runServer(t, serverType, authType)
+}
+
+func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string) {
+	var cmd string
+	if prefix == "" {
+		cmd = fmt.Sprintf(`%s trust --root %s`, ctx.Cmd(), "key.gpg")
+	} else {
+		cmd = fmt.Sprintf(`%s trust --prefix %s %s`, ctx.Cmd(), prefix, "key.gpg")
+	}
+
+	child := spawnOrFail(t, cmd)
+	defer waitOrFail(t, child, true)
+
+	expected := "Are you sure you want to trust this key"
+	if err := expectWithOutput(child, expected); err != nil {
+		t.Fatalf("Expected but didn't find %q in %v", expected, err)
+	}
+
+	if err := child.SendLine("yes"); err != nil {
+		t.Fatalf("Cannot confirm rkt trust: %s", err)
+	}
+
+	if prefix == "" {
+		expected = "Added root key at"
+	} else {
+		expected = fmt.Sprintf(`Added key for prefix "%s" at`, prefix)
+	}
+	if err := expectWithOutput(child, expected); err != nil {
+		t.Fatalf("Expected but didn't find %q in %v", expected, err)
 	}
 }

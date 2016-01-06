@@ -22,21 +22,29 @@ import (
 	"strings"
 	"testing"
 
-	taas "github.com/coreos/rkt/tests/test-auth-server/aci"
 	"github.com/coreos/rkt/tests/testutils"
+	taas "github.com/coreos/rkt/tests/testutils/aci-server"
 )
 
 func TestAuthSanity(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
-	server := runServer(t, taas.None)
-	defer server.Close()
+	server, image := runAuthServer(t, taas.AuthNone)
+	defer authCleanup(server, image)
 	expectedRunRkt(ctx, t, server.URL, "sanity", authSuccessfulDownload)
 }
 
 const (
-	authSuccessfulDownload = "Authentication succeeded."
+	// It cannot have any spaces, because of an actool limitation
+	// - if we pass an `--exec=/inspect
+	// --print-msg='Authentication succeeded.'` string to actool
+	// it will split the --exec value by spaces, disregarding the
+	// single quotes around "Authentication succeeded.". The
+	// result is that /inspect receives two parameters -
+	// "--print-msg='Authentication" and "succeeded.'"
+	authSuccessfulDownload = "AuthenticationSucceeded."
 	authFailedDownload     = "error downloading ACI: bad HTTP status code: 401"
+	authACIName            = "rkt-inspect-auth-test.aci"
 )
 
 type authConfDir int
@@ -59,7 +67,7 @@ func TestAuthBasic(t *testing.T) {
 		{"basic-local-config", authConfDirLocal, authSuccessfulDownload},
 		{"basic-system-config", authConfDirSystem, authSuccessfulDownload},
 	}
-	testAuthGeneric(t, taas.Basic, tests)
+	testAuthGeneric(t, taas.AuthBasic, tests)
 }
 
 func TestAuthOauth(t *testing.T) {
@@ -68,12 +76,12 @@ func TestAuthOauth(t *testing.T) {
 		{"oauth-local-config", authConfDirLocal, authSuccessfulDownload},
 		{"oauth-system-config", authConfDirSystem, authSuccessfulDownload},
 	}
-	testAuthGeneric(t, taas.Oauth, tests)
+	testAuthGeneric(t, taas.AuthOauth, tests)
 }
 
-func testAuthGeneric(t *testing.T, auth taas.Type, tests []genericAuthTest) {
-	server := runServer(t, auth)
-	defer server.Close()
+func testAuthGeneric(t *testing.T, auth taas.AuthType, tests []genericAuthTest) {
+	server, image := runAuthServer(t, auth)
+	defer authCleanup(server, image)
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 	for _, tt := range tests {
@@ -95,8 +103,8 @@ func testAuthGeneric(t *testing.T, auth taas.Type, tests []genericAuthTest) {
 func TestAuthOverride(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
-	server := runServer(t, taas.Oauth)
-	defer server.Close()
+	server, image := runAuthServer(t, taas.AuthOauth)
+	defer authCleanup(server, image)
 	tests := []struct {
 		systemConfig         string
 		localConfig          string
@@ -117,8 +125,8 @@ func TestAuthOverride(t *testing.T) {
 }
 
 func TestAuthIgnore(t *testing.T) {
-	server := runServer(t, taas.Oauth)
-	defer server.Close()
+	server, image := runAuthServer(t, taas.AuthOauth)
+	defer authCleanup(server, image)
 	testAuthIgnoreBogusFiles(t, server)
 	testAuthIgnoreSubdirectories(t, server)
 }
@@ -143,14 +151,27 @@ func testAuthIgnoreSubdirectories(t *testing.T, server *taas.Server) {
 	expectedRunRkt(ctx, t, server.URL, "oauth-subdirectories", authFailedDownload)
 }
 
-// expectedRunRkt tries to fetch and run a prog.aci from host within
-// given directory on host. Note that directory can be anything - it's
-// useful for ensuring that image name is unique and for descriptive
-// purposes.
-func expectedRunRkt(ctx *testutils.RktRunCtx, t *testing.T, host, dir, line string) {
+func runAuthServer(t *testing.T, auth taas.AuthType) (*taas.Server, string) {
+	server := runServer(t, taas.ServerOrdinary, auth)
+	image := patchTestACI(authACIName, fmt.Sprintf("--exec=/inspect --print-msg='%s'", authSuccessfulDownload))
+	fileSet := make(map[string]string, 1)
+	fileSet[authACIName] = image
+	server.UpdateFileSet(fileSet)
+	return server, image
+}
+
+func authCleanup(server *taas.Server, image string) {
+	server.Close()
+	_ = os.Remove(image)
+}
+
+// expectedRunRkt tries to fetch and run a an auth test ACI image from
+// host.
+func expectedRunRkt(ctx *testutils.RktRunCtx, t *testing.T, host, testName, line string) {
+	t.Logf("test name: %s", testName)
 	// First, check that --insecure-options=image,tls is required
 	// The server does not provide signatures for now.
-	cmd := fmt.Sprintf(`%s --debug run --mds-register=false %s/%s/prog.aci`, ctx.Cmd(), host, dir)
+	cmd := fmt.Sprintf(`%s --debug run --mds-register=false %s/%s`, ctx.Cmd(), host, authACIName)
 	child := spawnOrFail(t, cmd)
 	defer child.Wait()
 	signatureErrorLine := "error downloading the signature file"
@@ -159,7 +180,7 @@ func expectedRunRkt(ctx *testutils.RktRunCtx, t *testing.T, host, dir, line stri
 	}
 
 	// Then, run with --insecure-options=image,tls
-	cmd = fmt.Sprintf(`%s --debug --insecure-options=image,tls run --mds-register=false %s/%s/prog.aci`, ctx.Cmd(), host, dir)
+	cmd = fmt.Sprintf(`%s --debug --insecure-options=image,tls run --mds-register=false %s/%s`, ctx.Cmd(), host, authACIName)
 	child = spawnOrFail(t, cmd)
 	defer child.Wait()
 	if err := expectWithOutput(child, line); err != nil {

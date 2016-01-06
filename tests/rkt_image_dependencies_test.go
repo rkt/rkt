@@ -15,15 +15,14 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
-	taas "github.com/coreos/rkt/tests/test-auth-server/aci"
 	"github.com/coreos/rkt/tests/testutils"
+	taas "github.com/coreos/rkt/tests/testutils/aci-server"
 )
 
 const (
@@ -75,35 +74,8 @@ func TestImageDependencies(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	// TODO: we can avoid setting the port manually when appc/spec gains
-	// the ability to specify ports for discovery.
-	// See https://github.com/appc/spec/pull/110
-	//
-	// httptest by default uses random ports. We override this via the
-	// "httptest.serve" flag.
-	//
-	// As long as we set the port via the "httptest.serve" flag, we have
-	// to use https rather than http because httptest.Start() would wait
-	// forever in "select {}", see
-	// https://golang.org/src/net/http/httptest/server.go?s=2768:2792#L92
-	//
-	// This means this test must:
-	// - use https only
-	// - ignore tls errors with --insecure-options=tls
-	serverURL := flag.Lookup("httptest.serve")
-	if serverURL == nil {
-		panic("could not find the httptest.serve flag")
-	}
-	serverURL.Value.Set("127.0.0.1:443")
-
-	server := runServer(t, taas.None)
-	if server == nil {
-		panic("could not start the https test server")
-	}
+	server := runDiscoveryServer(t, taas.ServerOrdinary, taas.AuthNone)
 	defer server.Close()
-
-	// reset httptest.serve to "" so we don't influence other tests
-	serverURL.Value.Set("")
 
 	baseImage := getInspectImagePath()
 	_ = importImageAndFetchHash(t, ctx, baseImage)
