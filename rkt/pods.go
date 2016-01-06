@@ -915,29 +915,16 @@ func (p *pod) getAppsHashes() ([]types.Hash, error) {
 	return hashes, nil
 }
 
-type AppsImageManifests map[types.ACName]*schema.ImageManifest
-
-// getAppsImageManifests returns a map of ImageManifests keyed to the
-// corresponding App name.
-func (p *pod) getAppsImageManifests() (AppsImageManifests, error) {
-	apps, err := p.getApps()
+// getAppImageManifest returns an ImageManifest for the corresponding AppName.
+func (p *pod) getAppImageManifest(appName types.ACName) (*schema.ImageManifest, error) {
+	imb, err := ioutil.ReadFile(common.AppInfoImageManifestPath(p.path(), appName))
 	if err != nil {
 		return nil, err
 	}
 
-	aim := make(AppsImageManifests)
-	for _, a := range apps {
-		imb, err := ioutil.ReadFile(common.AppInfoImageManifestPath(p.path(), a.Name))
-		if err != nil {
-			return nil, err
-		}
-
-		im := &schema.ImageManifest{}
-		if err := im.UnmarshalJSON(imb); err != nil {
-			return nil, fmt.Errorf("invalid image manifest for app %q: %v", a.Name.String(), err)
-		}
-
-		aim[a.Name] = im
+	aim := &schema.ImageManifest{}
+	if err := aim.UnmarshalJSON(imb); err != nil {
+		return nil, fmt.Errorf("invalid image manifest for app %q: %v", appName.String(), err)
 	}
 
 	return aim, nil
