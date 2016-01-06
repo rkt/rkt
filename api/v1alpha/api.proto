@@ -76,6 +76,9 @@ message Image {
 
         // Size is the size in bytes of this image in the store.
         int64 size = 7;
+
+        // Annotations on this image.
+        repeated KeyValue annotations = 8;
 }
 
 // Network describes the network information of a pod.
@@ -112,6 +115,9 @@ message App {
         // Exit code of the app. optional, only valid if it's returned by InspectPod() and
         // the app has already exited.
         sint32 exit_code = 4;
+
+	// Annotations for this app.
+        repeated KeyValue annotations = 5;
 }
 
 // PodState defines the possible states of the pod.
@@ -165,6 +171,9 @@ message Pod {
 
         // JSON-encoded byte array that represents the pod manifest of the pod.
         bytes manifest = 6;
+
+        // Annotations on this pod.
+        repeated KeyValue annotations = 7;
 }
 
 message KeyValue {

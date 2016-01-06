@@ -226,8 +226,10 @@ type Image struct {
 	ImportTimestamp int64 `protobuf:"varint,5,opt,name=import_timestamp" json:"import_timestamp,omitempty"`
 	// JSON-encoded byte array that represents the image manifest, optional.
 	Manifest []byte `protobuf:"bytes,6,opt,name=manifest,proto3" json:"manifest,omitempty"`
-	// Size of the image, (aci size) + (tree size).
+	// Size is the size in bytes of this image in the store.
 	Size int64 `protobuf:"varint,7,opt,name=size" json:"size,omitempty"`
+	// Annotations on this image.
+	Annotations []*KeyValue `protobuf:"bytes,8,rep,name=annotations" json:"annotations,omitempty"`
 }
 
 func (m *Image) Reset()         { *m = Image{} }
@@ -237,6 +239,13 @@ func (*Image) ProtoMessage()    {}
 func (m *Image) GetBaseFormat() *ImageFormat {
 	if m != nil {
 		return m.BaseFormat
+	}
+	return nil
+}
+
+func (m *Image) GetAnnotations() []*KeyValue {
+	if m != nil {
+		return m.Annotations
 	}
 	return nil
 }
@@ -267,6 +276,8 @@ type App struct {
 	// Exit code of the app. optional, only valid if it's returned by InspectPod() and
 	// the app has already exited.
 	ExitCode int32 `protobuf:"zigzag32,4,opt,name=exit_code" json:"exit_code,omitempty"`
+	// Annotations for this app.
+	Annotations []*KeyValue `protobuf:"bytes,5,rep,name=annotations" json:"annotations,omitempty"`
 }
 
 func (m *App) Reset()         { *m = App{} }
@@ -276,6 +287,13 @@ func (*App) ProtoMessage()    {}
 func (m *App) GetImage() *Image {
 	if m != nil {
 		return m.Image
+	}
+	return nil
+}
+
+func (m *App) GetAnnotations() []*KeyValue {
+	if m != nil {
+		return m.Annotations
 	}
 	return nil
 }
@@ -305,6 +323,8 @@ type Pod struct {
 	Networks []*Network `protobuf:"bytes,5,rep,name=networks" json:"networks,omitempty"`
 	// JSON-encoded byte array that represents the pod manifest of the pod.
 	Manifest []byte `protobuf:"bytes,6,opt,name=manifest,proto3" json:"manifest,omitempty"`
+	// Annotations on this pod.
+	Annotations []*KeyValue `protobuf:"bytes,7,rep,name=annotations" json:"annotations,omitempty"`
 }
 
 func (m *Pod) Reset()         { *m = Pod{} }
@@ -321,6 +341,13 @@ func (m *Pod) GetApps() []*App {
 func (m *Pod) GetNetworks() []*Network {
 	if m != nil {
 		return m.Networks
+	}
+	return nil
+}
+
+func (m *Pod) GetAnnotations() []*KeyValue {
+	if m != nil {
+		return m.Annotations
 	}
 	return nil
 }
