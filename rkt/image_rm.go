@@ -38,16 +38,15 @@ func rmImages(s *store.Store, images []string) error {
 	done := 0
 	errors := 0
 	staleErrors := 0
+	imageMap := make(map[string]string)
+	imageCounter := make(map[string]int)
+
 	for _, pkey := range images {
-		var (
-			keys []string
-			name string
-		)
 		errors++
 		h, err := types.NewHash(pkey)
 		if err != nil {
 			var found bool
-			keys, found, err = s.ResolveName(pkey)
+			keys, found, err := s.ResolveName(pkey)
 			if len(keys) > 0 {
 				errors += len(keys) - 1
 			}
@@ -59,7 +58,10 @@ func rmImages(s *store.Store, images []string) error {
 				stderr("rkt: image name %q not found", pkey)
 				continue
 			}
-			name = pkey
+			for _, key := range keys {
+				imageMap[key] = pkey
+				imageCounter[key]++
+			}
 		} else {
 			key, err := s.ResolveKey(h.String())
 			if err != nil {
@@ -76,24 +78,32 @@ func rmImages(s *store.Store, images []string) error {
 				stderr("rkt: error retrieving aci infos for image %q: %v", key, err)
 				continue
 			}
-			name = aciinfo.Name
-			keys = append(keys, key)
+			imageMap[key] = aciinfo.Name
+			imageCounter[key]++
 		}
+	}
 
-		for _, key := range keys {
-			if err = s.RemoveACI(key); err != nil {
-				if serr, ok := err.(*store.StoreRemovalError); ok {
-					staleErrors++
-					stderr("rkt: some files cannot be removed for image %q (%q): %v", key, name, serr)
-				} else {
-					stderr("rkt: error removing aci for image %q (%q): %v", key, name, err)
-					continue
-				}
-			}
-			stdout("rkt: successfully removed aci for image: %q (%q)", key, name)
-			errors--
-			done++
+	// Adjust the error count by subtracting duplicate IDs from it,
+	// therefore allowing only one error per ID.
+	for _, c := range imageCounter {
+		if c > 1 {
+			errors -= c - 1
 		}
+	}
+
+	for key, name := range imageMap {
+		if err := s.RemoveACI(key); err != nil {
+			if serr, ok := err.(*store.StoreRemovalError); ok {
+				staleErrors++
+				stderr("rkt: some files cannot be removed for image %q (%q): %v", key, name, serr)
+			} else {
+				stderr("rkt: error removing aci for image %q (%q): %v", key, name, err)
+				continue
+			}
+		}
+		stdout("rkt: successfully removed aci for image: %q (%q)", key, name)
+		errors--
+		done++
 	}
 
 	if done > 0 {
