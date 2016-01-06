@@ -24,8 +24,8 @@ import (
 
 var (
 	cmdImageRm = &cobra.Command{
-		Use:   "rm IMAGEID...",
-		Short: "Remove image(s) with the given ID(s) from the local store",
+		Use:   "rm IMAGE...",
+		Short: "Remove image(s) with the given ID(s) or name(s) from the local store",
 		Run:   runWrapper(runRmImage),
 	}
 )
@@ -39,34 +39,61 @@ func rmImages(s *store.Store, images []string) error {
 	errors := 0
 	staleErrors := 0
 	for _, pkey := range images {
+		var (
+			keys []string
+			name string
+		)
 		errors++
 		h, err := types.NewHash(pkey)
 		if err != nil {
-			stderr("rkt: wrong image ID %q: %v", pkey, err)
-			continue
-		}
-		key, err := s.ResolveKey(h.String())
-		if err != nil {
-			stderr("rkt: image ID %q not valid: %v", pkey, err)
-			continue
-		}
-		if key == "" {
-			stderr("rkt: image ID %q doesn't exist", pkey)
-			continue
-		}
-
-		if err = s.RemoveACI(key); err != nil {
-			if serr, ok := err.(*store.StoreRemovalError); ok {
-				staleErrors++
-				stderr("rkt: some files cannot be removed for image ID %q: %v", pkey, serr)
-			} else {
-				stderr("rkt: error removing aci for image ID %q: %v", pkey, err)
+			var found bool
+			keys, found, err = s.ResolveName(pkey)
+			if len(keys) > 0 {
+				errors += len(keys) - 1
+			}
+			if err != nil {
+				stderr("rkt: %v", err)
 				continue
 			}
+			if !found {
+				stderr("rkt: image name %q not found", pkey)
+				continue
+			}
+			name = pkey
+		} else {
+			key, err := s.ResolveKey(h.String())
+			if err != nil {
+				stderr("rkt: image ID %q not valid: %v", pkey, err)
+				continue
+			}
+			if key == "" {
+				stderr("rkt: image ID %q doesn't exist", pkey)
+				continue
+			}
+
+			aciinfo, err := s.GetACIInfoWithBlobKey(key)
+			if err != nil {
+				stderr("rkt: error retrieving aci infos for image %q: %v", key, err)
+				continue
+			}
+			name = aciinfo.Name
+			keys = append(keys, key)
 		}
-		stdout("rkt: successfully removed aci for image ID: %q", pkey)
-		errors--
-		done++
+
+		for _, key := range keys {
+			if err = s.RemoveACI(key); err != nil {
+				if serr, ok := err.(*store.StoreRemovalError); ok {
+					staleErrors++
+					stderr("rkt: some files cannot be removed for image %q (%q): %v", key, name, serr)
+				} else {
+					stderr("rkt: error removing aci for image %q (%q): %v", key, name, err)
+					continue
+				}
+			}
+			stdout("rkt: successfully removed aci for image: %q (%q)", key, name)
+			errors--
+			done++
+		}
 	}
 
 	if done > 0 {

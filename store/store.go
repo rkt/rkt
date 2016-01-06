@@ -389,6 +389,30 @@ func (s *Store) ResolveKey(key string) (string, error) {
 	return aciInfos[0].BlobKey, nil
 }
 
+// ResolveName resolves an image name to a list of full keys and using the
+// store for resolution.
+func (s *Store) ResolveName(name string) ([]string, bool, error) {
+	var (
+		aciInfos []*ACIInfo
+		found    bool
+	)
+	err := s.db.Do(func(tx *sql.Tx) error {
+		var err error
+		aciInfos, found, err = GetACIInfosWithName(tx, name)
+		return err
+	})
+	if err != nil {
+		return nil, found, fmt.Errorf("error retrieving ACI Infos: %v", err)
+	}
+
+	keys := make([]string, len(aciInfos))
+	for i, aciInfo := range aciInfos {
+		keys[i] = aciInfo.BlobKey
+	}
+
+	return keys, found, nil
+}
+
 func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 	key, err := s.ResolveKey(key)
 	if err != nil {

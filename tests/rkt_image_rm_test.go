@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	rmImageReferenced = `rkt: image ID %q is referenced by some containers, cannot remove.`
-	rmImageOk         = "rkt: successfully removed aci for image ID:"
+	rmImageReferenced = `rkt: image %q is referenced by some containers, cannot remove.`
+	rmImageOk         = "rkt: successfully removed aci for image:"
 
 	unreferencedACI = "rkt-unreferencedACI.aci"
 	unreferencedApp = "coreos.com/rkt-unreferenced"
@@ -38,20 +38,53 @@ const (
 	stage1App = "coreos.com/rkt/stage1"
 )
 
-func TestImageRunRm(t *testing.T) {
+func TestImageRunRmName(t *testing.T) {
 	imageFile := patchTestACI(unreferencedACI, fmt.Sprintf("--name=%s", unreferencedApp))
 	defer os.Remove(imageFile)
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
 	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
-	t.Logf("Fetching %s: %v", imageFile, cmd)
 	spawnAndWaitOrFail(t, cmd, true)
 
 	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
 	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
 	cmd = fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), referencedACI)
-	t.Logf("Running %s: %v", referencedACI, cmd)
+	spawnAndWaitOrFail(t, cmd, true)
+
+	t.Logf("Retrieving stage1 image name")
+	stage1ImageName := getImageName(t, ctx, stage1App)
+
+	t.Logf("Removing stage1 image (should work)")
+	if err := removeImage(ctx, stage1ImageName, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	t.Logf("Removing image for app %s (should work)", referencedApp)
+	if err := removeImage(ctx, referencedApp, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	t.Logf("Removing image for app %s (should work)", unreferencedApp)
+	if err := removeImage(ctx, unreferencedApp, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestImageRunRmID(t *testing.T) {
+	imageFile := patchTestACI(unreferencedACI, fmt.Sprintf("--name=%s", unreferencedApp))
+	defer os.Remove(imageFile)
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
+	t.Logf("Fetching %s", imageFile)
+	spawnAndWaitOrFail(t, cmd, true)
+
+	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
+	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
+	cmd = fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), referencedACI)
+	t.Logf("Running %s", referencedACI)
 	spawnAndWaitOrFail(t, cmd, true)
 
 	t.Logf("Retrieving stage1 image ID")
@@ -73,29 +106,78 @@ func TestImageRunRm(t *testing.T) {
 	}
 
 	t.Logf("Removing stage1 image (should work)")
-	if err := removeImageId(ctx, stage1ImageID, true); err != nil {
+	if err := removeImage(ctx, stage1ImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	t.Logf("Removing image for app %s (should work)", referencedApp)
-	if err := removeImageId(ctx, referencedImageID, true); err != nil {
+	if err := removeImage(ctx, referencedImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	t.Logf("Removing image for app %s (should work)", unreferencedApp)
-	if err := removeImageId(ctx, unreferencedImageID, true); err != nil {
+	if err := removeImage(ctx, unreferencedImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestImagePrepareRmRun(t *testing.T) {
+func TestImagePrepareRmNameRun(t *testing.T) {
 	imageFile := patchTestACI(unreferencedACI, fmt.Sprintf("--name=%s", unreferencedApp))
 	defer os.Remove(imageFile)
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
 	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
-	t.Logf("Fetching %s: %v", imageFile, cmd)
+	t.Logf("Fetching %s", imageFile)
+	spawnAndWaitOrFail(t, cmd, true)
+
+	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
+	referencedACI := os.Getenv("RKT_INSPECT_IMAGE")
+	cmds := strings.Fields(ctx.Cmd())
+	prepareCmd := exec.Command(cmds[0], cmds[1:]...)
+	prepareCmd.Args = append(prepareCmd.Args, "--insecure-options=image", "prepare", referencedACI)
+	output, err := prepareCmd.Output()
+	if err != nil {
+		t.Fatalf("Cannot read the output: %v", err)
+	}
+
+	podIDStr := strings.TrimSpace(string(output))
+	podID, err := types.NewUUID(podIDStr)
+	if err != nil {
+		t.Fatalf("%q is not a valid UUID: %v", podIDStr, err)
+	}
+
+	t.Logf("Retrieving stage1 image name")
+	stage1ImageName := getImageName(t, ctx, stage1App)
+
+	t.Logf("Removing stage1 image (should work)")
+	if err := removeImage(ctx, stage1ImageName, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	t.Logf("Removing image for app %s (should work)", referencedApp)
+	if err := removeImage(ctx, referencedApp, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	t.Logf("Removing image for app %s (should work)", unreferencedApp)
+	if err := removeImage(ctx, unreferencedApp, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	cmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), podID.String())
+	t.Logf("Running %s", referencedACI)
+	spawnAndWaitOrFail(t, cmd, true)
+}
+
+func TestImagePrepareRmIDRun(t *testing.T) {
+	imageFile := patchTestACI(unreferencedACI, fmt.Sprintf("--name=%s", unreferencedApp))
+	defer os.Remove(imageFile)
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
+	t.Logf("Fetching %s", imageFile)
 	spawnAndWaitOrFail(t, cmd, true)
 
 	// at this point we know that RKT_INSPECT_IMAGE env var is not empty
@@ -133,23 +215,36 @@ func TestImagePrepareRmRun(t *testing.T) {
 	}
 
 	t.Logf("Removing stage1 image (should work)")
-	if err := removeImageId(ctx, stage1ImageID, true); err != nil {
+	if err := removeImage(ctx, stage1ImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	t.Logf("Removing image for app %s (should work)", referencedApp)
-	if err := removeImageId(ctx, referencedImageID, true); err != nil {
+	if err := removeImage(ctx, referencedImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	t.Logf("Removing image for app %s (should work)", unreferencedApp)
-	if err := removeImageId(ctx, unreferencedImageID, true); err != nil {
+	if err := removeImage(ctx, unreferencedImageID, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
 	cmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), podID.String())
-	t.Logf("Running %s: %v", referencedACI, cmd)
+	t.Logf("Running %s", referencedACI)
 	spawnAndWaitOrFail(t, cmd, true)
+}
+
+func getImageName(t *testing.T, ctx *testutils.RktRunCtx, name string) string {
+	cmd := fmt.Sprintf(`/bin/sh -c "%s image list --fields=name --no-legend | grep %s | cut -d: -f1"`, ctx.Cmd(), name)
+	child := spawnOrFail(t, cmd)
+	imageName, err := child.ReadLine()
+	imageName = strings.TrimSpace(imageName)
+	imageName = string(bytes.Trim([]byte(imageName), "\x00"))
+	if err != nil {
+		t.Fatalf("Cannot exec: %v", err)
+	}
+	waitOrFail(t, child, true)
+	return imageName
 }
 
 func getImageId(ctx *testutils.RktRunCtx, name string) (string, error) {
@@ -170,12 +265,12 @@ func getImageId(ctx *testutils.RktRunCtx, name string) (string, error) {
 	return imageID, nil
 }
 
-func removeImageId(ctx *testutils.RktRunCtx, imageID string, shouldWork bool) error {
-	expect := fmt.Sprintf(rmImageReferenced, imageID)
+func removeImage(ctx *testutils.RktRunCtx, image string, shouldWork bool) error {
+	expect := fmt.Sprintf(rmImageReferenced, image)
 	if shouldWork {
 		expect = rmImageOk
 	}
-	cmd := fmt.Sprintf("%s image rm %s", ctx.Cmd(), imageID)
+	cmd := fmt.Sprintf("%s image rm %s", ctx.Cmd(), image)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		return fmt.Errorf("Cannot exec: %v", err)
