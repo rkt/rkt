@@ -137,6 +137,7 @@ func TestSecFlags(t *testing.T) {
 		image  bool
 		tls    bool
 		onDisk bool
+		http   bool
 		err    bool
 	}{
 		{
@@ -144,36 +145,49 @@ func TestSecFlags(t *testing.T) {
 			image:  false,
 			tls:    false,
 			onDisk: false,
+			http:   false,
 		},
 		{
 			opts:   "image",
 			image:  true,
 			tls:    false,
 			onDisk: false,
+			http:   false,
 		},
 		{
 			opts:   "tls",
 			image:  false,
 			tls:    true,
 			onDisk: false,
+			http:   false,
 		},
 		{
 			opts:   "onDisk",
 			image:  false,
 			tls:    false,
 			onDisk: true,
+			http:   false,
+		},
+		{
+			opts:   "http",
+			image:  false,
+			tls:    false,
+			onDisk: false,
+			http:   true,
 		},
 		{
 			opts:   "all",
 			image:  true,
 			tls:    true,
 			onDisk: true,
+			http:   true,
 		},
 		{
 			opts:   "image,tls",
 			image:  true,
 			tls:    true,
 			onDisk: false,
+			http:   false,
 		},
 		{
 			opts: "i-am-sure-we-will-not-get-this-insecure-flag",
@@ -204,12 +218,16 @@ func TestSecFlags(t *testing.T) {
 			t.Errorf("test %d: expected on disk skip to be %v, got %v", i, tt.onDisk, got)
 		}
 
-		all := tt.onDisk && tt.tls && tt.image
+		if got := sf.AllowHTTP(); tt.http != got {
+			t.Errorf("test %d: expected http allowed to be %v, got %v", i, tt.http, got)
+		}
+
+		all := tt.http && tt.onDisk && tt.tls && tt.image
 		if got := sf.SkipAllSecurityChecks(); all != got {
 			t.Errorf("test %d: expected all skip to be %v, got %v", i, all, got)
 		}
 
-		any := tt.onDisk || tt.tls || tt.image
+		any := tt.http || tt.onDisk || tt.tls || tt.image
 		if got := sf.SkipAnySecurityChecks(); any != got {
 			t.Errorf("test %d: expected all skip to be %v, got %v", i, any, got)
 		}
