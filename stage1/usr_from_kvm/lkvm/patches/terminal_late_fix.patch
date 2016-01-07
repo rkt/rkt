@@ -2,7 +2,7 @@ diff --git a/term.c b/term.c
 index 9763211..dec0d79 100644
 --- a/term.c
 +++ b/term.c
-@@ -202,10 +202,16 @@ int term_init(struct kvm *kvm)
+@@ -202,10 +202,16 @@ static int term_init(struct kvm *kvm)
  
  	return 0;
  }
@@ -14,7 +14,7 @@ index 9763211..dec0d79 100644
 +//dev_init(term_init);
 +firmware_init(term_init);
  
- int term_exit(struct kvm *kvm)
+ static int term_exit(struct kvm *kvm)
  {
  	return 0;
  }
