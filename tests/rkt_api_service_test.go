@@ -288,7 +288,7 @@ func TestAPIServiceListInspectPods(t *testing.T) {
 		t.Fatalf("Cannot generate types.Hash from %v: %v", iresp.Images[0].Id, err)
 	}
 	pm := schema.BlankPodManifest()
-	pm.Apps = schema.AppList{
+	pm.Apps = []schema.RuntimeApp{
 		schema.RuntimeApp{
 			Name: types.ACName("rkt-inspect"),
 			Image: schema.RuntimeImage{
