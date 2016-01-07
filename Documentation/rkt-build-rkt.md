@@ -82,7 +82,7 @@ rkt run \
     --insecure-options=image \
     docker://debian:sid \
     --exec /bin/bash \
-    -- -c 'apt-get update && apt-get install -y --no-install-recommends ca-certificates gcc libc6-dev make automake wget git golang-go coreutils cpio squashfs-tools realpath autoconf file xz-utils patch bc locales && update-ca-certificates && cd /opt/rkt && ./autogen.sh && ./configure && make'
+    -- -c 'apt-get update && apt-get install -y --no-install-recommends ca-certificates gcc libc6-dev make automake wget git golang-go coreutils cpio squashfs-tools realpath autoconf file xz-utils patch bc locales libacl1-dev && update-ca-certificates && cd /opt/rkt && ./autogen.sh && ./configure && make'
 ```
 
 ## Fedora 22
@@ -94,5 +94,5 @@ rkt run \
     --insecure-options=image \
     docker://fedora:22 \
     --exec /bin/bash \
-    -- -c 'dnf install -y make gcc glibc-devel glibc-static cpio squashfs-tools gpg autoconf make automake golang file git wget tar xz patch bc hostname findutils openssl && cd /opt/rkt && ./autogen.sh && ./configure && make'
+    -- -c 'dnf install -y make gcc glibc-devel glibc-static cpio squashfs-tools gpg autoconf make automake golang file git wget tar xz patch bc hostname findutils openssl libacl-devel && cd /opt/rkt && ./autogen.sh && ./configure && make'
 ```
