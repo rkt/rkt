@@ -2,13 +2,9 @@
 
 language: go
 
-matrix:
- include:
-  - go: 1.4.3
-    install:
-     - go get golang.org/x/tools/cmd/cover
-     - go get golang.org/x/tools/cmd/vet
-  - go: 1.5.2
+go:
+  - 1.4.2
+  - 1.5.2
 
 before_install:
  - sudo apt-get update -qq
