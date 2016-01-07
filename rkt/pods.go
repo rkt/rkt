@@ -917,7 +917,7 @@ func (p *pod) getAppsHashes() ([]types.Hash, error) {
 
 // getAppImageManifest returns an ImageManifest for the corresponding AppName.
 func (p *pod) getAppImageManifest(appName types.ACName) (*schema.ImageManifest, error) {
-	imb, err := ioutil.ReadFile(common.AppInfoImageManifestPath(p.path(), appName))
+	imb, err := ioutil.ReadFile(common.AppImageManifestPath(p.path(), appName))
 	if err != nil {
 		return nil, err
 	}

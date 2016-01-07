@@ -121,7 +121,7 @@ func AppTreeStoreIDPath(root string, appName types.ACName) string {
 }
 
 // AppImageManifestPath returns the path to the app's ImageManifest file
-func AppInfoImageManifestPath(root string, appName types.ACName) string {
+func AppImageManifestPath(root string, appName types.ACName) string {
 	return filepath.Join(AppInfoPath(root, appName), aci.ManifestFile)
 }
 
