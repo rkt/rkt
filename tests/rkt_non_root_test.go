@@ -25,6 +25,14 @@ import (
 
 // TestNonRootReadInfo tests that non-root users that can do rkt list, rkt image list.
 func TestNonRootReadInfo(t *testing.T) {
+	if !common.SupportsUserNS() {
+		t.Skip("User namespaces are not supported on this host.")
+	}
+
+	if err := checkUserNS(); err != nil {
+		t.Skip("User namespaces don't work on this host.")
+	}
+
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 

@@ -647,3 +647,10 @@ func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string) {
 		t.Fatalf("Expected but didn't find %q in %v", expected, err)
 	}
 }
+
+func checkUserNS() error {
+	// CentOS 7 pretends to support user namespaces, but does not.
+	// See https://bugzilla.redhat.com/show_bug.cgi?id=1168776#c5
+	// Check if it really works
+	return exec.Command("/bin/bash", "-c", "unshare -U true").Run()
+}
