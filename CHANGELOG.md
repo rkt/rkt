@@ -1,3 +1,34 @@
+## v0.15.0
+
+rkt v0.15.0 is an incremental release with UX improvements, bug fixes, API service enhancements and new support for Go 1.5.
+
+#### New features and UX changes
+
+- Images can now be deleted from the store by both ID and name ([#1866](https://github.com/coreos/rkt/pull/1866)). See rkt's [rkt image rm](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/image.md#rkt-image-rm) documentation.
+- The journals of rkt pods can now be accessed by members of the Unix group rkt ([#1877](https://github.com/coreos/rkt/pull/1877)). See rkt's [journalctl -M](https://github.com/coreos/rkt/blob/master/Documentation/using-rkt-with-systemd.md#journalctl--m) documentation.
+
+#### Improved documentation
+
+- Mention [rkt integration in Nomad](https://github.com/coreos/rkt/blob/master/Documentation/using-rkt-with-nomad.md) ([#1884](https://github.com/coreos/rkt/pull/1884)).
+- Document [how to start the api service](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/api-service.md) and add a [program example](https://github.com/coreos/rkt/blob/master/api/v1alpha/client_example.go) explaining how the api service can be used to integrate rkt with other programs ([#1915](https://github.com/coreos/rkt/pull/1915)).
+
+#### API service
+
+- Programs using rkt's API service are now provided with the size of the images stored in rkt's store ([#1916](https://github.com/coreos/rkt/pull/1916)).
+- Programs using rkt's API service are now provided with any annotations found in the [image manifest](https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema) and [pod manifest](https://github.com/appc/spec/blob/master/spec/pods.md#pod-manifest-schema) ([#1924](https://github.com/coreos/rkt/pull/1924)).
+- Fix a panic in the API service by making the store database thread-safe ([#1892](https://github.com/coreos/rkt/pull/1892)) and by refactoring the API service functions to get the pod state ([#1893](https://github.com/coreos/rkt/pull/1893)).
+
+#### Build improvements
+
+- Add support for building rkt with Go 1.5, which is now the preferred version. rkt can still be built with Go 1.4 as best effort ([#1907](https://github.com/coreos/rkt/pull/1907)). As part of the move to Go 1.5, rkt now has a godep-save script to support Go 1.5 ([#1857](https://github.com/coreos/rkt/pull/1857)).
+- Continuous Integration on Travis now builds with both Go 1.4.2 and Go 1.5.2. Go 1.4.3 is avoided to workaround recent problems with go vet ([#1941](https://github.com/coreos/rkt/pull/1941)).
+
+#### Bug fixes
+
+- Fix regression issue when downloading image signatures from quay.io ([#1909](https://github.com/coreos/rkt/pull/1909)).
+- Properly cleanup the tap network interface that were not cleaned up in some error cases when using the kvm stage1 ([#1921](https://github.com/coreos/rkt/pull/1921)).
+- Fix a bug in the 9p filesystem used by the kvm stage1 that were preventing `apt-get` from working propertly ([#1918](https://github.com/coreos/rkt/pull/1918)).
+
 ## v0.14.0
 
 rkt v0.14.0 brings new features like resource isolators in the kvm stage1, a new stage1 flavor called *fly*, bug fixes and improved documentation.
