@@ -1,4 +1,4 @@
-# Build configuration
+# Build Configuration
 
 ## Overview
 
