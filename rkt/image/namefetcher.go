@@ -38,7 +38,7 @@ type nameFetcher struct {
 	Ks                 *keystore.Keystore
 	Debug              bool
 	Headers            map[string]config.Headerer
-	TrustKeysFromHttps bool
+	TrustKeysFromHTTPS bool
 }
 
 // GetHash runs the discovery, fetches the image, optionally verifies
@@ -60,7 +60,7 @@ func (f *nameFetcher) GetHash(app *discovery.App, a *asc) (string, error) {
 
 func (f *nameFetcher) discoverApp(app *discovery.App) (*discovery.Endpoints, error) {
 	insecure := discovery.InsecureNone
-	if f.InsecureFlags.SkipTlsCheck() {
+	if f.InsecureFlags.SkipTLSCheck() {
 		insecure = insecure | discovery.InsecureTls
 	}
 	if f.InsecureFlags.AllowHTTP() {
@@ -123,7 +123,7 @@ func (f *nameFetcher) fetchImageFromSingleEndpoint(app *discovery.App, aciURL st
 }
 
 func (f *nameFetcher) fetch(app *discovery.App, aciURL string, a *asc) (readSeekCloser, *cacheData, error) {
-	if f.InsecureFlags.SkipTlsCheck() && f.Ks != nil {
+	if f.InsecureFlags.SkipTLSCheck() && f.Ks != nil {
 		stderr("warning: TLS verification has been disabled")
 	}
 	if f.InsecureFlags.SkipImageCheck() && f.Ks != nil {
@@ -136,7 +136,7 @@ func (f *nameFetcher) fetch(app *discovery.App, aciURL string, a *asc) (readSeek
 	}
 
 	if f.InsecureFlags.SkipImageCheck() || f.Ks == nil {
-		o := f.getHttpOps()
+		o := f.getHTTPOps()
 		aciFile, cd, err := o.DownloadImage(u)
 		if err != nil {
 			return nil, nil, err
@@ -151,7 +151,7 @@ func (f *nameFetcher) fetchVerifiedURL(app *discovery.App, u *url.URL, a *asc) (
 	appName := app.Name.String()
 	f.maybeFetchPubKeys(appName)
 
-	o := f.getHttpOps()
+	o := f.getHTTPOps()
 	ascFile, retry, err := o.DownloadSignature(a)
 	if err != nil {
 		return nil, nil, err
@@ -186,11 +186,11 @@ func (f *nameFetcher) fetchVerifiedURL(app *discovery.App, u *url.URL, a *asc) (
 }
 
 func (f *nameFetcher) maybeFetchPubKeys(appName string) {
-	if f.TrustKeysFromHttps && !f.InsecureFlags.SkipTlsCheck() {
+	if f.TrustKeysFromHTTPS && !f.InsecureFlags.SkipTLSCheck() {
 		m := &pubkey.Manager{
 			AuthPerHost:        f.Headers,
-			InsecureAllowHttp:  false,
-			TrustKeysFromHttps: true,
+			InsecureAllowHTTP:  false,
+			TrustKeysFromHTTPS: true,
 			Ks:                 f.Ks,
 			Debug:              f.Debug,
 		}
@@ -249,12 +249,12 @@ func (f *nameFetcher) maybeOverrideAscFetcherWithRemote(ascURL string, a *asc) {
 		return
 	}
 	a.Location = ascURL
-	a.Fetcher = f.getHttpOps().GetAscRemoteFetcher()
+	a.Fetcher = f.getHTTPOps().GetAscRemoteFetcher()
 }
 
-func (f *nameFetcher) getHttpOps() *httpOps {
+func (f *nameFetcher) getHTTPOps() *httpOps {
 	return &httpOps{
-		InsecureSkipTLSVerify: f.InsecureFlags.SkipTlsCheck(),
+		InsecureSkipTLSVerify: f.InsecureFlags.SkipTLSCheck(),
 		S:       f.S,
 		Headers: f.Headers,
 	}

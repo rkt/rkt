@@ -64,7 +64,7 @@ func GC(pdir string, uuid *types.UUID, stage1Path string, debug bool) error {
 
 type mount struct {
 	id         int
-	parentId   int
+	parentID   int
 	mountPoint string
 	opt        map[string]struct{}
 }
@@ -78,7 +78,7 @@ func (m mounts) getMountDepth(i int) int {
 	for found := true; found; {
 		found = false
 		for _, mnt := range m {
-			if mnt.id == current.parentId {
+			if mnt.id == current.parentID {
 				ancestorCount += 1
 				current = mnt
 				found = true
@@ -100,8 +100,8 @@ func getMountsForPrefix(path string, mi io.Reader) (mounts, error) {
 	var podMounts mounts
 	sc := bufio.NewScanner(mi)
 	var (
-		mountId    int
-		parentId   int
+		mountID    int
+		parentID   int
 		mountPoint string
 		opt        map[string]struct{}
 	)
@@ -121,9 +121,9 @@ func getMountsForPrefix(path string, mi io.Reader) (mounts, error) {
 			var err error
 			switch i {
 			case 0:
-				mountId, err = strconv.Atoi(s)
+				mountID, err = strconv.Atoi(s)
 			case 1:
-				parentId, err = strconv.Atoi(s)
+				parentID, err = strconv.Atoi(s)
 			case 2, 3:
 			case 4:
 				mountPoint = s
@@ -145,8 +145,8 @@ func getMountsForPrefix(path string, mi io.Reader) (mounts, error) {
 
 		if strings.Contains(mountPoint, path) {
 			mnt := &mount{
-				id:         mountId,
-				parentId:   parentId,
+				id:         mountID,
+				parentID:   parentID,
 				mountPoint: mountPoint,
 				opt:        opt,
 			}

@@ -86,9 +86,9 @@ func TestNonRootReadInfo(t *testing.T) {
 	runRktAsGidAndCheckOutput(t, imgListCmd, "inspect-", false, gid)
 }
 
-// TestNonRootFetchRmGcImage tests that non-root users can remove images fetched by themselves but
+// TestNonRootFetchRmGCImage tests that non-root users can remove images fetched by themselves but
 // cannot remove images fetched by root, or gc any images.
-func TestNonRootFetchRmGcImage(t *testing.T) {
+func TestNonRootFetchRmGCImage(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
@@ -113,9 +113,9 @@ func TestNonRootFetchRmGcImage(t *testing.T) {
 	ctx.RunGC()
 
 	// Should not be able to do image gc.
-	imgGcCmd := fmt.Sprintf("%s image gc", ctx.Cmd())
-	t.Logf("Running %s", imgGcCmd)
-	runRktAsGidAndCheckOutput(t, imgGcCmd, "permission denied", true, gid)
+	imgGCCmd := fmt.Sprintf("%s image gc", ctx.Cmd())
+	t.Logf("Running %s", imgGCCmd)
+	runRktAsGidAndCheckOutput(t, imgGCCmd, "permission denied", true, gid)
 
 	// Should not be able to remove the image fetched by root.
 	imgRmCmd := fmt.Sprintf("%s image rm %s", ctx.Cmd(), rootImgHash)

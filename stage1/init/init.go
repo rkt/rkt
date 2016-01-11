@@ -376,9 +376,9 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		// we write /etc/machine-id here because systemd-nspawn needs it to link
 		// the container's journal to the host
 		mPath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "machine-id")
-		mId := strings.Replace(p.UUID.String(), "-", "", -1)
+		mID := strings.Replace(p.UUID.String(), "-", "", -1)
 
-		if err := ioutil.WriteFile(mPath, []byte(mId), 0644); err != nil {
+		if err := ioutil.WriteFile(mPath, []byte(mID), 0644); err != nil {
 			log.Fatalf("error writing /etc/machine-id: %v\n", err)
 		}
 

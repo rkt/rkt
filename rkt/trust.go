@@ -81,8 +81,8 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 
 	pkls := args
 	m := &pubkey.Manager{
-		InsecureAllowHttp:  flagAllowHTTP,
-		TrustKeysFromHttps: globalFlags.TrustKeysFromHttps,
+		InsecureAllowHTTP:  flagAllowHTTP,
+		TrustKeysFromHTTPS: globalFlags.TrustKeysFromHTTPS,
 		Ks:                 ks,
 		Debug:              globalFlags.Debug,
 	}

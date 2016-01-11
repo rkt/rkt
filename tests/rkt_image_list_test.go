@@ -26,30 +26,30 @@ import (
 	"github.com/coreos/rkt/tests/testutils"
 )
 
-type ImageId struct {
+type ImageID struct {
 	path string
 	hash string
 }
 
-func (imgId *ImageId) getShortHash(length int) (string, error) {
-	if length >= len(imgId.hash) {
-		return "", fmt.Errorf("getShortHash: Hash %s is shorter than %d chars", imgId.hash, length)
+func (imgID *ImageID) getShortHash(length int) (string, error) {
+	if length >= len(imgID.hash) {
+		return "", fmt.Errorf("getShortHash: Hash %s is shorter than %d chars", imgID.hash, length)
 	}
 
-	return imgId.hash[:length], nil
+	return imgID.hash[:length], nil
 }
 
-// containsConflictingHash returns an ImageId pair if a conflicting short hash is found. The minimum
+// containsConflictingHash returns an ImageID pair if a conflicting short hash is found. The minimum
 // hash of 2 chars is used for comparisons.
-func (imgId *ImageId) containsConflictingHash(imgIds []ImageId) (imgIdPair []ImageId, found bool) {
-	shortHash, err := imgId.getShortHash(2)
+func (imgID *ImageID) containsConflictingHash(imgIDs []ImageID) (imgIDPair []ImageID, found bool) {
+	shortHash, err := imgID.getShortHash(2)
 	if err != nil {
 		panic(fmt.Sprintf("containsConflictingHash: %s", err))
 	}
 
-	for _, iId := range imgIds {
-		if strings.HasPrefix(iId.hash, shortHash) {
-			imgIdPair = []ImageId{*imgId, iId}
+	for _, iID := range imgIDs {
+		if strings.HasPrefix(iID.hash, shortHash) {
+			imgIDPair = []ImageID{*imgID, iID}
 			found = true
 			break
 		}
@@ -121,8 +121,8 @@ func TestImageSize(t *testing.T) {
 	spawnAndWaitOrFail(t, gcCmd, true)
 
 	// image gc to remove the tree store
-	imageGcCmd := fmt.Sprintf("%s image gc", ctx.Cmd())
-	spawnAndWaitOrFail(t, imageGcCmd, true)
+	imageGCCmd := fmt.Sprintf("%s image gc", ctx.Cmd())
+	spawnAndWaitOrFail(t, imageGCCmd, true)
 
 	// check that the size goes back to the original (only the image size)
 	expectedStr = fmt.Sprintf("(?s)%s.*%d.*", imageHash, imageSize)
@@ -133,7 +133,7 @@ func TestImageSize(t *testing.T) {
 // command is usable by the commands that accept image hashes.
 func TestShortHash(t *testing.T) {
 	var (
-		imageIds []ImageId
+		imageIDs []ImageID
 		iter     int
 	)
 
@@ -143,30 +143,30 @@ func TestShortHash(t *testing.T) {
 		defer os.Remove(image)
 
 		imageHash := getHashOrPanic(image)
-		imageId := ImageId{image, imageHash}
+		imageID := ImageID{image, imageHash}
 
-		imageIdPair, isMatch := imageId.containsConflictingHash(imageIds)
+		imageIDPair, isMatch := imageID.containsConflictingHash(imageIDs)
 		if isMatch {
-			imageIds = imageIdPair
+			imageIDs = imageIDPair
 			break
 		}
 
-		imageIds = append(imageIds, imageId)
+		imageIDs = append(imageIDs, imageID)
 		iter++
 	}
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
 	// Pull the 2 images with matching first 2 hash chars into cas
-	for _, imageId := range imageIds {
-		cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageId.path)
-		t.Logf("Fetching %s: %v", imageId.path, cmd)
+	for _, imageID := range imageIDs {
+		cmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageID.path)
+		t.Logf("Fetching %s: %v", imageID.path, cmd)
 		spawnAndWaitOrFail(t, cmd, true)
 	}
 
 	// Get hash from 'rkt image list'
-	hash0 := fmt.Sprintf("sha512-%s", imageIds[0].hash[:12])
-	hash1 := fmt.Sprintf("sha512-%s", imageIds[1].hash[:12])
+	hash0 := fmt.Sprintf("sha512-%s", imageIDs[0].hash[:12])
+	hash1 := fmt.Sprintf("sha512-%s", imageIDs[1].hash[:12])
 	for _, hash := range []string{hash0, hash1} {
 		imageListCmd := fmt.Sprintf("%s image list --fields=id --no-legend", ctx.Cmd())
 		runRktAndCheckOutput(t, imageListCmd, hash, false)

@@ -17,11 +17,11 @@ package flag
 const (
 	insecureNone  = 0
 	insecureImage = 1 << (iota - 1)
-	insecureTls
+	insecureTLS
 	insecureOnDisk
 	insecureHTTP
 
-	insecureAll = (insecureImage | insecureTls | insecureOnDisk | insecureHTTP)
+	insecureAll = (insecureImage | insecureTLS | insecureOnDisk | insecureHTTP)
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 	insecureOptionsMap = map[string]int{
 		insecureOptions[0]: insecureNone,
 		insecureOptions[1]: insecureImage,
-		insecureOptions[2]: insecureTls,
+		insecureOptions[2]: insecureTLS,
 		insecureOptions[3]: insecureOnDisk,
 		insecureOptions[4]: insecureHTTP,
 		insecureOptions[5]: insecureAll,
@@ -57,8 +57,8 @@ func (sf *SecFlags) SkipImageCheck() bool {
 	return sf.hasFlag(insecureImage)
 }
 
-func (sf *SecFlags) SkipTlsCheck() bool {
-	return sf.hasFlag(insecureTls)
+func (sf *SecFlags) SkipTLSCheck() bool {
+	return sf.hasFlag(insecureTLS)
 }
 
 func (sf *SecFlags) SkipOnDiskCheck() bool {

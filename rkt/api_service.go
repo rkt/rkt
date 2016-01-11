@@ -117,7 +117,7 @@ func isPartOf(keyword, s string) bool {
 // satisfiesPodFilter returns true if the pod satisfies the filter.
 // The pod, manifest, filter must not be nil.
 func satisfiesPodFilter(pod v1alpha.Pod, manifest schema.PodManifest, filter v1alpha.PodFilter) bool {
-	// Filter according to the id.
+	// Filter according to the ID.
 	if len(filter.Ids) > 0 {
 		s := set.NewString(filter.Ids...)
 		if !s.Has(pod.Id) {

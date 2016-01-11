@@ -88,19 +88,19 @@ func TestImageRunRmID(t *testing.T) {
 	spawnAndWaitOrFail(t, cmd, true)
 
 	t.Logf("Retrieving stage1 image ID")
-	stage1ImageID, err := getImageId(ctx, stage1App)
+	stage1ImageID, err := getImageID(ctx, stage1App)
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 
 	t.Logf("Retrieving %s image ID", referencedApp)
-	referencedImageID, err := getImageId(ctx, referencedApp)
+	referencedImageID, err := getImageID(ctx, referencedApp)
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 
 	t.Logf("Retrieving %s image ID", unreferencedApp)
-	unreferencedImageID, err := getImageId(ctx, unreferencedApp)
+	unreferencedImageID, err := getImageID(ctx, unreferencedApp)
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
@@ -197,19 +197,19 @@ func TestImagePrepareRmIDRun(t *testing.T) {
 	}
 
 	t.Logf("Retrieving stage1 imageID")
-	stage1ImageID, err := getImageId(ctx, stage1App)
+	stage1ImageID, err := getImageID(ctx, stage1App)
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 
 	t.Logf("Retrieving %s image ID", referencedApp)
-	referencedImageID, err := getImageId(ctx, referencedApp)
+	referencedImageID, err := getImageID(ctx, referencedApp)
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 
 	t.Logf("Retrieving %s image ID", unreferencedApp)
-	unreferencedImageID, err := getImageId(ctx, unreferencedApp)
+	unreferencedImageID, err := getImageID(ctx, unreferencedApp)
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
@@ -247,7 +247,7 @@ func getImageName(t *testing.T, ctx *testutils.RktRunCtx, name string) string {
 	return imageName
 }
 
-func getImageId(ctx *testutils.RktRunCtx, name string) (string, error) {
+func getImageID(ctx *testutils.RktRunCtx, name string) (string, error) {
 	cmd := fmt.Sprintf(`/bin/sh -c "%s image list --fields=id,name --no-legend | grep %s | awk '{print $1}'"`, ctx.Cmd(), name)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {

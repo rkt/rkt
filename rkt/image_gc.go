@@ -29,20 +29,20 @@ const (
 )
 
 var (
-	cmdImageGc = &cobra.Command{
+	cmdImageGC = &cobra.Command{
 		Use:   "gc",
 		Short: "Garbage collect local store",
-		Run:   runWrapper(runGcImage),
+		Run:   runWrapper(runGCImage),
 	}
 	flagImageGracePeriod time.Duration
 )
 
 func init() {
-	cmdImage.AddCommand(cmdImageGc)
-	cmdImageGc.Flags().DurationVar(&flagImageGracePeriod, "grace-period", defaultImageGracePeriod, "duration to wait since an image was last used before removing it")
+	cmdImage.AddCommand(cmdImageGC)
+	cmdImageGC.Flags().DurationVar(&flagImageGracePeriod, "grace-period", defaultImageGracePeriod, "duration to wait since an image was last used before removing it")
 }
 
-func runGcImage(cmd *cobra.Command, args []string) (exit int) {
+func runGCImage(cmd *cobra.Command, args []string) (exit int) {
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
 		stderr("rkt: cannot open store: %v", err)

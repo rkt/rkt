@@ -146,7 +146,7 @@ func (f *Fetcher) fetchSingleImageByURL(urlStr string, a *asc) (string, error) {
 
 	switch u.Scheme {
 	case "http", "https":
-		return f.fetchSingleImageByHttpURL(u, a)
+		return f.fetchSingleImageByHTTPURL(u, a)
 	case "docker":
 		return f.fetchSingleImageByDockerURL(u)
 	case "file":
@@ -158,7 +158,7 @@ func (f *Fetcher) fetchSingleImageByURL(urlStr string, a *asc) (string, error) {
 	}
 }
 
-func (f *Fetcher) fetchSingleImageByHttpURL(u *url.URL, a *asc) (string, error) {
+func (f *Fetcher) fetchSingleImageByHTTPURL(u *url.URL, a *asc) (string, error) {
 	rem, err := f.getRemoteForURL(u)
 	if err != nil {
 		return "", err
@@ -166,7 +166,7 @@ func (f *Fetcher) fetchSingleImageByHttpURL(u *url.URL, a *asc) (string, error) 
 	if h := f.maybeCheckRemoteFromStore(rem, remoteCheckStrict); h != "" {
 		return h, nil
 	}
-	if h, err := f.maybeFetchHttpUrlFromRemote(rem, u, a); h != "" || err != nil {
+	if h, err := f.maybeFetchHTTPURLFromRemote(rem, u, a); h != "" || err != nil {
 		return h, err
 	}
 	return "", fmt.Errorf("unable to fetch image from URL %q: either image was not found in the store or store was disabled and fetching from remote yielded nothing or it was disabled", u.String())
@@ -182,7 +182,7 @@ func (f *Fetcher) fetchSingleImageByDockerURL(u *url.URL) (string, error) {
 	if h := f.maybeCheckRemoteFromStore(rem, remoteCheckLax); h != "" {
 		return h, nil
 	}
-	if h, err := f.maybeFetchDockerUrlFromRemote(u); h != "" || err != nil {
+	if h, err := f.maybeFetchDockerURLFromRemote(u); h != "" || err != nil {
 		return h, err
 	}
 	return "", fmt.Errorf("unable to fetch docker image from URL %q: either image was not found in the store or store was disabled and fetching from remote yielded nothing or it was disabled", u.String())
@@ -219,7 +219,7 @@ func (f *Fetcher) maybeCheckRemoteFromStore(rem *store.Remote, check remoteCheck
 	return ""
 }
 
-func (f *Fetcher) maybeFetchHttpUrlFromRemote(rem *store.Remote, u *url.URL, a *asc) (string, error) {
+func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *store.Remote, u *url.URL, a *asc) (string, error) {
 	if !f.StoreOnly {
 		stderr("remote fetching from URL %q", u.String())
 		hf := &httpFetcher{
@@ -235,7 +235,7 @@ func (f *Fetcher) maybeFetchHttpUrlFromRemote(rem *store.Remote, u *url.URL, a *
 	return "", nil
 }
 
-func (f *Fetcher) maybeFetchDockerUrlFromRemote(u *url.URL) (string, error) {
+func (f *Fetcher) maybeFetchDockerURLFromRemote(u *url.URL) (string, error) {
 	if !f.StoreOnly {
 		stderr("remote fetching from URL %q", u.String())
 		df := &dockerFetcher{
@@ -341,7 +341,7 @@ func (f *Fetcher) maybeFetchImageFromRemote(app *appBundle, a *asc) (string, err
 			Ks:                 f.Ks,
 			Debug:              f.Debug,
 			Headers:            f.Headers,
-			TrustKeysFromHttps: f.TrustKeysFromHttps,
+			TrustKeysFromHTTPS: f.TrustKeysFromHTTPS,
 		}
 		return nf.GetHash(app.App, a)
 	}

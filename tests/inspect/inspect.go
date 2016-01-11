@@ -64,9 +64,9 @@ var (
 		PrintDefaultGWv6  bool
 		PrintGWv4         string
 		PrintGWv6         string
-		GetHttp           string
-		ServeHttp         string
-		ServeHttpTimeout  int
+		GetHTTP           string
+		ServeHTTP         string
+		ServeHTTPTimeout  int
 		PrintIfaceCount   bool
 	}{}
 )
@@ -99,9 +99,9 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.PrintDefaultGWv6, "print-defaultgwv6", false, "Print the default IPv6 gateway")
 	globalFlagset.StringVar(&globalFlags.PrintGWv4, "print-gwv4", "", "Takes an interface name and prints its gateway's IPv4")
 	globalFlagset.StringVar(&globalFlags.PrintGWv6, "print-gwv6", "", "Takes an interface name and prints its gateway's IPv6")
-	globalFlagset.StringVar(&globalFlags.GetHttp, "get-http", "", "HTTP-Get from the given address")
-	globalFlagset.StringVar(&globalFlags.ServeHttp, "serve-http", "", "Serve the hostname via HTTP on the given address:port")
-	globalFlagset.IntVar(&globalFlags.ServeHttpTimeout, "serve-http-timeout", 30, "HTTP Timeout to wait for a client connection")
+	globalFlagset.StringVar(&globalFlags.GetHTTP, "get-http", "", "HTTP-Get from the given address")
+	globalFlagset.StringVar(&globalFlags.ServeHTTP, "serve-http", "", "Serve the hostname via HTTP on the given address:port")
+	globalFlagset.IntVar(&globalFlags.ServeHTTPTimeout, "serve-http-timeout", 30, "HTTP Timeout to wait for a client connection")
 	globalFlagset.BoolVar(&globalFlags.PrintIfaceCount, "print-iface-count", false, "Print the interface count")
 }
 
@@ -413,16 +413,16 @@ func main() {
 		// TODO
 	}
 
-	if globalFlags.ServeHttp != "" {
-		err := testutils.HttpServe(globalFlags.ServeHttp, globalFlags.ServeHttpTimeout)
+	if globalFlags.ServeHTTP != "" {
+		err := testutils.HTTPServe(globalFlags.ServeHTTP, globalFlags.ServeHTTPTimeout)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
 	}
 
-	if globalFlags.GetHttp != "" {
-		body, err := testutils.HttpGet(globalFlags.GetHttp)
+	if globalFlags.GetHTTP != "" {
+		body, err := testutils.HTTPGet(globalFlags.GetHTTP)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)

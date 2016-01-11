@@ -30,7 +30,7 @@ func TestCatManifest(t *testing.T) {
 	defer os.Remove(image)
 
 	imageHash := getHashOrPanic(image)
-	imgID := ImageId{path: image, hash: imageHash}
+	imgID := ImageID{path: image, hash: imageHash}
 
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
