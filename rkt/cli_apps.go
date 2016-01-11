@@ -19,7 +19,6 @@ package main
 import (
 	"fmt"
 	"net/url"
-	"path/filepath"
 	"strings"
 
 	"github.com/coreos/rkt/common/apps"
@@ -143,9 +142,6 @@ func (ae *appExec) Set(s string) error {
 	app := (*apps.Apps)(ae).Last()
 	if app == nil {
 		return fmt.Errorf("--exec must follow an image")
-	}
-	if !filepath.IsAbs(s) {
-		return fmt.Errorf("--exec must be absolute path")
 	}
 	if app.Exec != "" {
 		return fmt.Errorf("--exec specified multiple times for the same image")
