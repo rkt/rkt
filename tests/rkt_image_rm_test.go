@@ -28,8 +28,7 @@ import (
 )
 
 const (
-	rmImageReferenced = `rkt: image %q is referenced by some containers, cannot remove.`
-	rmImageOk         = "rkt: successfully removed aci for image:"
+	rmImageOk = "rkt: successfully removed aci for image:"
 
 	unreferencedACI = "rkt-unreferencedACI.aci"
 	unreferencedApp = "coreos.com/rkt-unreferenced"
@@ -56,19 +55,13 @@ func TestImageRunRmName(t *testing.T) {
 	stage1ImageName := getImageName(t, ctx, stage1App)
 
 	t.Logf("Removing stage1 image (should work)")
-	if err := removeImage(ctx, []string{stage1ImageName}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, stage1ImageName)
 
 	t.Logf("Removing image for app %s (should work)", referencedApp)
-	if err := removeImage(ctx, []string{referencedApp}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, referencedApp)
 
 	t.Logf("Removing image for app %s (should work)", unreferencedApp)
-	if err := removeImage(ctx, []string{unreferencedApp}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, unreferencedApp)
 }
 
 func TestImageRunRmID(t *testing.T) {
@@ -106,19 +99,13 @@ func TestImageRunRmID(t *testing.T) {
 	}
 
 	t.Logf("Removing stage1 image (should work)")
-	if err := removeImage(ctx, []string{stage1ImageID}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, stage1ImageID)
 
 	t.Logf("Removing image for app %s (should work)", referencedApp)
-	if err := removeImage(ctx, []string{referencedImageID}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, referencedImageID)
 
 	t.Logf("Removing image for app %s (should work)", unreferencedApp)
-	if err := removeImage(ctx, []string{unreferencedImageID}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, unreferencedImageID)
 }
 
 func TestImageRunRmDuplicate(t *testing.T) {
@@ -150,14 +137,10 @@ func TestImageRunRmDuplicate(t *testing.T) {
 	}
 
 	t.Logf("Removing image for app %s (should work)", referencedApp)
-	if err := removeImage(ctx, []string{referencedApp, referencedImageID}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, referencedApp, referencedImageID)
 
 	t.Logf("Removing image for app %s (should work)", unreferencedApp)
-	if err := removeImage(ctx, []string{unreferencedImageID, unreferencedApp}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, unreferencedImageID, unreferencedApp)
 }
 
 func TestImagePrepareRmNameRun(t *testing.T) {
@@ -190,19 +173,13 @@ func TestImagePrepareRmNameRun(t *testing.T) {
 	stage1ImageName := getImageName(t, ctx, stage1App)
 
 	t.Logf("Removing stage1 image (should work)")
-	if err := removeImage(ctx, []string{stage1ImageName}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, stage1ImageName)
 
 	t.Logf("Removing image for app %s (should work)", referencedApp)
-	if err := removeImage(ctx, []string{referencedApp}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, referencedApp)
 
 	t.Logf("Removing image for app %s (should work)", unreferencedApp)
-	if err := removeImage(ctx, []string{unreferencedApp}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, unreferencedApp)
 
 	cmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), podID.String())
 	t.Logf("Running %s", referencedACI)
@@ -254,19 +231,13 @@ func TestImagePrepareRmIDRun(t *testing.T) {
 	}
 
 	t.Logf("Removing stage1 image (should work)")
-	if err := removeImage(ctx, []string{stage1ImageID}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, stage1ImageID)
 
 	t.Logf("Removing image for app %s (should work)", referencedApp)
-	if err := removeImage(ctx, []string{referencedImageID}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, referencedImageID)
 
 	t.Logf("Removing image for app %s (should work)", unreferencedApp)
-	if err := removeImage(ctx, []string{unreferencedImageID}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, unreferencedImageID)
 
 	cmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), podID.String())
 	t.Logf("Running %s", referencedACI)
@@ -312,14 +283,10 @@ func TestImagePrepareRmDuplicate(t *testing.T) {
 	}
 
 	t.Logf("Removing image for app %s (should work)", referencedApp)
-	if err := removeImage(ctx, []string{referencedApp, referencedImageID}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, referencedApp, referencedImageID)
 
 	t.Logf("Removing image for app %s (should work)", unreferencedApp)
-	if err := removeImage(ctx, []string{unreferencedImageID, unreferencedApp}, true); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	removeImage(t, ctx, unreferencedImageID, unreferencedApp)
 
 	cmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), podID.String())
 	t.Logf("Running %s", referencedACI)
@@ -357,24 +324,16 @@ func getImageId(ctx *testutils.RktRunCtx, name string) (string, error) {
 	return imageID, nil
 }
 
-func removeImage(ctx *testutils.RktRunCtx, images []string, shouldWork bool) error {
-	cmd := fmt.Sprintf("%s image rm", ctx.Cmd())
-	for _, image := range images {
-		cmd += fmt.Sprintf(" %s", image)
-	}
-	expect := fmt.Sprintf(rmImageReferenced, images[0])
-	if shouldWork {
-		expect = rmImageOk
-	}
+func removeImage(t *testing.T, ctx *testutils.RktRunCtx, images ...string) {
+	cmd := fmt.Sprintf("%s image rm %s", ctx.Cmd(), strings.Join(images, " "))
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
-		return fmt.Errorf("Cannot exec: %v", err)
+		t.Fatalf("Cannot exec: %v", err)
 	}
-	if err := expectWithOutput(child, expect); err != nil {
-		return fmt.Errorf("Expected %q but not found: %v", expect, err)
+	if err := expectWithOutput(child, rmImageOk); err != nil {
+		t.Fatalf("Expected %q but not found: %v", rmImageOk, err)
 	}
 	if err := child.Wait(); err != nil {
-		return fmt.Errorf("rkt didn't terminate correctly: %v", err)
+		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
-	return nil
 }
