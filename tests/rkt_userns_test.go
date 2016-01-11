@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/tests/testutils"
 )
 
@@ -49,6 +50,14 @@ var usernsTests = []struct {
 }
 
 func TestUserns(t *testing.T) {
+	if !common.SupportsUserNS() {
+		t.Skip("User namespaces are not supported on this host.")
+	}
+
+	if err := checkUserNS(); err != nil {
+		t.Skip("User namespaces don't work on this host.")
+	}
+
 	image := patchTestACI("rkt-inspect-stat.aci", "--exec=/inspect --stat-file")
 	defer os.Remove(image)
 	ctx := testutils.NewRktRunCtx()
