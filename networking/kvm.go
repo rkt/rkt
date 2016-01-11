@@ -582,7 +582,7 @@ func (n *Networking) teardownKvmNets() {
 
 		_, err := n.execNetPlugin("DEL", &an, an.runtime.IfName)
 		if err != nil {
-			log.Printf("Error executing network plugin: %q", err)
+			log.Printf("Error executing network plugin: %v", err)
 		}
 		// remove masquerading if it was prepared
 		if an.conf.IPMasq {
@@ -592,7 +592,7 @@ func (n *Networking) teardownKvmNets() {
 				Mask: net.IPMask(an.runtime.Mask),
 			}, chain)
 			if err != nil {
-				log.Printf("Error on removing masquerading: %q", err)
+				log.Printf("Error on removing masquerading: %v", err)
 			}
 		}
 	}
