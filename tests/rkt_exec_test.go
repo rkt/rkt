@@ -55,6 +55,12 @@ func TestRunOverrideExec(t *testing.T) {
 			expectedLine: "inspect execed as: /inspect-link",
 		},
 		{
+			// Test overriding the entrypoint with a relative path
+			rktCmd:       fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s --exec inspect-link-bin -- --print-exec", ctx.Cmd(), execImage),
+			expectedLine: "inspect execed as: inspect-link-bin",
+		},
+
+		{
 			// Test overriding the entrypoint with a missing app section
 			rktCmd:       fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s --exec /inspect -- --print-exec", ctx.Cmd(), noappImage),
 			expectedLine: "inspect execed as: /inspect",
