@@ -57,6 +57,7 @@ Now we switch to the GitHub web UI to conduct the release:
 	export NAME="rkt-v0.16.0"
 	mkdir $NAME
 	cp release-build/bin/rkt release-build/bin/stage1-{coreos,kvm,fly}.aci $NAME/
+	cp -r dist/* $NAME/
 	tar czvf $NAME.tar.gz $NAME/
 ```
 
