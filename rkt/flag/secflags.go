@@ -19,19 +19,21 @@ const (
 	insecureImage = 1 << (iota - 1)
 	insecureTls
 	insecureOnDisk
+	insecureHTTP
 
-	insecureAll = (insecureImage | insecureTls | insecureOnDisk)
+	insecureAll = (insecureImage | insecureTls | insecureOnDisk | insecureHTTP)
 )
 
 var (
-	insecureOptions = []string{"none", "image", "tls", "ondisk", "all"}
+	insecureOptions = []string{"none", "image", "tls", "ondisk", "http", "all"}
 
 	insecureOptionsMap = map[string]int{
 		insecureOptions[0]: insecureNone,
 		insecureOptions[1]: insecureImage,
 		insecureOptions[2]: insecureTls,
 		insecureOptions[3]: insecureOnDisk,
-		insecureOptions[4]: insecureAll,
+		insecureOptions[4]: insecureHTTP,
+		insecureOptions[5]: insecureAll,
 	}
 )
 
@@ -61,6 +63,10 @@ func (sf *SecFlags) SkipTlsCheck() bool {
 
 func (sf *SecFlags) SkipOnDiskCheck() bool {
 	return sf.hasFlag(insecureOnDisk)
+}
+
+func (sf *SecFlags) AllowHTTP() bool {
+	return sf.hasFlag(insecureHTTP)
 }
 
 func (sf *SecFlags) SkipAllSecurityChecks() bool {

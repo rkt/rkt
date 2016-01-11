@@ -1,3 +1,9 @@
+## vUNRELEASED
+
+#### New features and UX changes
+
+- Explicitly allow http connections via a new 'http' option to `--insecure-options`. Any data and credentials will be sent in the clear.
+
 ## v0.15.0
 
 rkt v0.15.0 is an incremental release with UX improvements, bug fixes, API service enhancements and new support for Go 1.5.

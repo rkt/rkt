@@ -59,15 +59,12 @@ func (f *nameFetcher) GetHash(app *discovery.App, a *asc) (string, error) {
 }
 
 func (f *nameFetcher) discoverApp(app *discovery.App) (*discovery.Endpoints, error) {
-	// TODO(krnowak): Instead of hardcoding InsecureHttp, we probably
-	// should use f.InsecureFlags.AllowHttp and
-	// f.InsecureFlags.AllowHttpCredentials (if they are
-	// introduced) on it. Needs some work first on appc/spec side.
-	// https://github.com/appc/spec/issues/545
-	// https://github.com/coreos/rkt/issues/1836
-	insecure := discovery.InsecureHttp
+	insecure := discovery.InsecureNone
 	if f.InsecureFlags.SkipTlsCheck() {
 		insecure = insecure | discovery.InsecureTls
+	}
+	if f.InsecureFlags.AllowHTTP() {
+		insecure = insecure | discovery.InsecureHttp
 	}
 	hostHeaders := config.ResolveAuthPerHost(f.Headers)
 	ep, attempts, err := discovery.DiscoverEndpoints(*app, hostHeaders, insecure)
