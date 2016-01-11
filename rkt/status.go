@@ -50,20 +50,20 @@ func runStatus(cmd *cobra.Command, args []string) (exit int) {
 
 	p, err := getPodFromUUIDString(args[0])
 	if err != nil {
-		stderr("Problem retrieving pod: %v", err)
+		stderr.PrintE("Problem retrieving pod", err)
 		return 1
 	}
 	defer p.Close()
 
 	if flagWait {
 		if err := p.waitExited(); err != nil {
-			stderr("Unable to wait for pod: %v", err)
+			stderr.PrintE("Unable to wait for pod", err)
 			return 1
 		}
 	}
 
 	if err = printStatus(p); err != nil {
-		stderr("Unable to print status: %v", err)
+		stderr.PrintE("Unable to print status", err)
 		return 1
 	}
 
@@ -72,7 +72,7 @@ func runStatus(cmd *cobra.Command, args []string) (exit int) {
 
 // printStatus prints the pod's pid and per-app status codes
 func printStatus(p *pod) error {
-	stdout("state=%s", p.getState())
+	stdout.Printf("state=%s", p.getState())
 
 	created, err := p.getCreationTime()
 	if err != nil {
@@ -80,7 +80,7 @@ func printStatus(p *pod) error {
 	}
 	createdStr := created.Format(defaultTimeLayout)
 
-	stdout("created=%s", createdStr)
+	stdout.Printf("created=%s", createdStr)
 
 	started, err := p.getStartTime()
 	if err != nil {
@@ -89,11 +89,11 @@ func printStatus(p *pod) error {
 	var startedStr string
 	if !started.IsZero() {
 		startedStr = started.Format(defaultTimeLayout)
-		stdout("started=%s", startedStr)
+		stdout.Printf("started=%s", startedStr)
 	}
 
 	if p.isRunning() {
-		stdout("networks=%s", fmtNets(p.nets))
+		stdout.Printf("networks=%s", fmtNets(p.nets))
 	}
 
 	if !p.isEmbryo && !p.isPreparing && !p.isPrepared && !p.isAbortedPrepare && !p.isGarbage && !p.isGone {
@@ -107,9 +107,9 @@ func printStatus(p *pod) error {
 			return err
 		}
 
-		stdout("pid=%d\nexited=%t", pid, p.isExited)
+		stdout.Printf("pid=%d\nexited=%t", pid, p.isExited)
 		for app, stat := range stats {
-			stdout("app-%s=%d", app, stat)
+			stdout.Printf("app-%s=%d", app, stat)
 		}
 	}
 	return nil

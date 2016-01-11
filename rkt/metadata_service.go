@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -346,7 +345,7 @@ func handlePodManifest(w http.ResponseWriter, r *http.Request, pm *schema.PodMan
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(pm); err != nil {
-		log.Print(err)
+		stderr.Error(err)
 	}
 }
 
@@ -442,7 +441,7 @@ func handleImageManifest(w http.ResponseWriter, r *http.Request, _ *schema.PodMa
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(*im); err != nil {
-		log.Print(err)
+		stderr.Error(err)
 	}
 }
 
@@ -564,7 +563,7 @@ func logReq(h func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := &httpResp{w, 0}
 		h(resp, r)
-		log.Printf("%v %v - %v", r.Method, r.RequestURI, resp.status)
+		stderr.Printf("%v %v - %v", r.Method, r.RequestURI, resp.status)
 	}
 }
 
@@ -603,7 +602,7 @@ func runRegistrationServer(l net.Listener) {
 	r.HandleFunc("/pods/{uuid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
 
 	if err := http.Serve(l, r); err != nil {
-		stderr("Error serving registration HTTP: %v", err)
+		stderr.PrintE("Error serving registration HTTP", err)
 	}
 	close(exitCh)
 }
@@ -628,42 +627,42 @@ func runPublicServer(l net.Listener) {
 	r.HandleFunc("/pod/hmac/verify", logReq(handlePodVerify)).Methods("POST")
 
 	if err := http.Serve(l, r); err != nil {
-		stderr("Error serving pod HTTP: %v", err)
+		stderr.PrintE("Error serving pod HTTP", err)
 	}
 	close(exitCh)
 }
 
 func runMetadataService(cmd *cobra.Command, args []string) (exit int) {
 	signal.Notify(exitCh, syscall.SIGINT, syscall.SIGTERM)
-	log.Print("Metadata service starting...")
+	stderr.Print("Metadata service starting...")
 
 	unixl, err := unixListener()
 	if err != nil {
-		stderr(err.Error())
+		stderr.Error(err)
 		return 1
 	}
 	defer unixl.Close()
 
 	tcpl, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: flagListenPort})
 	if err != nil {
-		stderr("Error listening on port %v: %v", flagListenPort, err)
+		stderr.PrintE(fmt.Sprintf("Error listening on port %v", flagListenPort), err)
 		return 1
 	}
 	defer tcpl.Close()
 
 	if err := initCrypto(); err != nil {
-		stderr(err.Error())
+		stderr.Error(err)
 		return 1
 	}
 
 	go runRegistrationServer(unixl)
 	go runPublicServer(tcpl)
 
-	log.Print("Metadata service running...")
+	stderr.Print("Metadata service running...")
 
 	<-exitCh
 
-	log.Print("Metadata service exiting...")
+	stderr.Print("Metadata service exiting...")
 
 	return
 }

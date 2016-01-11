@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	rktflag "github.com/coreos/rkt/rkt/flag"
@@ -123,13 +122,11 @@ func init() {
 	var err error
 	flagImagesFields, err = rktflag.NewOptionList(fields, strings.Join(fields, ","))
 	if err != nil {
-		stderr("image-list: %v", err)
-		os.Exit(1)
+		stderr.FatalE("", err)
 	}
 	flagImagesSortFields, err = rktflag.NewOptionList(sortFields, l(importTime))
 	if err != nil {
-		stderr("image-list: %v", err)
-		os.Exit(1)
+		stderr.FatalE("", err)
 	}
 	flagImagesSortAsc = true
 
@@ -158,7 +155,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("images: cannot open store: %v\n", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
@@ -168,7 +165,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 	}
 	aciInfos, err := s.GetAllACIInfos(sortAciinfoFields, bool(flagImagesSortAsc))
 	if err != nil {
-		stderr("images: unable to get aci infos: %v", err)
+		stderr.PrintE("unable to get aci infos", err)
 		return 1
 	}
 
@@ -235,19 +232,19 @@ func runImages(cmd *cobra.Command, args []string) int {
 
 	if len(errors) > 0 {
 		sep := "----------------------------------------"
-		stderr("%d error(s) encountered when listing images:", len(errors))
-		stderr("%s", sep)
+		stderr.Printf("%d error(s) encountered when listing images:", len(errors))
+		stderr.Print(sep)
 		for _, err := range errors {
-			stderr("%s", err.Error())
-			stderr("%s", sep)
+			stderr.Error(err)
+			stderr.Print(sep)
 		}
-		stderr("Misc:")
-		stderr("  rkt's appc version: %s", schema.AppContainerVersion)
+		stderr.Print("Misc:")
+		stderr.Printf("  rkt's appc version: %s", schema.AppContainerVersion)
 		// make a visible break between errors and the listing
-		stderr("")
+		stderr.Print("")
 	}
 	tabOut.Flush()
-	stdout("%s", tabBuffer.String())
+	stdout.Print(tabBuffer.String())
 	return 0
 }
 

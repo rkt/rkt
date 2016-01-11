@@ -30,11 +30,11 @@ import (
 	specaci "github.com/appc/spec/aci"
 	"github.com/appc/spec/pkg/tarheader"
 	"github.com/appc/spec/schema/types"
-	"github.com/hashicorp/errwrap"
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/uid"
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -57,26 +57,26 @@ func (ts *TreeStore) Write(id string, key string, s *Store) (string, error) {
 	treepath := ts.GetPath(id)
 	fi, _ := os.Stat(treepath)
 	if fi != nil {
-		return "", fmt.Errorf("treestore: path %s already exists", treepath)
+		return "", fmt.Errorf("path %s already exists", treepath)
 	}
 	imageID, err := types.NewHash(key)
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: cannot convert key to imageID"), err)
+		return "", errwrap.Wrap(errors.New("cannot convert key to imageID"), err)
 	}
 	if err := os.MkdirAll(treepath, 0755); err != nil {
-		return "", errwrap.Wrap(fmt.Errorf("treestore: cannot create treestore directory %s", treepath), err)
+		return "", errwrap.Wrap(fmt.Errorf("cannot create treestore directory %s", treepath), err)
 	}
 	err = aci.RenderACIWithImageID(*imageID, treepath, s, uid.NewBlankUidRange())
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: cannot render aci"), err)
+		return "", errwrap.Wrap(errors.New("cannot render aci"), err)
 	}
 	hash, err := ts.Hash(id)
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: cannot calculate tree hash"), err)
+		return "", errwrap.Wrap(errors.New("cannot calculate tree hash"), err)
 	}
 	err = ioutil.WriteFile(filepath.Join(treepath, hashfilename), []byte(hash), 0644)
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: cannot write hash file"), err)
+		return "", errwrap.Wrap(errors.New("cannot write hash file"), err)
 	}
 	// before creating the "rendered" flag file we need to ensure that all data is fsynced
 	dfd, err := syscall.Open(treepath, syscall.O_RDONLY, 0)
@@ -85,23 +85,23 @@ func (ts *TreeStore) Write(id string, key string, s *Store) (string, error) {
 	}
 	defer syscall.Close(dfd)
 	if err := sys.Syncfs(dfd); err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: failed to sync data"), err)
+		return "", errwrap.Wrap(errors.New("failed to sync data"), err)
 	}
 	// Create rendered file
 	f, err := os.Create(filepath.Join(treepath, renderedfilename))
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: failed to write rendered file"), err)
+		return "", errwrap.Wrap(errors.New("failed to write rendered file"), err)
 	}
 	f.Close()
 
 	// Write the hash of the image that will use this tree store
 	err = ioutil.WriteFile(filepath.Join(treepath, imagefilename), []byte(key), 0644)
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: cannot write image file"), err)
+		return "", errwrap.Wrap(errors.New("cannot write image file"), err)
 	}
 
 	if err := syscall.Fsync(dfd); err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: failed to sync tree store directory"), err)
+		return "", errwrap.Wrap(errors.New("failed to sync tree store directory"), err)
 	}
 
 	treeSize, err := ts.Size(id)
@@ -125,7 +125,7 @@ func (ts *TreeStore) Remove(id string, s *Store) error {
 		return nil
 	}
 	if err != nil {
-		return errwrap.Wrap(errors.New("treestore: failed to open tree store directory"), err)
+		return errwrap.Wrap(errors.New("failed to open tree store directory"), err)
 	}
 
 	renderedFilePath := filepath.Join(treepath, renderedfilename)
@@ -142,12 +142,12 @@ func (ts *TreeStore) Remove(id string, s *Store) error {
 		// "rendered" flag file
 		f, err := os.Open(treepath)
 		if err != nil {
-			return errwrap.Wrap(errors.New("treestore: failed to open tree store directory"), err)
+			return errwrap.Wrap(errors.New("failed to open tree store directory"), err)
 		}
 		defer f.Close()
 		err = f.Sync()
 		if err != nil {
-			return errwrap.Wrap(errors.New("treestore: failed to sync tree store directory"), err)
+			return errwrap.Wrap(errors.New("failed to sync tree store directory"), err)
 		}
 	}
 
@@ -202,7 +202,7 @@ func (ts *TreeStore) Hash(id string) (string, error) {
 	iw := NewHashWriter(hash)
 	err := filepath.Walk(treepath, buildWalker(treepath, iw))
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: error walking rootfs"), err)
+		return "", errwrap.Wrap(errors.New("error walking rootfs"), err)
 	}
 
 	hashstring := hashToKey(hash)
@@ -216,14 +216,14 @@ func (ts *TreeStore) Check(id string) (string, error) {
 	treepath := ts.GetPath(id)
 	hash, err := ioutil.ReadFile(filepath.Join(treepath, hashfilename))
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: cannot read hash file"), err)
+		return "", errwrap.Wrap(errors.New("cannot read hash file"), err)
 	}
 	curhash, err := ts.Hash(id)
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: cannot calculate tree hash"), err)
+		return "", errwrap.Wrap(errors.New("cannot calculate tree hash"), err)
 	}
 	if curhash != string(hash) {
-		return "", fmt.Errorf("treestore: wrong tree hash: %s, expected: %s", curhash, hash)
+		return "", fmt.Errorf("wrong tree hash: %s, expected: %s", curhash, hash)
 	}
 	return curhash, nil
 }
@@ -233,7 +233,7 @@ func (ts *TreeStore) Check(id string) (string, error) {
 func (ts *TreeStore) Size(id string) (int64, error) {
 	sz, err := fileutil.DirSize(ts.GetPath(id))
 	if err != nil {
-		return -1, errwrap.Wrap(errors.New("treestore: error calculating size"), err)
+		return -1, errwrap.Wrap(errors.New("error calculating size"), err)
 	}
 	return sz, nil
 }
@@ -245,7 +245,7 @@ func (ts *TreeStore) GetImageHash(id string) (string, error) {
 
 	imgHash, err := ioutil.ReadFile(filepath.Join(treepath, imagefilename))
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("treestore: cannot read image file"), err)
+		return "", errwrap.Wrap(errors.New("cannot read image file"), err)
 	}
 
 	return string(imgHash), nil

@@ -19,11 +19,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/keystore"
+	"github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/multicall"
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
@@ -136,6 +136,9 @@ var (
 	cachedConfig  *config.Config
 	cachedDataDir string
 	cmdExitCode   int
+
+	stderr *log.Logger
+	stdout *log.Logger
 )
 
 var cmdRkt = &cobra.Command{
@@ -147,7 +150,7 @@ var cmdRkt = &cobra.Command{
 func init() {
 	sf, err := rktflag.NewSecFlags("none")
 	if err != nil {
-		stderr("rkt: problem initializing: %v", err)
+		fmt.Fprintf(os.Stderr, "rkt: problem initializing: %v", err)
 		os.Exit(1)
 	}
 
@@ -163,6 +166,12 @@ func init() {
 			globalFlags.InsecureFlags.PermissibleString()))
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.TrustKeysFromHTTPS, "trust-keys-from-https",
 		true, "automatically trust gpg keys fetched from https")
+
+	// Run this before the execution of each subcommand to set up output
+	cmdRkt.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		stderr = log.New(os.Stderr, cmd.Name(), globalFlags.Debug)
+		stdout = log.New(os.Stdout, "", false)
+	}
 
 	// TODO: Remove before 1.0
 	rktflag.InstallDeprecatedSkipVerify(cmdRkt.PersistentFlags(), sf)
@@ -195,22 +204,12 @@ func main() {
 	cmdRkt.SetHelpTemplate(`{{.UsageString}}`)
 
 	// // Uncomment to update rkt.bash
-	// stdout("Generating rkt.bash")
+	// stdout.Print("Generating rkt.bash")
 	// cmdRkt.GenBashCompletionFile("dist/bash_completion/rkt.bash")
 	// os.Exit(0)
 
 	cmdRkt.Execute()
 	os.Exit(cmdExitCode)
-}
-
-func stderr(format string, a ...interface{}) {
-	out := fmt.Sprintf(format, a...)
-	fmt.Fprintln(os.Stderr, strings.TrimSuffix(out, "\n"))
-}
-
-func stdout(format string, a ...interface{}) {
-	out := fmt.Sprintf(format, a...)
-	fmt.Fprintln(os.Stdout, strings.TrimSuffix(out, "\n"))
 }
 
 // where pod directories are created and locked before moving to prepared
@@ -271,7 +270,7 @@ func calculateDataDir() string {
 
 	// If above fails, then try to get the value from configuration.
 	if config, err := getConfig(); err != nil {
-		stderr("rkt: cannot get configuration: %v", err)
+		stderr.PrintE("cannot get configuration", err)
 		os.Exit(1)
 	} else {
 		if config.Paths.DataDir != "" {

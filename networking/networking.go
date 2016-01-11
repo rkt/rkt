@@ -17,7 +17,6 @@ package networking
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"syscall"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
+	"github.com/coreos/rkt/pkg/log"
 )
 
 const (
@@ -61,9 +61,14 @@ type NetConf struct {
 	MTU    int  `json:"mtu"`
 }
 
+var stderr *log.Logger
+
 // Setup creates a new networking namespace and executes network plugins to
 // set up networking. It returns in the new pod namespace
-func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common.NetList, localConfig, flavor string) (*Networking, error) {
+func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common.NetList, localConfig, flavor string, debug bool) (*Networking, error) {
+
+	stderr = log.New(os.Stderr, "networking", debug)
+
 	if flavor == "kvm" {
 		return kvmSetup(podRoot, podID, fps, netList, localConfig)
 	}
@@ -95,7 +100,7 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common
 	defer func() {
 		if err != nil {
 			if err := syscall.Unmount(nspath, 0); err != nil {
-				log.Printf("Error unmounting %q: %v", nspath, err)
+				stderr.PrintE(fmt.Sprintf("Error unmounting %q", nspath), err)
 			}
 		}
 	}()
@@ -143,7 +148,7 @@ func Load(podRoot string, podID *types.UUID) (*Networking, error) {
 		n, err := loadNet(ni.ConfPath)
 		if err != nil {
 			if !os.IsNotExist(err) {
-				log.Printf("Error loading %q: %v; ignoring", ni.ConfPath, err)
+				stderr.PrintE(fmt.Sprintf("Error loading %q; ignoring", ni.ConfPath), err)
 			}
 			continue
 		}
@@ -189,12 +194,12 @@ func (n *Networking) Teardown(flavor string) {
 	}
 
 	if err := n.enterHostNS(); err != nil {
-		log.Printf("Error switching to host netns: %v", err)
+		stderr.PrintE("Error switching to host netns", err)
 		return
 	}
 
 	if err := n.unforwardPorts(); err != nil {
-		log.Printf("Error removing forwarded ports: %v", err)
+		stderr.PrintE("Error removing forwarded ports", err)
 	}
 
 	n.teardownNets(n.nets)
@@ -202,7 +207,7 @@ func (n *Networking) Teardown(flavor string) {
 	if err := syscall.Unmount(n.podNSPath(), 0); err != nil {
 		// if already unmounted, umount(2) returns EINVAL
 		if !os.IsNotExist(err) && err != syscall.EINVAL {
-			log.Printf("Error unmounting %q: %v", n.podNSPath(), err)
+			stderr.PrintE(fmt.Sprintf("Error unmounting %q", n.podNSPath()), err)
 		}
 	}
 }
@@ -280,7 +285,7 @@ func withNetNS(curNS, tgtNS *os.File, f func() error) error {
 	if err := f(); err != nil {
 		// Attempt to revert the net ns in a known state
 		if err := ns.SetNS(curNS, syscall.CLONE_NEWNET); err != nil {
-			log.Printf("Cannot revert the net namespace: %v", err)
+			stderr.PrintE("Cannot revert the net namespace", err)
 		}
 		return err
 	}

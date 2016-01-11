@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,11 +36,11 @@ import (
 // GC enters the pod by fork/exec()ing the stage1's /gc similar to /init.
 // /gc can expect to have its CWD set to the pod root.
 // stage1Path is the path of the stage1 rootfs
-func GC(pdir string, uuid *types.UUID, stage1Path string, debug bool) error {
+func GC(pdir string, uuid *types.UUID, stage1Path string) error {
 	err := unregisterPod(pdir, uuid)
 	if err != nil {
 		// Probably not worth abandoning the rest
-		log.Printf("Warning: could not unregister pod with metadata service: %v", err)
+		log.PrintE("Warning: could not unregister pod with metadata service", err)
 	}
 
 	ep, err := getStage1Entrypoint(pdir, gcEntrypoint)
@@ -50,7 +49,7 @@ func GC(pdir string, uuid *types.UUID, stage1Path string, debug bool) error {
 	}
 
 	args := []string{filepath.Join(stage1Path, ep)}
-	if debug {
+	if debugEnabled {
 		args = append(args, "--debug")
 	}
 	args = append(args, uuid.String())
@@ -199,7 +198,7 @@ func MountGC(path, uuid string) error {
 	for _, mnt := range mnts {
 		if err := syscall.Unmount(mnt.mountPoint, 0); err != nil {
 			if err != syscall.ENOENT && err != syscall.EINVAL {
-				return errwrap.Wrap(fmt.Errorf("could not unmount at %v", mnt.mountPoint), err)
+				return errwrap.Wrap(fmt.Errorf("could not unmount %v", mnt.mountPoint), err)
 			}
 		}
 	}

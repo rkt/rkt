@@ -1,4 +1,4 @@
-// Copyright 2015 The rkt Authors
+// Copyright 2016 The rkt Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,37 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package common
 
 import (
-	"flag"
-	"io/ioutil"
 	"os"
 
 	rktlog "github.com/coreos/rkt/pkg/log"
 )
 
-const (
-	mountinfoPath = "/proc/self/mountinfo"
-)
-
-var (
-	debug bool
-
-	log *rktlog.Logger
-)
+var log *rktlog.Logger
 
 func init() {
-	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
-}
-
-func main() {
-	flag.Parse()
-
-	log = rktlog.New(os.Stderr, "gc", debug)
-	if !debug {
-		log.SetOutput(ioutil.Discard)
-	}
-	log.Printf("not doing anything since stage0 is cleaning up the mounts")
-	return
+	log = rktlog.New(os.Stderr, "stage1", false)
 }

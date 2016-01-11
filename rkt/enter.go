@@ -23,10 +23,10 @@ import (
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
-	"github.com/hashicorp/errwrap"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -61,50 +61,50 @@ func runEnter(cmd *cobra.Command, args []string) (exit int) {
 
 	p, err := getPodFromUUIDString(args[0])
 	if err != nil {
-		stderr("Problem problem retrieving pod: %v", err)
+		stderr.PrintE("problem retrieving pod", err)
 		return 1
 	}
 	defer p.Close()
 
 	if !p.isRunning() {
-		stderr("Pod %q isn't currently running", p.uuid)
+		stderr.Printf("Pod %q isn't currently running", p.uuid)
 		return 1
 	}
 
 	podPID, err := p.getContainerPID1()
 	if err != nil {
-		stderr("Unable to determine the pid for pod %q: %v", p.uuid, err)
+		stderr.PrintE(fmt.Sprintf("Unable to determine the pid for pod %q", p.uuid), err)
 		return 1
 	}
 
 	appName, err := getAppName(p)
 	if err != nil {
-		stderr("Unable to determine app name: %v", err)
+		stderr.PrintE("Unable to determine app name", err)
 		return 1
 	}
 
 	argv, err := getEnterArgv(p, args)
 	if err != nil {
-		stderr("Enter failed: %v", err)
+		stderr.PrintE("Enter failed", err)
 		return 1
 	}
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("Cannot open store: %v", err)
+		stderr.PrintE("Cannot open store", err)
 		return 1
 	}
 
 	stage1TreeStoreID, err := p.getStage1TreeStoreID()
 	if err != nil {
-		stderr("Error getting stage1 treeStoreID: %v", err)
+		stderr.PrintE("Error getting stage1 treeStoreID", err)
 		return 1
 	}
 
 	stage1RootFS := s.GetTreeStoreRootFS(stage1TreeStoreID)
 
 	if err = stage0.Enter(p.path(), podPID, *appName, stage1RootFS, argv); err != nil {
-		stderr("Enter failed: %v", err)
+		stderr.PrintE("Enter failed", err)
 		return 1
 	}
 	// not reached when stage0.Enter execs /enter
@@ -139,9 +139,9 @@ func getAppName(p *pod) (*types.ACName, error) {
 	default:
 	}
 
-	stderr("Pod contains multiple apps:")
+	stderr.Print("Pod contains multiple apps:")
 	for _, ra := range m.Apps {
-		stderr("\t%v", ra.Name)
+		stderr.Printf("\t%v", ra.Name)
 	}
 
 	return nil, fmt.Errorf("specify app using \"rkt enter --app= ...\"")
@@ -151,7 +151,7 @@ func getAppName(p *pod) (*types.ACName, error) {
 func getEnterArgv(p *pod, cmdArgs []string) ([]string, error) {
 	var argv []string
 	if len(cmdArgs) < 2 {
-		stderr("No command specified, assuming %q", defaultCmd)
+		stderr.Printf("No command specified, assuming %q", defaultCmd)
 		argv = []string{defaultCmd}
 	} else {
 		argv = cmdArgs[1:]

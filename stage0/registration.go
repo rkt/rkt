@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -171,7 +170,7 @@ func httpRequest(method, pth string, body io.Reader) error {
 			return nil
 
 		default:
-			log.Print(err)
+			log.Error(err)
 			time.Sleep(retryPause)
 		}
 	}

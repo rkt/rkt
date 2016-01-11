@@ -15,9 +15,6 @@
 package common
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 )
@@ -72,7 +69,7 @@ func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume
 				GID:  &defaultGID,
 			}
 
-			fmt.Fprintf(os.Stderr, "rkt: warning: no volume specified for mount point %q, implicitly creating an \"empty\" volume. This volume will be removed when the pod is garbage-collected.\n", mp.Name)
+			log.Printf("warning: no volume specified for mount point %q, implicitly creating an \"empty\" volume. This volume will be removed when the pod is garbage-collected.", mp.Name)
 
 			volumes[mp.Name] = emptyVol
 			ra.Mounts = append(ra.Mounts, schema.Mount{Volume: mp.Name, Path: mp.Path})

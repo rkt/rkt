@@ -38,7 +38,6 @@ package common
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,8 +45,8 @@ import (
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/go-systemd/unit"
-	"github.com/hashicorp/errwrap"
 	"github.com/coreos/rkt/common"
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -242,7 +241,7 @@ func VolumesToKvmDiskArgs(volumes []types.Volume) []string {
 		if vol.Kind == "host" {
 			// eg. --9p=/home/jon/srcdir,tag
 			arg := "--9p=" + vol.Source + "," + mountTag
-			log.Printf("stage1: --disk argument: %#v\n", arg)
+			log.Printf("--disk argument: %#v", arg)
 			args = append(args, arg)
 		}
 	}

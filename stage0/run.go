@@ -28,7 +28,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"path"
@@ -116,6 +115,7 @@ func init() {
 
 func InitDebug() {
 	debugEnabled = true
+	log.SetDebug(true)
 }
 
 func debug(format string, i ...interface{}) {
@@ -416,23 +416,23 @@ func addResolvConf(cfg RunConfig, rootfs string) {
 func Run(cfg RunConfig, dir string, dataDir string) {
 	useOverlay, err := preparedWithOverlay(dir)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.FatalE("error preparing overlay", err)
 	}
 
 	privateUsers, err := preparedWithPrivateUsers(dir)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.FatalE("error preparing private users", err)
 	}
 
 	debug("Setting up stage1")
 	if err := setupStage1Image(cfg, dir, useOverlay); err != nil {
-		log.Fatalf("error setting up stage1: %v", err)
+		log.FatalE("error setting up stage1", err)
 	}
 	debug("Wrote filesystem to %s\n", dir)
 
 	for _, app := range cfg.Apps {
 		if err := setupAppImage(cfg, app.Name, app.Image.ID, dir, useOverlay); err != nil {
-			log.Fatalf("error setting up app image: %v", err)
+			log.FatalE("error setting up app image", err)
 		}
 	}
 
@@ -443,21 +443,21 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 	}
 
 	if err := os.Setenv(common.EnvLockFd, fmt.Sprintf("%v", cfg.LockFd)); err != nil {
-		log.Fatalf("setting lock fd environment: %v", err)
+		log.FatalE("setting lock fd environment", err)
 	}
 
 	if err := os.Setenv(common.EnvSELinuxContext, fmt.Sprintf("%v", cfg.ProcessLabel)); err != nil {
-		log.Fatalf("setting SELinux context environment: %v", err)
+		log.FatalE("setting SELinux context environment", err)
 	}
 
 	debug("Pivoting to filesystem %s", dir)
 	if err := os.Chdir(dir); err != nil {
-		log.Fatalf("failed changing to dir: %v", err)
+		log.FatalE("failed changing to dir", err)
 	}
 
 	ep, err := getStage1Entrypoint(dir, runEntrypoint)
 	if err != nil {
-		log.Fatalf("error determining 'run' entrypoint: %v", err)
+		log.FatalE("error determining 'run' entrypoint", err)
 	}
 	args := []string{filepath.Join(destRootfs, ep)}
 	debug("Execing %s", ep)
@@ -477,7 +477,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 	if cfg.MDSRegister {
 		mdsToken, err := registerPod(".", cfg.UUID, cfg.Apps)
 		if err != nil {
-			log.Fatalf("failed to register the pod: %v", err)
+			log.FatalE("failed to register the pod", err)
 		}
 
 		args = append(args, "--mds-token="+mdsToken)
@@ -501,7 +501,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 	// around that yet.
 	_ = tpm.Extend(tpmEvent)
 	if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
-		log.Fatalf("error execing init: %v", err)
+		log.FatalE("error execing init", err)
 	}
 }
 
@@ -544,7 +544,7 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 		if !cfg.SkipTreeStoreCheck {
 			hash, err := cfg.Store.CheckTreeStore(treeStoreID)
 			if err != nil {
-				log.Printf("Warning: tree cache is in a bad state: %v. Rebuilding...", err)
+				log.PrintE("Warning: tree cache is in a bad state: %v. Rebuilding...", err)
 				var err error
 				treeStoreID, hash, err = cfg.Store.RenderTreeStore(img.String(), true)
 				if err != nil {

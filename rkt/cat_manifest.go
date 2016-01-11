@@ -43,7 +43,7 @@ func runCatManifest(cmd *cobra.Command, args []string) (exit int) {
 
 	pod, err := getPodFromUUIDString(args[0])
 	if err != nil {
-		stderr("cat-manifest: problem retrieving pod: %v", err)
+		stderr.PrintE("problem retrieving pod", err)
 		return 1
 	}
 	defer pod.Close()
@@ -60,10 +60,10 @@ func runCatManifest(cmd *cobra.Command, args []string) (exit int) {
 		b, err = json.Marshal(manifest)
 	}
 	if err != nil {
-		stderr("cat-manifest: cannot read the pod manifest: %v", err)
+		stderr.PrintE("cannot read the pod manifest", err)
 		return 1
 	}
 
-	stdout(string(b))
+	stdout.Print(string(b))
 	return 0
 }

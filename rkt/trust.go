@@ -54,7 +54,7 @@ func init() {
 func runTrust(cmd *cobra.Command, args []string) (exit int) {
 	if flagPrefix == "" && !flagRoot {
 		if len(args) != 0 {
-			stderr("--root required for non-prefixed (root) keys")
+			stderr.Print("--root required for non-prefixed (root) keys")
 		} else {
 			cmd.Usage()
 		}
@@ -62,20 +62,20 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	if flagPrefix != "" && flagRoot {
-		stderr("--root and --prefix usage mutually exclusive")
+		stderr.Print("--root and --prefix usage mutually exclusive")
 		return 1
 	}
 
 	ks := getKeystore()
 	if ks == nil {
-		stderr("could not get the keystore")
+		stderr.Print("could not get the keystore")
 		return 1
 	}
 
 	// if the user included a scheme with the prefix, error on it
 	u, err := url.Parse(flagPrefix)
 	if err == nil && u.Scheme != "" {
-		stderr("--prefix must not contain a URL scheme, omit %s://", u.Scheme)
+		stderr.Printf("--prefix must not contain a URL scheme, omit %s://", u.Scheme)
 		return 1
 	}
 
@@ -89,7 +89,7 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 	if len(pkls) == 0 {
 		pkls, err = m.GetPubKeyLocations(flagPrefix)
 		if err != nil {
-			stderr("Error determining key location: %v", err)
+			stderr.PrintE("Error determining key location", err)
 			return 1
 		}
 	}
@@ -99,7 +99,7 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 		acceptOpt = pubkey.AcceptForce
 	}
 	if err := m.AddKeys(pkls, flagPrefix, acceptOpt, pubkey.OverrideDeny); err != nil {
-		stderr("Error adding keys: %v", err)
+		stderr.PrintE("Error adding keys", err)
 		return 1
 	}
 

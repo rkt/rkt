@@ -152,26 +152,26 @@ func createDbFiles(casDbPath string, gid int, perm os.FileMode) error {
 func runInstall(cmd *cobra.Command, args []string) (exit int) {
 	gid, err := common.LookupGid(common.RktGroup)
 	if err != nil {
-		stderr("install: error looking up rkt gid: %v", err)
+		stderr.PrintE("error looking up rkt gid", err)
 		return 1
 	}
 
 	if err := createDirStructure(gid); err != nil {
-		stderr("install: error creating rkt directory structure: %v", err)
+		stderr.PrintE("error creating rkt directory structure", err)
 		return 1
 	}
 
 	casDbPath := filepath.Join(getDataDir(), "cas", "db")
 	if err := setCasDbFilesPermissions(casDbPath, gid, casDbPerm); err != nil {
-		stderr("install: error setting cas db permissions: %v", err)
+		stderr.PrintE("error setting cas db permissions", err)
 		return 1
 	}
 
 	if err := createDbFiles(casDbPath, gid, casDbPerm); err != nil {
-		stderr("install: error creating db files: %v", err)
+		stderr.PrintE("error creating db files", err)
 		return 1
 	}
-	stderr("rkt directory structure successfully created.")
+	stderr.Print("rkt directory structure successfully created.")
 
 	return 0
 }

@@ -19,9 +19,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -31,6 +28,7 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking"
+	rktlog "github.com/coreos/rkt/pkg/log"
 )
 
 var (
@@ -49,19 +47,15 @@ func init() {
 func main() {
 	flag.Parse()
 
-	if !debug {
-		log.SetOutput(ioutil.Discard)
-	}
+	log := rktlog.New(os.Stderr, "stage1 gc", debug)
 
 	podID, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "UUID is missing or malformed")
-		os.Exit(1)
+		log.Fatal("UUID is missing or malformed")
 	}
 
 	if err := gcNetworking(podID); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		log.FatalE("", err)
 	}
 }
 

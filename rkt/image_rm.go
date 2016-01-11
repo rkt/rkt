@@ -51,11 +51,11 @@ func rmImages(s *store.Store, images []string) error {
 				errors += len(keys) - 1
 			}
 			if err != nil {
-				stderr("rkt: %v", err)
+				stderr.Error(err)
 				continue
 			}
 			if !found {
-				stderr("rkt: image name %q not found", pkey)
+				stderr.Printf("image name %q not found", pkey)
 				continue
 			}
 			for _, key := range keys {
@@ -65,17 +65,17 @@ func rmImages(s *store.Store, images []string) error {
 		} else {
 			key, err := s.ResolveKey(h.String())
 			if err != nil {
-				stderr("rkt: image ID %q not valid: %v", pkey, err)
+				stderr.PrintE(fmt.Sprintf("image ID %q not valid", pkey), err)
 				continue
 			}
 			if key == "" {
-				stderr("rkt: image ID %q doesn't exist", pkey)
+				stderr.Printf("image ID %q doesn't exist", pkey)
 				continue
 			}
 
 			aciinfo, err := s.GetACIInfoWithBlobKey(key)
 			if err != nil {
-				stderr("rkt: error retrieving aci infos for image %q: %v", key, err)
+				stderr.PrintE(fmt.Sprintf("error retrieving aci infos for image %q", key), err)
 				continue
 			}
 			imageMap[key] = aciinfo.Name
@@ -95,28 +95,28 @@ func rmImages(s *store.Store, images []string) error {
 		if err := s.RemoveACI(key); err != nil {
 			if serr, ok := err.(*store.StoreRemovalError); ok {
 				staleErrors++
-				stderr("rkt: some files cannot be removed for image %q (%q): %v", key, name, serr)
+				stderr.PrintE(fmt.Sprintf("some files cannot be removed for image %q (%q)", key, name), serr)
 			} else {
-				stderr("rkt: error removing aci for image %q (%q): %v", key, name, err)
+				stderr.PrintE(fmt.Sprintf("error removing aci for image %q (%q)", key, name), err)
 				continue
 			}
 		}
-		stdout("successfully removed aci for image ID: %q", pkey)
+		stdout.Printf("successfully removed aci for image ID: %q", key)
 		errors--
 		done++
 	}
 
 	if done > 0 {
-		stderr("image rm: %d image(s) successfully removed", done)
+		stderr.Printf("%d image(s) successfully removed", done)
 	}
 
 	// If anything didn't complete, return exit status of 1
 	if (errors + staleErrors) > 0 {
 		if staleErrors > 0 {
-			stderr("image rm: %d image(s) removed but left some stale files", staleErrors)
+			stderr.Printf("%d image(s) removed but left some stale files", staleErrors)
 		}
 		if errors > 0 {
-			stderr("image rm: %d image(s) cannot be removed", errors)
+			stderr.Printf("%d image(s) cannot be removed", errors)
 		}
 		return fmt.Errorf("error(s) found while removing images")
 	}
@@ -126,18 +126,18 @@ func rmImages(s *store.Store, images []string) error {
 
 func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) < 1 {
-		stderr("image rm,: Must provide at least one image ID")
+		stderr.Print("Must provide at least one image ID")
 		return 1
 	}
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("rkt: cannot open store: %v", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
 	if err := rmImages(s, args); err != nil {
-		stderr("rkt: %v", err)
+		stderr.Error(err)
 		return 1
 	}
 

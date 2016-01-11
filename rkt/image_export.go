@@ -47,19 +47,19 @@ func runImageExport(cmd *cobra.Command, args []string) (exit int) {
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("image export: cannot open store: %v", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
 	key, err := getStoreKeyFromAppOrHash(s, args[0])
 	if err != nil {
-		stderr("image export: %v", err)
+		stderr.Error(err)
 		return 1
 	}
 
 	aci, err := s.ReadStream(key)
 	if err != nil {
-		stderr("image export: error reading image: %v", err)
+		stderr.PrintE("error reading image", err)
 		return 1
 	}
 	defer aci.Close()
@@ -73,23 +73,23 @@ func runImageExport(cmd *cobra.Command, args []string) (exit int) {
 	f, err := os.OpenFile(args[1], mode, 0644)
 	if err != nil {
 		if os.IsExist(err) {
-			stderr("image export: output ACI file exists (try --overwrite)")
+			stderr.Print("output ACI file exists (try --overwrite)")
 		} else {
-			stderr("image export: unable to open output ACI file %s: %v", args[1], err)
+			stderr.PrintE(fmt.Sprintf("unable to open output ACI file %s", args[1]), err)
 		}
 		return 1
 	}
 	defer func() {
 		err := f.Close()
 		if err != nil {
-			stderr("image export: error closing output ACI file: %v", err)
+			stderr.PrintE("error closing output ACI file", err)
 			exit = 1
 		}
 	}()
 
 	_, err = io.Copy(f, aci)
 	if err != nil {
-		stderr("image export: error writing to output ACI file: %v", err)
+		stderr.PrintE("error writing to output ACI file", err)
 		return 1
 	}
 

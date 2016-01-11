@@ -19,15 +19,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"path/filepath"
 
-	"github.com/hashicorp/errwrap"
-	"github.com/coreos/rkt/networking"
-
 	"github.com/appc/cni/pkg/types"
 	"github.com/coreos/go-systemd/unit"
+	"github.com/coreos/rkt/networking"
+	"github.com/hashicorp/errwrap"
 )
 
 // GetNetworkDescriptions explicitly convert slice of activeNets to slice of netDescribers

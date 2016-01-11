@@ -16,10 +16,10 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,8 +27,10 @@ import (
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/rkt/common"
+	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/sys"
 	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
@@ -57,6 +59,8 @@ var (
 	discardNetlist common.NetList
 	discardBool    bool
 	discardString  string
+
+	log *rktlog.Logger
 )
 
 func getHostMounts() (map[string]struct{}, error) {
@@ -86,7 +90,7 @@ func getHostMounts() (map[string]struct{}, error) {
 		hostMounts[mountPoint] = struct{}{}
 	}
 	if sc.Err() != nil {
-		return nil, fmt.Errorf("problem parsing mountinfo: %v", sc.Err())
+		return nil, errwrap.Wrap(errors.New("problem parsing mountinfo"), sc.Err())
 	}
 	return hostMounts, nil
 }
@@ -113,7 +117,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 			return nil, fmt.Errorf("duplicate mount given: %q", m.Volume)
 		}
 		namedVolumeMounts[m.Volume] = volumeMountTuple{M: m}
-		log.Printf("Adding %+v", namedVolumeMounts[m.Volume])
+		log.Printf("adding %+v", namedVolumeMounts[m.Volume])
 	}
 
 	// Merge command-line Mounts with ImageManifest's MountPoints
@@ -124,7 +128,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 			return nil, fmt.Errorf("conflicting path information from mount and mountpoint %q", mp.Name)
 		case !exists:
 			namedVolumeMounts[mp.Name] = volumeMountTuple{M: schema.Mount{Volume: mp.Name, Path: mp.Path}}
-			log.Printf("Adding %+v", namedVolumeMounts[mp.Name])
+			log.Printf("adding %+v", namedVolumeMounts[mp.Name])
 		}
 	}
 
@@ -139,7 +143,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 			return nil, fmt.Errorf("mismatched volume:mount pair: %q != %q", v.Name, tuple.M.Volume)
 		}
 		namedVolumeMounts[v.Name] = volumeMountTuple{V: v, M: tuple.M}
-		log.Printf("Adding %+v", namedVolumeMounts[v.Name])
+		log.Printf("adding %+v", namedVolumeMounts[v.Name])
 	}
 
 	// Merge command-line Volumes with ImageManifest's MountPoints
@@ -155,14 +159,14 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 			v := tuple.V
 			v.ReadOnly = &mp.ReadOnly
 			namedVolumeMounts[mp.Name] = volumeMountTuple{M: tuple.M, V: v}
-			log.Printf("Adding %+v", namedVolumeMounts[mp.Name])
+			log.Printf("adding %+v", namedVolumeMounts[mp.Name])
 		}
 	}
 
 	// Gather host mounts which we make MS_SHARED if passed as a volume source
 	hostMounts, err := getHostMounts()
 	if err != nil {
-		return nil, fmt.Errorf("can't gather host mounts: %v", err)
+		return nil, errwrap.Wrap(errors.New("can't gather host mounts"), err)
 	}
 
 	argFlyMounts := []flyMount{}
@@ -190,31 +194,31 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 func stage1() int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "UUID is missing or malformed\n")
+		log.Print("UUID is missing or malformed\n")
 		return 1
 	}
 
 	root := "."
 	p, err := stage1commontypes.LoadPod(root, uuid)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "can't load pod: %v\n", err)
+		log.PrintE("can't load pod", err)
 		return 1
 	}
 
 	if len(p.Manifest.Apps) != 1 {
-		fmt.Fprintf(os.Stderr, "flavor %q only supports 1 application per Pod for now.\n", flavor)
+		log.Print("flavor %q only supports 1 application per Pod for now.", flavor)
 		return 1
 	}
 
 	lfd, err := common.GetRktLockFD()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "can't get rkt lock fd: %v\n", err)
+		log.PrintE("can't get rkt lock fd", err)
 		return 1
 	}
 
 	// set close-on-exec flag on RKT_LOCK_FD so it gets correctly closed after execution is finished
 	if err := sys.CloseOnExec(lfd, true); err != nil {
-		fmt.Fprintf(os.Stderr, "can't set FD_CLOEXEC on rkt lock: %v\n", err)
+		log.PrintE("can't set FD_CLOEXEC on rkt lock", err)
 		return 1
 	}
 
@@ -228,7 +232,7 @@ func stage1() int {
 
 	argFlyMounts, err := evaluateMounts(rfs, string(p.Manifest.Apps[0].Name), p)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "can't evaluate mounts: %v\n", err)
+		log.PrintE("can't evaluate mounts", err)
 		return 1
 	}
 
@@ -257,7 +261,7 @@ func stage1() int {
 
 		if strings.HasPrefix(mount.HostPath, "/") {
 			if hostPathInfo, err = os.Stat(mount.HostPath); err != nil {
-				fmt.Fprintf(os.Stderr, "stat of host directory %s: \n%v", mount.HostPath, err)
+				log.PrintE(fmt.Sprintf("stat of host directory %s", mount.HostPath), err)
 				return 1
 			}
 		} else {
@@ -266,7 +270,7 @@ func stage1() int {
 
 		absTargetPath := filepath.Join(mount.TargetPrefixPath, mount.RelTargetPath)
 		if targetPathInfo, err = os.Stat(absTargetPath); err != nil && !os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "stat of target directory %s: \n%v\n", absTargetPath, err)
+			log.PrintE(fmt.Sprintf("stat of target directory %s", absTargetPath), err)
 			return 1
 		}
 
@@ -274,19 +278,19 @@ func stage1() int {
 		case targetPathInfo == nil:
 			absTargetPathParent, _ := filepath.Split(absTargetPath)
 			if err := os.MkdirAll(absTargetPathParent, 0700); err != nil {
-				fmt.Fprintf(os.Stderr, "can't create directory %q: \n%v", absTargetPath, err)
+				log.PrintE(fmt.Sprintf("can't create directory %q", absTargetPath), err)
 				return 1
 			}
 			switch {
 			case hostPathInfo == nil || hostPathInfo.IsDir():
 				if err := os.Mkdir(absTargetPath, 0700); err != nil {
-					fmt.Fprintf(os.Stderr, "can't create directory %q: \n%v", absTargetPath, err)
+					log.PrintE(fmt.Sprintf("can't create directory %q", absTargetPath), err)
 					return 1
 				}
 			case !hostPathInfo.IsDir():
 				file, err := os.OpenFile(absTargetPath, os.O_CREATE, 0700)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "can't create file %q: \n%v\n", absTargetPath, err)
+					log.PrintE(fmt.Sprintf("can't create file %q", absTargetPath), err)
 					return 1
 				}
 				file.Close()
@@ -294,42 +298,42 @@ func stage1() int {
 		case hostPathInfo != nil:
 			switch {
 			case hostPathInfo.IsDir() && !targetPathInfo.IsDir():
-				fmt.Fprintf(os.Stderr, "can't mount:  %q is a directory while %q is not\n", mount.HostPath, absTargetPath)
+				log.Printf("can't mount because %q is a directory while %q is not", mount.HostPath, absTargetPath)
 				return 1
 			case !hostPathInfo.IsDir() && targetPathInfo.IsDir():
-				fmt.Fprintf(os.Stderr, "can't mount:  %q is not a directory while %q is\n", mount.HostPath, absTargetPath)
+				log.Printf("can't mount because %q is not a directory while %q is", mount.HostPath, absTargetPath)
 				return 1
 			}
 		}
 
 		if err := syscall.Mount(mount.HostPath, absTargetPath, mount.Fs, mount.Flags, ""); err != nil {
-			fmt.Fprintf(os.Stderr, "can't mount %q on %q with flags %v: %v\n", mount.HostPath, absTargetPath, mount.Flags, err)
+			log.PrintE(fmt.Sprintf("can't mount %q on %q with flags %v", mount.HostPath, absTargetPath, mount.Flags), err)
 			return 1
 		}
 	}
 
 	if err = stage1common.WritePpid(os.Getpid()); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		log.Error(err)
 		return 4
 	}
 
-	log.Printf("Chroot to %q", rfs)
+	log.Printf("chroot to %q", rfs)
 	if err := syscall.Chroot(rfs); err != nil {
-		fmt.Fprintf(os.Stderr, "can't chroot: %v\n", err)
+		log.PrintE("can't chroot", err)
 		return 1
 	}
 
 	if err := os.Chdir("/"); err != nil {
-		fmt.Fprintf(os.Stderr, "can't change to root new directory: %v\n", err)
+		log.PrintE("can't change to root new directory", err)
 		return 1
 	}
 
-	log.Printf("Execing %q in %q", args, rfs)
+	log.Printf("execing %q in %q", args, rfs)
 	err = stage1common.WithClearedCloExec(lfd, func() error {
 		return syscall.Exec(args[0], args, env)
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "can't execute %q: %v\n", args[0], err)
+		log.PrintE(fmt.Sprintf("can't execute %q", args[0]), err)
 		return 7
 	}
 
@@ -339,6 +343,7 @@ func stage1() int {
 func main() {
 	flag.Parse()
 
+	log = rktlog.New(os.Stderr, "run", debug)
 	if !debug {
 		log.SetOutput(ioutil.Discard)
 	}

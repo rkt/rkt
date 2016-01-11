@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -48,6 +47,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/networking"
+	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/stage1/init/kvm"
 )
@@ -103,6 +103,7 @@ var (
 	mdsToken     string
 	localhostIP  net.IP
 	localConfig  string
+	log          *rktlog.Logger
 )
 
 func init() {
@@ -381,7 +382,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		mID := strings.Replace(p.UUID.String(), "-", "", -1)
 
 		if err := ioutil.WriteFile(mPath, []byte(mID), 0644); err != nil {
-			log.Fatalf("error writing /etc/machine-id: %v\n", err)
+			log.FatalE("error writing /etc/machine-id", err)
 		}
 
 		args = append(args, "--link-journal=try-guest")
@@ -389,9 +390,9 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		keepUnit, err := util.RunningFromSystemService()
 		if err != nil {
 			if err == util.ErrSoNotFound {
-				fmt.Fprintln(os.Stderr, "Warning: libsystemd not found even though systemd is running. Cgroup limits set by the environment (e.g. a systemd service) won't be enforced.")
+				log.Print("warning: libsystemd not found even though systemd is running. Cgroup limits set by the environment (e.g. a systemd service) won't be enforced.")
 			} else {
-				return nil, nil, fmt.Errorf("error determining if we're running from a system service: %v", err)
+				return nil, nil, errwrap.Wrap(errors.New("error determining if we're running from a system service"), err)
 			}
 		}
 
@@ -467,14 +468,14 @@ func forwardedPorts(pod *stage1commontypes.Pod) ([]networking.ForwardedPort, err
 func stage1() int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "UUID is missing or malformed")
+		log.Print("UUID is missing or malformed")
 		return 1
 	}
 
 	root := "."
 	p, err := stage1commontypes.LoadPod(root, uuid)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load pod: %v\n", err)
+		log.PrintE("failed to load pod", err)
 		return 1
 	}
 
@@ -482,12 +483,12 @@ func stage1() int {
 	// network plugins
 	lfd, err := common.GetRktLockFD()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get rkt lock fd: %v\n", err)
+		log.PrintE("Failed to get rkt lock fd", err)
 		return 1
 	}
 
 	if err := sys.CloseOnExec(lfd, true); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to set FD_CLOEXEC on rkt lock: %v\n", err)
+		log.PrintE("failed to set FD_CLOEXEC on rkt lock", err)
 		return 1
 	}
 
@@ -495,7 +496,7 @@ func stage1() int {
 
 	flavor, _, err := stage1initcommon.GetFlavor(p)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get stage1 flavor: %v\n", err)
+		log.PrintE("failed to get stage1 flavor", err)
 		return 3
 	}
 
@@ -503,18 +504,18 @@ func stage1() int {
 	if netList.Contained() {
 		fps, err := forwardedPorts(p)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+			log.Error(err)
 			return 6
 		}
 
-		n, err = networking.Setup(root, p.UUID, fps, netList, localConfig, flavor)
+		n, err = networking.Setup(root, p.UUID, fps, netList, localConfig, flavor, debug)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to setup network: %v\n", err)
+			log.PrintE("failed to setup network", err)
 			return 6
 		}
 
 		if err = n.Save(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to save networking state %v\n", err)
+			log.PrintE("failed to save networking state", err)
 			n.Teardown(flavor)
 			return 6
 		}
@@ -522,7 +523,7 @@ func stage1() int {
 		if len(mdsToken) > 0 {
 			hostIP, err := n.GetDefaultHostIP()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to get default Host IP: %v\n", err)
+				log.PrintE("failed to get default Host IP", err)
 				return 6
 			}
 
@@ -530,7 +531,7 @@ func stage1() int {
 		}
 	} else {
 		if flavor == "kvm" {
-			fmt.Fprintf(os.Stderr, "Flavor kvm requires private network configuration (try --net).\n")
+			log.Print("flavor kvm requires private network configuration (try --net)")
 			return 6
 		}
 		if len(mdsToken) > 0 {
@@ -539,41 +540,41 @@ func stage1() int {
 	}
 
 	if err = stage1initcommon.WriteDefaultTarget(p); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to write default.target: %v\n", err)
+		log.PrintE("failed to write default.target", err)
 		return 2
 	}
 
 	if err = stage1initcommon.WritePrepareAppTemplate(p); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to write prepare-app service template: %v\n", err)
+		log.PrintE("failed to write prepare-app service template", err)
 		return 2
 	}
 
 	if err := stage1initcommon.SetJournalPermissions(p); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: error setting journal ACLs, you'll need root to read the pod journal: %v", err)
+		log.PrintE("warning: error setting journal ACLs, you'll need root to read the pod journal", err)
 	}
 
 	if flavor == "kvm" {
 		if err := KvmPodToSystemd(p, n); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to configure systemd for kvm: %v\n", err)
+			log.PrintE("failed to configure systemd for kvm", err)
 			return 2
 		}
 	}
 
 	if err = stage1initcommon.PodToSystemd(p, interactive, flavor, privateUsers); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to configure systemd: %v\n", err)
+		log.PrintE("failed to configure systemd", err)
 		return 2
 	}
 
 	args, env, err := getArgsEnv(p, flavor, debug, n)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		log.Error(err)
 		return 3
 	}
 
 	// create a separate mount namespace so the cgroup filesystems
 	// are unmounted when exiting the pod
 	if err := syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
-		log.Fatalf("Error unsharing: %v", err)
+		log.FatalE("error unsharing", err)
 	}
 
 	// we recursively make / a "shared and slave" so mount events from the
@@ -582,21 +583,21 @@ func stage1() int {
 	// its peer group
 	// See https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
 	if err := syscall.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SLAVE, ""); err != nil {
-		log.Fatalf("Error making / a slave mount: %v", err)
+		log.FatalE("error making / a slave mount", err)
 	}
 	if err := syscall.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SHARED, ""); err != nil {
-		log.Fatalf("Error making / a shared and slave mount: %v", err)
+		log.FatalE("error making / a shared and slave mount", err)
 	}
 
 	enabledCgroups, err := cgroup.GetEnabledCgroups()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting cgroups: %v", err)
+		log.FatalE("error getting cgroups", err)
 		return 5
 	}
 
 	// mount host cgroups in the rkt mount namespace
 	if err := mountHostCgroups(enabledCgroups); err != nil {
-		log.Fatalf("Couldn't mount the host cgroups: %v\n", err)
+		log.FatalE("couldn't mount the host cgroups", err)
 		return 5
 	}
 
@@ -609,15 +610,15 @@ func stage1() int {
 	subcgroup, err := getContainerSubCgroup(machineID)
 	if err == nil {
 		if err := mountContainerCgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
-			fmt.Fprintf(os.Stderr, "Couldn't mount the container cgroups: %v\n", err)
+			log.PrintE("couldn't mount the container cgroups", err)
 			return 5
 		}
 	} else {
-		fmt.Fprintf(os.Stderr, "Continuing with per-app isolators disabled: %v\n", err)
+		log.PrintE("continuing with per-app isolators disabled", err)
 	}
 
 	if err = stage1common.WritePpid(os.Getpid()); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		log.Error(err)
 		return 4
 	}
 
@@ -625,7 +626,7 @@ func stage1() int {
 		return syscall.Exec(args[0], args, env)
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to execute %q: %v\n", args[0], err)
+		log.PrintE(fmt.Sprintf("failed to execute %q", args[0]), err)
 		return 7
 	}
 
@@ -734,10 +735,11 @@ func getContainerSubCgroup(machineID string) (string, error) {
 func main() {
 	flag.Parse()
 
+	log = rktlog.New(os.Stderr, "stage1", debug)
 	if !debug {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	// move code into stage1() helper so defered fns get run
+	// move code into stage1() helper so deferred fns get run
 	os.Exit(stage1())
 }

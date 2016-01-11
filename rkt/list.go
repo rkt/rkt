@@ -169,27 +169,27 @@ func runList(cmd *cobra.Command, args []string) int {
 		}
 
 	}); err != nil {
-		stderr("Failed to get pod handles: %v", err)
+		stderr.PrintE("Failed to get pod handles", err)
 		return 1
 	}
 
 	if len(errors) > 0 {
 		sep := "----------------------------------------"
-		stderr("%d error(s) encountered when listing pods:", len(errors))
-		stderr("%s", sep)
+		stderr.Printf("%d error(s) encountered when listing pods:", len(errors))
+		stderr.Print(sep)
 		for _, err := range errors {
-			stderr("%s", err.Error())
-			stderr("%s", sep)
+			stderr.Error(err)
+			stderr.Print(sep)
 		}
-		stderr("Misc:")
-		stderr("  rkt's appc version: %s", schema.AppContainerVersion)
-		stderr("%s", sep)
+		stderr.Print("Misc:")
+		stderr.Printf("  rkt's appc version: %s", schema.AppContainerVersion)
+		stderr.Print(sep)
 		// make a visible break between errors and the listing
-		stderr("")
+		stderr.Print("")
 	}
 
 	tabOut.Flush()
-	stdout("%s", tabBuffer.String())
+	stdout.Print(tabBuffer)
 	return 0
 }
 

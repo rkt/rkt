@@ -75,54 +75,54 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	privateUsers := uid.NewBlankUidRange()
 	if flagQuiet {
 		if os.Stdout, err = os.Open("/dev/null"); err != nil {
-			stderr("prepare: unable to open /dev/null: %v", err)
+			stderr.PrintE("unable to open /dev/null", err)
 			return 1
 		}
 	}
 
 	if flagStoreOnly && flagNoStore {
-		stderr("both --store-only and --no-store specified")
+		stderr.Print("both --store-only and --no-store specified")
 		return 1
 	}
 
 	if flagPrivateUsers {
 		if !common.SupportsUserNS() {
-			stderr("prepare: --private-users is not supported, kernel compiled without user namespace support")
+			stderr.Print("--private-users is not supported, kernel compiled without user namespace support")
 			return 1
 		}
 		privateUsers.SetRandomUidRange(uid.DefaultRangeCount)
 	}
 
 	if err = parseApps(&rktApps, args, cmd.Flags(), true); err != nil {
-		stderr("prepare: error parsing app image arguments: %v", err)
+		stderr.PrintE("error parsing app image arguments", err)
 		return 1
 	}
 
 	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || flagStoreOnly || flagNoStore) {
-		stderr("prepare: conflicting flags set with --pod-manifest (see --help)")
+		stderr.Print("conflicting flags set with --pod-manifest (see --help)")
 		return 1
 	}
 
 	if rktApps.Count() < 1 && len(flagPodManifest) == 0 {
-		stderr("prepare: must provide at least one image or specify the pod manifest")
+		stderr.Print("must provide at least one image or specify the pod manifest")
 		return 1
 	}
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("prepare: cannot open store: %v", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
 	config, err := getConfig()
 	if err != nil {
-		stderr("prepare: cannot get configuration: %v", err)
+		stderr.PrintE("cannot get configuration", err)
 		return 1
 	}
 
 	s1img, err := getStage1Hash(s, cmd)
 	if err != nil {
-		stderr("prepare: %v", err)
+		stderr.Error(err)
 		return 1
 	}
 
@@ -140,13 +140,13 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		WithDeps:  true,
 	}
 	if err := fn.FindImages(&rktApps); err != nil {
-		stderr("prepare: %v", err)
+		stderr.PrintE("error finding images", err)
 		return 1
 	}
 
 	p, err := newPod()
 	if err != nil {
-		stderr("prepare: error creating new pod: %v", err)
+		stderr.PrintE("error creating new pod", err)
 		return 1
 	}
 
@@ -178,28 +178,28 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 
 	keyLock, err := lock.SharedKeyLock(lockDir(), common.PrepareLock)
 	if err != nil {
-		stderr("rkt: cannot get shared prepare lock: %v", err)
+		stderr.PrintE("cannot get shared prepare lock", err)
 		return 1
 	}
 	if err = stage0.Prepare(pcfg, p.path(), p.uuid); err != nil {
-		stderr("prepare: error setting up stage0: %v", err)
+		stderr.PrintE("error setting up stage0", err)
 		keyLock.Close()
 		return 1
 	}
 	keyLock.Close()
 
 	if err := p.sync(); err != nil {
-		stderr("prepare: error syncing pod data: %v", err)
+		stderr.PrintE("error syncing pod data", err)
 		return 1
 	}
 
 	if err := p.xToPrepared(); err != nil {
-		stderr("prepare: error transitioning to prepared: %v", err)
+		stderr.PrintE("error transitioning to prepared", err)
 		return 1
 	}
 
 	os.Stdout = origStdout // restore output in case of --quiet
-	stdout("%s", p.uuid.String())
+	stdout.Printf("%s", p.uuid.String())
 
 	return 0
 }

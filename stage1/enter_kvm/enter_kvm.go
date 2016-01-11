@@ -19,17 +19,18 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"syscall"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/coreos/rkt/pkg/lock"
+	rktlog "github.com/coreos/rkt/pkg/log"
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -40,10 +41,12 @@ const (
 )
 
 var (
+	debug   bool
 	podPid  string
 	appName string
 	sshPath string
 	u, _    = user.Current()
+	log     *rktlog.Logger
 )
 
 // fileAccessible checks if the given path exists and is a regular file
@@ -133,12 +136,15 @@ func kvmCheckSSHSetup(workDir string) error {
 }
 
 func init() {
+	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
 	flag.StringVar(&podPid, "pid", "", "podPID")
 	flag.StringVar(&appName, "appname", "", "application to use")
 
+	log = rktlog.New(os.Stderr, "stage1 kvm", false)
+
 	var err error
 	if sshPath, err = exec.LookPath("ssh"); err != nil {
-		log.Fatalf("cannot find 'ssh' binary in PATH: %v", err)
+		log.FatalE("cannot find 'ssh' binary in PATH", err)
 	}
 }
 
@@ -205,7 +211,7 @@ func execSSH() error {
 	}
 
 	if err := kvmCheckSSHSetup(workDir); err != nil {
-		return errwrap.Wrap("error setting up ssh keys", err)
+		return errwrap.Wrap(errors.New("error setting up ssh keys"), err)
 	}
 
 	// prepare args for ssh invocation
@@ -230,12 +236,17 @@ func execSSH() error {
 
 func main() {
 	flag.Parse()
-	if appName == "" {
-		fmt.Fprintf(os.Stderr, "--appname not set to correct value\n")
-		os.Exit(1)
+
+	log = rktlog.New(os.Stderr, "enter_kvm", debug)
+	if !debug {
+		log.SetOutput(ioutil.Discard)
 	}
 
-	// execSSH should returns only with error
-	fmt.Fprintf(os.Stderr, "%v\n", execSSH())
+	if appName == "" {
+		log.Fatal("--appname not set to correct value")
+	}
+
+	// execSSH should return only with error
+	log.Print(execSSH())
 	os.Exit(2)
 }

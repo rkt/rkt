@@ -47,17 +47,17 @@ func init() {
 func runGCImage(cmd *cobra.Command, args []string) (exit int) {
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("rkt: cannot open store: %v", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
 	if err := gcTreeStore(s); err != nil {
-		stderr("rkt: failed to remove unreferenced treestores: %v", err)
+		stderr.PrintE("failed to remove unreferenced treestores", err)
 		return 1
 	}
 
 	if err := gcStore(s, flagImageGracePeriod); err != nil {
-		stderr("rkt: %v", err)
+		stderr.Error(err)
 		return 1
 	}
 
@@ -88,9 +88,9 @@ func gcTreeStore(s *store.Store) error {
 	for _, treeStoreID := range treeStoreIDs {
 		if _, ok := referencedTreeStoreIDs[treeStoreID]; !ok {
 			if err := s.RemoveTreeStore(treeStoreID); err != nil {
-				stderr("rkt: error removing treestore %q: %v", treeStoreID, err)
+				stderr.PrintE(fmt.Sprintf("error removing treestore %q", treeStoreID), err)
 			} else {
-				stderr("removed treestore %q", treeStoreID)
+				stderr.Printf("removed treestore %q", treeStoreID)
 			}
 		}
 	}
