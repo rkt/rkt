@@ -405,16 +405,6 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 	}
 
 	destRootfs := common.Stage1RootfsPath(dir)
-	flavor, err := os.Readlink(filepath.Join(destRootfs, "flavor"))
-	if err != nil {
-		log.Printf("error reading flavor: %v\n", err)
-	}
-	if flavor == "kvm" {
-		err := kvmCheckSSHSetup(destRootfs, dataDir)
-		if err != nil {
-			log.Fatalf("error setting up ssh keys: %v", err)
-		}
-	}
 
 	if err := os.Setenv(common.EnvLockFd, fmt.Sprintf("%v", cfg.LockFd)); err != nil {
 		log.Fatalf("setting lock fd environment: %v", err)
