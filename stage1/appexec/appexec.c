@@ -147,51 +147,41 @@ static void diag(const char *exe)
 	diag(itrp);
 }
 
-/* Append env variables listed in keep_env to env_file if they're present in
- * current environment */
-void append_env(const char *env_file, const char **keep_env)
+/* Create keep_env file from keep_env, if they're present in
+ * current environment and file doesn't exist */
+void initialize_keep_env(const char *keep_env_file, const char **keep_env)
 {
 	FILE		*f;
 	const char	**p;
 	char		*v;
 	char		nul = '\0';
 
-	pexit_if((f = fopen(env_file, "a")) == NULL,
-		"Unable to fopen \"%s\"", env_file);
+	if (!access(keep_env_file, F_OK)) return;
+	pexit_if((f = fopen(keep_env_file, "a")) == NULL,
+		"Unable to fopen \"%s\"", keep_env_file);
 
 	p = keep_env;
 	while (*p) {
 		v = getenv(*p);
 		if (v) {
 			pexit_if(fprintf(f, "%s=%s%c", *p, v, nul) != (strlen(*p) + strlen(v) + 2),
-				"Unable to write to \"%s\"", env_file);
+				"Unable to write to \"%s\"", keep_env_file);
 		}
 		p++;
 	}
 
 	pexit_if(fclose(f) == EOF,
-		"Unable to fclose \"%s\"", env_file);
-
-	return;
+		"Unable to fclose \"%s\"", keep_env_file);
 }
 
-/* Read environment from env and make it our own keeping the env variables in
- * keep_env if they're present in the current environment.
- * The environment file must exist, may be empty, and is expected to be of the format:
- * key=value\0key=value\0...
- */
-static void load_env(const char *env, const char **keep_env)
+/* Try to set current env from keep_env and env file. */
+static void set_env(const char *env_file)
 {
-	struct stat		st;
-	char			*map, *k, *v;
-	typeof(st.st_size)	i;
+	struct stat st;
+	char *map, *k, *v;
+	typeof(st.st_size) i;
 
-	append_env(env, keep_env);
-
-	map_file(env, PROT_READ|PROT_WRITE, MAP_PRIVATE, &st, (void **)&map);
-
-	pexit_if(clearenv() != 0,
-		"Unable to clear environment");
+	map_file(env_file, PROT_READ|PROT_WRITE, MAP_PRIVATE, &st, (void **)&map);
 
 	if(!st.st_size)
 		return;
@@ -209,6 +199,22 @@ static void load_env(const char *env, const char **keep_env)
 		pexit_if(setenv(k, v, 1) == -1,
 			"Unable to set env variable: \"%s\"=\"%s\"", k, v);
 	}
+}
+
+/* Read environment from env and keep_env files make it our own, keeping the env variables in
+ * if they're present in the current environment.
+ * The environment files must exist, may be empty, and are expected to be of the format:
+ * key=value\0key=value\0...
+ */
+static void load_env(const char *env_file, const char *keep_env_file, int entering)
+{
+	char *term = getenv("TERM"); /* usefull to keep during entering. */
+	pexit_if(clearenv() != 0,
+		"Unable to clear environment");
+
+	set_env(env_file);
+	set_env(keep_env_file);
+	if (entering) setenv("TERM", term, 1);
 }
 
 /* Parse a comma-separated list of numeric gids from str, returns an malloc'd
@@ -256,6 +262,16 @@ static void parse_gids(const char *str, size_t *n_gids_p, gid_t **gids_p)
 
 int main(int argc, char *argv[])
 {
+	int entering = 0;
+
+	int c;
+	while ((c = getopt(argc, argv, "e")) != -1)
+		switch (c) {
+			case 'e':
+				entering = 1;
+				break;
+		}
+
 	/* We need to keep these env variables since systemd uses them for socket
 	 * activation
 	 */
@@ -265,7 +281,9 @@ int main(int argc, char *argv[])
 		NULL
 	};
 
-	const char	*root, *cwd, *env, *uid_str, *gid_str, *exe;
+	const char *keep_env_file = "/rkt/env/keep_env";
+	const char	*root, *cwd, *env_file, *uid_str, *gid_str, *exe;
+
 	char		**args;
 	uid_t		uid;
 	gid_t		*gids;
@@ -274,17 +292,19 @@ int main(int argc, char *argv[])
 	exit_if(argc < 7,
 		"Usage: %s /path/to/root /work/directory /env/file uid gid[,gid...] /to/exec [args ...]", argv[0]);
 
-	root = argv[1];
-	cwd = argv[2];
-	env = argv[3];
-	uid_str = argv[4];
+	root = argv[optind];
+	cwd = argv[optind+1];
+	env_file = argv[optind+2];
+	uid_str = argv[optind+3];
 	uid = atoi(uid_str);
-	gid_str = argv[5];
-	args = &argv[6];
+	gid_str = argv[optind+4];
+	args = &argv[optind+5];
 	exe = args[0];
 
 	parse_gids(gid_str, &n_gids, &gids);
-	load_env(env, keep_env);
+
+	initialize_keep_env(keep_env_file, keep_env);
+	load_env(env_file, keep_env_file, entering);
 
 	pexit_if(chroot(root) == -1, "Chroot \"%s\" failed", root);
 	pexit_if(chdir(cwd) == -1, "Chdir \"%s\" failed", cwd);

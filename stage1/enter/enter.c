@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 		"Unable to fork");
 
 /* some stuff make the argv->args copy less cryptic */
-#define APPEXEC_ARGV_FWD_OFFSET	6
+#define APPEXEC_ARGV_FWD_OFFSET	8
 
 	if(child == 0) {
 		char		root[PATH_MAX];
@@ -155,6 +155,8 @@ int main(int argc, char *argv[])
 		args[3] = env;
 		args[4] = "0"; /* uid */
 		args[5] = "0"; /* gid */
+		args[6] = "-e"; /* entering phase */
+		args[7] = "--";
 		argsind = APPEXEC_ARGV_FWD_OFFSET;
 		while (optind < argc)
 			args[argsind++] = argv[optind++];
