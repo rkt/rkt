@@ -7,7 +7,7 @@ Vagrant.configure('2') do |config|
         vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
         vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
         # add more ram, the default isn't enough for the build
-        vb.customize ["modifyvm", :id, "--memory", "768"]
+        vb.customize ["modifyvm", :id, "--memory", "1024"]
     end
 
     config.vm.provision :shell, :privileged => true, :path => "scripts/install-vagrant.sh"
