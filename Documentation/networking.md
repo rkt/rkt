@@ -27,7 +27,7 @@ There is also the possibility to load all configured networks by using  `--net=a
 
 ### Builtin networks
 
-rkt ships with two built in networks, named *default* and *default-restricted*.
+rkt ships with two built-in networks, named *default* and *default-restricted*.
 
 ### The default network
 
@@ -57,12 +57,12 @@ It can also be loaded directly by explicitly passing `--net=default-restricted`.
 ### No (loopback only) networking
 
 The passing of `--net=none` will put the pod in a network namespace with only the loopback networking.
-This can be used to completely isolate the pods network.
+This can be used to completely isolate the pod's network.
 
 ### Setting up additional networks
 
 In addition to the default network (veth) described in the previous sections, rkt pods can be configured to join additional networks.
-Each additional network will result in an new interface being setup in the pod.
+Each additional network will result in an new interface being set up in the pod.
 The type of network interface, IP, routes, etc is controlled via a configuration file residing in `/etc/rkt/net.d` directory.
 The network configuration files are executed in lexicographically sorted order.
 Each file consists of a JSON dictionary as shown below:
@@ -100,7 +100,7 @@ It creates a virtual ethernet pair (akin to a pipe) and places one end into pod 
 `ptp` specific configuration fields are:
 
 - **mtu** (integer): the size of the MTU in bytes.
-- **ipMasq** (boolean): whether to setup IP masquerading on the host.
+- **ipMasq** (boolean): whether to set up IP masquerading on the host.
 
 #### bridge
 
@@ -115,7 +115,7 @@ The bridge can optionally be configured to act as the gateway for the network.
   Defaults to `rkt0`.
 - **isGateway** (boolean): whether the bridge should be assigned an IP and act as a gateway.
 - **mtu** (integer): the size of the MTU in bytes for bridge and veths.
-- **ipMasq** (boolean): whether to setup IP masquerading on the host.
+- **ipMasq** (boolean): whether to set up IP masquerading on the host.
 
 #### macvlan
 
@@ -138,7 +138,7 @@ Before traffic gets sent to the underlying network it can be evaluated within th
   Defaults to "bridge".
 - **mtu** (integer): the size of the MTU in bytes for the macvlan interface.
   Defaults to MTU of the master device.
-- **ipMasq** (boolean): whether to setup IP masquerading on the host.
+- **ipMasq** (boolean): whether to set up IP masquerading on the host.
   Defaults to false.
 
 #### ipvlan
@@ -160,7 +160,7 @@ ipvlan interfaces are able to have different IP addresses than the master interf
   Defaults to "l2".
 - **mtu** (integer): the size of the MTU in bytes for the ipvlan interface.
   Defaults to MTU of the master device.
-- **ipMasq** (boolean): whether to setup IP masquerading on the host.
+- **ipMasq** (boolean): whether to set up IP masquerading on the host.
   Defaults to false.
 
 **Notes**
@@ -276,7 +276,7 @@ The basic network configuration is as follows:
 }
 ```
 
-This will setup a linux-bridge, connect the container to the bridge and assign container IPs out of the subnet that flannel assigned to the host.
+This will set up a linux-bridge, connect the container to the bridge and assign container IPs out of the subnet that flannel assigned to the host.
 For more information included advanced configuration options, see [CNI docs](https://github.com/appc/cni/blob/master/Documentation/flannel.md).
 
 ## Exposing container ports on the host
