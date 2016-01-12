@@ -10,5 +10,6 @@ Vagrant.configure('2') do |config|
         vb.customize ["modifyvm", :id, "--memory", "1024"]
     end
 
+    config.vm.synced_folder ".", "/vagrant", type: "rsync"
     config.vm.provision :shell, :privileged => true, :path => "scripts/install-vagrant.sh"
 end
