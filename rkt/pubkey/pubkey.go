@@ -33,8 +33,8 @@ import (
 
 type Manager struct {
 	AuthPerHost        map[string]config.Headerer
-	InsecureAllowHttp  bool
-	TrustKeysFromHttps bool
+	InsecureAllowHTTP  bool
+	TrustKeysFromHTTPS bool
 	Ks                 *keystore.Keystore
 	Debug              bool
 }
@@ -100,7 +100,7 @@ func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, ove
 			continue
 		}
 
-		if m.TrustKeysFromHttps && u.Scheme == "https" {
+		if m.TrustKeysFromHTTPS && u.Scheme == "https" {
 			accept = AcceptForce
 		}
 
@@ -147,7 +147,7 @@ func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 
 	hostHeaders := config.ResolveAuthPerHost(m.AuthPerHost)
 	insecure := discovery.InsecureNone
-	if m.InsecureAllowHttp {
+	if m.InsecureAllowHTTP {
 		insecure = insecure | discovery.InsecureHttp
 	}
 	ep, attempts, err := discovery.DiscoverPublicKeys(*app, hostHeaders, insecure)
@@ -170,7 +170,7 @@ func (m *Manager) getPubKey(u *url.URL) (*os.File, error) {
 	case "":
 		return os.Open(u.Path)
 	case "http":
-		if !m.InsecureAllowHttp {
+		if !m.InsecureAllowHTTP {
 			return nil, fmt.Errorf("--insecure-allow-http required for http URLs")
 		}
 		fallthrough

@@ -210,7 +210,7 @@ func TestSecFlags(t *testing.T) {
 			t.Errorf("test %d: expected image skip to be %v, got %v", i, tt.image, got)
 		}
 
-		if got := sf.SkipTlsCheck(); tt.tls != got {
+		if got := sf.SkipTLSCheck(); tt.tls != got {
 			t.Errorf("test %d: expected tls skip to be %v, got %v", i, tt.tls, got)
 		}
 

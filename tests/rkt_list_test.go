@@ -29,7 +29,7 @@ func TestRktList(t *testing.T) {
 	defer os.Remove(image)
 
 	imageHash := getHashOrPanic(image)
-	imgID := ImageId{image, imageHash}
+	imgID := ImageID{image, imageHash}
 
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()

@@ -125,7 +125,7 @@ var (
 		Debug              bool
 		Help               bool
 		InsecureFlags      *rktflag.SecFlags
-		TrustKeysFromHttps bool
+		TrustKeysFromHTTPS bool
 	}{
 		Dir:             defaultDataDir,
 		SystemConfigDir: common.DefaultSystemConfigDir,
@@ -159,7 +159,7 @@ func init() {
 	cmdRkt.PersistentFlags().Var(globalFlags.InsecureFlags, "insecure-options",
 		fmt.Sprintf("comma-separated list of security features to disable. Allowed values: %s",
 			globalFlags.InsecureFlags.PermissibleString()))
-	cmdRkt.PersistentFlags().BoolVar(&globalFlags.TrustKeysFromHttps, "trust-keys-from-https",
+	cmdRkt.PersistentFlags().BoolVar(&globalFlags.TrustKeysFromHTTPS, "trust-keys-from-https",
 		true, "automatically trust gpg keys fetched from https")
 
 	// TODO: Remove before 1.0

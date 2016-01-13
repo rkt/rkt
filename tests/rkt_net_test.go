@@ -106,7 +106,7 @@ func TestNetHostConnectivity(t *testing.T) {
 		if err != nil {
 			ga.Fatalf("Error: %v\nOutput: %v", err, out)
 		}
-		body, err := testutils.HttpGet(httpGetAddr)
+		body, err := testutils.HTTPGet(httpGetAddr)
 		if err != nil {
 			ga.Fatalf("%v\n", err)
 		}
@@ -246,9 +246,9 @@ func TestNetDefaultConnectivity(t *testing.T) {
 		// Host opens the server
 		go func() {
 			defer ga.Done()
-			err := testutils.HttpServe(httpServeAddr, httpServeTimeout)
+			err := testutils.HTTPServe(httpServeAddr, httpServeTimeout)
 			if err != nil {
-				ga.Fatalf("Error during HttpServe: %v", err)
+				ga.Fatalf("Error during HTTPServe: %v", err)
 			}
 		}()
 
@@ -326,7 +326,7 @@ func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 			if err != nil {
 				ga.Fatalf("Error: %v\nOutput: %v", err, out)
 			}
-			body, err := testutils.HttpGet(httpGetAddr)
+			body, err := testutils.HTTPGet(httpGetAddr)
 			if err != nil {
 				ga.Fatalf("%v\n", err)
 			}
@@ -414,8 +414,8 @@ func prepareTestNet(t *testing.T, ctx *testutils.RktRunCtx, nt networkTemplateT)
  * Two containers spawn in the same custom network.
  * ---
  * Container 1 opens the http server
- * Container 2 fires a HttpGet on it
- * The body of the HttpGet is Container 1's hostname, which must match
+ * Container 2 fires a HTTPGet on it
+ * The body of the HTTPGet is Container 1's hostname, which must match
  */
 func testNetCustomDual(t *testing.T, nt networkTemplateT) {
 	httpPort, err := testutils.GetNextFreePort4()
@@ -526,9 +526,9 @@ func testNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 	// Host opens the server
 	go func() {
 		defer ga.Done()
-		err := testutils.HttpServe(httpServeAddr, httpServeTimeout)
+		err := testutils.HTTPServe(httpServeAddr, httpServeTimeout)
 		if err != nil {
-			ga.Fatalf("Error during HttpServe: %v", err)
+			ga.Fatalf("Error during HTTPServe: %v", err)
 		}
 	}()
 

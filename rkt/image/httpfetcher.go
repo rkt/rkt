@@ -94,7 +94,7 @@ func (f *httpFetcher) maybeUseCached(cd *cacheData) string {
 }
 
 func (f *httpFetcher) fetchURL(u *url.URL, a *asc, etag string) (readSeekCloser, *cacheData, error) {
-	if f.InsecureFlags.SkipTlsCheck() && f.Ks != nil {
+	if f.InsecureFlags.SkipTLSCheck() && f.Ks != nil {
 		stderr("warning: TLS verification has been disabled")
 	}
 	if f.InsecureFlags.SkipImageCheck() && f.Ks != nil {
@@ -102,7 +102,7 @@ func (f *httpFetcher) fetchURL(u *url.URL, a *asc, etag string) (readSeekCloser,
 	}
 
 	if f.InsecureFlags.SkipImageCheck() || f.Ks == nil {
-		o := f.getHttpOps()
+		o := f.getHTTPOps()
 		aciFile, cd, err := o.DownloadImageWithETag(u, etag)
 		if err != nil {
 			return nil, nil, err
@@ -114,7 +114,7 @@ func (f *httpFetcher) fetchURL(u *url.URL, a *asc, etag string) (readSeekCloser,
 }
 
 func (f *httpFetcher) fetchVerifiedURL(u *url.URL, a *asc, etag string) (readSeekCloser, *cacheData, error) {
-	o := f.getHttpOps()
+	o := f.getHTTPOps()
 	f.maybeOverrideAscFetcherWithRemote(o, u, a)
 	ascFile, retry, err := o.DownloadSignature(a)
 	if err != nil {
@@ -146,9 +146,9 @@ func (f *httpFetcher) fetchVerifiedURL(u *url.URL, a *asc, etag string) (readSee
 	return retAciFile, cd, nil
 }
 
-func (f *httpFetcher) getHttpOps() *httpOps {
+func (f *httpFetcher) getHTTPOps() *httpOps {
 	return &httpOps{
-		InsecureSkipTLSVerify: f.InsecureFlags.SkipTlsCheck(),
+		InsecureSkipTLSVerify: f.InsecureFlags.SkipTLSCheck(),
 		S:       f.S,
 		Headers: f.Headers,
 	}

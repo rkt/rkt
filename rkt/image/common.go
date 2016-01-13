@@ -53,9 +53,9 @@ type action struct {
 	// Debug tells whether additional debug messages should be
 	// printed.
 	Debug bool
-	// TrustKeysFromHttps tells whether discovered keys downloaded
+	// TrustKeysFromHTTPS tells whether discovered keys downloaded
 	// via the https protocol can be trusted
-	TrustKeysFromHttps bool
+	TrustKeysFromHTTPS bool
 
 	// StoreOnly tells whether to avoid getting images from a
 	// local filesystem or a remote location.

@@ -133,7 +133,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		DockerAuth:         config.DockerCredentialsPerRegistry,
 		InsecureFlags:      globalFlags.InsecureFlags,
 		Debug:              globalFlags.Debug,
-		TrustKeysFromHttps: globalFlags.TrustKeysFromHttps,
+		TrustKeysFromHTTPS: globalFlags.TrustKeysFromHTTPS,
 
 		StoreOnly: flagStoreOnly,
 		NoStore:   flagNoStore,

@@ -83,7 +83,7 @@ func getStage1Hash(s *store.Store, cmd *cobra.Command) (*types.Hash, error) {
 	fn := &image.Finder{
 		S:                  s,
 		InsecureFlags:      globalFlags.InsecureFlags,
-		TrustKeysFromHttps: globalFlags.TrustKeysFromHttps,
+		TrustKeysFromHTTPS: globalFlags.TrustKeysFromHTTPS,
 
 		StoreOnly: false,
 		NoStore:   false,
@@ -113,7 +113,7 @@ func getDefaultStage1Hash(fn *image.Finder, overridden bool) (*types.Hash, error
 	}
 	// we couldn't find a proper stage1 image in the store, fall
 	// back to using a stage1 ACI file (slow)
-	return getDefaultStage1HashFromUrl(fn, overridden)
+	return getDefaultStage1HashFromURL(fn, overridden)
 }
 
 func getDefaultStage1HashFromStore(fn *image.Finder) *types.Hash {
@@ -129,7 +129,7 @@ func getDefaultStage1HashFromStore(fn *image.Finder) *types.Hash {
 	return nil
 }
 
-func getDefaultStage1HashFromUrl(fn *image.Finder, overridden bool) (*types.Hash, error) {
+func getDefaultStage1HashFromURL(fn *image.Finder, overridden bool) (*types.Hash, error) {
 	if overridden {
 		// we specified --stage1-image parameter explicitly,
 		// so just try to get it without further or more ado

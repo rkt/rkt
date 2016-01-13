@@ -26,7 +26,7 @@ import (
 	"github.com/coreos/rkt/tests/testutils/logger"
 )
 
-func HttpServe(addr string, timeout int) error {
+func HTTPServe(addr string, timeout int) error {
 	hostname, err := os.Hostname()
 	if err != nil {
 		panic(err)
@@ -72,7 +72,7 @@ func HttpServe(addr string, timeout int) error {
 	return err
 }
 
-func HttpGet(addr string) (string, error) {
+func HTTPGet(addr string) (string, error) {
 	logger.Logf("Connecting to %v", addr)
 	res, err := http.Get(fmt.Sprintf("%v", addr))
 	if err != nil {
