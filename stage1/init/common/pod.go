@@ -29,13 +29,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/coreos/rkt/pkg/acl"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/go-systemd/unit"
 	"github.com/hashicorp/errwrap"
-	"github.com/naegelejd/go-acl"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
@@ -197,13 +197,35 @@ func SetJournalPermissions(p *stage1commontypes.Pod) error {
 		return errwrap.Wrap(errors.New("error creating journal dir"), err)
 	}
 
-	a, err := acl.Parse(fmt.Sprintf("g:%d:r-x,m:r-x", rktgid))
+	a, err := acl.InitACL()
 	if err != nil {
-		log.PanicE("error parsing ACL string", err)
+		return err
 	}
 	defer a.Free()
 
-	if err := a.SetFileDefault(journalPath); err != nil {
+	if err := a.ParseACL(fmt.Sprintf("g:%d:r-x,m:r-x", rktgid)); err != nil {
+		return fmt.Errorf("error parsing ACL string: %v", err)
+	}
+
+	val, err := a.Valid()
+	if err != nil {
+		return err
+	}
+	if !val {
+		if err := a.AddBaseEntries(journalPath); err != nil {
+			return fmt.Errorf("error adding base ACL entries: %v", err)
+		}
+
+		val, err := a.Valid()
+		if err != nil {
+			return err
+		}
+		if !val {
+			return fmt.Errorf("invalid ACL")
+		}
+	}
+
+	if err := a.SetFileACLDefault(journalPath); err != nil {
 		return err
 	}
 
