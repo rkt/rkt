@@ -31,10 +31,12 @@ var (
 		Short: "Stop a pod",
 		Run:   runWrapper(runStop),
 	}
+	flagForce bool
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdStop)
+	cmdStop.Flags().BoolVar(&flagForce, "force", false, "forced stopping")
 }
 
 func runStop(cmd *cobra.Command, args []string) (exit int) {
@@ -69,7 +71,7 @@ func runStop(cmd *cobra.Command, args []string) (exit int) {
 			continue
 		}
 
-		if err := stage0.StopPod(p.path()); err == nil {
+		if err := stage0.StopPod(p.path(), flagForce, podUUID); err == nil {
 			stdout.Printf("%q", p.uuid)
 		} else {
 			stderr.PrintE(fmt.Sprintf("stop: error stopping %q", p.uuid), err)

@@ -17,11 +17,20 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"syscall"
 )
+
+var (
+	force bool
+)
+
+func init() {
+	flag.BoolVar(&force, "force", false, "Forced stopping")
+}
 
 func readIntFromFile(path string) (i int, err error) {
 	b, err := ioutil.ReadFile(path)
@@ -32,15 +41,15 @@ func readIntFromFile(path string) (i int, err error) {
 	return
 }
 
-func stop() int {
+func stop(signal syscall.Signal) int {
 	pid, err := readIntFromFile("ppid")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
 		return 1
 	}
 
-	if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
-		fmt.Fprintf(os.Stderr, "error sending SIGTERM: %v\n", err)
+	if err := syscall.Kill(pid, signal); err != nil {
+		fmt.Fprintf(os.Stderr, "error sending %v: %v\n", signal, err)
 		return 1
 	}
 
@@ -48,5 +57,12 @@ func stop() int {
 }
 
 func main() {
-	os.Exit(stop())
+	flag.Parse()
+
+	signal := syscall.SIGTERM
+	if force {
+		signal = syscall.SIGKILL
+	}
+
+	os.Exit(stop(signal))
 }
