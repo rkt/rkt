@@ -50,7 +50,14 @@ Instead of a number, english words can be used.
 
 rkt ideally should be statically linked, so it would not require any dynamic libraries to be installed, but some C libraries do not support static linking.
 So, if rkt is dynamically linked, then the only thing it will depend on is a C library.
-Also, it requires the following kernel features:
+
+The stage1 images shipped with rkt also require the following libraries:
+
+* libdl
+* libacl
+* libattr
+
+Furthermore, rkt requires the following kernel features:
 
 * `CONFIG_CGROUPS`
 * `CONFIG_NAMESPACES`
