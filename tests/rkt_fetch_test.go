@@ -117,6 +117,28 @@ func TestFetch(t *testing.T) {
 	}
 }
 
+func TestFetchFullHash(t *testing.T) {
+	imagePath := getInspectImagePath()
+
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	tests := []struct {
+		fetchArgs          string
+		expectedHashLength int
+	}{
+		{"", len("sha512-") + 32},
+		{"--full", len("sha512-") + 64},
+	}
+
+	for _, tt := range tests {
+		hash := importImageAndFetchHash(t, ctx, tt.fetchArgs, imagePath)
+		if len(hash) != tt.expectedHashLength {
+			t.Fatalf("expected hash length of %d, got %d", tt.expectedHashLength, len(hash))
+		}
+	}
+}
+
 func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, finalURL string) {
 	remoteFetchMsgTpl := `remote fetching from URL %q`
 	storeMsgTpl := `using image from local store for .* %s`
@@ -156,7 +178,7 @@ func testFetchStoreOnly(t *testing.T, args string, image string, imageArgs strin
 	// 1. Run cmd with the image not available in the store should get $cannotFetchMsg.
 	runRktAndCheckRegexOutput(t, cmd, cannotFetchMsg)
 
-	importImageAndFetchHash(t, ctx, image)
+	importImageAndFetchHash(t, ctx, "", image)
 
 	// 2. Run cmd with the image available in the store, should get $storeMsg.
 	runRktAndCheckRegexOutput(t, cmd, storeMsg)
@@ -169,7 +191,7 @@ func testFetchNoStore(t *testing.T, args string, image string, imageArgs string,
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	importImageAndFetchHash(t, ctx, image)
+	importImageAndFetchHash(t, ctx, "", image)
 
 	cmd := fmt.Sprintf("%s --no-store %s %s %s", ctx.Cmd(), args, image, imageArgs)
 

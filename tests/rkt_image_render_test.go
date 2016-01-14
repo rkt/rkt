@@ -61,8 +61,8 @@ func TestImageRender(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	_ = importImageAndFetchHash(t, ctx, baseImage)
-	testImageShortHash := importImageAndFetchHash(t, ctx, testImage)
+	_ = importImageAndFetchHash(t, ctx, "", baseImage)
+	testImageShortHash := importImageAndFetchHash(t, ctx, "", testImage)
 
 	tests := []struct {
 		image        string

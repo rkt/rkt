@@ -53,7 +53,7 @@ func TestImageCatManifest(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	testImageHash := importImageAndFetchHash(t, ctx, testImage)
+	testImageHash := importImageAndFetchHash(t, ctx, "", testImage)
 
 	tests := []struct {
 		image      string

@@ -175,15 +175,15 @@ func createTempDirOrPanic(dirName string) string {
 	return tmpDir
 }
 
-func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img string, gid int) string {
+func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img string, fetchArgs string, gid int) string {
 	// Import the test image into store manually.
-	cmd := fmt.Sprintf("%s --insecure-options=image,tls fetch %s", ctx.Cmd(), img)
+	cmd := fmt.Sprintf("%s --insecure-options=image,tls fetch %s %s", ctx.Cmd(), fetchArgs, img)
 
 	// TODO(jonboulle): non-root user breaks trying to read root-written
 	// config directories. Should be a better way to approach this. Should
 	// config directories be readable by the rkt group too?
 	if gid != 0 {
-		cmd = fmt.Sprintf("%s --insecure-options=image,tls fetch %s", ctx.CmdNoConfig(), img)
+		cmd = fmt.Sprintf("%s --insecure-options=image,tls fetch %s %s", ctx.CmdNoConfig(), fetchArgs, img)
 	}
 	child, err := gexpect.Command(cmd)
 	if err != nil {
@@ -200,7 +200,7 @@ func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img st
 	}
 
 	// Read out the image hash.
-	result, out, err := expectRegexWithOutput(child, "sha512-[0-9a-f]{32}")
+	result, out, err := expectRegexWithOutput(child, "sha512-[0-9a-f]{32,64}")
 	if err != nil || len(result) != 1 {
 		t.Fatalf("Error: %v\nOutput: %v", err, out)
 	}
@@ -210,15 +210,15 @@ func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img st
 	return result[0]
 }
 
-func importImageAndFetchHash(t *testing.T, ctx *testutils.RktRunCtx, img string) string {
-	return importImageAndFetchHashAsGid(t, ctx, img, 0)
+func importImageAndFetchHash(t *testing.T, ctx *testutils.RktRunCtx, fetchArgs string, img string) string {
+	return importImageAndFetchHashAsGid(t, ctx, fetchArgs, img, 0)
 }
 
 func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *testutils.RktRunCtx) string {
 	imagePath := patchTestACI(image, patches...)
 	defer os.Remove(imagePath)
 
-	return importImageAndFetchHash(t, ctx, imagePath)
+	return importImageAndFetchHash(t, ctx, "", imagePath)
 }
 
 func patchImportAndRun(image string, patches []string, t *testing.T, ctx *testutils.RktRunCtx) {
