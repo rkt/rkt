@@ -208,7 +208,7 @@ Overriding is done for each registry.
 That means that the user can override credentials used for each registry.
 For example, given this system configuration:
 
-In `/usr/lib/rkt/auth.d/docker.json`:
+`/usr/lib/rkt/auth.d/docker.json`:
 
 ```json
 {
@@ -261,19 +261,49 @@ Note that _within_ a particular configuration directory (either system or local)
 
 ### rktKind: `paths`
 
-This kind of configuration is used to customize the various paths that rkt uses.
-The configuration files should be placed inside a `paths.d` subdirectory (e.g. in `/usr/lib/rkt/paths.d` or `/etc/rkt/paths.d`).
+The `paths` configuration kind is used to customize the various paths that rkt uses.
+The configuration files should be placed inside the `paths.d` subdirectory (e.g., in the case of the default system/local directories, in `/usr/lib/rkt/paths.d` and/or `/etc/rkt/paths.d`).
 
 #### rktVersion: `v1`
 
 ##### Description and examples
 
-This version of `paths` configuration specifies one additional field: `data`.
+This version of the `paths` configuration specifies one additional field: `data`.
 
 The `data` field is a string that defines where image data and running pods are stored.
-If its value is not overridden, it is `/var/lib/rkt` by default.
+This field is optional.
 
-For example, to store images in your home partition instead of the root partition:
+Example `paths` configuration:
+
+`/etc/rkt/paths.d/paths.json`:
+
+```json
+{
+	"rktKind": "paths",
+	"rktVersion": "v1",
+	"data": "/home/me/rkt/data"
+}
+```
+
+##### Override semantics
+
+Overriding is done for each path.
+For example, given this system configuration:
+
+`/usr/lib/rkt/paths.d/data.json`:
+
+```json
+{
+	"rktKind": "paths",
+	"rktVersion": "v1",
+	"data": "/opt/rkt-stuff/data"
+}
+```
+
+If only this configuration file is provided, then rkt will store images and pods in the `/opt/rkt-stuff/data` directory.
+
+But with additional configuration provided in the local configuration directory, this can be overridden.
+For example, given the above system configuration and the following local configuration:
 
 `/etc/rkt/paths.d/paths.json`:
 
@@ -285,14 +315,5 @@ For example, to store images in your home partition instead of the root partitio
 }
 ```
 
-##### Override semantics
-
-Overriding is done for each directory.
-Not specifying a directory leaves it as its default path.
-
-The `data` directory can be specified via the `--dir` command line argument.
-If this is provided, this takes precedence over any configuration files.
-
-Configuration files can be added to the system configuration (`/usr/lib/rkt/paths.d`) and the local configuration (`/etc/rkt/paths.d`).
-If there are configurations in both, the local configuration takes precedence.
-If there are multiple configurations in the same directory, an error occurs.
+Now rkt will store the images and pods in the `/home/me/rkt` directory.
+It will not know about any other data directory.
