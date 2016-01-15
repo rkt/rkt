@@ -428,7 +428,7 @@ func TestDeferredSignatureDownload(t *testing.T) {
 	defer os.Remove(asc)
 	ascBase := filepath.Base(asc)
 
-	server := runDiscoveryServer(t, taas.ServerQuay, taas.AuthNone)
+	server := runDiscoveryServer(t, taas.ProtocolHttps, taas.ServerQuay, taas.AuthNone)
 	defer server.Close()
 	fileSet := make(map[string]string, 2)
 	fileSet[imageFileName] = image

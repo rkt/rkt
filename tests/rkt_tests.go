@@ -565,8 +565,8 @@ func newAPIClientOrFail(t *testing.T, address string) (v1alpha.PublicAPIClient, 
 	return c, conn
 }
 
-func runServer(t *testing.T, serverType taas.ServerType, authType taas.AuthType) *taas.Server {
-	server := taas.NewServer(serverType, authType, 20)
+func runServer(t *testing.T, protocolType taas.ProtocolType, serverType taas.ServerType, authType taas.AuthType) *taas.Server {
+	server := taas.NewServer(protocolType, serverType, authType, 20)
 	go serverHandler(t, server)
 	return server
 }
@@ -604,7 +604,7 @@ func runSignImage(t *testing.T, imageFile string, keyIndex int) string {
 	return ascFile
 }
 
-func runDiscoveryServer(t *testing.T, serverType taas.ServerType, authType taas.AuthType) *taas.Server {
+func runDiscoveryServer(t *testing.T, protocolType taas.ProtocolType, serverType taas.ServerType, authType taas.AuthType) *taas.Server {
 	// TODO: we can avoid setting the port manually when appc/spec gains
 	// the ability to specify ports for discovery.
 	// See https://github.com/appc/spec/pull/110
@@ -627,7 +627,7 @@ func runDiscoveryServer(t *testing.T, serverType taas.ServerType, authType taas.
 	serverURL.Value.Set("127.0.0.1:443")
 	// reset httptest.serve to "" so we don't influence other tests
 	defer serverURL.Value.Set("")
-	return runServer(t, serverType, authType)
+	return runServer(t, protocolType, serverType, authType)
 }
 
 func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string, keyIndex int) {

@@ -25,6 +25,13 @@ import (
 	"strings"
 )
 
+type ProtocolType int
+
+const (
+	ProtocolHttps ProtocolType = iota
+	ProtocolHttp
+)
+
 type AuthType int
 
 const (
@@ -52,9 +59,11 @@ func (e *httpError) Error() string {
 type serverHandler struct {
 	server       ServerType
 	auth         AuthType
+	protocol     ProtocolType
 	msg          chan<- string
 	fileSet      map[string]string
 	servedImages map[string]struct{}
+	serverURL    string
 }
 
 func (h *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -167,7 +176,7 @@ func (h *serverHandler) handleRequest(w http.ResponseWriter, r *http.Request) {
 func (h *serverHandler) sendAcDiscovery(w http.ResponseWriter) {
 	// TODO(krnowak): When appc spec gets the discovery over
 	// custom port feature, possibly take it into account here
-	indexHTML := `<meta name="ac-discovery" content="localhost https://localhost/{name}.{ext}">`
+	indexHTML := fmt.Sprintf(`<meta name="ac-discovery" content="localhost %s/{name}.{ext}">`, h.serverURL)
 	w.Write([]byte(indexHTML))
 	h.sendMsg("  done.")
 }
@@ -246,7 +255,7 @@ func (s *Server) UpdateFileSet(fileSet map[string]string) {
 	s.handler.fileSet = fileSet
 }
 
-func NewServer(serverType ServerType, auth AuthType, msgCapacity int) *Server {
+func NewServer(protocol ProtocolType, serverType ServerType, auth AuthType, msgCapacity int) *Server {
 	msg := make(chan string, msgCapacity)
 	server := &Server{
 		Msg: msg,
@@ -254,14 +263,23 @@ func NewServer(serverType ServerType, auth AuthType, msgCapacity int) *Server {
 			auth:         auth,
 			msg:          msg,
 			server:       serverType,
-			fileSet:      make(map[string]string),
+			protocolType: protocol,
+			fileSet:      make(map[string]*servedFile),
 			servedImages: make(map[string]struct{}),
 		},
 	}
 	server.http = httptest.NewUnstartedServer(server.handler)
-	server.http.TLS = &tls.Config{InsecureSkipVerify: true}
-	server.http.StartTLS()
+	switch protocol {
+	case ProtocolHttp:
+		server.http.Start()
+	case ProtocolHttps:
+		server.http.TLS = &tls.Config{InsecureSkipVerify: true}
+		server.http.StartTLS()
+	default:
+		panic("Woe is me!")
+	}
 	server.URL = server.http.URL
+	server.handler.serverURL = server.http.URL
 	host := server.http.Listener.Addr().String()
 	switch auth {
 	case AuthNone:

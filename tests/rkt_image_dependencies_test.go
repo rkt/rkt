@@ -74,7 +74,7 @@ func TestImageDependencies(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	server := runDiscoveryServer(t, taas.ServerOrdinary, taas.AuthNone)
+	server := runDiscoveryServer(t, taas.ProtocolHttps, taas.ServerOrdinary, taas.AuthNone)
 	defer server.Close()
 
 	baseImage := getInspectImagePath()
@@ -180,10 +180,10 @@ func TestImageDependencies(t *testing.T) {
 	child := spawnOrFail(t, runCmd)
 
 	expectedList := []string{
-		"image: fetching image from https://localhost/localhost/image-a.aci",
+		fmt.Sprintf("image: fetching image from %s/localhost/image-a.aci", server.URL),
 		"image: using image from local store for image name localhost/image-b",
-		"image: fetching image from https://localhost/localhost/image-c.aci",
-		"image: fetching image from https://localhost/localhost/image-d.aci",
+		fmt.Sprintf("image: fetching image from %s/localhost/image-c.aci", server.URL),
+		fmt.Sprintf("image: fetching image from %s/localhost/image-d.aci", server.URL),
 		"image: using image from local store for image name coreos.com/rkt-inspect",
 		"HelloDependencies",
 	}
