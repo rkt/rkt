@@ -74,7 +74,7 @@ func TestImageDependencies(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	server := runDiscoveryServer(t, taas.GetDefaultServerSetup())
+	server := runServer(t, taas.GetDefaultServerSetup())
 	defer server.Close()
 
 	baseImage := getInspectImagePath()

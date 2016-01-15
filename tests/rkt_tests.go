@@ -19,7 +19,6 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -602,32 +601,6 @@ func runSignImage(t *testing.T, imageFile string, keyIndex int) string {
 		keyFingerprint, ascFile, imageFile)
 	spawnAndWaitOrFail(t, cmd, true)
 	return ascFile
-}
-
-func runDiscoveryServer(t *testing.T, setup taas.ServerSetup) *taas.Server {
-	// TODO: we can avoid setting the port manually when appc/spec gains
-	// the ability to specify ports for discovery.
-	// See https://github.com/appc/spec/pull/110
-	//
-	// httptest by default uses random ports. We override this via the
-	// "httptest.serve" flag.
-	//
-	// As long as we set the port via the "httptest.serve" flag, we have
-	// to use https rather than http because httptest.Start() would wait
-	// forever in "select {}", see
-	// https://golang.org/src/net/http/httptest/server.go?s=2768:2792#L92
-	//
-	// This means this test must:
-	// - use https only
-	// - ignore tls errors with --insecure-options=tls
-	serverURL := flag.Lookup("httptest.serve")
-	if serverURL == nil {
-		panic("could not find the httptest.serve flag")
-	}
-	serverURL.Value.Set("127.0.0.1:443")
-	// reset httptest.serve to "" so we don't influence other tests
-	defer serverURL.Value.Set("")
-	return runServer(t, setup)
 }
 
 func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string, keyIndex int) {

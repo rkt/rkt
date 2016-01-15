@@ -154,6 +154,7 @@ func testAuthIgnoreSubdirectories(t *testing.T, server *taas.Server) {
 func runAuthServer(t *testing.T, auth taas.AuthType) (*taas.Server, string) {
 	setup := taas.GetDefaultServerSetup()
 	setup.Auth = auth
+	setup.Port = taas.PortRandom
 	server := runServer(t, setup)
 	image := patchTestACI(authACIName, fmt.Sprintf("--exec=/inspect --print-msg='%s'", authSuccessfulDownload))
 	fileSet := make(map[string]string, 1)

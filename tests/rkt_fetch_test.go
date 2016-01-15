@@ -430,7 +430,7 @@ func TestDeferredSignatureDownload(t *testing.T) {
 
 	setup := taas.GetDefaultServerSetup()
 	setup.Server = taas.ServerQuay
-	server := runDiscoveryServer(t, setup)
+	server := runServer(t, setup)
 	defer server.Close()
 	fileSet := make(map[string]string, 2)
 	fileSet[imageFileName] = image

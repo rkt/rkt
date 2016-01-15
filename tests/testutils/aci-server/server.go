@@ -20,10 +20,18 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
+)
+
+type PortType int
+
+const (
+	PortFixed PortType = iota
+	PortRandom
 )
 
 type ProtocolType int
@@ -278,6 +286,7 @@ type Server struct {
 }
 
 type ServerSetup struct {
+	Port        PortType
 	Protocol    ProtocolType
 	Server      ServerType
 	Auth        AuthType
@@ -286,6 +295,7 @@ type ServerSetup struct {
 
 func GetDefaultServerSetup() *ServerSetup {
 	return &ServerSetup{
+		Port:        PortFixed,
 		Protocol:    ProtocolHttps,
 		Server:      ServerOrdinary,
 		Auth:        AuthNone,
@@ -324,6 +334,13 @@ func NewServer(setup *ServerSetup) *Server {
 		},
 	}
 	server.http = httptest.NewUnstartedServer(server.handler)
+	// We use our own listener, so we can override a port number
+	// without using a "httptest.serve" flag. Using the
+	// "httptest.serve" flag together with an HTTP protocol
+	// results in blocking for debugging purposes as described in
+	// https://golang.org/src/net/http/httptest/server.go#L74.
+	// Here, we lose the ability, but we don't need it.
+	server.http.Listener = newLocalListener(setup.Port, setup.Protocol)
 	switch setup.Protocol {
 	case ProtocolHttp:
 		server.http.Start()
@@ -350,6 +367,26 @@ func NewServer(setup *ServerSetup) *Server {
 		panic("Woe is me!")
 	}
 	return server
+}
+
+// based on code from net/http/httptest
+func newLocalListener(port PortType, protocol ProtocolType) net.Listener {
+	portNumber := 0
+	if port == PortFixed {
+		switch protocol {
+		case ProtocolHttp:
+			portNumber = 80
+		case ProtocolHttps:
+			portNumber = 443
+		}
+	}
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", portNumber))
+	if err != nil {
+		if l, err = net.Listen("tcp6", fmt.Sprintf("[::1]:%d", portNumber)); err != nil {
+			panic(fmt.Sprintf("aci test server: failed to listen on a port: %v", err))
+		}
+	}
+	return l
 }
 
 func sprintCreds(host, auth, creds string) string {
