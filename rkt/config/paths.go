@@ -17,6 +17,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 )
 
 type configurablePathsV1 struct {
@@ -36,9 +37,10 @@ func (p *configurablePathsV1) parse(config *Config, raw []byte) error {
 	}
 	if dirs.Data != "" {
 		if config.Paths.DataDir != "" {
-			// A clash has occurred. Data dir has been defined more than once in
-			// the same directory
 			return fmt.Errorf("data directory is already specified")
+		}
+		if !filepath.IsAbs(dirs.Data) {
+			return fmt.Errorf("data directory must be an absolute path")
 		}
 		config.Paths.DataDir = dirs.Data
 	}

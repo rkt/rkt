@@ -134,8 +134,8 @@ dnl specify a default name and version instead.
 AS_IF([test "x${RKT_STAGE1_DEFAULT_FLAVOR}" != 'xauto' -a '(' "x${RKT_STAGE1_DEFAULT_NAME}" != 'xauto' -o "x${RKT_STAGE1_DEFAULT_VERSION}" != 'xauto' ')'],
               dnl Passed both --with-stage1-default-flavor and
               dnl --with-stage1-default-{name,version} - bail out,
-              dnl they are conflicting.
-              [AC_MSG_ERROR([*** --with-stage1-default-flavor and --with-stage1-default-{name,version} flags are conflicting; use either default flavor or specific default name and version])],
+              dnl they are mutually exclusive.
+              [AC_MSG_ERROR([*** --with-stage1-default-flavor and --with-stage1-default-{name,version} flags are mutually exclusive; use either default flavor or specific default name and version])],
       [test "x${RKT_STAGE1_DEFAULT_FLAVOR}" = 'xauto' -a "x${RKT_STAGE1_DEFAULT_NAME}" = 'xauto' -a "x${RKT_STAGE1_DEFAULT_VERSION}" = 'xauto'],
               dnl Passed neither --with-stage1-default-flavor nor
               dnl --with-stage1-default-{name,version} - default to

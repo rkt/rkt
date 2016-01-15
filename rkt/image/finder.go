@@ -43,6 +43,7 @@ func (f *Finder) FindImages(al *apps.Apps) error {
 // store. Otherwise this might involve fetching it from remote with
 // the Fetcher.
 func (f *Finder) FindImage(img string, asc string, imgType apps.AppImageType) (*types.Hash, error) {
+	ensureLogger(f.Debug)
 	if imgType == apps.AppImageGuess {
 		imgType = guessImageType(img)
 	}
@@ -79,5 +80,6 @@ func (f *Finder) getHashFromStore(img string) (*types.Hash, error) {
 		// should never happen
 		log.PanicE("got an invalid hash from the store, looks like it is corrupted", err)
 	}
+	log.Printf("using image from the store with hash %s", h.String())
 	return h, nil
 }

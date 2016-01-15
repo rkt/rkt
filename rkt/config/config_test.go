@@ -122,7 +122,6 @@ func TestDockerAuthConfigFormat(t *testing.T) {
 }
 
 func TestPathsConfigFormat(t *testing.T) {
-	tmpPath := os.TempDir()
 	tests := []struct {
 		contents string
 		expected ConfigurablePaths
