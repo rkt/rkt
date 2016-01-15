@@ -518,6 +518,24 @@ func TestFilterImage(t *testing.T) {
 			},
 			false,
 		},
+		// Match one of the full names.
+		{
+			&v1alpha.Image{Name: "foo/basename-foo"},
+			&schema.ImageManifest{},
+			&v1alpha.ImageFilter{
+				FullNames: []string{"foo/basename-foo", "foo/basename-bar"},
+			},
+			true,
+		},
+		// Doesn't match any full names.
+		{
+			&v1alpha.Image{Name: "foo/basename-foo"},
+			&schema.ImageManifest{},
+			&v1alpha.ImageFilter{
+				FullNames: []string{"bar/basename-foo", "foo/basename-bar"},
+			},
+			false,
+		},
 		// Doesn't satisfy any filter conditions.
 		{
 			&v1alpha.Image{

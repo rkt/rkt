@@ -428,6 +428,8 @@ type ImageFilter struct {
 	ImportedBefore int64 `protobuf:"varint,7,opt,name=imported_before" json:"imported_before,omitempty"`
 	// If not empty, the images that have all of the annotations will be returned.
 	Annotations []*KeyValue `protobuf:"bytes,8,rep,name=annotations" json:"annotations,omitempty"`
+	// If not empty, the images that have any of the exact full names will be returned.
+	FullNames []string `protobuf:"bytes,9,rep,name=full_names" json:"full_names,omitempty"`
 }
 
 func (m *ImageFilter) Reset()                    { *m = ImageFilter{} }
