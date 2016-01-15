@@ -71,7 +71,7 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 func init() {
 	cmdRkt.AddCommand(cmdRun)
 
-	addStage1ImageFlag(cmdRun.Flags())
+	addStage1ImageFlags(cmdRun.Flags())
 	cmdRun.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires contained network). Syntax: --port=NAME:HOSTPORT")
 	cmdRun.Flags().Var(&flagNet, "net", "configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively. Syntax: --net[=n[:args], ...]")
 	cmdRun.Flags().Lookup("net").NoOptDefVal = "default"
@@ -170,7 +170,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	s1img, err := getStage1Hash(s, cmd)
+	s1img, err := getStage1Hash(s, config)
 	if err != nil {
 		stderr.Error(err)
 		return 1
