@@ -277,6 +277,22 @@ type Server struct {
 	http    *httptest.Server
 }
 
+type ServerSetup struct {
+	Protocol    ProtocolType
+	Server      ServerType
+	Auth        AuthType
+	MsgCapacity int
+}
+
+func GetDefaultServerSetup() *ServerSetup {
+	return &ServerSetup{
+		Protocol:    ProtocolHttps,
+		Server:      ServerOrdinary,
+		Auth:        AuthNone,
+		MsgCapacity: 20,
+	}
+}
+
 func (s *Server) Close() {
 	s.http.Close()
 	close(s.handler.msg)
@@ -294,21 +310,21 @@ func (s *Server) UpdateFileSet(fileSet map[string]string) error {
 	return nil
 }
 
-func NewServer(protocol ProtocolType, serverType ServerType, auth AuthType, msgCapacity int) *Server {
-	msg := make(chan string, msgCapacity)
+func NewServer(setup *ServerSetup) *Server {
+	msg := make(chan string, setup.MsgCapacity)
 	server := &Server{
 		Msg: msg,
 		handler: &serverHandler{
-			auth:         auth,
+			auth:         setup.Auth,
 			msg:          msg,
-			server:       serverType,
-			protocolType: protocol,
+			server:       setup.Server,
+			protocol:     setup.Protocol,
 			fileSet:      make(map[string]*servedFile),
 			servedImages: make(map[string]struct{}),
 		},
 	}
 	server.http = httptest.NewUnstartedServer(server.handler)
-	switch protocol {
+	switch setup.Protocol {
 	case ProtocolHttp:
 		server.http.Start()
 	case ProtocolHttps:
@@ -320,7 +336,7 @@ func NewServer(protocol ProtocolType, serverType ServerType, auth AuthType, msgC
 	server.URL = server.http.URL
 	server.handler.serverURL = server.http.URL
 	host := server.http.Listener.Addr().String()
-	switch auth {
+	switch setup.Auth {
 	case AuthNone:
 		// nothing to do
 	case AuthBasic:
