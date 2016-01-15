@@ -165,7 +165,9 @@ func TestImageDependencies(t *testing.T) {
 		fileSet[baseName] = img.fileName
 	}
 
-	server.UpdateFileSet(fileSet)
+	if err := server.UpdateFileSet(fileSet); err != nil {
+		t.Fatalf("Failed to populate a file list in test aci server: %v", err)
+	}
 
 	for i := len(imageList) - 1; i >= 0; i-- {
 		img := imageList[i]

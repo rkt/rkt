@@ -156,7 +156,9 @@ func runAuthServer(t *testing.T, auth taas.AuthType) (*taas.Server, string) {
 	image := patchTestACI(authACIName, fmt.Sprintf("--exec=/inspect --print-msg='%s'", authSuccessfulDownload))
 	fileSet := make(map[string]string, 1)
 	fileSet[authACIName] = image
-	server.UpdateFileSet(fileSet)
+	if err := server.UpdateFileSet(fileSet); err != nil {
+		t.Fatalf("Failed to populate a file list in test aci server: %v", err)
+	}
 	return server, image
 }
 
@@ -171,7 +173,7 @@ func expectedRunRkt(ctx *testutils.RktRunCtx, t *testing.T, host, testName, line
 	t.Logf("test name: %s", testName)
 	// First, check that --insecure-options=image,tls is required
 	// The server does not provide signatures for now.
-	cmd := fmt.Sprintf(`%s --debug run --mds-register=false %s/%s`, ctx.Cmd(), host, authACIName)
+	cmd := fmt.Sprintf(`%s --debug run --no-store --mds-register=false %s/%s`, ctx.Cmd(), host, authACIName)
 	child := spawnOrFail(t, cmd)
 	defer child.Wait()
 	signatureErrorLine := "error downloading the signature file"
@@ -180,7 +182,7 @@ func expectedRunRkt(ctx *testutils.RktRunCtx, t *testing.T, host, testName, line
 	}
 
 	// Then, run with --insecure-options=image,tls
-	cmd = fmt.Sprintf(`%s --debug --insecure-options=image,tls run --mds-register=false %s/%s`, ctx.Cmd(), host, authACIName)
+	cmd = fmt.Sprintf(`%s --debug --insecure-options=image,tls run --no-store --mds-register=false %s/%s`, ctx.Cmd(), host, authACIName)
 	child = spawnOrFail(t, cmd)
 	defer child.Wait()
 	if err := expectWithOutput(child, line); err != nil {
