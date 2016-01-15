@@ -2,7 +2,7 @@
 
 `rkt` reads configuration from two or three directories - a **system directory**, a **local directory** and, if provided, a **user directory**.
 The system directory defaults to `/usr/lib/rkt`, the local directory to `/etc/rkt`, and the user directory to an empty string.
-These locations can be changed with command line flags.
+These locations can be changed with command line flags described below.
 
 The system directory should contain a configuration created by a vendor (e.g. distribution).
 The contents of this directory should not be modified - it is meant to be read only.
@@ -35,6 +35,12 @@ The same relationship exists between the local directory and the user directory 
 The semantics of overriding configuration in this manner are specific to the `kind` and `version` of the configuration, and are described below.
 File names are not examined in determining local overrides.
 Only the fields inside configuration files need to match.
+
+## Command line flags
+
+To change the system configuration directory, use `--system-config` flag.
+To change the local configuration directory, use `--local-config` flag.
+To change the user configuration directory, use `--user-config` flag.
 
 ## Configuration kinds
 
@@ -159,6 +165,10 @@ For `tectonic.com`, it will send `Authorization: Bearer tectonic-token`.
 
 Note that _within_ a particular configuration directory (either system or local), it is a syntax error for the same domain to be defined in multiple files.
 
+##### Command line flags
+
+There are no command line flags for specifying or overriding the auth configuration.
+
 ### rktKind: `dockerAuth`
 
 The `dockerAuth` configuration kind is used to set up necessary credentials when downloading data from Docker registries.
@@ -259,6 +269,10 @@ The result is that when downloading images from `index.docker.io`, `rkt` still s
 
 Note that _within_ a particular configuration directory (either system or local), it is a syntax error for the same Docker registry to be defined in multiple files.
 
+##### Command line flags
+
+There are no command line flags for specifying or overriding the docker auth configuration.
+
 ### rktKind: `paths`
 
 The `paths` configuration kind is used to customize the various paths that rkt uses.
@@ -317,3 +331,7 @@ For example, given the above system configuration and the following local config
 
 Now rkt will store the images and pods in the `/home/me/rkt` directory.
 It will not know about any other data directory.
+
+##### Command line flags
+
+The `data` field can be overridden with the `--dir` flag.
