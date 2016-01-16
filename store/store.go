@@ -860,7 +860,11 @@ func (s *Store) GetACIInfoWithBlobKey(blobKey string) (*ACIInfo, error) {
 		return err
 	})
 	if !found {
-		err = fmt.Errorf("ACI info not found with blob key %q", blobKey)
+		if err != nil {
+			err = fmt.Errorf("ACI info not found with blob key %q: %v", blobKey, err)
+		} else {
+			err = fmt.Errorf("ACI info not found with blob key %q", blobKey)
+		}
 	}
 	return aciInfo, err
 }
