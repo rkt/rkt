@@ -218,8 +218,11 @@ func stage1() int {
 		return 1
 	}
 
-	// TODO: insert environment from manifest
-	env := []string{"PATH=/bin:/sbin:/usr/bin:/usr/local/bin"}
+	env := []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
+	for _, e := range p.Manifest.Apps[0].App.Environment {
+		env = append(env, e.Name+"="+e.Value)
+	}
+
 	args := p.Manifest.Apps[0].App.Exec
 	rfs := filepath.Join(common.AppPath(p.Root, p.Manifest.Apps[0].Name), "rootfs")
 
