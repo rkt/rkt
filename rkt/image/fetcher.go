@@ -66,8 +66,8 @@ func (f *Fetcher) fetchImageDeps(hash string) error {
 	imgsl := list.New()
 	seen := map[string]struct{}{}
 	f.addImageDeps(hash, imgsl, seen)
-	a := &asc{}
 	for el := imgsl.Front(); el != nil; el = el.Next() {
+		a := &asc{}
 		img := el.Value.(string)
 		hash, err := f.fetchSingleImage(img, a, apps.AppImageName)
 		if err != nil {
