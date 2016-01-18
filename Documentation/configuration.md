@@ -287,7 +287,7 @@ This version of the `paths` configuration specifies two additional fields: `data
 The `data` field is a string that defines where image data and running pods are stored.
 This field is optional.
 
-The `stage1-images` field is a string that defines where are the stage1 images are stored.
+The `stage1-images` field is a string that defines where are the stage1 images are stored, so rkt can search for them when using the `--stage1-from-dir` flag.
 This field is optional.
 
 Example `paths` configuration:
@@ -319,6 +319,7 @@ For example, given this system configuration:
 ```
 
 If only this configuration file is provided, then rkt will store images and pods in the `/opt/rkt-stuff/data` directory.
+Also, when user passes `--stage1-from-dir=stage1.aci` to rkt, rkt will search for this file in the directory specified at build time (usually `/usr/lib/rkt/stage1-images`).
 
 But with additional configuration provided in the local configuration directory, this can be overridden.
 For example, given the above system configuration and the following local configuration:
@@ -335,6 +336,7 @@ For example, given the above system configuration and the following local config
 
 Now rkt will store the images and pods in the `/home/me/rkt` directory.
 It will not know about any other data directory.
+Also, rkt will still search for the stage1 images in the directory specified at build time for the `--stage1-from-dir` flag.
 
 To override the stage1 images directory:
 
@@ -458,4 +460,4 @@ Note that _within_ a particular configuration directory (either system or local)
 
 ##### Command line flags
 
-The `name`, `version` and `location` fields are ignored in favor of a value coming from the `--stage1-image` flag.
+The `name`, `version` and `location` fields are ignored in favor of a value coming from `--stage1-url`, `--stage1-path`, `--stage1-name`, `--stage1-hash`, or `--stage1-from-dir` flags.
