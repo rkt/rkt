@@ -6,6 +6,7 @@
 - When using `bash`, `rkt` commands can be auto-completed ([#1955](https://github.com/coreos/rkt/pull/1955)).
 - The executables given on the command line via the `--exec` parameters don't need to be absolute paths anymore ([#1953](https://github.com/coreos/rkt/pull/1953)). This change reflects an update in the appc spec since [v0.7.2](https://github.com/appc/spec/releases/tag/v0.7.2). See rkt's [rkt run --exec](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#overriding-executable-to-launch) documentation.
 - Add a `--full` flag to rkt fetch so it returns full hash of the image. ([#1976](https://github.com/coreos/rkt/pull/1976))
+- There is a new global flag for specifying the user configuration directory, `--user-config`. It overrides whatever is configured in system and local configuration directories. It can be useful for specifying different credentials for fetching images without putting them in a globally visible directory like `/etc/rkt`. See rkt's [Global Options](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#global-options) documentation. ([#1981](https://github.com/coreos/rkt/pull/1981))
 
 #### Build improvements
 
