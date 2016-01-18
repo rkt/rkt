@@ -354,3 +354,108 @@ Now rkt will search in the `/home/me/stage1/images` directory, not in the direct
 
 The `data` field can be overridden with the `--dir` flag.
 The `stage1-images` field cannot be overridden with a command line flag.
+
+### rktKind: `stage1`
+
+The `stage1` configuration kind is used to set up a default stage1 image.
+The configuration files should be placed inside the `stage1.d` subdirectory (e.g., in the case of the default system/local directories, in `/usr/lib/rkt/stage1.d` and/or `/etc/rkt/stage1.d`).
+
+#### rktVersion: `v1`
+
+##### Description and examples
+
+This version of the `stage1` configuration specifies three additional fields: `name`, `version` and `location`.
+
+The `name` field is a string specifying a name of a default stage1 image.
+This field is optional.
+If specified, the `version` field must be specified too.
+
+The `version` field is a string specifying a version of a default stage1 image.
+This field is optional.
+If specified, the `name` field must be specified too.
+
+The `location` field is a string describing the location of a stage1 image file.
+This field is optional.
+
+The `name` and `version` fields are used by `rkt` (unless overridden with a run-time flag or left empty) to search for the stage1 image in the image store.
+If it is not found there then `rkt` will use a value from the `location` field (again, unless overridden or empty) to fetch the stage1 image.
+
+If the `name`, `version` and `location` fields are specified then it is expected that the file in `location` is a stage1 image with the same name and version in manifest as values of the `name` and `version` fields, respectively.
+Note that this is not enforced in any way.
+
+The `location` field can be:
+
+- a `file://` URL
+- a `http://` URL
+- a `https://` URL
+- a `docker://` URL
+- an absolute path (basically the same as a `file://` URL)
+
+An example:
+
+```json
+{
+	"rktKind": "stage1",
+	"rktVersion": "v1",
+	"name": "example.com/rkt/stage1",
+	"version": "1.2.3",
+	"location": "https://example.com/download/stage1-1.2.3.aci"
+}
+```
+
+##### Override semantics
+
+Overriding is done separately for the name-and-version pairs and for the locations.
+That means that the user can override either both a name and a version or a location.
+As an example, consider this system configuration:
+
+`/usr/lib/rkt/stage1.d/coreos.json`:
+
+```json
+{
+	"rktKind": "stage1",
+	"rktVersion": "v1",
+	"name": "coreos.com/rkt/stage1-coreos",
+	"version": "0.15.0+git",
+	"location": "/usr/libexec/rkt/stage1-coreos.aci"
+}
+```
+
+If only this configuration file is provided then `rkt` will check if `coreos.com/rkt/stage1-coreos` with version `0.15.0+git` is in image store.
+If it is absent then it would fetch it from `/usr/libexec/rkt/stage1-coreos.aci`.
+
+But with additional configuration provided in the local configuration directory, this can be overridden.
+For example, given the above system configuration and the following local configurations:
+
+`/etc/rkt/stage1.d/specific-coreos.json`:
+
+```json
+{
+	"rktKind": "stage1",
+	"rktVersion": "v1",
+	"location": "https://example.com/coreos-stage1.aci"
+}
+```
+
+The result is that `rkt` will still look for `coreos.com/rkt/stage1-coreos` with version `0.15.0+git` in the image store, but if it is not found, it will fetch it from `https://example.com/coreos-stage1.aci`.
+
+To continue the example, we can also override name and version with an additional configuration file like this:
+
+`/etc/rkt/stage1.d/other-name-and-version.json`:
+
+```json
+{
+	"rktKind": "stage1",
+	"rktVersion": "v1",
+	"name": "example.com/rkt/stage1",
+	"version": "1.2.3"
+}
+```
+
+Now `rkt` will search for `example.com/rkt/stage1` with version `1.2.3` in the image store before trying to fetch the image from `https://example.com/coreos-stage1.aci`.
+
+Note that _within_ a particular configuration directory (either system or local), it is a syntax error for the name, version or location to be defined in multiple files.
+
+##### Command line flags
+
+The `name`, `version` and `location` fields are ignored in favor of a value coming from the `--stage1-image` flag.

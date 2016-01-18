@@ -47,12 +47,21 @@ type ConfigurablePaths struct {
 	Stage1ImagesDir string
 }
 
+// Stage1 holds name, version and location of a default stage1 image
+// if it was specified in configuration.
+type Stage1Data struct {
+	Name     string
+	Version  string
+	Location string
+}
+
 // Config is a single place where configuration for rkt frontend needs
 // resides.
 type Config struct {
 	AuthPerHost                  map[string]Headerer
 	DockerCredentialsPerRegistry map[string]BasicCredentials
 	Paths                        ConfigurablePaths
+	Stage1                       Stage1Data
 }
 
 type configParser interface {
@@ -307,5 +316,12 @@ func mergeConfigs(config *Config, subconfig *Config) {
 	}
 	if subconfig.Paths.Stage1ImagesDir != "" {
 		config.Paths.Stage1ImagesDir = subconfig.Paths.Stage1ImagesDir
+	}
+	if subconfig.Stage1.Name != "" {
+		config.Stage1.Name = subconfig.Stage1.Name
+		config.Stage1.Version = subconfig.Stage1.Version
+	}
+	if subconfig.Stage1.Location != "" {
+		config.Stage1.Location = subconfig.Stage1.Location
 	}
 }
