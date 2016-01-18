@@ -43,7 +43,8 @@ type BasicCredentials struct {
 
 // ConfigurablePaths holds various paths defined in the configuration.
 type ConfigurablePaths struct {
-	DataDir string
+	DataDir         string
+	Stage1ImagesDir string
 }
 
 // Config is a single place where configuration for rkt frontend needs
@@ -303,5 +304,8 @@ func mergeConfigs(config *Config, subconfig *Config) {
 	}
 	if subconfig.Paths.DataDir != "" {
 		config.Paths.DataDir = subconfig.Paths.DataDir
+	}
+	if subconfig.Paths.Stage1ImagesDir != "" {
+		config.Paths.Stage1ImagesDir = subconfig.Paths.Stage1ImagesDir
 	}
 }

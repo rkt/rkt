@@ -127,11 +127,13 @@ func TestPathsConfigFormat(t *testing.T) {
 		expected ConfigurablePaths
 		fail     bool
 	}{
-		{"bogus contents", ConfigurablePaths{DataDir: ""}, true},
-		{`{"bogus": {"foo": "bar"}}`, ConfigurablePaths{DataDir: ""}, true},
-		{`{"rktKind": "foo"}`, ConfigurablePaths{DataDir: ""}, true},
-		{`{"rktKind": "paths", "rktVersion": "foo"}`, ConfigurablePaths{DataDir: ""}, true},
-		{`{"rktKind": "paths", "rktVersion": "v1", "data": "` + tmpPath + `"}`, ConfigurablePaths{DataDir: tmpPath}, false},
+		{"bogus contents", ConfigurablePaths{}, true},
+		{`{"bogus": {"foo": "bar"}}`, ConfigurablePaths{}, true},
+		{`{"rktKind": "foo"}`, ConfigurablePaths{}, true},
+		{`{"rktKind": "paths", "rktVersion": "foo"}`, ConfigurablePaths{}, true},
+		{`{"rktKind": "paths", "rktVersion": "v1"}`, ConfigurablePaths{}, false},
+		{`{"rktKind": "paths", "rktVersion": "v1", "data": "/dir1"}`, ConfigurablePaths{DataDir: "/dir1"}, false},
+		{`{"rktKind": "paths", "rktVersion": "v1", "data": "/dir1", "stage1-images": "/dir2"}`, ConfigurablePaths{DataDir: "/dir1", Stage1ImagesDir: "/dir2"}, false},
 	}
 	for _, tt := range tests {
 		cfg, err := getConfigFromContents(tt.contents, "paths")
