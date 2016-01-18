@@ -1,8 +1,17 @@
 # rkt configuration
 
-`rkt` reads configuration from two directories - a **system directory** and a **local directory**.
-The system directory defaults to `/usr/lib/rkt`, and the local directory to `/etc/rkt`.
-Both locations can be changed with command line flags.
+`rkt` reads configuration from two or three directories - a **system directory**, a **local directory** and, if provided, a **user directory**.
+The system directory defaults to `/usr/lib/rkt`, the local directory to `/etc/rkt`, and the user directory to an empty string.
+These locations can be changed with command line flags.
+
+The system directory should contain a configuration created by a vendor (e.g. distribution).
+The contents of this directory should not be modified - it is meant to be read only.
+
+The local directory keeps configuration local to the machine.
+It can be modified by the admin.
+
+The user directory may hold some user specific configuration.
+It may be useful for specifying credentials used for fetching images without spilling them to some directory readable by everyone.
 
 `rkt` looks for configuration files with the `.json` file name extension in subdirectories beneath the system and local directories.
 `rkt` does not recurse down the directory tree to search for these files.
@@ -22,8 +31,10 @@ When a new field is added, a default value should be specified for it, documente
 This way, an older version of `rkt` can work with newer-but-compatible versions of configuration files, and newer versions of `rkt` can still work with older versions of configuration files.
 
 Configuration values in the system directory are superseded by the value of the same field if it exists in the local directory.
+The same relationship exists between the local directory and the user directory if the user directory is provided.
 The semantics of overriding configuration in this manner are specific to the `kind` and `version` of the configuration, and are described below.
-File names are not examined to determine local overrides. Only the fields inside configuration files need to match.
+File names are not examined in determining local overrides.
+Only the fields inside configuration files need to match.
 
 ## Configuration kinds
 
