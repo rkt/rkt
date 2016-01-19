@@ -111,6 +111,14 @@ AC_ARG_ENABLE([functional-tests],
               [RKT_RUN_FUNCTIONAL_TESTS="${enableval}"],
               [RKT_RUN_FUNCTIONAL_TESTS="no"])
 
+## TPM
+
+AC_ARG_ENABLE([tpm],
+              [AS_HELP_STRING([--enable-tpm],
+                              [enable logging to TPM, use 'auto' to enable it if the required development files are found, default: 'yes'])],
+              [RKT_ENABLE_TPM="${enableval}"],
+              [RKT_ENABLE_TPM="yes"])
+
 #### CHECKING
 
 ## STAGE1 - initial verification and setup
@@ -461,12 +469,26 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 AC_SUBST(RKT_DEFINES_FOR_ENTER)
 
 # Check whether we can build TPM support code
-AC_CHECK_HEADER(trousers/tss.h, [TPM_TAGS=tpm], [], [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADER(trousers/tss.h, [HAVE_TPM=yes], [HAVE_TPM=no], [AC_INCLUDES_DEFAULT])
+
+TPM_TAGS=''
+AS_CASE([${RKT_ENABLE_TPM}],
+        [no],
+                dnl nothing to do
+                [:],
+        [auto],
+                [AS_VAR_IF([HAVE_TPM],[yes],
+                           [TPM_TAGS=tpm
+                            RKT_ENABLE_TPM=yes],
+                           [RKT_ENABLE_TPM=no])],
+        [yes],
+                [AS_VAR_IF([HAVE_TPM],[no],
+                           [AC_MSG_ERROR([*** TPM is enabled, but could not find required development files])])
+                 TPM_TAGS=tpm],
+        [AC_MSG_ERROR([*** Invalid value passed to --enable-tpm, should be either 'yes', 'no' or 'auto'])])
 
 # Check whether we have libacl
 AC_CHECK_HEADER(acl/libacl.h, [], [AC_MSG_ERROR([*** No development headers for libacl found. Try to install libacl-devel or libacl1-dev])], [AC_INCLUDES_DEFAULT])
-
-AC_SUBST(TPM_TAGS)
 
 AC_LANG_POP([C])
 
@@ -554,6 +576,8 @@ AC_SUBST(RKT_STAGE1_DEFAULT_VERSION_LDFLAGS)
 AC_SUBST(RKT_STAGE1_DEFAULT_LOCATION_LDFLAGS)
 AC_SUBST(RKT_VERSION_LDFLAGS)
 
+AC_SUBST(TPM_TAGS)
+
 #### FILE GENERATION AND REPORTING
 
 AC_CONFIG_FILES([makelib/variables.mk])
@@ -602,4 +626,5 @@ AC_MSG_RESULT([
         other build parameters
 
         functional tests enabled:               '${RKT_RUN_FUNCTIONAL_TESTS}'
+        TPM enabled:                            '${RKT_ENABLE_TPM}'
         go version:                             '${GO_VERSION}'])

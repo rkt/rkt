@@ -136,3 +136,13 @@ If any of the requirements above are not met and the value of the parameter is y
 This may not be ideal in CI environment, so there is a third possible value of this parameter - "auto".
 "auto" will enable functional tests if all the requirements are met.
 Otherwise, it will disable them without any errors.
+
+## Security
+
+There is only one security-related flag; to enable TPM for logging.
+
+#### `--enable-tpm`
+
+Logging to TPM is enabled by default, so it follows the "secure by default" principle.
+For it to work, [TrouSerS](http://trousers.sourceforge.net/) is required.
+Use 'auto' to enable it conditionally.
