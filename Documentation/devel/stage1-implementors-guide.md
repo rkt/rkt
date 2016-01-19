@@ -62,6 +62,7 @@ Stage 1 must write the host PIDs of the pod's process #1 and that process's pare
 * `--mds-token=$TOKEN` passes the auth token to the apps via `AC_METADATA_URL` env var
 * `--interactive` to run a pod interactively, that is, pass standard input to the application (only for pods with one application)
 * `--local-config=$PATH` to override the local configuration directory
+* `--private-users=$SHIFT` to define a UID/GID shift when using user namespaces. SHIFT is a two-value colon-separated parameter, the first value is the first host UID to assign to the container and the second one is the number of host UIDs to assign.
 
 ### `rkt enter` => `coreos.com/rkt/stage1/enter`
 
