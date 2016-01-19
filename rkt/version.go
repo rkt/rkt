@@ -1,4 +1,4 @@
-// Copyright 2014 The rkt Authors
+// Copyright 2014-2016 The rkt Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 package main
 
 import (
+	"runtime"
+
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
 	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/version"
@@ -34,7 +36,9 @@ func init() {
 }
 
 func runVersion(cmd *cobra.Command, args []string) (exit int) {
-	stdout("rkt version %s", version.Version)
-	stdout("appc version %s", schema.AppContainerVersion)
+	stdout("rkt Version: %s", version.Version)
+	stdout("appc Version: %s", schema.AppContainerVersion)
+	stdout("Go Version: %s", runtime.Version())
+	stdout("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
 	return
 }
