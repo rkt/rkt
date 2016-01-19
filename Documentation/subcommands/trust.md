@@ -73,6 +73,12 @@ Added key for prefix "coreos.com/etcd" at "/etc/rkt/trustedkeys/prefix.d/coreos.
 Trusted public keys can be pre-populated by placing them in the appropriate location on disk for the desired prefix.
 
 ```
-$ ls -l /etc/rkt/trustedkeys/
-[insert example of root key vs prefixed key]
+$ find /etc/rkt/trustedkeys/
+/etc/rkt/trustedkeys/
+/etc/rkt/trustedkeys/prefix.d
+/etc/rkt/trustedkeys/prefix.d/coreos.com
+/etc/rkt/trustedkeys/prefix.d/coreos.com/etcd
+/etc/rkt/trustedkeys/prefix.d/coreos.com/etcd/8b86de38890ddb7291867b025210bd8888182190
+/etc/rkt/trustedkeys/root.d
+/etc/rkt/trustedkeys/root.d/d8685c1eff3b2276e5da37fd65eea12767432ac4
 ```
