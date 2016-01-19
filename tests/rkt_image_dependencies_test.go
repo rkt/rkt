@@ -78,7 +78,7 @@ func TestImageDependencies(t *testing.T) {
 	defer server.Close()
 
 	baseImage := getInspectImagePath()
-	_ = importImageAndFetchHash(t, ctx, baseImage)
+	_ = importImageAndFetchHash(t, ctx, "", baseImage)
 	emptyImage := getEmptyImagePath()
 	fileSet := make(map[string]string)
 
@@ -171,7 +171,7 @@ func TestImageDependencies(t *testing.T) {
 		img := imageList[i]
 		if img.prefetch {
 			t.Logf("Importing image %q: %q", img.imageName, img.fileName)
-			testImageShortHash := importImageAndFetchHash(t, ctx, img.fileName)
+			testImageShortHash := importImageAndFetchHash(t, ctx, "", img.fileName)
 			t.Logf("Imported image %q: %s", img.imageName, testImageShortHash)
 		}
 	}

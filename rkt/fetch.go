@@ -36,6 +36,7 @@ var (
 		Short: "Fetch image(s) and store them in the local store",
 		Run:   runWrapper(runFetch),
 	}
+	flagFullHash bool
 )
 
 func init() {
@@ -48,6 +49,7 @@ func init() {
 	cmdFetch.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 	cmdFetch.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
 	cmdFetch.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
+	cmdFetch.Flags().BoolVar(&flagFullHash, "full", false, "print the full image hash after fetching")
 }
 
 func runFetch(cmd *cobra.Command, args []string) (exit int) {
@@ -96,8 +98,10 @@ func runFetch(cmd *cobra.Command, args []string) (exit int) {
 		if err != nil {
 			return err
 		}
-		shortHash := types.ShortHash(hash)
-		stdout(shortHash)
+		if !flagFullHash {
+			hash = types.ShortHash(hash)
+		}
+		stdout(hash)
 		return nil
 	})
 	if err != nil {

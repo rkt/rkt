@@ -5,6 +5,7 @@
 - Explicitly allow http connections via a new 'http' option to `--insecure-options` ([#1945](https://github.com/coreos/rkt/pull/1945)). Any data and credentials will be sent in the clear.
 - When using `bash`, `rkt` commands can be auto-completed ([#1955](https://github.com/coreos/rkt/pull/1955)).
 - The executables given on the command line via the `--exec` parameters don't need to be absolute paths anymore ([#1953](https://github.com/coreos/rkt/pull/1953)). This change reflects an update in the appc spec since [v0.7.2](https://github.com/appc/spec/releases/tag/v0.7.2). See rkt's [rkt run --exec](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#overriding-executable-to-launch) documentation.
+- Add a `--full` flag to rkt fetch so it returns full hash of the image. ([#1976](https://github.com/coreos/rkt/pull/1976))
 
 #### Build improvements
 
