@@ -26,12 +26,22 @@ GIT_BRANCH=${3-master}
 test -f cloudinit/${DISTRO}.cloudinit
 CLOUDINIT_IN=$PWD/cloudinit/${DISTRO}.cloudinit
 
-if [ "$DISTRO" = "fedora" ] ; then
+if [ "$DISTRO" = "fedora-22" ] ; then
   # https://getfedora.org/en/cloud/download/
-  # Search Fedora-Cloud-Base-23-20160106.x86_64-eu-central-1-HVM-standard-0 on AWS
-  # Or look at https://apps.fedoraproject.org/datagrepper/raw?category=fedimg
+  # Search on AWS or look at
+  # https://apps.fedoraproject.org/datagrepper/raw?category=fedimg
   # Sources: https://github.com/fedora-infra/fedimg/blob/develop/bin/list-the-amis.py
-  AMI=ami-d76a74bb
+
+  # Fedora-Cloud-Base-22-20151026.x86_64-eu-central-1-HVM-standard-0
+  AMI=ami-844a4599
+  AWS_USER=fedora
+elif [ "$DISTRO" = "fedora-23" ] ; then
+  # Fedora-Cloud-Base-23-20160116.x86_64-eu-central-1-HVM-standard-0
+  AMI=ami-c2445dae
+  AWS_USER=fedora
+elif [ "$DISTRO" = "fedora-rawhide" ] ; then
+  # Fedora-Cloud-Base-rawhide-20160119.x86_64-eu-central-1-HVM-standard-0
+  AMI=ami-8e150ce2
   AWS_USER=fedora
 elif [ "$DISTRO" = "ubuntu" ] ; then
   # https://cloud-images.ubuntu.com/locator/ec2/

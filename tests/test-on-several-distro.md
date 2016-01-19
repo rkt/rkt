@@ -24,7 +24,9 @@ Then run the tests with the specified Linux distribution:
 ```
 $ tests/aws.sh debian
 $ tests/aws.sh ubuntu
-$ tests/aws.sh fedora
+$ tests/aws.sh fedora-22
+$ tests/aws.sh fedora-23
+$ tests/aws.sh fedora-rawhide
 $ tests/aws.sh centos
 ```
 
