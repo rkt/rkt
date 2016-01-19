@@ -5,6 +5,8 @@
 package store
 
 import (
+	"fmt"
+	"os"
 	"runtime"
 	"sort"
 	"strings"
@@ -21,9 +23,10 @@ func interestingGoroutines() (gs []string) {
 		}
 		stack := strings.TrimSpace(sl[1])
 		if stack == "" ||
-			strings.Contains(stack, "testing.RunTests") ||
+			strings.Contains(stack, "created by testing.RunTests") ||
 			strings.Contains(stack, "testing.Main(") ||
 			strings.Contains(stack, "runtime.goexit") ||
+			strings.Contains(stack, "github.com/coreos/rkt/store.interestingGoroutines") ||
 			strings.Contains(stack, "created by runtime.gc") ||
 			strings.Contains(stack, "runtime.MHeap_Scavenger") {
 			continue
@@ -35,10 +38,18 @@ func interestingGoroutines() (gs []string) {
 }
 
 // Verify the other tests didn't leave any goroutines running.
-// This is in a file named z_last_test.go so it sorts at the end.
-func TestGoroutinesRunning(t *testing.T) {
+func TestMain(m *testing.M) {
+	v := m.Run()
+	if v == 0 && goroutineLeaked() {
+		os.Exit(1)
+	}
+	os.Exit(v)
+}
+
+func goroutineLeaked() bool {
 	if testing.Short() {
-		t.Skip("not counting goroutines for leakage in -short mode")
+		// not counting goroutines for leakage in -short mode
+		return false
 	}
 	gs := interestingGoroutines()
 
@@ -49,11 +60,12 @@ func TestGoroutinesRunning(t *testing.T) {
 		n++
 	}
 
-	t.Logf("num goroutines = %d", n)
-	if n > 0 {
-		t.Error("Too many goroutines.")
-		for stack, count := range stackCount {
-			t.Logf("%d instances of:\n%s", count, stack)
-		}
+	if n == 0 {
+		return false
 	}
+	fmt.Fprintf(os.Stderr, "Too many goroutines running after integration test(s).\n")
+	for stack, count := range stackCount {
+		fmt.Fprintf(os.Stderr, "%d instances of:\n%s\n", count, stack)
+	}
+	return true
 }
