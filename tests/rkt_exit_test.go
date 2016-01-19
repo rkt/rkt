@@ -70,19 +70,6 @@ func TestExitCodeWithSeveralApps(t *testing.T) {
 		}
 	}
 
-	t.Logf("Check intermediary status\n")
-
-	// TODO: how to make sure hello0 and hello1 terminated? They should
-	// terminate soon because they already printed their HelloWorld message.
-	time.Sleep(100 * time.Millisecond)
-
-	checkAppStatus(t, ctx, true, "hello0", "status=0")
-	checkAppStatus(t, ctx, true, "hello1", "status=1")
-	// Currently, hello2 should be stop correctly (exit code 0) when hello1
-	// failed, so it cannot return its exit code 2. This might change with
-	// https://github.com/coreos/rkt/issues/1461
-	checkAppStatus(t, ctx, true, "hello2", "status=0")
-
 	t.Logf("Waiting pod termination\n")
 	waitOrFail(t, child, true)
 
