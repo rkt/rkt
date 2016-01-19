@@ -125,13 +125,13 @@ func TestImageRunRmDuplicate(t *testing.T) {
 	spawnAndWaitOrFail(t, cmd, true)
 
 	t.Logf("Retrieving %s image ID", referencedApp)
-	referencedImageID, err := getImageId(ctx, referencedApp)
+	referencedImageID, err := getImageID(ctx, referencedApp)
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 
 	t.Logf("Retrieving %s image ID", unreferencedApp)
-	unreferencedImageID, err := getImageId(ctx, unreferencedApp)
+	unreferencedImageID, err := getImageID(ctx, unreferencedApp)
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
@@ -271,13 +271,13 @@ func TestImagePrepareRmDuplicate(t *testing.T) {
 	}
 
 	t.Logf("Retrieving %s image ID", referencedApp)
-	referencedImageID, err := getImageId(ctx, referencedApp)
+	referencedImageID, err := getImageID(ctx, referencedApp)
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
 
 	t.Logf("Retrieving %s image ID", unreferencedApp)
-	unreferencedImageID, err := getImageId(ctx, unreferencedApp)
+	unreferencedImageID, err := getImageID(ctx, unreferencedApp)
 	if err != nil {
 		t.Fatalf("rkt didn't terminate correctly: %v", err)
 	}
