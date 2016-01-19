@@ -10,6 +10,10 @@
 
 - Fix vagrant rkt build ([#1960](https://github.com/coreos/rkt/pull/1960)).
 
+#### Bug fixes
+
+- Fix bug where the wrong image signature was checked when using dependencies ([#1991](https://github.com/coreos/rkt/pull/1991)).
+
 #### Test improvements
 
 - A new script to run test on AWS makes it easier to test under several distributions: CentOS, Debian, Fedora, Ubuntu ([#1925](https://github.com/coreos/rkt/pull/1925)).
