@@ -78,6 +78,7 @@ func (e *podEnv) netPluginDel(n *activeNet, netns string) error {
 func (e *podEnv) pluginPaths() []string {
 	// try 3rd-party path first
 	return []string{
+		filepath.Join(e.localConfig, UserNetPathSuffix),
 		UserNetPluginsPath,
 		filepath.Join(common.Stage1RootfsPath(e.podRoot), BuiltinNetPluginsPath),
 	}
