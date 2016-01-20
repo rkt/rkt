@@ -514,6 +514,14 @@ func satisfiesImageFilter(image v1alpha.Image, manifest schema.ImageManifest, fi
 		}
 	}
 
+	// Filter according to the image full names.
+	if len(filter.FullNames) > 0 {
+		s := set.NewString(filter.FullNames...)
+		if !s.Has(image.Name) {
+			return false
+		}
+	}
+
 	// Filter according to the image name prefixes.
 	if len(filter.Prefixes) > 0 {
 		s := set.NewString(filter.Prefixes...)
