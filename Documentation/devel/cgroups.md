@@ -14,12 +14,16 @@ When systemd is not running on the host, or the systemd version is too old (< v2
 
 ### `rkt` started as a systemd service
 
-`rkt` is able to detect if it is started as a systemd service (from a `.service` file or from `systemd-run`). In that case, `systemd-nspawn` is started with the `--keep-unit` parameter. This will cause `systemd-nspawn` to use the D-Bus method call `RegisterMachineWithNetwork` instead of `CreateMachineWithNetwork` and the pod will remain in the cgroup of the service. It could be `/system.slice/servicename.service`.
+`rkt` is able to detect if it is started as a systemd service (from a `.service` file or from `systemd-run`).
+In that case, `systemd-nspawn` is started with the `--keep-unit` parameter.
+This will cause `systemd-nspawn` to use the D-Bus method call `RegisterMachineWithNetwork` instead of `CreateMachineWithNetwork` and the pod will remain in the cgroup of the service.
+By default, the slice is `systemd.slice` but [users are advised](https://github.com/coreos/rkt/blob/master/Documentation/using-rkt-with-systemd.md) to select `machine.slice` with `systemd-run --slice=machine` or `Slice=machine.slice` in the `.service` file.
+It will result in `/machine.slice/servicename.service` when the user select that slice.
 
 ### Summary
 
 1. `/machine.slice/machine-rkt...` when started on the command line with systemd v216+.
-2. `/system.slice/servicename.service` when started from a systemd service.
+2. `/$SLICE.slice/servicename.service` when started from a systemd service.
 3. `$CALLER_CGROUP/machine-some-id.slice` without systemd-v216+, since rkt >= 0.14.0.
 
 ## Future work
