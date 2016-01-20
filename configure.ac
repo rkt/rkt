@@ -488,9 +488,11 @@ dnl Detect go version. Go 1.4 support only "-X variable 'value'"
 dnl format of assigning values to variables via linker flags. Go 1.5
 dnl deprecates this format in favor of "-X 'variable=value'"
 dnl format. Drop this ugliness when we drop support for Go 1.4.
-GO_VERSION=`"${ABS_GO}" version | sed -e 's/^go version go\(DIGITS*\.DIGITS*\).*/\1/'`
+GO_VERSION=`"${ABS_GO}" version | sed -e 's/^go version go\(DIGITS*\.DIGITS*\.DIGITS*\).*/\1/'`
 GO_MAJOR=`echo "${GO_VERSION}" | grep -o '^DIGITS\+'`
-GO_MINOR=`echo "${GO_VERSION}" | grep -o 'DIGITS\+$'`
+GO_MINOR=`echo "${GO_VERSION}" | grep -o '^DIGITS\+\.DIGITS\+' | grep -o 'DIGITS\+$'`
+GO_MAJOR_MINOR=`echo "${GO_MAJOR}.${GO_MINOR}"`
+GO_MICRO=`echo "${GO_VERSION}" | grep -o 'DIGITS\+$'`
 
 GO_BEST_MAJOR=1
 GO_BEST_MINOR=5
@@ -503,12 +505,18 @@ AS_IF([test "${GO_MAJOR}" -gt "${GO_BEST_MAJOR}" || test "${GO_MAJOR}" -eq "${GO
        }],
       [AC_MSG_RESULT([no])
        AC_MSG_CHECKING([whether we have go 1.4])
-       AS_VAR_IF([GO_VERSION],[1.4],
+       AS_VAR_IF([GO_MAJOR_MINOR],[1.4],
                  [AC_MSG_RESULT([yes])
                   RKT_XF() {
                       echo "-X $1 '$2'"
                   }],
                  [AC_MSG_ERROR([*** go is too old (${GO_VERSION})])])])
+
+AC_MSG_CHECKING([whether we have a go version without CVE-2015-8618])
+AS_IF([test "${GO_MAJOR}" -eq "1" -a "${GO_MINOR}" -eq "5" -a "${GO_MICRO}" -lt "3"],
+      [AC_MSG_RESULT([no])
+       AC_MSG_ERROR([*** go version is vulnerable to CVE-2015-8618 (${GO_VERSION})])],
+      [AC_MSG_RESULT([yes])])
 
 RKT_STAGE1_DEFAULT_NAME_LDFLAGS=`RKT_XF main.defaultStage1Name "${RKT_STAGE1_DEFAULT_NAME}"`
 RKT_STAGE1_DEFAULT_VERSION_LDFLAGS=`RKT_XF main.defaultStage1Version "${RKT_STAGE1_DEFAULT_VERSION}"`
