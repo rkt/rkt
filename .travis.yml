@@ -4,7 +4,7 @@ language: go
 
 go:
   - 1.4.2
-  - 1.5.2
+  - 1.5.3
 
 before_install:
  - sudo apt-get update -qq
