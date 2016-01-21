@@ -23,13 +23,13 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/context"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
+	"github.com/coreos/gexpect"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/tests/testutils"
+	"golang.org/x/net/context"
 )
 
 func startAPIService(t *testing.T, ctx *testutils.RktRunCtx) *gexpect.ExpectSubprocess {

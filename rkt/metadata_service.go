@@ -33,11 +33,11 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/gorilla/mux"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
+	"github.com/gorilla/mux"
+	"github.com/spf13/cobra"
 )
 
 var (

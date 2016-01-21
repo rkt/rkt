@@ -24,7 +24,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/types"
+	"github.com/appc/docker2aci/lib/types"
 )
 
 const (

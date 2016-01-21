@@ -43,11 +43,11 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/context"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc/credentials"
-	pb "github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc/examples/route_guide/routeguide"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc/grpclog"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	pb "google.golang.org/grpc/examples/route_guide/routeguide"
+	"google.golang.org/grpc/grpclog"
 )
 
 var (

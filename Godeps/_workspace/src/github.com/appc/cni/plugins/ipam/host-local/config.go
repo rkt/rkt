@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
+	"github.com/appc/cni/pkg/types"
 )
 
 // IPAMConfig represents the IP related network configuration.

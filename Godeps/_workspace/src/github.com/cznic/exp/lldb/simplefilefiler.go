@@ -9,8 +9,8 @@ package lldb
 import (
 	"os"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/fileutil"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/mathutil"
+	"github.com/cznic/fileutil"
+	"github.com/cznic/mathutil"
 )
 
 var _ Filer = &SimpleFileFiler{} // Ensure SimpleFileFiler is a Filer.

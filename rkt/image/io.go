@@ -24,7 +24,7 @@ import (
 
 	"github.com/coreos/rkt/store"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/ioprogress"
+	"github.com/coreos/ioprogress"
 )
 
 // writeSyncer is an interface that wraps io.Writer and a Sync method.

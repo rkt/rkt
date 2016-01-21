@@ -21,9 +21,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/store"
+	"github.com/spf13/cobra"
 )
 
 const casDbPerm = os.FileMode(0660)

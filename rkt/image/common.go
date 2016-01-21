@@ -29,9 +29,9 @@ import (
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
+	"golang.org/x/crypto/openpgp"
 )
 
 // action is a common type for Finder and Fetcher

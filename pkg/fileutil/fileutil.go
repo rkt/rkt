@@ -24,7 +24,7 @@ import (
 
 	"github.com/coreos/rkt/pkg/uid"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/device"
+	"github.com/appc/spec/pkg/device"
 )
 
 func CopyRegularFile(src, dest string) (err error) {

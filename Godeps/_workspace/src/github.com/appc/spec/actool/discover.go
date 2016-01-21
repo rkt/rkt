@@ -20,7 +20,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
+	"github.com/appc/spec/discovery"
 )
 
 var (

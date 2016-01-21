@@ -19,7 +19,7 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus"
+	"github.com/godbus/dbus"
 )
 
 func (c *Conn) jobComplete(signal *dbus.Signal) {

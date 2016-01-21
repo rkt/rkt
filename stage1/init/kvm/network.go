@@ -24,8 +24,8 @@ import (
 
 	"github.com/coreos/rkt/networking"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
+	"github.com/appc/cni/pkg/types"
+	"github.com/coreos/go-systemd/unit"
 )
 
 // GetNetworkDescriptions explicitly convert slice of activeNets to slice of netDescribers

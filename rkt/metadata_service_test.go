@@ -18,8 +18,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
 
 func setupPodStoreTest(t *testing.T) (*podStore, *types.UUID, string, string) {

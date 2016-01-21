@@ -20,9 +20,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema/types"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/camlistore/camlistore/pkg/errorutil"
+	"github.com/camlistore/camlistore/pkg/errorutil"
 )
 
 const (

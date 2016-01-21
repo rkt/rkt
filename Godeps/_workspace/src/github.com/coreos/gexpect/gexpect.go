@@ -13,8 +13,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	shell "github.com/coreos/rkt/Godeps/_workspace/src/github.com/kballard/go-shellquote"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/kr/pty"
+	shell "github.com/kballard/go-shellquote"
+	"github.com/kr/pty"
 )
 
 var (

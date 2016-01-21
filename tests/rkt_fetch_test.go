@@ -26,7 +26,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/tests/testutils"
 	taas "github.com/coreos/rkt/tests/testutils/aci-server"
 )

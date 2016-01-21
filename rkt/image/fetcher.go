@@ -24,8 +24,8 @@ import (
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/discovery"
+	"github.com/appc/spec/schema/types"
 )
 
 // Fetcher will try to fetch images into the store.

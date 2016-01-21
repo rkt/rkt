@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
+	"github.com/coreos/gexpect"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/tests/testutils"
 )

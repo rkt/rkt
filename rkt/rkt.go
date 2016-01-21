@@ -22,12 +22,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/pkg/multicall"
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
+	"github.com/spf13/cobra"
 )
 
 const (

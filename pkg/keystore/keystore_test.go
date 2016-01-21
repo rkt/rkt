@@ -35,7 +35,7 @@ import (
 
 	"github.com/coreos/rkt/pkg/keystore/keystoretest"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
+	"golang.org/x/crypto/openpgp/errors"
 )
 
 func TestStoreTrustedKey(t *testing.T) {

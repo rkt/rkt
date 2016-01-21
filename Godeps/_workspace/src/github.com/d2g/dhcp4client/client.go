@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/d2g/dhcp4"
+	"github.com/d2g/dhcp4"
 )
 
 const (

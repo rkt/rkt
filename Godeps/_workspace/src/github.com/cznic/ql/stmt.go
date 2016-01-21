@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/strutil"
+	"github.com/cznic/strutil"
 )
 
 // NOTE: all stmt implementations must be safe for concurrent use by multiple

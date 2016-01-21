@@ -19,7 +19,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/http2/hpack"
+	"golang.org/x/net/http2/hpack"
 )
 
 type Transport struct {

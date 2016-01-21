@@ -1,6 +1,6 @@
 package main
 
-import "github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
+import "github.com/coreos/gexpect"
 import "fmt"
 import "strings"
 

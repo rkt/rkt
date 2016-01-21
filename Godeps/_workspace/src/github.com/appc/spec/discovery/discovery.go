@@ -22,8 +22,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/html"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/html/atom"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 type acMeta struct {

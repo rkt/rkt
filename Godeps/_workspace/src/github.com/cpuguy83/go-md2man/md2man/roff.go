@@ -6,7 +6,7 @@ import (
 	"html"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/russross/blackfriday"
+	"github.com/russross/blackfriday"
 )
 
 type roffRenderer struct{}

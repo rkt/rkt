@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	sd_dbus "github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/dbus"
-	sd_util "github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/util"
+	sd_dbus "github.com/coreos/go-systemd/dbus"
+	sd_util "github.com/coreos/go-systemd/util"
 	"github.com/coreos/rkt/tests/testutils"
 )
 

@@ -16,7 +16,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/html"
+	"golang.org/x/net/html"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/text/transform"

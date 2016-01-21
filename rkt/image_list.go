@@ -24,10 +24,10 @@ import (
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/lastditch"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/dustin/go-humanize"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/lastditch"
+	"github.com/dustin/go-humanize"
+	"github.com/spf13/cobra"
 )
 
 const (

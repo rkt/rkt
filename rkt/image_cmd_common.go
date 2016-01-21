@@ -19,8 +19,8 @@ import (
 
 	"github.com/coreos/rkt/store"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/discovery"
+	"github.com/appc/spec/schema/types"
 )
 
 func getStoreKeyFromApp(s *store.Store, img string) (string, error) {

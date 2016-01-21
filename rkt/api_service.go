@@ -26,16 +26,16 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/context"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/set"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
+	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 var (

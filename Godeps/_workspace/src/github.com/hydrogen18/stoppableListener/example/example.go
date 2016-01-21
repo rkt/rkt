@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/hydrogen18/stoppableListener"
+	"github.com/hydrogen18/stoppableListener"
 	"net"
 	"net/http"
 	"os"

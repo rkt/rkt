@@ -5,7 +5,7 @@
 package packet
 
 import (
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
+	"golang.org/x/crypto/openpgp/errors"
 	"io"
 )
 

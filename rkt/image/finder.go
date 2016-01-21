@@ -19,7 +19,7 @@ import (
 
 	"github.com/coreos/rkt/common/apps"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema/types"
 )
 
 // Finder will try to get images from the store. If not found, it will

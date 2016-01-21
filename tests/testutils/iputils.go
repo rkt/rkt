@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink"
 )
 
 func getDefaultGW(family int) (string, error) {

@@ -17,7 +17,7 @@ package ip
 import (
 	"net"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink"
 )
 
 // AddDefaultRoute sets the default route on the given gateway.

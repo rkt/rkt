@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/naegelejd/go-acl"
+	"github.com/naegelejd/go-acl"
 )
 
 func main() {

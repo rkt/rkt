@@ -22,8 +22,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/hydrogen18/stoppableListener"
 	"github.com/coreos/rkt/tests/testutils/logger"
+	"github.com/hydrogen18/stoppableListener"
 )
 
 func HTTPServe(addr string, timeout int) error {

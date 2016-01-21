@@ -30,10 +30,10 @@ import (
 
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/naegelejd/go-acl"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
+	"github.com/coreos/go-systemd/unit"
+	"github.com/naegelejd/go-acl"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"

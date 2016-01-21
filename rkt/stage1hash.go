@@ -23,12 +23,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/store"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 const (

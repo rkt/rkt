@@ -22,9 +22,9 @@ import (
 
 	// Note that if your project uses Godep to manage dependencies, then
 	// you need to change following the import paths.
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/context"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc"
 	"github.com/coreos/rkt/api/v1alpha"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 func main() {

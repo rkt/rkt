@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	mangen "github.com/coreos/rkt/Godeps/_workspace/src/github.com/cpuguy83/go-md2man/md2man"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
+	mangen "github.com/cpuguy83/go-md2man/md2man"
+	"github.com/spf13/pflag"
 )
 
 // GenManTree will call cmd.GenManTree(header, dir)

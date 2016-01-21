@@ -36,9 +36,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/ssh/terminal"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/http2"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/http2/hpack"
+	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/hpack"
 )
 
 // Flags

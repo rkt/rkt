@@ -27,8 +27,8 @@ import (
 	"github.com/coreos/rkt/rkt/pubkey"
 	"github.com/coreos/rkt/store"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
-	pgperrors "github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp/errors"
+	"github.com/appc/spec/discovery"
+	pgperrors "golang.org/x/crypto/openpgp/errors"
 )
 
 // nameFetcher is used to download images via discovery

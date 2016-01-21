@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/k8s.io/kubernetes/pkg/api/resource"
+	"k8s.io/kubernetes/pkg/api/resource"
 )
 
 var (

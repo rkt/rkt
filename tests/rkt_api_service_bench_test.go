@@ -20,11 +20,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/context"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc"
+	"github.com/coreos/gexpect"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/tests/testutils"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 func setup() (*testutils.RktRunCtx, *gexpect.ExpectSubprocess, v1alpha.PublicAPIClient, *grpc.ClientConn, string) {

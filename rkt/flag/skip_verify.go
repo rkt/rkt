@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
+	"github.com/spf13/pflag"
 )
 
 // TODO: Remove this file before 1.0 release

@@ -21,9 +21,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/pflag"
 	"github.com/coreos/rkt/version"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (

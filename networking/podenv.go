@@ -26,7 +26,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema/types"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"

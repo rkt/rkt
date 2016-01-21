@@ -21,8 +21,8 @@ import (
 
 	ptar "github.com/coreos/rkt/pkg/tar"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/acirenderer"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/pkg/acirenderer"
+	"github.com/appc/spec/schema/types"
 )
 
 // Given an imageID, start with the matching image available in the store,

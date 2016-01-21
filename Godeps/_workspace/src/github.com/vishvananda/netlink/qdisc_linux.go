@@ -7,7 +7,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink/nl"
+	"github.com/vishvananda/netlink/nl"
 )
 
 // QdiscDel will delete a qdisc from the system.

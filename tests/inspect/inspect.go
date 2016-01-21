@@ -29,9 +29,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/syndtr/gocapability/capability"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/tests/testutils"
+	"github.com/syndtr/gocapability/capability"
 )
 
 var (

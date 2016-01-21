@@ -62,7 +62,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/ql"
+	"github.com/cznic/ql"
 )
 
 func str(data []interface{}) string {

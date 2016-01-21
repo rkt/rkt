@@ -15,9 +15,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/bufs"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/mathutil"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/zappy"
+	"github.com/cznic/bufs"
+	"github.com/cznic/mathutil"
+	"github.com/cznic/zappy"
 )
 
 const (

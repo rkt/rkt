@@ -26,9 +26,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
+	"golang.org/x/crypto/openpgp"
 )
 
 // A Config structure is used to configure a Keystore.
