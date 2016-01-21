@@ -75,7 +75,7 @@ Use your discretion and see [previous release emails](https://groups.google.com/
 Make sure to include a list of authors that contributed since the previous release - something like the following might be handy:
 
 ```
-	git log ...v0.15.0 --pretty=format:"%an" | sort | uniq | tr '\n' ',' | sed -e 's#,#, #g' -e 's#, $#\n#'
+	git log ...v0.16.0 --pretty=format:"%an" | sort | uniq | tr '\n' ',' | sed -e 's#,#, #g' -e 's#, $#\n#'
 ```
 
 - Prepare CHANGELOG.md for the next release: add a "vUNRELEASED" section. The CHANGELOG should be updated alongside the code as pull requests are merged into master, so that the releaser does not need to start from scratch.
