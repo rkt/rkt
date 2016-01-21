@@ -1,16 +1,23 @@
-## vUNRELEASED
+## v0.16.0
 
 #### New features and UX changes
 
 - Explicitly allow http connections via a new 'http' option to `--insecure-options` ([#1945](https://github.com/coreos/rkt/pull/1945)). Any data and credentials will be sent in the clear.
 - When using `bash`, `rkt` commands can be auto-completed ([#1955](https://github.com/coreos/rkt/pull/1955)).
 - The executables given on the command line via the `--exec` parameters don't need to be absolute paths anymore ([#1953](https://github.com/coreos/rkt/pull/1953)). This change reflects an update in the appc spec since [v0.7.2](https://github.com/appc/spec/releases/tag/v0.7.2). See rkt's [rkt run --exec](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#overriding-executable-to-launch) documentation.
-- Add a `--full` flag to rkt fetch so it returns full hash of the image. ([#1976](https://github.com/coreos/rkt/pull/1976))
-- There is a new global flag for specifying the user configuration directory, `--user-config`. It overrides whatever is configured in system and local configuration directories. It can be useful for specifying different credentials for fetching images without putting them in a globally visible directory like `/etc/rkt`. See rkt's [Global Options](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#global-options) documentation. ([#1981](https://github.com/coreos/rkt/pull/1981))
+- Add a `--full` flag to rkt fetch so it returns full hash of the image ([#1976](https://github.com/coreos/rkt/pull/1976)).
+- There is a new global flag for specifying the user configuration directory, `--user-config`. It overrides whatever is configured in system and local configuration directories. It can be useful for specifying different credentials for fetching images without putting them in a globally visible directory like `/etc/rkt`. See rkt's [Global Options](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#global-options) documentation ([#1981](https://github.com/coreos/rkt/pull/1981)).
+- As a temporary fix, search for network plugins in the local configuration directory too ([#2005](https://github.com/coreos/rkt/pull/2005)).
+- Pass the environment defined in the image manifest to the application when using the fly stage1 image ([#1989](https://github.com/coreos/rkt/pull/1989)).
 
 #### Build improvements
 
 - Fix vagrant rkt build ([#1960](https://github.com/coreos/rkt/pull/1960)).
+- Switch to using unrewritten imports, this will allow rkt packages to be cleanly vendored by other projects ([#2014](https://github.com/coreos/rkt/pull/2014)).
+
+#### API service
+
+- Allow filtering images by name ([#1985](https://github.com/coreos/rkt/pull/1985)).
 
 #### Bug fixes
 
@@ -19,12 +26,13 @@
 #### Test improvements
 
 - A new script to run test on AWS makes it easier to test under several distributions: CentOS, Debian, Fedora, Ubuntu ([#1925](https://github.com/coreos/rkt/pull/1925)).
-- The functional tests now skip user namespace tests when user namespace does not work([#1947](https://github.com/coreos/rkt/pull/1947)).
+- The functional tests now skip user namespace tests when user namespaces do not work ([#1947](https://github.com/coreos/rkt/pull/1947)).
+- Check that rkt is not built with go 1.5.{0,1,2} to make sure it's not vulnerable to CVE-2015-8618 ([#2006](https://github.com/coreos/rkt/pull/2006)).
 
 #### Other changes
 
-- Cleanups in the kvm stage1 ([#1895](https://github.com/coreos/rkt/pull/1895))
-- Document stage1 filesystem layout for developers ([#1832](https://github.com/coreos/rkt/pull/1832))
+- Cleanups in the kvm stage1 ([#1895](https://github.com/coreos/rkt/pull/1895)).
+- Document stage1 filesystem layout for developers ([#1832](https://github.com/coreos/rkt/pull/1832)).
 
 #### Note for packagers
 
