@@ -127,11 +127,11 @@ func GetConfig() (*Config, error) {
 }
 
 // GetConfigFrom gets the Config instance with configuration taken
-// from given system path overridden with configuration from given
-// local path.
-func GetConfigFrom(system, local string) (*Config, error) {
+// from given paths. Subsequent paths override settings from the
+// previous paths.
+func GetConfigFrom(dirs ...string) (*Config, error) {
 	cfg := newConfig()
-	for _, cd := range []string{system, local} {
+	for _, cd := range dirs {
 		subcfg, err := GetConfigFromDir(cd)
 		if err != nil {
 			return nil, err

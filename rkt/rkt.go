@@ -122,6 +122,7 @@ var (
 		Dir                string
 		SystemConfigDir    string
 		LocalConfigDir     string
+		UserConfigDir      string
 		Debug              bool
 		Help               bool
 		InsecureFlags      *rktflag.SecFlags
@@ -156,6 +157,7 @@ func init() {
 	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.Dir), "dir", "rkt data directory")
 	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.SystemConfigDir), "system-config", "system configuration directory")
 	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.LocalConfigDir), "local-config", "local configuration directory")
+	cmdRkt.PersistentFlags().Var((*absDir)(&globalFlags.UserConfigDir), "user-config", "user configuration directory")
 	cmdRkt.PersistentFlags().Var(globalFlags.InsecureFlags, "insecure-options",
 		fmt.Sprintf("comma-separated list of security features to disable. Allowed values: %s",
 			globalFlags.InsecureFlags.PermissibleString()))
@@ -283,7 +285,14 @@ func calculateDataDir() string {
 
 func getConfig() (*config.Config, error) {
 	if cachedConfig == nil {
-		cfg, err := config.GetConfigFrom(globalFlags.SystemConfigDir, globalFlags.LocalConfigDir)
+		dirs := []string{
+			globalFlags.SystemConfigDir,
+			globalFlags.LocalConfigDir,
+		}
+		if globalFlags.UserConfigDir != "" {
+			dirs = append(dirs, globalFlags.UserConfigDir)
+		}
+		cfg, err := config.GetConfigFrom(dirs...)
 		if err != nil {
 			return nil, err
 		}
