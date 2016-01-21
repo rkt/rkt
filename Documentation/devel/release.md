@@ -39,6 +39,8 @@ After merging and going back to master branch, we check out the release version 
     - This will build the `coreos`, `kvm` and `fly` flavors and make `coreos` the default
     - Use make's `-j` parameter as you see fit
   - Sanity check `release-build/bin/rkt version`
+  - Sanity check `ldd release-build/bin/rkt`: it can contain linux-vdso.so, libpthread.so, libc.so, ld-linux-x86-64.so but nothing else.
+  - Sanity check `ldd release-build/tools/init`: in addition to the previous list, it can contain libdl.so, libacl.so, libattr.so but nothing else.
 - Add a signed tag: `git tag -s v0.16.0`.
   (We previously used tags for release notes, but now we store them in CHANGELOG.md, so a short tag with the release name is fine).
 - Push the tag to GitHub: `git push --tags`
