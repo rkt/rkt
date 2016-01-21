@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-iptables/iptables"
+	"github.com/coreos/go-iptables/iptables"
 )
 
 // SetupIPMasq installs iptables rules to masquerade traffic

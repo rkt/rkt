@@ -17,7 +17,7 @@ package common
 import (
 	"testing"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema/types"
 )
 
 func TestVolumesToKvmDiskArgs(t *testing.T) {

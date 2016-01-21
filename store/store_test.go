@@ -29,7 +29,7 @@ import (
 	"github.com/coreos/rkt/pkg/multicall"
 	"github.com/coreos/rkt/pkg/sys"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema/types"
 )
 
 const tstprefix = "store-test"

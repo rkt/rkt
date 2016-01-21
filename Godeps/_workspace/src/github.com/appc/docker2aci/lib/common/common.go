@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/util"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/tarball"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/aci"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	appctypes "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/docker2aci/lib/types"
+	"github.com/appc/docker2aci/lib/util"
+	"github.com/appc/docker2aci/tarball"
+	"github.com/appc/spec/aci"
+	"github.com/appc/spec/schema"
+	appctypes "github.com/appc/spec/schema/types"
 )
 
 const (

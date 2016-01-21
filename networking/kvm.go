@@ -27,10 +27,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
-	cnitypes "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
+	"github.com/appc/cni/pkg/ip"
+	cnitypes "github.com/appc/cni/pkg/types"
+	"github.com/appc/spec/schema/types"
+	"github.com/vishvananda/netlink"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"

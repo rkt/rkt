@@ -17,7 +17,7 @@
 package tpm
 
 import (
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-tspi/tpmclient"
+	"github.com/coreos/go-tspi/tpmclient"
 )
 
 // Extend extends the TPM log with the provided string. Returns any error.

@@ -7,7 +7,7 @@ import (
 	"net"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink/nl"
+	"github.com/vishvananda/netlink/nl"
 )
 
 var native = nl.NativeEndian()

@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/lastditch"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/lastditch"
+	"github.com/appc/spec/schema/types"
 	common "github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
+	"github.com/spf13/cobra"
 )
 
 var (

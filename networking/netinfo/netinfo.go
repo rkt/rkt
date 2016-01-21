@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
+	"github.com/appc/cni/pkg/types"
 )
 
 const filename = "net-info.json"

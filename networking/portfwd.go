@@ -19,7 +19,7 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-iptables/iptables"
+	"github.com/coreos/go-iptables/iptables"
 )
 
 func (e *podEnv) forwardPorts(fps []ForwardedPort, defIP net.IP) error {

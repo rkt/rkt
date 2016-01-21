@@ -29,7 +29,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema/types"
 )
 
 // GC enters the pod by fork/exec()ing the stage1's /gc similar to /init.

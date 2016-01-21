@@ -27,8 +27,8 @@ import (
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/discovery"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
+	"github.com/appc/spec/discovery"
+	"golang.org/x/crypto/openpgp"
 )
 
 type Manager struct {

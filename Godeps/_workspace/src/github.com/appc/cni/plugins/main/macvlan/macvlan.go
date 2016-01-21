@@ -21,12 +21,12 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ipam"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
+	"github.com/appc/cni/pkg/ip"
+	"github.com/appc/cni/pkg/ipam"
+	"github.com/appc/cni/pkg/ns"
+	"github.com/appc/cni/pkg/skel"
+	"github.com/appc/cni/pkg/types"
+	"github.com/vishvananda/netlink"
 )
 
 type NetConf struct {

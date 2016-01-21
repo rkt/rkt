@@ -39,7 +39,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/context"
+	"golang.org/x/net/context"
 )
 
 const (

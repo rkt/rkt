@@ -27,8 +27,8 @@ import (
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store"
 
-	docker2aci "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib"
-	d2acommon "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/common"
+	docker2aci "github.com/appc/docker2aci/lib"
+	d2acommon "github.com/appc/docker2aci/lib/common"
 )
 
 // dockerFetcher is used to fetch images from docker:// URLs. It uses

@@ -20,7 +20,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema/types"
 )
 
 // blockTransform creates a path slice from the given string to use as a

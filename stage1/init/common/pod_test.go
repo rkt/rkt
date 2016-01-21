@@ -22,8 +22,8 @@ import (
 
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
 
 const tstprefix = "pod-test"

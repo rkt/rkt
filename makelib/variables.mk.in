@@ -58,7 +58,8 @@ MAKETOOLSDIR := $(MK_TOPLEVEL_SRCDIR)/tools
 STAMPSDIR := $(BUILDDIR)/stamps
 TOOLSDIR := $(BUILDDIR)/tools
 BINDIR := $(BUILDDIR)/bin
-GOPATH := $(BUILDDIR)/gopath
+GOPATH_TO_CREATE := $(BUILDDIR)/gopath
+GOPATH := $(GOPATH_TO_CREATE)/src/github.com/coreos/rkt/Godeps/_workspace:$(GOPATH_TO_CREATE)
 DEPSDIR := $(BUILDDIR)/deps
 FILELISTDIR := $(BUILDDIR)/filelists
 MAINTEMPDIR := $(BUILDDIR)/tmp
@@ -81,7 +82,7 @@ CREATE_DIRS += \
 	$(STAMPSDIR) \
 	$(TOOLSDIR) \
 	$(BINDIR) \
-	$(GOPATH) \
+	$(GOPATH_TO_CREATE) \
 	$(DEPSDIR) \
 	$(FILELISTDIR) \
 	$(MAINTEMPDIR) \

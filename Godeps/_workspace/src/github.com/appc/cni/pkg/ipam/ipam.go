@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/invoke"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
+	"github.com/appc/cni/pkg/invoke"
+	"github.com/appc/cni/pkg/ip"
+	"github.com/appc/cni/pkg/types"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink"
 )
 
 func ExecAdd(plugin string, netconf []byte) (*types.Result, error) {

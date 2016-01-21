@@ -43,14 +43,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/context"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/http2"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/net/http2/hpack"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc/codes"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc/credentials"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc/grpclog"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc/metadata"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc/peer"
+	"golang.org/x/net/context"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/hpack"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 )
 
 // http2Client implements the ClientTransport interface with HTTP2.

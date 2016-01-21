@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/b"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/strutil"
+	"github.com/cznic/b"
+	"github.com/cznic/strutil"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/naegelejd/go-acl"
+	"github.com/naegelejd/go-acl"
 )
 
 // Usage: setfacl [-bkndRLP] { -m|-M|-x|-X ... } file ...

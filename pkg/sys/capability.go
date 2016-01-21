@@ -17,7 +17,7 @@ package sys
 import (
 	"os"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/syndtr/gocapability/capability"
+	"github.com/syndtr/gocapability/capability"
 )
 
 // HasChrootCapability checks if the current process has the CAP_SYS_CHROOT

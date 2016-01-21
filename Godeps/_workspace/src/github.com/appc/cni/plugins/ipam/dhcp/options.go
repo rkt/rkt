@@ -20,8 +20,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/d2g/dhcp4"
+	"github.com/appc/cni/pkg/types"
+	"github.com/d2g/dhcp4"
 )
 
 func parseRouter(opts dhcp4.Options) net.IP {

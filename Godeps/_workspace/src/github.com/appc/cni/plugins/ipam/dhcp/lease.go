@@ -23,12 +23,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/d2g/dhcp4"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/d2g/dhcp4client"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
+	"github.com/d2g/dhcp4"
+	"github.com/d2g/dhcp4client"
+	"github.com/vishvananda/netlink"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ns"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
+	"github.com/appc/cni/pkg/ns"
+	"github.com/appc/cni/pkg/types"
 )
 
 // RFC 2131 suggests using exponential backoff, starting with 4sec

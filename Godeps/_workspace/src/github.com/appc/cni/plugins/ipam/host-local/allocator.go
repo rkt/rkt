@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/ip"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/ipam/host-local/backend"
+	"github.com/appc/cni/pkg/ip"
+	"github.com/appc/cni/pkg/types"
+	"github.com/appc/cni/plugins/ipam/host-local/backend"
 )
 
 type IPAllocator struct {

@@ -15,7 +15,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/mathutil"
+	"github.com/cznic/mathutil"
 )
 
 const (

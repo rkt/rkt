@@ -28,13 +28,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/pborman/uuid"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/pborman/uuid"
 )
 
 // see Documentation/devel/pod-lifecycle.md for some explanation

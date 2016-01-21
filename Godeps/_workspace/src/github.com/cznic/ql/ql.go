@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/strutil"
+	"github.com/cznic/strutil"
 )
 
 const (

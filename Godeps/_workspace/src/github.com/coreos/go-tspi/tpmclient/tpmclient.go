@@ -23,8 +23,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-tspi/attestation"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-tspi/tspi"
+	"github.com/coreos/go-tspi/attestation"
+	"github.com/coreos/go-tspi/tspi"
 )
 
 // TPMClient represents a connection to a system running a daemon providing

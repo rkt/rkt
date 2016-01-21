@@ -23,7 +23,7 @@ import (
 
 	"github.com/coreos/rkt/rkt/pubkey"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/spf13/cobra"
 )
 
 var (

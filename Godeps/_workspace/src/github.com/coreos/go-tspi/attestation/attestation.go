@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-tspi/tspi"
+	"github.com/coreos/go-tspi/tspi"
 )
 
 func pad(plaintext []byte, bsize int) ([]byte, error) {

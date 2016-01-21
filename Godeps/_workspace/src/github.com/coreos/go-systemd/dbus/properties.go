@@ -15,7 +15,7 @@
 package dbus
 
 import (
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus"
+	"github.com/godbus/dbus"
 )
 
 // From the systemd docs:

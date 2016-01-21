@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/naegelejd/go-acl"
-	os2 "github.com/coreos/rkt/Godeps/_workspace/src/github.com/naegelejd/go-acl/os"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/naegelejd/go-acl/os/group"
+	"github.com/naegelejd/go-acl"
+	os2 "github.com/naegelejd/go-acl/os"
+	"github.com/naegelejd/go-acl/os/group"
 )
 
 func main() {

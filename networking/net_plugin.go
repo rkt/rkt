@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	cnitypes "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
+	cnitypes "github.com/appc/cni/pkg/types"
 
 	"github.com/coreos/rkt/common"
 )

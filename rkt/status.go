@@ -16,7 +16,7 @@
 
 package main
 
-import "github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
+import "github.com/spf13/cobra"
 
 var (
 	cmdStatus = &cobra.Command{

@@ -25,11 +25,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/common"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/util"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/ioprogress"
+	"github.com/appc/docker2aci/lib/common"
+	"github.com/appc/docker2aci/lib/types"
+	"github.com/appc/docker2aci/lib/util"
+	"github.com/appc/spec/schema"
+	"github.com/coreos/ioprogress"
 )
 
 const (

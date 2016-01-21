@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/sys/unix"
+	"golang.org/x/sys/unix"
 )
 
 const (

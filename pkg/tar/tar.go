@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/device"
+	"github.com/appc/spec/pkg/device"
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/uid"
 )

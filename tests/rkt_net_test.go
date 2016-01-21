@@ -23,9 +23,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink"
 	"github.com/coreos/rkt/tests/testutils"
 	"github.com/coreos/rkt/tests/testutils/logger"
+	"github.com/vishvananda/netlink"
 )
 
 /*

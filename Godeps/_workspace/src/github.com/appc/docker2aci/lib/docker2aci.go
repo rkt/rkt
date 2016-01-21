@@ -26,15 +26,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/backend/file"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/backend/repository"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/common"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/lib/util"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/docker2aci/tarball"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/pkg/acirenderer"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	appctypes "github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
+	"github.com/appc/docker2aci/lib/backend/file"
+	"github.com/appc/docker2aci/lib/backend/repository"
+	"github.com/appc/docker2aci/lib/common"
+	"github.com/appc/docker2aci/lib/types"
+	"github.com/appc/docker2aci/lib/util"
+	"github.com/appc/docker2aci/tarball"
+	"github.com/appc/spec/pkg/acirenderer"
+	"github.com/appc/spec/schema"
+	appctypes "github.com/appc/spec/schema/types"
 )
 
 type Docker2ACIBackend interface {

@@ -24,7 +24,7 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/cznic/mathutil"
+	"github.com/cznic/mathutil"
 	"github.com/remyoudompheng/bigfft"
 )
 

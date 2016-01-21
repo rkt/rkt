@@ -33,11 +33,11 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/goaci/proj2aci"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/util"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus/introspect"
+	"github.com/appc/goaci/proj2aci"
+	"github.com/appc/spec/schema/types"
+	"github.com/coreos/go-systemd/util"
+	"github.com/godbus/dbus"
+	"github.com/godbus/dbus/introspect"
 
 	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"

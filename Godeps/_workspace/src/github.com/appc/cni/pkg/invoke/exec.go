@@ -22,7 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
+	"github.com/appc/cni/pkg/types"
 )
 
 func pluginErr(err error, output []byte) error {

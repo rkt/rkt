@@ -22,7 +22,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
+	"github.com/appc/cni/pkg/types"
 )
 
 // CmdArgs captures all the arguments passed in to the plugin

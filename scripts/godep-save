@@ -27,7 +27,7 @@ else
 	echo "No file '${VA}' found"
 fi
 
-CMD="godep save -r ./... ${APPS}"
+CMD="godep save ./... ${APPS}"
 
 echo Running ${CMD}
 exec ${CMD}

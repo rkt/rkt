@@ -15,10 +15,10 @@
 package main
 
 import (
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/plugins/ipam/host-local/backend/disk"
+	"github.com/appc/cni/plugins/ipam/host-local/backend/disk"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/skel"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/cni/pkg/types"
+	"github.com/appc/cni/pkg/skel"
+	"github.com/appc/cni/pkg/types"
 )
 
 func main() {

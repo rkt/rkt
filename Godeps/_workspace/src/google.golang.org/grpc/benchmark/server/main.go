@@ -8,8 +8,8 @@ import (
 	_ "net/http/pprof"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc/benchmark"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/benchmark"
+	"google.golang.org/grpc/grpclog"
 )
 
 var (

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/vishvananda/netlink/nl"
+	"github.com/vishvananda/netlink/nl"
 )
 
 // FilterDel will delete a filter from the system.

@@ -17,10 +17,10 @@
 package main
 
 import (
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
+	"github.com/spf13/cobra"
 )
 
 const (

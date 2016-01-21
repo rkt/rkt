@@ -18,7 +18,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus"
+	"github.com/godbus/dbus"
 )
 
 const (

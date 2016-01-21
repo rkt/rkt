@@ -27,8 +27,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/go-systemd/unit"
-	"github.com/coreos/rkt/Godeps/_workspace/src/k8s.io/kubernetes/pkg/api/resource"
+	"github.com/coreos/go-systemd/unit"
+	"k8s.io/kubernetes/pkg/api/resource"
 )
 
 type addIsolatorFunc func(opts []*unit.UnitOption, limit *resource.Quantity) ([]*unit.UnitOption, error)

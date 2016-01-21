@@ -34,13 +34,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/types"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/coreos/gexpect"
-	"github.com/coreos/rkt/Godeps/_workspace/src/google.golang.org/grpc"
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
+	"github.com/coreos/gexpect"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/tests/testutils"
 	taas "github.com/coreos/rkt/tests/testutils/aci-server"
+	"google.golang.org/grpc"
 )
 
 const (

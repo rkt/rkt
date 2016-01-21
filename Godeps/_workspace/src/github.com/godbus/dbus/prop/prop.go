@@ -3,8 +3,8 @@
 package prop
 
 import (
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus"
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/godbus/dbus/introspect"
+	"github.com/godbus/dbus"
+	"github.com/godbus/dbus/introspect"
 	"sync"
 )
 

@@ -20,7 +20,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/github.com/appc/spec/schema/common"
+	"github.com/appc/spec/schema/common"
 )
 
 type MountPoint struct {
