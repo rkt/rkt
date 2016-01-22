@@ -262,7 +262,7 @@ $ curl -O https://example.com/pubkeys.gpg
 ###### Capture the public key fingerprint
 
 ```
-$ gpg --no-default-keyring --fingerprint --keyring ./pubkeys.gpg carly@example.com
+$ gpg --no-default-keyring --with-fingerprint --keyring ./pubkeys.gpg carly@example.com
 pub   2048R/26EF7A14 2015-01-09
       Key fingerprint = B346 E31D E7E3 C6F9 D1D4  603F 4DFB 61BF 26EF 7A14
 uid       [ unknown] Carly Container (ACI signing key) <carly@example.com>
