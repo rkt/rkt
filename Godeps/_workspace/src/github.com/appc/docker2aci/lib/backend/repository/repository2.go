@@ -56,9 +56,7 @@ func (rb *RepositoryBackend) supportsV2(indexURL string) (bool, error) {
 		return false, err
 	}
 
-	if rb.username != "" && rb.password != "" {
-		req.SetBasicAuth(rb.username, rb.password)
-	}
+	rb.setBasicAuth(req)
 
 	client := &http.Client{}
 	res, err := client.Do(req)
@@ -91,7 +89,7 @@ func (rb *RepositoryBackend) getImageInfoV2(dockerURL *types.ParsedDockerURL) ([
 	return layers, dockerURL, nil
 }
 
-func (rb *RepositoryBackend) buildACIV2(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
+func (rb *RepositoryBackend) buildACIV2(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compression common.Compression) (string, *schema.ImageManifest, error) {
 	manifest := rb.imageManifests[*dockerURL]
 
 	layerIndex, err := getLayerIndex(layerID, manifest)
@@ -121,7 +119,7 @@ func (rb *RepositoryBackend) buildACIV2(layerNumber int, layerID string, dockerU
 	defer layerFile.Close()
 
 	util.Debug("Generating layer ACI...")
-	aciPath, aciManifest, err := common.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compress)
+	aciPath, aciManifest, err := common.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating ACI: %v", err)
 	}
@@ -137,9 +135,7 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v
 		return nil, nil, err
 	}
 
-	if rb.username != "" && rb.password != "" {
-		req.SetBasicAuth(rb.username, rb.password)
-	}
+	rb.setBasicAuth(req)
 
 	res, err := rb.makeRequest(req, dockerURL.ImageName)
 	if err != nil {
@@ -197,6 +193,8 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 	if err != nil {
 		return nil, err
 	}
+
+	rb.setBasicAuth(req)
 
 	res, err := rb.makeRequest(req, dockerURL.ImageName)
 	if err != nil {
@@ -325,9 +323,7 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.
 	}
 	authReq.URL.RawQuery = getParams.Encode()
 
-	if rb.username != "" && rb.password != "" {
-		authReq.SetBasicAuth(rb.username, rb.password)
-	}
+	rb.setBasicAuth(authReq)
 
 	res, err = client.Do(authReq)
 	if err != nil {
@@ -367,4 +363,10 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.
 	hostAuthTokens[repo] = tokenStruct.Token
 
 	return rb.makeRequest(req, repo)
+}
+
+func (rb *RepositoryBackend) setBasicAuth(req *http.Request) {
+	if rb.username != "" && rb.password != "" {
+		req.SetBasicAuth(rb.username, rb.password)
+	}
 }

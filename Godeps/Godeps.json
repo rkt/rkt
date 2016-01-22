@@ -81,11 +81,11 @@
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
-			"Rev": "8c09a57b3976772258aaf5bbc1ee2dc6687e55c9"
+			"Rev": "1ed0a5bf5a1a032587c13605b6738ce018a5bb69"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/tarball",
-			"Rev": "8c09a57b3976772258aaf5bbc1ee2dc6687e55c9"
+			"Rev": "1ed0a5bf5a1a032587c13605b6738ce018a5bb69"
 		},
 		{
 			"ImportPath": "github.com/appc/goaci/proj2aci",

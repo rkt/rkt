@@ -39,7 +39,7 @@ import (
 
 type Docker2ACIBackend interface {
 	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
-	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compress bool) (string, *schema.ImageManifest, error)
+	BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPWl []string, compression common.Compression) (string, *schema.ImageManifest, error)
 }
 
 // Convert generates ACI images from docker registry URLs.
@@ -56,9 +56,9 @@ type Docker2ACIBackend interface {
 // temporary directory if tmpDir is "".
 // username and password can be passed if the image needs authentication.
 // It returns the list of generated ACI paths.
-func Convert(dockerURL string, squash bool, outputDir string, tmpDir string, username string, password string, insecure bool) ([]string, error) {
+func Convert(dockerURL string, squash bool, outputDir string, tmpDir string, compression common.Compression, username string, password string, insecure bool) ([]string, error) {
 	repositoryBackend := repository.NewRepositoryBackend(username, password, insecure)
-	return convertReal(repositoryBackend, dockerURL, squash, outputDir, tmpDir)
+	return convertReal(repositoryBackend, dockerURL, squash, outputDir, tmpDir, compression)
 }
 
 // ConvertFile generates ACI images from a file generated with "docker save".
@@ -75,7 +75,7 @@ func Convert(dockerURL string, squash bool, outputDir string, tmpDir string, use
 // It will use the temporary directory specified by tmpDir, or the default
 // temporary directory if tmpDir is "".
 // It returns the list of generated ACI paths.
-func ConvertFile(dockerURL string, filePath string, squash bool, outputDir string, tmpDir string) ([]string, error) {
+func ConvertFile(dockerURL string, filePath string, squash bool, outputDir string, tmpDir string, compression common.Compression) ([]string, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %v", err)
@@ -83,7 +83,7 @@ func ConvertFile(dockerURL string, filePath string, squash bool, outputDir strin
 	defer f.Close()
 
 	fileBackend := file.NewFileBackend(f)
-	return convertReal(fileBackend, dockerURL, squash, outputDir, tmpDir)
+	return convertReal(fileBackend, dockerURL, squash, outputDir, tmpDir, compression)
 }
 
 // GetIndexName returns the docker index server from a docker URL.
@@ -98,7 +98,7 @@ func GetDockercfgAuth(indexServer string) (string, string, error) {
 	return common.GetAuthInfo(indexServer)
 }
 
-func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outputDir string, tmpDir string) ([]string, error) {
+func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outputDir string, tmpDir string, compression common.Compression) ([]string, error) {
 	util.Debug("Getting image info...")
 	ancestry, parsedDockerURL, err := backend.GetImageInfo(dockerURL)
 	if err != nil {
@@ -123,7 +123,12 @@ func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outpu
 		layerID := ancestry[i]
 
 		// only compress individual layers if we're not squashing
-		aciPath, manifest, err := backend.BuildACI(i, layerID, parsedDockerURL, layersOutputDir, tmpDir, curPwl, !squash)
+		layerCompression := compression
+		if squash {
+			layerCompression = common.NoCompression
+		}
+
+		aciPath, manifest, err := backend.BuildACI(i, layerID, parsedDockerURL, layersOutputDir, tmpDir, curPwl, layerCompression)
 		if err != nil {
 			return nil, fmt.Errorf("error building layer: %v", err)
 		}
@@ -141,7 +146,7 @@ func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outpu
 	// acirenderer expects images in order from upper to base layer
 	images = util.ReverseImages(images)
 	if squash {
-		squashedImagePath, err := SquashLayers(images, conversionStore, *parsedDockerURL, outputDir)
+		squashedImagePath, err := SquashLayers(images, conversionStore, *parsedDockerURL, outputDir, compression)
 		if err != nil {
 			return nil, fmt.Errorf("error squashing image: %v", err)
 		}
@@ -153,7 +158,7 @@ func convertReal(backend Docker2ACIBackend, dockerURL string, squash bool, outpu
 
 // SquashLayers receives a list of ACI layer file names ordered from base image
 // to application image and squashes them into one ACI
-func SquashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistry, parsedDockerURL types.ParsedDockerURL, outputDir string) (path string, err error) {
+func SquashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistry, parsedDockerURL types.ParsedDockerURL, outputDir string, compression common.Compression) (path string, err error) {
 	util.Debug("Squashing layers...")
 	util.Debug("Rendering ACI...")
 	renderedACI, err := acirenderer.GetRenderedACIFromList(images, aciRegistry)
@@ -183,7 +188,7 @@ func SquashLayers(images []acirenderer.Image, aciRegistry acirenderer.ACIRegistr
 	}()
 
 	util.Debug("Writing squashed ACI...")
-	if err := writeSquashedImage(squashedTempFile, renderedACI, aciRegistry, manifests); err != nil {
+	if err := writeSquashedImage(squashedTempFile, renderedACI, aciRegistry, manifests, compression); err != nil {
 		return "", fmt.Errorf("error writing squashed image: %v", err)
 	}
 
@@ -224,10 +229,19 @@ func getManifests(renderedACI acirenderer.RenderedACI, aciRegistry acirenderer.A
 	return manifests, nil
 }
 
-func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI, aciProvider acirenderer.ACIProvider, manifests []schema.ImageManifest) error {
-	gw := gzip.NewWriter(outputFile)
-	defer gw.Close()
-	outputWriter := tar.NewWriter(gw)
+func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI, aciProvider acirenderer.ACIProvider, manifests []schema.ImageManifest, compression common.Compression) error {
+	var tarWriterTarget io.WriteCloser = outputFile
+
+	switch(compression) {
+	case common.NoCompression:
+	case common.GzipCompression:
+		tarWriterTarget = gzip.NewWriter(outputFile)
+		defer tarWriterTarget.Close()
+	default:
+		return fmt.Errorf("unexpected compression enum value: %d", compression)
+	}
+
+	outputWriter := tar.NewWriter(tarWriterTarget)
 	defer outputWriter.Close()
 
 	finalManifest := mergeManifests(manifests)
