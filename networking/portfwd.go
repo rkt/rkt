@@ -34,24 +34,34 @@ func (e *podEnv) forwardPorts(fps []ForwardedPort, defIP net.IP) error {
 
 	// Create a separate chain for this pod. This helps with debugging
 	// and makes it easier to cleanup
-	chain := e.portFwdChain()
+	chainDNAT := e.portFwdChain("DNAT")
+	chainSNAT := e.portFwdChain("SNAT")
 
-	if err = ipt.NewChain("nat", chain); err != nil {
+	if err = ipt.NewChain("nat", chainDNAT); err != nil {
 		return err
 	}
 
-	rule := e.portFwdRuleSpec(chain)
+	if err = ipt.NewChain("nat", chainSNAT); err != nil {
+		return err
+	}
 
-	for _, entry := range [][]string{
-		{"nat", "PREROUTING"}, // outside traffic hitting this host
-		{"nat", "OUTPUT"},     // traffic originating on this host
+	chainRuleDNAT := e.portFwdChainRuleSpec(chainDNAT, "DNAT")
+	chainRuleSNAT := e.portFwdChainRuleSpec(chainSNAT, "SNAT")
+
+	for _, entry := range []struct {
+		chain           string
+		customChainRule []string
+	}{
+		{"POSTROUTING", chainRuleSNAT}, // traffic originating from this host
+		{"PREROUTING", chainRuleDNAT},  // outside traffic hitting this host
+		{"OUTPUT", chainRuleDNAT},      // traffic originating from this host
 	} {
-		exists, err := ipt.Exists(entry[0], entry[1], rule...)
+		exists, err := ipt.Exists("nat", entry.chain, entry.customChainRule...)
 		if err != nil {
 			return err
 		}
 		if !exists {
-			err = ipt.Insert(entry[0], entry[1], 1, rule...)
+			err = ipt.Insert("nat", entry.chain, 1, entry.customChainRule...)
 			if err != nil {
 				return err
 			}
@@ -59,19 +69,41 @@ func (e *podEnv) forwardPorts(fps []ForwardedPort, defIP net.IP) error {
 	}
 
 	for _, p := range fps {
-		if err = forwardPort(ipt, chain, &p, defIP); err != nil {
-			return err
+
+		dst := fmt.Sprintf("%v:%v", defIP, p.PodPort)
+		dstIP := fmt.Sprintf("%v", defIP)
+		dport := strconv.Itoa(int(p.HostPort))
+
+		for _, r := range []struct {
+			chain string
+			rule  []string
+		}{
+			{ // Rewrite the destination
+				chainDNAT,
+				[]string{
+					"-p", p.Protocol,
+					"--dport", dport,
+					"-j", "DNAT",
+					"--to-destination", dst,
+				},
+			},
+			{ // Rewrite the source for connections to localhost on the host
+				chainSNAT,
+				[]string{
+					"-p", p.Protocol,
+					"-s", "127.0.0.1",
+					"-d", dstIP,
+					"--dport", dport,
+					"-j", "MASQUERADE",
+				},
+			},
+		} {
+			if err := ipt.AppendUnique("nat", r.chain, r.rule...); err != nil {
+				return err
+			}
 		}
 	}
-
 	return nil
-}
-
-func forwardPort(ipt *iptables.IPTables, chain string, p *ForwardedPort, defIP net.IP) error {
-	dst := fmt.Sprintf("%v:%v", defIP, p.PodPort)
-	dport := strconv.Itoa(int(p.HostPort))
-
-	return ipt.AppendUnique("nat", chain, "-p", p.Protocol, "--dport", dport, "-j", "DNAT", "--to-destination", dst)
 }
 
 func (e *podEnv) unforwardPorts() error {
@@ -80,9 +112,11 @@ func (e *podEnv) unforwardPorts() error {
 		return err
 	}
 
-	chain := e.portFwdChain()
+	chainDNAT := e.portFwdChain("DNAT")
+	chainSNAT := e.portFwdChain("SNAT")
 
-	rule := e.portFwdRuleSpec(chain)
+	chainRuleDNAT := e.portFwdChainRuleSpec(chainDNAT, "DNAT")
+	chainRuleSNAT := e.portFwdChainRuleSpec(chainSNAT, "SNAT")
 
 	// There's no clean way now to test if a chain exists or
 	// even if a rule exists if the chain is not present.
@@ -90,23 +124,35 @@ func (e *podEnv) unforwardPorts() error {
 	// TODO(eyakubovich): move to using libiptc for iptable
 	// manipulation
 
-	// outside traffic hitting this hot
-	ipt.Delete("nat", "PREROUTING", rule...)
+	for _, entry := range []struct {
+		chain           string
+		customChainRule []string
+	}{
+		{"POSTROUTING", chainRuleSNAT}, // traffic originating on this host
+		{"PREROUTING", chainRuleDNAT},  // outside traffic hitting this host
+		{"OUTPUT", chainRuleDNAT},      // traffic originating on this host
+	} {
+		ipt.Delete("nat", entry.chain, entry.customChainRule...)
+	}
 
-	// traffic originating on this host
-	ipt.Delete("nat", "OUTPUT", rule...)
-
-	// there should be no references, delete the chain
-	ipt.ClearChain("nat", chain)
-	ipt.DeleteChain("nat", chain)
-
+	for _, entry := range []string{chainDNAT, chainSNAT} {
+		ipt.ClearChain("nat", entry)
+		ipt.DeleteChain("nat", entry)
+	}
 	return nil
 }
 
-func (e *podEnv) portFwdChain() string {
-	return "RKT-PFWD-" + e.podID.String()[0:8]
+func (e *podEnv) portFwdChain(name string) string {
+	return fmt.Sprintf("RKT-PFWD-%s-%s", name, e.podID.String()[0:8])
 }
 
-func (e *podEnv) portFwdRuleSpec(chain string) []string {
-	return []string{"-m", "addrtype", "--dst-type", "LOCAL", "-j", chain}
+func (e *podEnv) portFwdChainRuleSpec(chain string, name string) []string {
+	switch name {
+	case "SNAT":
+		return []string{"-s", "127.0.0.1", "!", "-d", "127.0.0.1", "-j", chain}
+	case "DNAT":
+		return []string{"-m", "addrtype", "--dst-type", "LOCAL", "-j", chain}
+	default:
+		return nil
+	}
 }
