@@ -124,15 +124,6 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	}
 	defer os.Remove(invalidArchManifestFile)
 
-	invalidArchImage := patchTestACI("rkt-invalid-arch.aci", fmt.Sprintf("--manifest=%s", invalidArchManifestFile))
-	invalidArchTest := osArchTest{
-		image:        invalidArchImage,
-		rktCmd:       fmt.Sprintf("%s --insecure-options=image run %s", ctx.Cmd(), invalidArchImage),
-		expectedLine: `bad arch "armv5l"`,
-		expectError:  true,
-	}
-	tests = append(tests, invalidArchTest)
-
 	retTests := tests
 	tests = nil
 	return retTests
