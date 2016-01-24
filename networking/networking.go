@@ -17,8 +17,11 @@ package networking
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net"
 	"os"
+	"strings"
 	"syscall"
 
 	"github.com/appc/cni/pkg/ns"
@@ -114,13 +117,66 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common
 		if err := n.setupNets(n.nets); err != nil {
 			return err
 		}
-		return n.forwardPorts(fps, n.GetDefaultIP())
+		if len(fps) > 0 {
+			if err = n.enableDefaultLocalnetRouting(); err != nil {
+				return err
+			}
+			return n.forwardPorts(fps, n.GetDefaultIP())
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	return &n, nil
+}
+
+// enableDefaultLocalnetRouting enables the route_localnet attribute on the supposedly default network interface.
+// This allows setting up loopback NAT so the host can access the pod's forwarded ports on the localhost address.
+func (n *Networking) enableDefaultLocalnetRouting() error {
+	routeLocalnetFormat := ""
+
+	defaultHostIP, err := n.GetDefaultHostIP()
+	if err != nil {
+		return err
+	}
+
+	defaultHostIPstring := defaultHostIP.String()
+	switch {
+	case strings.Contains(defaultHostIPstring, "."):
+		routeLocalnetFormat = "/proc/sys/net/ipv4/conf/%s/route_localnet"
+	case strings.Contains(defaultHostIPstring, ":"):
+		return fmt.Errorf("unexpected IPv6 Address returned for default host interface: %q", defaultHostIPstring)
+	default:
+		return fmt.Errorf("unknown type for default Host IP: %q", defaultHostIPstring)
+	}
+
+	hostIfaces, err := n.GetIfacesByIP(defaultHostIP)
+	if err != nil {
+		return err
+	}
+
+	for _, hostIface := range hostIfaces {
+		routeLocalnetPath := fmt.Sprintf(routeLocalnetFormat, hostIface.Name)
+		routeLocalnetValue, err := ioutil.ReadFile(routeLocalnetPath)
+		if err != nil {
+			return err
+		}
+		if string(routeLocalnetValue) != "1" {
+			routeLocalnetFile, err := os.OpenFile(routeLocalnetPath, os.O_WRONLY, 0)
+			if err != nil {
+				return err
+			}
+			defer routeLocalnetFile.Close()
+
+			if _, err = io.WriteString(routeLocalnetFile, "1"); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // Load creates the Networking object from saved state.
@@ -181,6 +237,44 @@ func (n *Networking) GetDefaultHostIP() (net.IP, error) {
 		return nil, fmt.Errorf("no networks found")
 	}
 	return n.nets[len(n.nets)-1].runtime.HostIP, nil
+}
+
+// GetIfacesByIP searches for and returns the interfaces with the given IP
+// Disregards the subnet mask since not every net.IP object contains
+// On success it will return the list of found interfaces
+func (n *Networking) GetIfacesByIP(ifaceIP net.IP) ([]net.Interface, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	searchAddr := strings.Split(ifaceIP.String(), "/")[0]
+	resultInterfaces := make([]net.Interface, 0)
+
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return nil, errwrap.Wrap(fmt.Errorf("cannot get addresses for interface %v", iface.Name), err)
+		}
+
+		for _, addr := range addrs {
+			currentAddr := strings.Split(addr.String(), "/")[0]
+			if searchAddr == currentAddr {
+				resultInterfaces = append(resultInterfaces, iface)
+				break
+			}
+		}
+	}
+
+	if len(resultInterfaces) == 0 {
+		return nil, fmt.Errorf("no interface found with IP %q", ifaceIP)
+	}
+
+	return resultInterfaces, nil
 }
 
 // Teardown cleans up a produced Networking object.
