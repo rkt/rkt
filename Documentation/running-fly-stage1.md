@@ -6,7 +6,7 @@ The *fly* stage1 is an alternative stage1 that runs a single-application ACI wit
 ## Motivation
 
 The motivation of the fly feature is to add the ability to run applications with full privileges on the host but still benefit from the image management and discovery from rkt.
-The Kubernetes kubelet is one candidate for rkt fly.
+The Kubernetes `kubelet` is one candidate for rkt fly.
 
 
 ## How does it work?
