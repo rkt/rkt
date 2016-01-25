@@ -24,4 +24,4 @@ The IP and port of the metadata service are passed by rkt to pods via the `AC_ME
 
 ## Using the metadata service
 
-See [App Container specification](https://github.com/appc/spec/blob/master/SPEC.md#app-container-metadata-service) for more information about the metadata service including a list of supported endpoints and their usage.
+See [App Container specification](https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service) for more information about the metadata service including a list of supported endpoints and their usage.
