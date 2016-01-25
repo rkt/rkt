@@ -25,6 +25,7 @@ import (
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
 	"golang.org/x/crypto/openpgp"
+	pgperrors "golang.org/x/crypto/openpgp/errors"
 )
 
 // validator is a general image checker
@@ -76,6 +77,10 @@ func (v *validator) ValidateWithSignature(ks *keystore.Keystore, sig io.ReadSeek
 		return nil, errwrap.Wrap(errors.New("error seeking signature file"), err)
 	}
 	entity, err := ks.CheckSignature(v.GetImageName(), v.image, sig)
+	if err == pgperrors.ErrUnknownIssuer {
+		log.Print("If you expected the signing key to change, try running:")
+		log.Print("    rkt trust --prefix <image>")
+	}
 	if err != nil {
 		return nil, err
 	}

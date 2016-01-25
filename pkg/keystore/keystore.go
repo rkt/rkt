@@ -137,7 +137,52 @@ func (ks *Keystore) MaskTrustedKeySystemRoot(fingerprint string) (string, error)
 	return dst, ioutil.WriteFile(dst, []byte(""), 0644)
 }
 
-func (ks *Keystore) TrustedKeyPrefixExists(prefix string, r io.ReadSeeker) (bool, error) {
+// TrustKeyPrefixExists returns whether or not there exists 1 or more trusted
+// keys for a given prefix, or for any parent prefix.
+func (ks *Keystore) TrustedKeyPrefixExists(prefix string) (bool, error) {
+	acidentifier, err := types.NewACIdentifier(prefix)
+	if err != nil {
+		return false, err
+	}
+
+	pathNamesPrefix := []string{
+		// example: /etc/rkt/trustedkeys/prefix.d/coreos.com/etcd
+		path.Join(ks.LocalPrefixPath, acidentifier.String()),
+		// example: /usr/lib/rkt/trustedkeys/prefix.d/coreos.com/etcd
+		path.Join(ks.SystemPrefixPath, acidentifier.String()),
+	}
+
+	for _, p := range pathNamesPrefix {
+		_, err := os.Stat(p)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return false, errwrap.Wrap(fmt.Errorf("cannot check dir %q", p), err)
+		}
+		files, err := ioutil.ReadDir(p)
+		if err != nil {
+			return false, errwrap.Wrap(fmt.Errorf("cannot list files in dir %q", p), err)
+		}
+		for _, f := range files {
+			if !f.IsDir() && f.Size() > 0 {
+				return true, nil
+			}
+		}
+	}
+
+	parentPrefix, _ := path.Split(prefix)
+	parentPrefix = strings.Trim(parentPrefix, "/")
+
+	if parentPrefix != "" {
+		return ks.TrustedKeyPrefixExists(parentPrefix)
+	}
+
+	return false, nil
+}
+
+// TrustedKeyPrefixWithFingerprintExists returns whether or not a trusted key with the fingerprint of the key accessible through r exists for the given prefix.
+func (ks *Keystore) TrustedKeyPrefixWithFingerprintExists(prefix string, r io.ReadSeeker) (bool, error) {
 	defer r.Seek(0, os.SEEK_SET)
 
 	entityList, err := openpgp.ReadArmoredKeyRing(r)

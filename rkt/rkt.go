@@ -165,7 +165,7 @@ func init() {
 		fmt.Sprintf("comma-separated list of security features to disable. Allowed values: %s",
 			globalFlags.InsecureFlags.PermissibleString()))
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.TrustKeysFromHTTPS, "trust-keys-from-https",
-		true, "automatically trust gpg keys fetched from https")
+		false, "automatically trust gpg keys fetched from https")
 
 	// Run this before the execution of each subcommand to set up output
 	cmdRkt.PersistentPreRun = func(cmd *cobra.Command, args []string) {
