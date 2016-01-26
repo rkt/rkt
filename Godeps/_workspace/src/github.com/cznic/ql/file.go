@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/camlistore/lock"
+	"github.com/camlistore/go4/lock"
 	"github.com/cznic/exp/lldb"
 	"github.com/cznic/mathutil"
 )

@@ -136,8 +136,8 @@
 			"Rev": "9868aa0f8d8a93ff0b30ff0de46cc351b6b88b30"
 		},
 		{
-			"ImportPath": "github.com/camlistore/lock",
-			"Rev": "ae27720f340952636b826119b58130b9c1a847a0"
+			"ImportPath": "github.com/camlistore/go4/lock",
+			"Rev": "9ba773eba85ab9e258ff516630f7f6474bc4535b"
 		},
 		{
 			"ImportPath": "github.com/coreos/gexpect",
@@ -214,7 +214,7 @@
 		},
 		{
 			"ImportPath": "github.com/cznic/ql",
-			"Rev": "9c77931b60c6317f94de402268bbc3e8334b71f4"
+			"Rev": "77545ff365ff426dfab06c46d70fa77600cd55af"
 		},
 		{
 			"ImportPath": "github.com/cznic/sortutil",

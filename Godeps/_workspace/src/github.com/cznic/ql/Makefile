@@ -18,9 +18,9 @@ clean:
 	go clean
 	rm -f *~ y.go y.tab.c *.out ql.test
 
-coerce.go: helper.go
+coerce.go: helper/helper.go
 	if [ -f coerce.go ] ; then rm coerce.go ; fi
-	go run helper.go | gofmt > $@
+	go run helper/helper.go | gofmt > $@
 
 cover:
 	t=$(shell tempfile) ; go test -coverprofile $$t && go tool cover -html $$t && unlink $$t

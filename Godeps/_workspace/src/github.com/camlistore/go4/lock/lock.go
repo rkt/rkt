@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package lock is a file locking library.
 package lock
 
 import (
@@ -44,115 +45,142 @@ import (
 // On other operating systems, lock will fallback to using the presence and
 // content of a file named name + '.lock' to implement locking behavior.
 func Lock(name string) (io.Closer, error) {
-	return lockFn(name)
+	abs, err := filepath.Abs(name)
+	if err != nil {
+		return nil, err
+	}
+	lockmu.Lock()
+	defer lockmu.Unlock()
+	if locked[abs] {
+		return nil, fmt.Errorf("file %q already locked", abs)
+	}
+
+	c, err := lockFn(abs)
+	if err != nil {
+		return nil, fmt.Errorf("cannot acquire lock: %v", err)
+	}
+	locked[abs] = true
+	return c, nil
 }
 
 var lockFn = lockPortable
 
-// Portable version not using fcntl. Doesn't handle crashes as gracefully,
+// lockPortable is a portable version not using fcntl. Doesn't handle crashes as gracefully,
 // since it can leave stale lock files.
-// TODO: write pid of owner to lock file and on race see if pid is
-// still alive?
 func lockPortable(name string) (io.Closer, error) {
-	absName, err := filepath.Abs(name)
-	if err != nil {
-		return nil, fmt.Errorf("can't Lock file %q: can't find abs path: %v", name, err)
-	}
-	fi, err := os.Stat(absName)
+	fi, err := os.Stat(name)
 	if err == nil && fi.Size() > 0 {
-		if isStaleLock(absName) {
-			os.Remove(absName)
-		} else {
-			return nil, fmt.Errorf("can't Lock file %q: has non-zero size", name)
+		st := portableLockStatus(name)
+		switch st {
+		case statusLocked:
+			return nil, fmt.Errorf("file %q already locked", name)
+		case statusStale:
+			os.Remove(name)
+		case statusInvalid:
+			return nil, fmt.Errorf("can't Lock file %q: has invalid contents", name)
 		}
 	}
-	f, err := os.OpenFile(absName, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_EXCL, 0666)
+	f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC|os.O_EXCL, 0666)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create lock file %s %v", absName, err)
+		return nil, fmt.Errorf("failed to create lock file %s %v", name, err)
 	}
 	if err := json.NewEncoder(f).Encode(&pidLockMeta{OwnerPID: os.Getpid()}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot write owner pid: %v", err)
 	}
-	return &lockCloser{f: f, abs: absName}, nil
+	return &unlocker{
+		f:        f,
+		abs:      name,
+		portable: true,
+	}, nil
 }
+
+type lockStatus int
+
+const (
+	statusInvalid lockStatus = iota
+	statusLocked
+	statusUnlocked
+	statusStale
+)
 
 type pidLockMeta struct {
 	OwnerPID int
 }
 
-func isStaleLock(path string) bool {
+func portableLockStatus(path string) lockStatus {
 	f, err := os.Open(path)
 	if err != nil {
-		return false
+		return statusUnlocked
 	}
 	defer f.Close()
 	var meta pidLockMeta
 	if json.NewDecoder(f).Decode(&meta) != nil {
-		return false
+		return statusInvalid
 	}
 	if meta.OwnerPID == 0 {
-		return false
+		return statusInvalid
 	}
 	p, err := os.FindProcess(meta.OwnerPID)
 	if err != nil {
 		// e.g. on Windows
-		return true
+		return statusStale
 	}
 	// On unix, os.FindProcess always is true, so we have to send
 	// it a signal to see if it's alive.
 	if signalZero != nil {
 		if p.Signal(signalZero) != nil {
-			return true
+			return statusStale
 		}
 	}
-	return false
+	return statusLocked
 }
 
 var signalZero os.Signal // nil or set by lock_sigzero.go
-
-type lockCloser struct {
-	f    *os.File
-	abs  string
-	once sync.Once
-	err  error
-}
-
-func (lc *lockCloser) Close() error {
-	lc.once.Do(lc.close)
-	return lc.err
-}
-
-func (lc *lockCloser) close() {
-	if err := lc.f.Close(); err != nil {
-		lc.err = err
-	}
-	if err := os.Remove(lc.abs); err != nil {
-		lc.err = err
-	}
-}
 
 var (
 	lockmu sync.Mutex
 	locked = map[string]bool{} // abs path -> true
 )
 
-// unlocker is used by the darwin and linux implementations with fcntl
-// advisory locks.
 type unlocker struct {
-	f   *os.File
-	abs string
+	portable bool
+	f        *os.File
+	abs      string
+	// once guards the close method call.
+	once sync.Once
+	// err holds the error returned by Close.
+	err error
 }
 
 func (u *unlocker) Close() error {
+	u.once.Do(u.close)
+	return u.err
+}
+
+func (u *unlocker) close() {
 	lockmu.Lock()
-	// Remove is not necessary but it's nice for us to clean up.
+	defer lockmu.Unlock()
+	delete(locked, u.abs)
+
+	if u.portable {
+		// In the portable lock implementation, it's
+		// important to close before removing because
+		// Windows won't allow us to remove an open
+		// file.
+		if err := u.f.Close(); err != nil {
+			u.err = err
+		}
+		if err := os.Remove(u.abs); err != nil {
+			// Note that if both Close and Remove fail,
+			// we care more about the latter than the former
+			// so we'll return that error.
+			u.err = err
+		}
+		return
+	}
+	// In other implementatioons, it's nice for us to clean up.
 	// If we do do this, though, it needs to be before the
 	// u.f.Close below.
 	os.Remove(u.abs)
-	if err := u.f.Close(); err != nil {
-		return err
-	}
-	delete(locked, u.abs)
-	lockmu.Unlock()
-	return nil
+	u.err = u.f.Close()
 }

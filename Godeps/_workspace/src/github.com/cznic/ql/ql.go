@@ -519,6 +519,11 @@ func (r *whereRset) plan(ctx *execCtx) (plan, error) {
 		return nil, err
 	}
 
+	switch r.src.(type) {
+	case *leftJoinDefaultPlan, *rightJoinDefaultPlan, *fullJoinDefaultPlan:
+		return &filterDefaultPlan{r.src, expr, nil}, nil
+	}
+
 	switch x := expr.(type) {
 	case *binaryOperation:
 		return r.planBinOp(x)
@@ -1187,17 +1192,21 @@ func (db *DB) Execute(ctx *TCtx, l List, arg ...interface{}) (rs []Recordset, in
 		}
 	}
 
-	tnl0 := db.tnl
+	tnl0 := -1
 	if ctx != nil {
 		ctx.LastInsertID, ctx.RowsAffected = 0, 0
 	}
 
 	list := l.l
 	for _, s := range list {
-		r, err := db.run1(ctx, s, arg...)
+		r, tnla, tnl, err := db.run1(ctx, s, arg...)
+		if tnl0 < 0 {
+			tnl0 = tnla
+		}
 		if err != nil {
-			for db.tnl > tnl0 {
-				if _, e2 := db.run1(ctx, rollbackStmt{}); e2 != nil {
+			for tnl > tnl0 {
+				var e2 error
+				if _, _, tnl, e2 = db.run1(ctx, rollbackStmt{}); e2 != nil {
 					err = e2
 				}
 			}
@@ -1205,21 +1214,27 @@ func (db *DB) Execute(ctx *TCtx, l List, arg ...interface{}) (rs []Recordset, in
 		}
 
 		if r != nil {
+			if x, ok := r.(recordset); ok {
+				x.tx = ctx
+				r = x
+			}
 			rs = append(rs, r)
 		}
 	}
 	return
 }
 
-func (db *DB) run1(pc *TCtx, s stmt, arg ...interface{}) (rs Recordset, err error) {
+func (db *DB) run1(pc *TCtx, s stmt, arg ...interface{}) (rs Recordset, tnla, tnlb int, err error) {
 	db.mu.Lock()
+	tnla = db.tnl
+	tnlb = db.tnl
 	switch db.rw {
 	case false:
 		switch s.(type) {
 		case beginTransactionStmt:
 			defer db.mu.Unlock()
 			if pc == nil {
-				return nil, errors.New("BEGIN TRANSACTION: cannot start a transaction in nil TransactionCtx")
+				return nil, tnla, tnlb, errors.New("BEGIN TRANSACTION: cannot start a transaction in nil TransactionCtx")
 			}
 
 			if err = db.store.BeginTransaction(); err != nil {
@@ -1230,24 +1245,26 @@ func (db *DB) run1(pc *TCtx, s stmt, arg ...interface{}) (rs Recordset, err erro
 			db.rwmu.Lock()
 			db.cc = pc
 			db.tnl++
+			tnlb = db.tnl
 			db.rw = true
 			return
 		case commitStmt:
 			defer db.mu.Unlock()
-			return nil, errCommitNotInTransaction
+			return nil, tnla, tnlb, errCommitNotInTransaction
 		case rollbackStmt:
 			defer db.mu.Unlock()
-			return nil, errRollbackNotInTransaction
+			return nil, tnla, tnlb, errRollbackNotInTransaction
 		default:
 			if s.isUpdating() {
 				db.mu.Unlock()
-				return nil, fmt.Errorf("attempt to update the DB outside of a transaction")
+				return nil, tnla, tnlb, fmt.Errorf("attempt to update the DB outside of a transaction")
 			}
 
 			db.rwmu.RLock() // can safely grab before Unlock
 			db.mu.Unlock()
 			defer db.rwmu.RUnlock()
-			return s.exec(&execCtx{db, arg}) // R/O tctx
+			rs, err = s.exec(&execCtx{db, arg}) // R/O tctx
+			return rs, tnla, tnlb, err
 		}
 	default: // case true:
 		switch s.(type) {
@@ -1255,7 +1272,7 @@ func (db *DB) run1(pc *TCtx, s stmt, arg ...interface{}) (rs Recordset, err erro
 			defer db.mu.Unlock()
 
 			if pc == nil {
-				return nil, errBeginTransNoCtx
+				return nil, tnla, tnlb, errBeginTransNoCtx
 			}
 
 			if pc != db.cc {
@@ -1275,16 +1292,18 @@ func (db *DB) run1(pc *TCtx, s stmt, arg ...interface{}) (rs Recordset, err erro
 			db.beginTransaction()
 			db.cc = pc
 			db.tnl++
+			tnlb = db.tnl
 			return
 		case commitStmt:
 			defer db.mu.Unlock()
 			if pc != db.cc {
-				return nil, fmt.Errorf("invalid passed transaction context")
+				return nil, tnla, tnlb, fmt.Errorf("invalid passed transaction context")
 			}
 
 			db.commit()
 			err = db.store.Commit()
 			db.tnl--
+			tnlb = db.tnl
 			if db.tnl != 0 {
 				return
 			}
@@ -1297,12 +1316,13 @@ func (db *DB) run1(pc *TCtx, s stmt, arg ...interface{}) (rs Recordset, err erro
 			defer db.mu.Unlock()
 			defer func() { pc.LastInsertID = db.root.lastInsertID }()
 			if pc != db.cc {
-				return nil, fmt.Errorf("invalid passed transaction context")
+				return nil, tnla, tnlb, fmt.Errorf("invalid passed transaction context")
 			}
 
 			db.rollback()
 			err = db.store.Rollback()
 			db.tnl--
+			tnlb = db.tnl
 			if db.tnl != 0 {
 				return
 			}
@@ -1315,22 +1335,24 @@ func (db *DB) run1(pc *TCtx, s stmt, arg ...interface{}) (rs Recordset, err erro
 			if pc == nil {
 				if s.isUpdating() {
 					db.mu.Unlock()
-					return nil, fmt.Errorf("attempt to update the DB outside of a transaction")
+					return nil, tnla, tnlb, fmt.Errorf("attempt to update the DB outside of a transaction")
 				}
 
 				db.mu.Unlock() // must Unlock before RLock
 				db.rwmu.RLock()
 				defer db.rwmu.RUnlock()
-				return s.exec(&execCtx{db, arg})
+				rs, err = s.exec(&execCtx{db, arg})
+				return rs, tnla, tnlb, err
 			}
 
 			defer db.mu.Unlock()
 			defer func() { pc.LastInsertID = db.root.lastInsertID }()
 			if pc != db.cc {
-				return nil, fmt.Errorf("invalid passed transaction context")
+				return nil, tnla, tnlb, fmt.Errorf("invalid passed transaction context")
 			}
 
-			return s.exec(&execCtx{db, arg})
+			rs, err = s.exec(&execCtx{db, arg})
+			return rs, tnla, tnlb, err
 		}
 	}
 }
