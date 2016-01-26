@@ -117,21 +117,12 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	tests = append(tests, invalidOSTest)
 
 	// Test an image with an invalid arch
-	invalidArchManifestStr := strings.Replace(manifest, "ARCH_OS", `,{"name":"os","value":"linux"},{"name":"arch","value":"armv6l"}`, 1)
+	invalidArchManifestStr := strings.Replace(manifest, "ARCH_OS", `,{"name":"os","value":"linux"},{"name":"arch","value":"armv5l"}`, 1)
 	invalidArchManifestFile := "invalid-arch-manifest.json"
 	if err := ioutil.WriteFile(invalidArchManifestFile, []byte(invalidArchManifestStr), 0600); err != nil {
 		t.Fatalf("Cannot write invalid arch manifest: %v", err)
 	}
 	defer os.Remove(invalidArchManifestFile)
-
-	invalidArchImage := patchTestACI("rkt-invalid-arch.aci", fmt.Sprintf("--manifest=%s", invalidArchManifestFile))
-	invalidArchTest := osArchTest{
-		image:        invalidArchImage,
-		rktCmd:       fmt.Sprintf("%s --insecure-options=image run %s", ctx.Cmd(), invalidArchImage),
-		expectedLine: `bad arch "armv6l"`,
-		expectError:  true,
-	}
-	tests = append(tests, invalidArchTest)
 
 	retTests := tests
 	tests = nil
