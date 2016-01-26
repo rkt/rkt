@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	rmImageOk = "rkt: successfully removed aci for image:"
+	rmImageOk = "rm: 1 image(s) successfully removed"
 
 	unreferencedACI = "rkt-unreferencedACI.aci"
 	unreferencedApp = "coreos.com/rkt-unreferenced"

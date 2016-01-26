@@ -56,7 +56,7 @@ func TestCatManifest(t *testing.T) {
 		},
 		{
 			"1234567890abcdef",
-			"unable to resolve UUID: no matches found for",
+			"no matches found for",
 		},
 	}
 

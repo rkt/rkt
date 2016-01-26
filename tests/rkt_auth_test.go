@@ -43,7 +43,7 @@ const (
 	// result is that /inspect receives two parameters -
 	// "--print-msg='Authentication" and "succeeded.'"
 	authSuccessfulDownload = "AuthenticationSucceeded."
-	authFailedDownload     = "error downloading ACI: bad HTTP status code: 401"
+	authFailedDownload     = "error downloading ACI"
 	authACIName            = "rkt-inspect-auth-test.aci"
 )
 
