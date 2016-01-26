@@ -378,7 +378,7 @@ func (t *tree) overflow(p *x, q *d, pi, i int, k []interface{}, v []interface{})
 	t.ver++
 	l, r := p.siblings(pi)
 
-	if l != nil && l.c < 2*kd {
+	if l != nil && l.c < 2*kd && i > 0 {
 		l.mvL(q, 1)
 		t.insert(q, i-1, k, v)
 		return

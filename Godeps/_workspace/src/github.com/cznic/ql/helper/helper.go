@@ -293,7 +293,7 @@ func main() {
 
 // CAUTION: This file was generated automatically by
 //
-//	$ go run helper -o coerce.go
+//	$ go run helper/helper.go -o coerce.go
 //
 // DO NOT EDIT!
 

@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 )
 
 func init() {
@@ -28,28 +27,15 @@ func init() {
 }
 
 func lockPlan9(name string) (io.Closer, error) {
-	var f *os.File
-	abs, err := filepath.Abs(name)
-	if err != nil {
-		return nil, err
-	}
-	lockmu.Lock()
-	if locked[abs] {
-		lockmu.Unlock()
-		return nil, fmt.Errorf("file %q already locked", abs)
-	}
-	locked[abs] = true
-	lockmu.Unlock()
-
 	fi, err := os.Stat(name)
 	if err == nil && fi.Size() > 0 {
 		return nil, fmt.Errorf("can't Lock file %q: has non-zero size", name)
 	}
 
-	f, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE, os.ModeExclusive|0644)
+	f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE, os.ModeExclusive|0644)
 	if err != nil {
-		return nil, fmt.Errorf("Lock Create of %s (abs: %s) failed: %v", name, abs, err)
+		return nil, fmt.Errorf("Lock Create of %s failed: %v", name, err)
 	}
 
-	return &unlocker{f, abs}, nil
+	return &unlocker{f: f, abs: name}, nil
 }
