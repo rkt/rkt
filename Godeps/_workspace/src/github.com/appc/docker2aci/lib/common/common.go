@@ -33,6 +33,13 @@ const (
 	appcDockerParentImageID = "appc.io/docker/parentimageid"
 )
 
+type Compression int
+
+const (
+	NoCompression = iota
+	GzipCompression
+)
+
 func ParseDockerURL(arg string) *types.ParsedDockerURL {
 	if arg == "" {
 		return nil
@@ -59,7 +66,7 @@ func ParseDockerURL(arg string) *types.ParsedDockerURL {
 	}
 }
 
-func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compress bool) (string, *schema.ImageManifest, error) {
+func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compression Compression) (string, *schema.ImageManifest, error) {
 	manifest, err := GenerateManifest(layerData, dockerURL)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating the manifest: %v", err)
@@ -80,7 +87,7 @@ func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *ty
 	aciPath += ".aci"
 
 	aciPath = path.Join(outputDir, aciPath)
-	manifest, err = writeACI(layerFile, *manifest, curPwl, aciPath, compress)
+	manifest, err = writeACI(layerFile, *manifest, curPwl, aciPath, compression)
 	if err != nil {
 		return "", nil, fmt.Errorf("error writing ACI: %v", err)
 	}
@@ -350,7 +357,7 @@ func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPo
 	return mps, nil
 }
 
-func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string, compress bool) (*schema.ImageManifest, error) {
+func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string, compression Compression) (*schema.ImageManifest, error) {
 	aciFile, err := os.Create(output)
 	if err != nil {
 		return nil, fmt.Errorf("error creating ACI file: %v", err)
@@ -358,7 +365,7 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []strin
 	defer aciFile.Close()
 
 	var w io.WriteCloser = aciFile
-	if compress {
+	if compression == GzipCompression {
 		w = gzip.NewWriter(aciFile)
 		defer w.Close()
 	}

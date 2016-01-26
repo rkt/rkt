@@ -97,7 +97,7 @@ func (f *dockerFetcher) fetch(u *url.URL) (*os.File, error) {
 
 	registryURL := strings.TrimPrefix(u.String(), "docker://")
 	user, password := f.getCreds(registryURL)
-	acis, err := docker2aci.Convert(registryURL, true /* squash */, tmpDir, tmpDir, user, password, f.InsecureFlags.AllowHTTP())
+	acis, err := docker2aci.Convert(registryURL, true /* squash */, tmpDir, tmpDir, d2acommon.NoCompression, user, password, f.InsecureFlags.AllowHTTP())
 	if err != nil {
 		return nil, fmt.Errorf("error converting docker image to ACI: %v", err)
 	}
