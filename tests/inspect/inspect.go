@@ -37,37 +37,38 @@ import (
 var (
 	globalFlagset = flag.NewFlagSet("inspect", flag.ExitOnError)
 	globalFlags   = struct {
-		ReadStdin         bool
-		CheckTty          bool
-		PrintExec         bool
-		PrintMsg          string
-		PrintEnv          string
-		PrintCapsPid      int
-		PrintUser         bool
-		PrintGroups       bool
-		CheckCwd          string
-		ExitCode          int
-		ReadFile          bool
-		WriteFile         bool
-		StatFile          bool
-		Sleep             int
-		PreSleep          int
-		PrintMemoryLimit  bool
-		PrintCPUQuota     bool
-		FileName          string
-		Content           string
-		CheckCgroupMounts bool
-		PrintNetNS        bool
-		PrintIPv4         string
-		PrintIPv6         string
-		PrintDefaultGWv4  bool
-		PrintDefaultGWv6  bool
-		PrintGWv4         string
-		PrintGWv6         string
-		GetHTTP           string
-		ServeHTTP         string
-		ServeHTTPTimeout  int
-		PrintIfaceCount   bool
+		ReadStdin          bool
+		CheckTty           bool
+		PrintExec          bool
+		PrintMsg           string
+		PrintEnv           string
+		PrintCapsPid       int
+		PrintUser          bool
+		PrintGroups        bool
+		CheckCwd           string
+		ExitCode           int
+		ReadFile           bool
+		WriteFile          bool
+		StatFile           bool
+		Sleep              int
+		PreSleep           int
+		PrintMemoryLimit   bool
+		PrintCPUQuota      bool
+		FileName           string
+		Content            string
+		CheckCgroupMounts  bool
+		PrintNetNS         bool
+		PrintIPv4          string
+		PrintIPv6          string
+		PrintDefaultGWv4   bool
+		PrintDefaultGWv6   bool
+		PrintGWv4          string
+		PrintGWv6          string
+		GetHTTP            string
+		ServeHTTP          string
+		ServeHTTPTimeout   int
+		PrintIfaceCount    bool
+		PrintAppAnnotation string
 	}{}
 )
 
@@ -103,6 +104,7 @@ func init() {
 	globalFlagset.StringVar(&globalFlags.ServeHTTP, "serve-http", "", "Serve the hostname via HTTP on the given address:port")
 	globalFlagset.IntVar(&globalFlags.ServeHTTPTimeout, "serve-http-timeout", 30, "HTTP Timeout to wait for a client connection")
 	globalFlagset.BoolVar(&globalFlags.PrintIfaceCount, "print-iface-count", false, "Print the interface count")
+	globalFlagset.StringVar(&globalFlags.PrintAppAnnotation, "print-app-annotation", "", "Take an annotation name of the app, and prints its value")
 }
 
 func in(list []int, el int) bool {
@@ -437,6 +439,16 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("Interface count: %d\n", ifaceCount)
+	}
+
+	if globalFlags.PrintAppAnnotation != "" {
+		mdsUrl, appName := os.Getenv("AC_METADATA_URL"), os.Getenv("AC_APP_NAME")
+		body, err := testutils.HTTPGet(fmt.Sprintf("%s/acMetadata/v1/apps/%s/annotations/%s", mdsUrl, appName, globalFlags.PrintAppAnnotation))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Annotation %s=%s\n", globalFlags.PrintAppAnnotation, body)
 	}
 
 	os.Exit(globalFlags.ExitCode)
