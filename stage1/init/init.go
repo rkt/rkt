@@ -447,14 +447,14 @@ func forwardedPorts(pod *stage1commontypes.Pod) ([]networking.ForwardedPort, err
 						fp.PodPort = p.Port
 						n = a.Name.String()
 					} else {
-						return nil, fmt.Errorf("Ambiguous exposed port in PodManifest: %q and %q both define port %q", n, a.Name, p.Name)
+						return nil, fmt.Errorf("ambiguous exposed port in PodManifest: %q and %q both define port %q", n, a.Name, p.Name)
 					}
 				}
 			}
 		}
 
 		if n == "" {
-			return nil, fmt.Errorf("Port name %q is not defined by any apps", ep.Name)
+			return nil, fmt.Errorf("port name %q is not defined by any apps", ep.Name)
 		}
 
 		fps = append(fps, fp)
@@ -483,7 +483,7 @@ func stage1() int {
 	// network plugins
 	lfd, err := common.GetRktLockFD()
 	if err != nil {
-		log.PrintE("Failed to get rkt lock fd", err)
+		log.PrintE("failed to get rkt lock fd", err)
 		return 1
 	}
 

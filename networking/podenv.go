@@ -116,7 +116,7 @@ func (e *podEnv) setupNets(nets []activeNet) error {
 
 	n := activeNet{}
 	for i, n = range nets {
-		stderr.Printf("Loading network %v with type %v", n.conf.Name, n.conf.Type)
+		stderr.Printf("loading network %v with type %v", n.conf.Name, n.conf.Type)
 
 		n.runtime.IfName = fmt.Sprintf(IfNamePattern, i)
 		if n.runtime.ConfPath, err = copyFileToDir(n.runtime.ConfPath, e.netDir()); err != nil {
@@ -135,17 +135,17 @@ func (e *podEnv) teardownNets(nets []activeNet) {
 	nspath := e.podNSPath()
 
 	for i := len(nets) - 1; i >= 0; i-- {
-		stderr.Printf("Teardown: executing net-plugin %v", nets[i].conf.Type)
+		stderr.Printf("teardown - executing net-plugin %v", nets[i].conf.Type)
 
 		err := e.netPluginDel(&nets[i], nspath)
 		if err != nil {
-			stderr.PrintE(fmt.Sprintf("Error deleting %q", nets[i].conf.Name), err)
+			stderr.PrintE(fmt.Sprintf("error deleting %q", nets[i].conf.Name), err)
 		}
 
 		// Delete the conf file to signal that the network was
 		// torn down (or at least attempted to)
 		if err = os.Remove(nets[i].runtime.ConfPath); err != nil {
-			stderr.PrintE(fmt.Sprintf("Error deleting %q", nets[i].runtime.ConfPath), err)
+			stderr.PrintE(fmt.Sprintf("error deleting %q", nets[i].runtime.ConfPath), err)
 		}
 	}
 }
@@ -223,12 +223,12 @@ func copyFileToDir(src, dstdir string) (string, error) {
 
 func loadUserNets(localConfig string, netsLoadList common.NetList) ([]activeNet, error) {
 	if netsLoadList.None() {
-		stderr.Printf("Networking namespace with loopback only")
+		stderr.Printf("networking namespace with loopback only")
 		return nil, nil
 	}
 
 	userNetPath := filepath.Join(localConfig, UserNetPathSuffix)
-	stderr.Printf("Loading networks from %v", userNetPath)
+	stderr.Printf("loading networks from %v", userNetPath)
 
 	files, err := listFiles(userNetPath)
 	if err != nil {
@@ -255,7 +255,7 @@ func loadUserNets(localConfig string, netsLoadList common.NetList) ([]activeNet,
 
 		if n.conf.Name == "default" ||
 			n.conf.Name == "default-restricted" {
-			stderr.Printf(`Overriding %q network with %v`, n.conf.Name, filename)
+			stderr.Printf(`overriding %q network with %v`, n.conf.Name, filename)
 		}
 
 		if netExists(nets, n.conf.Name) {

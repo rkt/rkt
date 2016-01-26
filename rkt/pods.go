@@ -118,12 +118,12 @@ func walkPods(include includeMask, f func(*pod)) error {
 	for _, uuid := range ls {
 		u, err := types.NewUUID(uuid)
 		if err != nil {
-			stderr.PrintE(fmt.Sprintf("Skipping %q", uuid), err)
+			stderr.PrintE(fmt.Sprintf("skipping %q", uuid), err)
 			continue
 		}
 		p, err := getPod(u)
 		if err != nil {
-			stderr.PrintE(fmt.Sprintf("Skipping %q", uuid), err)
+			stderr.PrintE(fmt.Sprintf("skipping %q", uuid), err)
 			continue
 		}
 
@@ -576,7 +576,7 @@ func listPodsFromDir(cdir string) ([]string, error) {
 
 	for _, p := range ls {
 		if !p.IsDir() {
-			stderr.Printf("Unrecognized entry: %q, ignoring", p.Name())
+			stderr.Printf("unrecognized entry: %q, ignoring", p.Name())
 			continue
 		}
 		ps = append(ps, p.Name())
@@ -1065,7 +1065,7 @@ func (p *pod) getExitStatuses() (map[string]int, error) {
 	for _, name := range ls {
 		s, err := p.readIntFromFile(filepath.Join(statusDir, name))
 		if err != nil {
-			stderr.PrintE(fmt.Sprintf("Unable to get status of app %q", name), err)
+			stderr.PrintE(fmt.Sprintf("unable to get status of app %q", name), err)
 			continue
 		}
 		stats[name] = s

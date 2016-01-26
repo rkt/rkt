@@ -206,7 +206,7 @@ func stage1() int {
 	}
 
 	if len(p.Manifest.Apps) != 1 {
-		log.Print("flavor %q only supports 1 application per Pod for now.", flavor)
+		log.Printf("flavor %q only supports 1 application per Pod for now", flavor)
 		return 1
 	}
 

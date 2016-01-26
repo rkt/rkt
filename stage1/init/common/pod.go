@@ -399,7 +399,7 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 	}
 
 	if err = writeAppReaper(p, appName.String()); err != nil {
-		return errwrap.Wrap(fmt.Errorf("Failed to write app %q reaper service", appName), err)
+		return errwrap.Wrap(fmt.Errorf("failed to write app %q reaper service", appName), err)
 	}
 
 	return nil

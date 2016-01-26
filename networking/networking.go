@@ -100,7 +100,7 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common
 	defer func() {
 		if err != nil {
 			if err := syscall.Unmount(nspath, 0); err != nil {
-				stderr.PrintE(fmt.Sprintf("Error unmounting %q", nspath), err)
+				stderr.PrintE(fmt.Sprintf("error unmounting %q", nspath), err)
 			}
 		}
 	}()
@@ -129,7 +129,7 @@ func Load(podRoot string, podID *types.UUID) (*Networking, error) {
 	// the current directory is pod root
 	pdirfd, err := syscall.Open(podRoot, syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
 	if err != nil {
-		return nil, errwrap.Wrap(fmt.Errorf("Failed to open pod root directory (%v)", podRoot), err)
+		return nil, errwrap.Wrap(fmt.Errorf("failed to open pod root directory (%v)", podRoot), err)
 	}
 	defer syscall.Close(pdirfd)
 
@@ -148,7 +148,7 @@ func Load(podRoot string, podID *types.UUID) (*Networking, error) {
 		n, err := loadNet(ni.ConfPath)
 		if err != nil {
 			if !os.IsNotExist(err) {
-				stderr.PrintE(fmt.Sprintf("Error loading %q; ignoring", ni.ConfPath), err)
+				stderr.PrintE(fmt.Sprintf("error loading %q; ignoring", ni.ConfPath), err)
 			}
 			continue
 		}
@@ -194,12 +194,12 @@ func (n *Networking) Teardown(flavor string) {
 	}
 
 	if err := n.enterHostNS(); err != nil {
-		stderr.PrintE("Error switching to host netns", err)
+		stderr.PrintE("error switching to host netns", err)
 		return
 	}
 
 	if err := n.unforwardPorts(); err != nil {
-		stderr.PrintE("Error removing forwarded ports", err)
+		stderr.PrintE("error removing forwarded ports", err)
 	}
 
 	n.teardownNets(n.nets)
@@ -207,7 +207,7 @@ func (n *Networking) Teardown(flavor string) {
 	if err := syscall.Unmount(n.podNSPath(), 0); err != nil {
 		// if already unmounted, umount(2) returns EINVAL
 		if !os.IsNotExist(err) && err != syscall.EINVAL {
-			stderr.PrintE(fmt.Sprintf("Error unmounting %q", n.podNSPath()), err)
+			stderr.PrintE(fmt.Sprintf("error unmounting %q", n.podNSPath()), err)
 		}
 	}
 }
@@ -285,7 +285,7 @@ func withNetNS(curNS, tgtNS *os.File, f func() error) error {
 	if err := f(); err != nil {
 		// Attempt to revert the net ns in a known state
 		if err := ns.SetNS(curNS, syscall.CLONE_NEWNET); err != nil {
-			stderr.PrintE("Cannot revert the net namespace", err)
+			stderr.PrintE("cannot revert the net namespace", err)
 		}
 		return err
 	}

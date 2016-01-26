@@ -130,7 +130,7 @@ func gcStore(s *store.Store, gracePeriod time.Duration) error {
 	var imagesToRemove []string
 	aciinfos, err := s.GetAllACIInfos([]string{"lastused"}, true)
 	if err != nil {
-		return errwrap.Wrap(errors.New("Failed to get aciinfos"), err)
+		return errwrap.Wrap(errors.New("failed to get aciinfos"), err)
 	}
 	for _, ai := range aciinfos {
 		if time.Now().Sub(ai.LastUsed) <= gracePeriod {

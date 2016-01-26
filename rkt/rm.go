@@ -46,7 +46,7 @@ func runRm(cmd *cobra.Command, args []string) (exit int) {
 	case len(args) == 0 && flagUUIDFile != "":
 		podUUID, err = readUUIDFromFile(flagUUIDFile)
 		if err != nil {
-			stderr.PrintE("Unable to read UUID from file", err)
+			stderr.PrintE("unable to read UUID from file", err)
 			return 1
 		}
 		podUUIDs = append(podUUIDs, podUUID)
@@ -55,7 +55,7 @@ func runRm(cmd *cobra.Command, args []string) (exit int) {
 		for _, uuid := range args {
 			podUUID, err := resolveUUID(uuid)
 			if err != nil {
-				stderr.PrintE("Unable to resolve UUID", err)
+				stderr.PrintE("unable to resolve UUID", err)
 			} else {
 				podUUIDs = append(podUUIDs, podUUID)
 			}
@@ -71,7 +71,7 @@ func runRm(cmd *cobra.Command, args []string) (exit int) {
 		p, err := getPod(podUUID)
 		if err != nil {
 			ret = 1
-			stderr.PrintE("Cannot get pod", err)
+			stderr.PrintE("cannot get pod", err)
 		}
 
 		if removePod(p) {
@@ -82,7 +82,7 @@ func runRm(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	if ret == 1 {
-		stderr.Print("Failed to remove one or more pods")
+		stderr.Print("failed to remove one or more pods")
 	}
 
 	return ret
@@ -91,28 +91,28 @@ func runRm(cmd *cobra.Command, args []string) (exit int) {
 func removePod(p *pod) bool {
 	switch {
 	case p.isRunning():
-		stderr.Printf("Pod %q is currently running", p.uuid)
+		stderr.Printf("pod %q is currently running", p.uuid)
 		return false
 
 	case p.isEmbryo, p.isPreparing:
-		stderr.Printf("Pod %q is currently being prepared", p.uuid)
+		stderr.Printf("pod %q is currently being prepared", p.uuid)
 		return false
 
 	case p.isExitedDeleting, p.isDeleting:
-		stderr.Printf("Pod %q is currently being deleted", p.uuid)
+		stderr.Printf("pod %q is currently being deleted", p.uuid)
 		return false
 
 	case p.isAbortedPrepare:
-		stderr.Printf("Moving failed prepare %q to garbage", p.uuid)
+		stderr.Printf("moving failed prepare %q to garbage", p.uuid)
 		if err := p.xToGarbage(); err != nil && err != os.ErrNotExist {
-			stderr.PrintE("Rename error", err)
+			stderr.PrintE("rename error", err)
 			return false
 		}
 
 	case p.isPrepared:
-		stderr.Printf("Moving expired prepared pod %q to garbage", p.uuid)
+		stderr.Printf("moving expired prepared pod %q to garbage", p.uuid)
 		if err := p.xToGarbage(); err != nil && err != os.ErrNotExist {
-			stderr.PrintE("Rename error", err)
+			stderr.PrintE("rename error", err)
 			return false
 		}
 
@@ -122,13 +122,13 @@ func removePod(p *pod) bool {
 
 	case p.isExited:
 		if err := p.xToExitedGarbage(); err != nil && err != os.ErrNotExist {
-			stderr.PrintE("Rename error", err)
+			stderr.PrintE("rename error", err)
 			return false
 		}
 	}
 
 	if err := p.ExclusiveLock(); err != nil {
-		stderr.PrintE("Unable to acquire exclusive lock", err)
+		stderr.PrintE("unable to acquire exclusive lock", err)
 		return false
 	}
 

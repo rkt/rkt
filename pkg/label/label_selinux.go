@@ -43,7 +43,7 @@ func InitLabels(options []string) (string, string, error) {
 				return "", "", nil
 			}
 			if i := strings.Index(opt, ":"); i == -1 {
-				return "", "", fmt.Errorf("Bad SELinux Option")
+				return "", "", fmt.Errorf("bad SELinux Option")
 			}
 			con := strings.SplitN(opt, ":", 2)
 			pcon[con[0]] = con[1]
@@ -53,7 +53,7 @@ func InitLabels(options []string) (string, string, error) {
 			if con[0] == "mcsdir" {
 				err := selinux.SetMCSDir(con[1])
 				if err != nil {
-					return "", "", errwrap.Wrap(errors.New("Unable to configure MCS storage directory"), err)
+					return "", "", errwrap.Wrap(errors.New("unable to configure MCS storage directory"), err)
 				}
 			}
 		}

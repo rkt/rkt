@@ -83,7 +83,7 @@ type MacVTapNetConf struct {
 func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf) (netlink.Link, error) {
 	master, err := netlink.LinkByName(config.Master)
 	if err != nil {
-		return nil, errwrap.Wrap(fmt.Errorf("Cannot find master device '%v'", config.Master), err)
+		return nil, errwrap.Wrap(fmt.Errorf("cannot find master device '%v'", config.Master), err)
 	}
 	var mode netlink.MacvlanMode
 	switch config.Mode {
@@ -98,7 +98,7 @@ func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf) (netlink.Link, 
 	case "passthru":
 		mode = netlink.MACVLAN_MODE_PASSTHRU
 	default:
-		return nil, fmt.Errorf("Unsupported macvtap mode: %v", config.Mode)
+		return nil, fmt.Errorf("unsupported macvtap mode: %v", config.Mode)
 	}
 	mtu := master.Attrs().MTU
 	if config.MTU != 0 {
@@ -117,7 +117,7 @@ func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf) (netlink.Link, 
 	}
 
 	if err := netlink.LinkAdd(link); err != nil {
-		return nil, errwrap.Wrap(errors.New("Cannot create macvtap interface"), err)
+		return nil, errwrap.Wrap(errors.New("cannot create macvtap interface"), err)
 	}
 	return link, nil
 }
@@ -481,7 +481,7 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 			if err != nil {
 				rErr := tuntap.RemovePersistentIface(n.runtime.IfName, tuntap.Tap)
 				if rErr != nil {
-					stderr.PrintE("Warning: could not cleanup tap interface", rErr)
+					stderr.PrintE("warning: could not cleanup tap interface", rErr)
 				}
 				return nil, errwrap.Wrap(errors.New("can not add tap interface to bridge"), err)
 			}
@@ -564,18 +564,18 @@ func (n *Networking) teardownKvmNets() {
 		case "macvlan":
 			link, err := netlink.LinkByName(an.runtime.IfName)
 			if err != nil {
-				stderr.PrintE(fmt.Sprintf("Cannot find link `%v`", an.runtime.IfName), err)
+				stderr.PrintE(fmt.Sprintf("cannot find link `%v`", an.runtime.IfName), err)
 				continue
 			} else {
 				err := netlink.LinkDel(link)
 				if err != nil {
-					stderr.PrintE(fmt.Sprintf("Cannot remove link `%v`", an.runtime.IfName), err)
+					stderr.PrintE(fmt.Sprintf("cannot remove link `%v`", an.runtime.IfName), err)
 					continue
 				}
 			}
 
 		default:
-			stderr.Printf("Unsupported network type: %q", an.conf.Type)
+			stderr.Printf("unsupported network type: %q", an.conf.Type)
 			continue
 		}
 		// ugly hack again to directly call IPAM plugin to release IP
@@ -583,7 +583,7 @@ func (n *Networking) teardownKvmNets() {
 
 		_, err := n.execNetPlugin("DEL", &an, an.runtime.IfName)
 		if err != nil {
-			stderr.PrintE("Error executing network plugin", err)
+			stderr.PrintE("error executing network plugin", err)
 		}
 		// remove masquerading if it was prepared
 		if an.conf.IPMasq {
@@ -593,7 +593,7 @@ func (n *Networking) teardownKvmNets() {
 				Mask: net.IPMask(an.runtime.Mask),
 			}, chain)
 			if err != nil {
-				stderr.PrintE("Error on removing masquerading", err)
+				stderr.PrintE("error on removing masquerading", err)
 			}
 		}
 	}
@@ -604,7 +604,7 @@ func (n *Networking) teardownKvmNets() {
 func (n *Networking) kvmTeardown() {
 
 	if err := n.unforwardPorts(); err != nil {
-		stderr.PrintE("Error removing forwarded ports (kvm)", err)
+		stderr.PrintE("error removing forwarded ports (kvm)", err)
 	}
 	n.teardownKvmNets()
 }
@@ -624,7 +624,7 @@ func (an activeNet) IfName() string {
 		// kind of name, path to /dev/tapN made with N as link index
 		link, err := netlink.LinkByName(an.runtime.IfName)
 		if err != nil {
-			stderr.PrintE(fmt.Sprintf("Cannot get interface '%v'", an.runtime.IfName), err)
+			stderr.PrintE(fmt.Sprintf("cannot get interface '%v'", an.runtime.IfName), err)
 			return ""
 		}
 		return fmt.Sprintf("/dev/tap%d", link.Attrs().Index)

@@ -208,13 +208,13 @@ func satisfiesAnyPodFilters(pod *v1alpha.Pod, manifest *schema.PodManifest, filt
 func getPodManifest(p *pod) (*schema.PodManifest, []byte, error) {
 	data, err := p.readFile("pod")
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("Failed to read pod manifest for pod %q", p.uuid), err)
+		stderr.PrintE(fmt.Sprintf("failed to read pod manifest for pod %q", p.uuid), err)
 		return nil, nil, err
 	}
 
 	var manifest schema.PodManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		stderr.PrintE(fmt.Sprintf("Failed to unmarshal pod manifest for pod %q", p.uuid), err)
+		stderr.PrintE(fmt.Sprintf("failed to unmarshal pod manifest for pod %q", p.uuid), err)
 		return nil, nil, err
 	}
 	return &manifest, data, nil
@@ -225,7 +225,7 @@ func getApplist(p *pod) ([]*v1alpha.App, error) {
 	var apps []*v1alpha.App
 	applist, err := p.getApps()
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("Failed to get app list for pod %q", p.uuid), err)
+		stderr.PrintE(fmt.Sprintf("failed to get app list for pod %q", p.uuid), err)
 		return nil, err
 	}
 
@@ -352,7 +352,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 		}
 		pods = append(pods, pod)
 	}); err != nil {
-		stderr.PrintE("Failed to list pod", err)
+		stderr.PrintE("failed to list pod", err)
 		return nil, err
 	}
 	return &v1alpha.ListPodsResponse{Pods: pods}, nil
@@ -362,7 +362,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 	statusDir, err := p.getStatusDir()
 	if err != nil {
-		stderr.PrintE("Failed to get pod exit status directory", err)
+		stderr.PrintE("failed to get pod exit status directory", err)
 		return err
 	}
 
@@ -370,13 +370,13 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 		// Fill app's image info (id, name, version).
 		fullImageID, err := store.ResolveKey(app.Image.Id)
 		if err != nil {
-			stderr.PrintE(fmt.Sprintf("Failed to resolve the image ID %q", app.Image.Id), err)
+			stderr.PrintE(fmt.Sprintf("failed to resolve the image ID %q", app.Image.Id), err)
 			return err
 		}
 
 		im, err := p.getAppImageManifest(*types.MustACName(app.Name))
 		if err != nil {
-			stderr.PrintE(fmt.Sprintf("Failed to get image manifests for app %q", app.Name), err)
+			stderr.PrintE(fmt.Sprintf("failed to get image manifests for app %q", app.Name), err)
 			return err
 		}
 
@@ -408,7 +408,7 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 		}
 
 		if !os.IsNotExist(err) {
-			stderr.PrintE(fmt.Sprintf("Failed to read status for app %q", app.Name), err)
+			stderr.PrintE(fmt.Sprintf("failed to read status for app %q", app.Name), err)
 			return err
 		}
 		// If status file does not exit, that means the
@@ -430,13 +430,13 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.InspectPodRequest) (*v1alpha.InspectPodResponse, error) {
 	uuid, err := types.NewUUID(request.Id)
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("Invalid pod id %q", request.Id), err)
+		stderr.PrintE(fmt.Sprintf("invalid pod id %q", request.Id), err)
 		return nil, err
 	}
 
 	p, err := getPod(uuid)
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("Failed to get pod %q", request.Id), err)
+		stderr.PrintE(fmt.Sprintf("failed to get pod %q", request.Id), err)
 		return nil, err
 	}
 	defer p.Close()
@@ -459,13 +459,13 @@ func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.Insp
 func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1alpha.Image, *schema.ImageManifest, error) {
 	manifest, err := store.GetImageManifestJSON(aciInfo.BlobKey)
 	if err != nil {
-		stderr.PrintE("Failed to read the image manifest", err)
+		stderr.PrintE("failed to read the image manifest", err)
 		return nil, nil, err
 	}
 
 	var im schema.ImageManifest
 	if err = json.Unmarshal(manifest, &im); err != nil {
-		stderr.PrintE("Failed to unmarshal image manifest", err)
+		stderr.PrintE("failed to unmarshal image manifest", err)
 		return nil, nil, err
 	}
 
@@ -593,7 +593,7 @@ func satisfiesAnyImageFilters(image *v1alpha.Image, manifest *schema.ImageManife
 func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.ListImagesRequest) (*v1alpha.ListImagesResponse, error) {
 	aciInfos, err := s.store.GetAllACIInfos(nil, false)
 	if err != nil {
-		stderr.PrintE("Failed to get all ACI infos", err)
+		stderr.PrintE("failed to get all ACI infos", err)
 		return nil, err
 	}
 
@@ -618,19 +618,19 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 func getImageInfo(store *store.Store, imageID string) (*v1alpha.Image, error) {
 	key, err := store.ResolveKey(imageID)
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("Failed to resolve the image ID %q", imageID), err)
+		stderr.PrintE(fmt.Sprintf("failed to resolve the image ID %q", imageID), err)
 		return nil, err
 	}
 
 	aciInfo, err := store.GetACIInfoWithBlobKey(key)
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("Failed to get ACI info for image %q", key), err)
+		stderr.PrintE(fmt.Sprintf("failed to get ACI info for image %q", key), err)
 		return nil, err
 	}
 
 	image, _, err := aciInfoToV1AlphaAPIImage(store, aciInfo)
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("Failed to convert ACI to v1alphaAPIImage for image %q", key), err)
+		stderr.PrintE(fmt.Sprintf("failed to convert ACI to v1alphaAPIImage for image %q", key), err)
 		return nil, err
 	}
 	return image, nil

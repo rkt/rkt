@@ -67,44 +67,44 @@ func runEnter(cmd *cobra.Command, args []string) (exit int) {
 	defer p.Close()
 
 	if !p.isRunning() {
-		stderr.Printf("Pod %q isn't currently running", p.uuid)
+		stderr.Printf("pod %q isn't currently running", p.uuid)
 		return 1
 	}
 
 	podPID, err := p.getContainerPID1()
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("Unable to determine the pid for pod %q", p.uuid), err)
+		stderr.PrintE(fmt.Sprintf("unable to determine the pid for pod %q", p.uuid), err)
 		return 1
 	}
 
 	appName, err := getAppName(p)
 	if err != nil {
-		stderr.PrintE("Unable to determine app name", err)
+		stderr.PrintE("unable to determine app name", err)
 		return 1
 	}
 
 	argv, err := getEnterArgv(p, args)
 	if err != nil {
-		stderr.PrintE("Enter failed", err)
+		stderr.PrintE("enter failed", err)
 		return 1
 	}
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr.PrintE("Cannot open store", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
 	stage1TreeStoreID, err := p.getStage1TreeStoreID()
 	if err != nil {
-		stderr.PrintE("Error getting stage1 treeStoreID", err)
+		stderr.PrintE("error getting stage1 treeStoreID", err)
 		return 1
 	}
 
 	stage1RootFS := s.GetTreeStoreRootFS(stage1TreeStoreID)
 
 	if err = stage0.Enter(p.path(), podPID, *appName, stage1RootFS, argv); err != nil {
-		stderr.PrintE("Enter failed", err)
+		stderr.PrintE("enter failed", err)
 		return 1
 	}
 	// not reached when stage0.Enter execs /enter
@@ -139,7 +139,7 @@ func getAppName(p *pod) (*types.ACName, error) {
 	default:
 	}
 
-	stderr.Print("Pod contains multiple apps:")
+	stderr.Print("pod contains multiple apps:")
 	for _, ra := range m.Apps {
 		stderr.Printf("\t%v", ra.Name)
 	}
@@ -151,7 +151,7 @@ func getAppName(p *pod) (*types.ACName, error) {
 func getEnterArgv(p *pod, cmdArgs []string) ([]string, error) {
 	var argv []string
 	if len(cmdArgs) < 2 {
-		stderr.Printf("No command specified, assuming %q", defaultCmd)
+		stderr.Printf("no command specified, assuming %q", defaultCmd)
 		argv = []string{defaultCmd}
 	} else {
 		argv = cmdArgs[1:]

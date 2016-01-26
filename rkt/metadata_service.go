@@ -469,7 +469,7 @@ func handleAppID(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest,
 
 func initCrypto() error {
 	if n, err := rand.Reader.Read(hmacKey[:]); err != nil || n != len(hmacKey) {
-		return fmt.Errorf("Failed to generate HMAC Key")
+		return fmt.Errorf("failed to generate HMAC Key")
 	}
 	return nil
 }
@@ -574,7 +574,7 @@ func unixListener() (net.Listener, error) {
 		// socket activated
 		lfds, err := strconv.ParseInt(s, 10, 16)
 		if err != nil {
-			return nil, errwrap.Wrap(errors.New("Error parsing LISTEN_FDS env var"), err)
+			return nil, errwrap.Wrap(errors.New("error parsing LISTEN_FDS env var"), err)
 		}
 		if lfds < 1 {
 			return nil, fmt.Errorf("LISTEN_FDS < 1")
@@ -585,7 +585,7 @@ func unixListener() (net.Listener, error) {
 		dir := filepath.Dir(common.MetadataServiceRegSock)
 		err := os.MkdirAll(dir, 0755)
 		if err != nil {
-			return nil, errwrap.Wrap(fmt.Errorf("Failed to create %v", dir), err)
+			return nil, errwrap.Wrap(fmt.Errorf("failed to create %v", dir), err)
 		}
 
 		return net.ListenUnix("unix", &net.UnixAddr{
@@ -602,7 +602,7 @@ func runRegistrationServer(l net.Listener) {
 	r.HandleFunc("/pods/{uuid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
 
 	if err := http.Serve(l, r); err != nil {
-		stderr.PrintE("Error serving registration HTTP", err)
+		stderr.PrintE("error serving registration HTTP", err)
 	}
 	close(exitCh)
 }
@@ -627,14 +627,14 @@ func runPublicServer(l net.Listener) {
 	r.HandleFunc("/pod/hmac/verify", logReq(handlePodVerify)).Methods("POST")
 
 	if err := http.Serve(l, r); err != nil {
-		stderr.PrintE("Error serving pod HTTP", err)
+		stderr.PrintE("error serving pod HTTP", err)
 	}
 	close(exitCh)
 }
 
 func runMetadataService(cmd *cobra.Command, args []string) (exit int) {
 	signal.Notify(exitCh, syscall.SIGINT, syscall.SIGTERM)
-	stderr.Print("Metadata service starting...")
+	stderr.Print("metadata service starting...")
 
 	unixl, err := unixListener()
 	if err != nil {
@@ -645,7 +645,7 @@ func runMetadataService(cmd *cobra.Command, args []string) (exit int) {
 
 	tcpl, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: flagListenPort})
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("Error listening on port %v", flagListenPort), err)
+		stderr.PrintE(fmt.Sprintf("error listening on port %v", flagListenPort), err)
 		return 1
 	}
 	defer tcpl.Close()
@@ -658,11 +658,11 @@ func runMetadataService(cmd *cobra.Command, args []string) (exit int) {
 	go runRegistrationServer(unixl)
 	go runPublicServer(tcpl)
 
-	stderr.Print("Metadata service running...")
+	stderr.Print("metadata service running...")
 
 	<-exitCh
 
-	stderr.Print("Metadata service exiting...")
+	stderr.Print("metadata service exiting...")
 
 	return
 }

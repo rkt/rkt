@@ -126,7 +126,7 @@ func rmImages(s *store.Store, images []string) error {
 
 func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) < 1 {
-		stderr.Print("Must provide at least one image ID")
+		stderr.Print("must provide at least one image ID")
 		return 1
 	}
 

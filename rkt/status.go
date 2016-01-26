@@ -50,20 +50,20 @@ func runStatus(cmd *cobra.Command, args []string) (exit int) {
 
 	p, err := getPodFromUUIDString(args[0])
 	if err != nil {
-		stderr.PrintE("Problem retrieving pod", err)
+		stderr.PrintE("problem retrieving pod", err)
 		return 1
 	}
 	defer p.Close()
 
 	if flagWait {
 		if err := p.waitExited(); err != nil {
-			stderr.PrintE("Unable to wait for pod", err)
+			stderr.PrintE("unable to wait for pod", err)
 			return 1
 		}
 	}
 
 	if err = printStatus(p); err != nil {
-		stderr.PrintE("Unable to print status", err)
+		stderr.PrintE("unable to print status", err)
 		return 1
 	}
 

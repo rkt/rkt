@@ -40,7 +40,7 @@ func GC(pdir string, uuid *types.UUID, stage1Path string) error {
 	err := unregisterPod(pdir, uuid)
 	if err != nil {
 		// Probably not worth abandoning the rest
-		log.PrintE("Warning: could not unregister pod with metadata service", err)
+		log.PrintE("warning: could not unregister pod with metadata service", err)
 	}
 
 	ep, err := getStage1Entrypoint(pdir, gcEntrypoint)

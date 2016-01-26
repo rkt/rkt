@@ -127,7 +127,7 @@ func globGetFiles(args globArgs) []string {
 func globGetFilesFromFilelist(filename string) ([]string, error) {
 	fl, err := os.Open(filename)
 	if err != nil {
-		return nil, errwrap.Wrap(fmt.Errorf("Failed to open filelist %q", filename), err)
+		return nil, errwrap.Wrap(fmt.Errorf("failed to open filelist %q", filename), err)
 	}
 	defer fl.Close()
 	lists := filelist.Lists{}

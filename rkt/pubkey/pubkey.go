@@ -126,13 +126,13 @@ func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, ove
 		if prefix == "" {
 			path, err := m.Ks.StoreTrustedKeyRoot(pk)
 			if err != nil {
-				return errwrap.Wrap(errors.New("Error adding root key"), err)
+				return errwrap.Wrap(errors.New("error adding root key"), err)
 			}
 			stderr("Added root key at %q", path)
 		} else {
 			path, err := m.Ks.StoreTrustedKeyPrefix(prefix, pk)
 			if err != nil {
-				return errwrap.Wrap(fmt.Errorf("Error adding key for prefix %q", prefix), err)
+				return errwrap.Wrap(fmt.Errorf("error adding key for prefix %q", prefix), err)
 			}
 			stderr("Added key for prefix %q at %q", prefix, path)
 		}

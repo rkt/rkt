@@ -196,7 +196,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 
 	p, err := newPod()
 	if err != nil {
-		stderr.PrintE("Error creating new pod", err)
+		stderr.PrintE("error creating new pod", err)
 		return 1
 	}
 
@@ -204,14 +204,14 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	// clean it up even if something goes wrong
 	if flagUUIDFileSave != "" {
 		if err := writeUUIDToFile(p.uuid, flagUUIDFileSave); err != nil {
-			stderr.PrintE("Error saving pod UUID to file", err)
+			stderr.PrintE("error saving pod UUID to file", err)
 			return 1
 		}
 	}
 
 	processLabel, mountLabel, err := label.InitLabels([]string{"mcsdir:/var/run/rkt/mcs"})
 	if err != nil {
-		stderr.PrintE("Error initialising SELinux", err)
+		stderr.PrintE("error initialising SELinux", err)
 		return 1
 	}
 
@@ -260,7 +260,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	// get the lock fd for run
 	lfd, err := p.Fd()
 	if err != nil {
-		stderr.PrintE("Error getting pod lock fd", err)
+		stderr.PrintE("error getting pod lock fd", err)
 		return 1
 	}
 

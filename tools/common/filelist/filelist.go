@@ -66,18 +66,18 @@ func (list *Lists) ParseFilelist(filelist io.Reader) error {
 	for {
 		kind, count, err := parseHeader(scanner)
 		if err != nil {
-			return errwrap.Wrap(errors.New("Failed to parse filelist"), err)
+			return errwrap.Wrap(errors.New("failed to parse filelist"), err)
 		}
 		if kind == "" {
 			break
 		}
 		data := list.getDataForKind(kind)
 		if data == nil {
-			return fmt.Errorf("Failed to parse filelist: unknown kind %q, expected 'files', 'symlinks' or 'dirs'", kind)
+			return fmt.Errorf("failed to parse filelist: unknown kind %q, expected 'files', 'symlinks' or 'dirs'", kind)
 		}
 		items, err := parseList(scanner, count)
 		if err != nil {
-			return errwrap.Wrap(errors.New("Failed to parse filelist"), err)
+			return errwrap.Wrap(errors.New("failed to parse filelist"), err)
 		}
 		*data = items
 	}

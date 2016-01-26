@@ -544,7 +544,7 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 		if !cfg.SkipTreeStoreCheck {
 			hash, err := cfg.Store.CheckTreeStore(treeStoreID)
 			if err != nil {
-				log.PrintE("Warning: tree cache is in a bad state: %v. Rebuilding...", err)
+				log.PrintE("warning: tree cache is in a bad state: %v. Rebuilding...", err)
 				var err error
 				treeStoreID, hash, err = cfg.Store.RenderTreeStore(img.String(), true)
 				if err != nil {
@@ -625,7 +625,7 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 	if !cfg.SkipTreeStoreCheck {
 		hash, err := cfg.Store.CheckTreeStore(treeStoreID)
 		if err != nil {
-			log.Printf("Warning: tree cache is in a bad state: %v. Rebuilding...", err)
+			log.Printf("warning: tree cache is in a bad state: %v. Rebuilding...", err)
 			var err error
 			treeStoreID, hash, err = cfg.Store.RenderTreeStore(img.String(), true)
 			if err != nil {

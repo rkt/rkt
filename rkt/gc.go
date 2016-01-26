@@ -50,27 +50,27 @@ func init() {
 
 func runGC(cmd *cobra.Command, args []string) (exit int) {
 	if err := renameExited(); err != nil {
-		stderr.PrintE("Failed to rename exited pods", err)
+		stderr.PrintE("failed to rename exited pods", err)
 		return 1
 	}
 
 	if err := renameAborted(); err != nil {
-		stderr.PrintE("Failed to rename aborted pods", err)
+		stderr.PrintE("failed to rename aborted pods", err)
 		return 1
 	}
 
 	if err := renameExpired(flagPreparedExpiration); err != nil {
-		stderr.PrintE("Failed to rename expired prepared pods", err)
+		stderr.PrintE("failed to rename expired prepared pods", err)
 		return 1
 	}
 
 	if err := emptyExitedGarbage(flagGracePeriod); err != nil {
-		stderr.PrintE("Failed to empty exitedGarbage", err)
+		stderr.PrintE("failed to empty exitedGarbage", err)
 		return 1
 	}
 
 	if err := emptyGarbage(); err != nil {
-		stderr.PrintE("Failed to empty garbage", err)
+		stderr.PrintE("failed to empty garbage", err)
 		return 1
 	}
 
@@ -81,9 +81,9 @@ func runGC(cmd *cobra.Command, args []string) (exit int) {
 func renameExited() error {
 	if err := walkPods(includeRunDir, func(p *pod) {
 		if p.isExited {
-			stderr.Printf("Moving pod %q to garbage", p.uuid)
+			stderr.Printf("moving pod %q to garbage", p.uuid)
 			if err := p.xToExitedGarbage(); err != nil && err != os.ErrNotExist {
-				stderr.PrintE("Rename error", err)
+				stderr.PrintE("rename error", err)
 			}
 		}
 	}); err != nil {
@@ -100,7 +100,7 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 		st := &syscall.Stat_t{}
 		if err := syscall.Lstat(gp, st); err != nil {
 			if err != syscall.ENOENT {
-				stderr.PrintE(fmt.Sprintf("Unable to stat %q, ignoring", gp), err)
+				stderr.PrintE(fmt.Sprintf("unable to stat %q, ignoring", gp), err)
 			}
 			return
 		}
@@ -113,7 +113,7 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 
 			deletePod(p)
 		} else {
-			stderr.Printf("Pod %q not removed: still within grace period (%s)", p.uuid, gracePeriod)
+			stderr.Printf("pod %q not removed: still within grace period (%s)", p.uuid, gracePeriod)
 		}
 	}); err != nil {
 		return err
@@ -126,9 +126,9 @@ func emptyExitedGarbage(gracePeriod time.Duration) error {
 func renameAborted() error {
 	if err := walkPods(includePrepareDir, func(p *pod) {
 		if p.isAbortedPrepare {
-			stderr.Printf("Moving failed prepare %q to garbage", p.uuid)
+			stderr.Printf("moving failed prepare %q to garbage", p.uuid)
 			if err := p.xToGarbage(); err != nil && err != os.ErrNotExist {
-				stderr.PrintE("Rename error", err)
+				stderr.PrintE("rename error", err)
 			}
 		}
 	}); err != nil {
@@ -144,15 +144,15 @@ func renameExpired(preparedExpiration time.Duration) error {
 		pp := p.path()
 		if err := syscall.Lstat(pp, st); err != nil {
 			if err != syscall.ENOENT {
-				stderr.PrintE(fmt.Sprintf("Unable to stat %q, ignoring", pp), err)
+				stderr.PrintE(fmt.Sprintf("unable to stat %q, ignoring", pp), err)
 			}
 			return
 		}
 
 		if expiration := time.Unix(st.Ctim.Unix()).Add(preparedExpiration); time.Now().After(expiration) {
-			stderr.Printf("Moving expired prepared pod %q to garbage", p.uuid)
+			stderr.Printf("moving expired prepared pod %q to garbage", p.uuid)
 			if err := p.xToGarbage(); err != nil && err != os.ErrNotExist {
-				stderr.PrintE("Rename error", err)
+				stderr.PrintE("rename error", err)
 			}
 		}
 	}); err != nil {
@@ -182,13 +182,13 @@ func emptyGarbage() error {
 // or Garbage state
 func deletePod(p *pod) {
 	if !p.isExitedGarbage && !p.isGarbage {
-		panic(fmt.Sprintf("Logic error: deletePod called with non-garbage pod %q (status %q)", p.uuid, p.getState()))
+		stderr.Panicf("logic error: deletePod called with non-garbage pod %q (status %q)", p.uuid, p.getState())
 	}
 
 	if p.isExitedGarbage {
 		s, err := store.NewStore(getDataDir())
 		if err != nil {
-			stderr.PrintE("Cannot open store", err)
+			stderr.PrintE("cannot open store", err)
 			return
 		}
 		defer s.Close()
@@ -196,15 +196,15 @@ func deletePod(p *pod) {
 		// execute stage1's GC
 		stage1TreeStoreID, err := p.getStage1TreeStoreID()
 		if err != nil {
-			stderr.PrintE("Error getting stage1 treeStoreID", err)
-			stderr.Print("Skipping stage1 GC")
+			stderr.PrintE("error getting stage1 treeStoreID", err)
+			stderr.Print("skipping stage1 GC")
 		} else {
 			if globalFlags.Debug {
 				stage0.InitDebug()
 			}
 			stage1RootFS := s.GetTreeStoreRootFS(stage1TreeStoreID)
 			if err = stage0.GC(p.path(), p.uuid, stage1RootFS); err != nil {
-				stderr.PrintE(fmt.Sprintf("Problem performing stage1 GC on %q", p.uuid), err)
+				stderr.PrintE(fmt.Sprintf("problem performing stage1 GC on %q", p.uuid), err)
 			}
 		}
 
@@ -216,7 +216,7 @@ func deletePod(p *pod) {
 	}
 
 	if err := os.RemoveAll(p.path()); err != nil {
-		stderr.PrintE(fmt.Sprintf("Unable to remove pod %q", p.uuid), err)
+		stderr.PrintE(fmt.Sprintf("unable to remove pod %q", p.uuid), err)
 		os.Exit(1)
 	}
 }

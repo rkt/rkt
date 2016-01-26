@@ -169,7 +169,7 @@ func runList(cmd *cobra.Command, args []string) int {
 		}
 
 	}); err != nil {
-		stderr.PrintE("Failed to get pod handles", err)
+		stderr.PrintE("failed to get pod handles", err)
 		return 1
 	}
 
@@ -181,7 +181,7 @@ func runList(cmd *cobra.Command, args []string) int {
 			stderr.Error(err)
 			stderr.Print(sep)
 		}
-		stderr.Print("Misc:")
+		stderr.Print("misc:")
 		stderr.Printf("  rkt's appc version: %s", schema.AppContainerVersion)
 		stderr.Print(sep)
 		// make a visible break between errors and the listing
@@ -224,7 +224,7 @@ func newPodListLoadError(p *pod, err error, pmj []byte) error {
 }
 
 func newPodListZeroAppsError(p *pod) error {
-	return fmt.Errorf("Pod %s contains zero apps", p.uuid.String())
+	return fmt.Errorf("pod %s contains zero apps", p.uuid.String())
 }
 
 func newPodListLoadImageManifestError(p *pod, err error) error {

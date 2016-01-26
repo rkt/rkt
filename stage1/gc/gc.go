@@ -69,7 +69,7 @@ func gcNetworking(podID *types.UUID) error {
 		// In that case we try to read it from the pod's root directory
 		flavor, err = os.Readlink("flavor")
 		if err != nil {
-			return errwrap.Wrap(errors.New("Failed to get stage1 flavor"), err)
+			return errwrap.Wrap(errors.New("failed to get stage1 flavor"), err)
 		}
 	}
 
@@ -80,7 +80,7 @@ func gcNetworking(podID *types.UUID) error {
 	case os.IsNotExist(err):
 		// probably ran with --net=host
 	default:
-		return errwrap.Wrap(errors.New("Failed loading networking state"), err)
+		return errwrap.Wrap(errors.New("failed loading networking state"), err)
 	}
 
 	return nil

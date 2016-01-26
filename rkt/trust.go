@@ -89,7 +89,7 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 	if len(pkls) == 0 {
 		pkls, err = m.GetPubKeyLocations(flagPrefix)
 		if err != nil {
-			stderr.PrintE("Error determining key location", err)
+			stderr.PrintE("error determining key location", err)
 			return 1
 		}
 	}
@@ -99,7 +99,7 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 		acceptOpt = pubkey.AcceptForce
 	}
 	if err := m.AddKeys(pkls, flagPrefix, acceptOpt, pubkey.OverrideDeny); err != nil {
-		stderr.PrintE("Error adding keys", err)
+		stderr.PrintE("error adding keys", err)
 		return 1
 	}
 

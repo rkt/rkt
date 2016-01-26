@@ -238,7 +238,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 			stderr.Error(err)
 			stderr.Print(sep)
 		}
-		stderr.Print("Misc:")
+		stderr.Print("misc:")
 		stderr.Printf("  rkt's appc version: %s", schema.AppContainerVersion)
 		// make a visible break between errors and the listing
 		stderr.Print("")
