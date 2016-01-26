@@ -183,11 +183,10 @@ func (s *resumableSession) getMaxAge(headerValue string) int {
 	}
 
 	maxAge := 0
-	// TODO(krnowak): cache-control header values are separated by
-	// commas. So split it by commas and the strip
-	// leading/trailing whitespace from the parts.
-	parts := strings.Split(headerValue, " ")
+	parts := strings.Split(headerValue, ",")
+
 	for i := 0; i < len(parts); i++ {
+		parts[i] = strings.TrimSpace(parts[i])
 		attr, val := parts[i], ""
 		if j := strings.Index(attr, "="); j >= 0 {
 			attr, val = attr[:j], attr[j+1:]
