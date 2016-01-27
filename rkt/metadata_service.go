@@ -614,12 +614,12 @@ func runPublicServer(l net.Listener) {
 	mr := r.Methods("GET").Subrouter()
 
 	mr.HandleFunc("/pod/annotations/", logReq(podGet(handlePodAnnotations)))
-	mr.HandleFunc("/pod/annotations/{name}", logReq(podGet(handlePodAnnotation)))
+	mr.HandleFunc("/pod/annotations/{name:.*}", logReq(podGet(handlePodAnnotation)))
 	mr.HandleFunc("/pod/manifest", logReq(podGet(handlePodManifest)))
 	mr.HandleFunc("/pod/uuid", logReq(handlePodUUID))
 
 	mr.HandleFunc("/apps/{app:.*}/annotations/", logReq(appGet(handleAppAnnotations)))
-	mr.HandleFunc("/apps/{app:.*}/annotations/{name}", logReq(appGet(handleAppAnnotation)))
+	mr.HandleFunc("/apps/{app:.*}/annotations/{name:.*}", logReq(appGet(handleAppAnnotation)))
 	mr.HandleFunc("/apps/{app:.*}/image/manifest", logReq(appGet(handleImageManifest)))
 	mr.HandleFunc("/apps/{app:.*}/image/id", logReq(appGet(handleAppID)))
 
