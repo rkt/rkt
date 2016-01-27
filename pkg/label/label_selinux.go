@@ -43,7 +43,7 @@ func InitLabels(options []string) (string, string, error) {
 				return "", "", nil
 			}
 			if i := strings.Index(opt, ":"); i == -1 {
-				return "", "", fmt.Errorf("bad SELinux Option")
+				return "", "", errors.New("bad SELinux option")
 			}
 			con := strings.SplitN(opt, ":", 2)
 			pcon[con[0]] = con[1]
@@ -133,11 +133,11 @@ func Relabel(path string, fileLabel string, relabel string) error {
 	}
 	for _, p := range exclude_path {
 		if path == p {
-			return fmt.Errorf("Relabeling of %s is not allowed", path)
+			return fmt.Errorf("relabeling of %s is not allowed", path)
 		}
 	}
 	if strings.Contains(relabel, "z") && strings.Contains(relabel, "Z") {
-		return fmt.Errorf("Bad SELinux option z and Z can not be used together")
+		return fmt.Errorf("bad SELinux option z and Z can not be used together")
 	}
 	if strings.Contains(relabel, "z") {
 		c := selinux.NewContext(fileLabel)

@@ -101,7 +101,7 @@ func rmImages(s *store.Store, images []string) error {
 				continue
 			}
 		}
-		stdout.Printf("successfully removed aci for image ID: %q", key)
+		stdout.Printf("successfully removed aci for image: %q", key)
 		errors--
 		done++
 	}

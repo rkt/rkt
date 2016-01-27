@@ -140,7 +140,7 @@ func init() {
 	flag.StringVar(&podPid, "pid", "", "podPID")
 	flag.StringVar(&appName, "appname", "", "application to use")
 
-	log = rktlog.New(os.Stderr, "stage1 kvm", false)
+	log = rktlog.New(os.Stderr, "kvm", false)
 
 	var err error
 	if sshPath, err = exec.LookPath("ssh"); err != nil {
@@ -237,9 +237,10 @@ func execSSH() error {
 func main() {
 	flag.Parse()
 
-	log = rktlog.New(os.Stderr, "enter_kvm", debug)
 	if !debug {
 		log.SetOutput(ioutil.Discard)
+	} else {
+		log.SetDebug(true)
 	}
 
 	if appName == "" {
@@ -247,6 +248,6 @@ func main() {
 	}
 
 	// execSSH should return only with error
-	log.Print(execSSH())
+	log.Error(execSSH())
 	os.Exit(2)
 }

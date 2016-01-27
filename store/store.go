@@ -135,7 +135,7 @@ func (s *Store) populateSize() error {
 		return err
 	})
 	if err != nil {
-		return errwrap.Wrap(errors.New("populateSize(): error retrieving ACI Infos"), err)
+		return errwrap.Wrap(errors.New("error retrieving ACI Infos"), err)
 	}
 
 	aciSizes := make(map[string]int64)
