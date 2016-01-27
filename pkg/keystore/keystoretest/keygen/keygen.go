@@ -27,6 +27,8 @@ import (
 	"os"
 	"strings"
 	"text/template"
+
+	"golang.org/x/crypto/openpgp"
 )
 
 type Key struct {
