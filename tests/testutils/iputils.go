@@ -162,7 +162,15 @@ func CheckTcp4Port(port int) (bool, error) {
 }
 
 func GetNextFreePort4() (int, error) {
+	return GetNextFreePort4Banned(map[int]struct{}{})
+}
+
+func GetNextFreePort4Banned(bannedPorts map[int]struct{}) (int, error) {
 	for port := 49152; port <= 65535; port++ {
+		if _, portBanned := bannedPorts[port]; portBanned {
+			continue
+		}
+
 		avail, err := CheckTcp4Port(port)
 		if err != nil {
 			return 0, err
