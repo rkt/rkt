@@ -38,6 +38,7 @@ type Fetcher action
 // file for verification, unless verification is disabled. If
 // f.WithDeps is true also image dependencies are fetched.
 func (f *Fetcher) FetchImage(img string, ascPath string, imgType apps.AppImageType) (string, error) {
+	ensureLogger(f.Debug)
 	a := f.getAsc(ascPath)
 	hash, err := f.fetchSingleImage(img, a, imgType)
 	if err != nil {
@@ -214,7 +215,7 @@ func (f *Fetcher) maybeCheckRemoteFromStore(rem *store.Remote, check remoteCheck
 		useBlobKey = useCached(rem.DownloadTime, rem.CacheMaxAge)
 	}
 	if useBlobKey {
-		stderr("using image from local store for url %s", rem.ACIURL)
+		log.Printf("using image from local store for url %s", rem.ACIURL)
 		return rem.BlobKey
 	}
 	return ""
@@ -222,7 +223,7 @@ func (f *Fetcher) maybeCheckRemoteFromStore(rem *store.Remote, check remoteCheck
 
 func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *store.Remote, u *url.URL, a *asc) (string, error) {
 	if !f.StoreOnly {
-		stderr("remote fetching from URL %q", u.String())
+		log.Printf("remote fetching from URL %q", u.String())
 		hf := &httpFetcher{
 			InsecureFlags: f.InsecureFlags,
 			S:             f.S,
@@ -238,7 +239,7 @@ func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *store.Remote, u *url.URL, a *
 
 func (f *Fetcher) maybeFetchDockerURLFromRemote(u *url.URL) (string, error) {
 	if !f.StoreOnly {
-		stderr("remote fetching from URL %q", u.String())
+		log.Printf("remote fetching from URL %q", u.String())
 		df := &dockerFetcher{
 			InsecureFlags: f.InsecureFlags,
 			DockerAuth:    f.DockerAuth,
@@ -251,11 +252,12 @@ func (f *Fetcher) maybeFetchDockerURLFromRemote(u *url.URL) (string, error) {
 }
 
 func (f *Fetcher) fetchSingleImageByPath(path string, a *asc) (string, error) {
-	stderr("using image from file %s", path)
+	log.Printf("using image from file %s", path)
 	ff := &fileFetcher{
 		InsecureFlags: f.InsecureFlags,
 		S:             f.S,
 		Ks:            f.Ks,
+		Debug:         f.Debug,
 	}
 	return ff.GetHash(path, a)
 }
@@ -304,7 +306,7 @@ func (f *Fetcher) maybeCheckStoreForApp(app *appBundle) (string, error) {
 	if !f.NoStore {
 		key, err := f.getStoreKeyFromApp(app)
 		if err == nil {
-			stderr("using image from local store for image name %s", app.Str)
+			log.Printf("using image from local store for image name %s", app.Str)
 			return key, nil
 		}
 		switch err.(type) {

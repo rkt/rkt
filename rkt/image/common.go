@@ -25,6 +25,7 @@ import (
 
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/pkg/keystore"
+	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store"
@@ -71,6 +72,17 @@ type action struct {
 	WithDeps bool
 }
 
+var (
+	log    *rktlog.Logger
+	stdout *rktlog.Logger = rktlog.New(os.Stdout, "", false)
+)
+
+func ensureLogger(debug bool) {
+	if log == nil {
+		log = rktlog.New(os.Stderr, "image", debug)
+	}
+}
+
 // isReallyNil makes sure that the passed value is really really
 // nil. So it returns true if value is plain nil or if it is e.g. an
 // interface with non-nil type but nil-value (which normally is
@@ -99,15 +111,6 @@ func isReallyNil(iface interface{}) bool {
 		return v.IsNil()
 	}
 	return false
-}
-
-// stderr prints messages to standard error. There is no need to add a
-// trailing newline as it will be added automatically. Also, this
-// function prepends a "rkt: " string to the message.
-func stderr(format string, a ...interface{}) {
-	prefixedFormat := fmt.Sprintf("rkt: %s", format)
-	out := fmt.Sprintf(prefixedFormat, a...)
-	fmt.Fprintln(os.Stderr, strings.TrimSuffix(out, "\n"))
 }
 
 // useCached checks if downloadTime plus maxAge is before/after the current time.
@@ -140,7 +143,7 @@ func printIdentities(entity *openpgp.Entity) {
 	for _, v := range entity.Identities {
 		lines = append(lines, fmt.Sprintf("  %s", v.Name))
 	}
-	stderr("%s", strings.Join(lines, "\n"))
+	log.Print(strings.Join(lines, "\n"))
 }
 
 func guessImageType(image string) apps.AppImageType {

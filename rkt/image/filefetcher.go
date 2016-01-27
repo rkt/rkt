@@ -31,11 +31,13 @@ type fileFetcher struct {
 	InsecureFlags *rktflag.SecFlags
 	S             *store.Store
 	Ks            *keystore.Keystore
+	Debug         bool
 }
 
 // GetHash opens a file, optionally verifies it against passed asc,
 // stores it in the store and returns the hash.
 func (f *fileFetcher) GetHash(aciPath string, a *asc) (string, error) {
+	ensureLogger(f.Debug)
 	absPath, err := filepath.Abs(aciPath)
 	if err != nil {
 		return "", errwrap.Wrap(fmt.Errorf("failed to get an absolute path for %q", aciPath), err)
@@ -58,7 +60,7 @@ func (f *fileFetcher) GetHash(aciPath string, a *asc) (string, error) {
 
 func (f *fileFetcher) getFile(aciPath string, a *asc) (*os.File, error) {
 	if f.InsecureFlags.SkipImageCheck() && f.Ks != nil {
-		stderr("warning: image signature verification has been disabled")
+		log.Printf("warning: image signature verification has been disabled")
 	}
 	if f.InsecureFlags.SkipImageCheck() || f.Ks == nil {
 		aciFile, err := os.Open(aciPath)

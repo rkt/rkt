@@ -49,6 +49,7 @@ type dockerFetcher struct {
 // GetHash uses docker2aci to download the image and convert it to
 // ACI, then stores it in the store and returns the hash.
 func (f *dockerFetcher) GetHash(u *url.URL) (string, error) {
+	ensureLogger(f.Debug)
 	dockerURL := d2acommon.ParseDockerURL(path.Join(u.Host, u.Path))
 	latest := dockerURL.Tag == "latest"
 	return f.fetchImageFrom(u, latest)
@@ -60,7 +61,7 @@ func (f *dockerFetcher) fetchImageFrom(u *url.URL, latest bool) (string, error) 
 	}
 
 	if f.Debug {
-		stderr("fetching image from %s", u.String())
+		log.Printf("fetching image from %s", u.String())
 	}
 
 	aciFile, err := f.fetch(u)

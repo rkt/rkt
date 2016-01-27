@@ -46,8 +46,9 @@ type nameFetcher struct {
 // GetHash runs the discovery, fetches the image, optionally verifies
 // it against passed asc, stores it in the store and returns the hash.
 func (f *nameFetcher) GetHash(app *discovery.App, a *asc) (string, error) {
+	ensureLogger(f.Debug)
 	name := app.Name.String()
-	stderr("searching for app image %s", name)
+	log.Printf("searching for app image %s", name)
 	ep, err := f.discoverApp(app)
 	if err != nil {
 		return "", errwrap.Wrap(fmt.Errorf("discovery failed for %q", name), err)
@@ -72,7 +73,7 @@ func (f *nameFetcher) discoverApp(app *discovery.App) (*discovery.Endpoints, err
 	ep, attempts, err := discovery.DiscoverEndpoints(*app, hostHeaders, insecure)
 	if f.Debug {
 		for _, a := range attempts {
-			stderr("meta tag 'ac-discovery' not found on %s: %v", a.Prefix, a.Error)
+			log.PrintE(fmt.Sprintf("meta tag 'ac-discovery' not found on %s", a.Prefix), a.Error)
 		}
 	}
 	if err != nil {
@@ -85,19 +86,20 @@ func (f *nameFetcher) discoverApp(app *discovery.App) (*discovery.Endpoints, err
 }
 
 func (f *nameFetcher) fetchImageFromEndpoints(app *discovery.App, ep *discovery.Endpoints, a *asc, latest bool) (string, error) {
+	ensureLogger(f.Debug)
 	// TODO(krnowak): we should probably try all the endpoints,
 	// for this we need to clone "a" and call
 	// maybeOverrideAscFetcherWithRemote on the clone
 	aciURL := ep.ACIEndpoints[0].ACI
 	ascURL := ep.ACIEndpoints[0].ASC
-	stderr("remote fetching from URL %q", aciURL)
+	log.Printf("remote fetching from URL %q", aciURL)
 	f.maybeOverrideAscFetcherWithRemote(ascURL, a)
 	return f.fetchImageFromSingleEndpoint(app, aciURL, a, latest)
 }
 
 func (f *nameFetcher) fetchImageFromSingleEndpoint(app *discovery.App, aciURL string, a *asc, latest bool) (string, error) {
 	if f.Debug {
-		stderr("fetching image from %s", aciURL)
+		log.Printf("fetching image from %s", aciURL)
 	}
 
 	aciFile, cd, err := f.fetch(app, aciURL, a)
@@ -126,10 +128,10 @@ func (f *nameFetcher) fetchImageFromSingleEndpoint(app *discovery.App, aciURL st
 
 func (f *nameFetcher) fetch(app *discovery.App, aciURL string, a *asc) (readSeekCloser, *cacheData, error) {
 	if f.InsecureFlags.SkipTLSCheck() && f.Ks != nil {
-		stderr("warning: TLS verification has been disabled")
+		log.Print("warning: TLS verification has been disabled")
 	}
 	if f.InsecureFlags.SkipImageCheck() && f.Ks != nil {
-		stderr("warning: image signature verification has been disabled")
+		log.Print("warning: image signature verification has been disabled")
 	}
 
 	u, err := url.Parse(aciURL)
@@ -201,10 +203,10 @@ func (f *nameFetcher) maybeFetchPubKeys(appName string) {
 		// public keys fails but we already trust the key, we
 		// should be able to run the image anyway.
 		if err != nil {
-			stderr("error determining key location: %v", err)
+			log.PrintE("error determining key location", err)
 		} else {
 			if err := m.AddKeys(pkls, appName, pubkey.AcceptForce, pubkey.OverrideDeny); err != nil {
-				stderr("error adding keys: %v", err)
+				log.PrintE("error adding keys", err)
 			}
 		}
 	}
@@ -259,5 +261,6 @@ func (f *nameFetcher) getHTTPOps() *httpOps {
 		InsecureSkipTLSVerify: f.InsecureFlags.SkipTLSCheck(),
 		S:       f.S,
 		Headers: f.Headers,
+		Debug:   f.Debug,
 	}
 }
