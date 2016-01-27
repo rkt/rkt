@@ -51,7 +51,6 @@ var (
 func init() {
 	cmdRkt.AddCommand(cmdAPIService)
 	cmdAPIService.Flags().StringVar(&flagAPIServiceListenAddr, "listen", common.APIServiceListenAddr, "address to listen on client API requests")
-
 }
 
 // v1AlphaAPIServer implements v1Alpha.APIServer interface.
