@@ -41,6 +41,9 @@ func init() {
 
 	cmdRunPrepared.Flags().Var(&flagNet, "net", "configure the pod's networking. optionally pass a list of user-configured networks to load and arguments to pass to them. syntax: --net[=n[:args]][,]")
 	cmdRunPrepared.Flags().Lookup("net").NoOptDefVal = "default"
+	cmdRunPrepared.Flags().Var(&flagDNS, "dns", "name servers to write in /etc/resolv.conf")
+	cmdRunPrepared.Flags().Var(&flagDNSSearch, "dns-search", "DNS search domains to write in /etc/resolv.conf")
+	cmdRunPrepared.Flags().Var(&flagDNSOpt, "dns-opt", "DNS options to write in /etc/resolv.conf")
 	cmdRunPrepared.Flags().BoolVar(&flagInteractive, "interactive", false, "the pod is interactive")
 	cmdRunPrepared.Flags().BoolVar(&flagMDSRegister, "mds-register", false, "register pod with metadata service")
 }
@@ -123,6 +126,9 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		Net:         flagNet,
 		LockFd:      lfd,
 		Interactive: flagInteractive,
+		DNS:         flagDNS,
+		DNSSearch:   flagDNSSearch,
+		DNSOpt:      flagDNSOpt,
 		MDSRegister: flagMDSRegister,
 		Apps:        apps,
 		RktGid:      rktgid,
