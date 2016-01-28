@@ -140,7 +140,7 @@ func getMountsForPrefix(path string, mi io.Reader) (mounts, error) {
 				}
 			}
 			if err != nil {
-				return nil, fmt.Errorf("could not parse mountinfo line %q: %v", line, err)
+				return nil, errwrap.Wrap(fmt.Errorf("could not parse mountinfo line %q", line), err)
 			}
 		}
 
@@ -155,7 +155,7 @@ func getMountsForPrefix(path string, mi io.Reader) (mounts, error) {
 		}
 	}
 	if err := sc.Err(); err != nil {
-		return nil, fmt.Errorf("problem parsing mountinfo: %v", err)
+		return nil, errwrap.Wrap(errors.New("problem parsing mountinfo"), err)
 	}
 	sort.Sort(podMounts)
 	return podMounts, nil
@@ -190,7 +190,7 @@ func MountGC(path, uuid string) error {
 		mnt := mnts[i]
 		if needsRemountPrivate(mnt) {
 			if err := syscall.Mount("", mnt.mountPoint, "", syscall.MS_PRIVATE, ""); err != nil {
-				return fmt.Errorf("could not remount at %v: %v", mnt.mountPoint, err)
+				return errwrap.Wrap(fmt.Errorf("could not remount at %v", mnt.mountPoint), err)
 			}
 		}
 	}

@@ -127,7 +127,7 @@ func ExtractTar(rs io.Reader, dir string, overwrite bool, uidRange *uid.UidRange
 		return fmt.Errorf("extracttar error: %v, output: %s", err, out)
 	}
 	if encodeErr != nil {
-		return fmt.Errorf("extracttar failed to json encode filemap: %v", encodeErr)
+		return errwrap.Wrap(errors.New("extracttar failed to json encode filemap"), encodeErr)
 	}
 	return nil
 }

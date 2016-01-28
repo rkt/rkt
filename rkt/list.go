@@ -101,7 +101,7 @@ func runList(cmd *cobra.Command, args []string) int {
 
 		created, err := p.getCreationTime()
 		if err != nil {
-			errors = append(errors, fmt.Errorf("unable to get creation time for pod %q: %v", uuid, err))
+			errors = append(errors, errwrap.Wrap(fmt.Errorf("unable to get creation time for pod %q", uuid), err))
 		}
 		var createdStr string
 		if flagFullOutput {
@@ -112,7 +112,7 @@ func runList(cmd *cobra.Command, args []string) int {
 
 		started, err := p.getStartTime()
 		if err != nil {
-			errors = append(errors, fmt.Errorf("unable to get start time for pod %q: %v", uuid, err))
+			errors = append(errors, errwrap.Wrap(fmt.Errorf("unable to get start time for pod %q", uuid), err))
 		}
 		var startedStr string
 		if !started.IsZero() {

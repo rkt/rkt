@@ -403,7 +403,7 @@ func (s *Store) ResolveName(name string) ([]string, bool, error) {
 		return err
 	})
 	if err != nil {
-		return nil, found, fmt.Errorf("error retrieving ACI Infos: %v", err)
+		return nil, found, errwrap.Wrap(errors.New("error retrieving ACI Infos"), err)
 	}
 
 	keys := make([]string, len(aciInfos))
@@ -862,7 +862,7 @@ func (s *Store) GetACIInfoWithBlobKey(blobKey string) (*ACIInfo, error) {
 	})
 	if !found {
 		if err != nil {
-			err = fmt.Errorf("ACI info not found with blob key %q: %v", blobKey, err)
+			err = errwrap.Wrap(fmt.Errorf("ACI info not found with blob key %q", blobKey), err)
 		} else {
 			err = fmt.Errorf("ACI info not found with blob key %q", blobKey)
 		}

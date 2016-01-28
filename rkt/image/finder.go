@@ -60,7 +60,7 @@ func (f *Finder) FindImage(img string, asc string, imgType apps.AppImageType) (*
 	h, err := types.NewHash(key)
 	if err != nil {
 		// should never happen
-		panic(fmt.Errorf("got an invalid hash from the store, looks like it is corrupted: %v", err))
+		log.PanicE("got an invalid hash from the store, looks like it is corrupted", err)
 	}
 	return h, nil
 }
@@ -72,12 +72,12 @@ func (f *Finder) getHashFromStore(img string) (*types.Hash, error) {
 	}
 	fullKey, err := f.S.ResolveKey(img)
 	if err != nil {
-		return nil, errwrap.Wrap(fmt.Errorf("could not resolve image ID %q", img), err)
+		return nil, errwrap.Wrap(fmt.Errorf("could not resolve image %q", img), err)
 	}
 	h, err = types.NewHash(fullKey)
 	if err != nil {
 		// should never happen
-		panic(fmt.Errorf("got an invalid hash from the store, looks like it is corrupted: %v", err))
+		log.PanicE("got an invalid hash from the store, looks like it is corrupted", err)
 	}
 	return h, nil
 }

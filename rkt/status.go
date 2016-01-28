@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -76,7 +77,7 @@ func printStatus(p *pod) error {
 
 	created, err := p.getCreationTime()
 	if err != nil {
-		return fmt.Errorf("unable to get creation time for pod %q: %v", p.uuid, err)
+		return errwrap.Wrap(fmt.Errorf("unable to get creation time for pod %q", p.uuid), err)
 	}
 	createdStr := created.Format(defaultTimeLayout)
 
@@ -84,7 +85,7 @@ func printStatus(p *pod) error {
 
 	started, err := p.getStartTime()
 	if err != nil {
-		return fmt.Errorf("unable to get start time for pod %q: %v", p.uuid, err)
+		return errwrap.Wrap(fmt.Errorf("unable to get start time for pod %q", p.uuid), err)
 	}
 	var startedStr string
 	if !started.IsZero() {

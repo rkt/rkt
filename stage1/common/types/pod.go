@@ -16,6 +16,7 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 
@@ -23,6 +24,7 @@ import (
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 )
 
 // Pod encapsulates a PodManifest and ImageManifests
@@ -46,12 +48,12 @@ func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 
 	buf, err := ioutil.ReadFile(common.PodManifestPath(p.Root))
 	if err != nil {
-		return nil, fmt.Errorf("failed reading pod manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("failed reading pod manifest"), err)
 	}
 
 	pm := &schema.PodManifest{}
 	if err := json.Unmarshal(buf, pm); err != nil {
-		return nil, fmt.Errorf("failed unmarshalling pod manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("failed unmarshalling pod manifest"), err)
 	}
 	p.Manifest = pm
 
@@ -59,12 +61,12 @@ func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 		ampath := common.ImageManifestPath(p.Root, app.Name)
 		buf, err := ioutil.ReadFile(ampath)
 		if err != nil {
-			return nil, fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
+			return nil, errwrap.Wrap(fmt.Errorf("failed reading app manifest %q", ampath), err)
 		}
 
 		am := &schema.ImageManifest{}
 		if err = json.Unmarshal(buf, am); err != nil {
-			return nil, fmt.Errorf("failed unmarshalling app manifest %q: %v", ampath, err)
+			return nil, errwrap.Wrap(fmt.Errorf("failed unmarshalling app manifest %q", ampath), err)
 		}
 
 		if _, ok := p.Images[app.Name.String()]; ok {

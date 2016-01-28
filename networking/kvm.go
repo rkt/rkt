@@ -415,7 +415,7 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 	var e error
 	network.nets, e = network.loadNets()
 	if e != nil {
-		return nil, fmt.Errorf("error loading network definitions: %v", e)
+		return nil, errwrap.Wrap(errors.New("error loading network definitions"), e)
 	}
 
 	for i, n := range network.nets {

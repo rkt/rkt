@@ -194,12 +194,12 @@ func SetJournalPermissions(p *stage1commontypes.Pod) error {
 
 	journalPath := filepath.Join(s1, "rootfs", "var", "log", "journal")
 	if err := os.MkdirAll(journalPath, os.FileMode(0755)); err != nil {
-		return fmt.Errorf("error creating journal dir: %v", err)
+		return errwrap.Wrap(errors.New("error creating journal dir"), err)
 	}
 
 	a, err := acl.Parse(fmt.Sprintf("g:%d:r-x,m:r-x", rktgid))
 	if err != nil {
-		panic(fmt.Sprintf("error parsing ACL string: %v", err))
+		log.PanicE("error parsing ACL string", err)
 	}
 	defer a.Free()
 
