@@ -29,3 +29,33 @@ rkt: signature verified:
   CoreOS ACI Builder <release@coreos.com>
 c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 ```
+
+## Options
+
+| Flag | Default | Options | Description |
+| --- | --- | --- | --- |
+| `--exec` |  `` | A path | Override the exec command for the preciding image |
+| `--inherit-env` |  `false` | `true` or `false` | Inherit all environment variables not set by apps |
+| `--mount` |  `` | Mount syntax (`volume=NAME,target=PATH`). See [Mounting Volumes without Mount Points](run.md#mounting-volumes-without-mount-points) | Mount point binding a volume to a path withing an app |
+| `--no-overlay` |  `false` | `true` or `false` | Disable overlay filesystem |
+| `--no-store` |  `false` | `true` or `false` | Fetch images ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
+| `--pod-manifest` |  `` | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effects |
+| `--port` |  `` | A port number | Ports to expose on the host (requires `--net`) |
+| `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental) |
+| `--quiet` |  `false` | `true` or `false` | Supress superfluous output on stdout, print only the UUID on success |
+| `--set-env` |  `` | An environment variable. Syntax `NAME=VALUE` | An environment variable to set for apps |
+| `--stage1-image` |  `` | A path to a stage1 image. Local paths and HTTP/HTTPS URLs are supported | Image to use as stage1 |
+| `--store-only` |  `false` | `true` or `false` | Use only available images in the store (do not discover or download from remote URLs). See [image fetching behavior](../image-fetching-behavior.md) |
+| `--volume` |  `` | Volume syntax (`NAME,kind=KIND,source=PATH,readOnly=BOOL`). See [Mount Volumes into a Pod](run.md#mount-volumes-into-a-pod) | Volumes to make available in the pod |
+
+## Global options
+
+| Flag | Default | Options | Description |
+| --- | --- | --- | --- |
+| `--debug` |  `false` | `true` or `false` | Prints out more debug information to `stderr` |
+| `--dir` | `/var/lib/rkt` | A directory path | Path to the `rkt` data directory |
+| `--insecure-options` |  none | <ul><li>**none**: All security features are enabled</li><li>**http**: Allow HTTP connections. Be warned that this will send any credentials as clear text.</li><li>**image**: Disables verifying image signatures</li><li>**tls**: Accept any certificate from the server and any host name in that certificate</li><li>**ondisk**: Disables verifying the integrity of the on-disk, rendered image before running. This significantly speeds up start time.</li><li>**all**: Disables all security checks</li></ul>  | Comma-separated list of security features to disable |
+| `--local-config` |  `/etc/rkt` | A directory path | Path to the local configuration directory |
+| `--system-config` |  `/usr/lib/rkt` | A directory path | Path to the system configuration directory |
+| `--trust-keys-from-https` |  `true` | `true` or `false` | Automatically trust gpg keys fetched from https |
+| `--user-config` |  `` | A directory path | Path to the user configuration directory |

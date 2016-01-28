@@ -19,3 +19,22 @@ UUID                                   APP     IMAGE NAME              IMAGE ID 
                                        etcd    coreos.com/etcd:v2.0.9  sha512-a03f6bad952b
 3089337c4-8021-119b-5ea0-879a7c694de4  nginx   nginx                   sha512-32ad6892f21a   exited     2016-01-25 17:36:40.203 +0100 CET   2016-01-25 17:42:15.1 +0100 CET
 ```
+
+## Options
+
+| Flag | Default | Options | Description |
+| --- | --- | --- | --- |
+| `--full` |  `false` | `true` or `false` | Use long output format |
+| `--no-legend` |  `false` | `true` or `false` | Supress a legend with the list |
+
+## Global options
+
+| Flag | Default | Options | Description |
+| --- | --- | --- | --- |
+| `--debug` |  `false` | `true` or `false` | Prints out more debug information to `stderr` |
+| `--dir` | `/var/lib/rkt` | A directory path | Path to the `rkt` data directory |
+| `--insecure-options` |  none | <ul><li>**none**: All security features are enabled</li><li>**http**: Allow HTTP connections. Be warned that this will send any credentials as clear text.</li><li>**image**: Disables verifying image signatures</li><li>**tls**: Accept any certificate from the server and any host name in that certificate</li><li>**ondisk**: Disables verifying the integrity of the on-disk, rendered image before running. This significantly speeds up start time.</li><li>**all**: Disables all security checks</li></ul>  | Comma-separated list of security features to disable |
+| `--local-config` |  `/etc/rkt` | A directory path | Path to the local configuration directory |
+| `--system-config` |  `/usr/lib/rkt` | A directory path | Path to the system configuration directory |
+| `--trust-keys-from-https` |  `true` | `true` or `false` | Automatically trust gpg keys fetched from https |
+| `--user-config` |  `` | A directory path | Path to the user configuration directory |

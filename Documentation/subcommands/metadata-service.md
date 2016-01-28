@@ -25,3 +25,21 @@ The IP and port of the metadata service are passed by rkt to pods via the `AC_ME
 ## Using the metadata service
 
 See [App Container specification](https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service) for more information about the metadata service including a list of supported endpoints and their usage.
+
+## Options
+
+| Flag | Default | Options | Description |
+| --- | --- | --- | --- |
+| `--listen-port` |  `18112` | A port number | Listen port |
+
+## Global options
+
+| Flag | Default | Options | Description |
+| --- | --- | --- | --- |
+| `--debug` |  `false` | `true` or `false` | Prints out more debug information to `stderr` |
+| `--dir` | `/var/lib/rkt` | A directory path | Path to the `rkt` data directory |
+| `--insecure-options` |  none | <ul><li>**none**: All security features are enabled</li><li>**http**: Allow HTTP connections. Be warned that this will send any credentials as clear text.</li><li>**image**: Disables verifying image signatures</li><li>**tls**: Accept any certificate from the server and any host name in that certificate</li><li>**ondisk**: Disables verifying the integrity of the on-disk, rendered image before running. This significantly speeds up start time.</li><li>**all**: Disables all security checks</li></ul>  | Comma-separated list of security features to disable |
+| `--local-config` |  `/etc/rkt` | A directory path | Path to the local configuration directory |
+| `--system-config` |  `/usr/lib/rkt` | A directory path | Path to the system configuration directory |
+| `--trust-keys-from-https` |  `true` | `true` or `false` | Automatically trust gpg keys fetched from https |
+| `--user-config` |  `` | A directory path | Path to the user configuration directory |
