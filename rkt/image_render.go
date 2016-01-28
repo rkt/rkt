@@ -53,76 +53,76 @@ func runImageRender(cmd *cobra.Command, args []string) (exit int) {
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("image render: cannot open store: %v", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
 	key, err := getStoreKeyFromAppOrHash(s, args[0])
 	if err != nil {
-		stderr("image render: %v", err)
+		stderr.Error(err)
 		return 1
 	}
 
 	id, _, err := s.RenderTreeStore(key, false)
 	if err != nil {
-		stderr("image render: error rendering ACI: %v", err)
+		stderr.PrintE("error rendering ACI", err)
 		return 1
 	}
 	if _, err := s.CheckTreeStore(id); err != nil {
-		stderr("image render: warning: tree cache is in a bad state. Rebuilding...")
+		stderr.Print("warning: tree cache is in a bad state. Rebuilding...")
 		var err error
 		if id, _, err = s.RenderTreeStore(key, true); err != nil {
-			stderr("image render: error rendering ACI: %v", err)
+			stderr.PrintE("error rendering ACI", err)
 			return 1
 		}
 	}
 
 	if _, err := os.Stat(outputDir); err == nil {
 		if !flagRenderOverwrite {
-			stderr("image render: output directory exists (try --overwrite)")
+			stderr.Print("output directory exists (try --overwrite)")
 			return 1
 		}
 
 		// don't allow the user to delete the root filesystem by mistake
 		if outputDir == "/" {
-			stderr("image extract: this would delete your root filesystem. Refusing.")
+			stderr.Print("this would delete your root filesystem. Refusing.")
 			return 1
 		}
 
 		if err := os.RemoveAll(outputDir); err != nil {
-			stderr("image render: error removing existing output dir: %v", err)
+			stderr.PrintE("error removing existing output dir", err)
 			return 1
 		}
 	}
 	rootfsOutDir := outputDir
 	if !flagRenderRootfsOnly {
 		if err := os.MkdirAll(outputDir, 0755); err != nil {
-			stderr("image render: error creating output directory: %v", err)
+			stderr.PrintE("error creating output directory", err)
 			return 1
 		}
 		rootfsOutDir = filepath.Join(rootfsOutDir, "rootfs")
 
 		manifest, err := s.GetImageManifest(key)
 		if err != nil {
-			stderr("image render: error getting manifest: %v", err)
+			stderr.PrintE("error getting manifest", err)
 			return 1
 		}
 
 		mb, err := json.Marshal(manifest)
 		if err != nil {
-			stderr("image render: error marshalling image manifest: %v", err)
+			stderr.PrintE("error marshalling image manifest", err)
 			return 1
 		}
 
 		if err := ioutil.WriteFile(filepath.Join(outputDir, "manifest"), mb, 0700); err != nil {
-			stderr("image render: error writing image manifest: %v", err)
+			stderr.PrintE("error writing image manifest", err)
 			return 1
 		}
 	}
 
 	cachedTreePath := s.GetTreeStoreRootFS(id)
 	if err := fileutil.CopyTree(cachedTreePath, rootfsOutDir, uid.NewBlankUidRange()); err != nil {
-		stderr("image render: error copying ACI rootfs: %v", err)
+		stderr.PrintE("error copying ACI rootfs", err)
 		return 1
 	}
 

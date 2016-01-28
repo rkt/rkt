@@ -18,10 +18,13 @@
 package uid
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/hashicorp/errwrap"
 )
 
 const DefaultRangeCount = 0x10000
@@ -76,7 +79,7 @@ func (r *UidRange) Deserialize(uidRange []byte) error {
 	}
 	_, err := fmt.Sscanf(string(uidRange), "%d:%d", &r.Shift, &r.Count)
 	if err != nil {
-		return fmt.Errorf("error deserializing uid range: %v", err)
+		return errwrap.Wrap(errors.New("error deserializing uid range"), err)
 	}
 
 	return nil

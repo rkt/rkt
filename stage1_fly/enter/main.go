@@ -15,11 +15,15 @@
 package main
 
 import (
-	"log"
 	"os"
+
+	rktlog "github.com/coreos/rkt/pkg/log"
 )
 
+var log *rktlog.Logger
+
 func main() {
-	log.Printf("Not doing anything here! (%+v)", os.Args)
+	log = rktlog.New(os.Stderr, "enter", false)
+	log.Printf("not doing anything here! (%+v)", os.Args)
 	return
 }

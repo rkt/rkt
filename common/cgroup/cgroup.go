@@ -18,6 +18,7 @@ package cgroup
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,6 +29,7 @@ import (
 	"syscall"
 
 	"github.com/coreos/go-systemd/unit"
+	"github.com/hashicorp/errwrap"
 	"k8s.io/kubernetes/pkg/api/resource"
 )
 
@@ -133,7 +135,7 @@ func GetEnabledCgroups() (map[int][]string, error) {
 
 	cgroups, err := parseCgroups(cgroupsFile)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing /proc/cgroups: %v", err)
+		return nil, errwrap.Wrap(errors.New("error parsing /proc/cgroups"), err)
 	}
 
 	return cgroups, nil
@@ -184,7 +186,7 @@ func parseOwnCgroupController(controller string) ([]string, error) {
 	cgroupPath := "/proc/self/cgroup"
 	cg, err := os.Open(cgroupPath)
 	if err != nil {
-		return nil, fmt.Errorf("error opening /proc/self/cgroup: %v", err)
+		return nil, errwrap.Wrap(errors.New("error opening /proc/self/cgroup"), err)
 	}
 	defer cg.Close()
 
@@ -220,11 +222,11 @@ func GetOwnCgroupPath(controller string) (string, error) {
 func JoinSubcgroup(controller string, subcgroup string) error {
 	subcgroupPath := filepath.Join("/sys/fs/cgroup", controller, subcgroup)
 	if err := os.MkdirAll(subcgroupPath, 0600); err != nil {
-		return fmt.Errorf("error creating %q subcgroup: %v", subcgroup, err)
+		return errwrap.Wrap(fmt.Errorf("error creating %q subcgroup", subcgroup), err)
 	}
 	pidBytes := []byte(strconv.Itoa(os.Getpid()))
 	if err := ioutil.WriteFile(filepath.Join(subcgroupPath, "cgroup.procs"), pidBytes, 0600); err != nil {
-		return fmt.Errorf("error adding ourselves to the %q subcgroup: %v", subcgroup, err)
+		return errwrap.Wrap(fmt.Errorf("error adding ourselves to the %q subcgroup", subcgroup), err)
 	}
 
 	return nil
@@ -287,7 +289,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string) error {
 	// If we're mounting the host cgroups, /sys is probably mounted so we
 	// ignore EBUSY
 	if err := syscall.Mount("sysfs", sys, "sysfs", flags, ""); err != nil && err != syscall.EBUSY {
-		return fmt.Errorf("error mounting %q: %v", sys, err)
+		return errwrap.Wrap(fmt.Errorf("error mounting %q", sys), err)
 	}
 
 	cgroupTmpfs := filepath.Join(root, "/sys/fs/cgroup")
@@ -299,7 +301,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string) error {
 		syscall.MS_NODEV |
 		syscall.MS_STRICTATIME
 	if err := syscall.Mount("tmpfs", cgroupTmpfs, "tmpfs", flags, "mode=755"); err != nil {
-		return fmt.Errorf("error mounting %q: %v", cgroupTmpfs, err)
+		return errwrap.Wrap(fmt.Errorf("error mounting %q", cgroupTmpfs), err)
 	}
 
 	// Mount controllers
@@ -313,7 +315,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string) error {
 			syscall.MS_NOEXEC |
 			syscall.MS_NODEV
 		if err := syscall.Mount("cgroup", cPath, "cgroup", flags, c); err != nil {
-			return fmt.Errorf("error mounting %q: %v", cPath, err)
+			return errwrap.Wrap(fmt.Errorf("error mounting %q", cPath), err)
 		}
 	}
 
@@ -322,7 +324,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string) error {
 	for ln, tgt := range symlinks {
 		lnPath := filepath.Join(cgroupTmpfs, ln)
 		if err := os.Symlink(tgt, lnPath); err != nil {
-			return fmt.Errorf("error creating symlink: %v", err)
+			return errwrap.Wrap(errors.New("error creating symlink"), err)
 		}
 	}
 
@@ -339,7 +341,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string) error {
 		syscall.MS_NODEV |
 		syscall.MS_RDONLY
 	if err := syscall.Mount(cgroupTmpfs, cgroupTmpfs, "", flags, ""); err != nil {
-		return fmt.Errorf("error remounting RO %q: %v", cgroupTmpfs, err)
+		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", cgroupTmpfs), err)
 	}
 
 	return nil
@@ -380,7 +382,7 @@ func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup st
 					continue
 				}
 				if err := syscall.Mount(cgroupFilePath, cgroupFilePath, "", syscall.MS_BIND, ""); err != nil {
-					return fmt.Errorf("error bind mounting %q: %v", cgroupFilePath, err)
+					return errwrap.Wrap(fmt.Errorf("error bind mounting %q", cgroupFilePath), err)
 				}
 			}
 		}
@@ -393,7 +395,7 @@ func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup st
 			syscall.MS_NODEV |
 			syscall.MS_RDONLY
 		if err := syscall.Mount(cPath, cPath, "", flags, ""); err != nil {
-			return fmt.Errorf("error remounting RO %q: %v", cPath, err)
+			return errwrap.Wrap(fmt.Errorf("error remounting RO %q", cPath), err)
 		}
 	}
 
@@ -405,7 +407,7 @@ func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup st
 		syscall.MS_NODEV |
 		syscall.MS_RDONLY
 	if err := syscall.Mount(sysPath, sysPath, "", flags, ""); err != nil {
-		return fmt.Errorf("error remounting RO %q: %v", sysPath, err)
+		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", sysPath), err)
 	}
 
 	return nil

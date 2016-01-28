@@ -18,10 +18,12 @@
 package label
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/coreos/rkt/pkg/selinux"
+	"github.com/hashicorp/errwrap"
 )
 
 // InitLabels returns the process label and file labels to be used within
@@ -41,7 +43,7 @@ func InitLabels(options []string) (string, string, error) {
 				return "", "", nil
 			}
 			if i := strings.Index(opt, ":"); i == -1 {
-				return "", "", fmt.Errorf("Bad SELinux Option")
+				return "", "", errors.New("bad SELinux option")
 			}
 			con := strings.SplitN(opt, ":", 2)
 			pcon[con[0]] = con[1]
@@ -51,7 +53,7 @@ func InitLabels(options []string) (string, string, error) {
 			if con[0] == "mcsdir" {
 				err := selinux.SetMCSDir(con[1])
 				if err != nil {
-					return "", "", fmt.Errorf("Unable to configure MCS storage directory: %v", err)
+					return "", "", errwrap.Wrap(errors.New("unable to configure MCS storage directory"), err)
 				}
 			}
 		}
@@ -131,11 +133,11 @@ func Relabel(path string, fileLabel string, relabel string) error {
 	}
 	for _, p := range exclude_path {
 		if path == p {
-			return fmt.Errorf("Relabeling of %s is not allowed", path)
+			return fmt.Errorf("relabeling of %s is not allowed", path)
 		}
 	}
 	if strings.Contains(relabel, "z") && strings.Contains(relabel, "Z") {
-		return fmt.Errorf("Bad SELinux option z and Z can not be used together")
+		return fmt.Errorf("bad SELinux option z and Z can not be used together")
 	}
 	if strings.Contains(relabel, "z") {
 		c := selinux.NewContext(fileLabel)

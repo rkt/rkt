@@ -15,7 +15,7 @@
 package image
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"net/url"
 	"time"
@@ -24,6 +24,7 @@ import (
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 )
 
 // httpFetcher is used to download images from http or https URLs.
@@ -39,10 +40,11 @@ type httpFetcher struct {
 // GetHash fetches the URL, optionally verifies it against passed asc,
 // stores it in the store and returns the hash.
 func (f *httpFetcher) GetHash(u *url.URL, a *asc) (string, error) {
+	ensureLogger(f.Debug)
 	urlStr := u.String()
 
 	if f.Debug {
-		stderr("fetching image from %s", urlStr)
+		log.Printf("fetching image from %s", urlStr)
 	}
 
 	aciFile, cd, err := f.fetchURL(u, a, f.getETag())
@@ -95,10 +97,10 @@ func (f *httpFetcher) maybeUseCached(cd *cacheData) string {
 
 func (f *httpFetcher) fetchURL(u *url.URL, a *asc, etag string) (readSeekCloser, *cacheData, error) {
 	if f.InsecureFlags.SkipTLSCheck() && f.Ks != nil {
-		stderr("warning: TLS verification has been disabled")
+		log.Printf("warning: TLS verification has been disabled")
 	}
 	if f.InsecureFlags.SkipImageCheck() && f.Ks != nil {
-		stderr("warning: image signature verification has been disabled")
+		log.Printf("warning: image signature verification has been disabled")
 	}
 
 	if f.InsecureFlags.SkipImageCheck() || f.Ks == nil {
@@ -151,6 +153,7 @@ func (f *httpFetcher) getHTTPOps() *httpOps {
 		InsecureSkipTLSVerify: f.InsecureFlags.SkipTLSCheck(),
 		S:       f.S,
 		Headers: f.Headers,
+		Debug:   f.Debug,
 	}
 }
 
@@ -164,7 +167,7 @@ func (f *httpFetcher) validate(aciFile, ascFile io.ReadSeeker) error {
 		return err
 	}
 	if _, err := aciFile.Seek(0, 0); err != nil {
-		return fmt.Errorf("error seeking ACI file: %v", err)
+		return errwrap.Wrap(errors.New("error seeking ACI file"), err)
 	}
 
 	printIdentities(entity)

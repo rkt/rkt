@@ -258,7 +258,44 @@ Provided you have followed the preceding instructions, regardless of whether you
 $ ./scripts/godep-save
 ```
 
-## Finishing up
+## Errors & Output
+
+rkt attempts to offer consistent and structured error output. To achieve this, we use a couple helper types which we'll describe below.
+
+### Wrapping errors
+
+rkt uses the errwrap package to structure errors. This allows us to manages how we output errors. You can wrap errors by doing the following.
+
+```
+err := funcReturningSomeError()
+errwrap.Wrap(errors.New("My new error"), err)
+```
+
+### Logging errors
+
+For writing to output rkt uses its own log package which is essentially a wrapper around the golang log package. This is used to write to both `stderr` and `stdout`. By doing this, rkt can easily change the way it formats its output.
+
+A few new methods are added to control the output of the wrapped errors. For example, the following outputs an error to `stderr`.
+
+```
+log := rktlog.Logger(os.Stderr, "rkt", debug)
+
+log.PrintE("a message to accompany the error", err)
+```
+
+There are similar functions named `FatalE`, `PanicE`. All the other methods from golang's log package are available.
+
+### Writing to stdout
+
+In order to write to `stdout`, we also use the rkt log package. If not already set up in your package, one can be created as follows.
+
+```
+stdout := rktlog.Logger(os.Stdout, "", false)
+```
+
+Here, the prefix is an empty string and debug is set to `false`.
+
+## Finishing Up
 
 At this point, you should be good to PR.
 As well as a simple sanity check that the code actually builds and tests pass, here are some things to look out for:

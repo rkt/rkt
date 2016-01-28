@@ -18,9 +18,9 @@ package stage0
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,25 +30,26 @@ import (
 	"syscall"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 )
 
 // GC enters the pod by fork/exec()ing the stage1's /gc similar to /init.
 // /gc can expect to have its CWD set to the pod root.
 // stage1Path is the path of the stage1 rootfs
-func GC(pdir string, uuid *types.UUID, stage1Path string, debug bool) error {
+func GC(pdir string, uuid *types.UUID, stage1Path string) error {
 	err := unregisterPod(pdir, uuid)
 	if err != nil {
 		// Probably not worth abandoning the rest
-		log.Printf("Warning: could not unregister pod with metadata service: %v", err)
+		log.PrintE("warning: could not unregister pod with metadata service", err)
 	}
 
 	ep, err := getStage1Entrypoint(pdir, gcEntrypoint)
 	if err != nil {
-		return fmt.Errorf("error determining 'gc' entrypoint: %v", err)
+		return errwrap.Wrap(errors.New("error determining 'gc' entrypoint"), err)
 	}
 
 	args := []string{filepath.Join(stage1Path, ep)}
-	if debug {
+	if debugEnabled {
 		args = append(args, "--debug")
 	}
 	args = append(args, uuid.String())
@@ -139,7 +140,7 @@ func getMountsForPrefix(path string, mi io.Reader) (mounts, error) {
 				}
 			}
 			if err != nil {
-				return nil, fmt.Errorf("could not parse mountinfo line %q: %v", line, err)
+				return nil, errwrap.Wrap(fmt.Errorf("could not parse mountinfo line %q", line), err)
 			}
 		}
 
@@ -154,7 +155,7 @@ func getMountsForPrefix(path string, mi io.Reader) (mounts, error) {
 		}
 	}
 	if err := sc.Err(); err != nil {
-		return nil, fmt.Errorf("problem parsing mountinfo: %v", err)
+		return nil, errwrap.Wrap(errors.New("problem parsing mountinfo"), err)
 	}
 	sort.Sort(podMounts)
 	return podMounts, nil
@@ -182,14 +183,14 @@ func MountGC(path, uuid string) error {
 
 	mnts, err := getMountsForPrefix(path, mi)
 	if err != nil {
-		return fmt.Errorf("error getting mounts for pod %s from mountinfo: %v", uuid, err)
+		return errwrap.Wrap(fmt.Errorf("error getting mounts for pod %s from mountinfo", uuid), err)
 	}
 
 	for i := len(mnts) - 1; i >= 0; i -= 1 {
 		mnt := mnts[i]
 		if needsRemountPrivate(mnt) {
 			if err := syscall.Mount("", mnt.mountPoint, "", syscall.MS_PRIVATE, ""); err != nil {
-				return fmt.Errorf("could not remount at %v: %v", mnt.mountPoint, err)
+				return errwrap.Wrap(fmt.Errorf("could not remount at %v", mnt.mountPoint), err)
 			}
 		}
 	}
@@ -197,7 +198,7 @@ func MountGC(path, uuid string) error {
 	for _, mnt := range mnts {
 		if err := syscall.Unmount(mnt.mountPoint, 0); err != nil {
 			if err != syscall.ENOENT && err != syscall.EINVAL {
-				return fmt.Errorf("error unmounting dest at %v: %v", mnt.mountPoint, err)
+				return errwrap.Wrap(fmt.Errorf("could not unmount %v", mnt.mountPoint), err)
 			}
 		}
 	}

@@ -16,12 +16,13 @@ package store
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/coreos/rkt/pkg/lock"
+	"github.com/hashicorp/errwrap"
 
 	_ "github.com/cznic/ql/driver"
 )
@@ -91,7 +92,7 @@ func (db *DB) Open() error {
 	if err != nil {
 		unlockErr := db.dl.unlock()
 		if unlockErr != nil {
-			err = fmt.Errorf("[%s, %s]", err, unlockErr)
+			err = errwrap.Wrap(unlockErr, err)
 		}
 		return err
 	}
@@ -106,7 +107,7 @@ func (db *DB) Close() error {
 	}
 
 	if err := db.sqldb.Close(); err != nil {
-		return fmt.Errorf("cas db close failed: %v", err)
+		return errwrap.Wrap(errors.New("cas db close failed"), err)
 	}
 	db.sqldb = nil
 

@@ -28,8 +28,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp"
-	"github.com/coreos/rkt/Godeps/_workspace/src/golang.org/x/crypto/openpgp/armor"
+	"golang.org/x/crypto/openpgp"
 )
 
 type Key struct {

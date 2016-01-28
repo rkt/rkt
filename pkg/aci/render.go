@@ -15,9 +15,10 @@
 package aci
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/coreos/rkt/pkg/uid"
+	"github.com/hashicorp/errwrap"
 
 	ptar "github.com/coreos/rkt/pkg/tar"
 
@@ -70,7 +71,7 @@ func renderImage(renderedACI acirenderer.RenderedACI, dir string, ap acirenderer
 		// Overwrite is not needed. If a file needs to be overwritten then the renderedACI builder has a bug
 		if err := ptar.ExtractTar(rs, dir, false, uidRange, ra.FileMap); err != nil {
 			rs.Close()
-			return fmt.Errorf("error extracting ACI: %v", err)
+			return errwrap.Wrap(errors.New("error extracting ACI"), err)
 		}
 		rs.Close()
 	}

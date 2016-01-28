@@ -25,9 +25,9 @@ package stage0
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"path"
@@ -50,6 +50,7 @@ import (
 	"github.com/coreos/rkt/pkg/uid"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -114,6 +115,7 @@ func init() {
 
 func InitDebug() {
 	debugEnabled = true
+	log.SetDebug(true)
 }
 
 func debug(format string, i ...interface{}) {
@@ -183,7 +185,7 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 
 	v, err := types.NewSemVer(version.Version)
 	if err != nil {
-		return nil, fmt.Errorf("error creating version: %v", err)
+		return nil, errwrap.Wrap(errors.New("error creating version"), err)
 	}
 	pm.ACVersion = *v
 
@@ -192,14 +194,14 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 
 		am, err := cfg.Store.GetImageManifest(img.String())
 		if err != nil {
-			return fmt.Errorf("error getting the manifest: %v", err)
+			return errwrap.Wrap(errors.New("error getting the manifest"), err)
 		}
 		appName, err := imageNameToAppName(am.Name)
 		if err != nil {
-			return fmt.Errorf("error converting image name to app name: %v", err)
+			return errwrap.Wrap(errors.New("error converting image name to app name"), err)
 		}
 		if err := prepareAppImage(cfg, *appName, img, dir, cfg.UseOverlay); err != nil {
-			return fmt.Errorf("error setting up image %s: %v", img, err)
+			return errwrap.Wrap(fmt.Errorf("error setting up image %s", img), err)
 		}
 		if pm.Apps.Get(*appName) != nil {
 			return fmt.Errorf("error: multiple apps with name %s", am.Name)
@@ -261,7 +263,7 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 
 	pmb, err := json.Marshal(pm)
 	if err != nil {
-		return nil, fmt.Errorf("error marshalling pod manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("error marshalling pod manifest"), err)
 	}
 	return pmb, nil
 }
@@ -273,11 +275,11 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 func validatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 	pmb, err := ioutil.ReadFile(cfg.PodManifest)
 	if err != nil {
-		return nil, fmt.Errorf("error reading pod manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("error reading pod manifest"), err)
 	}
 	var pm schema.PodManifest
 	if err := json.Unmarshal(pmb, &pm); err != nil {
-		return nil, fmt.Errorf("error unmarshaling pod manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("error unmarshaling pod manifest"), err)
 	}
 
 	appNames := make(map[types.ACName]struct{})
@@ -289,10 +291,10 @@ func validatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		}
 		am, err := cfg.Store.GetImageManifest(img.ID.String())
 		if err != nil {
-			return nil, fmt.Errorf("error getting the image manifest from store: %v", err)
+			return nil, errwrap.Wrap(errors.New("error getting the image manifest from store"), err)
 		}
 		if err := prepareAppImage(cfg, ra.Name, img.ID, dir, cfg.UseOverlay); err != nil {
-			return nil, fmt.Errorf("error setting up image %s: %v", img, err)
+			return nil, errwrap.Wrap(fmt.Errorf("error setting up image %s", img), err)
 		}
 		if _, ok := appNames[ra.Name]; ok {
 			return nil, fmt.Errorf("multiple apps with same name %s", ra.Name)
@@ -308,11 +310,11 @@ func validatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 // Prepare sets up a pod based on the given config.
 func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	if err := os.MkdirAll(common.AppsInfoPath(dir), defaultRegularDirPerm); err != nil {
-		return fmt.Errorf("error creating apps info directory: %v", err)
+		return errwrap.Wrap(errors.New("error creating apps info directory"), err)
 	}
 	debug("Preparing stage1")
 	if err := prepareStage1Image(cfg, cfg.Stage1Image, dir, cfg.UseOverlay); err != nil {
-		return fmt.Errorf("error preparing stage1: %v", err)
+		return errwrap.Wrap(errors.New("error preparing stage1"), err)
 	}
 
 	var pmb []byte
@@ -331,14 +333,14 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	debug("Writing pod manifest")
 	fn := common.PodManifestPath(dir)
 	if err := ioutil.WriteFile(fn, pmb, defaultRegularFilePerm); err != nil {
-		return fmt.Errorf("error writing pod manifest: %v", err)
+		return errwrap.Wrap(errors.New("error writing pod manifest"), err)
 	}
 
 	if cfg.UseOverlay {
 		// mark the pod as prepared with overlay
 		f, err := os.Create(filepath.Join(dir, common.OverlayPreparedFilename))
 		if err != nil {
-			return fmt.Errorf("error writing overlay marker file: %v", err)
+			return errwrap.Wrap(errors.New("error writing overlay marker file"), err)
 		}
 		defer f.Close()
 	}
@@ -348,7 +350,7 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		uidrangeBytes := cfg.PrivateUsers.Serialize()
 
 		if err := ioutil.WriteFile(filepath.Join(dir, common.PrivateUsersPreparedFilename), uidrangeBytes, defaultRegularFilePerm); err != nil {
-			return fmt.Errorf("error writing userns marker file: %v", err)
+			return errwrap.Wrap(errors.New("error writing userns marker file"), err)
 		}
 	}
 
@@ -414,23 +416,23 @@ func addResolvConf(cfg RunConfig, rootfs string) {
 func Run(cfg RunConfig, dir string, dataDir string) {
 	useOverlay, err := preparedWithOverlay(dir)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.FatalE("error preparing overlay", err)
 	}
 
 	privateUsers, err := preparedWithPrivateUsers(dir)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.FatalE("error preparing private users", err)
 	}
 
 	debug("Setting up stage1")
 	if err := setupStage1Image(cfg, dir, useOverlay); err != nil {
-		log.Fatalf("error setting up stage1: %v", err)
+		log.FatalE("error setting up stage1", err)
 	}
 	debug("Wrote filesystem to %s\n", dir)
 
 	for _, app := range cfg.Apps {
 		if err := setupAppImage(cfg, app.Name, app.Image.ID, dir, useOverlay); err != nil {
-			log.Fatalf("error setting up app image: %v", err)
+			log.FatalE("error setting up app image", err)
 		}
 	}
 
@@ -441,21 +443,21 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 	}
 
 	if err := os.Setenv(common.EnvLockFd, fmt.Sprintf("%v", cfg.LockFd)); err != nil {
-		log.Fatalf("setting lock fd environment: %v", err)
+		log.FatalE("setting lock fd environment", err)
 	}
 
 	if err := os.Setenv(common.EnvSELinuxContext, fmt.Sprintf("%v", cfg.ProcessLabel)); err != nil {
-		log.Fatalf("setting SELinux context environment: %v", err)
+		log.FatalE("setting SELinux context environment", err)
 	}
 
 	debug("Pivoting to filesystem %s", dir)
 	if err := os.Chdir(dir); err != nil {
-		log.Fatalf("failed changing to dir: %v", err)
+		log.FatalE("failed changing to dir", err)
 	}
 
 	ep, err := getStage1Entrypoint(dir, runEntrypoint)
 	if err != nil {
-		log.Fatalf("error determining 'run' entrypoint: %v", err)
+		log.FatalE("error determining 'run' entrypoint", err)
 	}
 	args := []string{filepath.Join(destRootfs, ep)}
 	debug("Execing %s", ep)
@@ -475,7 +477,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 	if cfg.MDSRegister {
 		mdsToken, err := registerPod(".", cfg.UUID, cfg.Apps)
 		if err != nil {
-			log.Fatalf("failed to register the pod: %v", err)
+			log.FatalE("failed to register the pod", err)
 		}
 
 		args = append(args, "--mds-token="+mdsToken)
@@ -499,7 +501,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 	// around that yet.
 	_ = tpm.Extend(tpmEvent)
 	if err := syscall.Exec(args[0], args, os.Environ()); err != nil {
-		log.Fatalf("error execing init: %v", err)
+		log.FatalE("error execing init", err)
 	}
 }
 
@@ -511,7 +513,7 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 
 	am, err := cfg.Store.GetImageManifest(img.String())
 	if err != nil {
-		return fmt.Errorf("error getting the manifest: %v", err)
+		return errwrap.Wrap(errors.New("error getting the manifest"), err)
 	}
 
 	if _, hasOS := am.Labels.Get("os"); !hasOS {
@@ -527,7 +529,7 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 
 	appInfoDir := common.AppInfoPath(cdir, appName)
 	if err := os.MkdirAll(appInfoDir, defaultRegularDirPerm); err != nil {
-		return fmt.Errorf("error creating apps info directory: %v", err)
+		return errwrap.Wrap(errors.New("error creating apps info directory"), err)
 	}
 
 	if useOverlay {
@@ -536,43 +538,43 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 		}
 		treeStoreID, _, err := cfg.Store.RenderTreeStore(img.String(), false)
 		if err != nil {
-			return fmt.Errorf("error rendering tree image: %v", err)
+			return errwrap.Wrap(errors.New("error rendering tree image"), err)
 		}
 
 		if !cfg.SkipTreeStoreCheck {
 			hash, err := cfg.Store.CheckTreeStore(treeStoreID)
 			if err != nil {
-				log.Printf("Warning: tree cache is in a bad state: %v. Rebuilding...", err)
+				log.PrintE("warning: tree cache is in a bad state: %v. Rebuilding...", err)
 				var err error
 				treeStoreID, hash, err = cfg.Store.RenderTreeStore(img.String(), true)
 				if err != nil {
-					return fmt.Errorf("error rendering tree image: %v", err)
+					return errwrap.Wrap(errors.New("error rendering tree image"), err)
 				}
 			}
 			cfg.CommonConfig.RootHash = hash
 		}
 
 		if err := ioutil.WriteFile(common.AppTreeStoreIDPath(cdir, appName), []byte(treeStoreID), defaultRegularFilePerm); err != nil {
-			return fmt.Errorf("error writing app treeStoreID: %v", err)
+			return errwrap.Wrap(errors.New("error writing app treeStoreID"), err)
 		}
 	} else {
 		ad := common.AppPath(cdir, appName)
 		err := os.MkdirAll(ad, defaultRegularDirPerm)
 		if err != nil {
-			return fmt.Errorf("error creating image directory: %v", err)
+			return errwrap.Wrap(errors.New("error creating image directory"), err)
 		}
 
 		shiftedUid, shiftedGid, err := cfg.PrivateUsers.ShiftRange(uint32(os.Getuid()), uint32(os.Getgid()))
 		if err != nil {
-			return fmt.Errorf("error getting uid, gid: %v", err)
+			return errwrap.Wrap(errors.New("error getting uid, gid"), err)
 		}
 
 		if err := os.Chown(ad, int(shiftedUid), int(shiftedGid)); err != nil {
-			return fmt.Errorf("error shifting app %q's stage2 dir: %v", appName, err)
+			return errwrap.Wrap(fmt.Errorf("error shifting app %q's stage2 dir", appName), err)
 		}
 
 		if err := aci.RenderACIWithImageID(img, ad, cfg.Store, cfg.PrivateUsers); err != nil {
-			return fmt.Errorf("error rendering ACI: %v", err)
+			return errwrap.Wrap(errors.New("error rendering ACI"), err)
 		}
 	}
 	if err := writeManifest(*cfg.CommonConfig, img, appInfoDir); err != nil {
@@ -589,7 +591,7 @@ func setupAppImage(cfg RunConfig, appName types.ACName, img types.Hash, cdir str
 	if useOverlay {
 		err := os.MkdirAll(ad, defaultRegularDirPerm)
 		if err != nil {
-			return fmt.Errorf("error creating image directory: %v", err)
+			return errwrap.Wrap(errors.New("error creating image directory"), err)
 		}
 		treeStoreID, err := ioutil.ReadFile(common.AppTreeStoreIDPath(cdir, appName))
 		if err != nil {
@@ -599,7 +601,7 @@ func setupAppImage(cfg RunConfig, appName types.ACName, img types.Hash, cdir str
 			return err
 		}
 		if err := overlayRender(cfg, string(treeStoreID), cdir, ad, appName.String()); err != nil {
-			return fmt.Errorf("error rendering overlay filesystem: %v", err)
+			return errwrap.Wrap(errors.New("error rendering overlay filesystem"), err)
 		}
 	}
 
@@ -612,42 +614,42 @@ func setupAppImage(cfg RunConfig, appName types.ACName, img types.Hash, cdir str
 func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverlay bool) error {
 	s1 := common.Stage1ImagePath(cdir)
 	if err := os.MkdirAll(s1, defaultRegularDirPerm); err != nil {
-		return fmt.Errorf("error creating stage1 directory: %v", err)
+		return errwrap.Wrap(errors.New("error creating stage1 directory"), err)
 	}
 
 	treeStoreID, _, err := cfg.Store.RenderTreeStore(img.String(), false)
 	if err != nil {
-		return fmt.Errorf("error rendering tree image: %v", err)
+		return errwrap.Wrap(errors.New("error rendering tree image"), err)
 	}
 
 	if !cfg.SkipTreeStoreCheck {
 		hash, err := cfg.Store.CheckTreeStore(treeStoreID)
 		if err != nil {
-			log.Printf("Warning: tree cache is in a bad state: %v. Rebuilding...", err)
+			log.Printf("warning: tree cache is in a bad state: %v. Rebuilding...", err)
 			var err error
 			treeStoreID, hash, err = cfg.Store.RenderTreeStore(img.String(), true)
 			if err != nil {
-				return fmt.Errorf("error rendering tree image: %v", err)
+				return errwrap.Wrap(errors.New("error rendering tree image"), err)
 			}
 		}
 		cfg.CommonConfig.RootHash = hash
 	}
 
 	if err := writeManifest(*cfg.CommonConfig, img, s1); err != nil {
-		return fmt.Errorf("error writing manifest: %v", err)
+		return errwrap.Wrap(errors.New("error writing manifest"), err)
 	}
 
 	if !useOverlay {
 		destRootfs := filepath.Join(s1, "rootfs")
 		cachedTreePath := cfg.Store.GetTreeStoreRootFS(treeStoreID)
 		if err := fileutil.CopyTree(cachedTreePath, destRootfs, cfg.PrivateUsers); err != nil {
-			return fmt.Errorf("error rendering ACI: %v", err)
+			return errwrap.Wrap(errors.New("error rendering ACI"), err)
 		}
 	}
 
 	fn := path.Join(cdir, common.Stage1TreeStoreIDFilename)
 	if err := ioutil.WriteFile(fn, []byte(treeStoreID), defaultRegularFilePerm); err != nil {
-		return fmt.Errorf("error writing stage1 treeStoreID: %v", err)
+		return errwrap.Wrap(errors.New("error writing stage1 treeStoreID"), err)
 	}
 	return nil
 }
@@ -665,14 +667,14 @@ func setupStage1Image(cfg RunConfig, cdir string, useOverlay bool) error {
 		// pass an empty appName: make sure it remains consistent with
 		// overlayStatusDirTemplate
 		if err := overlayRender(cfg, string(treeStoreID), cdir, s1, ""); err != nil {
-			return fmt.Errorf("error rendering overlay filesystem: %v", err)
+			return errwrap.Wrap(errors.New("error rendering overlay filesystem"), err)
 		}
 
 		// we will later read the status from the upper layer of the overlay fs
 		// force the status directory to be there by touching it
 		statusPath := filepath.Join(s1, "rootfs", "rkt", "status")
 		if err := os.Chtimes(statusPath, time.Now(), time.Now()); err != nil {
-			return fmt.Errorf("error touching status dir: %v", err)
+			return errwrap.Wrap(errors.New("error touching status dir"), err)
 		}
 	}
 
@@ -688,7 +690,7 @@ func writeManifest(cfg CommonConfig, img types.Hash, dest string) error {
 
 	debug("Writing image manifest")
 	if err := ioutil.WriteFile(filepath.Join(dest, "manifest"), mb, defaultRegularFilePerm); err != nil {
-		return fmt.Errorf("error writing image manifest: %v", err)
+		return errwrap.Wrap(errors.New("error writing image manifest"), err)
 	}
 
 	return nil
@@ -701,7 +703,7 @@ func copyAppManifest(cdir string, appName types.ACName, dest string) error {
 	sourceFn := filepath.Join(appInfoDir, "manifest")
 	destFn := filepath.Join(dest, "manifest")
 	if err := fileutil.CopyRegularFile(sourceFn, destFn); err != nil {
-		return fmt.Errorf("error copying image manifest: %v", err)
+		return errwrap.Wrap(errors.New("error copying image manifest"), err)
 	}
 	return nil
 }
@@ -767,7 +769,7 @@ func overlayRender(cfg RunConfig, treeStoreID string, cdir string, dest string, 
 	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", cachedTreePath, upperDir, workDir)
 	opts = label.FormatMountLabel(opts, cfg.MountLabel)
 	if err := syscall.Mount("overlay", destRootfs, "overlay", 0, opts); err != nil {
-		return fmt.Errorf("error mounting: %v", err)
+		return errwrap.Wrap(errors.New("error mounting"), err)
 	}
 
 	return nil

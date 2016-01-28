@@ -18,11 +18,13 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 )
 
 // matchUUID attempts to match the uuid specified as uuid against all pods present.
@@ -62,7 +64,7 @@ func resolveUUID(uuid string) (*types.UUID, error) {
 
 	u, err := types.NewUUID(m[0])
 	if err != nil {
-		return nil, fmt.Errorf("invalid UUID: %v", err)
+		return nil, errwrap.Wrap(errors.New("invalid UUID"), err)
 	}
 
 	return u, nil

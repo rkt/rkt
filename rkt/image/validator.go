@@ -15,10 +15,12 @@
 package image
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/coreos/rkt/pkg/keystore"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
@@ -68,10 +70,10 @@ func (v *validator) ValidateWithSignature(ks *keystore.Keystore, sig io.ReadSeek
 		return nil, nil
 	}
 	if _, err := v.image.Seek(0, 0); err != nil {
-		return nil, fmt.Errorf("error seeking ACI file: %v", err)
+		return nil, errwrap.Wrap(errors.New("error seeking ACI file"), err)
 	}
 	if _, err := sig.Seek(0, 0); err != nil {
-		return nil, fmt.Errorf("error seeking signature file: %v", err)
+		return nil, errwrap.Wrap(errors.New("error seeking signature file"), err)
 	}
 	entity, err := ks.CheckSignature(v.GetImageName(), v.image, sig)
 	if err != nil {

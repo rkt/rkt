@@ -29,6 +29,7 @@ import (
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
+	"github.com/hashicorp/errwrap"
 	"golang.org/x/crypto/openpgp"
 )
 
@@ -116,7 +117,7 @@ func NewBasicACI(dir string, name string) (*os.File, error) {
 func NewACI(dir string, manifest string, entries []*ACIEntry) (*os.File, error) {
 	var im schema.ImageManifest
 	if err := im.UnmarshalJSON([]byte(manifest)); err != nil {
-		return nil, fmt.Errorf("invalid image manifest: %v", err)
+		return nil, errwrap.Wrap(errors.New("invalid image manifest"), err)
 	}
 
 	tf, err := ioutil.TempFile(dir, "")

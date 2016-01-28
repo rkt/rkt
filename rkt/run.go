@@ -29,6 +29,7 @@ import (
 	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -111,67 +112,67 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	privateUsers := uid.NewBlankUidRange()
 	err := parseApps(&rktApps, args, cmd.Flags(), true)
 	if err != nil {
-		stderr("run: error parsing app image arguments: %v", err)
+		stderr.PrintE("error parsing app image arguments", err)
 		return 1
 	}
 
 	if flagStoreOnly && flagNoStore {
-		stderr("both --store-only and --no-store specified")
+		stderr.Print("both --store-only and --no-store specified")
 		return 1
 	}
 
 	if flagPrivateUsers {
 		if !common.SupportsUserNS() {
-			stderr("run: --private-users is not supported, kernel compiled without user namespace support")
+			stderr.Print("--private-users is not supported, kernel compiled without user namespace support")
 			return 1
 		}
 		privateUsers.SetRandomUidRange(uid.DefaultRangeCount)
 	}
 
 	if len(flagPorts) > 0 && flagNet.None() {
-		stderr("--port flag does not work with 'none' networking")
+		stderr.Print("--port flag does not work with 'none' networking")
 		return 1
 	}
 	if len(flagPorts) > 0 && flagNet.Host() {
-		stderr("--port flag does not work with 'host' networking")
+		stderr.Print("--port flag does not work with 'host' networking")
 		return 1
 	}
 
 	if flagMDSRegister && flagNet.None() {
-		stderr("--mds-register flag does not work with --net=none. Please use 'host', 'default' or an equivalent network")
+		stderr.Print("--mds-register flag does not work with --net=none. Please use 'host', 'default' or an equivalent network")
 		return 1
 	}
 
 	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagStoreOnly || flagNoStore) {
-		stderr("conflicting flags set with --pod-manifest (see --help)")
+		stderr.Print("conflicting flags set with --pod-manifest (see --help)")
 		return 1
 	}
 
 	if flagInteractive && rktApps.Count() > 1 {
-		stderr("run: interactive option only supports one image")
+		stderr.Print("interactive option only supports one image")
 		return 1
 	}
 
 	if rktApps.Count() < 1 && len(flagPodManifest) == 0 {
-		stderr("run: must provide at least one image or specify the pod manifest")
+		stderr.Print("must provide at least one image or specify the pod manifest")
 		return 1
 	}
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("run: cannot open store: %v", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
 	config, err := getConfig()
 	if err != nil {
-		stderr("run: cannot get configuration: %v", err)
+		stderr.PrintE("cannot get configuration", err)
 		return 1
 	}
 
 	s1img, err := getStage1Hash(s, cmd)
 	if err != nil {
-		stderr("run: %v", err)
+		stderr.Error(err)
 		return 1
 	}
 
@@ -189,13 +190,13 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		WithDeps:  true,
 	}
 	if err := fn.FindImages(&rktApps); err != nil {
-		stderr("run: %v", err)
+		stderr.Error(err)
 		return 1
 	}
 
 	p, err := newPod()
 	if err != nil {
-		stderr("Error creating new pod: %v", err)
+		stderr.PrintE("error creating new pod", err)
 		return 1
 	}
 
@@ -203,14 +204,14 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	// clean it up even if something goes wrong
 	if flagUUIDFileSave != "" {
 		if err := writeUUIDToFile(p.uuid, flagUUIDFileSave); err != nil {
-			stderr("Error saving pod UUID to file: %v", err)
+			stderr.PrintE("error saving pod UUID to file", err)
 			return 1
 		}
 	}
 
 	processLabel, mountLabel, err := label.InitLabels([]string{"mcsdir:/var/run/rkt/mcs"})
 	if err != nil {
-		stderr("Error initialising SELinux: %v", err)
+		stderr.PrintE("error initialising SELinux", err)
 		return 1
 	}
 
@@ -245,12 +246,12 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 
 	keyLock, err := lock.SharedKeyLock(lockDir(), common.PrepareLock)
 	if err != nil {
-		stderr("rkt: cannot get shared prepare lock: %v", err)
+		stderr.PrintE("cannot get shared prepare lock", err)
 		return 1
 	}
 	err = stage0.Prepare(pcfg, p.path(), p.uuid)
 	if err != nil {
-		stderr("run: error setting up stage0: %v", err)
+		stderr.PrintE("error setting up stage0", err)
 		keyLock.Close()
 		return 1
 	}
@@ -259,19 +260,19 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	// get the lock fd for run
 	lfd, err := p.Fd()
 	if err != nil {
-		stderr("Error getting pod lock fd: %v", err)
+		stderr.PrintE("error getting pod lock fd", err)
 		return 1
 	}
 
 	// skip prepared by jumping directly to run, we own this pod
 	if err := p.xToRun(); err != nil {
-		stderr("run: unable to transition to run: %v", err)
+		stderr.PrintE("unable to transition to run", err)
 		return 1
 	}
 
 	rktgid, err := common.LookupGid(common.RktGroup)
 	if err != nil {
-		stderr("run: group %q not found, will use default gid when rendering images", common.RktGroup)
+		stderr.Printf("group %q not found, will use default gid when rendering images", common.RktGroup)
 		rktgid = -1
 	}
 
@@ -290,7 +291,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 
 	apps, err := p.getApps()
 	if err != nil {
-		stderr("run: cannot get the appList in the pod manifest: %v", err)
+		stderr.PrintE("cannot get the appList in the pod manifest", err)
 		return 1
 	}
 	rcfg.Apps = apps
@@ -311,7 +312,7 @@ func (pl *portList) Set(s string) error {
 
 	name, err := types.NewACName(parts[0])
 	if err != nil {
-		return fmt.Errorf("%q is not a valid port name: %v", parts[0], err)
+		return errwrap.Wrap(fmt.Errorf("%q is not a valid port name", parts[0]), err)
 	}
 
 	port, err := strconv.ParseUint(parts[1], 10, 16)

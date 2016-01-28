@@ -15,7 +15,10 @@
 package flag
 
 import (
+	"errors"
 	"fmt"
+
+	"github.com/hashicorp/errwrap"
 )
 
 // bitFlags is a flag value type supporting a csv list of options stored as bits
@@ -38,7 +41,7 @@ func newBitFlags(permissibleOptions []string, defaultOptions string, flagMap map
 	bf.typeName = "bitFlags"
 
 	if err := bf.Set(defaultOptions); err != nil {
-		return nil, fmt.Errorf("problem setting defaults: %v", err)
+		return nil, errwrap.Wrap(errors.New("problem setting defaults"), err)
 	}
 
 	return bf, nil

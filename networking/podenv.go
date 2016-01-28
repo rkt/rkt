@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -27,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
@@ -116,16 +116,16 @@ func (e *podEnv) setupNets(nets []activeNet) error {
 
 	n := activeNet{}
 	for i, n = range nets {
-		log.Printf("Loading network %v with type %v", n.conf.Name, n.conf.Type)
+		stderr.Printf("loading network %v with type %v", n.conf.Name, n.conf.Type)
 
 		n.runtime.IfName = fmt.Sprintf(IfNamePattern, i)
 		if n.runtime.ConfPath, err = copyFileToDir(n.runtime.ConfPath, e.netDir()); err != nil {
-			return fmt.Errorf("error copying %q to %q: %v", n.runtime.ConfPath, e.netDir(), err)
+			return errwrap.Wrap(fmt.Errorf("error copying %q to %q", n.runtime.ConfPath, e.netDir()), err)
 		}
 
 		n.runtime.IP, n.runtime.HostIP, err = e.netPluginAdd(&n, nspath)
 		if err != nil {
-			return fmt.Errorf("error adding network %q: %v", n.conf.Name, err)
+			return errwrap.Wrap(fmt.Errorf("error adding network %q", n.conf.Name), err)
 		}
 	}
 	return nil
@@ -135,17 +135,17 @@ func (e *podEnv) teardownNets(nets []activeNet) {
 	nspath := e.podNSPath()
 
 	for i := len(nets) - 1; i >= 0; i-- {
-		log.Printf("Teardown: executing net-plugin %v", nets[i].conf.Type)
+		stderr.Printf("teardown - executing net-plugin %v", nets[i].conf.Type)
 
 		err := e.netPluginDel(&nets[i], nspath)
 		if err != nil {
-			log.Printf("Error deleting %q: %v", nets[i].conf.Name, err)
+			stderr.PrintE(fmt.Sprintf("error deleting %q", nets[i].conf.Name), err)
 		}
 
 		// Delete the conf file to signal that the network was
 		// torn down (or at least attempted to)
 		if err = os.Remove(nets[i].runtime.ConfPath); err != nil {
-			log.Printf("Error deleting %q: %v", nets[i].runtime.ConfPath, err)
+			stderr.PrintE(fmt.Sprintf("error deleting %q", nets[i].runtime.ConfPath), err)
 		}
 	}
 }
@@ -189,7 +189,7 @@ func loadNet(filepath string) (*activeNet, error) {
 
 	n := &NetConf{}
 	if err = json.Unmarshal(bytes, n); err != nil {
-		return nil, fmt.Errorf("error loading %v: %v", filepath, err)
+		return nil, errwrap.Wrap(fmt.Errorf("error loading %v", filepath), err)
 	}
 
 	return &activeNet{
@@ -223,12 +223,12 @@ func copyFileToDir(src, dstdir string) (string, error) {
 
 func loadUserNets(localConfig string, netsLoadList common.NetList) ([]activeNet, error) {
 	if netsLoadList.None() {
-		log.Printf("Networking namespace with loopback only")
+		stderr.Printf("networking namespace with loopback only")
 		return nil, nil
 	}
 
 	userNetPath := filepath.Join(localConfig, UserNetPathSuffix)
-	log.Printf("Loading networks from %v", userNetPath)
+	stderr.Printf("loading networks from %v", userNetPath)
 
 	files, err := listFiles(userNetPath)
 	if err != nil {
@@ -255,11 +255,11 @@ func loadUserNets(localConfig string, netsLoadList common.NetList) ([]activeNet,
 
 		if n.conf.Name == "default" ||
 			n.conf.Name == "default-restricted" {
-			log.Printf(`Overriding %q network with %v`, n.conf.Name, filename)
+			stderr.Printf(`overriding %q network with %v`, n.conf.Name, filename)
 		}
 
 		if netExists(nets, n.conf.Name) {
-			log.Printf("%q network already defined, ignoring %v", n.conf.Name, filename)
+			stderr.Printf("%q network already defined, ignoring %v", n.conf.Name, filename)
 			continue
 		}
 

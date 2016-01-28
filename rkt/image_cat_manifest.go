@@ -45,19 +45,19 @@ func runImageCatManifest(cmd *cobra.Command, args []string) (exit int) {
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("image cat-manifest: cannot open store: %v", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
 	key, err := getStoreKeyFromAppOrHash(s, args[0])
 	if err != nil {
-		stderr("image cat-manifest: %v", err)
+		stderr.Error(err)
 		return 1
 	}
 
 	manifest, err := s.GetImageManifest(key)
 	if err != nil {
-		stderr("image cat-manifest: cannot get image manifest: %v", err)
+		stderr.PrintE("cannot get image manifest", err)
 		return 1
 	}
 
@@ -68,10 +68,10 @@ func runImageCatManifest(cmd *cobra.Command, args []string) (exit int) {
 		b, err = json.Marshal(manifest)
 	}
 	if err != nil {
-		stderr("image cat-manifest: cannot read the image manifest: %v", err)
+		stderr.PrintE("cannot read the image manifest", err)
 		return 1
 	}
 
-	stdout(string(b))
+	stdout.Print(string(b))
 	return 0
 }

@@ -15,6 +15,7 @@
 package image
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -26,6 +27,7 @@ import (
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 
 	docker2aci "github.com/appc/docker2aci/lib"
 	d2acommon "github.com/appc/docker2aci/lib/common"
@@ -47,6 +49,7 @@ type dockerFetcher struct {
 // GetHash uses docker2aci to download the image and convert it to
 // ACI, then stores it in the store and returns the hash.
 func (f *dockerFetcher) GetHash(u *url.URL) (string, error) {
+	ensureLogger(f.Debug)
 	dockerURL := d2acommon.ParseDockerURL(path.Join(u.Host, u.Path))
 	latest := dockerURL.Tag == "latest"
 	return f.fetchImageFrom(u, latest)
@@ -58,7 +61,7 @@ func (f *dockerFetcher) fetchImageFrom(u *url.URL, latest bool) (string, error) 
 	}
 
 	if f.Debug {
-		stderr("fetching image from %s", u.String())
+		log.Printf("fetching image from %s", u.String())
 	}
 
 	aciFile, err := f.fetch(u)
@@ -99,12 +102,12 @@ func (f *dockerFetcher) fetch(u *url.URL) (*os.File, error) {
 	user, password := f.getCreds(registryURL)
 	acis, err := docker2aci.Convert(registryURL, true /* squash */, tmpDir, tmpDir, d2acommon.NoCompression, user, password, f.InsecureFlags.AllowHTTP())
 	if err != nil {
-		return nil, fmt.Errorf("error converting docker image to ACI: %v", err)
+		return nil, errwrap.Wrap(errors.New("error converting docker image to ACI"), err)
 	}
 
 	aciFile, err := os.Open(acis[0])
 	if err != nil {
-		return nil, fmt.Errorf("error opening squashed ACI file: %v", err)
+		return nil, errwrap.Wrap(errors.New("error opening squashed ACI file"), err)
 	}
 
 	return aciFile, nil
@@ -113,7 +116,7 @@ func (f *dockerFetcher) fetch(u *url.URL) (*os.File, error) {
 func (f *dockerFetcher) getTmpDir() (string, error) {
 	storeTmpDir, err := f.S.TmpDir()
 	if err != nil {
-		return "", fmt.Errorf("error creating temporary dir for docker to ACI conversion: %v", err)
+		return "", errwrap.Wrap(errors.New("error creating temporary dir for docker to ACI conversion"), err)
 	}
 	return ioutil.TempDir(storeTmpDir, "docker2aci-")
 }

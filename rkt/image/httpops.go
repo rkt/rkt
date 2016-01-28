@@ -15,6 +15,7 @@
 package image
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/coreos/rkt/rkt/config"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 )
 
 // httpOps is a kind of facade around a downloader and a
@@ -32,28 +34,31 @@ type httpOps struct {
 	InsecureSkipTLSVerify bool
 	S                     *store.Store
 	Headers               map[string]config.Headerer
+	Debug                 bool
 }
 
 // DownloadSignature takes an asc instance and tries to get the
 // signature. If the remote server asked to to defer the download,
 // this function will return true and no error and no file.
 func (o *httpOps) DownloadSignature(a *asc) (readSeekCloser, bool, error) {
-	stderr("downloading signature from %v", a.Location)
+	ensureLogger(o.Debug)
+	log.Printf("downloading signature from %v", a.Location)
 	ascFile, err := a.Get()
 	if err == nil {
 		return ascFile, false, nil
 	}
 	if _, ok := err.(*statusAcceptedError); ok {
-		stderr("server requested deferring the signature download")
+		log.Printf("server requested deferring the signature download")
 		return nil, true, nil
 	}
-	return nil, false, fmt.Errorf("error downloading the signature file: %v", err)
+	return nil, false, errwrap.Wrap(errors.New("error downloading the signature file"), err)
 }
 
 // DownloadSignatureAgain does a similar thing to DownloadSignature,
 // but it expects the signature to be actually provided, that is - no
 // deferring this time.
 func (o *httpOps) DownloadSignatureAgain(a *asc) (readSeekCloser, error) {
+	ensureLogger(o.Debug)
 	ascFile, retry, err := o.DownloadSignature(a)
 	if err != nil {
 		return nil, err
@@ -67,6 +72,7 @@ func (o *httpOps) DownloadSignatureAgain(a *asc) (readSeekCloser, error) {
 // DownloadImage download the image, duh. It expects to actually
 // receive the file, instead of being asked to use the cached version.
 func (o *httpOps) DownloadImage(u *url.URL) (readSeekCloser, *cacheData, error) {
+	ensureLogger(o.Debug)
 	image, cd, err := o.DownloadImageWithETag(u, "")
 	if err != nil {
 		return nil, nil, err
@@ -80,6 +86,7 @@ func (o *httpOps) DownloadImage(u *url.URL) (readSeekCloser, *cacheData, error) 
 // DownloadImageWithETag might download an image or tell you to use
 // the cached image. In the latter case the returned file will be nil.
 func (o *httpOps) DownloadImageWithETag(u *url.URL, etag string) (readSeekCloser, *cacheData, error) {
+	ensureLogger(o.Debug)
 	aciFile, err := getTmpROC(o.S, u.String())
 	if err != nil {
 		return nil, nil, err
@@ -89,7 +96,7 @@ func (o *httpOps) DownloadImageWithETag(u *url.URL, etag string) (readSeekCloser
 	session := o.getSession(u, aciFile.File, "ACI", etag)
 	dl := o.getDownloader(session)
 	if err := dl.Download(u, aciFile.File); err != nil {
-		return nil, nil, fmt.Errorf("error downloading ACI: %v", err)
+		return nil, nil, errwrap.Wrap(errors.New("error downloading ACI"), err)
 	}
 	if session.Cd.UseCached {
 		return nil, session.Cd, nil
@@ -101,6 +108,7 @@ func (o *httpOps) DownloadImageWithETag(u *url.URL, etag string) (readSeekCloser
 
 // GetAscRemoteFetcher provides a remoteAscFetcher for asc.
 func (o *httpOps) GetAscRemoteFetcher() *remoteAscFetcher {
+	ensureLogger(o.Debug)
 	f := func(u *url.URL, file *os.File) error {
 		switch u.Scheme {
 		case "http", "https":

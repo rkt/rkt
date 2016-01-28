@@ -17,7 +17,9 @@ package main
 import (
 	"flag"
 	"io/ioutil"
-	"log"
+	"os"
+
+	rktlog "github.com/coreos/rkt/pkg/log"
 )
 
 const (
@@ -26,6 +28,8 @@ const (
 
 var (
 	debug bool
+
+	log *rktlog.Logger
 )
 
 func init() {
@@ -35,9 +39,10 @@ func init() {
 func main() {
 	flag.Parse()
 
+	log = rktlog.New(os.Stderr, "gc", debug)
 	if !debug {
 		log.SetOutput(ioutil.Discard)
 	}
-	log.Printf("Not doing anything since stage0 is cleaning up the mounts")
+	log.Printf("not doing anything since stage0 is cleaning up the mounts")
 	return
 }

@@ -17,7 +17,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -208,13 +207,13 @@ func satisfiesAnyPodFilters(pod *v1alpha.Pod, manifest *schema.PodManifest, filt
 func getPodManifest(p *pod) (*schema.PodManifest, []byte, error) {
 	data, err := p.readFile("pod")
 	if err != nil {
-		log.Printf("Failed to read pod manifest for pod %q: %v", p.uuid, err)
+		stderr.PrintE(fmt.Sprintf("failed to read pod manifest for pod %q", p.uuid), err)
 		return nil, nil, err
 	}
 
 	var manifest schema.PodManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		log.Printf("Failed to unmarshal pod manifest for pod %q: %v", p.uuid, err)
+		stderr.PrintE(fmt.Sprintf("failed to unmarshal pod manifest for pod %q", p.uuid), err)
 		return nil, nil, err
 	}
 	return &manifest, data, nil
@@ -225,7 +224,7 @@ func getApplist(p *pod) ([]*v1alpha.App, error) {
 	var apps []*v1alpha.App
 	applist, err := p.getApps()
 	if err != nil {
-		log.Printf("Failed to get app list for pod %q: %v", p.uuid, err)
+		stderr.PrintE(fmt.Sprintf("failed to get app list for pod %q", p.uuid), err)
 		return nil, err
 	}
 
@@ -352,7 +351,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 		}
 		pods = append(pods, pod)
 	}); err != nil {
-		log.Printf("Failed to list pod: %v", err)
+		stderr.PrintE("failed to list pod", err)
 		return nil, err
 	}
 	return &v1alpha.ListPodsResponse{Pods: pods}, nil
@@ -362,7 +361,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 	statusDir, err := p.getStatusDir()
 	if err != nil {
-		log.Printf("Failed to get pod exit status directory: %v", err)
+		stderr.PrintE("failed to get pod exit status directory", err)
 		return err
 	}
 
@@ -370,13 +369,13 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 		// Fill app's image info (id, name, version).
 		fullImageID, err := store.ResolveKey(app.Image.Id)
 		if err != nil {
-			log.Printf("Failed to resolve the image ID %q: %v", app.Image.Id, err)
+			stderr.PrintE(fmt.Sprintf("failed to resolve the image ID %q", app.Image.Id), err)
 			return err
 		}
 
 		im, err := p.getAppImageManifest(*types.MustACName(app.Name))
 		if err != nil {
-			log.Printf("Failed to get image manifests for app %q: %v", app.Name, err)
+			stderr.PrintE(fmt.Sprintf("failed to get image manifests for app %q", app.Name), err)
 			return err
 		}
 
@@ -408,7 +407,7 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 		}
 
 		if !os.IsNotExist(err) {
-			log.Printf("Failed to read status for app %q: %v", app.Name, err)
+			stderr.PrintE(fmt.Sprintf("failed to read status for app %q", app.Name), err)
 			return err
 		}
 		// If status file does not exit, that means the
@@ -430,13 +429,13 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.InspectPodRequest) (*v1alpha.InspectPodResponse, error) {
 	uuid, err := types.NewUUID(request.Id)
 	if err != nil {
-		log.Printf("Invalid pod id %q: %v", request.Id, err)
+		stderr.PrintE(fmt.Sprintf("invalid pod id %q", request.Id), err)
 		return nil, err
 	}
 
 	p, err := getPod(uuid)
 	if err != nil {
-		log.Printf("Failed to get pod %q: %v", request.Id, err)
+		stderr.PrintE(fmt.Sprintf("failed to get pod %q", request.Id), err)
 		return nil, err
 	}
 	defer p.Close()
@@ -459,13 +458,13 @@ func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.Insp
 func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1alpha.Image, *schema.ImageManifest, error) {
 	manifest, err := store.GetImageManifestJSON(aciInfo.BlobKey)
 	if err != nil {
-		log.Printf("Failed to read the image manifest: %v", err)
+		stderr.PrintE("failed to read the image manifest", err)
 		return nil, nil, err
 	}
 
 	var im schema.ImageManifest
 	if err = json.Unmarshal(manifest, &im); err != nil {
-		log.Printf("Failed to unmarshal image manifest: %v", err)
+		stderr.PrintE("failed to unmarshal image manifest", err)
 		return nil, nil, err
 	}
 
@@ -593,7 +592,7 @@ func satisfiesAnyImageFilters(image *v1alpha.Image, manifest *schema.ImageManife
 func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.ListImagesRequest) (*v1alpha.ListImagesResponse, error) {
 	aciInfos, err := s.store.GetAllACIInfos(nil, false)
 	if err != nil {
-		log.Printf("Failed to get all ACI infos: %v", err)
+		stderr.PrintE("failed to get all ACI infos", err)
 		return nil, err
 	}
 
@@ -618,19 +617,19 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 func getImageInfo(store *store.Store, imageID string) (*v1alpha.Image, error) {
 	key, err := store.ResolveKey(imageID)
 	if err != nil {
-		log.Printf("Failed to resolve the image ID %q: %v", imageID, err)
+		stderr.PrintE(fmt.Sprintf("failed to resolve the image ID %q", imageID), err)
 		return nil, err
 	}
 
 	aciInfo, err := store.GetACIInfoWithBlobKey(key)
 	if err != nil {
-		log.Printf("Failed to get ACI info for image %q: %v", key, err)
+		stderr.PrintE(fmt.Sprintf("failed to get ACI info for image %q", key), err)
 		return nil, err
 	}
 
 	image, _, err := aciInfoToV1AlphaAPIImage(store, aciInfo)
 	if err != nil {
-		log.Printf("Failed to convert ACI to v1alphaAPIImage for image %q: %v", key, err)
+		stderr.PrintE(fmt.Sprintf("failed to convert ACI to v1alphaAPIImage for image %q", key), err)
 		return nil, err
 	}
 	return image, nil
@@ -657,11 +656,11 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 	// signals are caught after print the starting message.
 	signal.Notify(exitCh, syscall.SIGINT, syscall.SIGTERM)
 
-	log.Print("API service starting...")
+	stderr.Print("API service starting...")
 
 	tcpl, err := net.Listen("tcp", flagAPIServiceListenAddr)
 	if err != nil {
-		stderr("api-service: %v", err)
+		stderr.Error(err)
 		return 1
 	}
 	defer tcpl.Close()
@@ -670,7 +669,7 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 
 	v1AlphaAPIServer, err := newV1AlphaAPIServer()
 	if err != nil {
-		stderr("api-service: failed to create API service: %v", err)
+		stderr.PrintE("failed to create API service", err)
 		return 1
 	}
 
@@ -678,11 +677,11 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 
 	go publicServer.Serve(tcpl)
 
-	log.Printf("API service running on %v...", flagAPIServiceListenAddr)
+	stderr.Printf("API service running on %v...", flagAPIServiceListenAddr)
 
 	<-exitCh
 
-	log.Print("API service exiting...")
+	stderr.Print("API service exiting...")
 
 	return
 }

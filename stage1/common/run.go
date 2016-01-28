@@ -15,12 +15,14 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/hashicorp/errwrap"
 )
 
 // WithClearedCloExec executes a given function in between setting and unsetting the close-on-exit flag
@@ -41,13 +43,13 @@ func WritePpid(pid int) error {
 	// Documentation/devel/stage1-implementors-guide.md
 	out, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("cannot get current working directory: %v\n", err)
+		return errwrap.Wrap(errors.New("cannot get current working directory"), err)
 	}
 	// we are the parent of the process that is PID 1 in the container so we write our PID to "ppid"
 	err = ioutil.WriteFile(filepath.Join(out, "ppid"),
 		[]byte(fmt.Sprintf("%d\n", pid)), 0644)
 	if err != nil {
-		return fmt.Errorf("cannot write ppid file: %v\n", err)
+		return errwrap.Wrap(errors.New("cannot write ppid file"), err)
 	}
 	return nil
 }

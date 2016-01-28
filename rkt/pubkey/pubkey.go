@@ -16,6 +16,7 @@ package pubkey
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,7 +26,9 @@ import (
 	"strings"
 
 	"github.com/coreos/rkt/pkg/keystore"
+	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/rkt/config"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/discovery"
 	"golang.org/x/crypto/openpgp"
@@ -52,15 +55,25 @@ const (
 	OverrideDeny
 )
 
+var log *rktlog.Logger
+var stdout *rktlog.Logger = rktlog.New(os.Stdout, "", false)
+
+func ensureLogger(debug bool) {
+	if log == nil {
+		log = rktlog.New(os.Stderr, "pubkey", debug)
+	}
+}
+
 // GetPubKeyLocations discovers one location at prefix
 func (m *Manager) GetPubKeyLocations(prefix string) ([]string, error) {
+	ensureLogger(m.Debug)
 	if prefix == "" {
 		return nil, fmt.Errorf("empty prefix")
 	}
 
 	kls, err := m.metaDiscoverPubKeyLocations(prefix)
 	if err != nil {
-		return nil, fmt.Errorf("prefix meta discovery error: %v", err)
+		return nil, errwrap.Wrap(errors.New("prefix meta discovery error"), err)
 	}
 
 	if len(kls) == 0 {
@@ -72,6 +85,7 @@ func (m *Manager) GetPubKeyLocations(prefix string) ([]string, error) {
 
 // AddKeys adds the keys listed in pkls at prefix
 func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, override OverrideOption) error {
+	ensureLogger(m.Debug)
 	if m.Ks == nil {
 		return fmt.Errorf("no keystore available to add keys to")
 	}
@@ -83,20 +97,20 @@ func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, ove
 		}
 		pk, err := m.getPubKey(u)
 		if err != nil {
-			return fmt.Errorf("error accessing the key %s: %v", pkl, err)
+			return errwrap.Wrap(fmt.Errorf("error accessing the key %s", pkl), err)
 		}
 		defer pk.Close()
 
 		exists, err := m.Ks.TrustedKeyPrefixExists(prefix, pk)
 		if err != nil {
-			return fmt.Errorf("error reading the key %s: %v", pkl, err)
+			return errwrap.Wrap(fmt.Errorf("error reading the key %s", pkl), err)
 		}
 		err = displayKey(prefix, pkl, pk)
 		if err != nil {
-			return fmt.Errorf("error displaying the key %s: %v", pkl, err)
+			return errwrap.Wrap(fmt.Errorf("error displaying the key %s", pkl), err)
 		}
 		if exists && override == OverrideDeny {
-			stderr("Key %q already in the keystore", pkl)
+			log.Printf("key %q already in the keystore", pkl)
 			continue
 		}
 
@@ -107,32 +121,32 @@ func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, ove
 		if accept == AcceptAsk {
 			accepted, err := reviewKey()
 			if err != nil {
-				return fmt.Errorf("error reviewing key: %v", err)
+				return errwrap.Wrap(errors.New("error reviewing key"), err)
 			}
 			if !accepted {
-				stderr("Not trusting %q", pkl)
+				log.Printf("not trusting %q", pkl)
 				continue
 			}
 		}
 
 		if accept == AcceptForce {
-			stderr("Trusting %q for prefix %q without fingerprint review.", pkl, prefix)
+			stdout.Printf("Trusting %q for prefix %q without fingerprint review.", pkl, prefix)
 		} else {
-			stderr("Trusting %q for prefix %q after fingerprint review.", pkl, prefix)
+			stdout.Printf("Trusting %q for prefix %q after fingerprint review.", pkl, prefix)
 		}
 
 		if prefix == "" {
 			path, err := m.Ks.StoreTrustedKeyRoot(pk)
 			if err != nil {
-				return fmt.Errorf("Error adding root key: %v", err)
+				return errwrap.Wrap(errors.New("error adding root key"), err)
 			}
-			stderr("Added root key at %q", path)
+			stdout.Printf("Added root key at %q", path)
 		} else {
 			path, err := m.Ks.StoreTrustedKeyPrefix(prefix, pk)
 			if err != nil {
-				return fmt.Errorf("Error adding key for prefix %q: %v", prefix, err)
+				return errwrap.Wrap(fmt.Errorf("error adding key for prefix %q", prefix), err)
 			}
-			stderr("Added key for prefix %q at %q", prefix, path)
+			stdout.Printf("Added key for prefix %q at %q", prefix, path)
 		}
 	}
 	return nil
@@ -157,7 +171,7 @@ func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 
 	if m.Debug {
 		for _, a := range attempts {
-			stderr("meta tag 'ac-discovery-pubkeys' not found on %s: %v", a.Prefix, a.Error)
+			log.PrintE(fmt.Sprintf("meta tag 'ac-discovery-pubkeys' not found on %s", a.Prefix), a.Error)
 		}
 	}
 
@@ -185,7 +199,7 @@ func (m *Manager) getPubKey(u *url.URL) (*os.File, error) {
 func downloadKey(u *url.URL) (*os.File, error) {
 	tf, err := ioutil.TempFile("", "")
 	if err != nil {
-		return nil, fmt.Errorf("error creating tempfile: %v", err)
+		return nil, errwrap.Wrap(errors.New("error creating tempfile"), err)
 	}
 	os.Remove(tf.Name()) // no need to keep the tempfile around
 
@@ -199,7 +213,7 @@ func downloadKey(u *url.URL) (*os.File, error) {
 	// from config here
 	res, err := http.Get(u.String())
 	if err != nil {
-		return nil, fmt.Errorf("error getting key: %v", err)
+		return nil, errwrap.Wrap(errors.New("error getting key"), err)
 	}
 	defer res.Body.Close()
 
@@ -208,11 +222,11 @@ func downloadKey(u *url.URL) (*os.File, error) {
 	}
 
 	if _, err := io.Copy(tf, res.Body); err != nil {
-		return nil, fmt.Errorf("error copying key: %v", err)
+		return nil, errwrap.Wrap(errors.New("error copying key"), err)
 	}
 
 	if _, err = tf.Seek(0, os.SEEK_SET); err != nil {
-		return nil, fmt.Errorf("error seeking: %v", err)
+		return nil, errwrap.Wrap(errors.New("error seeking"), err)
 	}
 
 	retTf := tf
@@ -226,17 +240,17 @@ func displayKey(prefix, location string, key *os.File) error {
 
 	kr, err := openpgp.ReadArmoredKeyRing(key)
 	if err != nil {
-		return fmt.Errorf("error reading key: %v", err)
+		return errwrap.Wrap(errors.New("error reading key"), err)
 	}
 
-	stderr("prefix: %q\nkey: %q", prefix, location)
+	log.Printf("prefix: %q\nkey: %q", prefix, location)
 	for _, k := range kr {
-		stderr("gpg key fingerprint is: %s", fingerToString(k.PrimaryKey.Fingerprint))
+		stdout.Printf("gpg key fingerprint is: %s", fingerToString(k.PrimaryKey.Fingerprint))
 		for _, sk := range k.Subkeys {
-			stderr("    subkey fingerprint: %s", fingerToString(sk.PublicKey.Fingerprint))
+			stdout.Printf("    Subkey fingerprint: %s", fingerToString(sk.PublicKey.Fingerprint))
 		}
 		for n, _ := range k.Identities {
-			stderr("\t%s", n)
+			stdout.Printf("\t%s", n)
 		}
 	}
 	return nil
@@ -246,10 +260,10 @@ func displayKey(prefix, location string, key *os.File) error {
 func reviewKey() (bool, error) {
 	in := bufio.NewReader(os.Stdin)
 	for {
-		stderr("Are you sure you want to trust this key (yes/no)?")
+		stdout.Printf("Are you sure you want to trust this key (yes/no)?")
 		input, err := in.ReadString('\n')
 		if err != nil {
-			return false, fmt.Errorf("error reading input: %v", err)
+			return false, errwrap.Wrap(errors.New("error reading input"), err)
 		}
 		switch input {
 		case "yes\n":
@@ -257,7 +271,7 @@ func reviewKey() (bool, error) {
 		case "no\n":
 			return false, nil
 		default:
-			stderr("Please enter 'yes' or 'no'")
+			stdout.Printf("Please enter 'yes' or 'no'")
 		}
 	}
 }
@@ -274,9 +288,4 @@ func fingerToString(fpr [20]byte) string {
 		str += strings.ToUpper(fmt.Sprintf("%.2x", b))
 	}
 	return str
-}
-
-func stderr(format string, a ...interface{}) {
-	out := fmt.Sprintf(format, a...)
-	fmt.Fprintln(os.Stderr, strings.TrimSuffix(out, "\n"))
 }

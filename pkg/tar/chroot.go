@@ -17,6 +17,7 @@ package tar
 import (
 	"archive/tar"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,6 +29,7 @@ import (
 	"github.com/coreos/rkt/pkg/multicall"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/uid"
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -54,38 +56,38 @@ func extractTarCommand() error {
 	}
 	overwrite, err := strconv.ParseBool(os.Args[2])
 	if err != nil {
-		return fmt.Errorf("error parsing overwrite argument: %v", err)
+		return errwrap.Wrap(errors.New("error parsing overwrite argument"), err)
 	}
 
 	us, err := strconv.ParseUint(os.Args[3], 10, 32)
 	if err != nil {
-		return fmt.Errorf("error parsing uidShift argument: %v", err)
+		return errwrap.Wrap(errors.New("error parsing uidShift argument"), err)
 	}
 	uc, err := strconv.ParseUint(os.Args[4], 10, 32)
 	if err != nil {
-		return fmt.Errorf("error parsing uidShift argument: %v", err)
+		return errwrap.Wrap(errors.New("error parsing uidShift argument"), err)
 	}
 
 	uidRange := &uid.UidRange{Shift: uint32(us), Count: uint32(uc)}
 
 	if err := syscall.Chroot(dir); err != nil {
-		return fmt.Errorf("failed to chroot in %s: %v", dir, err)
+		return errwrap.Wrap(fmt.Errorf("failed to chroot in %s", dir), err)
 	}
 	if err := syscall.Chdir("/"); err != nil {
-		return fmt.Errorf("failed to chdir: %v", err)
+		return errwrap.Wrap(errors.New("failed to chdir"), err)
 	}
 	fileMapFile := os.NewFile(uintptr(fileMapFdNum), "fileMap")
 
 	fileMap := map[string]struct{}{}
 	if err := json.NewDecoder(fileMapFile).Decode(&fileMap); err != nil {
-		return fmt.Errorf("error decoding fileMap: %v", err)
+		return errwrap.Wrap(errors.New("error decoding fileMap"), err)
 	}
 	editor, err := NewUidShiftingFilePermEditor(uidRange)
 	if err != nil {
-		return fmt.Errorf("error determining current user: %v", err)
+		return errwrap.Wrap(errors.New("error determining current user"), err)
 	}
 	if err := ExtractTarInsecure(tar.NewReader(os.Stdin), "/", overwrite, fileMap, editor); err != nil {
-		return fmt.Errorf("error extracting tar: %v", err)
+		return errwrap.Wrap(errors.New("error extracting tar"), err)
 	}
 
 	// flush remaining bytes
@@ -125,7 +127,7 @@ func ExtractTar(rs io.Reader, dir string, overwrite bool, uidRange *uid.UidRange
 		return fmt.Errorf("extracttar error: %v, output: %s", err, out)
 	}
 	if encodeErr != nil {
-		return fmt.Errorf("extracttar failed to json encode filemap: %v", encodeErr)
+		return errwrap.Wrap(errors.New("extracttar failed to json encode filemap"), encodeErr)
 	}
 	return nil
 }

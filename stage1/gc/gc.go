@@ -17,18 +17,18 @@
 package main
 
 import (
+	"errors"
 	"flag"
-	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking"
+	rktlog "github.com/coreos/rkt/pkg/log"
 )
 
 var (
@@ -47,19 +47,15 @@ func init() {
 func main() {
 	flag.Parse()
 
-	if !debug {
-		log.SetOutput(ioutil.Discard)
-	}
+	log := rktlog.New(os.Stderr, "stage1 gc", debug)
 
 	podID, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "UUID is missing or malformed")
-		os.Exit(1)
+		log.Fatal("UUID is missing or malformed")
 	}
 
 	if err := gcNetworking(podID); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		log.FatalE("", err)
 	}
 }
 
@@ -73,7 +69,7 @@ func gcNetworking(podID *types.UUID) error {
 		// In that case we try to read it from the pod's root directory
 		flavor, err = os.Readlink("flavor")
 		if err != nil {
-			return fmt.Errorf("Failed to get stage1 flavor: %v\n", err)
+			return errwrap.Wrap(errors.New("failed to get stage1 flavor"), err)
 		}
 	}
 
@@ -84,7 +80,7 @@ func gcNetworking(podID *types.UUID) error {
 	case os.IsNotExist(err):
 		// probably ran with --net=host
 	default:
-		return fmt.Errorf("Failed loading networking state: %v", err)
+		return errwrap.Wrap(errors.New("failed loading networking state"), err)
 	}
 
 	return nil

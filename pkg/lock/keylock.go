@@ -15,10 +15,13 @@
 package lock
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
+
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -62,12 +65,12 @@ func NewKeyLock(lockDir string, key string) (*KeyLock, error) {
 	// create the file if it doesn't exists
 	f, err := os.OpenFile(keyLockFile, os.O_RDONLY|os.O_CREATE, defaultFilePerm)
 	if err != nil {
-		return nil, fmt.Errorf("error creating key lock file: %v", err)
+		return nil, errwrap.Wrap(errors.New("error creating key lock file"), err)
 	}
 	f.Close()
 	keyLock, err := NewLock(keyLockFile, RegFile)
 	if err != nil {
-		return nil, fmt.Errorf("error opening key lock file: %v", err)
+		return nil, errwrap.Wrap(errors.New("error opening key lock file"), err)
 	}
 	return &KeyLock{lockDir: lockDir, key: key, keyLock: keyLock}, nil
 }
@@ -246,12 +249,12 @@ func (l *KeyLock) Unlock() error {
 func CleanKeyLocks(lockDir string) error {
 	f, err := os.Open(lockDir)
 	if err != nil {
-		return fmt.Errorf("error opening lockDir: %v", err)
+		return errwrap.Wrap(errors.New("error opening lockDir"), err)
 	}
 	defer f.Close()
 	files, err := f.Readdir(0)
 	if err != nil {
-		return fmt.Errorf("error getting lock files list: %v", err)
+		return errwrap.Wrap(errors.New("error getting lock files list"), err)
 	}
 	for _, f := range files {
 		filename := filepath.Join(lockDir, f.Name())
@@ -266,7 +269,7 @@ func CleanKeyLocks(lockDir string) error {
 		err = os.Remove(filename)
 		if err != nil {
 			keyLock.Close()
-			return fmt.Errorf("error removing lock file: %v", err)
+			return errwrap.Wrap(errors.New("error removing lock file"), err)
 		}
 		keyLock.Close()
 	}

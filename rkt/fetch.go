@@ -54,29 +54,29 @@ func init() {
 
 func runFetch(cmd *cobra.Command, args []string) (exit int) {
 	if err := parseApps(&rktApps, args, cmd.Flags(), false); err != nil {
-		stderr("fetch: unable to parse arguments: %v", err)
+		stderr.PrintE("unable to parse arguments", err)
 		return 1
 	}
 
 	if rktApps.Count() < 1 {
-		stderr("fetch: must provide at least one image")
+		stderr.Print("must provide at least one image")
 		return 1
 	}
 
 	if flagStoreOnly && flagNoStore {
-		stderr("both --store-only and --no-store specified")
+		stderr.Print("both --store-only and --no-store specified")
 		return 1
 	}
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("fetch: cannot open store: %v", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 	ks := getKeystore()
 	config, err := getConfig()
 	if err != nil {
-		stderr("fetch: cannot get configuration: %v", err)
+		stderr.PrintE("cannot get configuration", err)
 		return 1
 	}
 	ft := &image.Fetcher{
@@ -101,11 +101,11 @@ func runFetch(cmd *cobra.Command, args []string) (exit int) {
 		if !flagFullHash {
 			hash = types.ShortHash(hash)
 		}
-		stdout(hash)
+		stdout.Print(hash)
 		return nil
 	})
 	if err != nil {
-		stderr("%v", err)
+		stderr.Error(err)
 		return 1
 	}
 

@@ -56,30 +56,30 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 
 	p, err := getPodFromUUIDString(args[0])
 	if err != nil {
-		stderr("prepared-run: problem retrieving pod: %v", err)
+		stderr.PrintE("problem retrieving pod", err)
 		return 1
 	}
 	defer p.Close()
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("prepared-run: cannot open store: %v", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
 	if !p.isPrepared {
-		stderr("prepared-run: pod %q is not prepared", p.uuid)
+		stderr.Printf("pod %q is not prepared", p.uuid)
 		return 1
 	}
 
 	if flagInteractive {
 		ac, err := p.getAppCount()
 		if err != nil {
-			stderr("prepared-run: cannot get pod's app count: %v", err)
+			stderr.PrintE("cannot get pod's app count", err)
 			return 1
 		}
 		if ac > 1 {
-			stderr("prepared-run: interactive option only supports pods with one app")
+			stderr.Print("interactive option only supports pods with one app")
 			return 1
 		}
 	}
@@ -89,31 +89,31 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 	// to prepare the image again.
 	if flagMDSRegister {
 		if err := stage0.CheckMdsAvailability(); err != nil {
-			stderr("prepare-run: %v", err)
+			stderr.Error(err)
 			return 1
 		}
 	}
 
 	if err := p.xToRun(); err != nil {
-		stderr("prepared-run: cannot transition to run: %v", err)
+		stderr.PrintE("cannot transition to run", err)
 		return 1
 	}
 
 	lfd, err := p.Fd()
 	if err != nil {
-		stderr("prepared-run: unable to get lock fd: %v", err)
+		stderr.PrintE("unable to get lock fd", err)
 		return 1
 	}
 
 	apps, err := p.getApps()
 	if err != nil {
-		stderr("prepared-run: unable to get app list: %v", err)
+		stderr.PrintE("unable to get app list", err)
 		return 1
 	}
 
 	rktgid, err := common.LookupGid(common.RktGroup)
 	if err != nil {
-		stderr("prepared-run: group %q not found, will use default gid when rendering images", common.RktGroup)
+		stderr.Printf("group %q not found, will use default gid when rendering images", common.RktGroup)
 		rktgid = -1
 	}
 

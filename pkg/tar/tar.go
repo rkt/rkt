@@ -28,6 +28,7 @@ import (
 	"github.com/appc/spec/pkg/device"
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/uid"
+	"github.com/hashicorp/errwrap"
 )
 
 const DEFAULT_DIR_MODE os.FileMode = 0755
@@ -93,13 +94,13 @@ Tar:
 			}
 			err = extractFile(tr, target, hdr, overwrite, editor)
 			if err != nil {
-				return fmt.Errorf("error extracting tarball: %v", err)
+				return errwrap.Wrap(errors.New("error extracting tarball"), err)
 			}
 			if hdr.Typeflag == tar.TypeDir {
 				dirhdrs = append(dirhdrs, hdr)
 			}
 		default:
-			return fmt.Errorf("error extracting tarball: %v", err)
+			return errwrap.Wrap(errors.New("error extracting tarball"), err)
 		}
 	}
 
@@ -241,11 +242,11 @@ func extractFileFromTar(tr *tar.Reader, file string) ([]byte, error) {
 			}
 			buf, err := ioutil.ReadAll(tr)
 			if err != nil {
-				return nil, fmt.Errorf("error extracting tarball: %v", err)
+				return nil, errwrap.Wrap(errors.New("error extracting tarball"), err)
 			}
 			return buf, nil
 		default:
-			return nil, fmt.Errorf("error extracting tarball: %v", err)
+			return nil, errwrap.Wrap(errors.New("error extracting tarball"), err)
 		}
 	}
 }

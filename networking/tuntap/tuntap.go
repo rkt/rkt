@@ -16,10 +16,13 @@ package tuntap
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"syscall"
 	"unsafe"
+
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -81,7 +84,7 @@ func operateOnIface(name string, kind uint16, persistency uintptr) (string, erro
 	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, iface.file.Fd(), uintptr(syscall.TUNSETPERSIST), persistency)
 	err = iface.Close()
 	if err != nil {
-		return "", fmt.Errorf("iface close error : %v", err)
+		return "", errwrap.Wrap(errors.New("iface close error "), err)
 	}
 
 	if errno != 0 {

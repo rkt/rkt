@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -31,6 +30,7 @@ import (
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/rkt/common"
 )
@@ -57,14 +57,14 @@ func registerPod(root string, uuid *types.UUID, apps schema.AppList) (token stri
 	var err error
 	token, err = generateMDSToken()
 	if err != nil {
-		rerr = fmt.Errorf("failed to generate MDS token: %v", err)
+		rerr = errwrap.Wrap(errors.New("failed to generate MDS token"), err)
 		return
 	}
 
 	pmfPath := common.PodManifestPath(root)
 	pmf, err := os.Open(pmfPath)
 	if err != nil {
-		rerr = fmt.Errorf("failed to open runtime manifest (%v): %v", pmfPath, err)
+		rerr = errwrap.Wrap(fmt.Errorf("failed to open runtime manifest (%v)", pmfPath), err)
 		return
 	}
 
@@ -72,7 +72,7 @@ func registerPod(root string, uuid *types.UUID, apps schema.AppList) (token stri
 	err = httpRequest("PUT", pth, pmf)
 	pmf.Close()
 	if err != nil {
-		rerr = fmt.Errorf("failed to register pod with metadata svc: %v", err)
+		rerr = errwrap.Wrap(errors.New("failed to register pod with metadata svc"), err)
 		return
 	}
 
@@ -84,7 +84,7 @@ func registerPod(root string, uuid *types.UUID, apps schema.AppList) (token stri
 
 	rf, err := os.Create(filepath.Join(root, mdsRegisteredFile))
 	if err != nil {
-		rerr = fmt.Errorf("failed to create mds-register file: %v", err)
+		rerr = errwrap.Wrap(errors.New("failed to create mds-register file"), err)
 		return
 	}
 	rf.Close()
@@ -93,14 +93,14 @@ func registerPod(root string, uuid *types.UUID, apps schema.AppList) (token stri
 		ampath := common.ImageManifestPath(root, app.Name)
 		amf, err := os.Open(ampath)
 		if err != nil {
-			rerr = fmt.Errorf("failed reading app manifest %q: %v", ampath, err)
+			rerr = errwrap.Wrap(fmt.Errorf("failed reading app manifest %q", ampath), err)
 			return
 		}
 
 		err = registerApp(u, app.Name.String(), amf)
 		amf.Close()
 		if err != nil {
-			rerr = fmt.Errorf("failed to register app with metadata svc: %v", err)
+			rerr = errwrap.Wrap(errors.New("failed to register app with metadata svc"), err)
 			return
 		}
 	}
@@ -170,7 +170,7 @@ func httpRequest(method, pth string, body io.Reader) error {
 			return nil
 
 		default:
-			log.Print(err)
+			log.Error(err)
 			time.Sleep(retryPause)
 		}
 	}

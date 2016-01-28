@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -37,6 +36,7 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
 	"github.com/gorilla/mux"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -345,7 +345,7 @@ func handlePodManifest(w http.ResponseWriter, r *http.Request, pm *schema.PodMan
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(pm); err != nil {
-		log.Print(err)
+		stderr.Error(err)
 	}
 }
 
@@ -441,7 +441,7 @@ func handleImageManifest(w http.ResponseWriter, r *http.Request, _ *schema.PodMa
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(*im); err != nil {
-		log.Print(err)
+		stderr.Error(err)
 	}
 }
 
@@ -469,7 +469,7 @@ func handleAppID(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest,
 
 func initCrypto() error {
 	if n, err := rand.Reader.Read(hmacKey[:]); err != nil || n != len(hmacKey) {
-		return fmt.Errorf("Failed to generate HMAC Key")
+		return fmt.Errorf("failed to generate HMAC Key")
 	}
 	return nil
 }
@@ -563,7 +563,7 @@ func logReq(h func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := &httpResp{w, 0}
 		h(resp, r)
-		log.Printf("%v %v - %v", r.Method, r.RequestURI, resp.status)
+		stderr.Printf("%v %v - %v", r.Method, r.RequestURI, resp.status)
 	}
 }
 
@@ -574,7 +574,7 @@ func unixListener() (net.Listener, error) {
 		// socket activated
 		lfds, err := strconv.ParseInt(s, 10, 16)
 		if err != nil {
-			return nil, fmt.Errorf("Error parsing LISTEN_FDS env var: %v", err)
+			return nil, errwrap.Wrap(errors.New("error parsing LISTEN_FDS env var"), err)
 		}
 		if lfds < 1 {
 			return nil, fmt.Errorf("LISTEN_FDS < 1")
@@ -585,7 +585,7 @@ func unixListener() (net.Listener, error) {
 		dir := filepath.Dir(common.MetadataServiceRegSock)
 		err := os.MkdirAll(dir, 0755)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to create %v: %v", dir, err)
+			return nil, errwrap.Wrap(fmt.Errorf("failed to create %v", dir), err)
 		}
 
 		return net.ListenUnix("unix", &net.UnixAddr{
@@ -602,7 +602,7 @@ func runRegistrationServer(l net.Listener) {
 	r.HandleFunc("/pods/{uuid}/{app:.*}", logReq(handleRegisterApp)).Methods("PUT")
 
 	if err := http.Serve(l, r); err != nil {
-		stderr("Error serving registration HTTP: %v", err)
+		stderr.PrintE("error serving registration HTTP", err)
 	}
 	close(exitCh)
 }
@@ -627,42 +627,42 @@ func runPublicServer(l net.Listener) {
 	r.HandleFunc("/pod/hmac/verify", logReq(handlePodVerify)).Methods("POST")
 
 	if err := http.Serve(l, r); err != nil {
-		stderr("Error serving pod HTTP: %v", err)
+		stderr.PrintE("error serving pod HTTP", err)
 	}
 	close(exitCh)
 }
 
 func runMetadataService(cmd *cobra.Command, args []string) (exit int) {
 	signal.Notify(exitCh, syscall.SIGINT, syscall.SIGTERM)
-	log.Print("Metadata service starting...")
+	stderr.Print("metadata service starting...")
 
 	unixl, err := unixListener()
 	if err != nil {
-		stderr(err.Error())
+		stderr.Error(err)
 		return 1
 	}
 	defer unixl.Close()
 
 	tcpl, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: flagListenPort})
 	if err != nil {
-		stderr("Error listening on port %v: %v", flagListenPort, err)
+		stderr.PrintE(fmt.Sprintf("error listening on port %v", flagListenPort), err)
 		return 1
 	}
 	defer tcpl.Close()
 
 	if err := initCrypto(); err != nil {
-		stderr(err.Error())
+		stderr.Error(err)
 		return 1
 	}
 
 	go runRegistrationServer(unixl)
 	go runPublicServer(tcpl)
 
-	log.Print("Metadata service running...")
+	stderr.Print("metadata service running...")
 
 	<-exitCh
 
-	log.Print("Metadata service exiting...")
+	stderr.Print("metadata service exiting...")
 
 	return
 }

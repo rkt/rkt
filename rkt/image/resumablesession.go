@@ -147,7 +147,7 @@ func (s *resumableSession) maybeSetupDownloadResume(u *url.URL) error {
 		return err
 	}
 	if res.StatusCode != http.StatusOK {
-		stderr("bad HTTP status code from HEAD request: %d", res.StatusCode)
+		log.Printf("bad HTTP status code from HEAD request: %d", res.StatusCode)
 		return nil
 	}
 	status := s.verifyAcceptRange(res, fi.ModTime())
@@ -156,9 +156,9 @@ func (s *resumableSession) maybeSetupDownloadResume(u *url.URL) error {
 		s.amountAlreadyHere = size
 	} else {
 		if status == rangeInvalid {
-			stderr("cannot use cached partial download, resource updated.")
+			log.Printf("cannot use cached partial download, resource updated.")
 		} else {
-			stderr("cannot use cached partial download, range request unsupported.")
+			log.Printf("cannot use cached partial download, range request unsupported.")
 		}
 		if err := s.reset(); err != nil {
 			return err

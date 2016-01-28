@@ -54,43 +54,43 @@ func runImageExtract(cmd *cobra.Command, args []string) (exit int) {
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		stderr("image extract: cannot open store: %v", err)
+		stderr.PrintE("cannot open store", err)
 		return 1
 	}
 
 	key, err := getStoreKeyFromAppOrHash(s, args[0])
 	if err != nil {
-		stderr("image extract: %v", err)
+		stderr.Error(err)
 		return 1
 	}
 
 	aci, err := s.ReadStream(key)
 	if err != nil {
-		stderr("image extract: error reading ACI from the store: %v", err)
+		stderr.PrintE("error reading ACI from the store", err)
 		return 1
 	}
 
 	// ExtractTar needs an absolute path
 	absOutputDir, err := filepath.Abs(outputDir)
 	if err != nil {
-		stderr("image extract: error converting output to an absolute path: %v", err)
+		stderr.PrintE("error converting output to an absolute path", err)
 		return 1
 	}
 
 	if _, err := os.Stat(absOutputDir); err == nil {
 		if !flagExtractOverwrite {
-			stderr("image extract: output directory exists (try --overwrite)")
+			stderr.Print("output directory exists (try --overwrite)")
 			return 1
 		}
 
 		// don't allow the user to delete the root filesystem by mistake
 		if absOutputDir == "/" {
-			stderr("image extract: this would delete your root filesystem. Refusing.")
+			stderr.Print("this would delete your root filesystem. Refusing.")
 			return 1
 		}
 
 		if err := os.RemoveAll(absOutputDir); err != nil {
-			stderr("image extract: error removing existing output dir: %v", err)
+			stderr.PrintE("error removing existing output dir", err)
 			return 1
 		}
 	}
@@ -102,13 +102,13 @@ func runImageExtract(cmd *cobra.Command, args []string) (exit int) {
 	if flagExtractRootfsOnly {
 		rktTmpDir, err := s.TmpDir()
 		if err != nil {
-			stderr("image extract: error creating rkt temporary directory: %v", err)
+			stderr.PrintE("error creating rkt temporary directory", err)
 			return 1
 		}
 
 		tmpDir, err := ioutil.TempDir(rktTmpDir, "rkt-image-extract-")
 		if err != nil {
-			stderr("image extract: error creating temporary directory: %v", err)
+			stderr.PrintE("error creating temporary directory", err)
 			return 1
 		}
 		defer os.RemoveAll(tmpDir)
@@ -116,13 +116,13 @@ func runImageExtract(cmd *cobra.Command, args []string) (exit int) {
 		extractDir = tmpDir
 	} else {
 		if err := os.MkdirAll(absOutputDir, 0755); err != nil {
-			stderr("image extract: error creating output directory: %v", err)
+			stderr.PrintE("error creating output directory", err)
 			return 1
 		}
 	}
 
 	if err := tar.ExtractTar(aci, extractDir, false, uid.NewBlankUidRange(), nil); err != nil {
-		stderr("image extract: error extracting ACI: %v", err)
+		stderr.PrintE("error extracting ACI", err)
 		return 1
 	}
 
@@ -132,11 +132,11 @@ func runImageExtract(cmd *cobra.Command, args []string) (exit int) {
 			if e, ok := err.(*os.LinkError); ok && e.Err == syscall.EXDEV {
 				// it's on a different device, fall back to copying
 				if err := fileutil.CopyTree(rootfsDir, absOutputDir, uid.NewBlankUidRange()); err != nil {
-					stderr("image extract: error copying ACI rootfs: %v", err)
+					stderr.PrintE("error copying ACI rootfs", err)
 					return 1
 				}
 			} else {
-				stderr("image extract: error moving ACI rootfs: %v", err)
+				stderr.PrintE("error moving ACI rootfs", err)
 				return 1
 			}
 		}

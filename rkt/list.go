@@ -18,6 +18,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -27,6 +28,7 @@ import (
 	common "github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/dustin/go-humanize"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -99,7 +101,7 @@ func runList(cmd *cobra.Command, args []string) int {
 
 		created, err := p.getCreationTime()
 		if err != nil {
-			errors = append(errors, fmt.Errorf("unable to get creation time for pod %q: %v", uuid, err))
+			errors = append(errors, errwrap.Wrap(fmt.Errorf("unable to get creation time for pod %q", uuid), err))
 		}
 		var createdStr string
 		if flagFullOutput {
@@ -110,7 +112,7 @@ func runList(cmd *cobra.Command, args []string) int {
 
 		started, err := p.getStartTime()
 		if err != nil {
-			errors = append(errors, fmt.Errorf("unable to get start time for pod %q: %v", uuid, err))
+			errors = append(errors, errwrap.Wrap(fmt.Errorf("unable to get start time for pod %q", uuid), err))
 		}
 		var startedStr string
 		if !started.IsZero() {
@@ -167,27 +169,27 @@ func runList(cmd *cobra.Command, args []string) int {
 		}
 
 	}); err != nil {
-		stderr("Failed to get pod handles: %v", err)
+		stderr.PrintE("failed to get pod handles", err)
 		return 1
 	}
 
 	if len(errors) > 0 {
 		sep := "----------------------------------------"
-		stderr("%d error(s) encountered when listing pods:", len(errors))
-		stderr("%s", sep)
+		stderr.Printf("%d error(s) encountered when listing pods:", len(errors))
+		stderr.Print(sep)
 		for _, err := range errors {
-			stderr("%s", err.Error())
-			stderr("%s", sep)
+			stderr.Error(err)
+			stderr.Print(sep)
 		}
-		stderr("Misc:")
-		stderr("  rkt's appc version: %s", schema.AppContainerVersion)
-		stderr("%s", sep)
+		stderr.Print("misc:")
+		stderr.Printf("  rkt's appc version: %s", schema.AppContainerVersion)
+		stderr.Print(sep)
 		// make a visible break between errors and the listing
-		stderr("")
+		stderr.Print("")
 	}
 
 	tabOut.Flush()
-	stdout("%s", tabBuffer.String())
+	stdout.Print(tabBuffer)
 	return 0
 }
 
@@ -222,11 +224,11 @@ func newPodListLoadError(p *pod, err error, pmj []byte) error {
 }
 
 func newPodListZeroAppsError(p *pod) error {
-	return fmt.Errorf("Pod %s contains zero apps", p.uuid.String())
+	return fmt.Errorf("pod %s contains zero apps", p.uuid.String())
 }
 
 func newPodListLoadImageManifestError(p *pod, err error) error {
-	return fmt.Errorf("pod %s ImageManifest could not be loaded: %v", p.uuid.String(), err)
+	return errwrap.Wrap(fmt.Errorf("pod %s ImageManifest could not be loaded", p.uuid.String()), err)
 }
 
 func appLine(app lastditch.RuntimeApp) string {
@@ -246,7 +248,7 @@ func fmtNets(nis []netinfo.NetInfo) string {
 func getImageName(p *pod, appName types.ACName) (string, error) {
 	aim, err := p.getAppImageManifest(appName)
 	if err != nil {
-		return "", fmt.Errorf("problem retrieving ImageManifests from pod: %v", err)
+		return "", errwrap.Wrap(errors.New("problem retrieving ImageManifests from pod"), err)
 	}
 
 	imageName := aim.Name.String()

@@ -36,9 +36,9 @@ func init() {
 }
 
 func runVersion(cmd *cobra.Command, args []string) (exit int) {
-	stdout("rkt Version: %s", version.Version)
-	stdout("appc Version: %s", schema.AppContainerVersion)
-	stdout("Go Version: %s", runtime.Version())
-	stdout("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
+	stdout.Printf("rkt Version: %s", version.Version)
+	stdout.Printf("appc Version: %s", schema.AppContainerVersion)
+	stdout.Printf("Go Version: %s", runtime.Version())
+	stdout.Printf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
 	return
 }

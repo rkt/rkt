@@ -23,6 +23,7 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -82,11 +83,11 @@ func createFileWithPermissions(path string, uid int, gid int, perm os.FileMode) 
 
 func setPermissions(path string, uid int, gid int, perm os.FileMode) error {
 	if err := os.Chown(path, uid, gid); err != nil {
-		return fmt.Errorf("error setting %q directory group: %v", path, err)
+		return errwrap.Wrap(fmt.Errorf("error setting %q directory group", path), err)
 	}
 
 	if err := os.Chmod(path, perm); err != nil {
-		return fmt.Errorf("error setting %q directory permissions: %v", path, err)
+		return errwrap.Wrap(fmt.Errorf("error setting %q directory permissions", path), err)
 	}
 
 	return nil
@@ -97,7 +98,7 @@ func createDirStructure(gid int) error {
 		path := filepath.Join(getDataDir(), dir)
 
 		if err := os.MkdirAll(path, perm); err != nil {
-			return fmt.Errorf("error creating %q directory: %v", path, err)
+			return errwrap.Wrap(fmt.Errorf("error creating %q directory", path), err)
 		}
 
 		if err := setPermissions(path, 0, gid, perm); err != nil {
@@ -132,7 +133,7 @@ func setCasDbFilesPermissions(casDbPath string, gid int, perm os.FileMode) error
 func createDbFiles(casDbPath string, gid int, perm os.FileMode) error {
 	dbPath := filepath.Join(casDbPath, store.DbFilename)
 	if err := createFileWithPermissions(dbPath, 0, gid, perm); err != nil {
-		return fmt.Errorf("error creating %s: %v", dbPath, err)
+		return errwrap.Wrap(fmt.Errorf("error creating %s", dbPath), err)
 	}
 
 	// ql database uses a Write-Ahead Logging (WAL) file whose name is
@@ -142,7 +143,7 @@ func createDbFiles(casDbPath string, gid int, perm os.FileMode) error {
 	walFilename := fmt.Sprintf(".%x", h.Sum(nil))
 	walFilePath := filepath.Join(casDbPath, walFilename)
 	if err := createFileWithPermissions(walFilePath, 0, gid, perm); err != nil {
-		return fmt.Errorf("error creating %s: %v", walFilename, err)
+		return errwrap.Wrap(fmt.Errorf("error creating %s", walFilename), err)
 	}
 
 	return nil
@@ -151,26 +152,26 @@ func createDbFiles(casDbPath string, gid int, perm os.FileMode) error {
 func runInstall(cmd *cobra.Command, args []string) (exit int) {
 	gid, err := common.LookupGid(common.RktGroup)
 	if err != nil {
-		stderr("install: error looking up rkt gid: %v", err)
+		stderr.PrintE("error looking up rkt gid", err)
 		return 1
 	}
 
 	if err := createDirStructure(gid); err != nil {
-		stderr("install: error creating rkt directory structure: %v", err)
+		stderr.PrintE("error creating rkt directory structure", err)
 		return 1
 	}
 
 	casDbPath := filepath.Join(getDataDir(), "cas", "db")
 	if err := setCasDbFilesPermissions(casDbPath, gid, casDbPerm); err != nil {
-		stderr("install: error setting cas db permissions: %v", err)
+		stderr.PrintE("error setting cas db permissions", err)
 		return 1
 	}
 
 	if err := createDbFiles(casDbPath, gid, casDbPerm); err != nil {
-		stderr("install: error creating db files: %v", err)
+		stderr.PrintE("error creating db files", err)
 		return 1
 	}
-	stderr("rkt directory structure successfully created.")
+	stderr.Print("rkt directory structure successfully created.")
 
 	return 0
 }
