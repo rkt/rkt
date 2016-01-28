@@ -129,7 +129,22 @@ If a mount point is specified in the image manifest but no matching volume is fo
 
 ### Mounting Volumes
 
-For `host` volumes, the `--volume` flag allows you to specify each mount, its type, the location on the host, and whether the volume is read-only or not.
+Volumes are defined via the `--volume` flag, the volume is then mounted into each app running to the pod based on information defined in the ACI manifest.
+
+There are two kinds of volumes, `host` and `empty`.
+
+#### Host Volumes
+
+For `host` volumes, the `--volume` flag allows you to specify the volume name, the location on the host, and whether the volume is read-only or not.
+The volume name and location on the host are mandatory.
+The read-only parameter is false by default.
+
+Syntax:
+
+```
+---volume NAME,kind=host,source=SOURCE_PATH,readOnly=BOOL
+```
+
 In the following example, we make the host's `/srv/data` accessible to app1 on `/var/data`:
 
 ```
@@ -142,7 +157,21 @@ If you don't intend to persist the data and you just want to have a volume share
 # rkt run --volume data,kind=empty,readOnly=false example.com/app1
 ```
 
-The volume is then mounted into each app running to the pod based on information defined in the ACI manifest.
+#### Empty Volumes
+
+For `empty` volumes, the `--volume` flag allows you to specify the volume name, and the mode, UID and GID of the generated volume.
+The volume name is mandatory.
+By default, `mode` is `0755`, UID is `0` and GID is `0`.
+
+Syntax:
+
+ `--volume NAME,kind=empty,mode=MODE,uid=UID,gid=GID`
+
+ In the following example, we create an empty volume for app1's `/var/data`:
+
+ ```
+ # rkt run --volume data,kind=empty,mode=0700,UID=0,GID=0
+ ```
 
 ### Mounting Volumes without Mount Points
 
