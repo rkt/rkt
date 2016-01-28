@@ -22,7 +22,7 @@ Here is a small [Go program](../../api/v1alpha/client_example.go) that illustrat
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
-| `--listen` |  `localhost:15441` | An address to listen on | Address to listen on client API requests |
+| `--listen` |  `localhost:15441` | An address to listen on | Address to listen for client API requests |
 
 ## Global options
 

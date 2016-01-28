@@ -129,7 +129,7 @@ If a mount point is specified in the image manifest but no matching volume is fo
 
 ### Mounting Volumes
 
-Volumes are defined via the `--volume` flag, the volume is then mounted into each app running to the pod based on information defined in the ACI manifest.
+Volumes are defined via the `--volume` flag, the volume is then mounted into each app running in the pod based on information defined in the ACI manifest.
 
 There are two kinds of volumes, `host` and `empty`.
 
@@ -310,16 +310,19 @@ If you don't use systemd, you can use [daemon](http://www.libslack.org/daemon/) 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
 | `--cpu` |  `` | CPU units (example `--cpu=500m`, see the [Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html)) | CPU limit for the preceding image |
-| `--exec` |  `` | A path | Override the exec command for the preciding image |
+| `--dns` |  `` | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times |
+| `--dns-opt` |  `` | Option as described in the options section in resolv.conf(5) | DNS option to write in `/etc/resolv.conf`. It can be specified several times |
+| `--dns-search` |  `` | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times |
+| `--exec` |  `` | A path | Override the exec command for the preceding image |
 | `--inherit-env` |  `false` | `true` or `false` | Inherit all environment variables not set by apps |
 | `--interactive` |  `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied |
 | `--mds-register` |  `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net=(default|default-restricted|host)` |
 | `--memory` |  `` | Memory units (example '--memory=50M', see the [Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html)) | Memory limit for the preceding image |
-| `--mount` |  `` | Mount syntax (`volume=NAME,target=PATH`). See [Mounting Volumes without Mount Points](#mounting-volumes-without-mount-points) | Mount point binding a volume to a path withing an app |
-| `--net` |  `default` | A comma-separated list of networks. Syntax: `--net[=n[:args], ...]` | Configure the pod's networking and optionally pass a list of user-configured networks to oad and arguments to pass to them |
+| `--mount` |  `` | Mount syntax (`volume=NAME,target=PATH`). See [Mounting Volumes without Mount Points](#mounting-volumes-without-mount-points) | Mount point binding a volume to a path within an app |
+| `--net` |  `default` | A comma-separated list of networks. Syntax: `--net[=n[:args], ...]` | Configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively |
 | `--no-overlay` |  `false` | `true` or `false` | Disable overlay filesystem |
-| `--no-store` |  `false` | `true` or `false` | Fetch images ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
-| `--pod-manifest` |  `` | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effects |
+| `--no-store` |  `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
+| `--pod-manifest` |  `` | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect |
 | `--port` |  `` | A port number | Ports to expose on the host (requires `--net`) |
 | `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental) |
 | `--set-env` |  `` | An environment variable. Syntax `NAME=VALUE` | An environment variable to set for apps |

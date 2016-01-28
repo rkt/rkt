@@ -45,9 +45,12 @@ c9fad0e6    etcd    coreos.com/etcd prepared
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
+| `--dns` |  `` | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times |
+| `--dns-opt` |  `` | Option as described in the options section in resolv.conf(5) | DNS option to write in `/etc/resolv.conf`. It can be specified several times |
+| `--dns-search` |  `` | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times |
 | `--interactive` |  `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied |
 | `--mds-register` |  `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net=(default|default-restricted|host)` |
-| `--net` |  `default` | A comma-separated list of networks. Syntax: `--net[=n[:args], ...]` | Configure the pod's networking and optionally pass a list of user-configured networks to oad and arguments to pass to them |
+| `--net` |  `default` | A comma-separated list of networks. Syntax: `--net[=n[:args], ...]` | Configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively |
 
 ## Global options
 

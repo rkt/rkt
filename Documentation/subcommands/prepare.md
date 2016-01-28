@@ -34,12 +34,12 @@ c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
-| `--exec` |  `` | A path | Override the exec command for the preciding image |
+| `--exec` |  `` | A path | Override the exec command for the preceding image |
 | `--inherit-env` |  `false` | `true` or `false` | Inherit all environment variables not set by apps |
-| `--mount` |  `` | Mount syntax (`volume=NAME,target=PATH`). See [Mounting Volumes without Mount Points](run.md#mounting-volumes-without-mount-points) | Mount point binding a volume to a path withing an app |
+| `--mount` |  `` | Mount syntax (`volume=NAME,target=PATH`). See [Mounting Volumes without Mount Points](run.md#mounting-volumes-without-mount-points) | Mount point binding a volume to a path within an app |
 | `--no-overlay` |  `false` | `true` or `false` | Disable overlay filesystem |
-| `--no-store` |  `false` | `true` or `false` | Fetch images ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
-| `--pod-manifest` |  `` | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effects |
+| `--no-store` |  `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
+| `--pod-manifest` |  `` | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect |
 | `--port` |  `` | A port number | Ports to expose on the host (requires `--net`) |
 | `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental) |
 | `--quiet` |  `false` | `true` or `false` | Supress superfluous output on stdout, print only the UUID on success |
