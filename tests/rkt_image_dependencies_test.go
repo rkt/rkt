@@ -180,11 +180,11 @@ func TestImageDependencies(t *testing.T) {
 	child := spawnOrFail(t, runCmd)
 
 	expectedList := []string{
-		"rkt: fetching image from https://localhost/localhost/image-a.aci",
-		"rkt: using image from local store for image name localhost/image-b",
-		"rkt: fetching image from https://localhost/localhost/image-c.aci",
-		"rkt: fetching image from https://localhost/localhost/image-d.aci",
-		"rkt: using image from local store for image name coreos.com/rkt-inspect",
+		"image: fetching image from https://localhost/localhost/image-a.aci",
+		"image: using image from local store for image name localhost/image-b",
+		"image: fetching image from https://localhost/localhost/image-c.aci",
+		"image: fetching image from https://localhost/localhost/image-d.aci",
+		"image: using image from local store for image name coreos.com/rkt-inspect",
 		"HelloDependencies",
 	}
 
