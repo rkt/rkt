@@ -3,6 +3,7 @@
 #### New features and UX changes
 
 - Add pod creation and start times to `rkt list` and `rkt status` ([#2030](https://github.com/coreos/rkt/pull/2030)). See [`rkt list`](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/list.md) and [`rkt status`](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/status.md) documentation.
+- The DNS configuration can now be passed to the pod via the command line ([#2040](https://github.com/coreos/rkt/pull/2040)). See [`DNS support`](https://github.com/coreos/rkt/blob/master/Documentation/networking.md#dns-support) documentation.
 
 ## v0.16.0
 

@@ -56,6 +56,9 @@ End the image arguments with a lone "---" to resume argument parsing.`,
 	flagInheritEnv   bool
 	flagExplicitEnv  envMap
 	flagInteractive  bool
+	flagDNS          flagStringList
+	flagDNSSearch    flagStringList
+	flagDNSOpt       flagStringList
 	flagNoOverlay    bool
 	flagStoreOnly    bool
 	flagNoStore      bool
@@ -76,6 +79,9 @@ func init() {
 	cmdRun.Flags().BoolVar(&flagPrivateUsers, "private-users", false, "Run within user namespaces (experimental).")
 	cmdRun.Flags().Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
 	cmdRun.Flags().BoolVar(&flagInteractive, "interactive", false, "run pod interactively. If true, only one image may be supplied.")
+	cmdRun.Flags().Var(&flagDNS, "dns", "name servers to write in /etc/resolv.conf")
+	cmdRun.Flags().Var(&flagDNSSearch, "dns-search", "DNS search domains to write in /etc/resolv.conf")
+	cmdRun.Flags().Var(&flagDNSOpt, "dns-opt", "DNS options to write in /etc/resolv.conf")
 	cmdRun.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
 	cmdRun.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
 	cmdRun.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--net', '--no-overlay' and '--interactive' will have effects")
@@ -91,6 +97,9 @@ func init() {
 	cmdRun.Flags().Var((*appCPULimit)(&rktApps), "cpu", "cpu limit for the preceding image (example: '--cpu=500m')")
 
 	flagPorts = portList{}
+	flagDNS = flagStringList{}
+	flagDNSSearch = flagStringList{}
+	flagDNSOpt = flagStringList{}
 
 	// Disable interspersed flags to stop parsing after the first non flag
 	// argument. All the subsequent parsing will be done by parseApps.
@@ -271,6 +280,9 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		Net:          flagNet,
 		LockFd:       lfd,
 		Interactive:  flagInteractive,
+		DNS:          flagDNS,
+		DNSSearch:    flagDNSSearch,
+		DNSOpt:       flagDNSOpt,
 		MDSRegister:  flagMDSRegister,
 		LocalConfig:  globalFlags.LocalConfigDir,
 		RktGid:       rktgid,
@@ -326,6 +338,22 @@ func (pl *portList) String() string {
 
 func (pl *portList) Type() string {
 	return "portList"
+}
+
+// flagStringList implements the flag.Value interface to contain a set of strings
+type flagStringList []string
+
+func (dns *flagStringList) Set(s string) error {
+	*dns = append(*dns, s)
+	return nil
+}
+
+func (dns *flagStringList) String() string {
+	return strings.Join(*dns, " ")
+}
+
+func (dns *flagStringList) Type() string {
+	return "flagStringList"
 }
 
 // envMap implements the flag.Value interface to contain a set of name=value mappings
