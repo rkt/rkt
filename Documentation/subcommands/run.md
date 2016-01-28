@@ -129,7 +129,22 @@ If a mount point is specified in the image manifest but no matching volume is fo
 
 ### Mounting Volumes
 
-For `host` volumes, the `--volume` flag allows you to specify each mount, its type, the location on the host, and whether the volume is read-only or not.
+Volumes are defined via the `--volume` flag, the volume is then mounted into each app running in the pod based on information defined in the ACI manifest.
+
+There are two kinds of volumes, `host` and `empty`.
+
+#### Host Volumes
+
+For `host` volumes, the `--volume` flag allows you to specify the volume name, the location on the host, and whether the volume is read-only or not.
+The volume name and location on the host are mandatory.
+The read-only parameter is false by default.
+
+Syntax:
+
+```
+---volume NAME,kind=host,source=SOURCE_PATH,readOnly=BOOL
+```
+
 In the following example, we make the host's `/srv/data` accessible to app1 on `/var/data`:
 
 ```
@@ -142,7 +157,21 @@ If you don't intend to persist the data and you just want to have a volume share
 # rkt run --volume data,kind=empty,readOnly=false example.com/app1
 ```
 
-The volume is then mounted into each app running to the pod based on information defined in the ACI manifest.
+#### Empty Volumes
+
+For `empty` volumes, the `--volume` flag allows you to specify the volume name, and the mode, UID and GID of the generated volume.
+The volume name is mandatory.
+By default, `mode` is `0755`, UID is `0` and GID is `0`.
+
+Syntax:
+
+ `--volume NAME,kind=empty,mode=MODE,uid=UID,gid=GID`
+
+ In the following example, we create an empty volume for app1's `/var/data`:
+
+ ```
+ # rkt run --volume data,kind=empty,mode=0700,UID=0,GID=0
+ ```
 
 ### Mounting Volumes without Mount Points
 
@@ -275,3 +304,42 @@ However, since it is a regular process, you can use your init system to achieve 
 For example, if you use systemd, you can [run rkt using `systemd-run`](https://github.com/coreos/rkt/blob/master/Documentation/using-rkt-with-systemd.md#systemd-run).
 
 If you don't use systemd, you can use [daemon](http://www.libslack.org/daemon/) as an alternative.
+
+## Options
+
+| Flag | Default | Options | Description |
+| --- | --- | --- | --- |
+| `--cpu` |  `` | CPU units (example `--cpu=500m`, see the [Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html)) | CPU limit for the preceding image |
+| `--dns` |  `` | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times |
+| `--dns-opt` |  `` | Option as described in the options section in resolv.conf(5) | DNS option to write in `/etc/resolv.conf`. It can be specified several times |
+| `--dns-search` |  `` | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times |
+| `--exec` |  `` | A path | Override the exec command for the preceding image |
+| `--inherit-env` |  `false` | `true` or `false` | Inherit all environment variables not set by apps |
+| `--interactive` |  `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied |
+| `--mds-register` |  `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net=(default|default-restricted|host)` |
+| `--memory` |  `` | Memory units (example '--memory=50M', see the [Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html)) | Memory limit for the preceding image |
+| `--mount` |  `` | Mount syntax (`volume=NAME,target=PATH`). See [Mounting Volumes without Mount Points](#mounting-volumes-without-mount-points) | Mount point binding a volume to a path within an app |
+| `--net` |  `default` | A comma-separated list of networks. Syntax: `--net[=n[:args], ...]` | Configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively |
+| `--no-overlay` |  `false` | `true` or `false` | Disable overlay filesystem |
+| `--no-store` |  `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
+| `--pod-manifest` |  `` | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect |
+| `--port` |  `` | A port number | Ports to expose on the host (requires `--net`) |
+| `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental) |
+| `--set-env` |  `` | An environment variable. Syntax `NAME=VALUE` | An environment variable to set for apps |
+| `--signature` |  `` | A file path | Local signature file to use in validating the preceding image |
+| `--stage1-image` |  `` | A path to a stage1 image. Local paths and HTTP/HTTPS URLs are supported | Image to use as stage1 |
+| `--store-only` |  `false` | `true` or `false` | Use only available images in the store (do not discover or download from remote URLs). See [image fetching behavior](../image-fetching-behavior.md) |
+| `--uuid-file-save` |  `` | A file path | Write out the pod UUID to a file |
+| `--volume` |  `` | Volume syntax (`NAME,kind=KIND,source=PATH,readOnly=BOOL`). See [Mount Volumes into a Pod](#mount-volumes-into-a-pod) | Volumes to make available in the pod |
+
+## Global options
+
+| Flag | Default | Options | Description |
+| --- | --- | --- | --- |
+| `--debug` |  `false` | `true` or `false` | Prints out more debug information to `stderr` |
+| `--dir` | `/var/lib/rkt` | A directory path | Path to the `rkt` data directory |
+| `--insecure-options` |  none | <ul><li>**none**: All security features are enabled</li><li>**http**: Allow HTTP connections. Be warned that this will send any credentials as clear text.</li><li>**image**: Disables verifying image signatures</li><li>**tls**: Accept any certificate from the server and any host name in that certificate</li><li>**ondisk**: Disables verifying the integrity of the on-disk, rendered image before running. This significantly speeds up start time.</li><li>**all**: Disables all security checks</li></ul>  | Comma-separated list of security features to disable |
+| `--local-config` |  `/etc/rkt` | A directory path | Path to the local configuration directory |
+| `--system-config` |  `/usr/lib/rkt` | A directory path | Path to the system configuration directory |
+| `--trust-keys-from-https` |  `true` | `true` or `false` | Automatically trust gpg keys fetched from https |
+| `--user-config` |  `` | A directory path | Path to the user configuration directory |

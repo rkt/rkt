@@ -40,3 +40,26 @@ c9fad0e6    etcd    coreos.com/etcd prepared
 [25703.013405] etcd[4]: 2015/10/01 14:44:10 raft.node: ce2a822cea30bfca elected leader ce2a822cea30bfca at term 2
 [25703.017089] etcd[4]: 2015/10/01 14:44:10 etcdserver: published {Name:default ClientURLs:[http://localhost:2379 http://localhost:4001]} to cluster 7e27652122e8b2ae
 ```
+
+## Options
+
+| Flag | Default | Options | Description |
+| --- | --- | --- | --- |
+| `--dns` |  `` | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times |
+| `--dns-opt` |  `` | Option as described in the options section in resolv.conf(5) | DNS option to write in `/etc/resolv.conf`. It can be specified several times |
+| `--dns-search` |  `` | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times |
+| `--interactive` |  `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied |
+| `--mds-register` |  `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net=(default|default-restricted|host)` |
+| `--net` |  `default` | A comma-separated list of networks. Syntax: `--net[=n[:args], ...]` | Configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively |
+
+## Global options
+
+| Flag | Default | Options | Description |
+| --- | --- | --- | --- |
+| `--debug` |  `false` | `true` or `false` | Prints out more debug information to `stderr` |
+| `--dir` | `/var/lib/rkt` | A directory path | Path to the `rkt` data directory |
+| `--insecure-options` |  none | <ul><li>**none**: All security features are enabled</li><li>**http**: Allow HTTP connections. Be warned that this will send any credentials as clear text.</li><li>**image**: Disables verifying image signatures</li><li>**tls**: Accept any certificate from the server and any host name in that certificate</li><li>**ondisk**: Disables verifying the integrity of the on-disk, rendered image before running. This significantly speeds up start time.</li><li>**all**: Disables all security checks</li></ul>  | Comma-separated list of security features to disable |
+| `--local-config` |  `/etc/rkt` | A directory path | Path to the local configuration directory |
+| `--system-config` |  `/usr/lib/rkt` | A directory path | Path to the system configuration directory |
+| `--trust-keys-from-https` |  `true` | `true` or `false` | Automatically trust gpg keys fetched from https |
+| `--user-config` |  `` | A directory path | Path to the user configuration directory |
