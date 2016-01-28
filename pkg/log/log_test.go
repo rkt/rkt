@@ -53,7 +53,6 @@ func genNestedError() error {
 }
 
 func TestLogOutput(t *testing.T) {
-
 	for _, tt := range outputTests {
 		var logBuf bytes.Buffer
 		l := New(&logBuf, prefix, tt.debug)
