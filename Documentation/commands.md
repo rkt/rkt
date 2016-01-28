@@ -60,6 +60,11 @@ The API service allows clients to list and inspect pods and images running under
 
 * [api-service](subcommands/api-service.md)
 
+## Misc
+
+* [install](subcommands/install.md)
+* [version](subcommands/version.md)
+
 ## Global Options
 
 In addition to the flags used by individual `rkt` commands, `rkt` has a set of global options that are applicable to all commands.
