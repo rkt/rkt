@@ -121,7 +121,11 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common
 			if err = n.enableDefaultLocalnetRouting(); err != nil {
 				return err
 			}
-			return n.forwardPorts(fps, n.GetDefaultIP())
+			if err := n.forwardPorts(fps, n.GetDefaultIP()); err != nil {
+				n.unforwardPorts()
+				return err
+			}
+			return nil
 		}
 		return nil
 	})
