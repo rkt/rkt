@@ -79,30 +79,13 @@ acbuild end
 Note that `--insecure-options=image` is required because, by default, rkt expects our images to be signed.
 See the [Signing and Verification Guide](https://github.com/coreos/rkt/blob/master/Documentation/signing-and-verification-guide.md) for more details.
 
-At this point our hello app is running on port 5000 and ready to handle HTTP requests.
+At this point our hello app is running and ready to handle HTTP requests.
 
 You can also [run rkt as a daemon](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#run-rkt-as-a-daemon).
 
 ### Test with curl
 
-Open a new terminal and run the following command:
-
-```
-$ curl 127.0.0.1:5000
-hello
-```
-
-#### When curl Fails to Connect
-
-If you're running in Vagrant, the above may not work.
-You might see this instead:
-
-```
-$ curl 127.0.0.1:5000
-curl: (7) Failed to connect to 127.0.0.1 port 5000: Connection refused
-```
-
-Instead, use `rkt list` to find out what IP to use:
+By default, rkt will assign the running container an IP address. Use `rkt list` to discover what it is:
 
 ```
 # rkt list
@@ -110,7 +93,8 @@ UUID		APP	IMAGE NAME		STATE	NETWORKS
 885876b0	hello	example.com/hello:0.0.1	running	default:ip4=172.16.28.2
 ```
 
-Then you can `curl` that IP:
+Then you can `curl` that IP on port 5000:
+
 ```
 $ curl 172.16.28.2:5000
 hello
