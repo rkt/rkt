@@ -76,7 +76,7 @@ func gcNetworking(podID *types.UUID) error {
 	n, err := networking.Load(".", podID)
 	switch {
 	case err == nil:
-		n.Teardown(flavor)
+		n.Teardown(flavor, debug)
 	case os.IsNotExist(err):
 		// probably ran with --net=host
 	default:
