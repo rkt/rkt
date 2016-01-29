@@ -14,5 +14,7 @@ before_install:
 
 script:
  - ./autogen.sh
- - ./configure --with-stage1-default-name="example.com/some-stage1-for-rkt" --with-stage1-default-version="0.0.1"
+ # Build host and fly to ensure we build stage1 init. We don't build everything
+ # to avoid downloading large images.
+ - ./configure --with-stage1-flavors=host,fly
  - make unit-check
