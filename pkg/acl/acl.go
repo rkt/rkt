@@ -105,6 +105,8 @@ import (
 	"fmt"
 	"os"
 	"unsafe"
+
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -187,17 +189,22 @@ func getSymbolPointer(handle unsafe.Pointer, symbol string) (unsafe.Pointer, err
 	sym := C.CString(symbol)
 	defer C.free(unsafe.Pointer(sym))
 
+	C.dlerror()
 	p := C.dlsym(handle, sym)
-	if p == nil {
-		return nil, fmt.Errorf("error resolving symbol %q")
+	e := C.dlerror()
+	if e != nil {
+		return nil, errwrap.Wrap(fmt.Errorf("error resolving symbol %q", symbol), errors.New(C.GoString(e)))
 	}
 
 	return p, nil
 }
 
 func (h *libHandle) close() error {
-	if r := C.dlclose(h.handle); r != 0 {
-		return fmt.Errorf("error closing %v: %d", h.libname, r)
+	C.dlerror()
+	C.dlclose(h.handle)
+	e := C.dlerror()
+	if e != nil {
+		return errwrap.Wrap(fmt.Errorf("error closing %v", h.libname), errors.New(C.GoString(e)))
 	}
 	return nil
 }
@@ -221,9 +228,9 @@ func (a *ACL) ParseACL(acl string) error {
 	cacl := C.CString(acl)
 	defer C.free(unsafe.Pointer(cacl))
 
-	retACL, errno := C.my_acl_from_text(acl_from_text, cacl)
+	retACL, err := C.my_acl_from_text(acl_from_text, cacl)
 	if retACL == nil {
-		return fmt.Errorf("error calling acl_from_text: %v", errno)
+		return errwrap.Wrap(errors.New("error calling acl_from_text"), err)
 	}
 
 	a.a = retACL
@@ -238,9 +245,9 @@ func (a *ACL) Free() error {
 		return err
 	}
 
-	ret, errno := C.my_acl_free(acl_free, a.a)
+	ret, err := C.my_acl_free(acl_free, a.a)
 	if ret < 0 {
-		return fmt.Errorf("error calling acl_free: %v", errno)
+		return errwrap.Wrap(errors.New("error calling acl_free"), err)
 	}
 
 	return a.lib.close()
@@ -256,26 +263,26 @@ func (a *ACL) SetFileACLDefault(path string) error {
 	cpath := C.CString(path)
 	defer C.free(unsafe.Pointer(cpath))
 
-	ret, errno := C.my_acl_set_file(acl_set_file, cpath, C.ACL_TYPE_DEFAULT, a.a)
+	ret, err := C.my_acl_set_file(acl_set_file, cpath, C.ACL_TYPE_DEFAULT, a.a)
 	if ret < 0 {
-		return fmt.Errorf("error calling acl_set_file: %v", errno)
+		return errwrap.Wrap(errors.New("error calling acl_set_file"), err)
 	}
 
 	return nil
 }
 
 // Valid checks whether the ACL is valid.
-func (a *ACL) Valid() (bool, error) {
+func (a *ACL) Valid() error {
 	acl_valid, err := getSymbolPointer(a.lib.handle, "acl_valid")
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	ret := C.my_acl_valid(acl_valid, a.a)
+	ret, err := C.my_acl_valid(acl_valid, a.a)
 	if ret < 0 {
-		return false, nil
+		return errwrap.Wrap(errors.New("invalid acl"), err)
 	}
-	return true, nil
+	return nil
 }
 
 // AddBaseEntries adds the base ACL entries from the file permissions.
@@ -322,9 +329,9 @@ func (a *ACL) createEntry() (*Entry, error) {
 
 	var e C.acl_entry_t
 
-	rv, _ := C.my_acl_create_entry(acl_create_entry, &a.a, &e)
+	rv, err := C.my_acl_create_entry(acl_create_entry, &a.a, &e)
 	if rv < 0 {
-		return nil, fmt.Errorf("unable to create entry")
+		return nil, errwrap.Wrap(errors.New("unable to create entry"), err)
 	}
 	return &Entry{a, e}, nil
 }
@@ -354,9 +361,9 @@ func (entry *Entry) getPermset(a *ACL) (*Permset, error) {
 	}
 
 	var ps C.acl_permset_t
-	rv, _ := C.my_acl_get_permset(acl_get_permset, entry.e, &ps)
+	rv, err := C.my_acl_get_permset(acl_get_permset, entry.e, &ps)
 	if rv < 0 {
-		return nil, fmt.Errorf("unable to get permset")
+		return nil, errwrap.Wrap(errors.New("unable to get permset"), err)
 	}
 	return &Permset{a, ps}, nil
 }
@@ -367,9 +374,9 @@ func (entry *Entry) setTag(t Tag) error {
 		return err
 	}
 
-	rv, _ := C.my_acl_set_tag_type(acl_set_tag_type, entry.e, C.acl_tag_t(t))
+	rv, err := C.my_acl_set_tag_type(acl_set_tag_type, entry.e, C.acl_tag_t(t))
 	if rv < 0 {
-		return fmt.Errorf("unable to set tag")
+		return errwrap.Wrap(errors.New("unable to set tag"), err)
 	}
 
 	return nil
@@ -381,9 +388,9 @@ func (pset *Permset) addPerm(perm Perm) error {
 		return err
 	}
 
-	rv, _ := C.my_acl_add_perm(acl_add_perm, pset.p, C.acl_perm_t(perm))
+	rv, err := C.my_acl_add_perm(acl_add_perm, pset.p, C.acl_perm_t(perm))
 	if rv < 0 {
-		return fmt.Errorf("unable to add perm to permset")
+		return errwrap.Wrap(errors.New("unable to add perm to permset"), err)
 	}
 	return nil
 }

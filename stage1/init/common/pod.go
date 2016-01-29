@@ -204,29 +204,19 @@ func SetJournalPermissions(p *stage1commontypes.Pod) error {
 	defer a.Free()
 
 	if err := a.ParseACL(fmt.Sprintf("g:%d:r-x,m:r-x", rktgid)); err != nil {
-		return fmt.Errorf("error parsing ACL string: %v", err)
+		return errwrap.Wrap(errors.New("error parsing ACL string"), err)
 	}
 
-	val, err := a.Valid()
-	if err != nil {
+	if err := a.AddBaseEntries(journalPath); err != nil {
+		return errwrap.Wrap(errors.New("error adding base ACL entries"), err)
+	}
+
+	if err := a.Valid(); err != nil {
 		return err
-	}
-	if !val {
-		if err := a.AddBaseEntries(journalPath); err != nil {
-			return fmt.Errorf("error adding base ACL entries: %v", err)
-		}
-
-		val, err := a.Valid()
-		if err != nil {
-			return err
-		}
-		if !val {
-			return fmt.Errorf("invalid ACL")
-		}
 	}
 
 	if err := a.SetFileACLDefault(journalPath); err != nil {
-		return err
+		return errwrap.Wrap(fmt.Errorf("error setting default ACLs on %q", journalPath), err)
 	}
 
 	return nil
