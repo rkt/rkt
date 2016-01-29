@@ -4,6 +4,8 @@
 
 - Add pod creation and start times to `rkt list` and `rkt status` ([#2030](https://github.com/coreos/rkt/pull/2030)). See [`rkt list`](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/list.md) and [`rkt status`](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/status.md) documentation.
 - The DNS configuration can now be passed to the pod via the command line ([#2040](https://github.com/coreos/rkt/pull/2040)). See [`DNS support`](https://github.com/coreos/rkt/blob/master/Documentation/networking.md#dns-support) documentation.
+- Errors are now structured, allowing for better control of the output. See [#1937](https://github.com/coreos/rkt/pull/1937) for background and the [Error & Output](https://github.com/coreos/rkt/blob/master/Documentation/hacking.md#errors--output) section of the Hacking document for usage.
+- All output now uses the new log package in `pkg/log` to provide a more clean and consistent output format and more helpful debug output. See [#1937](https://github.com/coreos/rkt/pull/1937)
 
 ## v0.16.0
 
