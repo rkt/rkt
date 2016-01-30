@@ -94,7 +94,7 @@ func (rb *RepositoryBackend) buildACIV1(layerNumber int, layerID string, dockerU
 
 func (rb *RepositoryBackend) getRepoDataV1(indexURL string, remote string) (*RepoData, error) {
 	client := &http.Client{}
-	repositoryURL := rb.protocol() + path.Join(indexURL, "v1", "repositories", remote, "images")
+	repositoryURL := rb.schema + path.Join(indexURL, "v1", "repositories", remote, "images")
 
 	req, err := http.NewRequest("GET", repositoryURL, nil)
 	if err != nil {
@@ -148,7 +148,7 @@ func (rb *RepositoryBackend) getImageIDFromTagV1(registry string, appName string
 	// requested one (.../tags/TAG) because even though it's specified in the
 	// Docker API, some registries (e.g. Google Container Registry) don't
 	// implement it.
-	req, err := http.NewRequest("GET", rb.protocol()+path.Join(registry, "repositories", appName, "tags"), nil)
+	req, err := http.NewRequest("GET", rb.schema+path.Join(registry, "repositories", appName, "tags"), nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to get Image ID: %s, URL: %s", err, req.URL)
 	}
@@ -187,7 +187,7 @@ func (rb *RepositoryBackend) getImageIDFromTagV1(registry string, appName string
 
 func (rb *RepositoryBackend) getAncestryV1(imgID, registry string, repoData *RepoData) ([]string, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", rb.protocol()+path.Join(registry, "images", imgID, "ancestry"), nil)
+	req, err := http.NewRequest("GET", rb.schema+path.Join(registry, "images", imgID, "ancestry"), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func (rb *RepositoryBackend) getAncestryV1(imgID, registry string, repoData *Rep
 
 func (rb *RepositoryBackend) getJsonV1(imgID, registry string, repoData *RepoData) ([]byte, int64, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", rb.protocol()+path.Join(registry, "images", imgID, "json"), nil)
+	req, err := http.NewRequest("GET", rb.schema+path.Join(registry, "images", imgID, "json"), nil)
 	if err != nil {
 		return nil, -1, err
 	}
@@ -255,7 +255,7 @@ func (rb *RepositoryBackend) getJsonV1(imgID, registry string, repoData *RepoDat
 
 func (rb *RepositoryBackend) getLayerV1(imgID, registry string, repoData *RepoData, imgSize int64, tmpDir string) (*os.File, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", rb.protocol()+path.Join(registry, "images", imgID, "layer"), nil)
+	req, err := http.NewRequest("GET", rb.schema+path.Join(registry, "images", imgID, "layer"), nil)
 	if err != nil {
 		return nil, err
 	}
