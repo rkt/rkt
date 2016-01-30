@@ -232,7 +232,7 @@ func getManifests(renderedACI acirenderer.RenderedACI, aciRegistry acirenderer.A
 func writeSquashedImage(outputFile *os.File, renderedACI acirenderer.RenderedACI, aciProvider acirenderer.ACIProvider, manifests []schema.ImageManifest, compression common.Compression) error {
 	var tarWriterTarget io.WriteCloser = outputFile
 
-	switch(compression) {
+	switch compression {
 	case common.NoCompression:
 	case common.GzipCompression:
 		tarWriterTarget = gzip.NewWriter(outputFile)

@@ -48,36 +48,6 @@ type v2Manifest struct {
 	Signature []byte `json:"signature"`
 }
 
-func (rb *RepositoryBackend) supportsV2(indexURL string) (bool, error) {
-	url := rb.protocol() + path.Join(indexURL, "v2")
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return false, err
-	}
-
-	rb.setBasicAuth(req)
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return false, err
-	}
-	defer res.Body.Close()
-
-	switch res.StatusCode {
-	case http.StatusOK, http.StatusUnauthorized:
-		if res.Header.Get("Docker-Distribution-API-Version") == "registry/2.0" {
-			return true, nil
-		}
-		return false, nil
-	case http.StatusNotFound:
-		return false, nil
-	default:
-		return false, fmt.Errorf("unexpected http code: %d, URL: %s", res.StatusCode, req.URL)
-	}
-}
-
 func (rb *RepositoryBackend) getImageInfoV2(dockerURL *types.ParsedDockerURL) ([]string, *types.ParsedDockerURL, error) {
 	manifest, layers, err := rb.getManifestV2(dockerURL)
 	if err != nil {
@@ -128,7 +98,7 @@ func (rb *RepositoryBackend) buildACIV2(layerNumber int, layerID string, dockerU
 }
 
 func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v2Manifest, []string, error) {
-	url := rb.protocol() + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "manifests", dockerURL.Tag)
+	url := rb.schema + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "manifests", dockerURL.Tag)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -188,7 +158,7 @@ func getLayerIndex(layerID string, manifest v2Manifest) (int, error) {
 }
 
 func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedDockerURL, tmpDir string) (*os.File, error) {
-	url := rb.protocol() + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "blobs", layerID)
+	url := rb.schema + path.Join(dockerURL.IndexURL, "v2", dockerURL.ImageName, "blobs", layerID)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
