@@ -184,7 +184,10 @@ func (n *Networking) GetDefaultHostIP() (net.IP, error) {
 }
 
 // Teardown cleans up a produced Networking object.
-func (n *Networking) Teardown(flavor string) {
+func (n *Networking) Teardown(flavor string, debug bool) {
+
+	stderr = log.New(os.Stderr, "networking", debug)
+
 	// Teardown everything in reverse order of setup.
 	// This should be idempotent -- be tolerant of missing stuff
 

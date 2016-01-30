@@ -516,7 +516,7 @@ func stage1() int {
 
 		if err = n.Save(); err != nil {
 			log.PrintE("failed to save networking state", err)
-			n.Teardown(flavor)
+			n.Teardown(flavor, debug)
 			return 6
 		}
 
