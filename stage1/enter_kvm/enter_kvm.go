@@ -76,7 +76,7 @@ func generateKeyPair(private string) error {
 		"-N", "", // no passphrase
 	).Output()
 	if err != nil {
-		// out is in form of bytes buffer and we have to turn it into slice ending on first \0 occurence
+		// out is in form of bytes buffer and we have to turn it into slice ending on first \0 occurrence
 		return fmt.Errorf("error in keygen time. ret_val: %v, output: %v", err, string(out[:]))
 	}
 	return nil

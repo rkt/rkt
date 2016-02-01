@@ -122,7 +122,7 @@ func SetFileCreateLabel(fileLabel string) error {
 // is "z", relabel will change the MCS label to s0.  This will allow all
 // containers to share the content.  If the relabel string is a "Z" then
 // the MCS label should continue to be used.  SELinux will use this field
-// to make sure the content can not be shared by other containes.
+// to make sure the content can not be shared by other containers.
 func Relabel(path string, fileLabel string, relabel string) error {
 	exclude_path := []string{"/", "/usr", "/etc"}
 	if fileLabel == "" {

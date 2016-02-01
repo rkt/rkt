@@ -57,7 +57,7 @@ func TestGetKVMNetArgs(t *testing.T) {
 			},
 			expectedLkvm: []string{"--network", "mode=tap,tapif=fooInt,host_ip=1.1.1.1,guest_ip=2.2.2.2"},
 		},
-		{ // extra gw passed to kernel on (thrid position)
+		{ // extra gw passed to kernel on (third position)
 			netDescriptions: []netDescriber{
 				testNetDescriber{
 					net.ParseIP("1.1.1.1"),

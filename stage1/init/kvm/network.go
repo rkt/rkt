@@ -70,7 +70,7 @@ func GetKVMNetArgs(nds []netDescriber) ([]string, error) {
 // complemented by 3 random bytes.
 func generateMacAddress() (net.HardwareAddr, error) {
 	mac := []byte{
-		2,          // locally administred unicast
+		2,          // locally administered unicast
 		0x65, 0x02, // OUI (randomly choosen by jell)
 		0, 0, 0, // bytes to randomly overwrite
 	}
@@ -158,7 +158,7 @@ func GenerateNetworkInterfaceUnits(unitsPath string, netDescriptions []netDescri
 			return errwrap.Wrap(fmt.Errorf("failed to create network unit file %q", unitName), err)
 		}
 
-		log.Printf("network unit created: %q in %q (iface=%q, addr=%q)", unitName, unitsPath, ifName, address)
+		rlog.Printf("network unit created: %q in %q (iface=%q, addr=%q)", unitName, unitsPath, ifName, address)
 	}
 	return nil
 }

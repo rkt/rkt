@@ -460,7 +460,7 @@ func handleAppID(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest,
 	w.WriteHeader(http.StatusOK)
 	app := pm.Apps.Get(*an)
 	if app == nil {
-		// This is impossiple as we have already checked that
+		// This is impossible as we have already checked that
 		// the image manifest is not nil in the parent function.
 		panic("could not find app in manifest!")
 	}

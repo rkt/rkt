@@ -20,8 +20,8 @@ import (
 	rktlog "github.com/coreos/rkt/pkg/log"
 )
 
-var log *rktlog.Logger
+var rlog *rktlog.Logger
 
 func init() {
-	log = rktlog.New(os.Stderr, "kvm", false)
+	rlog = rktlog.New(os.Stderr, "kvm", false)
 }
