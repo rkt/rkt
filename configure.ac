@@ -483,16 +483,18 @@ dnl Digits regexp class. Square brackets are used by m4 for quoting,
 dnl so to get literal square brackets, m4 provides ugly @<:@ and @:>@
 dnl for [ and ].
 m4_define([DIGITS],[@<:@0-9@:>@])
+m4_define([CHARS],[@<:@a-z@:>@])
 
 dnl Detect go version. Go 1.4 support only "-X variable 'value'"
 dnl format of assigning values to variables via linker flags. Go 1.5
 dnl deprecates this format in favor of "-X 'variable=value'"
 dnl format. Drop this ugliness when we drop support for Go 1.4.
-GO_VERSION=`"${ABS_GO}" version | sed -e 's/^go version go\(DIGITS*\.DIGITS*\.DIGITS*\).*/\1/'`
+dnl Successfully parse versions like "go1.5", "go1.5.3", "go1.6rc1"
+GO_VERSION=`"${ABS_GO}" version | sed -e 's/^go version go\(DIGITS*\.DIGITS*CHARS*\(\.\)\{0,1\}DIGITS*\).*/\1/'`
 GO_MAJOR=`echo "${GO_VERSION}" | grep -o '^DIGITS\+'`
 GO_MINOR=`echo "${GO_VERSION}" | grep -o '^DIGITS\+\.DIGITS\+' | grep -o 'DIGITS\+$'`
 GO_MAJOR_MINOR=`echo "${GO_MAJOR}.${GO_MINOR}"`
-GO_MICRO=`echo "${GO_VERSION}" | grep -o 'DIGITS\+$'`
+GO_MICRO=`echo "${GO_VERSION}" | grep -o '^DIGITS\+\.DIGITS\+\.DIGITS\+' | sed -e 's/^DIGITS*\.DIGITS*\.\(DIGITS*\).*/\1/'`
 
 GO_BEST_MAJOR=1
 GO_BEST_MINOR=5
