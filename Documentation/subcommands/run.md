@@ -323,7 +323,7 @@ If you don't use systemd, you can use [daemon](http://www.libslack.org/daemon/) 
 | `--no-overlay` |  `false` | `true` or `false` | Disable overlay filesystem |
 | `--no-store` |  `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
 | `--pod-manifest` |  `` | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect |
-| `--port` |  `` | A port number | Ports to expose on the host (requires `--net`) |
+| `--port` |  `` | A port number | Ports to expose on the host (requires [contained network](https://github.com/coreos/rkt/blob/master/Documentation/networking.md#contained-mode)). Syntax: --port=NAME:HOSTPORT |
 | `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental) |
 | `--set-env` |  `` | An environment variable. Syntax `NAME=VALUE` | An environment variable to set for apps |
 | `--signature` |  `` | A file path | Local signature file to use in validating the preceding image |

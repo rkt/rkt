@@ -72,8 +72,8 @@ func init() {
 	cmdRkt.AddCommand(cmdRun)
 
 	addStage1ImageFlag(cmdRun.Flags())
-	cmdRun.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires --net)")
-	cmdRun.Flags().Var(&flagNet, "net", "configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively. syntax: --net[=n[:args], ...]")
+	cmdRun.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires contained network). Syntax: --port=NAME:HOSTPORT")
+	cmdRun.Flags().Var(&flagNet, "net", "configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively. Syntax: --net[=n[:args], ...]")
 	cmdRun.Flags().Lookup("net").NoOptDefVal = "default"
 	cmdRun.Flags().BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	cmdRun.Flags().BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
