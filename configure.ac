@@ -21,6 +21,11 @@ dnl We assume having bash in lots of places, so check it in the
 dnl beginning.
 RKT_REQ_ABS_PROG([BASH_SHELL], [bash])
 
+dnl this will be printed in configure summary and by rkt version
+RKT_FEATURES=""
+RKT_ADD_FEATURE() {
+    RKT_FEATURES=`echo "${RKT_FEATURES} $1" | sed -e 's/^ \+//'`
+}
 dnl if version ends with +git, append a short git-hash.
 AS_IF([test `expr match 'AC_PACKAGE_VERSION' '.*+git$'` -gt 0],
       dnl version has +git suffix, ignore errors (not a git repo)
@@ -110,6 +115,14 @@ AC_ARG_ENABLE([functional-tests],
                               [enable functional tests on make check (linux only, uses sudo, default: 'no', use 'auto' to enable if possible, for host stage1 flavor systemd version 220 or higher on host is required)])],
               [RKT_RUN_FUNCTIONAL_TESTS="${enableval}"],
               [RKT_RUN_FUNCTIONAL_TESTS="no"])
+
+## TPM
+
+AC_ARG_ENABLE([tpm],
+              [AS_HELP_STRING([--enable-tpm],
+                              [enable logging to TPM, use 'auto' to enable it if the required development files are found, default: 'yes'])],
+              [RKT_ENABLE_TPM="${enableval}"],
+              [RKT_ENABLE_TPM="yes"])
 
 #### CHECKING
 
@@ -461,12 +474,31 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 AC_SUBST(RKT_DEFINES_FOR_ENTER)
 
 # Check whether we can build TPM support code
-AC_CHECK_HEADER(trousers/tss.h, [TPM_TAGS=tpm], [], [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADER(trousers/tss.h, [HAVE_TPM=yes], [HAVE_TPM=no], [AC_INCLUDES_DEFAULT])
+
+TPM_TAGS=''
+AS_CASE([${RKT_ENABLE_TPM}],
+        [no],
+                dnl nothing to do
+                [:],
+        [auto],
+                [AS_VAR_IF([HAVE_TPM],[yes],
+                           [TPM_TAGS=tpm
+                            RKT_ENABLE_TPM=yes],
+                           [RKT_ENABLE_TPM=no])],
+        [yes],
+                [AS_VAR_IF([HAVE_TPM],[no],
+                           [AC_MSG_ERROR([*** TPM is enabled, but could not find required development files])])
+                 TPM_TAGS=tpm],
+        [AC_MSG_ERROR([*** Invalid value passed to --enable-tpm, should be either 'yes', 'no' or 'auto'])])
+AS_CASE([${RKT_ENABLE_TPM}],
+        [no],
+                [RKT_ADD_FEATURE '-TPM'],
+        [yes],
+                [RKT_ADD_FEATURE '+TPM'])
 
 # Check whether we have libacl
 AC_CHECK_HEADER(acl/libacl.h, [], [AC_MSG_ERROR([*** No development headers for libacl found. Try to install libacl-devel or libacl1-dev])], [AC_INCLUDES_DEFAULT])
-
-AC_SUBST(TPM_TAGS)
 
 AC_LANG_POP([C])
 
@@ -524,6 +556,7 @@ RKT_STAGE1_DEFAULT_NAME_LDFLAGS=`RKT_XF main.defaultStage1Name "${RKT_STAGE1_DEF
 RKT_STAGE1_DEFAULT_VERSION_LDFLAGS=`RKT_XF main.defaultStage1Version "${RKT_STAGE1_DEFAULT_VERSION}"`
 RKT_STAGE1_DEFAULT_LOCATION_LDFLAGS=`RKT_XF main.defaultStage1Image "${RKT_STAGE1_DEFAULT_LOCATION}"`
 RKT_VERSION_LDFLAGS=`RKT_XF github.com/coreos/rkt/version.Version "${RKT_VERSION}"`
+RKT_FEATURES_LDFLAGS=`RKT_XF main.rktFeatures "${RKT_FEATURES}"`
 
 #### SUBSTITUTIONS
 
@@ -553,6 +586,9 @@ AC_SUBST(RKT_STAGE1_DEFAULT_NAME_LDFLAGS)
 AC_SUBST(RKT_STAGE1_DEFAULT_VERSION_LDFLAGS)
 AC_SUBST(RKT_STAGE1_DEFAULT_LOCATION_LDFLAGS)
 AC_SUBST(RKT_VERSION_LDFLAGS)
+AC_SUBST(RKT_FEATURES_LDFLAGS)
+
+AC_SUBST(TPM_TAGS)
 
 #### FILE GENERATION AND REPORTING
 
@@ -602,4 +638,5 @@ AC_MSG_RESULT([
         other build parameters
 
         functional tests enabled:               '${RKT_RUN_FUNCTIONAL_TESTS}'
+        features:                               '${RKT_FEATURES}'
         go version:                             '${GO_VERSION}'])

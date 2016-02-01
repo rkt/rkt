@@ -11,6 +11,16 @@
 
 - Don't link to libacl, but dlopen it ([#1963](https://github.com/coreos/rkt/pull/1963)). This means that rkt will not crash if libacl is not present on the host, but it will just print a warning.
 
+#### Other changes
+
+- Trusted Platform Module logging (TPM) is now enabled by default ([#1815](https://github.com/coreos/rkt/issues/1815)). This ensures that rkt benefits from security features by default. See rkt's [Build Configuration](https://github.com/coreos/rkt/blob/master/Documentation/build-configure.md#security) documentation.
+
+#### Note for packagers
+
+With this release, `rkt` RPM/dpkg packages should have the following updates:
+
+- Pass `--enable-tpm=no` to configure script, if `rkt` should not use TPM.
+
 ## v0.16.0
 
 #### New features and UX changes

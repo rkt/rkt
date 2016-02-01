@@ -12,7 +12,7 @@ Let's get started:
 - Update the [roadmap](https://github.com/coreos/rkt/blob/master/ROADMAP.md) to remove the release you're performing, if necessary
 - Branch from the latest master, make sure your git status is clean
 - Ensure the build is clean!
-  - `git clean -ffdx && ./autogen.sh && ./configure --enable-functional-tests && make && make check` should work
+  - `git clean -ffdx && ./autogen.sh && ./configure --enable-tpm=no --enable-functional-tests && make && make check` should work
   - Integration tests on CI should be green
 - Update the [release notes](https://github.com/coreos/rkt/blob/master/CHANGELOG.md).
   Try to capture most of the salient changes since the last release, but don't go into unnecessary detail (better to link/reference the documentation wherever possible).
@@ -35,7 +35,7 @@ After merging and going back to master branch, we check out the release version 
 
 - `git checkout HEAD^` should work; sanity check configure.ac (2nd line) after doing this
 - Build rkt, we'll use this in a minute:
-  - `git clean -ffdx && ./autogen.sh && ./configure && make BUILDDIR=release-build -j 4`
+  - `git clean -ffdx && ./autogen.sh && ./configure --enable-tpm=no && make BUILDDIR=release-build -j 4`
     - This will build the `coreos`, `kvm` and `fly` flavors and make `coreos` the default
     - Use make's `-j` parameter as you see fit
   - Sanity check `release-build/bin/rkt version`
