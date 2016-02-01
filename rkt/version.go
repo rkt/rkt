@@ -23,7 +23,8 @@ import (
 )
 
 var (
-	cmdVersion = &cobra.Command{
+	rktFeatures string // set by linker
+	cmdVersion  = &cobra.Command{
 		Use:   "version",
 		Short: "Print the version and exit",
 		Long:  "Print the version and exit",
@@ -40,5 +41,6 @@ func runVersion(cmd *cobra.Command, args []string) (exit int) {
 	stdout.Printf("appc Version: %s", schema.AppContainerVersion)
 	stdout.Printf("Go Version: %s", runtime.Version())
 	stdout.Printf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
+	stdout.Printf("Features: %s", rktFeatures)
 	return
 }
