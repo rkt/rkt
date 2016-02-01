@@ -42,7 +42,7 @@ func findResources(isolators types.Isolators) (mem, cpus int64) {
 	return mem, cpus
 }
 
-// GetAppsResources returns values specfied by user in pod-manifest.
+// GetAppsResources returns values specified by user in pod-manifest.
 // Function expects a podmanifest apps.
 // Return aggregate quantity of mem (in MB) and cpus.
 func GetAppsResources(apps schema.AppList) (totalCpus, totalMem int64) {

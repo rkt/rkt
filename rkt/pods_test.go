@@ -120,7 +120,7 @@ func TestWalkPods(t *testing.T) {
 		defer os.RemoveAll(d)
 
 		// This will mark the flag as changed, so it will have
-		// precendence over the configuration and the default
+		// precedence over the configuration and the default
 		// value.
 		cmdRkt.PersistentFlags().Set("dir", d)
 		if err := initPods(); err != nil {

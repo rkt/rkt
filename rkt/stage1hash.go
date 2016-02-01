@@ -74,7 +74,7 @@ func stage1ImageFlagHelp() string {
 // from disk or network.
 //
 // As a special case, if stage1 image path is a default and not
-// overriden by --stage1-image flag and it is has no scheme, it will
+// overridden by --stage1-image flag and it is has no scheme, it will
 // try to fetch it from two places on disk - from the path directly if
 // it is absolute and then from the same directory where rkt binary
 // resides.
