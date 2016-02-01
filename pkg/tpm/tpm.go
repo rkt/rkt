@@ -17,12 +17,17 @@
 package tpm
 
 import (
+	"time"
+
 	"github.com/coreos/go-tspi/tpmclient"
 )
 
+// we're connecting to localhost, so 10ms is a reasonable timeout value
+const timeout = 10 * time.Millisecond
+
 // Extend extends the TPM log with the provided string. Returns any error.
 func Extend(description string) error {
-	connection := tpmclient.New("localhost:12041")
+	connection := tpmclient.New("localhost:12041", timeout)
 	err := connection.Extend(15, 0x1000, nil, description)
 	return err
 }

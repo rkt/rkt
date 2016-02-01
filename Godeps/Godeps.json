@@ -173,15 +173,15 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/attestation",
-			"Rev": "5b86c15a590e0dd6de7ae28357bbc20c3a1dbb49"
+			"Rev": "8d98d77f9fc5e3a93227cbcde7abb8bdf1a29869"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/tpmclient",
-			"Rev": "5b86c15a590e0dd6de7ae28357bbc20c3a1dbb49"
+			"Rev": "8d98d77f9fc5e3a93227cbcde7abb8bdf1a29869"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/tspi",
-			"Rev": "5b86c15a590e0dd6de7ae28357bbc20c3a1dbb49"
+			"Rev": "8d98d77f9fc5e3a93227cbcde7abb8bdf1a29869"
 		},
 		{
 			"ImportPath": "github.com/coreos/ioprogress",

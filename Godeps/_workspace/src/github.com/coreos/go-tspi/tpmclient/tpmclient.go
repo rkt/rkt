@@ -22,6 +22,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/coreos/go-tspi/attestation"
 	"github.com/coreos/go-tspi/tspi"
@@ -30,18 +31,25 @@ import (
 // TPMClient represents a connection to a system running a daemon providing
 // access to TPM functionality
 type TPMClient struct {
-	host string
+	host    string
+	timeout time.Duration
 }
 
 func (client *TPMClient) get(endpoint string) (*http.Response, error) {
 	url := fmt.Sprintf("http://%s/%s", client.host, endpoint)
-	resp, err := http.Get(url)
+	httpClient := &http.Client{
+		Timeout: client.timeout,
+	}
+	resp, err := httpClient.Get(url)
 	return resp, err
 }
 
 func (client *TPMClient) post(endpoint string, data io.Reader) (*http.Response, error) {
 	url := fmt.Sprintf("http://%s/%s", client.host, endpoint)
-	resp, err := http.Post(url, "application/json", data)
+	httpClient := &http.Client{
+		Timeout: client.timeout,
+	}
+	resp, err := httpClient.Post(url, "application/json", data)
 	return resp, err
 }
 
@@ -243,7 +251,10 @@ func (client *TPMClient) GetQuote(aikpub []byte, aikblob []byte, pcrs []int) (pc
 }
 
 // New returns a TPMClient structure configured to connect to the provided
-// host
-func New(host string) *TPMClient {
-	return &TPMClient{host: host}
+// host with the provided timeout.
+func New(host string, timeout time.Duration) *TPMClient {
+	return &TPMClient{
+		host:    host,
+		timeout: timeout,
+	}
 }
