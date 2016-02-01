@@ -338,6 +338,80 @@ func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 	f("--net=default-restricted")
 }
 
+/*
+ * Default net port forwarding connectivity
+ * ---
+ * Container launches http server on all its interfaces
+ * Host must be able to connect to container's http server on it's own interfaces
+ */
+func TestNetDefaultPortFwdConnectivity(t *testing.T) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	bannedPorts := make(map[int]struct{}, 0)
+	f := func(httpGetIP string, rktArg string, shouldSucceed bool) {
+		httpPort, err := testutils.GetNextFreePort4Banned(bannedPorts)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		bannedPorts[httpPort] = struct{}{}
+
+		httpServeAddr := fmt.Sprintf("0.0.0.0:%d", httpPort)
+		testImageArgs := []string{
+			fmt.Sprintf("--ports=http,protocol=tcp,port=%d", httpPort),
+			fmt.Sprintf("--exec=/inspect --serve-http=%v", httpServeAddr),
+		}
+		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
+		defer os.Remove(testImage)
+
+		cmd := fmt.Sprintf(
+			"%s --debug --insecure-options=image run --port=http:%d %s --mds-register=false %s",
+			ctx.Cmd(), httpPort, rktArg, testImage)
+		child := spawnOrFail(t, cmd)
+
+		httpGetAddr := fmt.Sprintf("http://%v:%v", httpGetIP, httpPort)
+
+		ga := testutils.NewGoroutineAssistant(t)
+		ga.Add(2)
+
+		// Child opens the server
+		go func() {
+			defer ga.Done()
+			ga.WaitOrFail(child)
+		}()
+
+		// Host connects to the child via the forward port on localhost
+		go func() {
+			defer ga.Done()
+			expectedRegex := `serving on`
+			_, out, err := expectRegexWithOutput(child, expectedRegex)
+			if err != nil {
+				ga.Fatalf("Error: %v\nOutput: %v", err, out)
+			}
+			body, err := testutils.HTTPGet(httpGetAddr)
+			switch {
+			case err != nil && shouldSucceed:
+				ga.Fatalf("%v\n", err)
+			case err == nil && !shouldSucceed:
+				ga.Fatalf("HTTP-Get to %q should have failed! But received %q", httpGetAddr, body)
+			case err != nil && !shouldSucceed:
+				child.Close()
+				fallthrough
+			default:
+				t.Logf("HTTP-Get received: %s", body)
+			}
+		}()
+
+		ga.Wait()
+	}
+	f("172.16.28.1", "--net=default", true)
+	f("127.0.0.1", "--net=default", true)
+
+	// TODO: ensure that default-restricted is not accessible from non-host
+	// f("172.16.28.1", "--net=default-restricted", true)
+	// f("127.0.0.1", "--net=default-restricted", true)
+}
+
 func writeNetwork(t *testing.T, net networkTemplateT, netd string) error {
 	var err error
 	path := filepath.Join(netd, net.Name+".conf")
