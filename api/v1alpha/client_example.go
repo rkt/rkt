@@ -51,6 +51,24 @@ func main() {
 
 	for _, p := range podResp.Pods {
 		fmt.Printf("Pod %q is running\n", p.Id)
+
+		logsResp, err := c.GetLogs(context.Background(), &v1alpha.GetLogsRequest{
+			PodId: p.Id,
+		})
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(2)
+		}
+
+		logsRecvResp, err := logsResp.Recv()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(2)
+		}
+
+		for _, l := range logsRecvResp.Lines {
+			fmt.Println(l)
+		}
 	}
 
 	// List images.
