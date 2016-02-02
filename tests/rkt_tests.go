@@ -584,10 +584,22 @@ func serverHandler(t *testing.T, server *taas.Server) {
 	}
 }
 
-func runSignImage(t *testing.T, imageFile string) string {
+func runSignImage(t *testing.T, imageFile string, keyIndex int) string {
 	ascFile := fmt.Sprintf("%s.asc", imageFile)
-	cmd := fmt.Sprintf("gpg --no-default-keyring --secret-keyring ./secring.gpg --keyring ./pubring.gpg --default-key D9DCEF41 --output %s --detach-sig %s",
-		ascFile, imageFile)
+
+	// keys stored in tests/secring.gpg, tests/pubring.gpg, tests/key1.gpg, tests/key2.gpg
+	keyFingerprint := ""
+	switch keyIndex {
+	case 1:
+		keyFingerprint = "D9DCEF41"
+	case 2:
+		keyFingerprint = "585091E3"
+	default:
+		panic("unknown key")
+	}
+
+	cmd := fmt.Sprintf("gpg --no-default-keyring --secret-keyring ./secring.gpg --keyring ./pubring.gpg --default-key %s --output %s --detach-sig %s",
+		keyFingerprint, ascFile, imageFile)
 	spawnAndWaitOrFail(t, cmd, true)
 	return ascFile
 }
@@ -618,12 +630,13 @@ func runDiscoveryServer(t *testing.T, serverType taas.ServerType, authType taas.
 	return runServer(t, serverType, authType)
 }
 
-func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string) {
+func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string, keyIndex int) {
 	var cmd string
+	keyFile := fmt.Sprintf("key%d.gpg", keyIndex)
 	if prefix == "" {
-		cmd = fmt.Sprintf(`%s trust --root %s`, ctx.Cmd(), "key.gpg")
+		cmd = fmt.Sprintf(`%s trust --root %s`, ctx.Cmd(), keyFile)
 	} else {
-		cmd = fmt.Sprintf(`%s trust --prefix %s %s`, ctx.Cmd(), prefix, "key.gpg")
+		cmd = fmt.Sprintf(`%s trust --prefix %s %s`, ctx.Cmd(), prefix, keyFile)
 	}
 
 	child := spawnOrFail(t, cmd)

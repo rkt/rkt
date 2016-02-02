@@ -424,7 +424,7 @@ func TestDeferredSignatureDownload(t *testing.T) {
 	image := patchTestACI(imageFileName, args...)
 	defer os.Remove(image)
 
-	asc := runSignImage(t, image)
+	asc := runSignImage(t, image, 1)
 	defer os.Remove(asc)
 	ascBase := filepath.Base(asc)
 
@@ -438,7 +438,7 @@ func TestDeferredSignatureDownload(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	runRktTrust(t, ctx, "")
+	runRktTrust(t, ctx, "", 1)
 
 	runCmd := fmt.Sprintf("%s --debug --insecure-options=tls run %s", ctx.Cmd(), imageName)
 	child := spawnOrFail(t, runCmd)
