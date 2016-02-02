@@ -182,12 +182,25 @@ func getTabOutWithWriter(writer io.Writer) *tabwriter.Writer {
 	return aTabOut
 }
 
-// runWrapper return a func(cmd *cobra.Command, args []string) that internally
+// runWrapper returns a func(cmd *cobra.Command, args []string) that internally
 // will add command function return code and the reinsertion of the "--" flag
 // terminator.
 func runWrapper(cf func(cmd *cobra.Command, args []string) (exit int)) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		cmdExitCode = cf(cmd, args)
+	}
+}
+
+// ensureSuperuser will error out if the effective UID of the current process
+// is not zero. Otherwise, it will invoke the supplied cobra command.
+func ensureSuperuser(cf func(cmd *cobra.Command, args []string)) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+		if os.Geteuid() != 0 {
+			stderr.Print("cannot run as unprivileged user")
+			cmdExitCode = 1
+			return
+		}
+		cf(cmd, args)
 	}
 }
 

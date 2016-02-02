@@ -49,7 +49,7 @@ mounts take precedence over global ones if they have the same path.
 An "--" may be used to inhibit rkt run's parsing of subsequent arguments,
 which will instead be appended to the preceding image app's exec arguments.
 End the image arguments with a lone "---" to resume argument parsing.`,
-		Run: runWrapper(runRun),
+		Run: ensureSuperuser(runWrapper(runRun)),
 	}
 	flagPorts        portList
 	flagNet          common.NetList

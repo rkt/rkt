@@ -36,7 +36,7 @@ var (
 	cmdGC = &cobra.Command{
 		Use:   "gc [--grace-period=duration] [--expire-prepared=duration]",
 		Short: "Garbage-collect rkt pods no longer in use",
-		Run:   runWrapper(runGC),
+		Run:   ensureSuperuser(runWrapper(runGC)),
 	}
 	flagGracePeriod        time.Duration
 	flagPreparedExpiration time.Duration
