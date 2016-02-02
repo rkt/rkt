@@ -7,7 +7,7 @@ If the ACI exists locally, it won't be re-downloaded.
 
 The easiest way to fetch an ACI is through meta discovery.
 rkt will find and download the ACI and signature from a location that the creator has published on their website.
-This process is detailed in the [Application Container specification](https://github.com/appc/spec/blob/master/spec/discovery.md) appc-discovery.
+The [ACI discovery mechanism is detailed in the App Container specification][appc-discovery].
 
 If you have previously trusted the image creator, it will be downloaded and verified:
 
@@ -101,3 +101,5 @@ Note that the configuration kind for images downloaded via https:// and images d
 | `--system-config` |  `/usr/lib/rkt` | A directory path | Path to the system configuration directory |
 | `--trust-keys-from-https` |  `false` | `true` or `false` | Automatically trust gpg keys fetched from https |
 | `--user-config` |  `` | A directory path | Path to the user configuration directory |
+
+[appc-discovery]: https://github.com/appc/spec/blob/master/spec/discovery.md

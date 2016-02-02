@@ -26,7 +26,7 @@ To trust a key for an entire root domain, you must use the `--root` flag, with a
 
 The easiest way to trust a key is through meta discovery.
 rkt will find and download a public key that the creator has published on their website.
-This process is detailed in the [Application Container specification](https://github.com/appc/spec/blob/master/spec/discovery.md) appc-discovery.
+The [ACI discovery mechanism is detailed in the App Container specification][appc-discovery].
 The TL;DR is rkt will find a meta tag that looks like:
 
 ```html
@@ -103,3 +103,5 @@ $ find /etc/rkt/trustedkeys/
 | `--system-config` |  `/usr/lib/rkt` | A directory path | Path to the system configuration directory |
 | `--trust-keys-from-https` |  `false` | `true` or `false` | Automatically trust gpg keys fetched from https |
 | `--user-config` |  `` | A directory path | Path to the user configuration directory |
+
+[appc-discovery]: https://github.com/appc/spec/blob/master/spec/discovery.md
