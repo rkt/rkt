@@ -2,12 +2,14 @@
 
 `rkt` is designed to cooperate with init systems, like [`systemd`][systemd]. rkt implements a simple CLI that directly executes processes, and does not interpose a long-running daemon, so the lifecycle of rkt pods can be directly managed by systemd. Standard systemd idioms like `systemctl start` and `systemctl stop` work out of the box.
 
+In the shell excerpts below, a `#` prompt indicates commands that require root privileges, while the `$` prompt denotes commands issued as an unprivileged user.
+
 ## systemd-run
 
 The [`systemd-run`][systemd-run] utility is a convenient shortcut for testing a service before making it permanent in a unit file. To start a "daemonized" container that forks the container processes into the background, wrap the invocation of `rkt` with `systemd-run`:
 
 ```
-$ systemd-run --slice=machine rkt run coreos.com/etcd:v2.0.10
+# systemd-run --slice=machine rkt run coreos.com/etcd:v2.0.10
 Running as unit run-3247.service.
 ```
 
@@ -46,11 +48,11 @@ rkt-f0261476-7044-4a84-b729-e0f7a47dcffe container nspawn
 Given the name of this rkt machine, `journalctl` can inspect its logs, or `machinectl` can shut it down:
 
 ```
-$ journalctl -M rkt-f0261476-7044-4a84-b729-e0f7a47dcffe
+# journalctl -M rkt-f0261476-7044-4a84-b729-e0f7a47dcffe
 Oct 26 17:38:11 locke rkt[3254]: [25966.375411] etcd[4]: 2015/10/26 16:38:11 raft: ce2a822cea30bfca became follower at term 0
 Oct 26 17:38:11 locke rkt[3254]: [25966.375685] etcd[4]: 2015/10/26 16:38:11 raft: newRaft ce2a822cea30bfca [peers: [], ter...term: 0]
 Oct 26 17:38:11 locke rkt[3254]: [25966.375942] etcd[4]: 2015/10/26 16:38:11
-$ machinectl poweroff rkt-f0261476-7044-4a84-b729-e0f7a47dcffe
+# machinectl poweroff rkt-f0261476-7044-4a84-b729-e0f7a47dcffe
 $ machinectl list
 MACHINE CLASS SERVICE
 
@@ -76,11 +78,11 @@ Restart=always
 This unit can now be managed using the standard `systemctl` commands:
 
 ```
-$ systemctl start etcd.service
-$ systemctl stop etcd.service
-$ systemctl restart etcd.service
-$ systemctl enable etcd.service
-$ systemctl disable etcd.service
+# systemctl start etcd.service
+# systemctl stop etcd.service
+# systemctl restart etcd.service
+# systemctl enable etcd.service
+# systemctl disable etcd.service
 ```
 
 Note that no `ExecStop` clause is required. Setting [`KillMode=mixed`][systemd-killmode-mixed] means that running `systemctl stop etcd.service` will send `SIGTERM` to `stage1`'s `systemd`, which in turn will initiate orderly shutdown inside the pod. Systemd is additionally able to send the cleanup `SIGKILL` to any lingering service processes, after a timeout. This comprises complete pod lifecycle management with familiar, well-known system init tools.
@@ -179,7 +181,7 @@ KillMode=mixed
 Finally, start the socket unit:
 
 ```
-$ systemctl start my-socket-activated-app.socket
+# systemctl start my-socket-activated-app.socket
 $ systemctl status my-socket-activated-app.socket
 ● my-socket-activated-app.socket - My socket-activated app's socket
    Loaded: loaded (/etc/systemd/system/my-socket-activated-app.socket; static; vendor preset: disabled)
