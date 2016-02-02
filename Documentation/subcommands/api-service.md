@@ -2,7 +2,7 @@
 
 ## Overview
 
-The API service is designed to help users to get a well defined and structual result for listing and introspecting their pods and images.
+The API service lists and introspects pods and images.
 The API service is implemented with [gRPC](http://www.grpc.io/).
 The API service is designed to run without root privileges, and currently provides a read-only interface.
 The API service is optional for running pods, the start/stop/crash of the API service won't affect any pods or images.
