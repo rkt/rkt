@@ -70,8 +70,8 @@ If you want to see the kernel and boot messages, run rkt with the `--debug` flag
 You can exit pressing `<Ctrl-a x>`.
 
 #### CPU usage
-By default, processes will start working on all CPUs if at least one app does not have specfied CPUs. 
-In the other case, container will be working on aggregate amount of CPUs. 
+By default, processes will start working on all CPUs if at least one app does not have specfied CPUs.
+In the other case, container will be working on aggregate amount of CPUs.
 
 #### Memory
 Currently, the memory allocated to the virtual machine is a sum of memory required by each app in pod and additional 128MB required by system. If memory of some app is not specified, app memory will be set on default value (128MB).
@@ -83,10 +83,27 @@ If you want to run software that requires hypervisor isolation along with truste
 For example, if you have a container stage1 named `stage1-coreos.aci` and a lkvm stage1 named `stage1-kvm.aci` in `/usr/local/rkt/`:
 
 ```
-# rkt run --stage1-image=/usr/local/rkt/stage1-coreos.aci coreos.com/etcd:v2.0.9
+# rkt run --stage1-path=/usr/local/rkt/stage1-coreos.aci coreos.com/etcd:v2.0.9
 ...
-# rkt run --stage1-image=/usr/local/rkt/stage1-kvm.aci coreos.com/etcd:v2.0.9
+# rkt run --stage1-path=/usr/local/rkt/stage1-kvm.aci coreos.com/etcd:v2.0.9
 ...
+```
+
+These images can be installed in the default stage1 images directory.
+In this case, the stage1 image can be selected with a different flag:
+
+```
+# rkt run --stage1-from-dir=stage1-coreos.aci coreos.com/etcd:v2.0.9
+...
+# rkt run --stage1-from-dir=stage1-kvm.aci coreos.com/etcd:v2.0.9
+...
+```
+
+When the image is already in the store, the `--stage1-name` or `--stage1-hash` flags can be used instead for a faster startup:
+
+```
+# rkt run --stage1-name=coreos.com/rkt/stage1-kvm coreos.com/etcd:v2.0.9
+# rkt run --stage1-hash=<hash> coreos.com/etcd:v2.0.9
 ```
 
 ## How does it work?

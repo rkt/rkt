@@ -44,7 +44,11 @@ c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 | `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental) |
 | `--quiet` |  `false` | `true` or `false` | Supress superfluous output on stdout, print only the UUID on success |
 | `--set-env` |  `` | An environment variable. Syntax `NAME=VALUE` | An environment variable to set for apps |
-| `--stage1-image` |  `` | A path to a stage1 image. Local paths and HTTP/HTTPS URLs are supported | Image to use as stage1 |
+| `--stage1-url` |  `` | A URL to a stage1 image. HTTP/HTTPS/File/Docker URLs are supported | Image to use as stage1 |
+| `--stage1-path` |  `` | A path to a stage1 image. Absolute and relative paths are supported | Image to use as stage1 |
+| `--stage1-name` |  `` | A name of a stage1 image. Will perform a discovery if the image is not in the store | Image to use as stage1 |
+| `--stage1-hash` |  `` | A hash of a stage1 image. The image must exist in the store | Image to use as stage1 |
+| `--stage1-from-dir` |  `` | A stage1 image file inside the default stage1 images directory | Image to use as stage1 |
 | `--store-only` |  `false` | `true` or `false` | Use only available images in the store (do not discover or download from remote URLs). See [image fetching behavior](../image-fetching-behavior.md) |
 | `--volume` |  `` | Volume syntax (`NAME,kind=KIND,source=PATH,readOnly=BOOL`). See [Mount Volumes into a Pod](run.md#mount-volumes-into-a-pod) | Volumes to make available in the pod |
 

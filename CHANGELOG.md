@@ -1,4 +1,4 @@
-## vUNREASED
+## vUNRELEASED
 
 #### New features and UX changes
 
@@ -6,6 +6,9 @@
 - The DNS configuration can now be passed to the pod via the command line ([#2040](https://github.com/coreos/rkt/pull/2040)). See [`DNS support`](https://github.com/coreos/rkt/blob/master/Documentation/networking.md#dns-support) documentation.
 - Errors are now structured, allowing for better control of the output. See [#1937](https://github.com/coreos/rkt/pull/1937) for background and the [Error & Output](https://github.com/coreos/rkt/blob/master/Documentation/hacking.md#errors--output) section of the Hacking document for usage.
 - All output now uses the new log package in `pkg/log` to provide a more clean and consistent output format and more helpful debug output. See [#1937](https://github.com/coreos/rkt/pull/1937)
+- Added configuration for stage1 image. Users can drop a configuration file to `/etc/rkt/stage1.d` (or to `stage1.d` in the user configuration directory) to tell rkt to use a different stage1 image name, version and location instead of build-time defaults ([#1977](https://github.com/coreos/rkt/pull/1977)).
+- Replaced the `--stage1-image` flag with a new set of flags. `--stage1-url`, `--stage-path`, `--stage1-name` do the usual fetching from remote if the image does not exist in the store. `--stage1-hash` takes the stage1 image directly from the store. `--stage1-from-dir` works together with the default stage1 images directory and is described in the next point ([#1977](https://github.com/coreos/rkt/pull/1977)).
+- Added default stage1 images directory. User can use the newly added `--stage1-from-dir` parameter to avoid typing the full path. `--stage1-from-dir` behaves like `--stage1-path` ([#1977](https://github.com/coreos/rkt/pull/1977)).
 
 #### Bug fixes
 
@@ -15,11 +18,16 @@
 
 - Trusted Platform Module logging (TPM) is now enabled by default ([#1815](https://github.com/coreos/rkt/issues/1815)). This ensures that rkt benefits from security features by default. See rkt's [Build Configuration](https://github.com/coreos/rkt/blob/master/Documentation/build-configure.md#security) documentation.
 
+#### Migration
+
+- The `--stage1-image` flag was removed. Scripts using it should be updated to use one of `--stage1-url`, `--stage1-path`, `--stage1-name`, `--stage1-hash` or `--stage1-from-dir`
+
 #### Note for packagers
 
 With this release, `rkt` RPM/dpkg packages should have the following updates:
 
 - Pass `--enable-tpm=no` to configure script, if `rkt` should not use TPM.
+- Use the `--with-default-stage1-images-directory` configure flag, if the default is not acceptable and install the built stage1 images there.
 
 ## v0.16.0
 
