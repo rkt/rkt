@@ -10,6 +10,7 @@
 - Replaced the `--stage1-image` flag with a new set of flags. `--stage1-url`, `--stage-path`, `--stage1-name` do the usual fetching from remote if the image does not exist in the store. `--stage1-hash` takes the stage1 image directly from the store. `--stage1-from-dir` works together with the default stage1 images directory and is described in the next point ([#1977](https://github.com/coreos/rkt/pull/1977)).
 - Added default stage1 images directory. User can use the newly added `--stage1-from-dir` parameter to avoid typing the full path. `--stage1-from-dir` behaves like `--stage1-path` ([#1977](https://github.com/coreos/rkt/pull/1977)).
 - Removed the deprecated `--insecure-skip-verify` flag ([#2068](https://github.com/coreos/rkt/pull/2068)).
+- Fetched keys are no longer automatically trusted by default, unless `--trust-keys-from-https` is used. Additionally, newly fetched key have to be explicitely trusted with `rkt trust` if a previous key was trusted for the same image prefix ([#2033](https://github.com/coreos/rkt/pull/2033)).
 
 #### Bug fixes
 
