@@ -149,7 +149,7 @@ func TestRktListCreatedStarted(t *testing.T) {
 	defer ctx.Cleanup()
 
 	// Prepare image
-	cmd := fmt.Sprintf("%s --insecure-skip-verify prepare %s", ctx.Cmd(), imgID.path)
+	cmd := fmt.Sprintf("%s --insecure-options=image prepare %s", ctx.Cmd(), imgID.path)
 	podUuid := runRktAndGetUUID(t, cmd)
 
 	// t0: prepare

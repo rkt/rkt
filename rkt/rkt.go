@@ -173,9 +173,6 @@ func init() {
 		stdout = log.New(os.Stdout, "", false)
 	}
 
-	// TODO: Remove before 1.0
-	rktflag.InstallDeprecatedSkipVerify(cmdRkt.PersistentFlags(), sf)
-
 	cobra.EnablePrefixMatching = true
 }
 
