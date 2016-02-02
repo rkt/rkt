@@ -41,37 +41,43 @@ func TestTrust(t *testing.T) {
 	runImage(t, ctx, imageFile, "error opening signature file", true)
 
 	t.Logf("Sign the images\n")
-	ascFile := runSignImage(t, imageFile)
+	ascFile := runSignImage(t, imageFile, 1)
 	defer os.Remove(ascFile)
-	ascFile = runSignImage(t, imageFile2)
+	ascFile = runSignImage(t, imageFile2, 1)
 	defer os.Remove(ascFile)
 
 	t.Logf("Run the signed image without trusting the key: it should fail\n")
 	runImage(t, ctx, imageFile, "openpgp: signature made by unknown entity", true)
 
 	t.Logf("Trust the key with the wrong prefix\n")
-	runRktTrust(t, ctx, "wrong-prefix.com/my-app")
+	runRktTrust(t, ctx, "wrong-prefix.com/my-app", 1)
 
 	t.Logf("Run a signed image with the key installed in the wrong prefix: it should fail\n")
 	runImage(t, ctx, imageFile, "openpgp: signature made by unknown entity", true)
 
+	t.Logf("Trust the key with the correct prefix, but wrong key\n")
+	runRktTrust(t, ctx, "rkt-prefix.com/my-app", 2)
+
+	t.Logf("Run a signed image with the wrong key installed: it should fail\n")
+	runImage(t, ctx, imageFile, "openpgp: signature made by unknown entity", true)
+
 	t.Logf("Trust the key with the correct prefix\n")
-	runRktTrust(t, ctx, "rkt-prefix.com/my-app")
+	runRktTrust(t, ctx, "rkt-prefix.com/my-app", 1)
 
 	t.Logf("Finally, run successfully the signed image\n")
 	runImage(t, ctx, imageFile, "Hello", false)
 	runImage(t, ctx, imageFile2, "openpgp: signature made by unknown entity", true)
 
 	t.Logf("Trust the key on unrelated prefixes\n")
-	runRktTrust(t, ctx, "foo.com")
-	runRktTrust(t, ctx, "example.com/my-app")
+	runRktTrust(t, ctx, "foo.com", 1)
+	runRktTrust(t, ctx, "example.com/my-app", 1)
 
 	t.Logf("But still only the first image can be executed\n")
 	runImage(t, ctx, imageFile, "Hello", false)
 	runImage(t, ctx, imageFile2, "openpgp: signature made by unknown entity", true)
 
 	t.Logf("Trust the key for all images (rkt trust --root)\n")
-	runRktTrust(t, ctx, "")
+	runRktTrust(t, ctx, "", 1)
 
 	t.Logf("Now both images can be executed\n")
 	runImage(t, ctx, imageFile, "Hello", false)
