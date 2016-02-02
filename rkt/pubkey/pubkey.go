@@ -32,6 +32,7 @@ import (
 
 	"github.com/appc/spec/discovery"
 	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Manager struct {
@@ -43,16 +44,10 @@ type Manager struct {
 }
 
 type AcceptOption int
-type OverrideOption int
 
 const (
 	AcceptForce AcceptOption = iota
 	AcceptAsk
-)
-
-const (
-	OverrideAllow OverrideOption = iota
-	OverrideDeny
 )
 
 var log *rktlog.Logger
@@ -84,7 +79,7 @@ func (m *Manager) GetPubKeyLocations(prefix string) ([]string, error) {
 }
 
 // AddKeys adds the keys listed in pkls at prefix
-func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, override OverrideOption) error {
+func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption) error {
 	ensureLogger(m.Debug)
 	if m.Ks == nil {
 		return fmt.Errorf("no keystore available to add keys to")
@@ -101,17 +96,9 @@ func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, ove
 		}
 		defer pk.Close()
 
-		exists, err := m.Ks.TrustedKeyPrefixExists(prefix, pk)
-		if err != nil {
-			return errwrap.Wrap(fmt.Errorf("error reading the key %s", pkl), err)
-		}
 		err = displayKey(prefix, pkl, pk)
 		if err != nil {
 			return errwrap.Wrap(fmt.Errorf("error displaying the key %s", pkl), err)
-		}
-		if exists && override == OverrideDeny {
-			log.Printf("key %q already in the keystore", pkl)
-			continue
 		}
 
 		if m.TrustKeysFromHTTPS && u.Scheme == "https" {
@@ -119,6 +106,12 @@ func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption, ove
 		}
 
 		if accept == AcceptAsk {
+			if !terminal.IsTerminal(int(os.Stdin.Fd())) || !terminal.IsTerminal(int(os.Stderr.Fd())) {
+				log.Printf("To trust the key for %q, do one of the following:", prefix)
+				log.Printf(" - call rkt with --trust-keys-from-https")
+				log.Printf(" - run: rkt trust --prefix %q", prefix)
+				return fmt.Errorf("error reviewing key: unable to ask user to review fingerprint due to lack of tty")
+			}
 			accepted, err := reviewKey()
 			if err != nil {
 				return errwrap.Wrap(errors.New("error reviewing key"), err)

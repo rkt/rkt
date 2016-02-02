@@ -190,11 +190,20 @@ func (f *nameFetcher) fetchVerifiedURL(app *discovery.App, u *url.URL, a *asc) (
 }
 
 func (f *nameFetcher) maybeFetchPubKeys(appName string) {
-	if f.TrustKeysFromHTTPS && !f.InsecureFlags.SkipTLSCheck() {
+	exists, err := f.Ks.TrustedKeyPrefixExists(appName)
+	if err != nil {
+		log.Printf("error checking for existing keys: %v", err)
+		return
+	}
+	if exists {
+		log.Printf("keys already exist for prefix %q, not fetching again", appName)
+		return
+	}
+	if !f.InsecureFlags.SkipTLSCheck() {
 		m := &pubkey.Manager{
 			AuthPerHost:        f.Headers,
 			InsecureAllowHTTP:  false,
-			TrustKeysFromHTTPS: true,
+			TrustKeysFromHTTPS: f.TrustKeysFromHTTPS,
 			Ks:                 f.Ks,
 			Debug:              f.Debug,
 		}
@@ -205,7 +214,12 @@ func (f *nameFetcher) maybeFetchPubKeys(appName string) {
 		if err != nil {
 			log.PrintE("error determining key location", err)
 		} else {
-			if err := m.AddKeys(pkls, appName, pubkey.AcceptForce, pubkey.OverrideDeny); err != nil {
+			accept := pubkey.AcceptAsk
+			if f.TrustKeysFromHTTPS {
+				accept = pubkey.AcceptForce
+			}
+			err := m.AddKeys(pkls, appName, accept)
+			if err != nil {
 				log.PrintE("error adding keys", err)
 			}
 		}
@@ -218,6 +232,10 @@ func (f *nameFetcher) checkIdentity(appName string, ascFile io.ReadSeeker) error
 	}
 	empty := bytes.NewReader([]byte{})
 	if _, err := f.Ks.CheckSignature(appName, empty, ascFile); err != nil {
+		if err == pgperrors.ErrUnknownIssuer {
+			log.Printf("If you expected the signing key to change, try running:")
+			log.Printf("    rkt trust --prefix %q", appName)
+		}
 		if _, ok := err.(pgperrors.SignatureError); !ok {
 			return err
 		}

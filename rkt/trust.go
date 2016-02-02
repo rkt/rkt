@@ -98,7 +98,8 @@ func runTrust(cmd *cobra.Command, args []string) (exit int) {
 	if flagSkipFingerprintReview {
 		acceptOpt = pubkey.AcceptForce
 	}
-	if err := m.AddKeys(pkls, flagPrefix, acceptOpt, pubkey.OverrideDeny); err != nil {
+
+	if err := m.AddKeys(pkls, flagPrefix, acceptOpt); err != nil {
 		stderr.PrintE("error adding keys", err)
 		return 1
 	}
