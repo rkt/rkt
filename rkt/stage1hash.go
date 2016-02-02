@@ -310,13 +310,18 @@ func getStage1HashFromPath(fn *image.Finder, imgLoc, imgFileName string) (*types
 		fetchErr = err
 	}
 	if imgFileName != "" {
-		rktDir := getRktBinaryDir()
-		imgPath := filepath.Join(rktDir, imgFileName)
-		hash, err := fn.FindImage(imgPath, "", apps.AppImagePath)
-		if err == nil {
-			return hash, nil
+		exePath, err := os.Readlink("/proc/self/exe")
+		if err != nil {
+			fallbackErr = err
+		} else {
+			rktDir := filepath.Dir(exePath)
+			imgPath := filepath.Join(rktDir, imgFileName)
+			hash, err := fn.FindImage(imgPath, "", apps.AppImagePath)
+			if err == nil {
+				return hash, nil
+			}
+			fallbackErr = err
 		}
-		fallbackErr = err
 	}
 	return nil, mergeStage1Errors(fetchErr, fallbackErr)
 }
@@ -329,8 +334,4 @@ func mergeStage1Errors(fetchErr, fallbackErr error) error {
 		return errwrap.Wrap(errors.New("failed to fetch stage1 image"), fetchErr)
 	}
 	return errwrap.Wrap(errors.New("failed to fall back to stage1 image in rkt directory (default stage1 image location is not specified)"), fallbackErr)
-}
-
-func getRktBinaryDir() string {
-	return filepath.Dir(os.Args[0])
 }
