@@ -446,7 +446,7 @@ func CopyLevel(src, dest string) (string, error) {
 	return tcon.Get(), nil
 }
 
-// Prevent users from relabing system files
+// Prevent users from relabeling system files
 func badPrefix(fpath string) error {
 	var badprefixes = []string{"/usr"}
 
