@@ -14,6 +14,7 @@
 - Use NAT loopback to make ports forwarded in pods accessible from localhost ([#1256](https://github.com/coreos/rkt/issues/1256)).
 - Show a clearer error message when unprivileged users execute commands that require root privileges ([#2081](https://github.com/coreos/rkt/pull/2081)).
 - Add a rkt tmpfiles configuration file to make the creation of the rkt data directory on first boot easier ([#2088](https://github.com/coreos/rkt/pull/2088)).
+- Remove `rkt install` command. It was replaced with a `setup-data-dir.sh` script ([#2101](https://github.com/coreos/rkt/pull/2101).
 
 #### Bug fixes
 
@@ -28,6 +29,7 @@
 
 - The `--stage1-image` flag was removed. Scripts using it should be updated to use one of `--stage1-url`, `--stage1-path`, `--stage1-name`, `--stage1-hash` or `--stage1-from-dir`
 - All uses of the deprecated `--insecure-skip-verify` flag should be replaced with the `--insecure-options` flag which allows user to selectively disable security features.
+- The `rkt install` command was removed in favor of the `scripts/setup-data-dir.sh` script.
 
 #### Note for packagers
 

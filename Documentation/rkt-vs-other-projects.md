@@ -33,7 +33,7 @@ rkt has no centralized "init" daemon, instead launching containers directly from
 #### Privilege Separation
 
 rkt uses standard Unix group permissions to allow privilege separation between different operations.
-Once the rkt data directory is correctly set up (for example, by `rkt install`), the container image downloads and signature verification can run as a non-privileged user.
+Once the rkt data directory is correctly set up, container image downloads and signature verification can run as a non-privileged user.
 
 ![rkt-vs-docker-fetch](rkt-vs-docker-fetch.png)
 

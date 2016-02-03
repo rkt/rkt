@@ -41,13 +41,11 @@ func TestNonRootReadInfo(t *testing.T) {
 		t.Skipf("Skipping the test because there's no %q group", common.RktGroup)
 	}
 
-	// Do 'rkt install. and launch some pods in root'.
-	cmd := fmt.Sprintf("%s install", ctx.Cmd())
-	t.Logf("Running rkt install")
-	runRktAndCheckOutput(t, cmd, "rkt directory structure successfully created", false)
+	if err := ctx.SetupDataDir(); err != nil {
+		t.Fatalf("failed to setup data dir: %v", err)
+	}
 
-	// Launch some pods, this creates the environment for later testing,
-	// also it exercises 'rkt install'.
+	// Launch some pods, this creates the environment for later testing.
 	imgs := []struct {
 		name     string
 		msg      string
@@ -97,10 +95,9 @@ func TestNonRootFetchRmGCImage(t *testing.T) {
 		t.Skipf("Skipping the test because there's no %q group", common.RktGroup)
 	}
 
-	// Do `rkt install` and fetch an image with root.
-	cmd := fmt.Sprintf("%s install", ctx.Cmd())
-	t.Logf("Running rkt install")
-	runRktAndCheckOutput(t, cmd, "rkt directory structure successfully created", false)
+	if err := ctx.SetupDataDir(); err != nil {
+		t.Fatalf("failed to setup data dir: %v", err)
+	}
 
 	rootImg := patchTestACI("rkt-inspect-root-rm.aci", "--exec=/inspect --print-msg=foobar")
 	defer os.Remove(rootImg)
