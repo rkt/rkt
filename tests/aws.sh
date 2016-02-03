@@ -32,28 +32,41 @@ if [ "$DISTRO" = "fedora-22" ] ; then
   # https://apps.fedoraproject.org/datagrepper/raw?category=fedimg
   # Sources: https://github.com/fedora-infra/fedimg/blob/develop/bin/list-the-amis.py
 
-  # Fedora-Cloud-Base-22-20151026.x86_64-eu-central-1-HVM-standard-0
-  AMI=ami-844a4599
+  # Fedora-Cloud-Base-22-20151026.x86_64-eu-central-1-HVM-standard-0 was deleted
+
+  # Fedora-Cloud-Base-22-20150521.x86_64-eu-central-1-HVM-standard-0
+  AMI=ami-a88eb0b5
   AWS_USER=fedora
 elif [ "$DISTRO" = "fedora-23" ] ; then
-  # Fedora-Cloud-Base-23-20160116.x86_64-eu-central-1-HVM-standard-0
-  AMI=ami-c2445dae
+  # Fedora-Cloud-Base-23-20160129.x86_64-eu-central-1-HVM-standard-0
+  AMI=ami-4d3e2621
   AWS_USER=fedora
 elif [ "$DISTRO" = "fedora-rawhide" ] ; then
-  # Fedora-Cloud-Base-rawhide-20160119.x86_64-eu-central-1-HVM-standard-0
-  AMI=ami-8e150ce2
+  # rawhide is currently broken
+  # Error: nothing provides libpsl.so.0()(64bit) needed by wget-1.17.1-1.fc24.x86_64
+
+  # Fedora-Cloud-Base-rawhide-20160127.x86_64-eu-central-1-HVM-standard-0
+  AMI=ami-877068eb
   AWS_USER=fedora
-elif [ "$DISTRO" = "ubuntu" ] ; then
+elif [ "$DISTRO" = "ubuntu-1604" ] ; then
   # https://cloud-images.ubuntu.com/locator/ec2/
+  # ubuntu/images-milestone/hvm/ubuntu-xenial-alpha2-amd64-server-20160125
   AMI=ami-b4a5b9d8
+  AWS_USER=ubuntu
+elif [ "$DISTRO" = "ubuntu-1510" ] ; then
+  # https://cloud-images.ubuntu.com/locator/ec2/
+  # ubuntu/images/hvm/ubuntu-wily-15.10-amd64-server-20160123
+  AMI=ami-e9869f85
   AWS_USER=ubuntu
 elif [ "$DISTRO" = "debian" ] ; then
   # https://wiki.debian.org/Cloud/AmazonEC2Image/Jessie
+  # Debian 8.1
   AMI=ami-02b78e1f
   AWS_USER=admin
 elif [ "$DISTRO" = "centos" ] ; then
   # Needs to subscribe first, see:
   # https://wiki.centos.org/Cloud/AWS
+  # CentOS-7 x86_64 HVM
   AMI=ami-e68f82fb
   AWS_USER=centos
 fi
