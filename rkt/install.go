@@ -42,6 +42,7 @@ var (
 		"tmp": os.FileMode(0750 | os.ModeSetgid),
 
 		// Cas directories.
+		// Please keep in sync with dist/init/systemd/tmpfiles.d/rkt.conf
 		// Make sure 'rkt' group can read/write some of the 'cas'
 		// directories so that users in the group can fetch images
 		"cas":                os.FileMode(0770 | os.ModeSetgid),
