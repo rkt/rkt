@@ -21,7 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/group"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -141,7 +141,7 @@ func createDbFiles(casDbPath string, gid int, perm os.FileMode) error {
 }
 
 func setupDataDir(dataDir string) error {
-	gid, err := common.LookupGid(common.RktGroup)
+	gid, err := group.LookupGid("rkt")
 	if err != nil {
 		return err
 	}
