@@ -39,7 +39,7 @@ They will be checked in that order and the first match will be used.
 An "--" may be used to inhibit rkt prepare's parsing of subsequent arguments,
 which will instead be appended to the preceding image app's exec arguments.
 End the image arguments with a lone "---" to resume argument parsing.`,
-		Run: runWrapper(runPrepare),
+		Run: ensureSuperuser(runWrapper(runPrepare)),
 	}
 	flagQuiet bool
 )

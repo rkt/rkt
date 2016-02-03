@@ -32,7 +32,7 @@ var (
 		Use:   "run-prepared UUID",
 		Short: "Run a prepared application pod in rkt",
 		Long:  "UUID must have been acquired via `rkt prepare`",
-		Run:   runWrapper(runRunPrepared),
+		Run:   ensureSuperuser(runWrapper(runRunPrepared)),
 	}
 )
 

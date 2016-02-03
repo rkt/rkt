@@ -33,7 +33,7 @@ var (
 	cmdInstall = &cobra.Command{
 		Use:   "install",
 		Short: "Set up rkt data directories with correct permissions",
-		Run:   runWrapper(runInstall),
+		Run:   ensureSuperuser(runWrapper(runInstall)),
 	}
 
 	// dirs relative to data directory
