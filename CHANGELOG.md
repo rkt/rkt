@@ -11,9 +11,12 @@
 - Added default stage1 images directory. User can use the newly added `--stage1-from-dir` parameter to avoid typing the full path. `--stage1-from-dir` behaves like `--stage1-path` ([#1977](https://github.com/coreos/rkt/pull/1977)).
 - Removed the deprecated `--insecure-skip-verify` flag ([#2068](https://github.com/coreos/rkt/pull/2068)).
 - Fetched keys are no longer automatically trusted by default, unless `--trust-keys-from-https` is used. Additionally, newly fetched keys have to be explicitly trusted with `rkt trust` if a previous key was trusted for the same image prefix ([#2033](https://github.com/coreos/rkt/pull/2033)).
+- Use NAT loopback to make ports forwarded in pods accessible from localhost ([#1256](https://github.com/coreos/rkt/issues/1256)).
+- Show a clearer error message when unprivileged users execute commands that require root privileges ([#2081](https://github.com/coreos/rkt/pull/2081)).
 
 #### Bug fixes
 
+- Fix regression when authenticating to v2 Docker registries ([#2008](https://github.com/coreos/rkt/issues/2008)).
 - Don't link to libacl, but dlopen it ([#1963](https://github.com/coreos/rkt/pull/1963)). This means that rkt will not crash if libacl is not present on the host, but it will just print a warning.
 
 #### Other changes
