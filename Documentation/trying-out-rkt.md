@@ -10,9 +10,9 @@ rkt consists of a single CLI tool, and is currently supported on amd64 Linux. A 
 To download the rkt binary, simply grab the latest release directly from GitHub:
 
 ```
-wget https://github.com/coreos/rkt/releases/download/v0.16.0/rkt-v0.16.0.tar.gz
-tar xzvf rkt-v0.16.0.tar.gz
-cd rkt-v0.16.0
+wget https://github.com/coreos/rkt/releases/download/v1.0.0/rkt-v1.0.0.tar.gz
+tar xzvf rkt-v1.0.0.tar.gz
+cd rkt-v1.0.0
 ./rkt help
 ```
 
