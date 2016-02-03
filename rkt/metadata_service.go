@@ -44,7 +44,9 @@ var (
 	cmdMetadataService = &cobra.Command{
 		Use:   "metadata-service [--listen-port=PORT]",
 		Short: "Run metadata service",
-		Run:   runWrapper(runMetadataService),
+		Long: `Provides a means for running apps to introspect their execution
+environment and assert their identity.`,
+		Run: runWrapper(runMetadataService),
 	}
 )
 

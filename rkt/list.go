@@ -36,6 +36,7 @@ var (
 	cmdList = &cobra.Command{
 		Use:   "list",
 		Short: "List pods",
+		Long:  `Displays a table of information about the pods.`,
 		Run:   runWrapper(runList),
 	}
 	flagNoLegend   bool

@@ -31,10 +31,15 @@ var (
 		Use:   "trust [--prefix=PREFIX] [--insecure-allow-http] [--skip-fingerprint-review] [--root] [PUBKEY ...]",
 		Short: "Trust a key for image verification",
 		Long: `Adds keys to the local keystore for use in verifying signed images.
-PUBKEY may be either a local file or URL,
+
+PUBKEY may be either a local file or URL.
+
 PREFIX scopes the applicability of PUBKEY to image names sharing PREFIX.
+
 Meta discovery of PUBKEY at PREFIX will be attempted if no PUBKEY is specified.
---root must be specified to add keys with no prefix; path to a key file must be given (no discovery).`,
+
+To trust a key for all images instead of for specific images, --root can be
+specified. Path to a key file must be given (no discovery).`,
 		Run: runWrapper(runTrust),
 	}
 	flagPrefix                string

@@ -35,8 +35,16 @@ const (
 var (
 	cmdGC = &cobra.Command{
 		Use:   "gc [--grace-period=duration] [--expire-prepared=duration]",
-		Short: "Garbage-collect rkt pods no longer in use",
-		Run:   ensureSuperuser(runWrapper(runGC)),
+		Short: "Garbage collect rkt pods no longer in use",
+		Long: `This is intended to be run periodically from a timer or cron job.
+
+Garbage collection is a 2-step process. First, stopped pods are moved to the
+garbage by one invocation of the gc command. A subsequent invocation will clean
+up the pod, assuming the pod has been in the garbage for more time than the
+specified grace period.
+
+Use --grace-period=0s to effectively disable the grace-period.`,
+		Run: ensureSuperuser(runWrapper(runGC)),
 	}
 	flagGracePeriod        time.Duration
 	flagPreparedExpiration time.Duration

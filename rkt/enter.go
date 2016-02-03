@@ -34,7 +34,12 @@ var (
 	cmdEnter = &cobra.Command{
 		Use:   "enter [--app=APPNAME] UUID [CMD [ARGS ...]]",
 		Short: "Enter the namespaces of an app within a rkt pod",
-		Run:   ensureSuperuser(runWrapper(runEnter)),
+
+		Long: `UUID should be the UUID of a running pod.
+
+By default the CMD that is run is /bin/bash, providing the user with shell
+access to the running pod.`,
+		Run: ensureSuperuser(runWrapper(runEnter)),
 	}
 	flagAppName string
 )

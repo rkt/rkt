@@ -31,7 +31,7 @@ var (
 	cmdRunPrepared = &cobra.Command{
 		Use:   "run-prepared UUID",
 		Short: "Run a prepared application pod in rkt",
-		Long:  "UUID must have been acquired via `rkt prepare`",
+		Long:  `Runs a previously prepared pod by its UUID`,
 		Run:   ensureSuperuser(runWrapper(runRunPrepared)),
 	}
 )
