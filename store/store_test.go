@@ -191,7 +191,7 @@ func TestGetImageManifest(t *testing.T) {
 		t.Errorf("expected im with name: %s, got: %s", wanted, im.Name.String())
 	}
 
-	// test unexistent key
+	// test nonexistent key
 	im, err = s.GetImageManifest("sha512-aaaaaaaaaaaaaaaaa")
 	if err == nil {
 		t.Fatalf("expected non-nil error!")
@@ -266,7 +266,7 @@ func TestGetAci(t *testing.T) {
 			},
 			[]test{
 				{
-					"example.com/unexistentaci",
+					"example.com/nonexistentaci",
 					types.Labels{},
 					-1,
 				},
