@@ -170,8 +170,7 @@ func authCleanup(server *taas.Server, image string) {
 	_ = os.Remove(image)
 }
 
-// expectedRunRkt tries to fetch and run a an auth test ACI image from
-// host.
+// expectedRunRkt tries to fetch and run an auth test ACI from host.
 func expectedRunRkt(ctx *testutils.RktRunCtx, t *testing.T, host, testName, line string) {
 	t.Logf("test name: %s", testName)
 	// First, check that --insecure-options=image,tls is required

@@ -30,11 +30,11 @@ $(call setup-filelist-file,STAGE1_FSD_FILELIST,/$(STAGE1_FSD_FLAVOR)-fsd)
 STAGE1_FSD_ACIROOTFSDIR := $(STAGE1_ACIROOTFSDIR_$(STAGE1_FSD_FLAVOR))
 # this is to get all stamps to make sure that the copying is done
 # after everything was put into the ACI rootfs and just before running
-# actool to create the ACI image
+# actool to create the ACI
 STAGE1_FSD_ALL_STAMPS := $(STAGE1_ALL_STAMPS_$(STAGE1_FSD_FLAVOR))
 
 # additions to LD_LIBRARY_PATH environment variable
-# TODO: we should somehow query the ACI image which libdirs it uses -
+# TODO: we should somehow query the ACI which libdirs it uses -
 # on fedora these would be /usr/lib and /usr/lib64, but on debian it
 # is probably /usr/lib and /usr/lib/x86_64 or something
 STAGE1_FSD_LD_LIBRARY_PATH := $(STAGE1_FSD_ACIROOTFSDIR)/lib:$(STAGE1_FSD_ACIROOTFSDIR)/lib64:$(STAGE1_FSD_ACIROOTFSDIR)/usr/lib:$(STAGE1_FSD_ACIROOTFSDIR)/usr/lib64

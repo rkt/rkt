@@ -181,7 +181,7 @@ https://example.com/images/example.com/hello-0.0.1-linux-amd64.aci
 https://example.com/images/example.com/hello-0.0.1-linux-amd64.aci.asc
 ```
 
-The first response contains the template URL used to download the ACI image and detached signature file.
+The first response contains the template URL used to download the ACI and detached signature file.
 
 ```
 <meta name="ac-discovery" content="example.com/hello https://example.com/images/{name}-{version}-{os}-{arch}.{ext}">

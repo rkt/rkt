@@ -57,7 +57,7 @@ AMI_STAGE1_VERSION := $(RKT_STAGE1_VERSION_OVERRIDE)
 
 endif
 
-# escaped values of the ACI image name, version and enter command, so
+# escaped values of the ACI name, version and enter command, so
 # they can be safely used in the replacement part of sed's s///
 # command.
 AMI_SED_NAME := $(call sed-replacement-escape,$(AMI_NAME))

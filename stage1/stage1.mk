@@ -30,7 +30,7 @@
 # directory for a given flavor.
 #
 # STAGE1_ACI_IMAGE_$(flavor) tells where in the build directory the
-# final ACI image is going to be built.
+# final ACI is going to be built.
 #
 # STAGE1_INSTALL_FILES_$(flavor) - a list of files that can be
 # installed only after all the stamps in STAGE1_USR_STAMPS_$(flavor)
@@ -73,10 +73,10 @@ $(foreach f,$(STAGE1_FLAVORS), \
 	$(eval STAGE1_CREATE_DIRS_$f :=) \
 	$(eval STAGE1_ENTER_CMD_$f :=))
 
-# Main stamp that tells whether all the ACI images have been built.
+# Main stamp that tells whether all the ACIs have been built.
 $(call setup-stamp-file,_STAGE1_BUILT_ACI_STAMP_,built_aci)
 
-# List of all the ACI images that the build system will build
+# List of all the ACIs that the build system will build
 _STAGE1_ALL_ACI_ := $(foreach f,$(STAGE1_FLAVORS),$(STAGE1_ACI_IMAGE_$f))
 _STAGE1_BUILT_ACI_ := $(foreach f,$(STAGE1_BUILT_FLAVORS),$(STAGE1_ACI_IMAGE_$f))
 
@@ -100,10 +100,10 @@ CLEAN_FILES += $(_STAGE1_ALL_ACI_)
 
 $(call generate-stamp-rule,$(_STAGE1_BUILT_ACI_STAMP_),$(_STAGE1_BUILT_ACI_))
 
-# A rule template for building an ACI image. To build the ACI image we
-# need to have the /usr contents prepared and the additional stuff in
-# place as well. If a flavor wants to have missing libraries copied it
-# is done here too.
+# A rule template for building an ACI. To build the ACI we need to
+# have the /usr contents prepared and the additional stuff in place as
+# well. If a flavor wants to have missing libraries copied, it is done
+# here too.
 #
 # 1 - flavor
 define _STAGE1_ACI_RULE_
@@ -132,8 +132,8 @@ $$(STAGE1_ACI_IMAGE_$1): $$(STAGE1_FSD_STAMP)
 
 endif
 
-# The actual rule that builds the ACI image. Additional dependencies
-# are above.
+# The actual rule that builds the ACI. Additional dependencies are
+# above.
 $$(call forward-vars,$$(STAGE1_ACI_IMAGE_$1), \
 	ACTOOL STAGE1_ACIDIR_$1)
 $$(STAGE1_ACI_IMAGE_$1): $$(ACTOOL_STAMP) | $$(BINDIR)
