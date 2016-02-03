@@ -541,28 +541,6 @@ _rkt_image()
     must_have_one_noun=()
 }
 
-_rkt_install()
-{
-    last_command="rkt_install"
-    commands=()
-
-    flags=()
-    two_word_flags=()
-    flags_with_completion=()
-    flags_completion=()
-
-    flags+=("--debug")
-    flags+=("--dir=")
-    flags+=("--insecure-options=")
-    flags+=("--user-config=")
-    flags+=("--local-config=")
-    flags+=("--system-config=")
-    flags+=("--trust-keys-from-https")
-
-    must_have_one_flag=()
-    must_have_one_noun=()
-}
-
 _rkt_list()
 {
     last_command="rkt_list"
@@ -823,7 +801,6 @@ _rkt()
     commands+=("fetch")
     commands+=("gc")
     commands+=("image")
-    commands+=("install")
     commands+=("list")
     commands+=("metadata-service")
     commands+=("prepare")

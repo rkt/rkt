@@ -100,6 +100,10 @@ func NewRktRunCtx() *RktRunCtx {
 	}
 }
 
+func (ctx *RktRunCtx) SetupDataDir() error {
+	return setupDataDir(ctx.DataDir())
+}
+
 func (ctx *RktRunCtx) LaunchMDS() error {
 	ctx.mds = exec.Command(ctx.rktBin(), "metadata-service")
 	return ctx.mds.Start()

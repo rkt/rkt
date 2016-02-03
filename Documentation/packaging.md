@@ -68,7 +68,7 @@ A Linux system configured with [suitable options](hacking.md#run-time-requiremen
 
 ### Ownership and permissions of rkt directories
 
-In general, subdirectories of `/var/lib/rkt` should be created with the same ownership and permissions as if created by `rkt install`, see [directory list](https://github.com/coreos/rkt/blob/master/dist/init/systemd/tmpfiles.d/rkt.conf).
+In general, subdirectories of `/var/lib/rkt` should be created with the same ownership and permissions as described in the [directory list](https://github.com/coreos/rkt/blob/master/dist/init/systemd/tmpfiles.d/rkt.conf).
 
 Any rkt package should create a system group `rkt`, and `/var/lib/rkt` should belong to group `rkt` with the `setgid` bit set (`chmod g+s`)
 

@@ -24,7 +24,6 @@ import (
 var rootRequiringCommands = []string{
 	"enter",
 	"gc",
-	"install",
 	"prepare",
 	"rm",
 	"run",

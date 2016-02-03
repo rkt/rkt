@@ -39,9 +39,9 @@ func startAPIService(t *testing.T, ctx *testutils.RktRunCtx) *gexpect.ExpectSubp
 		t.Logf("no %q group, will run api service with root, ONLY DO THIS FOR TESTING!", common.RktGroup)
 		noGid = true
 	} else {
-		t.Logf("Running rkt install")
-		installCmd := fmt.Sprintf("%s install", ctx.Cmd())
-		runRktAndCheckOutput(t, installCmd, "rkt directory structure successfully created", false)
+		if err := ctx.SetupDataDir(); err != nil {
+			t.Fatalf("failed to setup data directory: %v", err)
+		}
 	}
 
 	t.Logf("Running rkt api service")

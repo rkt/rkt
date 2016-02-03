@@ -62,7 +62,6 @@ The API service allows clients to list and inspect pods and images running under
 
 ## Misc
 
-* [install](subcommands/install.md)
 * [version](subcommands/version.md)
 
 ## Global Options
