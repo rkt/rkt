@@ -13,6 +13,7 @@
 - Fetched keys are no longer automatically trusted by default, unless `--trust-keys-from-https` is used. Additionally, newly fetched keys have to be explicitly trusted with `rkt trust` if a previous key was trusted for the same image prefix ([#2033](https://github.com/coreos/rkt/pull/2033)).
 - Use NAT loopback to make ports forwarded in pods accessible from localhost ([#1256](https://github.com/coreos/rkt/issues/1256)).
 - Show a clearer error message when unprivileged users execute commands that require root privileges ([#2081](https://github.com/coreos/rkt/pull/2081)).
+- Add a rkt tmpfiles configuration file to make the creation of the rkt data directory on first boot easier ([#2088](https://github.com/coreos/rkt/pull/2088)).
 
 #### Bug fixes
 
@@ -34,6 +35,7 @@ With this release, `rkt` RPM/dpkg packages should have the following updates:
 
 - Pass `--enable-tpm=no` to configure script, if `rkt` should not use TPM.
 - Use the `--with-default-stage1-images-directory` configure flag, if the default is not acceptable and install the built stage1 images there.
+- Distributions using systemd: install the new file `dist/init/systemd/tmpfiles.d/rkt.conf` in `/usr/lib/tmpfiles.d/rkt.conf` and then run `systemd-tmpfiles --create rkt.conf`. This can replace running `rkt install` to set the correct ownership and permissions.
 
 ## v0.16.0
 
