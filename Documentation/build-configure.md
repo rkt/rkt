@@ -148,6 +148,7 @@ There is only one security-related flag; to enable TPM for logging.
 
 #### `--enable-tpm`
 
-Logging to TPM is enabled by default, so it follows the "secure by default" principle.
-For it to work, [TrouSerS](http://trousers.sourceforge.net/) is required.
-Use 'auto' to enable it conditionally.
+This option to enable [logging to the TPM][rkt-tpm] is set by default. For logging to work, [TrouSerS](http://trousers.sourceforge.net/) is required. Set this option to `auto` to conditionally enable TPM features based on build support.
+
+
+[rkt-tpm]: devel/tpm.md
