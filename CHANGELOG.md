@@ -24,6 +24,7 @@
 #### Other changes
 
 - Trusted Platform Module logging (TPM) is now enabled by default ([#1815](https://github.com/coreos/rkt/issues/1815)). This ensures that rkt benefits from security features by default. See rkt's [Build Configuration](https://github.com/coreos/rkt/blob/master/Documentation/build-configure.md#security) documentation.
+- Added long descriptions to all rkt commands ([#2098](https://github.com/coreos/rkt/issues/2098)).
 
 #### Migration
 
