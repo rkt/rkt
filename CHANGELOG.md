@@ -29,7 +29,7 @@
 
 - The `--stage1-image` flag was removed. Scripts using it should be updated to use one of `--stage1-url`, `--stage1-path`, `--stage1-name`, `--stage1-hash` or `--stage1-from-dir`
 - All uses of the deprecated `--insecure-skip-verify` flag should be replaced with the `--insecure-options` flag which allows user to selectively disable security features.
-- The `rkt install` command was removed in favor of the `scripts/setup-data-dir.sh` script.
+- The `rkt install` command was removed in favor of the `dist/scripts/setup-data-dir.sh` script.
 
 #### Note for packagers
 

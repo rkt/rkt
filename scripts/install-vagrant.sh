@@ -17,5 +17,5 @@ echo "Installing rkt"
 ./scripts/install-rkt.sh
 
 groupadd rkt
-./scripts/setup-data-dir.sh
+./dist/scripts/setup-data-dir.sh
 usermod -a -G rkt vagrant
