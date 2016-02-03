@@ -44,7 +44,8 @@ import (
 
 const (
 	defaultTimeLayout = "2006-01-02 15:04:05.999 -0700 MST"
-	nobodyUid         = uint32(65534)
+	nobodyUid         = 65534
+	nobodyGid         = 65534
 )
 
 func expectCommon(p *gexpect.ExpectSubprocess, searchString string, timeout time.Duration) error {
@@ -190,7 +191,7 @@ func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img st
 	}
 	if gid != 0 {
 		child.Cmd.SysProcAttr = &syscall.SysProcAttr{}
-		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: nobodyUid, Gid: uint32(gid)}
+		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(nobodyUid), Gid: uint32(gid)}
 	}
 
 	err = child.Start()
@@ -262,18 +263,22 @@ func runRktAndGetUUID(t *testing.T, rktCmd string) string {
 }
 
 func runRktAsGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool, gid int) {
+	runRktAsUidGidAndCheckOutput(t, rktCmd, expectedLine, expectError, nobodyUid, gid)
+}
+
+func runRktAsUidGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool, uid, gid int) {
 	child, err := gexpect.Command(rktCmd)
 	if err != nil {
 		t.Fatalf("cannot exec rkt: %v", err)
 	}
 	if gid != 0 {
 		child.Cmd.SysProcAttr = &syscall.SysProcAttr{}
-		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: nobodyUid, Gid: uint32(gid)}
+		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)}
 	}
 
 	err = child.Start()
 	if err != nil {
-		t.Fatalf("cannot exec rkt: %v", err)
+		t.Fatalf("cannot start rkt: %v", err)
 	}
 	defer waitOrFail(t, child, !expectError)
 
@@ -291,7 +296,7 @@ func startRktAsGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, gid 
 	}
 	if gid != 0 {
 		child.Cmd.SysProcAttr = &syscall.SysProcAttr{}
-		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: nobodyUid, Gid: uint32(gid)}
+		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(nobodyUid), Gid: uint32(gid)}
 	}
 
 	if err := child.Start(); err != nil {
