@@ -130,6 +130,14 @@ AC_ARG_ENABLE([tpm],
               [RKT_ENABLE_TPM="${enableval}"],
               [RKT_ENABLE_TPM="yes"])
 
+## insecure go
+
+AC_ARG_ENABLE([insecure-go],
+              [AS_HELP_STRING([--enable-insecure-go],
+                              [allow building rkt with go having known security issues, default: no])],
+              [RKT_INSECURE_GO="${enableval}"],
+              [RKT_INSECURE_GO="no"])
+
 #### CHECKING
 
 ## STAGE1 - initial verification and setup
@@ -601,7 +609,10 @@ AS_IF([test "${GO_MAJOR}" -gt "${GO_BEST_MAJOR}" || test "${GO_MAJOR}" -eq "${GO
 AC_MSG_CHECKING([whether we have a go version without CVE-2015-8618])
 AS_IF([test "${GO_MAJOR}" -eq "1" -a "${GO_MINOR}" -eq "5" -a "${GO_MICRO}" -lt "3"],
       [AC_MSG_RESULT([no])
-       AC_MSG_ERROR([*** go version is vulnerable to CVE-2015-8618 (${GO_VERSION})])],
+       insecure_go_warning="go version is vulnerable to CVE-2015-8618 (${GO_VERSION})"
+       AS_VAR_IF([RKT_INSECURE_GO],[no],
+                 [AC_MSG_ERROR([*** ${insecure_go_warning}])],
+                 [AC_MSG_WARN([* ${insecure_go_warning}])])],
       [AC_MSG_RESULT([yes])])
 
 RKT_STAGE1_DEFAULT_NAME_LDFLAGS=`RKT_XF main.buildDefaultStage1Name "${RKT_STAGE1_DEFAULT_NAME}"`
