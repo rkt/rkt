@@ -601,7 +601,7 @@ AS_IF([test "${GO_MAJOR}" -gt "${GO_BEST_MAJOR}" || test "${GO_MAJOR}" -eq "${GO
 AC_MSG_CHECKING([whether we have a go version without CVE-2015-8618])
 AS_IF([test "${GO_MAJOR}" -eq "1" -a "${GO_MINOR}" -eq "5" -a "${GO_MICRO}" -lt "3"],
       [AC_MSG_RESULT([no])
-       AC_MSG_ERROR([*** go version is vulnerable to CVE-2015-8618 (${GO_VERSION})])],
+       AC_MSG_WARN([*** go version is vulnerable to CVE-2015-8618 (${GO_VERSION})])],
       [AC_MSG_RESULT([yes])])
 
 RKT_STAGE1_DEFAULT_NAME_LDFLAGS=`RKT_XF main.buildDefaultStage1Name "${RKT_STAGE1_DEFAULT_NAME}"`
