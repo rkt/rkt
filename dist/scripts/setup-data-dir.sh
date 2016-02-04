@@ -28,9 +28,9 @@ make_rkt_directory() {
     local mode="${2}"
 
     if [[ -e "${dir}" ]]; then
-	chmod "${mode}" "${dir}"
+        chmod "${mode}" "${dir}"
     else
-	mkdir --mode="${mode}" "${dir}"
+        mkdir --mode="${mode}" "${dir}"
     fi
     chgrp rkt "${dir}"
 }
@@ -43,7 +43,7 @@ create_rkt_file() {
     local mode="${2}"
 
     if [[ ! -e "${file}" ]]; then
-	touch "${file}"
+        touch "${file}"
     fi
     chmod "${mode}" "${file}"
     chgrp rkt "${file}"
