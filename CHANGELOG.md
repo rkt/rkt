@@ -1,5 +1,10 @@
 ## vUNRELEASED
 
+This marks the first release of rkt recommended for use in production.
+The command-line UX and on-disk format are considered stable and safe to develop against.
+Any changes to these interfaces will be backwards compatible and subject to formal deprecation.
+The API is not yet completely stabilized, but is functional and suitable for use by early adopters.
+
 #### New features and UX changes
 
 - Add pod creation and start times to `rkt list` and `rkt status` ([#2030](https://github.com/coreos/rkt/pull/2030)). See [`rkt list`](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/list.md) and [`rkt status`](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/status.md) documentation.
