@@ -1,4 +1,4 @@
-## vUNRELEASED
+## v1.0.0
 
 This marks the first release of rkt recommended for use in production.
 The command-line UX and on-disk format are considered stable and safe to develop against.
