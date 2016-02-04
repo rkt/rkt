@@ -432,7 +432,7 @@ Full changelog:
 ## v0.6.1
 
 The highlight of this release is the support of per-app memory and CPU
-isolators. This means that, in addition to restricting a pod’s CPU and memory
+isolators. This means that, in addition to restricting a pod's CPU and memory
 usage, individual apps inside a pod can also be restricted now.
 
 rkt 0.6.1 also includes a new CLI/subcommand framework, more functional testing
@@ -465,7 +465,7 @@ fixes and a new ipvlan network plugin.
 - new rkt subcommand: cat-manifest
 - extract ACI in a chroot to avoid malformed links modifying the host
   filesystem
-- improve rkt error message if the user doesn’t provide required volumes
+- improve rkt error message if the user doesn't provide required volumes
 - fix rkt status when using overlayfs
 - support for some arm architectures
 - documentation improvements
