@@ -26,8 +26,7 @@ For more on the background and motivation behind rkt, read the original [launch 
 
 ## Project status
 
-rkt is maturing rapidly while under active development, and its interfaces are not yet considered stable.
-We do not recommend its use in production, but we encourage you to try out rkt and provide feedback via issues and pull requests.
+rkt's version 1.0 release marks the command line user interface and on-disk data structures as stable and reliable for external development. Any major changes to those primary areas will be clearly communicated, and a formal deprecation process conducted for any retired features. The (optional) API for pod inspection is not yet completely stabilized, but is quite usable, and an excellent area for testing and participation as it matures.
 
 Check out the [roadmap](ROADMAP.md) for more details on the future of rkt.
 
@@ -69,4 +68,3 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details on submitting patches and the co
 ## Known issues
 
 Due to a bug in the Linux kernel, using rkt's overlay support on top of an overlay filesystem requires Linux 4.3+.
-
