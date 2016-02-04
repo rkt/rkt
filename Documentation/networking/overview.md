@@ -6,6 +6,9 @@ The various options can be grouped by two categories:
 * [host mode](#host mode)
 * [contained mode (default)](#contained mode)
 
+This document gives a brief overview of the supported plugins.
+More examples and advanced topics are linked in the [more docs](#more-docs) section.
+
 ## Host mode
 
 When `--net=host` is passed the pod's apps will inherit the network namespace of the process that is invoking rkt.
@@ -331,3 +334,12 @@ Now, any traffic arriving on host's TCP port 8888 will be forwarded to the pod o
 
 rkt also supports socket activation.
 This is documented in [Socket-activated service](using-rkt-with-systemd.md#socket-activated-service).
+
+## More Docs
+
+##### Examples
+* [bridge plugin](examples-bridge.md)
+
+##### Other topics:
+* [DNS configuration](dns.md)
+* [Overriding defaults](overriding-defaults.md)
