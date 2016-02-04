@@ -6,22 +6,27 @@
 
 ![rkt Logo](logos/rkt-horizontal-color.png)
 
-rkt (pronounced _"rock-it"_) is a CLI for running app containers on Linux. rkt is designed to be composable, secure, and fast.
+rkt (pronounced _"rock-it"_) is a CLI for running app containers on Linux. rkt is designed to be secure, composable, and standards-based.
 
 Some of rkt's key features and goals include:
 
-- First-class integration with init systems ([systemd][systemd], upstart) and cluster orchestration tools (fleet, [Kubernetes][kubernetes], [Nomad][nomad])
-- Compatibility with other container software (e.g. rkt can run [Docker images][docker])
-- Modular and extensible architecture ([network configuration plugins][networking], swappable execution engines based on systemd or [KVM][lkvm])
+- _Security_: rkt is developed with a principle of "secure-by-default", and includes a number of important security features like support for [SELinux][selinux], [TPM measurement][tpm], and running app containers in [hardware-isolated VMs](lkvm])
+- _Composability_: rkt is designed for first-class integration with init systems ([systemd][systemd], upstart) and cluster orchestration tools (fleet, [Kubernetes][kubernetes], [Nomad][nomad]), and supports [swappable execution engines][architecture].
+- _Open standards and compatibility_: rkt implements the [appc specification][rkt-and-appc], supports the [Container Networking Interface specification][CNI], and can also run [Docker images][docker]
 
 For more on the background and motivation behind rkt, read the original [launch announcement][blog-post].
 
+[architecture]: Documentation/devel/architecture.md
 [systemd]: Documentation/using-rkt-with-systemd.md
 [kubernetes]: Documentation/using-rkt-with-kubernetes.md
 [nomad]: Documentation/using-rkt-with-nomad.md
 [docker]: Documentation/running-docker-images.md
 [networking]: Documentation/networking.md
 [lkvm]: Documentation/running-lkvm-stage1.md
+[rkt-and-appc]: Documentation/app-container.md
+[cni]: https://github.com/appc/cni
+[selinux]: Documentation/selinux.md
+[tpm]: Documentation/devel/tpm.md
 [blog-post]: https://coreos.com/blog/rocket
 
 ## Project status
@@ -29,11 +34,6 @@ For more on the background and motivation behind rkt, read the original [launch 
 rkt's version 1.0 release marks the command line user interface and on-disk data structures as stable and reliable for external development. Any major changes to those primary areas will be clearly communicated, and a formal deprecation process conducted for any retired features. The (optional) API for pod inspection is not yet completely stabilized, but is quite usable, and an excellent area for testing and participation as it matures.
 
 Check out the [roadmap](ROADMAP.md) for more details on the future of rkt.
-
-## rkt and App Container (appc)
-
-rkt is an implementation of the [App Container (appc) spec](Documentation/app-container.md).
-rkt's native image format ([ACI](Documentation/app-container.md#ACI)) and runtime/execution environment ([pods](Documentation/app-container.md#pods)) are defined in the specification.
 
 ## Trying out rkt
 
