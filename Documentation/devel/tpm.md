@@ -11,5 +11,5 @@ Events are logged to PCR 15, with event type `0x1000`. Each event contains the f
 This provides a cryptographically verifiable audit log of the containers executed on a node, including the configuration of each.
 
 
-[build-configure-tpm]: build-configure.md#security
+[build-configure-tpm]: ../build-configure.md#security
 [go-tspi]: https://github.com/coreos/go-tspi
