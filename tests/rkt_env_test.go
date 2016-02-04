@@ -53,6 +53,18 @@ var envTests = []struct {
 		`/bin/sh -c "export VAR_OTHER=host ; ^RKT_BIN^ --debug enter $(^RKT_BIN^ list --full|grep running|awk '{print $1}') /inspect --print-env=VAR_OTHER"`,
 	},
 	{
+		`^RKT_BIN^ --insecure-options=image run --mds-register=false --set-env=TERM=dumb ^PRINT_TERM_HOST^`,
+		"TERM=dumb",
+		`^RKT_BIN^ --insecure-options=image run --mds-register=false --interactive --inherit-env=false ^SLEEP^`,
+		`/bin/sh -c "export TERM=dumb ; ^RKT_BIN^ enter $(^RKT_BIN^ list --full|grep running|awk '{print $1}') /inspect --print-env=TERM"`,
+	},
+	{
+		`^RKT_BIN^ --insecure-options=image run --mds-register=false --set-env=TERM=^HOST_TERM^ ^PRINT_TERM_HOST^`,
+		"TERM=^HOST_TERM^",
+		`^RKT_BIN^ --insecure-options=image run --mds-register=false --interactive --inherit-env=false ^SLEEP^`,
+		`/bin/sh -c "^RKT_BIN^ enter $(^RKT_BIN^ list --full|grep running|awk '{print $1}') /inspect --print-env=TERM"`,
+	},
+	{
 		`/bin/sh -c "export VAR_FROM_MANIFEST=host ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^PRINT_VAR_FROM_MANIFEST^"`,
 		"VAR_FROM_MANIFEST=manifest",
 		`/bin/sh -c "export VAR_FROM_MANIFEST=host ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --interactive --inherit-env=true ^SLEEP^"`,
@@ -71,20 +83,28 @@ func TestEnv(t *testing.T) {
 	defer os.Remove(printVarFromManifestImage)
 	printVarOtherImage := patchTestACI("rkt-inspect-print-var-other.aci", "--exec=/inspect --print-env=VAR_OTHER")
 	defer os.Remove(printVarOtherImage)
+	printTermHostImage := patchTestACI("rkt-inspect-print-term-host.aci", "--exec=/inspect --print-env=TERM")
+	defer os.Remove(printTermHostImage)
 	sleepImage := patchTestACI("rkt-inspect-sleep.aci", "--exec=/inspect --read-stdin")
 	defer os.Remove(sleepImage)
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
+	term := testutils.GetValueFromEnvOrPanic("TERM")
 	replacePlaceholders := func(cmd string) string {
 		fixed := cmd
 		fixed = strings.Replace(fixed, "^RKT_BIN^", ctx.Cmd(), -1)
 		fixed = strings.Replace(fixed, "^PRINT_VAR_FROM_MANIFEST^", printVarFromManifestImage, -1)
 		fixed = strings.Replace(fixed, "^PRINT_VAR_OTHER^", printVarOtherImage, -1)
+		fixed = strings.Replace(fixed, "^PRINT_TERM_HOST^", printTermHostImage, -1)
 		fixed = strings.Replace(fixed, "^SLEEP^", sleepImage, -1)
+		fixed = strings.Replace(fixed, "^HOST_TERM^", term, -1)
 		return fixed
 	}
 	for i, tt := range envTests {
+		// change dynamic variables from expected result
+		tt.runExpect = replacePlaceholders(tt.runExpect)
+
 		// 'run' tests
 		runCmd := replacePlaceholders(tt.runCmd)
 		t.Logf("Running 'run' test #%v", i)

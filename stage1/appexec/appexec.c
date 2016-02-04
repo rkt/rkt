@@ -208,7 +208,7 @@ static void set_env(const char *env_file)
  */
 static void load_env(const char *env_file, const char *keep_env_file, int entering)
 {
-	char *term = getenv("TERM"); /* usefull to keep during entering. */
+	char *term = getenv("TERM"); /* useful to keep during entering. */
 	pexit_if(clearenv() != 0,
 		"Unable to clear environment");
 
@@ -264,6 +264,8 @@ int main(int argc, char *argv[])
 {
 	int entering = 0;
 
+	/* '-e' optional flag passed only during 'entering' phase from stage1.
+	 */
 	int c;
 	while ((c = getopt(argc, argv, "e")) != -1)
 		switch (c) {
@@ -290,7 +292,7 @@ int main(int argc, char *argv[])
 	size_t		n_gids;
 
 	exit_if(argc < 7,
-		"Usage: %s /path/to/root /work/directory /env/file uid gid[,gid...] /to/exec [args ...]", argv[0]);
+		"Usage: %s /path/to/root /work/directory /env/file uid gid[,gid...] [-e] /to/exec [args ...]", argv[0]);
 
 	root = argv[optind];
 	cwd = argv[optind+1];
