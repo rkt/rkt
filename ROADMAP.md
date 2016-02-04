@@ -22,7 +22,7 @@ rkt's version 1.0 release marks the command line user interface and on-disk data
 ### rkt 1.1 (February)
 
 - Enhanced DNS configuration [#2044](https://github.com/coreos/rkt/issues/2044)
-- User configuraion for stage1 [#2013](https://github.com/coreos/rkt/issues/2013)
+- User configuration for stage1 [#2013](https://github.com/coreos/rkt/issues/2013)
 - packaged for more distributions
   - Debian [#1307](https://github.com/coreos/rkt/issues/1307)
 
