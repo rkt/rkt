@@ -10,9 +10,9 @@ rkt (pronounced _"rock-it"_) is a CLI for running app containers on Linux. rkt i
 
 Some of rkt's key features and goals include:
 
-- _Security_: rkt is developed with a principle of "secure-by-default", and includes a number of important security features like support for [SELinux][selinux], [TPM measurement][tpm], and running app containers in [hardware-isolated VMs][lkvm])
+- _Security_: rkt is developed with a principle of "secure-by-default", and includes a number of important security features like support for [SELinux][selinux], [TPM measurement][tpm], and running app containers in [hardware-isolated VMs][lkvm].
 - _Composability_: rkt is designed for first-class integration with init systems ([systemd][systemd], upstart) and cluster orchestration tools (fleet, [Kubernetes][kubernetes], [Nomad][nomad]), and supports [swappable execution engines][architecture].
-- _Open standards and compatibility_: rkt implements the [appc specification][rkt-and-appc], supports the [Container Networking Interface specification][CNI], and can also run [Docker images][docker]
+- _Open standards and compatibility_: rkt implements the [appc specification][rkt-and-appc], supports the [Container Networking Interface specification][CNI], and can also run [Docker images][docker].
 
 For more on the background and motivation behind rkt, read the original [launch announcement][blog-post].
 
