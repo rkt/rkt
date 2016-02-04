@@ -2,7 +2,9 @@
 
 ## Background
 
-[Control Groups](https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt) are a Linux feature for organizing processes in hierarchical groups and applying resources limits to them. Each rkt pod is placed in a different cgroup to separate the processes of the pod from the processes of the host. Memory and CPU isolators are also implemented with cgroups.
+[Control Groups][cgroups] are a Linux feature for organizing processes in hierarchical groups and applying resources limits to them. Each rkt pod is placed in a different cgroup to separate the processes of the pod from the processes of the host. Memory and CPU isolators are also implemented with cgroups.
+
+[cgroups]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 
 ## Which cgroups are used
 
