@@ -41,7 +41,7 @@ var (
 	supportedAPIVersion = "1.0.0-alpha"
 	cmdAPIService       = &cobra.Command{
 		Use:   `api-service [--listen="localhost:15441"]`,
-		Short: "Run API service (experimental, DO NOT USE IT)",
+		Short: "Run API service (experimental)",
 		Long: `The API service listens for gRPC requests on the address and port specified by
 the --listen option.
 
