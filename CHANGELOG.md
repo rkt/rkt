@@ -20,6 +20,7 @@
 
 - Fix regression when authenticating to v2 Docker registries ([#2008](https://github.com/coreos/rkt/issues/2008)).
 - Don't link to libacl, but dlopen it ([#1963](https://github.com/coreos/rkt/pull/1963)). This means that rkt will not crash if libacl is not present on the host, but it will just print a warning.
+- Only suppress diagnostic messages, not error messages in stage1 ([#2111](https://github.com/coreos/rkt/pull/2111)).
 
 #### Other changes
 
