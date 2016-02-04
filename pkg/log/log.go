@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
@@ -38,6 +39,20 @@ func New(out io.Writer, prefix string, debug bool) *Logger {
 	}
 	l.SetFlags(0)
 	return l
+}
+
+// NewLogSet returns a set of Loggers for commonly used output streams: errors,
+// diagnostics, stdout. The error and stdout streams should generally never be
+// suppressed. diagnostic can be suppressed by setting the output to
+// ioutil.Discard. If an output destination is not needed, one can simply
+// discard it by assigning it to '_'.
+func NewLogSet(prefix string, debug bool) (stderr, diagnostic, stdout *Logger) {
+	stderr = New(os.Stderr, prefix, debug)
+	diagnostic = New(os.Stderr, prefix, debug)
+	// Debug not used for stdout.
+	stdout = New(os.Stdout, prefix, false)
+
+	return stderr, diagnostic, stdout
 }
 
 // SetDebug sets the debug flag to the value of b

@@ -15,13 +15,25 @@
 package common
 
 import (
-	"os"
+	"io/ioutil"
 
 	rktlog "github.com/coreos/rkt/pkg/log"
 )
 
-var log *rktlog.Logger
+var (
+	log  *rktlog.Logger
+	diag *rktlog.Logger
+)
 
 func init() {
-	log = rktlog.New(os.Stderr, "stage1", false)
+	log, diag, _ = rktlog.NewLogSet("stage1", false)
+}
+
+func InitDebug(debug bool) {
+	log.SetDebug(debug)
+	if debug {
+		diag.SetDebug(true)
+	} else {
+		diag.SetOutput(ioutil.Discard)
+	}
 }
