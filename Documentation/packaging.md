@@ -4,30 +4,7 @@ This document aims to provide information about packaging rkt in Linux distribut
 
 ## Build-time dependencies
 
-### Basic build-time dependencies
-
-- autoconf
-- GNU Make
-- glibc-static
-- bash
-- go
-- gofmt
-- file
-- git
-- gpg
-
-#### Additional build-time dependencies for the coreos flavor
-
-wget, gpg, mktemp, md5sum, cpio, gzip, unsquashfs, sort
-
-#### Additional build-time dependencies for the kvm flavor
-
-patch, bc
-
-#### Additional build-time dependencies for the src flavor
-
-intltoolize, libtoolize and all systemd dependencies.
-The dependencies may differ depending on the version of built systemd.
+Please see [the list of build-time requirements][build-deps].
 
 ### Offline builds
 
@@ -57,12 +34,7 @@ rkt uses [Godep](https://github.com/tools/godep) to maintain [a copy of dependen
 
 ## Run-time dependencies
 
-A Linux system configured with [suitable options](hacking.md#run-time-requirements) is required.
-
-### Additional run-time dependencies for the host flavor
-
-- systemd >= v222 with systemctl, systemd-shutdown, systemd, systemd-journald.
-- bash
+Please see [the list of run-time requirements][run-deps].
 
 ## Packaging Externals
 
@@ -83,3 +55,5 @@ A few [example systemd unit files for rkt helper services][rkt-units] are includ
 [rkt-gc]: subcommands/gc.md
 [rkt-metadata-svc]: subcommands/metadata-service.md
 [rkt-units]: https://github.com/coreos/rkt/tree/master/dist/init/systemd
+[build-deps]: hacking.md#build-time-requirements
+[run-deps]: hacking.md#run-time-requirements
