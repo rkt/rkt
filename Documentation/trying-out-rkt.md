@@ -1,15 +1,13 @@
 # Trying out rkt 
 
-This guide provides a short introduction to trying out rkt. 
+This guide provides a short introduction to trying out rkt.
 For a more in-depth guide of a full end-to-end workflow of building an application and running it using rkt, check out the [getting-started-guide](getting-started-guide.md)
 
 ## Using rkt on Linux
 
-`rkt` consists of a single self-contained CLI, and is currently supported on amd64 Linux.
-A modern kernel is required but there should be no other system dependencies.
-We recommend booting up a fresh virtual machine to test out rkt.
+rkt consists of a single CLI tool, and is currently supported on amd64 Linux. A modern kernel is required but there should be no other system dependencies. We recommend booting up a fresh virtual machine to test out rkt.
 
-To download the `rkt` binary, simply grab the latest release directly from GitHub:
+To download the rkt binary, simply grab the latest release directly from GitHub:
 
 ```
 wget https://github.com/coreos/rkt/releases/download/v0.16.0/rkt-v0.16.0.tar.gz
@@ -18,20 +16,55 @@ cd rkt-v0.16.0
 ./rkt help
 ```
 
-## Trying out rkt using Vagrant
+**SELinux Note**: rkt can use SELinux but the policy needs to be tailored to your distribution. We suggest that new users [disable SELinux](https://www.centos.org/docs/5/html/5.1/Deployment_Guide/sec-sel-enable-disable.html) to get started. If you can help package rkt for your distro [please help](https://github.com/coreos/rkt/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+label%3Aarea%2Fdistribution++label%3Adependency%2Fexternal)!
 
-For Mac (and other Vagrant) users we have set up a `Vagrantfile`: clone this repository and make sure you have [Vagrant](https://www.vagrantup.com/) 1.5.x or greater installed.
-`vagrant up` starts up a Linux box and installs via some scripts `rkt` and `actool`.
-With a subsequent `vagrant ssh` you are ready to go:
+### Optional: Setup Privilege Separation
+
+For privilege separation rkt uses a `rkt` group that has read-write access to the rkt data directory. This allows `rkt fetch`, which downloads and verifies images, to run as a non-root user. If you skip this section, you can run `sudo rkt fetch` instead but we recommend taking the following steps for production use cases.
+
+rkt ships with a simple script that can help set up the appropriate permissions to facilitate non-root use:
+
+```
+sudo groupadd rkt
+export WHOAMI=$(whoami); sudo gpasswd -a $WHOAMI rkt
+sudo ./scripts/setup-data-dir.sh
+```
+
+Now it's time to test this out by retrieving an etcd image using a non-root user in the rkt group.
+
+First, trust the signing key for etcd images. This must be run as root as access to the keystore is restricted:
+
+```
+sudo ./rkt trust --prefix coreos.com/etcd
+```
+
+Now fetch the etcd image as an unprivileged user:
+```
+./rkt fetch coreos.com/etcd,version=v2.2.5
+```
+
+Success! Now rkt can fetch and download images as a non-root user.
+
+### rkt using Vagrant
+
+For Mac (and other Vagrant) users we have set up a `Vagrantfile`. Make sure you have [Vagrant](https://www.vagrantup.com/) 1.5.x or greater installed.
+
+First, download the `Vagrantfile` and start a Linux machines with `vagrant up` with `rkt` installed.
 
 ```
 git clone https://github.com/coreos/rkt
 cd rkt
 vagrant up
-vagrant ssh
 ```
 
-Keep in mind while running through the examples that right now `rkt` needs to be run as root for most operations.
+With a subsequent `vagrant ssh` you will have access to run rkt:
+
+```
+vagrant ssh
+rkt --help
+```
+
+Success! The rest of the guide can now be followed normally.
 
 ## rkt basics
 
