@@ -10,24 +10,63 @@ For more information on the rkt internals, see the [`devel`](devel/) documentati
 rkt should be able to be built on any modern Linux system.
 For the most part the codebase is self-contained (e.g. all dependencies are vendored), but assembly of the stage1 requires some other tools to be installed on the system.
 
-### Build-time requirements
+### Build-time Requirements
 
-* Linux 3.8+
-  * autoconf
-  * automake
-  * bc
-  * cpio
-  * gcc
-  * glibc development and static pieces (on Fedora/RHEL/Centos: glibc-devel and glibc-static packages, on Debian/Ubuntu libc6-dev package)
-  * gpg
-  * libacl development files (on Fedora/RHEL/Centos: libacl-devel, on Debian/Ubuntu libacl1-dev)
-  * make
-  * openssl
-  * patch
-  * realpath
-  * squashfs-tools
-  * wget
-* Go 1.4+
+#### Basic
+
+* GNU Make
+* Go 1.4+ (ideally 1.5.3 or later)
+* autoconf
+* aclocal (usually a part of automake)
+* bash
+* git
+* glibc
+  * development headers
+  * the rkt binary links against the library
+* gofmt (usually distributed with Go)
+* govet (usually distributed with Go)
+* TrouSerS (only when TPM is enabled)
+  * development headers
+  * the rkt binary links against the library
+* gpg (when running functional tests)
+
+#### Additional requirements when also building any stage1 image flavor
+
+* glibc
+  * development headers
+  * the stage1 binaries link against the static library
+* libdl
+  * development headers
+  * the stage1 binaries link against the library
+* libacl
+  * development headers
+* C compiler
+
+#### Specific for the coreos/kvm flavor
+
+* cat
+* cpio
+* gzip
+* md5sum
+* mktemp
+* sort
+* unsquashfs
+* wget
+* gpg (optional, required when downloading the CoreOS PXE image during the build)
+
+#### Specific for the kvm flavor
+
+* patch
+* tar
+* xz
+* build requirements for kernel
+* build requirements for lkvm
+
+#### Specific for the src flavor
+
+* build requirements for systemd
+
+### Running the build
 
 Once the requirements have been met you can build rkt by running the following commands:
 
@@ -46,29 +85,34 @@ Instead of a number, english words can be used.
 
 `make V=raw`
 
-### Run-time requirements
+### Run-time Requirements
 
-rkt ideally should be statically linked, so it would not require any dynamic libraries to be installed, but some C libraries do not support static linking.
-So, if rkt is dynamically linked, then the only thing it will depend on is a C library.
+To run rkt, the requirements on the following list must be fulfilled.
 
-The stage1 images shipped with rkt also require the following libraries:
+#### Basic
 
-* libdl
+* Linux 3.8+ (ideally 4.3+ to have overlay-on-overlay working), with the following options configured:
+  * CONFIG_CGROUPS
+  * CONFIG_NAMESPACES
+  * CONFIG_UTS_NS
+  * CONFIG_IPC_NS
+  * CONFIG_PID_NS
+  * CONFIG_NET_NS
+  * CONFIG_OVERLAY_FS (nice to have)
+
+#### Additional run-time requirement for all the stage1 image flavors
+
 * libacl
-* libattr
+  * the library is optional (it is dlopened inside the stage1)
 
-Furthermore, rkt requires the following kernel features:
+#### Specific for the host flavor
 
-* `CONFIG_CGROUPS`
-* `CONFIG_NAMESPACES`
-* `CONFIG_UTS_NS`
-* `CONFIG_IPC_NS`
-* `CONFIG_PID_NS`
-* `CONFIG_NET_NS`
-
-Additionally, the following features are nice to have:
-
-* `CONFIG_OVERLAY_FS` (to prepare the rootfs without tar)
+* bash
+* systemd >= v222
+  * systemctl
+  * systemd-shutdown
+  * systemd
+  * systemd-journald
 
 ### With Docker
 
