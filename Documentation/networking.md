@@ -13,6 +13,10 @@ When `--net=host` is passed the pod's apps will inherit the network namespace of
 If rkt is directly called from the host the apps within the pod will share the network stack and the interfaces with the host machine.
 This means that every network service that runs in the pod has the same connectivity as if it was started on the host directly.
 
+Applications that run in a pod which shares the host network namespace are able to access everything associated with the host's network interfaces: IP addresses, routes, iptables rules and sockets, including abstract Linux sockets.
+Depending on the host's setup these abstract Linux sockets, used by applications like X11 and D-Bus, might expose critical endpoints to the pod's applications.
+This risk can be avoided by configuring a separate namespace for pod.
+
 ## Contained mode
 
 If anything other than `host` is passed to `--net=`, the pod will live in a separate network namespace with the help of [CNI](https://github.com/appc/cni) and its plugin system.
@@ -58,6 +62,26 @@ It can also be loaded directly by explicitly passing `--net=default-restricted`.
 
 The passing of `--net=none` will put the pod in a network namespace with only the loopback networking.
 This can be used to completely isolate the pod's network.
+
+```sh
+$ sudo rkt run --interactive --net=none kinvolk.io/aci/busybox:1.24
+(...) 
+/ # ip address
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue
+	link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+	inet 127.0.0.1/8 scope host lo
+   	valid_lft forever preferred_lft forever
+	inet6 ::1/128 scope host
+   	valid_lft forever preferred_lft forever
+/ # ip route
+/ # ping localhost
+PING localhost (127.0.0.1): 56 data bytes
+64 bytes from 127.0.0.1: seq=0 ttl=64 time=0.022 ms
+^C
+```
+
+The situation here is very straightforward: no routes, the interface _lo_ with the local address.
+The resolution of localhost is enabled in rkt by default, as it will generate a minimal `/etc/hosts` inside the pod if the image does not provide one.
 
 ### Setting up additional networks
 
@@ -305,6 +329,9 @@ The pod's TCP port 80 can be mapped to an arbitrary port on the host during rkt 
 
 Now, any traffic arriving on host's TCP port 8888 will be forwarded to the pod on port 80.
 
+rkt also supports socket activation.
+This is documented in [Socket-activated service](using-rkt-with-systemd.md#socket-activated-service).
+
 ## Overriding default network
 
 If a network has a name "default", it will override the default network added by rkt.
@@ -347,13 +374,13 @@ Please follow [this issue on CNI](https://github.com/appc/cni/issues/56) to trac
 rkt can automatically prepare `/etc/resolv.conf` for the apps in the pod. The simplest configuration is:
 
 ```bash
-rkt run --dns=8.8.8.8 pod.aci
+$ sudo rkt run --dns=8.8.8.8 pod.aci
 ```
 
 Other parameters can be given:
 
 ```bash
-rkt run --dns=8.8.8.8 --dns=8.8.4.4 --dns-search=foo.com --dns-opt=debug pod.aci
+$ sudo rkt run --dns=8.8.8.8 --dns=8.8.4.4 --dns-search=foo.com --dns-opt=debug pod.aci
 ```
 
 This will generate the following `/etc/resolv.conf` for the applications:
@@ -365,4 +392,13 @@ search foo.com
 nameserver 8.8.8.8
 nameserver 8.8.4.4
 options debug
+```
+
+The following example shows that the DNS options allow the pod to resolve names successfully:
+
+```sh
+$ sudo rkt run --dns 8.8.8.8  --net=host kinvolk.io/aci/busybox:1.24 --exec /bin/busybox -- ping -c1 coreos.com
+...
+[57724.185917] busybox[4]: PING coreos.com (141.101.112.174): 56 data bytes
+[57724.186222] busybox[4]: 64 bytes from 141.101.112.174: seq=0 ttl=55 time=22.394 ms
 ```
