@@ -1,6 +1,6 @@
 # rkt and the Trusted Platform Module
 
-rkt supports *measuring* container state and configuration into the Trusted Platform Module (TPM) event log. Enable this functionality by building rkt with the [`--enable-tpm=yes` option to `./configure`][build-configure-tpm]. rkt accesses the TPM via the [`tpmd` executable available from the go-tspi project][go-tspi]. This `tpmd` is expected to listen on port 12041.
+rkt supports *measuring* container state and configuration into the [Trusted Platform Module (TPM)](https://en.wikipedia.org/wiki/Trusted_Platform_Module) event log. Enable this functionality by building rkt with the [`--enable-tpm=yes` option to `./configure`][build-configure-tpm]. rkt accesses the TPM via the [`tpmd` executable available from the go-tspi project][go-tspi]. This `tpmd` is expected to listen on port 12041.
 
 Events are logged to PCR 15, with event type `0x1000`. Each event contains the following data:
 
