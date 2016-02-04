@@ -8,7 +8,7 @@ FLY_ACI_SRC_MANIFEST := $(MK_SRCDIR)/aci-manifest.in
 FLY_ACI_GEN_MANIFEST := $(FLY_ACI_TMPDIR)/manifest
 # manifest in the ACI directory
 FLY_ACI_MANIFEST := $(FLY_ACIDIR)/manifest
-# escaped values of the ACI image name, version and enter command, so
+# escaped values of the ACI name, version and enter command, so
 # they can be safely used in the replacement part of sed's s///
 # command.
 FLY_ACI_VERSION := $(call sed-replacement-escape,$(RKT_VERSION))

@@ -35,7 +35,7 @@ type validator struct {
 }
 
 // newValidator returns a validator instance if passed image is indeed
-// an ACI image.
+// an ACI.
 func newValidator(image io.ReadSeeker) (*validator, error) {
 	manifest, err := aci.ManifestFromImage(image)
 	if err != nil {
