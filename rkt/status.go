@@ -27,7 +27,9 @@ var (
 	cmdStatus = &cobra.Command{
 		Use:   "status [--wait] UUID",
 		Short: "Check the status of a rkt pod",
-		Run:   runWrapper(runStatus),
+		Long: `Prints assorted information about the pod such as its state, pid and exit
+status`,
+		Run: runWrapper(runStatus),
 	}
 	flagWait bool
 )

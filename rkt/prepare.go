@@ -33,12 +33,18 @@ var (
 	cmdPrepare = &cobra.Command{
 		Use:   "prepare [--volume=name,kind=host,...] [--mount volume=VOL,target=PATH] [--quiet] IMAGE [-- image-args...[---]]...",
 		Short: "Prepare to run image(s) in a pod in rkt",
-		Long: `IMAGE should be a string referencing an image; either a hash, local file on disk, or URL.
-They will be checked in that order and the first match will be used.
+		Long: `Prepares the pod and returns its UUID for a subsequent call to run-prepared.
+
+Prepare is useful to get the UUID of the pod before running or when preparing
+takes a long time.
+
+IMAGE should be a string referencing an image; either a hash, local file on
+disk, or URL. They will be checked in that order and the first match will be
+used.
 
 An "--" may be used to inhibit rkt prepare's parsing of subsequent arguments,
-which will instead be appended to the preceding image app's exec arguments.
-End the image arguments with a lone "---" to resume argument parsing.`,
+which will instead be appended to the preceding image app's exec arguments. End
+the image arguments with a lone "---" to resume argument parsing.`,
 		Run: ensureSuperuser(runWrapper(runPrepare)),
 	}
 	flagQuiet bool

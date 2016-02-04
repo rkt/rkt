@@ -27,7 +27,7 @@ var (
 	cmdVersion  = &cobra.Command{
 		Use:   "version",
 		Short: "Print the version and exit",
-		Long:  "Print the version and exit",
+		Long:  "Print the version of rkt, and various build and configuration information.",
 		Run:   runWrapper(runVersion),
 	}
 )

@@ -34,7 +34,11 @@ var (
 	cmdFetch = &cobra.Command{
 		Use:   "fetch IMAGE_URL...",
 		Short: "Fetch image(s) and store them in the local store",
-		Run:   runWrapper(runFetch),
+		Long: `Locates and downloads remote ACIs and their attached signatures.
+
+If the ACI is available in the local store, the image will not be fetched
+again.`,
+		Run: runWrapper(runFetch),
 	}
 	flagFullHash bool
 )

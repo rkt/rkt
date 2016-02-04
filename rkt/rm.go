@@ -27,6 +27,7 @@ var (
 	cmdRm = &cobra.Command{
 		Use:   "rm [--uuid-file=FILE] UUID ...",
 		Short: "Remove all files and resources associated with an exited pod",
+		Long:  `Unlike gc, rm allows users to remove specific pods.`,
 		Run:   ensureSuperuser(runWrapper(runRm)),
 	}
 	flagUUIDFile string

@@ -42,7 +42,11 @@ var (
 	cmdAPIService       = &cobra.Command{
 		Use:   `api-service [--listen="localhost:15441"]`,
 		Short: "Run API service (experimental, DO NOT USE IT)",
-		Run:   runWrapper(runAPIService),
+		Long: `The API service listens for gRPC requests on the address and port specified by
+the --listen option.
+
+Specify the address 0.0.0.0 to listen on all interfaces.`,
+		Run: runWrapper(runAPIService),
 	}
 
 	flagAPIServiceListenAddr string

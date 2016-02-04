@@ -107,6 +107,7 @@ var (
 	cmdImageList = &cobra.Command{
 		Use:   "list",
 		Short: "List images in the local store",
+		Long:  `Optionally, allows the user to specify the fields and sort order.`,
 		Run:   runWrapper(runImages),
 	}
 	flagImagesFields     *rktflag.OptionList

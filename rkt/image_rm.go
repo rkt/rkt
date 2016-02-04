@@ -26,6 +26,7 @@ var (
 	cmdImageRm = &cobra.Command{
 		Use:   "rm IMAGE...",
 		Short: "Remove image(s) with the given ID(s) or name(s) from the local store",
+		Long:  `Unlike image gc, image rm allows users to remove specific images.`,
 		Run:   runWrapper(runRmImage),
 	}
 )

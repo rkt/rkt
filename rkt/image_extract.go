@@ -32,8 +32,11 @@ var (
 	cmdImageExtract = &cobra.Command{
 		Use:   "extract IMAGE OUTPUT_DIR",
 		Short: "Extract a stored image to a directory",
-		Long:  `IMAGE should be a string referencing an image: either a hash or an image name.`,
-		Run:   runWrapper(runImageExtract),
+		Long: `IMAGE should be a string referencing an image: either a hash or an image name.
+
+Note that in order to make cleaning up easy (just rm -rf), extract does not use
+overlayfs or any other mechanism.`,
+		Run: runWrapper(runImageExtract),
 	}
 	flagExtractRootfsOnly bool
 	flagExtractOverwrite  bool

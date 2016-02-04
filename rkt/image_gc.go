@@ -34,7 +34,11 @@ var (
 	cmdImageGC = &cobra.Command{
 		Use:   "gc",
 		Short: "Garbage collect local store",
-		Run:   runWrapper(runGCImage),
+		Long: `This is intended to be run periodically from a timer or cron job.
+
+The default grace period is 24h. Use --grace-period=0s to effectively disable
+the grace-period.`,
+		Run: runWrapper(runGCImage),
 	}
 	flagImageGracePeriod time.Duration
 )

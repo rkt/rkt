@@ -144,6 +144,9 @@ var (
 var cmdRkt = &cobra.Command{
 	Use:   "rkt [command]",
 	Short: cliDescription,
+	Long: `A CLI for running app containers on Linux.
+
+To get the help on any specific command, run "rkt help command".`,
 	BashCompletionFunction: bash_completion_func,
 }
 
