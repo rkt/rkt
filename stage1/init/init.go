@@ -104,6 +104,7 @@ var (
 	localhostIP  net.IP
 	localConfig  string
 	log          *rktlog.Logger
+	diag         *rktlog.Logger
 )
 
 func init() {
@@ -468,7 +469,7 @@ func forwardedPorts(pod *stage1commontypes.Pod) ([]networking.ForwardedPort, err
 func stage1() int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
-		log.Print("UUID is missing or malformed")
+		log.PrintE("UUID is missing or malformed", err)
 		return 1
 	}
 
@@ -735,9 +736,11 @@ func getContainerSubCgroup(machineID string) (string, error) {
 func main() {
 	flag.Parse()
 
-	log = rktlog.New(os.Stderr, "stage1", debug)
+	stage1initcommon.InitDebug(debug)
+
+	log, diag, _ = rktlog.NewLogSet("stage1", debug)
 	if !debug {
-		log.SetOutput(ioutil.Discard)
+		diag.SetOutput(ioutil.Discard)
 	}
 
 	// move code into stage1() helper so deferred fns get run

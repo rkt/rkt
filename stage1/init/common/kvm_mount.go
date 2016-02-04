@@ -86,7 +86,7 @@ func installNewMountUnit(root, what, where, fsType, options, beforeAndrequiredBy
 	if err := writeUnit(opts, filepath.Join(unitsPath, unitName)); err != nil {
 		return "", err
 	}
-	log.Printf("mount unit created: %q in %q (what=%q, where=%q)", unitName, unitsPath, what, where)
+	diag.Printf("mount unit created: %q in %q (what=%q, where=%q)", unitName, unitsPath, what, where)
 
 	return unitName, nil
 }
@@ -170,7 +170,7 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 		whatFullPath := filepath.Join(root, whatPath)
 
 		if vol.Kind == "empty" {
-			log.Printf("creating an empty volume folder for sharing: %q", whatFullPath)
+			diag.Printf("creating an empty volume folder for sharing: %q", whatFullPath)
 			err := os.MkdirAll(whatFullPath, 0700)
 			if err != nil {
 				return err
@@ -182,13 +182,13 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 		whereFullPath := filepath.Join(root, wherePath)
 
 		// assertion to make sure that "what" exists (created earlier by PodToSystemdHostMountUnits)
-		log.Printf("checking required source path: %q", whatFullPath)
+		diag.Printf("checking required source path: %q", whatFullPath)
 		if _, err := os.Stat(whatFullPath); os.IsNotExist(err) {
 			return fmt.Errorf("bug: missing source for volume %v", vol.Name)
 		}
 
 		// optionally prepare app directory
-		log.Printf("optionally preparing destination path: %q", whereFullPath)
+		diag.Printf("optionally preparing destination path: %q", whereFullPath)
 		err := os.MkdirAll(whereFullPath, 0700)
 		if err != nil {
 			return errwrap.Wrap(fmt.Errorf("failed to prepare dir for mount %v", m.Volume), err)
@@ -241,7 +241,7 @@ func VolumesToKvmDiskArgs(volumes []types.Volume) []string {
 		if vol.Kind == "host" {
 			// eg. --9p=/home/jon/srcdir,tag
 			arg := "--9p=" + vol.Source + "," + mountTag
-			log.Printf("--disk argument: %#v", arg)
+			diag.Printf("--disk argument: %#v", arg)
 			args = append(args, arg)
 		}
 	}

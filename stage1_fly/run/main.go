@@ -60,7 +60,8 @@ var (
 	discardBool    bool
 	discardString  string
 
-	log *rktlog.Logger
+	log  *rktlog.Logger
+	diag *rktlog.Logger
 )
 
 func getHostMounts() (map[string]struct{}, error) {
@@ -117,7 +118,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 			return nil, fmt.Errorf("duplicate mount given: %q", m.Volume)
 		}
 		namedVolumeMounts[m.Volume] = volumeMountTuple{M: m}
-		log.Printf("adding %+v", namedVolumeMounts[m.Volume])
+		diag.Printf("adding %+v", namedVolumeMounts[m.Volume])
 	}
 
 	// Merge command-line Mounts with ImageManifest's MountPoints
@@ -128,7 +129,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 			return nil, fmt.Errorf("conflicting path information from mount and mountpoint %q", mp.Name)
 		case !exists:
 			namedVolumeMounts[mp.Name] = volumeMountTuple{M: schema.Mount{Volume: mp.Name, Path: mp.Path}}
-			log.Printf("adding %+v", namedVolumeMounts[mp.Name])
+			diag.Printf("adding %+v", namedVolumeMounts[mp.Name])
 		}
 	}
 
@@ -143,7 +144,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 			return nil, fmt.Errorf("mismatched volume:mount pair: %q != %q", v.Name, tuple.M.Volume)
 		}
 		namedVolumeMounts[v.Name] = volumeMountTuple{V: v, M: tuple.M}
-		log.Printf("adding %+v", namedVolumeMounts[v.Name])
+		diag.Printf("adding %+v", namedVolumeMounts[v.Name])
 	}
 
 	// Merge command-line Volumes with ImageManifest's MountPoints
@@ -159,7 +160,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 			v := tuple.V
 			v.ReadOnly = &mp.ReadOnly
 			namedVolumeMounts[mp.Name] = volumeMountTuple{M: tuple.M, V: v}
-			log.Printf("adding %+v", namedVolumeMounts[mp.Name])
+			diag.Printf("adding %+v", namedVolumeMounts[mp.Name])
 		}
 	}
 
@@ -317,7 +318,7 @@ func stage1() int {
 		return 4
 	}
 
-	log.Printf("chroot to %q", rfs)
+	diag.Printf("chroot to %q", rfs)
 	if err := syscall.Chroot(rfs); err != nil {
 		log.PrintE("can't chroot", err)
 		return 1
@@ -328,7 +329,7 @@ func stage1() int {
 		return 1
 	}
 
-	log.Printf("execing %q in %q", args, rfs)
+	diag.Printf("execing %q in %q", args, rfs)
 	err = stage1common.WithClearedCloExec(lfd, func() error {
 		return syscall.Exec(args[0], args, env)
 	})
@@ -343,9 +344,9 @@ func stage1() int {
 func main() {
 	flag.Parse()
 
-	log = rktlog.New(os.Stderr, "run", debug)
+	log, diag, _ = rktlog.NewLogSet("run", debug)
 	if !debug {
-		log.SetOutput(ioutil.Discard)
+		diag.SetOutput(ioutil.Discard)
 	}
 
 	// move code into stage1() helper so defered fns get run

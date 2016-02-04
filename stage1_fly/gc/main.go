@@ -29,7 +29,7 @@ const (
 var (
 	debug bool
 
-	log *rktlog.Logger
+	diag *rktlog.Logger
 )
 
 func init() {
@@ -39,10 +39,10 @@ func init() {
 func main() {
 	flag.Parse()
 
-	log = rktlog.New(os.Stderr, "gc", debug)
+	diag = rktlog.New(os.Stderr, "gc", debug)
 	if !debug {
-		log.SetOutput(ioutil.Discard)
+		diag.SetOutput(ioutil.Discard)
 	}
-	log.Printf("not doing anything since stage0 is cleaning up the mounts")
+	diag.Printf("not doing anything since stage0 is cleaning up the mounts")
 	return
 }

@@ -47,6 +47,7 @@ var (
 	sshPath string
 	u, _    = user.Current()
 	log     *rktlog.Logger
+	diag    *rktlog.Logger
 )
 
 // fileAccessible checks if the given path exists and is a regular file
@@ -140,7 +141,7 @@ func init() {
 	flag.StringVar(&podPid, "pid", "", "podPID")
 	flag.StringVar(&appName, "appname", "", "application to use")
 
-	log = rktlog.New(os.Stderr, "kvm", false)
+	log, diag, _ = rktlog.NewLogSet("kvm", false)
 
 	var err error
 	if sshPath, err = exec.LookPath("ssh"); err != nil {
@@ -237,10 +238,11 @@ func execSSH() error {
 func main() {
 	flag.Parse()
 
+	log.SetDebug(debug)
+	diag.SetDebug(debug)
+
 	if !debug {
-		log.SetOutput(ioutil.Discard)
-	} else {
-		log.SetDebug(true)
+		diag.SetOutput(ioutil.Discard)
 	}
 
 	if appName == "" {

@@ -12,28 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package main
 
 import (
-	"io/ioutil"
+	"fmt"
+	"os"
+	"testing"
 
-	rktlog "github.com/coreos/rkt/pkg/log"
+	"github.com/coreos/rkt/tests/testutils"
 )
 
-var (
-	log  *rktlog.Logger
-	diag *rktlog.Logger
-)
+func TestRktEnsureErrors(t *testing.T) {
+	const imgName = "rkt-ensure-errors-test"
 
-func init() {
-	log, diag, _ = rktlog.NewLogSet("stage1", false)
-}
+	image := patchTestACI(fmt.Sprintf("%s.aci", imgName), fmt.Sprintf("--name=%s", imgName))
+	defer os.Remove(image)
 
-func InitDebug(debug bool) {
-	log.SetDebug(debug)
-	if debug {
-		diag.SetDebug(true)
-	} else {
-		diag.SetOutput(ioutil.Discard)
-	}
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	runCmd := fmt.Sprintf("%s run --insecure-options=image --net=notavalidnetwork %s", ctx.Cmd(), image)
+	t.Logf("Running test: %s", runCmd)
+	runRktAndCheckRegexOutput(t, runCmd, "stage1: failed to setup network")
 }
