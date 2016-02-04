@@ -18,9 +18,9 @@ cd rkt-v0.16.0
 
 **SELinux Note**: rkt can use SELinux but the policy needs to be tailored to your distribution. We suggest that new users [disable SELinux](https://www.centos.org/docs/5/html/5.1/Deployment_Guide/sec-sel-enable-disable.html) to get started. If you can help package rkt for your distro [please help](https://github.com/coreos/rkt/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+label%3Aarea%2Fdistribution++label%3Adependency%2Fexternal)!
 
-### Optional: Setup Privilege Separation
+### Optional: Set up Privilege Separation
 
-For privilege separation rkt uses a `rkt` group that has read-write access to the rkt data directory. This allows `rkt fetch`, which downloads and verifies images, to run as a non-root user. If you skip this section, you can run `sudo rkt fetch` instead but we recommend taking the following steps for production use cases.
+To faciliate privilege separation between different commands, rkt uses a `rkt` group that has read-write access to the rkt data directory. This allows `rkt fetch`, which downloads and verifies images, to run as a non-root user. If you skip this section, you can run `sudo rkt fetch` instead but we recommend taking the following steps for production use cases.
 
 rkt ships with a simple script that can help set up the appropriate permissions to facilitate non-root use:
 
@@ -49,7 +49,7 @@ Success! Now rkt can fetch and download images as a non-root user.
 
 For Mac (and other Vagrant) users we have set up a `Vagrantfile`. Make sure you have [Vagrant](https://www.vagrantup.com/) 1.5.x or greater installed.
 
-First, download the `Vagrantfile` and start a Linux machines with `vagrant up` with `rkt` installed.
+First, download the `Vagrantfile` and start a Linux machine with rkt installed by running `vagrant up`.
 
 ```
 git clone https://github.com/coreos/rkt
