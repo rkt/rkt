@@ -17,14 +17,28 @@ rkt's version 1.0 release marks the command line user interface and on-disk data
 - stage1 benchmarking [#1788](https://github.com/coreos/rkt/issues/1788)
 - more advanced stage1 image configuration [#1425](https://github.com/coreos/rkt/issues/1425)
 - packaged for more distributions
-  - CentOS [#1305](https://github.com/coreos/rkt/issues/1305)
-  - OpenSUSE [#1304](https://github.com/coreos/rkt/issues/1308)
   - Fedora [#1304](https://github.com/coreos/rkt/issues/1304)
+
+### rkt 1.1 (February)
+
+- Enhanced DNS configuration [#2044](https://github.com/coreos/rkt/issues/2044)
+- User configuraion for stage1 [#2013](https://github.com/coreos/rkt/issues/2013)
+- packaged for more distributions
   - Debian [#1307](https://github.com/coreos/rkt/issues/1307)
 
-### rkt 1.1 (Future)
+### rkt 1.2 (March)
 
-- stable API
+- app exit status propagation [#1460](https://github.com/coreos/rkt/issues/1460)
+- `rkt fly` as top-level command [#1889](https://github.com/coreos/rkt/issues/1889)
 - fully integrated with `machinectl login` and `systemd-run` [#1463](https://github.com/coreos/rkt/issues/1463)
 - IPv6 support [appc/cni#31](https://github.com/appc/cni/issues/31)
+- packaged for more distributions
+  - CentOS [#1305](https://github.com/coreos/rkt/issues/1305)
+
+### rkt 1.3 (March)
+
+- stable API
+- full integration with Kubernetes (aka "rktnetes")
+- full integration with `machinectl login` and `systemd-run` [#1463](https://github.com/coreos/rkt/issues/1463)
+- support for unified cgroup hierarchy [#1757](https://github.com/coreos/rkt/issues/1757)
 - attach to the app's stdin/stdout [#1799](https://github.com/coreos/rkt/issues/1799)
