@@ -435,6 +435,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 func forwardedPorts(pod *stage1commontypes.Pod) ([]networking.ForwardedPort, error) {
 	var fps []networking.ForwardedPort
 
+NextPort:
 	for _, ep := range pod.Manifest.Ports {
 		n := ""
 		fp := networking.ForwardedPort{}
@@ -443,6 +444,10 @@ func forwardedPorts(pod *stage1commontypes.Pod) ([]networking.ForwardedPort, err
 			for _, p := range a.App.Ports {
 				if p.Name == ep.Name {
 					if n == "" {
+						// skip socket-activated ports, they don't need port forwarding
+						if p.SocketActivated {
+							continue NextPort
+						}
 						fp.Protocol = p.Protocol
 						fp.HostPort = ep.HostPort
 						fp.PodPort = p.Port
