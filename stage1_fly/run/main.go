@@ -206,8 +206,18 @@ func stage1() int {
 		return 1
 	}
 
+	// Sanity checks
 	if len(p.Manifest.Apps) != 1 {
 		log.Printf("flavor %q only supports 1 application per Pod for now", flavor)
+		return 1
+	}
+
+	ra := p.Manifest.Apps[0]
+
+	imgName := p.AppNameToImageName(ra.Name)
+	args := ra.App.Exec
+	if len(args) == 0 {
+		log.Printf(`image %q has an empty "exec" (try --exec=BINARY)`, imgName)
 		return 1
 	}
 
@@ -224,14 +234,13 @@ func stage1() int {
 	}
 
 	env := []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
-	for _, e := range p.Manifest.Apps[0].App.Environment {
+	for _, e := range ra.App.Environment {
 		env = append(env, e.Name+"="+e.Value)
 	}
 
-	args := p.Manifest.Apps[0].App.Exec
-	rfs := filepath.Join(common.AppPath(p.Root, p.Manifest.Apps[0].Name), "rootfs")
+	rfs := filepath.Join(common.AppPath(p.Root, ra.Name), "rootfs")
 
-	argFlyMounts, err := evaluateMounts(rfs, string(p.Manifest.Apps[0].Name), p)
+	argFlyMounts, err := evaluateMounts(rfs, string(ra.Name), p)
 	if err != nil {
 		log.PrintE("can't evaluate mounts", err)
 		return 1

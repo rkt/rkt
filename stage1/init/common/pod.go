@@ -234,12 +234,7 @@ func generateGidArg(gid int, supplGid []int) string {
 func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string) error {
 	app := ra.App
 	appName := ra.Name
-	image, ok := p.Images[appName.String()]
-	if !ok {
-		// This is impossible as we have updated the map in LoadPod().
-		panic(fmt.Sprintf("No images for app %q", ra.Name.String()))
-	}
-	imgName := image.Name
+	imgName := p.AppNameToImageName(appName)
 
 	if len(app.Exec) == 0 {
 		return fmt.Errorf(`image %q has an empty "exec" (try --exec=BINARY)`, imgName)
