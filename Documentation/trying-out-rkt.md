@@ -30,15 +30,18 @@ export WHOAMI=$(whoami); sudo gpasswd -a $WHOAMI rkt
 sudo ./scripts/setup-data-dir.sh
 ```
 
-Now it's time to test this out by retrieving an etcd image using a non-root user in the rkt group.
-
-First, trust the signing key for etcd images. This must be run as root as access to the keystore is restricted:
+Trust the signing key for etcd images. This must be run as root as access to the keystore is restricted:
 
 ```
 sudo ./rkt trust --prefix coreos.com/etcd
 ```
 
+Now it's time to test this out by retrieving an etcd image using a non-root user in the rkt group.
+Make sure your shell is restarted to enable the `rkt` group for your user, or
+just run `newgrp rkt` to enable it and continue on the same session.
+
 Now fetch the etcd image as an unprivileged user:
+
 ```
 ./rkt fetch coreos.com/etcd,version=v2.2.5
 ```
