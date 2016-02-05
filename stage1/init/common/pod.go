@@ -230,6 +230,18 @@ func generateGidArg(gid int, supplGid []int) string {
 	return strings.Join(arg, ",")
 }
 
+// findHostPort returns the port number on the host that corresponds to an
+// image manifest port identified by name
+func findHostPort(pm schema.PodManifest, name types.ACName) uint {
+	var port uint
+	for _, p := range pm.Ports {
+		if p.Name == name {
+			port = p.HostPort
+		}
+	}
+	return port
+}
+
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
 func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string) error {
 	app := ra.App
@@ -364,7 +376,17 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 			default:
 				return fmt.Errorf("unrecognized protocol: %v", sap.Protocol)
 			}
-			sockopts = append(sockopts, unit.NewUnitOption("Socket", proto, fmt.Sprintf("%v", sap.Port)))
+			// We find the host port for the pod's port and use that in the
+			// socket unit file.
+			// This is so because systemd inside the pod will match based on
+			// the socket port number, and since the socket was created on the
+			// host, it will have the host port number.
+			port := findHostPort(*p.Manifest, sap.Name)
+			if port == 0 {
+				log.Printf("warning: no --port option for socket-activated port %q, assuming port %d as specified in the manifest", sap.Name, sap.Port)
+				port = sap.Port
+			}
+			sockopts = append(sockopts, unit.NewUnitOption("Socket", proto, fmt.Sprintf("%v", port)))
 		}
 
 		file, err := os.OpenFile(SocketUnitPath(p.Root, appName), os.O_WRONLY|os.O_CREATE, 0644)
