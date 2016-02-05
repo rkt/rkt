@@ -58,11 +58,12 @@ func (e *podEnv) netPluginAdd(n *activeNet, netns string) (ip, hostIP net.IP, er
 
 	pr := cnitypes.Result{}
 	if err = json.Unmarshal(output, &pr); err != nil {
+		err = errwrap.Wrap(fmt.Errorf("parsing %q", string(output)), err)
 		return nil, nil, errwrap.Wrap(fmt.Errorf("error parsing %q result", n.conf.Name), err)
 	}
 
 	if pr.IP4 == nil {
-		return nil, nil, fmt.Errorf("net-plugin returned no IPv4 configuration")
+		return nil, nil, nil
 	}
 
 	return pr.IP4.IP.IP, pr.IP4.Gateway, nil
