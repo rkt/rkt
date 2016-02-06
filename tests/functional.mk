@@ -7,7 +7,7 @@ FTST_IMAGE_ROOTFSDIR := $(FTST_IMAGE_DIR)/rootfs
 FTST_IMAGE := $(FTST_TMPDIR)/rkt-inspect.aci
 FTST_IMAGE_MANIFEST_SRC := $(MK_SRCDIR)/image/manifest
 FTST_IMAGE_MANIFEST := $(FTST_IMAGE_DIR)/manifest
-FTST_IMAGE_TEST_DIRS := $(FTST_IMAGE_ROOTFSDIR)/dir1 $(FTST_IMAGE_ROOTFSDIR)/dir2 $(FTST_IMAGE_ROOTFSDIR)/bin
+FTST_IMAGE_TEST_DIRS := $(FTST_IMAGE_ROOTFSDIR)/dir1 $(FTST_IMAGE_ROOTFSDIR)/dir2 $(FTST_IMAGE_ROOTFSDIR)/bin $(FTST_IMAGE_ROOTFSDIR)/etc
 FTST_ACE_MAIN_IMAGE_DIR := $(FTST_TMPDIR)/ace-main
 FTST_ACE_MAIN_IMAGE := $(FTST_TMPDIR)/rkt-ace-validator-main.aci
 FTST_ACE_MAIN_IMAGE_MANIFEST_SRC := Godeps/_workspace/src/github.com/appc/spec/ace/image_manifest_main.json
@@ -59,11 +59,14 @@ CLEAN_FILES += \
 	$(FTST_EMPTY_IMAGE) \
 	$(FTST_IMAGE_ROOTFSDIR)/dir1/file \
 	$(FTST_IMAGE_ROOTFSDIR)/dir2/file \
+	$(FTST_IMAGE_ROOTFSDIR)/etc/group \
+	$(FTST_IMAGE_ROOTFSDIR)/etc/passwd \
 	$(FTST_ACE_BINARY)
 CLEAN_DIRS += \
 	$(FTST_IMAGE_ROOTFSDIR)/dir1 \
 	$(FTST_IMAGE_ROOTFSDIR)/dir2 \
-	$(FTST_IMAGE_ROOTFSDIR)/bin
+	$(FTST_IMAGE_ROOTFSDIR)/bin \
+	$(FTST_IMAGE_ROOTFSDIR)/etc
 CLEAN_SYMLINKS += \
 	$(FTST_IMAGE_ROOTFSDIR)/inspect-link \
 	$(FTST_IMAGE_ROOTFSDIR)/bin/inspect-link-bin
@@ -86,6 +89,10 @@ $(FTST_IMAGE): $(FTST_IMAGE_MANIFEST) $(FTST_ACI_INSPECT) $(FTST_ACI_ECHO_SERVER
 	echo -n dir1 >$(FTST_IMAGE_ROOTFSDIR)/dir1/file; \
 	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/dir2/file)) \
 	echo -n dir2 >$(FTST_IMAGE_ROOTFSDIR)/dir2/file; \
+	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/etc/group)) \
+	echo -n group1:x:100:user1 >$(FTST_IMAGE_ROOTFSDIR)/etc/group; \
+	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/etc/passwd)) \
+	echo -n user1:x:1000:100::/: >$(FTST_IMAGE_ROOTFSDIR)/etc/passwd; \
 	$(call vb,v2,LN SF,/inspect $(call vsp,$(FTST_IMAGE_ROOTFSDIR)/inspect-link)) \
 	ln -sf /inspect $(FTST_IMAGE_ROOTFSDIR)/inspect-link; \
 	$(call vb,v2,LN SF,/inspect $(call vsp,$(FTST_IMAGE_ROOTFSDIR)/bin/inspect-link-bin)) \
