@@ -233,6 +233,11 @@ func stage1() int {
 		return 1
 	}
 
+	workDir := "/"
+	if ra.App.WorkingDirectory != "" {
+		workDir = ra.App.WorkingDirectory
+	}
+
 	env := []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
 	for _, e := range ra.App.Environment {
 		env = append(env, e.Name+"="+e.Value)
@@ -333,8 +338,8 @@ func stage1() int {
 		return 1
 	}
 
-	if err := os.Chdir("/"); err != nil {
-		log.PrintE("can't change to root new directory", err)
+	if err := os.Chdir(workDir); err != nil {
+		log.PrintE(fmt.Sprintf("can't change to working directory %q", workDir), err)
 		return 1
 	}
 
