@@ -148,6 +148,7 @@ var cmdRkt = &cobra.Command{
 
 To get the help on any specific command, run "rkt help command".`,
 	BashCompletionFunction: bash_completion_func,
+	Run: runMissingCommand,
 }
 
 func init() {
@@ -207,6 +208,12 @@ func ensureSuperuser(cf func(cmd *cobra.Command, args []string)) func(cmd *cobra
 	}
 }
 
+func runMissingCommand(cmd *cobra.Command, args []string) {
+	stderr.Print("missing command")
+	cmd.HelpFunc()(cmd, args)
+	cmdExitCode = 2 // invalid argument
+}
+
 func main() {
 	// check if rkt is executed with a multicall command
 	multicall.MaybeExec()
@@ -221,7 +228,9 @@ func main() {
 	// cmdRkt.GenBashCompletionFile("dist/bash_completion/rkt.bash")
 	// os.Exit(0)
 
-	cmdRkt.Execute()
+	if err := cmdRkt.Execute(); err != nil && cmdExitCode == 0 {
+		cmdExitCode = 2 // invalid argument
+	}
 	os.Exit(cmdExitCode)
 }
 
