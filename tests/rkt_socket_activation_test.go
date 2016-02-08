@@ -64,7 +64,7 @@ func TestSocketActivation(t *testing.T) {
 
 	echoImage := patchTestACI("rkt-inspect-echo.aci",
 		"--exec=/echo-socket-activated",
-		fmt.Sprintf("--ports=test-port,protocol=tcp,port=80,socketActivated=true"))
+		"--ports=test-port,protocol=tcp,port=80,socketActivated=true")
 	defer os.Remove(echoImage)
 
 	ctx := testutils.NewRktRunCtx()

@@ -146,9 +146,9 @@ To make socket activation work, add a [socket-activated port][aci-socketActivate
         ...
         "ports": [
             {
-                "name": "8080-tcp",
+                "name": "80-tcp",
                 "protocol": "tcp",
-                "port": 8080,
+                "port": 80,
                 "count": 1,
                 "socketActivated": true
             }
@@ -157,7 +157,9 @@ To make socket activation work, add a [socket-activated port][aci-socketActivate
 }
 ```
 
-Then you will need a pair of `.service` and `.socket` unit files. The socket unit file will have the same port you've set in the image manifest of your app, and the service unit file will run `rkt`:
+Then you will need a pair of `.service` and `.socket` unit files.
+
+In this example, we want to use the port 8080 on the host instead of the app's default 80, so we use rkt's `--port` option to override it.
 
 ```
 # my-socket-activated-app.socket
@@ -174,7 +176,7 @@ ListenStream=8080
 Description=My socket-activated app
 
 [Service]
-ExecStart=/usr/bin/rkt run myapp.com/my-socket-activated-app:v1.0
+ExecStart=/usr/bin/rkt run --port 80-tcp:8080 myapp.com/my-socket-activated-app:v1.0
 KillMode=mixed
 ```
 
@@ -189,10 +191,9 @@ $ systemctl status my-socket-activated-app.socket
    Listen: [::]:8080 (Stream)
 
 Jul 30 12:24:50 locke-work systemd[1]: Listening on My socket-activated app's socket.
-Jul 30 12:24:50 locke-work systemd[1]: Starting My socket-activated app's socket.
 ```
 
-Now a new connection to port 8080 will start your container to handle the request.
+Now, a new connection to port 8080 will start your container to handle the request.
 
 ## Other tools for managing pods
 
