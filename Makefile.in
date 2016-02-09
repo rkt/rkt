@@ -1,5 +1,8 @@
 # @configure_input@
 
+# make "all" a default target
+all:
+
 # install scripts
 INSTALL = @INSTALL@
 
@@ -10,10 +13,6 @@ GIT := @GIT@
 BASH := @BASH_SHELL@
 BASH_SHELL := @BASH_SHELL@
 ABS_GO := @ABS_GO@
-
-# path to rkt source code distro
-ORG_PATH := github.com/coreos
-REPO_PATH := $(ORG_PATH)/rkt
 
 # [STAGE1] build settings
 
@@ -57,38 +56,36 @@ RKT_FEATURES_LDFLAGS := @RKT_FEATURES_LDFLAGS@
 
 # build-related directories and binaries
 BUILDDIR ?= $(MK_TOPLEVEL_ABS_SRCDIR)/build-@PACKAGE_TARNAME@-@PACKAGE_VERSION@
-override BUILDDIR := $(abspath $(BUILDDIR))
 
-MAKETOOLSDIR := $(MK_TOPLEVEL_SRCDIR)/tools
-STAMPSDIR := $(BUILDDIR)/stamps
-TOOLSDIR := $(BUILDDIR)/tools
-BINDIR := $(BUILDDIR)/bin
-GOPATH_TO_CREATE := $(BUILDDIR)/gopath
-GOPATH := $(GOPATH_TO_CREATE)/src/github.com/coreos/rkt/Godeps/_workspace:$(GOPATH_TO_CREATE)
-DEPSDIR := $(BUILDDIR)/deps
-FILELISTDIR := $(BUILDDIR)/filelists
-MAINTEMPDIR := $(BUILDDIR)/tmp
-CLEANDIR := $(BUILDDIR)/clean
+# makelib/inc.mk must be included first!
+include makelib/inc.mk
+include makelib/verbosity.mk
+include makelib/file-ops-prolog.mk
+include makelib/variables.mk
+include makelib/misc.mk
 
-ACTOOL := $(BINDIR)/actool
-DEPSGENTOOL := $(TOOLSDIR)/depsgen
-FILELISTGENTOOL := $(TOOLSDIR)/filelistgen
-CLEANGENTOOL := $(TOOLSDIR)/cleangen
-QUICKRMTOOL := $(TOOLSDIR)/quickrm
+SHELL := $(BASH_SHELL)
+TOPLEVEL_STAMPS :=
+TOPLEVEL_CHECK_STAMPS :=
+TOPLEVEL_UNIT_CHECK_STAMPS :=
+TOPLEVEL_FUNCTIONAL_CHECK_STAMPS :=
+TOPLEVEL_SUBDIRS := rkt tests stage1 stage1_fly
 
-# test-related variables
-GO_TEST_PACKAGES ?= ./...
-GO_TEST_FUNC_ARGS ?=
+$(call inc-one,tools/tools.mk)
+$(call inc-many,$(foreach sd,$(TOPLEVEL_SUBDIRS),$(sd)/$(sd).mk))
 
-GO_ENV := $(strip GOPATH="$(GOPATH)" $(if $(strip $(GOROOT)),GOROOT=$(strip $(GOROOT))))
+all: $(TOPLEVEL_STAMPS)
 
-CREATE_DIRS += \
-	$(BUILDDIR) \
-	$(STAMPSDIR) \
-	$(TOOLSDIR) \
-	$(BINDIR) \
-	$(GOPATH_TO_CREATE) \
-	$(DEPSDIR) \
-	$(FILELISTDIR) \
-	$(MAINTEMPDIR) \
-	$(CLEANDIR)
+$(TOPLEVEL_CHECK_STAMPS): $(TOPLEVEL_STAMPS)
+
+.INTERMEDIATE: $(TOPLEVEL_CHECK_STAMPS)
+.INTERMEDIATE: $(TOPLEVEL_UNIT_CHECK_STAMPS)
+.INTERMEDIATE: $(TOPLEVEL_FUNCTIONAL_CHECK_STAMPS)
+
+check: $(TOPLEVEL_CHECK_STAMPS)
+unit-check: $(TOPLEVEL_UNIT_CHECK_STAMPS)
+functional-check: $(TOPLEVEL_FUNCTIONAL_CHECK_STAMPS)
+
+include makelib/file-ops-epilog.mk
+
+.PHONY: all check unit-check functional-check
