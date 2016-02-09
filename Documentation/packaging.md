@@ -4,7 +4,7 @@ This document aims to provide information about packaging rkt in Linux distribut
 
 ## Build-time dependencies
 
-Please see [the list of build-time requirements][build-deps].
+Please see [the list of build-time dependencies][build-deps].
 
 ### Offline builds
 
@@ -34,7 +34,7 @@ rkt uses [Godep](https://github.com/tools/godep) to maintain [a copy of dependen
 
 ## Run-time dependencies
 
-Please see [the list of run-time requirements][run-deps].
+Please see [the list of run-time dependencies][run-deps].
 
 ## Packaging Externals
 
@@ -55,5 +55,5 @@ A few [example systemd unit files for rkt helper services][rkt-units] are includ
 [rkt-gc]: subcommands/gc.md
 [rkt-metadata-svc]: subcommands/metadata-service.md
 [rkt-units]: https://github.com/coreos/rkt/tree/master/dist/init/systemd
-[build-deps]: hacking.md#build-time-requirements
-[run-deps]: hacking.md#run-time-requirements
+[build-deps]: dependencies.md#build-time-dependencies
+[run-deps]: dependencies.md#run-time-dependencies
