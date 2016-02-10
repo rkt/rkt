@@ -25,6 +25,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type PortType int
@@ -369,7 +370,6 @@ func NewServer(setup *ServerSetup) *Server {
 	return server
 }
 
-// based on code from net/http/httptest
 func newLocalListener(port PortType, protocol ProtocolType) net.Listener {
 	portNumber := 0
 	if port == PortFixed {
@@ -380,13 +380,31 @@ func newLocalListener(port PortType, protocol ProtocolType) net.Listener {
 			portNumber = 443
 		}
 	}
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", portNumber))
+	addrs, err := net.LookupHost("localhost")
 	if err != nil {
-		if l, err = net.Listen("tcp6", fmt.Sprintf("[::1]:%d", portNumber)); err != nil {
-			panic(fmt.Sprintf("aci test server: failed to listen on a port: %v", err))
-		}
+		panic(`aci test server: failed to look up "localhost", really`)
 	}
-	return l
+	var lookupErrs []string
+	for try := 0; try < 2; try++ {
+		for _, addr := range addrs {
+			addrport := fmt.Sprintf("%s:%d", addr, portNumber)
+			l, err := net.Listen("tcp", addrport)
+			if err == nil {
+				return l
+			}
+			lookupErrs = append(lookupErrs, fmt.Sprintf("(listen on %s, attempt #%d: %v)", addrport, try+1, err))
+		}
+		// TODO: When we have discovery on a custom port then
+		// we could drop listening on fixed ports, so we
+		// probably won't get any races between old server
+		// stopping to listen and new server starting to
+		// listen.
+		// https://github.com/appc/spec/pull/110
+		// Might be possible with ABD:
+		// https://github.com/appc/abd
+		time.Sleep(time.Second)
+	}
+	panic(fmt.Sprintf("aci test server: failed to listen on localhost:%d: %v", portNumber, lookupErrs))
 }
 
 func sprintCreds(host, auth, creds string) string {
