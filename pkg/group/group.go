@@ -37,12 +37,12 @@ type Group struct {
 	Users []string
 }
 
-// LookupGid reads the group file and returns the gid of the group
+// LookupGid reads the group file specified by groupFile, and returns the gid of the group
 // specified by groupName.
-func LookupGid(groupName string) (gid int, err error) {
-	groups, err := parseGroupFile(groupFilePath)
+func LookupGidFromFile(groupName, groupFile string) (gid int, err error) {
+	groups, err := parseGroupFile(groupFile)
 	if err != nil {
-		return -1, errwrap.Wrap(fmt.Errorf("error parsing %q file", groupFilePath), err)
+		return -1, errwrap.Wrap(fmt.Errorf("error parsing %q file", groupFile), err)
 	}
 
 	group, ok := groups[groupName]
@@ -51,6 +51,12 @@ func LookupGid(groupName string) (gid int, err error) {
 	}
 
 	return group.Gid, nil
+}
+
+// LookupGid reads the group file and returns the gid of the group
+// specified by groupName.
+func LookupGid(groupName string) (gid int, err error) {
+	return LookupGidFromFile(groupName, groupFilePath)
 }
 
 func parseGroupFile(path string) (group map[string]Group, err error) {
