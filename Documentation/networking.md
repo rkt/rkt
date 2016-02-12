@@ -212,7 +212,7 @@ $ cat /etc/rkt/net.d/10-containers.conf
 	"bridge": "rkt1",
 	"ipam": {
 		"type": "host-local",
-		"subnet": "10.1.0.0/16",
+		"subnet": "10.1.0.0/16"
 	}
 }
 ```
