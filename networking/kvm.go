@@ -81,7 +81,8 @@ type MacVTapNetConf struct {
 
 // setupTapDevice creates persistent macvtap device
 // and returns a newly created netlink.Link structure
-func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf) (netlink.Link, error) {
+// using part of pod hash and interface number in interface name
+func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf, interfaceNumber int) (netlink.Link, error) {
 	master, err := netlink.LinkByName(config.Master)
 	if err != nil {
 		return nil, errwrap.Wrap(fmt.Errorf("cannot find master device '%v'", config.Master), err)
@@ -105,11 +106,11 @@ func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf) (netlink.Link, 
 	if config.MTU != 0 {
 		mtu = config.MTU
 	}
-	nameTemplate := fmt.Sprintf("rkt-%s-vtap%%d", podID.String()[0:4])
+	interfaceName := fmt.Sprintf("rkt-%s-vtap%d", podID.String()[0:4], interfaceNumber)
 	link := &netlink.Macvtap{
 		Macvlan: netlink.Macvlan{
 			LinkAttrs: netlink.LinkAttrs{
-				Name:        nameTemplate,
+				Name:        interfaceName,
 				MTU:         mtu,
 				ParentIndex: master.Attrs().Index,
 			},
@@ -119,6 +120,11 @@ func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf) (netlink.Link, 
 
 	if err := netlink.LinkAdd(link); err != nil {
 		return nil, errwrap.Wrap(errors.New("cannot create macvtap interface"), err)
+	}
+	if err := netlink.LinkSetUp(link); err != nil {
+		// remove the newly added link and ignore errors, because we already are in a failed state
+		_ = netlink.LinkDel(link)
+		return nil, errwrap.Wrap(errors.New("cannot set up macvtap interface"), err)
 	}
 	return link, nil
 }
@@ -131,8 +137,12 @@ func kvmSetupNetAddressing(network *Networking, n activeNet, ifName string) erro
 	if err := ip.EnableIP4Forward(); err != nil {
 		return errwrap.Wrap(errors.New("failed to enable forwarding"), err)
 	}
+
+	// patch plugin type only for single IPAM run time, then revert this change
+	original_type := n.conf.Type
 	n.conf.Type = n.conf.IPAM.Type
 	output, err := network.execNetPlugin("ADD", &n, ifName)
+	n.conf.Type = original_type
 	if err != nil {
 		return errwrap.Wrap(fmt.Errorf("problem executing network plugin %q (%q)", n.conf.Type, ifName), err)
 	}
@@ -514,7 +524,7 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 			if err := json.Unmarshal(n.confBytes, &config); err != nil {
 				return nil, errwrap.Wrap(fmt.Errorf("error parsing %q result", n.conf.Name), err)
 			}
-			link, err := setupMacVTapDevice(podID, config)
+			link, err := setupMacVTapDevice(podID, config, i)
 			if err != nil {
 				return nil, err
 			}
