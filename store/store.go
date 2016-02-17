@@ -263,7 +263,7 @@ func NewStore(baseDir string) (*Store, error) {
 			needsMigrate = true
 		}
 		if version > dbVersion {
-			return fmt.Errorf("current store db version: %d greater than the current rkt expected version: %d", version, dbVersion)
+			return fmt.Errorf("current store db version: %d (greater than the current rkt expected version: %d)", version, dbVersion)
 		}
 		if version < 5 {
 			needsSizePopulation = true
