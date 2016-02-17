@@ -1,5 +1,5 @@
 # custom kernel compilation
-KERNEL_VERSION := 4.1.3
+KERNEL_VERSION := 4.3.1
 KERNEL_TMPDIR := $(UFK_TMPDIR)/kernel
 KERNEL_NAME := linux-$(KERNEL_VERSION)
 KERNEL_TARBALL := $(KERNEL_NAME).tar.xz
