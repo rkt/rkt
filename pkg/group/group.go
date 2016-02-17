@@ -16,6 +16,7 @@ package group
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -59,7 +60,7 @@ func LookupGid(groupName string) (gid int, err error) {
 	return LookupGidFromFile(groupName, groupFilePath)
 }
 
-func parseGroupFile(path string) (group map[string]Group, err error) {
+func parseGroupFile(path string) (group map[string]*Group, err error) {
 	groupFile, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -69,9 +70,9 @@ func parseGroupFile(path string) (group map[string]Group, err error) {
 	return parseGroups(groupFile)
 }
 
-func parseGroups(r io.Reader) (group map[string]Group, err error) {
+func parseGroups(r io.Reader) (group map[string]*Group, err error) {
 	s := bufio.NewScanner(r)
-	out := make(map[string]Group)
+	out := make(map[string]*Group)
 
 	for s.Scan() {
 		if err := s.Err(); err != nil {
@@ -83,8 +84,10 @@ func parseGroups(r io.Reader) (group map[string]Group, err error) {
 			continue
 		}
 
-		p := Group{}
-		parseGroupLine(text, &p)
+		p, err := parseGroupLine(text)
+		if err != nil {
+			return nil, errwrap.Wrap(errors.New("error parsing line"), err)
+		}
 
 		out[p.Name] = p
 	}
@@ -92,26 +95,33 @@ func parseGroups(r io.Reader) (group map[string]Group, err error) {
 	return out, nil
 }
 
-func parseGroupLine(line string, group *Group) {
+func parseGroupLine(line string) (*Group, error) {
 	const (
 		NameIdx = iota
 		PassIdx
 		GidIdx
 		UsersIdx
 	)
+	var err error
 
 	if line == "" {
-		return
+		return nil, errors.New("cannot parse empty line")
 	}
 
 	splits := strings.Split(line, ":")
 	if len(splits) < 4 {
-		return
+		return nil, fmt.Errorf("expected at least 4 fields, got %d", len(splits))
 	}
 
-	group.Name = splits[NameIdx]
-	group.Pass = splits[PassIdx]
-	group.Gid, _ = strconv.Atoi(splits[GidIdx])
+	group := &Group{
+		Name: splits[NameIdx],
+		Pass: splits[PassIdx],
+	}
+
+	group.Gid, err = strconv.Atoi(splits[GidIdx])
+	if err != nil {
+		return nil, errwrap.Wrap(errors.New("unable to parse gid"), err)
+	}
 
 	u := splits[UsersIdx]
 	if u != "" {
@@ -119,4 +129,6 @@ func parseGroupLine(line string, group *Group) {
 	} else {
 		group.Users = []string{}
 	}
+
+	return group, nil
 }

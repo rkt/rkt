@@ -21,49 +21,60 @@ import (
 
 func TestParseGroupLine(t *testing.T) {
 	tests := []struct {
-		line      string
-		groupLine Group
+		line          string
+		groupLine     *Group
+		shouldSucceed bool
 	}{
 		{
 			"ftp:x:1:",
-			Group{
+			&Group{
 				"ftp",
 				"x",
 				1,
 				[]string{},
 			},
+			true,
 		},
 		{
 			"u1:xxx:12:wheel,users",
-			Group{
+			&Group{
 				"u1",
 				"xxx",
 				12,
 				[]string{"wheel", "users"},
 			},
+			true,
 		},
 		{
 			"uerr:x:",
-			Group{},
+			nil,
+			false,
 		},
 		{
 			"",
-			Group{},
+			nil,
+			false,
 		},
 		{
 			"u1:xxx:12:wheel,users:extra:stuff",
-			Group{
+			&Group{
 				"u1",
 				"xxx",
 				12,
 				[]string{"wheel", "users"},
 			},
+			true,
 		},
 	}
 
 	for i, tt := range tests {
-		g := Group{}
-		parseGroupLine(tt.line, &g)
+		g, err := parseGroupLine(tt.line)
+		if err != nil {
+			if tt.shouldSucceed {
+				t.Errorf("#%d: parsing line %q failed unexpectedly", i, tt.line)
+			}
+			continue
+		}
 		if !reflect.DeepEqual(g, tt.groupLine) {
 			t.Errorf("#%d: got group %v, want group %v", i, g, tt.groupLine)
 		}
