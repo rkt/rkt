@@ -61,9 +61,14 @@ For more details, including how to join and recordings of previous syncs, see th
 
 ## Contributing to rkt
 
-rkt is an open source project under the Apache 2.0 [license](LICENSE), and contributions are gladly welcomed!
+rkt is an open source project and contributions are gladly welcomed!
 See the [Hacking Guide](Documentation/hacking.md) for more information on how to build and work on rkt.
 See [CONTRIBUTING](CONTRIBUTING.md) for details on submitting patches and the contribution workflow.
+
+## Licensing
+
+Unless otherwise noted, all code in the rkt repository is licensed under the [Apache 2.0 license](LICENSE).
+Some portions of the codebase are derived from other projects under different licenses; the appropriate information can be found in the header of those source files, as applicable.
 
 ## Known issues
 
