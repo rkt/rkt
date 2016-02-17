@@ -107,8 +107,10 @@ func envVars(vars [][2]string) []string {
 }
 
 func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) ([]byte, error) {
-	pluginPath := e.findNetPlugin(n.conf.Type)
-	if pluginPath == "" {
+	if n.runtime.PluginPath == "" {
+		n.runtime.PluginPath = e.findNetPlugin(n.conf.Type)
+	}
+	if n.runtime.PluginPath == "" {
 		return nil, fmt.Errorf("Could not find plugin %q", n.conf.Type)
 	}
 
@@ -125,8 +127,8 @@ func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) ([]byte, 
 	stdout := &bytes.Buffer{}
 
 	c := exec.Cmd{
-		Path:   pluginPath,
-		Args:   []string{pluginPath},
+		Path:   n.runtime.PluginPath,
+		Args:   []string{n.runtime.PluginPath},
 		Env:    envVars(vars),
 		Stdin:  stdin,
 		Stdout: stdout,
