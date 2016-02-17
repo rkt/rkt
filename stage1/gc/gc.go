@@ -73,7 +73,7 @@ func gcNetworking(podID *types.UUID) error {
 		}
 	}
 
-	n, err := networking.Load(".", podID, common.DefaultLocalConfigDir)
+	n, err := networking.Load(".", podID)
 	switch {
 	case err == nil:
 		n.Teardown(flavor, debug)
