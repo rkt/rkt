@@ -24,12 +24,12 @@ RKT_REQ_ABS_PROG([BASH_SHELL], [bash])
 dnl this will be printed in configure summary and by rkt version
 RKT_FEATURES=""
 RKT_ADD_FEATURE() {
-    RKT_FEATURES=`echo "${RKT_FEATURES} $1" | sed -e 's/^ \+//'`
+    RKT_FEATURES=`AS_ECHO(["${RKT_FEATURES} $1"]) | sed -e 's/^ \+//'`
 }
 dnl if version ends with +git, append a short git-hash.
 AS_IF([test `expr match 'AC_PACKAGE_VERSION' '.*+git$'` -gt 0],
       dnl version has +git suffix, ignore errors (not a git repo)
-      [RKT_VERSION="AC_PACKAGE_VERSION`git rev-parse --short HEAD 2>/dev/null``git diff-index --quiet HEAD 2>/dev/null || echo -dirty`"],
+      [RKT_VERSION="AC_PACKAGE_VERSION`git rev-parse --short HEAD 2>/dev/null``git diff-index --quiet HEAD 2>/dev/null || AS_ECHO(["-dirty"])`"],
       dnl version has no +git suffix
       [RKT_VERSION="AC_PACKAGE_VERSION"])
 
@@ -194,7 +194,7 @@ AS_VAR_IF([RKT_STAGE1_FLAVORS_VERSION_OVERRIDE], [auto],
           [RKT_STAGE1_FLAVORS_VERSION_OVERRIDE=''],
           dnl check if we override the version, even if we build no flavors at all
           [AS_VAR_IF([RKT_STAGE1_FLAVORS], [],
-                     [AC_MSG_WARN([* overriding stage1 version, but no stage1 flavors are built])])])
+                     [AC_MSG_WARN([* Overriding stage1 version, but no stage1 flavors are built])])])
 
 ## Stage1 default image directory
 
@@ -216,7 +216,7 @@ AS_CASE([${RKT_STAGE1_DEFAULT_IMAGES_DIR}],
         [/*],
                 dnl alright, the path is absolute
                 [:],
-        [AC_MSG_ERROR([*** path to the stage1 images directory must be absolute])])
+        [AC_MSG_ERROR([*** Path to the stage1 images directory must be absolute])])
 
 ## Built stage1 flavors verification
 
@@ -240,7 +240,7 @@ AC_DEFUN([RKT_IS_VALID_FLAVOR],
                   [coreos|kvm|host|src|fly],
                           [],
                   dnl Bogus flavor, bail out.
-                  [AC_MSG_ERROR([*** unknown stage1 flavor "$1" $2])])])
+                  [AC_MSG_ERROR([*** Unknown stage1 flavor "$1" $2])])])
 
 dnl RKT_IF_HAS_FLAVOR checks if the comma-separated list of flavors in
 dnl $1 contains any flavor in the comma-separated list of flavors in
@@ -429,7 +429,7 @@ AS_IF([test "x${RKT_RUN_FUNCTIONAL_TESTS}" = 'xyes' -o "x${RKT_RUN_FUNCTIONAL_TE
                        dnl we are on linux, checks can continue
                        [],
                dnl non-linux host
-               [rkt_functional_tests_msg="functional tests are supported only under linux"])
+               [rkt_functional_tests_msg='Functional tests are supported only under linux'])
       AS_VAR_IF([rkt_functional_tests_msg],[],
                 dnl we are on linux host; check if we have default
                 dnl flavor set
@@ -455,7 +455,7 @@ AS_IF([test "x${RKT_RUN_FUNCTIONAL_TESTS}" = 'xyes' -o "x${RKT_RUN_FUNCTIONAL_TE
                 dnl gpg found, alright
                 [:],
                 dnl gpg not found, running functional tests is impossible
-                [rkt_functional_tests_msg="Cannot run functional tests - no gpg found"])
+                [rkt_functional_tests_msg='Cannot run functional tests - no gpg found'])
       AS_VAR_IF([rkt_functional_tests_msg], [],
                  dnl no message, tests can be run
                  [RKT_RUN_FUNCTIONAL_TESTS=yes
