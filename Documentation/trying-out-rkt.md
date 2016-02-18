@@ -57,6 +57,15 @@ cd rkt
 vagrant up
 ```
 
+If you want to run Vagrant on a Linux host machine, you may want to use libvirt as a hypervisor, instead of VirtualBox. In order to do this, you need to install the necessary plugins, convert the box and start the machine using libvirt provider.
+
+```
+vagrant plugin install vagrant-libvirt
+vagrant plugin install vagrant-mutate
+vagrant mutate ubuntu/vivid64 libvirt
+vagrant up --provider=libvirt
+```
+
 With a subsequent `vagrant ssh` you will have access to run rkt:
 
 ```
