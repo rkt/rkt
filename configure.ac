@@ -587,6 +587,8 @@ GO_MAJOR=`echo "${GO_VERSION}" | grep -o '^DIGITS\+'`
 GO_MINOR=`echo "${GO_VERSION}" | grep -o '^DIGITS\+\.DIGITS\+' | grep -o 'DIGITS\+$'`
 GO_MAJOR_MINOR=`echo "${GO_MAJOR}.${GO_MINOR}"`
 GO_MICRO=`echo "${GO_VERSION}" | grep -o '^DIGITS\+\.DIGITS\+\.DIGITS\+' | sed -e 's/^DIGITS*\.DIGITS*\.\(DIGITS*\).*/\1/'`
+AS_VAR_IF([GO_MICRO],[],
+          [GO_MICRO=0])
 
 GO_BEST_MAJOR=1
 GO_BEST_MINOR=5
