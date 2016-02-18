@@ -64,7 +64,7 @@ func TestSocketActivation(t *testing.T) {
 
 	echoImage := patchTestACI("rkt-inspect-echo.aci",
 		"--exec=/echo-socket-activated",
-		fmt.Sprintf("--ports=%d-tcp,protocol=tcp,port=%d,socketActivated=true", port, port))
+		"--ports=test-port,protocol=tcp,port=80,socketActivated=true")
 	defer os.Remove(echoImage)
 
 	ctx := testutils.NewRktRunCtx()
@@ -91,7 +91,7 @@ func TestSocketActivation(t *testing.T) {
 	// systemd v219 as it does not work with absolute paths.
 	unitsDir := "/run/systemd/system"
 
-	cmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), echoImage)
+	cmd := fmt.Sprintf("%s --insecure-options=image run --port=test-port:%d --mds-register=false %s", ctx.Cmd(), port, echoImage)
 	serviceContent := fmt.Sprintf(rktTestingEchoService, cmd)
 	serviceTargetBase := fmt.Sprintf("rkt-testing-socket-activation-%d.service", rnd)
 	serviceTarget := filepath.Join(unitsDir, serviceTargetBase)

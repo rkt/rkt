@@ -1,3 +1,8 @@
+## vUNRELEASED
+
+#### Bug fixes
+- Socket activation was not working if the port on the host is different from the app port as set in the image manifest ([#2137](https://github.com/coreos/rkt/pull/2137)).
+
 ## v1.0.0
 
 This marks the first release of rkt recommended for use in production.
