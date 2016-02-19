@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -40,9 +41,13 @@ const (
 	GzipCompression
 )
 
-func ParseDockerURL(arg string) *types.ParsedDockerURL {
+func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
 	if arg == "" {
-		return nil
+		return nil, errors.New("empty Docker image reference")
+	}
+
+	if !referenceRegexp.MatchString(arg) {
+		return nil, fmt.Errorf("invalid Docker image reference %q", arg)
 	}
 
 	taglessRemote, tag := parseRepositoryTag(arg)
@@ -51,19 +56,19 @@ func ParseDockerURL(arg string) *types.ParsedDockerURL {
 	}
 	indexURL, imageName := SplitReposName(taglessRemote)
 
-	if indexURL == "" && !strings.Contains(imageName, "/") {
+	// the Docker client considers images referenced only by a name (e.g.
+	// "busybox" or "ubuntu") as valid, and, in that case, it adds the
+	// "library/" prefix because that's how they're stored in the official
+	// registry
+	if indexURL == defaultIndexURL && !strings.Contains(imageName, "/") {
 		imageName = "library/" + imageName
-	}
-
-	if indexURL == "" {
-		indexURL = defaultIndexURL
 	}
 
 	return &types.ParsedDockerURL{
 		IndexURL:  indexURL,
 		ImageName: imageName,
 		Tag:       tag,
-	}
+	}, nil
 }
 
 func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compression Compression) (string, *schema.ImageManifest, error) {

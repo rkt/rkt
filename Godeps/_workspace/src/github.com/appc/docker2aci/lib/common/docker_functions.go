@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -31,16 +32,110 @@ const (
 	dockercfgFileName = ".dockercfg"
 )
 
-// splitReposName breaks a reposName into an index name and remote name
+// Image references supported by docker2aci.
+// Taken from https://github.com/docker/distribution/blob/master/reference/reference.go
+//
+// reference      := name [ ":" tag ]
+// name           := [hostname '/'] component ['/' component]*
+// hostname       := hostcomponent ['.' hostcomponent]* [':' port-number]
+// hostcomponent  := /([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])/
+// port-number    := /[0-9]+/
+// component      := alpha-numeric [separator alpha-numeric]*
+// alpha-numeric  := /[a-z0-9]+/
+// separator      := /[_.]|__|[-]*/
+// tag            := /[\w][\w.-]{0,127}/
+//
+// TODO: check for digests if/when we support them
+var (
+	referenceRegexp = anchored(capture(nameRegexp),
+		optional(literal(":"), capture(tagRegexp)))
+
+	nameRegexp = expression(
+		optional(hostnameRegexp, literal(`/`)),
+		componentRegexp,
+		optional(repeated(literal(`/`), componentRegexp)))
+
+	hostnameRegexp = expression(
+		hostComponentRegexp,
+		optional(repeated(literal(`.`), hostComponentRegexp)),
+		optional(literal(`:`), portNumberRegexp))
+
+	hostComponentRegexp = match(`(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])`)
+
+	portNumberRegexp = match(`[0-9]+`)
+
+	componentRegexp = expression(
+		alphaNumericRegexp,
+		optional(repeated(separatorRegexp, alphaNumericRegexp)))
+
+	alphaNumericRegexp = match(`[a-z0-9]+`)
+
+	separatorRegexp = match(`(?:[._]|__|[-]*)`)
+
+	tagRegexp = match(`[\w][\w.-]{0,127}`)
+)
+
+// match compiles the string to a regular expression.
+var match = regexp.MustCompile
+
+// literal compiles s into a literal regular expression, escaping any regexp
+// reserved characters.
+func literal(s string) *regexp.Regexp {
+	re := match(regexp.QuoteMeta(s))
+
+	if _, complete := re.LiteralPrefix(); !complete {
+		panic("must be a literal")
+	}
+
+	return re
+}
+
+// expression defines a full expression, where each regular expression must
+// follow the previous.
+func expression(res ...*regexp.Regexp) *regexp.Regexp {
+	var s string
+	for _, re := range res {
+		s += re.String()
+	}
+
+	return match(s)
+}
+
+// optional wraps the expression in a non-capturing group and makes the
+// production optional.
+func optional(res ...*regexp.Regexp) *regexp.Regexp {
+	return match(group(expression(res...)).String() + `?`)
+}
+
+// repeated wraps the regexp in a non-capturing group to get one or more
+// matches.
+func repeated(res ...*regexp.Regexp) *regexp.Regexp {
+	return match(group(expression(res...)).String() + `+`)
+}
+
+// group wraps the regexp in a non-capturing group.
+func group(res ...*regexp.Regexp) *regexp.Regexp {
+	return match(`(?:` + expression(res...).String() + `)`)
+}
+
+// capture wraps the expression in a capturing group.
+func capture(res ...*regexp.Regexp) *regexp.Regexp {
+	return match(`(` + expression(res...).String() + `)`)
+}
+
+// anchored anchors the regular expression by adding start and end delimiters.
+func anchored(res ...*regexp.Regexp) *regexp.Regexp {
+	return match(`^` + expression(res...).String() + `$`)
+}
+
+// SplitReposName breaks a reposName into an index name and remote name
 func SplitReposName(reposName string) (string, string) {
 	nameParts := strings.SplitN(reposName, "/", 2)
 	var indexName, remoteName string
 	if len(nameParts) == 1 || (!strings.Contains(nameParts[0], ".") &&
 		!strings.Contains(nameParts[0], ":") && nameParts[0] != "localhost") {
 		// This is a Docker Index repos (ex: samalba/hipache or ubuntu)
-		// The URL for the index is different depending on the version of the
-		// API used to fetch it, so it cannot be inferred here.
-		indexName = ""
+		indexName = defaultIndexURL
 		remoteName = reposName
 	} else {
 		indexName = nameParts[0]

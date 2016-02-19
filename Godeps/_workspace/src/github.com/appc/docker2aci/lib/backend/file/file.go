@@ -29,7 +29,11 @@ func NewFileBackend(file *os.File) *FileBackend {
 }
 
 func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDockerURL, error) {
-	parsedDockerURL := common.ParseDockerURL(dockerURL)
+	parsedDockerURL, err := common.ParseDockerURL(dockerURL)
+	if err != nil {
+		// a missing Docker URL could mean that the file only contains one
+		// image, so we ignore the error here, we'll handle it in getImageID
+	}
 
 	appImageID, parsedDockerURL, err := getImageID(lb.file, parsedDockerURL)
 	if err != nil {

@@ -53,7 +53,10 @@ func NewRepositoryBackend(username string, password string, insecure bool) *Repo
 }
 
 func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDockerURL, error) {
-	dockerURL := common.ParseDockerURL(url)
+	dockerURL, err := common.ParseDockerURL(url)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	var supportsV2, ok bool
 	var URLSchema string
