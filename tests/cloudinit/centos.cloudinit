@@ -32,7 +32,7 @@ export PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/centos/.loca
 sed -i 's/ requiretty$/ !requiretty/g' /etc/sudoers
 
 su - centos --command="cd /var/tmp ; git clone --branch @GIT_BRANCH@ @GIT_URL@ rkt"
-su - centos --command="PATH=\$PATH ; cd /var/tmp/rkt ; ./tests/run-build.sh coreos"
+su - centos --command="PATH=\$PATH ; cd /var/tmp/rkt ; ./tests/run-build.sh @FLAVOR@"
 TESTEOF
 
 chmod +x /var/tmp/rkt-test.sh

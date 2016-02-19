@@ -22,6 +22,7 @@ fi
 DISTRO=$1
 GIT_URL=${2-https://github.com/coreos/rkt.git}
 GIT_BRANCH=${3-master}
+FLAVOR=${4-coreos}
 
 test -f cloudinit/${DISTRO}.cloudinit
 CLOUDINIT_IN=$PWD/cloudinit/${DISTRO}.cloudinit
@@ -78,6 +79,7 @@ test -f "${KEY_PAIR_NAME}.pem"
 CLOUDINIT=$(mktemp --tmpdir rkt-cloudinit.XXXXXXXXXX)
 sed -e "s#@GIT_URL@#${GIT_URL}#g" \
     -e "s#@GIT_BRANCH@#${GIT_BRANCH}#g" \
+    -e "s#@FLAVOR@#${FLAVOR}#g" \
     < $CLOUDINIT_IN >> $CLOUDINIT
 
 INSTANCE_ID=$(aws ec2 run-instances \

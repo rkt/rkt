@@ -22,11 +22,12 @@ $ tests/aws.sh setup
 Then run the tests with the specified Linux distribution:
 
 ```
-$ tests/aws.sh debian
-$ tests/aws.sh ubuntu
 $ tests/aws.sh fedora-22
 $ tests/aws.sh fedora-23
 $ tests/aws.sh fedora-rawhide
+$ tests/aws.sh ubuntu-1604
+$ tests/aws.sh ubuntu-1510
+$ tests/aws.sh debian
 $ tests/aws.sh centos
 ```
 
@@ -34,7 +35,12 @@ By default, this tests the upstream master branch.
 A specific branch can be tested with:
 
 ```
-$ tests/aws.sh ubuntu https://github.com/coreos/rkt.git branch-name
+$ tests/aws.sh fedora-23 https://github.com/coreos/rkt.git branch-name
+```
+
+Additionally, a stage1 flavor can be selected:
+```
+$ tests/aws.sh fedora-23 https://github.com/coreos/rkt.git branch-name coreos
 ```
 
 The VM instances are configured to terminate automatically on shutdown to reduce costs.

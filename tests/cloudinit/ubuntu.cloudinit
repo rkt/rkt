@@ -19,7 +19,7 @@ apt-get install -y build-essential autoconf
 apt-get install -y wget squashfs-tools patch gnupg golang libacl1-dev
 
 su - ubuntu --command="cd /var/tmp ; git clone --branch @GIT_BRANCH@ @GIT_URL@ rkt"
-su - ubuntu --command="PATH=\$PATH ; cd /var/tmp/rkt ; ./tests/run-build.sh coreos"
+su - ubuntu --command="PATH=\$PATH ; cd /var/tmp/rkt ; ./tests/run-build.sh @FLAVOR@"
 TESTEOF
 
 chmod +x /var/tmp/rkt-test.sh
