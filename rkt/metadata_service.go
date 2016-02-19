@@ -610,8 +610,7 @@ func runRegistrationServer(l net.Listener) {
 }
 
 func runPublicServer(l net.Listener) {
-	r := mux.NewRouter().Headers("Metadata-Flavor", "AppContainer").
-		PathPrefix("/{token}/acMetadata/v1").Subrouter()
+	r := mux.NewRouter().PathPrefix("/{token}/acMetadata/v1").Subrouter()
 
 	mr := r.Methods("GET").Subrouter()
 
