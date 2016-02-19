@@ -95,6 +95,15 @@ INSTANCE_ID=$(aws ec2 run-instances \
 	)
 echo INSTANCE_ID=$INSTANCE_ID
 
+aws ec2 create-tags --resources $INSTANCE_ID \
+	--tags \
+	Key=Name,Value=rkt-tst-${DISTRO}-${GIT_BRANCH}-${FLAVOR} \
+	Key=Distro,Value=${DISTRO} \
+	Key=Repo,Value=${GIT_URL} \
+	Key=Branch,Value=${GIT_BRANCH} \
+	Key=Flavor,Value=${FLAVOR} \
+	Key=User,Value=${USER}
+
 while state=$(aws ec2 describe-instances \
 	--instance-ids $INSTANCE_ID \
 	--output text \
