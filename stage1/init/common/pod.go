@@ -28,8 +28,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/coreos/rkt/pkg/acl"
+	"github.com/coreos/rkt/pkg/group"
+	"github.com/coreos/rkt/pkg/passwd"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 
 	"github.com/appc/spec/schema"
@@ -268,28 +271,61 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		return errwrap.Wrap(errors.New("unable to write environment file"), err)
 	}
 
-	// This is a partial implementation for app.User and app.Group:
-	// For now, only numeric ids (and the string "root") are supported.
-	var uid, gid int
+	var _uid, gid int
 	var err error
-	if app.User == "root" {
-		uid = 0
-	} else {
-		uid, err = strconv.Atoi(app.User)
-		if err != nil {
-			return fmt.Errorf("non-numerical user id not supported yet")
-		}
+
+	uidRange := uid.NewBlankUidRange()
+	if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
+		return errwrap.Wrap(errors.New("unable to deserialize uid range"), err)
 	}
-	if app.Group == "root" {
-		gid = 0
-	} else {
-		gid, err = strconv.Atoi(app.Group)
+
+	if strings.HasPrefix(app.User, "/") {
+		var stat syscall.Stat_t
+		if err = syscall.Lstat(filepath.Join(common.AppRootfsPath(p.Root, appName),
+			app.User), &stat); err != nil {
+			return errwrap.Wrap(fmt.Errorf("unable to get uid from file %q",
+				app.User), err)
+		}
+		uidReal, _, err := uidRange.UnshiftRange(stat.Uid, 0)
 		if err != nil {
-			return fmt.Errorf("non-numerical group id not supported yet")
+			return errwrap.Wrap(errors.New("unable to determine real uid"), err)
+		}
+		_uid = int(uidReal)
+	} else {
+		_uid, err = strconv.Atoi(app.User)
+		if err != nil {
+			_uid, err = passwd.LookupUidFromFile(app.User,
+				filepath.Join(common.AppRootfsPath(p.Root, appName), "etc/passwd"))
+			if err != nil {
+				return errwrap.Wrap(fmt.Errorf("cannot lookup user %q", app.User), err)
+			}
 		}
 	}
 
-	execWrap := []string{"/appexec", common.RelAppRootfsPath(appName), workDir, RelEnvFilePath(appName), strconv.Itoa(uid), generateGidArg(gid, app.SupplementaryGIDs)}
+	if strings.HasPrefix(app.Group, "/") {
+		var stat syscall.Stat_t
+		if err = syscall.Lstat(filepath.Join(common.AppRootfsPath(p.Root, appName),
+			app.Group), &stat); err != nil {
+			return errwrap.Wrap(fmt.Errorf("unable to get gid from file %q",
+				app.Group), err)
+		}
+		_, gidReal, err := uidRange.UnshiftRange(0, stat.Gid)
+		if err != nil {
+			return errwrap.Wrap(errors.New("unable to determine real gid"), err)
+		}
+		gid = int(gidReal)
+	} else {
+		gid, err = strconv.Atoi(app.Group)
+		if err != nil {
+			gid, err = group.LookupGidFromFile(app.Group,
+				filepath.Join(common.AppRootfsPath(p.Root, appName), "etc/group"))
+			if err != nil {
+				return errwrap.Wrap(fmt.Errorf("cannot lookup group %q", app.Group), err)
+			}
+		}
+	}
+
+	execWrap := []string{"/appexec", common.RelAppRootfsPath(appName), workDir, RelEnvFilePath(appName), strconv.Itoa(_uid), generateGidArg(gid, app.SupplementaryGIDs)}
 	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v", appName, imgName)),

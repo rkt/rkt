@@ -69,6 +69,13 @@ func (r *UidRange) ShiftRange(uid uint32, gid uint32) (uint32, uint32, error) {
 	return uid + r.Shift, gid + r.Shift, nil
 }
 
+func (r *UidRange) UnshiftRange(uid, gid uint32) (uint32, uint32, error) {
+	if uid < r.Shift || gid < r.Shift || (r.Count > 0 && (uid >= r.Shift+r.Count || gid >= r.Shift+r.Count)) {
+		return 0, 0, fmt.Errorf("uid %d or gid %d are out of range %d after unshifting", uid, gid, r.Count)
+	}
+	return uid - r.Shift, gid - r.Shift, nil
+}
+
 func (r *UidRange) Serialize() []byte {
 	return []byte(fmt.Sprintf("%d:%d", r.Shift, r.Count))
 }

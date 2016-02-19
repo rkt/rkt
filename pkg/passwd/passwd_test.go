@@ -1,4 +1,4 @@
-// Copyright 2015 The rkt Authors
+// Copyright 2016 The rkt Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,41 +12,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package group
+package passwd
 
 import (
 	"reflect"
 	"testing"
 )
 
-func TestParseGroupLine(t *testing.T) {
+func TestParsePasswdLine(t *testing.T) {
 	tests := []struct {
 		line          string
-		groupLine     *Group
+		passwdLine    *User
 		shouldSucceed bool
 	}{
 		{
-			"ftp:x:1:",
-			&Group{
-				"ftp",
+			"nobody:x:1000:100::/home/nobody:",
+			&User{
+				"nobody",
 				"x",
-				1,
-				[]string{},
+				1000,
+				100,
+				"",
+				"/home/nobody",
+				"",
 			},
 			true,
 		},
 		{
-			"u1:xxx:12:wheel,users",
-			&Group{
-				"u1",
-				"xxx",
-				12,
-				[]string{"wheel", "users"},
+			"nobody:x:1000:100::/home/nobody:/bin/nologin",
+			&User{
+				"nobody",
+				"x",
+				1000,
+				100,
+				"",
+				"/home/nobody",
+				"/bin/nologin",
 			},
 			true,
 		},
 		{
-			"uerr:x:",
+			"nobody:x:",
 			nil,
 			false,
 		},
@@ -56,27 +62,30 @@ func TestParseGroupLine(t *testing.T) {
 			false,
 		},
 		{
-			"u1:xxx:12:wheel,users:extra:stuff",
-			&Group{
-				"u1",
-				"xxx",
-				12,
-				[]string{"wheel", "users"},
+			"nobody:x:1000:100::/home/nobody:/bin/nologin:more:stuff",
+			&User{
+				"nobody",
+				"x",
+				1000,
+				100,
+				"",
+				"/home/nobody",
+				"/bin/nologin",
 			},
 			true,
 		},
 	}
 
 	for i, tt := range tests {
-		g, err := parseGroupLine(tt.line)
+		p, err := parsePasswdLine(tt.line)
 		if err != nil {
 			if tt.shouldSucceed {
 				t.Errorf("#%d: parsing line %q failed unexpectedly", i, tt.line)
 			}
 			continue
 		}
-		if !reflect.DeepEqual(g, tt.groupLine) {
-			t.Errorf("#%d: got group %v, want group %v", i, g, tt.groupLine)
+		if !reflect.DeepEqual(p, tt.passwdLine) {
+			t.Errorf("#%d: got user %v, want user %v", i, p, tt.passwdLine)
 		}
 	}
 }

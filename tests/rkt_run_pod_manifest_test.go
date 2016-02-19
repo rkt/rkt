@@ -586,6 +586,153 @@ func TestPodManifest(t *testing.T) {
 			fmt.Sprintf("%v=enabled", capability.CAP_NET_ADMIN.String()),
 			"",
 		},
+		{
+			// Set valid numerical app user and group.
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-valid-numerical-user-group.aci", []string{}},
+			},
+			&schema.PodManifest{
+				Apps: []schema.RuntimeApp{
+					{
+						Name: baseAppName,
+						App: &types.App{
+							Exec:  []string{"/inspect", "--print-user"},
+							User:  "1000",
+							Group: "100",
+						},
+					},
+				},
+			},
+			true,
+			"User: uid=1000 euid=1000 gid=100 egid=100",
+			"",
+		},
+		{
+			// Set valid non-numerical app user and group.
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-valid-user-group.aci", []string{}},
+			},
+			&schema.PodManifest{
+				Apps: []schema.RuntimeApp{
+					{
+						Name: baseAppName,
+						App: &types.App{
+							Exec:  []string{"/inspect", "--print-user"},
+							User:  "user1",
+							Group: "group1",
+						},
+					},
+				},
+			},
+			true,
+			"User: uid=1000 euid=1000 gid=100 egid=100",
+			"",
+		},
+		{
+			// Set invalid non-numerical app user.
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-invalid-user.aci", []string{}},
+			},
+			&schema.PodManifest{
+				Apps: []schema.RuntimeApp{
+					{
+						Name: baseAppName,
+						App: &types.App{
+							Exec:  []string{"/inspect", "--print-user"},
+							User:  "user2",
+							Group: "0",
+						},
+					},
+				},
+			},
+			false,
+			`"user2" user not found`,
+			"",
+		},
+		{
+			// Set invalid non-numerical app group.
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-invalid-group.aci", []string{}},
+			},
+			&schema.PodManifest{
+				Apps: []schema.RuntimeApp{
+					{
+						Name: baseAppName,
+						App: &types.App{
+							Exec:  []string{"/inspect", "--print-user"},
+							User:  "0",
+							Group: "group2",
+						},
+					},
+				},
+			},
+			false,
+			`"group2" group not found`,
+			"",
+		},
+		{
+			// Set valid path-like app user and group.
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-valid-path-user-group.aci", []string{}},
+			},
+			&schema.PodManifest{
+				Apps: []schema.RuntimeApp{
+					{
+						Name: baseAppName,
+						App: &types.App{
+							Exec:  []string{"/inspect", "--print-user"},
+							User:  "/etc/passwd",
+							Group: "/etc/group",
+						},
+					},
+				},
+			},
+			true,
+			"User: uid=0 euid=0 gid=0 egid=0",
+			"",
+		},
+		{
+			// Set invalid path-like app user.
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-invalid-path-user.aci", []string{}},
+			},
+			&schema.PodManifest{
+				Apps: []schema.RuntimeApp{
+					{
+						Name: baseAppName,
+						App: &types.App{
+							Exec:  []string{"/inspect", "--print-user"},
+							User:  "/etc/nofile",
+							Group: "0",
+						},
+					},
+				},
+			},
+			false,
+			`no such file or directory`,
+			"",
+		},
+		{
+			// Set invalid path-like app group.
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-invalid-path-group.aci", []string{}},
+			},
+			&schema.PodManifest{
+				Apps: []schema.RuntimeApp{
+					{
+						Name: baseAppName,
+						App: &types.App{
+							Exec:  []string{"/inspect", "--print-user"},
+							User:  "0",
+							Group: "/etc/nofile",
+						},
+					},
+				},
+			},
+			false,
+			`no such file or directory`,
+			"",
+		},
 	}
 
 	for i, tt := range tests {
