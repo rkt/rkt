@@ -2,6 +2,7 @@
 
 #### Bug fixes
 - Socket activation was not working if the port on the host is different from the app port as set in the image manifest ([#2137](https://github.com/coreos/rkt/pull/2137)).
+- Fix a bug when fetching images from private repositories in the official Docker registry ([#2197](https://github.com/coreos/rkt/pull/2197)).
 
 ## v1.0.0
 
