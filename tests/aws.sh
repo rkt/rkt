@@ -4,6 +4,7 @@ set -e
 
 SCRIPTPATH=$(dirname "$0")
 cd $SCRIPTPATH
+SCRIPTPATH=$PWD
 
 KEY_PAIR_NAME=rkt-testing-${USER}
 SECURITY_GROUP=rkt-testing-${USER}-security-group
@@ -23,6 +24,19 @@ DISTRO=$1
 GIT_URL=${2-https://github.com/coreos/rkt.git}
 GIT_BRANCH=${3-master}
 FLAVOR=${4-coreos}
+
+if [ "$DISTRO" = "all" ] ; then
+  gnome-terminal \
+	--tab --command="$SCRIPTPATH/aws.sh fedora-22      $GIT_URL $GIT_BRANCH $FLAVOR" \
+	--tab --command="$SCRIPTPATH/aws.sh fedora-23      $GIT_URL $GIT_BRANCH $FLAVOR" \
+	--tab --command="$SCRIPTPATH/aws.sh fedora-rawhide $GIT_URL $GIT_BRANCH $FLAVOR" \
+	--tab --command="$SCRIPTPATH/aws.sh ubuntu-1604    $GIT_URL $GIT_BRANCH $FLAVOR" \
+	--tab --command="$SCRIPTPATH/aws.sh ubuntu-1510    $GIT_URL $GIT_BRANCH $FLAVOR" \
+	--tab --command="$SCRIPTPATH/aws.sh debian         $GIT_URL $GIT_BRANCH $FLAVOR" \
+	--tab --command="$SCRIPTPATH/aws.sh centos         $GIT_URL $GIT_BRANCH $FLAVOR"
+
+  exit 0
+fi
 
 test -f cloudinit/${DISTRO}.cloudinit
 CLOUDINIT_IN=$PWD/cloudinit/${DISTRO}.cloudinit
@@ -125,8 +139,20 @@ sleep 5
 aws ec2 get-console-output --instance-id $INSTANCE_ID --output text |
   perl -ne 'print if /BEGIN SSH .* FINGERPRINTS/../END SSH .* FINGERPRINTS/'
 
-echo "Connect with:"
-echo ssh -o ServerAliveInterval=20 -i ${SCRIPTPATH}/${KEY_PAIR_NAME}.pem ${AWS_USER}@${AWS_IP}
+echo
 echo "Check the logs with:"
 echo tail -n 5000 -f /var/tmp/rkt-test.log
 
+repeat="Y"
+while [ "$repeat" = "Y" ] ; do
+  ssh -o ServerAliveInterval=20 -o ConnectTimeout=10 -o ConnectionAttempts=60 -i ${SCRIPTPATH}/${KEY_PAIR_NAME}.pem ${AWS_USER}@${AWS_IP}
+
+  echo -n "Reconnect? (Y/N)"
+  read -n1 Input
+  echo
+  case $Input in
+    [Nn]):
+    repeat="N"
+    ;;
+  esac
+done
