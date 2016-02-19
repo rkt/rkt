@@ -50,7 +50,10 @@ type dockerFetcher struct {
 // ACI, then stores it in the store and returns the hash.
 func (f *dockerFetcher) GetHash(u *url.URL) (string, error) {
 	ensureLogger(f.Debug)
-	dockerURL := d2acommon.ParseDockerURL(path.Join(u.Host, u.Path))
+	dockerURL, err := d2acommon.ParseDockerURL(path.Join(u.Host, u.Path))
+	if err != nil {
+		return "", fmt.Errorf(`invalid docker URL %q; expected syntax is "docker://[REGISTRY_HOST[:REGISTRY_PORT]/]IMAGE_NAME[:TAG]"`, u)
+	}
 	latest := dockerURL.Tag == "latest"
 	return f.fetchImageFrom(u, latest)
 }
