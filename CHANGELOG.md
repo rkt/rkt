@@ -3,6 +3,7 @@
 #### New features and UX changes
 
 - Add support for non-numerical UID/GID as specified in the appc spec ([#2159](https://github.com/coreos/rkt/pull/2159)).
+- When an application terminates with a non-zero exit status, `rkt run` now returns that exit status ([#2198](https://github.com/coreos/rkt/pull/2198)). This requires [systemd >= v227](https://lists.freedesktop.org/archives/systemd-devel/2015-October/034509.html) in stage1. systemd-v229 can now be used in the [src and host flavors](https://github.com/coreos/rkt/blob/master/Documentation/build-configure.md#--with-stage1-flavors) but this is not yet available in the default coreos flavor.
 
 #### Bug fixes
 - Socket activation was not working if the port on the host is different from the app port as set in the image manifest ([#2137](https://github.com/coreos/rkt/pull/2137)).
