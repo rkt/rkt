@@ -257,7 +257,7 @@ For example, given the above system configuration and the following local config
 {
 	"rktKind": "dockerAuth",
 	"rktVersion": "v1",
-	"domains": ["gcr.io"],
+	"registries": ["gcr.io"],
 	"credentials": {
 		"user": "goo",
 		"password": "gle"
