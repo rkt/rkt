@@ -542,21 +542,10 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
-		if vol.Kind == "empty" {
-			p := filepath.Join(sharedVolPath, vol.Name.String())
-			if err := os.MkdirAll(p, sharedVolPerm); err != nil {
-				return nil, errwrap.Wrap(fmt.Errorf("could not create shared volume %q", vol.Name), err)
-			}
-			if err := os.Chown(p, *vol.UID, *vol.GID); err != nil {
-				return nil, errwrap.Wrap(fmt.Errorf("could not change owner of %q", p), err)
-			}
-			mod, err := strconv.ParseUint(*vol.Mode, 8, 32)
-			if err != nil {
-				return nil, errwrap.Wrap(fmt.Errorf("invalid mode %q for volume %q", *vol.Mode, vol.Name), err)
-			}
-			if err := os.Chmod(p, os.FileMode(mod)); err != nil {
-				return nil, errwrap.Wrap(fmt.Errorf("could not change permissions of %q", p), err)
-			}
+		//set volumne permissions
+		volumePath := filepath.Join(sharedVolPath, vol.Name.String())
+		if err := PrepareMountpoints(volumePath, &vol); err != nil {
+			return nil, err
 		}
 
 		opt := make([]string, 4)

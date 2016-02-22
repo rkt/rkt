@@ -169,12 +169,9 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 		whatPath := filepath.Join(stage1MntDir, vol.Name.String())
 		whatFullPath := filepath.Join(root, whatPath)
 
-		if vol.Kind == "empty" {
-			diag.Printf("creating an empty volume folder for sharing: %q", whatFullPath)
-			err := os.MkdirAll(whatFullPath, 0700)
-			if err != nil {
-				return err
-			}
+		// set volume permissions
+		if err := PrepareMountpoints(whatFullPath, &vol); err != nil {
+			return err
 		}
 
 		// destination relative to stage1 rootfs and relative to pod root
