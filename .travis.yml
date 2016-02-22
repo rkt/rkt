@@ -12,6 +12,8 @@ before_install:
  - sudo apt-get install -y build-essential
  - sudo apt-get install -y libacl1-dev
 
+install: true
+
 script:
  - ./autogen.sh
  # Build host and fly to ensure we build stage1 init. We don't build everything
