@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Copyright 2015 Joseph Naegele
+//
+// Portions of this code are derived from go-acl by Joseph Naegele
+// (https://github.com/naegeldjd/go-acl) which is under an MIT license that can
+// be found in the accompanying LICENSE.MIT file
+//
+
 //+build linux
 
 // Package acl is a wrapper over libacl that dlopens it instead of being linked
