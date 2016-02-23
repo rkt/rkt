@@ -28,6 +28,7 @@ import (
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema/types"
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -273,4 +274,42 @@ func (l *NetList) SpecificArgs(net string) string {
 
 func (l *NetList) All() bool {
 	return l.Specific("all")
+}
+
+// LookupPath search for bin in paths. If found, it returns its absolute path,
+// if not, an error
+func LookupPath(bin string, paths string) (string, error) {
+	pathsArr := filepath.SplitList(paths)
+	for _, path := range pathsArr {
+		binPath := filepath.Join(path, bin)
+		binAbsPath, err := filepath.Abs(binPath)
+		if err != nil {
+			return "", fmt.Errorf("unable to find absolute path for %s", binPath)
+		}
+		d, err := os.Stat(binAbsPath)
+		if err != nil {
+			continue
+		}
+		// Check the executable bit, inspired by os.exec.LookPath()
+		if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
+			return binAbsPath, nil
+		}
+	}
+	return "", fmt.Errorf("unable to find %q in %q", bin, paths)
+}
+
+// SystemdVersion parses and returns the version of a given systemd binary
+func SystemdVersion(systemdBinaryPath string) (int, error) {
+	versionBytes, err := exec.Command(systemdBinaryPath, "--version").CombinedOutput()
+	if err != nil {
+		return -1, errwrap.Wrap(fmt.Errorf("unable to probe %s version", systemdBinaryPath), err)
+	}
+	versionStr := strings.SplitN(string(versionBytes), "\n", 2)[0]
+	var version int
+	n, err := fmt.Sscanf(versionStr, "systemd %d", &version)
+	if err != nil || n != 1 {
+		return -1, fmt.Errorf("cannot parse version: %q", versionStr)
+	}
+
+	return version, nil
 }

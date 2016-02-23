@@ -1,9 +1,0 @@
-[Unit]
-Description=Pod shutdown
-AllowIsolate=true
-StopWhenUnneeded=yes
-DefaultDependencies=false
-
-[Service]
-RemainAfterExit=yes
-ExecStop=/usr/bin/systemctl halt --force
