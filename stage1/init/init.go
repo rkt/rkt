@@ -296,6 +296,16 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		nsargs := stage1initcommon.VolumesToKvmDiskArgs(p.Manifest.Volumes)
 		args = append(args, nsargs...)
 
+		// set hostname inside pod
+		// According to systemd manual (https://www.freedesktop.org/software/systemd/man/hostname.html) :
+		// "The /etc/hostname file configures the name of the local system that is set
+		// during boot using the sethostname system call"
+		hostname := stage1initcommon.GetMachineID(p)
+		hostnamePath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc/hostname")
+		if err := ioutil.WriteFile(hostnamePath, []byte(hostname), 0644); err != nil {
+			return nil, nil, fmt.Errorf("error writing %s, %s", hostnamePath, err)
+		}
+
 		// lkvm requires $HOME to be defined,
 		// see https://github.com/coreos/rkt/issues/1393
 		if os.Getenv("HOME") == "" {
