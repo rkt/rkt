@@ -126,7 +126,7 @@ sha512-96323da393621d846c632e71551b77089ac0b004ceb5c2362be4f5ced2212db9   regist
 | --- | --- | --- | --- |
 | `--fields` |  `id,name,importtime,lastused,size,latest` | A comma-separated list with one or more of `id`, `name`, `importtime`, `lastused`, `size`, `latest` | Comma-separated list of fields to display |
 | `--full` |  `false` | `true` or `false` | Use long output format |
-| `--no-legend` |  `false` | `true` or `false` | Supress a legend with the list |
+| `--no-legend` |  `false` | `true` or `false` | Suppress a legend with the list |
 | `--order` |  `asc` | `asc` or `desc` | Choose the sorting order if at least one sort field is provided (`--sort`) |
 | `--sort` |  `importtime` | A comma-separated list with one or more of `id`, `name`, `importtime`, `lastused`, `size`, `latest` | Sort the output according to the provided comma-separated list of fields |
 

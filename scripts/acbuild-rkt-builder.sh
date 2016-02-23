@@ -36,7 +36,7 @@ check_tool docker2aci
 
 if [ ! -f "$ACI_FILE" ]; then
     docker2aci "docker://$DOCKERIMG"
-    # These base images dont always come with valid values
+    # These base images don't always come with valid values
     # actool patch-manifest -user 0 -group 0 --name $IMG-$IMG_VERSION --exec /bin/bash --replace $ACI_FILE
 fi
 

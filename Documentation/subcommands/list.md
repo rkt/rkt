@@ -25,7 +25,7 @@ UUID                                   APP     IMAGE NAME              IMAGE ID 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
 | `--full` |  `false` | `true` or `false` | Use long output format |
-| `--no-legend` |  `false` | `true` or `false` | Supress a legend with the list |
+| `--no-legend` |  `false` | `true` or `false` | Suppress a legend with the list |
 
 ## Global options
 

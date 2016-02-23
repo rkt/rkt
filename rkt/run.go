@@ -43,7 +43,7 @@ used.
 
 Volumes are made available to the container via --volume. Mounts bind volumes
 into each image's root within the container via --mount. --mount is
-position-sensitive; occuring before any images applies to all images, occuring
+position-sensitive; occurring before any images applies to all images, occurring
 after any images applies only to the nearest preceding image. Per-app mounts
 take precedence over global ones if they have the same path.
 

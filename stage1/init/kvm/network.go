@@ -71,7 +71,7 @@ func GetKVMNetArgs(nds []netDescriber) ([]string, error) {
 func generateMacAddress() (net.HardwareAddr, error) {
 	mac := []byte{
 		2,          // locally administered unicast
-		0x65, 0x02, // OUI (randomly choosen by jell)
+		0x65, 0x02, // OUI (randomly chosen by jell)
 		0, 0, 0, // bytes to randomly overwrite
 	}
 
