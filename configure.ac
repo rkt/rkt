@@ -20,6 +20,8 @@ AC_DEFUN([RKT_REQ_ABS_PROG],
 dnl We assume having bash in lots of places, so check it in the
 dnl beginning.
 RKT_REQ_ABS_PROG([BASH_SHELL], [bash])
+dnl for git suffix
+RKT_REQ_PROG([GIT],[git],[git])
 
 dnl this will be printed in configure summary and by rkt version
 RKT_FEATURES=""
@@ -253,6 +255,20 @@ AC_DEFUN([RKT_IF_HAS_FLAVOR],
                                       break])])
           AS_IF([test ${flavor_found} -eq 1],[:;$3],[:;$4])])
 
+dnl common deps for flavors using CoreOS PXE image; not checking for
+dnl gpg - it will be checked when we will actually download the image
+dnl from the network
+AC_DEFUN([RKT_COMMON_COREOS_PROGS],
+         [RKT_REQ_PROG([CAT],[cat],[cat])
+          RKT_REQ_PROG([CPIO],[cpio],[cpio])
+          RKT_REQ_PROG([GZIP],[gzip],[gzip])
+          RKT_REQ_PROG([MD5SUM],[md5sum],[md5sum])
+          RKT_REQ_PROG([MKTEMP],[mktemp],[mktemp])
+          RKT_REQ_PROG([SORT],[sort],[sort])
+          RKT_REQ_PROG([TOUCH],[touch],[touch])
+          RKT_REQ_PROG([UNSQUASHFS],[unsquashfs],[unsquashfs])
+          RKT_REQ_PROG([WGET],[wget],[wget])])
+
 dnl Validate passed flavors to build - make sure that valid flavors
 dnl were passed and each flavor was specified only once. Also, do some
 dnl basic program checks for each requested flavor.
@@ -264,25 +280,65 @@ RKT_ITERATE_FLAVORS([${RKT_STAGE1_FLAVORS}],[flavor],
                      RKT_SPECIFIED_FLAVORS="${RKT_SPECIFIED_FLAVORS},${flavor}"
                      AS_CASE([${flavor}],
                              [src],
-                                     [RKT_REQ_PROG([INTLTOOLIZE],[intltoolize],[intltoolize])
-                                      RKT_REQ_PROG([LIBTOOLIZE],[libtoolize],[libtoolize])],
+                                     [AC_MSG_NOTICE([will build systemd from source, make sure that all its build requirements are fulfilled])],
                              [coreos],
-                                     [RKT_REQ_PROG([WGET],[wget],[wget])
-                                      RKT_REQ_PROG([MKTEMP],[mktemp],[mktemp])
-                                      RKT_REQ_PROG([MD5SUM],[md5sum],[md5sum])
-                                      RKT_REQ_PROG([CPIO],[cpio],[cpio])
-                                      RKT_REQ_PROG([GZIP],[gzip],[gzip])
-                                      RKT_REQ_PROG([UNSQUASHFS],[unsquashfs],[unsquashfs])
-                                      RKT_REQ_PROG([SORT],[sort],[sort])],
+                                     [RKT_COMMON_COREOS_PROGS],
                              [kvm],
                                      [AC_MSG_WARN([* kvm is an experimental stage1 implementation, some features are missing])
+                                      AC_MSG_NOTICE([will build linux kernel and lkvm from source, make sure that all their build requirements are fulfilled])
+                                      RKT_COMMON_COREOS_PROGS
                                       RKT_REQ_PROG([PATCH],[patch],[patch])
-                                      RKT_REQ_PROG([BC],[bc],[bc])],
+                                      RKT_REQ_PROG([TAR],[tar],[tar])
+                                      RKT_REQ_PROG([XZ],[xz],[xz])],
                              [host],
                                      [],
                              [fly],
                                      [AC_MSG_WARN([* fly is an experimental stage1 implementation with almost no isolation and less features])],
                              [AC_MSG_ERROR([*** Unhandled flavor "${flavor}", should not happen])])])
+
+
+AS_VAR_IF([RKT_SPECIFIED_FLAVORS],[],
+          dnl no flavors specified, no checks
+          [],
+          dnl some flavor are specified, do some checks for stuff needed by any flavor
+          [AC_LANG_PUSH([C])
+           AC_CHECK_HEADER([acl/libacl.h],
+                           [],
+                           [AC_MSG_ERROR([*** No development headers for libacl found])],
+                           [AC_INCLUDES_DEFAULT])
+           AC_CHECK_HEADER([dlfcn.h],
+                           [],
+                           [AC_MSG_ERROR([*** No development headers for libdl found])],
+                           [AC_INCLUDES_DEFAULT])
+           # check for static libc
+           SAVE_LDFLAGS="$LDFLAGS"
+           LDFLAGS="-static $LDFLAGS"
+           AC_CHECK_LIB([c], [printf],
+                        dnl static libc is there
+                        [:],
+                        dnl static libc is not there
+                        [AC_MSG_ERROR([*** No static libc found. Try to install glibc-static or libc6-dev.])])
+           LDFLAGS="$SAVE_LDFLAGS"
+
+           # check for setns syscall, drop it in 2020 (centos 6.7 support ends
+           # then).
+           AC_MSG_CHECKING([whether C library provides setns function])
+           AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+                                             #define _GNU_SOURCE
+                                             #include <sched.h>
+                                           ]], [[(void)setns(0, 0);]])],
+                          [AC_MSG_RESULT([yes])],
+                          [AC_MSG_RESULT([no])
+                           AC_MSG_CHECKING([whether Linux kernel headers provide __NR_setns macro])
+                           AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+                                                             #include <linux/unistd.h>
+                                                           ]], [[(void)syscall(__NR_setns,0,0);]])],
+                                          [AC_MSG_RESULT([yes])
+                                           RKT_DEFINES_FOR_ENTER=-DNO_SETNS_AVAILABLE],
+                                          [AC_MSG_RESULT([no])
+                                           AC_MSG_ERROR([*** Neither setns function nor __NR_setns macro are available - either both glibc and kernel are too old or their development headers are not installed])])])
+
+           AC_LANG_POP([C])])
 
 dnl Validate passed default flavor, it should be one of the built
 dnl stage1 flavors
@@ -491,8 +547,6 @@ AS_VAR_IF([cross_compiling], [no],
                       AC_MSG_RESULT([${GOARCH_FOR_BUILD}])],
                      [AC_MSG_RESULT([user supplied ${GOARCH_FOR_BUILD}])])])
 
-AC_PROG_CC
-
 AC_LANG_PUSH([C])
 
 # check for libc generally
@@ -501,37 +555,6 @@ AC_CHECK_LIB([c], [fork],
              [:],
              dnl libc is not there
              [AC_MSG_ERROR([*** No libc found. Try to install glibc-devel or libc6-dev.])])
-
-# check for static libc
-SAVE_LDFLAGS="$LDFLAGS"
-LDFLAGS="-static $LDFLAGS"
-AC_CHECK_LIB([c], [printf],
-             dnl static libc is there
-             [:],
-             dnl static libc is not there
-             [AC_MSG_ERROR([*** No static libc found. Try to install glibc-static or libc6-dev.])])
-LDFLAGS="$SAVE_LDFLAGS"
-
-# check for setns syscall, drop it in 2020 (centos 6.7 support ends
-# then).
-
-AC_MSG_CHECKING([whether C library provides setns function])
-AC_LINK_IFELSE([AC_LANG_PROGRAM([[
-                                  #define _GNU_SOURCE
-                                  #include <sched.h>
-                                ]], [[(void)setns(0, 0);]])],
-               [AC_MSG_RESULT([yes])],
-               [AC_MSG_RESULT([no])
-                AC_MSG_CHECKING([whether Linux kernel headers provide __NR_setns macro])
-                AC_LINK_IFELSE([AC_LANG_PROGRAM([[
-                                                  #include <linux/unistd.h>
-                                                ]], [[(void)syscall(__NR_setns,0,0);]])],
-                               [AC_MSG_RESULT([yes])
-                                RKT_DEFINES_FOR_ENTER=-DNO_SETNS_AVAILABLE],
-                               [AC_MSG_RESULT([no])
-                                AC_MSG_ERROR([*** Neither setns function nor __NR_setns macro are available - either both glibc and kernel are too old or their development headers are not installed])])])
-
-AC_SUBST(RKT_DEFINES_FOR_ENTER)
 
 # Check whether we can build TPM support code
 AC_CHECK_HEADER(trousers/tss.h, [HAVE_TPM=yes], [HAVE_TPM=no], [AC_INCLUDES_DEFAULT])
@@ -557,14 +580,10 @@ AS_CASE([${RKT_ENABLE_TPM}],
         [yes],
                 [RKT_ADD_FEATURE '+TPM'])
 
-# Check whether we have libacl
-AC_CHECK_HEADER(acl/libacl.h, [], [AC_MSG_ERROR([*** No development headers for libacl found. Try to install libacl-devel or libacl1-dev])], [AC_INCLUDES_DEFAULT])
-
 AC_LANG_POP([C])
 
 AC_PROG_INSTALL
 RKT_REQ_PROG([FILE],[file],[file])
-RKT_REQ_PROG([GIT],[git],[git])
 RKT_REQ_PROG([GOBINARY],[go],[go])
 RKT_REQ_PROG([GOFMTBINARY],[gofmt],[gofmt])
 RKT_REQ_ABS_PROG([ABS_GO], [go])
@@ -669,6 +688,8 @@ AC_SUBST(RKT_VERSION_LDFLAGS)
 AC_SUBST(RKT_FEATURES_LDFLAGS)
 
 AC_SUBST(TPM_TAGS)
+
+AC_SUBST(RKT_DEFINES_FOR_ENTER)
 
 #### FILE GENERATION AND REPORTING
 
