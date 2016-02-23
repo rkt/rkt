@@ -42,7 +42,7 @@ c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 | `--pod-manifest` |  `` | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect |
 | `--port` |  `` | A port number | Ports to expose on the host (requires [contained network](https://github.com/coreos/rkt/blob/master/Documentation/networking.md#contained-mode)). Syntax: --port=NAME:HOSTPORT |
 | `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental) |
-| `--quiet` |  `false` | `true` or `false` | Supress superfluous output on stdout, print only the UUID on success |
+| `--quiet` |  `false` | `true` or `false` | Suppress superfluous output on stdout, print only the UUID on success |
 | `--set-env` |  `` | An environment variable. Syntax `NAME=VALUE` | An environment variable to set for apps |
 | `--stage1-url` |  `` | A URL to a stage1 image. HTTP/HTTPS/File/Docker URLs are supported | Image to use as stage1 |
 | `--stage1-path` |  `` | A path to a stage1 image. Absolute and relative paths are supported | Image to use as stage1 |

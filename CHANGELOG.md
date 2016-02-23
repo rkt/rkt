@@ -651,7 +651,7 @@ This release introduces much improved documentation and a few new features.
 
 The highlight of this release is that Rocket can now natively run Docker
 images. To do this, it leverages the appc/docker2aci library which performs a
-straightforward conversion betwen images in the Docker format and the appc
+straightforward conversion between images in the Docker format and the appc
 format.
 
 A simple example:

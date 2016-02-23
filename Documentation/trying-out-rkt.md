@@ -20,7 +20,7 @@ cd rkt-v1.0.0
 
 ### Optional: Set up Privilege Separation
 
-To faciliate privilege separation between different commands, rkt uses a `rkt` group that has read-write access to the rkt data directory. This allows `rkt fetch`, which downloads and verifies images, to run as a non-root user. If you skip this section, you can run `sudo rkt fetch` instead but we recommend taking the following steps for production use cases.
+To facilitate privilege separation between different commands, rkt uses a `rkt` group that has read-write access to the rkt data directory. This allows `rkt fetch`, which downloads and verifies images, to run as a non-root user. If you skip this section, you can run `sudo rkt fetch` instead but we recommend taking the following steps for production use cases.
 
 rkt ships with a simple script that can help set up the appropriate permissions to facilitate non-root use:
 

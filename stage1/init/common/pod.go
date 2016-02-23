@@ -542,7 +542,7 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
-		//set volumne permissions
+		//set volume permissions
 		volumePath := filepath.Join(sharedVolPath, vol.Name.String())
 		if err := PrepareMountpoints(volumePath, &vol); err != nil {
 			return nil, err
