@@ -64,17 +64,17 @@ This will build the rkt binary and the stage1-fly.aci in `build-rkt-1.0.0+git/bi
 
 ### Selecting stage1 at runtime
 
-Here is a quick example of how to use a container stage1 named `stage1-fly.aci` in `/usr/local/rkt/`:
+Here is a quick example of how to use a container stage1 named `stage1-fly.aci` in `/usr/share/rkt/`:
 
 ```
-# rkt run --stage1-path=/usr/local/rkt/stage1-fly.aci coreos.com/etcd:v2.0.9
+# rkt run --stage1-path=/usr/share/rkt/stage1-fly.aci coreos.com/etcd:v2.2.5
 ```
 
 When the image is already in the store, the `--stage1-name` or `--stage1-hash` flags can be used instead for a faster startup:
 
 ```
-# rkt run --stage1-name=coreos.com/rkt/stage1-fly coreos.com/etcd:v2.0.9
-# rkt run --stage1-hash=<hash> coreos.com/etcd:v2.0.9
+# rkt run --stage1-name=coreos.com/rkt/stage1-fly coreos.com/etcd:v2.2.5
+# rkt run --stage1-hash=<hash> coreos.com/etcd:v2.2.5
 ```
 
 ## Notes on isolation and security
