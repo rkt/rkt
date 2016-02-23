@@ -158,47 +158,27 @@ func machinedRegister() bool {
 	return found == 2
 }
 
-func lookupPath(bin string, paths string) (string, error) {
-	pathsArr := filepath.SplitList(paths)
-	for _, path := range pathsArr {
-		binPath := filepath.Join(path, bin)
-		binAbsPath, err := filepath.Abs(binPath)
-		if err != nil {
-			return "", fmt.Errorf("unable to find absolute path for %s", binPath)
-		}
-		d, err := os.Stat(binAbsPath)
-		if err != nil {
-			continue
-		}
-		// Check the executable bit, inspired by os.exec.LookPath()
-		if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
-			return binAbsPath, nil
-		}
-	}
-	return "", fmt.Errorf("unable to find %q in %q", bin, paths)
-}
-
 func installAssets() error {
-	systemctlBin, err := lookupPath("systemctl", os.Getenv("PATH"))
+	systemctlBin, err := common.LookupPath("systemctl", os.Getenv("PATH"))
 	if err != nil {
 		return err
 	}
-	bashBin, err := lookupPath("bash", os.Getenv("PATH"))
+	bashBin, err := common.LookupPath("bash", os.Getenv("PATH"))
 	if err != nil {
 		return err
 	}
 	// More paths could be added in that list if some Linux distributions install it in a different path
 	// Note that we look in /usr/lib/... first because of the merge:
 	// http://www.freedesktop.org/wiki/Software/systemd/TheCaseForTheUsrMerge/
-	systemdShutdownBin, err := lookupPath("systemd-shutdown", "/usr/lib/systemd:/lib/systemd")
+	systemdShutdownBin, err := common.LookupPath("systemd-shutdown", "/usr/lib/systemd:/lib/systemd")
 	if err != nil {
 		return err
 	}
-	systemdBin, err := lookupPath("systemd", "/usr/lib/systemd:/lib/systemd")
+	systemdBin, err := common.LookupPath("systemd", "/usr/lib/systemd:/lib/systemd")
 	if err != nil {
 		return err
 	}
-	systemdJournaldBin, err := lookupPath("systemd-journald", "/usr/lib/systemd:/lib/systemd")
+	systemdJournaldBin, err := common.LookupPath("systemd-journald", "/usr/lib/systemd:/lib/systemd")
 	if err != nil {
 		return err
 	}
@@ -347,7 +327,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		}
 
 	case "host":
-		hostNspawnBin, err := lookupPath("systemd-nspawn", os.Getenv("PATH"))
+		hostNspawnBin, err := common.LookupPath("systemd-nspawn", os.Getenv("PATH"))
 		if err != nil {
 			return nil, nil, err
 		}

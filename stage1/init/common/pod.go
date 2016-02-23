@@ -470,6 +470,43 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 	return nil
 }
 
+func writeShutdownService(p *stage1commontypes.Pod) error {
+	_, systemdVersion, err := GetFlavor(p)
+	if err != nil {
+		return err
+	}
+
+	opts := []*unit.UnitOption{
+		unit.NewUnitOption("Unit", "Description", "Pod shutdown"),
+		unit.NewUnitOption("Unit", "AllowIsolate", "true"),
+		unit.NewUnitOption("Unit", "StopWhenUnneeded", "yes"),
+		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
+		unit.NewUnitOption("Service", "RemainAfterExit", "yes"),
+	}
+
+	shutdownVerb := "exit"
+	// systemd <v227 doesn't allow the "exit" verb when running as PID 1, so
+	// use "halt".
+	if systemdVersion < 227 {
+		shutdownVerb = "halt"
+	}
+
+	opts = append(opts, unit.NewUnitOption("Service", "ExecStop", fmt.Sprintf("/usr/bin/systemctl --force %s", shutdownVerb)))
+
+	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), UnitsDir)
+	file, err := os.OpenFile(filepath.Join(unitsPath, "shutdown.service"), os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return errwrap.Wrap(errors.New("failed to create unit file"), err)
+	}
+	defer file.Close()
+
+	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
+		return errwrap.Wrap(errors.New("failed to write unit file"), err)
+	}
+
+	return nil
+}
+
 // writeEnvFile creates an environment file for given app name, the minimum
 // required environment variables by the appc spec will be set to sensible
 // defaults here if they're not provided by env.
@@ -508,13 +545,17 @@ func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types
 // PodToSystemd creates the appropriate systemd service unit files for
 // all the constituent apps of the Pod
 func PodToSystemd(p *stage1commontypes.Pod, interactive bool, flavor string, privateUsers string) error {
-
 	for i := range p.Manifest.Apps {
 		ra := &p.Manifest.Apps[i]
 		if err := appToSystemd(p, ra, interactive, flavor, privateUsers); err != nil {
 			return errwrap.Wrap(fmt.Errorf("failed to transform app %q into systemd service", ra.Name), err)
 		}
 	}
+
+	if err := writeShutdownService(p); err != nil {
+		return errwrap.Wrap(errors.New("failed to write shutdown service"), err)
+	}
+
 	return nil
 }
 
@@ -542,10 +583,21 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
-		//set volume permissions
-		volumePath := filepath.Join(sharedVolPath, vol.Name.String())
-		if err := PrepareMountpoints(volumePath, &vol); err != nil {
-			return nil, err
+		if vol.Kind == "empty" {
+			p := filepath.Join(sharedVolPath, vol.Name.String())
+			if err := os.MkdirAll(p, sharedVolPerm); err != nil {
+				return nil, errwrap.Wrap(fmt.Errorf("could not create shared volume %q", vol.Name), err)
+			}
+			if err := os.Chown(p, *vol.UID, *vol.GID); err != nil {
+				return nil, errwrap.Wrap(fmt.Errorf("could not change owner of %q", p), err)
+			}
+			mod, err := strconv.ParseUint(*vol.Mode, 8, 32)
+			if err != nil {
+				return nil, errwrap.Wrap(fmt.Errorf("invalid mode %q for volume %q", *vol.Mode, vol.Name), err)
+			}
+			if err := os.Chmod(p, os.FileMode(mod)); err != nil {
+				return nil, errwrap.Wrap(fmt.Errorf("could not change permissions of %q", p), err)
+			}
 		}
 
 		opt := make([]string, 4)
@@ -613,22 +665,39 @@ func PodToNspawnArgs(p *stage1commontypes.Pod) ([]string, error) {
 }
 
 // GetFlavor populates a flavor string based on the flavor itself and respectively the systemd version
-func GetFlavor(p *stage1commontypes.Pod) (flavor string, systemdVersion string, err error) {
+func GetFlavor(p *stage1commontypes.Pod) (flavor string, systemdVersion int, err error) {
 	flavor, err = os.Readlink(filepath.Join(common.Stage1RootfsPath(p.Root), "flavor"))
 	if err != nil {
-		return "", "", errwrap.Wrap(errors.New("unable to determine stage1 flavor"), err)
+		return "", -1, errwrap.Wrap(errors.New("unable to determine stage1 flavor"), err)
 	}
 
 	if flavor == "host" {
-		// This flavor does not contain systemd, so don't return systemdVersion
-		return flavor, "", nil
+		// This flavor does not contain systemd, parse "systemctl --version"
+		systemctlBin, err := common.LookupPath("systemctl", os.Getenv("PATH"))
+		if err != nil {
+			return "", -1, err
+		}
+
+		systemdVersion, err := common.SystemdVersion(systemctlBin)
+		if err != nil {
+			return "", -1, errwrap.Wrap(errors.New("error finding systemctl version"), err)
+		}
+
+		return flavor, systemdVersion, nil
 	}
 
 	systemdVersionBytes, err := ioutil.ReadFile(filepath.Join(common.Stage1RootfsPath(p.Root), "systemd-version"))
 	if err != nil {
-		return "", "", errwrap.Wrap(errors.New("unable to determine stage1's systemd version"), err)
+		return "", -1, errwrap.Wrap(errors.New("unable to determine stage1's systemd version"), err)
 	}
-	systemdVersion = strings.Trim(string(systemdVersionBytes), " \n")
+	systemdVersionString := strings.Trim(string(systemdVersionBytes), " \n")
+
+	// systemdVersionString is of the form v229, remove the first character to
+	// get the number
+	systemdVersion, err = strconv.Atoi(systemdVersionString[1:])
+	if err != nil {
+		return "", -1, errwrap.Wrap(errors.New("error parsing stage1's systemd version"), err)
+	}
 	return flavor, systemdVersion, nil
 }
 
