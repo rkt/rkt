@@ -9,8 +9,8 @@ In the shell excerpts below, a `#` prompt indicates commands that require root p
 The [`systemd-run`][systemd-run] utility is a convenient shortcut for testing a service before making it permanent in a unit file. To start a "daemonized" container that forks the container processes into the background, wrap the invocation of `rkt` with `systemd-run`:
 
 ```
-# systemd-run --slice=machine rkt run coreos.com/etcd:v2.0.10
-Running as unit run-3247.service.
+# systemd-run --slice=machine rkt run coreos.com/etcd:v2.2.5
+Running as unit run-29486.service.
 ```
 
 The `--slice=machine` option to `systemd-run` places the service in `machine.slice` rather than the host's `system.slice`, isolating containers in their own cgroup area.
@@ -18,21 +18,23 @@ The `--slice=machine` option to `systemd-run` places the service in `machine.sli
 Invoking a rkt container through systemd-run in this way creates a transient service unit that can be managed with the usual systemd tools:
 
 ```
-$ systemctl status run-3247.service
-● run-3247.service - /home/iaguis/work/coreos/go/src/github.com/coreos/rkt/build-rkt/bin/rkt run coreos.com/etcd:v2.0.10
-   Loaded: loaded
-  Drop-In: /run/systemd/system/run-3247.service.d
-           └─50-Description.conf, 50-ExecStart.conf
-   Active: active (running) since Mon 2015-10-26 17:38:06 CET; 41s ago
- Main PID: 3254 (ld-linux-x86-64)
-   CGroup: /system.slice/run-3247.service
-           ├─3254 stage1/rootfs/usr/lib/ld-linux-x86-64.so.2 stage1/rootfs/usr/bin/systemd-nspawn --boot --register=true --link-jou...
-           ├─3321 /usr/lib/systemd/systemd --default-standard-output=tty --log-target=null --log-level=warning --show-status=0
+$ systemctl status run-29486.service
+● run-29486.service - /bin/rkt run coreos.com/etcd:v2.2.5
+   Loaded: loaded (/run/systemd/system/run-29486.service; static; vendor preset: disabled)
+  Drop-In: /run/systemd/system/run-29486.service.d
+           └─50-Description.conf, 50-ExecStart.conf, 50-Slice.conf
+   Active: active (running) since Wed 2016-02-24 12:50:20 CET; 27s ago
+ Main PID: 29487 (ld-linux-x86-64)
+   Memory: 36.1M
+      CPU: 1.467s
+   CGroup: /machine.slice/run-29486.service
+           ├─29487 stage1/rootfs/usr/lib/ld-linux-x86-64.so.2 stage1/rootfs/usr/bin/systemd-nspawn --boot -Zsystem_u:system_r:svirt_lxc_net_t:s0:c46...
+           ├─29535 /usr/lib/systemd/systemd --default-standard-output=tty --log-target=null --log-level=warning --show-status=0
            └─system.slice
              ├─etcd.service
-             │ └─3326 /etcd
+             │ └─29544 /etcd
              └─systemd-journald.service
-               └─3322 /usr/lib/systemd/systemd-journald
+               └─29539 /usr/lib/systemd/systemd-journald
 ```
 
 Since every pod is registered with `machined` with a machine name of the form `rkt-$UUID`, the systemd tools can inspect pod logs, or stop and restart pod "machines". Use the `machinectl` tool to print the list of rkt pods:
@@ -40,7 +42,7 @@ Since every pod is registered with `machined` with a machine name of the form `r
 ```
 $ machinectl list
 MACHINE                                  CLASS     SERVICE
-rkt-f0261476-7044-4a84-b729-e0f7a47dcffe container nspawn
+rkt-2b0b2cec-8f63-4451-9431-9f8e9b265a23 container nspawn
 
 1 machines listed.
 ```
@@ -48,11 +50,15 @@ rkt-f0261476-7044-4a84-b729-e0f7a47dcffe container nspawn
 Given the name of this rkt machine, `journalctl` can inspect its logs, or `machinectl` can shut it down:
 
 ```
-# journalctl -M rkt-f0261476-7044-4a84-b729-e0f7a47dcffe
-Oct 26 17:38:11 locke rkt[3254]: [25966.375411] etcd[4]: 2015/10/26 16:38:11 raft: ce2a822cea30bfca became follower at term 0
-Oct 26 17:38:11 locke rkt[3254]: [25966.375685] etcd[4]: 2015/10/26 16:38:11 raft: newRaft ce2a822cea30bfca [peers: [], ter...term: 0]
-Oct 26 17:38:11 locke rkt[3254]: [25966.375942] etcd[4]: 2015/10/26 16:38:11
-# machinectl poweroff rkt-f0261476-7044-4a84-b729-e0f7a47dcffe
+# journalctl -M rkt-2b0b2cec-8f63-4451-9431-9f8e9b265a23
+...
+Feb 24 12:50:22 rkt-2b0b2cec-8f63-4451-9431-9f8e9b265a23 etcd[4]: 2016-02-24 11:50:22.518030 I | raft: ce2a822cea30bfca received vote from ce2a822cea30bfca at term 2
+Feb 24 12:50:22 rkt-2b0b2cec-8f63-4451-9431-9f8e9b265a23 etcd[4]: 2016-02-24 11:50:22.518073 I | raft: ce2a822cea30bfca became leader at term 2
+Feb 24 12:50:22 rkt-2b0b2cec-8f63-4451-9431-9f8e9b265a23 etcd[4]: 2016-02-24 11:50:22.518086 I | raft: raft.node: ce2a822cea30bfca elected leader ce2a822cea30bfca at te
+Feb 24 12:50:22 rkt-2b0b2cec-8f63-4451-9431-9f8e9b265a23 etcd[4]: 2016-02-24 11:50:22.518720 I | etcdserver: published {Name:default ClientURLs:[http://localhost:2379 h
+Feb 24 12:50:22 rkt-2b0b2cec-8f63-4451-9431-9f8e9b265a23 etcd[4]: 2016-02-24 11:50:22.518955 I | etcdserver: setting up the initial cluster version to 2.2
+Feb 24 12:50:22 rkt-2b0b2cec-8f63-4451-9431-9f8e9b265a23 etcd[4]: 2016-02-24 11:50:22.521680 N | etcdserver: set the initial cluster version to 2.2
+# machinectl poweroff rkt-2b0b2cec-8f63-4451-9431-9f8e9b265a23
 $ machinectl list
 MACHINE CLASS SERVICE
 
@@ -70,7 +76,8 @@ The following is a simple example of a unit file using `rkt` to run an `etcd` in
 Description=etcd
 
 [Service]
-ExecStart=/usr/bin/rkt run --mds-register=false coreos.com/etcd:v2.0.10
+Slice=machine.slice
+ExecStart=/usr/bin/rkt run coreos.com/etcd:v2.2.5
 KillMode=mixed
 Restart=always
 ```
@@ -222,16 +229,16 @@ The `systemd-cgls` command prints the list of cgroups active on the system. The 
 
 ```
 $ systemd-cgls
-├─1 /usr/lib/systemd/systemd --switched-root --system --deserialize 21
-machine.slice
-│ ├─etcd.service
-│ │ ├─7258 stage1/rootfs/usr/lib/ld-linux-x86-64.so.2 stage1/rootfs/usr/bin/systemd-nspawn --boot --register=true --link-journal=try-guest --quiet --keep-unit --uuid=6d0d9608-a744-4333-be21-942145a97a5a --machine=rkt-6d0d9608-a744-4333-be21-942145a97a5a --directory=stage1/rootfs -- --default-standard-output=tty --log-target=null --log-level=warning --show-status=0
-│ │ ├─7275 /usr/lib/systemd/systemd --default-standard-output=tty --log-target=null --log-level=warning --show-status=0
-│ │ └─system.slice
-│ │   ├─systemd-journald.service
-│ │   │ └─7277 /usr/lib/systemd/systemd-journald
-│ │   └─etcd.service
-│ │     └─7343 /etcd
+├─1 /usr/lib/systemd/systemd --switched-root --system --deserialize 22
+├─machine.slice
+│ └─etcd.service
+│   ├─1204 stage1/rootfs/usr/lib/ld-linux-x86-64.so.2 stage1/rootfs/usr/bin/s...
+│   ├─1421 /usr/lib/systemd/systemd --default-standard-output=tty --log-targe...
+│   └─system.slice
+│     ├─etcd.service
+│     │ └─1436 /etcd
+│     └─systemd-journald.service
+│       └─1428 /usr/lib/systemd/systemd-journald
 ```
 
 ### systemd-cgls --all
@@ -240,37 +247,58 @@ To display all active cgroups, use the `--all` flag. This will show two cgroups 
 
 ```
 $ systemd-cgls --all
-├─1 /usr/lib/systemd/systemd --switched-root --system --deserialize 21
-├─system.slice
-│ ├─var-lib-rkt-pods-run-6d0d9608\x2da744\x2d4333\x2dbe21\x2d942145a97a5a-stage1-rootfs.mount
-│ ├─var-lib-rkt-pods-run-6d0d9608\x2da744\x2d4333\x2dbe21\x2d942145a97a5a-stage1-rootfs-opt-stage2-etcd-rootfs.mount
-│ ├─etcd.service
-│ │ ├─7258 stage1/rootfs/usr/lib/ld-linux-x86-64.so.2 stage1/rootfs/usr/bin/systemd-nspawn --boot --register=true --link-journal=try-guest --quiet --keep-unit --uuid=6d0d9608-a744-4333-be21-942145a97a5a --machine=rkt-6d0d9608-a744-4333-be21-942145a97a5a --directory=stage1/rootfs -- --default-standard-output=tty --log-target=null --log-level=warning --show-status=0
-│ │ ├─7275 /usr/lib/systemd/systemd --default-standard-output=tty --log-target=null --log-level=warning --show-status=0
-│ │ └─system.slice
-│ │   ├─proc-sys-kernel-random-boot_id.mount
-│ │   ├─opt-stage2-etcd-rootfs-dev-random.mount
-│ │   ├─opt-stage2-etcd-rootfs-dev-net-tun.mount
-│ │   ├─-.mount
-│ │   ├─system-prepare\x2dapp.slice
-│ │   ├─opt-stage2-etcd-rootfs-dev-pts.mount
-│ │   ├─opt-stage2-etcd-rootfs-sys.mount
-│ │   ├─tmp.mount
-│ │   ├─opt-stage2-etcd-rootfs.mount
-│ │   ├─systemd-journald.service
-│ │   │ └─7277 /usr/lib/systemd/systemd-journald
-│ │   ├─opt-stage2-etcd-rootfs-proc.mount
-│ │   ├─opt-stage2-etcd-rootfs-dev-urandom.mount
-│ │   ├─etcd.service
-│ │   │ └─7343 /etcd
-│ │   ├─opt-stage2-etcd-rootfs-dev-tty.mount
-│ │   ├─opt-stage2-etcd-rootfs-dev-console.mount
-│ │   ├─run-systemd-nspawn-incoming.mount
-│ │   ├─opt-stage2-etcd-rootfs-dev-zero.mount
-│ │   ├─exit-watcher.service
-│ │   ├─opt-stage2-etcd-rootfs-dev-null.mount
-│ │   ├─opt-stage2-etcd-rootfs-dev-full.mount
-│ │   └─opt-stage2-etcd-rootfs-dev-shm.mount
+├─1 /usr/lib/systemd/systemd --switched-root --system --deserialize 22
+├─machine.slice
+│ └─etcd.service
+│   ├─1204 stage1/rootfs/usr/lib/ld-linux-x86-64.so.2 stage1/rootfs/usr/bin/s...
+│   ├─1421 /usr/lib/systemd/systemd --default-standard-output=tty --log-targe...
+│   └─system.slice
+│     ├─proc-sys-kernel-random-boot_id.mount
+│     ├─opt-stage2-etcd-rootfs-proc-kmsg.mount
+│     ├─opt-stage2-etcd-rootfs-sys.mount
+│     ├─opt-stage2-etcd-rootfs-dev-shm.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-perf_event.mount
+│     ├─etcd.service
+│     │ └─1436 /etcd
+│     ├─opt-stage2-etcd-rootfs-proc-sys-kernel-random-boot_id.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-cpu\x2ccpuacct.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-devices.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-freezer.mount
+│     ├─shutdown.service
+│     ├─-.mount
+│     ├─opt-stage2-etcd-rootfs-data\x2ddir.mount
+│     ├─system-prepare\x2dapp.slice
+│     ├─tmp.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-cpuset.mount
+│     ├─opt-stage2-etcd-rootfs-proc.mount
+│     ├─systemd-journald.service
+│     │ └─1428 /usr/lib/systemd/systemd-journald
+│     ├─opt-stage2-etcd-rootfs.mount
+│     ├─opt-stage2-etcd-rootfs-dev-random.mount
+│     ├─opt-stage2-etcd-rootfs-dev-pts.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup.mount
+│     ├─run-systemd-nspawn-incoming.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-systemd-machine.slice-etcd.service.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-memory-machine.slice-etcd.service-system.slice-etcd.service-cgroup.procs.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-blkio.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-net_cls\x2cnet_prio.mount
+│     ├─opt-stage2-etcd-rootfs-dev-net-tun.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-memory-machine.slice-etcd.service-system.slice-etcd.service-memory.limit_in_bytes.mount
+│     ├─opt-stage2-etcd-rootfs-dev-tty.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-pids.mount
+│     ├─reaper-etcd.service
+│     ├─opt-stage2-etcd-rootfs-sys-fs-selinux.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-memory.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-cpu\x2ccpuacct-machine.slice-etcd.service-system.slice-etcd.service-cpu.cfs_quota_us.mount
+│     ├─opt-stage2-etcd-rootfs-dev-urandom.mount
+│     ├─opt-stage2-etcd-rootfs-dev-zero.mount
+│     ├─opt-stage2-etcd-rootfs-dev-null.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-systemd.mount
+│     ├─opt-stage2-etcd-rootfs-dev-console.mount
+│     ├─opt-stage2-etcd-rootfs-dev-full.mount
+│     ├─opt-stage2-etcd-rootfs-sys-fs-cgroup-cpu\x2ccpuacct-machine.slice-etcd.service-system.slice-etcd.service-cgroup.procs.mount
+│     ├─opt-stage2-etcd-rootfs-proc-sys.mount
+│     └─opt-stage2-etcd-rootfs-sys-fs-cgroup-hugetlb.mount
 ```
 
 
