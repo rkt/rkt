@@ -487,7 +487,12 @@ func writeShutdownService(p *stage1commontypes.Pod) error {
 	shutdownVerb := "exit"
 	// systemd <v227 doesn't allow the "exit" verb when running as PID 1, so
 	// use "halt".
-	if systemdVersion < 227 {
+	// If systemdVersion is 0 it means it couldn't be guessed, assume it's new
+	// enough for "systemctl exit".
+	// This can happen, for example, when building rkt with:
+	//
+	// ./configure --with-stage1-flavors=src --with-stage1-systemd-version=master
+	if systemdVersion != 0 && systemdVersion < 227 {
 		shutdownVerb = "halt"
 	}
 
@@ -665,6 +670,7 @@ func PodToNspawnArgs(p *stage1commontypes.Pod) ([]string, error) {
 }
 
 // GetFlavor populates a flavor string based on the flavor itself and respectively the systemd version
+// If the systemd version couldn't be guessed, it will be set to 0.
 func GetFlavor(p *stage1commontypes.Pod) (flavor string, systemdVersion int, err error) {
 	flavor, err = os.Readlink(filepath.Join(common.Stage1RootfsPath(p.Root), "flavor"))
 	if err != nil {
@@ -692,11 +698,19 @@ func GetFlavor(p *stage1commontypes.Pod) (flavor string, systemdVersion int, err
 	}
 	systemdVersionString := strings.Trim(string(systemdVersionBytes), " \n")
 
-	// systemdVersionString is of the form v229, remove the first character to
-	// get the number
+	// systemdVersionString is either a tag name or a branch name. If it's a
+	// tag name it's of the form "v229", remove the first character to get the
+	// number.
 	systemdVersion, err = strconv.Atoi(systemdVersionString[1:])
 	if err != nil {
-		return "", -1, errwrap.Wrap(errors.New("error parsing stage1's systemd version"), err)
+		// If we get a syntax error, it means the parsing of the version string
+		// of the form "v229" failed, set it to 0 to indicate we couldn't guess
+		// it.
+		if e, ok := err.(*strconv.NumError); ok && e.Err == strconv.ErrSyntax {
+			systemdVersion = 0
+		} else {
+			return "", -1, errwrap.Wrap(errors.New("error parsing stage1's systemd version"), err)
+		}
 	}
 	return flavor, systemdVersion, nil
 }
