@@ -1,7 +1,12 @@
-## Overriding default network
+# Overriding defaults
+
+This document holds information about modifying or replacing builtin defaults and is only recommended to advanced users.
+Please make sure to have read the [networking overview page](overview.md) before treading into these things.
+
+## Overriding the "default" network
 
 If a network has a name "default", it will override the default network added by rkt.
-It is strongly recommended that such network also has type "veth" as it protects from the pod spoofing its IP address and defeating identity management provided by the metadata service.
+It is strongly recommended that such network also has type "ptp" as it protects from the pod spoofing its IP address and defeating identity management provided by the metadata service.
 
 ## Overriding network settings
 
