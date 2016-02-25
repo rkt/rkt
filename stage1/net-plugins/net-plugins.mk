@@ -15,7 +15,8 @@ NPM_PLUGIN_NAMES := \
 	main/ipvlan \
 	ipam/host-local \
 	ipam/dhcp \
-	meta/flannel
+	meta/flannel \
+	meta/tuning
 
 # both lists below have the same number of elements
 # array of path to built plugins

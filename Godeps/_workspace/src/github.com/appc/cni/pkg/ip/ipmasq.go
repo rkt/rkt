@@ -26,7 +26,7 @@ import (
 func SetupIPMasq(ipn *net.IPNet, chain string) error {
 	ipt, err := iptables.New()
 	if err != nil {
-		return fmt.Errorf("failed to locate iptabes: %v", err)
+		return fmt.Errorf("failed to locate iptables: %v", err)
 	}
 
 	if err = ipt.NewChain("nat", chain); err != nil {
@@ -51,7 +51,7 @@ func SetupIPMasq(ipn *net.IPNet, chain string) error {
 func TeardownIPMasq(ipn *net.IPNet, chain string) error {
 	ipt, err := iptables.New()
 	if err != nil {
-		return fmt.Errorf("failed to locate iptabes: %v", err)
+		return fmt.Errorf("failed to locate iptables: %v", err)
 	}
 
 	if err = ipt.Delete("nat", "POSTROUTING", "-s", ipn.String(), "-j", chain); err != nil {

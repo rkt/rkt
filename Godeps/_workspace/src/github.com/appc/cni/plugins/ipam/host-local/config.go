@@ -35,7 +35,7 @@ type IPAMConfig struct {
 }
 
 type IPAMArgs struct {
-	IP net.IP `json:"ip",omitempty`
+	IP net.IP `json:"ip,omitempty"`
 }
 
 type Net struct {
