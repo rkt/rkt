@@ -46,4 +46,4 @@ default via 10.2.0.1 dev eth0
 172.16.28.1 dev eth1  src 172.16.28.2
 ```
 
-Note that the _default-restricted_ network has been loaded in addition to the requested network.
+Note that the _[default-restricted](overview.md#the-default-restricted-network)_ network has been loaded in addition to the requested network.
