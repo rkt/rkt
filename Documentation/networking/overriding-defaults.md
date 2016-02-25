@@ -23,9 +23,13 @@ All arguments can either be given in a single instance of the `--net`, or can be
 *Reminder:* the separator for the networks (and their arguments) within one `--net` instance is the comma `,`.
 A network name must not be passed more than once, not within the same nor throughout multiple instances of `--net`.
 
-### Passing arguments to selected networks while loading all networks
+### Example: Passing arguments to two different networks
 
-If all networks should be loaded but it's not necessary to pass arguments to all, add `all` to the list of networks.
+This example will override the IP in the networks _net1_ and _net2_.
+
+```bash
+rkt run --net="net1:IP=1.2.3.4" --net="net2:IP=1.2.4.5" pod.aci
+```
 
 ### Example: load all networks and override IPs for two different networks
 
