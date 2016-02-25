@@ -9,36 +9,26 @@ The version of the spec that rkt implements can be seen in the output of `rkt ve
 
 rkt's version 1.0 release marks the command line user interface and on-disk data structures as stable and reliable for external development. The (optional) API for pod inspection is not yet completely stabilized, but is quite usable.
 
-### rkt 1.0 (February)
-- stable CLI
-- usable read-only API
-- stable on-disk format (all upgrades should be backwards-compatible)
-- different shared namespace execution modes [#1433](https://github.com/coreos/rkt/issues/1433)
-- stage1 benchmarking [#1788](https://github.com/coreos/rkt/issues/1788)
-- more advanced stage1 image configuration [#1425](https://github.com/coreos/rkt/issues/1425)
-- packaged for more distributions
-  - Fedora [#1304](https://github.com/coreos/rkt/issues/1304)
-
-### rkt 1.1 (February)
-
-- Enhanced DNS configuration [#2044](https://github.com/coreos/rkt/issues/2044)
-- User configuration for stage1 [#2013](https://github.com/coreos/rkt/issues/2013)
-- packaged for more distributions
-  - Debian [#1307](https://github.com/coreos/rkt/issues/1307)
-
 ### rkt 1.2 (March)
 
+- Enhanced DNS configuration [#2044](https://github.com/coreos/rkt/issues/2044)
 - app exit status propagation [#1460](https://github.com/coreos/rkt/issues/1460)
-- `rkt fly` as top-level command [#1889](https://github.com/coreos/rkt/issues/1889)
+- different shared namespace execution modes [#1433](https://github.com/coreos/rkt/issues/1433)
+- stage1 benchmarking [#1788](https://github.com/coreos/rkt/issues/1788)
 - fully integrated with `machinectl login` and `systemd-run` [#1463](https://github.com/coreos/rkt/issues/1463)
-- IPv6 support [appc/cni#31](https://github.com/appc/cni/issues/31)
+- User configuration for stage1 [#2013](https://github.com/coreos/rkt/issues/2013)
 - packaged for more distributions
-  - CentOS [#1305](https://github.com/coreos/rkt/issues/1305)
+  - Fedora [#1304](https://github.com/coreos/rkt/issues/1304)
 
 ### rkt 1.3 (March)
 
 - stable API
 - full integration with Kubernetes (aka "rktnetes")
 - full integration with `machinectl login` and `systemd-run` [#1463](https://github.com/coreos/rkt/issues/1463)
+- `rkt fly` as top-level command [#1889](https://github.com/coreos/rkt/issues/1889)
 - support for unified cgroup hierarchy [#1757](https://github.com/coreos/rkt/issues/1757)
 - attach to the app's stdin/stdout [#1799](https://github.com/coreos/rkt/issues/1799)
+- IPv6 support [appc/cni#31](https://github.com/appc/cni/issues/31)
+- packaged for more distributions
+  - Debian [#1307](https://github.com/coreos/rkt/issues/1307)
+  - CentOS [#1305](https://github.com/coreos/rkt/issues/1305)
