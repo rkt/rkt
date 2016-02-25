@@ -1,6 +1,6 @@
 ## Using NAT with bridge
 
-The bridge plugin can be configured to create a separate network on the host that will be NAT'ed similar to the default network.
+The [bridge plugin](https://github.com/appc/cni/blob/master/Documentation/bridge.md) can be configured to create a separate network on the host that will be NAT'ed similar to the _default_ network.
 The difference to a ptp configured network is that the pods will be able to communicate directly through the bridge and don't have to pass the host as a gateway.
 
 ```json
@@ -21,7 +21,10 @@ $ cat /etc/rkt/net.d/10-bridge-nat.conf
 }
 ```
 
-Inside the pod the interface configuration looks like this:
+This will add a bridge interface named _rkt-bridge-nat_ on the host and attach the pod's veth endpoint to it.
+It will not attach any other interface to the bridge, which remains the user's responsibility.
+
+Inside the pod, the interface configuration looks like this:
 
 ```
 $ sudo rkt run --net=bridge-nat --interactive --debug kinvolk.io/aci/busybox:1.24
