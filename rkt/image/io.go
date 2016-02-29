@@ -23,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/store"
 	"github.com/hashicorp/errwrap"
 
@@ -113,6 +114,12 @@ func getTmpROC(s *store.Store, path string) (*removeOnClose, error) {
 	tmp, err := s.TmpNamedFile(pathHash)
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("error setting up temporary file"), err)
+	}
+	// let's lock the file to avoid concurrent writes to the temporary file, it
+	// will go away when removing the temp file
+	_, err = lock.ExclusiveLock(tmp.Name(), lock.RegFile)
+	if err != nil {
+		return nil, err
 	}
 	roc := &removeOnClose{File: tmp}
 	return roc, nil
