@@ -4,11 +4,11 @@ How to perform a release of rkt.
 This guide is probably unnecessarily verbose, so improvements welcomed.
 Only parts of the procedure are automated; this is somewhat intentional (manual steps for sanity checking) but it can probably be further scripted, please help.
 
-The following example assumes we're going from version 0.15.0 (`v0.15.0`) to 0.16.0 (`v0.16.0`).
+The following example assumes we're going from version 1.0.0 (`v1.0.0`) to 1.1.0 (`v1.1.0`).
 
 Let's get started:
 
-- Start at the relevant milestone on GitHub (e.g. https://github.com/coreos/rkt/milestones/v0.16.0): ensure all referenced issues are closed (or moved elsewhere, if they're not done). Close the milestone.
+- Start at the relevant milestone on GitHub (e.g. https://github.com/coreos/rkt/milestones/v1.1.0): ensure all referenced issues are closed (or moved elsewhere, if they're not done). Close the milestone.
 - Update the [roadmap](https://github.com/coreos/rkt/blob/master/ROADMAP.md) to remove the release you're performing, if necessary
 - Branch from the latest master, make sure your git status is clean
 - Ensure the build is clean!
@@ -19,12 +19,12 @@ Let's get started:
 
 The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/blob/master/configure.ac#L2), so the first thing to do is bump it:
 
-- Run `scripts/bump-release v0.16.0`.
-  This should generate two commits: a bump to the actual release (e.g. v0.16.0), and then a bump to the release+git (e.g. v0.16.0+git).
+- Run `scripts/bump-release v1.1.0`.
+  This should generate two commits: a bump to the actual release (e.g. v1.1.0), and then a bump to the release+git (e.g. v1.1.0+git).
   The actual release version should only exist in a single commit!
 - Sanity check what the script did with `git diff HEAD^^` or similar.
   As well as changing the actual version, it also attempts to fix a bunch of references in the documentation etc.
-- Fix the commit `HEAD^^` so that the version in `stage1/aci/aci-manifest.in` is correct.
+- Fix the commit `HEAD^` so that the version in `stage1/aci/aci-manifest.in` is the version of appc/spec vendored with rkt.
 - If the script didn't work, yell at the author and/or fix it.
   It can almost certainly be improved.
 - File a PR and get a review from another [MAINTAINER](https://github.com/coreos/rkt/blob/master/MAINTAINERS).
@@ -34,33 +34,33 @@ The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/b
 After merging and going back to master branch, we check out the release version and tag it:
 
 - `git checkout HEAD^` should work; sanity check configure.ac (2nd line) after doing this
-- Build rkt, we'll use this in a minute:
-  - `git clean -ffdx && ./autogen.sh && ./configure --enable-tpm=no && make BUILDDIR=release-build -j 4`
-    - This will build the `coreos`, `kvm` and `fly` flavors and make `coreos` the default
-    - Use make's `-j` parameter as you see fit
+- Build rkt inside rkt (so make sure you have rkt in your $PATH), we'll use this in a minute:
+  - `git clean -ffdx && sudo ./scripts/acbuild-rkt-builder.sh`
+  - `rkt --insecure-options=image fetch ./rkt-builder.aci`
+  - `export BUILDDIR=$PWD/release-build && mkdir -p $BUILDDIR && sudo BUILDDIR=$BUILDDIR ./scripts/build-rir.sh`
   - Sanity check `release-build/bin/rkt version`
   - Sanity check `ldd release-build/bin/rkt`: it can contain linux-vdso.so, libpthread.so, libc.so, ld-linux-x86-64.so but nothing else.
   - Sanity check `ldd release-build/tools/init`: in addition to the previous list, it can contain libdl.so, but nothing else.
-- Add a signed tag: `git tag -s v0.16.0`.
+- Add a signed tag: `git tag -s v1.1.0`.
   (We previously used tags for release notes, but now we store them in CHANGELOG.md, so a short tag with the release name is fine).
 - Push the tag to GitHub: `git push --tags`
 
 Now we switch to the GitHub web UI to conduct the release:
 
 - https://github.com/coreos/rkt/releases/new
-- Tag "v0.16.0", release title "v0.16.0"
-- For now, check "This is a pre-release"
+- Tag "v1.1.0", release title "v1.1.0"
 - Copy-paste the release notes you added earlier in [CHANGELOG.md](https://github.com/coreos/rkt/blob/master/CHANGELOG.md)
 - You can also add a little more detail and polish to the release notes here if you wish, as it is more targeted towards users (vs the changelog being more for developers); use your best judgement and see previous releases on GH for examples.
 - Attach the release.
   This is a simple tarball:
 
 ```
-	export NAME="rkt-v0.16.0"
+	export NAME="rkt-v1.1.0"
 	mkdir $NAME
 	cp release-build/bin/rkt release-build/bin/stage1-{coreos,kvm,fly}.aci $NAME/
 	cp -r dist/* $NAME/
-	tar czvf $NAME.tar.gz $NAME/
+	sudo chown -R root:root $NAME/
+	tar czvf $NAME.tar.gz --numeric-owner $NAME/
 ```
 
 - Attach the release signature; your personal GPG is okay for now:
@@ -71,13 +71,15 @@ Now we switch to the GitHub web UI to conduct the release:
 
 - Publish the release!
 
+- Clean your git tree: `sudo git clean -ffdx`.
+
 Now it's announcement time: send an email to rkt-dev@googlegroups.com describing the release.
 Generally this is higher level overview outlining some of the major features, not a copy-paste of the release notes.
 Use your discretion and see [previous release emails](https://groups.google.com/forum/#!forum/rkt-dev) for examples.
 Make sure to include a list of authors that contributed since the previous release - something like the following might be handy:
 
 ```
-	git log ...v0.16.0 --pretty=format:"%an" | sort | uniq | tr '\n' ',' | sed -e 's#,#, #g' -e 's#, $#\n#'
+	git log v1.0.0..v1.1.0 --pretty=format:"%an" | sort | uniq | tr '\n' ',' | sed -e 's#,#, #g' -e 's#, $#\n#'
 ```
 
 - Prepare CHANGELOG.md for the next release: add a "vUNRELEASED" section. The CHANGELOG should be updated alongside the code as pull requests are merged into master, so that the releaser does not need to start from scratch.

@@ -20,14 +20,25 @@ if ! [[ "$1" =~ ^v[[:digit:]]+.[[:digit:]]+.[[:digit:]]$ ]]; then
 	exit 255
 fi
 
+function replace_stuff() {
+	local FROM
+	local TO
+	local REPLACE
+
+	FROM=$1
+	TO=$2
+	# escape special characters
+	REPLACE=$(sed -e 's/[]\/$*.^|[]/\\&/g'<<< $FROM)
+	shift 2
+	echo $* | xargs sed -i --follow-symlinks -e "s/$REPLACE/$TO/g"
+}
+
 function replace_all() {
-	REPLACE=$(sed -e 's/[]\/$*.^|[]/\\&/g'<<< $1)
-	git ls-files | grep -Ev "(CHANGELOG.md|Godeps)" | xargs sed -i --follow-symlinks -e "s/$REPLACE/$2/g"
+	replace_stuff $1 $2 $(git ls-files | grep -Ev "(CHANGELOG.md|Godeps|manifest\.d)")
 }
 
 function replace_version() {
-	REPLACE=$(sed -e 's/[]\/$*.^|[]/\\&/g'<<< $1)
-	sed -i -e "s/$REPLACE/$2/g" configure.ac
+	replace_stuff $1 $2 configure.ac scripts/build-rir.sh scripts/acbuild-rkt-builder.sh
 }
 
 NEXT=${1:1} 	        # 0.2.3
