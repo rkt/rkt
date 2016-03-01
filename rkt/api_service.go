@@ -82,6 +82,14 @@ func (s *v1AlphaAPIServer) GetInfo(context.Context, *v1alpha.GetInfoRequest) (*v
 			RktVersion:  version.Version,
 			AppcVersion: schema.AppContainerVersion.String(),
 			ApiVersion:  supportedAPIVersion,
+			GlobalFlags: &v1alpha.GlobalFlags{
+				Dir:                getDataDir(),
+				SystemConfigDir:    globalFlags.SystemConfigDir,
+				LocalConfigDir:     globalFlags.LocalConfigDir,
+				UserConfigDir:      globalFlags.UserConfigDir,
+				InsecureFlags:      globalFlags.InsecureFlags.String(),
+				TrustKeysFromHttps: globalFlags.TrustKeysFromHTTPS,
+			},
 		},
 	}, nil
 }

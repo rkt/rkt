@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"syscall"
 	"testing"
@@ -251,6 +252,16 @@ func TestAPIServiceGetInfo(t *testing.T) {
 	expectedAPIVersion := "1.0.0-alpha"
 	if resp.Info.ApiVersion != expectedAPIVersion {
 		t.Errorf("Expected api version to be %q, but saw %q", expectedAPIVersion, resp.Info.ApiVersion)
+	}
+
+	expectedGlobalFlags := &v1alpha.GlobalFlags{
+		Dir:             ctx.DataDir(),
+		SystemConfigDir: ctx.SystemDir(),
+		LocalConfigDir:  ctx.LocalDir(),
+		InsecureFlags:   "none",
+	}
+	if !reflect.DeepEqual(resp.Info.GlobalFlags, expectedGlobalFlags) {
+		t.Errorf("Expected global flags to be %v, but saw %v", expectedGlobalFlags, resp.Info.GlobalFlags)
 	}
 }
 
