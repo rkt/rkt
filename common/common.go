@@ -39,6 +39,7 @@ const (
 
 	EnvLockFd                    = "RKT_LOCK_FD"
 	EnvSELinuxContext            = "RKT_SELINUX_CONTEXT"
+	EnvSELinuxMountContext       = "RKT_SELINUX_MOUNT_CONTEXT"
 	Stage1TreeStoreIDFilename    = "stage1TreeStoreID"
 	AppTreeStoreIDFilename       = "treeStoreID"
 	OverlayPreparedFilename      = "overlay-prepared"
