@@ -450,6 +450,10 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 		log.FatalE("setting SELinux context environment", err)
 	}
 
+	if err := os.Setenv(common.EnvSELinuxMountContext, fmt.Sprintf("%v", cfg.MountLabel)); err != nil {
+		log.FatalE("setting SELinux mount context enviroment", err)
+	}
+
 	debug("Pivoting to filesystem %s", dir)
 	if err := os.Chdir(dir); err != nil {
 		log.FatalE("failed changing to dir", err)

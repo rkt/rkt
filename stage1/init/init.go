@@ -303,6 +303,10 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 			args = append(args, fmt.Sprintf("-Z%s", context))
 		}
 
+		if context := os.Getenv(common.EnvSELinuxMountContext); context != "" {
+			args = append(args, fmt.Sprintf("-L%s", context))
+		}
+
 		if machinedRegister() {
 			args = append(args, fmt.Sprintf("--register=true"))
 		} else {
@@ -318,6 +322,10 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 
 		if context := os.Getenv(common.EnvSELinuxContext); context != "" {
 			args = append(args, fmt.Sprintf("-Z%s", context))
+		}
+
+		if context := os.Getenv(common.EnvSELinuxMountContext); context != "" {
+			args = append(args, fmt.Sprintf("-L%s", context))
 		}
 
 		if machinedRegister() {
@@ -359,6 +367,10 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 
 		if context := os.Getenv(common.EnvSELinuxContext); context != "" {
 			args = append(args, fmt.Sprintf("-Z%s", context))
+		}
+
+		if context := os.Getenv(common.EnvSELinuxMountContext); context != "" {
+			args = append(args, fmt.Sprintf("-L%s", context))
 		}
 
 	default:
@@ -648,7 +660,8 @@ func areHostCgroupsMounted(enabledCgroups map[int][]string) bool {
 func mountHostCgroups(enabledCgroups map[int][]string) error {
 	systemdControllerPath := "/sys/fs/cgroup/systemd"
 	if !areHostCgroupsMounted(enabledCgroups) {
-		if err := cgroup.CreateCgroups("/", enabledCgroups); err != nil {
+		mountContext := os.Getenv(common.EnvSELinuxMountContext)
+		if err := cgroup.CreateCgroups("/", enabledCgroups, mountContext); err != nil {
 			return errwrap.Wrap(errors.New("error creating host cgroups"), err)
 		}
 	}
@@ -669,7 +682,8 @@ func mountHostCgroups(enabledCgroups map[int][]string) error {
 // namespace read-only, leaving the needed knobs in the subcgroup for each-app
 // read-write so systemd inside stage1 can apply isolators to them
 func mountContainerCgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
-	if err := cgroup.CreateCgroups(s1Root, enabledCgroups); err != nil {
+	mountContext := os.Getenv(common.EnvSELinuxMountContext)
+	if err := cgroup.CreateCgroups(s1Root, enabledCgroups, mountContext); err != nil {
 		return errwrap.Wrap(errors.New("error creating container cgroups"), err)
 	}
 	if err := cgroup.RemountCgroupsRO(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {

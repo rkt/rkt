@@ -275,7 +275,7 @@ func IsControllerMounted(c string) bool {
 
 // CreateCgroups mounts the cgroup controllers hierarchy in /sys/fs/cgroup
 // under root
-func CreateCgroups(root string, enabledCgroups map[int][]string) error {
+func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext string) error {
 	controllers := GetControllerDirs(enabledCgroups)
 	var flags uintptr
 
@@ -300,7 +300,13 @@ func CreateCgroups(root string, enabledCgroups map[int][]string) error {
 		syscall.MS_NOEXEC |
 		syscall.MS_NODEV |
 		syscall.MS_STRICTATIME
-	if err := syscall.Mount("tmpfs", cgroupTmpfs, "tmpfs", flags, "mode=755"); err != nil {
+
+	options := "mode=755"
+	if mountContext != "" {
+		options = fmt.Sprintf("mode=755,context=\"%s\"", mountContext)
+	}
+
+	if err := syscall.Mount("tmpfs", cgroupTmpfs, "tmpfs", flags, options); err != nil {
 		return errwrap.Wrap(fmt.Errorf("error mounting %q", cgroupTmpfs), err)
 	}
 
