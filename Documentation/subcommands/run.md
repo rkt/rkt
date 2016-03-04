@@ -314,6 +314,7 @@ If you don't use systemd, you can use [daemon](http://www.libslack.org/daemon/) 
 | `--dns-opt` |  `` | Option as described in the options section in resolv.conf(5) | DNS option to write in `/etc/resolv.conf`. It can be specified several times |
 | `--dns-search` |  `` | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times |
 | `--exec` |  `` | A path | Override the exec command for the preceding image |
+| `--hostname` |  `` | A host name | Pod's hostname. If empty, it will be "rkt-$PODUUID" |
 | `--inherit-env` |  `false` | `true` or `false` | Inherit all environment variables not set by apps |
 | `--interactive` |  `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied |
 | `--mds-register` |  `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net=(default|default-restricted|host)` |
