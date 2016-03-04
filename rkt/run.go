@@ -67,6 +67,7 @@ image arguments with a lone "---" to resume argument parsing.`,
 	flagPodManifest  string
 	flagMDSRegister  bool
 	flagUUIDFileSave string
+	flagHostname     string
 )
 
 func init() {
@@ -89,6 +90,7 @@ func init() {
 	cmdRun.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--net', '--no-overlay' and '--interactive' will have effect")
 	cmdRun.Flags().BoolVar(&flagMDSRegister, "mds-register", false, "register pod with metadata service. needs network connectivity to the host (--net=(default|default-restricted|host)")
 	cmdRun.Flags().StringVar(&flagUUIDFileSave, "uuid-file-save", "", "write out pod UUID to specified file")
+	cmdRun.Flags().StringVar(&flagHostname, "hostname", "", `pod's hostname. If empty, it will be "rkt-$PODUUID"`)
 	cmdRun.Flags().Var((*appsVolume)(&rktApps), "volume", "volumes to make available in the pod")
 
 	// per-app flags
@@ -290,6 +292,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		MDSRegister:  flagMDSRegister,
 		LocalConfig:  globalFlags.LocalConfigDir,
 		RktGid:       rktgid,
+		Hostname:     flagHostname,
 	}
 
 	apps, err := p.getApps()

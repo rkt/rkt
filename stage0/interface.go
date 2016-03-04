@@ -55,3 +55,7 @@ func getStage1InterfaceVersion(cdir string) (int, error) {
 	// "interface-version" annotation not found, assume version 1
 	return 1, nil
 }
+
+func interfaceVersionSupportsHostname(version int) bool {
+	return version > 1
+}
