@@ -26,12 +26,15 @@ import (
 const (
 	defaultTag              = "latest"
 	defaultIndexURL         = "registry-1.docker.io"
+	defaultIndexURLAuth     = "https://index.docker.io/v1/"
 	schemaVersion           = "0.7.0"
 	appcDockerRegistryURL   = "appc.io/docker/registryurl"
 	appcDockerRepository    = "appc.io/docker/repository"
 	appcDockerTag           = "appc.io/docker/tag"
 	appcDockerImageID       = "appc.io/docker/imageid"
 	appcDockerParentImageID = "appc.io/docker/parentimageid"
+	appcDockerEntrypoint    = "appc.io/docker/entrypoint"
+	appcDockerCmd           = "appc.io/docker/cmd"
 )
 
 type Compression int
@@ -192,10 +195,14 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerImageID), Value: layerData.ID})
 	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerParentImageID), Value: layerData.Parent})
 
-	genManifest.Labels = labels
-	genManifest.Annotations = annotations
-
 	if dockerConfig != nil {
+		if len(dockerConfig.Entrypoint) > 0 {
+			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerEntrypoint), Value: strings.Join(dockerConfig.Entrypoint, " ")})
+		}
+		if len(dockerConfig.Cmd) > 0 {
+			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerCmd), Value: strings.Join(dockerConfig.Cmd, " ")})
+		}
+
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
 		if exec != nil {
 			user, group := parseDockerUser(dockerConfig.User)
@@ -241,6 +248,9 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(appcDockerTag), Value: dockerURL.Tag})
 	}
+
+	genManifest.Labels = labels
+	genManifest.Annotations = annotations
 
 	return genManifest, nil
 }
@@ -432,10 +442,14 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []strin
 	}
 	newPwl := subtractWhiteouts(curPwl, whiteouts)
 
-	manifest.PathWhitelist, err = writeStdioSymlinks(trw, fileMap, newPwl)
+	newPwl, err = writeStdioSymlinks(trw, fileMap, newPwl)
 	if err != nil {
 		return nil, err
 	}
+	// Let's copy the newly generated PathWhitelist to avoid unintended
+	// side-effects
+	manifest.PathWhitelist = make([]string, len(newPwl))
+	copy(manifest.PathWhitelist, newPwl)
 
 	if err := WriteManifest(trw, manifest); err != nil {
 		return nil, fmt.Errorf("error writing manifest: %v", err)
