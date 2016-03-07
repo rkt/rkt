@@ -103,17 +103,16 @@ func gcTreeStore(s *store.Store) error {
 
 func getReferencedTreeStoreIDs() (map[string]struct{}, error) {
 	treeStoreIDs := map[string]struct{}{}
-	var walkErr error
 	// Consider pods in preparing, prepared, run, exitedgarbage state
 	if err := walkPods(includeMostDirs, func(p *pod) {
 		stage1TreeStoreID, err := p.getStage1TreeStoreID()
 		if err != nil {
-			walkErr = errwrap.Wrap(fmt.Errorf("cannot get stage1 treestoreID for pod %s", p.uuid), err)
+			stderr.PrintE(fmt.Sprintf("cannot get stage1 treestoreID for pod %s", p.uuid), err)
 			return
 		}
 		appsTreeStoreIDs, err := p.getAppsTreeStoreIDs()
 		if err != nil {
-			walkErr = errwrap.Wrap(fmt.Errorf("cannot get apps treestoreIDs for pod %s", p.uuid), err)
+			stderr.PrintE(fmt.Sprintf("cannot get apps treestoreID for pod %s", p.uuid), err)
 			return
 		}
 		allTreeStoreIDs := append(appsTreeStoreIDs, stage1TreeStoreID)
@@ -123,9 +122,6 @@ func getReferencedTreeStoreIDs() (map[string]struct{}, error) {
 		}
 	}); err != nil {
 		return nil, errwrap.Wrap(errors.New("failed to get pod handles"), err)
-	}
-	if walkErr != nil {
-		return nil, walkErr
 	}
 	return treeStoreIDs, nil
 }
