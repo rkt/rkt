@@ -199,13 +199,19 @@ func (f *nameFetcher) maybeFetchPubKeys(appName string) {
 		log.Printf("keys already exist for prefix %q, not fetching again", appName)
 		return
 	}
-	if !f.InsecureFlags.SkipTLSCheck() {
+	allowHTTP := false
+	if f.InsecureFlags.ConsiderInsecurePubKeys() {
+		log.Printf("signing keys may be downloaded from an insecure connection")
+		allowHTTP = f.InsecureFlags.AllowHTTP()
+	}
+	if !f.InsecureFlags.SkipTLSCheck() || f.InsecureFlags.ConsiderInsecurePubKeys() {
 		m := &pubkey.Manager{
-			AuthPerHost:        f.Headers,
-			InsecureAllowHTTP:  false,
-			TrustKeysFromHTTPS: f.TrustKeysFromHTTPS,
-			Ks:                 f.Ks,
-			Debug:              f.Debug,
+			AuthPerHost:          f.Headers,
+			InsecureAllowHTTP:    allowHTTP,
+			InsecureSkipTLSCheck: f.InsecureFlags.SkipTLSCheck(),
+			TrustKeysFromHTTPS:   f.TrustKeysFromHTTPS,
+			Ks:                   f.Ks,
+			Debug:                f.Debug,
 		}
 		pkls, err := m.GetPubKeyLocations(appName)
 		// We do not bail out here, because if fetching the
@@ -233,7 +239,7 @@ func (f *nameFetcher) checkIdentity(appName string, ascFile io.ReadSeeker) error
 	empty := bytes.NewReader([]byte{})
 	if _, err := f.Ks.CheckSignature(appName, empty, ascFile); err != nil {
 		if err == pgperrors.ErrUnknownIssuer {
-			log.Printf("If you expected the signing key to change, try running:")
+			log.Printf("if you expected the signing key to change, try running:")
 			log.Printf("    rkt trust --prefix %q", appName)
 		}
 		if _, ok := err.(pgperrors.SignatureError); !ok {

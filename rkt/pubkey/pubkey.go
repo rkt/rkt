@@ -16,14 +16,17 @@ package pubkey
 
 import (
 	"bufio"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/coreos/rkt/pkg/keystore"
 	rktlog "github.com/coreos/rkt/pkg/log"
@@ -36,11 +39,12 @@ import (
 )
 
 type Manager struct {
-	AuthPerHost        map[string]config.Headerer
-	InsecureAllowHTTP  bool
-	TrustKeysFromHTTPS bool
-	Ks                 *keystore.Keystore
-	Debug              bool
+	AuthPerHost          map[string]config.Headerer
+	InsecureAllowHTTP    bool
+	InsecureSkipTLSCheck bool
+	TrustKeysFromHTTPS   bool
+	Ks                   *keystore.Keystore
+	Debug                bool
 }
 
 type AcceptOption int
@@ -157,6 +161,9 @@ func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 	if m.InsecureAllowHTTP {
 		insecure = insecure | discovery.InsecureHttp
 	}
+	if m.InsecureSkipTLSCheck {
+		insecure = insecure | discovery.InsecureTls
+	}
 	ep, attempts, err := discovery.DiscoverPublicKeys(*app, hostHeaders, insecure)
 	if err != nil {
 		return nil, err
@@ -182,14 +189,14 @@ func (m *Manager) getPubKey(u *url.URL) (*os.File, error) {
 		}
 		fallthrough
 	case "https":
-		return downloadKey(u)
+		return downloadKey(u, m.InsecureSkipTLSCheck)
 	}
 
 	return nil, fmt.Errorf("only local files and http or https URLs supported")
 }
 
 // downloadKey retrieves the file, storing it in a deleted tempfile
-func downloadKey(u *url.URL) (*os.File, error) {
+func downloadKey(u *url.URL, skipTLSCheck bool) (*os.File, error) {
 	tf, err := ioutil.TempFile("", "")
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("error creating tempfile"), err)
@@ -204,7 +211,8 @@ func downloadKey(u *url.URL) (*os.File, error) {
 
 	// TODO(krnowak): we should probably apply credential headers
 	// from config here
-	res, err := http.Get(u.String())
+	client := getClient(skipTLSCheck)
+	res, err := client.Get(u.String())
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("error getting key"), err)
 	}
@@ -225,6 +233,36 @@ func downloadKey(u *url.URL) (*os.File, error) {
 	retTf := tf
 	tf = nil
 	return retTf, nil
+}
+
+func getClient(skipTLSCheck bool) *http.Client {
+	if !skipTLSCheck {
+		return http.DefaultClient
+	}
+	client := *http.DefaultClient
+	var tr *http.Transport
+	// default transport is hidden behind the RoundTripper
+	// interface, so we can't easily make a copy of it
+	if transport, ok := http.DefaultTransport.(*http.Transport); ok {
+		trCopy := *transport
+		tr = &trCopy
+	} else {
+		// meh, an already outdated copy from golang's
+		// net/http DefaultTransport defintion, without the
+		// ExpectContinueTimeout field set, because it exists
+		// only in go1.6
+		tr = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+		}
+	}
+	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	client.Transport = tr
+	return &client
 }
 
 // displayKey shows the key summary
