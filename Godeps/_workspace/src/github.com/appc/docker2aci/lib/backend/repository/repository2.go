@@ -14,13 +14,16 @@
 package repository
 
 import (
+	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -35,6 +38,8 @@ import (
 const (
 	defaultIndexURL = "registry-1.docker.io"
 )
+
+var validHex = regexp.MustCompile(`^([a-f0-9]{64})$`)
 
 type v2Manifest struct {
 	Name     string `json:"name"`
@@ -137,6 +142,10 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v
 		return nil, nil, fmt.Errorf("tag doesn't match what was requested, expected: %s, downloaded: %s", dockerURL.Tag, manifest.Tag)
 	}
 
+	if err := fixManifestLayers(manifest); err != nil {
+		return nil, nil, err
+	}
+
 	//TODO: verify signature here
 
 	layers := make([]string, len(manifest.FSLayers))
@@ -146,6 +155,62 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *types.ParsedDockerURL) (*v
 	}
 
 	return manifest, layers, nil
+}
+
+func fixManifestLayers(manifest *v2Manifest) error {
+	type imageV1 struct {
+		ID     string
+		Parent string
+	}
+	imgs := make([]*imageV1, len(manifest.FSLayers))
+	for i := range manifest.FSLayers {
+		img := &imageV1{}
+
+		if err := json.Unmarshal([]byte(manifest.History[i].V1Compatibility), img); err != nil {
+			return err
+		}
+
+		imgs[i] = img
+		if err := validateV1ID(img.ID); err != nil {
+			return err
+		}
+	}
+
+	if imgs[len(imgs)-1].Parent != "" {
+		return errors.New("Invalid parent ID in the base layer of the image.")
+	}
+
+	// check general duplicates to error instead of a deadlock
+	idmap := make(map[string]struct{})
+
+	var lastID string
+	for _, img := range imgs {
+		// skip IDs that appear after each other, we handle those later
+		if _, exists := idmap[img.ID]; img.ID != lastID && exists {
+			return fmt.Errorf("ID %+v appears multiple times in manifest", img.ID)
+		}
+		lastID = img.ID
+		idmap[lastID] = struct{}{}
+	}
+
+	// backwards loop so that we keep the remaining indexes after removing items
+	for i := len(imgs) - 2; i >= 0; i-- {
+		if imgs[i].ID == imgs[i+1].ID { // repeated ID. remove and continue
+			manifest.FSLayers = append(manifest.FSLayers[:i], manifest.FSLayers[i+1:]...)
+			manifest.History = append(manifest.History[:i], manifest.History[i+1:]...)
+		} else if imgs[i].Parent != imgs[i+1].ID {
+			return fmt.Errorf("Invalid parent ID. Expected %v, got %v.", imgs[i+1].ID, imgs[i].Parent)
+		}
+	}
+
+	return nil
+}
+
+func validateV1ID(id string) error {
+	if ok := validHex.MatchString(id); !ok {
+		return fmt.Errorf("image ID %q is invalid", id)
+	}
+	return nil
 }
 
 func getLayerIndex(layerID string, manifest v2Manifest) (int, error) {
@@ -172,7 +237,22 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *types.ParsedD
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
+	if res.StatusCode == http.StatusTemporaryRedirect || res.StatusCode == http.StatusFound {
+		location := res.Header.Get("Location")
+		if location != "" {
+			req, err = http.NewRequest("GET", location, nil)
+			if err != nil {
+				return nil, err
+			}
+			res, err = rb.makeRequest(req, dockerURL.ImageName)
+			if err != nil {
+				return nil, err
+			}
+			defer res.Body.Close()
+		}
+	}
+
+	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
 	}
 
@@ -233,7 +313,8 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.
 		}
 	}
 
-	client := &http.Client{}
+	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: rb.insecure}}
+	client := &http.Client{Transport: tr}
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -252,7 +333,6 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.
 	if len(tokens) != 2 || strings.ToLower(tokens[0]) != "bearer" {
 		return res, err
 	}
-
 	res.Body.Close()
 
 	tokens = strings.Split(tokens[1], ",")

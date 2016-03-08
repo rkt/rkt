@@ -45,7 +45,7 @@ type Docker2ACIBackend interface {
 // Convert generates ACI images from docker registry URLs.
 // It takes as input a dockerURL of the form:
 //
-// 	{docker registry URL}/{image name}:{tag}
+//     {registry URL}/{repository}:{reference[tag|digest]}
 //
 // It then gets all the layers of the requested image and converts each of
 // them to ACI.

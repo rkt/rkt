@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"path"
@@ -129,7 +130,8 @@ func (rb *RepositoryBackend) supportsRegistry(indexURL string, version registryV
 
 		rb.setBasicAuth(req)
 
-		client := &http.Client{}
+		tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: rb.insecure}}
+		client := &http.Client{Transport: tr}
 		res, err = client.Do(req)
 		return
 	}

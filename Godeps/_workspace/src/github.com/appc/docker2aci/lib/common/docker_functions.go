@@ -29,7 +29,8 @@ import (
 )
 
 const (
-	dockercfgFileName = ".dockercfg"
+	dockercfgFileName    = "config.json"
+	dockercfgFileNameOld = ".dockercfg"
 )
 
 // Image references supported by docker2aci.
@@ -182,32 +183,44 @@ func getHomeDir() string {
 // GetDockercfgAuth reads a ~/.dockercfg file and returns the username and password
 // of the given docker index server.
 func GetAuthInfo(indexServer string) (string, string, error) {
-	dockerCfgPath := path.Join(getHomeDir(), dockercfgFileName)
-
-	if _, err := os.Stat(dockerCfgPath); os.IsNotExist(err) {
-		return "", "", nil
+	// official docker registry
+	if indexServer == defaultIndexURL {
+		indexServer = defaultIndexURLAuth
 	}
-
-	j, err := ioutil.ReadFile(dockerCfgPath)
-	if err != nil {
-		return "", "", err
+	dockerCfgPath := path.Join(getHomeDir(), ".docker", dockercfgFileName)
+	if _, err := os.Stat(dockerCfgPath); err == nil {
+		j, err := ioutil.ReadFile(dockerCfgPath)
+		if err != nil {
+			return "", "", err
+		}
+		var dockerAuth types.DockerConfigFile
+		if err := json.Unmarshal(j, &dockerAuth); err != nil {
+			return "", "", err
+		}
+		// try the normal case
+		if c, ok := dockerAuth.AuthConfigs[indexServer]; ok {
+			return decodeDockerAuth(c.Auth)
+		}
+	} else if os.IsNotExist(err) {
+		oldDockerCfgPath := path.Join(getHomeDir(), dockercfgFileNameOld)
+		if _, err := os.Stat(oldDockerCfgPath); err != nil {
+			return "", "", nil //missing file is not an error
+		}
+		j, err := ioutil.ReadFile(oldDockerCfgPath)
+		if err != nil {
+			return "", "", err
+		}
+		var dockerAuthOld map[string]types.DockerAuthConfigOld
+		if err := json.Unmarshal(j, &dockerAuthOld); err != nil {
+			return "", "", err
+		}
+		if c, ok := dockerAuthOld[indexServer]; ok {
+			return decodeDockerAuth(c.Auth)
+		}
+	} else {
+		// if file is there but we can't stat it for any reason other
+		// than it doesn't exist then stop
+		return "", "", fmt.Errorf("%s - %v", dockerCfgPath, err)
 	}
-
-	var dockerAuth map[string]types.DockerAuthConfig
-	if err := json.Unmarshal(j, &dockerAuth); err != nil {
-		return "", "", err
-	}
-
-	// the official auth uses the full address instead of the hostname
-	officialAddress := "https://" + indexServer + "/v1/"
-	if c, ok := dockerAuth[officialAddress]; ok {
-		return decodeDockerAuth(c.Auth)
-	}
-
-	// try the normal case
-	if c, ok := dockerAuth[indexServer]; ok {
-		return decodeDockerAuth(c.Auth)
-	}
-
 	return "", "", nil
 }
