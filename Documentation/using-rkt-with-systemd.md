@@ -202,6 +202,84 @@ Jul 30 12:24:50 locke-work systemd[1]: Listening on My socket-activated app's so
 
 Now, a new connection to port 8080 will start your container to handle the request.
 
+### Bidirectionally proxy local sockets to another (possibly remote) socket.
+
+`rkt` also supports the [socket-proxyd service][systemd-socket-proxyd]. Much like socket activation, with socket-proxyd systemd provides a listener on a given port on behalf of a container, and starts the container when a connection is received. Socket-proxy listening can be useful in environments that lack native support for socket activation. The LKVM stage1 flavor is an example of such an environment.
+
+To set up socket proxyd, create a network template consisting of three units, like the example below. This example uses the redis app and the PTP network template in `/etc/rkt/net.d/ptp0.conf`:
+
+```json
+{
+	"name": "ptp0",
+	"type": "ptp",
+	"ipMasq": true,
+	"ipam": {
+		"type": "host-local",
+		"subnet": "172.16.28.0/24",
+		"routes": [
+			{ "dst": "0.0.0.0/0" }
+		]
+	}
+}
+```
+
+```
+# rkt-redis.service
+[Unit]
+Description=Socket-proxyd redis server
+
+[Service]
+ExecStart=/usr/bin/rkt --insecure-options=image run --net="ptp:IP=172.16.28.101" docker://redis
+KillMode=process
+```
+Note that you have to specify IP manually in systemd unit.
+
+Then you will need a pair of `.service` and `.socket` unit files.
+
+We want to use the port 6379 on the localhost instead of the remote container IP,
+so we use next systemd unit to override it.
+
+```
+# proxy-to-rkt-redis.service
+[Unit]
+Requires=rkt-redis.service
+After=rkt-redis.service
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 172.16.28.101:6379
+```
+Lastly the related socket unit,
+```
+# proxy-to-rkt-redis.socket
+[Socket]
+ListenStream=6371
+
+[Install]
+WantedBy=sockets.target
+```
+
+Finally, start the socket unit:
+
+```
+# systemctl enable proxy-to-redis.socket
+$ sudo systemctl start proxy-to-redis.socket
+● proxy-to-rkt-redis.socket
+   Loaded: loaded (/etc/systemd/system/proxy-to-rkt-redis.socket; enabled; vendor preset: disabled)
+   Active: active (listening) since Mon 2016-03-07 11:53:32 CET; 8s ago
+   Listen: [::]:6371 (Stream)
+
+Mar 07 11:53:32 user-host systemd[1]: Listening on proxy-to-rkt-redis.socket.
+Mar 07 11:53:32 user-host systemd[1]: Starting proxy-to-rkt-redis.socket.
+
+```
+
+Now, a new connection to localhost port 6371 will start your container with redis, to handle the request.
+
+```
+$ curl http://localhost:6371/
+```
+
+
 ## Other tools for managing pods
 
 Let us assume the service from the simple example unit file, above, is started on the host.
@@ -309,3 +387,4 @@ $ systemd-cgls --all
 [systemd-machined]: http://www.freedesktop.org/software/systemd/man/systemd-machined.service.html
 [systemd-run]: http://www.freedesktop.org/software/systemd/man/systemd-run.html
 [systemd-socket-activated]: http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html
+[systemd-socket-proxyd]: https://www.freedesktop.org/software/systemd/man/systemd-socket-proxyd.html
