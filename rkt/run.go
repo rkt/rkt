@@ -216,6 +216,8 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
+	p.mountLabel = mountLabel
+
 	cfg := stage0.CommonConfig{
 		MountLabel:   mountLabel,
 		ProcessLabel: processLabel,
