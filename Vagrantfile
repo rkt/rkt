@@ -1,6 +1,6 @@
 Vagrant.configure('2') do |config|
-    # grab Ubuntu 15.04 official image
-    config.vm.box = "ubuntu/vivid64" # Ubuntu 15.04
+    # grab Ubuntu 15.10 official image
+    config.vm.box = "ubuntu/wily64" # Ubuntu 15.10
 
     # fix issues with slow dns http://serverfault.com/a/595010
     config.vm.provider :virtualbox do |vb, override|
