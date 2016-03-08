@@ -64,6 +64,7 @@ var (
 		PrintDefaultGWv6   bool
 		PrintGWv4          string
 		PrintGWv6          string
+		PrintHostname      bool
 		GetHTTP            string
 		ServeHTTP          string
 		ServeHTTPTimeout   int
@@ -100,6 +101,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.PrintDefaultGWv6, "print-defaultgwv6", false, "Print the default IPv6 gateway")
 	globalFlagset.StringVar(&globalFlags.PrintGWv4, "print-gwv4", "", "Takes an interface name and prints its gateway's IPv4")
 	globalFlagset.StringVar(&globalFlags.PrintGWv6, "print-gwv6", "", "Takes an interface name and prints its gateway's IPv6")
+	globalFlagset.BoolVar(&globalFlags.PrintHostname, "print-hostname", false, "Prints the pod hostname")
 	globalFlagset.StringVar(&globalFlags.GetHTTP, "get-http", "", "HTTP-Get from the given address")
 	globalFlagset.StringVar(&globalFlags.ServeHTTP, "serve-http", "", "Serve the hostname via HTTP on the given address:port")
 	globalFlagset.IntVar(&globalFlags.ServeHTTPTimeout, "serve-http-timeout", 30, "HTTP Timeout to wait for a client connection")
@@ -414,6 +416,15 @@ func main() {
 
 	if globalFlags.PrintGWv6 != "" {
 		// TODO
+	}
+
+	if globalFlags.PrintHostname {
+		hostname, err := os.Hostname()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Hostname: %s\n", hostname)
 	}
 
 	if globalFlags.ServeHTTP != "" {
