@@ -42,3 +42,8 @@ sudo iptables -F -t nat
 
 rkt is available in the [Arch User Repository (AUR)](https://aur.archlinux.org/packages/rkt).
 Installing instructions are available in the [AUR installing packages documentation](https://wiki.archlinux.org/index.php/Arch_User_Repository#Installing_packages) or you can use an [AUR helper](https://wiki.archlinux.org/index.php/AUR_helpers).
+
+## Void
+
+rkt is available in the [official binary packages](http://www.voidlinux.eu/packages/) for the Void Linux distribution.
+The source for these packages is hosted on [GitHub](https://github.com/voidlinux/void-packages/tree/master/srcpkgs/rkt).
