@@ -1,4 +1,4 @@
-// Copyright 2015 CoreOS, Inc.
+// Copyright 2015 The appc Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package docker
 
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -25,12 +26,15 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/appc/docker2aci/lib/types"
+	"github.com/appc/docker2aci/lib/internal/types"
 )
 
 const (
 	dockercfgFileName    = "config.json"
 	dockercfgFileNameOld = ".dockercfg"
+	defaultIndexURL      = "registry-1.docker.io"
+	defaultIndexURLAuth  = "https://index.docker.io/v1/"
+	defaultTag           = "latest"
 )
 
 // Image references supported by docker2aci.
@@ -129,7 +133,7 @@ func anchored(res ...*regexp.Regexp) *regexp.Regexp {
 	return match(`^` + expression(res...).String() + `$`)
 }
 
-// SplitReposName breaks a reposName into an index name and remote name
+// SplitReposName breaks a reposName into an index name and remote name.
 func SplitReposName(reposName string) (string, string) {
 	nameParts := strings.SplitN(reposName, "/", 2)
 	var indexName, remoteName string
@@ -223,4 +227,36 @@ func GetAuthInfo(indexServer string) (string, string, error) {
 		return "", "", fmt.Errorf("%s - %v", dockerCfgPath, err)
 	}
 	return "", "", nil
+}
+
+// ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
+// index URL, image name, and tag.
+func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
+	if arg == "" {
+		return nil, errors.New("empty Docker image reference")
+	}
+
+	if !referenceRegexp.MatchString(arg) {
+		return nil, fmt.Errorf("invalid Docker image reference %q", arg)
+	}
+
+	taglessRemote, tag := parseRepositoryTag(arg)
+	if tag == "" {
+		tag = defaultTag
+	}
+	indexURL, imageName := SplitReposName(taglessRemote)
+
+	// the Docker client considers images referenced only by a name (e.g.
+	// "busybox" or "ubuntu") as valid, and, in that case, it adds the
+	// "library/" prefix because that's how they're stored in the official
+	// registry
+	if indexURL == defaultIndexURL && !strings.Contains(imageName, "/") {
+		imageName = "library/" + imageName
+	}
+
+	return &types.ParsedDockerURL{
+		IndexURL:  indexURL,
+		ImageName: imageName,
+		Tag:       tag,
+	}, nil
 }

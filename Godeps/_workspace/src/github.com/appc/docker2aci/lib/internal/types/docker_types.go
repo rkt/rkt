@@ -1,4 +1,4 @@
-// Copyright 2015 CoreOS, Inc.
+// Copyright 2015 The appc Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -64,7 +64,9 @@ type DockerImageConfig struct {
 	OnBuild         []string
 }
 
-// Taken from upstream Docker
+// DockerAuthConfigOld represents the deprecated ~/.dockercfg auth
+// configuration.
+// Taken from upstream Docker.
 type DockerAuthConfigOld struct {
 	Username      string `json:"username,omitempty"`
 	Password      string `json:"password,omitempty"`
@@ -73,6 +75,8 @@ type DockerAuthConfigOld struct {
 	ServerAddress string `json:"serveraddress,omitempty"`
 }
 
+// DockerAuthConfig represents a config.json auth entry.
+// Taken from upstream Docker.
 type DockerAuthConfig struct {
 	Username      string `json:"username,omitempty"`
 	Password      string `json:"password,omitempty"`
@@ -81,6 +85,8 @@ type DockerAuthConfig struct {
 	RegistryToken string `json:"registrytoken,omitempty"`
 }
 
+// DockerConfigFile represents a config.json auth file.
+// Taken from upstream docker.
 type DockerConfigFile struct {
 	AuthConfigs map[string]DockerAuthConfig `json:"auths"`
 }
