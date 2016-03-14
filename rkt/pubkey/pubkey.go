@@ -59,7 +59,7 @@ func ensureLogger(debug bool) {
 	}
 }
 
-// GetPubKeyLocations discovers one location at prefix
+// GetPubKeyLocations discovers locations at prefix
 func (m *Manager) GetPubKeyLocations(prefix string) ([]string, error) {
 	ensureLogger(m.Debug)
 	if prefix == "" {
@@ -145,7 +145,7 @@ func (m *Manager) AddKeys(pkls []string, prefix string, accept AcceptOption) err
 	return nil
 }
 
-// metaDiscoverPubKeyLocations discovers the public key through ACDiscovery by applying prefix as an ACApp
+// metaDiscoverPubKeyLocations discovers the locations of public keys through ACDiscovery by applying prefix as an ACApp
 func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 	app, err := discovery.NewAppFromString(prefix)
 	if err != nil {
