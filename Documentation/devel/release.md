@@ -69,6 +69,22 @@ Now we switch to the GitHub web UI to conduct the release:
 	gpg --detach-sign $NAME.tar.gz
 ```
 
+- Attach each stage1 file individually so they can be fetched by the ACI discovery mechanism. The files must be named as follows:
+
+```
+	cp release-build/bin/stage1-coreos.aci stage1-coreos-1.1.0-linux-amd64.aci
+	cp release-build/bin/stage1-kvm.aci stage1-kvm-1.1.0-linux-amd64.aci
+	cp release-build/bin/stage1-fly.aci stage1-fly-1.1.0-linux-amd64.aci
+```
+
+- Attach the signature of each stage1 file:
+
+```
+	gpg --armor --detach-sign stage1-coreos-1.1.0-linux-amd64.aci
+	gpg --armor --detach-sign stage1-kvm-1.1.0-linux-amd64.aci
+	gpg --armor --detach-sign stage1-fly-1.1.0-linux-amd64.aci
+```
+
 - Publish the release!
 
 - Clean your git tree: `sudo git clean -ffdx`.
