@@ -36,7 +36,10 @@
 package common
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -54,6 +57,15 @@ const (
 	// (or empty directories for kind=empty)
 	stage1MntDir = "/mnt/"
 )
+
+// makeHashFromVolumeName returns string of 16 bytes length from the volume name,
+// P9 file system needs that the tag be less than 31 bytes.
+func makeHashFromVolumeName(v string) (ret string) {
+	h := md5.New()
+	io.WriteString(h, v)
+	ret = hex.EncodeToString(h.Sum(nil))
+	return
+}
 
 // serviceUnitName returns a systemd service unit name for the given app name.
 // note: it was shamefully copy-pasted from stage1/init/path.go
@@ -114,10 +126,9 @@ func writeUnit(opts []*unit.UnitOption, unitPath string) error {
 // app service units.
 func PodToSystemdHostMountUnits(root string, volumes []types.Volume, appNames []types.ACName, unitsDir string) error {
 	// pod volumes need to mount p9 qemu mount_tags
-	for _, vol := range volumes {
-		// only host shared volumes
-
-		name := vol.Name.String() // acts as a mount tag 9p
+	for _, vol := range volumes { // only host shared volumes
+		name := vol.Name.String()
+		mountTag := makeHashFromVolumeName(name)
 
 		// serviceNames for ordering and requirements dependency for apps
 		var serviceNames []string
@@ -127,15 +138,15 @@ func PodToSystemdHostMountUnits(root string, volumes []types.Volume, appNames []
 
 		// for host kind we create a mount unit to mount host shared folder
 		if vol.Kind == "host" {
-			// /var/lib/.../pod/run/rootfs/mnt/{volumeName}
-			mountPoint := filepath.Join(root, stage1MntDir, name)
+			// /var/lib/.../pod/run/rootfs/mnt/{mountTag}
+			mountPoint := filepath.Join(root, stage1MntDir, mountTag)
 			err := os.MkdirAll(mountPoint, 0700)
 			if err != nil {
 				return err
 			}
 
 			_, err = installNewMountUnit(root,
-				name, // what (source) in 9p it is a channel tag which equals to volume.Name/mountPoint.name
+				mountTag, // what (source) in 9p it is a channel tag which equals to volume mountTag
 				filepath.Join(stage1MntDir, name), // where - destination
 				"9p",                            // fsType
 				"trans=virtio",                  // 9p specific options
@@ -166,7 +177,10 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 		vol := vols[m.Volume]
 
 		// source relative to stage1 rootfs to relative pod root
-		whatPath := filepath.Join(stage1MntDir, vol.Name.String())
+		hashedVolName := makeHashFromVolumeName(vol.Name.String())
+
+		whatPath := filepath.Join(stage1MntDir, hashedVolName)
+
 		whatFullPath := filepath.Join(root, whatPath)
 
 		// set volume permissions
@@ -234,7 +248,8 @@ func VolumesToKvmDiskArgs(volumes []types.Volume) []string {
 	var args []string
 
 	for _, vol := range volumes {
-		mountTag := vol.Name.String() // tag/channel name for virtio
+		// tag/channel name for virtio
+		mountTag := makeHashFromVolumeName(vol.Name.String())
 		if vol.Kind == "host" {
 			// eg. --9p=/home/jon/srcdir,tag
 			arg := "--9p=" + vol.Source + "," + mountTag

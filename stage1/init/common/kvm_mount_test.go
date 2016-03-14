@@ -15,6 +15,7 @@
 package common
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/appc/spec/schema/types"
@@ -27,7 +28,7 @@ func TestVolumesToKvmDiskArgs(t *testing.T) {
 	}{
 		{ // one host volume - one argument
 			volumes:  []types.Volume{{Name: types.ACName("foo"), Kind: "host", Source: "src1"}},
-			expected: []string{"--9p=src1,foo"},
+			expected: []string{fmt.Sprintf("--9p=src1,%s", makeHashFromVolumeName("foo"))},
 		},
 		{ // on empty volume - no arguments
 			volumes:  []types.Volume{{Name: types.ACName("foo"), Kind: "empty", Source: "src1"}},
@@ -38,7 +39,8 @@ func TestVolumesToKvmDiskArgs(t *testing.T) {
 				{Name: types.ACName("foo"), Kind: "host", Source: "src1"},
 				{Name: types.ACName("bar"), Kind: "host", Source: "src2"},
 			},
-			expected: []string{"--9p=src1,foo", "--9p=src2,bar"},
+			expected: []string{fmt.Sprintf("--9p=src1,%s", makeHashFromVolumeName("foo")),
+				fmt.Sprintf("--9p=src2,%s", makeHashFromVolumeName("bar"))},
 		},
 		{ // mix host and empty
 			volumes: []types.Volume{
@@ -46,7 +48,8 @@ func TestVolumesToKvmDiskArgs(t *testing.T) {
 				{Name: types.ACName("baz"), Kind: "empty", Source: "src1"},
 				{Name: types.ACName("bar"), Kind: "host", Source: "src2"},
 			},
-			expected: []string{"--9p=src1,foo", "--9p=src2,bar"},
+			expected: []string{fmt.Sprintf("--9p=src1,%s", makeHashFromVolumeName("foo")),
+				fmt.Sprintf("--9p=src2,%s", makeHashFromVolumeName("bar"))},
 		},
 	}
 
