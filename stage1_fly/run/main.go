@@ -112,6 +112,11 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 	imApp := p.Images[app].App
 	namedVolumeMounts := map[types.ACName]volumeMountTuple{}
 
+	var manifestMPs []types.MountPoint
+	if imApp != nil {
+		manifestMPs = imApp.MountPoints
+	}
+
 	for _, m := range p.Manifest.Apps[0].Mounts {
 		_, exists := namedVolumeMounts[m.Volume]
 		if exists {
@@ -122,7 +127,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 	}
 
 	// Merge command-line Mounts with ImageManifest's MountPoints
-	for _, mp := range imApp.MountPoints {
+	for _, mp := range manifestMPs {
 		tuple, exists := namedVolumeMounts[mp.Name]
 		switch {
 		case exists && tuple.M.Path != mp.Path:
@@ -148,7 +153,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 	}
 
 	// Merge command-line Volumes with ImageManifest's MountPoints
-	for _, mp := range imApp.MountPoints {
+	for _, mp := range manifestMPs {
 		// Check if we have a volume for this mountpoint
 		tuple, exists := namedVolumeMounts[mp.Name]
 		if !exists || tuple.V.Name == "" {
