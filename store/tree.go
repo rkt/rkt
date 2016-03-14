@@ -153,14 +153,18 @@ func (ts *TreeStore) Remove(id string, s *Store) error {
 
 	key, err := ts.GetImageHash(id)
 	if err != nil {
-		return err
+		fmt.Fprintf(os.Stderr, "store: warning: tree store in a bad state, forcing removal\n")
 	}
 
 	if err := os.RemoveAll(treepath); err != nil {
 		return err
 	}
 
-	return s.UpdateTreeStoreSize(key, 0)
+	if key != "" {
+		return s.UpdateTreeStoreSize(key, 0)
+	}
+
+	return nil
 }
 
 // IsRendered checks if the tree store with the provided id is fully rendered
