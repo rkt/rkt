@@ -1,4 +1,4 @@
-// Copyright 2015 CoreOS, Inc.
+// Copyright 2015 The appc Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package util defines convenience functions for handling slices and debugging.
+//
+// Note: this package is an implementation detail and shouldn't be used outside
+// of docker2aci.
 package util
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"strings"
 
 	"github.com/appc/spec/pkg/acirenderer"
 )
 
-var debugEnabled bool
-
+// Quote takes a slice of strings and returns another slice with them quoted.
 func Quote(l []string) []string {
 	var quoted []string
 
@@ -35,6 +35,7 @@ func Quote(l []string) []string {
 	return quoted
 }
 
+// ReverseImages takes an acirenderer.Images and reverses it.
 func ReverseImages(s acirenderer.Images) acirenderer.Images {
 	var o acirenderer.Images
 	for i := len(s) - 1; i >= 0; i-- {
@@ -44,10 +45,12 @@ func ReverseImages(s acirenderer.Images) acirenderer.Images {
 	return o
 }
 
+// In checks whether el is in list.
 func In(list []string, el string) bool {
 	return IndexOf(list, el) != -1
 }
 
+// IndexOf returns the index of el in list, or -1 if it's not found.
 func IndexOf(list []string, el string) int {
 	for i, x := range list {
 		if el == x {
@@ -55,27 +58,4 @@ func IndexOf(list []string, el string) int {
 		}
 	}
 	return -1
-}
-
-func printTo(w io.Writer, i ...interface{}) {
-	s := fmt.Sprint(i...)
-	fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
-}
-
-func Warn(i ...interface{}) {
-	printTo(os.Stderr, i...)
-}
-
-func Info(i ...interface{}) {
-	printTo(os.Stderr, i...)
-}
-
-func Debug(i ...interface{}) {
-	if debugEnabled {
-		printTo(os.Stderr, i...)
-	}
-}
-
-func InitDebug() {
-	debugEnabled = true
 }

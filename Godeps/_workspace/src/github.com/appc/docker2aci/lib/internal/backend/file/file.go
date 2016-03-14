@@ -1,3 +1,22 @@
+// Copyright 2015 The appc Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package file is an implementation of Docker2ACIBackend for files saved via
+// "docker save".
+//
+// Note: this package is an implementation detail and shouldn't be used outside
+// of docker2aci.
 package file
 
 import (
@@ -9,12 +28,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/appc/docker2aci/lib/common"
-	"github.com/appc/docker2aci/lib/types"
-	"github.com/appc/docker2aci/lib/util"
-	"github.com/appc/docker2aci/tarball"
+	"github.com/appc/docker2aci/lib/internal"
+	"github.com/appc/docker2aci/lib/internal/docker"
+	"github.com/appc/docker2aci/lib/internal/tarball"
+	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 )
 
@@ -29,7 +49,7 @@ func NewFileBackend(file *os.File) *FileBackend {
 }
 
 func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDockerURL, error) {
-	parsedDockerURL, err := common.ParseDockerURL(dockerURL)
+	parsedDockerURL, err := docker.ParseDockerURL(dockerURL)
 	if err != nil {
 		// a missing Docker URL could mean that the file only contains one
 		// image, so we ignore the error here, we'll handle it in getImageID
@@ -37,7 +57,7 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDo
 
 	appImageID, parsedDockerURL, err := getImageID(lb.file, parsedDockerURL)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting ImageID: %v", err)
+		return nil, nil, err
 	}
 
 	ancestry, err := getAncestry(lb.file, appImageID)
@@ -74,8 +94,8 @@ func (lb *FileBackend) BuildACI(layerNumber int, layerID string, dockerURL *type
 	}
 	defer layerFile.Close()
 
-	util.Debug("Generating layer ACI...")
-	aciPath, manifest, err := common.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
+	log.Debug("Generating layer ACI...")
+	aciPath, manifest, err := internal.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating ACI: %v", err)
 	}
@@ -118,7 +138,10 @@ func getImageID(file *os.File, dockerURL *types.ParsedDockerURL) (string, *types
 					for key, _ := range repositories {
 						appNames = append(appNames, key)
 					}
-					return fmt.Errorf("several images found, use option --image with one of:\n\n%s", strings.Join(appNames, "\n"))
+					return &common.ErrSeveralImages{
+						Msg:    "several images found",
+						Images: appNames,
+					}
 				default:
 					return fmt.Errorf("no images found")
 				}
@@ -209,7 +232,7 @@ func getTarFileBytes(file *os.File, path string) ([]byte, error) {
 }
 
 func extractEmbeddedLayer(file *os.File, layerID string, outputPath string) (*os.File, error) {
-	util.Info("Extracting ", layerID[:12], "\n")
+	log.Info("Extracting ", layerID[:12], "\n")
 
 	_, err := file.Seek(0, 0)
 	if err != nil {

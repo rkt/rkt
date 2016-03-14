@@ -103,7 +103,18 @@ func (f *dockerFetcher) fetch(u *url.URL) (*os.File, error) {
 
 	registryURL := strings.TrimPrefix(u.String(), "docker://")
 	user, password := f.getCreds(registryURL)
-	acis, err := docker2aci.Convert(registryURL, true /* squash */, tmpDir, tmpDir, d2acommon.NoCompression, user, password, f.InsecureFlags.AllowHTTP())
+	config := docker2aci.RemoteConfig{
+		Username: user,
+		Password: password,
+		Insecure: f.InsecureFlags.AllowHTTP(),
+		CommonConfig: docker2aci.CommonConfig{
+			Squash:      true,
+			OutputDir:   tmpDir,
+			TmpDir:      tmpDir,
+			Compression: d2acommon.NoCompression,
+		},
+	}
+	acis, err := docker2aci.ConvertRemoteRepo(registryURL, config)
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("error converting docker image to ACI"), err)
 	}

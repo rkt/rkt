@@ -1,4 +1,4 @@
-// Copyright 2015 CoreOS, Inc.
+// Copyright 2016 The appc Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package log
 
-type ParsedDockerURL struct {
-	IndexURL  string
-	ImageName string
-	Tag       string
+import (
+	"fmt"
+	"io"
+	"os"
+	"strings"
+)
+
+var debugEnabled bool
+
+func printTo(w io.Writer, i ...interface{}) {
+	s := fmt.Sprint(i...)
+	fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
+}
+
+// Info prints a message to stderr.
+func Info(i ...interface{}) {
+	printTo(os.Stderr, i...)
+}
+
+// Debug prints a message to stderr if debug is enabled.
+func Debug(i ...interface{}) {
+	if debugEnabled {
+		printTo(os.Stderr, i...)
+	}
+}
+
+// InitDebug enables debug output.
+func InitDebug() {
+	debugEnabled = true
 }

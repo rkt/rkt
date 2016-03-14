@@ -56,6 +56,16 @@
 			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
 		},
 		{
+			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local/backend",
+			"Comment": "v0.1.0-84-gb7ff8ab",
+			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local/backend/disk",
+			"Comment": "v0.1.0-84-gb7ff8ab",
+			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+		},
+		{
 			"ImportPath": "github.com/appc/cni/plugins/main/bridge",
 			"Comment": "v0.1.0-84-gb7ff8ab",
 			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
@@ -87,11 +97,53 @@
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
-			"Rev": "aa40f71b6f2edaa5fea4d97253f91f70d08bee7d"
+			"Comment": "v0.9.1",
+			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
 		},
 		{
-			"ImportPath": "github.com/appc/docker2aci/tarball",
-			"Rev": "aa40f71b6f2edaa5fea4d97253f91f70d08bee7d"
+			"ImportPath": "github.com/appc/docker2aci/lib/common",
+			"Comment": "v0.9.1",
+			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+		},
+		{
+			"ImportPath": "github.com/appc/docker2aci/lib/internal",
+			"Comment": "v0.9.1",
+			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+		},
+		{
+			"ImportPath": "github.com/appc/docker2aci/lib/internal/backend/file",
+			"Comment": "v0.9.1",
+			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+		},
+		{
+			"ImportPath": "github.com/appc/docker2aci/lib/internal/backend/repository",
+			"Comment": "v0.9.1",
+			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+		},
+		{
+			"ImportPath": "github.com/appc/docker2aci/lib/internal/docker",
+			"Comment": "v0.9.1",
+			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+		},
+		{
+			"ImportPath": "github.com/appc/docker2aci/lib/internal/tarball",
+			"Comment": "v0.9.1",
+			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+		},
+		{
+			"ImportPath": "github.com/appc/docker2aci/lib/internal/types",
+			"Comment": "v0.9.1",
+			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+		},
+		{
+			"ImportPath": "github.com/appc/docker2aci/lib/internal/util",
+			"Comment": "v0.9.1",
+			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+		},
+		{
+			"ImportPath": "github.com/appc/docker2aci/pkg/log",
+			"Comment": "v0.9.1",
+			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
 		},
 		{
 			"ImportPath": "github.com/appc/goaci/proj2aci",
@@ -134,6 +186,21 @@
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema",
+			"Comment": "v0.7.4",
+			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+		},
+		{
+			"ImportPath": "github.com/appc/spec/schema/common",
+			"Comment": "v0.7.4",
+			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+		},
+		{
+			"ImportPath": "github.com/appc/spec/schema/lastditch",
+			"Comment": "v0.7.4",
+			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+		},
+		{
+			"ImportPath": "github.com/appc/spec/schema/types",
 			"Comment": "v0.7.4",
 			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
 		},
@@ -223,6 +290,10 @@
 			"Rev": "77545ff365ff426dfab06c46d70fa77600cd55af"
 		},
 		{
+			"ImportPath": "github.com/cznic/ql/driver",
+			"Rev": "77545ff365ff426dfab06c46d70fa77600cd55af"
+		},
+		{
 			"ImportPath": "github.com/cznic/sortutil",
 			"Rev": "d4401851b4c370f979b842fa1e45e0b3b718b391"
 		},
@@ -248,6 +319,11 @@
 		},
 		{
 			"ImportPath": "github.com/godbus/dbus",
+			"Comment": "v3-6-ga1b8ba5",
+			"Rev": "a1b8ba5163b7f041b22761461eabd02b70d1f824"
+		},
+		{
+			"ImportPath": "github.com/godbus/dbus/introspect",
 			"Comment": "v3-6-ga1b8ba5",
 			"Rev": "a1b8ba5163b7f041b22761461eabd02b70d1f824"
 		},
@@ -322,11 +398,35 @@
 			"Rev": "ecf47fd5739b3d2c3daf7c89c4b9715a2605c21b"
 		},
 		{
+			"ImportPath": "github.com/vishvananda/netlink/nl",
+			"Rev": "ecf47fd5739b3d2c3daf7c89c4b9715a2605c21b"
+		},
+		{
 			"ImportPath": "golang.org/x/crypto/cast5",
 			"Rev": "a7ead6ddf06233883deca151dffaef2effbf498f"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/openpgp",
+			"Rev": "a7ead6ddf06233883deca151dffaef2effbf498f"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/openpgp/armor",
+			"Rev": "a7ead6ddf06233883deca151dffaef2effbf498f"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/openpgp/elgamal",
+			"Rev": "a7ead6ddf06233883deca151dffaef2effbf498f"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/openpgp/errors",
+			"Rev": "a7ead6ddf06233883deca151dffaef2effbf498f"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/openpgp/packet",
+			"Rev": "a7ead6ddf06233883deca151dffaef2effbf498f"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/openpgp/s2k",
 			"Rev": "a7ead6ddf06233883deca151dffaef2effbf498f"
 		},
 		{
@@ -342,7 +442,15 @@
 			"Rev": "c2528b2dd8352441850638a8bb678c2ad056fd3e"
 		},
 		{
+			"ImportPath": "golang.org/x/net/html/atom",
+			"Rev": "c2528b2dd8352441850638a8bb678c2ad056fd3e"
+		},
+		{
 			"ImportPath": "golang.org/x/net/http2",
+			"Rev": "c2528b2dd8352441850638a8bb678c2ad056fd3e"
+		},
+		{
+			"ImportPath": "golang.org/x/net/http2/hpack",
 			"Rev": "c2528b2dd8352441850638a8bb678c2ad056fd3e"
 		},
 		{
@@ -363,6 +471,34 @@
 		},
 		{
 			"ImportPath": "google.golang.org/grpc",
+			"Rev": "5da22b92e9485c15a6b284d52cc54d6580864c99"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/codes",
+			"Rev": "5da22b92e9485c15a6b284d52cc54d6580864c99"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/credentials",
+			"Rev": "5da22b92e9485c15a6b284d52cc54d6580864c99"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/grpclog",
+			"Rev": "5da22b92e9485c15a6b284d52cc54d6580864c99"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/metadata",
+			"Rev": "5da22b92e9485c15a6b284d52cc54d6580864c99"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/naming",
+			"Rev": "5da22b92e9485c15a6b284d52cc54d6580864c99"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/peer",
+			"Rev": "5da22b92e9485c15a6b284d52cc54d6580864c99"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc/transport",
 			"Rev": "5da22b92e9485c15a6b284d52cc54d6580864c99"
 		},
 		{
