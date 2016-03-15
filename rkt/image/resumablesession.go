@@ -148,6 +148,9 @@ func (s *resumableSession) maybeSetupDownloadResume(u *url.URL) error {
 	}
 	if res.StatusCode != http.StatusOK {
 		log.Printf("bad HTTP status code from HEAD request: %d", res.StatusCode)
+		if err := s.reset(); err != nil {
+			return err
+		}
 		return nil
 	}
 	status := s.verifyAcceptRange(res, fi.ModTime())

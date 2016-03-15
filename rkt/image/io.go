@@ -23,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/store"
 	"github.com/hashicorp/errwrap"
 
@@ -113,6 +114,19 @@ func getTmpROC(s *store.Store, path string) (*removeOnClose, error) {
 	tmp, err := s.TmpNamedFile(pathHash)
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("error setting up temporary file"), err)
+	}
+	// let's lock the file to avoid concurrent writes to the temporary file, it
+	// will go away when removing the temp file
+	_, err = lock.TryExclusiveLock(tmp.Name(), lock.RegFile)
+	if err != nil {
+		if err != lock.ErrLocked {
+			return nil, errwrap.Wrap(errors.New("failed to lock temporary file"), err)
+		}
+		log.Printf("another rkt instance is downloading this file, waiting...")
+		_, err = lock.ExclusiveLock(tmp.Name(), lock.RegFile)
+		if err != nil {
+			return nil, errwrap.Wrap(errors.New("failed to lock temporary file"), err)
+		}
 	}
 	roc := &removeOnClose{File: tmp}
 	return roc, nil
