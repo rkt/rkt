@@ -33,6 +33,7 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking/netinfo"
+	"github.com/coreos/rkt/pkg/label"
 	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/hashicorp/errwrap"
@@ -47,16 +48,17 @@ type pod struct {
 	createdByMe bool              // true if we're the creator of this pod (only the creator can xToPrepare or xToRun directly from preparing)
 	nets        []netinfo.NetInfo // list of networks (name, IP, iface) this pod is using
 
-	isEmbryo         bool // directory starts as embryo before entering preparing state, serves as stage for acquiring lock before rename to prepare/.
-	isPreparing      bool // when locked at pods/prepare/$uuid the pod is actively being prepared
-	isAbortedPrepare bool // when unlocked at pods/prepare/$uuid the pod never finished preparing
-	isPrepared       bool // when at pods/prepared/$uuid the pod is prepared, serves as stage for acquiring lock before rename to run/.
-	isExited         bool // when locked at pods/run/$uuid the pod is running, when unlocked it's exited.
-	isExitedGarbage  bool // when unlocked at pods/exited-garbage/$uuid the pod is exited and is garbage
-	isExitedDeleting bool // when locked at pods/exited-garbage/$uuid the pod is exited, garbage, and is being actively deleted
-	isGarbage        bool // when unlocked at pods/garbage/$uuid the pod is garbage that never ran
-	isDeleting       bool // when locked at pods/garbage/$uuid the pod is garbage that never ran, and is being actively deleted
-	isGone           bool // when a pod no longer can be located at its uuid anywhere XXX: only set by refreshState()
+	isEmbryo         bool   // directory starts as embryo before entering preparing state, serves as stage for acquiring lock before rename to prepare/.
+	isPreparing      bool   // when locked at pods/prepare/$uuid the pod is actively being prepared
+	isAbortedPrepare bool   // when unlocked at pods/prepare/$uuid the pod never finished preparing
+	isPrepared       bool   // when at pods/prepared/$uuid the pod is prepared, serves as stage for acquiring lock before rename to run/.
+	isExited         bool   // when locked at pods/run/$uuid the pod is running, when unlocked it's exited.
+	isExitedGarbage  bool   // when unlocked at pods/exited-garbage/$uuid the pod is exited and is garbage
+	isExitedDeleting bool   // when locked at pods/exited-garbage/$uuid the pod is exited, garbage, and is being actively deleted
+	isGarbage        bool   // when unlocked at pods/garbage/$uuid the pod is garbage that never ran
+	isDeleting       bool   // when locked at pods/garbage/$uuid the pod is garbage that never ran, and is being actively deleted
+	isGone           bool   // when a pod no longer can be located at its uuid anywhere XXX: only set by refreshState()
+	mountLabel       string // Label to use for container image
 }
 
 // Exported state. See Documentation/container-lifecycle.md for some explanation
@@ -430,6 +432,7 @@ func (p *pod) xToRun() error {
 		return err
 	}
 
+	label.Relabel(p.path(), p.mountLabel, "Z")
 	if err := os.Rename(p.path(), p.runPath()); err != nil {
 		// TODO(vc): we could race here with a concurrent xToRun(), let caller deal with the error.
 		return err
