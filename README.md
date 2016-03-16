@@ -70,6 +70,12 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details on submitting patches and the co
 Unless otherwise noted, all code in the rkt repository is licensed under the [Apache 2.0 license](LICENSE).
 Some portions of the codebase are derived from other projects under different licenses; the appropriate information can be found in the header of those source files, as applicable.
 
+## Security disclosure
+
+If you suspect you have found a security vulnerability in rkt, please _do not_ file a GitHub issue, but instead email <security@coreos.com> with the full details, including steps to reproduce the issue.
+CoreOS is currently the primary sponsor of rkt development, and all reports are thoroughly investigated by CoreOS engineers.
+For more information, see the [CoreOS Security Disclosure](https://coreos.com/security/disclosure/) page
+
 ## Known issues
 
 Due to a bug in the Linux kernel, using rkt's overlay support on top of an overlay filesystem requires Linux 4.3+.
