@@ -60,7 +60,7 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
 
 ## Run-time dependencies
 
-* Linux 3.8+ (ideally 4.3+ to have overlay-on-overlay working), with the following options configured:
+* Linux 3.18+ (ideally 4.3+ to have overlay-on-overlay working), with the following options configured:
   * CONFIG_CGROUPS
   * CONFIG_NAMESPACES
   * CONFIG_UTS_NS

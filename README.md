@@ -78,4 +78,8 @@ For more information, see the [CoreOS Security Disclosure](https://coreos.com/se
 
 ## Known issues
 
-Due to a bug in the Linux kernel, using rkt's overlay support on top of an overlay filesystem requires Linux 4.3+.
+Due to a bug in the Linux kernel, using rkt's overlay support on top of an overlay filesystem requires Linux 4.3+ (see the [stacked overlay fix](https://github.com/torvalds/linux/commit/1c8a47d) and [#1537](https://github.com/coreos/rkt/issues/1537)).
+
+Due to a bug in the Linux kernel, rkt will not work when /var/lib/rkt is on btrfs ([#2175](https://github.com/coreos/rkt/issues/2175)).
+
+Linux 3.18+ is required to successfully garbage collect rkt pods when system services such as udevd are in a slave mount namespace (see [lazy umounts on unlinked files and directories](https://github.com/torvalds/linux/commit/8ed936b) and [#1922](https://github.com/coreos/rkt/issues/1922)).
