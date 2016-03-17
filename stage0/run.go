@@ -88,6 +88,7 @@ type RunConfig struct {
 	MDSRegister bool           // whether to register with metadata service or not
 	Apps        schema.AppList // applications (prepare gets them via Apps)
 	LocalConfig string         // Path to local configuration
+	Hostname    string         // hostname of the pod
 	RktGid      int            // group id of the 'rkt' group, -1 if there's no rkt group.
 	DNS         []string       // DNS name servers to write in /etc/resolv.conf
 	DNSSearch   []string       // DNS search domains to write in /etc/resolv.conf
@@ -489,6 +490,19 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 
 	if cfg.LocalConfig != "" {
 		args = append(args, "--local-config="+cfg.LocalConfig)
+	}
+
+	s1v, err := getStage1InterfaceVersion(dir)
+	if err != nil {
+		log.FatalE("error determining stage1 interface version", err)
+	}
+
+	if cfg.Hostname != "" {
+		if interfaceVersionSupportsHostname(s1v) {
+			args = append(args, "--hostname="+cfg.Hostname)
+		} else {
+			log.Printf("warning: --hostname option is not supported by stage1")
+		}
 	}
 
 	args = append(args, cfg.UUID.String())

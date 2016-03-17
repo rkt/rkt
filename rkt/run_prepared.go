@@ -46,6 +46,7 @@ func init() {
 	cmdRunPrepared.Flags().Var(&flagDNSOpt, "dns-opt", "DNS options to write in /etc/resolv.conf")
 	cmdRunPrepared.Flags().BoolVar(&flagInteractive, "interactive", false, "the pod is interactive")
 	cmdRunPrepared.Flags().BoolVar(&flagMDSRegister, "mds-register", false, "register pod with metadata service")
+	cmdRunPrepared.Flags().StringVar(&flagHostname, "hostname", "", `pod's hostname. If empty, it will be "rkt-$PODUUID"`)
 }
 
 func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
@@ -132,6 +133,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		MDSRegister: flagMDSRegister,
 		Apps:        apps,
 		RktGid:      rktgid,
+		Hostname:    flagHostname,
 	}
 	if globalFlags.Debug {
 		stage0.InitDebug()

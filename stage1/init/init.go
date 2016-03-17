@@ -103,6 +103,7 @@ var (
 	mdsToken     string
 	localhostIP  net.IP
 	localConfig  string
+	hostname     string
 	log          *rktlog.Logger
 	diag         *rktlog.Logger
 )
@@ -114,6 +115,7 @@ func init() {
 	flag.StringVar(&privateUsers, "private-users", "", "Run within user namespace. Can be set to [=UIDBASE[:NUIDS]]")
 	flag.StringVar(&mdsToken, "mds-token", "", "MDS auth token")
 	flag.StringVar(&localConfig, "local-config", common.DefaultLocalConfigDir, "Local config path")
+	flag.StringVar(&hostname, "hostname", "", "Hostname of the pod")
 	// this ensures that main runs only on main thread (thread group leader).
 	// since namespace ops (unshare, setns) are done for a single thread, we
 	// must ensure that the goroutine does not jump from OS thread to thread
@@ -211,6 +213,18 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		return nil, nil, errwrap.Wrap(errors.New("failed to create flavor symlink"), err)
 	}
 
+	// set hostname inside pod
+	// According to systemd manual (https://www.freedesktop.org/software/systemd/man/hostname.html) :
+	// "The /etc/hostname file configures the name of the local system that is set
+	// during boot using the sethostname system call"
+	if hostname == "" {
+		hostname = stage1initcommon.GetMachineID(p)
+	}
+	hostnamePath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc/hostname")
+	if err := ioutil.WriteFile(hostnamePath, []byte(hostname), 0644); err != nil {
+		return nil, nil, fmt.Errorf("error writing %s, %s", hostnamePath, err)
+	}
+
 	switch flavor {
 	case "kvm":
 		if privateUsers != "" {
@@ -275,16 +289,6 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		// host volume sharing with 9p
 		nsargs := stage1initcommon.VolumesToKvmDiskArgs(p.Manifest.Volumes)
 		args = append(args, nsargs...)
-
-		// set hostname inside pod
-		// According to systemd manual (https://www.freedesktop.org/software/systemd/man/hostname.html) :
-		// "The /etc/hostname file configures the name of the local system that is set
-		// during boot using the sethostname system call"
-		hostname := stage1initcommon.GetMachineID(p)
-		hostnamePath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc/hostname")
-		if err := ioutil.WriteFile(hostnamePath, []byte(hostname), 0644); err != nil {
-			return nil, nil, fmt.Errorf("error writing %s, %s", hostnamePath, err)
-		}
 
 		// lkvm requires $HOME to be defined,
 		// see https://github.com/coreos/rkt/issues/1393

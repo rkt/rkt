@@ -56,6 +56,7 @@ Stage 1 must write the host PIDs of the pod's process #1 and that process's pare
 * `/var/lib/rkt/pods/run/$uuid/ppid`: the PID of the parent of the process that is PID 1 in the container.
 
 #### Arguments
+
 * `--debug` to activate debugging
 * `--net[=$NET1,$NET2,...]` to configure the creation of a contained network.
   See the [rkt networking documentation](../networking.md) for details.
@@ -63,6 +64,10 @@ Stage 1 must write the host PIDs of the pod's process #1 and that process's pare
 * `--interactive` to run a pod interactively, that is, pass standard input to the application (only for pods with one application)
 * `--local-config=$PATH` to override the local configuration directory
 * `--private-users=$SHIFT` to define a UID/GID shift when using user namespaces. SHIFT is a two-value colon-separated parameter, the first value is the first host UID to assign to the container and the second one is the number of host UIDs to assign.
+
+##### Arguments added in interface version 2
+
+* `--hostname=$HOSTNAME` configures the host name of the pod. If empty, it will be "rkt-$PODUUID".
 
 ### `rkt enter` => `coreos.com/rkt/stage1/enter`
 
@@ -102,7 +107,7 @@ Versioning
 The stage1 command line interface is versioned using an annotation with the name `coreos.com/rkt/stage1/interface-version`.
 If the annotation is not present, rkt assumes the version is 1.
 
-The current version of the stage1 interface is 1.
+The current version of the stage1 interface is 2.
 
 Examples
 --------
@@ -143,7 +148,7 @@ Examples
         },
         {
             "name": "coreos.com/rkt/stage1/interface-version",
-            "value": "1"
+            "value": "2"
         }
     ]
 }
