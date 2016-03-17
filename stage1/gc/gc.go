@@ -22,6 +22,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"syscall"
 
 	"github.com/appc/spec/schema/types"
 	"github.com/hashicorp/errwrap"
@@ -54,6 +56,10 @@ func main() {
 		log.Fatal("UUID is missing or malformed")
 	}
 
+	if err := removeJournalLink(podID); err != nil {
+		log.PrintE("error removing journal link", err)
+	}
+
 	if err := gcNetworking(podID); err != nil {
 		log.FatalE("", err)
 	}
@@ -84,4 +90,17 @@ func gcNetworking(podID *types.UUID) error {
 	}
 
 	return nil
+}
+
+func removeJournalLink(uuid *types.UUID) error {
+	// if the host runs systemd, we link the journal and set pod's machine-id
+	// as pod's UUID without the dashes in init.go:
+	// https://github.com/coreos/rkt/blob/95e6bc/stage1/init/init.go#L382
+	machineID := strings.Replace(uuid.String(), "-", "", -1)
+	journalLink := filepath.Join("/var/log/journal", machineID)
+	err := os.Remove(journalLink)
+	if err != nil && err.(*os.PathError).Err == syscall.ENOENT {
+		err = nil
+	}
+	return err
 }
