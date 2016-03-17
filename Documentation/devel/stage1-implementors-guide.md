@@ -96,6 +96,14 @@ For example, it removes the network namespace of a pod.
 * `--debug` to activate debugging
 * UUID of the pod
 
+Versioning
+----------
+
+The stage1 command line interface is versioned using an annotation with the name `coreos.com/rkt/stage1/interface-version`.
+If the annotation is not present, rkt assumes the version is 1.
+
+The current version of the stage1 interface is 1.
+
 Examples
 --------
 
@@ -132,6 +140,10 @@ Examples
         {
             "name": "coreos.com/rkt/stage1/gc",
             "value": "/ex/gc"
+        },
+        {
+            "name": "coreos.com/rkt/stage1/interface-version",
+            "value": "1"
         }
     ]
 }
