@@ -135,6 +135,9 @@ int main(int argc, char *argv[])
 		dir("sys",	0755),
 		dir("tmp",	01777),
 		dir("dev/pts",	0755),
+		dir("run",			0755),
+		dir("run/systemd",		0755),
+		dir("run/systemd/journal",	0755),
 	};
 	static const char *devnodes[] = {
 		"/dev/null",
@@ -152,6 +155,7 @@ int main(int argc, char *argv[])
 		{ "/sys", "/sys", "bind", NULL, MS_BIND|MS_REC },
 		{ "/dev/shm", "/dev/shm", "bind", NULL, MS_BIND },
 		{ "/dev/pts", "/dev/pts", "bind", NULL, MS_BIND },
+		{ "/run/systemd/journal", "/run/systemd/journal", "bind", NULL, MS_BIND },
 	};
 	static const mount_point files_mount_table[] = {
 		{ "/etc/rkt-resolv.conf", "/etc/resolv.conf", "bind", NULL, MS_BIND },
@@ -281,6 +285,12 @@ int main(int argc, char *argv[])
 		"Path too long: \"%s\"", to);
 	pexit_if(symlink("/dev/pts/ptmx", to) == -1,
 		"Failed to create /dev/ptmx symlink");
+
+	/* /dev/log -> /run/systemd/journal/dev-log */
+	exit_if(snprintf(to, sizeof(to), "%s/dev/log", root) >= sizeof(to),
+		"Path too long: \"%s\"", to);
+	pexit_if(symlink("/run/systemd/journal/dev-log", to) == -1,
+		"Failed to create /dev/log symlink");
 
 	return EXIT_SUCCESS;
 }
