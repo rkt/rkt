@@ -638,25 +638,26 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		vols[v.Name] = v
 	}
 
-	mounts := GenerateMounts(ra, vols)
+	mounts := generateMounts(ra, vols)
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
-		if vol.Kind == "empty" {
-			p := filepath.Join(sharedVolPath, vol.Name.String())
-			if err := os.MkdirAll(p, sharedVolPerm); err != nil {
-				return nil, errwrap.Wrap(fmt.Errorf("could not create shared volume %q", vol.Name), err)
-			}
-			if err := os.Chown(p, *vol.UID, *vol.GID); err != nil {
-				return nil, errwrap.Wrap(fmt.Errorf("could not change owner of %q", p), err)
-			}
-			mod, err := strconv.ParseUint(*vol.Mode, 8, 32)
-			if err != nil {
-				return nil, errwrap.Wrap(fmt.Errorf("invalid mode %q for volume %q", *vol.Mode, vol.Name), err)
-			}
-			if err := os.Chmod(p, os.FileMode(mod)); err != nil {
-				return nil, errwrap.Wrap(fmt.Errorf("could not change permissions of %q", p), err)
-			}
+		shPath := filepath.Join(sharedVolPath, vol.Name.String())
+
+		absRoot, err := filepath.Abs(p.Root) // Absolute path to the pod's rootfs.
+		if err != nil {
+			return nil, errwrap.Wrap(errors.New("could not get pod's root absolute path"), err)
+		}
+
+		appRootfs := common.AppRootfsPath(absRoot, appName)
+		mntPath, err := evaluateAppMountPath(appRootfs, m.Path)
+		if err != nil {
+			return nil, errwrap.Wrap(fmt.Errorf("could not evaluate path %v", m.Path), err)
+		}
+		mntAbsPath := filepath.Join(appRootfs, mntPath)
+
+		if err := PrepareMountpoints(shPath, mntAbsPath, &vol, m.dockerImplicit); err != nil {
+			return nil, err
 		}
 
 		opt := make([]string, 4)
@@ -665,11 +666,6 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 			opt[0] = "--bind-ro="
 		} else {
 			opt[0] = "--bind="
-		}
-
-		absRoot, err := filepath.Abs(p.Root) // Absolute path to the pod's rootfs.
-		if err != nil {
-			return nil, errwrap.Wrap(errors.New("could not get pod's root absolute path"), err)
 		}
 
 		switch vol.Kind {
@@ -681,15 +677,7 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 			return nil, fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty"`, vol.Kind)
 		}
 		opt[2] = ":"
-
-		appRootfs := common.AppRootfsPath(absRoot, appName)
-		mntPath, err := evaluateAppMountPath(appRootfs, m.Path)
-		if err != nil {
-			return nil, errwrap.Wrap(fmt.Errorf("could not evaluate path %v", m.Path), err)
-		}
-
 		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), mntPath)
-
 		args = append(args, strings.Join(opt, ""))
 	}
 

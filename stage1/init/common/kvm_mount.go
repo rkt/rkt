@@ -38,6 +38,7 @@ package common
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -172,7 +173,7 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 		vols[v.Name] = v
 	}
 
-	mounts := GenerateMounts(ra, vols)
+	mounts := generateMounts(ra, vols)
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
@@ -180,17 +181,25 @@ func AppToSystemdMountUnits(root string, appName types.ACName, volumes []types.V
 		hashedVolName := makeHashFromVolumeName(vol.Name.String())
 
 		whatPath := filepath.Join(stage1MntDir, hashedVolName)
-
 		whatFullPath := filepath.Join(root, whatPath)
-
-		// set volume permissions
-		if err := PrepareMountpoints(whatFullPath, &vol); err != nil {
-			return err
-		}
 
 		// destination relative to stage1 rootfs and relative to pod root
 		wherePath := filepath.Join(common.RelAppRootfsPath(appName), m.Path)
 		whereFullPath := filepath.Join(root, wherePath)
+
+		// create shared volumes directory
+		stage1MntPath := filepath.Join(root, stage1MntDir)
+		if err := os.MkdirAll(stage1MntPath, sharedVolPerm); err != nil {
+			return errwrap.Wrap(errors.New("could not create shared volumes directory"), err)
+		}
+		if err := os.Chmod(stage1MntPath, sharedVolPerm); err != nil {
+			return errwrap.Wrap(fmt.Errorf("could not change permissions of %q", stage1MntPath), err)
+		}
+
+		// prepare empty volumes
+		if err := PrepareMountpoints(whatFullPath, whereFullPath, &vol, m.dockerImplicit); err != nil {
+			return errwrap.Wrap(errors.New("error preparing empty mount points"), err)
+		}
 
 		// assertion to make sure that "what" exists (created earlier by PodToSystemdHostMountUnits)
 		diag.Printf("checking required source path: %q", whatFullPath)
