@@ -182,10 +182,18 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 	if dockerConfig != nil {
 		if len(dockerConfig.Entrypoint) > 0 {
-			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerEntrypoint), Value: strings.Join(dockerConfig.Entrypoint, " ")})
+			entry, err := json.Marshal(dockerConfig.Entrypoint)
+			if err != nil {
+				return nil, err
+			}
+			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerEntrypoint), Value: string(entry)})
 		}
 		if len(dockerConfig.Cmd) > 0 {
-			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerCmd), Value: strings.Join(dockerConfig.Cmd, " ")})
+			cmd, err := json.Marshal(dockerConfig.Cmd)
+			if err != nil {
+				return nil, err
+			}
+			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerCmd), Value: string(cmd)})
 		}
 
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
