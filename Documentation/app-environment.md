@@ -21,4 +21,4 @@ Since rkt v1.2.0, rkt gives access to systemd-journald's sockets in the /run/sys
 
 #### /dev/log
 
-Since rkt v1.2.0, /dev/log is created as a symlink to /run/systemd/journal/dev-log.
+Since rkt v1.2.0, if /dev/log does not exist in the image, it will be created as a symlink to /run/systemd/journal/dev-log.
