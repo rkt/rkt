@@ -682,7 +682,7 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		appRootfs := common.AppRootfsPath(absRoot, appName)
 		mntPath, err := evaluateAppMountPath(appRootfs, m.Path)
 		if err != nil {
-			return nil, fmt.Errorf("could not evaluate path %v: %v", m.Path, err)
+			return nil, errwrap.Wrap(fmt.Errorf("could not evaluate path %v", m.Path), err)
 		}
 
 		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), mntPath)
