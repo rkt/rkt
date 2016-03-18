@@ -1,5 +1,24 @@
-## vUNRELEASED
+## v1.2.0
 
+This release is an incremental release with numerous bug fixes.
+
+#### New features and UX changes
+
+- Add `--hostname` option to rkt run/run-prepared ([#2251](https://github.com/coreos/rkt/pull/2251)). This option allows setting the pod host name.
+
+#### Bug fixes
+
+- Fix deadlock while exiting a lkvm rkt pod ([#2191](https://github.com/coreos/rkt/pull/2191)).
+- SELinux fixes preparating rkt to work on Fedora with SELinux enabled ([#2247](https://github.com/coreos/rkt/pull/2247) and [#2262](https://github.com/coreos/rkt/pull/2262)).
+- Fix bug that occurs for some types of on-disk image corruption, making it impossible for the user run or garbage collect them ([#2180](https://github.com/coreos/rkt/issues/2180)).
+- Fix authentication issue when fetching from a private quay.io repository ([#2248](https://github.com/coreos/rkt/issues/2248)).
+- Allow concurrent image fetching ([#2239](https://github.com/coreos/rkt/pull/2239)).
+- Fix issue mounting volumes on images if the target path includes an absolute symlink ([#2290](https://github.com/coreos/rkt/pull/2290)).
+- Clean up dangling symlinks in `/var/log/journal` on garbage collection if running on systemd hosts ([#2289](https://github.com/coreos/rkt/pull/2289)).
+
+#### Note for 3rd party stage1 builders
+
+- The stage1 command line interface is versioned now. See the [implementors guide](https://github.com/coreos/rkt/blob/master/Documentation/devel/stage1-implementors-guide.md) for more information.
 
 ## v1.1.0
 
