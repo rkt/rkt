@@ -20,7 +20,7 @@ apt-get install -y --force-yes build-essential autoconf
 apt-get install -y --force-yes wget squashfs-tools patch gnupg golang git dbus libacl1-dev systemd-container
 
 su - admin --command="cd /var/tmp ; git clone --branch @GIT_BRANCH@ @GIT_URL@ rkt"
-su - admin --command="PATH=\$PATH ; cd /var/tmp/rkt ; ./tests/run-build.sh @FLAVOR@"
+su - admin --command="PATH=\$PATH ; cd /var/tmp/rkt ; ./tests/build-and-run-tests.sh -f @FLAVOR@"
 TESTEOF
 
 chmod +x /var/tmp/rkt-test.sh
