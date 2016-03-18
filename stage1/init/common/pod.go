@@ -565,6 +565,56 @@ func PodToSystemd(p *stage1commontypes.Pod, interactive bool, flavor string, pri
 	return nil
 }
 
+// evaluateAppMountPath tries to resolve symlinks within the path.
+// It returns the actual relative path for the given path.
+// TODO(yifan): This is a temporary fix for systemd-nspawn not handling symlink mounts well.
+// Could be removed when https://github.com/systemd/systemd/issues/2860 is resolved, and systemd
+// version is bumped.
+func evaluateAppMountPath(appRootfs, path string) (string, error) {
+	link := appRootfs
+
+	paths := strings.Split(path, "/")
+	for i, p := range paths {
+		next := filepath.Join(link, p)
+
+		if !strings.HasPrefix(next, appRootfs) {
+			return "", fmt.Errorf("path escapes app's root: %q", path)
+		}
+
+		fi, err := os.Lstat(next)
+		if err != nil {
+			if os.IsNotExist(err) {
+				link = filepath.Join(append([]string{link}, paths[i:]...)...)
+				break
+			}
+			return "", err
+		}
+
+		if fi.Mode()&os.ModeType != os.ModeSymlink {
+			link = filepath.Join(link, p)
+			continue
+		}
+
+		// Evaluate the symlink.
+		target, err := os.Readlink(next)
+		if err != nil {
+			return "", err
+		}
+
+		if filepath.IsAbs(target) {
+			link = filepath.Join(appRootfs, target)
+		} else {
+			link = filepath.Join(link, target)
+		}
+
+		if !strings.HasPrefix(link, appRootfs) {
+			return "", fmt.Errorf("symlink %q escapes app's root with value %q", next, target)
+		}
+	}
+
+	return strings.TrimPrefix(link, appRootfs), nil
+}
+
 // appToNspawnArgs transforms the given app manifest, with the given associated
 // app name, into a subset of applicable systemd-nspawn argument
 func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string, error) {
@@ -614,20 +664,28 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 			opt[0] = "--bind="
 		}
 
+		absRoot, err := filepath.Abs(p.Root) // Absolute path to the pod's rootfs.
+		if err != nil {
+			return nil, errwrap.Wrap(errors.New("could not get pod's root absolute path"), err)
+		}
+
 		switch vol.Kind {
 		case "host":
 			opt[1] = vol.Source
 		case "empty":
-			absRoot, err := filepath.Abs(p.Root)
-			if err != nil {
-				return nil, errwrap.Wrap(errors.New("cannot get pod's root absolute path"), err)
-			}
 			opt[1] = filepath.Join(common.SharedVolumesPath(absRoot), vol.Name.String())
 		default:
 			return nil, fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty"`, vol.Kind)
 		}
 		opt[2] = ":"
-		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), m.Path)
+
+		appRootfs := common.AppRootfsPath(absRoot, appName)
+		mntPath, err := evaluateAppMountPath(appRootfs, m.Path)
+		if err != nil {
+			return nil, fmt.Errorf("could not evaluate path %v: %v", m.Path, err)
+		}
+
+		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), mntPath)
 
 		args = append(args, strings.Join(opt, ""))
 	}

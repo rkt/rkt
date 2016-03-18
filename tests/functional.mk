@@ -58,6 +58,9 @@ CLEAN_FILES += \
 	$(FTST_INSPECT_BINARY) \
 	$(FTST_EMPTY_IMAGE) \
 	$(FTST_IMAGE_ROOTFSDIR)/dir1/file \
+	$(FTST_IMAGE_ROOTFSDIR)/dir1/link_abs_dir2 \
+	$(FTST_IMAGE_ROOTFSDIR)/dir1/link_rel_dir2 \
+	$(FTST_IMAGE_ROOTFSDIR)/dir1/link_invalid \
 	$(FTST_IMAGE_ROOTFSDIR)/dir2/file \
 	$(FTST_IMAGE_ROOTFSDIR)/etc/group \
 	$(FTST_IMAGE_ROOTFSDIR)/etc/passwd \
@@ -87,6 +90,12 @@ $(FTST_IMAGE): $(FTST_IMAGE_MANIFEST) $(FTST_ACI_INSPECT) $(FTST_ACI_ECHO_SERVER
 	set -e; \
 	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/dir1/file)) \
 	echo -n dir1 >$(FTST_IMAGE_ROOTFSDIR)/dir1/file; \
+	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/dir1/link_abs_dir2)) \
+	ln -sf /dir2 $(FTST_IMAGE_ROOTFSDIR)/dir1/link_abs_dir2; \
+	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/dir1/link_rel_dir2)) \
+	ln -sf ../dir2 $(FTST_IMAGE_ROOTFSDIR)/dir1/link_rel_dir2; \
+	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/dir1/link_invalid)) \
+	ln -sf /../dir2 $(FTST_IMAGE_ROOTFSDIR)/dir1/link_invalid; \
 	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/dir2/file)) \
 	echo -n dir2 >$(FTST_IMAGE_ROOTFSDIR)/dir2/file; \
 	$(call vb,v2,GEN,$(call vsp,$(FTST_IMAGE_ROOTFSDIR)/etc/group)) \
