@@ -25,11 +25,12 @@ import (
 )
 
 func TestMountSymlink(t *testing.T) {
-	mountSrcFile := filepath.Join(os.TempDir(), "hello")
+	tmpDir := createTempDirOrPanic("rkt-mount-test-")
+	defer os.RemoveAll(tmpDir)
+	mountSrcFile := filepath.Join(tmpDir, "hello")
 	if err := ioutil.WriteFile(mountSrcFile, []byte("world"), 0666); err != nil {
 		t.Fatalf("Cannot write file: %v", err)
 	}
-	defer os.Remove(mountSrcFile)
 
 	image := patchTestACI("rkt-test-mount-symlink.aci", "--exec=/inspect --read-file")
 	defer os.Remove(image)
