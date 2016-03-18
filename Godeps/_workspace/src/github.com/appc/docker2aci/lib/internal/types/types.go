@@ -23,4 +23,5 @@ type ParsedDockerURL struct {
 	IndexURL  string
 	ImageName string
 	Tag       string
+	Digest    string
 }

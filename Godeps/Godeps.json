@@ -97,53 +97,53 @@
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
-			"Comment": "v0.9.1",
-			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+			"Comment": "v0.9.2",
+			"Rev": "549d085bf2a55d8e8079f1186c425cee7fdcc4d5"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/common",
-			"Comment": "v0.9.1",
-			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+			"Comment": "v0.9.2",
+			"Rev": "549d085bf2a55d8e8079f1186c425cee7fdcc4d5"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal",
-			"Comment": "v0.9.1",
-			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+			"Comment": "v0.9.2",
+			"Rev": "549d085bf2a55d8e8079f1186c425cee7fdcc4d5"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/backend/file",
-			"Comment": "v0.9.1",
-			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+			"Comment": "v0.9.2",
+			"Rev": "549d085bf2a55d8e8079f1186c425cee7fdcc4d5"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/backend/repository",
-			"Comment": "v0.9.1",
-			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+			"Comment": "v0.9.2",
+			"Rev": "549d085bf2a55d8e8079f1186c425cee7fdcc4d5"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/docker",
-			"Comment": "v0.9.1",
-			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+			"Comment": "v0.9.2",
+			"Rev": "549d085bf2a55d8e8079f1186c425cee7fdcc4d5"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/tarball",
-			"Comment": "v0.9.1",
-			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+			"Comment": "v0.9.2",
+			"Rev": "549d085bf2a55d8e8079f1186c425cee7fdcc4d5"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/types",
-			"Comment": "v0.9.1",
-			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+			"Comment": "v0.9.2",
+			"Rev": "549d085bf2a55d8e8079f1186c425cee7fdcc4d5"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/util",
-			"Comment": "v0.9.1",
-			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+			"Comment": "v0.9.2",
+			"Rev": "549d085bf2a55d8e8079f1186c425cee7fdcc4d5"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/pkg/log",
-			"Comment": "v0.9.1",
-			"Rev": "69df7416b36aa903ef53842564c39c89cd6ecf53"
+			"Comment": "v0.9.2",
+			"Rev": "549d085bf2a55d8e8079f1186c425cee7fdcc4d5"
 		},
 		{
 			"ImportPath": "github.com/appc/goaci/proj2aci",
@@ -312,6 +312,16 @@
 		{
 			"ImportPath": "github.com/d2g/dhcp4client",
 			"Rev": "bed07e1bc5b85f69c6f0fd73393aa35ec68ed892"
+		},
+		{
+			"ImportPath": "github.com/docker/distribution/digest",
+			"Comment": "v2.3.0",
+			"Rev": "099622876197e3b24d627a72053d1bcc8968076a"
+		},
+		{
+			"ImportPath": "github.com/docker/distribution/reference",
+			"Comment": "v2.3.0",
+			"Rev": "099622876197e3b24d627a72053d1bcc8968076a"
 		},
 		{
 			"ImportPath": "github.com/dustin/go-humanize",
