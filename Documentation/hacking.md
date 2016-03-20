@@ -7,10 +7,10 @@ For more information on the rkt internals, see the [`devel`](devel/) documentati
 
 ## Building rkt
 
-rkt should be able to be built on any modern Linux system.
+You should be able build rkt on any modern Linux system.
 For the most part the codebase is self-contained (e.g. all dependencies are vendored), but assembly of the stage1 requires some other tools to be installed on the system.
 Please see [the list of the build-time dependencies](dependencies.md#build-time-dependencies).
-Once the dependenciess have been satisfied you can build rkt by running the following commands:
+Once the dependencies have been satisfied you can build rkt by running the following commands:
 
 ```
 git clone https://github.com/coreos/rkt.git
@@ -225,7 +225,7 @@ rkt attempts to offer consistent and structured error output. To achieve this, w
 
 ### Wrapping errors
 
-rkt uses the errwrap package to structure errors. This allows us to manages how we output errors. You can wrap errors by doing the following.
+rkt uses the errwrap package to structure errors. This allows us to manage how we output errors. You can wrap errors by doing the following.
 
 ```
 err := funcReturningSomeError()
@@ -258,7 +258,7 @@ Here, the prefix is an empty string and debug is set to `false`.
 
 ## Finishing Up
 
-At this point, you should be good to PR.
+At this point, you should be good to submit a PR.
 As well as a simple sanity check that the code actually builds and tests pass, here are some things to look out for:
 - `git status Godeps/` should show only a minimal and relevant change (i.e. only the dependencies you actually intended to touch).
 - `git diff Godeps/` should be free of any changes to import paths within the vendored dependencies
