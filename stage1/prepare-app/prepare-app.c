@@ -283,13 +283,13 @@ int main(int argc, char *argv[])
 	/* /dev/ptmx -> /dev/pts/ptmx */
 	exit_if(snprintf(to, sizeof(to), "%s/dev/ptmx", root) >= sizeof(to),
 		"Path too long: \"%s\"", to);
-	pexit_if(symlink("/dev/pts/ptmx", to) == -1,
+	pexit_if(symlink("/dev/pts/ptmx", to) == -1 && errno != EEXIST,
 		"Failed to create /dev/ptmx symlink");
 
 	/* /dev/log -> /run/systemd/journal/dev-log */
 	exit_if(snprintf(to, sizeof(to), "%s/dev/log", root) >= sizeof(to),
 		"Path too long: \"%s\"", to);
-	pexit_if(symlink("/run/systemd/journal/dev-log", to) == -1,
+	pexit_if(symlink("/run/systemd/journal/dev-log", to) == -1 && errno != EEXIST,
 		"Failed to create /dev/log symlink");
 
 	return EXIT_SUCCESS;
