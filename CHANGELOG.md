@@ -1,3 +1,12 @@
+## v1.2.1
+
+This release fixes a couple of bugs we missed in 1.2.0.
+
+#### Bug fixes
+
+- Do not error out if `/dev/ptmx` or `/dev/log` exist ([#2302](https://github.com/coreos/rkt/pull/2302)).
+- Vendor a release of go-systemd instead of current master ([#2306](https://github.com/coreos/rkt/pull/2306)).
+
 ## v1.2.0
 
 This release is an incremental release with numerous bug fixes.
