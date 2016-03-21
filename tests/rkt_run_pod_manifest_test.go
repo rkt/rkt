@@ -109,7 +109,7 @@ func TestPodManifest(t *testing.T) {
 		// [image name]:[image patches]
 		images         []imagePatch
 		podManifest    *schema.PodManifest
-		shouldSucceed  bool
+		expectedExit   int
 		expectedResult string
 		cgroup         string
 	}{
@@ -130,7 +130,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			`'"[$]`,
 			"",
 		},
@@ -154,7 +154,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			"dir1",
 			"",
 		},
@@ -191,7 +191,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			"empty:foo",
 			"",
 		},
@@ -227,7 +227,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			"(?s)/dir1: mode: d--x-w--wx.*" + "/dir1: user: 9991.*" + "/dir1: group: 9992",
 			"",
 		},
@@ -258,7 +258,7 @@ func TestPodManifest(t *testing.T) {
 					{"dir1", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
-			true,
+			0,
 			"host:foo",
 			"",
 		},
@@ -289,7 +289,7 @@ func TestPodManifest(t *testing.T) {
 					{"dir1", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
-			false,
+			1,
 			`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
 			"",
 		},
@@ -322,7 +322,7 @@ func TestPodManifest(t *testing.T) {
 					{"dir1", "host", tmpdir, &boolTrue, nil, nil, nil},
 				},
 			},
-			false,
+			1,
 			`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
 			"",
 		},
@@ -354,7 +354,7 @@ func TestPodManifest(t *testing.T) {
 					{"dir1", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
-			true,
+			0,
 			"host:bar",
 			"",
 		},
@@ -377,7 +377,7 @@ func TestPodManifest(t *testing.T) {
 					{"dir1", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
-			true,
+			0,
 			"host:baz",
 			"",
 		},
@@ -402,7 +402,7 @@ func TestPodManifest(t *testing.T) {
 					{"dir1", "host", tmpdir, &boolFalse, nil, nil, nil},
 				},
 			},
-			true,
+			0,
 			"host:zaz",
 			"",
 		},
@@ -426,7 +426,7 @@ func TestPodManifest(t *testing.T) {
 					{"dir1", "host", tmpdir, &boolTrue, nil, nil, nil},
 				},
 			},
-			false,
+			1,
 			`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
 			"",
 		},
@@ -453,7 +453,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			`CPU Quota: 100`,
 			"cpu",
 		},
@@ -481,7 +481,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			`Memory Limit: 4194304`,
 			"memory",
 		},
@@ -528,7 +528,7 @@ func TestPodManifest(t *testing.T) {
 					{"dir", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
-			true,
+			0,
 			"host:foo",
 			"",
 		},
@@ -552,7 +552,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			fmt.Sprintf("%v=disabled", capability.CAP_NET_ADMIN.String()),
 			"",
 		},
@@ -582,7 +582,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			fmt.Sprintf("%v=enabled", capability.CAP_NET_ADMIN.String()),
 			"",
 		},
@@ -603,7 +603,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			"User: uid=1000 euid=1000 gid=100 egid=100",
 			"",
 		},
@@ -624,7 +624,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			"User: uid=1000 euid=1000 gid=100 egid=100",
 			"",
 		},
@@ -645,7 +645,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			false,
+			2,
 			`"user2" user not found`,
 			"",
 		},
@@ -666,7 +666,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			false,
+			2,
 			`"group2" group not found`,
 			"",
 		},
@@ -687,7 +687,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			true,
+			0,
 			"User: uid=0 euid=0 gid=0 egid=0",
 			"",
 		},
@@ -708,7 +708,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			false,
+			2,
 			`no such file or directory`,
 			"",
 		},
@@ -729,7 +729,7 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 			},
-			false,
+			2,
 			`no such file or directory`,
 			"",
 		},
@@ -772,11 +772,7 @@ func TestPodManifest(t *testing.T) {
 				t.Fatalf("Expected %q but not found: %v\n%s", tt.expectedResult, err, out)
 			}
 		}
-		if err := child.Wait(); err != nil {
-			if tt.shouldSucceed {
-				t.Fatalf("rkt didn't terminate correctly: %v", err)
-			}
-		}
+		waitOrFail(t, child, tt.expectedExit)
 		verifyHostFile(t, tmpdir, "file", i, tt.expectedResult)
 
 		// 2. Test 'rkt prepare' + 'rkt run-prepared'.
@@ -793,11 +789,8 @@ func TestPodManifest(t *testing.T) {
 				t.Fatalf("Expected %q but not found: %v\n%s", tt.expectedResult, err, out)
 			}
 		}
-		if err := child.Wait(); err != nil {
-			if tt.shouldSucceed {
-				t.Fatalf("rkt didn't terminate correctly: %v", err)
-			}
-		}
+
+		waitOrFail(t, child, tt.expectedExit)
 		verifyHostFile(t, tmpdir, "file", i, tt.expectedResult)
 
 		// we run the garbage collector and remove the imported images to save
