@@ -226,23 +226,23 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/activation",
-			"Comment": "v4-15-ga831f36",
-			"Rev": "a831f36d09de8f095c28eeee839df52e9de5031f"
+			"Comment": "v5",
+			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
-			"Comment": "v4-15-ga831f36",
-			"Rev": "a831f36d09de8f095c28eeee839df52e9de5031f"
+			"Comment": "v5",
+			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/unit",
-			"Comment": "v4-15-ga831f36",
-			"Rev": "a831f36d09de8f095c28eeee839df52e9de5031f"
+			"Comment": "v5",
+			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/util",
-			"Comment": "v4-15-ga831f36",
-			"Rev": "a831f36d09de8f095c28eeee839df52e9de5031f"
+			"Comment": "v5",
+			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/attestation",
