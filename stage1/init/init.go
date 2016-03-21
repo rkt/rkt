@@ -430,9 +430,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 	args = append(args, "--default-standard-output=tty") // redirect all service logs straight to tty
 	if !debug {
 		args = append(args, "--log-target=null") // silence systemd output inside pod
-		// TODO remove --log-level=warning when we update stage1 to systemd v222
-		args = append(args, "--log-level=warning") // limit log output (systemd-shutdown ignores --log-target)
-		args = append(args, "--show-status=0")     // silence systemd initialization status output
+		args = append(args, "--show-status=0")   // silence systemd initialization status output
 	}
 
 	return args, env, nil
