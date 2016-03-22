@@ -14,9 +14,9 @@ The kubelet provides several flags to use rkt as the container runtime:
 - `--rkt-path` sets the rkt binary path.
 - `--rkt-stage1-image` sets the stage1 image path.
 
-The [getting started with rkt guide][] in the Kubernetes repository provides more detailed information about how to launch a kubernetes cluster with rkt, how to debug it, and more.
+The [getting started with rkt guide][] in the upstream Kubernetes documentation provides more detailed information about how to launch a kubernetes cluster with rkt, how to debug it, and more.
 
-[getting started with rkt guide]: https://github.com/kubernetes/kubernetes/blob/master/docs/getting-started-guides/rkt/README.md
+[getting started with rkt guide]: http://kubernetes.io/docs/getting-started-guides/rkt/
 
 ### Current Status
 
