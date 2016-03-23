@@ -47,22 +47,28 @@ if [ "$DISTRO" = "fedora-22" ] ; then
   # https://apps.fedoraproject.org/datagrepper/raw?category=fedimg
   # Sources: https://github.com/fedora-infra/fedimg/blob/develop/bin/list-the-amis.py
 
-  # Fedora-Cloud-Base-22-20151026.x86_64-eu-central-1-HVM-standard-0 was deleted
-
-  # Fedora-Cloud-Base-22-20150521.x86_64-eu-central-1-HVM-standard-0
-  AMI=ami-a88eb0b5
+  # Fedora-Cloud-Base-22-20160218.x86_64-eu-central-1-HVM-standard-0
+  AMI=ami-7a1b0116
   AWS_USER=fedora
+
+  # Workarounds
+  DISABLE_SELINUX=true
 elif [ "$DISTRO" = "fedora-23" ] ; then
-  # Fedora-Cloud-Base-23-20160129.x86_64-eu-central-1-HVM-standard-0
-  AMI=ami-4d3e2621
+  # Fedora-Cloud-Base-23-20160323.x86_64-eu-central-1-HVM-standard-0
+  AMI=ami-d59670ba
   AWS_USER=fedora
-elif [ "$DISTRO" = "fedora-rawhide" ] ; then
-  # rawhide is currently broken
-  # Error: nothing provides libpsl.so.0()(64bit) needed by wget-1.17.1-1.fc24.x86_64
 
-  # Fedora-Cloud-Base-rawhide-20160127.x86_64-eu-central-1-HVM-standard-0
-  AMI=ami-877068eb
+  # Workarounds
+  DISABLE_SELINUX=true
+elif [ "$DISTRO" = "fedora-rawhide" ] ; then
+  # Fedora-Cloud-Base-Rawhide-20160321.0.x86_64-eu-central-1-HVM-standard-0
+  AMI=ami-69967006
   AWS_USER=fedora
+
+  # Workarounds
+  # systemd in stage1 does not have the fixes for SELinux yet
+  FLAVOR=host
+  DISABLE_OVERLAY=true
 elif [ "$DISTRO" = "ubuntu-1604" ] ; then
   # https://cloud-images.ubuntu.com/locator/ec2/
   # ubuntu/images-milestone/hvm/ubuntu-xenial-alpha2-amd64-server-20160125
@@ -94,6 +100,8 @@ CLOUDINIT=$(mktemp --tmpdir rkt-cloudinit.XXXXXXXXXX)
 sed -e "s#@GIT_URL@#${GIT_URL}#g" \
     -e "s#@GIT_BRANCH@#${GIT_BRANCH}#g" \
     -e "s#@FLAVOR@#${FLAVOR}#g" \
+    -e "s#@DISABLE_SELINUX@#${DISABLE_SELINUX}#g" \
+    -e "s#@DISABLE_OVERLAY@#${DISABLE_OVERLAY}#g" \
     < $CLOUDINIT_IN >> $CLOUDINIT
 
 INSTANCE_ID=$(aws ec2 run-instances \
@@ -101,7 +109,7 @@ INSTANCE_ID=$(aws ec2 run-instances \
 	--count 1 \
 	--key-name $KEY_PAIR_NAME \
 	--security-groups $SECURITY_GROUP \
-	--instance-type t2.micro \
+	--instance-type m4.large \
 	--instance-initiated-shutdown-behavior terminate \
 	--user-data file://$CLOUDINIT \
 	--output text \
