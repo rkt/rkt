@@ -456,9 +456,8 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 	}
 
 	if flavor == "kvm" {
-		// bind mount all shared volumes from /mnt/volumeName (we don't use mechanism for bind-mounting given by nspawn)
-		err := AppToSystemdMountUnits(common.Stage1RootfsPath(p.Root), appName, p.Manifest.Volumes, ra, UnitsDir)
-		if err != nil {
+		// bind mount all shared volumes (we don't use mechanism for bind-mounting given by nspawn)
+		if err := MountSharedVolumes(common.Stage1RootfsPath(p.Root), appName, p.Manifest.Volumes, ra); err != nil {
 			return errwrap.Wrap(errors.New("failed to prepare mount units"), err)
 		}
 

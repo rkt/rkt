@@ -20,8 +20,6 @@ import (
 	"errors"
 	"path/filepath"
 
-	"github.com/appc/spec/schema/types"
-
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
@@ -30,27 +28,14 @@ import (
 	"github.com/hashicorp/errwrap"
 )
 
-// KvmPodToSystemd generates systemd unit files for a pod according to the manifest and network configuration
-func KvmPodToSystemd(p *stage1commontypes.Pod, n *networking.Networking) error {
+// KvmNetworkingToSystemd generates systemd unit files for a pod according to network configuration
+func KvmNetworkingToSystemd(p *stage1commontypes.Pod, n *networking.Networking) error {
 	podRoot := common.Stage1RootfsPath(p.Root)
 
 	// networking
 	netDescriptions := kvm.GetNetworkDescriptions(n)
 	if err := kvm.GenerateNetworkInterfaceUnits(filepath.Join(podRoot, stage1initcommon.UnitsDir), netDescriptions); err != nil {
 		return errwrap.Wrap(errors.New("failed to transform networking to units"), err)
-	}
-
-	// volumes
-	// prepare all applications names to become dependency for mount units
-	// all host-shared folder has to become available before applications starts
-	appNames := []types.ACName{}
-	for _, runtimeApp := range p.Manifest.Apps {
-		appNames = append(appNames, runtimeApp.Name)
-	}
-	// mount host volumes through some remote file system e.g. 9p to /mnt/volumeName location
-	// order is important here: PodToSystemHostMountUnits prepares folders that are checked by each appToSystemdMountUnits later
-	if err := stage1initcommon.PodToSystemdHostMountUnits(podRoot, p.Manifest.Volumes, appNames, stage1initcommon.UnitsDir); err != nil {
-		return errwrap.Wrap(errors.New("failed to transform pod volumes into mount units"), err)
 	}
 
 	return nil
