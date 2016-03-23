@@ -92,8 +92,9 @@ func generateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume
 			defaultMode := "0755"
 			defaultUID := 0
 			defaultGID := 0
+			uniqName := ra.Name + "-" + mp.Name
 			emptyVol := types.Volume{
-				Name: mp.Name,
+				Name: uniqName,
 				Kind: "empty",
 				Mode: &defaultMode,
 				UID:  &defaultUID,
@@ -106,11 +107,11 @@ func generateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume
 				log.Printf("Docker converted image, initializing implicit volume with data contained at the mount point %q.", mp.Name)
 			}
 
-			volumes[mp.Name] = emptyVol
+			volumes[uniqName] = emptyVol
 			genMnts = append(genMnts,
 				mountWrapper{
 					Mount: schema.Mount{
-						Volume: mp.Name,
+						Volume: uniqName,
 						Path:   mp.Path,
 					},
 					dockerImplicit: dockerImplicit,
