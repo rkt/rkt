@@ -15,9 +15,6 @@ fi
 if [ "${CI-}" == true ] ; then
 	# https://semaphoreci.com/
 	if [ "${SEMAPHORE-}" == true ] ; then
-		# A colon to guard against an empty body error.
-		:
-
 		# Most dependencies are already installed on Semaphore.
 		# Here we can install any missing dependencies. Whenever
 		# Semaphore installs more dependencies on their platform,
@@ -31,8 +28,8 @@ if [ "${CI-}" == true ] ; then
 		sudo apt-get install -y libacl1-dev
 
 		# libmount: https://github.com/systemd/systemd/pull/986#issuecomment-138451264
-		# sudo add-apt-repository --yes ppa:pitti/systemd-semaphore
-		# sudo apt-get update -qq || true
-		# sudo apt-get install -y libmount-dev libmount1
+		sudo add-apt-repository --yes ppa:pitti/systemd-semaphore
+		sudo apt-get update -qq || true
+		sudo apt-get install -y libmount-dev libmount1
 	fi
 fi
