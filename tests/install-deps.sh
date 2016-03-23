@@ -31,5 +31,10 @@ if [ "${CI-}" == true ] ; then
 		sudo add-apt-repository --yes ppa:pitti/systemd-semaphore
 		sudo apt-get update -qq || true
 		sudo apt-get install -y libmount-dev libmount1
+
+		# building systemd v229 crashes with the gcc 4.8, update to gcc 5
+		sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+		sudo apt-get update -qq
+		sudo apt-get install gcc-5 gcc-5-base libgcc-5-dev -y -qq
 	fi
 fi
