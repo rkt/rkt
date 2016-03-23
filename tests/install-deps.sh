@@ -15,9 +15,6 @@ fi
 if [ "${CI-}" == true ] ; then
 	# https://semaphoreci.com/
 	if [ "${SEMAPHORE-}" == true ] ; then
-		# A colon to guard against an empty body error.
-		:
-
 		# Most dependencies are already installed on Semaphore.
 		# Here we can install any missing dependencies. Whenever
 		# Semaphore installs more dependencies on their platform,
@@ -31,8 +28,13 @@ if [ "${CI-}" == true ] ; then
 		sudo apt-get install -y libacl1-dev
 
 		# libmount: https://github.com/systemd/systemd/pull/986#issuecomment-138451264
-		# sudo add-apt-repository --yes ppa:pitti/systemd-semaphore
-		# sudo apt-get update -qq || true
-		# sudo apt-get install -y libmount-dev libmount1
+		sudo add-apt-repository --yes ppa:pitti/systemd-semaphore
+		sudo apt-get update -qq || true
+		sudo apt-get install -y libmount-dev libmount1
+
+		# building systemd v229 crashes with the gcc 4.8, update to gcc 5
+		sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+		sudo apt-get update -qq
+		sudo apt-get install gcc-5 gcc-5-base libgcc-5-dev -y -qq
 	fi
 fi

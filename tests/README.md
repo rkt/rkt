@@ -36,7 +36,7 @@ sudo gpasswd -a runner rkt
 
 ```
 ./tests/run-build.sh none
-./tests/run-build.sh src v222
+./tests/run-build.sh src v229
 ```
 
 #### Thread 2

@@ -232,9 +232,8 @@ func main() {
 
 		err := ioutil.WriteFile(fileName, []byte(content), 0600)
 		if err != nil {
-			// This error message is tested in TestVolumes
 			fmt.Fprintf(os.Stderr, "Cannot write to file %q: %v\n", fileName, err)
-			os.Exit(0)
+			os.Exit(1)
 		}
 	}
 

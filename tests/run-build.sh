@@ -36,6 +36,9 @@ if [ "${SEMAPHORE-}" == true ] ; then
             . /opt/change-go-version.sh
             change-go-version 1.5
         fi
+
+        # systemd v229 doesn't build on gcc-4.8, set the compiler to gcc-5
+        export CC=gcc-5
 fi
 
 HEAD=`git rev-parse HEAD`

@@ -103,7 +103,7 @@ You may want to change it to point the build system to use some local repository
 
 This parameter takes either a tag name or a branch name.
 Tag names are usually in form of `v<number>`, where number is a systemd version.
-The default is `v222`.
+The default is `v229`.
 You can use branch name `master` to test the bleeding edge version of systemd.
 
 ### `coreos` and `kvm` flavor
@@ -122,7 +122,7 @@ If this parameter is specified, then also `--with-coreos-local-pxe-image-systemd
 
 The build system has no reliable way to deduce automatically what version of systemd the CoreOS PXE image contains, so it needs some help.
 This parameters tells the build systemd what is the version of systemd in the local PXE image.
-The value should be like tag name in systemd git repository, that is - `v<number>`, like `v222`.
+The value should be like tag name in systemd git repository, that is - `v<number>`, like `v229`.
 If this parameter is specified, then also `--with-coreos-local-pxe-image-path` must be specified too.
 
 ## Testing

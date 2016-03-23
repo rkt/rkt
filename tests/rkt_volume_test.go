@@ -27,56 +27,67 @@ import (
 )
 
 var volTests = []struct {
-	rktCmd string
-	expect string
+	rktCmd       string
+	expect       string
+	expectedExit int
 }{
 	// Check that we can read files in the ACI
 	{
 		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^READ_FILE^"`,
 		`<<<dir1>>>`,
+		0,
 	},
 	// Check that we can read files from a volume (both ro and rw)
 	{
 		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RW_READ_FILE^"`,
 		`<<<host>>>`,
+		0,
 	},
 	{
 		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
 		`<<<host>>>`,
+		0,
 	},
 	// Check that we can write to files in the ACI
 	{
 		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^WRITE_FILE^"`,
 		`<<<1>>>`,
+		0,
 	},
 	// Check that we can write files to a volume (both ro and rw)
 	{
 		`/bin/sh -c "export FILE=/dir1/file CONTENT=2 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RW_WRITE_FILE^"`,
 		`<<<2>>>`,
+		0,
 	},
 	{
 		`/bin/sh -c "export FILE=/dir1/file CONTENT=3 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_WRITE_FILE^"`,
 		`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
+		1,
 	},
 	// Check that the volume still contains the file previously written
 	{
 		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
 		`<<<2>>>`,
+		0,
 	},
 	// Check that injecting a rw mount/volume works without any mountpoint in the image manifest
 	{
 		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_ADD_MOUNT_RW^ --mount=volume=dir1,target=dir1"`,
 		`<<<1>>>`,
+		0,
 	},
 	// Check that injecting a ro mount/volume works without any mountpoint in the image manifest
 	{
 		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^,readOnly=true ^VOL_ADD_MOUNT_RO^ --mount=volume=dir1,target=dir1"`,
 		`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
+		1,
 	},
 	// Check that an implicit empty volume is created if the user didn't provide it but there's a mount point in the app
 	{
 		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^VOL_RW_WRITE_FILE^"`,
 		`<<<1>>>`,
+		0,
 	},
 }
 
@@ -122,7 +133,7 @@ func TestVolumes(t *testing.T) {
 
 		t.Logf("Running test #%v", i)
 		child := spawnOrFail(t, cmd)
-		defer waitOrFail(t, child, 0)
+		defer waitOrFail(t, child, tt.expectedExit)
 
 		if err := expectTimeoutWithOutput(child, tt.expect, time.Minute); err != nil {
 			fmt.Printf("Command: %s\n", cmd)

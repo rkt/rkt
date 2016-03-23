@@ -98,7 +98,7 @@ AC_ARG_WITH([stage1-systemd-src],
 
 AC_ARG_WITH([stage1-systemd-version],
             [AS_HELP_STRING([--with-stage1-systemd-version],
-                            [systemd version to build, used in 'src' stage1 flavor (default: 'v222', should be in format 'v<number>', like v222)])],
+                            [systemd version to build, used in 'src' stage1 flavor (default: 'v229', should be in format 'v<number>', like v229)])],
             [RKT_STAGE1_SYSTEMD_VER="${withval}"],
             [RKT_STAGE1_SYSTEMD_VER='auto'])
 
@@ -112,7 +112,7 @@ AC_ARG_WITH([coreos-local-pxe-image-path],
 
 AC_ARG_WITH([coreos-local-pxe-image-systemd-version],
             [AS_HELP_STRING([--with-coreos-local-pxe-image-systemd-version],
-                            [version of systemd in local CoreOS PXE image, used in 'coreos' and 'kvm' stage1 flavors (should be in format 'v<number>', like v222)])],
+                            [version of systemd in local CoreOS PXE image, used in 'coreos' and 'kvm' stage1 flavors (should be in format 'v<number>', like v229)])],
             [RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER="${withval}"],
             [RKT_LOCAL_COREOS_PXE_IMAGE_SYSTEMD_VER=])
 
@@ -363,7 +363,7 @@ RKT_IF_HAS_FLAVOR([${RKT_STAGE1_FLAVORS}],[src],
                              [:])
                    AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [auto],
                              dnl systemd version not specified, use default
-                             [RKT_STAGE1_SYSTEMD_VER='v222'],
+                             [RKT_STAGE1_SYSTEMD_VER='v229'],
                              dnl systemd version specified, use it
                              [:])],
                   dnl we are not building src flavor
