@@ -71,7 +71,7 @@ func TestExitCodeWithSeveralApps(t *testing.T) {
 	}
 
 	t.Logf("Waiting pod termination\n")
-	// Since systend v227, the exit status is propagated from the app to rkt
+	// Since systemd v227, the exit status is propagated from the app to rkt
 	waitOrFail(t, child, 5)
 
 	t.Logf("Check final status\n")
