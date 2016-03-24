@@ -172,6 +172,9 @@ message Pod {
 
         // Annotations on this pod.
         repeated KeyValue annotations = 7;
+
+        // Cgroup of the pod, empty if the pod is not running.
+        string cgroup = 8;
 }
 
 message KeyValue {

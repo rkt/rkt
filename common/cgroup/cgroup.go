@@ -182,8 +182,7 @@ func getControllerRWFiles(controller string) []string {
 	return nil
 }
 
-func parseOwnCgroupController(controller string) ([]string, error) {
-	cgroupPath := "/proc/self/cgroup"
+func parseCgroupController(cgroupPath, controller string) ([]string, error) {
 	cg, err := os.Open(cgroupPath)
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("error opening /proc/self/cgroup"), err)
@@ -210,7 +209,17 @@ func parseOwnCgroupController(controller string) ([]string, error) {
 // GetOwnCgroupPath returns the cgroup path of this process in controller
 // hierarchy
 func GetOwnCgroupPath(controller string) (string, error) {
-	parts, err := parseOwnCgroupController(controller)
+	parts, err := parseCgroupController("/proc/self/cgroup", controller)
+	if err != nil {
+		return "", err
+	}
+	return parts[2], nil
+}
+
+// GetCgroupPathByPid returns the cgroup path of the process with the given pid
+// and given controller.
+func GetCgroupPathByPid(pid int, controller string) (string, error) {
+	parts, err := parseCgroupController(fmt.Sprintf("/proc/%d/cgroup", pid), controller)
 	if err != nil {
 		return "", err
 	}

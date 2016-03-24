@@ -29,6 +29,7 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/set"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
@@ -303,13 +304,6 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
 	case Running:
 		pod.State = v1alpha.PodState_POD_STATE_RUNNING
 		pod.Networks = getNetworks(p)
-
-		// Get cgroup.
-		cgroup, err := p.getCgroup()
-		if err != nil {
-			return nil, nil, err
-		}
-		pod.Cgroup = cgroup
 	case Deleting:
 		pod.State = v1alpha.PodState_POD_STATE_DELETING
 	case Exited:
@@ -339,6 +333,25 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
 			return nil, nil, err
 		}
 		pod.Pid = int32(pid)
+	}
+
+	if pod.State == v1alpha.PodState_POD_STATE_RUNNING {
+		// Get cgroup for the "name=systemd" controller.
+		pid, err := p.getContainerPID1()
+		if err != nil {
+			return nil, nil, err
+		}
+		cgroup, err := cgroup.GetCgroupPathByPid(pid, "name=systemd")
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// If the stage1 systemd > v226, it will put the PID1 into "init.scope"
+		// implicit scope unit in the root slice.
+		// See https://github.com/coreos/rkt/pull/2331#issuecomment-203540543
+		//
+		// TODO(yifan): Revisit this when using unified cgroup hierarchy.
+		pod.Cgroup = strings.TrimSuffix(cgroup, "/init.scope")
 	}
 
 	pod.Manifest = data
