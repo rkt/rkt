@@ -55,10 +55,12 @@ func GetAppsResources(apps schema.AppList) (totalCpus, totalMem int64) {
 		totalCpus += cpus
 		totalMem += mem
 	}
-	// If user doesn't specify cpus for at least one app, we set no limit for
-	// whole pod.
-	if !cpusSpecified {
-		totalCpus = int64(runtime.NumCPU())
+	// In case when number of specified cpus is greater than
+	// number or when cpus aren't specified, we set number
+	// of logical cpus as a limit.
+	availableCpus := int64(runtime.NumCPU())
+	if !cpusSpecified || totalCpus > availableCpus {
+		totalCpus = availableCpus
 	}
 
 	// Add an overhead for the VM system
