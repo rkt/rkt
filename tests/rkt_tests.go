@@ -428,6 +428,9 @@ func parsePodInfoOutput(t *testing.T, result string, p *podInfo) {
 		case "state":
 			p.state = tuples[1]
 		case "networks":
+			if tuples[1] == "" {
+				break
+			}
 			networks := strings.Split(tuples[1], ",")
 			for _, n := range networks {
 				fields := strings.Split(n, ":")

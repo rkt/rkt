@@ -23,6 +23,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
@@ -147,6 +148,17 @@ func checkPod(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod, hasAppStat
 	checkPodState(t, podInfo.state, p.State)
 	checkPodApps(t, podInfo.apps, p.Apps, hasAppState)
 	checkPodNetworks(t, podInfo.networks, p.Networks)
+
+	expectedCgroupSuffix := ""
+	if podInfo.state == "running" {
+		machineID := fmt.Sprintf("rkt-%s", p.Id)
+		escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
+		expectedCgroupSuffix = fmt.Sprintf("/machine-%s.scope", escapedmID)
+	}
+
+	if !strings.HasSuffix(p.Cgroup, expectedCgroupSuffix) {
+		t.Errorf("Expected the cgroup suffix to have %q, but saw %q", expectedCgroupSuffix, p.Cgroup)
+	}
 
 	if hasManifest {
 		var mfst schema.PodManifest
@@ -404,5 +416,108 @@ func TestAPIServiceListInspectImages(t *testing.T) {
 
 	for _, m := range resp.Images {
 		checkImageDetails(t, ctx, m)
+	}
+}
+
+func TestAPIServiceCroup(t *testing.T) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	svc := startAPIService(t, ctx)
+	defer stopAPIService(t, svc)
+
+	c, conn := newAPIClientOrFail(t, "localhost:15441")
+	defer conn.Close()
+
+	aciFileName := patchTestACI("rkt-inspect-interactive.aci", "--exec=/inspect --read-stdin")
+	defer os.Remove(aciFileName)
+
+	runCmd := fmt.Sprintf("%s --insecure-options=image run --interactive %s", ctx.Cmd(), aciFileName)
+	child := spawnOrFail(t, runCmd)
+
+	var resp *v1alpha.ListPodsResponse
+	var err error
+	done := make(chan struct{})
+
+	// Wait the pods to be running.
+	go func() {
+		for {
+			// ListPods(detail=false).
+			resp, err = c.ListPods(context.Background(), &v1alpha.ListPodsRequest{})
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if len(resp.Pods) != 0 {
+				allRunning := true
+				for _, p := range resp.Pods {
+					if p.State != v1alpha.PodState_POD_STATE_RUNNING {
+						allRunning = false
+						break
+					}
+				}
+				if allRunning {
+					t.Logf("Pods are running")
+					close(done)
+					return
+				}
+			}
+			t.Logf("Pods are not in RUNNING state")
+			time.Sleep(time.Second)
+		}
+	}()
+
+	testutils.WaitOrTimeout(t, time.Second*10, done)
+
+	var cgroups []string
+
+	for _, p := range resp.Pods {
+		checkPodBasics(t, ctx, p)
+
+		// Test InspectPod().
+		inspectResp, err := c.InspectPod(context.Background(), &v1alpha.InspectPodRequest{Id: p.Id})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		checkPodDetails(t, ctx, inspectResp.Pod)
+		if p.Cgroup != "" {
+			cgroups = append(cgroups, p.Cgroup)
+		}
+	}
+
+	// ListPods(detail=true). Filter according to the cgroup.
+	resp, err = c.ListPods(context.Background(), &v1alpha.ListPodsRequest{
+		Detail:  true,
+		Filters: []*v1alpha.PodFilter{{Cgroups: cgroups}},
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(resp.Pods) == 0 {
+		t.Errorf("Unexpected result: %v, should see non-zero pods", resp.Pods)
+	}
+
+	for _, p := range resp.Pods {
+		checkPodDetails(t, ctx, p)
+	}
+
+	// Terminate the pods.
+	if err := child.SendLine("Good bye"); err != nil {
+		t.Fatalf("Failed to send message to the pod: %v", err)
+	}
+	waitOrFail(t, child, 0)
+
+	// Check that there's no cgroups returned for non-running pods.
+	cgroups = []string{}
+	resp, err = c.ListPods(context.Background(), &v1alpha.ListPodsRequest{})
+	for _, p := range resp.Pods {
+		checkPodBasics(t, ctx, p)
+		if p.Cgroup != "" {
+			cgroups = append(cgroups, p.Cgroup)
+		}
+	}
+	if len(cgroups) != 0 {
+		t.Errorf("Unexpected cgroup returned by pods: %v", cgroups)
 	}
 }
