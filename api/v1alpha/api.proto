@@ -204,6 +204,9 @@ message PodFilter {
 
         // If not empty, the pods that have all of the annotations will be returned.
         repeated KeyValue annotations = 6;
+
+        // If not empty, the pods whose cgroup are listed will be returned.
+        repeated string cgroups = 7;
 }
 
 // ImageFilter defines the condition that the returned images need to satisfy in ListImages().

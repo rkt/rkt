@@ -191,6 +191,14 @@ func satisfiesPodFilter(pod v1alpha.Pod, manifest schema.PodManifest, filter v1a
 		}
 	}
 
+	// Filter according to the cgroup.
+	if len(filter.Cgroups) > 0 {
+		s := set.NewString(filter.Cgroups...)
+		if !s.Has(pod.Cgroup) {
+			return false
+		}
+	}
+
 	return true
 }
 
