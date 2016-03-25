@@ -281,7 +281,7 @@ func stage1() int {
 
 		if strings.HasPrefix(mount.HostPath, "/") {
 			if hostPathInfo, err = os.Stat(mount.HostPath); err != nil {
-				log.PrintE(fmt.Sprintf("stat of host directory %s", mount.HostPath), err)
+				log.PrintE(fmt.Sprintf("stat of host path %s", mount.HostPath), err)
 				return 1
 			}
 		} else {
@@ -290,7 +290,7 @@ func stage1() int {
 
 		absTargetPath := filepath.Join(mount.TargetPrefixPath, mount.RelTargetPath)
 		if targetPathInfo, err = os.Stat(absTargetPath); err != nil && !os.IsNotExist(err) {
-			log.PrintE(fmt.Sprintf("stat of target directory %s", absTargetPath), err)
+			log.PrintE(fmt.Sprintf("stat of target path %s", absTargetPath), err)
 			return 1
 		}
 
