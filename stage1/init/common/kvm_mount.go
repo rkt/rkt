@@ -81,6 +81,11 @@ func MountSharedVolumes(root string, appName types.ACName, volumes []types.Volum
 		}
 
 		destination := filepath.Join(appRootfs, mntPath)
+		// TODO: verify if rkt should do this, or it should be some outer responsibility
+		// to ensure if such patch exists
+		if err := ensureDestinationExists(source, destination); err != nil {
+			return errwrap.Wrap(fmt.Errorf("could not create destination mount point: %v", destination), err)
+		}
 
 		if err := doBindMount(source, destination, readOnly); err != nil {
 			return errwrap.Wrap(fmt.Errorf("could not bind mount path %v (s: %v, d: %v)", m.Path, source, destination), err)
@@ -95,6 +100,31 @@ func doBindMount(source, destination string, readOnly bool) error {
 	}
 	if readOnly {
 		return syscall.Mount(source, destination, "bind", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, "")
+	}
+	return nil
+}
+
+func ensureDestinationExists(source, destination string) error {
+	fileInfo, err := os.Stat(source)
+	if err != nil {
+		return errwrap.Wrap(fmt.Errorf("could not stat source location: %v", source), err)
+	}
+
+	targetPathParent, _ := filepath.Split(destination)
+	if err := os.MkdirAll(targetPathParent, sharedVolPerm); err != nil {
+		return errwrap.Wrap(fmt.Errorf("could not create parent directory: %v", targetPathParent), err)
+	}
+
+	if fileInfo.IsDir() {
+		if err := os.Mkdir(destination, sharedVolPerm); !os.IsExist(err) {
+			return err
+		}
+	} else {
+		if file, err := os.OpenFile(destination, os.O_CREATE, sharedVolPerm); err != nil {
+			return err
+		} else {
+			file.Close()
+		}
 	}
 	return nil
 }
