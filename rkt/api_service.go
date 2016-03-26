@@ -303,6 +303,13 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
 	case Running:
 		pod.State = v1alpha.PodState_POD_STATE_RUNNING
 		pod.Networks = getNetworks(p)
+
+		// Get cgroup.
+		cgroup, err := p.getCgroup()
+		if err != nil {
+			return nil, nil, err
+		}
+		pod.Cgroup = cgroup
 	case Deleting:
 		pod.State = v1alpha.PodState_POD_STATE_DELETING
 	case Exited:
@@ -346,6 +353,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 	if err := walkPods(includeMostDirs, func(p *pod) {
 		pod, manifest, err := getBasicPod(p)
 		if err != nil { // Do not return partial pods.
+			stderr.PrintE(fmt.Sprintf("failed to get basic pod information for pod with uuid: %v", p.uuid), err)
 			return
 		}
 
@@ -356,6 +364,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 
 		if request.Detail {
 			if err := fillAppInfo(s.store, p, pod); err != nil { // Do not return partial pods.
+				stderr.PrintE(fmt.Sprintf("failed to fill app information for pod with uuid: %v", p.uuid), err)
 				return
 			}
 		} else {
