@@ -18,8 +18,13 @@ rkt's entry in the [Fedora package database](https://admin.fedoraproject.org/pkg
 
 #### Caveat: SELinux
 
-rkt currently does not integrate with SELinux on Fedora.
-See [#1727](https://github.com/coreos/rkt/issues/1727).
+rkt can integrate with SELinux on Fedora but in a limited way.
+This has the following caveats:
+- running as systemd service restricted (see [#2322](https://github.com/coreos/rkt/issues/2322))
+- access to host volumes restricted (see [#2325](https://github.com/coreos/rkt/issues/2325))
+- socket activation restricted (see [#2326](https://github.com/coreos/rkt/issues/2326))
+- metadata service restricted (see [#1978](https://github.com/coreos/rkt/issues/1978))
+
 As a workaround, SELinux can be temporarily disabled:
 ```
 sudo setenforce Permissive
@@ -32,6 +37,7 @@ SELINUX=permissive
 #### Caveat: firewall
 
 The default firewall rules can block the traffic from rkt pods.
+See [#2206](https://github.com/coreos/rkt/issues/2206).
 As a workaround, they can be removed:
 ```
 sudo iptables -F
