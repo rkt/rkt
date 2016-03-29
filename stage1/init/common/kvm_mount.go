@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/appc/spec/schema"
@@ -74,21 +75,26 @@ func MountSharedVolumes(root string, appName types.ACName, volumes []types.Volum
 		default:
 			return fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty"`, vol.Kind)
 		}
-		appRootfs := common.AppRootfsPath(".", appName)
-		mntPath, err := evaluateAppMountPath(appRootfs, m.Path)
+		absAppRootfs, err := filepath.Abs(common.AppRootfsPath(".", appName))
 		if err != nil {
-			return errwrap.Wrap(fmt.Errorf("could not evaluate path %v", m.Path), err)
+			return fmt.Errorf(`could not evaluate absolute path for application rootfs in app: %v`, appName)
 		}
 
-		destination := filepath.Join(appRootfs, mntPath)
-		// TODO: verify if rkt should do this, or it should be some outer responsibility
-		// to ensure if such patch exists
-		if err := ensureDestinationExists(source, destination); err != nil {
-			return errwrap.Wrap(fmt.Errorf("could not create destination mount point: %v", destination), err)
+		absDestination, err := filepath.Abs(filepath.Join(absAppRootfs, m.Path))
+		if err != nil {
+			return fmt.Errorf(`could not evaluate absolute path for application volume path %q in: %v`, m.Path, appName)
 		}
-
-		if err := doBindMount(source, destination, readOnly); err != nil {
-			return errwrap.Wrap(fmt.Errorf("could not bind mount path %v (s: %v, d: %v)", m.Path, source, destination), err)
+		if !strings.HasPrefix(absDestination, absAppRootfs) {
+			return fmt.Errorf("path escapes app's root: %v", absDestination)
+		}
+		// TODO: verify if rkt should ensure existance of destination there, or it should be some
+		// outer responsibility to ensure if such path exists
+		if cleanedSource, err := filepath.EvalSymlinks(source); err != nil {
+			return errwrap.Wrap(fmt.Errorf("could not resolve symlink for source: %v", source), err)
+		} else if err := ensureDestinationExists(cleanedSource, absDestination); err != nil {
+			return errwrap.Wrap(fmt.Errorf("could not create destination mount point: %v", absDestination), err)
+		} else if err := doBindMount(cleanedSource, absDestination, readOnly); err != nil {
+			return errwrap.Wrap(fmt.Errorf("could not bind mount path %v (s: %v, d: %v)", m.Path, source, absDestination), err)
 		}
 	}
 	return nil
