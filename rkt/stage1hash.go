@@ -219,23 +219,41 @@ func getStage1ImagesDirectory(c *config.Config) string {
 }
 
 func getStage1HashFromFlag(s *store.Store, loc stage1ImageLocation, dir string) (*types.Hash, error) {
+	withKeystore := true
+	location := loc.location
+	if loc.kind == stage1ImageLocationFromDir {
+		location = filepath.Join(dir, loc.location)
+	}
+	trustedLocation, err := isTrustedLocation(location)
+	if err != nil {
+		return nil, err
+	}
+
 	imgType := apps.AppImageGuess
 	switch loc.kind {
 	case stage1ImageLocationURL:
 		imgType = apps.AppImageURL
+		if trustedLocation {
+			withKeystore = false
+		}
 	case stage1ImageLocationPath:
 		imgType = apps.AppImagePath
+		if trustedLocation {
+			withKeystore = false
+		}
 	case stage1ImageLocationName:
 		imgType = apps.AppImageName
 	case stage1ImageLocationHash:
 		imgType = apps.AppImageHash
 	case stage1ImageLocationFromDir:
-		loc.location = filepath.Join(dir, loc.location)
+		if trustedLocation {
+			withKeystore = false
+		}
 		imgType = apps.AppImagePath
 	}
 
-	fn := getStage1Finder(s)
-	return fn.FindImage(loc.location, "", imgType)
+	fn := getStage1Finder(s, withKeystore)
+	return fn.FindImage(location, "", imgType)
 }
 
 func getStage1DataFromConfig(c *config.Config) (string, string, string) {
@@ -267,8 +285,24 @@ func getFileNameFromLocation(imgLoc string) string {
 	return filepath.Base(imgLoc)
 }
 
+func isTrustedLocation(location string) (bool, error) {
+	absLocation, err := filepath.Abs(location)
+	if err != nil {
+		return false, err
+	}
+	if absLocation == buildDefaultStage1ImageLoc ||
+		strings.HasPrefix(absLocation, fmt.Sprintf("%s%c", filepath.Clean(buildDefaultStage1ImagesDir), filepath.Separator)) {
+		return true, nil
+	}
+	return false, nil
+}
+
 func getConfiguredStage1Hash(s *store.Store, imgRef, imgLoc, imgFileName string) (*types.Hash, error) {
-	fn := getStage1Finder(s)
+	trusted, err := isTrustedLocation(imgLoc)
+	if err != nil {
+		return nil, err
+	}
+	fn := getStage1Finder(s, !trusted)
 	if !strings.HasSuffix(imgRef, "-dirty") {
 		fn.StoreOnly = true
 		if hash, err := fn.FindImage(imgRef, "", apps.AppImageName); err == nil {
@@ -287,8 +321,8 @@ func getConfiguredStage1Hash(s *store.Store, imgRef, imgLoc, imgFileName string)
 	return getStage1HashFromPath(fn, imgLoc, imgFileName)
 }
 
-func getStage1Finder(s *store.Store) *image.Finder {
-	return &image.Finder{
+func getStage1Finder(s *store.Store, withKeystore bool) *image.Finder {
+	fn := &image.Finder{
 		S:                  s,
 		InsecureFlags:      globalFlags.InsecureFlags,
 		TrustKeysFromHTTPS: globalFlags.TrustKeysFromHTTPS,
@@ -297,6 +331,11 @@ func getStage1Finder(s *store.Store) *image.Finder {
 		NoStore:   false,
 		WithDeps:  false,
 	}
+
+	if withKeystore {
+		fn.Ks = getKeystore()
+	}
+	return fn
 }
 
 func getStage1HashFromPath(fn *image.Finder, imgLoc, imgFileName string) (*types.Hash, error) {
