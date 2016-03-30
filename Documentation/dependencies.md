@@ -37,6 +37,7 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
 ### Specific dependencies for the coreos/kvm flavor
 
 * cat
+* comm
 * cpio
 * gzip
 * md5sum
