@@ -85,6 +85,12 @@ However, a default value can be set for this parameter at build time by setting 
 It can be set with the `paths` kind of configuration.
 For more details, see [configure script parameters documentation](build-configure.md) and [configuration documentation](configuration.md).
 
+rkt expects stage1 images to be signed except in the following cases:
+
+* it is the default stage1 image and it's in the same directory as the rkt binary
+* `--stage1-{name,hash}` is used and the image is already in the store
+* `--stage1-{url,path,from-dir}` is used and the image is in the default directory configured at build time
+
 ## Managing Dependencies
 
 rkt uses [`godep`](https://github.com/tools/godep) to manage third-party dependencies.

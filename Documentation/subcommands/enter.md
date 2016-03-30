@@ -16,18 +16,6 @@ bin   data  entrypoint.sh  home  lib64  mnt  proc  run   selinux  sys  usr
 boot  dev   etc            lib   media  opt  root  sbin  srv      tmp  var
 ```
 
-## Use a Custom Stage 1
-
-rkt is designed and intended to be modular, using a [staged architecture](../devel/architecture.md).
-
-You can use a custom stage1 by using the `--stage1-{url,path,name,hash,from-dir}` flags.
-
-```
-# rkt --stage1-path=/tmp/stage1.aci run coreos.com/etcd:v2.0.0
-```
-
-For more details see the [hacking documentation](../hacking.md).
-
 ## Run a Pod in the Background
 
 Work in progress. Please contribute!
