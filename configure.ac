@@ -260,6 +260,7 @@ dnl gpg - it will be checked when we will actually download the image
 dnl from the network
 AC_DEFUN([RKT_COMMON_COREOS_PROGS],
          [RKT_REQ_PROG([CAT],[cat],[cat])
+          RKT_REQ_PROG([COMM],[comm],[comm])
           RKT_REQ_PROG([CPIO],[cpio],[cpio])
           RKT_REQ_PROG([GZIP],[gzip],[gzip])
           RKT_REQ_PROG([MD5SUM],[md5sum],[md5sum])

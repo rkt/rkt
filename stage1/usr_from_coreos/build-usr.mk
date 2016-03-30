@@ -34,6 +34,13 @@ CBU_ROOTFS := $(CBU_TMPDIR)/rootfs
 CBU_COMPLETE_MANIFEST := $(CBU_TMPDIR)/manifest.txt
 # All manifest in the CBU_MANIFESTS_DIR
 CBU_MANIFESTS := $(wildcard $(CBU_MANIFESTS_DIR)/*)
+# A list of all files in the squashfs file without the likely
+# "squashfs-root" prefix
+CBU_SQUASHFS_FILES := $(CBU_TMPDIR)/squashfsfiles
+# A list of files that appear in both CBU_COMPLETE_MANIFEST and
+# CBU_SQUASHFS_FILES, should be the same as the list in
+# CBU_COMPLETE_MANIFEST, otherwise we get an error.
+CBU_COMMON_FILES := $(CBU_TMPDIR)/commonfiles
 
 # Stamp telling when ACI rootfs was prepared.
 $(call setup-stamp-file,CBU_ACI_ROOTFS_STAMP,$(CBU_DIFF)-acirootfs)
@@ -94,7 +101,9 @@ CBU_SYSTEMD_VERSION_FILE := $(CBU_ACIROOTFSDIR)/systemd-version
 
 CLEAN_FILES += \
 	$(CBU_COMPLETE_MANIFEST) \
-	$(CBU_SYSTEMD_VERSION_FILE)
+	$(CBU_SYSTEMD_VERSION_FILE) \
+	$(CBU_SQUASHFS_FILES) \
+	$(CBU_COMMON_FILES)
 INSTALL_DIRS += \
 	$(CBU_ROOTFS):0755
 INSTALL_SYMLINKS += \
@@ -154,6 +163,14 @@ $(call generate-clean-mk,$(CBU_ROOTFS_CLEAN_STAMP),$(CBU_ROOTFSDIR_CLEANMK),$(CB
 # This unpacks squashfs image to a temporary rootfs.
 $(call generate-stamp-rule,$(CBU_MKBASE_STAMP),$(CCN_SQUASHFS) $(CBU_COMPLETE_MANIFEST),$(CBU_ROOTFS), \
 	$(call vb,vt,UNSQUASHFS,$(call vsp,$(CCN_SQUASHFS)) => $(call vsp,$(CBU_ROOTFS)/usr)) \
+	CBU_SQROOT=$$$$(unsquashfs -ls "$(CCN_SQUASHFS)" --no-progress | tail --lines=1); \
+	unsquashfs -ls "$(CCN_SQUASHFS)" | grep "^$$$${CBU_SQROOT}" | sed -e "s/$$$${CBU_SQROOT}\///g" | sort >"$(CBU_SQUASHFS_FILES)"; \
+	comm -1 -2 "$(CBU_SQUASHFS_FILES)" "$(CBU_COMPLETE_MANIFEST)" >"$(CBU_COMMON_FILES)"; \
+	if ! cmp --silent "$(CBU_COMMON_FILES)" "$(CBU_COMPLETE_MANIFEST)"; \
+	then \
+		echo -e "Files listed in $(CBU_COMPLETE_MANIFEST) are missing from $(CCN_SQUASHFS):\n$$$$(comm -1 -3 "$(CBU_SQUASHFS_FILES)" "$(CBU_COMPLETE_MANIFEST)")"; \
+		exit 1; \
+	fi; \
 	unsquashfs -dest "$(CBU_ROOTFS)/usr" -ef "$(CBU_COMPLETE_MANIFEST)" "$(CCN_SQUASHFS)"$(call vl3, >/dev/null))
 
 # If either squashfs file or the concatenated manifest file changes we
