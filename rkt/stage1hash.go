@@ -353,6 +353,8 @@ func getStage1HashFromPath(fn *image.Finder, imgLoc, imgFileName string) (*types
 		if err != nil {
 			fallbackErr = err
 		} else {
+			// using stage1 image in rkt's path, don't check the signature
+			fn.Ks = nil
 			rktDir := filepath.Dir(exePath)
 			imgPath := filepath.Join(rktDir, imgFileName)
 			hash, err := fn.FindImage(imgPath, "", apps.AppImagePath)
