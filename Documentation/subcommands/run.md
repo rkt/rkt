@@ -305,6 +305,24 @@ For example, if you use systemd, you can [run rkt using `systemd-run`](https://g
 
 If you don't use systemd, you can use [daemon](http://www.libslack.org/daemon/) as an alternative.
 
+## Use a Custom Stage 1
+
+rkt is designed and intended to be modular, using a [staged architecture](../devel/architecture.md).
+
+You can use a custom stage1 by using the `--stage1-{url,path,name,hash,from-dir}` flags.
+
+```
+# rkt --stage1-path=/tmp/stage1.aci run coreos.com/etcd:v2.0.0
+```
+
+rkt expects stage1 images to be signed except in the following cases:
+
+* it is the default stage1 image and it's in the same directory as the rkt binary
+* `--stage1-{name,hash}` is used and the image is already in the store
+* `--stage1-{url,path,from-dir}` is used and the image is in the default directory configured at build time
+
+For more details see the [hacking documentation](../hacking.md).
+
 ## Options
 
 | Flag | Default | Options | Description |
