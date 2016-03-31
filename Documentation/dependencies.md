@@ -7,7 +7,7 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
 ### Basic
 
 * GNU Make
-* Go 1.4+ (ideally 1.5.3 or later)
+* Go 1.5.3 or later
 * autoconf
 * aclocal (usually a part of automake)
 * bash

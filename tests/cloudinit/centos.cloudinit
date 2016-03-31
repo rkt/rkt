@@ -12,14 +12,17 @@ groupadd rkt
 gpasswd -a centos rkt
 
 #yum update -y
-yum -y -v install epel-release # Needed for golang-vet and golang-cover
 yum -y -v groupinstall "Development Tools"
-yum -y -v install wget squashfs-tools patch glibc-static gnupg golang libacl-devel golang-vet golang-cover
+yum -y -v install wget squashfs-tools patch glibc-static gnupg libacl-devel
 
-# # No need to do that with CentOS's go1.4.2
-# # https://github.com/coreos/rkt/pull/1877#issuecomment-169614067
-# GOPATH=/tmp /usr/bin/go get golang.org/x/tools/cmd/vet
-# GOPATH=/tmp /usr/bin/go get golang.org/x/tools/cmd/cover
+pushd /tmp
+wget https://storage.googleapis.com/golang/go1.5.3.linux-amd64.tar.gz
+popd
+tar -C /usr/local -xzf /tmp/go1.5.3.linux-amd64.tar.gz
+ln -s /usr/local/go/bin/go /usr/local/bin/go
+ln -s /usr/local/go/bin/godoc /usr/local/bin/godoc
+ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+export GOROOT=/usr/local/go
 
 /usr/sbin/setenforce 0
 

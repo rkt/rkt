@@ -597,20 +597,14 @@ dnl for [ and ].
 m4_define([DIGITS],[@<:@0-9@:>@])
 m4_define([ALNUM],[@<:@a-z0-9@:>@])
 
-dnl Detect go version. Go 1.4 support only "-X variable 'value'"
-dnl format of assigning values to variables via linker flags. Go 1.5
-dnl deprecates this format in favor of "-X 'variable=value'"
-dnl format. Drop this ugliness when we drop support for Go 1.4.
-dnl Successfully parse versions like "go1.5", "go1.5.3", "go1.6rc1",
-dnl "devel +66330d8 Wed Jan 13 23:40:13 2016 +0000".
+dnl Detect go version. Successfully parse versions like "go1.5",
+dnl "go1.5.3", "go1.6rc1", "devel +66330d8 Wed Jan 13 23:40:13 2016
+dnl +0000".
 GO_VERSION_OUTPUT=`"${ABS_GO}" version`
 GO_VERSION=`AS_ECHO(["${GO_VERSION_OUTPUT}"]) | sed -e 's/^go version \(.*\) ALNUM*\/ALNUM*$/\1/'`
 AS_CASE([$GO_VERSION],
         [devel*],
-                [AC_MSG_WARN([* Using development version of go, all bets are off])
-                 RKT_XF() {
-                     AS_ECHO(["-X '$1=$2'"])
-                 }],
+                [AC_MSG_WARN([* Using development version of go, all bets are off])],
         [go*],
                 [GO_VERSION=`AS_ECHO(["${GO_VERSION}"]) | sed -e 's/^go\(.*\)/\1/'`
                  GO_MAJOR=`AS_ECHO(["${GO_VERSION}"]) | grep -o '^DIGITS\+'`
@@ -623,18 +617,9 @@ AS_CASE([$GO_VERSION],
                  GO_BEST_MINOR=5
                  AC_MSG_CHECKING([whether we have go ${GO_BEST_MAJOR}.${GO_BEST_MINOR} or newer])
                  AS_IF([test "${GO_MAJOR}" -gt "${GO_BEST_MAJOR}" || test "${GO_MAJOR}" -eq "${GO_BEST_MAJOR}" -a "${GO_MINOR}" -ge "${GO_BEST_MINOR}"],
-                       [AC_MSG_RESULT([yes])
-                        RKT_XF() {
-                            AS_ECHO(["-X '$1=$2'"])
-                        }],
+                       [AC_MSG_RESULT([yes])],
                        [AC_MSG_RESULT([no])
-                        AC_MSG_CHECKING([whether we have go 1.4])
-                        AS_IF([test "${GO_MAJOR}" -eq "1" -a "${GO_MINOR}" -eq "4"],
-                              [AC_MSG_RESULT([yes])
-                               RKT_XF() {
-                                   AS_ECHO(["-X $1 '$2'"])
-                               }],
-                              [AC_MSG_ERROR([*** go is too old (${GO_VERSION})])])])
+                        AC_MSG_ERROR([*** go is too old (${GO_VERSION})])])
 
                  AC_MSG_CHECKING([whether we have a go version without CVE-2015-8618])
                  AS_IF([test "${GO_MAJOR}" -eq "1" -a "${GO_MINOR}" -eq "5" -a "${GO_MICRO}" -lt "3"],
@@ -645,14 +630,13 @@ AS_CASE([$GO_VERSION],
                                   [AC_MSG_WARN([* ${insecure_go_warning}])])],
                        [AC_MSG_RESULT([yes])])],
         [AC_MSG_ERROR([*** Could not parse the output of go version])])
-
-RKT_STAGE1_DEFAULT_NAME_LDFLAGS=`RKT_XF main.buildDefaultStage1Name "${RKT_STAGE1_DEFAULT_NAME}"`
-RKT_STAGE1_DEFAULT_VERSION_LDFLAGS=`RKT_XF main.buildDefaultStage1Version "${RKT_STAGE1_DEFAULT_VERSION}"`
-RKT_STAGE1_DEFAULT_LOCATION_LDFLAGS=`RKT_XF main.buildDefaultStage1ImageLoc "${RKT_STAGE1_DEFAULT_LOCATION}"`
-RKT_STAGE1_DEFAULT_IMAGE_FILENAME_LDFLAGS=`RKT_XF main.buildDefaultStage1ImageInRktDir "${RKT_STAGE1_DEFAULT_IMAGE_FILENAME_IN_RKT_DIRECTORY}"`
-RKT_STAGE1_DEFAULT_IMAGES_DIRECTORY_LDFLAGS=`RKT_XF main.buildDefaultStage1ImagesDir "${RKT_STAGE1_DEFAULT_IMAGES_DIR}"`
-RKT_VERSION_LDFLAGS=`RKT_XF github.com/coreos/rkt/version.Version "${RKT_VERSION}"`
-RKT_FEATURES_LDFLAGS=`RKT_XF main.rktFeatures "${RKT_FEATURES}"`
+RKT_STAGE1_DEFAULT_NAME_LDFLAGS="-X 'main.buildDefaultStage1Name=${RKT_STAGE1_DEFAULT_NAME}'"
+RKT_STAGE1_DEFAULT_VERSION_LDFLAGS="-X 'main.buildDefaultStage1Version=${RKT_STAGE1_DEFAULT_VERSION}'"
+RKT_STAGE1_DEFAULT_LOCATION_LDFLAGS="-X 'main.buildDefaultStage1ImageLoc=${RKT_STAGE1_DEFAULT_LOCATION}'"
+RKT_STAGE1_DEFAULT_IMAGE_FILENAME_LDFLAGS="-X 'main.buildDefaultStage1ImageInRktDir=${RKT_STAGE1_DEFAULT_IMAGE_FILENAME_IN_RKT_DIRECTORY}'"
+RKT_STAGE1_DEFAULT_IMAGES_DIRECTORY_LDFLAGS="-X 'main.buildDefaultStage1ImagesDir=${RKT_STAGE1_DEFAULT_IMAGES_DIR}'"
+RKT_VERSION_LDFLAGS="-X 'github.com/coreos/rkt/version.Version=${RKT_VERSION}'"
+RKT_FEATURES_LDFLAGS="-X 'main.rktFeatures=${RKT_FEATURES}'"
 
 #### SUBSTITUTIONS
 
