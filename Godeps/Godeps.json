@@ -345,6 +345,10 @@
 			"Rev": "2402d76f3d41f928c7902a765dfc872356dd3aad"
 		},
 		{
+			"ImportPath": "github.com/google/btree",
+			"Rev": "f06e229e679911bb31a04e07ac891115822e37c3"
+		},
+		{
 			"ImportPath": "github.com/gorilla/context",
 			"Rev": "50c25fb3b2b3b3cc724e9b6ac75fb44b3bccd0da"
 		},
@@ -378,13 +382,9 @@
 			"Rev": "cccd189d45f7ac3368a0d127efb7f4d08ae0b655"
 		},
 		{
-			"ImportPath": "github.com/petar/GoLLRB/llrb",
-			"Rev": "53be0d36a84c2a886ca057d34b6aa4468df9ccb4"
-		},
-		{
 			"ImportPath": "github.com/peterbourgon/diskv",
-			"Comment": "v1.0.0",
-			"Rev": "f2c8925fb5e0e9614e23499efa68df1924ba6add"
+			"Comment": "v2.0.0",
+			"Rev": "937c5a91d7fb1477fa6d2bb71410b2ae7a0f2143"
 		},
 		{
 			"ImportPath": "github.com/russross/blackfriday",
