@@ -1,6 +1,7 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
 	"GoVersion": "go1.5",
+	"GodepVersion": "v60",
 	"Packages": [
 		"./...",
 		"github.com/appc/spec/actool",
@@ -214,7 +215,8 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/gexpect",
-			"Rev": "0b5620b695de57d5fcea082b9a062157ac60ed73"
+			"Comment": "v0.1.0",
+			"Rev": "ca42424d18c76d0d51a4cccd830d11878e9e5c17"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-iptables/iptables",

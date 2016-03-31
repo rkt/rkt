@@ -71,7 +71,7 @@ func (buf *buffer) ReadRune() (r rune, size int, err error) {
 		if err != nil {
 			return 0, 0, err
 		}
-		if utf8.FullRune(chunk) {
+		if utf8.FullRune(chunk[:n]) {
 			r, rL := utf8.DecodeRune(chunk)
 			if n > rL {
 				buf.PutBack(chunk[rL:n])
@@ -90,7 +90,7 @@ func (buf *buffer) ReadRune() (r rune, size int, err error) {
 		}
 		l = l + fn
 
-		if utf8.FullRune(chunk) {
+		if utf8.FullRune(chunk[:l]) {
 			r, rL := utf8.DecodeRune(chunk)
 			if buf.collect {
 				buf.collection.WriteRune(r)
@@ -331,7 +331,7 @@ func (expect *ExpectSubprocess) Expect(searchString string) (e error) {
 				if i == target {
 					unreadIndex := m + i - offset
 					if len(chunk) > unreadIndex {
-						expect.buf.PutBack(chunk[unreadIndex:])
+						expect.buf.PutBack(chunk[unreadIndex:n])
 					}
 					return nil
 				}
@@ -378,26 +378,25 @@ func (expect *ExpectSubprocess) Interact() {
 }
 
 func (expect *ExpectSubprocess) ReadUntil(delim byte) ([]byte, error) {
-	join := make([]byte, 1, 512)
+	join := make([]byte, 0, 512)
 	chunk := make([]byte, 255)
 
 	for {
-
 		n, err := expect.buf.Read(chunk)
-
-		if err != nil {
-			return join, err
-		}
 
 		for i := 0; i < n; i++ {
 			if chunk[i] == delim {
 				if len(chunk) > i+1 {
-					expect.buf.PutBack(chunk[i+1:])
+					expect.buf.PutBack(chunk[i+1:n])
 				}
 				return join, nil
 			} else {
 				join = append(join, chunk[i])
 			}
+		}
+
+		if err != nil {
+			return join, err
 		}
 	}
 }
@@ -408,10 +407,7 @@ func (expect *ExpectSubprocess) Wait() error {
 
 func (expect *ExpectSubprocess) ReadLine() (string, error) {
 	str, err := expect.ReadUntil('\n')
-	if err != nil {
-		return "", err
-	}
-	return string(str), nil
+	return string(str), err
 }
 
 func _start(expect *ExpectSubprocess) (*ExpectSubprocess, error) {
