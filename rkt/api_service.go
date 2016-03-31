@@ -29,6 +29,7 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/set"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
@@ -190,6 +191,14 @@ func satisfiesPodFilter(pod v1alpha.Pod, manifest schema.PodManifest, filter v1a
 		}
 	}
 
+	// Filter according to the cgroup.
+	if len(filter.Cgroups) > 0 {
+		s := set.NewString(filter.Cgroups...)
+		if !s.Has(pod.Cgroup) {
+			return false
+		}
+	}
+
 	return true
 }
 
@@ -334,6 +343,25 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
 		pod.Pid = int32(pid)
 	}
 
+	if pod.State == v1alpha.PodState_POD_STATE_RUNNING {
+		// Get cgroup for the "name=systemd" controller.
+		pid, err := p.getContainerPID1()
+		if err != nil {
+			return nil, nil, err
+		}
+		cgroup, err := cgroup.GetCgroupPathByPid(pid, "name=systemd")
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// If the stage1 systemd > v226, it will put the PID1 into "init.scope"
+		// implicit scope unit in the root slice.
+		// See https://github.com/coreos/rkt/pull/2331#issuecomment-203540543
+		//
+		// TODO(yifan): Revisit this when using unified cgroup hierarchy.
+		pod.Cgroup = strings.TrimSuffix(cgroup, "/init.scope")
+	}
+
 	pod.Manifest = data
 	pod.Apps = apps
 	pod.Annotations = convertAnnotationsToKeyValue(manifest.Annotations)
@@ -346,6 +374,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 	if err := walkPods(includeMostDirs, func(p *pod) {
 		pod, manifest, err := getBasicPod(p)
 		if err != nil { // Do not return partial pods.
+			stderr.PrintE(fmt.Sprintf("failed to get basic pod information for pod with uuid: %v", p.uuid), err)
 			return
 		}
 
@@ -356,6 +385,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 
 		if request.Detail {
 			if err := fillAppInfo(s.store, p, pod); err != nil { // Do not return partial pods.
+				stderr.PrintE(fmt.Sprintf("failed to fill app information for pod with uuid: %v", p.uuid), err)
 				return
 			}
 		} else {
