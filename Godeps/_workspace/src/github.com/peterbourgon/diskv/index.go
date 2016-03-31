@@ -3,7 +3,7 @@ package diskv
 import (
 	"sync"
 
-	"github.com/petar/GoLLRB/llrb"
+	"github.com/google/btree"
 )
 
 // Index is a generic interface for things that can
@@ -18,85 +18,84 @@ type Index interface {
 // LessFunction is used to initialize an Index of keys in a specific order.
 type LessFunction func(string, string) bool
 
-// llrbString is a custom data type that satisfies the LLRB Less interface,
-// making the strings it wraps sortable by the LLRB package.
-type llrbString struct {
+// btreeString is a custom data type that satisfies the BTree Less interface,
+// making the strings it wraps sortable by the BTree package.
+type btreeString struct {
 	s string
 	l LessFunction
 }
 
-// Less satisfies the llrb.Less interface using the llrbString's LessFunction.
-func (s llrbString) Less(i llrb.Item) bool {
-	return s.l(s.s, i.(llrbString).s)
+// Less satisfies the BTree.Less interface using the btreeString's LessFunction.
+func (s btreeString) Less(i btree.Item) bool {
+	return s.l(s.s, i.(btreeString).s)
 }
 
-// LLRBIndex is an implementation of the Index interface
-// using Petar Maymounkov's LLRB tree.
-type LLRBIndex struct {
+// BTreeIndex is an implementation of the Index interface using google/btree.
+type BTreeIndex struct {
 	sync.RWMutex
 	LessFunction
-	*llrb.LLRB
+	*btree.BTree
 }
 
-// Initialize populates the LLRB tree with data from the keys channel,
-// according to the passed less function. It's destructive to the LLRBIndex.
-func (i *LLRBIndex) Initialize(less LessFunction, keys <-chan string) {
+// Initialize populates the BTree tree with data from the keys channel,
+// according to the passed less function. It's destructive to the BTreeIndex.
+func (i *BTreeIndex) Initialize(less LessFunction, keys <-chan string) {
 	i.Lock()
 	defer i.Unlock()
 	i.LessFunction = less
-	i.LLRB = rebuild(less, keys)
+	i.BTree = rebuild(less, keys)
 }
 
-// Insert inserts the given key (only) into the LLRB tree.
-func (i *LLRBIndex) Insert(key string) {
+// Insert inserts the given key (only) into the BTree tree.
+func (i *BTreeIndex) Insert(key string) {
 	i.Lock()
 	defer i.Unlock()
-	if i.LLRB == nil || i.LessFunction == nil {
+	if i.BTree == nil || i.LessFunction == nil {
 		panic("uninitialized index")
 	}
-	i.LLRB.ReplaceOrInsert(llrbString{s: key, l: i.LessFunction})
+	i.BTree.ReplaceOrInsert(btreeString{s: key, l: i.LessFunction})
 }
 
-// Delete removes the given key (only) from the LLRB tree.
-func (i *LLRBIndex) Delete(key string) {
+// Delete removes the given key (only) from the BTree tree.
+func (i *BTreeIndex) Delete(key string) {
 	i.Lock()
 	defer i.Unlock()
-	if i.LLRB == nil || i.LessFunction == nil {
+	if i.BTree == nil || i.LessFunction == nil {
 		panic("uninitialized index")
 	}
-	i.LLRB.Delete(llrbString{s: key, l: i.LessFunction})
+	i.BTree.Delete(btreeString{s: key, l: i.LessFunction})
 }
 
 // Keys yields a maximum of n keys in order. If the passed 'from' key is empty,
 // Keys will return the first n keys. If the passed 'from' key is non-empty, the
 // first key in the returned slice will be the key that immediately follows the
 // passed key, in key order.
-func (i *LLRBIndex) Keys(from string, n int) []string {
+func (i *BTreeIndex) Keys(from string, n int) []string {
 	i.RLock()
 	defer i.RUnlock()
 
-	if i.LLRB == nil || i.LessFunction == nil {
+	if i.BTree == nil || i.LessFunction == nil {
 		panic("uninitialized index")
 	}
 
-	if i.LLRB.Len() <= 0 {
+	if i.BTree.Len() <= 0 {
 		return []string{}
 	}
 
-	llrbFrom := llrbString{s: from, l: i.LessFunction}
+	btreeFrom := btreeString{s: from, l: i.LessFunction}
 	skipFirst := true
-	if len(from) <= 0 || !i.LLRB.Has(llrbFrom) {
-		// no such key, so start at the top
-		llrbFrom = i.LLRB.Min().(llrbString)
+	if len(from) <= 0 || !i.BTree.Has(btreeFrom) {
+		// no such key, so fabricate an always-smallest item
+		btreeFrom = btreeString{s: "", l: func(string, string) bool { return true }}
 		skipFirst = false
 	}
 
 	keys := []string{}
-	iterator := func(i llrb.Item) bool {
-		keys = append(keys, i.(llrbString).s)
+	iterator := func(i btree.Item) bool {
+		keys = append(keys, i.(btreeString).s)
 		return len(keys) < n
 	}
-	i.LLRB.AscendGreaterOrEqual(llrbFrom, iterator)
+	i.BTree.AscendGreaterOrEqual(btreeFrom, iterator)
 
 	if skipFirst && len(keys) > 0 {
 		keys = keys[1:]
@@ -107,10 +106,10 @@ func (i *LLRBIndex) Keys(from string, n int) []string {
 
 // rebuildIndex does the work of regenerating the index
 // with the given keys.
-func rebuild(less LessFunction, keys <-chan string) *llrb.LLRB {
-	tree := llrb.New()
+func rebuild(less LessFunction, keys <-chan string) *btree.BTree {
+	tree := btree.New(2)
 	for key := range keys {
-		tree.ReplaceOrInsert(llrbString{s: key, l: less})
+		tree.ReplaceOrInsert(btreeString{s: key, l: less})
 	}
 	return tree
 }
