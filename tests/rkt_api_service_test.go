@@ -419,7 +419,7 @@ func TestAPIServiceListInspectImages(t *testing.T) {
 	}
 }
 
-func TestAPIServiceCroup(t *testing.T) {
+func TestAPIServiceCgroup(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
@@ -502,7 +502,7 @@ func TestAPIServiceCroup(t *testing.T) {
 		checkPodDetails(t, ctx, p)
 	}
 
-	// Terminate the pods.
+	// Terminate the pod.
 	if err := child.SendLine("Good bye"); err != nil {
 		t.Fatalf("Failed to send message to the pod: %v", err)
 	}
