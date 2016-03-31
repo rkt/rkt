@@ -82,4 +82,6 @@ Due to a bug in the Linux kernel, using rkt's overlay support on top of an overl
 
 Due to a bug in the Linux kernel, rkt will not work when /var/lib/rkt is on btrfs ([#2175](https://github.com/coreos/rkt/issues/2175)).
 
+Due to a bug in the Linux kernel, using rkt's overlay support in conjunction with SELinux requires a set of patches that are only currently available on some Linux distributions (for example, [CoreOS Linux](https://github.com/coreos/coreos-overlay/tree/master/sys-kernel/coreos-sources/files/4.4)). Work is ongoing to merge this work into the mainline Linux kernel ([#1727](https://github.com/coreos/rkt/issues/1727#issuecomment-173203129)).
+
 Linux 3.18+ is required to successfully garbage collect rkt pods when system services such as udevd are in a slave mount namespace (see [lazy umounts on unlinked files and directories](https://github.com/torvalds/linux/commit/8ed936b) and [#1922](https://github.com/coreos/rkt/issues/1922)).
