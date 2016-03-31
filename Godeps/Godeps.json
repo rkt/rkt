@@ -380,7 +380,8 @@
 		},
 		{
 			"ImportPath": "github.com/peterbourgon/diskv",
-			"Rev": "508f5671a72eeaef05cf8c24abe7fbc1c07faf69"
+			"Comment": "v1.0.0",
+			"Rev": "f2c8925fb5e0e9614e23499efa68df1924ba6add"
 		},
 		{
 			"ImportPath": "github.com/russross/blackfriday",

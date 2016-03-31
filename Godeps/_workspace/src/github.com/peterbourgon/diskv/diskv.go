@@ -56,8 +56,8 @@ type Options struct {
 // Diskv implements the Diskv interface. You shouldn't construct Diskv
 // structures directly; instead, use the New constructor.
 type Diskv struct {
-	sync.RWMutex
 	Options
+	mu        sync.RWMutex
 	cache     map[string][]byte
 	cacheSize uint64
 }
@@ -109,8 +109,8 @@ func (d *Diskv) WriteStream(key string, r io.Reader, sync bool) error {
 		return errEmptyKey
 	}
 
-	d.Lock()
-	defer d.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	return d.writeStreamWithLock(key, r, sync)
 }
@@ -143,6 +143,7 @@ func (d *Diskv) writeStreamWithLock(key string, r io.Reader, sync bool) error {
 	}
 
 	if err := wc.Close(); err != nil {
+		f.Close() // error deliberately ignored
 		return fmt.Errorf("compression close: %s", err)
 	}
 
@@ -180,8 +181,8 @@ func (d *Diskv) Import(srcFilename, dstKey string, move bool) (err error) {
 		return errImportDirectory
 	}
 
-	d.Lock()
-	defer d.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	if err := d.ensurePathWithLock(dstKey); err != nil {
 		return fmt.Errorf("ensure path: %s", err)
@@ -233,8 +234,8 @@ func (d *Diskv) Read(key string) ([]byte, error) {
 // If compression is enabled, ReadStream taps into the io.Reader stream prior
 // to decompression, and caches the compressed data.
 func (d *Diskv) ReadStream(key string, direct bool) (io.ReadCloser, error) {
-	d.RLock()
-	defer d.RUnlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	if val, ok := d.cache[key]; ok {
 		if !direct {
@@ -246,8 +247,8 @@ func (d *Diskv) ReadStream(key string, direct bool) (io.ReadCloser, error) {
 		}
 
 		go func() {
-			d.Lock()
-			defer d.Unlock()
+			d.mu.Lock()
+			defer d.mu.Unlock()
 			d.uncacheWithLock(key, uint64(len(val)))
 		}()
 	}
@@ -351,8 +352,8 @@ func (s *siphon) Read(p []byte) (int, error) {
 
 // Erase synchronously erases the given key from the disk and the cache.
 func (d *Diskv) Erase(key string) error {
-	d.Lock()
-	defer d.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	d.bustCacheWithLock(key)
 
@@ -364,14 +365,15 @@ func (d *Diskv) Erase(key string) error {
 	// erase from disk
 	filename := d.completeFilename(key)
 	if s, err := os.Stat(filename); err == nil {
-		if !!s.IsDir() {
+		if s.IsDir() {
 			return errBadKey
 		}
 		if err = os.Remove(filename); err != nil {
-			return fmt.Errorf("remove: %s", err)
+			return err
 		}
 	} else {
-		return fmt.Errorf("stat: %s", err)
+		// Return err as-is so caller can do os.IsNotExist(err).
+		return err
 	}
 
 	// clean up and return
@@ -384,8 +386,8 @@ func (d *Diskv) Erase(key string) error {
 // diskv-related data. Care should be taken to always specify a diskv base
 // directory that is exclusively for diskv data.
 func (d *Diskv) EraseAll() error {
-	d.Lock()
-	defer d.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	d.cache = make(map[string][]byte)
 	d.cacheSize = 0
 	return os.RemoveAll(d.BasePath)
@@ -393,8 +395,8 @@ func (d *Diskv) EraseAll() error {
 
 // Has returns true if the given key exists.
 func (d *Diskv) Has(key string) bool {
-	d.Lock()
-	defer d.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	if _, ok := d.cache[key]; ok {
 		return true
@@ -497,8 +499,8 @@ func (d *Diskv) cacheWithLock(key string, val []byte) error {
 
 // cacheWithoutLock acquires the store's (write) mutex and calls cacheWithLock.
 func (d *Diskv) cacheWithoutLock(key string, val []byte) error {
-	d.Lock()
-	defer d.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	return d.cacheWithLock(key, val)
 }
 
