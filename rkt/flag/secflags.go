@@ -20,12 +20,13 @@ const (
 	insecureTLS
 	insecureOnDisk
 	insecureHTTP
+	insecurePubKey
 
-	insecureAll = (insecureImage | insecureTLS | insecureOnDisk | insecureHTTP)
+	insecureAll = (insecureImage | insecureTLS | insecureOnDisk | insecureHTTP | insecurePubKey)
 )
 
 var (
-	insecureOptions = []string{"none", "image", "tls", "ondisk", "http", "all"}
+	insecureOptions = []string{"none", "image", "tls", "ondisk", "http", "pubkey", "all"}
 
 	insecureOptionsMap = map[string]int{
 		insecureOptions[0]: insecureNone,
@@ -33,7 +34,8 @@ var (
 		insecureOptions[2]: insecureTLS,
 		insecureOptions[3]: insecureOnDisk,
 		insecureOptions[4]: insecureHTTP,
-		insecureOptions[5]: insecureAll,
+		insecureOptions[5]: insecurePubKey,
+		insecureOptions[6]: insecureAll,
 	}
 )
 
@@ -67,6 +69,10 @@ func (sf *SecFlags) SkipOnDiskCheck() bool {
 
 func (sf *SecFlags) AllowHTTP() bool {
 	return sf.hasFlag(insecureHTTP)
+}
+
+func (sf *SecFlags) ConsiderInsecurePubKeys() bool {
+	return sf.hasFlag(insecurePubKey)
 }
 
 func (sf *SecFlags) SkipAllSecurityChecks() bool {
