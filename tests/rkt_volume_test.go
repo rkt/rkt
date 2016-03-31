@@ -141,3 +141,16 @@ func TestVolumes(t *testing.T) {
 		}
 	}
 }
+
+func TestDockerVolumeSemantics(t *testing.T) {
+	dockerVolImage := patchTestACI("rkt-volume-image.aci", fmt.Sprintf("--mounts=dir1,path=/dir1,readOnly=false"))
+	defer os.Remove(dockerVolImage)
+
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	cmd := fmt.Sprintf(`/bin/sh -c "export FILE=/dir1/file ; %s --debug --insecure-options=image run --inherit-env %s --exec /inspect -- --read-file"`, ctx.Cmd(), dockerVolImage)
+
+	expected := "<<<dir1>>>"
+	runRktAndCheckOutput(t, cmd, expected, false)
+}
