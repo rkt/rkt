@@ -21,12 +21,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/coreos/rkt/pkg/keystore"
 	rktlog "github.com/coreos/rkt/pkg/log"
@@ -240,28 +238,16 @@ func getClient(skipTLSCheck bool) *http.Client {
 		return http.DefaultClient
 	}
 	client := *http.DefaultClient
-	var tr *http.Transport
-	// default transport is hidden behind the RoundTripper
-	// interface, so we can't easily make a copy of it
-	if transport, ok := http.DefaultTransport.(*http.Transport); ok {
-		trCopy := *transport
-		tr = &trCopy
-	} else {
-		// meh, an already outdated copy from golang's
-		// net/http DefaultTransport defintion, without the
-		// ExpectContinueTimeout field set, because it exists
-		// only in go1.6
-		tr = &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).Dial,
-			TLSHandshakeTimeout: 10 * time.Second,
-		}
+	// Default transport is hidden behind the RoundTripper
+	// interface, so we can't easily make a copy of it. If this
+	// ever panics, we will have to adapt.
+	realTransport := http.DefaultTransport.(*http.Transport)
+	tr := *realTransport
+	if tr.TLSClientConfig == nil {
+		tr.TLSClientConfig = &tls.Config{}
 	}
-	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	client.Transport = tr
+	tr.TLSClientConfig.InsecureSkipVerify = true
+	client.Transport = &tr
 	return &client
 }
 
