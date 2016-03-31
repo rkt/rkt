@@ -148,6 +148,7 @@
 		},
 		{
 			"ImportPath": "github.com/appc/goaci/proj2aci",
+			"Comment": "v0.1.0",
 			"Rev": "ba7b591f930783c0ab75f5bbfd6ff65c7bd011bf"
 		},
 		{
