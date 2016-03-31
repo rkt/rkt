@@ -170,7 +170,7 @@ Syntax:
  In the following example, we create an empty volume for app1's `/var/data`:
 
  ```
- # rkt run --volume data,kind=empty,mode=0700,UID=0,GID=0
+ # rkt run --volume data,kind=empty,mode=0700,uid=0,gid=0
  ```
 
 ### Mounting Volumes without Mount Points
