@@ -24,15 +24,16 @@ import (
 	"github.com/coreos/rkt/tests/testutils"
 )
 
-const delta = 3 * time.Second
+const delta = 4 * time.Second
+const precision = 2 * time.Second
 
-// compareTime checks if a and b are roughly equal (1s precision)
+// compareTime checks if a and b are roughly equal
 func compareTime(a time.Time, b time.Time) bool {
 	diff := a.Sub(b)
 	if diff < 0 {
 		diff = -diff
 	}
-	return diff < time.Second
+	return diff < precision
 }
 
 func TestRktList(t *testing.T) {
@@ -174,9 +175,9 @@ func TestRktListCreatedStarted(t *testing.T) {
 
 	creation, start := getCreationStartTime(t, ctx, imageID)
 	if !compareTime(expectPrepare, creation) {
-		t.Fatalf("incorrect creation time returned. Got: %q Expect: %q (1s precision)", creation, expectPrepare)
+		t.Fatalf("rkt list returned an incorrect creation time. Got: %q Expect: %q", creation, expectPrepare)
 	}
 	if !compareTime(expectRun, start) {
-		t.Fatalf("incorrect creation time returned. Got: %q Expect: %q (1s precision)", start, expectRun)
+		t.Fatalf("rkt list returned an incorrect start time. Got: %q Expect: %q", start, expectRun)
 	}
 }
