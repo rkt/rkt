@@ -467,7 +467,7 @@ func TestAPIServiceCgroup(t *testing.T) {
 		}
 	}()
 
-	testutils.WaitOrTimeout(t, time.Second*10, done)
+	testutils.WaitOrTimeout(t, time.Second*30, done)
 
 	var cgroups []string
 
