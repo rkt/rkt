@@ -50,7 +50,10 @@ func TestServiceFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	opts := "-- --print-msg=HelloWorld --sleep=1000"
+	// we need to add --silent-sigterm so inspect terminates correctly and the
+	// transient service exits successfully so it disappears from the list of
+	// units
+	opts := "-- --silent-sigterm --print-msg=HelloWorld --sleep=1000"
 
 	cmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false --set-env=MESSAGE_LOOP=1000 %s %s", ctx.Cmd(), image, opts)
 	props := []sd_dbus.Property{
