@@ -18,83 +18,88 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/appc/cni/pkg/invoke",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/ip",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/ipam",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/ns",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/skel",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/pkg/types",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
+		},
+		{
+			"ImportPath": "github.com/appc/cni/pkg/utils",
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/ipam/dhcp",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local/backend",
-			"Comment": "v0.1.0-84-gb7ff8ab158bd",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local/backend/disk",
-			"Comment": "v0.1.0-84-gb7ff8ab158bd",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/bridge",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/ipvlan",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/macvlan",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/main/ptp",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/meta/flannel",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/meta/tuning",
-			"Comment": "v0.1.0-84-gb7ff8ab",
-			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
+			"Comment": "v0.2.0-rc0",
+			"Rev": "0046767be795f629180e0713b71822b731531997"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",

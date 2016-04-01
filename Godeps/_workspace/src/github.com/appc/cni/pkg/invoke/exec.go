@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/appc/cni/pkg/types"
 )
@@ -58,10 +57,6 @@ func ExecPluginWithoutResult(pluginPath string, netconf []byte, args CNIArgs) er
 }
 
 func execPlugin(pluginPath string, netconf []byte, args CNIArgs) ([]byte, error) {
-	if pluginPath == "" {
-		return nil, fmt.Errorf("could not find %q plugin", filepath.Base(pluginPath))
-	}
-
 	stdout := &bytes.Buffer{}
 
 	c := exec.Cmd{
