@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/coreos/go-tspi/attestation"
-	"github.com/coreos/go-tspi/tspi"
+	"github.com/coreos/go-tspi/tspiconst"
+	"github.com/coreos/go-tspi/verification"
 )
 
 // TPMClient represents a connection to a system running a daemon providing
@@ -35,8 +35,17 @@ type TPMClient struct {
 	timeout time.Duration
 }
 
+const (
+	GetEKCertURL    = "/v1/getEkcert"
+	ExtendURL       = "/v1/extend"
+	QuoteURL        = "/v1/quote"
+	GenerateAikURL  = "/v1/generateAik"
+	GenerateKeyURL  = "/v1/generateKey"
+	AikChallengeURL = "/v1/aikChallenge"
+)
+
 func (client *TPMClient) get(endpoint string) (*http.Response, error) {
-	url := fmt.Sprintf("http://%s/%s", client.host, endpoint)
+	url := fmt.Sprintf("http://%s%s", client.host, endpoint)
 	httpClient := &http.Client{
 		Timeout: client.timeout,
 	}
@@ -45,7 +54,7 @@ func (client *TPMClient) get(endpoint string) (*http.Response, error) {
 }
 
 func (client *TPMClient) post(endpoint string, data io.Reader) (*http.Response, error) {
-	url := fmt.Sprintf("http://%s/%s", client.host, endpoint)
+	url := fmt.Sprintf("http://%s%s", client.host, endpoint)
 	httpClient := &http.Client{
 		Timeout: client.timeout,
 	}
@@ -53,7 +62,7 @@ func (client *TPMClient) post(endpoint string, data io.Reader) (*http.Response, 
 	return resp, err
 }
 
-type ekcertResponse struct {
+type EkcertResponse struct {
 	EKCert []byte
 }
 
@@ -61,9 +70,9 @@ type ekcertResponse struct {
 // is an X509 certificate containing the public half of the Endorsement Key
 // and a signature chain chaining back to a vendor-issued signing certificate.
 func (client *TPMClient) GetEKCert() (ekcert []byte, err error) {
-	var ekcertData ekcertResponse
+	var ekcertData EkcertResponse
 
-	ekresp, err := client.get("v1/getEkcert")
+	ekresp, err := client.get(GetEKCertURL)
 	if err != nil {
 		return nil, fmt.Errorf("Can't obtain ekcert: %s", err)
 	}
@@ -81,7 +90,7 @@ func (client *TPMClient) GetEKCert() (ekcert []byte, err error) {
 	return ekcertData.EKCert, nil
 }
 
-type aikResponse struct {
+type AikResponse struct {
 	AIKBlob []byte
 	AIKPub  []byte
 }
@@ -90,9 +99,9 @@ type aikResponse struct {
 // It returns an unencrypted copy of the public half of the AIK, along with
 // a TSPI key blob encrypted by the TPM.
 func (client *TPMClient) GenerateAIK() (aikpub []byte, aikblob []byte, err error) {
-	var aikData aikResponse
+	var aikData AikResponse
 
-	aikresp, err := client.post("v1/generateAik", nil)
+	aikresp, err := client.post(GenerateAikURL, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Can't generate AIK: %s", err)
 	}
@@ -113,13 +122,54 @@ func (client *TPMClient) GenerateAIK() (aikpub []byte, aikblob []byte, err error
 	return aikpub, aikblob, nil
 }
 
-type challengeData struct {
+type KeyData struct {
+	KeyFlags int
+}
+
+type KeyResponse struct {
+	KeyBlob []byte
+	KeyPub  []byte
+}
+
+// GenerateKey requests that the TPM generate a new keypair
+func (client *TPMClient) GenerateKey(flags int) (keypub []byte, keyblob []byte, err error) {
+	var keyData KeyData
+	var keyResponse KeyResponse
+
+	keyData.KeyFlags = flags
+	request, err := json.Marshal(keyData)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Can't construct request JSON: %s", err)
+	}
+
+	keyresp, err := client.post(GenerateKeyURL, bytes.NewBuffer(request))
+	if err != nil {
+		return nil, nil, fmt.Errorf("Can't generate key: %s", err)
+	}
+	defer keyresp.Body.Close()
+	body, err := ioutil.ReadAll(keyresp.Body)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Can't read key response: %s", err)
+	}
+
+	err = json.Unmarshal(body, &keyResponse)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Can't parse key response: %s (%s)", err, body)
+	}
+
+	keypub = keyResponse.KeyPub
+	keyblob = keyResponse.KeyBlob
+
+	return keypub, keyblob, nil
+}
+
+type ChallengeData struct {
 	AIK     []byte
 	Asymenc []byte
 	Symenc  []byte
 }
 
-type challengeResponse struct {
+type ChallengeResponse struct {
 	Response []byte
 }
 
@@ -130,8 +180,8 @@ type challengeResponse struct {
 // provides the AES key used to encrypt symenc. Decrypting symenc provides
 // the original secret, which is then returned.
 func (client *TPMClient) ValidateAIK(aikblob []byte, asymenc []byte, symenc []byte) (secret []byte, err error) {
-	var challenge challengeData
-	var response challengeResponse
+	var challenge ChallengeData
+	var response ChallengeResponse
 
 	challenge.AIK = aikblob
 	challenge.Asymenc = asymenc
@@ -141,7 +191,7 @@ func (client *TPMClient) ValidateAIK(aikblob []byte, asymenc []byte, symenc []by
 	if err != nil {
 		return nil, fmt.Errorf("Can't construct challenge JSON: %s", err)
 	}
-	chalresp, err := client.post("v1/aikChallenge", bytes.NewBuffer(request))
+	chalresp, err := client.post(AikChallengeURL, bytes.NewBuffer(request))
 	if err != nil {
 		return nil, fmt.Errorf("Can't perform AIK challenge: %s", err)
 	}
@@ -158,7 +208,7 @@ func (client *TPMClient) ValidateAIK(aikblob []byte, asymenc []byte, symenc []by
 	return response.Response, nil
 }
 
-type extendInput struct {
+type ExtendInput struct {
 	Pcr       int
 	Eventtype int
 	Data      []byte
@@ -170,7 +220,7 @@ type extendInput struct {
 // event is not nil, data and event will be hashed to generate the extension
 // value. Event will then be stored in the TPM event log.
 func (client *TPMClient) Extend(pcr int, eventtype int, data []byte, event string) error {
-	var extendData extendInput
+	var extendData ExtendInput
 
 	extendData.Pcr = pcr
 	extendData.Eventtype = eventtype
@@ -181,7 +231,7 @@ func (client *TPMClient) Extend(pcr int, eventtype int, data []byte, event strin
 	if err != nil {
 		return fmt.Errorf("Can't construct extension JSON: %s", err)
 	}
-	chalresp, err := client.post("v1/extend", bytes.NewBuffer(request))
+	chalresp, err := client.post(ExtendURL, bytes.NewBuffer(request))
 	if err != nil {
 		return fmt.Errorf("Can't perform PCR extension: %s", err)
 	}
@@ -190,25 +240,25 @@ func (client *TPMClient) Extend(pcr int, eventtype int, data []byte, event strin
 	return nil
 }
 
-type quoteData struct {
+type QuoteData struct {
 	AIK   []byte
 	PCRs  []int
 	Nonce []byte
 }
 
-type quoteResponse struct {
+type QuoteResponse struct {
 	Data       []byte
 	Validation []byte
 	PCRValues  [][]byte
-	Events     []tspi.Log
+	Events     []tspiconst.Log
 }
 
 // GetQuote obtains a PCR quote from the TPM. It takes the aikpub Tspi Key, the
 // encrypted AIK blob and a list of PCRs as arguments. The response will
 // contain an array of PCR values, an array of log entries and any error.
-func (client *TPMClient) GetQuote(aikpub []byte, aikblob []byte, pcrs []int) (pcrvals [][]byte, log []tspi.Log, err error) {
-	var quoteRequest quoteData
-	var response quoteResponse
+func (client *TPMClient) GetQuote(aikpub []byte, aikblob []byte, pcrs []int) (pcrvals [][]byte, log []tspiconst.Log, err error) {
+	var quoteRequest QuoteData
+	var response QuoteResponse
 
 	nonce := make([]byte, 20)
 	_, err = rand.Read(nonce)
@@ -224,7 +274,7 @@ func (client *TPMClient) GetQuote(aikpub []byte, aikblob []byte, pcrs []int) (pc
 	if err != nil {
 		return nil, nil, fmt.Errorf("Can't construct quote request JSON: %s", err)
 	}
-	chalresp, err := client.post("v1/quote", bytes.NewBuffer(request))
+	chalresp, err := client.post(QuoteURL, bytes.NewBuffer(request))
 	if err != nil {
 		return nil, nil, fmt.Errorf("Can't perform obtain quote: %s", err)
 	}
@@ -239,9 +289,9 @@ func (client *TPMClient) GetQuote(aikpub []byte, aikblob []byte, pcrs []int) (pc
 		return nil, nil, fmt.Errorf("Can't parse quote response: %s", err)
 	}
 
-	aikmod := tspi.ModulusFromBlob(aikpub)
+	aikmod := aikpub[28:]
 
-	err = attestation.QuoteVerify(response.Data, response.Validation, aikmod, response.PCRValues, nonce)
+	err = verification.QuoteVerify(response.Data, response.Validation, aikmod, response.PCRValues, nonce)
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("Can't verify quote: %s", err)

@@ -58,12 +58,12 @@
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local/backend",
-			"Comment": "v0.1.0-84-gb7ff8ab",
+			"Comment": "v0.1.0-84-gb7ff8ab158bd",
 			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
 		},
 		{
 			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local/backend/disk",
-			"Comment": "v0.1.0-84-gb7ff8ab",
+			"Comment": "v0.1.0-84-gb7ff8ab158bd",
 			"Rev": "b7ff8ab158bd2fbc700d0fe6e0a58712970fabc0"
 		},
 		{
@@ -248,16 +248,19 @@
 			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
 		},
 		{
-			"ImportPath": "github.com/coreos/go-tspi/attestation",
-			"Rev": "8d98d77f9fc5e3a93227cbcde7abb8bdf1a29869"
-		},
-		{
 			"ImportPath": "github.com/coreos/go-tspi/tpmclient",
-			"Rev": "8d98d77f9fc5e3a93227cbcde7abb8bdf1a29869"
+			"Comment": "v0.1.1",
+			"Rev": "03955c59fff97f9e38e7e32c68ac4db21a2aea2b"
 		},
 		{
-			"ImportPath": "github.com/coreos/go-tspi/tspi",
-			"Rev": "8d98d77f9fc5e3a93227cbcde7abb8bdf1a29869"
+			"ImportPath": "github.com/coreos/go-tspi/tspiconst",
+			"Comment": "v0.1.1",
+			"Rev": "03955c59fff97f9e38e7e32c68ac4db21a2aea2b"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-tspi/verification",
+			"Comment": "v0.1.1",
+			"Rev": "03955c59fff97f9e38e7e32c68ac4db21a2aea2b"
 		},
 		{
 			"ImportPath": "github.com/coreos/ioprogress",
@@ -337,7 +340,7 @@
 		},
 		{
 			"ImportPath": "github.com/godbus/dbus/introspect",
-			"Comment": "v3-6-ga1b8ba5",
+			"Comment": "v3-6-ga1b8ba5163b7",
 			"Rev": "a1b8ba5163b7f041b22761461eabd02b70d1f824"
 		},
 		{
