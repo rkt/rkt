@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package attestation
+package verification
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/coreos/go-tspi/tspi"
+	"github.com/coreos/go-tspi/tspiconst"
 )
 
 func pad(plaintext []byte, bsize int) ([]byte, error) {
@@ -46,14 +46,14 @@ func pad(plaintext []byte, bsize int) ([]byte, error) {
 	return plaintext, nil
 }
 
-// GenerateChallenge takes a TSPI context, a copy of the EK certificate, the
-// public half of the AIK to be challenged and a secret. It then
-// symmetrically encrypts the secret with a randomly generated AES key and
-// Asymmetrically encrypts the AES key with the public half of the EK. These
-// can then be provided to the TPM in order to ensure that the AIK is under
-// the control of the TPM. It returns the asymmetrically and symmetrically
-// encrypted data, along with any error.
-func GenerateChallenge(context *tspi.Context, ekcert []byte, aikpub []byte, secret []byte) (asymenc []byte, symenc []byte, err error) {
+// GenerateChallenge takes a copy of the EK certificate, the public half of
+// the AIK to be challenged and a secret. It then symmetrically encrypts the
+// secret with a randomly generated AES key and Asymmetrically encrypts the
+// AES key with the public half of the EK. These can then be provided to the
+// TPM in order to ensure that the AIK is under the control of the TPM. It
+// returns the asymmetrically and symmetrically encrypted data, along with
+// any error.
+func GenerateChallenge(ekcert []byte, aikpub []byte, secret []byte) (asymenc []byte, symenc []byte, err error) {
 	aeskey := make([]byte, 16)
 	iv := make([]byte, 16)
 
@@ -99,15 +99,15 @@ func GenerateChallenge(context *tspi.Context, ekcert []byte, aikpub []byte, secr
 	if err != nil {
 		return nil, nil, err
 	}
-	err = binary.Write(symheader, binary.BigEndian, (uint32)(tspi.TPM_ALG_AES))
+	err = binary.Write(symheader, binary.BigEndian, (uint32)(tspiconst.TPM_ALG_AES))
 	if err != nil {
 		return nil, nil, err
 	}
-	err = binary.Write(symheader, binary.BigEndian, (uint16)(tspi.TPM_ES_SYM_CBC_PKCS5PAD))
+	err = binary.Write(symheader, binary.BigEndian, (uint16)(tspiconst.TPM_ES_SYM_CBC_PKCS5PAD))
 	if err != nil {
 		return nil, nil, err
 	}
-	err = binary.Write(symheader, binary.BigEndian, (uint16)(tspi.TPM_SS_NONE))
+	err = binary.Write(symheader, binary.BigEndian, (uint16)(tspiconst.TPM_SS_NONE))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -134,111 +134,6 @@ func GenerateChallenge(context *tspi.Context, ekcert []byte, aikpub []byte, secr
 	symenc = header
 
 	return asymenc, symenc, nil
-}
-
-// AIKChallengeResponse takes the output from GenerateChallenge along with the
-// encrypted AIK key blob. The TPM then decrypts the asymmetric challenge with
-// its EK in order to obtain the AES key, and uses the AES key to decrypt the
-// symmetrically encrypted data. It verifies that this data blob corresponds
-// to the AIK it was given, and if so hands back the secret contained within
-// the symmetrically encrypted data.
-func AIKChallengeResponse(context *tspi.Context, aikblob []byte, asymchallenge []byte, symchallenge []byte) (secret []byte, err error) {
-	var wellKnown [20]byte
-
-	srk, err := context.LoadKeyByUUID(tspi.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
-	if err != nil {
-		return nil, err
-	}
-	srkpolicy, err := srk.GetPolicy(tspi.TSS_POLICY_USAGE)
-	if err != nil {
-		return nil, err
-	}
-	srkpolicy.SetSecret(tspi.TSS_SECRET_MODE_SHA1, wellKnown[:])
-
-	tpm := context.GetTPM()
-	tpmpolicy, err := context.CreatePolicy(tspi.TSS_POLICY_USAGE)
-	if err != nil {
-		return nil, err
-	}
-	tpm.AssignPolicy(tpmpolicy)
-	tpmpolicy.SetSecret(tspi.TSS_SECRET_MODE_SHA1, wellKnown[:])
-
-	aik, err := context.LoadKeyByBlob(srk, aikblob)
-	if err != nil {
-		return nil, err
-	}
-	secret, err = tpm.ActivateIdentity(aik, asymchallenge, symchallenge)
-
-	return secret, err
-}
-
-// CreateAIK asks the TPM to generate an Attestation Identity Key. It returns
-// the unencrypted public half of the AIK along with an encrypted blob
-// containing both halves of the key, and any error.
-func CreateAIK(context *tspi.Context) ([]byte, []byte, error) {
-	var wellKnown [20]byte
-	n := make([]byte, 2048/8)
-	for i := 0; i < 2048/8; i++ {
-		n[i] = 0xff
-	}
-
-	srk, err := context.LoadKeyByUUID(tspi.TSS_PS_TYPE_SYSTEM, tspi.TSS_UUID_SRK)
-	if err != nil {
-		return nil, nil, err
-	}
-	keypolicy, err := srk.GetPolicy(tspi.TSS_POLICY_USAGE)
-	if err != nil {
-		return nil, nil, err
-	}
-	err = keypolicy.SetSecret(tspi.TSS_SECRET_MODE_SHA1, wellKnown[:])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	tpm := context.GetTPM()
-	tpmpolicy, err := tpm.GetPolicy(tspi.TSS_POLICY_USAGE)
-	if err != nil {
-		return nil, nil, err
-	}
-	err = tpm.AssignPolicy(tpmpolicy)
-	if err != nil {
-		return nil, nil, err
-	}
-	err = tpmpolicy.SetSecret(tspi.TSS_SECRET_MODE_SHA1, wellKnown[:])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pcakey, err := context.CreateKey(tspi.TSS_KEY_TYPE_LEGACY | tspi.TSS_KEY_SIZE_2048)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = pcakey.SetModulus(n)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	aik, err := context.CreateKey(tspi.TSS_KEY_TYPE_IDENTITY | tspi.TSS_KEY_SIZE_2048)
-	if err != nil {
-		return nil, nil, err
-	}
-	_, err = tpm.CollateIdentityRequest(srk, pcakey, aik)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pubkey, err := aik.GetPubKeyBlob()
-	if err != nil {
-		return nil, nil, err
-	}
-	blob, err := aik.GetKeyBlob()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	_, err = aik.GetModulus()
-	return pubkey, blob, nil
 }
 
 // VerifyEKCert verifies that the provided EK certificate is signed by a
@@ -675,69 +570,6 @@ BwIDAQAB
 	return fmt.Errorf("No matching certificate found")
 }
 
-// GetEKCert reads the Endorsement Key certificate from the TPM's NVRAM and
-// returns it, along with any error generated.
-func GetEKCert(context *tspi.Context) (ekcert []byte, err error) {
-	var wellKnown [20]byte
-	tpm := context.GetTPM()
-	nv, err := context.CreateNV()
-	if err != nil {
-		return nil, err
-	}
-	policy, err := tpm.GetPolicy(tspi.TSS_POLICY_USAGE)
-	if err != nil {
-		return nil, err
-	}
-	policy.SetSecret(tspi.TSS_SECRET_MODE_SHA1, wellKnown[:])
-	nv.SetIndex(0x1000f000)
-	nv.AssignPolicy(policy)
-	data, err := nv.ReadValue(0, 5)
-	if err != nil {
-		return nil, err
-	}
-
-	tag := (uint)((uint)(data[0])<<8 | (uint)(data[1]))
-	if tag != 0x1001 {
-		return nil, fmt.Errorf("Invalid tag: %x", tag)
-	}
-
-	if data[2] != 0 {
-		return nil, fmt.Errorf("Invalid certificate")
-	}
-
-	ekbuflen := (uint)(uint(data[3])<<8 | (uint)(data[4]))
-	offset := (uint)(5)
-
-	data, err = nv.ReadValue(offset, 2)
-
-	tag = (uint)((uint)(data[0])<<8 | (uint)(data[1]))
-	if tag == 0x1002 {
-		offset += 2
-		ekbuflen -= 2
-	} else if data[0] != 0x30 {
-		return nil, fmt.Errorf("Invalid header: %x\n", tag)
-	}
-
-	ekoffset := (uint)(0)
-	var ekbuf []byte
-	for ekoffset < ekbuflen {
-		length := (uint)(ekbuflen - ekoffset)
-		if length > 128 {
-			length = 128
-		}
-		data, err = nv.ReadValue(offset, length)
-		if err != nil {
-			return nil, err
-		}
-
-		ekbuf = append(ekbuf, data...)
-		offset += length
-		ekoffset += length
-	}
-
-	return ekbuf, nil
-}
-
 // QuoteVerify verifies that a quote was genuinely provided by the TPM. It
 // takes the quote data, quote validation blob, public half of the AIK,
 // current PCR values and the nonce used in the original quote request. It
@@ -776,6 +608,46 @@ func QuoteVerify(data []byte, validation []byte, aikpub []byte, pcrvalues [][]by
 
 	if bytes.Equal(pcrCompositeHash[:], pcrHash) == false {
 		return fmt.Errorf("PCR values don't match")
+	}
+
+	return nil
+}
+
+// KeyVerify verifies that a key certification request was genuinely
+// provided by the TPM. It takes the certification data, certification
+// validation blob, the public half of the AIK, the public half of the key
+// to be certified and the nonce used in the original quote request. It then
+// verifies that the validation block is a valid signature for the
+// certification data, that the certification data matches the certified key
+// and that the secrets are the same (in order to avoid replay attacks). It
+// returns an error if any stage of the validation fails.
+func KeyVerify(data []byte, validation []byte, aikpub []byte, keypub []byte, secret []byte) error {
+	n := big.NewInt(0)
+	n.SetBytes(aikpub)
+	e := 65537
+
+	pKey := rsa.PublicKey{N: n, E: int(e)}
+
+	dataHash := sha1.Sum(data[:])
+
+	err := rsa.VerifyPKCS1v15(&pKey, crypto.SHA1, dataHash[:], validation)
+	if err != nil {
+		return err
+	}
+
+	keyHash := data[43:63]
+	nonceHash := data[63:83]
+
+	secretHash := sha1.Sum(secret[:])
+
+	if bytes.Equal(secretHash[:], nonceHash) == false {
+		return fmt.Errorf("Secret doesn't match")
+	}
+
+	certHash := sha1.Sum(keypub[:])
+
+	if bytes.Equal(certHash[:], keyHash) == false {
+		return fmt.Errorf("Key doesn't match")
 	}
 
 	return nil
