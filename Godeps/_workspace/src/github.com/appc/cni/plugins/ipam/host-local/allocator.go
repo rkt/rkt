@@ -104,7 +104,7 @@ func (a *IPAllocator) Get(id string) (*types.IPConfig, error) {
 
 		if reserved {
 			return &types.IPConfig{
-				IP:      net.IPNet{requestedIP, a.conf.Subnet.Mask},
+				IP:      net.IPNet{IP: requestedIP, Mask: a.conf.Subnet.Mask},
 				Gateway: gw,
 				Routes:  a.conf.Routes,
 			}, nil
@@ -124,7 +124,7 @@ func (a *IPAllocator) Get(id string) (*types.IPConfig, error) {
 		}
 		if reserved {
 			return &types.IPConfig{
-				IP:      net.IPNet{cur, a.conf.Subnet.Mask},
+				IP:      net.IPNet{IP: cur, Mask: a.conf.Subnet.Mask},
 				Gateway: gw,
 				Routes:  a.conf.Routes,
 			}, nil

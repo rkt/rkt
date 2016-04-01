@@ -37,13 +37,6 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 	defer store.Close()
 
-	ipamArgs := IPAMArgs{}
-	err = types.LoadArgs(args.Args, &ipamArgs)
-	if err != nil {
-		return err
-	}
-	ipamConf.Args = &ipamArgs
-
 	allocator, err := NewIPAllocator(ipamConf, store)
 	if err != nil {
 		return err

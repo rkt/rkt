@@ -29,7 +29,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/appc/cni/pkg/ipam"
+	"github.com/appc/cni/pkg/invoke"
 	"github.com/appc/cni/pkg/skel"
 	"github.com/appc/cni/pkg/types"
 )
@@ -155,7 +155,7 @@ func delegateAdd(cid string, netconf map[string]interface{}) error {
 		return err
 	}
 
-	result, err := ipam.ExecAdd(netconf["type"].(string), netconfBytes)
+	result, err := invoke.DelegateAdd(netconf["type"].(string), netconfBytes)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func cmdDel(args *skel.CmdArgs) error {
 		return fmt.Errorf("failed to parse netconf: %v", err)
 	}
 
-	return ipam.ExecDel(n.Type, netconfBytes)
+	return invoke.DelegateDel(n.Type, netconfBytes)
 }
 
 func main() {

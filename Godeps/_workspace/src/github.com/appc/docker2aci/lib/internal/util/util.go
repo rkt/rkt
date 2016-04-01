@@ -19,7 +19,9 @@
 package util
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 
 	"github.com/appc/spec/pkg/acirenderer"
 )
@@ -58,4 +60,24 @@ func IndexOf(list []string, el string) int {
 		}
 	}
 	return -1
+}
+
+// GetTLSClient gets an HTTP client that behaves like the default HTTP
+// client, but optionally skips the TLS certificate verification.
+func GetTLSClient(skipTLSCheck bool) *http.Client {
+	if !skipTLSCheck {
+		return http.DefaultClient
+	}
+	client := *http.DefaultClient
+	// Default transport is hidden behind the RoundTripper
+	// interface, so we can't easily make a copy of it. If this
+	// ever panics, we will have to adapt.
+	realTransport := http.DefaultTransport.(*http.Transport)
+	tr := *realTransport
+	if tr.TLSClientConfig == nil {
+		tr.TLSClientConfig = &tls.Config{}
+	}
+	tr.TLSClientConfig.InsecureSkipVerify = true
+	client.Transport = &tr
+	return &client
 }

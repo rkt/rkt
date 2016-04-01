@@ -15,23 +15,33 @@
 package invoke
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
-func FindInPath(plugin string, path []string) string {
-	for _, p := range path {
-		fullname := filepath.Join(p, plugin)
-		if fi, err := os.Stat(fullname); err == nil && fi.Mode().IsRegular() {
-			return fullname
+// FindInPath returns the full path of the plugin by searching in the provided path
+func FindInPath(plugin string, paths []string) (string, error) {
+	if plugin == "" {
+		return "", fmt.Errorf("no plugin name provided")
+	}
+
+	if len(paths) == 0 {
+		return "", fmt.Errorf("no paths provided")
+	}
+
+	var fullpath string
+	for _, path := range paths {
+		full := filepath.Join(path, plugin)
+		if fi, err := os.Stat(full); err == nil && fi.Mode().IsRegular() {
+			fullpath = full
+			break
 		}
 	}
-	return ""
-}
 
-// Find returns the full path of the plugin by searching in CNI_PATH
-func Find(plugin string) string {
-	paths := strings.Split(os.Getenv("CNI_PATH"), ":")
-	return FindInPath(plugin, paths)
+	if fullpath == "" {
+		return "", fmt.Errorf("failed to find plugin %q in path %s", plugin, paths)
+	}
+
+	return fullpath, nil
 }

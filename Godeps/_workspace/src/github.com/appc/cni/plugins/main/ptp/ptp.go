@@ -15,7 +15,6 @@
 package main
 
 import (
-	"crypto/sha512"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,6 +29,7 @@ import (
 	"github.com/appc/cni/pkg/ns"
 	"github.com/appc/cni/pkg/skel"
 	"github.com/appc/cni/pkg/types"
+	"github.com/appc/cni/pkg/utils"
 )
 
 func init() {
@@ -178,9 +178,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 	}
 
 	if conf.IPMasq {
-		h := sha512.Sum512([]byte(args.ContainerID))
-		chain := fmt.Sprintf("CNI-%s-%x", conf.Name, h[:8])
-		if err = ip.SetupIPMasq(&result.IP4.IP, chain); err != nil {
+		chain := utils.FormatChainName(conf.Name, args.ContainerID)
+		comment := utils.FormatComment(conf.Name, args.ContainerID)
+		if err = ip.SetupIPMasq(&result.IP4.IP, chain, comment); err != nil {
 			return err
 		}
 	}
@@ -206,9 +206,9 @@ func cmdDel(args *skel.CmdArgs) error {
 	}
 
 	if conf.IPMasq {
-		h := sha512.Sum512([]byte(args.ContainerID))
-		chain := fmt.Sprintf("CNI-%s-%x", conf.Name, h[:8])
-		if err = ip.TeardownIPMasq(ipn, chain); err != nil {
+		chain := utils.FormatChainName(conf.Name, args.ContainerID)
+		comment := utils.FormatComment(conf.Name, args.ContainerID)
+		if err = ip.TeardownIPMasq(ipn, chain, comment); err != nil {
 			return err
 		}
 	}

@@ -20,7 +20,6 @@
 package repository
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"path"
@@ -28,6 +27,7 @@ import (
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal/docker"
 	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/spec/schema"
 )
 
@@ -137,8 +137,7 @@ func (rb *RepositoryBackend) supportsRegistry(indexURL string, version registryV
 
 		rb.setBasicAuth(req)
 
-		tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: rb.insecure}}
-		client := &http.Client{Transport: tr}
+		client := util.GetTLSClient(rb.insecure)
 		res, err = client.Do(req)
 		return
 	}

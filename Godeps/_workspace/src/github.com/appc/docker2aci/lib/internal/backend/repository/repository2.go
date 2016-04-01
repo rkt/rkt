@@ -15,7 +15,6 @@
 package repository
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +31,7 @@ import (
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/ioprogress"
@@ -315,8 +315,7 @@ func (rb *RepositoryBackend) makeRequest(req *http.Request, repo string) (*http.
 		}
 	}
 
-	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: rb.insecure}}
-	client := &http.Client{Transport: tr}
+	client := util.GetTLSClient(rb.insecure)
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err

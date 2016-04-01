@@ -42,6 +42,7 @@ const (
 	defaultBrName     = "kvm-cni0"
 	defaultSubnetFile = "/run/flannel/subnet.env"
 	defaultMTU        = 1500
+	masqComment       = "rkt-lkvm masquerading"
 )
 
 type BridgeNetConf struct {
@@ -534,7 +535,7 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 			if err := ip.SetupIPMasq(&net.IPNet{
 				IP:   n.runtime.IP,
 				Mask: net.IPMask(n.runtime.Mask),
-			}, chain); err != nil {
+			}, chain, masqComment); err != nil {
 				return nil, err
 			}
 		}
@@ -591,7 +592,7 @@ func (n *Networking) teardownKvmNets() {
 			err := ip.TeardownIPMasq(&net.IPNet{
 				IP:   an.runtime.IP,
 				Mask: net.IPMask(an.runtime.Mask),
-			}, chain)
+			}, chain, masqComment)
 			if err != nil {
 				stderr.PrintE("error on removing masquerading", err)
 			}
