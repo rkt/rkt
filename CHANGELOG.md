@@ -1,3 +1,31 @@
+## v1.3.0
+
+This release includes a number of new features and bugfixes like the long-awaited propagation of apps' exit status.
+
+#### New features and UX changes
+
+- Propagate exit status from apps inside the pod to rkt ([#2308](https://github.com/coreos/rkt/pull/2308)). Previously, if an app exited with a non-zero exit status, rkt's exit status would still be 0. Now, if an app fails, its exit status will be propagated to the outside. While this was partially implemented in some stage1 flavors since rkt v1.1.0, it now works in the default coreos flavor.
+- Check signatures for stage1 images by default, especially useful when stage1 images are downloaded from the Internet ([#2336](https://github.com/coreos/rkt/pull/2336)).
+ This doesn't affect the following cases:
+  - The stage1 image is already in the store
+  - The stage1 image is in the default directory configured at build time
+  - The stage1 image is the default one and it is in the same directory as the rkt binary
+- Allow downloading of insecure public keys with the `pubkey` insecure option ([#2278](https://github.com/coreos/rkt/pull/2278)).
+- Implement Docker volume semantics ([#2315](https://github.com/coreos/rkt/pull/2315)). Docker volumes are initialized with the files in the image if they exist, unless a host directory is mounted there. Implement that behavior in rkt when it runs a Docker converted image.
+
+#### API service
+
+- Return the cgroup when getting information about running pods and add a new cgroup filter ([#2331](https://github.com/coreos/rkt/pull/2331)).
+
+#### Bug fixes
+
+- Avoid configuring more CPUs than the host has in the kvm flavor ([#2321](https://github.com/coreos/rkt/pull/2321)).
+- Fix a bug where the proxy configuration wasn't forwarded to docker2aci ([docker2aci#147](https://github.com/appc/docker2aci/pull/147)).
+
+#### Notes
+
+- This release drops support for go1.4.
+
 ## v1.2.1
 
 This release fixes a couple of bugs we missed in 1.2.0.

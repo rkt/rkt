@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	manifestOSArchTemplate = `{"acKind":"ImageManifest","acVersion":"0.7.4","name":"IMG_NAME","labels":[{"name":"version","value":"1.2.1"}ARCH_OS],"app":{"exec":["/inspect", "--print-msg=HelloWorld"],"user":"0","group":"0","workingDirectory":"/"}}`
+	manifestOSArchTemplate = `{"acKind":"ImageManifest","acVersion":"0.7.4","name":"IMG_NAME","labels":[{"name":"version","value":"1.3.0"}ARCH_OS],"app":{"exec":["/inspect", "--print-msg=HelloWorld"],"user":"0","group":"0","workingDirectory":"/"}}`
 )
 
 type osArchTest struct {
