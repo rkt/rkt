@@ -14,9 +14,10 @@ contribution. See the [DCO](DCO) file for details.
 
 # Email and Chat
 
-The project has a mailing list and currently uses the general CoreOS IRC channel:
+The project has a mailing list and two discussion channels in IRC:
 - Email: [rkt-dev](https://groups.google.com/forum/#!forum/rkt-dev)
-- IRC: #[coreos](irc://irc.freenode.org:6667/#coreos) IRC channel on freenode.org
+- IRC: #[rkt](irc://irc.freenode.org:6667/#rkt) on freenode.org, for general discussion
+- IRC: #[rkt-dev](irc://irc.freenode.org:6667/#rkt-dev) on freenode.org, for development discussion
 
 Please avoid emailing maintainers found in the MAINTAINERS file directly. They
 are very busy and read the mailing lists.
