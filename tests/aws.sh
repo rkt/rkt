@@ -29,6 +29,7 @@ if [ "$DISTRO" = "all" ] ; then
   gnome-terminal \
 	--tab --command="$SCRIPTPATH/aws.sh fedora-22      $GIT_URL $GIT_BRANCH $FLAVOR" \
 	--tab --command="$SCRIPTPATH/aws.sh fedora-23      $GIT_URL $GIT_BRANCH $FLAVOR" \
+	--tab --command="$SCRIPTPATH/aws.sh fedora-24      $GIT_URL $GIT_BRANCH $FLAVOR" \
 	--tab --command="$SCRIPTPATH/aws.sh fedora-rawhide $GIT_URL $GIT_BRANCH $FLAVOR" \
 	--tab --command="$SCRIPTPATH/aws.sh ubuntu-1604    $GIT_URL $GIT_BRANCH $FLAVOR" \
 	--tab --command="$SCRIPTPATH/aws.sh ubuntu-1510    $GIT_URL $GIT_BRANCH $FLAVOR" \
@@ -60,6 +61,13 @@ elif [ "$DISTRO" = "fedora-23" ] ; then
 
   # Workarounds
   DISABLE_SELINUX=true
+elif [ "$DISTRO" = "fedora-24" ] ; then
+  # Fedora-Cloud-Base-24_Alpha-7.x86_64-eu-central-1-HVM-standard-0
+  AMI=ami-748b6d1b
+  AWS_USER=fedora
+
+  # Workarounds
+  DISABLE_OVERLAY=true
 elif [ "$DISTRO" = "fedora-rawhide" ] ; then
   # Fedora-Cloud-Base-Rawhide-20160321.0.x86_64-eu-central-1-HVM-standard-0
   AMI=ami-69967006
