@@ -28,6 +28,7 @@ import (
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/spf13/cobra"
+	_ "github.com/spf13/cobra/doc"
 )
 
 const (
