@@ -334,7 +334,7 @@ func stage1() int {
 
 	if err = stage1common.WritePpid(os.Getpid()); err != nil {
 		log.Error(err)
-		return 4
+		return 1
 	}
 
 	diag.Printf("chroot to %q", rfs)
@@ -354,7 +354,7 @@ func stage1() int {
 	})
 	if err != nil {
 		log.PrintE(fmt.Sprintf("can't execute %q", args[0]), err)
-		return 7
+		return 1
 	}
 
 	return 0
