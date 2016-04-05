@@ -145,6 +145,14 @@ func checkPod(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod, hasAppStat
 	if podInfo.pid != int(p.Pid) {
 		t.Errorf("Expected %d, saw %d", podInfo.pid, p.Pid)
 	}
+	// The time accuracy returned by 'rkt status' stops at milliseconds.
+	accuracy := time.Millisecond.Nanoseconds()
+	if podInfo.createdAt/accuracy != p.CreatedAt/accuracy {
+		t.Errorf("Expected %d, saw %d", podInfo.createdAt, p.CreatedAt)
+	}
+	if podInfo.startedAt/accuracy != p.StartedAt/accuracy {
+		t.Errorf("Expected %d, saw %d", podInfo.startedAt, p.StartedAt)
+	}
 	checkPodState(t, podInfo.state, p.State)
 	checkPodApps(t, podInfo.apps, p.Apps, hasAppState)
 	checkPodNetworks(t, podInfo.networks, p.Networks)
