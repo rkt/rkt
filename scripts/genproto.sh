@@ -21,7 +21,7 @@ export PATH=${GOPATH}/bin:${PATH}
 trap 'rm -rf "${GOPATH}"' EXIT
 
 # git (sha) version of golang/protobuf
-GO_PROTOBUF_SHA="dda510ac0fd43b39770f22ac6260eb91d377bce3"
+GO_PROTOBUF_SHA="2402d76f3d41f928c7902a765dfc872356dd3aad"
 
 echo "installing golang/protobuf using GOPATH=${GOPATH}"
 go get -u github.com/golang/protobuf/{proto,protoc-gen-go}

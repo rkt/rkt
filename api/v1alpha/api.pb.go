@@ -224,7 +224,7 @@ type Image struct {
 	// Base format of the image, required. This indicates the original format
 	// for the image as nowadays all the image formats will be transformed to
 	// ACI.
-	BaseFormat *ImageFormat `protobuf:"bytes,1,opt,name=base_format,json=baseFormat" json:"base_format,omitempty"`
+	BaseFormat *ImageFormat `protobuf:"bytes,1,opt,name=base_format" json:"base_format,omitempty"`
 	// ID of the image, a string that can be used to uniquely identify the image,
 	// e.g. sha512 hash of the ACIs, required.
 	Id string `protobuf:"bytes,2,opt,name=id" json:"id,omitempty"`
@@ -233,7 +233,7 @@ type Image struct {
 	// Version of the image, e.g. 'latest', '2.0.10', optional.
 	Version string `protobuf:"bytes,4,opt,name=version" json:"version,omitempty"`
 	// Timestamp of when the image is imported, it is the seconds since epoch, optional.
-	ImportTimestamp int64 `protobuf:"varint,5,opt,name=import_timestamp,json=importTimestamp" json:"import_timestamp,omitempty"`
+	ImportTimestamp int64 `protobuf:"varint,5,opt,name=import_timestamp" json:"import_timestamp,omitempty"`
 	// JSON-encoded byte array that represents the image manifest, optional.
 	Manifest []byte `protobuf:"bytes,6,opt,name=manifest,proto3" json:"manifest,omitempty"`
 	// Size is the size in bytes of this image in the store.
@@ -287,7 +287,7 @@ type App struct {
 	State AppState `protobuf:"varint,3,opt,name=state,enum=v1alpha.AppState" json:"state,omitempty"`
 	// Exit code of the app. optional, only valid if it's returned by InspectPod() and
 	// the app has already exited.
-	ExitCode int32 `protobuf:"zigzag32,4,opt,name=exit_code,json=exitCode" json:"exit_code,omitempty"`
+	ExitCode int32 `protobuf:"zigzag32,4,opt,name=exit_code" json:"exit_code,omitempty"`
 	// Annotations for this app.
 	Annotations []*KeyValue `protobuf:"bytes,5,rep,name=annotations" json:"annotations,omitempty"`
 }
@@ -370,7 +370,7 @@ func (m *Pod) GetAnnotations() []*KeyValue {
 
 type KeyValue struct {
 	// Key part of the key-value pair.
-	Key string `protobuf:"bytes,1,opt,name=Key,json=key" json:"Key,omitempty"`
+	Key string `protobuf:"bytes,1,opt,name=Key" json:"Key,omitempty"`
 	// Value part of the key-value pair.
 	Value string `protobuf:"bytes,2,opt,name=value" json:"value,omitempty"`
 }
@@ -388,11 +388,11 @@ type PodFilter struct {
 	// If not empty, the pods that have any of the states will be returned.
 	States []PodState `protobuf:"varint,2,rep,name=states,enum=v1alpha.PodState" json:"states,omitempty"`
 	// If not empty, the pods that all of the apps will be returned.
-	AppNames []string `protobuf:"bytes,3,rep,name=app_names,json=appNames" json:"app_names,omitempty"`
+	AppNames []string `protobuf:"bytes,3,rep,name=app_names" json:"app_names,omitempty"`
 	// If not empty, the pods that have all of the images(in the apps) will be returned
-	ImageIds []string `protobuf:"bytes,4,rep,name=image_ids,json=imageIds" json:"image_ids,omitempty"`
+	ImageIds []string `protobuf:"bytes,4,rep,name=image_ids" json:"image_ids,omitempty"`
 	// If not empty, the pods that are in all of the networks will be returned.
-	NetworkNames []string `protobuf:"bytes,5,rep,name=network_names,json=networkNames" json:"network_names,omitempty"`
+	NetworkNames []string `protobuf:"bytes,5,rep,name=network_names" json:"network_names,omitempty"`
 	// If not empty, the pods that have all of the annotations will be returned.
 	Annotations []*KeyValue `protobuf:"bytes,6,rep,name=annotations" json:"annotations,omitempty"`
 	// If not empty, the pods whose cgroup are listed will be returned.
@@ -421,20 +421,20 @@ type ImageFilter struct {
 	// If not empty, the images that have any of the base names will be returned.
 	// For example, both 'coreos.com/etcd' and 'k8s.io/etcd' will be returned if 'etcd' is included,
 	// however 'k8s.io/etcd-backup' will not be returned.
-	BaseNames []string `protobuf:"bytes,3,rep,name=base_names,json=baseNames" json:"base_names,omitempty"`
+	BaseNames []string `protobuf:"bytes,3,rep,name=base_names" json:"base_names,omitempty"`
 	// If not empty, the images that have any of the keywords in the name will be returned.
 	// For example, both 'kubernetes-etcd', 'etcd:latest' will be returned if 'etcd' is included,
 	Keywords []string `protobuf:"bytes,4,rep,name=keywords" json:"keywords,omitempty"`
 	// If not empty, the images that have all of the labels will be returned.
 	Labels []*KeyValue `protobuf:"bytes,5,rep,name=labels" json:"labels,omitempty"`
 	// If set, the images that are imported after this timestamp will be returned.
-	ImportedAfter int64 `protobuf:"varint,6,opt,name=imported_after,json=importedAfter" json:"imported_after,omitempty"`
+	ImportedAfter int64 `protobuf:"varint,6,opt,name=imported_after" json:"imported_after,omitempty"`
 	// If set, the images that are imported before this timestamp will be returned.
-	ImportedBefore int64 `protobuf:"varint,7,opt,name=imported_before,json=importedBefore" json:"imported_before,omitempty"`
+	ImportedBefore int64 `protobuf:"varint,7,opt,name=imported_before" json:"imported_before,omitempty"`
 	// If not empty, the images that have all of the annotations will be returned.
 	Annotations []*KeyValue `protobuf:"bytes,8,rep,name=annotations" json:"annotations,omitempty"`
 	// If not empty, the images that have any of the exact full names will be returned.
-	FullNames []string `protobuf:"bytes,9,rep,name=full_names,json=fullNames" json:"full_names,omitempty"`
+	FullNames []string `protobuf:"bytes,9,rep,name=full_names" json:"full_names,omitempty"`
 }
 
 func (m *ImageFilter) Reset()                    { *m = ImageFilter{} }
@@ -461,15 +461,15 @@ type GlobalFlags struct {
 	// Data directory.
 	Dir string `protobuf:"bytes,1,opt,name=dir" json:"dir,omitempty"`
 	// System configuration directory.
-	SystemConfigDir string `protobuf:"bytes,2,opt,name=system_config_dir,json=systemConfigDir" json:"system_config_dir,omitempty"`
+	SystemConfigDir string `protobuf:"bytes,2,opt,name=system_config_dir" json:"system_config_dir,omitempty"`
 	// Local configuration directory.
-	LocalConfigDir string `protobuf:"bytes,3,opt,name=local_config_dir,json=localConfigDir" json:"local_config_dir,omitempty"`
+	LocalConfigDir string `protobuf:"bytes,3,opt,name=local_config_dir" json:"local_config_dir,omitempty"`
 	// User configuration directory.
-	UserConfigDir string `protobuf:"bytes,4,opt,name=user_config_dir,json=userConfigDir" json:"user_config_dir,omitempty"`
+	UserConfigDir string `protobuf:"bytes,4,opt,name=user_config_dir" json:"user_config_dir,omitempty"`
 	// Insecure flags configurates what security features to disable.
-	InsecureFlags string `protobuf:"bytes,5,opt,name=insecure_flags,json=insecureFlags" json:"insecure_flags,omitempty"`
+	InsecureFlags string `protobuf:"bytes,5,opt,name=insecure_flags" json:"insecure_flags,omitempty"`
 	// Whether to automatically trust gpg keys fetched from https
-	TrustKeysFromHttps bool `protobuf:"varint,6,opt,name=trust_keys_from_https,json=trustKeysFromHttps" json:"trust_keys_from_https,omitempty"`
+	TrustKeysFromHttps bool `protobuf:"varint,6,opt,name=trust_keys_from_https" json:"trust_keys_from_https,omitempty"`
 }
 
 func (m *GlobalFlags) Reset()                    { *m = GlobalFlags{} }
@@ -480,13 +480,13 @@ func (*GlobalFlags) Descriptor() ([]byte, []int) { return fileDescriptor0, []int
 // Info describes the information of rkt on the machine.
 type Info struct {
 	// Version of rkt, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
-	RktVersion string `protobuf:"bytes,1,opt,name=rkt_version,json=rktVersion" json:"rkt_version,omitempty"`
+	RktVersion string `protobuf:"bytes,1,opt,name=rkt_version" json:"rkt_version,omitempty"`
 	// Version of appc, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
-	AppcVersion string `protobuf:"bytes,2,opt,name=appc_version,json=appcVersion" json:"appc_version,omitempty"`
+	AppcVersion string `protobuf:"bytes,2,opt,name=appc_version" json:"appc_version,omitempty"`
 	// Latest version of the api that's supported by the service, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/).
-	ApiVersion string `protobuf:"bytes,3,opt,name=api_version,json=apiVersion" json:"api_version,omitempty"`
+	ApiVersion string `protobuf:"bytes,3,opt,name=api_version" json:"api_version,omitempty"`
 	// The global flags that passed to the rkt api service when it's launched.
-	GlobalFlags *GlobalFlags `protobuf:"bytes,4,opt,name=global_flags,json=globalFlags" json:"global_flags,omitempty"`
+	GlobalFlags *GlobalFlags `protobuf:"bytes,4,opt,name=global_flags" json:"global_flags,omitempty"`
 }
 
 func (m *Info) Reset()                    { *m = Info{} }
@@ -544,10 +544,10 @@ type EventFilter struct {
 	// If set, then only returns the events after this timestamp.
 	// If the server starts after since_time, then only the events happened after the start of the server will be returned.
 	// If since_time is a future timestamp, then no events will be returned until that time.
-	SinceTime int64 `protobuf:"varint,4,opt,name=since_time,json=sinceTime" json:"since_time,omitempty"`
+	SinceTime int64 `protobuf:"varint,4,opt,name=since_time" json:"since_time,omitempty"`
 	// If set, then only returns the events before this timestamp.
 	// If it is a future timestamp, then the event stream will be closed at that moment.
-	UntilTime int64 `protobuf:"varint,5,opt,name=until_time,json=untilTime" json:"until_time,omitempty"`
+	UntilTime int64 `protobuf:"varint,5,opt,name=until_time" json:"until_time,omitempty"`
 }
 
 func (m *EventFilter) Reset()                    { *m = EventFilter{} }
@@ -744,11 +744,11 @@ func (m *ListenEventsResponse) GetEvents() []*Event {
 // Request for GetLogs().
 type GetLogsRequest struct {
 	// ID of the pod which we will get logs from, required.
-	PodId string `protobuf:"bytes,1,opt,name=pod_id,json=podId" json:"pod_id,omitempty"`
+	PodId string `protobuf:"bytes,1,opt,name=pod_id" json:"pod_id,omitempty"`
 	// Name of the app within the pod which we will get logs
 	// from, optional. If not set, then the logs of all the
 	// apps within the pod will be returned.
-	AppName string `protobuf:"bytes,2,opt,name=app_name,json=appName" json:"app_name,omitempty"`
+	AppName string `protobuf:"bytes,2,opt,name=app_name" json:"app_name,omitempty"`
 	// Number of most recent lines to return, optional.
 	Lines int32 `protobuf:"varint,3,opt,name=lines" json:"lines,omitempty"`
 	// If true, then a response stream will not be closed,
@@ -756,10 +756,10 @@ type GetLogsRequest struct {
 	Follow bool `protobuf:"varint,4,opt,name=follow" json:"follow,omitempty"`
 	// If set, then only the logs after the timestamp will
 	// be returned, optional.
-	SinceTime int64 `protobuf:"varint,5,opt,name=since_time,json=sinceTime" json:"since_time,omitempty"`
+	SinceTime int64 `protobuf:"varint,5,opt,name=since_time" json:"since_time,omitempty"`
 	// If set, then only the logs before the timestamp will
 	// be returned, optional.
-	UntilTime int64 `protobuf:"varint,6,opt,name=until_time,json=untilTime" json:"until_time,omitempty"`
+	UntilTime int64 `protobuf:"varint,6,opt,name=until_time" json:"until_time,omitempty"`
 }
 
 func (m *GetLogsRequest) Reset()                    { *m = GetLogsRequest{} }
@@ -814,10 +814,6 @@ func init() {
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
 var _ grpc.ClientConn
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion1
 
 // Client API for PublicAPI service
 
