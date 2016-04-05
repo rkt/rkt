@@ -37,6 +37,9 @@ bash-completion: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 	mkdir -p dist/bash_completion/
 	ls rkt/*.go | grep -vE '_test.go|main.go|_gen.go' | xargs go run rkt/bash_completion_gen.go
 
+protobuf:
+	scripts/genproto.sh
+
 $(call undefine-namespaces,LOCAL)
 # RKT_STAMP deliberately not cleared
 # RKT_BINARY deliberately not cleared
