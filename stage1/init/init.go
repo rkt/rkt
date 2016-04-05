@@ -507,7 +507,7 @@ func stage1() int {
 	flavor, _, err := stage1initcommon.GetFlavor(p)
 	if err != nil {
 		log.PrintE("failed to get stage1 flavor", err)
-		return 3
+		return 1
 	}
 
 	var n *networking.Networking
@@ -515,26 +515,26 @@ func stage1() int {
 		fps, err := forwardedPorts(p)
 		if err != nil {
 			log.Error(err)
-			return 6
+			return 1
 		}
 
 		n, err = networking.Setup(root, p.UUID, fps, netList, localConfig, flavor, debug)
 		if err != nil {
 			log.PrintE("failed to setup network", err)
-			return 6
+			return 1
 		}
 
 		if err = n.Save(); err != nil {
 			log.PrintE("failed to save networking state", err)
 			n.Teardown(flavor, debug)
-			return 6
+			return 1
 		}
 
 		if len(mdsToken) > 0 {
 			hostIP, err := n.GetDefaultHostIP()
 			if err != nil {
 				log.PrintE("failed to get default Host IP", err)
-				return 6
+				return 1
 			}
 
 			p.MetadataServiceURL = common.MetadataServicePublicURL(hostIP, mdsToken)
@@ -542,7 +542,7 @@ func stage1() int {
 	} else {
 		if flavor == "kvm" {
 			log.Print("flavor kvm requires private network configuration (try --net)")
-			return 6
+			return 1
 		}
 		if len(mdsToken) > 0 {
 			p.MetadataServiceURL = common.MetadataServicePublicURL(localhostIP, mdsToken)
@@ -551,12 +551,12 @@ func stage1() int {
 
 	if err = stage1initcommon.WriteDefaultTarget(p); err != nil {
 		log.PrintE("failed to write default.target", err)
-		return 2
+		return 1
 	}
 
 	if err = stage1initcommon.WritePrepareAppTemplate(p); err != nil {
 		log.PrintE("failed to write prepare-app service template", err)
-		return 2
+		return 1
 	}
 
 	if err := stage1initcommon.SetJournalPermissions(p); err != nil {
@@ -566,19 +566,19 @@ func stage1() int {
 	if flavor == "kvm" {
 		if err := KvmPodToSystemd(p, n); err != nil {
 			log.PrintE("failed to configure systemd for kvm", err)
-			return 2
+			return 1
 		}
 	}
 
 	if err = stage1initcommon.PodToSystemd(p, interactive, flavor, privateUsers); err != nil {
 		log.PrintE("failed to configure systemd", err)
-		return 2
+		return 1
 	}
 
 	args, env, err := getArgsEnv(p, flavor, debug, n)
 	if err != nil {
 		log.Error(err)
-		return 3
+		return 1
 	}
 
 	// create a separate mount namespace so the cgroup filesystems
@@ -602,13 +602,13 @@ func stage1() int {
 	enabledCgroups, err := cgroup.GetEnabledCgroups()
 	if err != nil {
 		log.FatalE("error getting cgroups", err)
-		return 5
+		return 1
 	}
 
 	// mount host cgroups in the rkt mount namespace
 	if err := mountHostCgroups(enabledCgroups); err != nil {
 		log.FatalE("couldn't mount the host cgroups", err)
-		return 5
+		return 1
 	}
 
 	var serviceNames []string
@@ -621,7 +621,7 @@ func stage1() int {
 	if err == nil {
 		if err := mountContainerCgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
 			log.PrintE("couldn't mount the container cgroups", err)
-			return 5
+			return 1
 		}
 	} else {
 		log.PrintE("continuing with per-app isolators disabled", err)
@@ -629,7 +629,7 @@ func stage1() int {
 
 	if err = stage1common.WritePpid(os.Getpid()); err != nil {
 		log.Error(err)
-		return 4
+		return 1
 	}
 
 	err = stage1common.WithClearedCloExec(lfd, func() error {
@@ -637,7 +637,7 @@ func stage1() int {
 	})
 	if err != nil {
 		log.PrintE(fmt.Sprintf("failed to execute %q", args[0]), err)
-		return 7
+		return 1
 	}
 
 	return 0
