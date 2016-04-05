@@ -175,6 +175,12 @@ message Pod {
 
         // Cgroup of the pod, empty if the pod is not running.
         string cgroup = 8;
+
+        // Timestamp when the pod is created, nanoseconds since epoch.
+        int64 created_at = 9;
+
+        // Timestamp when the pod is started, nanoseconds since epoch.
+        int64 started_at = 10;
 }
 
 message KeyValue {
