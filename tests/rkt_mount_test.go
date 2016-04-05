@@ -70,14 +70,14 @@ func TestMountSymlink(t *testing.T) {
 			"/dir1/../../../foo",
 			"/dir2/foo",
 			"path escapes app's root",
-			3,
+			1,
 		},
 		// '/dir1/link_invalid' is an invalid link because it tries to escape rootfs.
 		{
 			"/dir1/link_invalid/foo",
 			"/dir2/foo",
 			"escapes app's root with value",
-			3,
+			1,
 		},
 	}
 
