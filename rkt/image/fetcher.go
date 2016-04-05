@@ -118,7 +118,7 @@ func (f *Fetcher) fetchSingleImage(img string, a *asc, imgType apps.AppImageType
 		imgType = guessImageType(img)
 	}
 	if imgType == apps.AppImageHash {
-		return "", fmt.Errorf("cannot fetch a hash '%q', expected either a URL, a path or an image name", img)
+		return "", fmt.Errorf("cannot fetch a hash %q, expected either a URL, a path or an image name", img)
 	}
 
 	switch imgType {
