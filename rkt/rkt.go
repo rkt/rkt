@@ -24,7 +24,6 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/pkg/log"
-	"github.com/coreos/rkt/pkg/multicall"
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/spf13/cobra"
@@ -212,26 +211,6 @@ func runMissingCommand(cmd *cobra.Command, args []string) {
 	stderr.Print("missing command")
 	cmd.HelpFunc()(cmd, args)
 	cmdExitCode = 2 // invalid argument
-}
-
-func main() {
-	// check if rkt is executed with a multicall command
-	multicall.MaybeExec()
-
-	cmdRkt.SetUsageFunc(usageFunc)
-
-	// Make help just show the usage
-	cmdRkt.SetHelpTemplate(`{{.UsageString}}`)
-
-	// // Uncomment to update rkt.bash
-	// stdout.Print("Generating rkt.bash")
-	// cmdRkt.GenBashCompletionFile("dist/bash_completion/rkt.bash")
-	// os.Exit(0)
-
-	if err := cmdRkt.Execute(); err != nil && cmdExitCode == 0 {
-		cmdExitCode = 2 // invalid argument
-	}
-	os.Exit(cmdExitCode)
 }
 
 // where pod directories are created and locked before moving to prepared
