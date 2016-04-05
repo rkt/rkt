@@ -323,6 +323,18 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
 		return pod, nil, nil
 	}
 
+	createdAt, err := p.getCreationTime()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	startedAt, err := p.getStartTime()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pod.CreatedAt, pod.StartedAt = createdAt.UnixNano(), startedAt.UnixNano()
+
 	manifest, data, err := getPodManifest(p)
 	if err != nil {
 		return nil, nil, err

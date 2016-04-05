@@ -402,12 +402,14 @@ type networkInfo struct {
 }
 
 type podInfo struct {
-	id       string
-	pid      int
-	state    string
-	apps     map[string]*appInfo
-	networks map[string]*networkInfo
-	manifest []byte
+	id        string
+	pid       int
+	state     string
+	apps      map[string]*appInfo
+	networks  map[string]*networkInfo
+	manifest  []byte
+	createdAt int64
+	startedAt int64
 }
 
 // parsePodInfo parses the 'rkt status $UUID' result into podInfo struct.
@@ -416,6 +418,8 @@ type podInfo struct {
 // networks=default:ip4=172.16.28.103
 // pid=14352
 // exited=false
+// created=2016-04-01 19:12:03.447 -0700 PDT
+// started=2016-04-01 19:12:04.279 -0700 PDT
 func parsePodInfoOutput(t *testing.T, result string, p *podInfo) {
 	lines := strings.Split(strings.TrimSuffix(result, "\n"), "\n")
 	for _, line := range lines {
@@ -455,6 +459,18 @@ func parsePodInfoOutput(t *testing.T, result string, p *podInfo) {
 				t.Fatalf("Cannot parse the pod's pid %q: %v", tuples[1], err)
 			}
 			p.pid = pid
+		case "created":
+			createdAt, err := time.Parse(defaultTimeLayout, tuples[1])
+			if err != nil {
+				t.Fatalf("Cannot parse the pod's creation time %q: %v", tuples[1], err)
+			}
+			p.createdAt = createdAt.UnixNano()
+		case "started":
+			startedAt, err := time.Parse(defaultTimeLayout, tuples[1])
+			if err != nil {
+				t.Fatalf("Cannot parse the pod's start time %q: %v", tuples[1], err)
+			}
+			p.startedAt = startedAt.UnixNano()
 		}
 		if strings.HasPrefix(tuples[0], "app-") {
 			exitCode, err := strconv.Atoi(tuples[1])
