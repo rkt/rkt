@@ -15,22 +15,13 @@ if ! [[ $(protoc --version) =~ "3.0.0" ]]; then
 	exit 255
 fi
 
-export GOPATH=$(mktemp -d)
-export PATH=${GOPATH}/bin:${PATH}
+export GOPATH=$(godep path)
+export PATH=.:${PATH}
 
-trap 'rm -rf "${GOPATH}"' EXIT
+echo "building protoc-gen-go"
+go build github.com/golang/protobuf/protoc-gen-go
+trap 'rm -f "protoc-gen-go"' EXIT
 
-# git (sha) version of golang/protobuf
-GO_PROTOBUF_SHA="2402d76f3d41f928c7902a765dfc872356dd3aad"
-
-echo "installing golang/protobuf using GOPATH=${GOPATH}"
-go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
-
-echo "resetting golang/protobuf to version ${GO_PROTOBUF_SHA}"
-pushd ${GOPATH}/src/github.com/golang/protobuf
-	git reset --hard "${GO_PROTOBUF_SHA}"
-	make install
-popd
-
+echo "generating code"
 API_DIR="api/v1alpha"
 protoc -I "${API_DIR}" "${API_DIR}"/*.proto --go_out=plugins=grpc:"${API_DIR}"
