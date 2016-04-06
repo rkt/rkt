@@ -13,7 +13,8 @@
 		"github.com/appc/cni/plugins/main/ptp",
 		"github.com/appc/cni/plugins/meta/flannel",
 		"github.com/appc/cni/plugins/meta/tuning",
-		"github.com/appc/spec/ace"
+		"github.com/appc/spec/ace",
+		"github.com/golang/protobuf/protoc-gen-go"
 	],
 	"Deps": [
 		{
@@ -351,6 +352,26 @@
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/proto",
+			"Rev": "2402d76f3d41f928c7902a765dfc872356dd3aad"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/protoc-gen-go",
+			"Rev": "2402d76f3d41f928c7902a765dfc872356dd3aad"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/protoc-gen-go/descriptor",
+			"Rev": "2402d76f3d41f928c7902a765dfc872356dd3aad"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/protoc-gen-go/generator",
+			"Rev": "2402d76f3d41f928c7902a765dfc872356dd3aad"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/protoc-gen-go/internal/grpc",
+			"Rev": "2402d76f3d41f928c7902a765dfc872356dd3aad"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/protoc-gen-go/plugin",
 			"Rev": "2402d76f3d41f928c7902a765dfc872356dd3aad"
 		},
 		{

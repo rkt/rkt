@@ -14,7 +14,7 @@
 
 // This file is not part of the rkt binary. It is only executed manually via
 // the makefile.
-//+build ignore
+//+build doc
 
 package main
 
