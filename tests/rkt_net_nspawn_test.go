@@ -26,10 +26,16 @@ func TestNetHostConnectivity(t *testing.T) {
 	NewNetHostConnectivityTest().Execute(t)
 }
 
-func TestNetDefaultPortFwdConnectivity(t *testing.T) {
-	NewNetDefaultPortFwdConnectivityTest(
-		PortFwdCase{"172.16.28.1", "--net=default", true},
-		PortFwdCase{"127.0.0.1", "--net=default", true},
+func TestNetPortFwdConnectivity(t *testing.T) {
+	NewNetPortFwdConnectivityTest(
+		defaultSamePortFwdCase,
+		defaultDiffPortFwdCase,
+		defaultLoSamePortFwdCase,
+		defaultLoDiffPortFwdCase,
+		bridgeSamePortFwdCase,
+		bridgeDiffPortFwdCase,
+		bridgeLoSamePortFwdCase,
+		bridgeLoDiffPortFwdCase,
 	).Execute(t)
 }
 

@@ -18,9 +18,9 @@ package main
 
 import "testing"
 
-func TestNetDefaultPortFwdConnectivity(t *testing.T) {
-	NewNetDefaultPortFwdConnectivityTest(
-		PortFwdCase{"172.16.28.1", "--net=default", true},
+func TestNetPortFwdConnectivity(t *testing.T) {
+	NewNetPortFwdConnectivityTest(
+		defaultSamePortFwdCase,
 	).Execute(t)
 }
 
