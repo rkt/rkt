@@ -327,33 +327,32 @@ For more details see the [hacking documentation](../hacking.md).
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
-| `--cpu` |  `` | CPU units (example `--cpu=500m`, see the [Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html)) | CPU limit for the preceding image |
-| `--dns` |  `` | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times |
-| `--dns-opt` |  `` | Option as described in the options section in resolv.conf(5) | DNS option to write in `/etc/resolv.conf`. It can be specified several times |
-| `--dns-search` |  `` | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times |
-| `--exec` |  `` | A path | Override the exec command for the preceding image |
-| `--hostname` |  `` | A host name | Pod's hostname. If empty, it will be "rkt-$PODUUID" |
-| `--inherit-env` |  `false` | `true` or `false` | Inherit all environment variables not set by apps |
-| `--interactive` |  `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied |
-| `--mds-register` |  `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net=(default|default-restricted|host)` |
-| `--memory` |  `` | Memory units (example '--memory=50M', see the [Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html)) | Memory limit for the preceding image |
-| `--mount` |  `` | Mount syntax (`volume=NAME,target=PATH`). See [Mounting Volumes without Mount Points](#mounting-volumes-without-mount-points) | Mount point binding a volume to a path within an app |
-| `--net` |  `default` | A comma-separated list of networks. Syntax: `--net[=n[:args], ...]` | Configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively |
-| `--no-overlay` |  `false` | `true` or `false` | Disable overlay filesystem |
-| `--no-store` |  `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
-| `--pod-manifest` |  `` | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect |
-| `--port` |  `` | A port number | Ports to expose on the host (requires [contained network](https://github.com/coreos/rkt/blob/master/Documentation/networking/overview.md#contained-mode)). Syntax: `--port=NAME:HOSTPORT` The NAME is that given in the ACI. By convention, Docker containers' EXPOSEd ports are given a name formed from the port number, a hyphen, and the protocol, e.g., `80-tcp`, giving something like `--port=80-tcp:8080` |
-| `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental) |
-| `--set-env` |  `` | An environment variable. Syntax `NAME=VALUE` | An environment variable to set for apps |
-| `--signature` |  `` | A file path | Local signature file to use in validating the preceding image |
-| `--stage1-url` |  `` | A URL to a stage1 image. HTTP/HTTPS/File/Docker URLs are supported | Image to use as stage1 |
-| `--stage1-path` |  `` | A path to a stage1 image. Absolute and relative paths are supported | Image to use as stage1 |
-| `--stage1-name` |  `` | A name of a stage1 image. Will perform a discovery if the image is not in the store | Image to use as stage1 |
-| `--stage1-hash` |  `` | A hash of a stage1 image. The image must exist in the store | Image to use as stage1 |
-| `--stage1-from-dir` |  `` | A stage1 image file inside the default stage1 images directory | Image to use as stage1 |
-| `--store-only` |  `false` | `true` or `false` | Use only available images in the store (do not discover or download from remote URLs). See [image fetching behavior](../image-fetching-behavior.md) |
-| `--uuid-file-save` |  `` | A file path | Write out the pod UUID to a file |
-| `--volume` |  `` | Volume syntax (`NAME,kind=KIND,source=PATH,readOnly=BOOL`). See [Mount Volumes into a Pod](#mount-volumes-into-a-pod) | Volumes to make available in the pod |
+| `--cpu` | none | CPU units (ex. `--cpu=500m`) | CPU limit for the preceding image in [Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html) format. |
+| `--dns` | none | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times |
+| `--dns-opt` | none | DNS option  | DNS option from resolv.conf(5) to write in `/etc/resolv.conf`. It can be specified several times. |
+| `--dns-search` | none | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times. |
+| `--exec` | none | Path to executable | Override the exec command for the preceding image. |
+| `--inherit-env` | `false` | `true` or `false` | Inherit all environment variables not set by apps. |
+| `--interactive` | `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied. |
+| `--mds-register` | `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net` as `default`, `default-restricted`, or `host`). |
+| `--memory` | none | Memory units (ex. `--memory=50M`) | Memory limit for the preceding image in [Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html) format. |
+| `--mount` | none | Mount syntax (ex. `--mount volume=NAME,target=PATH`) | Mount point binding a volume to a path within an app. See [Mounting Volumes without Mount Points](#mounting-volumes-without-mount-points). |
+| `--net` | `default` | A comma-separated list of networks. (ex. `--net[=n[:args], ...]`) | Configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively. |
+| `--no-overlay` | `false` | `true` or `false` | Disable the overlay filesystem. |
+| `--no-store` | `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
+| `--pod-manifest` | none | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect. |
+| `--port` | none | A port number (ex. `--port=NAME:HOSTPORT`) | Ports to expose on the host (requires [contained network](../networking.md#contained-mode)). |
+| `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental). |
+| `--set-env` | none | An environment variable (ex. `--set-env=NAME=VALUE`) | An environment variable to set for apps. |
+| `--signature` | none | A file path | Local signature file to use in validating the preceding image |
+| `--stage1-url` | none | URL with protocol | A URL to a stage1 image. HTTP/HTTPS/File/Docker URLs are supported. |
+| `--stage1-path` | none | Absolute or relative path | A path to a stage1 image. |
+| `--stage1-name` | none | Image name (ex. `--stage1-name=coreos.com/rkt/stage1-coreos`) | A name of a stage1 image. Will perform a discovery if the image is not in the store. |
+| `--stage1-hash` | none | Image hash (ex. `--stage1-hash=sha512-dedce9f5ea50`) | A hash of a stage1 image. The image must exist in the store. |
+| `--stage1-from-dir` | none | Image name (ex. `--stage1-name=coreos.com/rkt/stage1-coreos`) | A stage1 image file name to search for inside the default stage1 images directory. |
+| `--store-only` | `false` | `true` or `false` | Use only available images in the store (do not discover or download from remote URLs). See [image fetching behavior](../image-fetching-behavior.md). |
+| `--uuid-file-save` | none | A file path | Write out the pod UUID to a file. |
+| `--volume` |  none | Volume syntax (ex. `--volume NAME,kind=KIND,source=PATH,readOnly=BOOL`) | Volumes to make available in the pod. See [Mount Volumes into a Pod](#mount-volumes-into-a-pod). |
 
 ## Global options
 
