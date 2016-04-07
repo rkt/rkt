@@ -62,10 +62,10 @@ func convertedFromDocker(ra *schema.RuntimeApp) bool {
 	return ok
 }
 
-// generateMounts maps MountPoint paths to volumes, returning a list of mounts,
+// GenerateMounts maps MountPoint paths to volumes, returning a list of mounts,
 // each with a parameter indicating if it's an implicit empty volume from a
 // Docker image.
-func generateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume) []mountWrapper {
+func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume) []mountWrapper {
 	app := ra.App
 
 	var genMnts []mountWrapper

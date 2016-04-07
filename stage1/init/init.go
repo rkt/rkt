@@ -628,6 +628,14 @@ func stage1() int {
 		return 1
 	}
 
+	// prepare mounts for kvm flavor
+	if flavor == "kvm" {
+		if err := KvmPrepareMounts(s1Root, p); err != nil {
+			log.PrintE("could not prepare mounts", err)
+			return 1
+		}
+	}
+
 	err = stage1common.WithClearedCloExec(lfd, func() error {
 		return syscall.Exec(args[0], args, env)
 	})
