@@ -142,15 +142,45 @@ func TestVolumes(t *testing.T) {
 	}
 }
 
-func TestDockerVolumeSemantics(t *testing.T) {
-	dockerVolImage := patchTestACI("rkt-volume-image.aci", fmt.Sprintf("--mounts=dir1,path=/dir1,readOnly=false"))
-	defer os.Remove(dockerVolImage)
+var volDockerTests = []struct {
+	dir             string
+	expectedContent string
+}{
+	{
+		"/dir1",
+		"dir1",
+	},
+	{
+		"/dir2",
+		"dir2",
+	},
+	{
+		"/dir1/link_rel_dir2",
+		"dir2",
+	},
+	{
+		"/dir1/link_abs_dir2",
+		"dir2",
+	},
+}
 
+func TestDockerVolumeSemantics(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf(`/bin/sh -c "export FILE=/dir1/file ; %s --debug --insecure-options=image run --inherit-env %s --exec /inspect -- --read-file"`, ctx.Cmd(), dockerVolImage)
+	var dockerVolImage []string
+	for _, tt := range volDockerTests {
+		img := patchTestACI("rkt-volume-image.aci", fmt.Sprintf("--mounts=mydir,path=%s,readOnly=false", tt.dir))
+		defer os.Remove(img)
+		dockerVolImage = append(dockerVolImage, img)
+	}
 
-	expected := "<<<dir1>>>"
-	runRktAndCheckOutput(t, cmd, expected, false)
+	for i, tt := range volDockerTests {
+		t.Logf("Running test #%v on directory %s", i, tt.dir)
+
+		cmd := fmt.Sprintf(`/bin/sh -c "export FILE=%s/file ; %s --debug --insecure-options=image run --inherit-env %s --exec /inspect -- --read-file"`, tt.dir, ctx.Cmd(), dockerVolImage[i])
+
+		expected := fmt.Sprintf("<<<%s>>>", tt.expectedContent)
+		runRktAndCheckOutput(t, cmd, expected, false)
+	}
 }
