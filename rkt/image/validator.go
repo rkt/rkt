@@ -24,6 +24,7 @@ import (
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 	"golang.org/x/crypto/openpgp"
 	pgperrors "golang.org/x/crypto/openpgp/errors"
 )
@@ -60,6 +61,21 @@ func (v *validator) ValidateName(imageName string) error {
 	if name != imageName {
 		return fmt.Errorf("error when reading the app name: %q expected but %q found",
 			imageName, name)
+	}
+	return nil
+}
+
+// ValidateLabels checks if desired image labels are actually the same as
+// the ones in the image manifest.
+func (v *validator) ValidateLabels(labels map[types.ACIdentifier]string) error {
+	for n, rv := range labels {
+		if av, ok := v.manifest.GetLabel(n.String()); ok {
+			if rv != av {
+				return fmt.Errorf("requested value for label %q: %q differs from fetched aci label value: %q", n, rv, av)
+			}
+		} else {
+			return fmt.Errorf("requested label %q not provided by the image manifest", n)
+		}
 	}
 	return nil
 }

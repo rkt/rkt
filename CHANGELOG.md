@@ -1,5 +1,9 @@
 ## vUNRELEASED
 
+#### New features and UX changes
+
+- Ensure that the initial name and labels used for discovery match the name and labels in the Image Manifest as specified in the appc spec ([#2311](https://github.com/coreos/rkt/pull/2311)). Users wanting the latest image should use `rkt prepare/run/fetch example.com/aci` without any labels. If the discovery server supports the "latest" pattern, the user can bypass a locally cached image in the store and fetch an updated image using `rkt prepare/run/fetch --no-store example.com/aci` option.
+
 #### Note for packagers
 
 Files generated from sources are no longer checked-in the git repository. Instead, packagers should build them:
