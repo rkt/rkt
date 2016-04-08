@@ -33,7 +33,7 @@ dnf -y -v install systemd-container || true
 export PATH=/usr/lib64/ccache:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/fedora/.local/bin:/home/fedora/bin
 
 su - fedora --command="cd /var/tmp ; git clone --branch @GIT_BRANCH@ @GIT_URL@ rkt"
-su - fedora --command="PATH=\$PATH ; cd /var/tmp/rkt ; ./tests/run-build.sh @FLAVOR@"
+su - fedora --command="PATH=\$PATH ; cd /var/tmp/rkt ; ./tests/build-and-run-tests.sh -f @FLAVOR@"
 TESTEOF
 
 chmod +x /var/tmp/rkt-test.sh

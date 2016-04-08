@@ -35,15 +35,15 @@ sudo gpasswd -a runner rkt
 #### Thread 1
 
 ```
-./tests/run-build.sh none
-./tests/run-build.sh src v229
+./tests/build-and-run-tests.sh -f none -c
+./tests/build-and-run-tests.sh -f src -s v229 -c
 ```
 
 #### Thread 2
 
 ```
-./tests/run-build.sh coreos
-./tests/run-build.sh host
+./tests/build-and-run-tests.sh -f coreos -c
+./tests/build-and-run-tests.sh -f host -c
 ```
 
 #### Post thread
@@ -58,10 +58,19 @@ The LKVM stage1 or other versions of systemd are not currently tested.
 It would be possible to add more tests with the following commands:
 
 ```
-./tests/run-build.sh src v227
-./tests/run-build.sh src master
-./tests/run-build.sh kvm
+./tests/build-and-run-tests.sh -f src -s v227 -c
+./tests/build-and-run-tests.sh -f src -s master -c
+./tests/build-and-run-tests.sh -f kvm -c
 ```
+
+#### build-and-run-tests.sh parameters description
+
+The build script has the following parameters:
+- `-f` - Select flavor for rkt. You can choose only one from the following list: "`coreos`, `host`, `kvm`, `none`, `src`".
+- `-s` - Systemd version. You can choose `master` or a tag from the [systemd GitHub repository](https://github.com/systemd/systemd).
+- `-c` - Run cleanup. Cleanup has two phases: *after build* and *after tests*. In the *after build* phase, this script removes artifacts from external dependencies (like kernel sources in the `kvm` flavor). In the  *after tests* phase, it removes `rkt` build artifacts and (if the build is running on CI or if the `-x` flag is used) it unmounts the remaining `rkt` mountpoints, removes unused `rkt` NICs and flushes the current state of IPAM IP reservation.
+- `-x` - Force after-test cleanup on a non-CI system. **WARNING: This flag can affect your system. Use with caution.**
+- `-u` - Show usage message and exit.
 
 ### Platform
 
