@@ -7,10 +7,10 @@ For more information on the rkt internals, see the [`devel`](devel/) documentati
 
 ## Building rkt
 
-You should be able build rkt on any modern Linux system.
+You should be able build rkt on any modern Linux system with [Go](https://golang.org/) (1.5+) installed.
 For the most part the codebase is self-contained (e.g. all dependencies are vendored), but assembly of the stage1 requires some other tools to be installed on the system.
 Please see [the list of the build-time dependencies](dependencies.md#build-time-dependencies).
-Once the dependencies have been satisfied you can build rkt by running the following commands:
+Once the dependencies have been satisfied you can build rkt with a default configuration by running the following commands:
 
 ```
 git clone https://github.com/coreos/rkt.git
@@ -22,27 +22,25 @@ Build verbosity can be controlled with the V variable.
 Set V to 0 to have a silent build.
 Set V to either 1 or 2 to get short messages about what is being done (level 2 prints more of them).
 Set V to 3 to get raw output.
-Instead of a number, english words can be used.
-`quiet` or `silent` for level 0, `info` for level 1, `all` for level 2 and `raw` for level 3. Example:
-
-`make V=raw`
+Instead of a number, English words can be used: `quiet` or `silent` for level 0, `info` for level 1, `all` for level 2 and `raw` for level 3. 
+For example, `make V=raw` is equivalent to `make V=3`.
 
 To be able to run rkt, please see [the list of the run-time dependencies](dependencies.md#run-time-dependencies).
 
-### With Docker
+### Building rkt with Docker
 
 Alternatively, you can build rkt in a Docker container with the following command.
-Replace $SRC with the absolute path to your rkt source code:
+Replace `$SRC` with the absolute path to your rkt source code:
 
 ```
 # docker run -v $SRC:/opt/rkt -i -t golang:1.5 /bin/bash -c "apt-get update && apt-get install -y coreutils cpio squashfs-tools realpath autoconf file xz-utils patch bc && cd /opt/rkt && go get github.com/appc/spec/... && ./autogen.sh && ./configure && make"
 ```
 
-### Building systemd in stage1 from the sources
+### Building systemd in stage1 from source
 
 By default, rkt gets systemd from a CoreOS image to generate stage1.
-But it's also possible to build systemd from the sources.
-To do this, use the following configure parameters after running `./autogen.sh`:
+It's also possible to build systemd from source.
+To do this, use the following `configure` parameters after running `./autogen.sh`:
 
 - `--with-stage1-flavors`
 - `--with-stage1-default-flavor` (optional)
@@ -60,9 +58,9 @@ Example:
 
 The stage1 kvm image is based on CoreOS, but with additional components for running containers on top of a hypervisor.
 
-To build, pass `kvm` to `--with-stage1-flavors` parameter in `./configure`
+To build this stage1 image, pass `kvm` to `--with-stage1-flavors` parameter in `./configure`
 
-This will generate stage1 with embedded kernel and kvmtool to start pod in virtual machine.
+This will generate a stage1 with an embedded kernel and kvmtool, which launches each pod in a separate virtual machine.
 
 Additional build dependencies for the stage1 kvm follow.
 If building with docker, these must be added to the `apt-get install` command.
@@ -91,7 +89,7 @@ rkt expects stage1 images to be signed except in the following cases:
 * `--stage1-{name,hash}` is used and the image is already in the store
 * `--stage1-{url,path,from-dir}` is used and the image is in the default directory configured at build time
 
-## Managing Dependencies
+## Managing dependencies
 
 rkt uses [`godep`](https://github.com/tools/godep) to manage third-party dependencies.
 The build process is crafted to make this transparent to most users (i.e. if you're just building rkt from source, or modifying any of the codebase without changing dependencies, you should have no need to interact with godep).
