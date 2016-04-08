@@ -48,12 +48,14 @@ Use --grace-period=0s to effectively disable the grace-period.`,
 	}
 	flagGracePeriod        time.Duration
 	flagPreparedExpiration time.Duration
+	flagMarkOnly           bool
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdGC)
 	cmdGC.Flags().DurationVar(&flagGracePeriod, "grace-period", defaultGracePeriod, "duration to wait before discarding inactive pods from garbage")
 	cmdGC.Flags().DurationVar(&flagPreparedExpiration, "expire-prepared", defaultPreparedExpiration, "duration to wait before expiring prepared pods")
+	cmdGC.Flags().BoolVar(&flagMarkOnly, "mark-only", false, "if set to true, then the exited/aborted pods will be moved to the garbage directories without actually deleting them, this is useful for marking the exit time of a pod")
 }
 
 func runGC(cmd *cobra.Command, args []string) (exit int) {
@@ -65,6 +67,10 @@ func runGC(cmd *cobra.Command, args []string) (exit int) {
 	if err := renameAborted(); err != nil {
 		stderr.PrintE("failed to rename aborted pods", err)
 		return 1
+	}
+
+	if flagMarkOnly {
+		return
 	}
 
 	if err := renameExpired(flagPreparedExpiration); err != nil {
