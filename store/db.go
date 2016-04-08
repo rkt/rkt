@@ -17,6 +17,7 @@ package store
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -34,9 +35,11 @@ const (
 // dbLock is used to guarantee both thread-safety and process-safety
 // for db access.
 type dbLock struct {
+	// This lock is to make that access to the ql db file being blocking
+	// since ql use an internal locking that will not block and return an
+	// error when a lock is already held.
 	fl *lock.FileLock
-	// Although the FileLock already ensures thread safety, the Go runtime is unaware
-	// of this, and so Mutex is necessary to satisfy the Go race detector.
+	// This lock is to avoid concurrent access from multiple goroutines.
 	sync.Mutex
 }
 
@@ -49,19 +52,37 @@ func newDBLock(dirPath string) (*dbLock, error) {
 }
 
 func (dl *dbLock) lock() error {
+	dl.Lock()
 	if err := dl.fl.ExclusiveLock(); err != nil {
+		dl.Unlock()
 		return err
 	}
-	dl.Lock()
 	return nil
 }
 
-func (dl *dbLock) unlock() error {
+func (dl *dbLock) unlock() {
 	if err := dl.fl.Unlock(); err != nil {
-		return err
+		// TODO(sgotti) what'll happen when df.fl.Unlock fails? From
+		// man 2 flock looks like it'll happen only when the underlying
+		// fd has been closed (in this case the lock has been released
+		// when the fd has been closed, assuming no dup fd due to
+		// forking etc...).
+
+		// If there're other cases where it fails without unlocking,
+		// there's no simple way to handle them.
+		// Possible solutions:
+		// * panic (done here)
+		// * try to close the lock (and related fd), panic if close
+		// fails and create a new lock.
+		//
+		// Passing a specific error to the caller and let it recover
+		// creating a new store instance is tricky because we
+		// don't know the lock state and cannot be sure on how to clean
+		// this store instance
+
+		panic(fmt.Errorf("failed to unlock the db flock: %v", err))
 	}
 	dl.Unlock()
-	return nil
 }
 
 type DB struct {
@@ -90,10 +111,7 @@ func (db *DB) Open() error {
 
 	sqldb, err := sql.Open("ql", filepath.Join(db.dbdir, DbFilename))
 	if err != nil {
-		unlockErr := db.dl.unlock()
-		if unlockErr != nil {
-			err = errwrap.Wrap(unlockErr, err)
-		}
+		db.dl.unlock()
 		return err
 	}
 	db.sqldb = sqldb
@@ -112,7 +130,8 @@ func (db *DB) Close() error {
 	db.sqldb = nil
 
 	// Don't close the flock as it will be reused.
-	return db.dl.unlock()
+	db.dl.unlock()
+	return nil
 }
 
 func (db *DB) Begin() (*sql.Tx, error) {
