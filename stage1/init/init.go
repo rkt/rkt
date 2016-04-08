@@ -627,7 +627,15 @@ func stage1() int {
 		log.PrintE("continuing with per-app isolators disabled", err)
 	}
 
-	if err = stage1common.WritePpid(os.Getpid()); err != nil {
+	// kvm flavor has a bit different logic in handling pid vs ppid, for details look into #2389
+	// it does not require existance of "ppid", but instead registers current pid (which
+	// will be reused by lkvm binary) as an pod process pid used in entering
+	pid_filename := "ppid"
+	if flavor == "kvm" {
+		pid_filename = "pid"
+	}
+
+	if err = stage1common.WritePid(os.Getpid(), pid_filename); err != nil {
 		log.Error(err)
 		return 1
 	}
