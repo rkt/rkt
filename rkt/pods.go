@@ -909,8 +909,9 @@ func (p *pod) getPID() (int, error) {
 
 // getContainerPID1 returns the pid of the process with pid 1 in the pod.
 func (p *pod) getContainerPID1() (pid int, err error) {
-	// rkt supports two methods to find the container's PID 1:
-	// the pid file and the ppid file.
+	// rkt supports two methods to find the container's PID 1: the pid
+	// file and the ppid file.
+	// The ordering is not important and only one of them must be supplied.
 	// See Documentation/devel/stage1-implementors-guide.md
 	for {
 		var ppid int
