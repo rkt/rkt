@@ -29,6 +29,7 @@ Garbage collecting pod "f07a4070-79a9-4db0-ae65-a090c9c393a3"
 | --- | --- | --- | --- |
 | `--expire-prepared` |  `24h0m0s` | A time | Duration to wait before expiring prepared pods |
 | `--grace-period` |  `30m0s` | A time | Duration to wait before discarding inactive pods from garbage |
+| `--mark-only` | `false` | If set to true, then the exited/aborted pods will be moved to the garbage directories without actually deleting them, this is useful for marking the exit time of a pod |
 
 ## Global options
 

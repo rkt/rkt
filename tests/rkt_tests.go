@@ -238,6 +238,14 @@ func patchImportAndRun(image string, patches []string, t *testing.T, ctx *testut
 	spawnAndWaitOrFail(t, cmd, 0)
 }
 
+func patchImportAndPrepare(image string, patches []string, t *testing.T, ctx *testutils.RktRunCtx) {
+	imagePath := patchTestACI(image, patches...)
+	defer os.Remove(imagePath)
+
+	cmd := fmt.Sprintf("%s --insecure-options=image prepare %s", ctx.Cmd(), imagePath)
+	spawnAndWaitOrFail(t, cmd, 0)
+}
+
 func runGC(t *testing.T, ctx *testutils.RktRunCtx) {
 	cmd := fmt.Sprintf("%s gc --grace-period=0s", ctx.Cmd())
 	spawnAndWaitOrFail(t, cmd, 0)
