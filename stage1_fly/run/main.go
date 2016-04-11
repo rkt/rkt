@@ -332,7 +332,7 @@ func stage1() int {
 		}
 	}
 
-	if err = stage1common.WritePpid(os.Getpid()); err != nil {
+	if err = stage1common.WritePid(os.Getpid(), "ppid"); err != nil {
 		log.Error(err)
 		return 1
 	}
