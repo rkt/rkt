@@ -286,10 +286,6 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 			args = append(args, "--debug")
 		}
 
-		// host volume sharing with 9p
-		nsargs := stage1initcommon.VolumesToKvmDiskArgs(p.Manifest.Volumes)
-		args = append(args, nsargs...)
-
 		// lkvm requires $HOME to be defined,
 		// see https://github.com/coreos/rkt/issues/1393
 		if os.Getenv("HOME") == "" {
@@ -564,7 +560,7 @@ func stage1() int {
 	}
 
 	if flavor == "kvm" {
-		if err := KvmPodToSystemd(p, n); err != nil {
+		if err := KvmNetworkingToSystemd(p, n); err != nil {
 			log.PrintE("failed to configure systemd for kvm", err)
 			return 1
 		}
@@ -638,6 +634,14 @@ func stage1() int {
 	if err = stage1common.WritePid(os.Getpid(), pid_filename); err != nil {
 		log.Error(err)
 		return 1
+	}
+
+	// prepare mounts for kvm flavor
+	if flavor == "kvm" {
+		if err := KvmPrepareMounts(s1Root, p); err != nil {
+			log.PrintE("could not prepare mounts", err)
+			return 1
+		}
 	}
 
 	err = stage1common.WithClearedCloExec(lfd, func() error {

@@ -48,7 +48,7 @@ import (
 const (
 	// FlavorFile names the file storing the pod's flavor
 	FlavorFile    = "flavor"
-	sharedVolPerm = os.FileMode(0755)
+	SharedVolPerm = os.FileMode(0755)
 )
 
 var (
@@ -455,15 +455,6 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		return errwrap.Wrap(errors.New("failed to link service want"), err)
 	}
 
-	if flavor == "kvm" {
-		// bind mount all shared volumes from /mnt/volumeName (we don't use mechanism for bind-mounting given by nspawn)
-		err := AppToSystemdMountUnits(common.Stage1RootfsPath(p.Root), appName, p.Manifest.Volumes, ra, UnitsDir)
-		if err != nil {
-			return errwrap.Wrap(errors.New("failed to prepare mount units"), err)
-		}
-
-	}
-
 	if err = writeAppReaper(p, appName.String()); err != nil {
 		return errwrap.Wrap(fmt.Errorf("failed to write app %q reaper service", appName), err)
 	}
@@ -626,10 +617,10 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 	app := ra.App
 
 	sharedVolPath := common.SharedVolumesPath(p.Root)
-	if err := os.MkdirAll(sharedVolPath, sharedVolPerm); err != nil {
+	if err := os.MkdirAll(sharedVolPath, SharedVolPerm); err != nil {
 		return nil, errwrap.Wrap(errors.New("could not create shared volumes directory"), err)
 	}
-	if err := os.Chmod(sharedVolPath, sharedVolPerm); err != nil {
+	if err := os.Chmod(sharedVolPath, SharedVolPerm); err != nil {
 		return nil, errwrap.Wrap(fmt.Errorf("could not change permissions of %q", sharedVolPath), err)
 	}
 
@@ -638,7 +629,7 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		vols[v.Name] = v
 	}
 
-	mounts := generateMounts(ra, vols)
+	mounts := GenerateMounts(ra, vols)
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
