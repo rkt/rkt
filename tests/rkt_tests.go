@@ -679,6 +679,23 @@ func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string, keyIndex
 	}
 }
 
+func generatePodManifestFile(t *testing.T, manifest *schema.PodManifest) string {
+	tmpDir := testutils.GetValueFromEnvOrPanic("FUNCTIONAL_TMP")
+	f, err := ioutil.TempFile(tmpDir, "rkt-test-manifest-")
+	if err != nil {
+		t.Fatalf("Cannot create tmp pod manifest: %v", err)
+	}
+
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("Cannot marshal pod manifest: %v", err)
+	}
+	if err := ioutil.WriteFile(f.Name(), data, 0600); err != nil {
+		t.Fatalf("Cannot write pod manifest file: %v", err)
+	}
+	return f.Name()
+}
+
 func checkUserNS() error {
 	// CentOS 7 pretends to support user namespaces, but does not.
 	// See https://bugzilla.redhat.com/show_bug.cgi?id=1168776#c5

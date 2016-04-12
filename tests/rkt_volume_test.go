@@ -24,6 +24,9 @@ import (
 	"time"
 
 	"github.com/coreos/rkt/tests/testutils"
+
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
 
 var volTests = []struct {
@@ -181,6 +184,55 @@ func TestDockerVolumeSemantics(t *testing.T) {
 		cmd := fmt.Sprintf(`/bin/sh -c "export FILE=%s/file ; %s --debug --insecure-options=image run --inherit-env %s --exec /inspect -- --read-file"`, tt.dir, ctx.Cmd(), dockerVolImage[i])
 
 		expected := fmt.Sprintf("<<<%s>>>", tt.expectedContent)
+		runRktAndCheckOutput(t, cmd, expected, false)
+	}
+}
+
+func TestDockerVolumeSemanticsPodManifest(t *testing.T) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	for i, tt := range volDockerTests {
+		t.Logf("Running test #%v on directory %s", i, tt.dir)
+
+		hash := patchImportAndFetchHash(fmt.Sprintf("rkt-volume-image-pm-%d.aci", i), []string{fmt.Sprintf("--mounts=mydir,path=%s,readOnly=false", tt.dir)}, t, ctx)
+
+		imgID, err := types.NewHash(hash)
+		if err != nil {
+			t.Fatalf("Cannot generate types.Hash from %v: %v", hash, err)
+		}
+
+		pm := &schema.PodManifest{
+			ACKind:    schema.PodManifestKind,
+			ACVersion: schema.AppContainerVersion,
+			Apps: []schema.RuntimeApp{
+				{
+					Name: "rkt-volume-image",
+					App: &types.App{
+						Exec:  []string{"/inspect", "--read-file"},
+						User:  "0",
+						Group: "0",
+						Environment: []types.EnvironmentVariable{
+							{"FILE", fmt.Sprintf("%s/file", tt.dir)},
+						},
+						MountPoints: []types.MountPoint{
+							{"mydir", tt.dir, false},
+						},
+					},
+					Image: schema.RuntimeImage{
+						ID: *imgID,
+					},
+				},
+			},
+		}
+
+		manifestFile := generatePodManifestFile(t, pm)
+		defer os.Remove(manifestFile)
+
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --pod-manifest=%s", ctx.Cmd(), manifestFile)
+
+		expected := fmt.Sprintf("<<<%s>>>", tt.expectedContent)
+
 		runRktAndCheckOutput(t, cmd, expected, false)
 	}
 }
