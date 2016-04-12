@@ -41,23 +41,6 @@ func stringP(s string) *string {
 	return &s
 }
 
-func generatePodManifestFile(t *testing.T, manifest *schema.PodManifest) string {
-	tmpDir := testutils.GetValueFromEnvOrPanic("FUNCTIONAL_TMP")
-	f, err := ioutil.TempFile(tmpDir, "rkt-test-manifest-")
-	if err != nil {
-		t.Fatalf("Cannot create tmp pod manifest: %v", err)
-	}
-
-	data, err := json.Marshal(manifest)
-	if err != nil {
-		t.Fatalf("Cannot marshal pod manifest: %v", err)
-	}
-	if err := ioutil.WriteFile(f.Name(), data, 0600); err != nil {
-		t.Fatalf("Cannot write pod manifest file: %v", err)
-	}
-	return f.Name()
-}
-
 func verifyHostFile(t *testing.T, tmpdir, filename string, i int, expectedResult string) {
 	filePath := path.Join(tmpdir, filename)
 	defer os.Remove(filePath)

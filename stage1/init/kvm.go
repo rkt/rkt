@@ -48,9 +48,10 @@ func KvmNetworkingToSystemd(p *stage1commontypes.Pod, n *networking.Networking) 
 	return nil
 }
 
-func mountSharedVolumes(root string, volumes []types.Volume, ra *schema.RuntimeApp) error {
+func mountSharedVolumes(root string, p *stage1commontypes.Pod, ra *schema.RuntimeApp) error {
 	app := ra.App
 	appName := ra.Name
+	volumes := p.Manifest.Volumes
 	vols := make(map[types.ACName]types.Volume)
 	for _, v := range volumes {
 		vols[v.Name] = v
@@ -64,7 +65,8 @@ func mountSharedVolumes(root string, volumes []types.Volume, ra *schema.RuntimeA
 		return errwrap.Wrap(fmt.Errorf("could not change permissions of %q", sharedVolPath), err)
 	}
 
-	mounts := stage1initcommon.GenerateMounts(ra, vols)
+	imageManifest := p.Images[appName.String()]
+	mounts := stage1initcommon.GenerateMounts(ra, vols, imageManifest)
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
@@ -155,7 +157,7 @@ func ensureDestinationExists(source, destination string) error {
 
 func prepareMountsForApp(s1Root string, p *stage1commontypes.Pod, ra *schema.RuntimeApp) error {
 	// bind mount all shared volumes (we don't use mechanism for bind-mounting given by nspawn)
-	if err := mountSharedVolumes(s1Root, p.Manifest.Volumes, ra); err != nil {
+	if err := mountSharedVolumes(s1Root, p, ra); err != nil {
 		return errwrap.Wrap(errors.New("failed to prepare mount point"), err)
 	}
 

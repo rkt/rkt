@@ -56,8 +56,8 @@ func IsMountReadOnly(vol types.Volume, mountPoints []types.MountPoint) bool {
 	return isMPReadOnly(mountPoints, vol.Name)
 }
 
-func convertedFromDocker(ra *schema.RuntimeApp) bool {
-	ann := ra.Annotations
+func convertedFromDocker(im *schema.ImageManifest) bool {
+	ann := im.Annotations
 	_, ok := ann.Get("appc.io/docker/repository")
 	return ok
 }
@@ -65,7 +65,7 @@ func convertedFromDocker(ra *schema.RuntimeApp) bool {
 // GenerateMounts maps MountPoint paths to volumes, returning a list of mounts,
 // each with a parameter indicating if it's an implicit empty volume from a
 // Docker image.
-func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume) []mountWrapper {
+func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume, imageManifest *schema.ImageManifest) []mountWrapper {
 	app := ra.App
 
 	var genMnts []mountWrapper
@@ -101,7 +101,7 @@ func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume
 				GID:  &defaultGID,
 			}
 
-			dockerImplicit := convertedFromDocker(ra)
+			dockerImplicit := convertedFromDocker(imageManifest)
 			log.Printf("warning: no volume specified for mount point %q, implicitly creating an \"empty\" volume. This volume will be removed when the pod is garbage-collected.", mp.Name)
 			if dockerImplicit {
 				log.Printf("Docker converted image, initializing implicit volume with data contained at the mount point %q.", mp.Name)
@@ -162,11 +162,10 @@ func PrepareMountpoints(volPath string, targetPath string, vol *types.Volume, do
 				return errwrap.Wrap(fmt.Errorf("error copying image files to empty volume %q", volPath), err)
 			}
 		}
-	} else {
-		if err := os.MkdirAll(volPath, 0770); err != nil {
-			return errwrap.Wrap(fmt.Errorf("error creating %q", volPath), err)
-		}
+	}
 
+	if err := os.MkdirAll(volPath, 0770); err != nil {
+		return errwrap.Wrap(fmt.Errorf("error creating %q", volPath), err)
 	}
 	if err := os.Chown(volPath, Uid, Gid); err != nil {
 		return errwrap.Wrap(fmt.Errorf("could not change owner of %q", volPath), err)

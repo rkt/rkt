@@ -629,7 +629,8 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		vols[v.Name] = v
 	}
 
-	mounts := GenerateMounts(ra, vols)
+	imageManifest := p.Images[appName.String()]
+	mounts := GenerateMounts(ra, vols, imageManifest)
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
