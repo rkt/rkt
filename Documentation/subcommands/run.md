@@ -142,7 +142,7 @@ The read-only parameter is false by default.
 Syntax:
 
 ```
----volume NAME,kind=host,source=SOURCE_PATH,readOnly=BOOL
+--volume NAME,kind=host,source=SOURCE_PATH,readOnly=BOOL
 ```
 
 In the following example, we make the host's `/srv/data` accessible to app1 on `/var/data`:
