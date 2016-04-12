@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -456,5 +457,73 @@ func TestDeferredSignatureDownload(t *testing.T) {
 		if err := expectWithOutput(child, msg); err != nil {
 			t.Fatalf("Could not find expected msg %q, output follows:\n%v", msg, err)
 		}
+	}
+}
+
+func TestDifferentDiscoveryLabels(t *testing.T) {
+	manifestTemplate := `{"acKind":"ImageManifest","acVersion":"0.7.4","name":"IMG_NAME","labels":[{"name":"version","value":"1.2.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}]}`
+	emptyImage := getEmptyImagePath()
+	imageName := "localhost/rkt-test-different-discovery-labels-image"
+	manifest := strings.Replace(manifestTemplate, "IMG_NAME", imageName, -1)
+	tmpDir := createTempDirOrPanic("rkt-TestDifferentDiscoveryLabels-")
+	defer os.RemoveAll(tmpDir)
+
+	tmpManifest, err := ioutil.TempFile(tmpDir, "manifest")
+	if err != nil {
+		panic(fmt.Sprintf("Cannot create temp manifest: %v", err))
+	}
+	if err := ioutil.WriteFile(tmpManifest.Name(), []byte(manifest), 0600); err != nil {
+		panic(fmt.Sprintf("Cannot write to temp manifest: %v", err))
+	}
+	defer os.Remove(tmpManifest.Name())
+
+	image := patchACI(emptyImage, "rkt-test-different-discovery-labels-image.aci", "--manifest", tmpManifest.Name())
+	imageFileName := fmt.Sprintf("%s.aci", filepath.Base(imageName))
+	defer os.Remove(image)
+
+	asc := runSignImage(t, image, 1)
+	defer os.Remove(asc)
+	ascBase := filepath.Base(asc)
+
+	setup := taas.GetDefaultServerSetup()
+	server := runServer(t, setup)
+	defer server.Close()
+	fileSet := make(map[string]string, 2)
+	fileSet[imageFileName] = image
+	fileSet[ascBase] = asc
+	if err := server.UpdateFileSet(fileSet); err != nil {
+		t.Fatalf("Failed to populate a file list in test aci server: %v", err)
+	}
+
+	tests := []struct {
+		imageName       string
+		expectedMessage string
+	}{
+		{imageName + ":2.0", fmt.Sprintf("requested value for label %q: %q differs from fetched aci label value: %q", "version", "2.0", "1.2.0")},
+		{imageName + ":latest", fmt.Sprintf("requested value for label %q: %q differs from fetched aci label value: %q", "version", "latest", "1.2.0")},
+		{imageName + ",arch=armv7b", fmt.Sprintf("requested value for label %q: %q differs from fetched aci label value: %q", "arch", "armv7b", "amd64")},
+		{imageName + ",unexistinglabel=bla", fmt.Sprintf("requested label %q not provided by the image manifest", "unexistinglabel")},
+	}
+
+	for _, tt := range tests {
+		testDifferentDiscoveryNameLabels(t, tt.imageName, tt.expectedMessage)
+	}
+}
+
+func testDifferentDiscoveryNameLabels(t *testing.T, imageName string, expectedMessage string) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	runRktTrust(t, ctx, "", 1)
+
+	// Since aci-server provided meta tag template doesn't contains
+	// {version} {os} or {arch}, we can just ask for any version/os/arch
+	// and always get the same ACI
+	runCmd := fmt.Sprintf("%s --debug --insecure-options=tls fetch %s", ctx.Cmd(), imageName)
+	child := spawnOrFail(t, runCmd)
+	defer waitOrFail(t, child, 1)
+
+	if err := expectWithOutput(child, expectedMessage); err != nil {
+		t.Fatalf("Could not find expected msg %q, output follows:\n%v", expectedMessage, err)
 	}
 }

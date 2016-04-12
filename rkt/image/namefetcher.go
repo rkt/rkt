@@ -181,7 +181,7 @@ func (f *nameFetcher) fetchVerifiedURL(app *discovery.App, u *url.URL, a *asc) (
 		}
 	}
 
-	if err := f.validate(appName, aciFile, ascFile); err != nil {
+	if err := f.validate(app, aciFile, ascFile); err != nil {
 		return nil, nil, err
 	}
 	retAciFile := aciFile
@@ -249,13 +249,17 @@ func (f *nameFetcher) checkIdentity(appName string, ascFile io.ReadSeeker) error
 	return nil
 }
 
-func (f *nameFetcher) validate(appName string, aciFile, ascFile io.ReadSeeker) error {
+func (f *nameFetcher) validate(app *discovery.App, aciFile, ascFile io.ReadSeeker) error {
 	v, err := newValidator(aciFile)
 	if err != nil {
 		return err
 	}
 
-	if err := v.ValidateName(appName); err != nil {
+	if err := v.ValidateName(app.Name.String()); err != nil {
+		return err
+	}
+
+	if err := v.ValidateLabels(app.Labels); err != nil {
 		return err
 	}
 
