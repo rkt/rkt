@@ -169,8 +169,8 @@ func TestDockerVolumeSemantics(t *testing.T) {
 	defer ctx.Cleanup()
 
 	var dockerVolImage []string
-	for _, tt := range volDockerTests {
-		img := patchTestACI("rkt-volume-image.aci", fmt.Sprintf("--mounts=mydir,path=%s,readOnly=false", tt.dir))
+	for i, tt := range volDockerTests {
+		img := patchTestACI(fmt.Sprintf("rkt-volume-image-%d.aci", i), fmt.Sprintf("--mounts=mydir,path=%s,readOnly=false", tt.dir))
 		defer os.Remove(img)
 		dockerVolImage = append(dockerVolImage, img)
 	}
