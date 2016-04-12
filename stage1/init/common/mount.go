@@ -162,11 +162,10 @@ func PrepareMountpoints(volPath string, targetPath string, vol *types.Volume, do
 				return errwrap.Wrap(fmt.Errorf("error copying image files to empty volume %q", volPath), err)
 			}
 		}
-	} else {
-		if err := os.MkdirAll(volPath, 0770); err != nil {
-			return errwrap.Wrap(fmt.Errorf("error creating %q", volPath), err)
-		}
+	}
 
+	if err := os.MkdirAll(volPath, 0770); err != nil {
+		return errwrap.Wrap(fmt.Errorf("error creating %q", volPath), err)
 	}
 	if err := os.Chown(volPath, Uid, Gid); err != nil {
 		return errwrap.Wrap(fmt.Errorf("could not change owner of %q", volPath), err)
