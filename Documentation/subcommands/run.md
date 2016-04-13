@@ -44,6 +44,14 @@ In the following example, the CPU isolator is defined to 750 milli-cores and the
 # rkt run coreos.com/etcd:v2.0.0 --cpu=750m --memory=128M
 ```
 
+## Overriding User/Group
+
+Application images must specify the username/group or the UID/GID the app is to be run as as specified in the [Image Manifest Schema](https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema). The user/group can be overridden by rkt using the `--user` and `--group` flags:
+
+```
+# rkt --insecure-options=image run docker://busybox --user=1000 --group=100 --exec id
+```
+
 ## Passing Arguments
 
 To pass additional arguments to images use the pattern of `image1 -- [image1 flags] --- image2 -- [image2 flags]`.

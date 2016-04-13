@@ -99,6 +99,8 @@ func init() {
 	cmdRun.Flags().Var((*appMount)(&rktApps), "mount", "mount point binding a volume to a path within an app")
 	cmdRun.Flags().Var((*appMemoryLimit)(&rktApps), "memory", "memory limit for the preceding image (example: '--memory=16Mi', '--memory=50M', '--memory=1G')")
 	cmdRun.Flags().Var((*appCPULimit)(&rktApps), "cpu", "cpu limit for the preceding image (example: '--cpu=500m')")
+	cmdRun.Flags().Var((*appUser)(&rktApps), "user", "user override for the preceding image (example: '--user=user')")
+	cmdRun.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
 
 	flagPorts = portList{}
 	flagDNS = flagStringList{}

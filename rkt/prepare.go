@@ -69,6 +69,8 @@ func init() {
 	cmdPrepare.Flags().Var((*appExec)(&rktApps), "exec", "override the exec command for the preceding image")
 	cmdPrepare.Flags().Var((*appMount)(&rktApps), "mount", "mount point binding a volume to a path within an app")
 	cmdPrepare.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
+	cmdPrepare.Flags().Var((*appUser)(&rktApps), "user", "user override for the preceding image (example: '--user=user')")
+	cmdPrepare.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
 
 	// Disable interspersed flags to stop parsing after the first non flag
 	// argument. This is need to permit to correctly handle

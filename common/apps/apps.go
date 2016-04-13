@@ -46,6 +46,7 @@ type App struct {
 	Mounts      []schema.Mount        // mounts for this app (superseding any mounts in rktApps.mounts of same MountPoint)
 	MemoryLimit *types.ResourceMemory // memory isolator override
 	CPULimit    *types.ResourceCPU    // cpu isolator override
+	User, Group string                // user, group overrides
 
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
 	ImageID types.Hash // resolved image identifier
