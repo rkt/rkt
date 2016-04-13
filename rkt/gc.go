@@ -17,13 +17,17 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 	"time"
 
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
 
@@ -191,6 +195,31 @@ func emptyGarbage() error {
 	return nil
 }
 
+func mountPodStage1(s *store.Store, p *pod) error {
+	if !p.usesOverlay() {
+		return nil
+	}
+
+	s1Id, err := p.getStage1TreeStoreID()
+	if err != nil {
+		return errwrap.Wrap(errors.New("error getting stage1 treeStoreID"), err)
+	}
+	s1rootfs := s.GetTreeStoreRootFS(s1Id)
+
+	stage1Dir := common.Stage1RootfsPath(p.path())
+	overlayDir := filepath.Join(p.path(), "overlay")
+	imgDir := filepath.Join(overlayDir, s1Id)
+	upperDir := filepath.Join(imgDir, "upper")
+	workDir := filepath.Join(imgDir, "work")
+
+	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", s1rootfs, upperDir, workDir)
+	if err := syscall.Mount("overlay", stage1Dir, "overlay", 0, opts); err != nil {
+		return errwrap.Wrap(errors.New("error mounting stage1"), err)
+	}
+
+	return nil
+}
+
 // deletePod cleans up files and resource associated with the pod
 // pod must be under exclusive lock and be in either ExitedGarbage
 // or Garbage state
@@ -207,19 +236,25 @@ func deletePod(p *pod) {
 		}
 		defer s.Close()
 
-		// execute stage1's GC
-		stage1TreeStoreID, err := p.getStage1TreeStoreID()
-		if err != nil {
-			stderr.PrintE("error getting stage1 treeStoreID", err)
-			stderr.Print("skipping stage1 GC")
-		} else {
-			if globalFlags.Debug {
-				stage0.InitDebug()
-			}
-			stage1RootFS := s.GetTreeStoreRootFS(stage1TreeStoreID)
-			if err = stage0.GC(p.path(), p.uuid, stage1RootFS); err != nil {
+		if globalFlags.Debug {
+			stage0.InitDebug()
+		}
+
+		if err := mountPodStage1(s, p); err == nil {
+			if err = stage0.GC(p.path(), p.uuid); err != nil {
 				stderr.PrintE(fmt.Sprintf("problem performing stage1 GC on %q", p.uuid), err)
 			}
+			// an overlay fs can be mounted over itself, let's unmount it here
+			// if we mounted it before to avoid problems when running
+			// stage0.MountGC
+			if p.usesOverlay() {
+				stage1Mnt := common.Stage1RootfsPath(p.path())
+				if err := syscall.Unmount(stage1Mnt, 0); err != nil {
+					stderr.PrintE("error unmounting stage1", err)
+				}
+			}
+		} else {
+			stderr.PrintE("skipping stage1 GC", err)
 		}
 
 		// unmount all leftover mounts

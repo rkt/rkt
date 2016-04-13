@@ -29,19 +29,22 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/coreos/rkt/common"
+
 	"github.com/appc/spec/schema/types"
 	"github.com/hashicorp/errwrap"
 )
 
 // GC enters the pod by fork/exec()ing the stage1's /gc similar to /init.
 // /gc can expect to have its CWD set to the pod root.
-// stage1Path is the path of the stage1 rootfs
-func GC(pdir string, uuid *types.UUID, stage1Path string) error {
+func GC(pdir string, uuid *types.UUID) error {
 	err := unregisterPod(pdir, uuid)
 	if err != nil {
 		// Probably not worth abandoning the rest
 		log.PrintE("warning: could not unregister pod with metadata service", err)
 	}
+
+	stage1Path := common.Stage1RootfsPath(pdir)
 
 	ep, err := getStage1Entrypoint(pdir, gcEntrypoint)
 	if err != nil {
