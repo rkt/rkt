@@ -872,11 +872,14 @@ func getChildPID(ppid int) (int, error) {
 
 // getPID returns the pid of the stage1 process that started the pod.
 func (p *pod) getPID() (int, error) {
-	pid, err := p.readIntFromFile("ppid")
-	if err != nil {
-		return -1, err
+	if pid, err := p.readIntFromFile("pid"); err == nil {
+		return pid, nil
 	}
-	return pid, nil
+	if pid, err := p.readIntFromFile("ppid"); err != nil {
+		return -1, err
+	} else {
+		return pid, nil
+	}
 }
 
 // getContainerPID1 returns the pid of the process with pid 1 in the pod.
