@@ -101,7 +101,7 @@ A more advanced unit example takes advantage of a few convenient `systemd` featu
 1. Inheriting environment variables specified in the unit with `--inherit-env`. This feature helps keep units concise, instead of layering on many flags to `rkt run`.
 2. Using the dependency graph to start our pod after networking has come online. This is helpful if your application requires outside connectivity to fetch remote configuration (for example, from `etcd`).
 3. Set resource limits for this `rkt` pod. This can also be done in the unit file, rather than flagged to `rkt run`.
-4. Set `ExecStop` to invoke `rkt gc --mark-only` to record the timestamp when the pod exits.
+4. Set `ExecStopPost` to invoke `rkt gc --mark-only` to record the timestamp when the pod exits.
 (Run `rkt gc --help` to see more details about this flag).
 After running `rkt gc --mark-only`, the timestamp can be retrieved from rkt API service in pod's `gc_marked_at` field.
 The timestamp can be treated as the finished time of the pod.
@@ -131,7 +131,7 @@ Environment=TMPDIR=/var/tmp
 ExecStartPre=/usr/bin/rkt fetch myapp.com/myapp-1.3.4
 # Start the app
 ExecStart=/usr/bin/rkt run --inherit-env --port=http:8888 myapp.com/myapp-1.3.4
-ExecStop=/usr/bin/rkt gc --mark-only
+ExecStopPost=/usr/bin/rkt gc --mark-only
 KillMode=mixed
 Restart=always
 ```

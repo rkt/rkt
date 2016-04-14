@@ -338,6 +338,8 @@ func TestAPIServiceListInspectPods(t *testing.T) {
 	runCmd := fmt.Sprintf("%s run --pod-manifest=%s", ctx.Cmd(), manifestFile)
 	waitOrFail(t, spawnOrFail(t, runCmd), 0)
 
+	time.Sleep(delta)
+
 	gcCmd := fmt.Sprintf("%s gc --mark-only=true", ctx.Cmd())
 	waitOrFail(t, spawnOrFail(t, gcCmd), 0)
 
