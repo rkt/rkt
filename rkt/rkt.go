@@ -259,10 +259,12 @@ func getDataDir() string {
 }
 
 func calculateDataDir() string {
+	var dataDir string
+
 	// If --dir parameter is passed, then use this value.
 	if dirFlag := cmdRkt.PersistentFlags().Lookup("dir"); dirFlag != nil {
 		if dirFlag.Changed {
-			return globalFlags.Dir
+			dataDir = globalFlags.Dir
 		}
 	} else {
 		// should not happen
@@ -270,17 +272,29 @@ func calculateDataDir() string {
 	}
 
 	// If above fails, then try to get the value from configuration.
-	if config, err := getConfig(); err != nil {
-		stderr.PrintE("cannot get configuration", err)
-		os.Exit(1)
-	} else {
-		if config.Paths.DataDir != "" {
-			return config.Paths.DataDir
+	if dataDir == "" {
+		if config, err := getConfig(); err != nil {
+			stderr.PrintE("cannot get configuration", err)
+			os.Exit(1)
+		} else {
+			if config.Paths.DataDir != "" {
+				dataDir = config.Paths.DataDir
+			}
 		}
 	}
 
+	if dataDir == "" {
+		dataDir = defaultDataDir
+	}
+
+	// Resolve symlinks
+	realDataDir, err := filepath.EvalSymlinks(dataDir)
+	if err != nil {
+		stderr.PrintE(fmt.Sprintf("cannot evaluate dataDir %q real path", dataDir), err)
+		os.Exit(1)
+	}
 	// If above fails, then use the default.
-	return defaultDataDir
+	return realDataDir
 }
 
 func getConfig() (*config.Config, error) {
