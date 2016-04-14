@@ -36,7 +36,7 @@ sudo gpasswd -a runner rkt
 
 ```
 ./tests/build-and-run-tests.sh -f none -c
-./tests/build-and-run-tests.sh -f src -s v229 -c
+./tests/build-and-run-tests.sh -f kvm -c
 ```
 
 #### Thread 2
@@ -60,7 +60,7 @@ It would be possible to add more tests with the following commands:
 ```
 ./tests/build-and-run-tests.sh -f src -s v227 -c
 ./tests/build-and-run-tests.sh -f src -s master -c
-./tests/build-and-run-tests.sh -f kvm -c
+./tests/build-and-run-tests.sh -f src -s v229 -c
 ```
 
 #### build-and-run-tests.sh parameters description

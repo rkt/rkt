@@ -12,28 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build coreos src kvm
+// +build coreos src
 
 package main
 
-import (
-	"fmt"
-	"os"
-	"testing"
+import "testing"
 
-	"github.com/coreos/rkt/tests/testutils"
-)
+var pidFileName = "ppid"
 
-func TestRktEnsureErrors(t *testing.T) {
-	const imgName = "rkt-ensure-errors-test"
+func TestPidFileDelayedStart(t *testing.T) {
+	NewPidFileDelayedStartTest(pidFileName)
+}
 
-	image := patchTestACI(fmt.Sprintf("%s.aci", imgName), fmt.Sprintf("--name=%s", imgName))
-	defer os.Remove(image)
-
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
-
-	runCmd := fmt.Sprintf("%s run --insecure-options=image --net=notavalidnetwork %s", ctx.Cmd(), image)
-	t.Logf("Running test: %s", runCmd)
-	runRktAndCheckRegexOutput(t, runCmd, "stage1: failed to setup network")
+func TestPidFileAbortedStart(t *testing.T) {
+	// For nspawn, the escape character is ^]^]^]. This process will exit with code 1
+	NewPidFileAbortedStartTest(pidFileName, "\035\035\035", 1)
 }

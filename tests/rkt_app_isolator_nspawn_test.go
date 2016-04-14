@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build coreos src kvm
+// +build coreos src
 
 package main
 
@@ -24,16 +24,16 @@ import (
 	"github.com/coreos/rkt/tests/testutils"
 )
 
-func TestRktEnsureErrors(t *testing.T) {
-	const imgName = "rkt-ensure-errors-test"
-
-	image := patchTestACI(fmt.Sprintf("%s.aci", imgName), fmt.Sprintf("--name=%s", imgName))
-	defer os.Remove(image)
-
+func TestCgroups(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	runCmd := fmt.Sprintf("%s run --insecure-options=image --net=notavalidnetwork %s", ctx.Cmd(), image)
-	t.Logf("Running test: %s", runCmd)
-	runRktAndCheckRegexOutput(t, runCmd, "stage1: failed to setup network")
+	t.Logf("Running test: %v", cgroupsTest.testName)
+
+	aciFileName := patchTestACI("rkt-inspect-isolators.aci", cgroupsTest.aciBuildArgs...)
+	defer os.Remove(aciFileName)
+
+	rktCmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), aciFileName)
+	expectedLine := "check-cgroups: SUCCESS"
+	runRktAndCheckOutput(t, rktCmd, expectedLine, false)
 }

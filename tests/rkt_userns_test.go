@@ -74,31 +74,36 @@ func TestUserns(t *testing.T) {
 			runCmd = strings.Replace(runCmd, "^FILE^", tt.file, -1)
 			runCmd = strings.Replace(runCmd, "^USERNS^", userNsOpt, -1)
 
-			t.Logf("Running 'run' test #%v: %v", i, runCmd)
-			child, err := gexpect.Spawn(runCmd)
-			if err != nil {
-				t.Fatalf("Cannot exec rkt #%v: %v", i, err)
-			}
+			if userNsOpt == "--private-users" {
+				t.Logf("Running 'run' test #%v: %v", i, runCmd)
+				child, err := gexpect.Spawn(runCmd)
+				if err != nil {
+					t.Fatalf("Cannot exec rkt #%v: %v", i, err)
+				}
 
-			err = expectWithOutput(child, tt.file+": mode: "+tt.expectMode)
-			if err != nil {
-				t.Fatalf("Expected %q but not found: %v", tt.expectMode, err)
-			}
-			err = expectWithOutput(child, tt.file+": user: "+tt.expectUid)
-			if err != nil {
-				t.Fatalf("Expected %q but not found: %v", tt.expectUid, err)
-			}
-			err = expectWithOutput(child, tt.file+": group: "+tt.expectGid)
-			if err != nil {
-				t.Fatalf("Expected %q but not found: %v", tt.expectGid, err)
-			}
+				expectedResult := tt.file + `: mode: (\w+.\w+.\w+)`
+				result, _, err := expectRegexWithOutput(child, expectedResult)
+				if err != nil || result[1] != tt.expectMode {
+					t.Fatalf("Expected %q but not found: %v", tt.expectMode, result)
+				}
+				expectedResult = tt.file + `: user: (\d)`
+				result, _, err = expectRegexWithOutput(child, expectedResult)
+				if err != nil || result[0] == tt.expectUid {
+					t.Fatalf("Expected %q but not found: %v", tt.expectUid, result)
+				}
+				expectedResult = tt.file + `: group: (\d)`
+				result, _, err = expectRegexWithOutput(child, expectedResult)
+				if err != nil || result[0] == tt.expectGid {
+					t.Fatalf("Expected %q but not found: %v", tt.expectGid, result)
+				}
 
-			err = child.Wait()
-			if err != nil {
-				t.Fatalf("rkt didn't terminate correctly: %v", err)
-			}
+				err = child.Wait()
+				if err != nil {
+					t.Fatalf("rkt didn't terminate correctly: %v", err)
+				}
 
-			ctx.Reset()
+				ctx.Reset()
+			}
 		}
 	}
 }

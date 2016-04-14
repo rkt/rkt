@@ -12,28 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build coreos src kvm
+// +build kvm
 
 package main
 
-import (
-	"fmt"
-	"os"
-	"testing"
+import "testing"
 
-	"github.com/coreos/rkt/tests/testutils"
-)
+func TestNetDefaultPortFwdConnectivity(t *testing.T) {
+	NewNetDefaultPortFwdConnectivityTest(
+		PortFwdCase{"172.16.28.1", "--net=default", true},
+	).Execute(t)
+}
 
-func TestRktEnsureErrors(t *testing.T) {
-	const imgName = "rkt-ensure-errors-test"
-
-	image := patchTestACI(fmt.Sprintf("%s.aci", imgName), fmt.Sprintf("--name=%s", imgName))
-	defer os.Remove(image)
-
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
-
-	runCmd := fmt.Sprintf("%s run --insecure-options=image --net=notavalidnetwork %s", ctx.Cmd(), image)
-	t.Logf("Running test: %s", runCmd)
-	runRktAndCheckRegexOutput(t, runCmd, "stage1: failed to setup network")
+func TestNetCustomPtp(t *testing.T) {
+	// PTP means connection Point-To-Point. That is, connections to other pods/containers should be forbidden
+	NewNetCustomPtpTest(false)
 }
