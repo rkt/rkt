@@ -85,6 +85,10 @@ func TestAuthConfigFormat(t *testing.T) {
 				t.Error("Got unexpected results\nResult:\n", result, "\n\nExpected:\n", tt.expected)
 			}
 		}
+
+		if _, err := json.Marshal(cfg); err != nil {
+			t.Errorf("error marshaling config %v", err)
+		}
 	}
 }
 
@@ -117,6 +121,10 @@ func TestDockerAuthConfigFormat(t *testing.T) {
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Error("Got unexpected results\nResult:\n", result, "\n\nExpected:\n", tt.expected)
 			}
+		}
+
+		if _, err := json.Marshal(cfg); err != nil {
+			t.Errorf("error marshaling config %v", err)
 		}
 	}
 }
