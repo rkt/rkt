@@ -137,7 +137,7 @@ func checkPodNetworks(t *testing.T, rawNets map[string]*networkInfo, apiNets []*
 }
 
 // Check the pod's information by 'rkt status'.
-func checkPod(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod, hasAppState, hasManifest bool) {
+func checkPod(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod, hasAppState, hasManifest bool, expectedGCTime time.Time) {
 	podInfo := getPodInfo(t, ctx, p.Id)
 	if podInfo.id != p.Id {
 		t.Errorf("Expected %q, saw %q", podInfo.id, p.Id)
@@ -152,6 +152,12 @@ func checkPod(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod, hasAppStat
 	}
 	if podInfo.startedAt/accuracy != p.StartedAt/accuracy {
 		t.Errorf("Expected %d, saw %d", podInfo.startedAt, p.StartedAt)
+	}
+
+	// If expectedGCTime.IsZero() == true, then p.GcMarkedAt should also be zero.
+	actualTime := time.Unix(0, p.GcMarkedAt)
+	if !compareTime(expectedGCTime, actualTime) {
+		t.Errorf("API service returned an incorrect GC marked time. Got %q, Expect: %q", actualTime, expectedGCTime)
 	}
 	checkPodState(t, podInfo.state, p.State)
 	checkPodApps(t, podInfo.apps, p.Apps, hasAppState)
@@ -186,12 +192,16 @@ func checkPod(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod, hasAppStat
 	}
 }
 
+func checkPodBasicsWithGCTime(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod, expectedGCTime time.Time) {
+	checkPod(t, ctx, p, false, false, expectedGCTime)
+}
+
 func checkPodBasics(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod) {
-	checkPod(t, ctx, p, false, false)
+	checkPod(t, ctx, p, false, false, time.Time{})
 }
 
 func checkPodDetails(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod) {
-	checkPod(t, ctx, p, true, true)
+	checkPod(t, ctx, p, true, true, time.Time{})
 }
 
 // Check the image's information by 'rkt image list'.
@@ -326,8 +336,12 @@ func TestAPIServiceListInspectPods(t *testing.T) {
 	defer os.Remove(manifestFile)
 
 	runCmd := fmt.Sprintf("%s run --pod-manifest=%s", ctx.Cmd(), manifestFile)
-	esp := spawnOrFail(t, runCmd)
-	waitOrFail(t, esp, 0)
+	waitOrFail(t, spawnOrFail(t, runCmd), 0)
+
+	gcCmd := fmt.Sprintf("%s gc --mark-only=true", ctx.Cmd())
+	waitOrFail(t, spawnOrFail(t, gcCmd), 0)
+
+	gcTime := time.Now()
 
 	// ListPods(detail=false).
 	resp, err = c.ListPods(context.Background(), &v1alpha.ListPodsRequest{})
@@ -340,7 +354,7 @@ func TestAPIServiceListInspectPods(t *testing.T) {
 	}
 
 	for _, p := range resp.Pods {
-		checkPodBasics(t, ctx, p)
+		checkPodBasicsWithGCTime(t, ctx, p, gcTime)
 
 		// Test InspectPod().
 		inspectResp, err := c.InspectPod(context.Background(), &v1alpha.InspectPodRequest{Id: p.Id})

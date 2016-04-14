@@ -478,7 +478,7 @@ func (p *pod) xToExitedGarbage() error {
 	return nil
 }
 
-// xToGarbage transitions a pod from prepared -> garbage or prepared -> garbage
+// xToGarbage transitions a pod from abortedPrepared -> garbage or prepared -> garbage
 func (p *pod) xToGarbage() error {
 	if !p.isAbortedPrepare && !p.isPrepared {
 		return fmt.Errorf("bug: only failed prepare or prepared pods may transition to garbage")
@@ -676,6 +676,7 @@ func (p *pod) refreshState() error {
 
 // waitExited waits for a pod to (run and) exit.
 func (p *pod) waitExited() error {
+	// isExited implies isExitedGarbage.
 	for !p.isExited && !p.isAbortedPrepare && !p.isGarbage && !p.isGone {
 		if err := p.SharedLock(); err != nil {
 			return err
@@ -764,6 +765,7 @@ func (p *pod) getModTime(path string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
+	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
@@ -803,6 +805,29 @@ func (p *pod) getStartTime() (time.Time, error) {
 		}
 	}
 	return t, err
+}
+
+func (p *pod) getGCMarkedTime() (time.Time, error) {
+	if !p.isGarbage && !p.isExitedGarbage {
+		return time.Time{}, nil
+	}
+
+	// At this point, the pod is in either exited-garbage dir, garbage dir or gone already.
+	podPath := p.path()
+	if podPath == "" {
+		// Pod is gone.
+		return time.Time{}, nil
+	}
+
+	st := &syscall.Stat_t{}
+	if err := syscall.Lstat(podPath, st); err != nil {
+		if err == syscall.ENOENT {
+			// Pod is gone.
+			err = nil
+		}
+		return time.Time{}, err
+	}
+	return time.Unix(st.Ctim.Unix()), nil
 }
 
 type ErrChildNotReady struct {

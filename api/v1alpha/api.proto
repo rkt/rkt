@@ -173,11 +173,18 @@ message Pod {
         // Cgroup of the pod, empty if the pod is not running.
         string cgroup = 8;
 
-        // Timestamp when the pod is created, nanoseconds since epoch.
+        // Timestamp of when the pod is created, nanoseconds since epoch.
+        // Zero if the pod is not created.
         int64 created_at = 9;
 
-        // Timestamp when the pod is started, nanoseconds since epoch.
+        // Timestamp of when the pod is started, nanoseconds since epoch.
+        // Zero if the pod is not started.
         int64 started_at = 10;
+
+        // Timestamp of when the pod is moved to exited-garbage/garbage,
+        // in nanoseconds since epoch.
+        // Zero if the pod is not moved to exited-garbage/garbage yet.
+        int64 gc_marked_at = 11;
 }
 
 message KeyValue {

@@ -333,7 +333,14 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
 		return nil, nil, err
 	}
 
-	pod.CreatedAt, pod.StartedAt = createdAt.UnixNano(), startedAt.UnixNano()
+	gcMarkedAt, err := p.getGCMarkedTime()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pod.CreatedAt = createdAt.UnixNano()
+	pod.StartedAt = startedAt.UnixNano()
+	pod.GcMarkedAt = gcMarkedAt.UnixNano()
 
 	manifest, data, err := getPodManifest(p)
 	if err != nil {
