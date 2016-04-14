@@ -59,6 +59,37 @@ var (
 		"LOGNAME": "root",
 		"HOME":    "/root",
 	}
+
+	// The list of default capabilities inside systemd-nspawn pod is available
+	// here: https://www.freedesktop.org/software/systemd/man/systemd-nspawn.html
+	nspawnCapabilities, _ = types.NewLinuxCapabilitiesRetainSet([]string{
+		"CAP_CHOWN",
+		"CAP_DAC_OVERRIDE",
+		"CAP_DAC_READ_SEARCH",
+		"CAP_FOWNER",
+		"CAP_FSETID",
+		"CAP_IPC_OWNER",
+		"CAP_KILL",
+		"CAP_LEASE",
+		"CAP_LINUX_IMMUTABLE",
+		"CAP_NET_BIND_SERVICE",
+		"CAP_NET_BROADCAST",
+		"CAP_NET_RAW",
+		"CAP_SETGID",
+		"CAP_SETFCAP",
+		"CAP_SETPCAP",
+		"CAP_SETUID",
+		"CAP_SYS_ADMIN",
+		"CAP_SYS_CHROOT",
+		"CAP_SYS_NICE",
+		"CAP_SYS_PTRACE",
+		"CAP_SYS_TTY_CONFIG",
+		"CAP_SYS_RESOURCE",
+		"CAP_SYS_BOOT",
+		"CAP_AUDIT_WRITE",
+		"CAP_AUDIT_CONTROL",
+		"CAP_MKNOD",
+	}...)
 )
 
 // execEscape uses Golang's string quoting for ", \, \n, and regex for special cases
@@ -346,6 +377,13 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
 		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
 		opts = append(opts, unit.NewUnitOption("Service", "SyslogIdentifier", filepath.Base(app.Exec[0])))
+	}
+
+	if flavor == "kvm" {
+		capabilities := append(app.Isolators, nspawnCapabilities.AsIsolator())
+		capabilitiesStr := GetAppCapabilities(capabilities)
+
+		opts = append(opts, unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")))
 	}
 
 	// When an app fails, we shut down the pod
@@ -673,20 +711,8 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		args = append(args, strings.Join(opt, ""))
 	}
 
-	for _, i := range app.Isolators {
-		switch v := i.Value().(type) {
-		case types.LinuxCapabilitiesSet:
-			var caps []string
-			// TODO: cleanup the API on LinuxCapabilitiesSet to give strings easily.
-			for _, c := range v.Set() {
-				caps = append(caps, string(c))
-			}
-			if i.Name == types.LinuxCapabilitiesRetainSetName {
-				capList := strings.Join(caps, ",")
-				args = append(args, "--capability="+capList)
-			}
-		}
-	}
+	capList := strings.Join(GetAppCapabilities(app.Isolators), ",")
+	args = append(args, "--capability="+capList)
 
 	return args, nil
 }
@@ -771,4 +797,27 @@ func GetAppHashes(p *stage1commontypes.Pod) []types.Hash {
 // systemd-nspawn
 func GetMachineID(p *stage1commontypes.Pod) string {
 	return "rkt-" + p.UUID.String()
+}
+
+// GetAppCapabilities is a filter which returns a string slice of valid Linux capabilities
+// It requires list of available isolators
+func GetAppCapabilities(isolators types.Isolators) []string {
+	var caps []string
+
+	for _, isolator := range isolators {
+		if capSet, ok := isolator.Value().(types.LinuxCapabilitiesSet); ok &&
+			isolator.Name == types.LinuxCapabilitiesRetainSetName {
+			caps = append(caps, parseLinuxCapabilitiesSet(capSet)...)
+		}
+	}
+	return caps
+}
+
+// parseLinuxCapabilitySet parses a LinuxCapabilitiesSet into string slice
+func parseLinuxCapabilitiesSet(capSet types.LinuxCapabilitiesSet) []string {
+	var capsStr []string
+	for _, cap := range capSet.Set() {
+		capsStr = append(capsStr, string(cap))
+	}
+	return capsStr
 }
