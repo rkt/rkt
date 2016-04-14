@@ -248,6 +248,14 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 			ra.App.Isolators = append(ra.App.Isolators, isolator)
 		}
 
+		if user := app.User; user != "" {
+			ra.App.User = user
+		}
+
+		if group := app.Group; group != "" {
+			ra.App.Group = group
+		}
+
 		if cfg.InheritEnv || len(cfg.ExplicitEnv) > 0 {
 			MergeEnvs(&ra.App.Environment, cfg.InheritEnv, cfg.ExplicitEnv)
 		}

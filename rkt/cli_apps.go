@@ -305,3 +305,51 @@ func (aml *appCPULimit) String() string {
 func (aml *appCPULimit) Type() string {
 	return "appCPULimit"
 }
+
+// appUser is for --user flags in the form of: --user=user
+type appUser apps.Apps
+
+func (au *appUser) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--user must follow an image")
+	}
+	app.User = s
+	return nil
+}
+
+func (au *appUser) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	return app.User
+}
+
+func (au *appUser) Type() string {
+	return "appUser"
+}
+
+// appGroup is for --group flags in the form of: --group=group
+type appGroup apps.Apps
+
+func (ag *appGroup) Set(s string) error {
+	app := (*apps.Apps)(ag).Last()
+	if app == nil {
+		return fmt.Errorf("--group must follow an image")
+	}
+	app.Group = s
+	return nil
+}
+
+func (ag *appGroup) String() string {
+	app := (*apps.Apps)(ag).Last()
+	if app == nil {
+		return ""
+	}
+	return app.Group
+}
+
+func (ag *appGroup) Type() string {
+	return "appGroup"
+}
