@@ -22,7 +22,7 @@ import (
 	"github.com/coreos/go-iptables/iptables"
 )
 
-func (e *podEnv) forwardPorts(fps []ForwardedPort, defIP net.IP) error {
+func (e *podEnv) forwardPorts(fps []ForwardedPort, podIP net.IP) error {
 	if len(fps) == 0 {
 		return nil
 	}
@@ -70,9 +70,9 @@ func (e *podEnv) forwardPorts(fps []ForwardedPort, defIP net.IP) error {
 
 	for _, p := range fps {
 
-		dst := fmt.Sprintf("%v:%v", defIP, p.PodPort)
-		dstIP := fmt.Sprintf("%v", defIP)
-		dport := strconv.Itoa(int(p.HostPort))
+		socketPod := fmt.Sprintf("%v:%v", podIP, p.PodPort)
+		dstPortHost := strconv.Itoa(int(p.HostPort))
+		dstPortPod := strconv.Itoa(int(p.PodPort))
 
 		for _, r := range []struct {
 			chain string
@@ -82,9 +82,9 @@ func (e *podEnv) forwardPorts(fps []ForwardedPort, defIP net.IP) error {
 				chainDNAT,
 				[]string{
 					"-p", p.Protocol,
-					"--dport", dport,
+					"--dport", dstPortHost,
 					"-j", "DNAT",
-					"--to-destination", dst,
+					"--to-destination", socketPod,
 				},
 			},
 			{ // Rewrite the source for connections to localhost on the host
@@ -92,8 +92,8 @@ func (e *podEnv) forwardPorts(fps []ForwardedPort, defIP net.IP) error {
 				[]string{
 					"-p", p.Protocol,
 					"-s", "127.0.0.1",
-					"-d", dstIP,
-					"--dport", dport,
+					"-d", podIP.String(),
+					"--dport", dstPortPod,
 					"-j", "MASQUERADE",
 				},
 			},
