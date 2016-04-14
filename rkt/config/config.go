@@ -32,7 +32,8 @@ import (
 // Headerer is an interface for getting additional HTTP headers to use
 // when downloading data (images, signatures).
 type Headerer interface {
-	Header() http.Header
+	GetHeader() http.Header
+	SignRequest(r *http.Request) *http.Request
 }
 
 // BasicCredentials holds typical credentials used for authentication
@@ -165,7 +166,7 @@ var (
 func ResolveAuthPerHost(authPerHost map[string]Headerer) map[string]http.Header {
 	hostHeaders := make(map[string]http.Header, len(authPerHost))
 	for k, v := range authPerHost {
-		hostHeaders[k] = v.Header()
+		hostHeaders[k] = v.GetHeader()
 	}
 	return hostHeaders
 }

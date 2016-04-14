@@ -146,8 +146,13 @@ type testHeaderer struct {
 	h http.Header
 }
 
-func (h *testHeaderer) Header() http.Header {
+func (h *testHeaderer) GetHeader() http.Header {
 	return h.h
+}
+
+func (h *testHeaderer) SignRequest(r *http.Request) *http.Request {
+	r.Header.Set("Authorization", h.GetHeader().Get("Authorization"))
+	return r
 }
 
 func TestDownloading(t *testing.T) {
