@@ -15,9 +15,9 @@ vagrant up --provider virtualbox
 vagrant ssh
 sudo -s
 
-wget https://github.com/coreos/rkt/releases/download/v1.3.0/rkt-v1.3.0.tar.gz
-tar xzvf rkt-v1.3.0.tar.gz
-cd rkt-v1.3.0
+wget https://github.com/coreos/rkt/releases/download/v1.4.0/rkt-v1.4.0.tar.gz
+tar xzvf rkt-v1.4.0.tar.gz
+cd rkt-v1.4.0
 ./rkt help
 ```
 
