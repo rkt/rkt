@@ -1,10 +1,66 @@
-## vUNRELEASED
+## v1.4.0
+
+This release includes a number of new features and bugfixes like a new config subcommand, man page, and bash completion generation during build time.
 
 #### New features and UX changes
 
-- Add `--user`/`--group` option to rkt run/prepare ([#2419](https://github.com/coreos/rkt/pull/2419)). This option allows overriding the user/group specified in the image manifest.
+- config: add config subcommand ([#2405](https://github.com/coreos/rkt/pull/2405)). This new subcommand prints the current rkt configuration. It can be used to get i.e. authentication credentials. See rkt's [config subcommand](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/config.md) documentation.
 
-- Ensure that the initial name and labels used for discovery match the name and labels in the Image Manifest as specified in the appc spec ([#2311](https://github.com/coreos/rkt/pull/2311)). Users wanting the latest image should use `rkt prepare/run/fetch example.com/aci` without any labels. If the discovery server supports the "latest" pattern, the user can bypass a locally cached image in the store and fetch an updated image using `rkt prepare/run/fetch --no-store example.com/aci` option.
+- run: add `--user`/`--group` app flags to `rkt run` and `rkt prepare` allowing to override the user and group specified in the image manifest ([#2419](https://github.com/coreos/rkt/pull/2419)).
+
+- gc: Add flag 'mark-only' to mark garbage pods without deleting them ([#2400](https://github.com/coreos/rkt/pull/2400), [#2402](https://github.com/coreos/rkt/pull/2402)). This new flag moves exited/aborted pods to the exited-garbage/garbage directory but does not delete them. A third party application can use `rkt gc --mark-only=true` to mark exited pods as garbage without deleting them.
+
+- kvm: Add support for app capabilities limitation ([#2222](https://github.com/coreos/rkt/pull/2222)). By default kvm flavor has got enabled every capability inside pod. This patch adds support for a restricted set of capabilities inside a kvm flavor of rkt.
+
+- stage1/init: return exit code 1 on error ([#2383](https://github.com/coreos/rkt/pull/2383)). On error, stage1/init was returning a non-zero value between 1 and 7. This change makes it return status code 1 only.
+
+- api: Add 'CreatedAt', 'StartedAt' in pod's info returned by api service. ([#2377](https://github.com/coreos/rkt/pull/2377)).
+
+#### Improved documentation
+
+- Minor documentation fixes ([#2413](https://github.com/coreos/rkt/pull/2413), [#2395](https://github.com/coreos/rkt/pull/2395), [#2231](https://github.com/coreos/rkt/pull/2231)).
+
+- functional tests: Add new test with systemd-proxyd ([#2257](https://github.com/coreos/rkt/pull/2257)). Adds a new test and documentation how to use systemd-proxyd with rkt pods.
+
+#### Bug fixes
+
+- kvm: refactor volumes support ([#2328](https://github.com/coreos/rkt/pull/2328)). This allows users to share regular files as volumes in addition to directories.
+
+- kvm: fix rkt status ([#2415](https://github.com/coreos/rkt/pull/2415)). Fixes a regression bug were `rkt status` was no longer reporting the pid of the pod when using the kvm flavor.
+
+- Build actool for the *build* architecture ([#2372](https://github.com/coreos/rkt/pull/2372)). Fixes a cross compilation issue with acbuild.
+
+- rkt: calculate real dataDir path ([#2399](https://github.com/coreos/rkt/pull/2399)). Fixes garbage collection when the data directory specified by `--dir` contains a symlink component.
+
+- stage1/init: fix docker volume semantics ([#2409](https://github.com/coreos/rkt/pull/2409)). Fixes a bug in docker volume semantics when rkt runs with the option `--pod-manifest`. When a Docker image exposes a mount point that is not mounted by a host volume, Docker volume semantics expect the files in the directory to be available to the application. This was partially fixed in rkt 1.3.0 via [#2315](https://github.com/coreos/rkt/pull/2315) but the bug remained when rkt runs with the option `--pod-manifest`. This is now fully fixed.
+
+- rkt/image: check that discovery labels match manifest labels ([#2311](https://github.com/coreos/rkt/pull/2311)).
+
+- store: fix multi process with multi goroutines race on db ([#2391](https://github.com/coreos/rkt/pull/2391)). This was a bug when multiple `rkt fetch` commands were executed concurrently.
+
+- kvm: fix pid vs ppid usage ([#2396](https://github.com/coreos/rkt/pull/2396)). Fixes a bug in `rkt enter` in the kvm flavor causing an infinite loop.
+
+- kvm: Fix connectivity issue in macvtap networks caused by macvlan NICs having incorrect names ([#2181](https://github.com/coreos/rkt/pull/2181)). 
+
+- tests: TestRktListCreatedStarted: fix timing issue causing the test to fail on slow machines ([#2366](https://github.com/coreos/rkt/pull/2366)).
+
+- rkt/image: remove redundant quotes in an error message ([#2379](https://github.com/coreos/rkt/pull/2379)).
+
+- prepare: Support 'ondisk' verification skip as documented by [the global options](https://github.com/coreos/rkt/blob/master/Documentation/commands.md#global-options) ([#2376](https://github.com/coreos/rkt/pull/2376)). Prior to this commit, rkt prepare would check the ondisk image even if the `--insecure-options=ondisk` flag was provided. This corrects that.
+
+#### Other changes
+
+- tests: skip TestSocketProxyd when systemd-socket-proxyd is not installed ([#2436](https://github.com/coreos/rkt/pull/2436)).
+
+- tests: TestDockerVolumeSemantics: more tests with symlinks ([#2394](https://github.com/coreos/rkt/pull/2394)).
+
+- rkt: Improve build shell script used in [continuous integration](https://github.com/coreos/rkt/blob/master/tests/README.md) ([#2394](https://github.com/coreos/rkt/pull/2394)).
+
+- protobuf: generate code using a script ([#2382](https://github.com/coreos/rkt/pull/2382)).
+
+- Generate manpages ([#2373](https://github.com/coreos/rkt/pull/2373)). This adds support for generating rkt man pages using `make manpages` and the bash completion file using `make bash-completion`, see the note for packagers below.
+
+- tests/aws.sh: add test for Fedora 24 ([#2340](https://github.com/coreos/rkt/pull/2340)).
 
 #### Note for packagers
 
