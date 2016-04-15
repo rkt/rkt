@@ -383,17 +383,18 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
 	}
 
+	// systemd-nspawn needs /etc/machine-id to link the container's journal
+	// to the host. Since systemd-v230, /etc/machine-id is mandatory, see
+	// https://github.com/systemd/systemd/commit/e01ff70a77e781734e1e73a2238af2e9bf7967a8
+	mPath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "machine-id")
+	mID := strings.Replace(p.UUID.String(), "-", "", -1)
+
+	if err := ioutil.WriteFile(mPath, []byte(mID), 0644); err != nil {
+		log.FatalE("error writing /etc/machine-id", err)
+	}
+
 	// link journal only if the host is running systemd
 	if util.IsRunningSystemd() {
-		// we write /etc/machine-id here because systemd-nspawn needs it to link
-		// the container's journal to the host
-		mPath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "machine-id")
-		mID := strings.Replace(p.UUID.String(), "-", "", -1)
-
-		if err := ioutil.WriteFile(mPath, []byte(mID), 0644); err != nil {
-			log.FatalE("error writing /etc/machine-id", err)
-		}
-
 		args = append(args, "--link-journal=try-guest")
 
 		keepUnit, err := util.RunningFromSystemService()
@@ -408,6 +409,8 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		if keepUnit {
 			args = append(args, "--keep-unit")
 		}
+	} else {
+		args = append(args, "--link-journal=no")
 	}
 
 	if !debug {
