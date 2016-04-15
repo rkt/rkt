@@ -64,6 +64,7 @@ AMI_SED_NAME := $(call sed-replacement-escape,$(AMI_NAME))
 AMI_SED_VERSION := $(call sed-replacement-escape,$(AMI_STAGE1_VERSION))
 AMI_SED_ENTER := $(call sed-replacement-escape,$(STAGE1_ENTER_CMD_$(AMI_FLAVOR)))
 AMI_SED_ARCH := $(call sed-replacement-escape,$(RKT_ACI_ARCH))
+AMI_SED_STOP := $(call sed-replacement-escape,$(STAGE1_STOP_CMD_$(AMI_FLAVOR)))
 
 # main stamp ensures everything is done
 $(call setup-stamp-file,AMI_STAMP,$(AMI_FLAVOR)-main)
@@ -87,7 +88,7 @@ $(call generate-stamp-rule,$(AMI_STAMP),$(AMI_INSTALLED_FILES) $(AMI_MANIFEST_KV
 
 # this rule generates a manifest
 $(call forward-vars,$(AMI_GEN_MANIFEST), \
-	AMI_FLAVOR AMI_SED_NAME AMI_SED_VERSION AMI_SED_ENTER AMI_SED_ARCH)
+	AMI_FLAVOR AMI_SED_NAME AMI_SED_VERSION AMI_SED_ENTER AMI_SED_ARCH AMI_SED_STOP)
 $(AMI_GEN_MANIFEST): $(AMI_SRC_MANIFEST) | $(AMI_TMPDIR)
 	$(VQ) \
 	set -e; \
@@ -97,6 +98,7 @@ $(AMI_GEN_MANIFEST): $(AMI_SRC_MANIFEST) | $(AMI_TMPDIR)
 		-e 's/@RKT_STAGE1_VERSION@/$(AMI_SED_VERSION)/g' \
 		-e 's/@RKT_STAGE1_ENTER@/$(AMI_SED_ENTER)/g' \
 		-e 's/@RKT_STAGE1_ARCH@/$(AMI_SED_ARCH)/g' \
+		-e 's/@RKT_STAGE1_STOP@/$(AMI_SED_STOP)/g' \
 	"$<" >"$@.tmp"; \
 	$(call bash-cond-rename,$@.tmp,$@)
 
