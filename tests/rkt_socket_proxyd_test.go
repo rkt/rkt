@@ -36,6 +36,11 @@ func TestSocketProxyd(t *testing.T) {
 		t.Skip("Systemd is not running on the host.")
 	}
 
+	socketProxydPath := "/lib/systemd/systemd-socket-proxyd"
+	if _, err := os.Stat(socketProxydPath); os.IsNotExist(err) {
+		t.Skip("systemd-socket-proxyd is not installed.")
+	}
+
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
@@ -135,10 +140,11 @@ func TestSocketProxyd(t *testing.T) {
 	After=%s
 
 	[Service]
-	ExecStart=/lib/systemd/systemd-socket-proxyd %s:%d
+	ExecStart=%s %s:%d
 	`
 
-	proxyContent := fmt.Sprintf(proxyToRktTestingEchoService, serviceTargetBase, serviceTargetBase, containerIP, port)
+	proxyContent := fmt.Sprintf(proxyToRktTestingEchoService, serviceTargetBase, serviceTargetBase,
+		socketProxydPath, containerIP, port)
 	proxyContentBase := fmt.Sprintf("proxy-to-rkt-testing-socket-activation-%d.service", rnd)
 	proxyTarget := filepath.Join(unitsDir, proxyContentBase)
 
