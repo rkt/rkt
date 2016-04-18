@@ -23,9 +23,6 @@ import (
 )
 
 func TestAppUserGroup(t *testing.T) {
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
-
 	imageDummy := patchTestACI("rkt-inspect-dummy.aci", "--name=dummy")
 	defer os.Remove(imageDummy)
 
@@ -83,6 +80,9 @@ func TestAppUserGroup(t *testing.T) {
 		},
 	} {
 		func() {
+			ctx := testutils.NewRktRunCtx()
+			defer ctx.Cleanup()
+
 			tt.imageParams = append(tt.imageParams, "--exec=/inspect --print-user")
 			image := patchTestACI("rkt-inspect-user-group.aci", tt.imageParams...)
 			defer os.Remove(image)
