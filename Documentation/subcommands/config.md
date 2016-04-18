@@ -17,6 +17,7 @@ The entry "stage0" refers to stage-specific configuration; "stage1" is currently
 The "stage0" entry contains subentries of rktKind "auth", "dockerAuth", "paths", and "stage1". Note that the `config` subcommand will output separate entries per "auth" domain and separate entries per "dockerAuth" registry. While it is possible to specify an array of strings in the input configuration rkt internally merges configuration state from different directories potentially creating multiple entries.
 
 Consider the following system configuration:
+
 ```
 $ cat /etc/rkt/auth.d/basic.json
 {
@@ -33,6 +34,7 @@ $ cat /etc/rkt/auth.d/basic.json
 ```
 
 And the following user configuration:
+
 ```
 $ ~/.config/rkt/auth.d/basic.json
 {
@@ -47,6 +49,7 @@ $ ~/.config/rkt/auth.d/basic.json
 ```
 
 The `config` subcommand would generate the following separate merged entries:
+
 ```
 {
   "stage0": [
@@ -123,3 +126,4 @@ $ rkt config
     }
   ]
 }
+```
