@@ -612,6 +612,28 @@ func TestPodManifest(t *testing.T) {
 			"",
 		},
 		{
+			// Set "root", it should work without it being present in
+			// /etc/{passwd,group}
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-root-user-group.aci", []string{}},
+			},
+			&schema.PodManifest{
+				Apps: []schema.RuntimeApp{
+					{
+						Name: baseAppName,
+						App: &types.App{
+							Exec:  []string{"/inspect", "--print-user"},
+							User:  "root",
+							Group: "root",
+						},
+					},
+				},
+			},
+			0,
+			"User: uid=0 euid=0 gid=0 egid=0",
+			"",
+		},
+		{
 			// Set invalid non-numerical app user.
 			[]imagePatch{
 				{"rkt-test-run-pod-manifest-invalid-user.aci", []string{}},
