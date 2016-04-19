@@ -266,10 +266,12 @@ func displayKey(prefix, location string, key *os.File) error {
 		for _, sk := range k.Subkeys {
 			stdout.Printf("    Subkey fingerprint: %s", fingerToString(sk.PublicKey.Fingerprint))
 		}
-		for n, _ := range k.Identities {
+
+		for n := range k.Identities {
 			stdout.Printf("\t%s", n)
 		}
 	}
+
 	return nil
 }
 

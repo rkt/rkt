@@ -284,7 +284,7 @@ func missingNets(defined common.NetList, loaded []activeNet) []string {
 	}
 
 	var missing []string
-	for n, _ := range diff {
+	for n := range diff {
 		missing = append(missing, n)
 	}
 	return missing

@@ -181,7 +181,7 @@ func (s *Store) populateSize() error {
 		}
 	}
 
-	for k, _ := range aciSizes {
+	for k := range aciSizes {
 		s.UpdateSize(k, aciSizes[k])
 		s.UpdateTreeStoreSize(k, tsSizes[k])
 	}

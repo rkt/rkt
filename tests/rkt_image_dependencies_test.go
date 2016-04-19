@@ -140,7 +140,7 @@ func TestImageDependencies(t *testing.T) {
 		},
 	}
 
-	for i, _ := range imageList {
+	for i := range imageList {
 		// We need a reference rather than a new copy from "range"
 		// because we modify the content
 		img := &imageList[i]

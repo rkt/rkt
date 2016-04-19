@@ -110,35 +110,35 @@ var (
 	// this holds necessary data to generate the --stage1-* flags
 	// for each location kind
 	stage1FlagsData = map[stage1ImageLocationKind]*stage1FlagData{
-		stage1ImageLocationURL: &stage1FlagData{
+		stage1ImageLocationURL: {
 			kind: stage1ImageLocationURL,
 			flag: "stage1-url",
 			name: "stage1URL",
 			help: "a URL to an image to use as stage1",
 		},
 
-		stage1ImageLocationPath: &stage1FlagData{
+		stage1ImageLocationPath: {
 			kind: stage1ImageLocationPath,
 			flag: "stage1-path",
 			name: "stage1Path",
 			help: "an absolute or a relative path to an image to use as stage1",
 		},
 
-		stage1ImageLocationName: &stage1FlagData{
+		stage1ImageLocationName: {
 			kind: stage1ImageLocationName,
 			flag: "stage1-name",
 			name: "stage1Name",
 			help: "a name of an image to use as stage1",
 		},
 
-		stage1ImageLocationHash: &stage1FlagData{
+		stage1ImageLocationHash: {
 			kind: stage1ImageLocationHash,
 			flag: "stage1-hash",
 			name: "stage1Hash",
 			help: "a hash of an image to use as stage1",
 		},
 
-		stage1ImageLocationFromDir: &stage1FlagData{
+		stage1ImageLocationFromDir: {
 			kind: stage1ImageLocationFromDir,
 			flag: "stage1-from-dir",
 			name: "stage1FromDir",
