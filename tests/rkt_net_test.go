@@ -608,6 +608,10 @@ func testNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 
 	// Child connects to host
 	hostname, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+
 	go func() {
 		defer ga.Done()
 		testImageArgs := []string{fmt.Sprintf("--exec=/inspect --get-http=%v", httpGetAddr)}
@@ -623,6 +627,7 @@ func testNetCustomNatConnectivity(t *testing.T, nt networkTemplateT) {
 		if err != nil {
 			ga.Fatalf("Error: %v\nOutput: %v", err, out)
 		}
+
 		if result[1] != hostname {
 			ga.Fatalf("Hostname received by client `%v` doesn't match `%v`", result[1], hostname)
 		}
