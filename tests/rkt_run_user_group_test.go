@@ -78,6 +78,18 @@ func TestAppUserGroup(t *testing.T) {
 			rktParams:   "--user=user1 --group=group1",
 			expected:    "User: uid=1000 euid=1000 gid=100 egid=100",
 		},
+		{
+			imageParams: []string{"--user=root", "--group=root"},
+			expected:    "User: uid=0 euid=0 gid=0 egid=0",
+		},
+		{
+			rktParams: "--user=root --group=root",
+			expected:  "User: uid=0 euid=0 gid=0 egid=0",
+		},
+		{
+			rktParams: "--user=/inspect --group=/inspect",
+			expected:  "User: uid=0 euid=0 gid=0 egid=0",
+		},
 	} {
 		func() {
 			ctx := testutils.NewRktRunCtx()

@@ -302,62 +302,13 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		return errwrap.Wrap(errors.New("unable to write environment file"), err)
 	}
 
-	var _uid, gid int
-	var err error
-
-	uidRange := uid.NewBlankUidRange()
-	if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
-		return errwrap.Wrap(errors.New("unable to deserialize uid range"), err)
-	}
-
-	if strings.HasPrefix(app.User, "/") {
-		var stat syscall.Stat_t
-		if err = syscall.Lstat(filepath.Join(common.AppRootfsPath(p.Root, appName),
-			app.User), &stat); err != nil {
-			return errwrap.Wrap(fmt.Errorf("unable to get uid from file %q",
-				app.User), err)
-		}
-		uidReal, _, err := uidRange.UnshiftRange(stat.Uid, 0)
-		if err != nil {
-			return errwrap.Wrap(errors.New("unable to determine real uid"), err)
-		}
-		_uid = int(uidReal)
-	} else {
-		_uid, err = strconv.Atoi(app.User)
-		if err != nil {
-			_uid, err = passwd.LookupUidFromFile(app.User,
-				filepath.Join(common.AppRootfsPath(p.Root, appName), "etc/passwd"))
-			if err != nil {
-				return errwrap.Wrap(fmt.Errorf("cannot lookup user %q", app.User), err)
-			}
-		}
-	}
-
-	if strings.HasPrefix(app.Group, "/") {
-		var stat syscall.Stat_t
-		if err = syscall.Lstat(filepath.Join(common.AppRootfsPath(p.Root, appName),
-			app.Group), &stat); err != nil {
-			return errwrap.Wrap(fmt.Errorf("unable to get gid from file %q",
-				app.Group), err)
-		}
-		_, gidReal, err := uidRange.UnshiftRange(0, stat.Gid)
-		if err != nil {
-			return errwrap.Wrap(errors.New("unable to determine real gid"), err)
-		}
-		gid = int(gidReal)
-	} else {
-		gid, err = strconv.Atoi(app.Group)
-		if err != nil {
-			gid, err = group.LookupGidFromFile(app.Group,
-				filepath.Join(common.AppRootfsPath(p.Root, appName), "etc/group"))
-			if err != nil {
-				return errwrap.Wrap(fmt.Errorf("cannot lookup group %q", app.Group), err)
-			}
-		}
+	u, g, err := parseUserGroup(p, ra, privateUsers)
+	if err != nil {
+		return err
 	}
 
 	execWrap := []string{"/appexec", common.RelAppRootfsPath(appName), workDir, RelEnvFilePath(appName),
-		strconv.Itoa(_uid), generateGidArg(gid, app.SupplementaryGIDs), "--"}
+		strconv.Itoa(u), generateGidArg(g, app.SupplementaryGIDs), "--"}
 	execStart := quoteExec(append(execWrap, app.Exec...))
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v", appName, imgName)),
@@ -498,6 +449,81 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 	}
 
 	return nil
+}
+
+// parseUserGroup parses the User and Group fields of an App and returns its
+// UID and GID.
+// The User and Group fields accept several formats:
+//   1. the hardcoded string "root"
+//   2. a path
+//   3. a number
+//   4. a name in reference to /etc/{group,passwod} in the image
+// See https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
+func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, privateUsers string) (int, int, error) {
+	app := ra.App
+	appName := ra.Name
+
+	var uid_, gid_ int
+	var err error
+
+	uidRange := uid.NewBlankUidRange()
+	if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
+		return -1, -1, errwrap.Wrap(errors.New("unable to deserialize uid range"), err)
+	}
+
+	switch {
+	case app.User == "root":
+		uid_ = 0
+	case strings.HasPrefix(app.User, "/"):
+		var stat syscall.Stat_t
+		if err = syscall.Lstat(filepath.Join(common.AppRootfsPath(p.Root, appName),
+			app.User), &stat); err != nil {
+			return -1, -1, errwrap.Wrap(fmt.Errorf("unable to get uid from file %q",
+				app.User), err)
+		}
+		uidReal, _, err := uidRange.UnshiftRange(stat.Uid, 0)
+		if err != nil {
+			return -1, -1, errwrap.Wrap(errors.New("unable to determine real uid"), err)
+		}
+		uid_ = int(uidReal)
+	default:
+		uid_, err = strconv.Atoi(app.User)
+		if err != nil {
+			uid_, err = passwd.LookupUidFromFile(app.User,
+				filepath.Join(common.AppRootfsPath(p.Root, appName), "etc/passwd"))
+			if err != nil {
+				return -1, -1, errwrap.Wrap(fmt.Errorf("cannot lookup user %q", app.User), err)
+			}
+		}
+	}
+
+	switch {
+	case app.Group == "root":
+		gid_ = 0
+	case strings.HasPrefix(app.Group, "/"):
+		var stat syscall.Stat_t
+		if err = syscall.Lstat(filepath.Join(common.AppRootfsPath(p.Root, appName),
+			app.Group), &stat); err != nil {
+			return -1, -1, errwrap.Wrap(fmt.Errorf("unable to get gid from file %q",
+				app.Group), err)
+		}
+		_, gidReal, err := uidRange.UnshiftRange(0, stat.Gid)
+		if err != nil {
+			return -1, -1, errwrap.Wrap(errors.New("unable to determine real gid"), err)
+		}
+		gid_ = int(gidReal)
+	default:
+		gid_, err = strconv.Atoi(app.Group)
+		if err != nil {
+			gid_, err = group.LookupGidFromFile(app.Group,
+				filepath.Join(common.AppRootfsPath(p.Root, appName), "etc/group"))
+			if err != nil {
+				return -1, -1, errwrap.Wrap(fmt.Errorf("cannot lookup group %q", app.Group), err)
+			}
+		}
+	}
+
+	return uid_, gid_, nil
 }
 
 func writeShutdownService(p *stage1commontypes.Pod) error {
