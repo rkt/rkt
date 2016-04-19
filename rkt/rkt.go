@@ -107,7 +107,9 @@ func (d *absDir) Set(str string) error {
 	if err != nil {
 		return err
 	}
+
 	*d = (absDir)(dir)
+
 	return nil
 }
 
@@ -181,7 +183,9 @@ func init() {
 
 func getTabOutWithWriter(writer io.Writer) *tabwriter.Writer {
 	aTabOut := new(tabwriter.Writer)
+
 	aTabOut.Init(writer, 0, 8, 1, '\t', 0)
+
 	return aTabOut
 }
 
@@ -203,6 +207,7 @@ func ensureSuperuser(cf func(cmd *cobra.Command, args []string)) func(cmd *cobra
 			cmdExitCode = 1
 			return
 		}
+
 		cf(cmd, args)
 	}
 }
@@ -255,6 +260,7 @@ func getDataDir() string {
 	if cachedDataDir == "" {
 		cachedDataDir = calculateDataDir()
 	}
+
 	return cachedDataDir
 }
 
@@ -262,29 +268,29 @@ func calculateDataDir() string {
 	var dataDir string
 
 	// If --dir parameter is passed, then use this value.
-	if dirFlag := cmdRkt.PersistentFlags().Lookup("dir"); dirFlag != nil {
-		if dirFlag.Changed {
-			dataDir = globalFlags.Dir
-		}
-	} else {
+	dirFlag := cmdRkt.PersistentFlags().Lookup("dir")
+	if dirFlag == nil {
 		// should not happen
 		panic(`"--dir" flag not found`)
 	}
 
-	// If above fails, then try to get the value from configuration.
-	if dataDir == "" {
-		if config, err := getConfig(); err != nil {
-			stderr.PrintE("cannot get configuration", err)
-			os.Exit(1)
-		} else {
-			if config.Paths.DataDir != "" {
-				dataDir = config.Paths.DataDir
-			}
-		}
+	if dirFlag.Changed {
+		dataDir = globalFlags.Dir
 	}
 
+	// If above fails, then try to get the value from configuration.
 	if dataDir == "" {
-		dataDir = defaultDataDir
+		config, err := getConfig()
+		if err != nil {
+			stderr.PrintE("cannot get configuration", err)
+			os.Exit(1)
+		}
+
+		if config.Paths.DataDir != "" {
+			dataDir = config.Paths.DataDir
+		} else {
+			dataDir = defaultDataDir
+		}
 	}
 
 	// Resolve symlinks
@@ -297,26 +303,33 @@ func calculateDataDir() string {
 			os.Exit(1)
 		}
 	}
+
 	// If above fails, then use the default.
 	return realDataDir
 }
 
 func getConfig() (*config.Config, error) {
-	if cachedConfig == nil {
-		dirs := []string{
-			globalFlags.SystemConfigDir,
-			globalFlags.LocalConfigDir,
-		}
-		if globalFlags.UserConfigDir != "" {
-			dirs = append(dirs, globalFlags.UserConfigDir)
-		}
-		cfg, err := config.GetConfigFrom(dirs...)
-		if err != nil {
-			return nil, err
-		}
-		cachedConfig = cfg
+	if cachedConfig != nil {
+		return cachedConfig, nil
 	}
-	return cachedConfig, nil
+
+	dirs := []string{
+		globalFlags.SystemConfigDir,
+		globalFlags.LocalConfigDir,
+	}
+
+	if globalFlags.UserConfigDir != "" {
+		dirs = append(dirs, globalFlags.UserConfigDir)
+	}
+
+	cfg, err := config.GetConfigFrom(dirs...)
+	if err != nil {
+		return nil, err
+	}
+
+	cachedConfig = cfg
+
+	return cfg, nil
 }
 
 func lockDir() string {
