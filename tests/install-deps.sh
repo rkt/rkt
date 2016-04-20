@@ -15,9 +15,9 @@ fi
 if [ "${CI-}" == true ] ; then
 	# https://semaphoreci.com/
 	if [ "${SEMAPHORE-}" == true ] ; then
-		# Most dependencies are already installed on Semaphore CI system.
+		# Most dependencies are already installed on Semaphore.
 		# Here we can install any missing dependencies. Whenever
-		# Semaphore CI system installs more dependencies on their
+		# Semaphore installs more dependencies on their
 		# platform, they should be removed from here to save time.
 
 		# If there is some dependency to install then

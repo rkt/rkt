@@ -5,12 +5,12 @@ The tests use [gexpect](https://github.com/coreos/gexpect) to spawn various `rkt
 
 ## Semaphore Continuous Integration System
 
-The tests run on the [Semaphore CI system](https://semaphoreci.com/) through the [`rktbot`](https://semaphoreci.com/rktbot) user, which is part of the [`coreos`](https://semaphoreci.com/coreos/) org on Semaphore CI system.
+The tests run on the [Semaphore CI system](https://semaphoreci.com/) through the [`rktbot`](https://semaphoreci.com/rktbot) user, which is part of the [`coreos`](https://semaphoreci.com/coreos/) org on Semaphore.
 This user is authorized against the corresponding [`rktbot`](https://github.com/rktbot) GitHub account.
 The credentials for `rktbot` are currently managed by CoreOS.
 
-The tests are executed on Semaphore CI system at each Pull Request (PR).
-Each GitHub PR page should have a link to the [test results on Semaphore CI](https://semaphoreci.com/coreos/rkt).
+The tests are executed on Semaphore at each Pull Request (PR).
+Each GitHub PR page should have a link to the [test results on Semaphore](https://semaphoreci.com/coreos/rkt).
 
 Developers can disable the tests by adding `[skip ci]` in the last commit message of the PR.
 
