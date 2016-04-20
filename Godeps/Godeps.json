@@ -18,6 +18,10 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/StackExchange/wmi",
+			"Rev": "f3e2bae1e0cb5aef83e319133eabfee30013a4a5"
+		},
+		{
 			"ImportPath": "github.com/appc/cni/pkg/invoke",
 			"Comment": "v0.2.0-rc0",
 			"Rev": "0046767be795f629180e0713b71822b731531997"
@@ -341,6 +345,16 @@
 			"Rev": "c20a8bde38c8f5ba06f6600edf473705c96829d1"
 		},
 		{
+			"ImportPath": "github.com/go-ole/go-ole",
+			"Comment": "v1.2.0-10-g572eabb",
+			"Rev": "572eabb84c424e76a0d39d31510dd7dfd62f70b2"
+		},
+		{
+			"ImportPath": "github.com/go-ole/go-ole/oleutil",
+			"Comment": "v1.2.0-10-g572eabb",
+			"Rev": "572eabb84c424e76a0d39d31510dd7dfd62f70b2"
+		},
+		{
 			"ImportPath": "github.com/godbus/dbus",
 			"Comment": "v3-6-ga1b8ba5",
 			"Rev": "a1b8ba5163b7f041b22761461eabd02b70d1f824"
@@ -420,6 +434,40 @@
 			"ImportPath": "github.com/russross/blackfriday",
 			"Comment": "v1.4-2-g300106c",
 			"Rev": "300106c228d52c8941d4b3de6054a6062a86dda3"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/cpu",
+			"Comment": "v2.0.0-10-g9ef3410",
+			"Rev": "9ef341037b1bcadeeee79e77da4f6baf63de4feb"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/host",
+			"Comment": "v2.0.0-10-g9ef3410",
+			"Rev": "9ef341037b1bcadeeee79e77da4f6baf63de4feb"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/internal/common",
+			"Comment": "v2.0.0-10-g9ef3410",
+			"Rev": "9ef341037b1bcadeeee79e77da4f6baf63de4feb"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/mem",
+			"Comment": "v2.0.0-10-g9ef3410",
+			"Rev": "9ef341037b1bcadeeee79e77da4f6baf63de4feb"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/net",
+			"Comment": "v2.0.0-10-g9ef3410",
+			"Rev": "9ef341037b1bcadeeee79e77da4f6baf63de4feb"
+		},
+		{
+			"ImportPath": "github.com/shirou/gopsutil/process",
+			"Comment": "v2.0.0-10-g9ef3410",
+			"Rev": "9ef341037b1bcadeeee79e77da4f6baf63de4feb"
+		},
+		{
+			"ImportPath": "github.com/shirou/w32",
+			"Rev": "3c9377fc6748f222729a8270fe2775d149a249ad"
 		},
 		{
 			"ImportPath": "github.com/shurcooL/sanitized_anchor_name",
