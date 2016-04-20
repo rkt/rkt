@@ -28,14 +28,24 @@ function ciSkip {
     exit 0
 }
 
+# Finds the branching point of two commits. 
+# For example, let B and D be two commits, and their ancestry graph as A -> B, A -> C -> D. 
+# Given commits B and D, it returns A. 
+function getBranchingPoint {
+    diff --old-line-format='' --new-line-format='' \
+        <(git rev-list --first-parent "${1:-$1}") \
+            <(git rev-list --first-parent "${2:-$2}") | head -1
+}
+
 # Configure SemaphoreCI environment.
 function semaphoreConfiguration {
     # We might not need to run functional tests or process docs.
     # This is best-effort; || true ensures this does not affect test outcome
     # First, ensure origin is updated - semaphore can do some weird caching
     git fetch || true
-    SRC_CHANGES=$(git diff-tree --no-commit-id --name-only -r HEAD..origin/master | grep -cEv ${DOC_CHANGE_PATTERN}) || true
-    DOC_CHANGES=$(git diff-tree --no-commit-id --name-only -r HEAD..origin/master | grep -cE ${DOC_CHANGE_PATTERN}) || true
+    BRANCHING_POINT=$(getBranchingPoint HEAD origin/master)
+    SRC_CHANGES=$(git diff-tree --no-commit-id --name-only -r HEAD..${BRANCHING_POINT} | grep -cEv ${DOC_CHANGE_PATTERN}) || true
+    DOC_CHANGES=$(git diff-tree --no-commit-id --name-only -r HEAD..${BRANCHING_POINT} | grep -cE ${DOC_CHANGE_PATTERN}) || true
 
     # Set up go environment on semaphore
     if [ -f /opt/change-go-version.sh ]; then
