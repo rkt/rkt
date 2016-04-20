@@ -166,7 +166,7 @@ function buildFolder {
 function detectChanges {
     HEAD=`git rev-parse HEAD`
     MASTER=`git rev-parse origin/master`
-    if [[ ${HEAD} != ${MASTER} ]]; then
+    if [[ ${HEAD} == ${MASTER} ]]; then
         SRC_CHANGES=1
         DOC_CHANGES=1
     elif [[ ${SRC_CHANGES} -eq 0 && ${DOC_CHANGES} -eq 0 ]]; then
