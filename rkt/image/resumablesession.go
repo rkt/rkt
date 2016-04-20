@@ -285,7 +285,14 @@ func (s *resumableSession) getClient() *http.Client {
 			if len(via) >= 10 {
 				return fmt.Errorf("too many redirects")
 			}
-			s.setHTTPHeaders(req)
+			stripAuth := false
+			// don't propagate "Authorization" if the redirect is to a
+			// different host
+			previousHost := via[len(via)-1].URL.Host
+			if previousHost != req.URL.Host {
+				stripAuth = true
+			}
+			s.setHTTPHeaders(req, stripAuth)
 			return nil
 		},
 	}
@@ -302,7 +309,7 @@ func (s *resumableSession) httpRequest(method string, u *url.URL) *http.Request 
 		Host:       u.Host,
 	}
 
-	s.setHTTPHeaders(req)
+	s.setHTTPHeaders(req, false)
 
 	return req
 }
@@ -330,8 +337,11 @@ func (s *resumableSession) eTagOK(res *http.Response) bool {
 	return false
 }
 
-func (s *resumableSession) setHTTPHeaders(req *http.Request) {
+func (s *resumableSession) setHTTPHeaders(req *http.Request, stripAuth bool) {
 	for k, v := range s.Headers {
+		if stripAuth && k == "Authorization" {
+			continue
+		}
 		for _, e := range v {
 			req.Header.Add(k, e)
 		}
