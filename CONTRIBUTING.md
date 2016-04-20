@@ -5,14 +5,14 @@ GitHub pull requests.  This document outlines some of the conventions on
 development workflow, commit message formatting, contact points and other
 resources to make it easier to get your contribution accepted.
 
-# Certificate of Origin
+### Certificate of Origin
 
 By contributing to this project you agree to the Developer Certificate of
 Origin (DCO). This document was created by the Linux Kernel community and is a
 simple statement that you, as a contributor, have the legal right to make the
 contribution. See the [DCO](DCO) file for details.
 
-# Email and Chat
+### Email and Chat
 
 The project has a mailing list and two discussion channels in IRC:
 - Email: [rkt-dev](https://groups.google.com/forum/#!forum/rkt-dev)
@@ -22,13 +22,13 @@ The project has a mailing list and two discussion channels in IRC:
 Please avoid emailing maintainers found in the MAINTAINERS file directly. They
 are very busy and read the mailing lists.
 
-## Getting Started
+### Getting Started
 
 - Fork the repository on GitHub
 - Read the [README](README.md) for build and test instructions
 - Play with the project, submit bugs, submit patches!
 
-## Contribution Flow
+### Contribution Flow
 
 This is a rough outline of what a contributor's workflow looks like:
 
@@ -38,6 +38,14 @@ This is a rough outline of what a contributor's workflow looks like:
 - Push your changes to a topic branch in your fork of the repository.
 - Make sure the tests pass, and add any new tests as appropriate.
 - Submit a pull request to the original repository.
+- Submit a comment with the sole content "@reviewer PTAL" (please take a look) in GitHub
+  and replace "@reviewer" with the correct recipient.
+- When addressing pull request review comments add new commits to the existing pull request or,
+  if the added commits are about the same size as the previous commits,
+  squash them into the existing commits.
+- Once your PR is labelled as "reviewed/lgtm" squash the addressed commits in one commit.
+- If your PR addresses multiple subsystems reorganize your PR and create multiple commits per subsystem.
+- Your contribution is ready to be merged.
 
 Thanks for your contributions!
 
@@ -76,3 +84,18 @@ The first line is the subject and should be no longer than 70 characters, the
 second line is always blank, and other lines should be wrapped at 80 characters.
 This allows the message to be easier to read on GitHub as well as in various
 git tools.
+
+### Format of the Pull Request
+
+The pull request title and the first paragraph of the pull request description
+is being used to generate the changelog of the next release.
+
+The convention follows the same rules as for commit messages. The PR title reflects the
+what and the first paragraph of the PR description reflects the why.
+In most cases one can reuse the commit title as the PR title
+and the commit messages as the PR description for the PR.
+
+If your PR includes more commits spanning mulitple subsystems one should change the PR title
+and the first paragraph of the PR description to reflect a summary of all changes involved.
+
+Do not add entries in the changelog yourself. They will be overwritten when creating a new release.

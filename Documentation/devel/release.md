@@ -98,4 +98,29 @@ Make sure to include a list of authors that contributed since the previous relea
 	git log v1.1.0..v1.2.0 --pretty=format:"%an" | sort | uniq | tr '\n' ',' | sed -e 's#,#, #g' -e 's#, $#\n#'
 ```
 
-- Prepare CHANGELOG.md for the next release: add a "vUNRELEASED" section. The CHANGELOG should be updated alongside the code as pull requests are merged into master, so that the releaser does not need to start from scratch.
+Add `CHANGELOG.md` entries:
+
+- Add a new version headline and a meaningful release summary:
+
+```
+## v1.2.0
+
+This release includes a number of new features and bugfixes like a new config subcommand, man page, and bash completion generation during build time.
+```
+
+- Execute `scripts/changelog.sh`
+- Copy/Paste the generated entries into `CHANGELOG.md`
+- Group the generated entries according to the following headlines:
+
+```
+#### New features and UX changes
+...
+#### Improved documentation
+...
+#### Bug fixes
+...
+#### Other changes
+...
+```
+
+- Correct/fix the changelog entries if necessary.
