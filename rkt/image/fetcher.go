@@ -16,10 +16,12 @@ package image
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
 	"net/url"
 	"runtime"
 
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
@@ -48,6 +50,11 @@ func (f *Fetcher) FetchImage(img string, ascPath string, imgType apps.AppImageTy
 		err = f.fetchImageDeps(hash)
 		if err != nil {
 			return "", err
+		}
+	}
+	if common.SupportsOverlay() {
+		if _, _, err := f.S.RenderTreeStore(hash, false); err != nil {
+			return "", errwrap.Wrap(errors.New("error rendering tree store"), err)
 		}
 	}
 	return hash, nil
