@@ -285,8 +285,7 @@ RKT_ITERATE_FLAVORS([${RKT_STAGE1_FLAVORS}],[flavor],
                              [coreos],
                                      [RKT_COMMON_COREOS_PROGS],
                              [kvm],
-                                     [AC_MSG_WARN([* kvm is an experimental stage1 implementation, some features are missing])
-                                      AC_MSG_NOTICE([will build linux kernel and lkvm from source, make sure that all their build requirements are fulfilled])
+                                     [AC_MSG_NOTICE([will build linux kernel and lkvm from source, make sure that all their build requirements are fulfilled])
                                       RKT_COMMON_COREOS_PROGS
                                       RKT_REQ_PROG([PATCH],[patch],[patch])
                                       RKT_REQ_PROG([TAR],[tar],[tar])
