@@ -17,8 +17,8 @@ if [ "${CI-}" == true ] ; then
 	if [ "${SEMAPHORE-}" == true ] ; then
 		# Most dependencies are already installed on Semaphore.
 		# Here we can install any missing dependencies. Whenever
-		# Semaphore installs more dependencies on their platform,
-		# they should be removed from here to save time.
+		# Semaphore installs more dependencies on their
+		# platform, they should be removed from here to save time.
 
 		# If there is some dependency to install then
 		# uncomment the following line and add "sudo apt-get
