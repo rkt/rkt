@@ -199,6 +199,23 @@ func satisfiesPodFilter(pod v1alpha.Pod, manifest schema.PodManifest, filter v1a
 		}
 	}
 
+	// Filter if pod's cgroup is a prefix of the passed in cgroup
+	if len(filter.PodSubCgroups) > 0 {
+		matched := false
+		if pod.Cgroup != "" {
+			for _, cgroup := range filter.PodSubCgroups {
+				if strings.HasPrefix(cgroup, pod.Cgroup) {
+					matched = true
+					break
+				}
+			}
+		}
+
+		if !matched {
+			return false
+		}
+	}
+
 	return true
 }
 
