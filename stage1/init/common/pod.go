@@ -457,7 +457,7 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 //   1. the hardcoded string "root"
 //   2. a path
 //   3. a number
-//   4. a name in reference to /etc/{group,passwod} in the image
+//   4. a name in reference to /etc/{group,passwd} in the image
 // See https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
 func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, privateUsers string) (int, int, error) {
 	app := ra.App
