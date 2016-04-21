@@ -1,18 +1,8 @@
-**rkt**
+**Environment**
 
-output of `rkt version`
+Replace this with the output of:
 
-**Kernel**
-
-output of `uname -srm`
-
-**Distribution**
-
-content of `/etc/os-release`
-
-**systemd**
-
-output of `systemctl --version`
+`printf "$(rkt version)\n--\n$(uname -srm)\n--\n$(cat /etc/os-release)\n--\n$(systemctl --version)"`
 
 **What did you do?**
 
