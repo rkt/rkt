@@ -1,8 +1,8 @@
 # Running rkt with an LKVM stage1
 
-rkt has experimental support for executing pods with an [LKVM](https://kernel.googlesource.com/pub/scm/linux/kernel/git/will/kvmtool/+/master/README) [stage1](devel/architecture.md#stage-1). rkt employs this [alternative stage1](devel/stage1-implementors-guide.md) to run a pod within a virtual machine with its own operating system kernel and hypervisor isolation, rather than creating a container using Linux cgroups and namespaces.
+rkt has support for executing pods with an [LKVM](https://kernel.googlesource.com/pub/scm/linux/kernel/git/will/kvmtool/+/master/README) [stage1](devel/architecture.md#stage-1). rkt employs this [alternative stage1](devel/stage1-implementors-guide.md) to run a pod within a virtual machine with its own operating system kernel and hypervisor isolation, rather than creating a container using Linux cgroups and namespaces.
 
-The "experimental" label denotes that the LKVM stage1 does not yet implement all of the default stage1's features and semantics. While the same app container can be executed under isolation by either stage1, it may require different configuration, especially for networking. However, several deployments of the LKVM stage1 are operational outside of CoreOS, and we encourage testing of this feature and welcome your contributions.
+The LKVM stage1 does not yet implement all of the default stage1's features and semantics. While the same app container can be executed under isolation by either stage1, it may require different configuration, especially for networking. However, several deployments of the LKVM stage1 are operational outside of CoreOS, and we encourage testing of this feature and welcome your contributions.
 
 ## Getting started
 
