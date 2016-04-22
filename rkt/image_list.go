@@ -71,10 +71,10 @@ var (
 	}
 
 	ImagesSortableFields = map[string]struct{}{
-		l(name):       struct{}{},
-		l(importTime): struct{}{},
-		l(lastUsed):   struct{}{},
-		l(size):       struct{}{},
+		l(name):       {},
+		l(importTime): {},
+		l(lastUsed):   {},
+		l(size):       {},
 	}
 )
 

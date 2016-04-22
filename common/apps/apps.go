@@ -112,7 +112,7 @@ func (al *Apps) Validate() error {
 // Walk iterates on al.apps calling f for each app
 // walking stops if f returns an error, the error is simply returned
 func (al *Apps) Walk(f func(*App) error) error {
-	for i, _ := range al.apps {
+	for i := range al.apps {
 		// XXX(vc): note we supply f() with a pointer to the app instance in al.apps to enable modification by f()
 		if err := f(&al.apps[i]); err != nil {
 			return err

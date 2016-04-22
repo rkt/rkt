@@ -110,7 +110,7 @@ func TestDockerAuthConfigFormat(t *testing.T) {
 		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"], "credentials": {"user": ""}}`, nil, true},
 		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"], "credentials": {"user": "bar"}}`, nil, true},
 		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"], "credentials": {"user": "bar", "password": ""}}`, nil, true},
-		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"], "credentials": {"user": "bar", "password": "baz"}}`, map[string]BasicCredentials{"coreos.com": BasicCredentials{User: "bar", Password: "baz"}}, false},
+		{`{"rktKind": "dockerAuth", "rktVersion": "v1", "registries": ["coreos.com"], "credentials": {"user": "bar", "password": "baz"}}`, map[string]BasicCredentials{"coreos.com": {User: "bar", Password: "baz"}}, false},
 	}
 	for _, tt := range tests {
 		cfg, err := getConfigFromContents(tt.contents, "dockerAuth")
@@ -275,15 +275,15 @@ func TestConfigLoading(t *testing.T) {
 		result[d] = h.Header()
 	}
 	expected := map[string]http.Header{
-		"endocode.com": http.Header{
+		"endocode.com": {
 			// local_user1:local_password1
 			authHeader: []string{"Basic bG9jYWxfdXNlcjE6bG9jYWxfcGFzc3dvcmQx"},
 		},
-		"coreos.com": http.Header{
+		"coreos.com": {
 			// system_user2:system_password2
 			authHeader: []string{"Basic c3lzdGVtX3VzZXIyOnN5c3RlbV9wYXNzd29yZDI="},
 		},
-		"tectonic.com": http.Header{
+		"tectonic.com": {
 			// local_user2:local_password2
 			authHeader: []string{"Basic bG9jYWxfdXNlcjI6bG9jYWxfcGFzc3dvcmQy"},
 		},

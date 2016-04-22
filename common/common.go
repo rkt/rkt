@@ -241,12 +241,12 @@ func (l *NetList) Strings() []string {
 	return list
 }
 
-func (l *NetList) StringsOnlyNames() []string {
-	var list []string
-	for k, _ := range l.mapping {
+func (l *NetList) StringsOnlyNames() (list []string) {
+	for k := range l.mapping {
 		list = append(list, k)
 	}
-	return list
+
+	return
 }
 
 // Check if host networking has been requested

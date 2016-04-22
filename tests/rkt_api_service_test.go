@@ -322,16 +322,16 @@ func TestAPIServiceListInspectPods(t *testing.T) {
 	}
 	pm := schema.BlankPodManifest()
 	pm.Apps = []schema.RuntimeApp{
-		schema.RuntimeApp{
+		{
 			Name: types.ACName("rkt-inspect"),
 			Image: schema.RuntimeImage{
 				Name: types.MustACIdentifier("coreos.com/rkt-inspect"),
 				ID:   *imgID,
 			},
-			Annotations: []types.Annotation{types.Annotation{Name: types.ACIdentifier("app-test"), Value: "app-test"}},
+			Annotations: []types.Annotation{{Name: types.ACIdentifier("app-test"), Value: "app-test"}},
 		},
 	}
-	pm.Annotations = []types.Annotation{types.Annotation{Name: types.ACIdentifier("test"), Value: "test"}}
+	pm.Annotations = []types.Annotation{{Name: types.ACIdentifier("test"), Value: "test"}}
 	manifestFile := generatePodManifestFile(t, pm)
 	defer os.Remove(manifestFile)
 

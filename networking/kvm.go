@@ -386,7 +386,7 @@ func kvmTransformFlannelNetwork(net *activeNet) error {
 		"type":   "host-local",
 		"subnet": fenv.sn.String(),
 		"routes": []cnitypes.Route{
-			cnitypes.Route{
+			{
 				Dst: *fenv.nw,
 			},
 		},

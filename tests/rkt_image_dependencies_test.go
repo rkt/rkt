@@ -134,7 +134,7 @@ func generateComplexDependencyTree(t *testing.T, ctx *testutils.RktRunCtx) (map[
 		},
 	}
 
-	for i, _ := range imageList {
+	for i := range imageList {
 		// We need a reference rather than a new copy from "range"
 		// because we modify the content
 		img := &imageList[i]
