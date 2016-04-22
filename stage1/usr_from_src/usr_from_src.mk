@@ -161,7 +161,6 @@ $(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PA
 		--disable-vconsole \
 		--disable-quotacheck \
 		--disable-tmpfiles \
-		--disable-sysusers \
 		--disable-randomseed \
 		--disable-backlight \
 		--disable-rfkill \

@@ -60,35 +60,23 @@ var (
 		"HOME":    "/root",
 	}
 
-	// The list of default capabilities inside systemd-nspawn pod is available
-	// here: https://www.freedesktop.org/software/systemd/man/systemd-nspawn.html
-	nspawnCapabilities, _ = types.NewLinuxCapabilitiesRetainSet([]string{
+	// appDefaultCapabilities defines a restricted set of capabilities given to
+	// apps by default.
+	appDefaultCapabilities, _ = types.NewLinuxCapabilitiesRetainSet([]string{
+		"CAP_AUDIT_WRITE",
 		"CAP_CHOWN",
 		"CAP_DAC_OVERRIDE",
-		"CAP_DAC_READ_SEARCH",
-		"CAP_FOWNER",
 		"CAP_FSETID",
-		"CAP_IPC_OWNER",
+		"CAP_FOWNER",
 		"CAP_KILL",
-		"CAP_LEASE",
-		"CAP_LINUX_IMMUTABLE",
-		"CAP_NET_BIND_SERVICE",
-		"CAP_NET_BROADCAST",
-		"CAP_NET_RAW",
-		"CAP_SETGID",
-		"CAP_SETFCAP",
-		"CAP_SETPCAP",
-		"CAP_SETUID",
-		"CAP_SYS_ADMIN",
-		"CAP_SYS_CHROOT",
-		"CAP_SYS_NICE",
-		"CAP_SYS_PTRACE",
-		"CAP_SYS_TTY_CONFIG",
-		"CAP_SYS_RESOURCE",
-		"CAP_SYS_BOOT",
-		"CAP_AUDIT_WRITE",
-		"CAP_AUDIT_CONTROL",
 		"CAP_MKNOD",
+		"CAP_NET_RAW",
+		"CAP_NET_BIND_SERVICE",
+		"CAP_SETUID",
+		"CAP_SETGID",
+		"CAP_SETPCAP",
+		"CAP_SETFCAP",
+		"CAP_SYS_CHROOT",
 	}...)
 )
 
@@ -276,6 +264,116 @@ func findHostPort(pm schema.PodManifest, name types.ACName) uint {
 	return port
 }
 
+// generateSysusers generates systemd sysusers files for a given app so that
+// corresponding entries in /etc/passwd and /etc/group are created in stage1.
+// This is needed to use the "User=" and "Group=" options in the systemd
+// service files of apps.
+// If there're several apps defining the same UIDs/GIDs, systemd will take care
+// of only generating one /etc/{passwd,group} entry
+func generateSysusers(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uid_ int, gid_ int) error {
+	app := ra.App
+	appName := ra.Name
+
+	if err := os.MkdirAll(path.Join(common.Stage1RootfsPath(p.Root), "usr/lib/sysusers.d"), 0755); err != nil {
+		return err
+	}
+
+	gids := append(app.SupplementaryGIDs, gid_)
+
+	// Create the Unix user and group
+	var sysusersConf []string
+
+	for _, g := range gids {
+		groupname := "gen" + strconv.Itoa(g)
+		sysusersConf = append(sysusersConf, fmt.Sprintf("g %s %d\n", groupname, g))
+	}
+
+	username := "gen" + strconv.Itoa(uid_)
+	sysusersConf = append(sysusersConf, fmt.Sprintf("u %s %d \"%s\"\n", username, uid_, username))
+
+	if err := ioutil.WriteFile(path.Join(common.Stage1RootfsPath(p.Root), "usr/lib/sysusers.d", ServiceUnitName(appName)+".conf"),
+		[]byte(strings.Join(sysusersConf, "\n")), 0640); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// lookupPathInsideApp returns the path (relative to the app rootfs) of the
+// given binary. It will look up on "paths" (also relative to the app rootfs)
+// and evaluate possible symlinks to check if the resulting path is actually
+// executable.
+func lookupPathInsideApp(bin string, paths string, appRootfs string) (string, error) {
+	pathsArr := filepath.SplitList(paths)
+	var appPathsArr []string
+	for _, p := range pathsArr {
+		appPathsArr = append(appPathsArr, filepath.Join(appRootfs, p))
+	}
+	for _, path := range appPathsArr {
+		binPath := filepath.Join(path, bin)
+		binAbsPath, err := filepath.Abs(binPath)
+		if err != nil {
+			return "", fmt.Errorf("unable to find absolute path for %s", binPath)
+		}
+		relPath := strings.TrimPrefix(binAbsPath, appRootfs)
+		d, err := os.Lstat(binAbsPath)
+		if err != nil {
+			continue
+		}
+		binRealPath, err := evaluateSymlinksInsideApp(appRootfs, relPath)
+		if err != nil {
+			return "", errwrap.Wrap(fmt.Errorf("could not evaluate path %v", binAbsPath), err)
+		}
+		binRealPath = filepath.Join(appRootfs, binRealPath)
+		d, err = os.Stat(binRealPath)
+		if err != nil {
+			continue
+		}
+		// Check the executable bit, inspired by os.exec.LookPath()
+		if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
+			// The real path is executable, return the path relative to the app
+			return relPath, nil
+		}
+	}
+	return "", fmt.Errorf("unable to find %q in %q", bin, paths)
+}
+
+// appSearchPaths returns a list of paths where we should search for
+// non-absolute exec binaries
+func appSearchPaths(p *stage1commontypes.Pod, appRootfs string, app types.App) []string {
+	appEnv := app.Environment
+
+	if imgPath, ok := appEnv.Get("PATH"); ok {
+		return strings.Split(imgPath, ":")
+	}
+
+	// emulate exec(3) behavior, first check pod's directory and then the list
+	// of directories returned by confstr(_CS_PATH). That's typically
+	// "/bin:/usr/bin" so let's use that.
+	return []string{appRootfs, "/bin", "/usr/bin"}
+}
+
+// findBinPath takes a binary path and returns a the absolute path of the
+// binary relative to the app rootfs. This can be passed to ExecStart on the
+// app's systemd service file directly.
+func findBinPath(p *stage1commontypes.Pod, appName types.ACName, app types.App, bin string) (string, error) {
+	absRoot, err := filepath.Abs(p.Root)
+	if err != nil {
+		return "", errwrap.Wrap(errors.New("could not get pod's root absolute path"), err)
+	}
+
+	appRootfs := common.AppRootfsPath(absRoot, appName)
+	appPathDirs := appSearchPaths(p, appRootfs, app)
+	appPath := strings.Join(appPathDirs, ":")
+
+	binPath, err := lookupPathInsideApp(bin, appPath, appRootfs)
+	if err != nil {
+		return "", errwrap.Wrap(fmt.Errorf("error looking up %q", bin), err)
+	}
+
+	return strings.TrimPrefix(binPath, appRootfs), nil
+}
+
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
 func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string) error {
 	app := ra.App
@@ -298,8 +396,16 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		env.Set("AC_METADATA_URL", p.MetadataServiceURL)
 	}
 
-	if err := writeEnvFile(p, env, appName, privateUsers); err != nil {
-		return errwrap.Wrap(errors.New("unable to write environment file"), err)
+	// TODO(iaguis): make appexec use the same format as systemd
+	envFilePathSystemd := EnvFilePathSystemd(p.Root, appName)
+	envFilePathAppexec := EnvFilePathAppexec(p.Root, appName)
+
+	if err := writeEnvFile(p, env, appName, privateUsers, '\n', envFilePathSystemd); err != nil {
+		return errwrap.Wrap(errors.New("unable to write environment file for systemd"), err)
+	}
+
+	if err := writeEnvFile(p, env, appName, privateUsers, '\000', envFilePathAppexec); err != nil {
+		return errwrap.Wrap(errors.New("unable to write environment file for appexec"), err)
 	}
 
 	u, g, err := parseUserGroup(p, ra, privateUsers)
@@ -307,17 +413,43 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		return err
 	}
 
-	execWrap := []string{"/appexec", common.RelAppRootfsPath(appName), workDir, RelEnvFilePath(appName),
-		strconv.Itoa(u), generateGidArg(g, app.SupplementaryGIDs), "--"}
-	execStart := quoteExec(append(execWrap, app.Exec...))
+	if err := generateSysusers(p, ra, u, g); err != nil {
+		return errwrap.Wrap(errors.New("unable to generate sysusers"), err)
+	}
+
+	binPath := app.Exec[0]
+	if !filepath.IsAbs(binPath) {
+		binPath, err = findBinPath(p, appName, *app, binPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	var supplementaryGroups []string
+	for _, g := range app.SupplementaryGIDs {
+		supplementaryGroups = append(supplementaryGroups, strconv.Itoa(g))
+	}
+
+	// TODO: read the RemoveSet as well. See
+	// https://github.com/coreos/rkt/issues/2348#issuecomment-211796840
+	capabilities := append(app.Isolators, appDefaultCapabilities.AsIsolator())
+	capabilitiesStr := GetAppCapabilities(capabilities)
+
+	execStart := append([]string{binPath}, app.Exec[1:]...)
+	execStartString := quoteExec(execStart)
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v", appName, imgName)),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
 		unit.NewUnitOption("Unit", "Wants", fmt.Sprintf("reaper-%s.service", appName)),
 		unit.NewUnitOption("Service", "Restart", "no"),
-		unit.NewUnitOption("Service", "ExecStart", execStart),
-		unit.NewUnitOption("Service", "User", "0"),
-		unit.NewUnitOption("Service", "Group", "0"),
+		unit.NewUnitOption("Service", "ExecStart", execStartString),
+		unit.NewUnitOption("Service", "RootDirectory", common.RelAppRootfsPath(appName)),
+		unit.NewUnitOption("Service", "WorkingDirectory", workDir),
+		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePathSystemd(appName)),
+		unit.NewUnitOption("Service", "User", strconv.Itoa(u)),
+		unit.NewUnitOption("Service", "Group", strconv.Itoa(g)),
+		unit.NewUnitOption("Service", "SupplementaryGroups", strings.Join(supplementaryGroups, " ")),
+		unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")),
 	}
 
 	if interactive {
@@ -328,13 +460,6 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
 		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
 		opts = append(opts, unit.NewUnitOption("Service", "SyslogIdentifier", filepath.Base(app.Exec[0])))
-	}
-
-	if flavor == "kvm" {
-		capabilities := append(app.Isolators, nspawnCapabilities.AsIsolator())
-		capabilitiesStr := GetAppCapabilities(capabilities)
-
-		opts = append(opts, unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")))
 	}
 
 	// When an app fails, we shut down the pod
@@ -350,7 +475,7 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		default:
 			return fmt.Errorf("unrecognized eventHandler: %v", eh.Name)
 		}
-		exec := quoteExec(append(execWrap, eh.Exec...))
+		exec := quoteExec(eh.Exec)
 		opts = append(opts, unit.NewUnitOption("Service", typ, exec))
 	}
 
@@ -429,6 +554,9 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 
 	opts = append(opts, unit.NewUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(appName)))
 	opts = append(opts, unit.NewUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(appName)))
+
+	opts = append(opts, unit.NewUnitOption("Unit", "Requires", "sysusers.service"))
+	opts = append(opts, unit.NewUnitOption("Unit", "After", "sysusers.service"))
 
 	file, err := os.OpenFile(ServiceUnitPath(p.Root, appName), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
@@ -574,17 +702,17 @@ func writeShutdownService(p *stage1commontypes.Pod) error {
 // writeEnvFile creates an environment file for given app name, the minimum
 // required environment variables by the appc spec will be set to sensible
 // defaults here if they're not provided by env.
-func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types.ACName, privateUsers string) error {
+func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types.ACName, privateUsers string, separator byte, envFilePath string) error {
 	ef := bytes.Buffer{}
 
 	for dk, dv := range defaultEnv {
 		if _, exists := env.Get(dk); !exists {
-			fmt.Fprintf(&ef, "%s=%s\000", dk, dv)
+			fmt.Fprintf(&ef, "%s=%s%c", dk, dv, separator)
 		}
 	}
 
 	for _, e := range env {
-		fmt.Fprintf(&ef, "%s=%s\000", e.Name, e.Value)
+		fmt.Fprintf(&ef, "%s=%s%c", e.Name, e.Value, separator)
 	}
 
 	uidRange := uid.NewBlankUidRange()
@@ -592,7 +720,6 @@ func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types
 		return err
 	}
 
-	envFilePath := EnvFilePath(p.Root, appName)
 	if err := ioutil.WriteFile(envFilePath, ef.Bytes(), 0644); err != nil {
 		return err
 	}
@@ -623,12 +750,9 @@ func PodToSystemd(p *stage1commontypes.Pod, interactive bool, flavor string, pri
 	return nil
 }
 
-// evaluateAppMountPath tries to resolve symlinks within the path.
-// It returns the actual relative path for the given path.
-// TODO(yifan): This is a temporary fix for systemd-nspawn not handling symlink mounts well.
-// Could be removed when https://github.com/systemd/systemd/issues/2860 is resolved, and systemd
-// version is bumped.
-func evaluateAppMountPath(appRootfs, path string) (string, error) {
+// evaluateSymlinksInsideApp tries to resolve symlinks within the path.
+// It returns the actual path relative to the pod for the given path.
+func evaluateSymlinksInsideApp(appRootfs, path string) (string, error) {
 	link := appRootfs
 
 	paths := strings.Split(path, "/")
@@ -706,7 +830,11 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		}
 
 		appRootfs := common.AppRootfsPath(absRoot, appName)
-		mntPath, err := evaluateAppMountPath(appRootfs, m.Path)
+
+		// TODO(yifan): This is a temporary fix for systemd-nspawn not handling symlink mounts well.
+		// Could be removed when https://github.com/systemd/systemd/issues/2860 is resolved, and systemd
+		// version is bumped.
+		mntPath, err := evaluateSymlinksInsideApp(appRootfs, m.Path)
 		if err != nil {
 			return nil, errwrap.Wrap(fmt.Errorf("could not evaluate path %v", m.Path), err)
 		}

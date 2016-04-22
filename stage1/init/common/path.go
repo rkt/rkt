@@ -43,15 +43,28 @@ func ServiceUnitPath(root string, appName types.ACName) string {
 	return filepath.Join(common.Stage1RootfsPath(root), UnitsDir, ServiceUnitName(appName))
 }
 
-// RelEnvFilePath returns the path to the environment file for the given app name
-// relative to the pod's root.
-func RelEnvFilePath(appName types.ACName) string {
+// RelEnvFilePathAppexec returns the path to the environment file for the given
+// app name relative to the pod's root to be parsed by appexec.
+func RelEnvFilePathAppexec(appName types.ACName) string {
 	return filepath.Join(envDir, appName.String())
 }
 
-// EnvFilePath returns the path to the environment file for the given app name.
-func EnvFilePath(root string, appName types.ACName) string {
-	return filepath.Join(common.Stage1RootfsPath(root), RelEnvFilePath(appName))
+// EnvFilePathAppexec returns the path to the environment file for the given
+// app name to be parsed by appexec.
+func EnvFilePathAppexec(root string, appName types.ACName) string {
+	return filepath.Join(common.Stage1RootfsPath(root), RelEnvFilePathAppexec(appName))
+}
+
+// RelEnvFilePathSystemd returns the path to the environment file for the given
+// app name relative to the pod's root to be parsed by systemd.
+func RelEnvFilePathSystemd(appName types.ACName) string {
+	return filepath.Join(envDir, appName.String()) + "-systemd"
+}
+
+// EnvFilePathSystemd returns the path to the environment file for the given
+// app name to be parsed by systemd.
+func EnvFilePathSystemd(root string, appName types.ACName) string {
+	return EnvFilePathAppexec(root, appName) + "-systemd"
 }
 
 // ServiceWantPath returns the systemd default.target want symlink path for the
