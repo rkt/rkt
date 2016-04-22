@@ -431,6 +431,10 @@ func TestPodManifest(t *testing.T) {
 									Name:     "resource/cpu",
 									ValueRaw: rawRequestLimit("100", "100"),
 								},
+								{
+									Name:     "os/linux/capabilities-retain-set",
+									ValueRaw: rawValue(`{"set":["CAP_SYS_PTRACE"]}`),
+								},
 							},
 						},
 					},
@@ -458,6 +462,10 @@ func TestPodManifest(t *testing.T) {
 									Name: "resource/memory",
 									// 4MB.
 									ValueRaw: rawRequestLimit("4194304", "4194304"),
+								},
+								{
+									Name:     "os/linux/capabilities-retain-set",
+									ValueRaw: rawValue(`{"set":["CAP_SYS_PTRACE"]}`),
 								},
 							},
 						},
