@@ -16,7 +16,7 @@ $(TST_SHORT_TESTS_STAMP):
 	$(VQ) \
 	set -e; \
 	$(call vb,vt,GOFMT,$(TST_GOFMT_DIRS)) \
-	res=$$($(GOFMT) -l $(TST_GOFMT_DIRS)); \
+	res=$$($(GOFMT) -s -l $(TST_GOFMT_DIRS)); \
 	if [ -n "$${res}" ]; then echo -e "gofmt checking failed:\n$${res}"; exit 1; fi; \
 	$(call vb,vt,GO VET,$(TST_GO_VET_PACKAGES)) \
 	res=$$($(GO_ENV) "$(GO)" vet $(TST_GO_VET_PACKAGES)); \
