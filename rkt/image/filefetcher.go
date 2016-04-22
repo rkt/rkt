@@ -34,9 +34,9 @@ type fileFetcher struct {
 	Debug         bool
 }
 
-// GetHash opens a file, optionally verifies it against passed asc,
+// Hash opens a file, optionally verifies it against passed asc,
 // stores it in the store and returns the hash.
-func (f *fileFetcher) GetHash(aciPath string, a *asc) (string, error) {
+func (f *fileFetcher) Hash(aciPath string, a *asc) (string, error) {
 	ensureLogger(f.Debug)
 	absPath, err := filepath.Abs(aciPath)
 	if err != nil {
@@ -98,7 +98,7 @@ func (f *fileFetcher) getVerifiedFile(aciPath string, a *asc) (*os.File, error) 
 
 	entity, err := validator.ValidateWithSignature(f.Ks, ascFile)
 	if err != nil {
-		return nil, errwrap.Wrap(fmt.Errorf("image %q verification failed", validator.GetImageName()), err)
+		return nil, errwrap.Wrap(fmt.Errorf("image %q verification failed", validator.ImageName()), err)
 	}
 	printIdentities(entity)
 

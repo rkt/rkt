@@ -106,8 +106,8 @@ func (o *httpOps) DownloadImageWithETag(u *url.URL, etag string) (readSeekCloser
 	return retAciFile, session.Cd, nil
 }
 
-// GetAscRemoteFetcher provides a remoteAscFetcher for asc.
-func (o *httpOps) GetAscRemoteFetcher() *remoteAscFetcher {
+// AscRemoteFetcher provides a remoteAscFetcher for asc.
+func (o *httpOps) AscRemoteFetcher() *remoteAscFetcher {
 	ensureLogger(o.Debug)
 	f := func(u *url.URL, file *os.File) error {
 		switch u.Scheme {

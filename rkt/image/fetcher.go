@@ -239,7 +239,7 @@ func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *store.Remote, u *url.URL, a *
 			Debug:         f.Debug,
 			Headers:       f.Headers,
 		}
-		return hf.GetHash(u, a)
+		return hf.Hash(u, a)
 	}
 	return "", nil
 }
@@ -253,7 +253,7 @@ func (f *Fetcher) maybeFetchDockerURLFromRemote(u *url.URL) (string, error) {
 			S:             f.S,
 			Debug:         f.Debug,
 		}
-		return df.GetHash(u)
+		return df.Hash(u)
 	}
 	return "", nil
 }
@@ -266,7 +266,7 @@ func (f *Fetcher) fetchSingleImageByPath(path string, a *asc) (string, error) {
 		Ks:            f.Ks,
 		Debug:         f.Debug,
 	}
-	return ff.GetHash(path, a)
+	return ff.Hash(path, a)
 }
 
 type appBundle struct {
@@ -353,7 +353,7 @@ func (f *Fetcher) maybeFetchImageFromRemote(app *appBundle, a *asc) (string, err
 			Headers:            f.Headers,
 			TrustKeysFromHTTPS: f.TrustKeysFromHTTPS,
 		}
-		return nf.GetHash(app.App, a)
+		return nf.Hash(app.App, a)
 	}
 	return "", nil
 }

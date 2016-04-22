@@ -37,9 +37,9 @@ type httpFetcher struct {
 	Headers       map[string]config.Headerer
 }
 
-// GetHash fetches the URL, optionally verifies it against passed asc,
+// Hash fetches the URL, optionally verifies it against passed asc,
 // stores it in the store and returns the hash.
-func (f *httpFetcher) GetHash(u *url.URL, a *asc) (string, error) {
+func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 	ensureLogger(f.Debug)
 	urlStr := u.String()
 
@@ -47,7 +47,7 @@ func (f *httpFetcher) GetHash(u *url.URL, a *asc) (string, error) {
 		log.Printf("fetching image from %s", urlStr)
 	}
 
-	aciFile, cd, err := f.fetchURL(u, a, f.getETag())
+	aciFile, cd, err := f.fetchURL(u, a, f.eTag())
 	if err != nil {
 		return "", err
 	}
@@ -104,7 +104,7 @@ func (f *httpFetcher) fetchURL(u *url.URL, a *asc, etag string) (readSeekCloser,
 	}
 
 	if f.InsecureFlags.SkipImageCheck() || f.Ks == nil {
-		o := f.getHTTPOps()
+		o := f.httpOps()
 		aciFile, cd, err := o.DownloadImageWithETag(u, etag)
 		if err != nil {
 			return nil, nil, err
@@ -116,7 +116,7 @@ func (f *httpFetcher) fetchURL(u *url.URL, a *asc, etag string) (readSeekCloser,
 }
 
 func (f *httpFetcher) fetchVerifiedURL(u *url.URL, a *asc, etag string) (readSeekCloser, *cacheData, error) {
-	o := f.getHTTPOps()
+	o := f.httpOps()
 	f.maybeOverrideAscFetcherWithRemote(o, u, a)
 	ascFile, retry, err := o.DownloadSignature(a)
 	if err != nil {
@@ -148,7 +148,7 @@ func (f *httpFetcher) fetchVerifiedURL(u *url.URL, a *asc, etag string) (readSee
 	return retAciFile, cd, nil
 }
 
-func (f *httpFetcher) getHTTPOps() *httpOps {
+func (f *httpFetcher) httpOps() *httpOps {
 	return &httpOps{
 		InsecureSkipTLSVerify: f.InsecureFlags.SkipTLSCheck(),
 		S:       f.S,
@@ -174,7 +174,7 @@ func (f *httpFetcher) validate(aciFile, ascFile io.ReadSeeker) error {
 	return nil
 }
 
-func (f *httpFetcher) getETag() string {
+func (f *httpFetcher) eTag() string {
 	if f.Rem != nil {
 		return f.Rem.ETag
 	}
@@ -187,5 +187,5 @@ func (f *httpFetcher) maybeOverrideAscFetcherWithRemote(o *httpOps, u *url.URL, 
 	}
 	u2 := ascURLFromImgURL(u)
 	a.Location = u2.String()
-	a.Fetcher = o.GetAscRemoteFetcher()
+	a.Fetcher = o.AscRemoteFetcher()
 }
