@@ -1,6 +1,6 @@
 # aci directory should be the last one
 _S1_SS_SUBDIRS_ := \
-	appexec \
+	enterexec \
 	prepare-app \
 	enter \
 	enter_kvm \

@@ -77,8 +77,8 @@ Stage 1 must write the host PIDs of the pod's process #1 and that process's pare
 4. executes the resolved entrypoint relative to `/var/lib/rkt/pods/run/$uuid/stage1/rootfs`
 
 In the bundled rkt stage 1, the entrypoint is a statically-linked C program found at `/enter` within the stage 1 ACI rootfs.
-This program enters the namespaces of the systemd-nspawn container's PID 1 before executing the `/appexec` program.
-`appexec` then `chroot`s into the ACI's rootfs, loading the application and its environment.
+This program enters the namespaces of the systemd-nspawn container's PID 1 before executing the `/enterexec` program.
+`enterexec` then `chroot`s into the ACI's rootfs, loading the application and its environment.
 
 An alternative stage 1 would need to do whatever is appropriate for entering the application environment created by its own `coreos.com/rkt/stage1/run` entrypoint.
 

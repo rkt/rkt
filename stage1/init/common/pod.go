@@ -105,7 +105,7 @@ func execEscape(i int, str string) string {
 // quoteExec returns an array of quoted strings appropriate for systemd execStart usage
 func quoteExec(exec []string) string {
 	if len(exec) == 0 {
-		// existing callers prefix {"/appexec", "/app/root", "/work/dir", "/env/file"} so this shouldn't occur.
+		// existing callers always include at least the binary so this shouldn't occur.
 		panic("empty exec")
 	}
 
@@ -396,16 +396,16 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		env.Set("AC_METADATA_URL", p.MetadataServiceURL)
 	}
 
-	// TODO(iaguis): make appexec use the same format as systemd
+	// TODO(iaguis): make enterexec use the same format as systemd
 	envFilePathSystemd := EnvFilePathSystemd(p.Root, appName)
-	envFilePathAppexec := EnvFilePathAppexec(p.Root, appName)
+	envFilePathEnterexec := EnvFilePathEnterexec(p.Root, appName)
 
 	if err := writeEnvFile(p, env, appName, privateUsers, '\n', envFilePathSystemd); err != nil {
 		return errwrap.Wrap(errors.New("unable to write environment file for systemd"), err)
 	}
 
-	if err := writeEnvFile(p, env, appName, privateUsers, '\000', envFilePathAppexec); err != nil {
-		return errwrap.Wrap(errors.New("unable to write environment file for appexec"), err)
+	if err := writeEnvFile(p, env, appName, privateUsers, '\000', envFilePathEnterexec); err != nil {
+		return errwrap.Wrap(errors.New("unable to write environment file for enterexec"), err)
 	}
 
 	u, g, err := parseUserGroup(p, ra, privateUsers)
