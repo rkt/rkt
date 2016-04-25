@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/tests/testutils"
 )
@@ -77,14 +78,17 @@ func TestImageSize(t *testing.T) {
 
 	imageListCmd := fmt.Sprintf("%s image list --no-legend --full", ctx.Cmd())
 
-	// check that the printed size is the same as the actual image size
-	expectedStr := fmt.Sprintf("(?s)%s.*%d.*", imageHash, imageSize)
+	// if we don't support overlay fs, we don't render the image on fetch
+	if !common.SupportsOverlay() {
+		// check that the printed size is the same as the actual image size
+		expectedStr := fmt.Sprintf("(?s)%s.*%d.*", imageHash, imageSize)
 
-	runRktAndCheckRegexOutput(t, imageListCmd, expectedStr)
+		runRktAndCheckRegexOutput(t, imageListCmd, expectedStr)
 
-	// run the image, so rkt renders it in the tree store
-	runCmd := fmt.Sprintf("%s --insecure-options=image run %s", ctx.Cmd(), image)
-	spawnAndWaitOrFail(t, runCmd, 0)
+		// run the image, so rkt renders it in the tree store
+		runCmd := fmt.Sprintf("%s --insecure-options=image run %s", ctx.Cmd(), image)
+		spawnAndWaitOrFail(t, runCmd, 0)
+	}
 
 	tmpDir := createTempDirOrPanic("rkt_image_list_test")
 	defer os.RemoveAll(tmpDir)
@@ -113,7 +117,7 @@ func TestImageSize(t *testing.T) {
 	}
 
 	// check the size with the rendered image
-	expectedStr = fmt.Sprintf("(?s)%s.*%d.*", imageHash, imageSize+tsSize)
+	expectedStr := fmt.Sprintf("(?s)%s.*%d.*", imageHash, imageSize+tsSize)
 	runRktAndCheckRegexOutput(t, imageListCmd, expectedStr)
 
 	// gc the pod
