@@ -546,7 +546,7 @@ func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1al
 		Version:         version,
 		ImportTimestamp: aciInfo.ImportTime.Unix(),
 		Manifest:        manifest,
-		Size:            aciInfo.Size,
+		Size:            aciInfo.Size + aciInfo.TreeStoreSize,
 		Annotations:     convertAnnotationsToKeyValue(im.Annotations),
 	}, &im, nil
 }
