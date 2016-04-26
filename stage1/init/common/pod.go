@@ -270,11 +270,15 @@ func findHostPort(pm schema.PodManifest, name types.ACName) uint {
 // service files of apps.
 // If there're several apps defining the same UIDs/GIDs, systemd will take care
 // of only generating one /etc/{passwd,group} entry
-func generateSysusers(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uid_ int, gid_ int) error {
+func generateSysusers(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uid_ int, gid_ int, uidRange *uid.UidRange) error {
+	var toShift []string
+
 	app := ra.App
 	appName := ra.Name
 
-	if err := os.MkdirAll(path.Join(common.Stage1RootfsPath(p.Root), "usr/lib/sysusers.d"), 0755); err != nil {
+	sysusersDir := path.Join(common.Stage1RootfsPath(p.Root), "usr/lib/sysusers.d")
+	toShift = append(toShift, sysusersDir)
+	if err := os.MkdirAll(sysusersDir, 0755); err != nil {
 		return err
 	}
 
@@ -291,9 +295,18 @@ func generateSysusers(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uid_ int,
 	username := "gen" + strconv.Itoa(uid_)
 	sysusersConf = append(sysusersConf, fmt.Sprintf("u %s %d \"%s\"\n", username, uid_, username))
 
-	if err := ioutil.WriteFile(path.Join(common.Stage1RootfsPath(p.Root), "usr/lib/sysusers.d", ServiceUnitName(appName)+".conf"),
-		[]byte(strings.Join(sysusersConf, "\n")), 0640); err != nil {
+	sysusersFile := path.Join(common.Stage1RootfsPath(p.Root), "usr/lib/sysusers.d", ServiceUnitName(appName)+".conf")
+	toShift = append(toShift, sysusersFile)
+	if err := ioutil.WriteFile(sysusersFile, []byte(strings.Join(sysusersConf, "\n")), 0640); err != nil {
 		return err
+	}
+
+	if uidRange.Shift != 0 && uidRange.Count != 0 {
+		for _, f := range toShift {
+			if err := os.Chown(f, int(uidRange.Shift), int(uidRange.Shift)); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -400,20 +413,25 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 	envFilePathSystemd := EnvFilePathSystemd(p.Root, appName)
 	envFilePathEnterexec := EnvFilePathEnterexec(p.Root, appName)
 
-	if err := writeEnvFile(p, env, appName, privateUsers, '\n', envFilePathSystemd); err != nil {
+	uidRange := uid.NewBlankUidRange()
+	if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
+		return err
+	}
+
+	if err := writeEnvFile(p, env, appName, uidRange, '\n', envFilePathSystemd); err != nil {
 		return errwrap.Wrap(errors.New("unable to write environment file for systemd"), err)
 	}
 
-	if err := writeEnvFile(p, env, appName, privateUsers, '\000', envFilePathEnterexec); err != nil {
+	if err := writeEnvFile(p, env, appName, uidRange, '\000', envFilePathEnterexec); err != nil {
 		return errwrap.Wrap(errors.New("unable to write environment file for enterexec"), err)
 	}
 
-	u, g, err := parseUserGroup(p, ra, privateUsers)
+	u, g, err := parseUserGroup(p, ra, uidRange)
 	if err != nil {
 		return err
 	}
 
-	if err := generateSysusers(p, ra, u, g); err != nil {
+	if err := generateSysusers(p, ra, u, g, uidRange); err != nil {
 		return errwrap.Wrap(errors.New("unable to generate sysusers"), err)
 	}
 
@@ -587,17 +605,12 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 //   3. a number
 //   4. a name in reference to /etc/{group,passwd} in the image
 // See https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
-func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, privateUsers string) (int, int, error) {
+func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uidRange *uid.UidRange) (int, int, error) {
 	app := ra.App
 	appName := ra.Name
 
 	var uid_, gid_ int
 	var err error
-
-	uidRange := uid.NewBlankUidRange()
-	if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
-		return -1, -1, errwrap.Wrap(errors.New("unable to deserialize uid range"), err)
-	}
 
 	switch {
 	case app.User == "root":
@@ -702,7 +715,7 @@ func writeShutdownService(p *stage1commontypes.Pod) error {
 // writeEnvFile creates an environment file for given app name, the minimum
 // required environment variables by the appc spec will be set to sensible
 // defaults here if they're not provided by env.
-func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types.ACName, privateUsers string, separator byte, envFilePath string) error {
+func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types.ACName, uidRange *uid.UidRange, separator byte, envFilePath string) error {
 	ef := bytes.Buffer{}
 
 	for dk, dv := range defaultEnv {
@@ -713,11 +726,6 @@ func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types
 
 	for _, e := range env {
 		fmt.Fprintf(&ef, "%s=%s%c", e.Name, e.Value, separator)
-	}
-
-	uidRange := uid.NewBlankUidRange()
-	if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
-		return err
 	}
 
 	if err := ioutil.WriteFile(envFilePath, ef.Bytes(), 0644); err != nil {
