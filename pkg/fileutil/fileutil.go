@@ -225,3 +225,14 @@ func DirSize(path string) (int64, error) {
 
 	return 0, nil
 }
+
+// IsExecutable checks if the given path points to an executable file by
+// checking the executable bit. Inspired by os.exec.LookPath()
+func IsExecutable(path string) bool {
+	d, err := os.Stat(path)
+	if err == nil {
+		m := d.Mode()
+		return !m.IsDir() && m&0111 != 0
+	}
+	return false
+}

@@ -42,6 +42,7 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
+	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/uid"
 )
 
@@ -333,12 +334,7 @@ func lookupPathInsideApp(bin string, paths string, appRootfs string, workDir str
 			return "", errwrap.Wrap(fmt.Errorf("could not evaluate path %v", stage2Path), err)
 		}
 		binRealPath = filepath.Join(appRootfs, binRealPath)
-		d, err := os.Stat(binRealPath)
-		if err != nil {
-			continue
-		}
-		// Check the executable bit, inspired by os.exec.LookPath()
-		if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
+		if fileutil.IsExecutable(binRealPath) {
 			// The real path is executable, return the path relative to the app
 			return stage2Path, nil
 		}
