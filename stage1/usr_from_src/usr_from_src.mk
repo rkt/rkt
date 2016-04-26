@@ -104,6 +104,7 @@ CLEAN_DIRS += \
 CLEAN_SYMLINKS += $(S1_RF_ACIROOTFSDIR)/flavor
 
 $(call inc-one,bash.mk)
+$(call inc-one,libnss.mk)
 
 # this makes sure everything is done - ACI rootfs is populated,
 # clean/deps/filelist are generated
@@ -161,7 +162,6 @@ $(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PA
 		--disable-vconsole \
 		--disable-quotacheck \
 		--disable-tmpfiles \
-		--disable-sysusers \
 		--disable-randomseed \
 		--disable-backlight \
 		--disable-rfkill \

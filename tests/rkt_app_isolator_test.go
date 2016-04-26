@@ -30,12 +30,13 @@ const (
 	CPUQuota       = 800              // milli-cores
 )
 
+// We need CAP_SYS_PTRACE to escape the chroot
 var memoryTest = struct {
 	testName     string
 	aciBuildArgs []string
 }{
 	`Check memory isolator`,
-	[]string{"--exec=/inspect --print-memorylimit"},
+	[]string{"--exec=/inspect --print-memorylimit", "--capability=CAP_SYS_PTRACE"},
 }
 
 var cpuTest = struct {
@@ -43,7 +44,7 @@ var cpuTest = struct {
 	aciBuildArgs []string
 }{
 	`Check CPU quota`,
-	[]string{"--exec=/inspect --print-cpuquota"},
+	[]string{"--exec=/inspect --print-cpuquota", "--capability=CAP_SYS_PTRACE"},
 }
 
 var cgroupsTest = struct {
@@ -51,7 +52,7 @@ var cgroupsTest = struct {
 	aciBuildArgs []string
 }{
 	`Check cgroup mounts`,
-	[]string{"--exec=/inspect --check-cgroups"},
+	[]string{"--exec=/inspect --check-cgroups", "--capability=CAP_SYS_PTRACE"},
 }
 
 func TestAppIsolatorMemory(t *testing.T) {

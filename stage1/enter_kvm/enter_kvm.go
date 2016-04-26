@@ -181,11 +181,11 @@ func getPodDefaultIP(workDir string) (string, error) {
 	return "", fmt.Errorf("pod has no default network!")
 }
 
-func getAppexecArgs() []string {
+func getEnterexecArgs() []string {
 	// Documentation/devel/stage1-implementors-guide.md#arguments-1
 	// also from ../enter/enter.c
 	args := []string{
-		"/appexec",
+		"/enterexec",
 		fmt.Sprintf("/opt/stage2/%s/rootfs", appName),
 		"/", // as in ../enter/enter.c - this should be app.WorkingDirectory
 		fmt.Sprintf("/rkt/env/%s", appName),
@@ -230,7 +230,7 @@ func execSSH() error {
 		"-o", "LogLevel=quiet", // do not log minor informations
 		podDefaultIP,
 	}
-	args = append(args, getAppexecArgs()...)
+	args = append(args, getEnterexecArgs()...)
 
 	// this should not return in case of success
 	err = syscall.Exec(sshPath, args, os.Environ())
