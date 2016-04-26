@@ -1,0 +1,43 @@
+# rkt-monitor
+
+This is a small go utility intended to monitor the CPU and memory usage of rkt
+and its children processes. This is accomplished by exec'ing rkt, reading proc
+once a second for a specified duration, and printing the results.
+
+This utility has a handful of flags:
+
+```
+Usage:
+  rkt-monitor IMAGE [flags]
+
+Examples:
+rkt-monitor mem-stresser.aci -v -d 30s
+
+Flags:
+  -d, --duration="10s": How long to run the ACI
+  -h, --help[=false]: help for rkt-monitor
+  -o, --show-output[=false]: Display rkt's stdout and stderr
+  -v, --verbose[=false]: Print current usage every second
+```
+
+Some acbuild scripts and golang source code is provided to build ACIs that
+attempt to eat up resources in different ways.
+
+An example usage:
+
+```
+derek@rokot ~/go/src/github.com/coreos/rkt/tests/rkt-monitor> ./build-log-stresser.sh 
+Building worker...
+Beginning build with an empty ACI
+Setting name of ACI to appc.io/rkt-log-stresser
+Copying host:worker-binary to aci:/worker
+Setting exec command [/worker]
+Writing ACI to log-stresser.aci
+Ending the build
+derek@rokot ~/go/src/github.com/coreos/rkt/tests/rkt-monitor> sudo ./rkt-monitor log-stresser.aci 
+[sudo] password for derek: 
+rkt(13261): seconds alive: 10  avg CPU: 33.113897%  avg Mem: 4 kB  peak Mem: 4 kB
+systemd(13302): seconds alive: 9  avg CPU: 0.000000%  avg Mem: 4 mB  peak Mem: 4 mB
+systemd-journal(13303): seconds alive: 9  avg CPU: 68.004584%  avg Mem: 7 mB  peak Mem: 7 mB
+worker(13307): seconds alive: 9  avg CPU: 13.004088%  avg Mem: 1 mB  peak Mem: 1 mB
+```
