@@ -316,36 +316,31 @@ func generateSysusers(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uid_ int,
 // given binary. It will look up on "paths" (also relative to the app rootfs)
 // and evaluate possible symlinks to check if the resulting path is actually
 // executable.
-func lookupPathInsideApp(bin string, paths string, appRootfs string) (string, error) {
+func lookupPathInsideApp(bin string, paths string, appRootfs string, workDir string) (string, error) {
 	pathsArr := filepath.SplitList(paths)
 	var appPathsArr []string
 	for _, p := range pathsArr {
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(workDir, p)
+		}
 		appPathsArr = append(appPathsArr, filepath.Join(appRootfs, p))
 	}
 	for _, path := range appPathsArr {
 		binPath := filepath.Join(path, bin)
-		binAbsPath, err := filepath.Abs(binPath)
+		stage2Path := strings.TrimPrefix(binPath, appRootfs)
+		binRealPath, err := evaluateSymlinksInsideApp(appRootfs, stage2Path)
 		if err != nil {
-			return "", fmt.Errorf("unable to find absolute path for %s", binPath)
-		}
-		relPath := strings.TrimPrefix(binAbsPath, appRootfs)
-		d, err := os.Lstat(binAbsPath)
-		if err != nil {
-			continue
-		}
-		binRealPath, err := evaluateSymlinksInsideApp(appRootfs, relPath)
-		if err != nil {
-			return "", errwrap.Wrap(fmt.Errorf("could not evaluate path %v", binAbsPath), err)
+			return "", errwrap.Wrap(fmt.Errorf("could not evaluate path %v", stage2Path), err)
 		}
 		binRealPath = filepath.Join(appRootfs, binRealPath)
-		d, err = os.Stat(binRealPath)
+		d, err := os.Stat(binRealPath)
 		if err != nil {
 			continue
 		}
 		// Check the executable bit, inspired by os.exec.LookPath()
 		if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
 			// The real path is executable, return the path relative to the app
-			return relPath, nil
+			return stage2Path, nil
 		}
 	}
 	return "", fmt.Errorf("unable to find %q in %q", bin, paths)
@@ -353,38 +348,48 @@ func lookupPathInsideApp(bin string, paths string, appRootfs string) (string, er
 
 // appSearchPaths returns a list of paths where we should search for
 // non-absolute exec binaries
-func appSearchPaths(p *stage1commontypes.Pod, appRootfs string, app types.App) []string {
+func appSearchPaths(p *stage1commontypes.Pod, workDir string, app types.App) []string {
 	appEnv := app.Environment
 
 	if imgPath, ok := appEnv.Get("PATH"); ok {
 		return strings.Split(imgPath, ":")
 	}
 
-	// emulate exec(3) behavior, first check pod's directory and then the list
-	// of directories returned by confstr(_CS_PATH). That's typically
+	// emulate exec(3) behavior, first check working directory and then the
+	// list of directories returned by confstr(_CS_PATH). That's typically
 	// "/bin:/usr/bin" so let's use that.
-	return []string{appRootfs, "/bin", "/usr/bin"}
+	return []string{workDir, "/bin", "/usr/bin"}
 }
 
 // findBinPath takes a binary path and returns a the absolute path of the
 // binary relative to the app rootfs. This can be passed to ExecStart on the
 // app's systemd service file directly.
-func findBinPath(p *stage1commontypes.Pod, appName types.ACName, app types.App, bin string) (string, error) {
-	absRoot, err := filepath.Abs(p.Root)
-	if err != nil {
-		return "", errwrap.Wrap(errors.New("could not get pod's root absolute path"), err)
+func findBinPath(p *stage1commontypes.Pod, appName types.ACName, app types.App, workDir string, bin string) (string, error) {
+	var binPath string
+	switch {
+	// absolute path, just use it
+	case filepath.IsAbs(bin):
+		binPath = bin
+	// non-absolute path containing a slash, look in the working dir
+	case strings.Contains(bin, "/"):
+		binPath = filepath.Join(workDir, bin)
+	// filename, search in the app's $PATH
+	default:
+		absRoot, err := filepath.Abs(p.Root)
+		if err != nil {
+			return "", errwrap.Wrap(errors.New("could not get pod's root absolute path"), err)
+		}
+		appRootfs := common.AppRootfsPath(absRoot, appName)
+		appPathDirs := appSearchPaths(p, workDir, app)
+		appPath := strings.Join(appPathDirs, ":")
+
+		binPath, err = lookupPathInsideApp(bin, appPath, appRootfs, workDir)
+		if err != nil {
+			return "", errwrap.Wrap(fmt.Errorf("error looking up %q", bin), err)
+		}
 	}
 
-	appRootfs := common.AppRootfsPath(absRoot, appName)
-	appPathDirs := appSearchPaths(p, appRootfs, app)
-	appPath := strings.Join(appPathDirs, ":")
-
-	binPath, err := lookupPathInsideApp(bin, appPath, appRootfs)
-	if err != nil {
-		return "", errwrap.Wrap(fmt.Errorf("error looking up %q", bin), err)
-	}
-
-	return strings.TrimPrefix(binPath, appRootfs), nil
+	return binPath, nil
 }
 
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
@@ -435,12 +440,9 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		return errwrap.Wrap(errors.New("unable to generate sysusers"), err)
 	}
 
-	binPath := app.Exec[0]
-	if !filepath.IsAbs(binPath) {
-		binPath, err = findBinPath(p, appName, *app, binPath)
-		if err != nil {
-			return err
-		}
+	binPath, err := findBinPath(p, appName, *app, workDir, app.Exec[0])
+	if err != nil {
+		return err
 	}
 
 	var supplementaryGroups []string
@@ -759,7 +761,7 @@ func PodToSystemd(p *stage1commontypes.Pod, interactive bool, flavor string, pri
 }
 
 // evaluateSymlinksInsideApp tries to resolve symlinks within the path.
-// It returns the actual path relative to the pod for the given path.
+// It returns the actual path relative to the app rootfs for the given path.
 func evaluateSymlinksInsideApp(appRootfs, path string) (string, error) {
 	link := appRootfs
 
