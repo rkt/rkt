@@ -41,7 +41,7 @@ c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 | `--no-store` | `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
 | `--pod-manifest` | none | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect. |
 | `--port` | none | A port number (ex. `--port=NAME:HOSTPORT`) | Ports to expose on the host (requires [contained network](../networking.md#contained-mode)). |
-| `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental) |
+| `--private-users` |  `false` | `true` or `false` | Run within user namespaces |
 | `--quiet` |  `false` | `true` or `false` | Suppress superfluous output on stdout, print only the UUID on success |
 | `--set-env` |  `` | An environment variable. Syntax `NAME=VALUE` | An environment variable to set for apps |
 | `--signature` |  `` | A file path | Local signature file to use in validating the preceding image |

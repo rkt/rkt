@@ -350,7 +350,7 @@ For more details see the [hacking documentation](../hacking.md).
 | `--no-store` | `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
 | `--pod-manifest` | none | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect. |
 | `--port` | none | A port number (ex. `--port=NAME:HOSTPORT`) | Ports to expose on the host (requires [contained network](../networking.md#contained-mode)). |
-| `--private-users` |  `false` | `true` or `false` | Run within user namespaces (experimental). |
+| `--private-users` |  `false` | `true` or `false` | Run within user namespaces. |
 | `--set-env` | none | An environment variable (ex. `--set-env=NAME=VALUE`) | An environment variable to set for apps. |
 | `--signature` | none | A file path | Local signature file to use in validating the preceding image |
 | `--stage1-url` | none | URL with protocol | A URL to a stage1 image. HTTP/HTTPS/File/Docker URLs are supported. |
