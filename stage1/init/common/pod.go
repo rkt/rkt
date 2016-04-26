@@ -28,11 +28,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/coreos/rkt/pkg/acl"
-	"github.com/coreos/rkt/pkg/group"
-	"github.com/coreos/rkt/pkg/passwd"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 
 	"github.com/appc/spec/schema"
@@ -43,7 +40,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/fileutil"
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 )
 
 const (
@@ -271,7 +268,7 @@ func findHostPort(pm schema.PodManifest, name types.ACName) uint {
 // service files of apps.
 // If there're several apps defining the same UIDs/GIDs, systemd will take care
 // of only generating one /etc/{passwd,group} entry
-func generateSysusers(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uid_ int, gid_ int, uidRange *uid.UidRange) error {
+func generateSysusers(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uid_ int, gid_ int, uidRange *user.UidRange) error {
 	var toShift []string
 
 	app := ra.App
@@ -414,7 +411,7 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 	envFilePathSystemd := EnvFilePathSystemd(p.Root, appName)
 	envFilePathEnterexec := EnvFilePathEnterexec(p.Root, appName)
 
-	uidRange := uid.NewBlankUidRange()
+	uidRange := user.NewBlankUidRange()
 	if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
 		return err
 	}
@@ -603,66 +600,48 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 //   3. a number
 //   4. a name in reference to /etc/{group,passwd} in the image
 // See https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
-func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uidRange *uid.UidRange) (int, int, error) {
-	app := ra.App
-	appName := ra.Name
-
-	var uid_, gid_ int
+func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uidRange *user.UidRange) (int, int, error) {
+	var uidResolver, gidResolver user.Resolver
+	var uid, gid int
 	var err error
 
-	switch {
-	case app.User == "root":
-		uid_ = 0
-	case strings.HasPrefix(app.User, "/"):
-		var stat syscall.Stat_t
-		if err = syscall.Lstat(filepath.Join(common.AppRootfsPath(p.Root, appName),
-			app.User), &stat); err != nil {
-			return -1, -1, errwrap.Wrap(fmt.Errorf("unable to get uid from file %q",
-				app.User), err)
-		}
-		uidReal, _, err := uidRange.UnshiftRange(stat.Uid, stat.Gid)
-		if err != nil {
-			return -1, -1, errwrap.Wrap(errors.New("unable to determine real uid"), err)
-		}
-		uid_ = int(uidReal)
-	default:
-		uid_, err = strconv.Atoi(app.User)
-		if err != nil {
-			uid_, err = passwd.LookupUidFromFile(app.User,
-				filepath.Join(common.AppRootfsPath(p.Root, appName), "etc/passwd"))
-			if err != nil {
-				return -1, -1, errwrap.Wrap(fmt.Errorf("cannot lookup user %q", app.User), err)
-			}
-		}
+	root := common.AppRootfsPath(p.Root, ra.Name)
+
+	uidResolver, err = user.NumericIDs(ra.App.User)
+	if err != nil {
+		uidResolver, err = user.IDsFromStat(root, ra.App.User, uidRange)
 	}
 
-	switch {
-	case app.Group == "root":
-		gid_ = 0
-	case strings.HasPrefix(app.Group, "/"):
-		var stat syscall.Stat_t
-		if err = syscall.Lstat(filepath.Join(common.AppRootfsPath(p.Root, appName),
-			app.Group), &stat); err != nil {
-			return -1, -1, errwrap.Wrap(fmt.Errorf("unable to get gid from file %q",
-				app.Group), err)
-		}
-		_, gidReal, err := uidRange.UnshiftRange(stat.Uid, stat.Gid)
-		if err != nil {
-			return -1, -1, errwrap.Wrap(errors.New("unable to determine real gid"), err)
-		}
-		gid_ = int(gidReal)
-	default:
-		gid_, err = strconv.Atoi(app.Group)
-		if err != nil {
-			gid_, err = group.LookupGidFromFile(app.Group,
-				filepath.Join(common.AppRootfsPath(p.Root, appName), "etc/group"))
-			if err != nil {
-				return -1, -1, errwrap.Wrap(fmt.Errorf("cannot lookup group %q", app.Group), err)
-			}
-		}
+	if err != nil {
+		uidResolver, err = user.IDsFromEtc(root, ra.App.User, "")
 	}
 
-	return uid_, gid_, nil
+	if err != nil { // give up
+		return -1, -1, errwrap.Wrap(fmt.Errorf("invalid user %q", ra.App.User), err)
+	}
+
+	if uid, _, err = uidResolver.IDs(); err != nil {
+		return -1, -1, errwrap.Wrap(fmt.Errorf("failed to configure user %q", ra.App.User), err)
+	}
+
+	gidResolver, err = user.NumericIDs(ra.App.Group)
+	if err != nil {
+		gidResolver, err = user.IDsFromStat(root, ra.App.Group, uidRange)
+	}
+
+	if err != nil {
+		gidResolver, err = user.IDsFromEtc(root, "", ra.App.Group)
+	}
+
+	if err != nil { // give up
+		return -1, -1, errwrap.Wrap(fmt.Errorf("invalid group %q", ra.App.Group), err)
+	}
+
+	if _, gid, err = gidResolver.IDs(); err != nil {
+		return -1, -1, errwrap.Wrap(fmt.Errorf("failed to configure group %q", ra.App.Group), err)
+	}
+
+	return uid, gid, nil
 }
 
 func writeShutdownService(p *stage1commontypes.Pod) error {
@@ -713,7 +692,7 @@ func writeShutdownService(p *stage1commontypes.Pod) error {
 // writeEnvFile creates an environment file for given app name, the minimum
 // required environment variables by the appc spec will be set to sensible
 // defaults here if they're not provided by env.
-func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types.ACName, uidRange *uid.UidRange, separator byte, envFilePath string) error {
+func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types.ACName, uidRange *user.UidRange, separator byte, envFilePath string) error {
 	ef := bytes.Buffer{}
 
 	for dk, dv := range defaultEnv {

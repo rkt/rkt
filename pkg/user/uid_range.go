@@ -15,7 +15,7 @@
 // For how the uidshift and uidcount are generated please check:
 // http://cgit.freedesktop.org/systemd/systemd/commit/?id=03cfe0d51499e86b1573d1
 
-package uid
+package user
 
 import (
 	"errors"

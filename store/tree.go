@@ -33,7 +33,7 @@ import (
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/sys"
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -66,7 +66,7 @@ func (ts *TreeStore) Write(id string, key string, s *Store) (string, error) {
 	if err := os.MkdirAll(treepath, 0755); err != nil {
 		return "", errwrap.Wrap(fmt.Errorf("cannot create treestore directory %s", treepath), err)
 	}
-	err = aci.RenderACIWithImageID(*imageID, treepath, s, uid.NewBlankUidRange())
+	err = aci.RenderACIWithImageID(*imageID, treepath, s, user.NewBlankUidRange())
 	if err != nil {
 		return "", errwrap.Wrap(errors.New("cannot render aci"), err)
 	}

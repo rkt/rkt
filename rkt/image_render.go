@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/coreos/rkt/pkg/fileutil"
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 	"github.com/coreos/rkt/store"
 
 	"github.com/spf13/cobra"
@@ -127,7 +127,7 @@ func runImageRender(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	cachedTreePath := s.GetTreeStoreRootFS(id)
-	if err := fileutil.CopyTree(cachedTreePath, rootfsOutDir, uid.NewBlankUidRange()); err != nil {
+	if err := fileutil.CopyTree(cachedTreePath, rootfsOutDir, user.NewBlankUidRange()); err != nil {
 		stderr.PrintE("error copying ACI rootfs", err)
 		return 1
 	}

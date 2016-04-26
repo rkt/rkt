@@ -28,7 +28,7 @@ import (
 
 	"github.com/coreos/rkt/pkg/multicall"
 	"github.com/coreos/rkt/pkg/sys"
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 )
 
 func init() {
@@ -792,7 +792,7 @@ func extractTarHelper(rdr io.Reader, target string) error {
 }
 
 func extractTarHelperPWL(rdr io.Reader, target string, pwl PathWhitelistMap) error {
-	return ExtractTar(rdr, target, false, uid.NewBlankUidRange(), pwl)
+	return ExtractTar(rdr, target, false, user.NewBlankUidRange(), pwl)
 }
 
 func extractTarInsecureHelper(rdr io.Reader, target string) error {
@@ -800,7 +800,7 @@ func extractTarInsecureHelper(rdr io.Reader, target string) error {
 }
 
 func extractTarInsecureHelperPWL(rdr io.Reader, target string, pwl PathWhitelistMap) error {
-	editor, err := NewUidShiftingFilePermEditor(uid.NewBlankUidRange())
+	editor, err := NewUidShiftingFilePermEditor(user.NewBlankUidRange())
 	if err != nil {
 		return err
 	}

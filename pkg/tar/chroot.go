@@ -28,7 +28,7 @@ import (
 
 	"github.com/coreos/rkt/pkg/multicall"
 	"github.com/coreos/rkt/pkg/sys"
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -68,7 +68,7 @@ func extractTarCommand() error {
 		return errwrap.Wrap(errors.New("error parsing uidShift argument"), err)
 	}
 
-	uidRange := &uid.UidRange{Shift: uint32(us), Count: uint32(uc)}
+	uidRange := &user.UidRange{Shift: uint32(us), Count: uint32(uc)}
 
 	if err := syscall.Chroot(dir); err != nil {
 		return errwrap.Wrap(fmt.Errorf("failed to chroot in %s", dir), err)
@@ -101,7 +101,7 @@ func extractTarCommand() error {
 // If overwrite is true, existing files will be overwritten.
 // The extraction is executed by fork/exec()ing a new process. The new process
 // needs the CAP_SYS_CHROOT capability.
-func ExtractTar(rs io.Reader, dir string, overwrite bool, uidRange *uid.UidRange, pwl PathWhitelistMap) error {
+func ExtractTar(rs io.Reader, dir string, overwrite bool, uidRange *user.UidRange, pwl PathWhitelistMap) error {
 	r, w, err := os.Pipe()
 	if err != nil {
 		return err
