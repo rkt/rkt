@@ -63,6 +63,7 @@ var (
 
 	// appDefaultCapabilities defines a restricted set of capabilities given to
 	// apps by default.
+	// See https://github.com/appc/spec/issues/598
 	appDefaultCapabilities, _ = types.NewLinuxCapabilitiesRetainSet([]string{
 		"CAP_AUDIT_WRITE",
 		"CAP_CHOWN",
