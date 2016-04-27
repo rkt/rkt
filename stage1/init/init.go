@@ -532,7 +532,7 @@ func stage1() int {
 		}
 
 		if len(mdsToken) > 0 {
-			hostIP, err := n.GetDefaultHostIP()
+			hostIP, err := n.GetForwardableNetHostIP()
 			if err != nil {
 				log.PrintE("failed to get default Host IP", err)
 				return 1

@@ -40,14 +40,6 @@ const (
 	selfNetNS     = "/proc/self/ns/net"
 )
 
-// ForwardedPort describes a port that will be
-// forwarded (mapped) from the host to the pod
-type ForwardedPort struct {
-	Protocol string
-	HostPort uint
-	PodPort  uint
-}
-
 // Networking describes the networking details of a pod.
 type Networking struct {
 	podEnv
@@ -121,11 +113,11 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common
 			if err = n.enableDefaultLocalnetRouting(); err != nil {
 				return err
 			}
-			defaultIP, err := n.GetDefaultIP()
+			podIP, err := n.GetForwardableNetPodIP()
 			if err != nil {
 				return err
 			}
-			if err := n.forwardPorts(fps, defaultIP); err != nil {
+			if err := n.forwardPorts(fps, podIP); err != nil {
 				n.unforwardPorts()
 				return err
 			}
@@ -145,7 +137,7 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common
 func (n *Networking) enableDefaultLocalnetRouting() error {
 	routeLocalnetFormat := ""
 
-	defaultHostIP, err := n.GetDefaultHostIP()
+	defaultHostIP, err := n.GetForwardableNetHostIP()
 	if err != nil {
 		return err
 	}
@@ -231,43 +223,6 @@ func Load(podRoot string, podID *types.UUID) (*Networking, error) {
 		hostNS: hostNS,
 		nets:   nets,
 	}, nil
-}
-
-// GetDefaultNet iterates through all loaded networks and returns either
-// the first network that has masquerading enabled,
-// or the last network in case there is no masqueraded one,
-// or an error if no network was loaded.
-func (n *Networking) GetDefaultNet() (*activeNet, error) {
-	numberNets := len(n.nets)
-	if numberNets == 0 {
-		return nil, fmt.Errorf("no networks found")
-	}
-	for _, net := range n.nets {
-		if net.IPMasq() {
-			return &net, nil
-		}
-	}
-	return &n.nets[numberNets-1], nil
-}
-
-// GetDefaultIP uses GetDefaultNet() to determine the default network and then
-// returns the Pod's IP of that network.
-func (n *Networking) GetDefaultIP() (net.IP, error) {
-	net, err := n.GetDefaultNet()
-	if err != nil {
-		return nil, err
-	}
-	return net.runtime.IP, nil
-}
-
-// GetDefaultHostIP uses GetDefaultNet() to determine the default network and then
-// returns the Host's IP of that network.
-func (n *Networking) GetDefaultHostIP() (net.IP, error) {
-	net, err := n.GetDefaultNet()
-	if err != nil {
-		return nil, err
-	}
-	return net.runtime.HostIP, nil
 }
 
 // GetIfacesByIP searches for and returns the interfaces with the given IP

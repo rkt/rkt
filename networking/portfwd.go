@@ -22,6 +22,51 @@ import (
 	"github.com/coreos/go-iptables/iptables"
 )
 
+// ForwardedPort describes a port that will be
+// forwarded (mapped) from the host to the pod
+type ForwardedPort struct {
+	Protocol string
+	HostPort uint
+	PodPort  uint
+}
+
+// GetForwardableNet iterates through all loaded networks and returns either
+// the first network that has masquerading enabled,
+// or the last network in case there is no masqueraded one,
+// or an error if no network was loaded.
+func (n *Networking) GetForwardableNet() (*activeNet, error) {
+	numberNets := len(n.nets)
+	if numberNets == 0 {
+		return nil, fmt.Errorf("no networks found")
+	}
+	for _, net := range n.nets {
+		if net.IPMasq() {
+			return &net, nil
+		}
+	}
+	return &n.nets[numberNets-1], nil
+}
+
+// GetForwardableNetPodIP uses GetForwardableNet() to determine the default network and then
+// returns the Pod's IP of that network.
+func (n *Networking) GetForwardableNetPodIP() (net.IP, error) {
+	net, err := n.GetForwardableNet()
+	if err != nil {
+		return nil, err
+	}
+	return net.runtime.IP, nil
+}
+
+// GetForwardableNetHostIP uses GetForwardableNet() to determine the default network and then
+// returns the Host's IP of that network.
+func (n *Networking) GetForwardableNetHostIP() (net.IP, error) {
+	net, err := n.GetForwardableNet()
+	if err != nil {
+		return nil, err
+	}
+	return net.runtime.HostIP, nil
+}
+
 func (e *podEnv) forwardPorts(fps []ForwardedPort, podIP net.IP) error {
 	if len(fps) == 0 {
 		return nil
