@@ -58,7 +58,8 @@ func TestUserns(t *testing.T) {
 		t.Skip("User namespaces don't work on this host.")
 	}
 
-	image := patchTestACI("rkt-inspect-stat.aci", "--exec=/inspect --stat-file")
+	// we need CAP_SYS_PTRACE to read /proc/1/root
+	image := patchTestACI("rkt-inspect-stat.aci", "--exec=/inspect --stat-file", "--capability=CAP_SYS_PTRACE")
 	defer os.Remove(image)
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
