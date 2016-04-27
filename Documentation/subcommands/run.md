@@ -340,6 +340,7 @@ For more details see the [hacking documentation](../hacking.md).
 | `--dns-opt` | none | DNS option  | DNS option from resolv.conf(5) to write in `/etc/resolv.conf`. It can be specified several times. |
 | `--dns-search` | none | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times. |
 | `--exec` | none | Path to executable | Override the exec command for the preceding image. |
+| `--hostname` | "rkt-$PODUUID" | A host name | Set pod's host name. |
 | `--inherit-env` | `false` | `true` or `false` | Inherit all environment variables not set by apps. |
 | `--interactive` | `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied. |
 | `--mds-register` | `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net` as `default`, `default-restricted`, or `host`). |
