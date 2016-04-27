@@ -33,6 +33,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/openpgp"
+
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/gexpect"
@@ -628,10 +630,8 @@ func serverHandler(t *testing.T, server *taas.Server) {
 	}
 }
 
-func runSignImage(t *testing.T, imageFile string, keyIndex int) string {
-	ascFile := fmt.Sprintf("%s.asc", imageFile)
-
-	// keys stored in tests/secring.gpg, tests/pubring.gpg, tests/key1.gpg, tests/key2.gpg
+func runSignImage(t *testing.T, imagePath string, keyIndex int) string {
+	// keys stored in tests/secring.gpg.
 	keyFingerprint := ""
 	switch keyIndex {
 	case 1:
@@ -642,10 +642,43 @@ func runSignImage(t *testing.T, imageFile string, keyIndex int) string {
 		panic("unknown key")
 	}
 
-	cmd := fmt.Sprintf("gpg --no-default-keyring --secret-keyring ./secring.gpg --keyring ./pubring.gpg --default-key %s --output %s --detach-sig %s",
-		keyFingerprint, ascFile, imageFile)
-	spawnAndWaitOrFail(t, cmd, 0)
-	return ascFile
+	secringFile, err := os.Open("./secring.gpg")
+	if err != nil {
+		t.Fatalf("Cannot open secring.gpg file: %v", err)
+	}
+	defer secringFile.Close()
+
+	entityList, err := openpgp.ReadKeyRing(secringFile)
+	if err != nil {
+		t.Fatalf("Failed to read secring.gpg file: %v", err)
+	}
+
+	var signingEntity *openpgp.Entity
+	for _, entity := range entityList {
+		if entity.PrivateKey.KeyIdShortString() == keyFingerprint {
+			signingEntity = entity
+		}
+	}
+
+	imageFile, err := os.Open(imagePath)
+	if err != nil {
+		t.Fatalf("Cannot open image file %s: %v", imagePath, err)
+	}
+	defer imageFile.Close()
+
+	ascPath := fmt.Sprintf("%s.asc", imagePath)
+	ascFile, err := os.Create(ascPath)
+	if err != nil {
+		t.Fatalf("Cannot create asc file %s: %v", ascPath, err)
+	}
+	defer ascFile.Close()
+
+	err = openpgp.ArmoredDetachSign(ascFile, signingEntity, imageFile, nil)
+	if err != nil {
+		t.Fatalf("Cannot create armored detached signature: %v", err)
+	}
+
+	return ascPath
 }
 
 func runRktTrust(t *testing.T, ctx *testutils.RktRunCtx, prefix string, keyIndex int) {
