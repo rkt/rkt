@@ -61,6 +61,9 @@ lib64/libmount.so.1
 lib64/libmount.so.1.1.0
 lib64/libnss_files-2.21.so
 lib64/libnss_files.so.2
+lib64/libpam.so
+lib64/libpam.so.0
+lib64/libpam.so.0.84.1
 lib64/libpcre.so
 lib64/libpcre.so.1
 lib64/libpcre.so.1.2.4
