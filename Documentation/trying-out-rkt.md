@@ -27,7 +27,7 @@ rkt ships with a simple script that can help set up the appropriate permissions 
 ```
 sudo groupadd rkt
 export WHOAMI=$(whoami); sudo gpasswd -a $WHOAMI rkt
-sudo ./scripts/setup-data-dir.sh
+sudo ./dist/scripts/setup-data-dir.sh
 ```
 
 Trust the signing key for etcd images. This must be run as root as access to the keystore is restricted:
