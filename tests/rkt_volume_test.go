@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build coreos src
+// +build coreos src kvm
 
 package main
 
@@ -96,55 +96,57 @@ var volTests = []struct {
 	},
 }
 
-func TestVolumes(t *testing.T) {
-	readFileImage := patchTestACI("rkt-inspect-read-file.aci", "--exec=/inspect --read-file")
-	defer os.Remove(readFileImage)
-	writeFileImage := patchTestACI("rkt-inspect-write-file.aci", "--exec=/inspect --write-file --read-file")
-	defer os.Remove(writeFileImage)
-	volRwReadFileImage := patchTestACI("rkt-inspect-vol-rw-read-file.aci", "--exec=/inspect --read-file", "--mounts=dir1,path=/dir1,readOnly=false")
-	defer os.Remove(volRwReadFileImage)
-	volRwWriteFileImage := patchTestACI("rkt-inspect-vol-rw-write-file.aci", "--exec=/inspect --write-file --read-file", "--mounts=dir1,path=/dir1,readOnly=false")
-	defer os.Remove(volRwWriteFileImage)
-	volRoReadFileImage := patchTestACI("rkt-inspect-vol-ro-read-file.aci", "--exec=/inspect --read-file", "--mounts=dir1,path=/dir1,readOnly=true")
-	defer os.Remove(volRoReadFileImage)
-	volRoWriteFileImage := patchTestACI("rkt-inspect-vol-ro-write-file.aci", "--exec=/inspect --write-file --read-file", "--mounts=dir1,path=/dir1,readOnly=true")
-	defer os.Remove(volRoWriteFileImage)
-	volAddMountRwImage := patchTestACI("rkt-inspect-vol-add-mount-rw.aci", "--exec=/inspect --write-file --read-file")
-	defer os.Remove(volAddMountRwImage)
-	volAddMountRoImage := patchTestACI("rkt-inspect-vol-add-mount-ro.aci", "--exec=/inspect --write-file --read-file")
-	defer os.Remove(volAddMountRoImage)
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
+func NewVolumesTest() testutils.Test {
+	return testutils.TestFunc(func(t *testing.T) {
+		readFileImage := patchTestACI("rkt-inspect-read-file.aci", "--exec=/inspect --read-file")
+		defer os.Remove(readFileImage)
+		writeFileImage := patchTestACI("rkt-inspect-write-file.aci", "--exec=/inspect --write-file --read-file")
+		defer os.Remove(writeFileImage)
+		volRwReadFileImage := patchTestACI("rkt-inspect-vol-rw-read-file.aci", "--exec=/inspect --read-file", "--mounts=dir1,path=/dir1,readOnly=false")
+		defer os.Remove(volRwReadFileImage)
+		volRwWriteFileImage := patchTestACI("rkt-inspect-vol-rw-write-file.aci", "--exec=/inspect --write-file --read-file", "--mounts=dir1,path=/dir1,readOnly=false")
+		defer os.Remove(volRwWriteFileImage)
+		volRoReadFileImage := patchTestACI("rkt-inspect-vol-ro-read-file.aci", "--exec=/inspect --read-file", "--mounts=dir1,path=/dir1,readOnly=true")
+		defer os.Remove(volRoReadFileImage)
+		volRoWriteFileImage := patchTestACI("rkt-inspect-vol-ro-write-file.aci", "--exec=/inspect --write-file --read-file", "--mounts=dir1,path=/dir1,readOnly=true")
+		defer os.Remove(volRoWriteFileImage)
+		volAddMountRwImage := patchTestACI("rkt-inspect-vol-add-mount-rw.aci", "--exec=/inspect --write-file --read-file")
+		defer os.Remove(volAddMountRwImage)
+		volAddMountRoImage := patchTestACI("rkt-inspect-vol-add-mount-ro.aci", "--exec=/inspect --write-file --read-file")
+		defer os.Remove(volAddMountRoImage)
+		ctx := testutils.NewRktRunCtx()
+		defer ctx.Cleanup()
 
-	tmpdir := createTempDirOrPanic("rkt-tests.")
-	defer os.RemoveAll(tmpdir)
+		tmpdir := createTempDirOrPanic("rkt-tests.")
+		defer os.RemoveAll(tmpdir)
 
-	tmpfile := filepath.Join(tmpdir, "file")
-	if err := ioutil.WriteFile(tmpfile, []byte("host"), 0600); err != nil {
-		t.Fatalf("Cannot create temporary file: %v", err)
-	}
-
-	for i, tt := range volTests {
-		cmd := strings.Replace(tt.rktCmd, "^TMPDIR^", tmpdir, -1)
-		cmd = strings.Replace(cmd, "^RKT_BIN^", ctx.Cmd(), -1)
-		cmd = strings.Replace(cmd, "^READ_FILE^", readFileImage, -1)
-		cmd = strings.Replace(cmd, "^WRITE_FILE^", writeFileImage, -1)
-		cmd = strings.Replace(cmd, "^VOL_RO_READ_FILE^", volRoReadFileImage, -1)
-		cmd = strings.Replace(cmd, "^VOL_RO_WRITE_FILE^", volRoWriteFileImage, -1)
-		cmd = strings.Replace(cmd, "^VOL_RW_READ_FILE^", volRwReadFileImage, -1)
-		cmd = strings.Replace(cmd, "^VOL_RW_WRITE_FILE^", volRwWriteFileImage, -1)
-		cmd = strings.Replace(cmd, "^VOL_ADD_MOUNT_RW^", volAddMountRwImage, -1)
-		cmd = strings.Replace(cmd, "^VOL_ADD_MOUNT_RO^", volAddMountRoImage, -1)
-
-		t.Logf("Running test #%v", i)
-		child := spawnOrFail(t, cmd)
-		defer waitOrFail(t, child, tt.expectedExit)
-
-		if err := expectTimeoutWithOutput(child, tt.expect, time.Minute); err != nil {
-			fmt.Printf("Command: %s\n", cmd)
-			t.Fatalf("Expected %q but not found #%v: %v", tt.expect, i, err)
+		tmpfile := filepath.Join(tmpdir, "file")
+		if err := ioutil.WriteFile(tmpfile, []byte("host"), 0600); err != nil {
+			t.Fatalf("Cannot create temporary file: %v", err)
 		}
-	}
+
+		for i, tt := range volTests {
+			cmd := strings.Replace(tt.rktCmd, "^TMPDIR^", tmpdir, -1)
+			cmd = strings.Replace(cmd, "^RKT_BIN^", ctx.Cmd(), -1)
+			cmd = strings.Replace(cmd, "^READ_FILE^", readFileImage, -1)
+			cmd = strings.Replace(cmd, "^WRITE_FILE^", writeFileImage, -1)
+			cmd = strings.Replace(cmd, "^VOL_RO_READ_FILE^", volRoReadFileImage, -1)
+			cmd = strings.Replace(cmd, "^VOL_RO_WRITE_FILE^", volRoWriteFileImage, -1)
+			cmd = strings.Replace(cmd, "^VOL_RW_READ_FILE^", volRwReadFileImage, -1)
+			cmd = strings.Replace(cmd, "^VOL_RW_WRITE_FILE^", volRwWriteFileImage, -1)
+			cmd = strings.Replace(cmd, "^VOL_ADD_MOUNT_RW^", volAddMountRwImage, -1)
+			cmd = strings.Replace(cmd, "^VOL_ADD_MOUNT_RO^", volAddMountRoImage, -1)
+
+			t.Logf("Running test #%v", i)
+			child := spawnOrFail(t, cmd)
+			defer waitOrFail(t, child, tt.expectedExit)
+
+			if err := expectTimeoutWithOutput(child, tt.expect, time.Minute); err != nil {
+				fmt.Printf("Command: %s\n", cmd)
+				t.Fatalf("Expected %q but not found #%v: %v", tt.expect, i, err)
+			}
+		}
+	})
 }
 
 var volDockerTests = []struct {

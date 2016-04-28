@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build coreos src
+// +build coreos src kvm
 
 package main
 
@@ -75,46 +75,54 @@ var capsTests = []struct {
 	},
 }
 
-func TestCaps(t *testing.T) {
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
+// CommonTestCaps creates a new capabilities test fixture for the given stages.
+func NewCapsTest(hasStage1FullCaps bool, stages []int) testutils.Test {
+	return testutils.TestFunc(func(t *testing.T) {
+		ctx := testutils.NewRktRunCtx()
+		defer ctx.Cleanup()
 
-	for i, tt := range capsTests {
-		stage1Args := []string{"--exec=/inspect --print-caps-pid=1 --print-user"}
-		stage2Args := []string{"--exec=/inspect --print-caps-pid=0 --print-user"}
-		if tt.capIsolator != "" {
-			stage1Args = append(stage1Args, "--capability="+tt.capIsolator)
-			stage2Args = append(stage2Args, "--capability="+tt.capIsolator)
+		for i, tt := range capsTests {
+			stage1Args := []string{"--exec=/inspect --print-caps-pid=1 --print-user"}
+			stage2Args := []string{"--exec=/inspect --print-caps-pid=0 --print-user"}
+			if tt.capIsolator != "" {
+				stage1Args = append(stage1Args, "--capability="+tt.capIsolator)
+				stage2Args = append(stage2Args, "--capability="+tt.capIsolator)
+			}
+			stage1FileName := patchTestACI("rkt-inspect-print-caps-stage1.aci", stage1Args...)
+			defer os.Remove(stage1FileName)
+			stage2FileName := patchTestACI("rkt-inspect-print-caps-stage2.aci", stage2Args...)
+			defer os.Remove(stage2FileName)
+			stageFileNames := []string{stage1FileName, stage2FileName}
+
+			for _, stage := range stages {
+				t.Logf("Running test #%v: %v [stage %v]", i, tt.testName, stage)
+
+				cmd := fmt.Sprintf("%s --debug --insecure-options=image run --mds-register=false --set-env=CAPABILITY=%d %s", ctx.Cmd(), int(tt.capa), stageFileNames[stage-1])
+				child := spawnOrFail(t, cmd)
+
+				expectedLine := tt.capa.String()
+
+				capInStage1Expected := tt.capInStage1Expected || hasStage1FullCaps
+
+				if (stage == 1 && capInStage1Expected) || (stage == 2 && tt.capInStage2Expected) {
+					expectedLine += "=enabled"
+				} else {
+					expectedLine += "=disabled"
+				}
+
+				if err := expectWithOutput(child, expectedLine); err != nil {
+					t.Fatalf("Expected %q but not found: %v", expectedLine, err)
+				}
+
+				if err := expectWithOutput(child, "User: uid=0 euid=0 gid=0 egid=0"); err != nil {
+					t.Fatalf("Expected user 0 but not found: %v", err)
+				}
+
+				waitOrFail(t, child, 0)
+			}
+			ctx.Reset()
 		}
-		stage1FileName := patchTestACI("rkt-inspect-print-caps-stage1.aci", stage1Args...)
-		defer os.Remove(stage1FileName)
-		stage2FileName := patchTestACI("rkt-inspect-print-caps-stage2.aci", stage2Args...)
-		defer os.Remove(stage2FileName)
-		stageFileNames := []string{stage1FileName, stage2FileName}
-
-		for _, stage := range []int{1, 2} {
-			t.Logf("Running test #%v: %v [stage %v]", i, tt.testName, stage)
-
-			cmd := fmt.Sprintf("%s --debug --insecure-options=image run --mds-register=false --set-env=CAPABILITY=%d %s", ctx.Cmd(), int(tt.capa), stageFileNames[stage-1])
-			child := spawnOrFail(t, cmd)
-
-			expectedLine := tt.capa.String()
-			if (stage == 1 && tt.capInStage1Expected) || (stage == 2 && tt.capInStage2Expected) {
-				expectedLine += "=enabled"
-			} else {
-				expectedLine += "=disabled"
-			}
-			if err := expectWithOutput(child, expectedLine); err != nil {
-				t.Fatalf("Expected %q but not found: %v", expectedLine, err)
-			}
-
-			if err := expectWithOutput(child, "User: uid=0 euid=0 gid=0 egid=0"); err != nil {
-				t.Fatalf("Expected user 0 but not found: %v", err)
-			}
-			waitOrFail(t, child, 0)
-		}
-		ctx.Reset()
-	}
+	})
 }
 
 func TestCapsNonRoot(t *testing.T) {

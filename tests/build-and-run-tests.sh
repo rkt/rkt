@@ -11,7 +11,7 @@ function cleanup {
                 sudo umount "${mp}"
             done
 
-            for link in $(ip link | grep rkt | cut -d':' -f2); do
+            for link in $(ip link | grep rkt | cut -d':' -f2 | cut -d'@' -f1); do
                 sudo ip link del "${link}"
             done
             sudo rm -rf /var/lib/cni/networks/*

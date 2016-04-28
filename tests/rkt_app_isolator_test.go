@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build coreos src
+// +build coreos src kvm
 
 package main
 
@@ -100,19 +100,5 @@ func TestAppIsolatorCPU(t *testing.T) {
 
 	rktCmd = fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s --cpu 900m", ctx.Cmd(), aciFileName)
 	expectedLine = "CPU Quota: " + strconv.Itoa(900)
-	runRktAndCheckOutput(t, rktCmd, expectedLine, false)
-}
-
-func TestCgroups(t *testing.T) {
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
-
-	t.Logf("Running test: %v", cgroupsTest.testName)
-
-	aciFileName := patchTestACI("rkt-inspect-isolators.aci", cgroupsTest.aciBuildArgs...)
-	defer os.Remove(aciFileName)
-
-	rktCmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), aciFileName)
-	expectedLine := "check-cgroups: SUCCESS"
 	runRktAndCheckOutput(t, rktCmd, expectedLine, false)
 }

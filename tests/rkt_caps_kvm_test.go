@@ -12,28 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build coreos src kvm
+// +build kvm
 
 package main
 
-import (
-	"fmt"
-	"os"
-	"testing"
+import "testing"
 
-	"github.com/coreos/rkt/tests/testutils"
-)
-
-func TestRktEnsureErrors(t *testing.T) {
-	const imgName = "rkt-ensure-errors-test"
-
-	image := patchTestACI(fmt.Sprintf("%s.aci", imgName), fmt.Sprintf("--name=%s", imgName))
-	defer os.Remove(image)
-
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
-
-	runCmd := fmt.Sprintf("%s run --insecure-options=image --net=notavalidnetwork %s", ctx.Cmd(), image)
-	t.Logf("Running test: %s", runCmd)
-	runRktAndCheckRegexOutput(t, runCmd, "stage1: failed to setup network")
+func TestCaps(t *testing.T) {
+	// KVM is running VMs as stage1 pods, so root has access to all VM options.
+	// The case with access to PID 1 is skipped...
+	// KVM flavor runs systemd stage1 with full capabilities in stage1 (pid=1)
+	// so expect every capability enabled
+	NewCapsTest(true, []int{2}).Execute(t)
 }
