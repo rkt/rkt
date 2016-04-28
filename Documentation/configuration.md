@@ -192,7 +192,7 @@ These fields must be specified and cannot be empty.
 
 Some popular Docker registries:
 
-* index.docker.io (Assumed as the default when no specific registry is named on the rkt command line, as in `docker:///redis`.)
+* registry-1.docker.io (Assumed as the default when no specific registry is named on the rkt command line, as in `docker:///redis`.)
 * quay.io
 * gcr.io
 
@@ -204,7 +204,7 @@ Example `dockerAuth` configuration:
 {
 	"rktKind": "dockerAuth",
 	"rktVersion": "v1",
-	"registries": ["index.docker.io", "quay.io"],
+	"registries": ["registry-1.docker.io", "quay.io"],
 	"credentials": {
 		"user": "foo",
 		"password": "bar"
@@ -224,7 +224,7 @@ For example, given this system configuration:
 {
 	"rktKind": "dockerAuth",
 	"rktVersion": "v1",
-	"registries": ["index.docker.io", "gcr.io", "quay.io"],
+	"registries": ["registry-1.docker.io", "gcr.io", "quay.io"],
 	"credentials": {
 		"user": "foo",
 		"password": "bar"
@@ -232,7 +232,7 @@ For example, given this system configuration:
 }
 ```
 
-If only this configuration file is provided, then when downloading images from either `index.docker.io`, `gcr.io`, or `quay.io`, `rkt` would use user `foo` and password `bar`.
+If only this configuration file is provided, then when downloading images from either `registry-1.docker.io`, `gcr.io`, or `quay.io`, `rkt` would use user `foo` and password `bar`.
 
 But with additional configuration provided in the local configuration directory, this can be overridden.
 For example, given the above system configuration and the following local configuration:
@@ -265,7 +265,7 @@ For example, given the above system configuration and the following local config
 }
 ```
 
-The result is that when downloading images from `index.docker.io`, `rkt` still sends user `foo` and password `bar`, but when downloading from `quay.io`, it uses user `baz` and password `quux`; and for `gcr.io` it will use user `goo` and password `gle`.
+The result is that when downloading images from `registry-1.docker.io`, `rkt` still sends user `foo` and password `bar`, but when downloading from `quay.io`, it uses user `baz` and password `quux`; and for `gcr.io` it will use user `goo` and password `gle`.
 
 Note that _within_ a particular configuration directory (either system or local), it is a syntax error for the same Docker registry to be defined in multiple files.
 
