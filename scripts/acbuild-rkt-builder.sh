@@ -16,51 +16,37 @@ fi
 
 MODIFY=${MODIFY:-""}
 FLAGS=${FLAGS:-""}
-IMG=${IMG:-"debian"}
-IMG_VERSION=${IMG_VERSION:-"sid"}
-DOCKERIMG="$IMG:$IMG_VERSION"
-ACI_FILE=${ACI_FILE:-"./library-$IMG-$IMG_VERSION.aci"}
-OUT_ACI=${OUT_ACI:-"rkt-builder.aci"}
-ACI_NAME=${ACI_NAME:-"coreos.com/rkt/builder"}
+IMG_NAME="coreos.com/rkt/builder"
+IMG_VERSION=${VERSION:-"v1.4.0+git"}
+ACI_FILE=rkt-builder.aci
 BUILDDIR=/opt/build-rkt
 SRC_DIR=/opt/rkt
 ACI_GOPATH=/go
-VERSION=${VERSION:-"v1.4.0+git"}
-echo "Version: $VERSION"
 
-echo "Building $ACI_FILE"
-
-check_tool acbuild
-check_tool docker2aci
-# check_tool actool
-
-if [ ! -f "$ACI_FILE" ]; then
-    docker2aci "docker://$DOCKERIMG"
-    # These base images don't always come with valid values
-    # actool patch-manifest -user 0 -group 0 --name $IMG-$IMG_VERSION --exec /bin/bash --replace $ACI_FILE
-fi
+DEBIAN_SID_DEPS="ca-certificates gcc libc6-dev make automake wget git golang-go cpio squashfs-tools realpath autoconf file xz-utils patch bc locales libacl1-dev libssl-dev"
 
 acbuildend () {
     export EXIT=$?;
-    acbuild --debug end && exit $EXIT;
+    acbuild --debug end && rm -rf rootfs && exit $EXIT;
 }
 
-# If modify is specified, pass the modify flag to each command and don't use
-# acbuild begin, write or end otherwise build with a context, and setup a trap
-# to handle failures,
-if [ "$MODIFY" ]; then
-    FLAGS="--modify $MODIFY $FLAGS"
-    OUT_ACI=$MODIFY
-else
-    acbuild $FLAGS begin "$ACI_FILE"
-    trap acbuildend EXIT
-fi
+echo "Generating debian sid tree"
 
-acbuild $FLAGS set-name $ACI_NAME
-acbuild $FLAGS label add version $VERSION
+mkdir rootfs
+debootstrap --force-check-gpg --variant=minbase --components=main --include="${DEBIAN_SID_DEPS}" sid rootfs http://httpredir.debian.org/debian/
+rm -rf rootfs/var/cache/apt/archives/*
+
+echo "Version: ${IMG_VERSION}"
+echo "Building ${ACI_FILE}"
+
+acbuild begin ./rootfs
+trap acbuildend EXIT
+
+acbuild $FLAGS set-name $IMG_NAME
+acbuild $FLAGS label add version $IMG_VERSION
 acbuild $FLAGS set-user 0
 acbuild $FLAGS set-group 0
-acbuild $FLAGS environment add OS_VERSION $IMG_VERSION
+acbuild $FLAGS environment add OS_VERSION sid
 acbuild $FLAGS environment add GOPATH $ACI_GOPATH
 acbuild $FLAGS environment add BUILDDIR $BUILDDIR
 acbuild $FLAGS environment add SRC_DIR $SRC_DIR
@@ -68,9 +54,8 @@ acbuild $FLAGS mount add build-dir $BUILDDIR
 acbuild $FLAGS mount add src-dir $SRC_DIR
 acbuild $FLAGS set-working-dir $SRC_DIR
 acbuild $FLAGS copy "$(dirname $0)" /scripts
-acbuild $FLAGS run /bin/bash "/scripts/install-deps-$IMG-$IMG_VERSION.sh"
 acbuild $FLAGS run /bin/bash /scripts/install-appc-spec.sh
 acbuild $FLAGS set-exec /bin/bash /scripts/build-rkt.sh
 if [ -z "$MODIFY" ]; then
-    acbuild $FLAGS write --overwrite $OUT_ACI
+    acbuild write --overwrite $ACI_FILE
 fi
