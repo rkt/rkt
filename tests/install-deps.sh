@@ -25,7 +25,7 @@ if [ "${CI-}" == true ] ; then
 		# install -y <dep>" after it.
 
 		sudo apt-get update -qq || true
-		sudo apt-get install -y libacl1-dev
+		sudo apt-get install -y libacl1-dev bc
 
 		# libmount: https://github.com/systemd/systemd/pull/986#issuecomment-138451264
 		sudo add-apt-repository --yes ppa:pitti/systemd-semaphore
