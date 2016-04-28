@@ -606,7 +606,6 @@ func stage1() int {
 		return 1
 	}
 
-	// mount host cgroups in the rkt mount namespace
 	if err := mountHostCgroups(enabledCgroups); err != nil {
 		log.FatalE("couldn't mount the host cgroups", err)
 		return 1
@@ -628,9 +627,9 @@ func stage1() int {
 		log.PrintE("continuing with per-app isolators disabled", err)
 	}
 
-	// kvm flavor has a bit different logic in handling pid vs ppid, for details look into #2389
-	// it does not require existance of "ppid", but instead registers current pid (which
-	// will be reused by lkvm binary) as an pod process pid used in entering
+	// KVM flavor has a bit different logic in handling pid vs ppid, for details look into #2389
+	// it doesn't require the existence of a "ppid", instead it registers the current pid (which
+	// will be reused by lkvm binary) as a pod process pid used during entering
 	pid_filename := "ppid"
 	if flavor == "kvm" {
 		pid_filename = "pid"
@@ -641,7 +640,6 @@ func stage1() int {
 		return 1
 	}
 
-	// prepare mounts for kvm flavor
 	if flavor == "kvm" {
 		if err := KvmPrepareMounts(s1Root, p); err != nil {
 			log.PrintE("could not prepare mounts", err)
