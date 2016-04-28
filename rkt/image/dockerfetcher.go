@@ -46,9 +46,9 @@ type dockerFetcher struct {
 	Debug         bool
 }
 
-// GetHash uses docker2aci to download the image and convert it to
+// Hash uses docker2aci to download the image and convert it to
 // ACI, then stores it in the store and returns the hash.
-func (f *dockerFetcher) GetHash(u *url.URL) (string, error) {
+func (f *dockerFetcher) Hash(u *url.URL) (string, error) {
 	ensureLogger(f.Debug)
 	dockerURL, err := d2acommon.ParseDockerURL(path.Join(u.Host, u.Path))
 	if err != nil {

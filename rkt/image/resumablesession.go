@@ -81,12 +81,12 @@ type resumableSession struct {
 	byteRangeSupported bool
 }
 
-func (s *resumableSession) GetClient() (*http.Client, error) {
+func (s *resumableSession) Client() (*http.Client, error) {
 	s.ensureClient()
 	return s.client, nil
 }
 
-func (s *resumableSession) GetRequest(u *url.URL) (*http.Request, error) {
+func (s *resumableSession) Request(u *url.URL) (*http.Request, error) {
 	s.u = u
 	if err := s.maybeSetupDownloadResume(u); err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func (s *resumableSession) HandleStatus(res *http.Response) (bool, error) {
 	}
 }
 
-func (s *resumableSession) GetBodyReader(res *http.Response) (io.Reader, error) {
+func (s *resumableSession) BodyReader(res *http.Response) (io.Reader, error) {
 	reader := getIoProgressReader(s.Label, res)
 	return reader, nil
 }

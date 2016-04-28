@@ -43,9 +43,9 @@ type nameFetcher struct {
 	TrustKeysFromHTTPS bool
 }
 
-// GetHash runs the discovery, fetches the image, optionally verifies
+// Hash runs the discovery, fetches the image, optionally verifies
 // it against passed asc, stores it in the store and returns the hash.
-func (f *nameFetcher) GetHash(app *discovery.App, a *asc) (string, error) {
+func (f *nameFetcher) Hash(app *discovery.App, a *asc) (string, error) {
 	ensureLogger(f.Debug)
 	name := app.Name.String()
 	log.Printf("searching for app image %s", name)
@@ -140,7 +140,7 @@ func (f *nameFetcher) fetch(app *discovery.App, aciURL string, a *asc) (readSeek
 	}
 
 	if f.InsecureFlags.SkipImageCheck() || f.Ks == nil {
-		o := f.getHTTPOps()
+		o := f.httpOps()
 		aciFile, cd, err := o.DownloadImage(u)
 		if err != nil {
 			return nil, nil, err
@@ -155,7 +155,7 @@ func (f *nameFetcher) fetchVerifiedURL(app *discovery.App, u *url.URL, a *asc) (
 	appName := app.Name.String()
 	f.maybeFetchPubKeys(appName)
 
-	o := f.getHTTPOps()
+	o := f.httpOps()
 	ascFile, retry, err := o.DownloadSignature(a)
 	if err != nil {
 		return nil, nil, err
@@ -281,10 +281,10 @@ func (f *nameFetcher) maybeOverrideAscFetcherWithRemote(ascURL string, a *asc) {
 		return
 	}
 	a.Location = ascURL
-	a.Fetcher = f.getHTTPOps().GetAscRemoteFetcher()
+	a.Fetcher = f.httpOps().AscRemoteFetcher()
 }
 
-func (f *nameFetcher) getHTTPOps() *httpOps {
+func (f *nameFetcher) httpOps() *httpOps {
 	return &httpOps{
 		InsecureSkipTLSVerify: f.InsecureFlags.SkipTLSCheck(),
 		S:       f.S,
