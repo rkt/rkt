@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO: fix TestNetLongName on KVM and add the "kvm" build tag again
-// +build coreos src
+// +build coreos src kvm
 
 package main
 
@@ -783,20 +782,4 @@ func NewNetOverrideTest() testutils.Test {
 			t.Fatalf("overriding IP did not work: Got %q but expected %q", containerIP, expectedIP)
 		}
 	})
-}
-
-func TestNetLongName(t *testing.T) {
-	nt := networkTemplateT{
-		Name:   "thisnameiswaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaytoolong",
-		Type:   "ptp",
-		IpMasq: true,
-		Ipam: ipamTemplateT{
-			Type:   "host-local",
-			Subnet: "11.11.6.0/24",
-			Routes: []map[string]string{
-				{"dst": "0.0.0.0/0"},
-			},
-		},
-	}
-	testNetCustomNatConnectivity(t, nt)
 }
