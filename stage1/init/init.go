@@ -165,6 +165,10 @@ func installAssets() error {
 	if err != nil {
 		return err
 	}
+	systemdSysusersBin, err := common.LookupPath("systemd-sysusers", os.Getenv("PATH"))
+	if err != nil {
+		return err
+	}
 	bashBin, err := common.LookupPath("bash", os.Getenv("PATH"))
 	if err != nil {
 		return err
@@ -189,6 +193,7 @@ func installAssets() error {
 	assets := []string{
 		proj2aci.GetAssetString("/usr/lib/systemd/systemd", systemdBin),
 		proj2aci.GetAssetString("/usr/bin/systemctl", systemctlBin),
+		proj2aci.GetAssetString("/usr/bin/systemd-sysusers", systemdSysusersBin),
 		proj2aci.GetAssetString("/usr/lib/systemd/systemd-journald", systemdJournaldBin),
 		proj2aci.GetAssetString("/usr/bin/bash", bashBin),
 		proj2aci.GetAssetString(fmt.Sprintf("%s/systemd-journald.service", systemdUnitsPath), fmt.Sprintf("%s/systemd-journald.service", systemdUnitsPath)),
