@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"runtime"
 
 	"github.com/coreos/rkt/common"
@@ -52,7 +53,9 @@ func (f *Fetcher) FetchImage(img string, ascPath string, imgType apps.AppImageTy
 			return "", err
 		}
 	}
-	if common.SupportsOverlay() {
+	// we need to be able to do a chroot and access to the tree store
+	// directories, check if we're root
+	if common.SupportsOverlay() && os.Geteuid() == 0 {
 		if _, _, err := f.S.RenderTreeStore(hash, false); err != nil {
 			return "", errwrap.Wrap(errors.New("error rendering tree store"), err)
 		}
