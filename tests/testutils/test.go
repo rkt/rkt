@@ -12,28 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build coreos src
+package testutils
 
-package main
+import "testing"
 
-import (
-	"fmt"
-	"os"
-	"testing"
+// Test is the interface that wraps a test.
+// It is meant to be used for parametrized test fixtures.
+//
+// Execute executes the test.
+type Test interface {
+	Execute(*testing.T)
+}
 
-	"github.com/coreos/rkt/tests/testutils"
-)
+// TestFunc is a functional adapter to allow ordinary functions as test wrappers.
+type TestFunc func(*testing.T)
 
-func TestRktEnsureErrors(t *testing.T) {
-	const imgName = "rkt-ensure-errors-test"
-
-	image := patchTestACI(fmt.Sprintf("%s.aci", imgName), fmt.Sprintf("--name=%s", imgName))
-	defer os.Remove(image)
-
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
-
-	runCmd := fmt.Sprintf("%s run --insecure-options=image --net=notavalidnetwork %s", ctx.Cmd(), image)
-	t.Logf("Running test: %s", runCmd)
-	runRktAndCheckRegexOutput(t, runCmd, "stage1: failed to setup network")
+func (f TestFunc) Execute(t *testing.T) {
+	f(t)
 }

@@ -58,7 +58,7 @@ function semaphoreCIConfiguration {
 }
 
 function checkFlavorValue {
-    FLAVORS="coreos host kvm none src"
+    FLAVORS="coreos host kvm none src fly"
     if [ -z "${RKT_STAGE1_USR_FROM}" ]; then
         set -
         echo "Flavor is not set"
@@ -112,7 +112,7 @@ function parseParameters {
 # Configure build
 function configure {
     case "${RKT_STAGE1_USR_FROM}" in
-        coreos|kvm)
+        coreos|kvm|fly)
         ./configure --with-stage1-flavors="${RKT_STAGE1_USR_FROM}" \
                 --with-stage1-default-flavor="${RKT_STAGE1_USR_FROM}" \
                 --enable-functional-tests --enable-tpm=auto \
