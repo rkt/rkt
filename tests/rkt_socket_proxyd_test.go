@@ -102,7 +102,7 @@ func TestSocketProxyd(t *testing.T) {
 	unitsDir := "/run/systemd/system"
 	containerIP := "192.168.0.101"
 
-	cmd := fmt.Sprintf("%s --insecure-options=image --debug run --net=\"%s:IP=%s\" --port=test-port:%d --mds-register=false %s",
+	cmd := fmt.Sprintf("%s --insecure-options=image --debug run --net=%s:IP=%s --port=test-port:%d --mds-register=false %s",
 		ctx.Cmd(), nt.Name, containerIP, port, echoImage)
 
 	serviceContent := fmt.Sprintf(rktTestingEchoService, cmd)
