@@ -76,23 +76,27 @@ The build output will be in `${SRC_DIR}/build-rkt-${RKT_VERSION}+git`.
 ## Debian Sid
 ```
 rkt run \
+    --volume rslvconf,kind=host,source=/etc/resolv.conf
+    --mount volume=rslvconf,target=/etc/resolv.conf
     --volume src-dir,kind=host,source=$SRC_DIR \
     --mount volume=src-dir,target=/opt/rkt \
     --interactive \
     --insecure-options=image \
     docker://debian:sid \
     --exec /bin/bash \
-    -- -c 'apt-get update && apt-get install -y --no-install-recommends ca-certificates gcc libc6-dev make automake wget git golang-go coreutils cpio squashfs-tools realpath autoconf file xz-utils patch bc locales libacl1-dev && update-ca-certificates && cd /opt/rkt && ./autogen.sh && ./configure && make'
+    -- -c 'cd /opt/rkt && ./scripts/install-deps-debian-sid.sh && ./autogen.sh && ./configure --disable-tpm && make'
 ```
 
 ## Fedora 22
 ```
 rkt run \
+    --volume rslvconf,kind=host,source=/etc/resolv.conf
+    --mount volume=rslvconf,target=/etc/resolv.conf
     --volume src-dir,kind=host,source=$SRC_DIR \
     --mount volume=src-dir,target=/opt/rkt \
     --interactive \
     --insecure-options=image \
     docker://fedora:22 \
     --exec /bin/bash \
-    -- -c 'dnf install -y make gcc glibc-devel glibc-static cpio squashfs-tools gpg autoconf make automake golang file git wget tar xz patch bc hostname findutils openssl libacl-devel && cd /opt/rkt && ./autogen.sh && ./configure && make'
+    -- -c 'cd /opt/rkt && ./scripts/install-deps-fedora-22.sh && ./autogen.sh && ./configure --disable-tpm && make'
 ```
