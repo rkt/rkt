@@ -97,7 +97,7 @@ func mountSharedVolumes(root string, p *stage1commontypes.Pod, ra *schema.Runtim
 		default:
 			return fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty"`, vol.Kind)
 		}
-		absAppRootfs, err := filepath.Abs(common.AppRootfsPath(root, appName))
+		absAppRootfs, err := filepath.Abs(common.AppRootfsPath(".", appName))
 		if err != nil {
 			return fmt.Errorf(`could not evaluate absolute path for application rootfs in app: %v`, appName)
 		}
