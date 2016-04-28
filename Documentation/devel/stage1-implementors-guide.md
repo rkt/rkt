@@ -50,10 +50,10 @@ An alternative stage 1 could forego systemd-nspawn and systemd altogether, or re
 All that is required is an executable at the place indicated by the `coreos.com/rkt/stage1/run` entrypoint that knows how to apply the pod manifest and prepared ACI file-systems to good effect.
 
 The resolved entrypoint must inform rkt of its PID for the benefit of `rkt enter`.
-Stage 1 must write the host PIDs of the pod's process #1 and that process's parent to these two files, respectively:
+Stage 1 implementors have two options for doing so; only one must be implemented:
 
-* `/var/lib/rkt/pods/run/$uuid/pid`: the PID of the process that is PID 1 in the container.
-* `/var/lib/rkt/pods/run/$uuid/ppid`: the PID of the parent of the process that is PID 1 in the container.
+* `/var/lib/rkt/pods/run/$uuid/pid`: the PID of the process that will be given to the "enter" entrypoint.
+* `/var/lib/rkt/pods/run/$uuid/ppid`: the PID of the parent of the process that will be given to the "enter" entrypoint. That parent process must have exactly one child process.
 
 #### Arguments
 
