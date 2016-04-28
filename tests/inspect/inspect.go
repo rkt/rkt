@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -70,6 +71,7 @@ var (
 		ServeHTTPTimeout   int
 		PrintIfaceCount    bool
 		PrintAppAnnotation string
+		SilentSigterm      bool
 	}{}
 )
 
@@ -107,6 +109,7 @@ func init() {
 	globalFlagset.IntVar(&globalFlags.ServeHTTPTimeout, "serve-http-timeout", 30, "HTTP Timeout to wait for a client connection")
 	globalFlagset.BoolVar(&globalFlags.PrintIfaceCount, "print-iface-count", false, "Print the interface count")
 	globalFlagset.StringVar(&globalFlags.PrintAppAnnotation, "print-app-annotation", "", "Take an annotation name of the app, and prints its value")
+	globalFlagset.BoolVar(&globalFlags.SilentSigterm, "silent-sigterm", false, "Exit with a success exit status if we receive SIGTERM")
 }
 
 func in(list []int, el int) bool {
@@ -124,6 +127,15 @@ func main() {
 	if len(args) > 0 {
 		fmt.Fprintln(os.Stderr, "Wrong parameters")
 		os.Exit(1)
+	}
+
+	if globalFlags.SilentSigterm {
+		terminateCh := make(chan os.Signal, 1)
+		signal.Notify(terminateCh, syscall.SIGTERM)
+		go func() {
+			<-terminateCh
+			os.Exit(0)
+		}()
 	}
 
 	if globalFlags.PreSleep >= 0 {
