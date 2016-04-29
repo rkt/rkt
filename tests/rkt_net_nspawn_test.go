@@ -57,20 +57,3 @@ func TestNetCustomPtp(t *testing.T) {
 func TestNetDefaultConnectivity(t *testing.T) {
 	NewNetDefaultConnectivityTest().Execute(t)
 }
-
-// TODO: fix this for kvm, see https://github.com/coreos/rkt/issues/2533
-func TestNetLongName(t *testing.T) {
-	nt := networkTemplateT{
-		Name:   "thisnameiswaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaytoolong",
-		Type:   "ptp",
-		IpMasq: true,
-		Ipam: ipamTemplateT{
-			Type:   "host-local",
-			Subnet: "11.11.6.0/24",
-			Routes: []map[string]string{
-				{"dst": "0.0.0.0/0"},
-			},
-		},
-	}
-	testNetCustomNatConnectivity(t, nt)
-}
