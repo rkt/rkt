@@ -1,3 +1,37 @@
+## v1.5.0
+
+This release switches to pure systemd for running apps within a pod. This lays the foundation to implement enhanced isolation capabilities. For example, starting with v1.5.0, apps are started with more restricted capabilities. User namespace support and the KVM stage1 are not experimental anymore. Resource usage can be benchmarked using the new rkt-monitor tool.
+
+#### New features and UX changes
+
+- stage1: replace appexec with pure systemd ([#2493](https://github.com/coreos/rkt/pull/2493)). Replace functionality implemented in appexec with equivalent systemd options. This allows restricting the capabilities granted to apps in a pod and makes enabling other security features (per-app mount namespaces, seccomp filters...) easier.
+- stage1: restrict capabilities granted to apps ([#2493](https://github.com/coreos/rkt/pull/2493)). Apps in a pod receive now a [smaller set of capabilities](https://github.com/coreos/rkt/blob/v1.5.0/stage1/init/common/pod.go#L67).
+- rkt/image: render images on fetch ([#2398](https://github.com/coreos/rkt/pull/2398)). On systems with overlay fs support, rkt was delaying rendering images to the tree store until they were about to run for the first time which caused that first run to be slow for big images. When fetching as root, render the images right away so the first run is faster.
+
+#### Bug fixes
+
+- kvm: fix mounts regression ([#2530](https://github.com/coreos/rkt/pull/2530)). Cause - AppRootfsPath called with local "root" value was adding
+stage1/rootfs twice. After this change this is made properly.
+- rkt/image: strip "Authorization" on redirects to a different host ([#2465](https://github.com/coreos/rkt/pull/2465)). We now don't pass the "Authorization" header if the redirect goes to a different host, it can leak sensitive information to unexpected third parties.
+- stage1/init: interpret the string "root" as UID/GID 0 ([#2458](https://github.com/coreos/rkt/pull/2458)). This is a special case and it should work even if the image doesn't have /etc/passwd or /etc/group.
+
+#### Improved documentation
+
+- added benchmarks folder, benchmarks for v1.4.0 ([#2520](https://github.com/coreos/rkt/pull/2520)). Added the `Documentation/benchmarks` folder which includes a README that describes how rkt-monitor works and how to use it, and a file detailing the results of running rkt-monitor on each current workload with rkt v1.4.0.
+- minor documentation fixes ([#2455](https://github.com/coreos/rkt/pull/2455), [#2528](https://github.com/coreos/rkt/pull/2528), [#2511](https://github.com/coreos/rkt/pull/2511)).
+
+#### Testing
+
+- kvm: enable functional tests for kvm ([#2007](https://github.com/coreos/rkt/pull/2007)). This includes initial support for running functional tests on the `kvm` flavor.
+
+#### Other changes
+
+- benchmarks: added rkt-monitor benchmarks ([#2324](https://github.com/coreos/rkt/pull/2324)). This includes the code for a golang binary that can start rkt and watch its resource usage and bash scripts for generating a handful of test scenarios.
+- scripts: generate a Debian Sid ACI instead of using the Docker hub image ([#2471](https://github.com/coreos/rkt/pull/2471)). This is the first step to having an official release builder.
+- pkg/sys: add SYS_SYNCFS definition for ppc64/ppc64le ([#2443](https://github.com/coreos/rkt/pull/2443)). Added missing SYS_SYNCFS definition for ppc64 and ppc64le, fixing build failures on those architectures.
+- userns: not experimental anymore ([#2486](https://github.com/coreos/rkt/pull/2486)). Although it requires doing a recursive chown for each app, user namespaces work fine and shouldn't be marked as experimental.
+- kvm: not experimental anymore ([#2485](https://github.com/coreos/rkt/pull/2485)). The kvm flavor was initially introduced in rkt v0.8.0, no reason to mark it as experimental.
+
 ## v1.4.0
 
 This release includes a number of new features and bugfixes like a new config subcommand, man page, and bash completion generation during build time.
