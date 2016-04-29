@@ -241,15 +241,9 @@ func getPodManifest(p *pod) (*schema.PodManifest, []byte, error) {
 }
 
 // getApplist returns a list of apps in the pod.
-func getApplist(p *pod) ([]*v1alpha.App, error) {
+func getApplist(manifest *schema.PodManifest) []*v1alpha.App {
 	var apps []*v1alpha.App
-	applist, err := p.getApps()
-	if err != nil {
-		stderr.PrintE(fmt.Sprintf("failed to get app list for pod %q", p.uuid), err)
-		return nil, err
-	}
-
-	for _, app := range applist {
+	for _, app := range manifest.Apps {
 		img := &v1alpha.Image{
 			BaseFormat: &v1alpha.ImageFormat{
 				// Only support appc image now. If it's a docker image, then it
@@ -268,7 +262,7 @@ func getApplist(p *pod) ([]*v1alpha.App, error) {
 			// State and exit code are not returned in 'ListPods()'.
 		})
 	}
-	return apps, nil
+	return apps
 }
 
 // getNetworks returns the list of the info of the network that the pod belongs to.
@@ -286,29 +280,30 @@ func getNetworks(p *pod) []*v1alpha.Network {
 
 // getBasicPod returns *v1alpha.Pod with basic pod information, it also returns a *schema.PodManifest
 // object.
-func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
+func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest) {
 	pod := &v1alpha.Pod{Id: p.uuid.String(), Pid: -1}
 
-	// If a pod is in Embryo, Preparing, AbortedPrepare state,
-	// only id and state will be returned.
-	//
-	// If a pod is in other states, the pod manifest and
-	// apps will be returned when 'detailed' is true in the request.
-	//
-	// Valid pid and networks are only returned when a pod is in Running.
+	manifest, data, err := getPodManifest(p)
+	if err != nil {
+		stderr.PrintE(fmt.Sprintf("failed to get the pod manifest for pod %q", p.uuid), err)
+	} else {
+		pod.Manifest = data
+		pod.Annotations = convertAnnotationsToKeyValue(manifest.Annotations)
+		pod.Apps = getApplist(manifest)
+	}
+
 	switch p.getState() {
 	case Embryo:
 		pod.State = v1alpha.PodState_POD_STATE_EMBRYO
-		return pod, nil, nil
+		// When a pod is in embryo state, there is not much
+		// information to return.
+		return pod, manifest
 	case Preparing:
 		pod.State = v1alpha.PodState_POD_STATE_PREPARING
-		return pod, nil, nil
 	case AbortedPrepare:
 		pod.State = v1alpha.PodState_POD_STATE_ABORTED_PREPARE
-		return pod, nil, nil
 	case Prepared:
 		pod.State = v1alpha.PodState_POD_STATE_PREPARED
-		return pod, nil, nil
 	case Running:
 		pod.State = v1alpha.PodState_POD_STATE_RUNNING
 		pod.Networks = getNetworks(p)
@@ -320,45 +315,35 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
 		pod.State = v1alpha.PodState_POD_STATE_GARBAGE
 	default:
 		pod.State = v1alpha.PodState_POD_STATE_UNDEFINED
-		return pod, nil, nil
+		return pod, manifest
 	}
 
 	createdAt, err := p.getCreationTime()
 	if err != nil {
-		return nil, nil, err
+		stderr.PrintE(fmt.Sprintf("failed to get the creation time for pod %q", p.uuid), err)
+	} else if !createdAt.IsZero() {
+		pod.CreatedAt = createdAt.UnixNano()
 	}
 
 	startedAt, err := p.getStartTime()
 	if err != nil {
-		return nil, nil, err
+		stderr.PrintE(fmt.Sprintf("failed to get the start time for pod %q", p.uuid), err)
+	} else if !startedAt.IsZero() {
+		pod.StartedAt = startedAt.UnixNano()
+
 	}
 
 	gcMarkedAt, err := p.getGCMarkedTime()
 	if err != nil {
-		return nil, nil, err
+		stderr.PrintE(fmt.Sprintf("failed to get the gc marked time for pod %q", p.uuid), err)
+	} else if !gcMarkedAt.IsZero() {
+		pod.GcMarkedAt = gcMarkedAt.UnixNano()
 	}
 
-	pod.CreatedAt = createdAt.UnixNano()
-	pod.StartedAt = startedAt.UnixNano()
-	pod.GcMarkedAt = gcMarkedAt.UnixNano()
-
-	manifest, data, err := getPodManifest(p)
+	pid, err := p.getPID()
 	if err != nil {
-		return nil, nil, err
-	}
-
-	apps, err := getApplist(p)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if pod.State == v1alpha.PodState_POD_STATE_RUNNING ||
-		pod.State == v1alpha.PodState_POD_STATE_DELETING ||
-		pod.State == v1alpha.PodState_POD_STATE_EXITED {
-		pid, err := p.getPID()
-		if err != nil {
-			return nil, nil, err
-		}
+		stderr.PrintE(fmt.Sprintf("failed to get the PID for pod %q", p.uuid), err)
+	} else {
 		pod.Pid = int32(pid)
 	}
 
@@ -366,36 +351,29 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest, error) {
 		// Get cgroup for the "name=systemd" controller.
 		pid, err := p.getContainerPID1()
 		if err != nil {
-			return nil, nil, err
+			stderr.PrintE(fmt.Sprintf("failed to get the container PID1 for pod %q", p.uuid), err)
+		} else {
+			cgroup, err := cgroup.GetCgroupPathByPid(pid, "name=systemd")
+			if err != nil {
+				stderr.PrintE(fmt.Sprintf("failed to get the cgroup path for pod %q", p.uuid), err)
+			} else {
+				// If the stage1 systemd > v226, it will put the PID1 into "init.scope"
+				// implicit scope unit in the root slice.
+				// See https://github.com/coreos/rkt/pull/2331#issuecomment-203540543
+				//
+				// TODO(yifan): Revisit this when using unified cgroup hierarchy.
+				pod.Cgroup = strings.TrimSuffix(cgroup, "/init.scope")
+			}
 		}
-		cgroup, err := cgroup.GetCgroupPathByPid(pid, "name=systemd")
-		if err != nil {
-			return nil, nil, err
-		}
-
-		// If the stage1 systemd > v226, it will put the PID1 into "init.scope"
-		// implicit scope unit in the root slice.
-		// See https://github.com/coreos/rkt/pull/2331#issuecomment-203540543
-		//
-		// TODO(yifan): Revisit this when using unified cgroup hierarchy.
-		pod.Cgroup = strings.TrimSuffix(cgroup, "/init.scope")
 	}
 
-	pod.Manifest = data
-	pod.Apps = apps
-	pod.Annotations = convertAnnotationsToKeyValue(manifest.Annotations)
-
-	return pod, manifest, nil
+	return pod, manifest
 }
 
 func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPodsRequest) (*v1alpha.ListPodsResponse, error) {
 	var pods []*v1alpha.Pod
 	if err := walkPods(includeMostDirs, func(p *pod) {
-		pod, manifest, err := getBasicPod(p)
-		if err != nil { // Do not return partial pods.
-			stderr.PrintE(fmt.Sprintf("failed to get basic pod information for pod with uuid: %v", p.uuid), err)
-			return
-		}
+		pod, manifest := getBasicPod(p)
 
 		// Filters are combined with 'OR'.
 		if !satisfiesAnyPodFilters(pod, manifest, request.Filters) {
@@ -403,10 +381,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 		}
 
 		if request.Detail {
-			if err := fillAppInfo(s.store, p, pod); err != nil { // Do not return partial pods.
-				stderr.PrintE(fmt.Sprintf("failed to fill app information for pod with uuid: %v", p.uuid), err)
-				return
-			}
+			fillAppInfo(s.store, p, pod)
 		} else {
 			pod.Manifest = nil
 		}
@@ -419,25 +394,36 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 }
 
 // fillAppInfo fills the apps' state and image info of the pod.
-func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
-	statusDir, err := p.getStatusDir()
-	if err != nil {
-		stderr.PrintE("failed to get pod exit status directory", err)
-		return err
+func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) {
+	switch v1pod.State {
+	case v1alpha.PodState_POD_STATE_UNDEFINED:
+		return
+	case v1alpha.PodState_POD_STATE_EMBRYO:
+		return
 	}
 
 	for _, app := range v1pod.Apps {
+		readStatus := false
+
+		if p.isRunning() {
+			readStatus = true
+			app.State = v1alpha.AppState_APP_STATE_RUNNING
+		} else if p.afterRun() {
+			readStatus = true
+			app.State = v1alpha.AppState_APP_STATE_EXITED
+		} else {
+			app.State = v1alpha.AppState_APP_STATE_UNDEFINED
+		}
+
 		// Fill app's image info (id, name, version).
 		fullImageID, err := store.ResolveKey(app.Image.Id)
 		if err != nil {
 			stderr.PrintE(fmt.Sprintf("failed to resolve the image ID %q", app.Image.Id), err)
-			return err
 		}
 
 		im, err := p.getAppImageManifest(*types.MustACName(app.Name))
 		if err != nil {
 			stderr.PrintE(fmt.Sprintf("failed to get image manifests for app %q", app.Name), err)
-			return err
 		}
 
 		version, ok := im.Labels.Get("version")
@@ -459,32 +445,21 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) error {
 			// info from store.
 		}
 
-		// Fill app's state and exit code.
-		value, err := p.readIntFromFile(filepath.Join(statusDir, app.Name))
-		if err == nil {
-			app.State = v1alpha.AppState_APP_STATE_EXITED
-			app.ExitCode = int32(value)
-			continue
+		if readStatus {
+			// Fill app's state and exit code.
+			statusDir, err := p.getStatusDir()
+			if err != nil {
+				stderr.PrintE("failed to get pod exit status directory", err)
+			} else {
+				value, err := p.readIntFromFile(filepath.Join(statusDir, app.Name))
+				if err != nil && !os.IsNotExist(err) {
+					stderr.PrintE(fmt.Sprintf("failed to read status for app %q", app.Name), err)
+				} else {
+					app.ExitCode = int32(value)
+				}
+			}
 		}
-
-		if !os.IsNotExist(err) {
-			stderr.PrintE(fmt.Sprintf("failed to read status for app %q", app.Name), err)
-			return err
-		}
-		// If status file does not exit, that means the
-		// app is either running or aborted.
-		//
-		// FIXME(yifan): This is not acttually true, the app can be aborted while
-		// the pod is still running if the spec changes.
-		switch p.getState() {
-		case Running:
-			app.State = v1alpha.AppState_APP_STATE_RUNNING
-		default:
-			app.State = v1alpha.AppState_APP_STATE_UNDEFINED
-		}
-
 	}
-	return nil
 }
 
 func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.InspectPodRequest) (*v1alpha.InspectPodResponse, error) {
@@ -501,15 +476,10 @@ func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.Insp
 	}
 	defer p.Close()
 
-	pod, _, err := getBasicPod(p)
-	if err != nil {
-		return nil, err
-	}
+	pod, _ := getBasicPod(p)
 
 	// Fill the extra pod info that is not available in ListPods(detail=false).
-	if err := fillAppInfo(s.store, p, pod); err != nil {
-		return nil, err
-	}
+	fillAppInfo(s.store, p, pod)
 
 	return &v1alpha.InspectPodResponse{Pod: pod}, nil
 }
