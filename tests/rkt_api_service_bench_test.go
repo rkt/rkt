@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build coreos src kvm
+// +build host coreos src kvm
 
 package main
 
