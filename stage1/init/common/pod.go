@@ -329,7 +329,7 @@ func lookupPathInsideApp(bin string, paths string, appRootfs string, workDir str
 	for _, path := range appPathsArr {
 		binPath := filepath.Join(path, bin)
 		stage2Path := strings.TrimPrefix(binPath, appRootfs)
-		binRealPath, err := evaluateSymlinksInsideApp(appRootfs, stage2Path)
+		binRealPath, err := EvaluateSymlinksInsideApp(appRootfs, stage2Path)
 		if err != nil {
 			return "", errwrap.Wrap(fmt.Errorf("could not evaluate path %v", stage2Path), err)
 		}
@@ -756,9 +756,9 @@ func PodToSystemd(p *stage1commontypes.Pod, interactive bool, flavor string, pri
 	return nil
 }
 
-// evaluateSymlinksInsideApp tries to resolve symlinks within the path.
+// EvaluateSymlinksInsideApp tries to resolve symlinks within the path.
 // It returns the actual path relative to the app rootfs for the given path.
-func evaluateSymlinksInsideApp(appRootfs, path string) (string, error) {
+func EvaluateSymlinksInsideApp(appRootfs, path string) (string, error) {
 	link := appRootfs
 
 	paths := strings.Split(path, "/")
@@ -840,13 +840,13 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		// TODO(yifan): This is a temporary fix for systemd-nspawn not handling symlink mounts well.
 		// Could be removed when https://github.com/systemd/systemd/issues/2860 is resolved, and systemd
 		// version is bumped.
-		mntPath, err := evaluateSymlinksInsideApp(appRootfs, m.Path)
+		mntPath, err := EvaluateSymlinksInsideApp(appRootfs, m.Path)
 		if err != nil {
 			return nil, errwrap.Wrap(fmt.Errorf("could not evaluate path %v", m.Path), err)
 		}
 		mntAbsPath := filepath.Join(appRootfs, mntPath)
 
-		if err := PrepareMountpoints(shPath, mntAbsPath, &vol, m.dockerImplicit); err != nil {
+		if err := PrepareMountpoints(shPath, mntAbsPath, &vol, m.DockerImplicit); err != nil {
 			return nil, err
 		}
 

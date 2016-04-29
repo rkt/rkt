@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"syscall"
 
 	"github.com/appc/spec/schema"
@@ -70,21 +68,24 @@ func mountSharedVolumes(root string, p *stage1commontypes.Pod, ra *schema.Runtim
 	for _, m := range mounts {
 		vol := vols[m.Volume]
 
-		if vol.Kind == "empty" {
-			p := filepath.Join(sharedVolPath, vol.Name.String())
-			if err := os.MkdirAll(p, stage1initcommon.SharedVolPerm); err != nil {
-				return errwrap.Wrap(fmt.Errorf("could not create shared volume %q", vol.Name), err)
-			}
-			if err := os.Chown(p, *vol.UID, *vol.GID); err != nil {
-				return errwrap.Wrap(fmt.Errorf("could not change owner of %q", p), err)
-			}
-			mod, err := strconv.ParseUint(*vol.Mode, 8, 32)
-			if err != nil {
-				return errwrap.Wrap(fmt.Errorf("invalid mode %q for volume %q", *vol.Mode, vol.Name), err)
-			}
-			if err := os.Chmod(p, os.FileMode(mod)); err != nil {
-				return errwrap.Wrap(fmt.Errorf("could not change permissions of %q", p), err)
-			}
+		absRoot, err := filepath.Abs(p.Root) // Absolute path to the pod's rootfs.
+		if err != nil {
+			return errwrap.Wrap(errors.New("could not get pod's root absolute path"), err)
+		}
+
+		absAppRootfs := common.AppRootfsPath(absRoot, appName)
+		if err != nil {
+			return fmt.Errorf(`could not evaluate absolute path for application rootfs in app: %v`, appName)
+		}
+
+		mntPath, err := stage1initcommon.EvaluateSymlinksInsideApp(absAppRootfs, m.Path)
+		if err != nil {
+			return errwrap.Wrap(fmt.Errorf("could not evaluate path %v", m.Path), err)
+		}
+		absDestination := filepath.Join(absAppRootfs, mntPath)
+		shPath := filepath.Join(sharedVolPath, vol.Name.String())
+		if err := stage1initcommon.PrepareMountpoints(shPath, absDestination, &vol, m.DockerImplicit); err != nil {
+			return err
 		}
 
 		readOnly := stage1initcommon.IsMountReadOnly(vol, app.MountPoints)
@@ -96,18 +97,6 @@ func mountSharedVolumes(root string, p *stage1commontypes.Pod, ra *schema.Runtim
 			source = filepath.Join(common.SharedVolumesPath(root), vol.Name.String())
 		default:
 			return fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty"`, vol.Kind)
-		}
-		absAppRootfs, err := filepath.Abs(common.AppRootfsPath(".", appName))
-		if err != nil {
-			return fmt.Errorf(`could not evaluate absolute path for application rootfs in app: %v`, appName)
-		}
-
-		absDestination, err := filepath.Abs(filepath.Join(absAppRootfs, m.Path))
-		if err != nil {
-			return fmt.Errorf(`could not evaluate absolute path for application volume path %q in: %v`, m.Path, appName)
-		}
-		if !strings.HasPrefix(absDestination, absAppRootfs) {
-			return fmt.Errorf("path escapes app's root: %v", absDestination)
 		}
 		if cleanedSource, err := filepath.EvalSymlinks(source); err != nil {
 			return errwrap.Wrap(fmt.Errorf("could not resolve symlink for source: %v", source), err)

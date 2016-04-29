@@ -32,7 +32,7 @@ import (
 // whether it is an implicit empty volume converted from a Docker image.
 type mountWrapper struct {
 	schema.Mount
-	dockerImplicit bool
+	DockerImplicit bool
 }
 
 func isMPReadOnly(mountPoints []types.MountPoint, name types.ACName) bool {
@@ -76,7 +76,7 @@ func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume
 		genMnts = append(genMnts,
 			mountWrapper{
 				Mount:          m,
-				dockerImplicit: false,
+				DockerImplicit: false,
 			})
 	}
 
@@ -114,7 +114,7 @@ func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume
 						Volume: uniqName,
 						Path:   mp.Path,
 					},
-					dockerImplicit: dockerImplicit,
+					DockerImplicit: dockerImplicit,
 				})
 		} else {
 			genMnts = append(genMnts,
@@ -123,7 +123,7 @@ func GenerateMounts(ra *schema.RuntimeApp, volumes map[types.ACName]types.Volume
 						Volume: vol.Name,
 						Path:   mp.Path,
 					},
-					dockerImplicit: false,
+					DockerImplicit: false,
 				})
 		}
 	}
