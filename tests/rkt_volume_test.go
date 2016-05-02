@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO: fix TestDockerVolumeSemantics on KVM and add the "kvm" build tag again
-// +build host coreos src
+// +build host coreos src kvm
 
 package main
 
