@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"syscall"
@@ -499,6 +500,7 @@ func NewAPIServiceCgroupTest() testutils.Test {
 		testutils.WaitOrTimeout(t, time.Second*30, done)
 
 		var cgroups []string
+		var subcgroups []string
 
 		for _, p := range resp.Pods {
 			checkPodBasics(t, ctx, p)
@@ -511,6 +513,7 @@ func NewAPIServiceCgroupTest() testutils.Test {
 			checkPodDetails(t, ctx, inspectResp.Pod)
 			if p.Cgroup != "" {
 				cgroups = append(cgroups, p.Cgroup)
+				subcgroups = append(subcgroups, filepath.Join(p.Cgroup, "system.slice"))
 			}
 		}
 
@@ -518,6 +521,22 @@ func NewAPIServiceCgroupTest() testutils.Test {
 		resp, err = c.ListPods(context.Background(), &v1alpha.ListPodsRequest{
 			Detail:  true,
 			Filters: []*v1alpha.PodFilter{{Cgroups: cgroups}},
+		})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+
+		if len(resp.Pods) == 0 {
+			t.Errorf("Unexpected result: %v, should see non-zero pods", resp.Pods)
+		}
+
+		for _, p := range resp.Pods {
+			checkPodDetails(t, ctx, p)
+		}
+
+		resp, err = c.ListPods(context.Background(), &v1alpha.ListPodsRequest{
+			Detail:  true,
+			Filters: []*v1alpha.PodFilter{{PodSubCgroups: subcgroups}},
 		})
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
