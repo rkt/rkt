@@ -16,10 +16,6 @@ bin   data  entrypoint.sh  home  lib64  mnt  proc  run   selinux  sys  usr
 boot  dev   etc            lib   media  opt  root  sbin  srv      tmp  var
 ```
 
-## Run a Pod in the Background
-
-Work in progress. Please contribute!
-
 ## Options
 
 | Flag | Default | Options | Description |
