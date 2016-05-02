@@ -29,6 +29,7 @@ import (
 
 	"github.com/appc/cni/pkg/ip"
 	cnitypes "github.com/appc/cni/pkg/types"
+	cniutils "github.com/appc/cni/pkg/utils"
 	"github.com/appc/spec/schema/types"
 	"github.com/hashicorp/errwrap"
 	"github.com/vishvananda/netlink"
@@ -42,7 +43,6 @@ const (
 	defaultBrName     = "kvm-cni0"
 	defaultSubnetFile = "/run/flannel/subnet.env"
 	defaultMTU        = 1500
-	masqComment       = "rkt-lkvm masquerading"
 )
 
 type BridgeNetConf struct {
@@ -541,11 +541,12 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 		}
 
 		if n.conf.IPMasq {
-			chain := getChainName(podID.String(), n.conf.Name)
+			chain := cniutils.FormatChainName(n.conf.Name, podID.String())
+			comment := cniutils.FormatChainName(n.conf.Name, podID.String())
 			if err := ip.SetupIPMasq(&net.IPNet{
 				IP:   n.runtime.IP,
 				Mask: net.IPMask(n.runtime.Mask),
-			}, chain, masqComment); err != nil {
+			}, chain, comment); err != nil {
 				return nil, err
 			}
 		}
@@ -598,11 +599,12 @@ func (n *Networking) teardownKvmNets() {
 		}
 		// remove masquerading if it was prepared
 		if an.conf.IPMasq {
-			chain := getChainName(n.podID.String(), an.conf.Name)
+			chain := cniutils.FormatChainName(an.conf.Name, n.podID.String())
+			comment := cniutils.FormatChainName(an.conf.Name, n.podID.String())
 			err := ip.TeardownIPMasq(&net.IPNet{
 				IP:   an.runtime.IP,
 				Mask: net.IPMask(an.runtime.Mask),
-			}, chain, masqComment)
+			}, chain, comment)
 			if err != nil {
 				stderr.PrintE("error on removing masquerading", err)
 			}

@@ -783,3 +783,19 @@ func NewNetOverrideTest() testutils.Test {
 		}
 	})
 }
+
+func TestNetLongName(t *testing.T) {
+	nt := networkTemplateT{
+		Name:   "thisnameiswaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaytoolong",
+		Type:   "ptp",
+		IpMasq: true,
+		Ipam: ipamTemplateT{
+			Type:   "host-local",
+			Subnet: "11.11.6.0/24",
+			Routes: []map[string]string{
+				{"dst": "0.0.0.0/0"},
+			},
+		},
+	}
+	testNetCustomNatConnectivity(t, nt)
+}
