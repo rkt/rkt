@@ -1,3 +1,17 @@
+## v1.5.1
+
+This release is a minor bug fix release.
+
+#### Bug fixes
+
+- rkt: fix bug where rkt errored out if the default data directory didn't exist [#2557](https://github.com/coreos/rkt/pull/2557).
+- kvm: fix docker volume semantics ([#2558](https://github.com/coreos/rkt/pull/2558)). When a Docker image exposes a mount point that is not mounted by a host volume, Docker volume semantics expect the files in the directory to be available to the application. This was not working properly in the kvm flavor and it's fixed now.
+- kvm: fix net long names ([#2543](https://github.com/coreos/rkt/pull/2543)). Handle network names that are longer than the maximum allowed by iptables in the kvm flavor.
+
+#### Other changes
+
+- minor tests and clean-ups (, [#2551](https://github.com/coreos/rkt/pull/2551)).
+
 ## v1.5.0
 
 This release switches to pure systemd for running apps within a pod. This lays the foundation to implement enhanced isolation capabilities. For example, starting with v1.5.0, apps are started with more restricted capabilities. User namespace support and the KVM stage1 are not experimental anymore. Resource usage can be benchmarked using the new rkt-monitor tool.
