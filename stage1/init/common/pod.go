@@ -64,7 +64,7 @@ var (
 	// appDefaultCapabilities defines a restricted set of capabilities given to
 	// apps by default.
 	// See https://github.com/appc/spec/issues/598
-	appDefaultCapabilities, _ = types.NewLinuxCapabilitiesRetainSet([]string{
+	appDefaultCapabilities, _ = types.NewLinuxCapabilitiesRetainSet(
 		"CAP_AUDIT_WRITE",
 		"CAP_CHOWN",
 		"CAP_DAC_OVERRIDE",
@@ -78,8 +78,7 @@ var (
 		"CAP_SETGID",
 		"CAP_SETPCAP",
 		"CAP_SETFCAP",
-		"CAP_SYS_CHROOT",
-	}...)
+		"CAP_SYS_CHROOT")
 )
 
 // execEscape uses Golang's string quoting for ", \, \n, and regex for special cases
