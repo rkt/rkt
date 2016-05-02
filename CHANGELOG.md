@@ -10,7 +10,7 @@ This release is a minor bug fix release.
 
 #### Other changes
 
-- minor tests and clean-ups (, [#2551](https://github.com/coreos/rkt/pull/2551)).
+- minor tests and clean-ups ([#2551](https://github.com/coreos/rkt/pull/2551)).
 
 ## v1.5.0
 
