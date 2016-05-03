@@ -34,15 +34,18 @@ Or permanently disabled by editing `/etc/selinux/config`:
 SELINUX=permissive
 ```
 
-#### Caveat: firewall
+#### Caveat: firewalld
 
-The default firewall rules can block the traffic from rkt pods.
-See [#2206](https://github.com/coreos/rkt/issues/2206).
-As a workaround, they can be removed:
+Fedora uses [firewalld](https://fedoraproject.org/wiki/FirewallD) to dynamically define firewall zones.
+rkt is [not yet fully integrated with firewalld](https://github.com/coreos/rkt/issues/2206).
+The default firewalld rules may interfere with the network connectivity of rkt pods.
+To work around this, add a firewalld rule to allow pod traffic:
 ```
-sudo iptables -F
-sudo iptables -F -t nat
+sudo firewall-cmd --add-source=172.16.28.0/24 --zone=trusted
 ```
+
+172.16.28.0/24 is the subnet of the [default pod network](https://github.com/coreos/rkt/blob/master/Documentation/networking/overview.md#the-default-network). The command must be adapted when rkt is configured to use a [different network](https://github.com/coreos/rkt/blob/master/Documentation/networking/overview.md#setting-up-additional-networks) with a different subnet.
+
 
 ## Arch
 
