@@ -620,7 +620,7 @@ func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uidRange *u
 			return -1, -1, errwrap.Wrap(fmt.Errorf("unable to get uid from file %q",
 				app.User), err)
 		}
-		uidReal, _, err := uidRange.UnshiftRange(stat.Uid, 0)
+		uidReal, _, err := uidRange.UnshiftRange(stat.Uid, stat.Gid)
 		if err != nil {
 			return -1, -1, errwrap.Wrap(errors.New("unable to determine real uid"), err)
 		}
@@ -646,7 +646,7 @@ func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uidRange *u
 			return -1, -1, errwrap.Wrap(fmt.Errorf("unable to get gid from file %q",
 				app.Group), err)
 		}
-		_, gidReal, err := uidRange.UnshiftRange(0, stat.Gid)
+		_, gidReal, err := uidRange.UnshiftRange(stat.Uid, stat.Gid)
 		if err != nil {
 			return -1, -1, errwrap.Wrap(errors.New("unable to determine real gid"), err)
 		}
