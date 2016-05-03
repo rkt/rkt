@@ -27,7 +27,7 @@ import (
 
 	"github.com/appc/spec/pkg/device"
 	"github.com/coreos/rkt/pkg/fileutil"
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -41,7 +41,7 @@ type PathWhitelistMap map[string]struct{}
 
 type FilePermissionsEditor func(string, int, int, byte, os.FileInfo) error
 
-func NewUidShiftingFilePermEditor(uidRange *uid.UidRange) (FilePermissionsEditor, error) {
+func NewUidShiftingFilePermEditor(uidRange *user.UidRange) (FilePermissionsEditor, error) {
 	if os.Geteuid() != 0 {
 		return func(_ string, _, _ int, _ byte, _ os.FileInfo) error {
 			// The files are owned by the current user on creation.

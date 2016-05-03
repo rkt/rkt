@@ -47,7 +47,7 @@ import (
 	"github.com/coreos/rkt/pkg/label"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/tpm"
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
 	"github.com/hashicorp/errwrap"
@@ -76,7 +76,7 @@ type PrepareConfig struct {
 	UseOverlay         bool                // prepare pod with overlay fs
 	SkipTreeStoreCheck bool                // skip checking the treestore before rendering
 	PodManifest        string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
-	PrivateUsers       *uid.UidRange       // User namespaces
+	PrivateUsers       *user.UidRange      // User namespaces
 }
 
 // configuration parameters needed by Run

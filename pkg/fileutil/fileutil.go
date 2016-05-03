@@ -22,7 +22,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 
 	"github.com/appc/spec/pkg/device"
 )
@@ -60,7 +60,7 @@ func CopySymlink(src, dest string) error {
 	return nil
 }
 
-func CopyTree(src, dest string, uidRange *uid.UidRange) error {
+func CopyTree(src, dest string, uidRange *user.UidRange) error {
 	cleanSrc := filepath.Clean(src)
 
 	dirs := make(map[string][]syscall.Timespec)

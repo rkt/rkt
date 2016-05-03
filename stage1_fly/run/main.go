@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/coreos/rkt/common"
 	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/pkg/user"
 	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 )
@@ -337,6 +339,39 @@ func stage1() int {
 		return 1
 	}
 
+	var uidResolver, gidResolver user.Resolver
+	var uid, gid int
+
+	uidResolver, err = user.NumericIDs(ra.App.User)
+	if err != nil {
+		uidResolver, err = user.IDsFromStat(rfs, ra.App.User, nil)
+	}
+
+	if err != nil { // give up
+		log.PrintE(fmt.Sprintf("invalid user %q", ra.App.User), err)
+		return 1
+	}
+
+	if uid, _, err = uidResolver.IDs(); err != nil {
+		log.PrintE(fmt.Sprintf("failed to configure user %q", ra.App.User), err)
+		return 1
+	}
+
+	gidResolver, err = user.NumericIDs(ra.App.Group)
+	if err != nil {
+		gidResolver, err = user.IDsFromStat(rfs, ra.App.Group, nil)
+	}
+
+	if err != nil { // give up
+		log.PrintE(fmt.Sprintf("invalid group %q", ra.App.Group), err)
+		return 1
+	}
+
+	if _, gid, err = gidResolver.IDs(); err != nil {
+		log.PrintE(fmt.Sprintf("failed to configure group %q", ra.App.Group), err)
+		return 1
+	}
+
 	diag.Printf("chroot to %q", rfs)
 	if err := syscall.Chroot(rfs); err != nil {
 		log.PrintE("can't chroot", err)
@@ -345,6 +380,23 @@ func stage1() int {
 
 	if err := os.Chdir(workDir); err != nil {
 		log.PrintE(fmt.Sprintf("can't change to working directory %q", workDir), err)
+		return 1
+	}
+
+	// lock the current goroutine to its current OS thread.
+	// This will force the subsequent syscalls to be executed in the same OS thread as Setresuid, and Setresgid,
+	// see https://github.com/golang/go/issues/1435#issuecomment-66054163.
+	runtime.LockOSThread()
+
+	diag.Printf("setting uid %d gid %d", uid, gid)
+
+	if err := syscall.Setresgid(gid, gid, gid); err != nil {
+		log.PrintE(fmt.Sprintf("can't set gid %d", gid), err)
+		return 1
+	}
+
+	if err := syscall.Setresuid(uid, uid, uid); err != nil {
+		log.PrintE(fmt.Sprintf("can't set uid %d", uid), err)
 		return 1
 	}
 

@@ -21,7 +21,7 @@ import (
 	"syscall"
 
 	"github.com/coreos/rkt/pkg/fileutil"
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
@@ -158,7 +158,7 @@ func PrepareMountpoints(volPath string, targetPath string, vol *types.Volume, do
 			Uid = int(fi.Sys().(*syscall.Stat_t).Uid)
 			Gid = int(fi.Sys().(*syscall.Stat_t).Gid)
 
-			if err := fileutil.CopyTree(targetPath, volPath, uid.NewBlankUidRange()); err != nil {
+			if err := fileutil.CopyTree(targetPath, volPath, user.NewBlankUidRange()); err != nil {
 				return errwrap.Wrap(fmt.Errorf("error copying image files to empty volume %q", volPath), err)
 			}
 		}

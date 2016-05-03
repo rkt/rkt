@@ -25,7 +25,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/label"
 	"github.com/coreos/rkt/pkg/lock"
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/stage0"
 	"github.com/coreos/rkt/store"
@@ -114,7 +114,7 @@ func init() {
 }
 
 func runRun(cmd *cobra.Command, args []string) (exit int) {
-	privateUsers := uid.NewBlankUidRange()
+	privateUsers := user.NewBlankUidRange()
 	err := parseApps(&rktApps, args, cmd.Flags(), true)
 	if err != nil {
 		stderr.PrintE("error parsing app image arguments", err)
@@ -131,7 +131,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 			stderr.Print("--private-users is not supported, kernel compiled without user namespace support")
 			return 1
 		}
-		privateUsers.SetRandomUidRange(uid.DefaultRangeCount)
+		privateUsers.SetRandomUidRange(user.DefaultRangeCount)
 	}
 
 	if len(flagPorts) > 0 && flagNet.None() {

@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/coreos/rkt/pkg/uid"
+	"github.com/coreos/rkt/pkg/user"
 )
 
 const tstprefix = "fileutil-test"
@@ -95,7 +95,7 @@ func TestCopyTree(t *testing.T) {
 	createTree(t, src, tr)
 
 	// absolute paths
-	if err := CopyTree(src, dst, uid.NewBlankUidRange()); err != nil {
+	if err := CopyTree(src, dst, user.NewBlankUidRange()); err != nil {
 		t.Fatal(err)
 	}
 	checkTree(t, dst, tr)
@@ -106,13 +106,13 @@ func TestCopyTree(t *testing.T) {
 	}
 
 	dst = "dst-rel1"
-	if err := CopyTree("././src/", dst, uid.NewBlankUidRange()); err != nil {
+	if err := CopyTree("././src/", dst, user.NewBlankUidRange()); err != nil {
 		t.Fatal(err)
 	}
 	checkTree(t, dst, tr)
 
 	dst = "./dst-rel2"
-	if err := CopyTree("./src", dst, uid.NewBlankUidRange()); err != nil {
+	if err := CopyTree("./src", dst, user.NewBlankUidRange()); err != nil {
 		t.Fatal(err)
 	}
 	checkTree(t, dst, tr)
