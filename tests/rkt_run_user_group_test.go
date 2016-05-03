@@ -21,12 +21,15 @@ import (
 	"os"
 	"testing"
 
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/tests/testutils"
 )
 
 func TestAppUserGroup(t *testing.T) {
 	imageDummy := patchTestACI("rkt-inspect-dummy.aci", "--name=dummy")
 	defer os.Remove(imageDummy)
+
+	supportsUserNS := common.SupportsUserNS() && checkUserNS() == nil
 
 	for _, tt := range []struct {
 		imageParams []string
@@ -101,23 +104,32 @@ func TestAppUserGroup(t *testing.T) {
 			image := patchTestACI("rkt-inspect-user-group.aci", tt.imageParams...)
 			defer os.Remove(image)
 
-			// run the user/group overriden app first
-			rktCmd := fmt.Sprintf(
-				"%s --insecure-options=image run %s %s %s",
-				ctx.Cmd(),
-				image, tt.rktParams,
-				imageDummy,
-			)
-			runRktAndCheckOutput(t, rktCmd, tt.expected, false)
+			userNSOpts := []string{""}
+			if supportsUserNS {
+				userNSOpts = append(userNSOpts, "--private-users --no-overlay")
+			}
 
-			// run the user/group overriden app last
-			rktCmd = fmt.Sprintf(
-				"%s --insecure-options=image run %s %s %s",
-				ctx.Cmd(),
-				imageDummy,
-				image, tt.rktParams,
-			)
-			runRktAndCheckOutput(t, rktCmd, tt.expected, false)
+			for _, userNSOpt := range userNSOpts {
+				// run the user/group overriden app first
+				rktCmd := fmt.Sprintf(
+					"%s --debug --insecure-options=image run %s %s %s %s",
+					ctx.Cmd(),
+					userNSOpt,
+					image, tt.rktParams,
+					imageDummy,
+				)
+				runRktAndCheckOutput(t, rktCmd, tt.expected, false)
+
+				// run the user/group overriden app last
+				rktCmd = fmt.Sprintf(
+					"%s --debug --insecure-options=image run %s %s %s %s",
+					ctx.Cmd(),
+					userNSOpt,
+					imageDummy,
+					image, tt.rktParams,
+				)
+				runRktAndCheckOutput(t, rktCmd, tt.expected, false)
+			}
 		}()
 	}
 }
