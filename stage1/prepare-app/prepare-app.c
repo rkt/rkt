@@ -47,8 +47,8 @@ static int exit_err;
 #define lenof(_str) \
 	(sizeof(_str) - 1)
 
-#define MACHINE_ID_LEN		lenof("0123456789abcdef0123456789ab")
-#define MACHINE_NAME_LEN	lenof("rkt-01234567-89ab-cdef-0123-456789ab")
+#define MACHINE_ID_LEN		lenof("0123456789abcdef0123456789abcdef")
+#define MACHINE_NAME_LEN	lenof("rkt-01234567-89ab-cdef-0123-456789abcdef")
 
 typedef struct _dir_op_t {
 	const char	*name;
@@ -77,7 +77,7 @@ static int get_machine_name(char *out, int out_len) {
 	pgoto_if(close(fd) != 0,
 		_fail, "Error closing \"/etc/machine-id\"");
 	goto_if(snprintf(out, out_len,
-			"rkt-%.8s-%.4s-%.4s-%.4s-%.8s",
+			"rkt-%.8s-%.4s-%.4s-%.4s-%.12s",
 			buf, buf+8, buf+12, buf+16, buf+20) >= out_len,
 		_fail, "Error constructing machine name");
 
