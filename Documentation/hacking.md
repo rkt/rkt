@@ -89,6 +89,10 @@ rkt expects stage1 images to be signed except in the following cases:
 * `--stage1-{name,hash}` is used and the image is already in the store
 * `--stage1-{url,path,from-dir}` is used and the image is in the default directory configured at build time
 
+### Updating the coreos flavor stage1
+
+Follow the instructions on [Update coreos flavor stage1](devel/update-coreos-stage1.md).
+
 ## Managing dependencies
 
 rkt uses [`godep`](https://github.com/tools/godep) to manage third-party dependencies.
