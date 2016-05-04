@@ -38,6 +38,7 @@ Check out the [roadmap](ROADMAP.md) for more details on the future of rkt.
 ## Trying out rkt
 
 To get started quickly using rkt for the first time, start with the ["trying out rkt" document](Documentation/trying-out-rkt.md).
+Also check [rkt support on your Linux distribution](Documentation/distributions.md).
 For an end-to-end example of building an application from scratch and running it with rkt, check out the [getting started guide](Documentation/getting-started-guide.md).
 
 ## Getting help with rkt
