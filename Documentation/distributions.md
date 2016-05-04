@@ -49,8 +49,10 @@ sudo firewall-cmd --add-source=172.16.28.0/24 --zone=trusted
 
 ## Arch
 
-rkt is available in the [Arch User Repository (AUR)](https://aur.archlinux.org/packages/rkt).
-Installing instructions are available in the [AUR installing packages documentation](https://wiki.archlinux.org/index.php/Arch_User_Repository#Installing_packages) or you can use an [AUR helper](https://wiki.archlinux.org/index.php/AUR_helpers).
+rkt is available in the [Community Repository](https://www.archlinux.org/packages/community/x86_64/rkt/) and can be installed using pacman:
+```
+sudo pacman -S rkt
+```
 
 ## Void
 
