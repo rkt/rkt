@@ -59,7 +59,7 @@ func init() {
 	cmdPrepare.Flags().BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	cmdPrepare.Flags().BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	cmdPrepare.Flags().BoolVar(&flagPrivateUsers, "private-users", false, "run within user namespaces.")
-	cmdPrepare.Flags().Var(&flagExplicitEnv, "set-env", "an environment variable to set for apps in the form name=value")
+	cmdPrepare.Flags().Var(&flagExplicitEnv, "set-env", "environment variable to set for apps in the form name=value")
 	cmdPrepare.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
 	cmdPrepare.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
 	cmdPrepare.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--quiet' and '--no-overlay' will have effect")
