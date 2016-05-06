@@ -507,6 +507,11 @@
 			"Rev": "9ef341037b1bcadeeee79e77da4f6baf63de4feb"
 		},
 		{
+			"ImportPath": "github.com/shirou/gopsutil/load",
+			"Comment": "v2.0.0-10-g9ef3410",
+			"Rev": "9ef341037b1bcadeeee79e77da4f6baf63de4feb"
+		},
+		{
 			"ImportPath": "github.com/shirou/gopsutil/mem",
 			"Comment": "v2.0.0-10-g9ef3410",
 			"Rev": "9ef341037b1bcadeeee79e77da4f6baf63de4feb"

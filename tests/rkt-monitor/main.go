@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/appc/spec/schema"
+	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 )
@@ -97,24 +98,28 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 
 	var execCmd *exec.Cmd
 	if podManifest {
-		execCmd = exec.Command("rkt", "run", "--pod-manifest", args[0], "--net=host")
+		execCmd = exec.Command("rkt", "run", "--pod-manifest", args[0], "--net=default-restricted")
 	} else {
-		execCmd = exec.Command("rkt", "run", args[0], "--insecure-options=image", "--net=host")
+		execCmd = exec.Command("rkt", "run", args[0], "--insecure-options=image", "--net=default-restricted")
 	}
 	if flagShowOutput {
 		execCmd.Stdout = os.Stdout
 		execCmd.Stderr = os.Stderr
 	}
+
+	containerStarting := time.Now()
+
 	err = execCmd.Start()
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
+	containerStarted := time.Now()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
-		for range c {
+		for _ = range c {
 			err := killAllChildren(int32(execCmd.Process.Pid))
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "cleanup failed: %v\n", err)
@@ -149,10 +154,14 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 		time.Sleep(time.Second)
 	}
 
+	loadAvg, err := load.Avg()
+
+	containerStopping := time.Now()
 	err = killAllChildren(int32(execCmd.Process.Pid))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cleanup failed: %v\n", err)
 	}
+	containerStoped := time.Now()
 
 	for _, processHistory := range usages {
 		var avgCPU float64
@@ -172,6 +181,10 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 
 		fmt.Printf("%s(%d): seconds alive: %d  avg CPU: %f%%  avg Mem: %s  peak Mem: %s\n", processHistory[0].Name, processHistory[0].Pid, len(processHistory), avgCPU, formatSize(avgMem), formatSize(peakMem))
 	}
+	fmt.Printf("load average: Load1: %f Load5: %f Load15: %f\n", loadAvg.Load1, loadAvg.Load5, loadAvg.Load15)
+
+	fmt.Printf("container start time: %dns\n", containerStarted.Sub(containerStarting).Nanoseconds())
+	fmt.Printf("container stop time: %dns\n", containerStoped.Sub(containerStopping).Nanoseconds())
 }
 
 func killAllChildren(pid int32) error {
