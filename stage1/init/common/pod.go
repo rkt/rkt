@@ -57,25 +57,6 @@ var (
 		"LOGNAME": "root",
 		"HOME":    "/root",
 	}
-
-	// appDefaultCapabilities defines a restricted set of capabilities given to
-	// apps by default.
-	// See https://github.com/appc/spec/issues/598
-	appDefaultCapabilities, _ = types.NewLinuxCapabilitiesRetainSet(
-		"CAP_AUDIT_WRITE",
-		"CAP_CHOWN",
-		"CAP_DAC_OVERRIDE",
-		"CAP_FSETID",
-		"CAP_FOWNER",
-		"CAP_KILL",
-		"CAP_MKNOD",
-		"CAP_NET_RAW",
-		"CAP_NET_BIND_SERVICE",
-		"CAP_SETUID",
-		"CAP_SETGID",
-		"CAP_SETPCAP",
-		"CAP_SETFCAP",
-		"CAP_SYS_CHROOT")
 )
 
 // execEscape uses Golang's string quoting for ", \, \n, and regex for special cases
@@ -443,10 +424,10 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		supplementaryGroups = append(supplementaryGroups, strconv.Itoa(g))
 	}
 
-	// TODO: read the RemoveSet as well. See
-	// https://github.com/coreos/rkt/issues/2348#issuecomment-211796840
-	capabilities := append(app.Isolators, appDefaultCapabilities.AsIsolator())
-	capabilitiesStr := GetAppCapabilities(capabilities)
+	capabilitiesStr, err := getAppCapabilities(app.Isolators)
+	if err != nil {
+		return err
+	}
 
 	execStart := append([]string{binPath}, app.Exec[1:]...)
 	execStartString := quoteExec(execStart)
@@ -853,7 +834,11 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		args = append(args, strings.Join(opt, ""))
 	}
 
-	capList := strings.Join(GetAppCapabilities(app.Isolators), ",")
+	capabilitiesStr, err := getAppCapabilities(app.Isolators)
+	if err != nil {
+		return nil, err
+	}
+	capList := strings.Join(capabilitiesStr, ",")
 	args = append(args, "--capability="+capList)
 
 	return args, nil
@@ -941,18 +926,81 @@ func GetMachineID(p *stage1commontypes.Pod) string {
 	return "rkt-" + p.UUID.String()
 }
 
-// GetAppCapabilities is a filter which returns a string slice of valid Linux capabilities
-// It requires list of available isolators
-func GetAppCapabilities(isolators types.Isolators) []string {
-	var caps []string
+// getAppCapabilities computes the set of Linux capabilities that an app
+// should have based on its isolators. Only the following capabalities matter:
+// - os/linux/capabilities-retain-set
+// - os/linux/capabilities-remove-set
+//
+// The resulting capabilities are generated following the rules from the spec:
+// See: https://github.com/appc/spec/blob/master/spec/ace.md#linux-isolators
+func getAppCapabilities(isolators types.Isolators) ([]string, error) {
+	var capsToRetain []string
+	var capsToRemove []string
 
+	// Default caps defined in
+	// https://github.com/appc/spec/blob/master/spec/ace.md#linux-isolators
+	appDefaultCapabilities := []string{
+		"CAP_AUDIT_WRITE",
+		"CAP_CHOWN",
+		"CAP_DAC_OVERRIDE",
+		"CAP_FSETID",
+		"CAP_FOWNER",
+		"CAP_KILL",
+		"CAP_MKNOD",
+		"CAP_NET_RAW",
+		"CAP_NET_BIND_SERVICE",
+		"CAP_SETUID",
+		"CAP_SETGID",
+		"CAP_SETPCAP",
+		"CAP_SETFCAP",
+		"CAP_SYS_CHROOT",
+	}
+
+	// Iterate over the isolators defined in
+	// https://github.com/appc/spec/blob/master/spec/ace.md#linux-isolators
+	// Only read the capababilities isolators:
+	// - os/linux/capabilities-retain-set
+	// - os/linux/capabilities-remove-set
 	for _, isolator := range isolators {
-		if capSet, ok := isolator.Value().(types.LinuxCapabilitiesSet); ok &&
-			isolator.Name == types.LinuxCapabilitiesRetainSetName {
-			caps = append(caps, parseLinuxCapabilitiesSet(capSet)...)
+		if capSet, ok := isolator.Value().(types.LinuxCapabilitiesSet); ok {
+			switch isolator.Name {
+			case types.LinuxCapabilitiesRetainSetName:
+				capsToRetain = append(capsToRetain, parseLinuxCapabilitiesSet(capSet)...)
+			case types.LinuxCapabilitiesRevokeSetName:
+				capsToRemove = append(capsToRemove, parseLinuxCapabilitiesSet(capSet)...)
+			}
 		}
 	}
-	return caps
+
+	// appc/spec does not allow to have both the retain set and the remove
+	// set defined.
+	if len(capsToRetain) > 0 && len(capsToRemove) > 0 {
+		return nil, errors.New("cannot have both os/linux/capabilities-retain-set and os/linux/capabilities-remove-set")
+	}
+
+	// Neither the retain set or the remove set are defined
+	if len(capsToRetain) == 0 && len(capsToRemove) == 0 {
+		return appDefaultCapabilities, nil
+	}
+
+	if len(capsToRetain) > 0 {
+		return capsToRetain, nil
+	}
+
+	if len(capsToRemove) == 0 {
+		panic("len(capsToRetain) is negative. This cannot happen.")
+	}
+
+	caps := appDefaultCapabilities
+	for _, rc := range capsToRemove {
+		// backward loop to be safe against deletion
+		for i := len(caps) - 1; i >= 0; i-- {
+			if caps[i] == rc {
+				caps = append(caps[:i], caps[i+1:]...)
+			}
+		}
+	}
+	return caps, nil
 }
 
 // parseLinuxCapabilitySet parses a LinuxCapabilitiesSet into string slice
