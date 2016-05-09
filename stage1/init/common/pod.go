@@ -457,6 +457,9 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		unit.NewUnitOption("Service", "Restart", "no"),
 		unit.NewUnitOption("Service", "ExecStart", execStartString),
 		unit.NewUnitOption("Service", "RootDirectory", common.RelAppRootfsPath(appName)),
+		// MountFlags=shared creates a new mount namespace and (as unintuitive
+		// as it might seem) makes sure the mount is slave+shared.
+		unit.NewUnitOption("Service", "MountFlags", "shared"),
 		unit.NewUnitOption("Service", "WorkingDirectory", workDir),
 		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePathSystemd(appName)),
 		unit.NewUnitOption("Service", "User", strconv.Itoa(u)),
