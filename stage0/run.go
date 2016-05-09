@@ -415,6 +415,12 @@ func addResolvConf(cfg RunConfig, rootfs string) {
 	}
 	content += "\n"
 
+	if err := os.Mkdir(filepath.Join(rootfs, "etc"), defaultRegularDirPerm); err != nil {
+		if !os.IsExist(err) {
+			log.Fatalf("error creating dir %q: %v\n", "/etc", err)
+		}
+	}
+
 	if err := ioutil.WriteFile(filepath.Join(rootfs, "etc/rkt-resolv.conf"), []byte(content), 0644); err != nil {
 		log.Fatalf("error writing /etc/rkt-resolv.conf: %v\n", err)
 	}
