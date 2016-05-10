@@ -40,14 +40,6 @@ const (
 	selfNetNS     = "/proc/self/ns/net"
 )
 
-// ForwardedPort describes a port that will be
-// forwarded (mapped) from the host to the pod
-type ForwardedPort struct {
-	Protocol string
-	HostPort uint
-	PodPort  uint
-}
-
 // Networking describes the networking details of a pod.
 type Networking struct {
 	podEnv
@@ -121,7 +113,11 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common
 			if err = n.enableDefaultLocalnetRouting(); err != nil {
 				return err
 			}
-			if err := n.forwardPorts(fps, n.GetDefaultIP()); err != nil {
+			podIP, err := n.GetForwardableNetPodIP()
+			if err != nil {
+				return err
+			}
+			if err := n.forwardPorts(fps, podIP); err != nil {
 				n.unforwardPorts()
 				return err
 			}
@@ -141,7 +137,7 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common
 func (n *Networking) enableDefaultLocalnetRouting() error {
 	routeLocalnetFormat := ""
 
-	defaultHostIP, err := n.GetDefaultHostIP()
+	defaultHostIP, err := n.GetForwardableNetHostIP()
 	if err != nil {
 		return err
 	}
@@ -227,20 +223,6 @@ func Load(podRoot string, podID *types.UUID) (*Networking, error) {
 		hostNS: hostNS,
 		nets:   nets,
 	}, nil
-}
-
-func (n *Networking) GetDefaultIP() net.IP {
-	if len(n.nets) == 0 {
-		return nil
-	}
-	return n.nets[len(n.nets)-1].runtime.IP
-}
-
-func (n *Networking) GetDefaultHostIP() (net.IP, error) {
-	if len(n.nets) == 0 {
-		return nil, fmt.Errorf("no networks found")
-	}
-	return n.nets[len(n.nets)-1].runtime.HostIP, nil
 }
 
 // GetIfacesByIP searches for and returns the interfaces with the given IP

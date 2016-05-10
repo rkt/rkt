@@ -350,24 +350,60 @@ func TestNetDefaultRestrictedConnectivity(t *testing.T) {
 
 type PortFwdCase struct {
 	HttpGetIP     string
+	HttpServePort int
 	RktArg        string
 	ShouldSucceed bool
 }
 
-func (ct PortFwdCase) Execute(t *testing.T, ctx *testutils.RktRunCtx) {
+var (
+	bannedPorts = make(map[int]struct{}, 0)
 
-	bannedPorts := make(map[int]struct{}, 0)
+	defaultSamePortFwdCase   = PortFwdCase{"172.16.28.1", 0, "--net=default", true}
+	defaultDiffPortFwdCase   = PortFwdCase{"172.16.28.1", 1024, "--net=default", true}
+	defaultLoSamePortFwdCase = PortFwdCase{"127.0.0.1", 0, "--net=default", true}
+	defaultLoDiffPortFwdCase = PortFwdCase{"127.0.0.1", 1014, "--net=default", true}
+
+	portFwdBridge = networkTemplateT{
+		Name:      "bridge1",
+		Type:      "bridge",
+		Bridge:    "bridge1",
+		IpMasq:    true,
+		IsGateway: true,
+		Ipam: ipamTemplateT{
+			Type:   "host-local",
+			Subnet: "11.11.5.0/24",
+			Routes: []map[string]string{
+				{"dst": "0.0.0.0/0"},
+			},
+		},
+	}
+	bridgeSamePortFwdCase   = PortFwdCase{"11.11.5.1", 0, "--net=" + portFwdBridge.Name, true}
+	bridgeDiffPortFwdCase   = PortFwdCase{"11.11.5.1", 1024, "--net=" + portFwdBridge.Name, true}
+	bridgeLoSamePortFwdCase = PortFwdCase{"127.0.0.1", 0, "--net=" + portFwdBridge.Name, true}
+	bridgeLoDiffPortFwdCase = PortFwdCase{"127.0.0.1", 1024, "--net=" + portFwdBridge.Name, true}
+)
+
+func (ct PortFwdCase) Execute(t *testing.T, ctx *testutils.RktRunCtx) {
+	netdir := prepareTestNet(t, ctx, portFwdBridge)
+	defer os.RemoveAll(netdir)
+
 	httpPort, err := testutils.GetNextFreePort4Banned(bannedPorts)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
 	bannedPorts[httpPort] = struct{}{}
 
-	httpServeAddr := fmt.Sprintf("0.0.0.0:%d", httpPort)
+	httpServePort := ct.HttpServePort
+	if httpServePort == 0 {
+		httpServePort = httpPort
+	}
+
+	httpServeAddr := fmt.Sprintf("0.0.0.0:%d", httpServePort)
 	testImageArgs := []string{
-		fmt.Sprintf("--ports=http,protocol=tcp,port=%d", httpPort),
+		fmt.Sprintf("--ports=http,protocol=tcp,port=%d", httpServePort),
 		fmt.Sprintf("--exec=/inspect --serve-http=%v", httpServeAddr),
 	}
+	t.Logf("testImageArgs: %v", testImageArgs)
 	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 	defer os.Remove(testImage)
 
@@ -410,10 +446,6 @@ func (ct PortFwdCase) Execute(t *testing.T, ctx *testutils.RktRunCtx) {
 	}()
 
 	ga.Wait()
-
-	// TODO: ensure that default-restricted is not accessible from non-host
-	// f("172.16.28.1", "--net=default-restricted", true)
-	// f("127.0.0.1", "--net=default-restricted", true)
 }
 
 type portFwdTest []PortFwdCase
@@ -428,12 +460,12 @@ func (ct portFwdTest) Execute(t *testing.T) {
 }
 
 /*
- * Default net port forwarding connectivity
+ * Net port forwarding connectivity
  * ---
  * Container launches http server on all its interfaces
  * Host must be able to connect to container's http server on it's own interfaces
  */
-func NewNetDefaultPortFwdConnectivityTest(cases ...PortFwdCase) testutils.Test {
+func NewNetPortFwdConnectivityTest(cases ...PortFwdCase) testutils.Test {
 	return portFwdTest(cases)
 }
 
@@ -465,6 +497,7 @@ type networkTemplateT struct {
 	Master    string `json:"master,omitempty"`
 	IpMasq    bool
 	IsGateway bool
+	Bridge    string `json:"bridge,omitempty"`
 	Ipam      ipamTemplateT
 }
 

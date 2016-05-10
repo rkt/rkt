@@ -552,8 +552,11 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 		}
 		network.nets[i] = n
 	}
-	err := network.forwardPorts(fps, network.GetDefaultIP())
+	podIP, err := network.GetForwardableNetPodIP()
 	if err != nil {
+		return nil, err
+	}
+	if err := network.forwardPorts(fps, podIP); err != nil {
 		return nil, err
 	}
 
