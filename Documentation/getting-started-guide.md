@@ -28,7 +28,7 @@ Next we need to build our application.
 We are going to statically link our app so we can ship an App Container Image with no external dependencies.
 
 ```
-$ CGO_ENABLED=0 GOOS=linux go build -o hello -a -tags netgo -ldflags '-w' .
+$ CGO_ENABLED=0 go build -ldflags '-extldflags "-static"'
 ```
 
 Before proceeding, verify that the produced binary is statically linked:
