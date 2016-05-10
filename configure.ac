@@ -289,7 +289,11 @@ RKT_ITERATE_FLAVORS([${RKT_STAGE1_FLAVORS}],[flavor],
                                       RKT_COMMON_COREOS_PROGS
                                       RKT_REQ_PROG([PATCH],[patch],[patch])
                                       RKT_REQ_PROG([TAR],[tar],[tar])
-                                      RKT_REQ_PROG([XZ],[xz],[xz])],
+                                      RKT_REQ_PROG([XZ],[xz],[xz])
+                                      AC_CHECK_HEADER([openssl/bio.h],
+                                                      [],
+                                                      [AC_MSG_ERROR([** No development headers for openssl found])],
+                                                      [AC_INCLUDES_DEFAULT])],
                              [host],
                                      [],
                              [fly],

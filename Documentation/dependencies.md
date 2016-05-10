@@ -52,7 +52,10 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
 * patch
 * tar
 * xz
-* build dependencies for kernel
+* [build dependencies for kernel](https://www.kernel.org/doc/Documentation/Changes)
+  * bc
+  * binutils
+  * openssl
 * build dependencies for lkvm
 
 ### Specific dependencies for the src flavor
