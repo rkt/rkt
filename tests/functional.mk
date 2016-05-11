@@ -10,11 +10,11 @@ FTST_IMAGE_MANIFEST := $(FTST_IMAGE_DIR)/manifest
 FTST_IMAGE_TEST_DIRS := $(FTST_IMAGE_ROOTFSDIR)/dir1 $(FTST_IMAGE_ROOTFSDIR)/dir2 $(FTST_IMAGE_ROOTFSDIR)/bin $(FTST_IMAGE_ROOTFSDIR)/etc
 FTST_ACE_MAIN_IMAGE_DIR := $(FTST_TMPDIR)/ace-main
 FTST_ACE_MAIN_IMAGE := $(FTST_TMPDIR)/rkt-ace-validator-main.aci
-FTST_ACE_MAIN_IMAGE_MANIFEST_SRC := Godeps/_workspace/src/github.com/appc/spec/ace/image_manifest_main.json
+FTST_ACE_MAIN_IMAGE_MANIFEST_SRC := Godeps/_workspace/src/github.com/appc/spec/ace/image_manifest_main.json.in
 FTST_ACE_MAIN_IMAGE_MANIFEST := $(FTST_ACE_MAIN_IMAGE_DIR)/manifest
 FTST_ACE_SIDEKICK_IMAGE_DIR := $(FTST_TMPDIR)/ace-sidekick
 FTST_ACE_SIDEKICK_IMAGE := $(FTST_TMPDIR)/rkt-ace-validator-sidekick.aci
-FTST_ACE_SIDEKICK_IMAGE_MANIFEST_SRC := Godeps/_workspace/src/github.com/appc/spec/ace/image_manifest_sidekick.json
+FTST_ACE_SIDEKICK_IMAGE_MANIFEST_SRC := Godeps/_workspace/src/github.com/appc/spec/ace/image_manifest_sidekick.json.in
 FTST_ACE_SIDEKICK_IMAGE_MANIFEST := $(FTST_ACE_SIDEKICK_IMAGE_DIR)/manifest
 FTST_INSPECT_BINARY := $(FTST_TMPDIR)/inspect
 FTST_ACI_INSPECT := $(FTST_IMAGE_ROOTFSDIR)/inspect
@@ -39,8 +39,6 @@ INSTALL_FILES += \
 	$(FTST_IMAGE_MANIFEST_SRC):$(FTST_IMAGE_MANIFEST):- \
 	$(FTST_INSPECT_BINARY):$(FTST_ACI_INSPECT):- \
 	$(FTST_EMPTY_IMAGE_MANIFEST_SRC):$(FTST_EMPTY_IMAGE_MANIFEST):- \
-	$(FTST_ACE_MAIN_IMAGE_MANIFEST_SRC):$(FTST_ACE_MAIN_IMAGE_MANIFEST):- \
-	$(FTST_ACE_SIDEKICK_IMAGE_MANIFEST_SRC):$(FTST_ACE_SIDEKICK_IMAGE_MANIFEST):- \
 	$(FTST_ECHO_SERVER_BINARY):$(FTST_ACI_ECHO_SERVER):-
 CREATE_DIRS += \
 	$(FTST_IMAGE_DIR) \
@@ -145,7 +143,15 @@ include makelib/build_go_bin.mk
 # 1 - image
 # 2 - aci directory
 # 3 - ace validator
+# 4 - manifest.json.in
 define FTST_GENERATE_ACE_IMAGE
+
+$$(call forward-vars,$2/manifest,ABS_GO)
+$2/manifest: $4 | $2
+	$$(VQ) \
+	$$(call vb,v2,GEN,$$(call vsp,$$@)) \
+	GOARCH="$$$$($$(ABS_GO) env GOARCH)"; \
+	sed -e "s/@GOOS@/linux/" -e "s/@GOARCH@/$$$$GOARCH/" <$$< >$$@
 
 $$(call forward-vars,$1,ACTOOL)
 $1: $2/manifest $2/rootfs/ace-validator | $2/rootfs/opt/acvalidator
@@ -155,10 +161,10 @@ $1: $2/manifest $2/rootfs/ace-validator | $2/rootfs/opt/acvalidator
 
 CREATE_DIRS += $2 $$(call dir-chain,$2,rootfs/opt/acvalidator)
 INSTALL_FILES += $3:$2/rootfs/ace-validator:-
-CLEAN_FILES += $1
+CLEAN_FILES += $1 $2/manifest
 endef
 
-$(eval $(call FTST_GENERATE_ACE_IMAGE,$(FTST_ACE_MAIN_IMAGE),$(FTST_ACE_MAIN_IMAGE_DIR),$(FTST_ACE_BINARY)))
-$(eval $(call FTST_GENERATE_ACE_IMAGE,$(FTST_ACE_SIDEKICK_IMAGE),$(FTST_ACE_SIDEKICK_IMAGE_DIR),$(FTST_ACE_BINARY)))
+$(eval $(call FTST_GENERATE_ACE_IMAGE,$(FTST_ACE_MAIN_IMAGE),$(FTST_ACE_MAIN_IMAGE_DIR),$(FTST_ACE_BINARY),$(FTST_ACE_MAIN_IMAGE_MANIFEST_SRC)))
+$(eval $(call FTST_GENERATE_ACE_IMAGE,$(FTST_ACE_SIDEKICK_IMAGE),$(FTST_ACE_SIDEKICK_IMAGE_DIR),$(FTST_ACE_BINARY),$(FTST_ACE_SIDEKICK_IMAGE_MANIFEST_SRC)))
 
 $(call undefine-namespaces,FTST)
