@@ -114,7 +114,7 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
-		for _ = range c {
+		for range c {
 			err := killAllChildren(int32(execCmd.Process.Pid))
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "cleanup failed: %v\n", err)
