@@ -214,7 +214,15 @@ static void load_env(const char *env_file, const char *keep_env_file, int enteri
 
 	set_env(env_file);
 	set_env(keep_env_file);
-	if (entering) setenv("TERM", term, 1);
+	if (entering) {
+		// enter is typically interactive; ensure we always have a sane enough term
+		// variable.
+		if (term == NULL) {
+			setenv("TERM", "vt100", 1);
+		} else {
+			setenv("TERM", term, 1);
+		}
+	}
 }
 
 /* Parse a comma-separated list of numeric gids from str, returns an malloc'd
