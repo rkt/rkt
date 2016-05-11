@@ -46,13 +46,17 @@ func readIntFromFile(path string) (i int, err error) {
 }
 
 func main() {
+
 	flag.Parse()
 
+	pid, err := readIntFromFile("pid")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
+		os.Exit(1)
+	}
+
 	if force {
-		if pid, err := readIntFromFile("pid"); err != nil {
-			fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
-			os.Exit(1)
-		} else if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
+		if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
 			fmt.Fprintf(os.Stderr, "error sending %v: %v\n", syscall.SIGKILL, err)
 			os.Exit(1)
 		}

@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"syscall"
+
+	"github.com/shirou/gopsutil/process"
 )
 
 var (
@@ -32,7 +33,7 @@ func init() {
 	flag.BoolVar(&force, "force", false, "Forced stopping")
 }
 
-func readIntFromFile(path string) (i int, err error) {
+func readIntFromFile(path string) (i int32, err error) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return
@@ -41,28 +42,43 @@ func readIntFromFile(path string) (i int, err error) {
 	return
 }
 
-func stop(signal syscall.Signal) int {
-	pid, err := readIntFromFile("ppid")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
-		return 1
-	}
-
-	if err := syscall.Kill(pid, signal); err != nil {
-		fmt.Fprintf(os.Stderr, "error sending %v: %v\n", signal, err)
-		return 1
-	}
-
-	return 0
-}
-
 func main() {
 	flag.Parse()
 
-	signal := syscall.SIGTERM
-	if force {
-		signal = syscall.SIGKILL
+	pid, err := readIntFromFile("ppid")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
+		return
 	}
 
-	os.Exit(stop(signal))
+	process, err := process.NewProcess(pid)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "unable to create process %d instance: %v\n", pid, err)
+		return
+	}
+
+	if force {
+		children, err := process.Children()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "cannot get child processes from %d: %v\n", pid, err)
+			os.Exit(1)
+		}
+
+		for _, child := range children {
+			if err := child.Kill(); err != nil {
+				fmt.Fprintf(os.Stderr, "unable to kill process %d: %v\n", child.Pid, err)
+				os.Exit(1)
+			}
+		}
+
+		if err := process.Kill(); err != nil {
+			fmt.Fprintf(os.Stderr, "unable to kill process %d: %v\n", pid, err)
+			os.Exit(1)
+		}
+	} else {
+		if process.Terminate() != nil {
+			fmt.Fprintf(os.Stderr, "unable to terminate process %d: %v\n", pid, err)
+			os.Exit(1)
+		}
+	}
 }
