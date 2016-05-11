@@ -33,19 +33,19 @@ const (
 const (
 	InsecureNone InsecureOption = 0
 
-	InsecureTls InsecureOption = 1 << iota
-	InsecureHttp
+	InsecureTLS InsecureOption = 1 << iota
+	InsecureHTTP
 )
 
 var (
 	// Client is the default http.Client used for discovery requests.
 	Client            *http.Client
-	ClientInsecureTls *http.Client
+	ClientInsecureTLS *http.Client
 
 	// httpDo is the internal object used by discovery to retrieve URLs; it is
 	// defined here so it can be overridden for testing
 	httpDo            httpDoer
-	httpDoInsecureTls httpDoer
+	httpDoInsecureTLS httpDoer
 )
 
 // httpDoer is an interface used to wrap http.Client for real requests and
@@ -66,13 +66,13 @@ func init() {
 	}
 	httpDo = Client
 
-	// copy for InsecureTls
-	tInsecureTls := *t
-	tInsecureTls.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	ClientInsecureTls = &http.Client{
-		Transport: &tInsecureTls,
+	// copy for InsecureTLS
+	tInsecureTLS := *t
+	tInsecureTLS.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	ClientInsecureTLS = &http.Client{
+		Transport: &tInsecureTLS,
 	}
-	httpDoInsecureTls = ClientInsecureTls
+	httpDoInsecureTLS = ClientInsecureTLS
 }
 
 func httpsOrHTTP(name string, hostHeaders map[string]http.Header, insecure InsecureOption) (urlStr string, body io.ReadCloser, err error) {
@@ -90,8 +90,8 @@ func httpsOrHTTP(name string, hostHeaders map[string]http.Header, insecure Insec
 		if hostHeader, ok := hostHeaders[u.Host]; ok {
 			req.Header = hostHeader
 		}
-		if insecure&InsecureTls != 0 {
-			res, err = httpDoInsecureTls.Do(req)
+		if insecure&InsecureTLS != 0 {
+			res, err = httpDoInsecureTLS.Do(req)
 			return
 		}
 		res, err = httpDo.Do(req)
@@ -104,7 +104,7 @@ func httpsOrHTTP(name string, hostHeaders map[string]http.Header, insecure Insec
 	}
 	urlStr, res, err := fetch("https")
 	if err != nil || res.StatusCode != http.StatusOK {
-		if insecure&InsecureHttp != 0 {
+		if insecure&InsecureHTTP != 0 {
 			closeBody(res)
 			urlStr, res, err = fetch("http")
 		}

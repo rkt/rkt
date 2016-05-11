@@ -37,15 +37,17 @@ type ACIEndpoint struct {
 	ASC string
 }
 
-type Endpoints struct {
+// A struct containing both discovered endpoints and keys. Used to avoid
+// function duplication (one for endpoints and one for keys, so to avoid two
+// doDiscover, two DiscoverWalkFunc)
+type discoveryData struct {
 	ACIEndpoints []ACIEndpoint
-	Keys         []string
+	PublicKeys   []string
 }
 
-func (e *Endpoints) Append(ep Endpoints) {
-	e.ACIEndpoints = append(e.ACIEndpoints, ep.ACIEndpoints...)
-	e.Keys = append(e.Keys, ep.Keys...)
-}
+type ACIEndpoints []ACIEndpoint
+
+type PublicKeys []string
 
 const (
 	defaultVersion = "latest"
@@ -124,7 +126,7 @@ func createTemplateVars(app App) []string {
 	return tplVars
 }
 
-func doDiscover(pre string, hostHeaders map[string]http.Header, app App, insecure InsecureOption) (*Endpoints, error) {
+func doDiscover(pre string, hostHeaders map[string]http.Header, app App, insecure InsecureOption) (*discoveryData, error) {
 	app = *app.Copy()
 	if app.Labels["version"] == "" {
 		app.Labels["version"] = defaultVersion
@@ -140,7 +142,7 @@ func doDiscover(pre string, hostHeaders map[string]http.Header, app App, insecur
 
 	tplVars := createTemplateVars(app)
 
-	de := &Endpoints{}
+	dd := &discoveryData{}
 
 	for _, m := range meta {
 		if !strings.HasPrefix(app.Name.String(), m.prefix) {
@@ -159,41 +161,37 @@ func doDiscover(pre string, hostHeaders map[string]http.Header, app App, insecur
 			if !ok {
 				continue
 			}
-			de.ACIEndpoints = append(de.ACIEndpoints, ACIEndpoint{ACI: aci, ASC: asc})
+			dd.ACIEndpoints = append(dd.ACIEndpoints, ACIEndpoint{ACI: aci, ASC: asc})
 
 		case "ac-discovery-pubkeys":
-			de.Keys = append(de.Keys, m.uri)
+			dd.PublicKeys = append(dd.PublicKeys, m.uri)
 		}
 	}
 
-	return de, nil
+	return dd, nil
 }
 
 // DiscoverWalk will make HTTPS requests to find discovery meta tags and
 // optionally will use HTTP if insecure is set. hostHeaders specifies the
 // header to apply depending on the host (e.g. authentication). Based on the
 // response of the discoverFn it will continue to recurse up the tree.
-func DiscoverWalk(app App, hostHeaders map[string]http.Header, insecure InsecureOption, discoverFn DiscoverWalkFunc) (err error) {
-	var (
-		eps *Endpoints
-	)
-
+func DiscoverWalk(app App, hostHeaders map[string]http.Header, insecure InsecureOption, discoverFn DiscoverWalkFunc) (dd *discoveryData, err error) {
 	parts := strings.Split(string(app.Name), "/")
 	for i := range parts {
 		end := len(parts) - i
 		pre := strings.Join(parts[:end], "/")
 
-		eps, err = doDiscover(pre, hostHeaders, app, insecure)
-		if derr := discoverFn(pre, eps, err); derr != nil {
-			return derr
+		dd, err = doDiscover(pre, hostHeaders, app, insecure)
+		if derr := discoverFn(pre, dd, err); derr != nil {
+			return dd, derr
 		}
 	}
 
-	return
+	return nil, fmt.Errorf("discovery failed")
 }
 
 // DiscoverWalkFunc can stop a DiscoverWalk by returning non-nil error.
-type DiscoverWalkFunc func(prefix string, eps *Endpoints, err error) error
+type DiscoverWalkFunc func(prefix string, dd *discoveryData, err error) error
 
 // FailedAttempt represents a failed discovery attempt. This is for debugging
 // and user feedback.
@@ -202,59 +200,58 @@ type FailedAttempt struct {
 	Error  error
 }
 
-func walker(out *Endpoints, attempts *[]FailedAttempt, testFn DiscoverWalkFunc) DiscoverWalkFunc {
-	return func(pre string, eps *Endpoints, err error) error {
+func walker(attempts *[]FailedAttempt, testFn DiscoverWalkFunc) DiscoverWalkFunc {
+	return func(pre string, dd *discoveryData, err error) error {
 		if err != nil {
 			*attempts = append(*attempts, FailedAttempt{pre, err})
 			return nil
 		}
-		out.Append(*eps)
-		if err := testFn(pre, eps, err); err != nil {
+		if err := testFn(pre, dd, err); err != nil {
 			return err
 		}
 		return nil
 	}
 }
 
-// DiscoverEndpoints will make HTTPS requests to find the ac-discovery meta
+// DiscoverACIEndpoints will make HTTPS requests to find the ac-discovery meta
 // tags and optionally will use HTTP if insecure is set. hostHeaders
 // specifies the header to apply depending on the host (e.g. authentication).
 // It will not give up until it has exhausted the path or found an image
 // discovery.
-func DiscoverEndpoints(app App, hostHeaders map[string]http.Header, insecure InsecureOption) (out *Endpoints, attempts []FailedAttempt, err error) {
-	out = &Endpoints{}
-	testFn := func(pre string, eps *Endpoints, err error) error {
-		if len(out.ACIEndpoints) != 0 {
+func DiscoverACIEndpoints(app App, hostHeaders map[string]http.Header, insecure InsecureOption) (ACIEndpoints, []FailedAttempt, error) {
+	testFn := func(pre string, dd *discoveryData, err error) error {
+		if len(dd.ACIEndpoints) != 0 {
 			return errEnough
 		}
 		return nil
 	}
 
-	err = DiscoverWalk(app, hostHeaders, insecure, walker(out, &attempts, testFn))
+	attempts := []FailedAttempt{}
+	dd, err := DiscoverWalk(app, hostHeaders, insecure, walker(&attempts, testFn))
 	if err != nil && err != errEnough {
 		return nil, attempts, err
 	}
 
-	return out, attempts, nil
+	return dd.ACIEndpoints, attempts, nil
 }
 
 // DiscoverPublicKey will make HTTPS requests to find the ac-public-keys meta
 // tags and optionally will use HTTP if insecure is set. hostHeaders
 // specifies the header to apply depending on the host (e.g. authentication).
 // It will not give up until it has exhausted the path or found an public key.
-func DiscoverPublicKeys(app App, hostHeaders map[string]http.Header, insecure InsecureOption) (out *Endpoints, attempts []FailedAttempt, err error) {
-	out = &Endpoints{}
-	testFn := func(pre string, eps *Endpoints, err error) error {
-		if len(out.Keys) != 0 {
+func DiscoverPublicKeys(app App, hostHeaders map[string]http.Header, insecure InsecureOption) (PublicKeys, []FailedAttempt, error) {
+	testFn := func(pre string, dd *discoveryData, err error) error {
+		if len(dd.PublicKeys) != 0 {
 			return errEnough
 		}
 		return nil
 	}
 
-	err = DiscoverWalk(app, hostHeaders, insecure, walker(out, &attempts, testFn))
+	attempts := []FailedAttempt{}
+	dd, err := DiscoverWalk(app, hostHeaders, insecure, walker(&attempts, testFn))
 	if err != nil && err != errEnough {
 		return nil, attempts, err
 	}
 
-	return out, attempts, nil
+	return dd.PublicKeys, attempts, nil
 }

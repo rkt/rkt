@@ -60,29 +60,44 @@ func runDiscover(args []string) (exit int) {
 		}
 		insecure := discovery.InsecureNone
 		if transportFlags.Insecure {
-			insecure = discovery.InsecureTls | discovery.InsecureHttp
+			insecure = discovery.InsecureTLS | discovery.InsecureHTTP
 		}
-		eps, attempts, err := discovery.DiscoverEndpoints(*app, nil, insecure)
+		eps, attempts, err := discovery.DiscoverACIEndpoints(*app, nil, insecure)
 		if err != nil {
-			stderr("error fetching %s: %s", name, err)
+			stderr("error fetching endpoints for %s: %s", name, err)
 			return 1
 		}
 		for _, a := range attempts {
-			fmt.Printf("discover walk: prefix: %s error: %v\n", a.Prefix, a.Error)
+			fmt.Printf("discover endpoints walk: prefix: %s error: %v\n", a.Prefix, a.Error)
 		}
+		publicKeys, attempts, err := discovery.DiscoverPublicKeys(*app, nil, insecure)
+		if err != nil {
+			stderr("error fetching public keys for %s: %s", name, err)
+			return 1
+		}
+		for _, a := range attempts {
+			fmt.Printf("discover public keys walk: prefix: %s error: %v\n", a.Prefix, a.Error)
+		}
+
+		type discoveryData struct {
+			ACIEndpoints []discovery.ACIEndpoint
+			PublicKeys   []string
+		}
+
 		if outputJson {
-			jsonBytes, err := json.MarshalIndent(&eps, "", "    ")
+			dd := discoveryData{ACIEndpoints: eps, PublicKeys: publicKeys}
+			jsonBytes, err := json.MarshalIndent(dd, "", "    ")
 			if err != nil {
 				stderr("error generating JSON: %s", err)
 				return 1
 			}
 			fmt.Println(string(jsonBytes))
 		} else {
-			for _, aciEndpoint := range eps.ACIEndpoints {
+			for _, aciEndpoint := range eps {
 				fmt.Printf("ACI: %s, ASC: %s\n", aciEndpoint.ACI, aciEndpoint.ASC)
 			}
-			if len(eps.Keys) > 0 {
-				fmt.Println("Keys: " + strings.Join(eps.Keys, ","))
+			if len(publicKeys) > 0 {
+				fmt.Println("PublicKeys: " + strings.Join(publicKeys, ","))
 			}
 		}
 	}

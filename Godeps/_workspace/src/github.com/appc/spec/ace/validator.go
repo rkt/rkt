@@ -226,7 +226,7 @@ func ValidateMountpoints(wmp map[string]types.MountPoint) results {
 	return r
 }
 
-func metadataRequest(req *http.Request) ([]byte, error) {
+func metadataRequest(req *http.Request, expectedContentType string) ([]byte, error) {
 	cli := http.Client{
 		Timeout: 100 * time.Millisecond,
 	}
@@ -242,6 +242,11 @@ func metadataRequest(req *http.Request) ([]byte, error) {
 		return nil, fmt.Errorf("Get %s failed with %v", req.URL, resp.StatusCode)
 	}
 
+	if respContentType := resp.Header.Get("Content-Type"); respContentType != expectedContentType {
+		return nil, fmt.Errorf("`%s` did not respond with expected Content-Type header.  Expected %s, received %s",
+			req.RequestURI, expectedContentType, respContentType)
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("Get %s failed on body read: %v", req.URL, err)
@@ -250,27 +255,28 @@ func metadataRequest(req *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-func metadataGet(metadataURL, path string) ([]byte, error) {
+func metadataGet(metadataURL, path string, expectedContentType string) ([]byte, error) {
 	uri := metadataURL + metadataPathBase + path
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
 		panic(err)
 	}
-	return metadataRequest(req)
+
+	return metadataRequest(req, expectedContentType)
 }
 
-func metadataPost(metadataURL, path string, body []byte) ([]byte, error) {
+func metadataPost(metadataURL, path string, body []byte, expectedContentType string) ([]byte, error) {
 	uri := metadataURL + metadataPathBase + path
 	req, err := http.NewRequest("POST", uri, bytes.NewBuffer(body))
 	if err != nil {
 		panic(err)
 	}
-	req.Header.Set("Content-Type", "text/plan")
+	req.Header.Set("Content-Type", "text/plain")
 
-	return metadataRequest(req)
+	return metadataRequest(req, expectedContentType)
 }
 
-func metadataPostForm(metadataURL, path string, data url.Values) ([]byte, error) {
+func metadataPostForm(metadataURL, path string, data url.Values, expectedContentType string) ([]byte, error) {
 	uri := metadataURL + metadataPathBase + path
 	req, err := http.NewRequest("POST", uri, strings.NewReader(data.Encode()))
 	if err != nil {
@@ -278,7 +284,7 @@ func metadataPostForm(metadataURL, path string, data url.Values) ([]byte, error)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	return metadataRequest(req)
+	return metadataRequest(req, expectedContentType)
 }
 
 func validatePodAnnotations(metadataURL string, pm *schema.PodManifest) results {
@@ -286,28 +292,14 @@ func validatePodAnnotations(metadataURL string, pm *schema.PodManifest) results 
 
 	var actualAnnots types.Annotations
 
-	annots, err := metadataGet(metadataURL, "/pod/annotations/")
+	annotJson, err := metadataGet(metadataURL, "/pod/annotations/", "application/json")
 	if err != nil {
 		return append(r, err)
 	}
 
-	for _, key := range strings.Split(string(annots), "\n") {
-		if key == "" {
-			continue
-		}
-
-		val, err := metadataGet(metadataURL, "/pod/annotations/"+key)
-		if err != nil {
-			r = append(r, err)
-		}
-
-		name, err := types.NewACIdentifier(key)
-		if err != nil {
-			r = append(r, fmt.Errorf("invalid annotation name: %v", err))
-			continue
-		}
-
-		actualAnnots.Set(*name, string(val))
+	err = json.Unmarshal(annotJson, actualAnnots)
+	if err != nil {
+		return append(r, err)
 	}
 
 	if !reflect.DeepEqual(actualAnnots, pm.Annotations) {
@@ -320,7 +312,7 @@ func validatePodAnnotations(metadataURL string, pm *schema.PodManifest) results 
 func validatePodMetadata(metadataURL string, pm *schema.PodManifest) results {
 	r := results{}
 
-	uuid, err := metadataGet(metadataURL, "/pod/uuid")
+	uuid, err := metadataGet(metadataURL, "/pod/uuid", "text/plain; charset=us-ascii")
 	if err != nil {
 		return append(r, err)
 	}
@@ -349,28 +341,14 @@ func validateAppAnnotations(metadataURL string, pm *schema.PodManifest, app *sch
 
 	var actualAnnots types.Annotations
 
-	annots, err := metadataGet(metadataURL, "/apps/"+string(app.Name)+"/annotations/")
+	annotJson, err := metadataGet(metadataURL, "/apps/"+string(app.Name)+"/annotations", "application/json")
 	if err != nil {
 		return append(r, err)
 	}
 
-	for _, key := range strings.Split(string(annots), "\n") {
-		if key == "" {
-			continue
-		}
-
-		val, err := metadataGet(metadataURL, "/apps/"+string(app.Name)+"/annotations/"+key)
-		if err != nil {
-			r = append(r, err)
-		}
-
-		lbl, err := types.NewACIdentifier(key)
-		if err != nil {
-			r = append(r, fmt.Errorf("invalid annotation name: %v", err))
-			continue
-		}
-
-		actualAnnots.Set(*lbl, string(val))
+	err = json.Unmarshal(annotJson, actualAnnots)
+	if err != nil {
+		return append(r, err)
 	}
 
 	if !reflect.DeepEqual(actualAnnots, expectedAnnots) {
@@ -384,7 +362,7 @@ func validateAppAnnotations(metadataURL string, pm *schema.PodManifest, app *sch
 func validateAppMetadata(metadataURL string, pm *schema.PodManifest, app *schema.RuntimeApp) results {
 	r := results{}
 
-	am, err := metadataGet(metadataURL, "/apps/"+app.Name.String()+"/image/manifest")
+	am, err := metadataGet(metadataURL, "/apps/"+app.Name.String()+"/image/manifest", "application/json")
 	if err != nil {
 		return append(r, err)
 	}
@@ -394,7 +372,7 @@ func validateAppMetadata(metadataURL string, pm *schema.PodManifest, app *schema
 		return append(r, fmt.Errorf("failed to JSON-decode %q manifest: %v", app.Name.String(), err))
 	}
 
-	id, err := metadataGet(metadataURL, "/apps/"+app.Name.String()+"/image/id")
+	id, err := metadataGet(metadataURL, "/apps/"+app.Name.String()+"/image/id", "text/plain; charset=us-ascii")
 	if err != nil {
 		r = append(r, err)
 	}
@@ -411,7 +389,7 @@ func validateSigning(metadataURL string, pm *schema.PodManifest) results {
 	r := results{}
 
 	// Get our UUID
-	uuid, err := metadataGet(metadataURL, "/pod/uuid")
+	uuid, err := metadataGet(metadataURL, "/pod/uuid", "text/plain; charset=us-ascii")
 	if err != nil {
 		return append(r, err)
 	}
@@ -421,7 +399,7 @@ func validateSigning(metadataURL string, pm *schema.PodManifest) results {
 	// Sign
 	sig, err := metadataPostForm(metadataURL, "/pod/hmac/sign", url.Values{
 		"content": []string{plaintext},
-	})
+	}, "text/plain; charset=us-ascii")
 	if err != nil {
 		return append(r, err)
 	}
@@ -431,7 +409,7 @@ func validateSigning(metadataURL string, pm *schema.PodManifest) results {
 		"content":   []string{plaintext},
 		"uuid":      []string{string(uuid)},
 		"signature": []string{string(sig)},
-	})
+	}, "text/plain; charset=us-ascii")
 
 	if err != nil {
 		return append(r, err)
@@ -448,7 +426,7 @@ func ValidateMetadataSvc() results {
 		return append(r, fmt.Errorf("AC_METADATA_URL is not set"))
 	}
 
-	pod, err := metadataGet(metadataURL, "/pod/manifest")
+	pod, err := metadataGet(metadataURL, "/pod/manifest", "application/json")
 	if err != nil {
 		return append(r, err)
 	}

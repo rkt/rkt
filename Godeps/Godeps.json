@@ -163,62 +163,58 @@
 		},
 		{
 			"ImportPath": "github.com/appc/spec/ace",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/aci",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/actool",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/discovery",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/acirenderer",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/device",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/tarheader",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema/common",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema/lastditch",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema/types",
-			"Comment": "v0.7.4",
-			"Rev": "0875c991a496fe2b65ed296551c667b199a6bfb8"
-		},
-		{
-			"ImportPath": "github.com/camlistore/camlistore/pkg/errorutil",
-			"Rev": "9868aa0f8d8a93ff0b30ff0de46cc351b6b88b30"
+			"Comment": "v0.8.0",
+			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
 		},
 		{
 			"ImportPath": "github.com/camlistore/go4/lock",
@@ -496,6 +492,10 @@
 		{
 			"ImportPath": "github.com/vishvananda/netlink/nl",
 			"Rev": "ecf47fd5739b3d2c3daf7c89c4b9715a2605c21b"
+		},
+		{
+			"ImportPath": "go4.org/errorutil",
+			"Rev": "03efcb870d84809319ea509714dd6d19a1498483"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/cast5",
