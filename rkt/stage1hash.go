@@ -114,35 +114,35 @@ var (
 			kind: stage1ImageLocationURL,
 			flag: "stage1-url",
 			name: "stage1URL",
-			help: "a URL to an image to use as stage1",
+			help: "URL to an image to use as stage1",
 		},
 
 		stage1ImageLocationPath: {
 			kind: stage1ImageLocationPath,
 			flag: "stage1-path",
 			name: "stage1Path",
-			help: "an absolute or a relative path to an image to use as stage1",
+			help: "absolute or relative path to an image to use as stage1",
 		},
 
 		stage1ImageLocationName: {
 			kind: stage1ImageLocationName,
 			flag: "stage1-name",
 			name: "stage1Name",
-			help: "a name of an image to use as stage1",
+			help: "name of an image to use as stage1",
 		},
 
 		stage1ImageLocationHash: {
 			kind: stage1ImageLocationHash,
 			flag: "stage1-hash",
 			name: "stage1Hash",
-			help: "a hash of an image to use as stage1",
+			help: "hash of an image to use as stage1",
 		},
 
 		stage1ImageLocationFromDir: {
 			kind: stage1ImageLocationFromDir,
 			flag: "stage1-from-dir",
 			name: "stage1FromDir",
-			help: "a filename of an image in stage1 images directory to use as stage1",
+			help: "filename of an image in stage1 images directory to use as stage1",
 		},
 	}
 	// location to stage1 image overridden by one of --stage1-*
