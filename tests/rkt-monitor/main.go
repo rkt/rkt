@@ -15,7 +15,9 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -44,6 +46,7 @@ var (
 	flagVerbose    bool
 	flagDuration   string
 	flagShowOutput bool
+	saveToCsv      bool
 
 	cmdRktMonitor = &cobra.Command{
 		Use:     "rkt-monitor IMAGE",
@@ -59,6 +62,9 @@ func init() {
 	cmdRktMonitor.Flags().BoolVarP(&flagVerbose, "verbose", "v", false, "Print current usage every second")
 	cmdRktMonitor.Flags().StringVarP(&flagDuration, "duration", "d", "10s", "How long to run the ACI")
 	cmdRktMonitor.Flags().BoolVarP(&flagShowOutput, "show-output", "o", false, "Display rkt's stdout and stderr")
+	cmdRktMonitor.Flags().BoolVarP(&saveToCsv, "to-file", "f", false, "Save benchmark results to benchmark.csv file")
+
+	flag.Parse()
 }
 
 func main() {
@@ -119,7 +125,7 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
-		for _ = range c {
+		for range c {
 			err := killAllChildren(int32(execCmd.Process.Pid))
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "cleanup failed: %v\n", err)
@@ -131,6 +137,9 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 	usages := make(map[int32][]*ProcessStatus)
 
 	timeToStop := time.Now().Add(d)
+
+	records := [][]string{{"Time", "PID name", "PID number", "RSS", "CPU"}} // csv headers
+
 	for time.Now().Before(timeToStop) {
 		usage, err := getUsage(int32(execCmd.Process.Pid))
 		if err != nil {
@@ -138,6 +147,10 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 		}
 		if flagVerbose {
 			printUsage(usage)
+		}
+
+		if saveToCsv {
+			records = addRecords(usage, records)
 		}
 
 		for _, ps := range usage {
@@ -181,6 +194,14 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 
 		fmt.Printf("%s(%d): seconds alive: %d  avg CPU: %f%%  avg Mem: %s  peak Mem: %s\n", processHistory[0].Name, processHistory[0].Pid, len(processHistory), avgCPU, formatSize(avgMem), formatSize(peakMem))
 	}
+
+	if saveToCsv {
+		saveRecords(records)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Can't write to a file: %v\n", err)
+		}
+	}
+
 	fmt.Printf("load average: Load1: %f Load5: %f Load15: %f\n", loadAvg.Load1, loadAvg.Load5, loadAvg.Load15)
 
 	fmt.Printf("container start time: %dns\n", containerStarted.Sub(containerStarting).Nanoseconds())
@@ -295,4 +316,27 @@ func printUsage(statuses []*ProcessStatus) {
 		fmt.Printf("%s(%d): Mem: %s CPU: %f\n", s.Name, s.Pid, formatSize(s.RSS), s.CPU)
 	}
 	fmt.Printf("\n")
+}
+
+func addRecords(statuses []*ProcessStatus, records [][]string) [][]string {
+	for _, s := range statuses {
+		records = append(records, []string{time.Now().String(), s.Name, strconv.Itoa(int(s.Pid)), formatSize(s.RSS), strconv.FormatFloat(s.CPU, 'g', 1, 64)})
+	}
+	return records
+}
+
+func saveRecords(records [][]string) error {
+	csvFile, err := os.Create("benchmark.csv")
+	defer csvFile.Close()
+	if err != nil {
+		return err
+	}
+
+	w := csv.NewWriter(csvFile)
+	w.WriteAll(records)
+	if err := w.Error(); err != nil {
+		return err
+	}
+
+	return nil
 }
