@@ -417,7 +417,7 @@ type podInfo struct {
 	state     string
 	apps      map[string]*appInfo
 	networks  map[string]*networkInfo
-	manifest  []byte
+	manifest  *schema.PodManifest
 	createdAt int64
 	startedAt int64
 }
@@ -435,7 +435,8 @@ func parsePodInfoOutput(t *testing.T, result string, p *podInfo) {
 	for _, line := range lines {
 		tuples := strings.SplitN(line, "=", 2)
 		if len(tuples) != 2 {
-			t.Fatalf("Unexpected line: %v", line)
+			t.Logf("Unexpected line: %v", line)
+			continue
 		}
 
 		switch tuples[0] {
@@ -521,6 +522,7 @@ func getPodDir(t *testing.T, ctx *testutils.RktRunCtx, podID string) string {
 func getPodInfo(t *testing.T, ctx *testutils.RktRunCtx, podID string) *podInfo {
 	p := &podInfo{
 		id:       podID,
+		pid:      -1,
 		apps:     make(map[string]*appInfo),
 		networks: make(map[string]*networkInfo),
 	}
@@ -532,14 +534,13 @@ func getPodInfo(t *testing.T, ctx *testutils.RktRunCtx, podID string) *podInfo {
 	}
 
 	// Trim the last '\n' character.
-	p.manifest = bytes.TrimSpace(output)
+	mfst := bytes.TrimSpace(output)
 
 	// Fill app infos.
-	var manifest schema.PodManifest
-	if err := json.Unmarshal(p.manifest, &manifest); err != nil {
+	if err := json.Unmarshal(mfst, &p.manifest); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	for _, app := range manifest.Apps {
+	for _, app := range p.manifest.Apps {
 		appName := app.Name.String()
 		p.apps[appName] = &appInfo{
 			name: appName,
@@ -549,10 +550,7 @@ func getPodInfo(t *testing.T, ctx *testutils.RktRunCtx, podID string) *podInfo {
 	}
 
 	// Fill other infos.
-	output, err = exec.Command("/bin/bash", "-c", fmt.Sprintf("%s status %s", ctx.Cmd(), podID)).CombinedOutput()
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
+	output, _ = exec.Command("/bin/bash", "-c", fmt.Sprintf("%s status %s", ctx.Cmd(), podID)).CombinedOutput()
 	parsePodInfoOutput(t, string(output), p)
 
 	return p
