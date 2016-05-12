@@ -157,12 +157,12 @@ func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 	hostHeaders := config.ResolveAuthPerHost(m.AuthPerHost)
 	insecure := discovery.InsecureNone
 	if m.InsecureAllowHTTP {
-		insecure = insecure | discovery.InsecureHttp
+		insecure = insecure | discovery.InsecureHTTP
 	}
 	if m.InsecureSkipTLSCheck {
-		insecure = insecure | discovery.InsecureTls
+		insecure = insecure | discovery.InsecureTLS
 	}
-	ep, attempts, err := discovery.DiscoverPublicKeys(*app, hostHeaders, insecure)
+	keys, attempts, err := discovery.DiscoverPublicKeys(*app, hostHeaders, insecure)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 		}
 	}
 
-	return ep.Keys, nil
+	return keys, nil
 }
 
 // getPubKey retrieves a public key (if remote), and verifies it's a gpg key

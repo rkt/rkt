@@ -47,6 +47,7 @@ var (
 	patchGroup             string
 	patchSupplementaryGIDs string
 	patchCaps              string
+	patchRevokeCaps        string
 	patchMounts            string
 	patchPorts             string
 	patchIsolators         string
@@ -63,6 +64,7 @@ var (
 		  [--exec="/app --debug"]
 		  [--user=uid] [--group=gid]
 		  [--capability=CAP_SYS_ADMIN,CAP_NET_ADMIN]
+		  [--revoke-capability=CAP_SYS_CHROOT,CAP_MKNOD]
 		  [--mounts=work,path=/opt,readOnly=true[:work2,...]]
 		  [--ports=query,protocol=tcp,port=8080[:query2,...]]
 		  [--supplementary-groups=gid1,gid2,...]
@@ -92,7 +94,8 @@ func init() {
 	cmdPatchManifest.Flags.StringVar(&patchUser, "user", "", "Replace user")
 	cmdPatchManifest.Flags.StringVar(&patchGroup, "group", "", "Replace group")
 	cmdPatchManifest.Flags.StringVar(&patchSupplementaryGIDs, "supplementary-groups", "", "Replace supplementary groups, expects a comma-separated list.")
-	cmdPatchManifest.Flags.StringVar(&patchCaps, "capability", "", "Replace capability")
+	cmdPatchManifest.Flags.StringVar(&patchCaps, "capability", "", "Set the capability remain set")
+	cmdPatchManifest.Flags.StringVar(&patchRevokeCaps, "revoke-capability", "", "Set the capability remove set")
 	cmdPatchManifest.Flags.StringVar(&patchMounts, "mounts", "", "Replace mount points")
 	cmdPatchManifest.Flags.StringVar(&patchPorts, "ports", "", "Replace ports")
 	cmdPatchManifest.Flags.StringVar(&patchIsolators, "isolators", "", "Replace isolators")
@@ -161,7 +164,14 @@ func patchManifest(im *schema.ImageManifest) error {
 		app.Exec = strings.Split(patchExec, " ")
 	}
 
-	if patchUser != "" || patchGroup != "" || patchSupplementaryGIDs != "" || patchCaps != "" || patchMounts != "" || patchPorts != "" || patchIsolators != "" {
+	if patchUser != "" ||
+		patchGroup != "" ||
+		patchSupplementaryGIDs != "" ||
+		patchCaps != "" ||
+		patchRevokeCaps != "" ||
+		patchMounts != "" ||
+		patchPorts != "" ||
+		patchIsolators != "" {
 		// ...but if we still don't have an app and the user is trying
 		// to patch one of its other parameters, it's an error
 		if app == nil {
@@ -192,7 +202,7 @@ func patchManifest(im *schema.ImageManifest) error {
 	if patchCaps != "" {
 		isolator := app.Isolators.GetByName(types.LinuxCapabilitiesRetainSetName)
 		if isolator != nil {
-			return fmt.Errorf("isolator already exists")
+			return fmt.Errorf("isolator already exists (os/linux/capabilities-retain-set)")
 		}
 
 		// Instantiate a Isolator with the content specified by the --capability
@@ -200,6 +210,20 @@ func patchManifest(im *schema.ImageManifest) error {
 		caps, err := types.NewLinuxCapabilitiesRetainSet(strings.Split(patchCaps, ",")...)
 		if err != nil {
 			return fmt.Errorf("cannot parse capability %q: %v", patchCaps, err)
+		}
+		app.Isolators = append(app.Isolators, caps.AsIsolator())
+	}
+	if patchRevokeCaps != "" {
+		isolator := app.Isolators.GetByName(types.LinuxCapabilitiesRevokeSetName)
+		if isolator != nil {
+			return fmt.Errorf("isolator already exists (os/linux/capabilities-remove-set)")
+		}
+
+		// Instantiate a Isolator with the content specified by the --revoke-capability
+		// parameter.
+		caps, err := types.NewLinuxCapabilitiesRevokeSet(strings.Split(patchRevokeCaps, ",")...)
+		if err != nil {
+			return fmt.Errorf("cannot parse capability %q: %v", patchRevokeCaps, err)
 		}
 		app.Isolators = append(app.Isolators, caps.AsIsolator())
 	}

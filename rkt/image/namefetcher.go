@@ -61,16 +61,16 @@ func (f *nameFetcher) Hash(app *discovery.App, a *asc) (string, error) {
 	return f.fetchImageFromEndpoints(app, ep, a, latest)
 }
 
-func (f *nameFetcher) discoverApp(app *discovery.App) (*discovery.Endpoints, error) {
+func (f *nameFetcher) discoverApp(app *discovery.App) (discovery.ACIEndpoints, error) {
 	insecure := discovery.InsecureNone
 	if f.InsecureFlags.SkipTLSCheck() {
-		insecure = insecure | discovery.InsecureTls
+		insecure = insecure | discovery.InsecureTLS
 	}
 	if f.InsecureFlags.AllowHTTP() {
-		insecure = insecure | discovery.InsecureHttp
+		insecure = insecure | discovery.InsecureHTTP
 	}
 	hostHeaders := config.ResolveAuthPerHost(f.Headers)
-	ep, attempts, err := discovery.DiscoverEndpoints(*app, hostHeaders, insecure)
+	ep, attempts, err := discovery.DiscoverACIEndpoints(*app, hostHeaders, insecure)
 	if f.Debug {
 		for _, a := range attempts {
 			log.PrintE(fmt.Sprintf("meta tag 'ac-discovery' not found on %s", a.Prefix), a.Error)
@@ -79,19 +79,19 @@ func (f *nameFetcher) discoverApp(app *discovery.App) (*discovery.Endpoints, err
 	if err != nil {
 		return nil, err
 	}
-	if len(ep.ACIEndpoints) == 0 {
+	if len(ep) == 0 {
 		return nil, fmt.Errorf("no endpoints discovered")
 	}
 	return ep, nil
 }
 
-func (f *nameFetcher) fetchImageFromEndpoints(app *discovery.App, ep *discovery.Endpoints, a *asc, latest bool) (string, error) {
+func (f *nameFetcher) fetchImageFromEndpoints(app *discovery.App, ep discovery.ACIEndpoints, a *asc, latest bool) (string, error) {
 	ensureLogger(f.Debug)
 	// TODO(krnowak): we should probably try all the endpoints,
 	// for this we need to clone "a" and call
 	// maybeOverrideAscFetcherWithRemote on the clone
-	aciURL := ep.ACIEndpoints[0].ACI
-	ascURL := ep.ACIEndpoints[0].ASC
+	aciURL := ep[0].ACI
+	ascURL := ep[0].ASC
 	log.Printf("remote fetching from URL %q", aciURL)
 	f.maybeOverrideAscFetcherWithRemote(ascURL, a)
 	return f.fetchImageFromSingleEndpoint(app, aciURL, a, latest)
