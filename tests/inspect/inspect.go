@@ -42,6 +42,7 @@ var (
 		CheckTty           bool
 		PrintExec          bool
 		PrintMsg           string
+		SuffixMsg          string
 		PrintEnv           string
 		PrintCapsPid       int
 		PrintUser          bool
@@ -81,6 +82,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.CheckTty, "check-tty", false, "Check if stdin is a terminal")
 	globalFlagset.BoolVar(&globalFlags.PrintExec, "print-exec", false, "Print the command we were execed as (i.e. argv[0])")
 	globalFlagset.StringVar(&globalFlags.PrintMsg, "print-msg", "", "Print the message given as parameter")
+	globalFlagset.StringVar(&globalFlags.SuffixMsg, "suffix-msg", "", "Print this suffix after some commands")
 	globalFlagset.StringVar(&globalFlags.CheckCwd, "check-cwd", "", "Check if the current working directory is the one specified")
 	globalFlagset.StringVar(&globalFlags.PrintEnv, "print-env", "", "Print the specified environment variable")
 	globalFlagset.IntVar(&globalFlags.PrintCapsPid, "print-caps-pid", -1, "Print capabilities of the specified pid (or current process if pid=0)")
@@ -188,10 +190,10 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Cannot get caps: %v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("Capability set: effective: %s\n", caps.StringCap(capability.EFFECTIVE))
-		fmt.Printf("Capability set: permitted: %s\n", caps.StringCap(capability.PERMITTED))
-		fmt.Printf("Capability set: inheritable: %s\n", caps.StringCap(capability.INHERITABLE))
-		fmt.Printf("Capability set: bounding: %s\n", caps.StringCap(capability.BOUNDING))
+		fmt.Printf("Capability set: effective: %s (%s)\n", caps.StringCap(capability.EFFECTIVE), globalFlags.SuffixMsg)
+		fmt.Printf("Capability set: permitted: %s (%s)\n", caps.StringCap(capability.PERMITTED), globalFlags.SuffixMsg)
+		fmt.Printf("Capability set: inheritable: %s (%s)\n", caps.StringCap(capability.INHERITABLE), globalFlags.SuffixMsg)
+		fmt.Printf("Capability set: bounding: %s (%s)\n", caps.StringCap(capability.BOUNDING), globalFlags.SuffixMsg)
 
 		if capStr := os.Getenv("CAPABILITY"); capStr != "" {
 			capInt, err := strconv.Atoi(capStr)
@@ -201,9 +203,9 @@ func main() {
 			}
 			c := capability.Cap(capInt)
 			if caps.Get(capability.BOUNDING, c) {
-				fmt.Printf("%v=enabled\n", c.String())
+				fmt.Printf("%v=enabled (%s)\n", c.String(), globalFlags.SuffixMsg)
 			} else {
-				fmt.Printf("%v=disabled\n", c.String())
+				fmt.Printf("%v=disabled (%s)\n", c.String(), globalFlags.SuffixMsg)
 			}
 		}
 	}
