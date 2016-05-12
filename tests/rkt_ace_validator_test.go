@@ -56,16 +56,18 @@ func TestAceValidator(t *testing.T) {
 	child := spawnOrFail(t, rktCmd)
 	defer waitOrFail(t, child, 0)
 
+	out := ""
 	for _, set := range expected {
 		for len(set) > 0 {
-			results, _, err := expectRegexWithOutput(child, pattern)
+			results, o, err := expectRegexWithOutput(child, pattern)
+			out += o
 			if err != nil {
 				var keys []string
 				for k := range set {
 					keys = append(keys, fmt.Sprintf("%q", k))
 				}
 				ex := strings.Join(keys, " or ")
-				t.Fatalf("Expected %s, but not found: %v", ex, err)
+				t.Fatalf("Expected %s, but not found: %v\nOutput: %v", ex, err, out)
 			}
 			if len(results) != 2 {
 				t.Fatalf("Unexpected regex results, expected a whole match and one submatch, got %#v", results)
