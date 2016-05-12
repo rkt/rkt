@@ -309,7 +309,7 @@ func appGet(h func(http.ResponseWriter, *http.Request, *schema.PodManifest, *sch
 func handlePodAnnotations(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest) {
 	defer r.Body.Close()
 
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	for k := range pm.Annotations {
@@ -335,7 +335,7 @@ func handlePodAnnotation(w http.ResponseWriter, r *http.Request, pm *schema.PodM
 		return
 	}
 
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(v))
 }
@@ -363,7 +363,7 @@ func handlePodUUID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "text/plain; charset=us-ascii")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(uuid.String()))
 }
@@ -395,7 +395,7 @@ func handleAppAnnotations(w http.ResponseWriter, r *http.Request, pm *schema.Pod
 		return
 	}
 
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "text/plain; charset=us-ascii")
 	w.WriteHeader(http.StatusOK)
 
 	for _, annot := range mergeAppAnnotations(im, pm, an) {
@@ -431,7 +431,7 @@ func handleAppAnnotation(w http.ResponseWriter, r *http.Request, pm *schema.PodM
 		return
 	}
 
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(v))
 }
@@ -458,7 +458,7 @@ func handleAppID(w http.ResponseWriter, r *http.Request, pm *schema.PodManifest,
 		return
 	}
 
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "text/plain; charset=us-ascii")
 	w.WriteHeader(http.StatusOK)
 	app := pm.Apps.Get(*an)
 	if app == nil {
@@ -501,7 +501,7 @@ func handlePodSign(w http.ResponseWriter, r *http.Request) {
 	h.Write([]byte(content))
 
 	// Send back HMAC as the signature
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "text/plain; charset=us-ascii")
 	w.WriteHeader(http.StatusOK)
 	enc := base64.NewEncoder(base64.StdEncoding, w)
 	enc.Write(h.Sum(nil))
