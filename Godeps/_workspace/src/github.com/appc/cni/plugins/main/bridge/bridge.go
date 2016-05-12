@@ -238,14 +238,29 @@ func cmdDel(args *skel.CmdArgs) error {
 		return err
 	}
 
-	err = ipam.ExecDel(n.IPAM.Type, args.StdinData)
+	if err := ipam.ExecDel(n.IPAM.Type, args.StdinData); err != nil {
+		return err
+	}
+
+	var ipn *net.IPNet
+	err = ns.WithNetNSPath(args.Netns, false, func(hostNS *os.File) error {
+		var err error
+		ipn, err = ip.DelLinkByNameAddr(args.IfName, netlink.FAMILY_V4)
+		return err
+	})
 	if err != nil {
 		return err
 	}
 
-	return ns.WithNetNSPath(args.Netns, false, func(hostNS *os.File) error {
-		return ip.DelLinkByName(args.IfName)
-	})
+	if n.IPMasq {
+		chain := utils.FormatChainName(n.Name, args.ContainerID)
+		comment := utils.FormatComment(n.Name, args.ContainerID)
+		if err = ip.TeardownIPMasq(ipn, chain, comment); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func main() {
