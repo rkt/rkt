@@ -94,6 +94,11 @@ var volTests = []struct {
 		`<<<1>>>`,
 		0,
 	},
+	{
+		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --volume=dir1,kind=host,source=^TMPDIR^ --inherit-env=true ^VOL_RW_WRITE_FILE_ONLY^ ^VOL_RO_READ_FILE_ONLY^ --exec /inspect -- --pre-sleep=1 --read-file"`,
+		`<<<1>>>`,
+		0,
+	},
 }
 
 func NewVolumesTest() testutils.Test {
@@ -106,6 +111,10 @@ func NewVolumesTest() testutils.Test {
 		defer os.Remove(volRwReadFileImage)
 		volRwWriteFileImage := patchTestACI("rkt-inspect-vol-rw-write-file.aci", "--exec=/inspect --write-file --read-file", "--mounts=dir1,path=/dir1,readOnly=false")
 		defer os.Remove(volRwWriteFileImage)
+		volRwWriteFileOnlyImage := patchTestACI("rkt-inspect-vol-rw-write-file-only.aci", "--exec=/inspect --write-file", "--mounts=dir1,path=/dir1,readOnly=false")
+		defer os.Remove(volRwWriteFileOnlyImage)
+		volRoReadFileOnlyImage := patchTestACI("rkt-inspect-vol-ro-read-file-only.aci", "--name=coreos.com/rkt-inspect-2", "--exec=/inspect --read-file", "--mounts=dir1,path=/dir1,readOnly=true")
+		defer os.Remove(volRoReadFileOnlyImage)
 		volRoReadFileImage := patchTestACI("rkt-inspect-vol-ro-read-file.aci", "--exec=/inspect --read-file", "--mounts=dir1,path=/dir1,readOnly=true")
 		defer os.Remove(volRoReadFileImage)
 		volRoWriteFileImage := patchTestACI("rkt-inspect-vol-ro-write-file.aci", "--exec=/inspect --write-file --read-file", "--mounts=dir1,path=/dir1,readOnly=true")
@@ -134,6 +143,8 @@ func NewVolumesTest() testutils.Test {
 			cmd = strings.Replace(cmd, "^VOL_RO_WRITE_FILE^", volRoWriteFileImage, -1)
 			cmd = strings.Replace(cmd, "^VOL_RW_READ_FILE^", volRwReadFileImage, -1)
 			cmd = strings.Replace(cmd, "^VOL_RW_WRITE_FILE^", volRwWriteFileImage, -1)
+			cmd = strings.Replace(cmd, "^VOL_RW_WRITE_FILE_ONLY^", volRwWriteFileOnlyImage, -1)
+			cmd = strings.Replace(cmd, "^VOL_RO_READ_FILE_ONLY^", volRoReadFileOnlyImage, -1)
 			cmd = strings.Replace(cmd, "^VOL_ADD_MOUNT_RW^", volAddMountRwImage, -1)
 			cmd = strings.Replace(cmd, "^VOL_ADD_MOUNT_RO^", volAddMountRoImage, -1)
 
