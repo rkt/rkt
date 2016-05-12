@@ -72,6 +72,7 @@ var (
 		PrintIfaceCount    bool
 		PrintAppAnnotation string
 		SilentSigterm      bool
+		CheckMountNS       bool
 	}{}
 )
 
@@ -110,6 +111,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.PrintIfaceCount, "print-iface-count", false, "Print the interface count")
 	globalFlagset.StringVar(&globalFlags.PrintAppAnnotation, "print-app-annotation", "", "Take an annotation name of the app, and prints its value")
 	globalFlagset.BoolVar(&globalFlags.SilentSigterm, "silent-sigterm", false, "Exit with a success exit status if we receive SIGTERM")
+	globalFlagset.BoolVar(&globalFlags.CheckMountNS, "check-mountns", false, "Check if app's mount ns is different than stage1's. Requires CAP_SYS_PTRACE")
 }
 
 func in(list []int, el int) bool {
@@ -472,6 +474,25 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("Annotation %s=%s\n", globalFlags.PrintAppAnnotation, body)
+	}
+
+	if globalFlags.CheckMountNS {
+		appMountNS, err := os.Readlink("/proc/self/ns/mnt")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		s1MountNS, err := os.Readlink("/proc/1/ns/mnt")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		if appMountNS != s1MountNS {
+			fmt.Println("check-mountns: DIFFERENT")
+		} else {
+			fmt.Println("check-mountns: IDENTICAL")
+			os.Exit(1)
+		}
 	}
 
 	os.Exit(globalFlags.ExitCode)
