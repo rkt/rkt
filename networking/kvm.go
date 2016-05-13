@@ -35,7 +35,6 @@ import (
 	"github.com/vishvananda/netlink"
 
 	"github.com/coreos/rkt/common"
-	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/coreos/rkt/networking/tuntap"
 )
 
@@ -397,12 +396,11 @@ func kvmTransformFlannelNetwork(net *activeNet) error {
 		return errwrap.Wrap(errors.New("error in marshaling generated network settings"), err)
 	}
 
+	net.runtime.IP4 = &cnitypes.IPConfig{}
 	*net = activeNet{
 		confBytes: bytes,
 		conf:      &NetConf{},
-		runtime: &netinfo.NetInfo{
-			IP4: &cnitypes.IPConfig{},
-		},
+		runtime:   net.runtime,
 	}
 	net.conf.Name = n.Name
 	net.conf.Type = n.Delegate["type"].(string)
