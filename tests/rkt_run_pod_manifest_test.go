@@ -1068,7 +1068,8 @@ func TestPodManifest(t *testing.T) {
 
 		if tt.expectedResult != "" {
 			if _, out, err := expectRegexWithOutput(child, tt.expectedResult); err != nil {
-				t.Fatalf("Expected %q but not found: %v\n%s", tt.expectedResult, err, out)
+				t.Errorf("Expected %q but not found: %v\n%s", tt.expectedResult, err, out)
+				continue
 			}
 		}
 		waitOrFail(t, child, tt.expectedExit)
@@ -1085,7 +1086,8 @@ func TestPodManifest(t *testing.T) {
 
 		if tt.expectedResult != "" {
 			if _, out, err := expectRegexWithOutput(child, tt.expectedResult); err != nil {
-				t.Fatalf("Expected %q but not found: %v\n%s", tt.expectedResult, err, out)
+				t.Errorf("Expected %q but not found: %v\n%s", tt.expectedResult, err, out)
+				continue
 			}
 		}
 
