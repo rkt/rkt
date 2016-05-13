@@ -580,7 +580,7 @@ func TestPodManifest(t *testing.T) {
 				{
 					"rkt-test-run-pod-manifest-vol-rw-no-app.aci",
 					[]string{
-						"--exec=/inspect --write-file --read-file --file-name=/dir1/file --content=host:baz",
+						"--exec=/inspect --write-file --read-file --file-name=/dir1/file --content=host:baw",
 						"--mounts=dir1,path=/dir1,readOnly=false",
 					},
 				},
@@ -594,7 +594,7 @@ func TestPodManifest(t *testing.T) {
 				},
 			},
 			0,
-			"host:baz",
+			"host:baw",
 			"",
 		},
 		{
@@ -619,14 +619,14 @@ func TestPodManifest(t *testing.T) {
 					{"dir1", "host", tmpdir, nil, nil, nil, nil},
 				},
 			},
-			1,
-			`Cannot write to file "/dir1/host": open /dir1/host: read-only file system`,
+			0,
+			"host:baz",
 			"",
 		},
 		{
 			// Simple read after write with volume mounted, no apps in pod manifest.
 			// This should succeed even the mount point in image manifest is readOnly,
-			// because it is overrided by the volume's readOnly.
+			// because it is overriden by the volume's readOnly.
 			[]imagePatch{
 				{
 					"rkt-test-run-pod-manifest-vol-ro-no-app.aci",
