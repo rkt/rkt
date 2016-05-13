@@ -450,7 +450,7 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 	}
 
 	if ra.ReadOnlyRootFS {
-		opts = append(opts, unit.NewUnitOption("Service", "ReadOnlyDirectories", "/"))
+		opts = append(opts, unit.NewUnitOption("Service", "ReadOnlyDirectories", common.RelAppRootfsPath(appName)))
 	}
 
 	// TODO(tmrts): Extract this logic into a utility function.
@@ -474,7 +474,7 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		}
 
 		if !IsMountReadOnly(vols[m.Volume], app.MountPoints) {
-			rwDirs = append(rwDirs, mntPath)
+			rwDirs = append(rwDirs, filepath.Join(common.RelAppRootfsPath(appName), mntPath))
 		}
 	}
 
