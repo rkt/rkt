@@ -1,3 +1,35 @@
+## v1.6.0
+
+This release focuses on security enhancements. It provides additional isolators, creating a new mount namespace per app. Also a new version of CoreOS 1032.0.0 with systemd v229 is being used in stage1.
+
+#### New features and UX changes
+
+- stage1: implement read-only rootfs ([#2624](https://github.com/coreos/rkt/pull/2624)). Using the Pod manifest readOnlyRootFS option mounts the rootfs of the app as read-only using systemd-exec unit option ReadOnlyDirectories, see [appc/spec](https://github.com/appc/spec/blob/master/spec/pods.md#pod-manifest-schema).
+- stage1: capabilities: implement both remain set and remove set ([#2589](https://github.com/coreos/rkt/pull/2589)). It follows the [Linux Isolators semantics from the App Container Executor spec](https://github.com/appc/spec/blob/master/spec/ace.md#linux-isolators), as modified by [appc/spec#600](https://github.com/appc/spec/pull/600).
+- stage1/init: create a new mount ns for each app ([#2603](https://github.com/coreos/rkt/pull/2603)). Up to this point, you could escape the app's chroot easily by using a simple program downloaded from the internet [1](http://www.unixwiz.net/techtips/chroot-practices.html). To avoid this, we now create a new mount namespace per each app.
+- api: Return the pods even when we failed getting information about them ([#2593](https://github.com/coreos/rkt/pull/2593)).
+- stage1/usr_from_coreos: use CoreOS 1032.0.0 with systemd v229 ([#2514](https://github.com/coreos/rkt/pull/2514)).
+
+#### Bug fixes
+
+- kvm: fix flannel network info ([#2625](https://github.com/coreos/rkt/pull/2625)). It wasn't saving the network information on disk.
+- stage1: Machine name wasn't being populated with the full UUID ([#2575](https://github.com/coreos/rkt/pull/2575)).
+- rkt: Some simple arg doc string fixes ([#2588](https://github.com/coreos/rkt/pull/2588)). Remove some unnecessary indefinite articles from the start of argument doc strings and fixes the arg doc string for run-prepared's --interactive flag.
+- stage1: Fix segfault in enterexec ([#2608](https://github.com/coreos/rkt/pull/2608)). This happened if rkt enter was executed without the TERM environment variable set.
+- net: fix port forwarding behavior with custom CNI ipMasq'ed networks and allow different hostPort:podPort combinations ([#2387](https://github.com/coreos/rkt/pull/2387)).
+- stage0: check and create /etc ([#2599](https://github.com/coreos/rkt/pull/2599)). Checks '/etc' before writing to '/etc/rkt-resolv.conf' and creates it with default permissions if it doesn't exist.
+
+#### Other changes
+
+- godep: update cni to v0.2.3 ([#2618](https://github.com/coreos/rkt/pull/2618)).
+- godep: update appc/spec to v0.8.1 ([#2623](https://github.com/coreos/rkt/pull/2623), [#2611](https://github.com/coreos/rkt/pull/2611)).
+- dist: Update tmpfiles to create /etc/rkt ([#2472](https://github.com/coreos/rkt/pull/2472)). By creating this directory, users can run `rkt trust` without being root, if the user is in the rkt group.
+- Invoke gofmt with simplify-code flag ([#2489](https://github.com/coreos/rkt/pull/2489)). Enables code simplification checks of gofmt.
+- Implement composable uid/gid generators ([#2510](https://github.com/coreos/rkt/pull/2510)). This cleans up the code a bit and implements uid/gid functionality for rkt fly.
+- stage1: download CoreOS over HTTPS ([#2568](https://github.com/coreos/rkt/pull/2568)). 
+- Documentation updates ([#2555](https://github.com/coreos/rkt/pull/2555), [#2609](https://github.com/coreos/rkt/pull/2609), [#2605](https://github.com/coreos/rkt/pull/2605), [#2578](https://github.com/coreos/rkt/pull/2578), [#2614](https://github.com/coreos/rkt/pull/2614), [#2579](https://github.com/coreos/rkt/pull/2579), [#2570](https://github.com/coreos/rkt/pull/2570)).
+- Test improvements ([#2613](https://github.com/coreos/rkt/pull/2613), [#2566](https://github.com/coreos/rkt/pull/2566), [#2508](https://github.com/coreos/rkt/pull/2508)).
+
 ## v1.5.1
 
 This release is a minor bug fix release.
