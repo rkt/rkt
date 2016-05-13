@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
 	"GoVersion": "go1.5",
-	"GodepVersion": "v60",
+	"GodepVersion": "v62",
 	"Packages": [
 		"./...",
 		"github.com/appc/spec/actool",
@@ -163,58 +163,58 @@
 		},
 		{
 			"ImportPath": "github.com/appc/spec/ace",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/aci",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/actool",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/discovery",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/acirenderer",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/device",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/tarheader",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema/common",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema/lastditch",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema/types",
-			"Comment": "v0.8.0",
-			"Rev": "09a93af33cd0691f49e2d18689af16a1432b13e4"
+			"Comment": "v0.8.1",
+			"Rev": "b889d03467ae08bb6c13241762a64305b69bcf82"
 		},
 		{
 			"ImportPath": "github.com/camlistore/go4/lock",
