@@ -295,7 +295,7 @@ The `run` subcommand features the `--net` argument which takes options to config
 
 ### Default contained networking
 
-When the argument is not given, `--net=default` is automatically assumed and the default contained network network will be loaded.
+When the argument is not given, `--net=default` is automatically assumed and the default contained network will be loaded.
 
 ### Host networking
 
