@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/coreos/rkt/pkg/log"
@@ -83,8 +84,17 @@ func TestCalculateDataDir(t *testing.T) {
 
 		cachedConfig.Paths.DataDir = tc.configDataDir
 
-		if dataDir := calculateDataDir(); dataDir != tc.out {
-			t.Errorf("main.calculateDataDir() with setup %q, expected %q, got %q", tc, tc.out, dataDir)
+		realDataDir, err := filepath.EvalSymlinks(tc.out)
+		if err != nil {
+			if os.IsNotExist(err) {
+				realDataDir = tc.out
+			} else {
+				panic(fmt.Errorf("filepath.EvalSymlinks(%q) got error %q", tc.out, err))
+			}
+		}
+
+		if dataDir := calculateDataDir(); dataDir != realDataDir {
+			t.Errorf("main.calculateDataDir() with setup %q, expected %q, got %q", tc, realDataDir, dataDir)
 		}
 
 		resetConfigState()
