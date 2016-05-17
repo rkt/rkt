@@ -31,11 +31,11 @@ include makelib/build_go_bin.mk
 
 manpages: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 	mkdir -p dist/manpages/
-	ls rkt/*.go | grep -vE '_test.go|main.go|_gen.go' | xargs go run rkt/manpages_gen.go
+	ls rkt/*.go | grep -vE '_test.go|main.go|_gen.go' | $(GO_ENV) xargs "$(GO)" run rkt/manpages_gen.go
 
 bash-completion: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 	mkdir -p dist/bash_completion/
-	ls rkt/*.go | grep -vE '_test.go|main.go|_gen.go' | xargs go run rkt/bash_completion_gen.go
+	ls rkt/*.go | grep -vE '_test.go|main.go|_gen.go' | $(GO_ENV) xargs "$(GO)" run rkt/bash_completion_gen.go
 
 protobuf:
 	scripts/genproto.sh
