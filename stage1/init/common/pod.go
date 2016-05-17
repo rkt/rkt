@@ -447,6 +447,11 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		unit.NewUnitOption("Service", "Group", strconv.Itoa(g)),
 		unit.NewUnitOption("Service", "SupplementaryGroups", strings.Join(supplementaryGroups, " ")),
 		unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")),
+		// This helps working around a race
+		// (https://github.com/systemd/systemd/issues/2913) that causes the
+		// systemd unit name not getting written to the journal if the unit is
+		// short-lived and runs as non-root.
+		unit.NewUnitOption("Service", "SyslogIdentifier", appName.String()),
 	}
 
 	if ra.ReadOnlyRootFS {
@@ -487,7 +492,6 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 	} else {
 		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
 		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
-		opts = append(opts, unit.NewUnitOption("Service", "SyslogIdentifier", filepath.Base(app.Exec[0])))
 	}
 
 	// When an app fails, we shut down the pod
