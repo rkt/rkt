@@ -619,6 +619,11 @@ func stage1() int {
 	machineID := stage1initcommon.GetMachineID(p)
 	subcgroup, err := getContainerSubCgroup(machineID)
 	if err == nil {
+		if err := ioutil.WriteFile(filepath.Join(p.Root, "subcgroup"),
+			[]byte(fmt.Sprintf("%s", subcgroup)), 0644); err != nil {
+			log.FatalE("cannot write subcgroup file", err)
+			return 1
+		}
 		if err := mountContainerCgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
 			log.PrintE("couldn't mount the container cgroups", err)
 			return 1
@@ -729,7 +734,7 @@ func getContainerSubCgroup(machineID string) (string, error) {
 		if err != nil {
 			return "", errwrap.Wrap(errors.New("could not get unit name"), err)
 		}
-		subcgroup = filepath.Join(slicePath, unit, "system.slice")
+		subcgroup = filepath.Join(slicePath, unit)
 	} else {
 		escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
 		machineDir := "machine-" + escapedmID + ".scope"
@@ -737,7 +742,7 @@ func getContainerSubCgroup(machineID string) (string, error) {
 			// we are not in the final cgroup yet: systemd-nspawn will move us
 			// to the correct cgroup later during registration so we can't
 			// look it up in /proc/self/cgroup
-			subcgroup = filepath.Join("machine.slice", machineDir, "system.slice")
+			subcgroup = filepath.Join("machine.slice", machineDir)
 		} else {
 			// when registration is disabled the container will be directly
 			// under the current cgroup so we can look it up in /proc/self/cgroup
@@ -748,11 +753,10 @@ func getContainerSubCgroup(machineID string) (string, error) {
 			// systemd-nspawn won't work if we are in the root cgroup. In addition,
 			// we want all rkt instances to be in distinct cgroups. Create a
 			// subcgroup and add ourselves to it.
-			ownCgroupPath = filepath.Join(ownCgroupPath, machineDir)
-			if err := cgroup.JoinSubcgroup("systemd", ownCgroupPath); err != nil {
-				return "", errwrap.Wrap(fmt.Errorf("error joining %s subcgroup", ownCgroupPath), err)
+			subcgroup = filepath.Join(ownCgroupPath, machineDir)
+			if err := cgroup.JoinSubcgroup("systemd", subcgroup); err != nil {
+				return "", errwrap.Wrap(fmt.Errorf("error joining %s subcgroup", subcgroup), err)
 			}
-			subcgroup = filepath.Join(ownCgroupPath, "system.slice")
 		}
 	}
 
