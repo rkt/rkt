@@ -92,7 +92,7 @@ To read the logs of a running pod, get the pod's machine name from `machinectl`:
 ```
 $ machinectl
 MACHINE                                  CLASS     SERVICE
-rkt-132f9d56-0e3f-4d1e-ba86-68efd488bb62 container nspawn
+rkt-bc3c1451-2e81-45c6-aeb0-807db44e31b4 container rkt
 
 1 machines listed.
 ```
@@ -100,16 +100,27 @@ rkt-132f9d56-0e3f-4d1e-ba86-68efd488bb62 container nspawn
 or `rkt list --full`
 
 ```
-# rkt list --full
-UUID					APP	IMAGE NAME		IMAGE ID		STATE	NETWORKS
-132f9d56-0e3f-4d1e-ba86-68efd488bb62	etcd	coreos.com/etcd:v2.0.10 sha512-c03b055d02e5	running
+$ rkt list --full
+UUID                                  APP    IMAGE NAME                              IMAGE ID             STATE    CREATED                             STARTED                             NETWORKS
+bc3c1451-2e81-45c6-aeb0-807db44e31b4  etcd   coreos.com/etcd:v2.3.4                  sha512-7f05a10f6d2c  running  2016-05-18 10:07:35.312 +0200 CEST  2016-05-18 10:07:35.405 +0200 CEST  default:ip4=172.16.28.83
+                                      redis  registry-1.docker.io/library/redis:3.2  sha512-6eaaf936bc76
 ```
 
 The pod's machine name will be the pod's UUID prefixed with `rkt-`.
 Given this machine name, logs can be retrieved by `journalctl`:
 
 ```
-# journalctl -M rkt-132f9d56-0e3f-4d1e-ba86-68efd488bb62
-
+$ journalctl -M rkt-bc3c1451-2e81-45c6-aeb0-807db44e31b4
 [...]
 ```
+
+To get logs from one app in the pod:
+
+```
+$ journalctl -M rkt-bc3c1451-2e81-45c6-aeb0-807db44e31b4 -t etcd
+[...]
+$ journalctl -M rkt-bc3c1451-2e81-45c6-aeb0-807db44e31b4 -t redis
+[...]
+```
+
+Additionaly, logs can be programmatically accessed via the [sd-journal API](https://www.freedesktop.org/software/systemd/man/sd-journal.html).
