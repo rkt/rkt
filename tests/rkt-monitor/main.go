@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -43,10 +44,11 @@ type ProcessStatus struct {
 var (
 	pidMap map[int32]*process.Process
 
-	flagVerbose    bool
-	flagDuration   string
-	flagShowOutput bool
-	saveToCsv      bool
+	flagVerbose          bool
+	flagDuration         string
+	flagShowOutput       bool
+	flagSaveToCsv        bool
+	flagRepetitionNumber int
 
 	cmdRktMonitor = &cobra.Command{
 		Use:     "rkt-monitor IMAGE",
@@ -60,9 +62,10 @@ func init() {
 	pidMap = make(map[int32]*process.Process)
 
 	cmdRktMonitor.Flags().BoolVarP(&flagVerbose, "verbose", "v", false, "Print current usage every second")
+	cmdRktMonitor.Flags().IntVarP(&flagRepetitionNumber, "repetitions", "r", 1, "Numbers of benchmark repetitions")
 	cmdRktMonitor.Flags().StringVarP(&flagDuration, "duration", "d", "10s", "How long to run the ACI")
 	cmdRktMonitor.Flags().BoolVarP(&flagShowOutput, "show-output", "o", false, "Display rkt's stdout and stderr")
-	cmdRktMonitor.Flags().BoolVarP(&saveToCsv, "to-file", "f", false, "Save benchmark results to benchmark.csv file")
+	cmdRktMonitor.Flags().BoolVarP(&flagSaveToCsv, "to-file", "f", false, "Save benchmark results to files in a temp dir")
 
 	flag.Parse()
 }
@@ -103,109 +106,133 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 	}
 
 	var execCmd *exec.Cmd
-	if podManifest {
-		execCmd = exec.Command("rkt", "run", "--pod-manifest", args[0], "--net=default-restricted")
-	} else {
-		execCmd = exec.Command("rkt", "run", args[0], "--insecure-options=image", "--net=default-restricted")
-	}
-	if flagShowOutput {
-		execCmd.Stdout = os.Stdout
-		execCmd.Stderr = os.Stderr
-	}
+	var loadAvg *load.AvgStat
+	var containerStarting, containerStarted, containerStopping, containerStopped time.Time
 
-	containerStarting := time.Now()
+	records := [][]string{{"Time", "PID name", "PID number", "RSS", "CPU"}}             // csv headers
+	summaryRecords := [][]string{{"Load1", "Load5", "Load15", "StartTime", "StopTime"}} // csv summary headers
 
-	err = execCmd.Start()
-	if err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
-	}
-	containerStarted := time.Now()
+	for i := 0; i < flagRepetitionNumber; i++ {
+		containerStarting = time.Now()
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for range c {
-			err := killAllChildren(int32(execCmd.Process.Pid))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "cleanup failed: %v\n", err)
-			}
+		if podManifest {
+			execCmd = exec.Command("rkt", "run", "--pod-manifest", args[0], "--net=default-restricted")
+		} else {
+			execCmd = exec.Command("rkt", "run", args[0], "--insecure-options=image", "--net=default-restricted")
+		}
+
+		if flagShowOutput {
+			execCmd.Stdout = os.Stdout
+			execCmd.Stderr = os.Stderr
+		}
+
+		err = execCmd.Start()
+		containerStarted = time.Now()
+		if err != nil {
+			fmt.Printf("%v\n", err)
 			os.Exit(1)
 		}
-	}()
 
-	usages := make(map[int32][]*ProcessStatus)
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		go func() {
+			for range c {
+				err := killAllChildren(int32(execCmd.Process.Pid))
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "cleanup failed: %v\n", err)
+				}
+				os.Exit(1)
+			}
+		}()
 
-	timeToStop := time.Now().Add(d)
+		usages := make(map[int32][]*ProcessStatus)
 
-	records := [][]string{{"Time", "PID name", "PID number", "RSS", "CPU"}} // csv headers
+		timeToStop := time.Now().Add(d)
 
-	for time.Now().Before(timeToStop) {
-		usage, err := getUsage(int32(execCmd.Process.Pid))
+		for time.Now().Before(timeToStop) {
+			usage, err := getUsage(int32(execCmd.Process.Pid))
+			if err != nil {
+				panic(err)
+			}
+			if flagVerbose {
+				printUsage(usage)
+			}
+
+			if flagSaveToCsv {
+				records = addRecords(usage, records)
+			}
+
+			for _, ps := range usage {
+				usages[ps.Pid] = append(usages[ps.Pid], ps)
+			}
+
+			_, err = process.NewProcess(int32(execCmd.Process.Pid))
+			if err != nil {
+				// process.Process.IsRunning is not implemented yet
+				fmt.Fprintf(os.Stderr, "rkt exited prematurely\n")
+				break
+			}
+
+			time.Sleep(time.Second)
+		}
+
+		loadAvg, err = load.Avg()
 		if err != nil {
-			panic(err)
-		}
-		if flagVerbose {
-			printUsage(usage)
+			fmt.Fprintf(os.Stderr, "measure load avg failed: %v\n", err)
 		}
 
-		if saveToCsv {
-			records = addRecords(usage, records)
-		}
-
-		for _, ps := range usage {
-			usages[ps.Pid] = append(usages[ps.Pid], ps)
-		}
-
-		_, err = process.NewProcess(int32(execCmd.Process.Pid))
+		containerStopping = time.Now()
+		err = killAllChildren(int32(execCmd.Process.Pid))
+		containerStopped = time.Now()
 		if err != nil {
-			// process.Process.IsRunning is not implemented yet
-			fmt.Fprintf(os.Stderr, "rkt exited prematurely\n")
-			break
+			fmt.Fprintf(os.Stderr, "cleanup failed: %v\n", err)
 		}
 
-		time.Sleep(time.Second)
-	}
+		for _, processHistory := range usages {
+			var avgCPU float64
+			var avgMem uint64
+			var peakMem uint64
 
-	loadAvg, err := load.Avg()
+			for _, p := range processHistory {
+				avgCPU += p.CPU
+				avgMem += p.RSS
+				if peakMem < p.RSS {
+					peakMem = p.RSS
+				}
+			}
 
-	containerStopping := time.Now()
-	err = killAllChildren(int32(execCmd.Process.Pid))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "cleanup failed: %v\n", err)
-	}
-	containerStoped := time.Now()
+			avgCPU = avgCPU / float64(len(processHistory))
+			avgMem = avgMem / uint64(len(processHistory))
 
-	for _, processHistory := range usages {
-		var avgCPU float64
-		var avgMem uint64
-		var peakMem uint64
-
-		for _, p := range processHistory {
-			avgCPU += p.CPU
-			avgMem += p.RSS
-			if peakMem < p.RSS {
-				peakMem = p.RSS
+			if !flagSaveToCsv {
+				fmt.Printf("%s(%d): seconds alive: %d  avg CPU: %f%%  avg Mem: %s  peak Mem: %s\n", processHistory[0].Name, processHistory[0].Pid, len(processHistory), avgCPU, formatSize(avgMem), formatSize(peakMem))
 			}
 		}
 
-		avgCPU = avgCPU / float64(len(processHistory))
-		avgMem = avgMem / uint64(len(processHistory))
-
-		fmt.Printf("%s(%d): seconds alive: %d  avg CPU: %f%%  avg Mem: %s  peak Mem: %s\n", processHistory[0].Name, processHistory[0].Pid, len(processHistory), avgCPU, formatSize(avgMem), formatSize(peakMem))
+		if flagSaveToCsv {
+			summaryRecords = append(summaryRecords, []string{
+				strconv.FormatFloat(loadAvg.Load1, 'g', 3, 64),
+				strconv.FormatFloat(loadAvg.Load5, 'g', 3, 64),
+				strconv.FormatFloat(loadAvg.Load15, 'g', 3, 64),
+				strconv.FormatInt(containerStarted.Sub(containerStarting).Nanoseconds(), 10),
+				strconv.FormatInt(containerStopped.Sub(containerStopping).Nanoseconds(), 10)})
+		} else {
+			fmt.Printf("load average: Load1: %f Load5: %f Load15: %f\n", loadAvg.Load1, loadAvg.Load5, loadAvg.Load15)
+			fmt.Printf("container start time: %dns\n", containerStarted.Sub(containerStarting).Nanoseconds())
+			fmt.Printf("container stop time: %dns\n", containerStopped.Sub(containerStopping).Nanoseconds())
+		}
 	}
 
-	if saveToCsv {
-		saveRecords(records)
+	if flagSaveToCsv {
+		err = saveRecords(records, "rkt_benchmark_interval_")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Can't write to a file: %v\n", err)
 		}
+		err = saveRecords(summaryRecords, "rkt_benchmark_summary_")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Can't write to a summary file: %v\n", err)
+		}
 	}
-
-	fmt.Printf("load average: Load1: %f Load5: %f Load15: %f\n", loadAvg.Load1, loadAvg.Load5, loadAvg.Load15)
-
-	fmt.Printf("container start time: %dns\n", containerStarted.Sub(containerStarting).Nanoseconds())
-	fmt.Printf("container stop time: %dns\n", containerStoped.Sub(containerStopping).Nanoseconds())
 }
 
 func killAllChildren(pid int32) error {
@@ -325,8 +352,8 @@ func addRecords(statuses []*ProcessStatus, records [][]string) [][]string {
 	return records
 }
 
-func saveRecords(records [][]string) error {
-	csvFile, err := os.Create("benchmark.csv")
+func saveRecords(records [][]string, prefix string) error {
+	csvFile, err := ioutil.TempFile("", prefix)
 	defer csvFile.Close()
 	if err != nil {
 		return err

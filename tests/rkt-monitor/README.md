@@ -14,8 +14,10 @@ Examples:
 rkt-monitor mem-stresser.aci -v -d 30s
 
 Flags:
+  -f, --to-file[=false]: Save benchmark results to files in a temp dir
   -d, --duration="10s": How long to run the ACI
   -h, --help[=false]: help for rkt-monitor
+  -r, --repetitions=1: Numbers of benchmark repetitions
   -o, --show-output[=false]: Display rkt's stdout and stderr
   -v, --verbose[=false]: Print current usage every second
 ```

@@ -23,7 +23,9 @@ command `rkt fetch --insecure-options=image <newDirectory>/*`.
 With rkt-monitor and an ACI or a pod manifest, now the benchmarks can be run
 via `./rkt-monitor <workload>`.
 
-There are two flags available to influence how rkt-monitor runs. `-v` will
-print out the current resource usage of each process every second. `-d` can be
-used to specify a duration to run the tests for (default of 10s). For example,
-`-d 30s` will run the tests for 30 seconds.
+There are four flags available to influence how rkt-monitor runs. `-r ` set the
+number of benchmark experiment repetitions, `-f` save output to files in a
+temporary directory with `rkt_benchmark` prefix, `-v` will print out the current
+resource usage of each process every second. `-d` can be used to specify a
+duration to run the tests for (default of 10s). For example, `-d 30s` will run
+the tests for 30 seconds.
