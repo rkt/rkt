@@ -301,6 +301,7 @@ func TestAPIServiceGetInfo(t *testing.T) {
 		Dir:             ctx.DataDir(),
 		SystemConfigDir: ctx.SystemDir(),
 		LocalConfigDir:  ctx.LocalDir(),
+		UserConfigDir:   ctx.UserDir(),
 		InsecureFlags:   "none",
 	}
 	if !reflect.DeepEqual(resp.Info.GlobalFlags, expectedGlobalFlags) {

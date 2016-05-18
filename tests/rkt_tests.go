@@ -312,6 +312,31 @@ func runRktAsUidGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, exp
 	}
 }
 
+func runRkt(t *testing.T, rktCmd string, uid, gid int) (string, int) {
+	child, err := gexpect.Command(rktCmd)
+	if err != nil {
+		t.Fatalf("cannot exec rkt: %v", err)
+	}
+	if gid != 0 {
+		child.Cmd.SysProcAttr = &syscall.SysProcAttr{}
+		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)}
+	}
+
+	err = child.Start()
+	if err != nil {
+		t.Fatalf("cannot start rkt: %v", err)
+	}
+
+	_, linesChan := child.AsyncInteractChannels()
+
+	var buf bytes.Buffer
+	for line := range linesChan {
+		buf.WriteString(line + "\n") // reappend newline
+	}
+
+	return buf.String(), getExitStatus(child.Wait())
+}
+
 func startRktAsGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, gid int) *gexpect.ExpectSubprocess {
 	child, err := gexpect.Command(rktCmd)
 	if err != nil {
@@ -732,4 +757,27 @@ func checkUserNS() error {
 	// See https://bugzilla.redhat.com/show_bug.cgi?id=1168776#c5
 	// Check if it really works
 	return exec.Command("/bin/bash", "-c", "unshare -U true").Run()
+}
+
+func authDir(confDir string) string {
+	return filepath.Join(confDir, "auth.d")
+}
+
+func pathsDir(confDir string) string {
+	return filepath.Join(confDir, "paths.d")
+}
+
+func stage1Dir(confDir string) string {
+	return filepath.Join(confDir, "stage1.d")
+}
+
+func writeConfig(t *testing.T, dir, filename, contents string) {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("Failed to create config directory %q: %v", dir, err)
+	}
+	path := filepath.Join(dir, filename)
+	os.Remove(path)
+	if err := ioutil.WriteFile(path, []byte(contents), 0644); err != nil {
+		t.Fatalf("Failed to write file %q: %v", path, err)
+	}
 }
