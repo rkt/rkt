@@ -10,5 +10,6 @@
 /config.log
 /config.status
 /configure
-/dist
+/dist/bash_completion
+/dist/manpages
 /tags
