@@ -234,8 +234,10 @@ function main {
 
     DOC_CHANGE_PATTERN="\
             -e ^Documentation/ \
-            -e ^(README|ROADMAP|CONTRIBUTING|CHANGELOG)$ \
+            -e ^logos/ \
+            -e ^(MAINTAINERS|LICENSE|DCO)$ \
             -e \.md$\
+            -e \.(jpeg|jpg|png|svg)$\
     "
 
     buildFolder
