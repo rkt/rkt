@@ -88,8 +88,8 @@ func TestServiceFile(t *testing.T) {
 		t.Fatalf("Test unit not found in list")
 	}
 
-	// Run the unit for 10 seconds. You can check the logs manually in journalctl
-	time.Sleep(10 * time.Second)
+	// Run the unit for 15 seconds. You can check the logs manually in journalctl
+	time.Sleep(15 * time.Second)
 
 	// Stop the unit
 	_, err = conn.StopUnit(target, "replace", reschan)
