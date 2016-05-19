@@ -79,7 +79,7 @@ func TestAuthConfigFormat(t *testing.T) {
 		} else if !tt.fail {
 			result := make(map[string]http.Header)
 			for k, v := range cfg.AuthPerHost {
-				result[k] = v.Header()
+				result[k] = v.GetHeader()
 			}
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Error("Got unexpected results\nResult:\n", result, "\n\nExpected:\n", tt.expected)
@@ -272,7 +272,7 @@ func TestConfigLoading(t *testing.T) {
 	}
 	result := make(map[string]http.Header)
 	for d, h := range cfg.AuthPerHost {
-		result[d] = h.Header()
+		result[d] = h.GetHeader()
 	}
 	expected := map[string]http.Header{
 		"endocode.com": {

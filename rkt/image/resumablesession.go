@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/rkt/rkt/config"
 	"github.com/coreos/rkt/version"
 )
 
@@ -58,8 +59,10 @@ type resumableSession struct {
 	// validation should be skipped.
 	InsecureSkipTLSVerify bool
 	// Headers are HTTP headers to be added to the HTTP
-	// request. Used for authentication.
+	// request. Used for ETAG.
 	Headers http.Header
+	// Headerers used for authentication.
+	Headerers map[string]config.Headerer
 	// File possibly holds the downloaded data - it is used for
 	// resuming interrupted downloads.
 	File *os.File
@@ -310,6 +313,20 @@ func (s *resumableSession) httpRequest(method string, u *url.URL) *http.Request 
 	}
 
 	s.setHTTPHeaders(req, false)
+
+	// Send credentials only over secure channel
+	// TODO(krnowak): This could be controlled with another
+	// insecure flag.
+	if req.URL.Scheme != "https" {
+		return req
+	}
+
+	if hostOpts, ok := s.Headerers[req.URL.Host]; ok {
+		req = hostOpts.SignRequest(req)
+		if req == nil {
+			panic("Req is nil!")
+		}
+	}
 
 	return req
 }

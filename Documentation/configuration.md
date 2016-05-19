@@ -65,7 +65,7 @@ This field must be specified and cannot be empty.
 The `credentials` field is defined by the `type` field.
 It should hold all the data that are needed for successful authentication with the given hosts.
 
-This version of auth configuration supports two methods - basic HTTP authentication and OAuth Bearer Token.
+This version of auth configuration supports three methods - basic HTTP authentication, OAuth Bearer Token, and AWS v4 authentication.
 
 Basic HTTP authentication requires two things - a user and a password.
 To use this type, define `type` as `basic` and the `credentials` field as a map with two keys - `user` and `password`.
@@ -102,6 +102,26 @@ For example:
 	"type": "oauth",
 	"credentials": {
 		"token": "sometoken"
+	}
+}
+```
+
+AWS v4 authentication requires three things - an access key ID, a secret access key and an AWS region. If the region is left empty, it will be determined automatically from the URL/domain.
+To use this type, define `type` as `aws` and the `credentials` field as a map with two or three keys - `accessKeyID` and `secretAccessKey` are mandatory, whilst `awsRegion` is optional and can be left empty.
+For example:
+
+`/etc/rkt/auth.d/coreos-aws.json`:
+
+```json
+{
+	"rktKind": "auth",
+	"rktVersion": "v1",
+	"domains": ["my-s3-bucket.s3.amazonaws.com"],
+	"type": "aws",
+	"credentials": {
+		"accessKeyID": "foo",
+		"secretAccessKey": "bar",
+		"awsRegion": "us-east-1"
 	}
 }
 ```
