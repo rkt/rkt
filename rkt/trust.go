@@ -59,7 +59,12 @@ func init() {
 func runTrust(cmd *cobra.Command, args []string) (exit int) {
 	if flagPrefix == "" && !flagRoot {
 		if len(args) != 0 {
-			stderr.Print("--root required for non-prefixed (root) keys")
+			stderr.Print(`aborting due to implicit unbounded trust (root domain)
+Please provide a specific domain prefix to trust:
+    rkt trust --prefix "example.com/foo" [PUBKEY]
+    rkt trust --prefix "example.com/foo/*" [PUBKEY]
+Otherwise, trust at the root domain (not recommended) must be explicitly requested:
+    rkt trust --root PUBKEY`)
 		} else {
 			cmd.Usage()
 		}
