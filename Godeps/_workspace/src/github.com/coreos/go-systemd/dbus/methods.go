@@ -199,6 +199,11 @@ func (c *Conn) GetUnitProperty(unit string, propertyName string) (*Property, err
 	return c.getProperty(unit, "org.freedesktop.systemd1.Unit", propertyName)
 }
 
+// GetServiceProperty returns property for given service name and property name
+func (c *Conn) GetServiceProperty(service string, propertyName string) (*Property, error) {
+	return c.getProperty(service, "org.freedesktop.systemd1.Service", propertyName)
+}
+
 // GetUnitTypeProperties returns the extra properties for a unit, specific to the unit type.
 // Valid values for unitType: Service, Socket, Target, Device, Mount, Automount, Snapshot, Timer, Swap, Path, Slice, Scope
 // return "dbus.Error: Unknown interface" if the unitType is not the correct type of the unit

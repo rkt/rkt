@@ -276,23 +276,28 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/activation",
-			"Comment": "v5",
-			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
+			"Comment": "v8",
+			"Rev": "b9b5f5970662ce700ab6ee41f56186e5b131490c"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
-			"Comment": "v5",
-			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
+			"Comment": "v8",
+			"Rev": "b9b5f5970662ce700ab6ee41f56186e5b131490c"
+		},
+		{
+			"ImportPath": "github.com/coreos/go-systemd/sdjournal",
+			"Comment": "v8",
+			"Rev": "b9b5f5970662ce700ab6ee41f56186e5b131490c"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/unit",
-			"Comment": "v5",
-			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
+			"Comment": "v8",
+			"Rev": "b9b5f5970662ce700ab6ee41f56186e5b131490c"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/util",
-			"Comment": "v5",
-			"Rev": "7b2428fec40033549c68f54e26e89e7ca9a9ce31"
+			"Comment": "v8",
+			"Rev": "b9b5f5970662ce700ab6ee41f56186e5b131490c"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/tpmclient",
@@ -312,6 +317,11 @@
 		{
 			"ImportPath": "github.com/coreos/ioprogress",
 			"Rev": "e7fc03058804de5488baed8df5b89f3924b9ec9a"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/dlopen",
+			"Comment": "v1",
+			"Rev": "160ae6282d8c48a33d8c150e4e4817fdef8a5cde"
 		},
 		{
 			"ImportPath": "github.com/cpuguy83/go-md2man/md2man",
