@@ -143,7 +143,7 @@ func kvmSetupNetAddressing(network *Networking, n activeNet, ifName string) erro
 	output, err := network.execNetPlugin("ADD", &n, ifName)
 	n.conf.Type = original_type
 	if err != nil {
-		return errwrap.Wrap(fmt.Errorf("problem executing network plugin %q (%q)", n.conf.Type, ifName), err)
+		return errwrap.Wrap(fmt.Errorf("problem executing network plugin %q (%q)", n.conf.IPAM.Type, ifName), err)
 	}
 
 	result := cnitypes.Result{}
