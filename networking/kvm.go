@@ -569,6 +569,13 @@ extend Networking struct with methods to clean up kvm specific network configura
 // removing tuntap interface and releasing its ip from IPAM plugin
 func (n *Networking) teardownKvmNets() {
 	for _, an := range n.nets {
+		if an.conf.Type == "flannel" {
+			if err := kvmTransformFlannelNetwork(&an); err != nil {
+				stderr.PrintE("error transforming flannel network", err)
+				continue
+			}
+		}
+
 		switch an.conf.Type {
 		case "ptp", "bridge":
 			// remove tuntap interface
