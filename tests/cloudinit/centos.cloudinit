@@ -13,7 +13,7 @@ gpasswd -a centos rkt
 
 #yum update -y
 yum -y -v groupinstall "Development Tools"
-yum -y -v install wget squashfs-tools patch glibc-static gnupg libacl-devel
+yum -y -v install wget squashfs-tools patch glibc-static gnupg libacl-devel systemd-devel
 
 pushd /tmp
 wget https://storage.googleapis.com/golang/go1.5.3.linux-amd64.tar.gz

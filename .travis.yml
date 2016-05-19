@@ -1,6 +1,8 @@
 # Configures rkt tests at Travis CI (https://travis-ci.org).
 
 language: go
+sudo: required
+dist: trusty
 
 go:
   - 1.5.3
@@ -11,6 +13,7 @@ install:
  - sudo apt-get install -y cpio realpath squashfs-tools
  - sudo apt-get install -y build-essential
  - sudo apt-get install -y libacl1-dev
+ - sudo apt-get install -y libsystemd-journal-dev
 
 script:
  - ./autogen.sh

@@ -20,6 +20,8 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
 * TrouSerS (only when TPM is enabled)
   * development headers
   * the rkt binary links against the library
+* libsystemd-journal
+  * development headers
 * gpg (when running functional tests)
 
 ### Additional dependencies when building any stage1 image

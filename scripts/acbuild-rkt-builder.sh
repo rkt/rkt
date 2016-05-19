@@ -23,7 +23,7 @@ BUILDDIR=/opt/build-rkt
 SRC_DIR=/opt/rkt
 ACI_GOPATH=/go
 
-DEBIAN_SID_DEPS="ca-certificates gcc libc6-dev make automake wget git golang-go cpio squashfs-tools realpath autoconf file xz-utils patch bc locales libacl1-dev libssl-dev"
+DEBIAN_SID_DEPS="ca-certificates gcc libc6-dev make automake wget git golang-go cpio squashfs-tools realpath autoconf file xz-utils patch bc locales libacl1-dev libssl-dev libsystemd-dev"
 
 acbuildend () {
     export EXIT=$?;
