@@ -293,13 +293,13 @@ func FileInfoFromHeader(hdr *tar.Header) *fileInfo {
 		Devmajor: hdr.Devmajor,
 		Devminor: hdr.Devminor,
 	}
-	keys := make([]string, len(hdr.Xattrs))
+	keys := make([]string, 0, len(hdr.Xattrs))
 	for k := range hdr.Xattrs {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	xattrs := make([]xattr, 0)
+	xattrs := make([]xattr, 0, len(keys))
 	for _, k := range keys {
 		xattrs = append(xattrs, xattr{Name: k, Value: hdr.Xattrs[k]})
 	}
@@ -373,10 +373,7 @@ func buildWalker(root string, aw specaci.ArchiveWriter) filepath.WalkFunc {
 			r = nil
 		}
 
-		if err := aw.AddFile(hdr, r); err != nil {
-			return err
-		}
-		return nil
+		return aw.AddFile(hdr, r)
 	}
 }
 
