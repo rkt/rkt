@@ -153,7 +153,11 @@ func checkPodNetworks(t *testing.T, rawNets map[string]*networkInfo, apiNets []*
 
 // Check the pod's information by 'rkt status'.
 func checkPod(t *testing.T, ctx *testutils.RktRunCtx, p *v1alpha.Pod, hasAppState, hasManifest bool, expectedGCTime time.Time) {
+	t.Logf("API Pod info: %v", p)
+
 	podInfo := getPodInfo(t, ctx, p.Id)
+	t.Logf("Pod info: %+v", podInfo)
+
 	if podInfo.id != p.Id {
 		t.Errorf("Expected %q, saw %q", podInfo.id, p.Id)
 	}
@@ -525,7 +529,7 @@ func NewAPIServiceCgroupTest() testutils.Test {
 				if len(resp.Pods) != 0 {
 					allRunning := true
 					for _, p := range resp.Pods {
-						if p.State != v1alpha.PodState_POD_STATE_RUNNING {
+						if p.State != v1alpha.PodState_POD_STATE_RUNNING || p.Pid == -1 {
 							allRunning = false
 							break
 						}
