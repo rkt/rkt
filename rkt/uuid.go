@@ -77,7 +77,7 @@ func readUUIDFromFile(path string) (*types.UUID, error) {
 	}
 	uuid = bytes.TrimSpace(uuid)
 
-	return types.NewUUID(string(uuid))
+	return resolveUUID(string(uuid))
 }
 
 func writeUUIDToFile(uuid *types.UUID, path string) error {
