@@ -79,3 +79,24 @@ func TestRm(t *testing.T) {
 		}
 	}
 }
+
+func TestRmInvalid(t *testing.T) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	nonexistentUUID := "0f746094-3438-42bc-ab37-3cf85f132e60"
+	tmpDir := createTempDirOrPanic("rkt_rm_test")
+	defer os.RemoveAll(tmpDir)
+	uuidFile := filepath.Join(tmpDir, "uuid-file")
+	if err := ioutil.WriteFile(uuidFile, []byte(nonexistentUUID), 0600); err != nil {
+		t.Fatalf("cannot write uuid-file: %v", err)
+	}
+
+	expected := fmt.Sprintf("no matches found for %q", nonexistentUUID)
+
+	cmd := fmt.Sprintf("%s rm %s", ctx.Cmd(), nonexistentUUID)
+	runRktAndCheckOutput(t, cmd, expected, true)
+
+	cmd = fmt.Sprintf("%s rm --uuid-file=%s", ctx.Cmd(), uuidFile)
+	runRktAndCheckOutput(t, cmd, expected, true)
+}
