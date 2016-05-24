@@ -124,3 +124,15 @@ $ journalctl -M rkt-bc3c1451-2e81-45c6-aeb0-807db44e31b4 -t redis
 ```
 
 Additionaly, logs can be programmatically accessed via the [sd-journal API](https://www.freedesktop.org/software/systemd/man/sd-journal.html).
+
+##### Stopped pod
+
+To read the logs of a stopped pod, use:
+
+```
+journalctl -m _MACHINE_ID=132f9d560e3f4d1eba8668efd488bb62
+
+[...]
+```
+
+On some distributions such as Ubuntu, persistent journal storage is not enabled by default. In this case, it is not possible to get the logs of a stopped pod. Persistent journal storage can be enabled with `sudo mkdir /var/log/journal` before starting the pods.
