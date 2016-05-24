@@ -140,23 +140,16 @@ static void mount_at(const char *root, const mount_point *mnt)
 
 static void mount_sys(const char *root)
 {
-	int i;
-	char to[4096];
 	struct statfs fs;
-	DIR *dir = NULL;
-	struct dirent *d;
-	const mount_point mnt_rec = { "/sys", "sys", "bind", NULL, MS_BIND|MS_REC };
-	const mount_point sys_bind_table[] = {
-		{ "/sys", "sys", "bind", NULL, MS_BIND },
-		{ "/sys/fs/cgroup", "sys/fs/cgroup", "bind", NULL, MS_BIND },
-	};
+	const mount_point sys_bind_rec = { "/sys", "sys", "bind", NULL, MS_BIND|MS_REC };
+	const mount_point sys_bind = { "/sys", "sys", "bind", NULL, MS_BIND };
 
 	pexit_if(statfs("/sys/fs/cgroup", &fs) != 0,
 	         "Cannot statfs /sys/fs/cgroup");
 	if (fs.f_type == (typeof(fs.f_type)) CGROUP2_SUPER_MAGIC) {
 		/* With the unified cgroup hierarchy, recursive bind mounts
 		 * are fine. */
-		mount_at(root, &mnt_rec);
+		mount_at(root, &sys_bind_rec);
 		return;
 	}
 
@@ -184,7 +177,7 @@ static void mount_sys(const char *root)
 		// do a recursive bind mount if we are in a user namespace having a parent namespace set,
 		// i.e. either one of uid base, shift, or the range is set, see user_namespaces(7).
 		if (uid_base != 0 || uid_shift != 0 || uid_range != UNMAPPED) {
-			mount_at(root, &mnt_rec);
+			mount_at(root, &sys_bind_rec);
 			return;
 		}
 	}
@@ -194,30 +187,7 @@ static void mount_sys(const char *root)
 	 * a quadratic progression, prepare-app does not bind mount
 	 * /sys recursively. See:
 	 * https://github.com/coreos/rkt/issues/2351 */
-	for (i = 0; i < nelems(sys_bind_table); i++) {
-		mount_at(root, &sys_bind_table[i]);
-	}
-
-	exit_if(snprintf(to, sizeof(to), "%s/%s", root, "sys/fs/cgroup") >= sizeof(to),
-		"Path too long: \"%s\"", to);
-	pexit_if(!(dir = opendir(to)), "Failed to open directory \"%s\"", to)
-	errno = 0;
-	while ((d = readdir(dir))) {
-		if (d->d_type != DT_DIR)
-			continue;
-		if (strcmp(d->d_name, ".") == 0)
-			continue;
-		if (strcmp(d->d_name, "..") == 0)
-			continue;
-
-		exit_if(snprintf(to, sizeof(to), "sys/fs/cgroup/%s", d->d_name) >= sizeof(to),
-			"Path too long: \"%s\"", to);
-
-		mount_point mnt = { to, to, "bind", NULL, MS_BIND };
-		mount_at(root, &mnt);
-	}
-	pexit_if(errno != 0, "Failed to read directory \"%s\"", to);
-	pexit_if(closedir(dir) != 0, "Failed to close directory");
+	mount_at(root, &sys_bind);
 }
 
 int main(int argc, char *argv[])
