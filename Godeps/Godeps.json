@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
 	"GoVersion": "go1.5",
-	"GodepVersion": "v70",
+	"GodepVersion": "v71",
 	"Packages": [
 		"./...",
 		"github.com/appc/spec/actool",
@@ -259,6 +259,101 @@
 		{
 			"ImportPath": "github.com/camlistore/go4/lock",
 			"Rev": "9ba773eba85ab9e258ff516630f7f6474bc4535b"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/invoke",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/ip",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/ipam",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/ns",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/skel",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/testutils",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/types",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/utils",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/utils/sysctl",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/ipam/dhcp",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/ipam/host-local",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/ipam/host-local/backend",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/ipam/host-local/backend/disk",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/main/bridge",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/main/ipvlan",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/main/macvlan",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/main/ptp",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/meta/flannel",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/meta/tuning",
+			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
 		},
 		{
 			"ImportPath": "github.com/coreos/gexpect",

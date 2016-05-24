@@ -27,10 +27,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/appc/cni/pkg/ip"
-	cnitypes "github.com/appc/cni/pkg/types"
-	cniutils "github.com/appc/cni/pkg/utils"
 	"github.com/appc/spec/schema/types"
+	"github.com/containernetworking/cni/pkg/ip"
+	cnitypes "github.com/containernetworking/cni/pkg/types"
+	cniutils "github.com/containernetworking/cni/pkg/utils"
 	"github.com/hashicorp/errwrap"
 	"github.com/vishvananda/netlink"
 

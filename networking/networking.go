@@ -24,9 +24,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/appc/cni/pkg/ns"
-	cnitypes "github.com/appc/cni/pkg/types"
 	"github.com/appc/spec/schema/types"
+	"github.com/containernetworking/cni/pkg/ns"
+	cnitypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/hashicorp/errwrap"
 	"github.com/vishvananda/netlink"
 
