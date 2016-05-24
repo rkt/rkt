@@ -375,7 +375,7 @@ func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup st
 	// Mount RW knobs we need to make the enabled isolators work
 	for _, c := range controllers {
 		cPath := filepath.Join(cgroupTmpfs, c)
-		subcgroupPath := filepath.Join(cPath, subcgroup)
+		subcgroupPath := filepath.Join(cPath, subcgroup, "system.slice")
 
 		// Workaround for https://github.com/coreos/rkt/issues/1210
 		if c == "cpuset" {
