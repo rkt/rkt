@@ -165,11 +165,11 @@ $(eval $(call setup-custom-dep-file,$1,$(MK_PATH)$2))
 endef
 
 # Returns all not-excluded directories inside $REPO_PATH that have
-# nonzero files matching given "go list -f {{.ITEM}}".
+# nonzero files matching given "go list -f {{.ITEM1}} {{.ITEM2}}...".
 # 1 - where to look for files (./... to look for all files inside the project)
-# 2 - a "go list -f {{.ITEM}}" item (GoFiles, TestGoFiles, etc)
+# 2 - a list of "go list -f {{.ITEM}}" items (GoFiles, TestGoFiles, etc)
 # 3 - space-separated list of excluded directories
-# Example: $(call go-find-directories,./...,TestGoFiles,tests)
+# Example: $(call go-find-directories,./...,TestGoFiles XTestGoFiles,tests)
 define go-find-directories
 $(strip \
 	$(eval _MISC_GFD_ESCAPED_SRCDIR := $(MK_TOPLEVEL_ABS_SRCDIR)) \
@@ -177,8 +177,9 @@ $(strip \
 	$(eval _MISC_GFD_ESCAPED_SRCDIR := $(subst /,\/,$(_MISC_GFD_ESCAPED_SRCDIR))) \
 	$(eval _MISC_GFD_SPACE_ :=) \
 	$(eval _MISC_GFD_SPACE_ +=) \
-	$(eval _MISC_GFD_FILES_ := $(shell $(GO_ENV) "$(GO)" list -f '{{.ImportPath}} {{.$2}}' $1 | \
-		grep --invert-match '\[\]' | \
+	$(eval _MISC_GFD_GO_LIST_ITEMS_ := $(foreach i,$2,{{.$i}})) \
+	$(eval _MISC_GFD_FILES_ := $(shell $(GO_ENV) "$(GO)" list -f '{{.ImportPath}} $(_MISC_GFD_GO_LIST_ITEMS_)' $1 | \
+		grep '\[[^]]' | \
 		sed -e 's/.*$(_MISC_GFD_ESCAPED_SRCDIR)\///' -e 's/[[:space:]]*\[.*\]$$//' \
 		$(if $3,| grep --invert-match '^\($(subst $(_MISC_GFD_SPACE_),\|,$3)\)'))) \
 	$(_MISC_GFD_FILES_) \
