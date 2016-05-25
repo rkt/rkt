@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 # make sure we are running in a toplevel directory
 if ! [[ "$0" =~ "scripts/godep-save" ]]; then
