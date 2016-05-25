@@ -5,6 +5,8 @@
 rkt is an integral part of CoreOS, installed with the operating system.
 The [CoreOS releases page](https://coreos.com/releases/) lists the version of rkt available in each CoreOS release channel.
 
+If the version of rkt included in CoreOS is too old, it's fairly trivial to fetch the desired version [via a systemd unit](Documentation/install-rkt-in-coreos.md)
+
 ## Fedora
 
 rkt is packaged in the development version of Fedora, [Rawhide](https://fedoraproject.org/wiki/Releases/Rawhide):
