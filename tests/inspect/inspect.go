@@ -390,6 +390,10 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
+		if len(ips) == 0 {
+			fmt.Fprintf(os.Stderr, "No IPv4 found for interface %+v:\n", iface)
+			os.Exit(1)
+		}
 		fmt.Printf("%v IPv4: %s\n", iface, ips[0])
 	}
 
