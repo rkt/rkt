@@ -301,8 +301,10 @@ func (n *Networking) Teardown(flavor string, debug bool) {
 // for "rkt list" and friends to display
 func (e *Networking) Save() error {
 
-	if err := e.podNSPathSave(); err != nil {
-		return err
+	if e.podNS != nil {
+		if err := e.podNSPathSave(); err != nil {
+			return err
+		}
 	}
 
 	var nis []netinfo.NetInfo
