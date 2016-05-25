@@ -258,7 +258,19 @@ func patchManifest(im *schema.ImageManifest) error {
 				return fmt.Errorf("cannot parse isolator %q: %v", is, err)
 			}
 
-			if _, ok := types.ResourceIsolatorNames[name]; !ok {
+			_, ok := types.ResourceIsolatorNames[name]
+
+			if name == types.LinuxNoNewPrivilegesName {
+				ok = true
+				kv := strings.Split(is, ",")
+				if len(kv) != 2 {
+					return fmt.Errorf("isolator %s: invalid format", name)
+				}
+
+				isolatorStr = fmt.Sprintf(`{ "name": "%s", "value": %s }`, name, kv[1])
+			}
+
+			if !ok {
 				return fmt.Errorf("isolator %s is not supported for patching", name)
 			}
 
