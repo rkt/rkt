@@ -407,8 +407,8 @@
 		},
 		{
 			"ImportPath": "github.com/gogo/protobuf/proto",
-			"Comment": "v0.1-125-g82d16f7",
-			"Rev": "82d16f734d6d871204a3feb1a73cb220cc92574c"
+			"Comment": "v0.2",
+			"Rev": "4168943e65a2802828518e95310aeeed6d84c4e5"
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/proto",
