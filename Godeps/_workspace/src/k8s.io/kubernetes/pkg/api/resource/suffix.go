@@ -1,5 +1,5 @@
 /*
-Copyright 2014 Google Inc. All rights reserved.
+Copyright 2014 The Kubernetes Authors All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -83,6 +83,8 @@ func newSuffixer() suffixer {
 	// a suffix for 2^0.
 	sh.decSuffixes.addSuffix("", bePair{2, 0})
 
+	sh.decSuffixes.addSuffix("n", bePair{10, -9})
+	sh.decSuffixes.addSuffix("u", bePair{10, -6})
 	sh.decSuffixes.addSuffix("m", bePair{10, -3})
 	sh.decSuffixes.addSuffix("", bePair{10, 0})
 	sh.decSuffixes.addSuffix("k", bePair{10, 3})

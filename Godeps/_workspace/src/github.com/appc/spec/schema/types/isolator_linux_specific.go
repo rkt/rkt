@@ -22,6 +22,7 @@ import (
 const (
 	LinuxCapabilitiesRetainSetName = "os/linux/capabilities-retain-set"
 	LinuxCapabilitiesRevokeSetName = "os/linux/capabilities-remove-set"
+	LinuxNoNewPrivilegesName       = "os/linux/no-new-privileges"
 )
 
 var LinuxIsolatorNames = make(map[ACIdentifier]struct{})
@@ -30,10 +31,29 @@ func init() {
 	for name, con := range map[ACIdentifier]IsolatorValueConstructor{
 		LinuxCapabilitiesRevokeSetName: func() IsolatorValue { return &LinuxCapabilitiesRevokeSet{} },
 		LinuxCapabilitiesRetainSetName: func() IsolatorValue { return &LinuxCapabilitiesRetainSet{} },
+		LinuxNoNewPrivilegesName:       func() IsolatorValue { v := LinuxNoNewPrivileges(false); return &v },
 	} {
 		AddIsolatorName(name, LinuxIsolatorNames)
 		AddIsolatorValueConstructor(name, con)
 	}
+}
+
+type LinuxNoNewPrivileges bool
+
+func (l LinuxNoNewPrivileges) AssertValid() error {
+	return nil
+}
+
+func (l *LinuxNoNewPrivileges) UnmarshalJSON(b []byte) error {
+	var v bool
+	err := json.Unmarshal(b, &v)
+	if err != nil {
+		return err
+	}
+
+	*l = LinuxNoNewPrivileges(v)
+
+	return nil
 }
 
 type LinuxCapabilitiesSet interface {
