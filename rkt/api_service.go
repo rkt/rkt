@@ -736,7 +736,7 @@ func (s *v1AlphaAPIServer) GetLogs(request *v1alpha.GetLogsRequest, server v1alp
 		}
 		jconf.Matches = []sdjournal.Match{
 			{
-				Field: sdjournal.SD_JOURNAL_FIELD_SYSTEMD_UNIT,
+				Field: sdjournal.SD_JOURNAL_FIELD_SYSLOG_IDENTIFIER,
 				Value: stage1common.ServiceUnitName(*acname),
 			},
 		}
