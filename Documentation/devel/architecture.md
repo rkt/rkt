@@ -21,12 +21,12 @@ Until https://github.com/coreos/rkt/issues/572 is resolved, this should be consi
 The first stage is the actual `rkt` binary itself.
 When running a pod, this binary is responsible for performing a number of initial preparatory tasks:
 
-- Fetching the specified ACIs, including the stage 1 ACI of --stage1-{url,path,name,hash,from-dir} if specified.
+- Fetching the specified ACIs, including the stage1 ACI of --stage1-{url,path,name,hash,from-dir} if specified.
 - Generating a Pod UUID
 - Generating a Pod Manifest
 - Creating a filesystem for the pod
-- Setting up stage 1 and stage 2 directories in the filesystem
-- Unpacking the stage 1 ACI into the pod filesystem
+- Setting up stage1 and stage2 directories in the filesystem
+- Unpacking the stage1 ACI into the pod filesystem
 - Unpacking the ACIs and copying each app into the stage2 directories
 
 Given a run command such as:
@@ -61,7 +61,7 @@ At this point the stage0 execs `/stage1/rootfs/init` with the current working di
 ### Stage 1
 
 The next stage is a binary that the user trusts to set up cgroups, execute processes, and perform other operations as root on the host.
-This stage has the responsibility of taking the pod filesystem that was created by stage 0 and creating the necessary cgroups, namespaces and mounts to launch the pod.
+This stage has the responsibility of taking the pod filesystem that was created by stage0 and creating the necessary cgroups, namespaces and mounts to launch the pod.
 Specifically, it must:
 
 - Read the Image and Pod Manifests. The Image Manifest defines the default `exec` specifications of each application; the Pod Manifest defines the ordering of the units, as well as any overrides.
@@ -76,7 +76,7 @@ This process is slightly different for the qemu-kvm stage1 but a similar workflo
 
 ### Stage 1 systemd Architecture
 
-rkt's Stage 1 includes a very minimal systemd that takes care of launching the apps in each pod, apply per-app resource isolators and make sure the apps finish in an orderly manner.
+rkt's Stage1 includes a very minimal systemd that takes care of launching the apps in each pod, apply per-app resource isolators and make sure the apps finish in an orderly manner.
 
 We will now detail how the starting, shutdown, and exist status collection of the apps in a pod are implemented internally.
 

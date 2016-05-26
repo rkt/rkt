@@ -320,7 +320,7 @@ For example, if you use systemd, you can [run rkt using `systemd-run`](https://g
 
 If you don't use systemd, you can use [daemon](http://www.libslack.org/daemon/) as an alternative.
 
-## Use a Custom Stage 1
+## Use a Custom Stage1
 
 rkt is designed and intended to be modular, using a [staged architecture](../devel/architecture.md).
 
