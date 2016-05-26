@@ -89,36 +89,55 @@ func TestGCAfterUnmount(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	imagePath := patchImportAndFetchHash("inspect-gc-test-run.aci", []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=0"}, t, ctx)
-	defer os.Remove(imagePath)
-	cmd := fmt.Sprintf("%s --insecure-options=image prepare %s", ctx.Cmd(), imagePath)
-	uuid := runRktAndGetUUID(t, cmd)
+	for _, rmNetns := range []bool{false, true} {
 
-	cmd = fmt.Sprintf("%s run-prepared %s", ctx.Cmd(), uuid)
-	runRktAndCheckOutput(t, cmd, "", false)
+		imagePath := patchImportAndFetchHash("inspect-gc-test-run.aci", []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=0"}, t, ctx)
+		defer os.Remove(imagePath)
+		cmd := fmt.Sprintf("%s --insecure-options=image prepare %s", ctx.Cmd(), imagePath)
+		uuid := runRktAndGetUUID(t, cmd)
 
-	stage1MntPath := filepath.Join(ctx.DataDir(), "pods", "run", uuid, "stage1", "rootfs")
-	stage2MntPath := filepath.Join(stage1MntPath, "opt", "stage2", "rkt-inspect", "rootfs")
+		cmd = fmt.Sprintf("%s run-prepared %s", ctx.Cmd(), uuid)
+		runRktAndCheckOutput(t, cmd, "", false)
 
-	if err := syscall.Unmount(stage2MntPath, 0); err != nil {
-		t.Fatalf("cannot umount stage2: %v", err)
-	}
+		podDir := filepath.Join(ctx.DataDir(), "pods", "run", uuid)
+		stage1MntPath := filepath.Join(podDir, "stage1", "rootfs")
+		stage2MntPath := filepath.Join(stage1MntPath, "opt", "stage2", "rkt-inspect", "rootfs")
+		netnsPath := filepath.Join(podDir, "netns")
+		podNetNSPathBytes, err := ioutil.ReadFile(netnsPath)
+		if err != nil {
+			t.Fatalf(`cannot read "netns" stage1: %v`, err)
+		}
+		podNetNSPath := string(podNetNSPathBytes)
 
-	if err := syscall.Unmount(stage1MntPath, 0); err != nil {
-		t.Fatalf("cannot umount stage1: %v", err)
-	}
+		if err := syscall.Unmount(stage2MntPath, 0); err != nil {
+			t.Fatalf("cannot umount stage2: %v", err)
+		}
 
-	pods := podsRemaining(t, ctx)
-	if len(pods) == 0 {
-		t.Fatalf("pods should still be present in rkt's data directory")
-	}
+		if err := syscall.Unmount(stage1MntPath, 0); err != nil {
+			t.Fatalf("cannot umount stage1: %v", err)
+		}
 
-	gcCmd := fmt.Sprintf("%s gc --mark-only=false --expire-prepared=0 --grace-period=0", ctx.Cmd())
-	// check we don't get any output (an error) after "executing net-plugin..."
-	runRktAndCheckRegexOutput(t, gcCmd, `executing net-plugin .*\n\z`)
+		if err := syscall.Unmount(podNetNSPath, 0); err != nil {
+			t.Fatalf("cannot umount pod netns: %v", err)
+		}
 
-	pods = podsRemaining(t, ctx)
-	if len(pods) != 0 {
-		t.Fatalf("no pods should exist rkt's data directory, but found: %v", pods)
+		if rmNetns {
+			_ = os.RemoveAll(podNetNSPath)
+		}
+
+		pods := podsRemaining(t, ctx)
+		if len(pods) == 0 {
+			t.Fatalf("pods should still be present in rkt's data directory")
+		}
+
+		gcCmd := fmt.Sprintf("%s gc --mark-only=false --expire-prepared=0 --grace-period=0", ctx.Cmd())
+		// check we don't get any output (an error) after "executing net-plugin..."
+		runRktAndCheckRegexOutput(t, gcCmd, `executing net-plugin .*\n\z`)
+
+		pods = podsRemaining(t, ctx)
+		if len(pods) != 0 {
+			t.Fatalf("no pods should exist rkt's data directory, but found: %v", pods)
+		}
+
 	}
 }
