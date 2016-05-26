@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema/types"
@@ -54,6 +55,11 @@ const (
 
 	DefaultLocalConfigDir  = "/etc/rkt"
 	DefaultSystemConfigDir = "/usr/lib/rkt"
+)
+
+const (
+	FsMagicAUFS = int64(0x61756673) // https://goo.gl/CBwx43
+	FsMagicZFS  = int64(0x2FC12FC1) // https://goo.gl/xTvzO5
 )
 
 // Stage1ImagePath returns the path where the stage1 app image (unpacked ACI) is rooted,
@@ -313,4 +319,21 @@ func SystemdVersion(systemdBinaryPath string) (int, error) {
 	}
 
 	return version, nil
+}
+
+// FSSupportsOverlay checks whether the filesystem under which
+// a specified path resides is compatible with OverlayFS
+func FSSupportsOverlay(path string) bool {
+	var data syscall.Statfs_t
+	err := syscall.Statfs(path, &data)
+	if err != nil {
+		return false
+	}
+
+	if data.Type == FsMagicAUFS ||
+		data.Type == FsMagicZFS {
+		return false
+	}
+
+	return true
 }

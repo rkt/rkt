@@ -235,7 +235,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 
 	pcfg := stage0.PrepareConfig{
 		CommonConfig:       &cfg,
-		UseOverlay:         !flagNoOverlay && common.SupportsOverlay(),
+		UseOverlay:         !flagNoOverlay && common.SupportsOverlay() && common.FSSupportsOverlay(getDataDir()),
 		PrivateUsers:       privateUsers,
 		SkipTreeStoreCheck: globalFlags.InsecureFlags.SkipOnDiskCheck(),
 	}
