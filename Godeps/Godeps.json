@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
 	"GoVersion": "go1.5",
-	"GodepVersion": "v71",
+	"GodepVersion": "v70",
 	"Packages": [
 		"./...",
 		"github.com/appc/spec/actool",
@@ -163,58 +163,58 @@
 		},
 		{
 			"ImportPath": "github.com/appc/spec/ace",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/aci",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/actool",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/discovery",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/acirenderer",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/device",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/pkg/tarheader",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema/common",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema/lastditch",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/appc/spec/schema/types",
-			"Comment": "v0.8.3",
-			"Rev": "db96f94ae6b227fe4d8288527ead8927181620f6"
+			"Comment": "v0.8.4",
+			"Rev": "f82c741e743001237821b5e0bb9a8ebd324d3117"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/aws",
