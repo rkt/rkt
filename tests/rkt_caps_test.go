@@ -393,7 +393,7 @@ func NewCapsTest(hasStage1FullCaps bool, stages []int) testutils.Test {
 			stageFileNames := []string{stage1FileName, stage2FileName}
 
 			for _, stage := range stages {
-				t.Logf("Running test #%v: %v [stage %v]", i, tt.testName, stage)
+				t.Logf("Running test #%v: %v [stage%v]", i, tt.testName, stage)
 
 				cmd := fmt.Sprintf("%s --debug --insecure-options=image run --mds-register=false --set-env=CAPABILITY=%d %s", ctx.Cmd(), int(tt.capa), stageFileNames[stage-1])
 				child := spawnOrFail(t, cmd)

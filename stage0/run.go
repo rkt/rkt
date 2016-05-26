@@ -20,7 +20,7 @@ package stage0
 // rkt is a reference implementation of the app container specification.
 //
 // Execution on rkt is divided into a number of stages, and the `rkt`
-// binary implements the first stage (stage 0)
+// binary implements the first stage (stage0)
 //
 
 import (
@@ -526,7 +526,7 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 		log.Fatalf("error clearing FD_CLOEXEC on lock fd")
 	}
 
-	tpmEvent := fmt.Sprintf("rkt: Rootfs: %s Manifest: %s Stage 1 args: %s", cfg.CommonConfig.RootHash, cfg.CommonConfig.ManifestData, strings.Join(args, " "))
+	tpmEvent := fmt.Sprintf("rkt: Rootfs: %s Manifest: %s Stage1 args: %s", cfg.CommonConfig.RootHash, cfg.CommonConfig.ManifestData, strings.Join(args, " "))
 	// If there's no TPM available or there's a failure for some other
 	// reason, ignore it and continue anyway. Long term we'll want policy
 	// that enforces TPM behaviour, but we don't have any infrastructure
