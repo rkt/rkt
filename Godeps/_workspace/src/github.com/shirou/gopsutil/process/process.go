@@ -20,7 +20,6 @@ type Process struct {
 	Pid            int32 `json:"pid"`
 	name           string
 	status         string
-	parent         int32
 	numCtxSwitches *NumCtxSwitchesStat
 	uids           []int32
 	gids           []int32
