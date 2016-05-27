@@ -32,8 +32,7 @@ func TestRm(t *testing.T) {
 
 	var uuids []string
 
-	img := patchTestACI("inspect-rm-test-run.aci", []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=0"}...)
-	defer os.Remove(img)
+	img := getInspectImagePath()
 	prepareCmd := fmt.Sprintf("%s --insecure-options=image prepare %s", ctx.Cmd(), img)
 
 	// Finished pod.
