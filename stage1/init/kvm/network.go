@@ -22,7 +22,7 @@ import (
 	"net"
 	"path/filepath"
 
-	"github.com/appc/cni/pkg/types"
+	"github.com/containernetworking/cni/pkg/types"
 	"github.com/coreos/go-systemd/unit"
 	"github.com/coreos/rkt/networking"
 	"github.com/hashicorp/errwrap"

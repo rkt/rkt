@@ -175,37 +175,39 @@ func NewNetNoneTest() testutils.Test {
  * ---
  * Container must be in a separate network namespace
  */
-func TestNetDefaultNetNS(t *testing.T) {
-	testImageArgs := []string{"--exec=/inspect --print-netns"}
-	testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
-	defer os.Remove(testImage)
+func NewTestNetDefaultNetNS() testutils.Test {
+	return testutils.TestFunc(func(t *testing.T) {
+		testImageArgs := []string{"--exec=/inspect --print-netns"}
+		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
+		defer os.Remove(testImage)
 
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
+		ctx := testutils.NewRktRunCtx()
+		defer ctx.Cleanup()
 
-	f := func(argument string) {
-		cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
-		child := spawnOrFail(t, cmd)
-		defer waitOrFail(t, child, 0)
+		f := func(argument string) {
+			cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
+			child := spawnOrFail(t, cmd)
+			defer waitOrFail(t, child, 0)
 
-		expectedRegex := `NetNS: (net:\[\d+\])`
-		result, out, err := expectRegexWithOutput(child, expectedRegex)
-		if err != nil {
-			t.Fatalf("Error: %v\nOutput: %v", err, out)
+			expectedRegex := `NetNS: (net:\[\d+\])`
+			result, out, err := expectRegexWithOutput(child, expectedRegex)
+			if err != nil {
+				t.Fatalf("Error: %v\nOutput: %v", err, out)
+			}
+
+			ns, err := os.Readlink("/proc/self/ns/net")
+			if err != nil {
+				t.Fatalf("Cannot evaluate NetNS symlink: %v", err)
+			}
+
+			if nsChanged := ns != result[1]; !nsChanged {
+				t.Fatalf("container did not leave host netns")
+			}
+
 		}
-
-		ns, err := os.Readlink("/proc/self/ns/net")
-		if err != nil {
-			t.Fatalf("Cannot evaluate NetNS symlink: %v", err)
-		}
-
-		if nsChanged := ns != result[1]; !nsChanged {
-			t.Fatalf("container did not leave host netns")
-		}
-
-	}
-	f("--net=default")
-	f("")
+		f("--net=default")
+		f("")
+	})
 }
 
 /*
@@ -293,59 +295,61 @@ func NewNetDefaultConnectivityTest() testutils.Test {
  * eth0's IPv4
  * TODO: verify that the container isn't NATed
  */
-func TestNetDefaultRestrictedConnectivity(t *testing.T) {
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
+func NewTestNetDefaultRestrictedConnectivity() testutils.Test {
+	return testutils.TestFunc(func(t *testing.T) {
+		ctx := testutils.NewRktRunCtx()
+		defer ctx.Cleanup()
 
-	f := func(argument string) {
-		httpPort, err := testutils.GetNextFreePort4()
-		if err != nil {
-			t.Fatalf("%v", err)
-		}
-		httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
-		iface := "eth0"
-
-		testImageArgs := []string{fmt.Sprintf("--exec=/inspect --print-ipv4=%v --serve-http=%v", iface, httpServeAddr)}
-		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
-		defer os.Remove(testImage)
-
-		cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
-		child := spawnOrFail(t, cmd)
-
-		expectedRegex := `IPv4: (\d+\.\d+\.\d+\.\d+)`
-		result, out, err := expectRegexWithOutput(child, expectedRegex)
-		if err != nil {
-			t.Fatalf("Error: %v\nOutput: %v", err, out)
-		}
-		httpGetAddr := fmt.Sprintf("http://%v:%v", result[1], httpPort)
-
-		ga := testutils.NewGoroutineAssistant(t)
-		ga.Add(2)
-
-		// Child opens the server
-		go func() {
-			defer ga.Done()
-			ga.WaitOrFail(child)
-		}()
-
-		// Host connects to the child
-		go func() {
-			defer ga.Done()
-			expectedRegex := `serving on`
-			_, out, err := expectRegexWithOutput(child, expectedRegex)
+		f := func(argument string) {
+			httpPort, err := testutils.GetNextFreePort4()
 			if err != nil {
-				ga.Fatalf("Error: %v\nOutput: %v", err, out)
+				t.Fatalf("%v", err)
 			}
-			body, err := testutils.HTTPGet(httpGetAddr)
-			if err != nil {
-				ga.Fatalf("%v\n", err)
-			}
-			t.Logf("HTTP-Get received: %s", body)
-		}()
+			httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
+			iface := "eth0"
 
-		ga.Wait()
-	}
-	f("--net=default-restricted")
+			testImageArgs := []string{fmt.Sprintf("--exec=/inspect --print-ipv4=%v --serve-http=%v", iface, httpServeAddr)}
+			testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
+			defer os.Remove(testImage)
+
+			cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
+			child := spawnOrFail(t, cmd)
+
+			expectedRegex := `IPv4: (\d+\.\d+\.\d+\.\d+)`
+			result, out, err := expectRegexWithOutput(child, expectedRegex)
+			if err != nil {
+				t.Fatalf("Error: %v\nOutput: %v", err, out)
+			}
+			httpGetAddr := fmt.Sprintf("http://%v:%v", result[1], httpPort)
+
+			ga := testutils.NewGoroutineAssistant(t)
+			ga.Add(2)
+
+			// Child opens the server
+			go func() {
+				defer ga.Done()
+				ga.WaitOrFail(child)
+			}()
+
+			// Host connects to the child
+			go func() {
+				defer ga.Done()
+				expectedRegex := `serving on`
+				_, out, err := expectRegexWithOutput(child, expectedRegex)
+				if err != nil {
+					ga.Fatalf("Error: %v\nOutput: %v", err, out)
+				}
+				body, err := testutils.HTTPGet(httpGetAddr)
+				if err != nil {
+					ga.Fatalf("%v\n", err)
+				}
+				t.Logf("HTTP-Get received: %s", body)
+			}()
+
+			ga.Wait()
+		}
+		f("--net=default-restricted")
+	})
 }
 
 type PortFwdCase struct {
@@ -817,18 +821,20 @@ func NewNetOverrideTest() testutils.Test {
 	})
 }
 
-func TestNetLongName(t *testing.T) {
-	nt := networkTemplateT{
-		Name:   "thisnameiswaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaytoolong",
-		Type:   "ptp",
-		IpMasq: true,
-		Ipam: ipamTemplateT{
-			Type:   "host-local",
-			Subnet: "11.11.6.0/24",
-			Routes: []map[string]string{
-				{"dst": "0.0.0.0/0"},
+func NewTestNetLongName() testutils.Test {
+	return testutils.TestFunc(func(t *testing.T) {
+		nt := networkTemplateT{
+			Name:   "thisnameiswaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaytoolong",
+			Type:   "ptp",
+			IpMasq: true,
+			Ipam: ipamTemplateT{
+				Type:   "host-local",
+				Subnet: "11.11.6.0/24",
+				Routes: []map[string]string{
+					{"dst": "0.0.0.0/0"},
+				},
 			},
-		},
-	}
-	testNetCustomNatConnectivity(t, nt)
+		}
+		testNetCustomNatConnectivity(t, nt)
+	})
 }

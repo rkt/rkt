@@ -63,3 +63,15 @@ func TestNetCustomPtp(t *testing.T) {
 func TestNetDefaultConnectivity(t *testing.T) {
 	NewNetDefaultConnectivityTest().Execute(t)
 }
+
+func TestNetDefaultNetNS(t *testing.T) {
+	NewTestNetDefaultNetNS().Execute(t)
+}
+
+func TestNetLongName(t *testing.T) {
+	NewTestNetLongName().Execute(t)
+}
+
+func TestNetDefaultRestrictedConnectivity(t *testing.T) {
+	NewTestNetDefaultRestrictedConnectivity().Execute(t)
+}
