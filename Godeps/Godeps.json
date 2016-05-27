@@ -108,53 +108,53 @@
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
-			"Comment": "v0.9.3",
-			"Rev": "3b996e400e8937a7433b1759f846215e1d3b2fbd"
+			"Comment": "v0.11.0",
+			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/common",
-			"Comment": "v0.9.3",
-			"Rev": "3b996e400e8937a7433b1759f846215e1d3b2fbd"
+			"Comment": "v0.11.0",
+			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal",
-			"Comment": "v0.9.3",
-			"Rev": "3b996e400e8937a7433b1759f846215e1d3b2fbd"
+			"Comment": "v0.11.0",
+			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/backend/file",
-			"Comment": "v0.9.3",
-			"Rev": "3b996e400e8937a7433b1759f846215e1d3b2fbd"
+			"Comment": "v0.11.0",
+			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/backend/repository",
-			"Comment": "v0.9.3",
-			"Rev": "3b996e400e8937a7433b1759f846215e1d3b2fbd"
+			"Comment": "v0.11.0",
+			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/docker",
-			"Comment": "v0.9.3",
-			"Rev": "3b996e400e8937a7433b1759f846215e1d3b2fbd"
+			"Comment": "v0.11.0",
+			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/tarball",
-			"Comment": "v0.9.3",
-			"Rev": "3b996e400e8937a7433b1759f846215e1d3b2fbd"
+			"Comment": "v0.11.0",
+			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/types",
-			"Comment": "v0.9.3",
-			"Rev": "3b996e400e8937a7433b1759f846215e1d3b2fbd"
+			"Comment": "v0.11.0",
+			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/util",
-			"Comment": "v0.9.3",
-			"Rev": "3b996e400e8937a7433b1759f846215e1d3b2fbd"
+			"Comment": "v0.11.0",
+			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/pkg/log",
-			"Comment": "v0.9.3",
-			"Rev": "3b996e400e8937a7433b1759f846215e1d3b2fbd"
+			"Comment": "v0.11.0",
+			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
 		},
 		{
 			"ImportPath": "github.com/appc/goaci/proj2aci",
@@ -676,6 +676,31 @@
 			"ImportPath": "k8s.io/kubernetes/third_party/forked/reflect",
 			"Comment": "v1.3.0-alpha.4",
 			"Rev": "9990f843cd62caa90445cf76b07d63ba7b5c86fd"
+		},
+		{
+			"ImportPath": "github.com/klauspost/pgzip",
+			"Comment": "v1.0",
+			"Rev": "95e8170c5d4da28db9c64dfc9ec3138ea4466fd4"
+		},
+		{
+			"ImportPath": "github.com/coreos/pkg/progressutil",
+			"Comment": "v1",
+			"Rev": "160ae6282d8c48a33d8c150e4e4817fdef8a5cde"
+		},
+		{
+			"ImportPath": "github.com/klauspost/compress/flate",
+			"Comment": "v1.0",
+			"Rev": "006acde2c5d283d2f8b8aa03d8f0cd2891c680cf"
+		},
+		{
+			"ImportPath": "github.com/klauspost/crc32",
+			"Comment": "v1.0",
+			"Rev": "19b0b332c9e4516a6370a0456e6182c3b5036720"
+		},
+		{
+			"ImportPath": "github.com/klauspost/cpuid",
+			"Comment": "v1.0",
+			"Rev": "09cded8978dc9e80714c4d85b0322337b0a1e5e0"
 		}
 	]
 }

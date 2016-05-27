@@ -42,14 +42,14 @@ type RepositoryBackend struct {
 	repoData          *RepoData
 	username          string
 	password          string
-	insecure          bool
+	insecure          common.InsecureConfig
 	hostsV2Support    map[string]bool
 	hostsV2AuthTokens map[string]map[string]string
 	schema            string
 	imageManifests    map[types.ParsedDockerURL]v2Manifest
 }
 
-func NewRepositoryBackend(username string, password string, insecure bool) *RepositoryBackend {
+func NewRepositoryBackend(username string, password string, insecure common.InsecureConfig) *RepositoryBackend {
 	return &RepositoryBackend{
 		username:          username,
 		password:          password,
@@ -93,11 +93,11 @@ func (rb *RepositoryBackend) GetImageInfo(url string) ([]string, *types.ParsedDo
 	}
 }
 
-func (rb *RepositoryBackend) BuildACI(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compression common.Compression) (string, *schema.ImageManifest, error) {
+func (rb *RepositoryBackend) BuildACI(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	if rb.hostsV2Support[dockerURL.IndexURL] {
-		return rb.buildACIV2(layerNumber, layerID, dockerURL, outputDir, tmpBaseDir, curPwl, compression)
+		return rb.buildACIV2(layerIDs, dockerURL, outputDir, tmpBaseDir, compression)
 	} else {
-		return rb.buildACIV1(layerNumber, layerID, dockerURL, outputDir, tmpBaseDir, curPwl, compression)
+		return rb.buildACIV1(layerIDs, dockerURL, outputDir, tmpBaseDir, compression)
 	}
 }
 
@@ -137,7 +137,7 @@ func (rb *RepositoryBackend) supportsRegistry(indexURL string, version registryV
 
 		rb.setBasicAuth(req)
 
-		client := util.GetTLSClient(rb.insecure)
+		client := util.GetTLSClient(rb.insecure.SkipVerify)
 		res, err = client.Do(req)
 		return
 	}
@@ -149,7 +149,7 @@ func (rb *RepositoryBackend) supportsRegistry(indexURL string, version registryV
 		defer res.Body.Close()
 	}
 	if err != nil || !ok {
-		if rb.insecure {
+		if rb.insecure.AllowHTTP {
 			schema = "http"
 			res, err = fetch(schema)
 			if err == nil {

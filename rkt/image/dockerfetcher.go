@@ -106,7 +106,10 @@ func (f *dockerFetcher) fetch(u *url.URL) (*os.File, error) {
 	config := docker2aci.RemoteConfig{
 		Username: user,
 		Password: password,
-		Insecure: f.InsecureFlags.AllowHTTP(),
+		Insecure: d2acommon.InsecureConfig{
+			SkipVerify: f.InsecureFlags.SkipTLSCheck(),
+			AllowHTTP:  f.InsecureFlags.AllowHTTP(),
+		},
 		CommonConfig: docker2aci.CommonConfig{
 			Squash:      true,
 			OutputDir:   tmpDir,
