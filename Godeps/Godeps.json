@@ -593,8 +593,8 @@
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/load",
-			"Comment": "v2.0.0-10-g9ef3410",
-			"Rev": "9ef341037b1bcadeeee79e77da4f6baf63de4feb"
+			"Comment": "v2.0.0",
+			"Rev": "e8f7a95747d711f34ddfe9dd9b825a84bd059dec"
 		},
 		{
 			"ImportPath": "github.com/shirou/gopsutil/mem",
