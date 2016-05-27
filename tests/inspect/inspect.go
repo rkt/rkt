@@ -30,6 +30,8 @@ import (
 	"time"
 	"unsafe"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/tests/testutils"
 	"github.com/syndtr/gocapability/capability"
@@ -74,6 +76,7 @@ var (
 		PrintAppAnnotation string
 		SilentSigterm      bool
 		CheckMountNS       bool
+		PrintNoNewPrivs    bool
 	}{}
 )
 
@@ -114,6 +117,7 @@ func init() {
 	globalFlagset.StringVar(&globalFlags.PrintAppAnnotation, "print-app-annotation", "", "Take an annotation name of the app, and prints its value")
 	globalFlagset.BoolVar(&globalFlags.SilentSigterm, "silent-sigterm", false, "Exit with a success exit status if we receive SIGTERM")
 	globalFlagset.BoolVar(&globalFlags.CheckMountNS, "check-mountns", false, "Check if app's mount ns is different than stage1's. Requires CAP_SYS_PTRACE")
+	globalFlagset.BoolVar(&globalFlags.PrintNoNewPrivs, "print-no-new-privs", false, "print the prctl PR_GET_NO_NEW_PRIVS value")
 }
 
 func in(list []int, el int) bool {
@@ -131,6 +135,16 @@ func main() {
 	if len(args) > 0 {
 		fmt.Fprintln(os.Stderr, "Wrong parameters")
 		os.Exit(1)
+	}
+
+	if globalFlags.PrintNoNewPrivs {
+		r1, _, err := syscall.Syscall(
+			syscall.SYS_PRCTL,
+			uintptr(unix.PR_GET_NO_NEW_PRIVS),
+			uintptr(0), uintptr(0),
+		)
+
+		fmt.Printf("no_new_privs: %v err: %v\n", r1, err)
 	}
 
 	if globalFlags.SilentSigterm {

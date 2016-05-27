@@ -429,6 +429,8 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		return err
 	}
 
+	noNewPrivileges := getAppNoNewPrivileges(app.Isolators)
+
 	execStart := append([]string{binPath}, app.Exec[1:]...)
 	execStartString := quoteExec(execStart)
 	opts := []*unit.UnitOption{
@@ -447,6 +449,7 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		unit.NewUnitOption("Service", "Group", strconv.Itoa(g)),
 		unit.NewUnitOption("Service", "SupplementaryGroups", strings.Join(supplementaryGroups, " ")),
 		unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")),
+		unit.NewUnitOption("Service", "NoNewPrivileges", strconv.FormatBool(noNewPrivileges)),
 		// This helps working around a race
 		// (https://github.com/systemd/systemd/issues/2913) that causes the
 		// systemd unit name not getting written to the journal if the unit is
@@ -1082,4 +1085,16 @@ func parseLinuxCapabilitiesSet(capSet types.LinuxCapabilitiesSet) []string {
 		capsStr = append(capsStr, string(cap))
 	}
 	return capsStr
+}
+
+func getAppNoNewPrivileges(isolators types.Isolators) bool {
+	for _, isolator := range isolators {
+		noNewPrivileges, ok := isolator.Value().(*types.LinuxNoNewPrivileges)
+
+		if ok && bool(*noNewPrivileges) {
+			return true
+		}
+	}
+
+	return false
 }
