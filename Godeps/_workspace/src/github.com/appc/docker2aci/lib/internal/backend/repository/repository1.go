@@ -29,6 +29,7 @@ import (
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/ioprogress"
@@ -62,40 +63,78 @@ func (rb *RepositoryBackend) getImageInfoV1(dockerURL *types.ParsedDockerURL) ([
 	return ancestry, dockerURL, nil
 }
 
-func (rb *RepositoryBackend) buildACIV1(layerNumber int, layerID string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, curPwl []string, compression common.Compression) (string, *schema.ImageManifest, error) {
-	tmpDir, err := ioutil.TempDir(tmpBaseDir, "docker2aci-")
+func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+	layerFiles := make([]*os.File, len(layerIDs))
+	layerDatas := make([]types.DockerImageData, len(layerIDs))
+
+	tmpParentDir, err := ioutil.TempDir(tmpBaseDir, "docker2aci-")
 	if err != nil {
-		return "", nil, fmt.Errorf("error creating dir: %v", err)
+		return nil, nil, err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpParentDir)
 
-	j, size, err := rb.getJsonV1(layerID, rb.repoData.Endpoints[0], rb.repoData)
-	if err != nil {
-		return "", nil, fmt.Errorf("error getting image json: %v", err)
+	var doneChannels []chan error
+	for i, layerID := range layerIDs {
+		doneChan := make(chan error)
+		doneChannels = append(doneChannels, doneChan)
+		// https://github.com/golang/go/wiki/CommonMistakes
+		i := i // golang--
+		layerID := layerID
+		go func() {
+			tmpDir, err := ioutil.TempDir(tmpParentDir, "")
+			if err != nil {
+				doneChan <- fmt.Errorf("error creating dir: %v", err)
+				return
+			}
+
+			j, size, err := rb.getJsonV1(layerID, rb.repoData.Endpoints[0], rb.repoData)
+			if err != nil {
+				doneChan <- fmt.Errorf("error getting image json: %v", err)
+				return
+			}
+
+			layerDatas[i] = types.DockerImageData{}
+			if err := json.Unmarshal(j, &layerDatas[i]); err != nil {
+				doneChan <- fmt.Errorf("error unmarshaling layer data: %v", err)
+				return
+			}
+
+			layerFiles[i], err = rb.getLayerV1(layerID, rb.repoData.Endpoints[0], rb.repoData, size, tmpDir)
+			if err != nil {
+				doneChan <- fmt.Errorf("error getting the remote layer: %v", err)
+				return
+			}
+			doneChan <- nil
+		}()
+	}
+	for _, doneChan := range doneChannels {
+		err := <-doneChan
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	var aciLayerPaths []string
+	var aciManifests []*schema.ImageManifest
+	var curPwl []string
+
+	for i := len(layerIDs) - 1; i >= 0; i-- {
+		log.Debug("Generating layer ACI...")
+		aciPath, manifest, err := internal.GenerateACI(i, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
+		}
+		aciLayerPaths = append(aciLayerPaths, aciPath)
+		aciManifests = append(aciManifests, manifest)
+		curPwl = manifest.PathWhitelist
+
+		layerFiles[i].Close()
 	}
 
-	layerData := types.DockerImageData{}
-	if err := json.Unmarshal(j, &layerData); err != nil {
-		return "", nil, fmt.Errorf("error unmarshaling layer data: %v", err)
-	}
-
-	layerFile, err := rb.getLayerV1(layerID, rb.repoData.Endpoints[0], rb.repoData, size, tmpDir)
-	if err != nil {
-		return "", nil, fmt.Errorf("error getting the remote layer: %v", err)
-	}
-	defer layerFile.Close()
-
-	log.Debug("Generating layer ACI...")
-	aciPath, manifest, err := internal.GenerateACI(layerNumber, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
-	if err != nil {
-		return "", nil, fmt.Errorf("error generating ACI: %v", err)
-	}
-
-	return aciPath, manifest, nil
+	return aciLayerPaths, aciManifests, nil
 }
 
 func (rb *RepositoryBackend) getRepoDataV1(indexURL string, remote string) (*RepoData, error) {
-	client := &http.Client{}
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	repositoryURL := rb.schema + path.Join(indexURL, "v1", "repositories", remote, "images")
 
 	req, err := http.NewRequest("GET", repositoryURL, nil)
@@ -145,7 +184,7 @@ func (rb *RepositoryBackend) getRepoDataV1(indexURL string, remote string) (*Rep
 }
 
 func (rb *RepositoryBackend) getImageIDFromTagV1(registry string, appName string, tag string, repoData *RepoData) (string, error) {
-	client := &http.Client{}
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	// we get all the tags instead of directly getting the imageID of the
 	// requested one (.../tags/TAG) because even though it's specified in the
 	// Docker API, some registries (e.g. Google Container Registry) don't
@@ -188,7 +227,7 @@ func (rb *RepositoryBackend) getImageIDFromTagV1(registry string, appName string
 }
 
 func (rb *RepositoryBackend) getAncestryV1(imgID, registry string, repoData *RepoData) ([]string, error) {
-	client := &http.Client{}
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	req, err := http.NewRequest("GET", rb.schema+path.Join(registry, "images", imgID, "ancestry"), nil)
 	if err != nil {
 		return nil, err
@@ -221,7 +260,7 @@ func (rb *RepositoryBackend) getAncestryV1(imgID, registry string, repoData *Rep
 }
 
 func (rb *RepositoryBackend) getJsonV1(imgID, registry string, repoData *RepoData) ([]byte, int64, error) {
-	client := &http.Client{}
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	req, err := http.NewRequest("GET", rb.schema+path.Join(registry, "images", imgID, "json"), nil)
 	if err != nil {
 		return nil, -1, err
@@ -256,7 +295,7 @@ func (rb *RepositoryBackend) getJsonV1(imgID, registry string, repoData *RepoDat
 }
 
 func (rb *RepositoryBackend) getLayerV1(imgID, registry string, repoData *RepoData, imgSize int64, tmpDir string) (*os.File, error) {
-	client := &http.Client{}
+	client := util.GetTLSClient(rb.insecure.SkipVerify)
 	req, err := http.NewRequest("GET", rb.schema+path.Join(registry, "images", imgID, "layer"), nil)
 	if err != nil {
 		return nil, err

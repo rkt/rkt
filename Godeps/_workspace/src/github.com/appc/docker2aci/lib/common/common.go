@@ -44,6 +44,12 @@ type ErrSeveralImages struct {
 	Images []string
 }
 
+// InsecureConfig represents the different insecure options available
+type InsecureConfig struct {
+	SkipVerify bool
+	AllowHTTP  bool
+}
+
 func (e *ErrSeveralImages) Error() string {
 	return e.Msg
 }
