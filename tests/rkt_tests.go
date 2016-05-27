@@ -225,6 +225,16 @@ func importImageAndFetchHash(t *testing.T, ctx *testutils.RktRunCtx, fetchArgs s
 	return importImageAndFetchHashAsGid(t, ctx, fetchArgs, img, 0)
 }
 
+func importImageAndRun(imagePath string, t *testing.T, ctx *testutils.RktRunCtx) {
+	cmd := fmt.Sprintf("%s --insecure-options=image run %s", ctx.Cmd(), imagePath)
+	spawnAndWaitOrFail(t, cmd, 0)
+}
+
+func importImageAndPrepare(imagePath string, t *testing.T, ctx *testutils.RktRunCtx) {
+	cmd := fmt.Sprintf("%s --insecure-options=image prepare %s", ctx.Cmd(), imagePath)
+	spawnAndWaitOrFail(t, cmd, 0)
+}
+
 func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *testutils.RktRunCtx) string {
 	imagePath := patchTestACI(image, patches...)
 	defer os.Remove(imagePath)

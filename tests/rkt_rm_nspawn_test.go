@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
@@ -29,8 +28,7 @@ func TestRmCgroup(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	imagePath := patchImportAndFetchHash("inspect-rm-test-run.aci", []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=0"}, t, ctx)
-	defer os.Remove(imagePath)
+	imagePath := getInspectImagePath()
 	cmd := fmt.Sprintf("%s --insecure-options=image prepare %s", ctx.Cmd(), imagePath)
 	uuid := runRktAndGetUUID(t, cmd)
 	shortUUID := strings.Split(uuid, "-")[0]

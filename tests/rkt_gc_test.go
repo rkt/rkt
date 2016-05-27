@@ -32,15 +32,14 @@ func TestGC(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
+	imagePath := getInspectImagePath()
 	// Finished pods.
-	patchImportAndRun("inspect-gc-test-run.aci", []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=0"}, t, ctx)
+	importImageAndRun(imagePath, t, ctx)
 
 	// Prepared pods.
-	patchImportAndPrepare("inspect-gc-test-prepare.aci", []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=0"}, t, ctx)
+	importImageAndPrepare(imagePath, t, ctx)
 
 	// Abort prepare.
-	imagePath := patchTestACI("inspect-gc-test-abort.aci", []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=0"}...)
-	defer os.Remove(imagePath)
 	cmd := fmt.Sprintf("%s --insecure-options=image prepare %s %s", ctx.Cmd(), imagePath, imagePath)
 	spawnAndWaitOrFail(t, cmd, 1)
 
@@ -89,10 +88,11 @@ func TestGCAfterUnmount(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
+	imagePath := getInspectImagePath()
+
 	for _, rmNetns := range []bool{false, true} {
 
-		imagePath := patchImportAndFetchHash("inspect-gc-test-run.aci", []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=0"}, t, ctx)
-		defer os.Remove(imagePath)
+		importImageAndFetchHash(t, ctx, "", imagePath)
 		cmd := fmt.Sprintf("%s --insecure-options=image prepare %s", ctx.Cmd(), imagePath)
 		uuid := runRktAndGetUUID(t, cmd)
 
