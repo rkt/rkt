@@ -46,7 +46,7 @@ func main() {
 	})
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	for _, p := range podResp.Pods {
@@ -57,13 +57,13 @@ func main() {
 		})
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(2)
+			os.Exit(1)
 		}
 
 		logsRecvResp, err := logsResp.Recv()
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(2)
+			os.Exit(1)
 		}
 
 		for _, l := range logsRecvResp.Lines {
@@ -83,7 +83,7 @@ func main() {
 	})
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(3)
+		os.Exit(1)
 	}
 
 	for _, im := range imgResp.Images {
