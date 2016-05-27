@@ -7,7 +7,7 @@
 
 # 1.
 
-# plugin names - taken from github.com/appc/cni/plugins
+# plugin names - taken from github.com/containernetworking/cni/plugins
 NPM_PLUGIN_NAMES := \
 	main/ptp \
 	main/bridge \
@@ -38,7 +38,7 @@ $$(call setup-stamp-file,NPM_STAMP,$$(NPM_BASE))
 # variables for makelib/build_go_bin.mk
 BGB_STAMP := $$(NPM_STAMP)
 BGB_BINARY := $$(NPM_PLUGIN)
-BGB_PKG_IN_REPO := Godeps/_workspace/src/github.com/appc/cni/plugins/$1
+BGB_PKG_IN_REPO := Godeps/_workspace/src/github.com/containernetworking/cni/plugins/$1
 include makelib/build_go_bin.mk
 
 $$(NPM_PLUGIN): | $$(TOOLSDIR)

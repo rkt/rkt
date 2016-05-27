@@ -6,7 +6,6 @@ github.com/containernetworking/cni/plugins/ipam/dhcp
 github.com/containernetworking/cni/plugins/ipam/host-local
 github.com/containernetworking/cni/plugins/main/bridge
 github.com/containernetworking/cni/plugins/main/ipvlan
-github.com/containernetworking/cni/plugins/main/lo
 github.com/containernetworking/cni/plugins/main/macvlan
 github.com/containernetworking/cni/plugins/main/ptp
 github.com/containernetworking/cni/plugins/meta/flannel

@@ -5,14 +5,14 @@
 	"Packages": [
 		"./...",
 		"github.com/appc/spec/actool",
-		"github.com/appc/cni/plugins/ipam/dhcp",
-		"github.com/appc/cni/plugins/ipam/host-local",
-		"github.com/appc/cni/plugins/main/bridge",
-		"github.com/appc/cni/plugins/main/ipvlan",
-		"github.com/appc/cni/plugins/main/macvlan",
-		"github.com/appc/cni/plugins/main/ptp",
-		"github.com/appc/cni/plugins/meta/flannel",
-		"github.com/appc/cni/plugins/meta/tuning",
+		"github.com/containernetworking/cni/plugins/ipam/dhcp",
+		"github.com/containernetworking/cni/plugins/ipam/host-local",
+		"github.com/containernetworking/cni/plugins/main/bridge",
+		"github.com/containernetworking/cni/plugins/main/ipvlan",
+		"github.com/containernetworking/cni/plugins/main/macvlan",
+		"github.com/containernetworking/cni/plugins/main/ptp",
+		"github.com/containernetworking/cni/plugins/meta/flannel",
+		"github.com/containernetworking/cni/plugins/meta/tuning",
 		"github.com/appc/spec/ace",
 		"github.com/golang/protobuf/protoc-gen-go"
 	],
@@ -20,91 +20,6 @@
 		{
 			"ImportPath": "github.com/StackExchange/wmi",
 			"Rev": "f3e2bae1e0cb5aef83e319133eabfee30013a4a5"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/pkg/invoke",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/pkg/ip",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/pkg/ipam",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/pkg/ns",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/pkg/skel",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/pkg/types",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/pkg/utils",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/plugins/ipam/dhcp",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local/backend",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/plugins/ipam/host-local/backend/disk",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/plugins/main/bridge",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/plugins/main/ipvlan",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/plugins/main/macvlan",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/plugins/main/ptp",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/plugins/meta/flannel",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
-		},
-		{
-			"ImportPath": "github.com/appc/cni/plugins/meta/tuning",
-			"Comment": "v0.2.3",
-			"Rev": "b634ff6bcd406a6f8ca9405b018787ef53d82dc2"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
@@ -276,6 +191,11 @@
 			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
 		},
 		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/ipam",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
 			"ImportPath": "github.com/containernetworking/cni/pkg/ns",
 			"Comment": "v0.3.0-rc3",
 			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
@@ -288,6 +208,16 @@
 		{
 			"ImportPath": "github.com/containernetworking/cni/pkg/testutils",
 			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/skel",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/testutils",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
 			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
 		},
 		{
@@ -353,6 +283,61 @@
 		{
 			"ImportPath": "github.com/containernetworking/cni/plugins/meta/tuning",
 			"Comment": "v0.3.0-rc3",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/pkg/utils/sysctl",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/ipam/dhcp",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/ipam/host-local",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/ipam/host-local/backend",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/ipam/host-local/backend/disk",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/main/bridge",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/main/ipvlan",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/main/macvlan",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/main/ptp",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/meta/flannel",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
+			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
+		},
+		{
+			"ImportPath": "github.com/containernetworking/cni/plugins/meta/tuning",
+			"Comment": "v0.3.0-rc2-5-g35f3a09",
 			"Rev": "35f3a090b2f7ebe32daf0c6a73eb060c669e2128"
 		},
 		{
