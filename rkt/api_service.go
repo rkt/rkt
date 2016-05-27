@@ -17,6 +17,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"os/signal"
@@ -24,13 +25,16 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/coreos/go-systemd/sdjournal"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/set"
+	stage1common "github.com/coreos/rkt/stage1/init/common"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
 	"github.com/spf13/cobra"
@@ -691,8 +695,76 @@ func (s *v1AlphaAPIServer) InspectImage(ctx context.Context, request *v1alpha.In
 	return &v1alpha.InspectImageResponse{Image: image}, nil
 }
 
+// LogsStreamWriter is a wrapper around a gRPC streaming server.
+// Implements io.Writer interface.
+type LogsStreamWriter struct {
+	server v1alpha.PublicAPI_GetLogsServer
+}
+
+func (sw LogsStreamWriter) Write(b []byte) (int, error) {
+	if err := sw.server.SendMsg(b); err != nil {
+		return 0, err
+	}
+	return len(b), nil
+}
+
 func (s *v1AlphaAPIServer) GetLogs(request *v1alpha.GetLogsRequest, server v1alpha.PublicAPI_GetLogsServer) error {
-	return fmt.Errorf("not implemented yet")
+	uuid, err := types.NewUUID(request.PodId)
+	if err != nil {
+		return err
+	}
+	pod, err := getPod(uuid)
+	if err != nil {
+		return err
+	}
+	stage1Path := "stage1/rootfs"
+	if pod.usesOverlay() {
+		stage1TreeStoreID, err := pod.getStage1TreeStoreID()
+		if err != nil {
+			return err
+		}
+		stage1Path = fmt.Sprintf("/overlay/%s/upper/", stage1TreeStoreID)
+	}
+	path := filepath.Join(getDataDir(), "/pods/run/", request.PodId, stage1Path, "/var/log/journal/")
+	jconf := sdjournal.JournalReaderConfig{
+		Path: path,
+	}
+	if request.AppName != "" {
+		acname, err := types.NewACName(request.AppName)
+		if err != nil {
+			return err
+		}
+		jconf.Matches = []sdjournal.Match{
+			{
+				Field: sdjournal.SD_JOURNAL_FIELD_SYSLOG_IDENTIFIER,
+				Value: stage1common.ServiceUnitName(*acname),
+			},
+		}
+	}
+	if request.SinceTime != 0 {
+		t := time.Unix(request.SinceTime, 0)
+		jconf.Since = time.Since(t)
+	}
+	if request.Lines != 0 {
+		jconf.NumFromTail = uint64(request.Lines)
+	}
+
+	jr, err := sdjournal.NewJournalReader(jconf)
+	if err != nil {
+		return err
+	}
+	defer jr.Close()
+
+	if request.Follow {
+		return jr.Follow(nil, LogsStreamWriter{server: server})
+	}
+
+	data, err := ioutil.ReadAll(jr)
+	if err != nil {
+		return err
+	}
+	lines := strings.Split(string(data), "\n")
+	return server.Send(&v1alpha.GetLogsResponse{Lines: lines})
 }
 
 func (s *v1AlphaAPIServer) ListenEvents(request *v1alpha.ListenEventsRequest, server v1alpha.PublicAPI_ListenEventsServer) error {

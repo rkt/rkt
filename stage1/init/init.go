@@ -36,6 +36,7 @@ import (
 	"github.com/appc/goaci/proj2aci"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/go-systemd/util"
+	"github.com/coreos/pkg/dlopen"
 	"github.com/godbus/dbus"
 	"github.com/godbus/dbus/introspect"
 	"github.com/hashicorp/errwrap"
@@ -397,7 +398,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 
 		keepUnit, err := util.RunningFromSystemService()
 		if err != nil {
-			if err == util.ErrSoNotFound {
+			if err == dlopen.ErrSoNotFound {
 				log.Print("warning: libsystemd not found even though systemd is running. Cgroup limits set by the environment (e.g. a systemd service) won't be enforced.")
 			} else {
 				return nil, nil, errwrap.Wrap(errors.New("error determining if we're running from a system service"), err)

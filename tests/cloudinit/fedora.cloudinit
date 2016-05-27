@@ -25,7 +25,7 @@ gpasswd -a fedora rkt
 dnf -y -v update
 dnf -y -v groupinstall "Development Tools"
 dnf -y -v groupinstall "C Development Tools and Libraries"
-dnf -y -v install wget squashfs-tools patch glibc-static gnupg golang libacl-devel file
+dnf -y -v install wget squashfs-tools patch glibc-static gnupg golang libacl-devel file systemd-devel
 # systemd-container only available in newer versions of Fedora
 dnf -y -v install systemd-container || true
 

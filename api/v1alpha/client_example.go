@@ -46,11 +46,29 @@ func main() {
 	})
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	for _, p := range podResp.Pods {
 		fmt.Printf("Pod %q is running\n", p.Id)
+
+		logsResp, err := c.GetLogs(context.Background(), &v1alpha.GetLogsRequest{
+			PodId: p.Id,
+		})
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		logsRecvResp, err := logsResp.Recv()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		for _, l := range logsRecvResp.Lines {
+			fmt.Println(l)
+		}
 	}
 
 	// List images.
@@ -65,7 +83,7 @@ func main() {
 	})
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(3)
+		os.Exit(1)
 	}
 
 	for _, im := range imgResp.Images {

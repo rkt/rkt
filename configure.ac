@@ -563,6 +563,12 @@ AC_CHECK_LIB([c], [fork],
 # Check whether we can build TPM support code
 AC_CHECK_HEADER(trousers/tss.h, [HAVE_TPM=yes], [HAVE_TPM=no], [AC_INCLUDES_DEFAULT])
 
+# Check whether we have libsystemd-journal (needed by the API server)
+AC_CHECK_HEADER([systemd/sd-journal.h],
+                           [],
+                           [AC_MSG_ERROR([*** No development headers for libsystemd-journal found])],
+                           [AC_INCLUDES_DEFAULT])
+
 TPM_TAGS=''
 AS_CASE([${RKT_ENABLE_TPM}],
         [no],
