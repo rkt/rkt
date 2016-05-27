@@ -28,3 +28,15 @@ func TestNetCustomPtp(t *testing.T) {
 	// PTP means connection Point-To-Point. That is, connections to other pods/containers should be forbidden
 	NewNetCustomPtpTest(false)
 }
+
+func TestNetDefaultNetNS(t *testing.T) {
+	NewTestNetDefaultNetNS().Execute(t)
+}
+
+func TestNetLongName(t *testing.T) {
+	NewTestNetLongName().Execute(t)
+}
+
+func TestNetDefaultRestrictedConnectivity(t *testing.T) {
+	NewTestNetDefaultRestrictedConnectivity().Execute(t)
+}
