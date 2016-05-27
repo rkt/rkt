@@ -10,21 +10,22 @@ Let's get started:
 
 - Start at the relevant milestone on GitHub (e.g. https://github.com/coreos/rkt/milestones/v1.2.0): ensure all referenced issues are closed (or moved elsewhere, if they're not done). Close the milestone.
 - Update the [roadmap](https://github.com/coreos/rkt/blob/master/ROADMAP.md) to remove the release you're performing, if necessary
+- Ensure that `stage1/aci/aci-manifest.in` is the same version of appc/spec vendored with rkt. Otherwise, update it.
 - Branch from the latest master, make sure your git status is clean
 - Ensure the build is clean!
   - `git clean -ffdx && ./autogen.sh && ./configure --enable-tpm=no --enable-functional-tests && make && make check` should work
   - Integration tests on CI should be green
 - Update the [release notes](https://github.com/coreos/rkt/blob/master/CHANGELOG.md).
   Try to capture most of the salient changes since the last release, but don't go into unnecessary detail (better to link/reference the documentation wherever possible).
+  `scripts/changelog.sh` will help generating an initial list of changes. Correct/fix entries if necessary, and group them by category.
 
 The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/blob/master/configure.ac#L2), so the first thing to do is bump it:
 
 - Run `scripts/bump-release v1.2.0`.
-  This should generate two commits: a bump to the actual release (e.g. v1.2.0), and then a bump to the release+git (e.g. v1.2.0+git).
+  This should generate two commits: a bump to the actual release (e.g. v1.2.0, including CHANGELOG updates), and then a bump to the release+git (e.g. v1.2.0+git).
   The actual release version should only exist in a single commit!
 - Sanity check what the script did with `git diff HEAD^^` or similar.
   As well as changing the actual version, it also attempts to fix a bunch of references in the documentation etc.
-- Fix the commit `HEAD^` so that the version in `stage1/aci/aci-manifest.in` is the version of appc/spec vendored with rkt.
 - If the script didn't work, yell at the author and/or fix it.
   It can almost certainly be improved.
 - File a PR and get a review from another [MAINTAINER](https://github.com/coreos/rkt/blob/master/MAINTAINERS).
@@ -97,30 +98,3 @@ Make sure to include a list of authors that contributed since the previous relea
 ```
 	git log v1.1.0..v1.2.0 --pretty=format:"%an" | sort | uniq | tr '\n' ',' | sed -e 's#,#, #g' -e 's#, $#\n#'
 ```
-
-Add `CHANGELOG.md` entries:
-
-- Add a new version headline and a meaningful release summary:
-
-```
-## v1.2.0
-
-This release includes a number of new features and bugfixes like a new config subcommand, man page, and bash completion generation during build time.
-```
-
-- Execute `scripts/changelog.sh`
-- Copy/Paste the generated entries into `CHANGELOG.md`
-- Group the generated entries according to the following headlines:
-
-```
-#### New features and UX changes
-...
-#### Improved documentation
-...
-#### Bug fixes
-...
-#### Other changes
-...
-```
-
-- Correct/fix the changelog entries if necessary.
