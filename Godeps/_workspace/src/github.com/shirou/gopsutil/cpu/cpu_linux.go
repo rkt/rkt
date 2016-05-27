@@ -121,7 +121,7 @@ func Info() ([]InfoStat, error) {
 				return ret, err
 			}
 			c.CPU = int32(t)
-		case "vendorId", "vendor_id":
+		case "vendorId":
 			c.VendorID = value
 		case "cpu family":
 			c.Family = value
