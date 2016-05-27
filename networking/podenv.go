@@ -107,17 +107,32 @@ func (e *podEnv) podNSPathLoad() (string, error) {
 	return string(podNSPath), nil
 }
 
+func podNSerrorOK(podNSPath string, err error) bool {
+	switch err.(type) {
+	case ns.NSPathNotExistErr:
+		return true
+	case ns.NSPathNotNSErr:
+		return true
+
+	default:
+		if os.IsNotExist(err) {
+			return true
+		}
+		return false
+	}
+}
+
 func (e *podEnv) podNSLoad() (ns.NetNS, error) {
 	podNSPath, err := e.podNSPathLoad()
-	if err != nil {
+	if err != nil && !podNSerrorOK(podNSPath, err) {
 		return nil, err
+	} else {
+		podNS, err := ns.GetNS(podNSPath)
+		if err != nil && !podNSerrorOK(podNSPath, err) {
+			return nil, err
+		}
+		return podNS, nil
 	}
-
-	podNS, err := ns.GetNS(podNSPath)
-	if err != nil {
-		return nil, err
-	}
-	return podNS, nil
 }
 
 func (e *podEnv) podNSPathSave() error {
