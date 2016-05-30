@@ -15,17 +15,21 @@
 package progressutil
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"sync"
 	"time"
 )
 
+var (
+	ErrAlreadyStarted = errors.New("cannot add copies after PrintAndWait has been called")
+)
+
 type copyReader struct {
 	reader  io.Reader
 	current int64
 	total   int64
-	done    bool
 	pb      *ProgressBar
 }
 
@@ -35,9 +39,6 @@ func (cr *copyReader) Read(p []byte) (int, error) {
 	err1 := cr.updateProgressBar()
 	if err == nil {
 		err = err1
-	}
-	if err != nil {
-		cr.done = true
 	}
 	return n, err
 }
@@ -52,12 +53,21 @@ func (cr *copyReader) updateProgressBar() error {
 	return cr.pb.SetCurrentProgress(progress)
 }
 
+// NewCopyProgressPrinter returns a new CopyProgressPrinter
+func NewCopyProgressPrinter() *CopyProgressPrinter {
+	return &CopyProgressPrinter{results: make(chan error), cancel: make(chan struct{})}
+}
+
 // CopyProgressPrinter will perform an arbitrary number of io.Copy calls, while
 // continually printing the progress of each copy.
 type CopyProgressPrinter struct {
-	readers []*copyReader
-	errors  []error
+	results chan error
+	cancel  chan struct{}
+
+	// `lock` mutex protects all fields below it in CopyProgressPrinter struct
 	lock    sync.Mutex
+	readers []*copyReader
+	started bool
 	pbp     *ProgressBarPrinter
 }
 
@@ -65,8 +75,15 @@ type CopyProgressPrinter struct {
 // will be made to copy bytes from reader to dest, and name and size will be
 // used to label the progress bar and display how much progress has been made.
 // If size is 0, the total size of the reader is assumed to be unknown.
-func (cpp *CopyProgressPrinter) AddCopy(reader io.Reader, name string, size int64, dest io.Writer) {
+// AddCopy can only be called before PrintAndWait; otherwise, ErrAlreadyStarted
+// will be returned.
+func (cpp *CopyProgressPrinter) AddCopy(reader io.Reader, name string, size int64, dest io.Writer) error {
 	cpp.lock.Lock()
+	defer cpp.lock.Unlock()
+
+	if cpp.started {
+		return ErrAlreadyStarted
+	}
 	if cpp.pbp == nil {
 		cpp.pbp = &ProgressBarPrinter{}
 		cpp.pbp.PadToBeEven = true
@@ -82,60 +99,65 @@ func (cpp *CopyProgressPrinter) AddCopy(reader io.Reader, name string, size int6
 	cr.pb.SetPrintAfter(cr.formattedProgress())
 
 	cpp.readers = append(cpp.readers, cr)
-	cpp.lock.Unlock()
 
 	go func() {
 		_, err := io.Copy(dest, cr)
-		if err != nil {
-			cpp.lock.Lock()
-			cpp.errors = append(cpp.errors, err)
-			cpp.lock.Unlock()
+		select {
+		case <-cpp.cancel:
+			return
+		case cpp.results <- err:
+			return
 		}
 	}()
+	return nil
 }
 
 // PrintAndWait will print the progress for each copy operation added with
 // AddCopy to printTo every printInterval. This will continue until every added
 // copy is finished, or until cancel is written to.
+// PrintAndWait may only be called once; any subsequent calls will immediately
+// return ErrAlreadyStarted.  After PrintAndWait has been called, no more
+// copies may be added to the CopyProgressPrinter.
 func (cpp *CopyProgressPrinter) PrintAndWait(printTo io.Writer, printInterval time.Duration, cancel chan struct{}) error {
-	for {
-		// If cancel is not nil, see if anything has been written to it. If
-		// something has, return, otherwise keep drawing.
-		if cancel != nil {
-			select {
-			case <-cancel:
-				return nil
-			default:
-			}
-		}
-
-		cpp.lock.Lock()
-		readers := cpp.readers
-		errors := cpp.errors
+	cpp.lock.Lock()
+	if cpp.started {
 		cpp.lock.Unlock()
+		return ErrAlreadyStarted
+	}
+	cpp.started = true
+	cpp.lock.Unlock()
 
-		if len(errors) > 0 {
-			return errors[0]
-		}
+	n := len(cpp.readers)
+	if n == 0 {
+		// Nothing to do.
+		return nil
+	}
 
-		if len(readers) > 0 {
+	defer close(cpp.cancel)
+	t := time.NewTicker(printInterval)
+	allDone := false
+	for i := 0; i < n; {
+		select {
+		case <-cancel:
+			return nil
+		case <-t.C:
 			_, err := cpp.pbp.Print(printTo)
 			if err != nil {
 				return err
 			}
-		} else {
+		case err := <-cpp.results:
+			i++
+			// Once completion is signaled, further on this just drains
+			// (unlikely) errors from the channel.
+			if err == nil && !allDone {
+				allDone, err = cpp.pbp.Print(printTo)
+			}
+			if err != nil {
+				return err
+			}
 		}
-
-		allDone := true
-		for _, r := range readers {
-			allDone = allDone && r.done
-		}
-		if allDone && len(readers) > 0 {
-			return nil
-		}
-
-		time.Sleep(printInterval)
 	}
+	return nil
 }
 
 func (cr *copyReader) formattedProgress() string {

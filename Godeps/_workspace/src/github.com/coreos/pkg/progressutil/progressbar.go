@@ -38,11 +38,31 @@ var (
 // be created directly, use the AddProgressBar on a ProgressBarPrinter to
 // create these.
 type ProgressBar struct {
+	lock sync.Mutex
+
 	currentProgress float64
 	printBefore     string
 	printAfter      string
-	lock            sync.Mutex
 	done            bool
+}
+
+func (pb *ProgressBar) clone() *ProgressBar {
+	pb.lock.Lock()
+	pbClone := &ProgressBar{
+		currentProgress: pb.currentProgress,
+		printBefore:     pb.printBefore,
+		printAfter:      pb.printAfter,
+		done:            pb.done,
+	}
+	pb.lock.Unlock()
+	return pbClone
+}
+
+func (pb *ProgressBar) GetCurrentProgress() float64 {
+	pb.lock.Lock()
+	val := pb.currentProgress
+	pb.lock.Unlock()
+	return val
 }
 
 // SetCurrentProgress sets the progress of this ProgressBar. The progress must
@@ -57,11 +77,42 @@ func (pb *ProgressBar) SetCurrentProgress(progress float64) error {
 	return nil
 }
 
+// GetDone returns whether or not this progress bar is done
+func (pb *ProgressBar) GetDone() bool {
+	pb.lock.Lock()
+	val := pb.done
+	pb.lock.Unlock()
+	return val
+}
+
+// SetDone sets whether or not this progress bar is done
+func (pb *ProgressBar) SetDone(val bool) {
+	pb.lock.Lock()
+	pb.done = val
+	pb.lock.Unlock()
+}
+
+// GetPrintBefore gets the text printed on the line before the progress bar.
+func (pb *ProgressBar) GetPrintBefore() string {
+	pb.lock.Lock()
+	val := pb.printBefore
+	pb.lock.Unlock()
+	return val
+}
+
 // SetPrintBefore sets the text printed on the line before the progress bar.
 func (pb *ProgressBar) SetPrintBefore(before string) {
 	pb.lock.Lock()
 	pb.printBefore = before
 	pb.lock.Unlock()
+}
+
+// GetPrintAfter gets the text printed on the line after the progress bar.
+func (pb *ProgressBar) GetPrintAfter() string {
+	pb.lock.Lock()
+	val := pb.printAfter
+	pb.lock.Unlock()
+	return val
 }
 
 // SetPrintAfter sets the text printed on the line after the progress bar.
@@ -74,6 +125,8 @@ func (pb *ProgressBar) SetPrintAfter(after string) {
 // ProgressBarPrinter will print out the progress of some number of
 // ProgressBars.
 type ProgressBarPrinter struct {
+	lock sync.Mutex
+
 	// DisplayWidth can be set to influence how large the progress bars are.
 	// The bars will be scaled to attempt to produce lines of this number of
 	// characters, but lines of different lengths may still be printed. When
@@ -85,7 +138,8 @@ type ProgressBarPrinter struct {
 	PadToBeEven         bool
 	numLinesInLastPrint int
 	progressBars        []*ProgressBar
-	lock                sync.Mutex
+	maxBefore           int
+	maxAfter            int
 }
 
 // AddProgressBar will create a new ProgressBar, register it with this
@@ -107,7 +161,10 @@ func (pbp *ProgressBarPrinter) AddProgressBar() *ProgressBar {
 // the previously printed bars.
 func (pbp *ProgressBarPrinter) Print(printTo io.Writer) (bool, error) {
 	pbp.lock.Lock()
-	bars := pbp.progressBars
+	var bars []*ProgressBar
+	for _, bar := range pbp.progressBars {
+		bars = append(bars, bar.clone())
+	}
 	numColumns := pbp.DisplayWidth
 	pbp.lock.Unlock()
 
@@ -123,29 +180,25 @@ func (pbp *ProgressBarPrinter) Print(printTo io.Writer) (bool, error) {
 		moveCursorUp(printTo, pbp.numLinesInLastPrint)
 	}
 
-	maxBefore := 0
-	maxAfter := 0
 	for _, bar := range bars {
-		bar.lock.Lock()
-		beforeSize := len(bar.printBefore)
-		afterSize := len(bar.printAfter)
-		bar.lock.Unlock()
-		if beforeSize > maxBefore {
-			maxBefore = beforeSize
+		beforeSize := len(bar.GetPrintBefore())
+		afterSize := len(bar.GetPrintAfter())
+		if beforeSize > pbp.maxBefore {
+			pbp.maxBefore = beforeSize
 		}
-		if afterSize > maxAfter {
-			maxAfter = afterSize
+		if afterSize > pbp.maxAfter {
+			pbp.maxAfter = afterSize
 		}
 	}
 
-	allDone := false
+	allDone := true
 	for _, bar := range bars {
 		if isTerminal(printTo) {
-			bar.printToTerminal(printTo, numColumns, pbp.PadToBeEven, maxBefore, maxAfter)
+			bar.printToTerminal(printTo, numColumns, pbp.PadToBeEven, pbp.maxBefore, pbp.maxAfter)
 		} else {
 			bar.printToNonTerminal(printTo)
 		}
-		allDone = allDone || bar.currentProgress == 1
+		allDone = allDone && bar.GetCurrentProgress() == 1
 	}
 
 	pbp.numLinesInLastPrint = len(bars)
@@ -161,9 +214,8 @@ func moveCursorUp(printTo io.Writer, numLines int) {
 }
 
 func (pb *ProgressBar) printToTerminal(printTo io.Writer, numColumns int, padding bool, maxBefore, maxAfter int) {
-	pb.lock.Lock()
-	before := pb.printBefore
-	after := pb.printAfter
+	before := pb.GetPrintBefore()
+	after := pb.GetPrintAfter()
 
 	if padding {
 		before = before + strings.Repeat(" ", maxBefore-len(before))
@@ -173,29 +225,26 @@ func (pb *ProgressBar) printToTerminal(printTo io.Writer, numColumns int, paddin
 	progressBarSize := numColumns - (len(fmt.Sprintf("%s [] %s", before, after)))
 	progressBar := ""
 	if progressBarSize > 0 {
-		currentProgress := int(pb.currentProgress * float64(progressBarSize))
+		currentProgress := int(pb.GetCurrentProgress() * float64(progressBarSize))
 		progressBar = fmt.Sprintf("[%s%s] ",
 			strings.Repeat("=", currentProgress),
 			strings.Repeat(" ", progressBarSize-currentProgress))
 	} else {
 		// If we can't fit the progress bar, better to not pad the before/after.
-		before = pb.printBefore
-		after = pb.printAfter
+		before = pb.GetPrintBefore()
+		after = pb.GetPrintAfter()
 	}
 
 	fmt.Fprintf(printTo, "%s %s%s\n", before, progressBar, after)
-	pb.lock.Unlock()
 }
 
 func (pb *ProgressBar) printToNonTerminal(printTo io.Writer) {
-	pb.lock.Lock()
-	if !pb.done {
+	if !pb.GetDone() {
 		fmt.Fprintf(printTo, "%s %s\n", pb.printBefore, pb.printAfter)
-		if pb.currentProgress == 1 {
-			pb.done = true
+		if pb.GetCurrentProgress() == 1 {
+			pb.SetDone(true)
 		}
 	}
-	pb.lock.Unlock()
 }
 
 // isTerminal returns True when w is going to a tty, and false otherwise.
