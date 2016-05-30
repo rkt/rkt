@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
 	"GoVersion": "go1.5",
-	"GodepVersion": "v71",
+	"GodepVersion": "v72",
 	"Packages": [
 		"./...",
 		"github.com/appc/spec/actool",
@@ -23,53 +23,53 @@
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib",
-			"Comment": "v0.11.0",
-			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
+			"Comment": "v0.11.1",
+			"Rev": "355af275fa8d48b4ecdd361a5feaf173abff81e7"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/common",
-			"Comment": "v0.11.0",
-			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
+			"Comment": "v0.11.1",
+			"Rev": "355af275fa8d48b4ecdd361a5feaf173abff81e7"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal",
-			"Comment": "v0.11.0",
-			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
+			"Comment": "v0.11.1",
+			"Rev": "355af275fa8d48b4ecdd361a5feaf173abff81e7"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/backend/file",
-			"Comment": "v0.11.0",
-			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
+			"Comment": "v0.11.1",
+			"Rev": "355af275fa8d48b4ecdd361a5feaf173abff81e7"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/backend/repository",
-			"Comment": "v0.11.0",
-			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
+			"Comment": "v0.11.1",
+			"Rev": "355af275fa8d48b4ecdd361a5feaf173abff81e7"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/docker",
-			"Comment": "v0.11.0",
-			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
+			"Comment": "v0.11.1",
+			"Rev": "355af275fa8d48b4ecdd361a5feaf173abff81e7"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/tarball",
-			"Comment": "v0.11.0",
-			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
+			"Comment": "v0.11.1",
+			"Rev": "355af275fa8d48b4ecdd361a5feaf173abff81e7"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/types",
-			"Comment": "v0.11.0",
-			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
+			"Comment": "v0.11.1",
+			"Rev": "355af275fa8d48b4ecdd361a5feaf173abff81e7"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/lib/internal/util",
-			"Comment": "v0.11.0",
-			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
+			"Comment": "v0.11.1",
+			"Rev": "355af275fa8d48b4ecdd361a5feaf173abff81e7"
 		},
 		{
 			"ImportPath": "github.com/appc/docker2aci/pkg/log",
-			"Comment": "v0.11.0",
-			"Rev": "abe598e6384a9978e419a3f43d3e389218407624"
+			"Comment": "v0.11.1",
+			"Rev": "355af275fa8d48b4ecdd361a5feaf173abff81e7"
 		},
 		{
 			"ImportPath": "github.com/appc/goaci/proj2aci",
@@ -400,8 +400,8 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/pkg/dlopen",
-			"Comment": "v1",
-			"Rev": "160ae6282d8c48a33d8c150e4e4817fdef8a5cde"
+			"Comment": "v2",
+			"Rev": "7f080b6c11ac2d2347c3cd7521e810207ea1a041"
 		},
 		{
 			"ImportPath": "github.com/cpuguy83/go-md2man/md2man",
@@ -774,8 +774,8 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/pkg/progressutil",
-			"Comment": "v1",
-			"Rev": "160ae6282d8c48a33d8c150e4e4817fdef8a5cde"
+			"Comment": "v2",
+			"Rev": "7f080b6c11ac2d2347c3cd7521e810207ea1a041"
 		},
 		{
 			"ImportPath": "github.com/klauspost/compress/flate",
