@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	noappManifestStr = `{"acKind":"ImageManifest","acVersion":"0.7.4","name":"coreos.com/rkt-inspect","labels":[{"name":"version","value":"1.6.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}]}`
+	noappManifestStr = `{"acKind":"ImageManifest","acVersion":"0.7.4","name":"coreos.com/rkt-inspect","labels":[{"name":"version","value":"1.7.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}]}`
 )
 
 func TestRunOverrideExec(t *testing.T) {

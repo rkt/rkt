@@ -1,3 +1,41 @@
+## v1.7.0
+
+This release introduces some new security features, including a "no-new-privileges" isolator and initial (partial) restrictions on /proc and /sys access.
+Cgroups handling has also been improved with regards to setup and cleaning. Many bugfixes and new documentation are included too.
+
+#### New features and UX changes
+
+- stage1: implement no-new-privs linux isolator ([#2677](https://github.com/coreos/rkt/pull/2677)).
+- stage0: disable OverlayFS by default when working on ZFS ([#2600](https://github.com/coreos/rkt/pull/2600)).
+- stage1: (partially) restrict access to procfs and sysfs paths ([#2683](https://github.com/coreos/rkt/pull/2683)).
+- stage1: clean up pod cgroups on GC ([#2655](https://github.com/coreos/rkt/pull/2655)).
+- stage1/prepare-app: don't mount /sys/fs/cgroup in stage2 ([#2681](https://github.com/coreos/rkt/pull/2681)).
+- stage0: complain and abort on conflicting CLI flags ([#2666](https://github.com/coreos/rkt/pull/2666)).
+- stage1: update CoreOS image signing key ([#2659](https://github.com/coreos/rkt/pull/2659)).
+- api_service: Implement GetLogs RPC request ([#2662](https://github.com/coreos/rkt/pull/2662)).
+- networking: update to CNI v0.3.0 ([#3696](https://github.com/coreos/rkt/pull/2696)).
+
+#### Bug fixes
+
+- api: fix image size reporting ([#2501](https://github.com/coreos/rkt/pull/2501)).
+- build: fix build failures on manpages/bash-completion target due to missing GOPATH ([#2646](https://github.com/coreos/rkt/pull/2646)).
+- dist: fix "other" permissions so rkt list can work without root/rkt-admin ([#2698](https://github.com/coreos/rkt/pull/2698)).
+- kvm: fix logging network plugin type ([#2635](https://github.com/coreos/rkt/pull/2635)).
+- kvm: transform flannel network to allow teardown ([#2647](https://github.com/coreos/rkt/pull/2647)).
+- rkt: fix panic on rm a non-existing pod with uuid-file ([#2679](https://github.com/coreos/rkt/pull/2679)).
+- stage1/init: work around `cgroup/SCM_CREDENTIALS` race ([#2645](https://github.com/coreos/rkt/pull/2645)).
+- gc: mount stage1 on GC ([#2704](https://github.com/coreos/rkt/pull/2704)).
+- stage1: fix network files leak on GC ([#2319](https://github.com/coreos/rkt/issues/2319)).
+
+#### Other changes
+
+- deps: remove unused dependencies ([#2703](https://github.com/coreos/rkt/pull/2703)).
+- deps: appc/spec, k8s, protobuf updates ([#2697](https://github.com/coreos/rkt/pull/2697)).
+- deps: use tagged release of github.com/shirou/gopsutil ([#2705](https://github.com/coreos/rkt/pull/2705)).
+- deps: bump docker2aci to v0.11.1 ([#2719](https://github.com/coreos/rkt/pull/2719)).
+- Documentation updates ([#2620](https://github.com/coreos/rkt/pull/2620), [#2700](https://github.com/coreos/rkt/pull/2700), [#2637](https://github.com/coreos/rkt/pull/2637), [#2591](https://github.com/coreos/rkt/pull/2591), [#2651](https://github.com/coreos/rkt/pull/2651), [#2699](https://github.com/coreos/rkt/pull/2699), [#2631](https://github.com/coreos/rkt/pull/2631)).
+- Test improvements ([#2587](https://github.com/coreos/rkt/pull/2587), [#2656](https://github.com/coreos/rkt/pull/2656), [#2676](https://github.com/coreos/rkt/pull/2676), [#2554](https://github.com/coreos/rkt/pull/2554), [#2690](https://github.com/coreos/rkt/pull/2690), [#2674](https://github.com/coreos/rkt/pull/2674), [#2665](https://github.com/coreos/rkt/pull/2665), [#2649](https://github.com/coreos/rkt/pull/2649), [#2643](https://github.com/coreos/rkt/pull/2643), [#2637](https://github.com/coreos/rkt/pull/2637), [#2633](https://github.com/coreos/rkt/pull/2633)).
+
 ## v1.6.0
 
 This release focuses on security enhancements. It provides additional isolators, creating a new mount namespace per app. Also a new version of CoreOS 1032.0.0 with systemd v229 is being used in stage1.
