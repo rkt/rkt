@@ -370,7 +370,7 @@ func getPodCgroup(p *pod, pid int) (string, error) {
 	// Get cgroup for the "name=systemd" controller; we assume the api-server is
 	// running on a system using systemd for returning cgroups, and will just not
 	// set it otherwise.
-	cgroup, err := cgroup.GetCgroupPathByPid(pid, "name=systemd")
+	cgroup, err := cgroup.GetV1CgroupPathByPid(pid, "name=systemd")
 	if err != nil {
 		return "", err
 	}

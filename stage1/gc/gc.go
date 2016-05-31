@@ -132,7 +132,7 @@ func cleanupCgroups() error {
 	// if we're trying to clean up our own cgroup it means we're running in the
 	// same unit file as the rkt pod. We don't have to do anything, systemd
 	// will do the cleanup for us
-	ourCgroupPath, err := cgroup.GetOwnCgroupPath("name=systemd")
+	ourCgroupPath, err := cgroup.GetOwnLegacyCgroupPath("name=systemd")
 	if err == nil {
 		if strings.HasPrefix(ourCgroupPath, "/"+subcgroup) {
 			return nil
