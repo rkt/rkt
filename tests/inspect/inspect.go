@@ -380,7 +380,7 @@ func main() {
 
 		for _, p := range testPaths {
 			if err := syscall.Mkdir(filepath.Join(p, "test"), 0600); err == nil || err != syscall.EROFS {
-				fmt.Println("check-cgroups: FAIL")
+				fmt.Fprintf(os.Stderr, "check-cgroups: FAIL (%v)", err)
 				os.Exit(1)
 			}
 		}
