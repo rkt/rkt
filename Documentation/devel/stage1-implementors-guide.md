@@ -1,8 +1,6 @@
-Stage1 ACI implementor's guide
-=============================
+# Stage1 ACI implementor's guide
 
-Background
-----------
+## Background
 
 rkt's execution of pods is divided roughly into three separate stages:
 
@@ -25,8 +23,7 @@ Stage1 is the vehicle for getting there from stage0.
 For any given pod instance, stage1 may be replaced by a completely different implementation.
 This allows users to employ different containment strategies on the same host running the same interchangeable ACIs.
 
-Entrypoints
------------
+## Entrypoints
 
 ### `rkt run` => `coreos.com/rkt/stage1/run`
 
@@ -47,7 +44,7 @@ Systemd-nspawn then boots the stage1 systemd with the just-written unit files fo
 The `/init` program's primary job is translating a pod manifest to systemd-nspawn systemd.services.
 
 An alternative stage1 could forego systemd-nspawn and systemd altogether, or retain these and introduce something like novm or qemu-kvm for greater isolation by first starting a VM.
-All that is required is an executable at the place indicated by the `coreos.com/rkt/stage1/run` entrypoint that knows how to apply the pod manifest and prepared ACI file-systems to good effect.
+All that is required is an executable at the place indicated by the `coreos.com/rkt/stage1/run` entrypoint that knows how to apply the pod manifest and prepared ACI file-systems.
 
 The resolved entrypoint must inform rkt of its PID for the benefit of `rkt enter`.
 Stage1 implementors have two options for doing so; only one must be implemented:
@@ -65,7 +62,7 @@ Stage1 implementors have two options for doing so; only one must be implemented:
 * `--local-config=$PATH` to override the local configuration directory
 * `--private-users=$SHIFT` to define a UID/GID shift when using user namespaces. SHIFT is a two-value colon-separated parameter, the first value is the first host UID to assign to the container and the second one is the number of host UIDs to assign.
 
-##### Arguments added in interface version 2
+#### Arguments added in interface version 2
 
 * `--hostname=$HOSTNAME` configures the host name of the pod. If empty, it will be "rkt-$PODUUID".
 
@@ -101,16 +98,14 @@ For example, it removes the network namespace of a pod.
 * `--debug` to activate debugging
 * UUID of the pod
 
-Versioning
-----------
+## Versioning
 
 The stage1 command line interface is versioned using an annotation with the name `coreos.com/rkt/stage1/interface-version`.
 If the annotation is not present, rkt assumes the version is 1.
 
 The current version of the stage1 interface is 2.
 
-Examples
---------
+## Examples
 
 ### Stage1 ACI manifest
 
