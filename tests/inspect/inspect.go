@@ -371,10 +371,10 @@ func main() {
 		testPaths := []string{rootCgroupPath}
 
 		// test a couple of controllers if they're available
-		if cgroup.IsIsolatorSupported("memory") {
+		if _, err := os.Stat(filepath.Join(rootCgroupPath, "memory")); err == nil {
 			testPaths = append(testPaths, filepath.Join(rootCgroupPath, "memory"))
 		}
-		if cgroup.IsIsolatorSupported("cpu") {
+		if _, err := os.Stat(filepath.Join(rootCgroupPath, "cpu")); err == nil {
 			testPaths = append(testPaths, filepath.Join(rootCgroupPath, "cpu"))
 		}
 
