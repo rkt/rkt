@@ -437,6 +437,38 @@ func NewAPIServiceListInspectPodsTest() testutils.Test {
 		for _, p := range resp.Pods {
 			checkPodDetails(t, ctx, p)
 		}
+
+		// ListPods with corrupt pod directory
+		// Note that we don't checkPodDetails here, the failure this is testing is
+		// the api server panicing, which results in a list call hanging for ages
+		// and then failing.
+		// TODO: do further validation on the partial pods returned
+		for _, p := range resp.Pods {
+			numRemoved := 0
+			podDir := getPodDir(t, ctx, p.Id)
+			filepath.Walk(filepath.Join(podDir, "appsinfo"), filepath.WalkFunc(func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if info.Name() == "manifest" {
+					os.Remove(path)
+					numRemoved++
+				}
+				return nil
+			}))
+			if numRemoved == 0 {
+				t.Fatalf("Expected to remove at least one app manifest for pod %v", p)
+			}
+		}
+
+		// ListPods(detail=true).
+		resp, err = c.ListPods(context.Background(), &v1alpha.ListPodsRequest{Detail: true})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if len(resp.Pods) != len(podManifests) {
+			t.Fatalf("Expected %v pods, got %v pods", len(podManifests), len(resp.Pods))
+		}
 	})
 }
 
