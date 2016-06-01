@@ -34,7 +34,10 @@ func InitLabels(options []string) (string, string, error) {
 	if !selinux.SelinuxEnabled() {
 		return "", "", nil
 	}
-	processLabel, mountLabel := selinux.GetLxcContexts()
+	processLabel, mountLabel, err := selinux.GetLxcContexts()
+	if err != nil {
+		return "", "", err
+	}
 	if processLabel != "" {
 		pcon := selinux.NewContext(processLabel)
 		mcon := selinux.NewContext(mountLabel)
