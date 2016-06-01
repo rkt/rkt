@@ -442,16 +442,7 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) {
 			stderr.PrintE(fmt.Sprintf("failed to resolve the image ID %q", app.Image.Id), err)
 		}
 
-		im, err := p.getAppImageManifest(*types.MustACName(app.Name))
-		if err != nil {
-			stderr.PrintE(fmt.Sprintf("failed to get image manifests for app %q", app.Name), err)
-		}
-
-		version, ok := im.Labels.Get("version")
-		if !ok {
-			version = "latest"
-		}
-
+		// The following information is always known
 		app.Image = &v1alpha.Image{
 			BaseFormat: &v1alpha.ImageFormat{
 				// Only support appc image now. If it's a docker image, then it
@@ -459,11 +450,22 @@ func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) {
 				Type:    v1alpha.ImageType_IMAGE_TYPE_APPC,
 				Version: schema.AppContainerVersion.String(),
 			},
-			Id:      fullImageID,
-			Name:    im.Name.String(),
-			Version: version,
+			Id: fullImageID,
 			// Other information are not available because they require the image
-			// info from store.
+			// info from store. Some of it is filled in below if possible.
+		}
+
+		im, err := p.getAppImageManifest(*types.MustACName(app.Name))
+		if err != nil {
+			stderr.PrintE(fmt.Sprintf("failed to get image manifests for app %q", app.Name), err)
+		} else {
+			app.Image.Name = im.Name.String()
+
+			version, ok := im.Labels.Get("version")
+			if !ok {
+				version = "latest"
+			}
+			app.Image.Version = version
 		}
 
 		if readStatus {
