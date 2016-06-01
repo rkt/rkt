@@ -61,14 +61,20 @@ func TestSELinux(t *testing.T) {
 
 	var plabel, flabel string
 
-	plabel, flabel = selinux.GetLxcContexts()
+	plabel, flabel, err = selinux.GetLxcContexts()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if plabel == "" {
 		t.Skip("No LXC contexts, skipping tests")
 	}
 	t.Log(plabel)
 	t.Log(flabel)
 	selinux.FreeLxcContexts(plabel)
-	plabel, flabel = selinux.GetLxcContexts()
+	plabel, flabel, err = selinux.GetLxcContexts()
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Log(plabel)
 	t.Log(flabel)
 	selinux.FreeLxcContexts(plabel)
