@@ -62,13 +62,15 @@ func CopySymlink(src, dest string) error {
 
 func CopyTree(src, dest string, uidRange *user.UidRange) error {
 	cleanSrc := filepath.Clean(src)
-
 	dirs := make(map[string][]syscall.Timespec)
 	copyWalker := func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		rootLess := path[len(cleanSrc):]
+		if cleanSrc == "." {
+			rootLess = path
+		}
 		target := filepath.Join(dest, rootLess)
 		mode := info.Mode()
 		switch {
