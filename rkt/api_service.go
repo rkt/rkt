@@ -702,7 +702,8 @@ type LogsStreamWriter struct {
 }
 
 func (sw LogsStreamWriter) Write(b []byte) (int, error) {
-	if err := sw.server.SendMsg(b); err != nil {
+	lines := strings.Split(string(b), "\n")
+	if err := sw.server.Send(&v1alpha.GetLogsResponse{Lines: lines}); err != nil {
 		return 0, err
 	}
 	return len(b), nil
