@@ -1,9 +1,24 @@
 # rkt release guide
 
-How to perform a release of rkt.
-This guide is probably unnecessarily verbose, so improvements welcomed.
-Only parts of the procedure are automated; this is somewhat intentional (manual steps for sanity checking) but it can probably be further scripted, please help.
+## Release cycle
 
+This section describes the typical release cycle of rkt:
+
+1. A GitHub [milestone](https://github.com/coreos/rkt/milestones) sets the target date for a future rkt release. Releases occur approximately every two to three weeks.
+2. Issues grouped into the next release milestone are worked on in order of priority.
+3. Changes are submitted for review in the form of a GitHub Pull Request (PR). Each PR undergoes review and must pass continuous integration (CI) tests before being accepted and merged into the main line of rkt source code.
+4. The day before each release is a short code freeze during which no new code or dependencies may be merged. Instead, this period focuses on polishing the release, with tasks concerning:
+  * Documentation
+  * Usability tests
+  * Issues triaging
+  * Roadmap planning and scheduling the next release milestone
+  * Organizational and backlog review
+  * Build, distribution, and install testing by release manager
+
+## Release process
+
+This section shows how to perform a release of rkt.
+Only parts of the procedure are automated; this is somewhat intentional (manual steps for sanity checking) but it can probably be further scripted, please help.
 The following example assumes we're going from version 1.1.0 (`v1.1.0`) to 1.2.0 (`v1.2.0`).
 
 Let's get started:
