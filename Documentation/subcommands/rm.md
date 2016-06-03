@@ -11,7 +11,7 @@ Instead of passing UUID on command line, rm command can read the UUID from a tex
 This can be paired with `--uuid-file-save` to remove pods by name:
 
 ```
-rkt run --uuid-files-save=/run/rkt-uuids/mypod ...
+rkt run --uuid-file-save=/run/rkt-uuids/mypod ...
 rkt rm --uuid-file=/run/rkt-uuids/mypod
 ```
 
