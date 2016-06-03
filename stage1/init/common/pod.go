@@ -1069,6 +1069,7 @@ func getAppNoNewPrivileges(isolators types.Isolators) bool {
 // /proc and /sys. Entries are either hidden or just made read-only to app.
 func protectSystemFiles(opts []*unit.UnitOption, appName types.ACName) []*unit.UnitOption {
 	roPaths := []string{
+		"/proc/bus/",
 		"/proc/sys/kernel/core_pattern",
 		"/proc/sys/kernel/modprobe",
 		"/proc/sys/vm/panic_on_oom",
