@@ -17,7 +17,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/coreos/rkt/api/v1alpha"
@@ -25,7 +27,58 @@ import (
 	"google.golang.org/grpc"
 )
 
+func getLogsWithoutFollow(c v1alpha.PublicAPIClient, p *v1alpha.Pod) {
+	logsResp, err := c.GetLogs(context.Background(), &v1alpha.GetLogsRequest{
+		PodId:  p.Id,
+		Follow: false,
+	})
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	logsRecvResp, err := logsResp.Recv()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	for _, l := range logsRecvResp.Lines {
+		fmt.Println(l)
+	}
+}
+
+func getLogsWithFollow(c v1alpha.PublicAPIClient, p *v1alpha.Pod) {
+	logsResp, err := c.GetLogs(context.Background(), &v1alpha.GetLogsRequest{
+		PodId:  p.Id,
+		Follow: true,
+	})
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	for {
+		logsRecvResp, err := logsResp.Recv()
+		if err == io.EOF {
+			return
+		}
+
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		for _, l := range logsRecvResp.Lines {
+			fmt.Println(l)
+		}
+	}
+}
+
 func main() {
+	followFlag := flag.Bool("follow", false, "enable 'follow' option on GetLogs")
+	flag.Parse()
+
 	conn, err := grpc.Dial("localhost:15441", grpc.WithInsecure())
 	if err != nil {
 		fmt.Println(err)
@@ -50,24 +103,12 @@ func main() {
 	}
 
 	for _, p := range podResp.Pods {
-		fmt.Printf("Pod %q is running\n", p.Id)
-
-		logsResp, err := c.GetLogs(context.Background(), &v1alpha.GetLogsRequest{
-			PodId: p.Id,
-		})
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		logsRecvResp, err := logsResp.Recv()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		for _, l := range logsRecvResp.Lines {
-			fmt.Println(l)
+		if *followFlag {
+			fmt.Printf("Pod %q is running. Following logs:\n", p.Id)
+			getLogsWithFollow(c, p)
+		} else {
+			fmt.Printf("Pod %q is running.\n", p.Id)
+			getLogsWithoutFollow(c, p)
 		}
 	}
 
