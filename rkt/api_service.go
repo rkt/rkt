@@ -704,7 +704,14 @@ type LogsStreamWriter struct {
 }
 
 func (sw LogsStreamWriter) Write(b []byte) (int, error) {
-	lines := strings.Split(string(b), "\n")
+	// Remove empty lines
+	lines := make([]string, 0)
+	for _, v := range strings.Split(string(b), "\n") {
+		if len(v) > 0 {
+			lines = append(lines, v)
+		}
+	}
+
 	if err := sw.server.Send(&v1alpha.GetLogsResponse{Lines: lines}); err != nil {
 		return 0, err
 	}
@@ -766,7 +773,13 @@ func (s *v1AlphaAPIServer) GetLogs(request *v1alpha.GetLogsRequest, server v1alp
 	if err != nil {
 		return err
 	}
-	lines := strings.Split(string(data), "\n")
+	// Remove empty lines
+	lines := make([]string, 0)
+	for _, v := range strings.Split(string(data), "\n") {
+		if len(v) > 0 {
+			lines = append(lines, v)
+		}
+	}
 	return server.Send(&v1alpha.GetLogsResponse{Lines: lines})
 }
 
