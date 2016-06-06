@@ -457,42 +457,8 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		unit.NewUnitOption("Service", "SyslogIdentifier", appName.String()),
 	}
 
-	// Restrict access to some security-sensitive paths under /proc and /sys.
-	// Those entries can be hidden or just made read-only to app.
-	roPaths := []string{
-		"/proc/sys/kernel/core_pattern",
-		"/proc/sys/kernel/modprobe",
-		"/proc/sys/vm/panic_on_oom",
-		"/proc/sysrq-trigger",
-		"/sys/block/",
-		"/sys/bus/",
-		"/sys/class/",
-		"/sys/dev/",
-		"/sys/devices/",
-		"/sys/kernel/",
-	}
-	hiddenPaths := []string{
-		// TODO(lucab): file-paths restrictions need support in systemd first
-		//"/proc/config.gz",
-		//"/proc/kallsyms",
-		//"/proc/sched_debug",
-		//"/proc/kcore",
-		//"/proc/kmem",
-		//"/proc/mem",
-		"/sys/firmware/",
-		"/sys/fs/",
-		"/sys/hypervisor/",
-		"/sys/module/",
-		"/sys/power/",
-	}
-	// Paths prefixed with "-" are ignored if they do not exist:
-	// [https://www.freedesktop.org/software/systemd/man/systemd.exec.html#ReadWriteDirectories=]
-	for _, p := range hiddenPaths {
-		opts = append(opts, unit.NewUnitOption("Service", "InaccessibleDirectories", fmt.Sprintf("-%s", filepath.Join(common.RelAppRootfsPath(appName), p))))
-	}
-	for _, p := range roPaths {
-		opts = append(opts, unit.NewUnitOption("Service", "ReadOnlyDirectories", fmt.Sprintf("-%s", filepath.Join(common.RelAppRootfsPath(appName), p))))
-	}
+	// Restrict access to sensitive paths (eg. procfs)
+	opts = protectSystemFiles(opts, appName)
 
 	if ra.ReadOnlyRootFS {
 		opts = append(opts, unit.NewUnitOption("Service", "ReadOnlyDirectories", common.RelAppRootfsPath(appName)))
@@ -1097,4 +1063,45 @@ func getAppNoNewPrivileges(isolators types.Isolators) bool {
 	}
 
 	return false
+}
+
+// restrictProcFS restricts access to some security-sensitive paths under
+// /proc and /sys. Entries are either hidden or just made read-only to app.
+func protectSystemFiles(opts []*unit.UnitOption, appName types.ACName) []*unit.UnitOption {
+	roPaths := []string{
+		"/proc/bus/",
+		"/proc/sys/kernel/core_pattern",
+		"/proc/sys/kernel/modprobe",
+		"/proc/sys/vm/panic_on_oom",
+		"/proc/sysrq-trigger",
+		"/sys/block/",
+		"/sys/bus/",
+		"/sys/class/",
+		"/sys/dev/",
+		"/sys/devices/",
+		"/sys/kernel/",
+	}
+	hiddenPaths := []string{
+		// TODO(lucab): file-paths restrictions need support in systemd first
+		//"/proc/config.gz",
+		//"/proc/kallsyms",
+		//"/proc/sched_debug",
+		//"/proc/kcore",
+		//"/proc/kmem",
+		//"/proc/mem",
+		"/sys/firmware/",
+		"/sys/fs/",
+		"/sys/hypervisor/",
+		"/sys/module/",
+		"/sys/power/",
+	}
+	// Paths prefixed with "-" are ignored if they do not exist:
+	// https://www.freedesktop.org/software/systemd/man/systemd.exec.html#ReadWriteDirectories=
+	for _, p := range hiddenPaths {
+		opts = append(opts, unit.NewUnitOption("Service", "InaccessibleDirectories", fmt.Sprintf("-%s", filepath.Join(common.RelAppRootfsPath(appName), p))))
+	}
+	for _, p := range roPaths {
+		opts = append(opts, unit.NewUnitOption("Service", "ReadOnlyDirectories", fmt.Sprintf("-%s", filepath.Join(common.RelAppRootfsPath(appName), p))))
+	}
+	return opts
 }
