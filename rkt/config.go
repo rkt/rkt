@@ -28,10 +28,12 @@ var (
 The generated configuration entries resemble the original rkt configuration format.`,
 		Run: runWrapper(runConfig),
 	}
+	flagConfigPrettyPrint bool
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdConfig)
+	cmdConfig.Flags().BoolVar(&flagConfigPrettyPrint, "pretty-print", false, "apply indent to format the output")
 }
 
 func runConfig(cmd *cobra.Command, args []string) int {
@@ -41,7 +43,12 @@ func runConfig(cmd *cobra.Command, args []string) int {
 		return 1
 	}
 
-	b, err := json.Marshal(config)
+	var b []byte
+	if flagConfigPrettyPrint {
+		b, err = json.MarshalIndent(config, "", "\t")
+	} else {
+		b, err = json.Marshal(config)
+	}
 	if err != nil {
 		stderr.PanicE("error marshaling configuration", err)
 	}
