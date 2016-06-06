@@ -31,6 +31,7 @@ import (
 	"github.com/containernetworking/cni/pkg/ip"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
 	cniutils "github.com/containernetworking/cni/pkg/utils"
+	cnisysctl "github.com/containernetworking/cni/pkg/utils/sysctl"
 	"github.com/hashicorp/errwrap"
 	"github.com/vishvananda/netlink"
 
@@ -78,6 +79,10 @@ type MacVTapNetConf struct {
 	Mode   string `json:"mode"`
 }
 
+const (
+	IPv4InterfaceArpProxySysctlTemplate = "net.ipv4.conf.%s.proxy_arp"
+)
+
 // setupTapDevice creates persistent macvtap device
 // and returns a newly created netlink.Link structure
 // using part of pod hash and interface number in interface name
@@ -120,6 +125,15 @@ func setupMacVTapDevice(podID types.UUID, config MacVTapNetConf, interfaceNumber
 	if err := netlink.LinkAdd(link); err != nil {
 		return nil, errwrap.Wrap(errors.New("cannot create macvtap interface"), err)
 	}
+
+	// TODO: duplicate following lines for ipv6 support, when it will be added in other places
+	ipv4SysctlValueName := fmt.Sprintf(IPv4InterfaceArpProxySysctlTemplate, interfaceName)
+	if _, err := cnisysctl.Sysctl(ipv4SysctlValueName, "1"); err != nil {
+		// remove the newly added link and ignore errors, because we already are in a failed state
+		_ = netlink.LinkDel(link)
+		return nil, errwrap.Wrap(fmt.Errorf("failed to set proxy_arp on newly added interface %q", interfaceName), err)
+	}
+
 	if err := netlink.LinkSetUp(link); err != nil {
 		// remove the newly added link and ignore errors, because we already are in a failed state
 		_ = netlink.LinkDel(link)
