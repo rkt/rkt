@@ -29,8 +29,9 @@ var (
 
 // JournalReaderConfig represents options to drive the behavior of a JournalReader.
 type JournalReaderConfig struct {
-	// The Since and NumFromTail options are mutually exclusive and determine
-	// where the reading begins within the journal.
+	// The Since, NumFromTail and Cursor options are mutually exclusive and
+	// determine where the reading begins within the journal. The order in which
+	// options are written is exactly the order of precedence.
 	Since       time.Duration // start relative to a Duration from now
 	NumFromTail uint64        // start relative to the tail
 	Cursor      string        // start relative to the cursor
