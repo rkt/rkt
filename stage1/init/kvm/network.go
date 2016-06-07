@@ -158,7 +158,7 @@ func GenerateNetworkInterfaceUnits(unitsPath string, netDescriptions []netDescri
 			return errwrap.Wrap(fmt.Errorf("failed to create network unit file %q", unitName), err)
 		}
 
-		rlog.Printf("network unit created: %q in %q (iface=%q, addr=%q)", unitName, unitsPath, ifName, address)
+		diag.Printf("network unit created: %q in %q (iface=%q, addr=%q)", unitName, unitsPath, ifName, address)
 	}
 	return nil
 }
