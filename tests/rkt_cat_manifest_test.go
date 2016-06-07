@@ -63,7 +63,7 @@ func TestCatManifest(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		runCmd := fmt.Sprintf("%s cat-manifest %s", ctx.Cmd(), tt.uuid)
+		runCmd := fmt.Sprintf("%s cat-manifest --pretty-print=false %s", ctx.Cmd(), tt.uuid)
 		t.Logf("Running test #%d", i)
 		runRktAndCheckRegexOutput(t, runCmd, tt.match)
 	}

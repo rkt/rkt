@@ -452,7 +452,7 @@ func TestConfig(t *testing.T) {
 
 			tt.configFunc(ctx)
 
-			rktCmd := ctx.Cmd() + " --debug --insecure-options=image config"
+			rktCmd := ctx.Cmd() + " --debug --insecure-options=image --pretty-print=false config"
 			out, status := runRkt(t, rktCmd, nobodyUid, 0)
 
 			if status != 0 {

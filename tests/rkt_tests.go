@@ -627,7 +627,8 @@ func getImageInfo(t *testing.T, ctx *testutils.RktRunCtx, imageID string) *image
 	imgInfo := parseImageInfoOutput(t, string(output))
 
 	// Get manifest
-	output, err = exec.Command("/bin/bash", "-c", fmt.Sprintf("%s image cat-manifest %s", ctx.Cmd(), imageID)).CombinedOutput()
+	output, err = exec.Command("/bin/bash", "-c",
+		fmt.Sprintf("%s image cat-manifest --pretty-print=false %s", ctx.Cmd(), imageID)).CombinedOutput()
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
