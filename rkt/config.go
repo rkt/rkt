@@ -33,7 +33,7 @@ The generated configuration entries resemble the original rkt configuration form
 
 func init() {
 	cmdRkt.AddCommand(cmdConfig)
-	cmdConfig.Flags().BoolVar(&flagConfigPrettyPrint, "pretty-print", false, "apply indent to format the output")
+	cmdConfig.Flags().BoolVar(&flagConfigPrettyPrint, "pretty-print", true, "apply indent to format the output")
 }
 
 func runConfig(cmd *cobra.Command, args []string) int {

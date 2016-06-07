@@ -16,7 +16,7 @@ For debugging or inspection you may want to extract an ACI manifest to stdout.
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
-| `--pretty-print` |  `false` | `true` or `false` | Apply indent to format the output |
+| `--pretty-print` |  `true` | `true` or `false` | Apply indent to format the output |
 
 ## rkt image export
 
