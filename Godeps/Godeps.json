@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/coreos/rkt",
 	"GoVersion": "go1.5",
-	"GodepVersion": "v72",
+	"GodepVersion": "v74",
 	"Packages": [
 		"./...",
 		"github.com/appc/spec/actool",
@@ -356,28 +356,28 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/activation",
-			"Comment": "v8",
-			"Rev": "b9b5f5970662ce700ab6ee41f56186e5b131490c"
+			"Comment": "v9",
+			"Rev": "6dc8b843c670f2027cc26b164935635840a40526"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
-			"Comment": "v8",
-			"Rev": "b9b5f5970662ce700ab6ee41f56186e5b131490c"
+			"Comment": "v9",
+			"Rev": "6dc8b843c670f2027cc26b164935635840a40526"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/sdjournal",
-			"Comment": "v8",
-			"Rev": "b9b5f5970662ce700ab6ee41f56186e5b131490c"
+			"Comment": "v9",
+			"Rev": "6dc8b843c670f2027cc26b164935635840a40526"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/unit",
-			"Comment": "v8",
-			"Rev": "b9b5f5970662ce700ab6ee41f56186e5b131490c"
+			"Comment": "v9",
+			"Rev": "6dc8b843c670f2027cc26b164935635840a40526"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/util",
-			"Comment": "v8",
-			"Rev": "b9b5f5970662ce700ab6ee41f56186e5b131490c"
+			"Comment": "v9",
+			"Rev": "6dc8b843c670f2027cc26b164935635840a40526"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/tpmclient",
