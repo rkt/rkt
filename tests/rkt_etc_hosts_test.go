@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -85,5 +86,47 @@ func TestPrepareAppEnsureEtcHosts(t *testing.T) {
 		if err != nil {
 			t.Fatalf("rkt didn't terminate correctly: %v", err)
 		}
+	}
+}
+
+// stage1/prepare-app will bind mount /proc/sys/kernel/hostname on /etc/hostname,
+// see https://github.com/coreos/rkt/issues/2657
+var etcHostnameTests = []struct {
+	aciBuildArgs   []string
+	runArgs        []string
+	expectedOutput string
+	expectErr      bool
+}{
+	{
+		[]string{"--exec=/inspect -file-name /etc/hostname -stat-file"},
+		nil,
+		`/etc/hostname: mode: -rw-r--r--`,
+		false,
+	},
+	{
+		[]string{"--exec=/inspect -file-name /etc/hostname -read-file"},
+		[]string{"--hostname custom_hostname_setting"},
+		`<<<custom_hostname_setting`,
+		false,
+	},
+	{
+		[]string{"--exec=/inspect -file-name /etc/hostname -read-file"},
+		nil,
+		`<<<rkt-`,
+		false,
+	},
+}
+
+func TestPrepareAppCheckEtcHostname(t *testing.T) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	for i, ti := range etcHostnameTests {
+
+		aciFileName := patchTestACI(fmt.Sprintf("rkt-inspect-hostname-%d.aci", i), ti.aciBuildArgs...)
+		defer os.Remove(aciFileName)
+
+		rktCmd := fmt.Sprintf("%s --insecure-options=image run %s %s", ctx.Cmd(), aciFileName, strings.Join(ti.runArgs, " "))
+		runRktAndCheckOutput(t, rktCmd, ti.expectedOutput, ti.expectErr)
 	}
 }

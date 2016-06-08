@@ -230,6 +230,7 @@ int main(int argc, char *argv[])
 	};
 	static const mount_point files_mount_table[] = {
 		{ "/etc/rkt-resolv.conf", "/etc/resolv.conf", "bind", NULL, MS_BIND },
+		{ "/proc/sys/kernel/hostname", "/etc/hostname", "bind", NULL, MS_BIND },
 	};
 	const char *root;
 	int rootfd;
