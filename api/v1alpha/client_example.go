@@ -29,8 +29,9 @@ import (
 
 func getLogsWithoutFollow(c v1alpha.PublicAPIClient, p *v1alpha.Pod) {
 	logsResp, err := c.GetLogs(context.Background(), &v1alpha.GetLogsRequest{
-		PodId:  p.Id,
-		Follow: false,
+		PodId:   p.Id,
+		Follow:  false,
+		AppName: p.Apps[0].Name,
 	})
 	if err != nil {
 		fmt.Println(err)
@@ -50,8 +51,9 @@ func getLogsWithoutFollow(c v1alpha.PublicAPIClient, p *v1alpha.Pod) {
 
 func getLogsWithFollow(c v1alpha.PublicAPIClient, p *v1alpha.Pod) {
 	logsResp, err := c.GetLogs(context.Background(), &v1alpha.GetLogsRequest{
-		PodId:  p.Id,
-		Follow: true,
+		PodId:   p.Id,
+		Follow:  true,
+		AppName: p.Apps[0].Name,
 	})
 	if err != nil {
 		fmt.Println(err)

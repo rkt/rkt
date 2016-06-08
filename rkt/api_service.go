@@ -34,7 +34,6 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/set"
-	stage1common "github.com/coreos/rkt/stage1/init/common"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
 	"github.com/spf13/cobra"
@@ -740,14 +739,10 @@ func (s *v1AlphaAPIServer) GetLogs(request *v1alpha.GetLogsRequest, server v1alp
 		Path: path,
 	}
 	if request.AppName != "" {
-		acname, err := types.NewACName(request.AppName)
-		if err != nil {
-			return err
-		}
 		jconf.Matches = []sdjournal.Match{
 			{
 				Field: sdjournal.SD_JOURNAL_FIELD_SYSLOG_IDENTIFIER,
-				Value: stage1common.ServiceUnitName(*acname),
+				Value: request.AppName,
 			},
 		}
 	}
