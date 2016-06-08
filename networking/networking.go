@@ -274,7 +274,7 @@ func (n *Networking) Teardown(flavor string, debug bool) {
 
 	podNS, err := n.podNSLoad()
 	if err != nil {
-		stderr.PrintE("error loading podNS: %v", err)
+		stderr.PrintE("error loading podNS", err)
 	}
 	if podNS != nil {
 		defer func() {
