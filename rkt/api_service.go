@@ -748,7 +748,7 @@ func (s *v1AlphaAPIServer) GetLogs(request *v1alpha.GetLogsRequest, server v1alp
 	}
 	if request.SinceTime != 0 {
 		t := time.Unix(request.SinceTime, 0)
-		jconf.Since = time.Since(t)
+		jconf.Since = -time.Since(t)
 	}
 	if request.Lines != 0 {
 		jconf.NumFromTail = uint64(request.Lines)

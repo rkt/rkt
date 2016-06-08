@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/coreos/rkt/api/v1alpha"
 	"golang.org/x/net/context"
@@ -29,9 +30,11 @@ import (
 
 func getLogsWithoutFollow(c v1alpha.PublicAPIClient, p *v1alpha.Pod) {
 	logsResp, err := c.GetLogs(context.Background(), &v1alpha.GetLogsRequest{
-		PodId:   p.Id,
-		Follow:  false,
-		AppName: p.Apps[0].Name,
+		PodId:     p.Id,
+		Follow:    false,
+		AppName:   p.Apps[0].Name,
+		SinceTime: time.Now().Add(-time.Second * 5).Unix(),
+		Lines:     10,
 	})
 	if err != nil {
 		fmt.Println(err)
