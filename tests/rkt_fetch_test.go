@@ -161,7 +161,11 @@ func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, 
 	if err := expectWithOutput(child, remoteFetchMsg); err != nil {
 		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}
-	child.Wait()
+	err := child.Wait()
+	status := getExitStatus(err)
+	if status != 0 {
+		t.Skip("remote fetching failed, probably a network failure. Skipping...")
+	}
 
 	// 2. Run cmd with the image available in the store, should get $storeMsg.
 	runRktAndCheckRegexOutput(t, cmd, storeMsg)
@@ -203,7 +207,11 @@ func testFetchNoStore(t *testing.T, args string, image string, imageArgs string,
 	if err := expectWithOutput(child, remoteFetchMsg); err != nil {
 		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}
-	child.Wait()
+	err := child.Wait()
+	status := getExitStatus(err)
+	if status != 0 {
+		t.Skip("remote fetching failed, probably a network failure. Skipping...")
+	}
 }
 
 type synchronizedBool struct {
