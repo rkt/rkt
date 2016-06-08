@@ -58,8 +58,8 @@ const (
 )
 
 const (
-	FsMagicAUFS = int64(0x61756673) // https://goo.gl/CBwx43
-	FsMagicZFS  = int64(0x2FC12FC1) // https://goo.gl/xTvzO5
+	FsMagicAUFS = 0x61756673 // https://goo.gl/CBwx43
+	FsMagicZFS  = 0x2FC12FC1 // https://goo.gl/xTvzO5
 )
 
 // Stage1ImagePath returns the path where the stage1 app image (unpacked ACI) is rooted,
