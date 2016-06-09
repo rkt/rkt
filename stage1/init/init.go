@@ -566,6 +566,7 @@ func stage1() int {
 	}
 
 	if flavor == "kvm" {
+		kvm.InitDebug(debug)
 		if err := KvmNetworkingToSystemd(p, n); err != nil {
 			log.PrintE("failed to configure systemd for kvm", err)
 			return 1
