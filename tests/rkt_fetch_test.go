@@ -164,6 +164,7 @@ func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, 
 	err := child.Wait()
 	status := getExitStatus(err)
 	if status != 0 {
+		t.Errorf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, 0, child.Collect())
 		t.Skip("remote fetching failed, probably a network failure. Skipping...")
 	}
 
@@ -210,6 +211,7 @@ func testFetchNoStore(t *testing.T, args string, image string, imageArgs string,
 	err := child.Wait()
 	status := getExitStatus(err)
 	if status != 0 {
+		t.Errorf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, 0, child.Collect())
 		t.Skip("remote fetching failed, probably a network failure. Skipping...")
 	}
 }
