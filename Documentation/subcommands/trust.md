@@ -16,7 +16,7 @@ A few examples:
 # rkt trust --prefix=coreos.com/etcd
 ```
 
-To trust a key for an entire root domain, you must use the `--root` flag, with a path to a local key file (no discovery).
+To trust a key for an entire root domain, you must use the `--root` flag, with a path to a key file (no discovery).
 
 ```
 # rkt trust --root ~/aci-pubkeys.gpg
