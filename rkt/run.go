@@ -101,6 +101,8 @@ func init() {
 	cmdRun.Flags().Var((*appCPULimit)(&rktApps), "cpu", "cpu limit for the preceding image (example: '--cpu=500m')")
 	cmdRun.Flags().Var((*appUser)(&rktApps), "user", "user override for the preceding image (example: '--user=user')")
 	cmdRun.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
+	cmdRun.Flags().Var((*appCapsRetain)(&rktApps), "cap-retain", "capability to retain (example: '--cap-retain=CAP_SYS_ADMIN')")
+	cmdRun.Flags().Var((*appCapsRemove)(&rktApps), "cap-remove", "capability to remove (example: '--cap-remove=CAP_MKNOD')")
 
 	flagPorts = portList{}
 	flagDNS = flagStringList{}
@@ -150,7 +152,8 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 
 	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || flagInheritEnv || !flagExplicitEnv.IsEmpty() || rktApps.Count() > 0 || flagStoreOnly || flagNoStore ||
 		(*appsVolume)(&rktApps).String() != "" || (*appMount)(&rktApps).String() != "" || (*appExec)(&rktApps).String() != "" ||
-		(*appUser)(&rktApps).String() != "" || (*appGroup)(&rktApps).String() != "") {
+		(*appUser)(&rktApps).String() != "" || (*appGroup)(&rktApps).String() != "" ||
+		(*appCapsRetain)(&rktApps).String() != "" || (*appCapsRemove)(&rktApps).String() != "") {
 		stderr.Print("conflicting flags set with --pod-manifest (see --help)")
 		return 1
 	}

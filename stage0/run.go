@@ -248,6 +248,30 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 			ra.App.Isolators = append(ra.App.Isolators, isolator)
 		}
 
+		if app.CapsRetain != nil && app.CapsRemove != nil {
+			return fmt.Errorf("error: cannot use both --cap-retain and --cap-remove on the same image")
+		}
+
+		// Delete existing caps isolators if the user wants to override
+		// them with either --cap-retain or --cap-remove
+		if app.CapsRetain != nil || app.CapsRemove != nil {
+			for i := len(ra.App.Isolators) - 1; i >= 0; i-- {
+				isolator := ra.App.Isolators[i]
+				if _, ok := isolator.Value().(types.LinuxCapabilitiesSet); ok {
+					ra.App.Isolators = append(ra.App.Isolators[:i],
+						ra.App.Isolators[i+1:]...)
+				}
+			}
+		}
+
+		if capsRetain := app.CapsRetain; capsRetain != nil {
+			isolator := capsRetain.AsIsolator()
+			ra.App.Isolators = append(ra.App.Isolators, isolator)
+		} else if capsRemove := app.CapsRemove; capsRemove != nil {
+			isolator := capsRemove.AsIsolator()
+			ra.App.Isolators = append(ra.App.Isolators, isolator)
+		}
+
 		if user := app.User; user != "" {
 			ra.App.User = user
 		}
