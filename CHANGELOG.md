@@ -1,3 +1,29 @@
+## v1.8.0
+
+This release focuses on stabilizing the API service, fixing multiple issues in the logging subsystem.
+
+#### New features and UX changes
+
+- api: GetLogs: improve client example with 'Follow' ([#2747](https://github.com/coreos/rkt/pull/2747)).
+- kvm: add proxy arp support to macvtap ([#2715](https://github.com/coreos/rkt/pull/2715)).
+- stage0/config: add a CLI flag to pretty print json ([#2745](https://github.com/coreos/rkt/pull/2745)).
+- stage1: make /proc/bus/ read-only ([#2743](https://github.com/coreos/rkt/pull/2743)).
+
+#### Bug fixes
+
+- api: GetLogs: use the correct type in LogsStreamWriter ([#2744](https://github.com/coreos/rkt/pull/2744)).
+- api: fix service panic on incomplete pods ([#2739](https://github.com/coreos/rkt/pull/2739)).
+- api: Fix the GetLogs() when appname is given ([#2763](https://github.com/coreos/rkt/pull/2763)).
+- pkg/selinux: various fixes ([#2723](https://github.com/coreos/rkt/pull/2723)).
+- pkg/fileutil: don't remove the cleanSrc if it equals '.' ([#2731](https://github.com/coreos/rkt/pull/2731)).
+- stage0: remove superfluous error verbs ([#2750](https://github.com/coreos/rkt/pull/2750)).
+
+#### Other changes
+
+- Godeps: bump go-systemd ([#2754](https://github.com/coreos/rkt/pull/2754)). Fixes a panic on the api-service when calling GetLogs().
+- Documentation updates ([#2756](https://github.com/coreos/rkt/pull/2756), [#2741](https://github.com/coreos/rkt/pull/2741), [#2737](https://github.com/coreos/rkt/pull/2737), [#2742](https://github.com/coreos/rkt/pull/2742), [#2730](https://github.com/coreos/rkt/pull/2730), [#2729](https://github.com/coreos/rkt/pull/2729))
+- Test improvements ([#2726](https://github.com/coreos/rkt/pull/2726)).
+
 ## v1.7.0
 
 This release introduces some new security features, including a "no-new-privileges" isolator and initial (partial) restrictions on /proc and /sys access.
