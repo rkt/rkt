@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build amd64,openbsd
+
 package unix
 
 func Getpagesize() int { return 4096 }
@@ -13,8 +15,6 @@ func NsecToTimespec(nsec int64) (ts Timespec) {
 	ts.Nsec = nsec % 1e9
 	return
 }
-
-func TimevalToNsec(tv Timeval) int64 { return int64(tv.Sec)*1e9 + int64(tv.Usec)*1e3 }
 
 func NsecToTimeval(nsec int64) (tv Timeval) {
 	nsec += 999 // round up to microsecond

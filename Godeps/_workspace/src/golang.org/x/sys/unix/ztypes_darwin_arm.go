@@ -1,5 +1,8 @@
+// NOTE: cgo can't generate struct Stat_t and struct Statfs_t yet
 // Created by cgo -godefs - DO NOT EDIT
-// cgo -godefs types_dragonfly.go
+// cgo -godefs types_darwin.go
+
+// +build arm,darwin
 
 package unix
 
@@ -28,6 +31,8 @@ type Timeval struct {
 	Usec int32
 }
 
+type Timeval32 [0]byte
+
 type Rusage struct {
 	Utime    Timeval
 	Stime    Timeval
@@ -48,74 +53,50 @@ type Rusage struct {
 }
 
 type Rlimit struct {
-	Cur int64
-	Max int64
+	Cur uint64
+	Max uint64
 }
 
 type _Gid_t uint32
 
-const (
-	S_IFMT   = 0xf000
-	S_IFIFO  = 0x1000
-	S_IFCHR  = 0x2000
-	S_IFDIR  = 0x4000
-	S_IFBLK  = 0x6000
-	S_IFREG  = 0x8000
-	S_IFLNK  = 0xa000
-	S_IFSOCK = 0xc000
-	S_ISUID  = 0x800
-	S_ISGID  = 0x400
-	S_ISVTX  = 0x200
-	S_IRUSR  = 0x100
-	S_IWUSR  = 0x80
-	S_IXUSR  = 0x40
-)
-
 type Stat_t struct {
-	Ino      uint64
-	Nlink    uint32
-	Dev      uint32
-	Mode     uint16
-	Padding1 uint16
-	Uid      uint32
-	Gid      uint32
-	Rdev     uint32
-	Atim     Timespec
-	Mtim     Timespec
-	Ctim     Timespec
-	Size     int64
-	Blocks   int64
-	Blksize  uint32
-	Flags    uint32
-	Gen      uint32
-	Lspare   int32
-	Qspare1  int64
-	Qspare2  int64
+	Dev           int32
+	Mode          uint16
+	Nlink         uint16
+	Ino           uint64
+	Uid           uint32
+	Gid           uint32
+	Rdev          int32
+	Atimespec     Timespec
+	Mtimespec     Timespec
+	Ctimespec     Timespec
+	Birthtimespec Timespec
+	Size          int64
+	Blocks        int64
+	Blksize       int32
+	Flags         uint32
+	Gen           uint32
+	Lspare        int32
+	Qspare        [2]int64
 }
 
 type Statfs_t struct {
-	Spare2      int32
-	Bsize       int32
+	Bsize       uint32
 	Iosize      int32
-	Blocks      int32
-	Bfree       int32
-	Bavail      int32
-	Files       int32
-	Ffree       int32
+	Blocks      uint64
+	Bfree       uint64
+	Bavail      uint64
+	Files       uint64
+	Ffree       uint64
 	Fsid        Fsid
 	Owner       uint32
-	Type        int32
-	Flags       int32
-	Syncwrites  int32
-	Asyncwrites int32
+	Type        uint32
+	Flags       uint32
+	Fssubtype   uint32
 	Fstypename  [16]int8
-	Mntonname   [80]int8
-	Syncreads   int32
-	Asyncreads  int32
-	Spares1     int16
-	Mntfromname [80]int8
-	Spares2     int16
-	Spare       [2]int32
+	Mntonname   [1024]int8
+	Mntfromname [1024]int8
+	Reserved    [8]uint32
 }
 
 type Flock_t struct {
@@ -126,17 +107,43 @@ type Flock_t struct {
 	Whence int16
 }
 
-type Dirent struct {
-	Fileno  uint64
-	Namlen  uint16
-	Type    uint8
-	Unused1 uint8
-	Unused2 uint32
-	Name    [256]int8
+type Fstore_t struct {
+	Flags      uint32
+	Posmode    int32
+	Offset     int64
+	Length     int64
+	Bytesalloc int64
+}
+
+type Radvisory_t struct {
+	Offset int64
+	Count  int32
+}
+
+type Fbootstraptransfer_t struct {
+	Offset int64
+	Length uint32
+	Buffer *byte
+}
+
+type Log2phys_t struct {
+	Flags       uint32
+	Contigbytes int64
+	Devoffset   int64
 }
 
 type Fsid struct {
 	Val [2]int32
+}
+
+type Dirent struct {
+	Ino       uint64
+	Seekoff   uint64
+	Reclen    uint16
+	Namlen    uint16
+	Type      uint8
+	Name      [1024]int8
+	Pad_cgo_0 [3]byte
 }
 
 type RawSockaddrInet4 struct {
@@ -171,8 +178,6 @@ type RawSockaddrDatalink struct {
 	Alen   uint8
 	Slen   uint8
 	Data   [12]int8
-	Rcf    uint16
-	Route  [16]uint16
 }
 
 type RawSockaddr struct {
@@ -224,6 +229,12 @@ type Cmsghdr struct {
 	Type  int32
 }
 
+type Inet4Pktinfo struct {
+	Ifindex  uint32
+	Spec_dst [4]byte /* in_addr */
+	Addr     [4]byte /* in_addr */
+}
+
 type Inet6Pktinfo struct {
 	Addr    [16]byte /* in6_addr */
 	Ifindex uint32
@@ -243,12 +254,13 @@ const (
 	SizeofSockaddrInet6    = 0x1c
 	SizeofSockaddrAny      = 0x6c
 	SizeofSockaddrUnix     = 0x6a
-	SizeofSockaddrDatalink = 0x36
+	SizeofSockaddrDatalink = 0x14
 	SizeofLinger           = 0x8
 	SizeofIPMreq           = 0x8
 	SizeofIPv6Mreq         = 0x14
 	SizeofMsghdr           = 0x1c
 	SizeofCmsghdr          = 0xc
+	SizeofInet4Pktinfo     = 0xc
 	SizeofInet6Pktinfo     = 0x14
 	SizeofIPv6MTUInfo      = 0x20
 	SizeofICMPv6Filter     = 0x20
@@ -270,17 +282,17 @@ type Kevent_t struct {
 }
 
 type FdSet struct {
-	Bits [32]uint32
+	Bits [32]int32
 }
 
 const (
-	SizeofIfMsghdr         = 0x68
-	SizeofIfData           = 0x58
-	SizeofIfaMsghdr        = 0x14
-	SizeofIfmaMsghdr       = 0x10
-	SizeofIfAnnounceMsghdr = 0x18
-	SizeofRtMsghdr         = 0x5c
-	SizeofRtMetrics        = 0x38
+	SizeofIfMsghdr    = 0x70
+	SizeofIfData      = 0x60
+	SizeofIfaMsghdr   = 0x14
+	SizeofIfmaMsghdr  = 0x10
+	SizeofIfmaMsghdr2 = 0x14
+	SizeofRtMsghdr    = 0x5c
+	SizeofRtMetrics   = 0x38
 )
 
 type IfMsghdr struct {
@@ -296,16 +308,16 @@ type IfMsghdr struct {
 
 type IfData struct {
 	Type       uint8
+	Typelen    uint8
 	Physical   uint8
 	Addrlen    uint8
 	Hdrlen     uint8
 	Recvquota  uint8
 	Xmitquota  uint8
-	Pad_cgo_0  [2]byte
+	Unused1    uint8
 	Mtu        uint32
 	Metric     uint32
-	Link_state uint32
-	Baudrate   uint64
+	Baudrate   uint32
 	Ipackets   uint32
 	Ierrors    uint32
 	Opackets   uint32
@@ -317,9 +329,13 @@ type IfData struct {
 	Omcasts    uint32
 	Iqdrops    uint32
 	Noproto    uint32
-	Hwassist   uint32
-	Unused     uint32
+	Recvtiming uint32
+	Xmittiming uint32
 	Lastchange Timeval
+	Unused2    uint32
+	Hwassist   uint32
+	Reserved1  uint32
+	Reserved2  uint32
 }
 
 type IfaMsghdr struct {
@@ -343,13 +359,15 @@ type IfmaMsghdr struct {
 	Pad_cgo_0 [2]byte
 }
 
-type IfAnnounceMsghdr struct {
-	Msglen  uint16
-	Version uint8
-	Type    uint8
-	Index   uint16
-	Name    [16]int8
-	What    uint16
+type IfmaMsghdr2 struct {
+	Msglen    uint16
+	Version   uint8
+	Type      uint8
+	Addrs     int32
+	Flags     int32
+	Index     uint16
+	Pad_cgo_0 [2]byte
+	Refcount  int32
 }
 
 type RtMsghdr struct {
@@ -369,21 +387,17 @@ type RtMsghdr struct {
 }
 
 type RtMetrics struct {
-	Locks     uint32
-	Mtu       uint32
-	Pksent    uint32
-	Expire    uint32
-	Sendpipe  uint32
-	Ssthresh  uint32
-	Rtt       uint32
-	Rttvar    uint32
-	Recvpipe  uint32
-	Hopcount  uint32
-	Mssopt    uint16
-	Pad       uint16
-	Msl       uint32
-	Iwmaxsegs uint32
-	Iwcapsegs uint32
+	Locks    uint32
+	Mtu      uint32
+	Hopcount uint32
+	Expire   int32
+	Recvpipe uint32
+	Sendpipe uint32
+	Ssthresh uint32
+	Rtt      uint32
+	Rttvar   uint32
+	Pksent   uint32
+	Filler   [4]uint32
 }
 
 const (
