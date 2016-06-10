@@ -28,7 +28,7 @@ attempt to eat up resources in different ways.
 An example usage:
 
 ```
-derek@rokot ~/go/src/github.com/coreos/rkt/tests/rkt-monitor> ./build-log-stresser.sh 
+derek@rokot ~/go/src/github.com/coreos/rkt> ./tests/rkt-monitor/build-stresser.sh log
 Building worker...
 Beginning build with an empty ACI
 Setting name of ACI to appc.io/rkt-log-stresser
@@ -36,7 +36,7 @@ Copying host:worker-binary to aci:/worker
 Setting exec command [/worker]
 Writing ACI to log-stresser.aci
 Ending the build
-derek@rokot ~/go/src/github.com/coreos/rkt/tests/rkt-monitor> sudo ./rkt-monitor log-stresser.aci 
+derek@rokot ~/go/src/github.com/coreos/rkt> sudo ./build-rkt-1.8.0+git/bin/rkt-monitor log-stresser.aci 
 [sudo] password for derek: 
 rkt(13261): seconds alive: 10  avg CPU: 33.113897%  avg Mem: 4 kB  peak Mem: 4 kB
 systemd(13302): seconds alive: 9  avg CPU: 0.000000%  avg Mem: 4 mB  peak Mem: 4 mB

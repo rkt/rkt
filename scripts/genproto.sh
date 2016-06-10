@@ -15,11 +15,10 @@ if ! [[ $(protoc --version) =~ "3.0.0" ]]; then
 	exit 255
 fi
 
-export GOPATH=$(godep path)
 export PATH=.:${PATH}
 
 echo "building protoc-gen-go"
-go build github.com/golang/protobuf/protoc-gen-go
+go build vendor/github.com/golang/protobuf/protoc-gen-go
 trap 'rm -f "protoc-gen-go"' EXIT
 
 echo "generating code"

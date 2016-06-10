@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-
 set -e
+
+if ! [[ "$0" =~ "tests/rkt-monitor/build-too-many-apps.sh" ]]; then
+	echo "must be run from repository root"
+	exit 255
+fi
 
 NUM_APPS=100
 
 # Build worker binary
 
 echo "Building worker binary"
-CGO_ENABLED=0 GOOS=linux go build -o worker-binary -a -tags netgo -ldflags '-w' ./sleeper/main.go
+make rkt-monitor
 
 # Generate worker images
 
-rmWorker() { rm worker-binary; }
 acbuildEnd() {
-    rmWorker
     export EXIT=$?
     acbuild --debug end && exit $EXIT
 }
@@ -28,14 +30,12 @@ do
     echo "Building image ${NAME}"
 
     acbuild begin
-    acbuild copy worker-binary /worker-binary
+    acbuild copy build-rkt-1.8.0+git/bin/sleeper /worker-binary
     acbuild set-exec /worker-binary
     acbuild set-name ${NAME}
     acbuild write --overwrite too-many-apps-images/${NAME}.aci
     acbuild end
 done
-
-trap rmWorker EXIT
 
 # Generate pod manifest
 

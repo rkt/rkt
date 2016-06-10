@@ -10,7 +10,7 @@ TARGETDIR := $(BUILDDIR)/target
 TARGET_BINDIR := $(BUILDDIR)/target/bin
 TARGET_TOOLSDIR := $(BUILDDIR)/target/tools
 GOPATH_TO_CREATE := $(BUILDDIR)/gopath
-GOPATH := $(GOPATH_TO_CREATE)/src/github.com/coreos/rkt/Godeps/_workspace:$(GOPATH_TO_CREATE)
+GOPATH := $(GOPATH_TO_CREATE)
 DEPSDIR := $(BUILDDIR)/deps
 FILELISTDIR := $(BUILDDIR)/filelists
 MAINTEMPDIR := $(BUILDDIR)/tmp
@@ -27,6 +27,7 @@ GO_TEST_PACKAGES ?= ./...
 GO_TEST_FUNC_ARGS ?=
 
 GO_ENV := $(strip \
+	GO15VENDOREXPERIMENT=1 \
 	GOARCH="$(GOARCH)" \
 	CGO_ENABLED=1 \
 	CC="$(CC)" \

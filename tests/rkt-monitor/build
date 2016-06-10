@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-set -e
-
-export GOPATH=${PWD}/../../Godeps/_workspace
-
-eval $(go env)
-export GOOS GOARCH
-
-go build -o rkt-monitor

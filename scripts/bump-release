@@ -34,7 +34,7 @@ function replace_stuff() {
 }
 
 function replace_all() {
-	replace_stuff $1 $2 $(git ls-files | grep -Ev "(CHANGELOG.md|Godeps|manifest\.d)")
+	replace_stuff $1 $2 $(git ls-files | grep -Ev "(CHANGELOG.md|vendor|manifest\.d)")
 }
 
 function replace_version() {
