@@ -29,6 +29,11 @@ import (
 func getPodCgroups(shortUUID string) ([]string, error) {
 	var podCgroups []string
 	walkCgroups := func(path string, info os.FileInfo, err error) error {
+		// Maybe the file doesn't exist anymore. We've seen this during tests,
+		// not sure about the reason though.
+		if os.IsNotExist(err) {
+			return nil
+		}
 		if err != nil {
 			return err
 		}

@@ -101,8 +101,8 @@ func TestFetch(t *testing.T) {
 		{"--insecure-options=image fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
 		{"--insecure-options=image fetch", "docker://busybox", "", "docker://busybox"},
 		{"--insecure-options=image fetch", "docker://busybox:latest", "", "docker://busybox:latest"},
-		{"--insecure-options=image run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /dev/null", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /dev/null", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /etcdctl", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /etcdctl", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
 		{"--insecure-options=image run --mds-register=false", "docker://busybox", "", "docker://busybox"},
 		{"--insecure-options=image run --mds-register=false", "docker://busybox:latest", "", "docker://busybox:latest"},
 		{"--insecure-options=image prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
@@ -161,7 +161,12 @@ func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, 
 	if err := expectWithOutput(child, remoteFetchMsg); err != nil {
 		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}
-	child.Wait()
+	err := child.Wait()
+	status := getExitStatus(err)
+	if status != 0 {
+		t.Errorf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, 0, child.Collect())
+		t.Skip("remote fetching failed, probably a network failure. Skipping...")
+	}
 
 	// 2. Run cmd with the image available in the store, should get $storeMsg.
 	runRktAndCheckRegexOutput(t, cmd, storeMsg)
@@ -203,7 +208,12 @@ func testFetchNoStore(t *testing.T, args string, image string, imageArgs string,
 	if err := expectWithOutput(child, remoteFetchMsg); err != nil {
 		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}
-	child.Wait()
+	err := child.Wait()
+	status := getExitStatus(err)
+	if status != 0 {
+		t.Errorf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, 0, child.Collect())
+		t.Skip("remote fetching failed, probably a network failure. Skipping...")
+	}
 }
 
 type synchronizedBool struct {
