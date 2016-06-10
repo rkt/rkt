@@ -26,255 +26,277 @@ import (
 	"github.com/syndtr/gocapability/capability"
 )
 
-func TestCapsSeveralApp(t *testing.T) {
-	// All the following images are launched together in the same pod
-	var appCapsTests = []struct {
-		// constants
-		testName     string // name of the image
-		capRemainSet string // if != "x", value passed to actool patch-manifest --capability=
-		capRemoveSet string // if != "x", value passed to actool patch-manifest --revoke-capability=
-		expected     string // caps bounding set as printed by gocapability
+var appCapsTests = []struct {
+	// constants
+	testName     string // name of the image
+	capRetainSet string // only use value if != "x"
+	capRemoveSet string // only use value if != "x"
+	expected     string // caps bounding set as printed by gocapability
 
-		// set during the test
-		imageFile string
-	}{
-		// Testing without isolators
-		{
-			testName:     "image-none",
-			capRemainSet: "x",
-			capRemoveSet: "x",
-			expected: strings.Join([]string{
-				"chown",
-				"dac_override",
-				"fowner",
-				"fsetid",
-				"kill",
-				"setgid",
-				"setuid",
-				"setpcap",
-				"net_bind_service",
-				"net_raw",
-				"sys_chroot",
-				"mknod",
-				"audit_write",
-				"setfcap",
-			}, ", "),
-		},
-		// Testing remain set
-		{
-			testName:     "image-only-one-cap",
-			capRemainSet: "CAP_NET_ADMIN",
-			capRemoveSet: "x",
-			expected:     "net_admin",
-		},
-		{
-			testName:     "image-only-one-cap-from-default",
-			capRemainSet: "CAP_CHOWN",
-			capRemoveSet: "x",
-			expected:     "chown",
-		},
-		{
-			testName: "image-some-caps",
-			capRemainSet: strings.Join([]string{
-				"CAP_CHOWN",
-				"CAP_FOWNER",
-				"CAP_SYS_ADMIN",
-				"CAP_NET_ADMIN",
-			}, ","),
-			capRemoveSet: "x",
-			expected: strings.Join([]string{
-				"chown",
-				"fowner",
-				"net_admin",
-				"sys_admin",
-			}, ", "),
-		},
-		{
-			testName: "image-caps-from-nspawn-default",
-			capRemainSet: strings.Join([]string{
-				"CAP_CHOWN",
-				"CAP_DAC_OVERRIDE",
-				"CAP_DAC_READ_SEARCH",
-				"CAP_FOWNER",
-				"CAP_FSETID",
-				"CAP_IPC_OWNER",
-				"CAP_KILL",
-				"CAP_LEASE",
-				"CAP_LINUX_IMMUTABLE",
-				"CAP_NET_BIND_SERVICE",
-				"CAP_NET_BROADCAST",
-				"CAP_NET_RAW",
-				"CAP_SETGID",
-				"CAP_SETFCAP",
-				"CAP_SETPCAP",
-				"CAP_SETUID",
-				"CAP_SYS_ADMIN",
-				"CAP_SYS_CHROOT",
-				"CAP_SYS_NICE",
-				"CAP_SYS_PTRACE",
-				"CAP_SYS_TTY_CONFIG",
-				"CAP_SYS_RESOURCE",
-				"CAP_SYS_BOOT",
-				"CAP_AUDIT_WRITE",
-				"CAP_AUDIT_CONTROL",
-			}, ","),
-			capRemoveSet: "x",
-			expected: strings.Join([]string{
-				"chown",
-				"dac_override",
-				"dac_read_search",
-				"fowner",
-				"fsetid",
-				"kill",
-				"setgid",
-				"setuid",
-				"setpcap",
-				"linux_immutable",
-				"net_bind_service",
-				"net_broadcast",
-				"net_raw",
-				"ipc_owner",
-				"sys_chroot",
-				"sys_ptrace",
-				"sys_admin",
-				"sys_boot",
-				"sys_nice",
-				"sys_resource",
-				"sys_tty_config",
-				"lease",
-				"audit_write",
-				"audit_control",
-				"setfcap",
-			}, ", "),
-		},
-		// Testing revoke set
-		{
-			testName:     "image-revoke-one-from-default",
-			capRemainSet: "x",
-			capRemoveSet: "CAP_CHOWN",
-			expected: strings.Join([]string{
-				"dac_override, fowner, fsetid, kill, setgid, setuid, setpcap, net_bind_service, net_raw, sys_chroot, mknod, audit_write, setfcap",
-			}, ", "),
-		},
-		{
-			testName:     "image-revoke-one-already-revoked",
-			capRemainSet: "x",
-			capRemoveSet: "CAP_SYS_ADMIN",
-			expected: strings.Join([]string{
-				"chown",
-				"dac_override",
-				"fowner",
-				"fsetid",
-				"kill",
-				"setgid",
-				"setuid",
-				"setpcap",
-				"net_bind_service",
-				"net_raw",
-				"sys_chroot",
-				"mknod",
-				"audit_write",
-				"setfcap",
-			}, ", "),
-		},
-		{
-			testName:     "image-revoke-two",
-			capRemainSet: "x",
-			capRemoveSet: "CAP_CHOWN,CAP_SYS_ADMIN",
-			expected: strings.Join([]string{
-				"dac_override",
-				"fowner",
-				"fsetid",
-				"kill",
-				"setgid",
-				"setuid",
-				"setpcap",
-				"net_bind_service",
-				"net_raw",
-				"sys_chroot",
-				"mknod",
-				"audit_write",
-				"setfcap",
-			}, ", "),
-		},
-		{
-			testName:     "image-revoke-all",
-			capRemainSet: "x",
-			capRemoveSet: strings.Join([]string{
-				"CAP_AUDIT_WRITE",
-				"CAP_CHOWN",
-				"CAP_DAC_OVERRIDE",
-				"CAP_FSETID",
-				"CAP_FOWNER",
-				"CAP_KILL",
-				"CAP_MKNOD",
-				"CAP_NET_RAW",
-				"CAP_NET_BIND_SERVICE",
-				"CAP_SETUID",
-				"CAP_SETGID",
-				"CAP_SETPCAP",
-				"CAP_SETFCAP",
-				"CAP_SYS_CHROOT",
-			}, ","),
-			expected: "",
-		},
-		{
-			testName:     "image-revoke-all-but-one",
-			capRemainSet: "x",
-			capRemoveSet: strings.Join([]string{
-				"CAP_AUDIT_WRITE",
-				"CAP_CHOWN",
-				"CAP_DAC_OVERRIDE",
-				"CAP_FSETID",
-				"CAP_FOWNER",
-				"CAP_KILL",
-				"CAP_MKNOD",
-				"CAP_NET_RAW",
-				"CAP_NET_BIND_SERVICE",
-				"CAP_SETUID",
-				"CAP_SETGID",
-				"CAP_SETPCAP",
-				"CAP_SETFCAP",
-			}, ","),
-			expected: "sys_chroot",
-		},
-		{
-			testName:     "image-revoke-all-plus-one",
-			capRemainSet: "x",
-			capRemoveSet: strings.Join([]string{
-				"CAP_AUDIT_WRITE",
-				"CAP_CHOWN",
-				"CAP_DAC_OVERRIDE",
-				"CAP_FSETID",
-				"CAP_FOWNER",
-				"CAP_KILL",
-				"CAP_MKNOD",
-				"CAP_NET_RAW",
-				"CAP_NET_BIND_SERVICE",
-				"CAP_SETUID",
-				"CAP_SETGID",
-				"CAP_SETPCAP",
-				"CAP_SETFCAP",
-				"CAP_SYS_CHROOT",
-				"CAP_SYS_ADMIN",
-			}, ","),
-			expected: "",
-		},
-		// Testing with an empty remain set or an empty remove set
-		// TODO(alban): "actool patch-manifest" cannot generate those images for now
-		//{
-		//	testName:     "image-remain-set-empty",
-		//	capRemainSet: "",
-		//	capRemoveSet: "x",
-		//	expected:     "",
-		//},
-		//{
-		//	testName:     "image-revoke-none",
-		//	capRemainSet: "x",
-		//	capRemoveSet: "",
-		//	expected:     "TODO(alban)",
-		//},
+	// set during the test
+	imageFile string
+}{
+	// Testing without isolators
+	{
+		testName:     "image-none",
+		capRetainSet: "x",
+		capRemoveSet: "x",
+		expected: strings.Join([]string{
+			"chown",
+			"dac_override",
+			"fowner",
+			"fsetid",
+			"kill",
+			"setgid",
+			"setuid",
+			"setpcap",
+			"net_bind_service",
+			"net_raw",
+			"sys_chroot",
+			"mknod",
+			"audit_write",
+			"setfcap",
+		}, ", "),
+	},
+	// Testing retain set
+	{
+		testName:     "image-only-one-cap",
+		capRetainSet: "CAP_NET_ADMIN",
+		capRemoveSet: "x",
+		expected:     "net_admin",
+	},
+	{
+		testName:     "image-only-one-cap-from-default",
+		capRetainSet: "CAP_CHOWN",
+		capRemoveSet: "x",
+		expected:     "chown",
+	},
+	{
+		testName: "image-some-caps",
+		capRetainSet: strings.Join([]string{
+			"CAP_CHOWN",
+			"CAP_FOWNER",
+			"CAP_SYS_ADMIN",
+			"CAP_NET_ADMIN",
+		}, ","),
+		capRemoveSet: "x",
+		expected: strings.Join([]string{
+			"chown",
+			"fowner",
+			"net_admin",
+			"sys_admin",
+		}, ", "),
+	},
+	{
+		testName: "image-caps-from-nspawn-default",
+		capRetainSet: strings.Join([]string{
+			"CAP_CHOWN",
+			"CAP_DAC_OVERRIDE",
+			"CAP_DAC_READ_SEARCH",
+			"CAP_FOWNER",
+			"CAP_FSETID",
+			"CAP_IPC_OWNER",
+			"CAP_KILL",
+			"CAP_LEASE",
+			"CAP_LINUX_IMMUTABLE",
+			"CAP_NET_BIND_SERVICE",
+			"CAP_NET_BROADCAST",
+			"CAP_NET_RAW",
+			"CAP_SETGID",
+			"CAP_SETFCAP",
+			"CAP_SETPCAP",
+			"CAP_SETUID",
+			"CAP_SYS_ADMIN",
+			"CAP_SYS_CHROOT",
+			"CAP_SYS_NICE",
+			"CAP_SYS_PTRACE",
+			"CAP_SYS_TTY_CONFIG",
+			"CAP_SYS_RESOURCE",
+			"CAP_SYS_BOOT",
+			"CAP_AUDIT_WRITE",
+			"CAP_AUDIT_CONTROL",
+		}, ","),
+		capRemoveSet: "x",
+		expected: strings.Join([]string{
+			"chown",
+			"dac_override",
+			"dac_read_search",
+			"fowner",
+			"fsetid",
+			"kill",
+			"setgid",
+			"setuid",
+			"setpcap",
+			"linux_immutable",
+			"net_bind_service",
+			"net_broadcast",
+			"net_raw",
+			"ipc_owner",
+			"sys_chroot",
+			"sys_ptrace",
+			"sys_admin",
+			"sys_boot",
+			"sys_nice",
+			"sys_resource",
+			"sys_tty_config",
+			"lease",
+			"audit_write",
+			"audit_control",
+			"setfcap",
+		}, ", "),
+	},
+	// Testing remove set
+	{
+		testName:     "image-remove-one-from-default",
+		capRetainSet: "x",
+		capRemoveSet: "CAP_CHOWN",
+		expected: strings.Join([]string{
+			"dac_override, fowner, fsetid, kill, setgid, setuid, setpcap, net_bind_service, net_raw, sys_chroot, mknod, audit_write, setfcap",
+		}, ", "),
+	},
+	{
+		testName:     "image-remove-one-already-removed",
+		capRetainSet: "x",
+		capRemoveSet: "CAP_SYS_ADMIN",
+		expected: strings.Join([]string{
+			"chown",
+			"dac_override",
+			"fowner",
+			"fsetid",
+			"kill",
+			"setgid",
+			"setuid",
+			"setpcap",
+			"net_bind_service",
+			"net_raw",
+			"sys_chroot",
+			"mknod",
+			"audit_write",
+			"setfcap",
+		}, ", "),
+	},
+	{
+		testName:     "image-remove-two",
+		capRetainSet: "x",
+		capRemoveSet: "CAP_CHOWN,CAP_SYS_ADMIN",
+		expected: strings.Join([]string{
+			"dac_override",
+			"fowner",
+			"fsetid",
+			"kill",
+			"setgid",
+			"setuid",
+			"setpcap",
+			"net_bind_service",
+			"net_raw",
+			"sys_chroot",
+			"mknod",
+			"audit_write",
+			"setfcap",
+		}, ", "),
+	},
+	{
+		testName:     "image-remove-all",
+		capRetainSet: "x",
+		capRemoveSet: strings.Join([]string{
+			"CAP_AUDIT_WRITE",
+			"CAP_CHOWN",
+			"CAP_DAC_OVERRIDE",
+			"CAP_FSETID",
+			"CAP_FOWNER",
+			"CAP_KILL",
+			"CAP_MKNOD",
+			"CAP_NET_RAW",
+			"CAP_NET_BIND_SERVICE",
+			"CAP_SETUID",
+			"CAP_SETGID",
+			"CAP_SETPCAP",
+			"CAP_SETFCAP",
+			"CAP_SYS_CHROOT",
+		}, ","),
+		expected: "",
+	},
+	{
+		testName:     "image-remove-all-but-one",
+		capRetainSet: "x",
+		capRemoveSet: strings.Join([]string{
+			"CAP_AUDIT_WRITE",
+			"CAP_CHOWN",
+			"CAP_DAC_OVERRIDE",
+			"CAP_FSETID",
+			"CAP_FOWNER",
+			"CAP_KILL",
+			"CAP_MKNOD",
+			"CAP_NET_RAW",
+			"CAP_NET_BIND_SERVICE",
+			"CAP_SETUID",
+			"CAP_SETGID",
+			"CAP_SETPCAP",
+			"CAP_SETFCAP",
+		}, ","),
+		expected: "sys_chroot",
+	},
+	{
+		testName:     "image-remove-all-plus-one",
+		capRetainSet: "x",
+		capRemoveSet: strings.Join([]string{
+			"CAP_AUDIT_WRITE",
+			"CAP_CHOWN",
+			"CAP_DAC_OVERRIDE",
+			"CAP_FSETID",
+			"CAP_FOWNER",
+			"CAP_KILL",
+			"CAP_MKNOD",
+			"CAP_NET_RAW",
+			"CAP_NET_BIND_SERVICE",
+			"CAP_SETUID",
+			"CAP_SETGID",
+			"CAP_SETPCAP",
+			"CAP_SETFCAP",
+			"CAP_SYS_CHROOT",
+			"CAP_SYS_ADMIN",
+		}, ","),
+		expected: "",
+	},
+	// Testing with an empty retain set or an empty remove set
+	// TODO(alban): "actool patch-manifest" cannot generate those images for now
+	//{
+	//	testName:     "image-retain-set-empty",
+	//	capRetainSet: "",
+	//	capRemoveSet: "x",
+	//	expected:     "",
+	//},
+	//{
+	//	testName:     "image-remove-none",
+	//	capRetainSet: "x",
+	//	capRemoveSet: "",
+	//	expected:     "TODO(alban)",
+	//},
+}
+
+func capsSeveralAppsRunAndCheckOutput(t *testing.T, ctx *testutils.RktRunCtx, cmd string) {
+	// Ideally, the test would run the pod only one time, but all
+	// apps' output is mixed together without ordering guarantees, so
+	// it makes it impossible to call all the expectWithOutput() in
+	// the correct order.
+	for _, tt := range appCapsTests {
+		t.Logf("Checking caps for %q", tt.testName)
+		child := spawnOrFail(t, cmd)
+
+		expected := fmt.Sprintf("Capability set: bounding: %s (%s)",
+			tt.expected, tt.testName)
+		if err := expectWithOutput(child, expected); err != nil {
+			t.Fatalf("Expected %q but not found: %v", expected, err)
+		}
+
+		waitOrFail(t, child, 0)
+
+		ctx.RunGC()
 	}
+}
+
+func TestCapsSeveralAppWithPatches(t *testing.T) {
+	// All the following images are launched together in the same pod
 
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
@@ -284,8 +306,8 @@ func TestCapsSeveralApp(t *testing.T) {
 			fmt.Sprintf("--name=%s", tt.testName),
 			fmt.Sprintf("--exec=/inspect --print-caps-pid=0 --suffix-msg=%s", tt.testName),
 		}
-		if tt.capRemainSet != "x" {
-			patches = append(patches, "--capability="+tt.capRemainSet)
+		if tt.capRetainSet != "x" {
+			patches = append(patches, "--capability="+tt.capRetainSet)
 		}
 		if tt.capRemoveSet != "x" {
 			patches = append(patches, "--revoke-capability="+tt.capRemoveSet)
@@ -303,11 +325,141 @@ func TestCapsSeveralApp(t *testing.T) {
 	}
 	cmd := fmt.Sprintf("%s --insecure-options=image run %s", ctx.Cmd(), rktArgs)
 
-	// Ideally, the test would run the pod only one time, but all
-	// apps' output is mixed together without ordering guarantees, so
-	// it makes it impossible to call all the expectWithOutput() in
-	// the correct order.
+	capsSeveralAppsRunAndCheckOutput(t, ctx, cmd)
+}
+
+func TestCapsSeveralAppWithFlags(t *testing.T) {
+	// All the following images are launched together in the same pod
+
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	for i, tt := range appCapsTests {
+		imageFile := patchTestACI(tt.testName+".aci", fmt.Sprintf("--name=%s", tt.testName),
+			fmt.Sprintf("--exec=/inspect --print-caps-pid=0 --suffix-msg=%s", tt.testName))
+		defer os.Remove(imageFile)
+		appCapsTests[i].imageFile = imageFile
+		t.Logf("Built image %q", imageFile)
+	}
+
+	// Generate the rkt arguments to launch all the apps in the same pod
+	rktArgs := ""
 	for _, tt := range appCapsTests {
+		rktArgs += " " + tt.imageFile
+		if tt.capRetainSet != "x" {
+			rktArgs += " --cap-retain=" + tt.capRetainSet
+		}
+		if tt.capRemoveSet != "x" {
+			rktArgs += " --cap-remove=" + tt.capRemoveSet
+		}
+	}
+	cmd := fmt.Sprintf("%s --insecure-options=image run %s", ctx.Cmd(), rktArgs)
+
+	capsSeveralAppsRunAndCheckOutput(t, ctx, cmd)
+}
+
+// Tests that flags on the command line override the isolator in the ACI
+func TestCapsOverride(t *testing.T) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	var appCapsOverride = []struct {
+		testName        string // name of the image
+		capRetainSetImg string // only use value if != "x"
+		capRemoveSetImg string // only use value if != "x"
+		capRetainSetFlg string // only use value if != "x"
+		capRemoveSetFlg string // only use value if != "x"
+		expected        string // caps bounding set as printed by gocapability
+	}{
+		{
+			testName:        "retain-override-retain",
+			capRetainSetImg: "CAP_MKNOD",
+			capRemoveSetImg: "x",
+			capRetainSetFlg: "CAP_SYS_ADMIN",
+			capRemoveSetFlg: "x",
+			expected: strings.Join([]string{
+				"sys_admin",
+			}, ", "),
+		},
+		{
+			testName:        "retain-override-remove",
+			capRetainSetImg: "x",
+			capRemoveSetImg: "CAP_CHOWN",
+			capRetainSetFlg: "CAP_SYS_ADMIN",
+			capRemoveSetFlg: "x",
+			expected: strings.Join([]string{
+				"sys_admin",
+			}, ", "),
+		},
+		{
+			testName:        "remove-override-remove",
+			capRetainSetImg: "x",
+			capRemoveSetImg: "CAP_CHOWN",
+			capRetainSetFlg: "x",
+			capRemoveSetFlg: "CAP_KILL",
+			expected: strings.Join([]string{
+				"chown",
+				"dac_override",
+				"fowner",
+				"fsetid",
+				"setgid",
+				"setuid",
+				"setpcap",
+				"net_bind_service",
+				"net_raw",
+				"sys_chroot",
+				"mknod",
+				"audit_write",
+				"setfcap",
+			}, ", "),
+		},
+		{
+			testName:        "remove-override-retain",
+			capRetainSetImg: "CAP_MKNOD",
+			capRemoveSetImg: "x",
+			capRetainSetFlg: "x",
+			capRemoveSetFlg: "CAP_KILL",
+			expected: strings.Join([]string{
+				"chown",
+				"dac_override",
+				"fowner",
+				"fsetid",
+				"setgid",
+				"setuid",
+				"setpcap",
+				"net_bind_service",
+				"net_raw",
+				"sys_chroot",
+				"mknod",
+				"audit_write",
+				"setfcap",
+			}, ", "),
+		},
+	}
+
+	for _, tt := range appCapsOverride {
+		patches := []string{
+			fmt.Sprintf("--name=%s", tt.testName),
+			fmt.Sprintf("--exec=/inspect --print-caps-pid=0 --suffix-msg=%s", tt.testName),
+		}
+		if tt.capRetainSetImg != "x" {
+			patches = append(patches, "--capability="+tt.capRetainSetImg)
+		}
+		if tt.capRemoveSetImg != "x" {
+			patches = append(patches, "--revoke-capability="+tt.capRemoveSetImg)
+		}
+		imageFile := patchTestACI(tt.testName+".aci", patches...)
+		defer os.Remove(imageFile)
+		t.Logf("Built image %q", imageFile)
+
+		cmd := fmt.Sprintf("%s --insecure-options=image run %s", ctx.Cmd(), imageFile)
+		if tt.capRetainSetFlg != "x" {
+			cmd += " --cap-retain=" + tt.capRetainSetFlg
+		}
+		if tt.capRemoveSetFlg != "x" {
+			cmd += " --cap-remove=" + tt.capRemoveSetFlg
+		}
+
 		t.Logf("Checking caps for %q", tt.testName)
 		child := spawnOrFail(t, cmd)
 
