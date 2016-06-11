@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build 386,darwin
+
 package unix
 
 import (
@@ -18,8 +20,6 @@ func NsecToTimespec(nsec int64) (ts Timespec) {
 	ts.Nsec = int32(nsec % 1e9)
 	return
 }
-
-func TimevalToNsec(tv Timeval) int64 { return int64(tv.Sec)*1e9 + int64(tv.Usec)*1e3 }
 
 func NsecToTimeval(nsec int64) (tv Timeval) {
 	nsec += 999 // round up to microsecond
@@ -71,3 +71,7 @@ func sendfile(outfd int, infd int, offset *int64, count int) (written int, err e
 }
 
 func Syscall9(num, a1, a2, a3, a4, a5, a6, a7, a8, a9 uintptr) (r1, r2 uintptr, err syscall.Errno)
+
+// SYS___SYSCTL is used by syscall_bsd.go for all BSDs, but in modern versions
+// of darwin/386 the syscall is called sysctl instead of __sysctl.
+const SYS___SYSCTL = SYS_SYSCTL

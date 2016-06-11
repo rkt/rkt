@@ -709,7 +709,7 @@
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
-			"Rev": "e11762ca30adc5b39fdbfd8c4250dabeb8e456d3"
+			"Rev": "b44883b474ffefa37335017174e397412b633a4f"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/vcs",
