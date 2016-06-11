@@ -55,10 +55,9 @@ After merging and going back to master branch, we check out the release version 
   - `rkt --insecure-options=image fetch ./rkt-builder.aci`
   - `export BUILDDIR=$PWD/release-build && mkdir -p $BUILDDIR && sudo BUILDDIR=$BUILDDIR ./scripts/build-rir.sh`
   - Sanity check `release-build/bin/rkt version`
-  - Sanity check `ldd release-build/bin/rkt`: it can contain linux-vdso.so, libpthread.so, libc.so, ld-linux-x86-64.so but nothing else.
-  - Sanity check `ldd release-build/tools/init`: in addition to the previous list, it can contain libdl.so, but nothing else.
-- Add a signed tag: `git tag -s v1.2.0`.
-  (We previously used tags for release notes, but now we store them in CHANGELOG.md, so a short tag with the release name is fine).
+  - Sanity check `ldd release-build/bin/rkt`: it can contain linux-vdso.so, libpthread.so, libc.so, libdl.so and ld-linux-x86-64.so but nothing else.
+  - Sanity check `ldd release-build/tools/init`: same as above.
+- Grab the release key (see details below) and add a signed tag: `GIT_COMMITTER_NAME="CoreOS Application Signing Key" GIT_COMMITTER_EMAIL="security@coreos.com" git tag -u $RKTSUBKEYID'!' -s v1.2.0 -m "rkt v1.2.0"`
 - Push the tag to GitHub: `git push --tags`
 
 Now we switch to the GitHub web UI to conduct the release:
@@ -71,35 +70,36 @@ Now we switch to the GitHub web UI to conduct the release:
   This is a simple tarball:
 
 ```
-	export NAME="rkt-v1.2.0"
-	mkdir $NAME
-	cp release-build/bin/rkt release-build/bin/stage1-{coreos,kvm,fly}.aci $NAME/
-	cp -r dist/* $NAME/
-	sudo chown -R root:root $NAME/
-	tar czvf $NAME.tar.gz --numeric-owner $NAME/
-```
-
-- Attach the release signature; your personal GPG is okay for now:
-
-```
-	gpg --detach-sign $NAME.tar.gz
+export RKTVER="1.2.0"
+export NAME="rkt-v$RKTVER"
+mkdir $NAME
+cp release-build/bin/rkt release-build/bin/stage1-{coreos,kvm,fly}.aci $NAME/
+cp -r dist/* $NAME/
+sudo chown -R root:root $NAME/
+tar czvf $NAME.tar.gz --numeric-owner $NAME/
 ```
 
 - Attach each stage1 file individually so they can be fetched by the ACI discovery mechanism. The files must be named as follows:
 
 ```
-	cp release-build/bin/stage1-coreos.aci stage1-coreos-1.2.0-linux-amd64.aci
-	cp release-build/bin/stage1-kvm.aci stage1-kvm-1.2.0-linux-amd64.aci
-	cp release-build/bin/stage1-fly.aci stage1-fly-1.2.0-linux-amd64.aci
+cp release-build/bin/stage1-coreos.aci stage1-coreos-$RKTVER-linux-amd64.aci
+cp release-build/bin/stage1-kvm.aci stage1-kvm-$RKTVER-linux-amd64.aci
+cp release-build/bin/stage1-fly.aci stage1-fly-$RKTVER-linux-amd64.aci
 ```
 
-- Attach the signature of each stage1 file:
+- Sign all release artifacts.
+
+rkt project key must be used to sign the generated binaries and images.`$RKTSUBKEYID` is the key ID of rkt project Yubikey. Connect the key and run `gpg2 --card-status` to get the ID.
+The public key for GPG signing can be found at [CoreOS Application Signing Key](https://coreos.com/security/app-signing-key) and is assumed as trusted.
+
+The following commands are used for public release signing:
 
 ```
-	gpg --armor --detach-sign stage1-coreos-1.2.0-linux-amd64.aci
-	gpg --armor --detach-sign stage1-kvm-1.2.0-linux-amd64.aci
-	gpg --armor --detach-sign stage1-fly-1.2.0-linux-amd64.aci
+for i in $NAME.tar.gz stage1-*.aci; do gpg2 -u $RKTSUBKEYID'!' --armor --output ${i}.asc --detach-sign ${i}; done
+for i in $NAME.tar.gz stage1-*.aci; do gpg2 --verify ${i}.asc ${i}; done
 ```
+
+- Once signed and uploaded, double-check that all artifacts and signatures are on github. There should be 8 files in attachments (1x tar.gz, 3x ACI, 4x armored signatures).
 
 - Publish the release!
 
@@ -111,5 +111,5 @@ Use your discretion and see [previous release emails](https://groups.google.com/
 Make sure to include a list of authors that contributed since the previous release - something like the following might be handy:
 
 ```
-	git log v1.1.0..v1.2.0 --pretty=format:"%an" | sort | uniq | tr '\n' ',' | sed -e 's#,#, #g' -e 's#, $#\n#'
+git log v1.1.0..v1.2.0 --pretty=format:"%an" | sort | uniq | tr '\n' ',' | sed -e 's#,#, #g' -e 's#, $#\n#'
 ```
