@@ -373,8 +373,7 @@ var capsTests = []struct {
 	},
 }
 
-// CommonTestCaps creates a new capabilities test fixture for the given stages.
-func NewCapsTest(hasStage1FullCaps bool, stages []int) testutils.Test {
+func NewCapsTest(hasStage1FullCaps bool) testutils.Test {
 	return testutils.TestFunc(func(t *testing.T) {
 		ctx := testutils.NewRktRunCtx()
 		defer ctx.Cleanup()
@@ -392,7 +391,7 @@ func NewCapsTest(hasStage1FullCaps bool, stages []int) testutils.Test {
 			defer os.Remove(stage2FileName)
 			stageFileNames := []string{stage1FileName, stage2FileName}
 
-			for _, stage := range stages {
+			for _, stage := range []int{1, 2} {
 				t.Logf("Running test #%v: %v [stage%v]", i, tt.testName, stage)
 
 				cmd := fmt.Sprintf("%s --debug --insecure-options=image run --mds-register=false --set-env=CAPABILITY=%d %s", ctx.Cmd(), int(tt.capa), stageFileNames[stage-1])

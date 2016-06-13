@@ -19,9 +19,5 @@ package main
 import "testing"
 
 func TestCaps(t *testing.T) {
-	// KVM is running VMs as stage1 pods, so root has access to all VM options.
-	// The case with access to PID 1 is skipped...
-	// KVM flavor runs systemd stage1 with full capabilities in stage1 (pid=1)
-	// so expect every capability enabled
-	NewCapsTest(true, []int{2}).Execute(t)
+	NewCapsTest(true).Execute(t)
 }

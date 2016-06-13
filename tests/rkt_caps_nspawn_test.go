@@ -19,5 +19,5 @@ package main
 import "testing"
 
 func TestCaps(t *testing.T) {
-	NewCapsTest(false, []int{1, 2}).Execute(t)
+	NewCapsTest(false).Execute(t)
 }
