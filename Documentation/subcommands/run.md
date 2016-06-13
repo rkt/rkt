@@ -44,7 +44,7 @@ This executable can be overridden by rkt using the `--exec` flag:
 ## Overriding Isolators
 
 Application images can include per-app isolators and some of them can be overridden by rkt.
-The units come from [the Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html).
+The units come from [the Kubernetes resource model](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/resources.md).
 In the following example, the CPU isolator is defined to 750 milli-cores and the memory isolator limits the memory usage to 128MB.
 
 ```
@@ -342,7 +342,7 @@ For more details see the [hacking documentation](../hacking.md).
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
-| `--cpu` | none | CPU units (ex. `--cpu=500m`) | CPU limit for the preceding image in [Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html) format. |
+| `--cpu` | none | CPU units (ex. `--cpu=500m`) | CPU limit for the preceding image in [Kubernetes resource model](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/resources.md) format. |
 | `--dns` | none | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times |
 | `--dns-opt` | none | DNS option  | DNS option from resolv.conf(5) to write in `/etc/resolv.conf`. It can be specified several times. |
 | `--dns-search` | none | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times. |
@@ -351,13 +351,13 @@ For more details see the [hacking documentation](../hacking.md).
 | `--inherit-env` | `false` | `true` or `false` | Inherit all environment variables not set by apps. |
 | `--interactive` | `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied. |
 | `--mds-register` | `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net` as `default`, `default-restricted`, or `host`). |
-| `--memory` | none | Memory units (ex. `--memory=50M`) | Memory limit for the preceding image in [Kubernetes resource model](http://kubernetes.io/v1.1/docs/design/resources.html) format. |
+| `--memory` | none | Memory units (ex. `--memory=50M`) | Memory limit for the preceding image in [Kubernetes resource model](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/resources.md) format. |
 | `--mount` | none | Mount syntax (ex. `--mount volume=NAME,target=PATH`) | Mount point binding a volume to a path within an app. See [Mounting Volumes without Mount Points](#mounting-volumes-without-mount-points). |
 | `--net` | `default` | A comma-separated list of networks. (ex. `--net[=n[:args], ...]`) | Configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively. |
 | `--no-overlay` | `false` | `true` or `false` | Disable the overlay filesystem. |
 | `--no-store` | `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior](../image-fetching-behavior.md) |
 | `--pod-manifest` | none | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect. |
-| `--port` | none | A port number (ex. `--port=NAME:HOSTPORT`) | Ports to expose on the host (requires [contained network](../networking.md#contained-mode)). |
+| `--port` | none | A port name and number pair | Container port name to expose through host port number. Requires [contained network](../networking/overview.md#contained-mode). Syntax: `--port=NAME:HOSTPORT` The NAME is that given in the ACI. By convention, Docker containers' EXPOSEd ports are given a name formed from the port number, a hyphen, and the protocol, e.g., `80-tcp`, giving something like `--port=80-tcp:8080` |
 | `--private-users` |  `false` | `true` or `false` | Run within user namespaces. |
 | `--set-env` | none | An environment variable (ex. `--set-env=NAME=VALUE`) | An environment variable to set for apps. |
 | `--signature` | none | A file path | Local signature file to use in validating the preceding image |
@@ -372,4 +372,4 @@ For more details see the [hacking documentation](../hacking.md).
 
 ## Global options
 
-See the table with [global options in general commands documentation](../commands.md#global-options).
+See the table with [global options in the general commands documentation](../commands.md#global-options).
