@@ -16,6 +16,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -36,6 +37,7 @@ import (
 	"github.com/coreos/rkt/pkg/set"
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
+	"github.com/godbus/dbus"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -368,6 +370,11 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest) {
 	}
 
 	if pod.State == v1alpha.PodState_POD_STATE_RUNNING {
+		if err := waitForMachinedRegistration(pod.Id); err != nil {
+			// If there's an error, it means we're not registered to machined
+			// in a reasonable time. Just output the cgroup we're in.
+			stderr.PrintE("checking for machined registration failed", err)
+		}
 		// Get cgroup for the "name=systemd" controller.
 		pid, err := p.getContainerPID1()
 		if err != nil {
@@ -388,6 +395,25 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest) {
 	}
 
 	return pod, manifest
+}
+
+func waitForMachinedRegistration(uuid string) error {
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		return err
+	}
+	machined := conn.Object("org.freedesktop.machine1", "/org/freedesktop/machine1")
+	machineName := "rkt-" + uuid
+
+	var o dbus.ObjectPath
+	for i := 0; i < 10; i++ {
+		if err := machined.Call("org.freedesktop.machine1.Manager.GetMachine", 0, machineName).Store(&o); err == nil {
+			return nil
+		}
+		time.Sleep(time.Millisecond * 50)
+	}
+
+	return errors.New("pod not found")
 }
 
 func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPodsRequest) (*v1alpha.ListPodsResponse, error) {
