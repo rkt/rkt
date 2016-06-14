@@ -85,7 +85,7 @@ func TestImageCatManifest(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		runCmd := fmt.Sprintf("%s image cat-manifest %s", ctx.Cmd(), tt.image)
+		runCmd := fmt.Sprintf("%s image cat-manifest --pretty-print=false %s", ctx.Cmd(), tt.image)
 		t.Logf("Running test #%d", i)
 		runRktAndCheckOutput(t, runCmd, tt.expect, !tt.shouldFind)
 	}

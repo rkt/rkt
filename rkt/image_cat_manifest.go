@@ -34,7 +34,7 @@ var (
 
 func init() {
 	cmdImage.AddCommand(cmdImageCatManifest)
-	cmdImageCatManifest.Flags().BoolVar(&flagPrettyPrint, "pretty-print", false, "apply indent to format the output")
+	cmdImageCatManifest.Flags().BoolVar(&flagPrettyPrint, "pretty-print", true, "apply indent to format the output")
 }
 
 func runImageCatManifest(cmd *cobra.Command, args []string) (exit int) {
