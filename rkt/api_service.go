@@ -735,6 +735,11 @@ func (s *v1AlphaAPIServer) GetLogs(request *v1alpha.GetLogsRequest, server v1alp
 		stage1Path = fmt.Sprintf("/overlay/%s/upper/", stage1TreeStoreID)
 	}
 	path := filepath.Join(getDataDir(), "/pods/run/", request.PodId, stage1Path, "/var/log/journal/")
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return fmt.Errorf("%s: logging unsupported", uuid.String())
+	}
+
 	jconf := sdjournal.JournalReaderConfig{
 		Path: path,
 	}
