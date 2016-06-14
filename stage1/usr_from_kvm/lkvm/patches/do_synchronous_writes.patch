@@ -7,7 +7,7 @@ index edcaf3e..f2f2d73 100644
  
  	if (kvm->cfg.using_rootfs) {
 -		strcat(real_cmdline, " rw rootflags=trans=virtio,version=9p2000.L,cache=loose rootfstype=9p");
-+		strcat(real_cmdline, " rw rootflags=trans=virtio,version=9p2000.L,cache=none rootfstype=9p");
++		strcat(real_cmdline, " rw rootflags=trans=virtio,version=9p2000.L,cache=mmap rootfstype=9p");
  		if (kvm->cfg.custom_rootfs) {
  			kvm_run_set_sandbox(kvm);
  
