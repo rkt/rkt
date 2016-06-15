@@ -28,6 +28,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/tests/testutils"
@@ -395,6 +396,9 @@ func testInterruptingServerHandler(t *testing.T, imagePath string, kill, waitfor
 			panic(err)
 		}
 
+		// sleep a bit before signaling that rkt should be killed since it
+		// might not have had time to write everything to disk
+		time.Sleep(time.Second)
 		kill <- struct{}{}
 		<-waitforkill
 	}
