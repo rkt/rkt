@@ -41,15 +41,21 @@ func getLogsWithoutFollow(c v1alpha.PublicAPIClient, p *v1alpha.Pod) {
 		SinceTime: time.Now().Add(-time.Second * 5).Unix(),
 		Lines:     10,
 	})
+
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	logsRecvResp, err := logsResp.Recv()
+
+	if err == io.EOF {
+		return
+	}
+
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
+		return
 	}
 
 	for _, l := range logsRecvResp.Lines {
@@ -81,7 +87,7 @@ func getLogsWithFollow(c v1alpha.PublicAPIClient, p *v1alpha.Pod) {
 
 		if err != nil {
 			fmt.Println(err)
-			os.Exit(1)
+			return
 		}
 
 		for _, l := range logsRecvResp.Lines {
