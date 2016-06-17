@@ -369,6 +369,29 @@ func startRktAsGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, gid 
 	return child
 }
 
+func startRktAsUidGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool, uid, gid int) *gexpect.ExpectSubprocess {
+	child, err := gexpect.Command(rktCmd)
+	if err != nil {
+		t.Fatalf("cannot exec rkt: %v", err)
+	}
+	if gid != 0 {
+		child.Cmd.SysProcAttr = &syscall.SysProcAttr{}
+		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)}
+	}
+
+	err = child.Start()
+	if err != nil {
+		t.Fatalf("cannot start rkt: %v", err)
+	}
+
+	if expectedLine != "" {
+		if err := expectWithOutput(child, expectedLine); err != nil {
+			t.Fatalf("didn't receive expected output %q: %v", expectedLine, err)
+		}
+	}
+	return child
+}
+
 func runRktAndCheckRegexOutput(t *testing.T, rktCmd, match string) {
 	child := spawnOrFail(t, rktCmd)
 	defer child.Wait()
