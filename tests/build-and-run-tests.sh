@@ -255,6 +255,7 @@ function main {
 
     DOC_CHANGE_PATTERN="\
             -e ^Documentation/ \
+            -e ^dist/ \
             -e ^logos/ \
             -e ^(MAINTAINERS|LICENSE|DCO)$ \
             -e \.md$\
