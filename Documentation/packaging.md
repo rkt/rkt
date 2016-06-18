@@ -48,12 +48,13 @@ When the ownership and permissions of `/var/lib/rkt` are set up correctly, membe
 
 ### systemd units
 
-A few [example systemd unit files for rkt helper services][rkt-units] are included in the rkt sources. These units demonstrate a systemd-managed, socket-activated rkt [metadata-service][rkt-metadata-svc], along with a convenient periodic [garbage collection][rkt-gc] service invoked at 12-hour intervals to purge dead pods.
+A few [example systemd unit files for rkt helper services][rkt-units] are included in the rkt sources. These units demonstrate systemd-managed units to run the rkt [metadata-service][rkt-metadata-svc] with socket-activation, the rkt [api-service][api-service], and a periodic [garbage collection][rkt-gc] service invoked at 12-hour intervals to purge dead pods.
 
 
 [build-config]: build-configure.md
 [rkt-gc]: subcommands/gc.md
 [rkt-metadata-svc]: subcommands/metadata-service.md
+[api-service]: subcommands/api-service.md
 [rkt-units]: https://github.com/coreos/rkt/tree/master/dist/init/systemd
 [build-deps]: dependencies.md#build-time-dependencies
 [run-deps]: dependencies.md#run-time-dependencies

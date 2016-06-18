@@ -13,6 +13,8 @@ The API service listens for gRPC requests on the address and port specified by t
 The default is to listen on the loopback interface on port number `15441`, equivalent to invoking `rkt api-service --listen=localhost:15441`.
 Specify the address `0.0.0.0` to listen on all interfaces.
 
+Typically, the API service will be run via a unit file similar to the one included in the [dist directory](../dist/init/systemd/rkt-api.service).
+
 ## Using the API service
 
 The interfaces are defined in the [protobuf here](../../api/v1alpha/api.proto).
