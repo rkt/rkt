@@ -102,8 +102,8 @@ $(AMI_GEN_MANIFEST): $(AMI_SRC_MANIFEST) | $(AMI_TMPDIR)
 	"$<" >"$@.tmp"; \
 	$(call bash-cond-rename,$@.tmp,$@)
 
-# invalidate generated manifest if name, version, arch or enter cmd changes
-$(call generate-kv-deps,$(AMI_MANIFEST_KV_DEPMK_STAMP),$(AMI_GEN_MANIFEST),$(AMI_MANIFEST_KV_DEPMK),AMI_SED_NAME AMI_SED_VERSION AMI_SED_ARCH AMI_SED_ENTER)
+# invalidate generated manifest if name, version, arch, enter or stop cmd changes
+$(call generate-kv-deps,$(AMI_MANIFEST_KV_DEPMK_STAMP),$(AMI_GEN_MANIFEST),$(AMI_MANIFEST_KV_DEPMK),AMI_SED_NAME AMI_SED_VERSION AMI_SED_ARCH AMI_SED_STOP AMI_SED_ENTER)
 
 # this removes the ACI rootfs dir
 $(call generate-rm-dir-rule,$(AMI_RMDIR_STAMP),$(AMI_ACIROOTFSDIR))

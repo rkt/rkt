@@ -21,22 +21,19 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"syscall"
 
-	rktlog "github.com/coreos/rkt/pkg/log"
-	"github.com/coreos/rkt/stage1/common/ssh"
+	"github.com/shirou/gopsutil/process"
 )
 
 var (
 	force bool
-	log   *rktlog.Logger
 )
 
 func init() {
-	flag.BoolVar(&force, "force", false, "Forced stop")
+	flag.BoolVar(&force, "force", false, "Forced stopping")
 }
 
-func readIntFromFile(path string) (i int, err error) {
+func readIntFromFile(path string) (i int32, err error) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return
@@ -48,21 +45,27 @@ func readIntFromFile(path string) (i int, err error) {
 func main() {
 	flag.Parse()
 
-	if force {
-		pid, err := readIntFromFile("pid")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
-			os.Exit(1)
-		}
-
-		if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
-			fmt.Fprintf(os.Stderr, "error sending %v: %v\n", syscall.SIGKILL, err)
-			os.Exit(1)
-		}
-		return
+	pid, err := readIntFromFile("pid")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
+		os.Exit(1)
 	}
 
-	// ExecSSH() should return only with error
-	log.Error(ssh.ExecSSH([]string{"systemctl", "halt"}))
-	os.Exit(1)
+	process, err := process.NewProcess(pid)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "unable to create process %d instance: %v\n", pid, err)
+		os.Exit(1)
+	}
+
+	if force {
+		if process.Kill() != nil {
+			fmt.Fprintf(os.Stderr, "unable to kill process %d: %v\n", pid, err)
+			os.Exit(1)
+		}
+	} else {
+		if process.Terminate() != nil {
+			fmt.Fprintf(os.Stderr, "unable to terminate process %d: %v\n", pid, err)
+			os.Exit(1)
+		}
+	}
 }

@@ -9,7 +9,7 @@ $(call setup-stamp-file,FLY_STAMP,aci-build)
 
 $(call inc-many,$(foreach sd,$(FLY_SUBDIRS),$(sd)/$(sd).mk))
 
-$(call inc-one,../stage1/stop/stop_fly.mk)
+$(call inc-one,stop/stop.mk)
 
 $(call generate-stamp-rule,$(FLY_STAMP),$(FLY_STAMPS) $(ACTOOL_STAMP),, \
 	$(call vb,vt,ACTOOL,$(call vsp,$(FLY_STAGE1))) \

@@ -48,13 +48,13 @@ func main() {
 	pid, err := readIntFromFile("ppid")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
-		return
+		os.Exit(1)
 	}
 
 	process, err := process.NewProcess(pid)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "unable to create process %d instance: %v\n", pid, err)
-		return
+		os.Exit(1)
 	}
 
 	if force {
