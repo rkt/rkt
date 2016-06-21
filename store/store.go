@@ -548,7 +548,7 @@ func (s *Store) RemoveACI(key string) error {
 		dirUid := int(fi.Sys().(*syscall.Stat_t).Uid)
 
 		if uid != dirUid && uid != 0 {
-			return fmt.Errorf("permission denied, are you root or the owner of the image?")
+			return fmt.Errorf("permission denied on %s, directory owner id (%d) does not match current real id (%d). Are you root or the owner of the image?", path, dirUid, uid)
 		}
 	}
 
