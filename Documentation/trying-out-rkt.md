@@ -5,7 +5,7 @@ For a more in-depth guide of a full end-to-end workflow of building an applicati
 
 ## Using rkt on Linux
 
-rkt consists of a single CLI tool, and is currently supported on amd64 Linux. A modern kernel is required but there should be no other system dependencies. We recommend booting up a fresh virtual machine to test out rkt.
+rkt consists of a single CLI tool and can run on different platforms. The primary target platform currently is amd64 Linux. A modern kernel is required but there should be no other system dependencies.
 
 To download the rkt binary, simply grab the latest release directly from GitHub:
 
@@ -15,6 +15,10 @@ tar xzvf rkt-v1.8.0.tar.gz
 cd rkt-v1.8.0
 ./rkt help
 ```
+
+Like most applications, the easiest way to run rkt is to install it with your system's package manager, like apt on Debian or dnf on Fedora. If your distribution doesn't include a rkt package, or your operating system isn't Linux at all, running rkt in a Vagrant virtual machine can be nearly as simple. The instructions below start a virtual machine with rkt installed and ready to run.
+
+Refer to the [distributions guide](distributions.md) whether a package is available for your Linux distribution.
 
 **SELinux Note**: rkt can use SELinux but the policy needs to be tailored to your distribution. We suggest that new users [disable SELinux](https://www.centos.org/docs/5/html/5.1/Deployment_Guide/sec-sel-enable-disable.html) to get started. If you can help package rkt for your distro [please help](https://github.com/coreos/rkt/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+label%3Aarea%2Fdistribution++label%3Adependency%2Fexternal)!
 
@@ -65,7 +69,7 @@ If you want to run Vagrant on a Linux host machine, you may want to use libvirt 
 ```
 vagrant plugin install vagrant-libvirt
 vagrant plugin install vagrant-mutate
-vagrant mutate ubuntu/vivid64 libvirt
+vagrant mutate ubuntu/xenial64 libvirt
 vagrant up --provider=libvirt
 ```
 
@@ -75,6 +79,55 @@ With a subsequent `vagrant ssh` you will have access to run rkt:
 vagrant ssh
 rkt --help
 ```
+
+Additional help can be consulted in the rkt man pages:
+
+```
+man rkt
+```
+
+The Vagrant setup also includes bash-completion to assist with rkt subcommands and options.
+
+To reach pods from your host determine the IP address of the Vagrant machine:
+
+```
+vagrant ssh -c 'ip address'
+...
+3: enp0s8: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 08:00:27:04:e4:5d brd ff:ff:ff:ff:ff:ff
+    inet 172.28.128.3/24 brd 172.28.128.255 scope global enp0s8
+       valid_lft forever preferred_lft forever
+...
+
+```
+
+In the given example the Vagrant machine has the IP address `172.28.128.3`. The following command starts a nginx container using host networking and will be reachable from the host:
+
+```
+sudo rkt run --net=host --insecure-options=image docker://nginx
+```
+
+The nginx container is now accessible on the host under http://172.28.128.3. In order to use containers with the default contained network, a route to the 172.16.28.0/24 network has to be configured on the host:
+
+On Linux execute:
+```
+sudo ip route add 172.16.28.0/24 via 172.28.128.3
+```
+
+On OSX execute:
+```
+sudo route -n add 172.16.28.0/24 172.28.128.3
+```
+
+Now nginx can be started using the default network:
+```
+$ sudo rkt run --insecure-options=image docker://nginx
+$ rkt list
+UUID		APP	IMAGE NAME					STATE	CREATED		STARTED		NETWORKS
+0c3ab969	nginx	registry-1.docker.io/library/nginx:latest	running	2 minutes ago	2 minutes ago	default:ip4=172.16.28.2
+```
+
+The nginx container is now accessible on the host under http://172.16.28.2.
 
 Success! The rest of the guide can now be followed normally.
 

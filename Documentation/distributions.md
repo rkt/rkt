@@ -7,6 +7,36 @@ The [CoreOS releases page](https://coreos.com/releases/) lists the version of rk
 
 If the version of rkt included in CoreOS is too old, it's fairly trivial to fetch the desired version [via a systemd unit](install-rkt-in-coreos.md)
 
+## Debian
+
+rkt currently is packaged in Debian sid (unstable) available at https://packages.debian.org/sid/utils/rkt:
+
+```
+sudo apt-get install rkt
+```
+
+Note that due to an outstanding bug (https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=823322) one has to use the "coreos" stage1 image:
+
+```
+sudo rkt run --insecure-options=image --stage1-name=coreos.com/rkt/stage1-coreos:1.5.1 docker://nginx
+```
+
+If you prefer to install the newest version of rkt follow the instructions in the Ubuntu section below.
+
+## Ubuntu
+
+rkt is not packaged currently in Ubuntu. If you want the newest version of rkt the easiest method to install it is using the `install-rkt.sh` script:
+
+```
+sudo ./scripts/install-rkt.sh
+```
+
+The above script will install the "gnupg2", and "checkinstall" packages, download rkt, verify it, and finally invoke "checkinstall" to create a deb pakage and install rkt. To uninstall rkt, execute:
+
+```
+sudo apt-get remove rkt
+```
+
 ## Fedora
 
 rkt is packaged in the development version of Fedora, [Rawhide](https://fedoraproject.org/wiki/Releases/Rawhide):
