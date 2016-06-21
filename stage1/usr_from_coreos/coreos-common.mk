@@ -11,7 +11,7 @@ $(call setup-tmp-dir,CCN_TMPDIR)
 # systemd version in coreos image
 CCN_SYSTEMD_VERSION := v229
 # coreos image version
-CCN_IMG_RELEASE := 1032.0.0
+CCN_IMG_RELEASE := 1068.0.0
 # coreos image URL
 CCN_IMG_URL := https://alpha.release.core-os.net/amd64-usr/$(CCN_IMG_RELEASE)/coreos_production_pxe_image.cpio.gz
 # path to downloaded pxe image
