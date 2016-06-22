@@ -344,11 +344,14 @@ For more details see the [hacking documentation](../hacking.md).
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
+| `--cap-remove` | none | capability to remove (example: '--cap-remove=CAP\_SYS\_CHROOT,CAP\_MKNOD') | Capabilities to remove from the process's capabilities bounding set, all others from the default set will be included |
+| `--cap-retain` | none | capability to retain (example: '--cap-remove=CAP\_SYS\_ADMIN,CAP\_NET\_ADMIN') | Capabilities to retain in the process's capabilities bounding set, all others will be removed |
 | `--cpu` | none | CPU units (ex. `--cpu=500m`) | CPU limit for the preceding image in [Kubernetes resource model](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/resources.md) format. |
 | `--dns` | none | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times |
 | `--dns-opt` | none | DNS option  | DNS option from resolv.conf(5) to write in `/etc/resolv.conf`. It can be specified several times. |
 | `--dns-search` | none | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times. |
 | `--exec` | none | Path to executable | Override the exec command for the preceding image. |
+| `--group` | root | gid, groupname or file path | Group override for the preceding image (example: '--group=group') |
 | `--hostname` | "rkt-$PODUUID" | A host name | Set pod's host name. |
 | `--inherit-env` | `false` | `true` or `false` | Inherit all environment variables not set by apps. |
 | `--interactive` | `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied. |
@@ -370,6 +373,7 @@ For more details see the [hacking documentation](../hacking.md).
 | `--stage1-path` | none | Absolute or relative path | A path to a stage1 image. |
 | `--stage1-url` | none | URL with protocol | A URL to a stage1 image. HTTP/HTTPS/File/Docker URLs are supported. |
 | `--store-only` | `false` | `true` or `false` | Use only available images in the store (do not discover or download from remote URLs). See [image fetching behavior](../image-fetching-behavior.md). |
+| `--user` | none | uid, username or file path | user override for the preceding image (example: '--user=user') |
 | `--uuid-file-save` | none | A file path | Write out the pod UUID to a file. |
 | `--volume` |  none | Volume syntax (ex. `--volume NAME,kind=KIND,source=PATH,readOnly=BOOL`) | Volumes to make available in the pod. See [Mount Volumes into a Pod](#mount-volumes-into-a-pod). |
 

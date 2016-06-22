@@ -35,6 +35,7 @@ c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
 | `--exec` | none | Path to executable | Override the exec command for the preceding image. |
+| `--group` | root | gid, groupname or file path | Group override for the preceding image (example: '--group=group') |
 | `--inherit-env` | `false` | `true` or `false` | Inherit all environment variables not set by apps. |
 | `--mount` | none | Mount syntax (ex. `--mount volume=NAME,target=PATH`) | Mount point binding a volume to a path within an app. See [Mounting Volumes without Mount Points](#mounting-volumes-without-mount-points). |
 | `--no-overlay` | `false` | `true` or `false` | Disable the overlay filesystem. |
@@ -52,9 +53,8 @@ c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 | `--stage1-hash` |  `` | A hash of a stage1 image. The image must exist in the store | Image to use as stage1 |
 | `--stage1-from-dir` |  `` | A stage1 image file inside the default stage1 images directory | Image to use as stage1 |
 | `--store-only` |  `false` | `true` or `false` | Use only available images in the store (do not discover or download from remote URLs). See [image fetching behavior](../image-fetching-behavior.md) |
+| `--user` | none | uid, username or file path | user override for the preceding image (example: '--user=user') |
 | `--volume` |  `` | Volume syntax (`NAME,kind=KIND,source=PATH,readOnly=BOOL`). See [Mount Volumes into a Pod](run.md#mount-volumes-into-a-pod) | Volumes to make available in the pod |
-| `--user` | none | username or UID | user override for the preceding image (example: '--user=user') |
-| `--group` | none | group or GID | group override for the preceding image (example: '--group=group') |
 
 ## Global options
 
