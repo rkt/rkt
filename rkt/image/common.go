@@ -160,7 +160,14 @@ func guessImageType(image string) apps.AppImageType {
 	// Well, at this point is basically heuristics time. The image
 	// parameter can be either a relative path or an image name.
 
-	// First, let's check if there is a colon in the image
+	// First, let's try to stat whatever file the URL would specify. If it
+	// exists, that's probably what the user wanted.
+	f, err := os.Stat(image)
+	if err == nil && f.Mode().IsRegular() {
+		return apps.AppImagePath
+	}
+
+	// Second, let's check if there is a colon in the image
 	// parameter. Colon often serves as a paths separator (like in
 	// the PATH environment variable), so if it exists, then it is
 	// highly unlikely that the image parameter is a path. Colon
@@ -170,14 +177,14 @@ func guessImageType(image string) apps.AppImageType {
 		return apps.AppImageName
 	}
 
-	// Second, let's check if there is a dot followed by a slash
+	// Third, let's check if there is a dot followed by a slash
 	// (./) - if so, it is likely that the image parameter is path
 	// like ./aci-in-this-dir or ../aci-in-parent-dir
 	if strings.Contains(image, "./") {
 		return apps.AppImagePath
 	}
 
-	// Third, let's check if the image parameter has an .aci
+	// Fourth, let's check if the image parameter has an .aci
 	// extension. If so, likely a path like "stage1-coreos.aci".
 	if filepath.Ext(image) == schema.ACIExtension {
 		return apps.AppImagePath
