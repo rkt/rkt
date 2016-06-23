@@ -77,6 +77,7 @@ If the image is not in the store, `--stage1-name` will perform discovery and fet
 By design, the *fly* stage1 does not provide the same isolaton and security features as the default stage1.
 
 Specifically, the following constraints are not available when using the *fly* stage1:
+
 - network namespace isolation
 - CPU isolators
 - Memory isolators
