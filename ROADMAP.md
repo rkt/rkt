@@ -9,14 +9,6 @@ The version of the spec that rkt implements can be seen in the output of `rkt ve
 
 rkt's version 1.0 release marks the command line user interface and on-disk data structures as stable and reliable for external development. The (optional) API for pod inspection is not yet completely stabilized, but is quite usable.
 
-
-### rkt 1.9.0 (June)
-
-- full integration with Kubernetes (aka "rktnetes")
-- app-level seccomp support [#1614](https://github.com/coreos/rkt/issues/1614)
-- enhanced DNS configuration [#2044](https://github.com/coreos/rkt/issues/2044)
-- IPv6 support [appc/cni#31](https://github.com/appc/cni/issues/31)
-
 ### rkt 1.10.0 (July)
 
 - stable gRPC [API](https://github.com/coreos/rkt/tree/master/api/v1alpha)
@@ -25,6 +17,8 @@ rkt's version 1.0 release marks the command line user interface and on-disk data
 
 ### rkt 1.11.0 (July)
 
+- IPv6 support [appc/cni#31](https://github.com/appc/cni/issues/31)
+- enhanced DNS configuration [#2044](https://github.com/coreos/rkt/issues/2044)
 - packaged for more distributions
   - CentOS [#1305](https://github.com/coreos/rkt/issues/1305)
 
