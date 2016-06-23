@@ -1,3 +1,30 @@
+## v1.9.0
+
+This release focuses on bug fixes and developer tooling and UX improvements.
+
+#### New features and UX changes
+
+- rkt/run: added --set-env-file switch and priorities for environments ([#2816](https://github.com/coreos/rkt/pull/2816)). --set-env-file gets an environment variables file path in the format "VAR=VALUE\n...".
+- run: add --cap-retain and --cap-remove ([#2771](https://github.com/coreos/rkt/pull/2771)).
+- store: print more information on rm as non-root ([#2805](https://github.com/coreos/rkt/pull/2805)).
+- Documentation/vagrant: use rkt binary for getting started ([#2808](https://github.com/coreos/rkt/pull/2808)). 
+- docs: New file in documentation - instruction for new developers in rkt ([#2639](https://github.com/coreos/rkt/pull/2639)).
+- stage0/trust: change error message if prefix/root flag missing ([#2661](https://github.com/coreos/rkt/pull/2661)).
+
+#### Bug fixes
+
+- rkt/uuid: fix match when uuid is an empty string ([#2807](https://github.com/coreos/rkt/pull/2807)).
+- rkt/api_service: fix fly pods ([#2799](https://github.com/coreos/rkt/pull/2799)).
+- api/client_example: fix panic if pod has no apps ([#2766](https://github.com/coreos/rkt/pull/2766)). Fixes the concern expressed in https://github.com/coreos/rkt/pull/2763#discussion_r66409260
+- api_service: wait until a pod regs with machined ([#2788](https://github.com/coreos/rkt/pull/2788)).
+
+#### Other changes
+
+- stage1: update coreos image to 1068.0.0 ([#2821](https://github.com/coreos/rkt/pull/2821)). 
+- KVM: Update LKVM patch to mount with mmap mode ([#2795](https://github.com/coreos/rkt/pull/2795)).
+- stage1: always write /etc/machine-id ([#2440](https://github.com/coreos/rkt/pull/2440)). Prepare rkt for systemd-v230 in stage1.
+- stage1/prepare-app: always adjust /etc/hostname ([#2761](https://github.com/coreos/rkt/pull/2761)). 
+
 ## v1.8.0
 
 This release focuses on stabilizing the API service, fixing multiple issues in the logging subsystem.
