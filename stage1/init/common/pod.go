@@ -388,21 +388,15 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		env.Set("AC_METADATA_URL", p.MetadataServiceURL)
 	}
 
-	// TODO(iaguis): make enterexec use the same format as systemd
-	envFilePathSystemd := EnvFilePathSystemd(p.Root, appName)
-	envFilePathEnterexec := EnvFilePathEnterexec(p.Root, appName)
+	envFilePath := EnvFilePath(p.Root, appName)
 
 	uidRange := user.NewBlankUidRange()
 	if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
 		return err
 	}
 
-	if err := writeEnvFile(p, env, appName, uidRange, '\n', envFilePathSystemd); err != nil {
+	if err := writeEnvFile(p, env, appName, uidRange, '\n', envFilePath); err != nil {
 		return errwrap.Wrap(errors.New("unable to write environment file for systemd"), err)
-	}
-
-	if err := writeEnvFile(p, env, appName, uidRange, '\000', envFilePathEnterexec); err != nil {
-		return errwrap.Wrap(errors.New("unable to write environment file for enterexec"), err)
 	}
 
 	u, g, err := parseUserGroup(p, ra, uidRange)
@@ -444,7 +438,7 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		// as it might seem) makes sure the mount is slave+shared.
 		unit.NewUnitOption("Service", "MountFlags", "shared"),
 		unit.NewUnitOption("Service", "WorkingDirectory", workDir),
-		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePathSystemd(appName)),
+		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePath(appName)),
 		unit.NewUnitOption("Service", "User", strconv.Itoa(u)),
 		unit.NewUnitOption("Service", "Group", strconv.Itoa(g)),
 		unit.NewUnitOption("Service", "SupplementaryGroups", strings.Join(supplementaryGroups, " ")),
