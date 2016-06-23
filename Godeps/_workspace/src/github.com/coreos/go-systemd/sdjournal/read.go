@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -46,9 +47,10 @@ type JournalReaderConfig struct {
 }
 
 // JournalReader is an io.ReadCloser which provides a simple interface for iterating through the
-// systemd journal.
+// systemd journal. A JournalReader is not safe for concurrent use by multiple goroutines.
 type JournalReader struct {
-	journal *Journal
+	journal   *Journal
+	msgReader *strings.Reader
 }
 
 // NewJournalReader creates a new JournalReader with configuration options that are similar to the
@@ -101,35 +103,60 @@ func NewJournalReader(config JournalReaderConfig) (*JournalReader, error) {
 	return r, nil
 }
 
+// Read reads entries from the journal. Read follows the Reader interface so
+// it must be able to read a specific amount of bytes. Journald on the other
+// hand only allows us to read full entries of arbitrary size (without byte
+// granularity). JournalReader is therefore internally buffering entries that
+// don't fit in the read buffer. Callers should keep calling until 0 and/or an
+// error is returned.
 func (r *JournalReader) Read(b []byte) (int, error) {
 	var err error
-	var c int
 
-	// Advance the journal cursor
-	c, err = r.journal.Next()
+	if r.msgReader == nil {
+		var c int
 
-	// An unexpected error
-	if err != nil {
-		return 0, err
-	}
+		// Advance the journal cursor. It has to be called at least one time
+		// before reading
+		c, err = r.journal.Next()
 
-	// EOF detection
-	if c == 0 {
-		return 0, io.EOF
-	}
+		// An unexpected error
+		if err != nil {
+			return 0, err
+		}
 
-	// Build a message
-	var msg string
-	msg, err = r.buildMessage()
+		// EOF detection
+		if c == 0 {
+			return 0, io.EOF
+		}
 
-	if err != nil {
-		return 0, err
+		// Build a message
+		var msg string
+		msg, err = r.buildMessage()
+
+		if err != nil {
+			return 0, err
+		}
+		r.msgReader = strings.NewReader(msg)
 	}
 
 	// Copy and return the message
-	copy(b, []byte(msg))
+	var sz int
+	sz, err = r.msgReader.Read(b)
+	if err == io.EOF {
+		// The current entry has been fully read. Don't propagate this
+		// EOF, so the next entry can be read at the next Read()
+		// iteration.
+		r.msgReader = nil
+		return sz, nil
+	}
+	if err != nil {
+		return sz, err
+	}
+	if r.msgReader.Len() == 0 {
+		r.msgReader = nil
+	}
 
-	return len(msg), nil
+	return sz, nil
 }
 
 // Close closes the JournalReader's handle to the journal.
@@ -139,6 +166,7 @@ func (r *JournalReader) Close() error {
 
 // Rewind attempts to rewind the JournalReader to the first entry.
 func (r *JournalReader) Rewind() error {
+	r.msgReader = nil
 	return r.journal.SeekHead()
 }
 
@@ -161,7 +189,9 @@ process:
 			return ErrExpired
 		default:
 			if c > 0 {
-				writer.Write(msg[:c])
+				if _, err = writer.Write(msg[:c]); err != nil {
+					break process
+				}
 				continue process
 			}
 		}

@@ -356,28 +356,28 @@
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/activation",
-			"Comment": "v9",
-			"Rev": "6dc8b843c670f2027cc26b164935635840a40526"
+			"Comment": "v10",
+			"Rev": "b32b8467dbea18858bfebf65c1a6a761090f2c31"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/dbus",
-			"Comment": "v9",
-			"Rev": "6dc8b843c670f2027cc26b164935635840a40526"
+			"Comment": "v10",
+			"Rev": "b32b8467dbea18858bfebf65c1a6a761090f2c31"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/sdjournal",
-			"Comment": "v9",
-			"Rev": "6dc8b843c670f2027cc26b164935635840a40526"
+			"Comment": "v10",
+			"Rev": "b32b8467dbea18858bfebf65c1a6a761090f2c31"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/unit",
-			"Comment": "v9",
-			"Rev": "6dc8b843c670f2027cc26b164935635840a40526"
+			"Comment": "v10",
+			"Rev": "b32b8467dbea18858bfebf65c1a6a761090f2c31"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-systemd/util",
-			"Comment": "v9",
-			"Rev": "6dc8b843c670f2027cc26b164935635840a40526"
+			"Comment": "v10",
+			"Rev": "b32b8467dbea18858bfebf65c1a6a761090f2c31"
 		},
 		{
 			"ImportPath": "github.com/coreos/go-tspi/tpmclient",
