@@ -349,17 +349,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 	}
 
 	// Bind-mount cgroup tmpfs filesystem read-only
-	flags = syscall.MS_BIND |
-		syscall.MS_REMOUNT |
-		syscall.MS_NOSUID |
-		syscall.MS_NOEXEC |
-		syscall.MS_NODEV |
-		syscall.MS_RDONLY
-	if err := syscall.Mount(cgroupTmpfs, cgroupTmpfs, "", flags, ""); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", cgroupTmpfs), err)
-	}
-
-	return nil
+	return mountFsRO(cgroupTmpfs)
 }
 
 // RemountCgroupsRO remounts the cgroup hierarchy under root read-only, leaving
@@ -369,8 +359,6 @@ func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup st
 	controllers := GetControllerDirs(enabledCgroups)
 	cgroupTmpfs := filepath.Join(root, "/sys/fs/cgroup")
 	sysPath := filepath.Join(root, "/sys")
-
-	var flags uintptr
 
 	// Mount RW knobs we need to make the enabled isolators work
 	for _, c := range controllers {
@@ -403,26 +391,24 @@ func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup st
 		}
 
 		// Re-mount controller read-only to prevent the container modifying host controllers
-		flags = syscall.MS_BIND |
-			syscall.MS_REMOUNT |
-			syscall.MS_NOSUID |
-			syscall.MS_NOEXEC |
-			syscall.MS_NODEV |
-			syscall.MS_RDONLY
-		if err := syscall.Mount(cPath, cPath, "", flags, ""); err != nil {
-			return errwrap.Wrap(fmt.Errorf("error remounting RO %q", cPath), err)
+		if err := mountFsRO(cPath); err != nil {
+			return err
 		}
 	}
 
 	// Bind-mount sys filesystem read-only
-	flags = syscall.MS_BIND |
+	return mountFsRO(sysPath)
+}
+
+func mountFsRO(mountPoint string) error {
+	var flags uintptr = syscall.MS_BIND |
 		syscall.MS_REMOUNT |
 		syscall.MS_NOSUID |
 		syscall.MS_NOEXEC |
 		syscall.MS_NODEV |
 		syscall.MS_RDONLY
-	if err := syscall.Mount(sysPath, sysPath, "", flags, ""); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", sysPath), err)
+	if err := syscall.Mount(mountPoint, mountPoint, "", flags, ""); err != nil {
+		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", mountPoint), err)
 	}
 
 	return nil
