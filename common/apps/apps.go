@@ -145,13 +145,3 @@ func (al *Apps) GetArgs() [][]string {
 	}
 	return aal
 }
-
-// GetImageIDs returns a list of the imageIDs in al, one per app.
-// The order reflects the app order in al.
-func (al *Apps) GetImageIDs() []types.Hash {
-	var hl []types.Hash
-	for _, a := range al.apps {
-		hl = append(hl, a.ImageID)
-	}
-	return hl
-}
