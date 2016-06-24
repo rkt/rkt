@@ -10,9 +10,9 @@ rkt consists of a single CLI tool and can run on different platforms. The primar
 To download the rkt binary, simply grab the latest release directly from GitHub:
 
 ```
-wget https://github.com/coreos/rkt/releases/download/v1.9.0/rkt-v1.9.0.tar.gz
-tar xzvf rkt-v1.9.0.tar.gz
-cd rkt-v1.9.0
+wget https://github.com/coreos/rkt/releases/download/v1.9.1/rkt-v1.9.1.tar.gz
+tar xzvf rkt-v1.9.1.tar.gz
+cd rkt-v1.9.1
 ./rkt help
 ```
 

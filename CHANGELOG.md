@@ -1,3 +1,14 @@
+## v1.9.1
+
+This is a minor bug fix release.
+
+#### Bug fixes
+
+- Godeps: update go-systemd ([#2837](https://github.com/coreos/rkt/pull/2837)). go-systemd v10 fixes a panic-inducing bug due to returning incorrect
+Read() length values.
+- stage1/fly: use 0755 to create mountpaths ([#2836](https://github.com/coreos/rkt/pull/2836)). This will allow any user to list the content directories. It does not
+have any effect on the permissions on the mounted files itself.
+
 ## v1.9.0
 
 This release focuses on bug fixes and developer tooling and UX improvements.
