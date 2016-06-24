@@ -17,7 +17,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -59,19 +58,12 @@ func verifyHostFile(t *testing.T, tmpdir, filename string, i int, expectedResult
 	}
 }
 
-func rawValue(value string) *json.RawMessage {
-	msg := json.RawMessage(value)
-	return &msg
-}
-
-func rawRequestLimit(request, limit string) *json.RawMessage {
-	if request == "" {
-		return rawValue(fmt.Sprintf(`{"limit":%q}`, limit))
+func mustNewIsolator(body string) (i types.Isolator) {
+	err := i.UnmarshalJSON([]byte(body))
+	if err != nil {
+		panic(err)
 	}
-	if limit == "" {
-		return rawValue(fmt.Sprintf(`{"request":%q}`, request))
-	}
-	return rawValue(fmt.Sprintf(`{"request":%q,"limit":%q}`, request, limit))
+	return
 }
 
 type imagePatch struct {
@@ -735,14 +727,14 @@ func TestPodManifest(t *testing.T) {
 							User:  "0",
 							Group: "0",
 							Isolators: []types.Isolator{
-								{
-									Name:     "resource/cpu",
-									ValueRaw: rawRequestLimit("100", "100"),
-								},
-								{
-									Name:     "os/linux/capabilities-retain-set",
-									ValueRaw: rawValue(`{"set":["CAP_SYS_PTRACE"]}`),
-								},
+								mustNewIsolator(`{
+									"name":     "resource/cpu",
+									"value":    { "request": "100", "limit": "100"}
+								}`),
+								mustNewIsolator(`{
+									"name":     "os/linux/capabilities-retain-set",
+									"value":    { "set": ["CAP_SYS_PTRACE"] }
+								}`),
 							},
 						},
 					},
@@ -766,15 +758,15 @@ func TestPodManifest(t *testing.T) {
 							User:  "0",
 							Group: "0",
 							Isolators: []types.Isolator{
-								{
-									Name: "resource/memory",
-									// 4MB.
-									ValueRaw: rawRequestLimit("4194304", "4194304"),
-								},
-								{
-									Name:     "os/linux/capabilities-retain-set",
-									ValueRaw: rawValue(`{"set":["CAP_SYS_PTRACE"]}`),
-								},
+								// 4MB.
+								mustNewIsolator(`{
+									"name":     "resource/memory",
+									"value":    { "request": "4194304", "limit": "4194304"}
+								}`),
+								mustNewIsolator(`{
+									"name":     "os/linux/capabilities-retain-set",
+									"value":    { "set": ["CAP_SYS_PTRACE"] }
+								}`),
 							},
 						},
 					},
@@ -872,10 +864,10 @@ func TestPodManifest(t *testing.T) {
 								{"CAPABILITY", strconv.Itoa(int(capability.CAP_NET_ADMIN))},
 							},
 							Isolators: []types.Isolator{
-								{
-									Name:     "os/linux/capabilities-retain-set",
-									ValueRaw: rawValue(fmt.Sprintf(`{"set":["CAP_NET_ADMIN"]}`)),
-								},
+								mustNewIsolator(`{
+									"name":     "os/linux/capabilities-retain-set",
+									"value":    { "set": ["CAP_NET_ADMIN"] }
+								}`),
 							},
 						},
 					},
