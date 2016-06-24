@@ -299,13 +299,13 @@ func stage1() int {
 		switch {
 		case targetPathInfo == nil:
 			absTargetPathParent, _ := filepath.Split(absTargetPath)
-			if err := os.MkdirAll(absTargetPathParent, 0700); err != nil {
+			if err := os.MkdirAll(absTargetPathParent, 0755); err != nil {
 				log.PrintE(fmt.Sprintf("can't create directory %q", absTargetPath), err)
 				return 1
 			}
 			switch {
 			case hostPathInfo == nil || hostPathInfo.IsDir():
-				if err := os.Mkdir(absTargetPath, 0700); err != nil {
+				if err := os.Mkdir(absTargetPath, 0755); err != nil {
 					log.PrintE(fmt.Sprintf("can't create directory %q", absTargetPath), err)
 					return 1
 				}
