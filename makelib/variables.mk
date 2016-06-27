@@ -14,7 +14,7 @@ FILELISTDIR := $(BUILDDIR)/filelists
 MAINTEMPDIR := $(BUILDDIR)/tmp
 CLEANDIR := $(BUILDDIR)/clean
 
-ACTOOL := $(BINDIR)/actool
+ACTOOL := $(TOOLSDIR)/actool
 DEPSGENTOOL := $(TOOLSDIR)/depsgen
 FILELISTGENTOOL := $(TOOLSDIR)/filelistgen
 CLEANGENTOOL := $(TOOLSDIR)/cleangen

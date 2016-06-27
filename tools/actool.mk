@@ -10,7 +10,7 @@ CLEAN_FILES += $(ACTOOL)
 
 $(call generate-stamp-rule,$(ACTOOL_STAMP))
 
-$(ACTOOL): $(MK_PATH) | $(BINDIR)
+$(ACTOOL): $(MK_PATH) | $(TOOLSDIR)
 
 include makelib/build_go_bin.mk
 
