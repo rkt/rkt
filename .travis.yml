@@ -8,12 +8,18 @@ go:
   - 1.5.3
   - 1.6
 
+addons:
+  apt:
+    packages:
+    - cpio
+    - realpath
+    - squashfs-tools
+    - build-essential
+    - libacl1-dev
+    - libsystemd-journal-dev
+
 install:
- - sudo apt-get update -qq
- - sudo apt-get install -y cpio realpath squashfs-tools
- - sudo apt-get install -y build-essential
- - sudo apt-get install -y libacl1-dev
- - sudo apt-get install -y libsystemd-journal-dev
+  -
 
 script:
  - ./autogen.sh
