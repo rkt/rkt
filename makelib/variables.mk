@@ -4,7 +4,6 @@ REPO_PATH := $(ORG_PATH)/rkt
 
 override BUILDDIR := $(abspath $(BUILDDIR))
 
-MAKETOOLSDIR := $(MK_TOPLEVEL_SRCDIR)/tools
 STAMPSDIR := $(BUILDDIR)/stamps
 TOOLSDIR := $(BUILDDIR)/tools
 BINDIR := $(BUILDDIR)/bin
