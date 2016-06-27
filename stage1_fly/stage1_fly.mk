@@ -1,9 +1,9 @@
 FLY_ACIDIR := $(BUILDDIR)/aci-for-fly-flavor
 FLY_ACIROOTFSDIR := $(FLY_ACIDIR)/rootfs
-FLY_TOOLSDIR := $(TOOLSDIR)/fly
+FLY_TOOLSDIR := $(TARGET_TOOLSDIR)/fly
 FLY_STAMPS :=
 FLY_SUBDIRS := run gc enter aci
-FLY_STAGE1 := $(BINDIR)/stage1-fly.aci
+FLY_STAGE1 := $(TARGET_BINDIR)/stage1-fly.aci
 
 $(call setup-stamp-file,FLY_STAMP,aci-build)
 

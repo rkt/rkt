@@ -66,7 +66,7 @@ $(foreach f,$(STAGE1_FLAVORS), \
 	$(eval STAGE1_SECONDARY_STAMPS_$f :=) \
 	$(eval STAGE1_ACIDIR_$f := $(BUILDDIR)/aci-for-$f-flavor) \
 	$(eval STAGE1_ACIROOTFSDIR_$f := $(STAGE1_ACIDIR_$f)/rootfs) \
-	$(eval STAGE1_ACI_IMAGE_$f := $(BINDIR)/stage1-$f.aci) \
+	$(eval STAGE1_ACI_IMAGE_$f := $(TARGET_BINDIR)/stage1-$f.aci) \
 	$(eval STAGE1_INSTALL_FILES_$f :=) \
 	$(eval STAGE1_INSTALL_SYMLINKS_$f :=) \
 	$(eval STAGE1_INSTALL_DIRS_$f :=) \
@@ -136,7 +136,7 @@ endif
 # above.
 $$(call forward-vars,$$(STAGE1_ACI_IMAGE_$1), \
 	ACTOOL STAGE1_ACIDIR_$1)
-$$(STAGE1_ACI_IMAGE_$1): $$(ACTOOL_STAMP) | $$(BINDIR)
+$$(STAGE1_ACI_IMAGE_$1): $$(ACTOOL_STAMP) | $$(TARGET_BINDIR)
 	$(VQ) \
 	$(call vb,vt,ACTOOL,$$(call vsp,$$@)) \
 	"$$(ACTOOL)" build --overwrite --owner-root "$$(STAGE1_ACIDIR_$1)" "$$@"

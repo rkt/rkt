@@ -24,7 +24,7 @@ _ASSCB_PATH_ := $(lastword $(MAKEFILE_LIST))
 # Name of a binary, deduced upon filename of a parent Makefile.
 _ASSCB_NAME_ := $(patsubst %.mk,%,$(MK_FILENAME))
 # Path to built binary. Not the one in the ACI rootfs.
-_ASSCB_BINARY_ := $(TOOLSDIR)/$(_ASSCB_NAME_)
+_ASSCB_BINARY_ := $(TARGET_TOOLSDIR)/$(_ASSCB_NAME_)
 
 ifeq ($(ASSCB_FLAVORS),)
 
@@ -44,7 +44,7 @@ CLEAN_FILES += $(_ASSCB_BINARY_)
 
 include makelib/build_static_c_bin.mk
 
-$(_ASSCB_BINARY_): $(_ASSCB_PATH_) $(MK_PATH) | $(TOOLSDIR)
+$(_ASSCB_BINARY_): $(_ASSCB_PATH_) $(MK_PATH) | $(TARGET_TOOLSDIR)
 
 # 2.
 

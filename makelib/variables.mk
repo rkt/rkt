@@ -6,7 +6,9 @@ override BUILDDIR := $(abspath $(BUILDDIR))
 
 STAMPSDIR := $(BUILDDIR)/stamps
 TOOLSDIR := $(BUILDDIR)/tools
-BINDIR := $(BUILDDIR)/bin
+TARGETDIR := $(BUILDDIR)/target
+TARGET_BINDIR := $(BUILDDIR)/target/bin
+TARGET_TOOLSDIR := $(BUILDDIR)/target/tools
 GOPATH_TO_CREATE := $(BUILDDIR)/gopath
 GOPATH := $(GOPATH_TO_CREATE)/src/github.com/coreos/rkt/Godeps/_workspace:$(GOPATH_TO_CREATE)
 DEPSDIR := $(BUILDDIR)/deps
@@ -36,7 +38,9 @@ CREATE_DIRS += \
 	$(BUILDDIR) \
 	$(STAMPSDIR) \
 	$(TOOLSDIR) \
-	$(BINDIR) \
+	$(TARGETDIR) \
+	$(TARGET_BINDIR) \
+	$(TARGET_TOOLSDIR) \
 	$(GOPATH_TO_CREATE) \
 	$(DEPSDIR) \
 	$(FILELISTDIR) \
