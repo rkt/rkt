@@ -56,8 +56,6 @@ import (
 const (
 	// Path to systemd-nspawn binary within the stage1 rootfs
 	nspawnBin = "/usr/bin/systemd-nspawn"
-	// Path to the interpreter within the stage1 rootfs
-	interpBin = "/usr/lib/ld-linux-x86-64.so.2"
 	// Path to the localtime file/symlink in host
 	localtimePath = "/etc/localtime"
 )
