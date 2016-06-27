@@ -9,7 +9,7 @@
         },
         {
             "name": "arch",
-            "value": "amd64"
+            "value": "@RKT_STAGE1_ARCH@"
         },
         {
             "name": "os",
