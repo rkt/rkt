@@ -7,6 +7,8 @@ all:
 INSTALL = @INSTALL@
 
 # binaries we need to build things
+CC := @CC@
+CXX := @CXX@
 GO := @GOBINARY@
 GOFMT := @GOFMTBINARY@
 GIT := @GIT@

@@ -1,6 +1,9 @@
 AC_PREREQ([2.63])
 AC_INIT([rkt], [1.9.1+git], [https://github.com/coreos/rkt/issues])
 
+AC_PROG_CC
+AC_PROG_CXX
+
 AC_DEFUN([RKT_CHECK_PROG],
          [AS_VAR_IF([$1], [],
                     [AC_CHECK_PROG($@)],[:])])
