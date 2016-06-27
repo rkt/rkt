@@ -24,7 +24,13 @@ QUICKRMTOOL := $(TOOLSDIR)/quickrm
 GO_TEST_PACKAGES ?= ./...
 GO_TEST_FUNC_ARGS ?=
 
-GO_ENV := $(strip GOPATH="$(GOPATH)" $(if $(strip $(GOROOT)),GOROOT=$(strip $(GOROOT))))
+GO_ENV := $(strip \
+	GOARCH="$(GOARCH)" \
+	CGO_ENABLED=1 \
+	CC="$(CC)" \
+	CXX="$(CXX)" \
+	GOPATH="$(GOPATH)" \
+	$(if $(strip $(GOROOT)),GOROOT="$(strip $(GOROOT))"))
 
 CREATE_DIRS += \
 	$(BUILDDIR) \
