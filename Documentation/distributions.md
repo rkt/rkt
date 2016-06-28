@@ -96,6 +96,23 @@ nix-env -iA rkt
 
 The source for the rkt.nix expression can be found on [GitHub](https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/virtualization/rkt/default.nix)
 
+
+## openSUSE
+
+rkt is available in the [Virtualization:containers](https://build.opensuse.org/package/show/Virtualization:containers/rkt) project on openSUSE Build Service.
+Before installing, the appropriate repository needs to be added (usually Tumbleweed or Leap):
+
+```
+sudo zypper ar -f obs://Virtualization:containers/openSUSE_Tumbleweed/ virtualization_containers
+sudo zypper ar -f obs://Virtualization:containers/openSUSE_Leap_42.1/ virtualization_containers
+```
+
+Install rkt using zypper:
+
+```
+sudo zypper in rkt
+```
+
 ## Void
 
 rkt is available in the [official binary packages](http://www.voidlinux.eu/packages/) for the Void Linux distribution.
