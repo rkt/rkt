@@ -322,7 +322,8 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 	case "coreos":
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), interpBin))
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
-		args = append(args, "--boot") // Launch systemd in the pod
+		args = append(args, "--boot")             // Launch systemd in the pod
+		args = append(args, "--notify-ready=yes") // From systemd v231
 
 		if context := os.Getenv(common.EnvSELinuxContext); context != "" {
 			args = append(args, fmt.Sprintf("-Z%s", context))
@@ -348,7 +349,8 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 	case "src":
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), interpBin))
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
-		args = append(args, "--boot") // Launch systemd in the pod
+		args = append(args, "--boot")             // Launch systemd in the pod
+		args = append(args, "--notify-ready=yes") // From systemd v231
 
 		if context := os.Getenv(common.EnvSELinuxContext); context != "" {
 			args = append(args, fmt.Sprintf("-Z%s", context))
@@ -389,6 +391,9 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 		}
 		if n != 1 || version < 220 {
 			return nil, nil, fmt.Errorf("rkt needs systemd-nspawn >= 220. %s version not supported: %v", hostNspawnBin, versionStr)
+		}
+		if version >= 231 {
+			args = append(args, "--notify-ready=yes") // From systemd v231
 		}
 
 		// Copy systemd, bash, etc. in stage1 at run-time
