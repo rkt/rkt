@@ -1,3 +1,9 @@
+## v1.10.0
+
+#### Other changes
+
+- build directory layout change ([#2758](https://github.com/coreos/rkt/pull/2758)): The rkt binary and stage1 image files have been moved from the 'bin' sub-directory to the 'target/bin' sub-directory.
+
 ## v1.9.1
 
 This is a minor bug fix release.

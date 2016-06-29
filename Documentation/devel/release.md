@@ -54,9 +54,9 @@ After merging and going back to master branch, we check out the release version 
   - `git clean -ffdx && sudo ./scripts/acbuild-rkt-builder.sh`
   - `rkt --insecure-options=image fetch ./rkt-builder.aci`
   - `export BUILDDIR=$PWD/release-build && mkdir -p $BUILDDIR && sudo BUILDDIR=$BUILDDIR ./scripts/build-rir.sh`
-  - Sanity check `release-build/bin/rkt version`
-  - Sanity check `ldd release-build/bin/rkt`: it can contain linux-vdso.so, libpthread.so, libc.so, libdl.so and ld-linux-x86-64.so but nothing else.
-  - Sanity check `ldd release-build/tools/init`: same as above.
+  - Sanity check `release-build/target/bin/rkt version`
+  - Sanity check `ldd release-build/target/bin/rkt`: it can contain linux-vdso.so, libpthread.so, libc.so, libdl.so and ld-linux-x86-64.so but nothing else.
+  - Sanity check `ldd release-build/target/tools/init`: same as above.
 - Grab the release key (see details below) and add a signed tag: `GIT_COMMITTER_NAME="CoreOS Application Signing Key" GIT_COMMITTER_EMAIL="security@coreos.com" git tag -u $RKTSUBKEYID'!' -s v1.2.0 -m "rkt v1.2.0"`
 - Push the tag to GitHub: `git push --tags`
 
@@ -73,7 +73,7 @@ Now we switch to the GitHub web UI to conduct the release:
 export RKTVER="1.2.0"
 export NAME="rkt-v$RKTVER"
 mkdir $NAME
-cp release-build/bin/rkt release-build/bin/stage1-{coreos,kvm,fly}.aci $NAME/
+cp release-build/target/bin/rkt release-build/target/bin/stage1-{coreos,kvm,fly}.aci $NAME/
 cp -r dist/* $NAME/
 sudo chown -R root:root $NAME/
 tar czvf $NAME.tar.gz --numeric-owner $NAME/
@@ -82,9 +82,9 @@ tar czvf $NAME.tar.gz --numeric-owner $NAME/
 - Attach each stage1 file individually so they can be fetched by the ACI discovery mechanism. The files must be named as follows:
 
 ```
-cp release-build/bin/stage1-coreos.aci stage1-coreos-$RKTVER-linux-amd64.aci
-cp release-build/bin/stage1-kvm.aci stage1-kvm-$RKTVER-linux-amd64.aci
-cp release-build/bin/stage1-fly.aci stage1-fly-$RKTVER-linux-amd64.aci
+cp release-build/target/bin/stage1-coreos.aci stage1-coreos-$RKTVER-linux-amd64.aci
+cp release-build/target/bin/stage1-kvm.aci stage1-kvm-$RKTVER-linux-amd64.aci
+cp release-build/target/bin/stage1-fly.aci stage1-fly-$RKTVER-linux-amd64.aci
 ```
 
 - Sign all release artifacts.

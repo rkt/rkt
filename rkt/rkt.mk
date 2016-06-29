@@ -2,7 +2,7 @@ LOCAL_NAME := $(patsubst %.mk,%,$(MK_FILENAME))
 
 $(call setup-stamp-file,RKT_STAMP)
 
-RKT_BINARY := $(BINDIR)/$(LOCAL_NAME)
+RKT_BINARY := $(TARGET_BINDIR)/$(LOCAL_NAME)
 
 # variables for makelib/build_go_bin.mk
 BGB_STAMP := $(RKT_STAMP)
@@ -25,7 +25,7 @@ TOPLEVEL_STAMPS += $(RKT_STAMP)
 
 $(call generate-stamp-rule,$(RKT_STAMP))
 
-$(BGB_BINARY): $(MK_PATH) | $(BINDIR)
+$(BGB_BINARY): $(MK_PATH) | $(TARGET_BINDIR)
 
 include makelib/build_go_bin.mk
 
