@@ -193,6 +193,8 @@ func extractFile(tr *tar.Reader, target string, hdr *tar.Header, overwrite bool,
 		if err := syscall.Mkfifo(p, uint32(fi.Mode())); err != nil {
 			return err
 		}
+	case typ == tar.TypeXGlobalHeader:
+		return nil
 	// TODO(jonboulle): implement other modes
 	default:
 		return fmt.Errorf("unsupported type: %v", typ)
