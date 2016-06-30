@@ -177,34 +177,30 @@ void initialize_keep_env(const char *keep_env_file, const char **keep_env)
 /* Try to set current env from keep_env and env file. */
 static void set_env(const char *env_file)
 {
-	struct stat st;
-	char *map, *k, *v;
-	typeof(st.st_size) i;
+	FILE 		*f;
+	char 		*line = NULL;
+	size_t 		len = 0;
+	ssize_t 	read;
+	char 		*v;
 
-	map_file(env_file, PROT_READ|PROT_WRITE, MAP_PRIVATE, &st, (void **)&map);
-
-	if(!st.st_size)
-		return;
-
-	map[st.st_size - 1] = '\0'; /* ensure the mapping is null-terminated */
-
-	for(i = 0; i < st.st_size;) {
-		k = &map[i];
-		i += strlen(k) + 1;
-		exit_if((v = strchr(k, '=')) == NULL,
-			"Malformed environment entry: \"%s\"", k);
-		/* a private writable map is used permitting s/=/\0/ */
+	pexit_if((f = fopen(env_file, "r")) == NULL,
+             "Unable to fopen \"%s\"", env_file);
+	while ((read = getline(&line, &len, f)) != -1) {
+		pexit_if((v = strchr(line, '=')) == NULL,
+				"Malformed environment entry: \"%s\"", line);
 		*v = '\0';
 		v++;
-		pexit_if(setenv(k, v, 1) == -1,
-			"Unable to set env variable: \"%s\"=\"%s\"", k, v);
+		pexit_if(setenv(line, v, 1) == -1,
+				 "Unable to set env variable: \"%s\"=\"%s\"", line, v);
 	}
-}
+	free(line);
+	pexit_if(fclose(f) == EOF,
+			 "Unable to fclose \"%s\"", env_file);}
 
 /* Read environment from env and keep_env files make it our own, keeping the env variables in
  * if they're present in the current environment.
  * The environment files must exist, may be empty, and are expected to be of the format:
- * key=value\0key=value\0...
+ * key=value\nkey=value\n...
  */
 static void load_env(const char *env_file, const char *keep_env_file, int entering)
 {
