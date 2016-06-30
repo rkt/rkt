@@ -10,11 +10,11 @@ FTST_IMAGE_MANIFEST := $(FTST_IMAGE_DIR)/manifest
 FTST_IMAGE_TEST_DIRS := $(FTST_IMAGE_ROOTFSDIR)/dir1 $(FTST_IMAGE_ROOTFSDIR)/dir2 $(FTST_IMAGE_ROOTFSDIR)/bin $(FTST_IMAGE_ROOTFSDIR)/etc
 FTST_ACE_MAIN_IMAGE_DIR := $(FTST_TMPDIR)/ace-main
 FTST_ACE_MAIN_IMAGE := $(FTST_TMPDIR)/rkt-ace-validator-main.aci
-FTST_ACE_MAIN_IMAGE_MANIFEST_SRC := Godeps/_workspace/src/github.com/appc/spec/ace/image_manifest_main.json.in
+FTST_ACE_MAIN_IMAGE_MANIFEST_SRC := vendor/github.com/appc/spec/ace/image_manifest_main.json.in
 FTST_ACE_MAIN_IMAGE_MANIFEST := $(FTST_ACE_MAIN_IMAGE_DIR)/manifest
 FTST_ACE_SIDEKICK_IMAGE_DIR := $(FTST_TMPDIR)/ace-sidekick
 FTST_ACE_SIDEKICK_IMAGE := $(FTST_TMPDIR)/rkt-ace-validator-sidekick.aci
-FTST_ACE_SIDEKICK_IMAGE_MANIFEST_SRC := Godeps/_workspace/src/github.com/appc/spec/ace/image_manifest_sidekick.json.in
+FTST_ACE_SIDEKICK_IMAGE_MANIFEST_SRC := vendor/github.com/appc/spec/ace/image_manifest_sidekick.json.in
 FTST_ACE_SIDEKICK_IMAGE_MANIFEST := $(FTST_ACE_SIDEKICK_IMAGE_DIR)/manifest
 FTST_INSPECT_BINARY := $(FTST_TMPDIR)/inspect
 FTST_ACI_INSPECT := $(FTST_IMAGE_ROOTFSDIR)/inspect
@@ -120,7 +120,7 @@ include makelib/build_go_bin.mk
 
 BGB_STAMP := $(FTST_FUNCTIONAL_TESTS_STAMP)
 BGB_BINARY := $(FTST_ACE_BINARY)
-BGB_PKG_IN_REPO := Godeps/_workspace/src/github.com/appc/spec/ace
+BGB_PKG_IN_REPO := vendor/github.com/appc/spec/ace
 BGB_GO_FLAGS := -a -installsuffix cgo
 BGB_ADDITIONAL_GO_ENV := CGO_ENABLED=0
 

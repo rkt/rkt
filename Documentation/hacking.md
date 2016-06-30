@@ -96,13 +96,9 @@ Follow the instructions on [Update coreos flavor stage1](devel/update-coreos-sta
 
 ## Managing dependencies
 
-rkt uses [`godep`](https://github.com/tools/godep) to manage third-party dependencies.
-The build process is crafted to make this transparent to most users (i.e. if you're just building rkt from source, or modifying any of the codebase without changing dependencies, you should have no need to interact with godep).
+rkt uses [`glide`](https://github.com/Masterminds/glide) and [`glide-vc`](https://github.com/sgotti/glide-vc) to manage third-party dependencies.
+The build process is crafted to make this transparent to most users (i.e. if you're just building rkt from source, or modifying any of the codebase without changing dependencies, you should have no need to interact with glide).
 But occasionally the need arises to either a) add a new dependency or b) update/remove an existing dependency.
-There are two types of dependencies:
-
-- libraries - Go code imported by some Go source file in the repository
-- applications - Go code that we need to build to get some executable binary; this means that we want to "import" a "main" package.
 
 We might want to vendor an application for several reasons:
 
@@ -110,122 +106,49 @@ We might want to vendor an application for several reasons:
 - it will be a part of a stage1 image (like CNI plugins for networking)
 - it will be used in functional tests (like ACE validator)
 
-At this point, the ramblings below from an experienced Godep victim^Wenthusiast might prove of use...
+### Update glide/glide-vc
 
-### Update godep
-
-Step zero is generally to ensure you have the **latest version** of `godep` available in your `PATH`.
-
-### Having the right directory layout (i.e. `GOPATH`)
-
-To work with `godep`, you'll need to have the repository (i.e. `github.com/coreos/rkt`) checked out in a valid `GOPATH`.
-If you use the [standard Go workflow](https://golang.org/doc/code.html#Organization), with every package in its proper place in a workspace, this should be no problem.
-As an example, if one was obtaining the repository for the first time, one would do the following:
-
-```
-$ export GOPATH=/tmp/foo               # or any directory you please
-$ go get -d github.com/coreos/rkt/...  # or 'git clone https://github.com/coreos/rkt $GOPATH/src/github.com/coreos/rkt'
-$ cd $GOPATH/src/github.com/coreos/rkt
-```
-
-If, however, you instead prefer to manage your source code in directories like `~/src/rkt`, there's a problem: `godep` doesn't like symbolic links (which is what the rkt build process uses by default to create a self-contained GOPATH).
-Hence, you'll need to work around this with bind mounts, with something like the following:
-
-```
-$ export GOPATH=/tmp/foo        # or any directory you please
-$ mkdir -p $GOPATH/src/github.com/coreos/rkt
-# mount --bind ~/src/rkt $GOPATH/src/github.com/coreos/rkt
-$ cd $GOPATH/src/github.com/coreos/rkt
-```
-
-One benefit of this approach over the single-workspace workflow is that checking out different versions of dependencies in the `GOPATH` (as we are about to do) is guaranteed to not affect any other packages in the `GOPATH`.
-(Using [gvm](https://github.com/moovweb/gvm) or other such tomfoolery to manage `GOPATH`s is an exercise left for the reader.)
-
-### Restoring the current state of dependencies
-
-Now that we have a functional `GOPATH`, use `godep` to restore the full set of vendored dependencies to their correct versions.
-(What this command does is essentially just loop over the set of dependencies codified in `Godeps/Godeps.json`, using `go get` to retrieve and then `git checkout` (or equivalent) to set each to their correct revision.)
-
-```
-$ godep restore # might take a while if it's the first time...
-```
-
-At this stage, your path forks, depending on what exactly you want to do: add, update or remove a dependency, or add, update or remove an application.
-But in _all six cases_, the procedure finishes with the [same save command](#saving-the-set-of-dependencies).
+Ensure you have the **latest version** of `glide` and `glide-vc` available in your `PATH`.
 
 #### Add a new dependency
 
-In this case you'll first need to retrieve the dependency you're working with into `GOPATH`.
-As a simple example, assuming we're adding `github.com/fizz/buzz/tazz`:
-
+Use the glide tool to add a new dependency. In order to add a dependency to a package i.e. `github.com/fizz/buzz` for version `1.2.3`, execute:
 ```
-$ go get -d github.com/fizz/buzz
-```
-
-##### If it is a library
-
-Add the new dependency into `godep`'s purview by simply importing the standard package name in one of your sources:
-
-```
-$ vim $GOPATH/src/github.com/coreos/rkt/some/file.go
-...
-import "github.com/fizz/buzz/tazz"
-...
+$ glide get -u github.com/fizz/buzz#1.2.3
+$ ./scripts/glide-update.sh
 ```
 
-Now, GOTO [saving](#saving-the-set-of-dependencies)
+Note that although glide does support [versions and ranges](https://github.com/Masterminds/glide/blob/master/docs/versions.md) currently it is preferred to pin to concrete versions as described above.
 
-##### If it is an application
+*Note*: Do *not* use `go get` and `glide update` to add new dependencies. It will cause both `glide.lock` and `glide.yaml` files to diverge.
 
-Add the new application to the `vendoredApps` file in the root of the repository:
+#### Update existing dependencies
 
+Once in a while new versions of dependencies are available. Entries in the `glide.yaml` file specify the target version. To update a dependency, edit the appropriate entry and specify the updated target version.
+
+*Note*: Changing specific entries in `glide.yaml` does not imply that only those will be updated. Glide will pull potential updates for all dependencies.
+
+To update a vendored dependency to a newer version, first update its target version directly in `glade.yaml`. The glide update script will then take care of pulling all dependencies and refreshing any updated ones, according to version constraints specified in the YAML manifest.
+
+*Note*: Glide will pull all dependencies from all referenced repos potentially causing a lot of network traffic.
+
+Once done editing glide.yaml, execute the glide update script:
 ```
-$ vim vendoredApps
-...
-github.com/fizz/buzz/tazz
-...
-```
-
-Now, GOTO [saving](#saving-the-set-of-dependencies)
-
-#### Update an existing dependency
-
-The steps here are the same for both libraries and applications.
-In this case, assuming we're updating `github.com/foo/bar`:
-
-```
-$ cd $GOPATH/src/github.com/foo/bar
-$ git pull   # or 'go get -d -u github.com/foo/bar/...'
-$ git checkout $DESIRED_REVISION
-$ cd $GOPATH/src/github.com/coreos/rkt
-$ godep update github.com/foo/bar/...
+$ ./scripts/glide-update.sh
 ```
 
-Now, GOTO [saving](#saving-the-set-of-dependencies)
+#### Resolving transitive dependency conflicts
+
+Glide currently has no deterministic mechanism to resolve transitive dependency conflicts. A transitive dependency conflict exists if package `A` depends on `B`, and a package `C` also depends on `B`, but on a different version.
+
+To resolve this conflict on package `C` specify the version directly in the `glide.yaml` file as described above.
 
 #### Removing an existing dependency
 
-This is the simplest case of all.
-
-##### If it is a library
-
-Simply remove all references to a dependency from the source files.
-
-Now, GOTO [saving](#saving-the-set-of-dependencies)
-
-##### If it is an application
-
-Simply remove the relevant line from the `vendoredApps` file.
-
-Now, GOTO [saving](#saving-the-set-of-dependencies)
-
-### Saving the set of dependencies
-
-Finally, here we are, the magic command, the holy grail, the ultimate conclusion of all `godep` operations.
-Provided you have followed the preceding instructions, regardless of whether you are adding/removing/modifying dependencies, this innocuous script will cast the necessary spells to solve all of your dependency worries:
-
+Execute:
 ```
-$ ./scripts/godep-save
+$ glide rm github.com/fizz/buzz
+$ ./scripts/glide-update.sh
 ```
 
 ## Errors & Output

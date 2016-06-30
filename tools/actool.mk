@@ -2,7 +2,7 @@ $(call setup-stamp-file,ACTOOL_STAMP)
 
 # variables for makelib/build_go_bin.mk
 BGB_STAMP := $(ACTOOL_STAMP)
-BGB_PKG_IN_REPO := Godeps/_workspace/src/github.com/appc/spec/actool
+BGB_PKG_IN_REPO := vendor/github.com/appc/spec/actool
 BGB_BINARY := $(ACTOOL)
 BGB_ADDITIONAL_GO_ENV := GOARCH=$(GOARCH_FOR_BUILD) CC=$(CC_FOR_BUILD)
 
