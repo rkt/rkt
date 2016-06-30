@@ -86,5 +86,8 @@ func (a *App) assertValid() error {
 	if err := a.Environment.assertValid(); err != nil {
 		return err
 	}
+	if err := a.Isolators.assertValid(); err != nil {
+		return err
+	}
 	return nil
 }

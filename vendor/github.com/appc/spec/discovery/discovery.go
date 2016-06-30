@@ -126,13 +126,13 @@ func createTemplateVars(app App) []string {
 	return tplVars
 }
 
-func doDiscover(pre string, hostHeaders map[string]http.Header, app App, insecure InsecureOption) (*discoveryData, error) {
+func doDiscover(pre string, hostHeaders map[string]http.Header, app App, insecure InsecureOption, port uint) (*discoveryData, error) {
 	app = *app.Copy()
 	if app.Labels["version"] == "" {
 		app.Labels["version"] = defaultVersion
 	}
 
-	_, body, err := httpsOrHTTP(pre, hostHeaders, insecure)
+	_, body, err := httpsOrHTTP(pre, hostHeaders, insecure, port)
 	if err != nil {
 		return nil, err
 	}
@@ -174,14 +174,15 @@ func doDiscover(pre string, hostHeaders map[string]http.Header, app App, insecur
 // DiscoverWalk will make HTTPS requests to find discovery meta tags and
 // optionally will use HTTP if insecure is set. hostHeaders specifies the
 // header to apply depending on the host (e.g. authentication). Based on the
-// response of the discoverFn it will continue to recurse up the tree.
-func DiscoverWalk(app App, hostHeaders map[string]http.Header, insecure InsecureOption, discoverFn DiscoverWalkFunc) (dd *discoveryData, err error) {
+// response of the discoverFn it will continue to recurse up the tree. If port
+// is 0, the default port will be used.
+func DiscoverWalk(app App, hostHeaders map[string]http.Header, insecure InsecureOption, port uint, discoverFn DiscoverWalkFunc) (dd *discoveryData, err error) {
 	parts := strings.Split(string(app.Name), "/")
 	for i := range parts {
 		end := len(parts) - i
 		pre := strings.Join(parts[:end], "/")
 
-		dd, err = doDiscover(pre, hostHeaders, app, insecure)
+		dd, err = doDiscover(pre, hostHeaders, app, insecure, port)
 		if derr := discoverFn(pre, dd, err); derr != nil {
 			return dd, derr
 		}
@@ -217,8 +218,8 @@ func walker(attempts *[]FailedAttempt, testFn DiscoverWalkFunc) DiscoverWalkFunc
 // tags and optionally will use HTTP if insecure is set. hostHeaders
 // specifies the header to apply depending on the host (e.g. authentication).
 // It will not give up until it has exhausted the path or found an image
-// discovery.
-func DiscoverACIEndpoints(app App, hostHeaders map[string]http.Header, insecure InsecureOption) (ACIEndpoints, []FailedAttempt, error) {
+// discovery. If port is 0, the default port will be used.
+func DiscoverACIEndpoints(app App, hostHeaders map[string]http.Header, insecure InsecureOption, port uint) (ACIEndpoints, []FailedAttempt, error) {
 	testFn := func(pre string, dd *discoveryData, err error) error {
 		if len(dd.ACIEndpoints) != 0 {
 			return errEnough
@@ -227,7 +228,7 @@ func DiscoverACIEndpoints(app App, hostHeaders map[string]http.Header, insecure 
 	}
 
 	attempts := []FailedAttempt{}
-	dd, err := DiscoverWalk(app, hostHeaders, insecure, walker(&attempts, testFn))
+	dd, err := DiscoverWalk(app, hostHeaders, insecure, port, walker(&attempts, testFn))
 	if err != nil && err != errEnough {
 		return nil, attempts, err
 	}
@@ -239,7 +240,8 @@ func DiscoverACIEndpoints(app App, hostHeaders map[string]http.Header, insecure 
 // tags and optionally will use HTTP if insecure is set. hostHeaders
 // specifies the header to apply depending on the host (e.g. authentication).
 // It will not give up until it has exhausted the path or found an public key.
-func DiscoverPublicKeys(app App, hostHeaders map[string]http.Header, insecure InsecureOption) (PublicKeys, []FailedAttempt, error) {
+// If port is 0, the default port will be used.
+func DiscoverPublicKeys(app App, hostHeaders map[string]http.Header, insecure InsecureOption, port uint) (PublicKeys, []FailedAttempt, error) {
 	testFn := func(pre string, dd *discoveryData, err error) error {
 		if len(dd.PublicKeys) != 0 {
 			return errEnough
@@ -248,7 +250,7 @@ func DiscoverPublicKeys(app App, hostHeaders map[string]http.Header, insecure In
 	}
 
 	attempts := []FailedAttempt{}
-	dd, err := DiscoverWalk(app, hostHeaders, insecure, walker(&attempts, testFn))
+	dd, err := DiscoverWalk(app, hostHeaders, insecure, port, walker(&attempts, testFn))
 	if err != nil && err != errEnough {
 		return nil, attempts, err
 	}

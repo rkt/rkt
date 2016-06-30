@@ -1,5 +1,5 @@
-hash: 74fbc0c8510a051f4fa1a79b834e401dbea213c8e5e5749ec1c3a81d2256f091
-updated: 2016-06-29T10:38:03.891204025+02:00
+hash: ac083a9947f04c599d238227e4cb251313045d516a9075bbb4c6e88120789d69
+updated: 2016-06-30T12:56:38.421141147+02:00
 imports:
 - name: github.com/appc/docker2aci
   version: 355af275fa8d48b4ecdd361a5feaf173abff81e7
@@ -19,7 +19,7 @@ imports:
   subpackages:
   - proj2aci
 - name: github.com/appc/spec
-  version: f82c741e743001237821b5e0bb9a8ebd324d3117
+  version: fd5e3d8f5d596c6fbd506e80b5e13ba8a97b704c
   subpackages:
   - ace
   - aci
@@ -290,4 +290,4 @@ imports:
   - pkg/api/resource
   - pkg/conversion
   - third_party/forked/reflect
-devImports: []
+testImports: []
