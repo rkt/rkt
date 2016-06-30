@@ -160,6 +160,7 @@ function build {
     CORES=$(grep -c ^processor /proc/cpuinfo)
     echo "Running make with ${CORES} threads"
     make "-j${CORES}"
+    make manpages bash-completion
 
     if [[ ${PRECLEANUP} == true ]]; then
         rm -rf "${BUILD_DIR}/tmp/usr_from_${RKT_STAGE1_USR_FROM}"
