@@ -18,7 +18,9 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/coreos/rkt/tests/testutils"
@@ -51,4 +53,26 @@ func TestFlyNetns(t *testing.T) {
 	if nsChanged := ns != result[1]; nsChanged {
 		t.Fatalf("container left host netns")
 	}
+}
+
+func TestFlyMountCLI(t *testing.T) {
+	tmpDir := createTempDirOrPanic("rkt-mount-test-")
+	defer os.RemoveAll(tmpDir)
+	mountSrcFile := filepath.Join(tmpDir, "hello")
+	if err := ioutil.WriteFile(mountSrcFile, []byte("world"), 0600); err != nil {
+		t.Fatalf("Cannot write file: %v", err)
+	}
+
+	testImageArgs := []string{fmt.Sprintf("--exec=/inspect --read-file --file-name %s", mountSrcFile)}
+	testImage := patchTestACI("rkt-inspect-stage1-fly.aci", testImageArgs...)
+	defer os.Remove(testImage)
+
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	paramMount := fmt.Sprintf("--volume=test,kind=host,source=%s --mount volume=test,target=%s", mountSrcFile, mountSrcFile)
+	cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s %s", ctx.Cmd(), testImage, paramMount)
+	child := spawnOrFail(t, cmd)
+	ctx.RegisterChild(child)
+	waitOrFail(t, child, 0)
 }
