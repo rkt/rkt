@@ -20,9 +20,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/tests/testutils"
 )
 
@@ -76,3 +80,141 @@ func TestFlyMountCLI(t *testing.T) {
 	ctx.RegisterChild(child)
 	waitOrFail(t, child, 0)
 }
+
+// TODO: unite this with rkt_run_pod_manifest_test.go {
+type imagePatch struct {
+	name    string
+	patches []string
+}
+
+const baseAppName = "rkt-inspect"
+
+func verifyHostFile(t *testing.T, tmpdir, filename string, i int, expectedResult string) {
+	filePath := path.Join(tmpdir, filename)
+	defer os.Remove(filePath)
+
+	// Verify the file is written to host.
+	if strings.Contains(expectedResult, "host:") {
+		data, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			t.Fatalf("%d: Cannot read the host file: %v", i, err)
+		}
+		if string(data) != expectedResult {
+			t.Fatalf("%d: Expecting %q in the host file, but saw %q", i, expectedResult, data)
+		}
+	}
+}
+
+func TestFlyMountPodManifest(t *testing.T) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	tmpdir := createTempDirOrPanic("rkt-tests.")
+	defer os.RemoveAll(tmpdir)
+
+	tests := []struct {
+		// [image name]:[image patches]
+		images         []imagePatch
+		podManifest    *schema.PodManifest
+		expectedExit   int
+		expectedResult string
+	}{
+		{
+			// Simple read after write with volume mounted in a read-only rootfs.
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-read-only-rootfs-vol-rw.aci", []string{}},
+			},
+			&schema.PodManifest{
+				Apps: []schema.RuntimeApp{
+					{
+						Name: baseAppName,
+						App: &types.App{
+							Exec:  []string{"/inspect", "--write-file", "--read-file"},
+							User:  "0",
+							Group: "0",
+							Environment: []types.EnvironmentVariable{
+								{"FILE", "/dir1/file"},
+								{"CONTENT", "host:foo"},
+							},
+							MountPoints: []types.MountPoint{
+								{"dir1", "/dir1", false},
+							},
+						},
+						ReadOnlyRootFS: true,
+					},
+				},
+				Volumes: []types.Volume{
+					{"dir1", "host", tmpdir, nil, nil, nil, nil},
+				},
+			},
+			0,
+			"host:foo",
+		},
+	}
+
+	for i, tt := range tests {
+		var hashesToRemove []string
+		for j, v := range tt.images {
+			hash := patchImportAndFetchHash(v.name, v.patches, t, ctx)
+			hashesToRemove = append(hashesToRemove, hash)
+			imgName := types.MustACIdentifier(v.name)
+			imgID, err := types.NewHash(hash)
+			if err != nil {
+				t.Fatalf("Cannot generate types.Hash from %v: %v", hash, err)
+			}
+
+			ra := &tt.podManifest.Apps[j]
+			ra.Image.Name = imgName
+			ra.Image.ID = *imgID
+		}
+
+		tt.podManifest.ACKind = schema.PodManifestKind
+		tt.podManifest.ACVersion = schema.AppContainerVersion
+
+		manifestFile := generatePodManifestFile(t, tt.podManifest)
+		defer os.Remove(manifestFile)
+
+		// 1. Test 'rkt run'.
+		runCmd := fmt.Sprintf("%s run --mds-register=false --pod-manifest=%s", ctx.Cmd(), manifestFile)
+		t.Logf("Running 'run' test #%v", i)
+		child := spawnOrFail(t, runCmd)
+		ctx.RegisterChild(child)
+
+		if tt.expectedResult != "" {
+			if _, out, err := expectRegexWithOutput(child, tt.expectedResult); err != nil {
+				t.Errorf("Expected %q but not found: %v\n%s", tt.expectedResult, err, out)
+				continue
+			}
+		}
+		waitOrFail(t, child, tt.expectedExit)
+		verifyHostFile(t, tmpdir, "file", i, tt.expectedResult)
+
+		// 2. Test 'rkt prepare' + 'rkt run-prepared'.
+		rktCmd := fmt.Sprintf("%s --insecure-options=image prepare --pod-manifest=%s",
+			ctx.Cmd(), manifestFile)
+		uuid := runRktAndGetUUID(t, rktCmd)
+
+		runPreparedCmd := fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), uuid)
+		t.Logf("Running 'run-prepared' test #%v", i)
+		child = spawnOrFail(t, runPreparedCmd)
+
+		if tt.expectedResult != "" {
+			if _, out, err := expectRegexWithOutput(child, tt.expectedResult); err != nil {
+				t.Errorf("Expected %q but not found: %v\n%s", tt.expectedResult, err, out)
+				continue
+			}
+		}
+
+		waitOrFail(t, child, tt.expectedExit)
+		verifyHostFile(t, tmpdir, "file", i, tt.expectedResult)
+
+		// we run the garbage collector and remove the imported images to save
+		// space
+		runGC(t, ctx)
+		for _, h := range hashesToRemove {
+			removeFromCas(t, ctx, h)
+		}
+	}
+}
+
+// }
