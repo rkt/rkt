@@ -32,12 +32,16 @@ include makelib/build_go_bin.mk
 manpages: GO_ENV += GOARCH=$(GOARCH_FOR_BUILD) CC=$(CC_FOR_BUILD)
 manpages: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 	mkdir -p dist/manpages/
-	ls rkt/*.go | grep -vE '_test.go|main.go|_gen.go' | $(GO_ENV) xargs "$(GO)" run rkt/manpages_gen.go
+	ls $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/*.go | \
+		grep -vE '_test.go|main.go|_gen.go' | \
+		$(GO_ENV) xargs "$(GO)" run $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/manpages_gen.go
 
 bash-completion: GO_ENV += GOARCH=$(GOARCH_FOR_BUILD) CC=$(CC_FOR_BUILD)
 bash-completion: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 	mkdir -p dist/bash_completion/
-	ls rkt/*.go | grep -vE '_test.go|main.go|_gen.go' | $(GO_ENV) xargs "$(GO)" run rkt/bash_completion_gen.go
+	ls $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/*.go | \
+		grep -vE '_test.go|main.go|_gen.go' | \
+		$(GO_ENV) xargs "$(GO)" run $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/bash_completion_gen.go
 
 protobuf:
 	scripts/genproto.sh
