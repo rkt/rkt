@@ -904,35 +904,17 @@ func NewNetPreserveNetNameTest() testutils.Test {
 		defer os.RemoveAll(netdir)
 		defer os.Remove(ntFlannel.SubnetFile)
 
-		getNetInfo, resumeContainer := make(chan struct{}), make(chan struct{})
-		ga := testutils.NewGoroutineAssistant(t)
-		ga.Add(1)
-
 		podUUIDFile := filepath.Join(ctx.DataDir(), "pod_uuid")
 		defer os.Remove(podUUIDFile)
-		go func() {
-			// start container with 'flannel' network
-			defer ga.Done()
-			testImageArgs := []string{"--exec=/inspect --print-msg=sleeping --sleep=10"}
-			testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
-			defer os.Remove(testImage)
-			cmd := fmt.Sprintf("%s --debug --insecure-options=image run --uuid-file-save=%s --net=%s --mds-register=false %s", ctx.Cmd(), podUUIDFile, ntFlannel.Name, testImage)
-			child := ga.SpawnOrFail(cmd)
-			defer ga.WaitOrFail(child)
 
-			// wait until stage2
-			if _, out, err := expectRegexTimeoutWithOutput(child, "sleeping", time.Minute); err != nil {
-				ga.Fatalf("Can't spawn container!\nError: %v\nOutput: %v", err, out)
-			}
+		// start container with 'flannel' network
+		testImageArgs := []string{"--exec=/inspect"}
+		testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
+		defer os.Remove(testImage)
 
-			// trigger parsing net-info.json
-			getNetInfo <- struct{}{}
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --uuid-file-save=%s --net=%s --mds-register=false %s", ctx.Cmd(), podUUIDFile, ntFlannel.Name, testImage)
+		spawnAndWaitOrFail(t, cmd, 0)
 
-			// wait with cleanup for loading netInfo's
-			<-resumeContainer
-		}()
-
-		<-getNetInfo
 		podUUID, err := ioutil.ReadFile(podUUIDFile)
 		if err != nil {
 			t.Fatalf("Can't read pod UUID: %v", err)
@@ -950,9 +932,6 @@ func NewNetPreserveNetNameTest() testutils.Test {
 			t.Fatalf("Can't open net-info.json for reading: %v", err)
 		}
 
-		// resume rkt-inspect-networking container for cleanup
-		resumeContainer <- struct{}{}
-
 		if len(info) != 2 {
 			t.Fatalf("Incorrect number of networks: %v", len(info))
 		}
@@ -968,8 +947,6 @@ func NewNetPreserveNetNameTest() testutils.Test {
 		if !found {
 			t.Fatalf("Network '%s' not found!\nnetInfo[0]: %v\nnetInfo[1]: %v", ntFlannel.Name, info[0], info[1])
 		}
-
-		ga.Wait()
 	})
 }
 
