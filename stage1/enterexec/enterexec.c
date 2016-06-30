@@ -195,7 +195,8 @@ static void set_env(const char *env_file)
 	}
 	free(line);
 	pexit_if(fclose(f) == EOF,
-			 "Unable to fclose \"%s\"", env_file);}
+			 "Unable to fclose \"%s\"", env_file);
+}
 
 /* Read environment from env and keep_env files make it our own, keeping the env variables in
  * if they're present in the current environment.
