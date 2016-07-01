@@ -110,7 +110,7 @@ func init() {
 	flag.StringVar(&discardString, "local-config", common.DefaultLocalConfigDir, "Local config path")
 }
 
-func checkAndAddMps(namedVolumeMounts map[types.ACName]volumeMountTuple, mountpoints []types.MountPoint) error {
+func addMountPoints(namedVolumeMounts map[types.ACName]volumeMountTuple, mountpoints []types.MountPoint) error {
 	for _, mp := range mountpoints {
 		tuple, exists := namedVolumeMounts[mp.Name]
 		switch {
@@ -141,14 +141,14 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 	var imAppManifestMPs []types.MountPoint
 	if imApp := p.Images[app].App; imApp != nil {
 		imAppManifestMPs = imApp.MountPoints
-		if err := checkAndAddMps(namedVolumeMounts, imAppManifestMPs); err != nil {
+		if err := addMountPoints(namedVolumeMounts, imAppManifestMPs); err != nil {
 			return nil, err
 		}
 	}
 
 	// Merge command-line Mounts with PodManifest's RuntimeApp's App's MountPoints
 	raApp := p.Manifest.Apps[0]
-	if err := checkAndAddMps(namedVolumeMounts, raApp.App.MountPoints); err != nil {
+	if err := addMountPoints(namedVolumeMounts, raApp.App.MountPoints); err != nil {
 		return nil, err
 	}
 

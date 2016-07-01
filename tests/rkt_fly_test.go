@@ -74,14 +74,36 @@ func TestFlyMountCLI(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	paramMount := fmt.Sprintf("--volume=test,kind=host,source=%s --mount volume=test,target=%s", mountSrcFile, mountSrcFile)
-	cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s %s", ctx.Cmd(), testImage, paramMount)
-	child := spawnOrFail(t, cmd)
-	ctx.RegisterChild(child)
-	waitOrFail(t, child, 0)
+	testParams := []struct {
+		mountParam   string
+		expectedExit int
+	}{
+		{
+			fmt.Sprintf(
+				"--volume=test,kind=host,source=%s --mount volume=test,target=%s",
+				mountSrcFile, mountSrcFile,
+			),
+			0,
+		},
+		{
+			fmt.Sprintf(
+				"--volume=test1,kind=host,source=%s --mount volume=test1,target=%s --volume=test2,kind=host,source=%s --mount volume=test1,target=%s",
+				mountSrcFile, mountSrcFile,
+				mountSrcFile, mountSrcFile,
+			),
+			1, /* TODO: decide on consistency with other stage1s */
+		},
+	}
+
+	for _, testParam := range testParams {
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s %s", ctx.Cmd(), testImage, testParam.mountParam)
+		child := spawnOrFail(t, cmd)
+		ctx.RegisterChild(child)
+		waitOrFail(t, child, testParam.expectedExit)
+	}
 }
 
-// TODO: unite this with rkt_run_pod_manifest_test.go {
+// TODO: unite this with rkt_run_pod_manifest_test.go
 type imagePatch struct {
 	name    string
 	patches []string
@@ -216,5 +238,3 @@ func TestFlyMountPodManifest(t *testing.T) {
 		}
 	}
 }
-
-// }
