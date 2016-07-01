@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build ignore
+// +build !fly
 
 package main
 
@@ -23,6 +23,11 @@ import (
 
 	"github.com/coreos/rkt/tests/testutils"
 )
+
+// Spin up the appc ACE validator pod and return the result.
+
+// You'll find the actual application at vendor/github.com/appc/spec/ace/validator.go,
+// the two ACIs are built from that
 
 func TestAceValidator(t *testing.T) {
 	newStringSet := func(strs ...string) map[string]struct{} {
@@ -37,7 +42,7 @@ func TestAceValidator(t *testing.T) {
 		newStringSet("main", "sidekick"),
 		newStringSet("poststop"),
 	}
-	pattern := `ace-validator\[\d+\]: ([[:alpha:]]+) OK`
+	pattern := `ace-validator-(?:main|sidekick)\[\d+\]: ([[:alpha:]]+) OK`
 
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
