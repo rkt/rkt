@@ -266,6 +266,36 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 			ra.App.Isolators = append(ra.App.Isolators, *isolator)
 		}
 
+		// Override seccomp isolators via --seccomp CLI switch
+		if app.SeccompFilter != "" {
+			var is *types.Isolator
+			mode, errno, set, err := app.SeccompOverride()
+			if err != nil {
+				return err
+			}
+			switch mode {
+			case "retain":
+				lss, err := types.NewLinuxSeccompRetainSet(errno, set...)
+				if err != nil {
+					return err
+				}
+				if is, err = lss.AsIsolator(); err != nil {
+					return err
+				}
+			case "remove":
+				lss, err := types.NewLinuxSeccompRemoveSet(errno, set...)
+				if err != nil {
+					return err
+				}
+				if is, err = lss.AsIsolator(); err != nil {
+					return err
+				}
+			default:
+				return apps.ErrInvalidSeccompMode
+			}
+			ra.App.Isolators.ReplaceIsolatorsByName(*is, []types.ACIdentifier{types.LinuxSeccompRemoveSetName, types.LinuxSeccompRetainSetName})
+		}
+
 		if user := app.User; user != "" {
 			ra.App.User = user
 		}
