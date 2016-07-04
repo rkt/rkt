@@ -172,8 +172,25 @@ func addStage1ImageFlags(flags *pflag.FlagSet) {
 // If the user passed --stage1-url, --stage1-path, --stage1-name,
 // --stage1-hash, or --stage1-from-dir then we take what was passed
 // and try to load it. If it failed, we bail out. No second chances
-// and whatnot. The details about how each location type should be
-// handled are below.
+// and whatnot. The details about how each flag type should be handled
+// are below.
+//
+// For --stage1-url, we do discovery, and try to fetch it directly into
+// the store.
+//
+// For --stage1-path, we do no discovery and try to fetch the image
+// directly from the given file path into the store. If the file is not
+// found, then we try to fetch the file in the same directory as the
+// rkt binary itself into the store.
+//
+// For --stage1-from-dir, we do no discovery and try to fetch the image
+// from the stage1 images directory by the name.
+//
+// For --stage1-name, we do discovery and fetch the discovered image
+// into the store.
+//
+// For --stage1-hash, we do no discovery and try to fetch the image
+// from the store by the hash.
 //
 // If the user passed none of the above flags, we try to get the name,
 // the version and the location from the configuration. The name and
@@ -194,9 +211,6 @@ func addStage1ImageFlags(flags *pflag.FlagSet) {
 // directly into the store instead. If the file is not found and we
 // have a second chance, we try to fetch the file in the same
 // directory as the rkt binary itself into the store.
-//
-// If location is a name, we do the discovery, fetch the discovered
-// image into the store.
 //
 // If location is an image hash then we make sure that it exists in
 // the store.
