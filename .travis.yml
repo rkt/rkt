@@ -33,7 +33,7 @@ script:
  -      if [ "${TARGET}" == "amd64" ]; then
                 ./autogen.sh;
                 ./configure --with-stage1-flavors=host,fly --enable-tpm=auto;
-                make unit-check;
+                make unit-check manpages bash-completion;
         elif [ "${TARGET}" == "arm64" ]; then
                 eval "$(GIMME_ARCH=${TARGET} GIMME_CGO_ENABLED=1 ./gimme.local ${TRAVIS_GO_VERSION})";
                 ./autogen.sh;
