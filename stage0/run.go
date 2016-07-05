@@ -260,11 +260,17 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		}
 
 		if capsRetain := app.CapsRetain; capsRetain != nil {
-			isolator := capsRetain.AsIsolator()
-			ra.App.Isolators = append(ra.App.Isolators, isolator)
+			isolator, err := capsRetain.AsIsolator()
+			if err != nil {
+				return err
+			}
+			ra.App.Isolators = append(ra.App.Isolators, *isolator)
 		} else if capsRemove := app.CapsRemove; capsRemove != nil {
-			isolator := capsRemove.AsIsolator()
-			ra.App.Isolators = append(ra.App.Isolators, isolator)
+			isolator, err := capsRemove.AsIsolator()
+			if err != nil {
+				return err
+			}
+			ra.App.Isolators = append(ra.App.Isolators, *isolator)
 		}
 
 		if user := app.User; user != "" {

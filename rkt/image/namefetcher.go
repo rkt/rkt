@@ -70,7 +70,7 @@ func (f *nameFetcher) discoverApp(app *discovery.App) (discovery.ACIEndpoints, e
 		insecure = insecure | discovery.InsecureHTTP
 	}
 	hostHeaders := config.ResolveAuthPerHost(f.Headers)
-	ep, attempts, err := discovery.DiscoverACIEndpoints(*app, hostHeaders, insecure)
+	ep, attempts, err := discovery.DiscoverACIEndpoints(*app, hostHeaders, insecure, 0)
 	if f.Debug {
 		for _, a := range attempts {
 			log.PrintE(fmt.Sprintf("meta tag 'ac-discovery' not found on %s", a.Prefix), a.Error)

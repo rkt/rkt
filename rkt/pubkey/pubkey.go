@@ -156,13 +156,14 @@ func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 
 	hostHeaders := config.ResolveAuthPerHost(m.AuthPerHost)
 	insecure := discovery.InsecureNone
+
 	if m.InsecureAllowHTTP {
 		insecure = insecure | discovery.InsecureHTTP
 	}
 	if m.InsecureSkipTLSCheck {
 		insecure = insecure | discovery.InsecureTLS
 	}
-	keys, attempts, err := discovery.DiscoverPublicKeys(*app, hostHeaders, insecure)
+	keys, attempts, err := discovery.DiscoverPublicKeys(*app, hostHeaders, insecure, 0)
 	if err != nil {
 		return nil, err
 	}
