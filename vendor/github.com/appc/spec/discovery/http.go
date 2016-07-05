@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -75,13 +76,16 @@ func init() {
 	httpDoInsecureTLS = ClientInsecureTLS
 }
 
-func httpsOrHTTP(name string, hostHeaders map[string]http.Header, insecure InsecureOption) (urlStr string, body io.ReadCloser, err error) {
-	fetch := func(scheme string) (urlStr string, res *http.Response, err error) {
+func httpsOrHTTP(name string, hostHeaders map[string]http.Header, insecure InsecureOption, port uint) (urlStr string, body io.ReadCloser, err error) {
+	fetch := func(scheme string, port uint) (urlStr string, res *http.Response, err error) {
 		u, err := url.Parse(scheme + "://" + name)
 		if err != nil {
 			return "", nil, err
 		}
 		u.RawQuery = "ac-discovery=1"
+		if port != 0 {
+			u.Host += ":" + strconv.FormatUint(uint64(port), 10)
+		}
 		urlStr = u.String()
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
@@ -102,11 +106,11 @@ func httpsOrHTTP(name string, hostHeaders map[string]http.Header, insecure Insec
 			res.Body.Close()
 		}
 	}
-	urlStr, res, err := fetch("https")
+	urlStr, res, err := fetch("https", port)
 	if err != nil || res.StatusCode != http.StatusOK {
 		if insecure&InsecureHTTP != 0 {
 			closeBody(res)
-			urlStr, res, err = fetch("http")
+			urlStr, res, err = fetch("http", port)
 		}
 	}
 

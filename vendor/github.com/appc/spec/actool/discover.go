@@ -29,9 +29,10 @@ var (
 		Name:        "discover",
 		Description: "Discover the download URLs for an app",
 		Summary:     "Discover the download URLs for one or more app container images",
-		Usage:       "[--json] APP...",
+		Usage:       "[--json] [--port] [--insecure] APP...",
 		Run:         runDiscover,
 	}
+	flagPort uint
 )
 
 func init() {
@@ -39,6 +40,8 @@ func init() {
 		"Don't check TLS certificates and allow insecure non-TLS downloads over http")
 	cmdDiscover.Flags.BoolVar(&outputJson, "json", false,
 		"Output result as JSON")
+	cmdDiscover.Flags.UintVar(&flagPort, "port", 0,
+		"Port to connect to when performing discovery")
 }
 
 func runDiscover(args []string) (exit int) {
@@ -62,7 +65,7 @@ func runDiscover(args []string) (exit int) {
 		if transportFlags.Insecure {
 			insecure = discovery.InsecureTLS | discovery.InsecureHTTP
 		}
-		eps, attempts, err := discovery.DiscoverACIEndpoints(*app, nil, insecure)
+		eps, attempts, err := discovery.DiscoverACIEndpoints(*app, nil, insecure, flagPort)
 		if err != nil {
 			stderr("error fetching endpoints for %s: %s", name, err)
 			return 1
@@ -70,7 +73,7 @@ func runDiscover(args []string) (exit int) {
 		for _, a := range attempts {
 			fmt.Printf("discover endpoints walk: prefix: %s error: %v\n", a.Prefix, a.Error)
 		}
-		publicKeys, attempts, err := discovery.DiscoverPublicKeys(*app, nil, insecure)
+		publicKeys, attempts, err := discovery.DiscoverPublicKeys(*app, nil, insecure, flagPort)
 		if err != nil {
 			stderr("error fetching public keys for %s: %s", name, err)
 			return 1
