@@ -452,7 +452,7 @@ func (s *Store) ReadStream(key string) (io.ReadCloser, error) {
 // (i.e. the hash of the uncompressed ACI)
 // latest defines if the aci has to be marked as the latest. For example an ACI
 // discovered without asking for a specific version (latest pattern).
-func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
+func (s *Store) WriteACI(r io.ReadSeeker, fetchInfo ACIFetchInfo) (string, error) {
 	// We need to allow the store's setgid bits (if any) to propagate, so
 	// disable umask
 	um := syscall.Umask(0)
@@ -508,12 +508,13 @@ func (s *Store) WriteACI(r io.ReadSeeker, latest bool) (string, error) {
 	// Save aciinfo
 	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo := &ACIInfo{
-			BlobKey:    key,
-			Name:       im.Name.String(),
-			ImportTime: time.Now(),
-			LastUsed:   time.Now(),
-			Latest:     latest,
-			Size:       sz,
+			BlobKey:         key,
+			Name:            im.Name.String(),
+			ImportTime:      time.Now(),
+			LastUsed:        time.Now(),
+			Latest:          fetchInfo.Latest,
+			Size:            sz,
+			InsecureOptions: fetchInfo.InsecureOptions,
 		}
 		return WriteACIInfo(tx, aciinfo)
 	}); err != nil {
@@ -843,6 +844,20 @@ nextKey:
 		return curaciinfo.BlobKey, nil
 	}
 	return "", ACINotFoundError{name: name, labels: labels}
+}
+
+func (s *Store) GetAllRemotes() ([]*Remote, error) {
+	var remotes []*Remote
+	err := s.db.Do(func(tx *sql.Tx) error {
+		var err error
+		remotes, err = GetAllRemotes(tx)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return remotes, nil
 }
 
 func (s *Store) GetAllACIInfos(sortfields []string, ascending bool) ([]*ACIInfo, error) {
