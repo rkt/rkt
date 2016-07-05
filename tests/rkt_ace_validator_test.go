@@ -40,7 +40,7 @@ func TestAceValidator(t *testing.T) {
 	expected := []map[string]struct{}{
 		newStringSet("prestart"),
 		newStringSet("main", "sidekick"),
-		newStringSet("poststop"),
+		// newStringSet("poststop"), // Disabled by caseyc for #2870
 	}
 	pattern := `ace-validator-(?:main|sidekick)\[\d+\]: ([[:alpha:]]+) OK`
 
