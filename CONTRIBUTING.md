@@ -98,4 +98,7 @@ and the commit messages as the PR description for the PR.
 If your PR includes more commits spanning mulitple subsystems one should change the PR title
 and the first paragraph of the PR description to reflect a summary of all changes involved.
 
+A large PR must be split into multiple commits, each with clear commit messages.
+Intermediate commits should compile and pass tests. Exceptions to non-compilable must have a valid reason, i.e. dependency bumps.
+
 Do not add entries in the changelog yourself. They will be overwritten when creating a new release.
