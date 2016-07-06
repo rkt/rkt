@@ -24,6 +24,11 @@ import (
 	"github.com/coreos/rkt/tests/testutils"
 )
 
+// Launch an app that polls the Annotations metadata
+// service - (see https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service)
+
+// The app's source is at tests/inspect/inspect.go
+
 func TestFetchAppAnnotation(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
