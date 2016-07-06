@@ -254,9 +254,17 @@ func runImages(cmd *cobra.Command, args []string) int {
 
 				fieldValue = fmt.Sprintf("%s", f.String())
 			case l(aciURL):
-				fieldValue = fmt.Sprintf("%s", remoteMap[aciInfo.BlobKey].ACIURL)
+				if imageRemote := remoteMap[aciInfo.BlobKey]; imageRemote == nil {
+					fieldValue = ""
+				} else {
+					fieldValue = fmt.Sprintf("%s", imageRemote.ACIURL)
+				}
 			case l(signatureURL):
-				fieldValue = fmt.Sprintf("%s", remoteMap[aciInfo.BlobKey].SigURL)
+				if imageRemote := remoteMap[aciInfo.BlobKey]; imageRemote == nil {
+					fieldValue = ""
+				} else {
+					fieldValue = fmt.Sprintf("%s", imageRemote.SigURL)
+				}
 			}
 			fieldValues = append(fieldValues, fieldValue)
 
