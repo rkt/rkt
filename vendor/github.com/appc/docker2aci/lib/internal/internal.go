@@ -26,6 +26,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -34,6 +35,7 @@ import (
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal/tarball"
 	"github.com/appc/docker2aci/lib/internal/types"
+	"github.com/appc/docker2aci/lib/internal/typesV2"
 	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/aci"
@@ -63,20 +65,8 @@ func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *ty
 	}
 
 	imageName := strings.Replace(dockerURL.ImageName, "/", "-", -1)
-	aciPath := imageName + "-" + layerData.ID
-	if dockerURL.Tag != "" {
-		aciPath += "-" + dockerURL.Tag
-	}
-	if layerData.OS != "" {
-		aciPath += "-" + layerData.OS
-		if layerData.Architecture != "" {
-			aciPath += "-" + layerData.Architecture
-		}
-	}
-	aciPath += "-" + strconv.Itoa(layerNumber)
-	aciPath += ".aci"
+	aciPath := generateACIPath(outputDir, imageName, layerData.ID, dockerURL.Tag, layerData.OS, layerData.Architecture, layerNumber)
 
-	aciPath = path.Join(outputDir, aciPath)
 	manifest, err = writeACI(layerFile, *manifest, curPwl, aciPath, compression)
 	if err != nil {
 		return "", nil, fmt.Errorf("error writing ACI: %v", err)
@@ -89,25 +79,71 @@ func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *ty
 	return aciPath, manifest, nil
 }
 
-// ValidateACI checks whether the ACI in aciPath is valid.
-func ValidateACI(aciPath string) error {
-	aciFile, err := os.Open(aciPath)
+func GenerateACI22LowerLayer(dockerURL *types.ParsedDockerURL, layerDigest string, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression) (string, *schema.ImageManifest, error) {
+	formattedDigest := strings.Replace(layerDigest, ":", "-", -1)
+	aciName := fmt.Sprintf("%s/%s-%s", dockerURL.IndexURL, dockerURL.ImageName, formattedDigest)
+	sanitizedAciName, err := appctypes.SanitizeACIdentifier(aciName)
 	if err != nil {
-		return err
+		return "", nil, err
 	}
-	defer aciFile.Close()
-
-	tr, err := aci.NewCompressedTarReader(aciFile)
+	manifest, err := GenerateEmptyManifest(sanitizedAciName)
 	if err != nil {
-		return err
-	}
-	defer tr.Close()
-
-	if err := aci.ValidateArchive(tr.Reader); err != nil {
-		return err
+		return "", nil, err
 	}
 
-	return nil
+	aciPath := generateACIPath(outputDir, aciName, layerDigest, dockerURL.Tag, runtime.GOOS, runtime.GOARCH, -1)
+	manifest, err = writeACI(layerFile, *manifest, curPwl, aciPath, compression)
+	if err != nil {
+		return "", nil, err
+	}
+
+	err = ValidateACI(aciPath)
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid ACI generated: %v", err)
+	}
+	return aciPath, manifest, nil
+}
+
+func GenerateACI22TopLayer(dockerURL *types.ParsedDockerURL, imageConfig *typesV2.ImageConfig, layerDigest string, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression, lowerLayers []*schema.ImageManifest) (string, *schema.ImageManifest, error) {
+	aciName := fmt.Sprintf("%s/%s-%s", dockerURL.IndexURL, dockerURL.ImageName, layerDigest)
+	sanitizedAciName, err := appctypes.SanitizeACIdentifier(aciName)
+	if err != nil {
+		return "", nil, err
+	}
+	manifest, err := GenerateManifestV22(sanitizedAciName, dockerURL, imageConfig, layerDigest, lowerLayers)
+	if err != nil {
+		return "", nil, err
+	}
+
+	aciPath := generateACIPath(outputDir, aciName, layerDigest, dockerURL.Tag, runtime.GOOS, runtime.GOARCH, -1)
+	manifest, err = writeACI(layerFile, *manifest, curPwl, aciPath, compression)
+	if err != nil {
+		return "", nil, err
+	}
+
+	err = ValidateACI(aciPath)
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid ACI generated: %v", err)
+	}
+	return aciPath, manifest, nil
+}
+
+func generateACIPath(outputDir, imageName, digest, tag, osString, arch string, layerNum int) string {
+	aciPath := imageName
+	if tag != "" {
+		aciPath += "-" + tag
+	}
+	if osString != "" {
+		aciPath += "-" + osString
+		if arch != "" {
+			aciPath += "-" + arch
+		}
+	}
+	if layerNum != -1 {
+		aciPath += "-" + strconv.Itoa(layerNum)
+	}
+	aciPath += ".aci"
+	return path.Join(outputDir, aciPath)
 }
 
 // GenerateManifest converts the docker manifest format to an appc
@@ -248,6 +284,123 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 	return genManifest, nil
 }
 
+func GenerateEmptyManifest(name string) (*schema.ImageManifest, error) {
+	acid, err := appctypes.NewACIdentifier(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &schema.ImageManifest{
+		ACKind:    schema.ImageManifestKind,
+		ACVersion: schema.AppContainerVersion,
+		Name:      *acid,
+		Labels: appctypes.Labels{
+			appctypes.Label{
+				*appctypes.MustACIdentifier("arch"),
+				runtime.GOARCH,
+			},
+			appctypes.Label{
+				*appctypes.MustACIdentifier("os"),
+				runtime.GOOS,
+			},
+		},
+	}, nil
+}
+
+func GenerateManifestV22(name string, dockerURL *types.ParsedDockerURL, config *typesV2.ImageConfig, imageDigest string, lowerLayers []*schema.ImageManifest) (*schema.ImageManifest, error) {
+	manifest, err := GenerateEmptyManifest(name)
+	if err != nil {
+		return nil, err
+	}
+
+	labels := manifest.Labels.ToMap()
+	annotations := manifest.Annotations
+
+	addLabel := func(key, val string) {
+		if key != "" && val != "" {
+			labels[*appctypes.MustACIdentifier(key)] = val
+		}
+	}
+
+	addAnno := func(key, val string) {
+		if key != "" && val != "" {
+			annotations.Set(*appctypes.MustACIdentifier(key), val)
+		}
+	}
+
+	addLabel("version", dockerURL.Tag)
+	addLabel("os", config.OS)
+	addLabel("arch", config.Architecture)
+
+	addAnno("author", config.Author)
+	addAnno("created", config.Created)
+
+	addAnno(common.AppcDockerRegistryURL, dockerURL.IndexURL)
+	addAnno(common.AppcDockerRepository, dockerURL.ImageName)
+	addAnno(common.AppcDockerImageID, imageDigest)
+	addAnno("created", config.Created)
+
+	if config.Config != nil {
+		exec := getExecCommand(config.Config.Entrypoint, config.Config.Cmd)
+		user, group := parseDockerUser(config.Config.User)
+		var env appctypes.Environment
+		for _, v := range config.Config.Env {
+			parts := strings.SplitN(v, "=", 2)
+			env.Set(parts[0], parts[1])
+		}
+		manifest.App = &appctypes.App{
+			Exec:             exec,
+			User:             user,
+			Group:            group,
+			Environment:      env,
+			WorkingDirectory: config.Config.WorkingDir,
+		}
+		manifest.App.MountPoints, err = convertVolumesToMPs(config.Config.Volumes)
+		if err != nil {
+			return nil, err
+		}
+		manifest.App.Ports, err = convertPorts(config.Config.ExposedPorts, nil)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	for _, lowerLayer := range lowerLayers {
+		manifest.Dependencies = append(manifest.Dependencies, appctypes.Dependency{
+			ImageName: lowerLayer.Name,
+			Labels:    lowerLayer.Labels,
+		})
+	}
+
+	manifest.Labels, err = appctypes.LabelsFromMap(labels)
+	if err != nil {
+		return nil, err
+	}
+	manifest.Annotations = annotations
+	return manifest, nil
+}
+
+// ValidateACI checks whether the ACI in aciPath is valid.
+func ValidateACI(aciPath string) error {
+	aciFile, err := os.Open(aciPath)
+	if err != nil {
+		return err
+	}
+	defer aciFile.Close()
+
+	tr, err := aci.NewCompressedTarReader(aciFile)
+	if err != nil {
+		return err
+	}
+	defer tr.Close()
+
+	if err := aci.ValidateArchive(tr.Reader); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type appcPortSorter []appctypes.Port
 
 func (s appcPortSorter) Len() int {
@@ -366,6 +519,11 @@ func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPo
 }
 
 func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string, compression common.Compression) (*schema.ImageManifest, error) {
+	dir, _ := path.Split(output)
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		return nil, fmt.Errorf("error creating ACI parent dir: %v", err)
+	}
 	aciFile, err := os.Create(output)
 	if err != nil {
 		return nil, fmt.Errorf("error creating ACI file: %v", err)

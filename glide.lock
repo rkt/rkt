@@ -1,8 +1,8 @@
-hash: c98a3d0cb1340703d2bbf77ac3bf2f6e357c0de64fb02f5d502ffac399b5d5e5
-updated: 2016-07-06T16:44:19.414775414+02:00
+hash: 79f133fbb4e0f79f65f0b5303420513c3e3f8859b9d11ef7b6ff65120dcd29e4
+updated: 2016-07-14T12:45:07.658245282+02:00
 imports:
 - name: github.com/appc/docker2aci
-  version: 355af275fa8d48b4ecdd361a5feaf173abff81e7
+  version: d77d6e4b99a0d8b6be6f70c623c86ba777110cbd
   subpackages:
   - lib
   - lib/common
@@ -14,6 +14,7 @@ imports:
   - lib/internal/types
   - lib/internal/util
   - pkg/log
+  - lib/internal/typesV2
 - name: github.com/appc/goaci
   version: ba7b591f930783c0ab75f5bbfd6ff65c7bd011bf
   subpackages:
