@@ -19,7 +19,12 @@ package imagestore
 
 import (
 	"database/sql"
+	"errors"
 	"time"
+)
+
+var (
+	ErrRemoteNotFound = errors.New("remote target not found")
 )
 
 func NewRemote(aciurl, sigurl string) *Remote {
@@ -46,25 +51,28 @@ func remoteRowScan(rows *sql.Rows, remote *Remote) error {
 	return rows.Scan(&remote.ACIURL, &remote.SigURL, &remote.ETag, &remote.BlobKey, &remote.CacheMaxAge, &remote.DownloadTime)
 }
 
-// GetRemote tries to retrieve a remote with the given aciURL. found will be
-// false if remote doesn't exist.
-func GetRemote(tx *sql.Tx, aciURL string) (remote *Remote, found bool, err error) {
-	remote = &Remote{}
+// GetRemote tries to retrieve a remote with the given aciURL.
+// If remote doesn't exist, it returns ErrRemoteNotFound error.
+func GetRemote(tx *sql.Tx, aciURL string) (*Remote, error) {
 	rows, err := tx.Query("SELECT * FROM remote WHERE aciurl == $1", aciURL)
 	if err != nil {
-		return nil, false, err
-	}
-	for rows.Next() {
-		found = true
-		if err := rows.Scan(&remote.ACIURL, &remote.SigURL, &remote.ETag, &remote.BlobKey, &remote.CacheMaxAge, &remote.DownloadTime); err != nil {
-			return nil, false, err
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return remote, found, err
+	if ok := rows.Next(); !ok {
+		return nil, ErrRemoteNotFound
+	}
+
+	remote := &Remote{}
+	if err := remoteRowScan(rows, remote); err != nil {
+		return nil, err
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return remote, nil
 }
 
 // GetAllRemotes returns all the ACIInfos sorted by optional sortfields and

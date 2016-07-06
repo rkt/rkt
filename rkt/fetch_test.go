@@ -230,10 +230,10 @@ func TestDownloading(t *testing.T) {
 		denyAuthTS.URL: "deny auth",
 	}
 	tests := []struct {
-		ACIURL   string
-		hit      bool
-		options  http.Header
-		authFail bool
+		ACIURL       string
+		remoteExists bool
+		options      http.Header
+		authFail     bool
 	}{
 		{noAuthTS.URL, false, noAuth, false},
 		{noAuthTS.URL, true, noAuth, false},
@@ -259,16 +259,19 @@ func TestDownloading(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		_, ok, err := s.GetRemote(tt.ACIURL)
+		_, err := s.GetRemote(tt.ACIURL)
 		if err != nil {
-			t.Fatalf("unexpected err: %v", err)
+			if err != imagestore.ErrRemoteNotFound {
+				t.Fatalf("unexpected err: %v", err)
+			}
+
+			if tt.remoteExists {
+				t.Fatalf("should've found the remote, got %v", err)
+			}
+		} else if !tt.remoteExists {
+			t.Fatalf("should've gotten a remote not found error")
 		}
-		if tt.hit == false && ok {
-			t.Fatalf("expected miss got a hit")
-		}
-		if tt.hit == true && !ok {
-			t.Fatalf("expected a hit got a miss")
-		}
+
 		parsed, err := url.Parse(tt.ACIURL)
 		if err != nil {
 			panic(fmt.Sprintf("Invalid url from test server: %s", tt.ACIURL))
@@ -547,7 +550,7 @@ func TestFetchImageCache(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		rem, _, err := s.GetRemote(aciURL)
+		rem, err := s.GetRemote(aciURL)
 		if err != nil {
 			t.Fatalf("Error getting remote info: %v\n", err)
 		}
@@ -563,7 +566,7 @@ func TestFetchImageCache(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		rem, _, err = s.GetRemote(aciURL)
+		rem, err = s.GetRemote(aciURL)
 		if err != nil {
 			t.Fatalf("Error getting remote info: %v\n", err)
 		}
