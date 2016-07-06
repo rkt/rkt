@@ -3264,7 +3264,9 @@ func (l value) String() string {
 	case time.Duration:
 		return fmt.Sprintf("duration(%q)", l.val)
 	case time.Time:
-		return fmt.Sprintf("time(%q)", l.val)
+		y, m, d := x.Date()
+		zone, _ := x.Zone()
+		return fmt.Sprintf("date(%v, %v, %v, %v, %v, %v, %v, %v)", y, m, d, x.Hour(), x.Minute(), x.Second(), x.Nanosecond(), zone)
 	case *big.Rat:
 		return fmt.Sprintf("bigrat(%q)", l.val)
 	case *big.Int:

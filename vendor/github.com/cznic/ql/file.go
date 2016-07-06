@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/camlistore/go4/lock"
-	"github.com/cznic/exp/lldb"
 	"github.com/cznic/mathutil"
+	"github.com/cznic/ql/vendored/github.com/camlistore/go4/lock"
+	"github.com/cznic/ql/vendored/github.com/cznic/exp/lldb"
 )
 
 const (
@@ -409,7 +409,7 @@ func newFileFromOSFile(f lldb.OSFile) (fi *file, err error) {
 	w, err = os.OpenFile(wn, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0666)
 	closew = true
 	defer func() {
-		if closew {
+		if w != nil && closew {
 			nm := w.Name()
 			w.Close()
 			os.Remove(nm)
@@ -554,7 +554,7 @@ func (s *file) OpenIndex(unique bool, handle int64) (btreeIndex, error) {
 		return nil, err
 	}
 
-	return &fileIndex{s, handle, t, unique}, nil
+	return &fileIndex{s, handle, t, unique, newGobCoder()}, nil
 }
 
 func (s *file) CreateIndex(unique bool) ( /* handle */ int64, btreeIndex, error) {
@@ -563,7 +563,7 @@ func (s *file) CreateIndex(unique bool) ( /* handle */ int64, btreeIndex, error)
 		return -1, nil, err
 	}
 
-	return h, &fileIndex{s, h, t, unique}, nil
+	return h, &fileIndex{s, h, t, unique, newGobCoder()}, nil
 }
 
 func (s *file) Acid() bool { return s.wal != nil }
@@ -1096,6 +1096,7 @@ type fileIndex struct {
 	h      int64
 	t      *lldb.BTree
 	unique bool
+	codec  *gobCoder
 }
 
 func (x *fileIndex) Clear() error {
@@ -1202,8 +1203,51 @@ func (x *fileIndex) Drop() error {
 	return x.f.a.Free(x.h)
 }
 
-func (x *fileIndex) Seek(indexedValues []interface{}) (indexIterator, bool, error) { //TODO(indices) blobs: +test
-	k, err := lldb.EncodeScalars(append(indexedValues, 0)...)
+// []interface{}{qltype, ...}->[]interface{}{lldb scalar type, ...}
+func (x *fileIndex) flatten(data []interface{}) (err error) {
+	for i, v := range data {
+		tag := 0
+		var b []byte
+		switch xx := v.(type) {
+		case []byte:
+			tag = qBlob
+			b = xx
+		case *big.Int:
+			tag = qBigInt
+			b, err = x.codec.encode(xx)
+		case *big.Rat:
+			tag = qBigRat
+			b, err = x.codec.encode(xx)
+		case time.Time:
+			tag = qTime
+			b, err = x.codec.encode(xx)
+		case time.Duration:
+			tag = qDuration
+			b, err = x.codec.encode(xx)
+		default:
+			continue
+		}
+		if err != nil {
+			return
+		}
+
+		var buf []byte
+		if buf, err = lldb.EncodeScalars([]interface{}{tag, b}...); err != nil {
+			return
+		}
+
+		data[i] = buf
+	}
+	return
+}
+
+func (x *fileIndex) Seek(indexedValues []interface{}) (indexIterator, bool, error) {
+	data := append(indexedValues, 0)
+	if err := x.flatten(data); err != nil {
+		return nil, false, err
+	}
+
+	k, err := lldb.EncodeScalars(data...)
 	if err != nil {
 		return nil, false, err
 	}

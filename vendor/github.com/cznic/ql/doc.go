@@ -14,6 +14,23 @@
 //
 // Change list
 //
+// 2016-07-06: Release v1.0.4 fixes a panic when closing the WAL file.
+//
+//	https://github.com/cznic/ql/pull/127
+//
+// 2016-04-03: Release v1.0.3 fixes a data race.
+//
+//	https://github.com/cznic/ql/issues/126
+//
+// 2016-03-23: Release v1.0.2 vendors github.com/cznic/exp/lldb and
+// github.com/camlistore/go4/lock.
+//
+// 2016-03-17: Release v1.0.1 adjusts for latest goyacc. Parser error messages
+// are improved and changed, but their exact form is not considered a API
+// change.
+//
+// 2016-03-05: The current version has been tagged v1.0.0.
+//
 // 2015-06-15: To improve compatibility with other SQL implementations, the
 // count built-in aggregate function now accepts * as its argument.
 //

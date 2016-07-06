@@ -251,7 +251,12 @@ func (t *BTree) Get(buf, key []byte) (value []byte, err error) {
 		return
 	}
 
-	value = need(len(buffer), buf)
+	if len(buffer) != 0 {
+		// The buffer cache returns nil for empty buffers, bypass it
+		value = need(len(buffer), buf)
+	} else {
+		value = []byte{}
+	}
 	copy(value, buffer)
 	return
 }
@@ -625,6 +630,18 @@ func (e *BTreeEnumerator) Next() (key, value []byte, err error) {
 
 	canRetry := true
 retry:
+	if e.enum.p == nil {
+		e.err = io.EOF
+		return nil, nil, e.err
+	}
+
+	if e.enum.index == e.enum.p.len() && e.enum.serial == e.enum.t.serial {
+		if err := e.enum.next(); err != nil {
+			e.err = err
+			return nil, nil, e.err
+		}
+	}
+
 	if key, value, err = e.enum.current(); err != nil {
 		if _, ok := err.(*ErrINVAL); !ok || !canRetry {
 			e.err = err
@@ -1348,7 +1365,13 @@ func (p btreeDataPage) valueField(index int) (b []byte, h int64) {
 }
 
 func (p btreeDataPage) value(a btreeStore, index int) (b []byte, err error) {
-	return p.content(a, 15+kKV+2*kKV*index)
+	value, err := p.content(a, 15+kKV+2*kKV*index)
+	if err == nil && value == nil {
+		// We have a valid page, no fetch error, the key is valid so return
+		// non-nil data
+		return []byte{}, nil
+	}
+	return value, err
 }
 
 func (p btreeDataPage) valueCopy(a btreeStore, index int) (b []byte, err error) {
@@ -1491,7 +1514,7 @@ func (p btreeDataPage) overflow(a btreeStore, root, ph, parent int64, parentInde
 			return nil, err
 		}
 
-		if left.len() < 2*kData {
+		if left.len() < 2*kData && index > 0 {
 
 			p, left = p.moveLeft(left, 1)
 			if err = a.Realloc(leftH, left); err != nil {
