@@ -19,7 +19,7 @@ func init() {
 	if err != nil {
 		return
 	}
-	out, err := exec.Command(getconf, "CLK_TCK").Output()
+	out, err := invoke.Command(getconf, "CLK_TCK")
 	// ignore errors
 	if err == nil {
 		i, err := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
@@ -121,7 +121,7 @@ func Info() ([]InfoStat, error) {
 				return ret, err
 			}
 			c.CPU = int32(t)
-		case "vendorId":
+		case "vendorId", "vendor_id":
 			c.VendorID = value
 		case "cpu family":
 			c.Family = value

@@ -200,7 +200,7 @@ import:
 - package: github.com/russross/blackfriday
   version: 300106c228d52c8941d4b3de6054a6062a86dda3
 - package: github.com/shirou/gopsutil
-  version: v2.0.0
+  version: v2.1
   subpackages:
   - cpu
   - host
