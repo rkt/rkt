@@ -534,6 +534,100 @@ var (
 		"error",
 	}
 
+	yyTokenLiteralStrings = map[int]string{
+		57347: "identifier",
+		57409: "OFFSET",
+		57404: "LIMIT",
+		57372: "DEFAULT",
+		57412: "ORDER",
+		57435: "WHERE",
+		57408: "NULL",
+		57361: "bigint",
+		57362: "bigrat",
+		57363: "blob",
+		57364: "bool",
+		57366: "byte",
+		57369: "complex128",
+		57370: "complex64",
+		57377: "duration",
+		57383: "float32",
+		57384: "float64",
+		57382: "float",
+		57394: "int16",
+		57395: "int32",
+		57396: "int64",
+		57397: "int8",
+		57393: "int",
+		57418: "rune",
+		57421: "string",
+		57423: "time",
+		57428: "uint16",
+		57429: "uint32",
+		57430: "uint64",
+		57431: "uint8",
+		57427: "uint",
+		57381: "false",
+		57346: "floating-point literal",
+		57388: "GROUP",
+		57348: "imaginary literal",
+		57349: "integer literal",
+		57407: "NOT",
+		57411: "OR",
+		57413: "||",
+		57350: "QL parameter",
+		57351: "string literal",
+		57425: "true",
+		57385: "FROM",
+		57358: "ASC",
+		57374: "DESC",
+		57357: "AS",
+		57354: "AND",
+		57355: "&&",
+		57360: "BETWEEN",
+		57390: "IN",
+		57378: "==",
+		57387: ">=",
+		57399: "IS",
+		57401: "<=",
+		57403: "LIKE",
+		57406: "!=",
+		57356: "&^",
+		57405: "<<",
+		57417: ">>",
+		57386: "FULL",
+		57402: "LEFT",
+		57415: "RIGHT",
+		57419: "SELECT",
+		57410: "ON",
+		57400: "JOIN",
+		57376: "DROP",
+		57379: "EXISTS",
+		57389: "IF",
+		57391: "INDEX",
+		57414: "OUTER",
+		57422: "TABLE",
+		57434: "VALUES",
+		57353: "ALTER",
+		57359: "BEGIN",
+		57368: "COMMIT",
+		57371: "CREATE",
+		57373: "DELETE",
+		57380: "EXPLAIN",
+		57392: "INSERT",
+		57416: "ROLLBACK",
+		57426: "TRUNCATE",
+		57433: "UPDATE",
+		57352: "ADD",
+		57365: "BY",
+		57420: "SET",
+		57367: "COLUMN",
+		57375: "DISTINCT",
+		57398: "INTO",
+		57436: "parse expression prefix",
+		57424: "TRANSACTION",
+		57432: "UNIQUE",
+	}
+
 	yyReductions = map[int]struct{ xsym, components int }{
 		0:   {0, 1},
 		1:   {190, 1},
@@ -1568,6 +1662,10 @@ func yySymName(c int) (s string) {
 		return yySymNames[x]
 	}
 
+	if c < 0x7f {
+		return __yyfmt__.Sprintf("'%c'", c)
+	}
+
 	return __yyfmt__.Sprintf("%d", c)
 }
 
@@ -1684,7 +1782,21 @@ yynewstate:
 			if !ok {
 				msg, ok = yyXErrors[yyXError{yyshift, -1}]
 			}
-			if !ok || msg == "" {
+			if yychar > 0 {
+				ls := yyTokenLiteralStrings[yychar]
+				if ls == "" {
+					ls = yySymName(yychar)
+				}
+				if ls != "" {
+					switch {
+					case msg == "":
+						msg = __yyfmt__.Sprintf("unexpected %s", ls)
+					default:
+						msg = __yyfmt__.Sprintf("unexpected %s, %s", ls, msg)
+					}
+				}
+			}
+			if msg == "" {
 				msg = "syntax error"
 			}
 			yylex.Error(msg)

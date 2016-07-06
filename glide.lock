@@ -1,5 +1,5 @@
-hash: 262928409ee0c00a98dba9f47fec1ebaa0d0ec82e662bf9eae314c6dcc74ae80
-updated: 2016-07-06T14:39:16.612873298+02:00
+hash: c98a3d0cb1340703d2bbf77ac3bf2f6e357c0de64fb02f5d502ffac399b5d5e5
+updated: 2016-07-06T16:44:19.414775414+02:00
 imports:
 - name: github.com/appc/docker2aci
   version: 355af275fa8d48b4ecdd361a5feaf173abff81e7
@@ -43,10 +43,6 @@ imports:
   - aws/request
   - private/protocol/rest
   - private/signer/v4
-- name: github.com/camlistore/go4
-  version: 9ba773eba85ab9e258ff516630f7f6474bc4535b
-  subpackages:
-  - lock
 - name: github.com/containernetworking/cni
   version: 5c3c17164270150467498a32c71436c7cd5501be
   subpackages:
@@ -122,18 +118,16 @@ imports:
   version: e2e747ce049fb910cff6b1fd7ad8faf3900939d5
 - name: github.com/cznic/bufs
   version: 3dcccbd7064a1689f9c093a988ea11ac00e21f51
-- name: github.com/cznic/exp
-  version: 36265f1914ea00990ff0b73f72350edf9b1850df
-  subpackages:
-  - lldb
 - name: github.com/cznic/fileutil
   version: 21ae57c9dce724a15e88bd9cd46d5668f3e880a5
 - name: github.com/cznic/mathutil
   version: 250d0b9d3304c5ea0c4cfc7d9efc7ee528b81f3b
 - name: github.com/cznic/ql
-  version: 77545ff365ff426dfab06c46d70fa77600cd55af
+  version: 2cbfdfc32e5e9575be5176b1f6f21d6445003617
   subpackages:
   - driver
+  - vendored/github.com/camlistore/go4/lock
+  - vendored/github.com/cznic/exp/lldb
 - name: github.com/cznic/sortutil
   version: d4401851b4c370f979b842fa1e45e0b3b718b391
 - name: github.com/cznic/strutil

@@ -44,10 +44,6 @@ import:
   - aws/request
   - private/protocol/rest
   - private/signer/v4
-- package: github.com/camlistore/go4
-  version: 9ba773eba85ab9e258ff516630f7f6474bc4535b
-  subpackages:
-  - lock
 - package: github.com/containernetworking/cni
   version: v0.3.0
   subpackages:
@@ -123,16 +119,12 @@ import:
   version: e2e747ce049fb910cff6b1fd7ad8faf3900939d5
 - package: github.com/cznic/bufs
   version: 3dcccbd7064a1689f9c093a988ea11ac00e21f51
-- package: github.com/cznic/exp
-  version: 36265f1914ea00990ff0b73f72350edf9b1850df
-  subpackages:
-  - lldb
 - package: github.com/cznic/fileutil
   version: 21ae57c9dce724a15e88bd9cd46d5668f3e880a5
 - package: github.com/cznic/mathutil
   version: 250d0b9d3304c5ea0c4cfc7d9efc7ee528b81f3b
 - package: github.com/cznic/ql
-  version: 77545ff365ff426dfab06c46d70fa77600cd55af
+  version: v1.0.4
   subpackages:
   - driver
 - package: github.com/cznic/sortutil

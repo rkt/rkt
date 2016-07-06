@@ -1241,8 +1241,8 @@ func (db *DB) run1(pc *TCtx, s stmt, arg ...interface{}) (rs Recordset, tnla, tn
 				return
 			}
 
-			db.beginTransaction()
 			db.rwmu.Lock()
+			db.beginTransaction()
 			db.cc = pc
 			db.tnl++
 			tnlb = db.tnl
