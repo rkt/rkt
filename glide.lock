@@ -1,5 +1,5 @@
-hash: ac083a9947f04c599d238227e4cb251313045d516a9075bbb4c6e88120789d69
-updated: 2016-06-30T12:56:38.421141147+02:00
+hash: 262928409ee0c00a98dba9f47fec1ebaa0d0ec82e662bf9eae314c6dcc74ae80
+updated: 2016-07-06T14:39:16.612873298+02:00
 imports:
 - name: github.com/appc/docker2aci
   version: 355af275fa8d48b4ecdd361a5feaf173abff81e7
@@ -209,7 +209,7 @@ imports:
 - name: github.com/russross/blackfriday
   version: 300106c228d52c8941d4b3de6054a6062a86dda3
 - name: github.com/shirou/gopsutil
-  version: e8f7a95747d711f34ddfe9dd9b825a84bd059dec
+  version: 22a03b5be3f384f558742929065778aa26471033
   subpackages:
   - cpu
   - host
