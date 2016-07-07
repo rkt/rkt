@@ -33,8 +33,8 @@ lib64/libc.so.6
 lib64/libdl-2.21.so
 lib64/libdl.so
 lib64/libdl.so.2
-lib64/libgcrypt.so.11
-lib64/libgcrypt.so.11.8.3
+lib64/libgcrypt.so.20
+lib64/libgcrypt.so.20.0.5
 lib64/libgpg-error.so.0
 lib64/libgpg-error.so.0.10.0
 lib64/libip4tc.so.0

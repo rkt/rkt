@@ -40,7 +40,7 @@ lib64/libgcc_s.so
 lib64/libgcc_s.so.1
 lib64/libgcrypt.so
 lib64/libgcrypt.so.20
-lib64/libgcrypt.so.20.0.3
+lib64/libgcrypt.so.20.0.5
 lib64/libgpg-error.so
 lib64/libgpg-error.so.0
 lib64/libgpg-error.so.0.10.0
@@ -75,7 +75,7 @@ lib64/librt.so
 lib64/librt.so.1
 lib64/libseccomp.so
 lib64/libseccomp.so.2
-lib64/libseccomp.so.2.1.1
+lib64/libseccomp.so.2.3.0
 lib64/libselinux.so
 lib64/libselinux.so.1
 lib64/libuuid.so
