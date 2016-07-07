@@ -24,7 +24,7 @@ import (
 )
 
 func TestRktStop(t *testing.T) {
-	image := patchTestACI("rkt-stop-test.aci", "--name=rkt-stop-test", "--exec=/inspect --read-stdin")
+	image := patchTestACI("rkt-stop-test.aci", "--name=rkt-stop-test", "--exec=/inspect --read-stdin --silent-sigterm")
 	defer os.Remove(image)
 
 	ctx := testutils.NewRktRunCtx()
