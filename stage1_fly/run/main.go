@@ -110,15 +110,24 @@ func init() {
 	flag.StringVar(&discardString, "local-config", common.DefaultLocalConfigDir, "Local config path")
 }
 
+func addMountPoints(namedVolumeMounts map[types.ACName]volumeMountTuple, mountpoints []types.MountPoint) error {
+	for _, mp := range mountpoints {
+		tuple, exists := namedVolumeMounts[mp.Name]
+		switch {
+		case exists && tuple.M.Path != mp.Path:
+			return fmt.Errorf("conflicting path information from mount and mountpoint %q", mp.Name)
+		case !exists:
+			namedVolumeMounts[mp.Name] = volumeMountTuple{M: schema.Mount{Volume: mp.Name, Path: mp.Path}}
+			diag.Printf("adding %+v", namedVolumeMounts[mp.Name])
+		}
+	}
+	return nil
+}
+
 func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMount, error) {
-	imApp := p.Images[app].App
 	namedVolumeMounts := map[types.ACName]volumeMountTuple{}
 
-	var manifestMPs []types.MountPoint
-	if imApp != nil {
-		manifestMPs = imApp.MountPoints
-	}
-
+	// Insert the PodManifest's first RuntimeApp's Mounts
 	for _, m := range p.Manifest.Apps[0].Mounts {
 		_, exists := namedVolumeMounts[m.Volume]
 		if exists {
@@ -129,15 +138,18 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 	}
 
 	// Merge command-line Mounts with ImageManifest's MountPoints
-	for _, mp := range manifestMPs {
-		tuple, exists := namedVolumeMounts[mp.Name]
-		switch {
-		case exists && tuple.M.Path != mp.Path:
-			return nil, fmt.Errorf("conflicting path information from mount and mountpoint %q", mp.Name)
-		case !exists:
-			namedVolumeMounts[mp.Name] = volumeMountTuple{M: schema.Mount{Volume: mp.Name, Path: mp.Path}}
-			diag.Printf("adding %+v", namedVolumeMounts[mp.Name])
+	var imAppManifestMPs []types.MountPoint
+	if imApp := p.Images[app].App; imApp != nil {
+		imAppManifestMPs = imApp.MountPoints
+		if err := addMountPoints(namedVolumeMounts, imAppManifestMPs); err != nil {
+			return nil, err
 		}
+	}
+
+	// Merge command-line Mounts with PodManifest's RuntimeApp's App's MountPoints
+	raApp := p.Manifest.Apps[0]
+	if err := addMountPoints(namedVolumeMounts, raApp.App.MountPoints); err != nil {
+		return nil, err
 	}
 
 	// Insert the command-line Volumes
@@ -155,7 +167,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 	}
 
 	// Merge command-line Volumes with ImageManifest's MountPoints
-	for _, mp := range manifestMPs {
+	for _, mp := range imAppManifestMPs {
 		// Check if we have a volume for this mountpoint
 		tuple, exists := namedVolumeMounts[mp.Name]
 		if !exists || tuple.V.Name == "" {
