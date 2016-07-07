@@ -4,9 +4,9 @@
 #
 set -e
 
-if ! [[ "$0" =~ "scripts/glide-update.sh" ]]; then
-	echo "must be run from repository root"
-	exit 255
+if ! [[ "$PWD" = "$GOPATH/src/github.com/coreos/rkt" ]]; then
+  echo "must be run from \$GOPATH/src/github.com/coreos/rkt"
+  exit 255
 fi
 
 if [ ! $(command -v glide) ]; then
