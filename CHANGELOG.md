@@ -1,8 +1,35 @@
 ## v1.10.0
+This release introduces a number of important features and improvements:
+
+- ARM64 support
+- A new subcommand `rkt stop` to gracefully stop running pods
+- native Go vendoring with Glide
+- rkt is now packaged for openSUSE Tumbleweed and Leap
+
+#### New features
+- Add ARM64 support ([#2758](https://github.com/coreos/rkt/pull/2758)). This enables ARM64 cross-compliation, fly, and stage1-coreos.
+- Replace Godep with Glide, introduce native Go vendoring ([#2735](https://github.com/coreos/rkt/pull/2735)).
+- rkt: rkt stop ([#2438](https://github.com/coreos/rkt/pull/2438)). Cleanly stops a running pod. For systemd-nspawn, sends a SIGTERM. For kvm, executes `systemctl halt`.
+
+#### Bug fixes
+- stage1/fly: respect runtimeApp App's MountPoints ([#2852](https://github.com/coreos/rkt/pull/2852)). Fixes #2846.
+- run: fix sandbox-side metadata service to comply to appc v0.8.1 ([#2863](https://github.com/coreos/rkt/pull/2863)). Fixes #2621.
 
 #### Other changes
-
 - build directory layout change ([#2758](https://github.com/coreos/rkt/pull/2758)): The rkt binary and stage1 image files have been moved from the 'bin' sub-directory to the 'target/bin' sub-directory.
+- networking/kvm: add flannel default gateway parsing ([#2859](https://github.com/coreos/rkt/pull/2859)).
+- stage1/enterexec: environment file with '\n' as separator (systemd style) ([#2839](https://github.com/coreos/rkt/pull/2839)).
+- pkg/tar: ignore global extended headers ([#2847](https://github.com/coreos/rkt/pull/2847)).
+- pkg/tar: remove errwrap ([#2848](https://github.com/coreos/rkt/pull/2848)).
+- tests: fix abuses of appc types.Isolator ([#2840](https://github.com/coreos/rkt/pull/2840)).
+- common: remove unused GetImageIDs() ([#2834](https://github.com/coreos/rkt/pull/2834)).
+- common/cgroup: add mountFsRO() helper function ([#2829](https://github.com/coreos/rkt/pull/2829)).
+- Documentation updates ([#2732](https://github.com/coreos/rkt/pull/2732), [#2869](https://github.com/coreos/rkt/pull/2869), [#2810](https://github.com/coreos/rkt/pull/2810), [#2865](https://github.com/coreos/rkt/pull/2865), [#2825](https://github.com/coreos/rkt/pull/2825), [#2841](https://github.com/coreos/rkt/pull/2841), [#2732](https://github.com/coreos/rkt/pull/2732))
+
+#### Library updates
+- glide: bump ql to v1.0.4 ([#2875](https://github.com/coreos/rkt/pull/2875)). It fixes an occassional panic when doing GC.
+- glide: bump gopsutils to 2.1 ([#2876](https://github.com/coreos/rkt/pull/2876)). To include https://github.com/shirou/gopsutil/pull/194 (this adds ARM aarch64 support)
+- vendor: update appc/spec to 0.8.5 ([#2854](https://github.com/coreos/rkt/pull/2854)).
 
 ## v1.9.1
 
