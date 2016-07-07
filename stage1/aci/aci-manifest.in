@@ -30,6 +30,10 @@
             "value": "/gc"
         },
         {
+            "name": "coreos.com/rkt/stage1/stop",
+            "value": "@RKT_STAGE1_STOP@"
+        },
+        {
             "name": "coreos.com/rkt/stage1/interface-version",
             "value": "2"
         }

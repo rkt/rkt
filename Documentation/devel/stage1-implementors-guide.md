@@ -104,6 +104,17 @@ For example, it removes the network namespace of a pod.
 * `--debug` to activate debugging
 * UUID of the pod
 
+### `rkt stop` => "coreos.com/rkt/stage1/stop"
+
+The optional stop entrypoint initiates an orderly shutdown of stage1.
+
+In the bundled rkt stage 1, the entrypoint is sending SIGTERM signal to systemd-nspawn. Fore kvm flavor, it is calling `systemctl halt` on the container (through SSH) for kvm flavor
+
+#### Arguments
+
+* `--force` to force the stopping of the pod. E.g. in the bundled rkt stage 1, stop sends SIGKILL
+* UUID of the pod
+
 ## Versioning
 
 The stage1 command line interface is versioned using an annotation with the name `coreos.com/rkt/stage1/interface-version`.
@@ -146,6 +157,10 @@ The current version of the stage1 interface is 2.
         {
             "name": "coreos.com/rkt/stage1/gc",
             "value": "/ex/gc"
+        },
+        {
+            "name": "coreos.com/rkt/stage1/stop",
+            "value": "/ex/stop"
         },
         {
             "name": "coreos.com/rkt/stage1/interface-version",
