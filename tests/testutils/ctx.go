@@ -144,6 +144,12 @@ func (ctx *RktRunCtx) Reset() {
 
 func (ctx *RktRunCtx) cleanupChildren() error {
 	for _, child := range ctx.children {
+		if child.Cmd == nil ||
+			child.Cmd.Process == nil ||
+			child.Cmd.ProcessState == nil {
+			continue
+		}
+
 		if child.Cmd.ProcessState.Exited() {
 			logger.Logf("Child %q already exited", child.Cmd.Path)
 			continue
