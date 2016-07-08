@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"syscall"
 
@@ -57,10 +56,10 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	aci := args[1]
-	ext := filepath.Ext(aci)
+	outACI := args[1]
+	ext := filepath.Ext(outACI)
 	if ext != schema.ACIExtension {
-		stderr.Printf("extension must be %s (given %s)", schema.ACIExtension, aci)
+		stderr.Printf("extension must be %s (given %s)", schema.ACIExtension, outACI)
 		return 1
 	}
 
@@ -88,32 +87,47 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 	}
 	app := apps[0]
 
+	root := common.AppPath(p.path(), app.Name)
+	manifestPath := filepath.Join(common.AppInfoPath(p.path(), app.Name), aci.ManifestFile)
 	if p.usesOverlay() {
-		tmpMntDir := path.Join(getDataDir(), "tmp", fmt.Sprintf("rkt-export-%s", p.uuid))
-		if err := os.MkdirAll(tmpMntDir, common.DefaultRegularDirPerm); err != nil {
+		tmpDir := filepath.Join(getDataDir(), "tmp")
+		if err := os.MkdirAll(tmpDir, common.DefaultRegularDirPerm); err != nil {
 			stderr.PrintE("unable to create temp directory", err)
 			return 1
 		}
-
-		mntDir, err := mountOverlay(p, &app, tmpMntDir)
+		podDir, err := ioutil.TempDir(tmpDir, fmt.Sprintf("rkt-export-%s", p.uuid))
 		if err != nil {
-			stderr.PrintE(fmt.Sprintf("couldn't mount directory at %s", tmpMntDir), err)
+			stderr.PrintE("unable to create export temp directory", err)
+			return 1
+		}
+		defer func() {
+			if err := os.RemoveAll(podDir); err != nil {
+				stderr.PrintE("problem removing temp directory", err)
+				exit = 1
+			}
+		}()
+		mntDir := filepath.Join(podDir, "rootfs")
+		if err := os.Mkdir(mntDir, common.DefaultRegularDirPerm); err != nil {
+			stderr.PrintE("unable to create rootfs directory inside temp directory", err)
+			return 1
+		}
+
+		if err := mountOverlay(p, &app, mntDir); err != nil {
+			stderr.PrintE(fmt.Sprintf("couldn't mount directory at %s", mntDir), err)
+			return 1
 		}
 		defer func() {
 			if err := syscall.Unmount(mntDir, 0); err != nil {
 				stderr.PrintE(fmt.Sprintf("error unmounting directory %s", mntDir), err)
 				exit = 1
 			}
-			if err := os.RemoveAll(tmpMntDir); err != nil {
-				stderr.PrintE("problem removing temp directory", err)
-				exit = 1
-			}
 		}()
+		root = podDir
 	}
 
 	// Check for user namespace (--private-user), if in use get uidRange
 	var uidRange *user.UidRange
-	privUserFile := path.Join(p.path(), common.PrivateUsersPreparedFilename)
+	privUserFile := filepath.Join(p.path(), common.PrivateUsersPreparedFilename)
 	privUserContent, err := ioutil.ReadFile(privUserFile)
 	if err == nil {
 		uidRange = user.NewBlankUidRange()
@@ -124,8 +138,7 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 		}
 	}
 
-	root := common.AppPath(p.path(), app.Name)
-	if err = buildAci(root, aci, uidRange); err != nil {
+	if err = buildAci(root, manifestPath, outACI, uidRange); err != nil {
 		stderr.PrintE("error building aci", err)
 		return 1
 	}
@@ -133,45 +146,44 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 }
 
 // mountOverlay mounts the app from the overlay-rendered pod to the destination directory.
-func mountOverlay(pod *pod, app *schema.RuntimeApp, dest string) (string, error) {
+func mountOverlay(pod *pod, app *schema.RuntimeApp, dest string) error {
 	if _, err := os.Stat(dest); err != nil {
-		return "", err
+		return err
 	}
 
 	s, err := store.NewStore(getDataDir())
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("cannot open store"), err)
+		return errwrap.Wrap(errors.New("cannot open store"), err)
 	}
 
 	treeStoreID, err := pod.getAppTreeStoreID(app.Name)
 	if err != nil {
-		return "", err
+		return err
 	}
 	lower := s.GetTreeStoreRootFS(treeStoreID)
-	imgDir := path.Join(path.Join(pod.path(), "overlay"), treeStoreID)
+	imgDir := filepath.Join(filepath.Join(pod.path(), "overlay"), treeStoreID)
 	if _, err := os.Stat(imgDir); err != nil {
-		return "", err
+		return err
 	}
-	upper := path.Join(imgDir, "upper", app.Name.String())
+	upper := filepath.Join(imgDir, "upper", app.Name.String())
 	if _, err := os.Stat(upper); err != nil {
-		return "", err
+		return err
 	}
-	work := path.Join(imgDir, "work", app.Name.String())
+	work := filepath.Join(imgDir, "work", app.Name.String())
 	if _, err := os.Stat(work); err != nil {
-		return "", err
+		return err
 	}
 
-	mntDir, err := overlay.Mount(&overlay.MountCfg{lower, upper, work, dest, ""})
-	if err != nil {
-		return "", errwrap.Wrap(errors.New("problem mounting overlayfs directory"), err)
+	if err := overlay.Mount(&overlay.MountCfg{lower, upper, work, dest, ""}); err != nil {
+		return errwrap.Wrap(errors.New("problem mounting overlayfs directory"), err)
 	}
 
-	return mntDir, nil
+	return nil
 }
 
 // buildAci builds a target aci from the root directory using any uid shift
 // information from uidRange.
-func buildAci(root, target string, uidRange *user.UidRange) (e error) {
+func buildAci(root, manifestPath, target string, uidRange *user.UidRange) (e error) {
 	mode := os.O_CREATE | os.O_WRONLY
 	if flagOverwriteACI {
 		mode |= os.O_TRUNC
@@ -201,8 +213,7 @@ func buildAci(root, target string, uidRange *user.UidRange) (e error) {
 		}
 	}()
 
-	mpath := filepath.Join(root, aci.ManifestFile)
-	b, err := ioutil.ReadFile(mpath)
+	b, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
 		return errwrap.Wrap(errors.New("unable to read Image Manifest"), err)
 	}

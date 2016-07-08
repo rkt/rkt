@@ -771,7 +771,7 @@ func overlayRender(cfg RunConfig, treeStoreID string, cdir string, dest string, 
 	if err != nil {
 		return errwrap.Wrap(errors.New("problem preparing overlay directories"), err)
 	}
-	if _, err = overlay.Mount(mc); err != nil {
+	if err = overlay.Mount(mc); err != nil {
 		return errwrap.Wrap(errors.New("problem mounting overlay filesystem"), err)
 	}
 

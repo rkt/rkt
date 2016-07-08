@@ -10,7 +10,7 @@ $ rkt export UUID .aci
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
-| `--overwrite` |  `false` | `true` or `false` | Overwrite the output aci if it exists  |
+| `--overwrite` |  `false` | `true` or `false` | Overwrite the output ACI if it exists  |
 
 ## Global options
 
