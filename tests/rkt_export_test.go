@@ -38,6 +38,7 @@ func TestExport(t *testing.T) {
 		writeArgs      string
 		readArgs       string
 		expectedResult string
+		unmountOverlay bool
 	}
 
 	tests := []testCfg{
@@ -46,6 +47,7 @@ func TestExport(t *testing.T) {
 			"--write-file --file-name=" + testFile + " --content=" + testContent,
 			"--read-file --file-name=" + testFile,
 			testContent,
+			false,
 		},
 	}
 
@@ -57,6 +59,7 @@ func TestExport(t *testing.T) {
 				"--write-file --file-name=" + testFile + " --content=" + testContent,
 				"--read-file --file-name=" + testFile,
 				testContent,
+				false,
 			},
 		}...)
 	}
@@ -68,6 +71,15 @@ func TestExport(t *testing.T) {
 				"--write-file --file-name=" + testFile + " --content=" + testContent,
 				"--read-file --file-name=" + testFile,
 				testContent,
+				false,
+			},
+			// Test unmounting overlay to simulate a reboot
+			{
+				"--insecure-options=image",
+				"--write-file --file-name=" + testFile + " --content=" + testContent,
+				"--read-file --file-name=" + testFile,
+				testContent,
+				true,
 			},
 		}...)
 	}
@@ -88,6 +100,10 @@ func TestExport(t *testing.T) {
 		t.Logf("Running 'inspect --write-file'")
 		child := spawnOrFail(t, runCmd)
 		waitOrFail(t, child, 0)
+
+		if tt.unmountOverlay {
+			unmountPod(t, ctx, uuid, true)
+		}
 
 		// Export the image
 		exportCmd := fmt.Sprintf("%s export %s %s", ctx.Cmd(), uuid, tmpTestAci)

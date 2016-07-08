@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
 
 	"github.com/coreos/rkt/common"
@@ -99,31 +98,7 @@ func TestGCAfterUnmount(t *testing.T) {
 		cmd = fmt.Sprintf("%s run-prepared %s", ctx.Cmd(), uuid)
 		runRktAndCheckOutput(t, cmd, "", false)
 
-		podDir := filepath.Join(ctx.DataDir(), "pods", "run", uuid)
-		stage1MntPath := filepath.Join(podDir, "stage1", "rootfs")
-		stage2MntPath := filepath.Join(stage1MntPath, "opt", "stage2", "rkt-inspect", "rootfs")
-		netnsPath := filepath.Join(podDir, "netns")
-		podNetNSPathBytes, err := ioutil.ReadFile(netnsPath)
-		if err != nil {
-			t.Fatalf(`cannot read "netns" stage1: %v`, err)
-		}
-		podNetNSPath := string(podNetNSPathBytes)
-
-		if err := syscall.Unmount(stage2MntPath, 0); err != nil {
-			t.Fatalf("cannot umount stage2: %v", err)
-		}
-
-		if err := syscall.Unmount(stage1MntPath, 0); err != nil {
-			t.Fatalf("cannot umount stage1: %v", err)
-		}
-
-		if err := syscall.Unmount(podNetNSPath, 0); err != nil {
-			t.Fatalf("cannot umount pod netns: %v", err)
-		}
-
-		if rmNetns {
-			_ = os.RemoveAll(podNetNSPath)
-		}
+		unmountPod(t, ctx, uuid, rmNetns)
 
 		pods := podsRemaining(t, ctx)
 		if len(pods) == 0 {
