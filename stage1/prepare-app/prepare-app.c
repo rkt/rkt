@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define _GNU_SOURCE
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
@@ -138,6 +139,45 @@ static void mount_at(const char *root, const mount_point *mnt)
 		 "Mounting \"%s\" on \"%s\" failed", mnt->source, to);
 }
 
+static int mount_sys_required(const char *root)
+{
+	FILE *f;
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t read;
+
+	pexit_if((f = fopen("/proc/self/mountinfo", "re")) == NULL,
+		 "Unable to open /proc/self/mountinfo");
+
+	while ((read = getline(&line, &len, f)) != -1) {
+		char *sys_dir;
+		char *sys_subdir;
+		char *mountpoint;
+
+		exit_if(asprintf(&sys_dir, "%s/sys", root) == -1,
+			"Calling asprintf failed");
+		exit_if(asprintf(&sys_subdir, "%s/sys/", root) == -1,
+			"Calling asprintf failed");
+		sscanf(line, "%*s %*s %*s %*s %ms", &mountpoint);
+
+		// The mount point is exactly $ROOTFS/sys
+		if (strcmp(sys_dir, mountpoint) == 0) {
+			free(mountpoint);
+			return 0;
+		}
+		// The mount point is a subdirectory of $ROOTFS/sys
+		if (strncmp(sys_subdir, mountpoint, strlen(sys_subdir)) == 0) {
+			free(mountpoint);
+			return 0;
+		}
+
+		free(mountpoint);
+	}
+
+	pexit_if(fclose(f) != 0, "Unable to close /proc/self/mountinfo");
+
+	return 1;
+}
 static void mount_sys(const char *root)
 {
 	struct statfs fs;
@@ -327,7 +367,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* Bind mount /sys: handled differently, depending on cgroups */
-	mount_sys(root);
+	if (mount_sys_required(root))
+		mount_sys(root);
 
 	/* Bind mount files, if the source exists */
 	for (i = 0; i < nelems(files_mount_table); i++) {
