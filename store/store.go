@@ -219,6 +219,9 @@ func NewStore(baseDir string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := s.storeLock.SharedLock(); err != nil {
+		return nil, err
+	}
 
 	for i, p := range diskvStores {
 		s.stores[i] = diskv.New(diskv.Options{
