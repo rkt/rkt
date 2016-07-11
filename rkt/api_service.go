@@ -100,15 +100,20 @@ func (s *v1AlphaAPIServer) GetInfo(context.Context, *v1alpha.GetInfoRequest) (*v
 	}, nil
 }
 
-type valueGetter interface {
-	Get(string) (string, bool)
+func findInKeyValues(kvs []*v1alpha.KeyValue, key string) (string, bool) {
+	for _, kv := range kvs {
+		if kv.Key == key {
+			return kv.Value, true
+		}
+	}
+	return "", false
 }
 
 // containsAllKeyValues returns true if the actualKVs contains all of the key-value
 // pairs listed in requiredKVs, otherwise it returns false.
-func containsAllKeyValues(actualKVs valueGetter, requiredKVs []*v1alpha.KeyValue) bool {
+func containsAllKeyValues(actualKVs []*v1alpha.KeyValue, requiredKVs []*v1alpha.KeyValue) bool {
 	for _, requiredKV := range requiredKVs {
-		actualValue, ok := actualKVs.Get(requiredKV.Key)
+		actualValue, ok := findInKeyValues(actualKVs, requiredKV.Key)
 		if !ok || actualValue != requiredKV.Value {
 			return false
 		}
@@ -132,8 +137,8 @@ func isPartOf(keyword, s string) bool {
 }
 
 // satisfiesPodFilter returns true if the pod satisfies the filter.
-// The pod, manifest, filter must not be nil.
-func satisfiesPodFilter(pod v1alpha.Pod, manifest schema.PodManifest, filter v1alpha.PodFilter) bool {
+// The pod, filter must not be nil.
+func satisfiesPodFilter(pod v1alpha.Pod, filter v1alpha.PodFilter) bool {
 	// Filter according to the ID.
 	if len(filter.Ids) > 0 {
 		s := set.NewString(filter.Ids...)
@@ -191,7 +196,7 @@ func satisfiesPodFilter(pod v1alpha.Pod, manifest schema.PodManifest, filter v1a
 
 	// Filter according to the annotations.
 	if len(filter.Annotations) > 0 {
-		if !containsAllKeyValues(manifest.Annotations, filter.Annotations) {
+		if !containsAllKeyValues(pod.Annotations, filter.Annotations) {
 			return false
 		}
 	}
@@ -226,19 +231,14 @@ func satisfiesPodFilter(pod v1alpha.Pod, manifest schema.PodManifest, filter v1a
 
 // satisfiesAnyPodFilters returns true if any of the filter conditions is satisfied
 // by the pod, or there's no filters.
-func satisfiesAnyPodFilters(pod *v1alpha.Pod, manifest *schema.PodManifest, filters []*v1alpha.PodFilter) bool {
+func satisfiesAnyPodFilters(pod *v1alpha.Pod, filters []*v1alpha.PodFilter) bool {
 	// No filters, return true directly.
 	if len(filters) == 0 {
 		return true
 	}
 
-	// No manifest, but have filters, return false.
-	if manifest == nil {
-		return false
-	}
-
 	for _, filter := range filters {
-		if satisfiesPodFilter(*pod, *manifest, *filter) {
+		if satisfiesPodFilter(*pod, *filter) {
 			return true
 		}
 	}
@@ -300,9 +300,8 @@ func getNetworks(p *pod) []*v1alpha.Network {
 	return networks
 }
 
-// getBasicPod returns *v1alpha.Pod with basic pod information, it also returns a *schema.PodManifest
-// object.
-func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest) {
+// getBasicPod returns *v1alpha.Pod with basic pod information.
+func getBasicPod(p *pod) *v1alpha.Pod {
 	pod := &v1alpha.Pod{Id: p.uuid.String(), Pid: -1}
 
 	manifest, data, err := getPodManifest(p)
@@ -319,7 +318,7 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest) {
 		pod.State = v1alpha.PodState_POD_STATE_EMBRYO
 		// When a pod is in embryo state, there is not much
 		// information to return.
-		return pod, manifest
+		return pod
 	case Preparing:
 		pod.State = v1alpha.PodState_POD_STATE_PREPARING
 	case AbortedPrepare:
@@ -337,7 +336,7 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest) {
 		pod.State = v1alpha.PodState_POD_STATE_GARBAGE
 	default:
 		pod.State = v1alpha.PodState_POD_STATE_UNDEFINED
-		return pod, manifest
+		return pod
 	}
 
 	createdAt, err := p.getCreationTime()
@@ -394,7 +393,7 @@ func getBasicPod(p *pod) (*v1alpha.Pod, *schema.PodManifest) {
 		}
 	}
 
-	return pod, manifest
+	return pod
 }
 
 func waitForMachinedRegistration(uuid string) error {
@@ -419,10 +418,10 @@ func waitForMachinedRegistration(uuid string) error {
 func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPodsRequest) (*v1alpha.ListPodsResponse, error) {
 	var pods []*v1alpha.Pod
 	if err := walkPods(includeMostDirs, func(p *pod) {
-		pod, manifest := getBasicPod(p)
+		pod := getBasicPod(p)
 
 		// Filters are combined with 'OR'.
-		if !satisfiesAnyPodFilters(pod, manifest, request.Filters) {
+		if !satisfiesAnyPodFilters(pod, request.Filters) {
 			return
 		}
 
@@ -524,7 +523,7 @@ func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.Insp
 	}
 	defer p.Close()
 
-	pod, _ := getBasicPod(p)
+	pod := getBasicPod(p)
 
 	// Fill the extra pod info that is not available in ListPods(detail=false).
 	fillAppInfo(s.store, p, pod)
@@ -533,18 +532,17 @@ func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.Insp
 }
 
 // aciInfoToV1AlphaAPIImage takes an aciInfo object and construct the v1alpha.Image object.
-// It also returns the image manifest of the image.
-func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1alpha.Image, *schema.ImageManifest, error) {
+func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1alpha.Image, error) {
 	manifest, err := store.GetImageManifestJSON(aciInfo.BlobKey)
 	if err != nil {
 		stderr.PrintE("failed to read the image manifest", err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	var im schema.ImageManifest
 	if err = json.Unmarshal(manifest, &im); err != nil {
 		stderr.PrintE("failed to unmarshal image manifest", err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	version, ok := im.Labels.Get("version")
@@ -566,7 +564,8 @@ func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1al
 		Manifest:        manifest,
 		Size:            aciInfo.Size + aciInfo.TreeStoreSize,
 		Annotations:     convertAnnotationsToKeyValue(im.Annotations),
-	}, &im, nil
+		Labels:          convertLabelsToKeyValue(im.Labels),
+	}, nil
 }
 
 func convertAnnotationsToKeyValue(as types.Annotations) []*v1alpha.KeyValue {
@@ -581,9 +580,21 @@ func convertAnnotationsToKeyValue(as types.Annotations) []*v1alpha.KeyValue {
 	return kvs
 }
 
+func convertLabelsToKeyValue(ls types.Labels) []*v1alpha.KeyValue {
+	kvs := make([]*v1alpha.KeyValue, 0, len(ls))
+	for _, l := range ls {
+		kv := &v1alpha.KeyValue{
+			Key:   string(l.Name),
+			Value: l.Value,
+		}
+		kvs = append(kvs, kv)
+	}
+	return kvs
+}
+
 // satisfiesImageFilter returns true if the image satisfies the filter.
-// The image, manifest, filter must not be nil.
-func satisfiesImageFilter(image v1alpha.Image, manifest schema.ImageManifest, filter v1alpha.ImageFilter) bool {
+// The image, filter must not be nil.
+func satisfiesImageFilter(image v1alpha.Image, filter v1alpha.ImageFilter) bool {
 	// Filter according to the IDs.
 	if len(filter.Ids) > 0 {
 		s := set.NewString(filter.Ids...)
@@ -638,14 +649,14 @@ func satisfiesImageFilter(image v1alpha.Image, manifest schema.ImageManifest, fi
 
 	// Filter according to the image labels.
 	if len(filter.Labels) > 0 {
-		if !containsAllKeyValues(manifest.Labels, filter.Labels) {
+		if !containsAllKeyValues(image.Labels, filter.Labels) {
 			return false
 		}
 	}
 
 	// Filter according to the annotations.
 	if len(filter.Annotations) > 0 {
-		if !containsAllKeyValues(manifest.Annotations, filter.Annotations) {
+		if !containsAllKeyValues(image.Annotations, filter.Annotations) {
 			return false
 		}
 	}
@@ -655,13 +666,13 @@ func satisfiesImageFilter(image v1alpha.Image, manifest schema.ImageManifest, fi
 
 // satisfiesAnyImageFilters returns true if any of the filter conditions is satisfied
 // by the image, or there's no filters.
-func satisfiesAnyImageFilters(image *v1alpha.Image, manifest *schema.ImageManifest, filters []*v1alpha.ImageFilter) bool {
+func satisfiesAnyImageFilters(image *v1alpha.Image, filters []*v1alpha.ImageFilter) bool {
 	// No filters, return true directly.
 	if len(filters) == 0 {
 		return true
 	}
 	for _, filter := range filters {
-		if satisfiesImageFilter(*image, *manifest, *filter) {
+		if satisfiesImageFilter(*image, *filter) {
 			return true
 		}
 	}
@@ -677,11 +688,11 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 
 	var images []*v1alpha.Image
 	for _, aciInfo := range aciInfos {
-		image, manifest, err := aciInfoToV1AlphaAPIImage(s.store, aciInfo)
+		image, err := aciInfoToV1AlphaAPIImage(s.store, aciInfo)
 		if err != nil {
 			continue
 		}
-		if !satisfiesAnyImageFilters(image, manifest, request.Filters) {
+		if !satisfiesAnyImageFilters(image, request.Filters) {
 			continue
 		}
 		if !request.Detail {
@@ -706,7 +717,7 @@ func getImageInfo(store *store.Store, imageID string) (*v1alpha.Image, error) {
 		return nil, err
 	}
 
-	image, _, err := aciInfoToV1AlphaAPIImage(store, aciInfo)
+	image, err := aciInfoToV1AlphaAPIImage(store, aciInfo)
 	if err != nil {
 		stderr.PrintE(fmt.Sprintf("failed to convert ACI to v1alphaAPIImage for image %q", key), err)
 		return nil, err
