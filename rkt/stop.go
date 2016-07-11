@@ -27,7 +27,7 @@ import (
 
 var (
 	cmdStop = &cobra.Command{
-		Use:   "stop UUID ...",
+		Use:   "stop --uuid-file=FILE | UUID ...",
 		Short: "Stop a pod",
 		Run:   runWrapper(runStop),
 	}
@@ -37,25 +37,40 @@ var (
 func init() {
 	cmdRkt.AddCommand(cmdStop)
 	cmdStop.Flags().BoolVar(&flagForce, "force", false, "forced stopping")
+	cmdStop.Flags().StringVar(&flagUUIDFile, "uuid-file", "", "read pod UUID from file instead of argument")
 }
 
 func runStop(cmd *cobra.Command, args []string) (exit int) {
 	var podUUID *types.UUID
 	var podUUIDs []*types.UUID
+	var err error
 	var errors int
 
-	if len(args) < 1 {
-		cmd.Usage()
-		return 1
-	}
-
-	for _, uuid := range args {
-		podUUID, err := resolveUUID(uuid)
+	ret := 0
+	switch {
+	case len(args) == 0 && flagUUIDFile != "":
+		podUUID, err = readUUIDFromFile(flagUUIDFile)
 		if err != nil {
-			stderr.PrintE("stop: unable to resolve UUID: %v", err)
+			stderr.PrintE("unable to resolve UUID from file", err)
+			ret = 1
 		} else {
 			podUUIDs = append(podUUIDs, podUUID)
 		}
+
+	case len(args) > 0 && flagUUIDFile == "":
+		for _, uuid := range args {
+			podUUID, err := resolveUUID(uuid)
+			if err != nil {
+				stderr.PrintE("unable to resolve UUID", err)
+				ret = 1
+			} else {
+				podUUIDs = append(podUUIDs, podUUID)
+			}
+		}
+
+	default:
+		cmd.Usage()
+		return 1
 	}
 
 	for _, podUUID = range podUUIDs {
@@ -84,5 +99,5 @@ func runStop(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	return 0
+	return ret
 }
