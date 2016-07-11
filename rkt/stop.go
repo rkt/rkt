@@ -77,11 +77,11 @@ func runStop(cmd *cobra.Command, args []string) (exit int) {
 		p, err := getPod(podUUID)
 		if err != nil {
 			errors++
-			stderr.PrintE("stop: cannot get pod", err)
+			stderr.PrintE("cannot get pod", err)
 		}
 
 		if !p.isRunning() {
-			stderr.Error(fmt.Errorf("stop: pod %q is not running", p.uuid))
+			stderr.Error(fmt.Errorf("pod %q is not running", p.uuid))
 			errors++
 			continue
 		}
@@ -89,13 +89,13 @@ func runStop(cmd *cobra.Command, args []string) (exit int) {
 		if err := stage0.StopPod(p.path(), flagForce, podUUID); err == nil {
 			stdout.Printf("%q", p.uuid)
 		} else {
-			stderr.PrintE(fmt.Sprintf("stop: error stopping %q", p.uuid), err)
+			stderr.PrintE(fmt.Sprintf("error stopping %q", p.uuid), err)
 			errors++
 		}
 	}
 
 	if errors > 0 {
-		stderr.Error(fmt.Errorf("stop: failed to stop %d pod(s)", errors))
+		stderr.Error(fmt.Errorf("failed to stop %d pod(s)", errors))
 		return 1
 	}
 
