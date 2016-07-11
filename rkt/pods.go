@@ -1061,7 +1061,8 @@ func (p *pod) getDirNames(path string) ([]string, error) {
 }
 
 func (p *pod) usesOverlay() bool {
-	_, err := p.openFile(common.OverlayPreparedFilename, syscall.O_RDONLY)
+	f, err := p.openFile(common.OverlayPreparedFilename, syscall.O_RDONLY)
+	defer f.Close()
 	return err == nil
 }
 
