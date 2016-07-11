@@ -85,6 +85,10 @@ func (dl *dbLock) unlock() {
 	dl.Unlock()
 }
 
+func (dl *dbLock) close() error {
+	return dl.fl.Close()
+}
+
 type DB struct {
 	dbdir string
 	dl    *dbLock

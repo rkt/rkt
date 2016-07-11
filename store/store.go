@@ -310,7 +310,13 @@ func NewStore(baseDir string) (*Store, error) {
 
 // Close closes a Store opened with NewStore().
 func (s *Store) Close() error {
-	return s.storeLock.Close()
+	if err := s.storeLock.Close(); err != nil {
+		return err
+	}
+	if err := s.db.dl.close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // backupDB backs up current database.
