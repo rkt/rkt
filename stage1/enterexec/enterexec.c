@@ -181,7 +181,7 @@ static void set_env(const char *env_file)
 	char 		*line = NULL;
 	size_t 		len = 0;
 	ssize_t 	read;
-	char 		*v;
+	char 		*v, *nl;
 
 	pexit_if((f = fopen(env_file, "r")) == NULL,
              "Unable to fopen \"%s\"", env_file);
@@ -190,6 +190,9 @@ static void set_env(const char *env_file)
 				"Malformed environment entry: \"%s\"", line);
 		*v = '\0';
 		v++;
+		/* remove new line character */
+		if ((nl = strchr(v, '\n')) != NULL)
+			*nl = '\0';
 		pexit_if(setenv(line, v, 1) == -1,
 				 "Unable to set env variable: \"%s\"=\"%s\"", line, v);
 	}
