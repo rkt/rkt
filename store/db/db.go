@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package store
+package db
 
 import (
 	"database/sql"
@@ -25,6 +25,8 @@ import (
 )
 
 const (
+	defaultPathPerm = os.FileMode(0770 | os.ModeSetgid)
+
 	DbFilename = "ql.db"
 )
 
@@ -37,6 +39,10 @@ func NewDB(dbdir string) (*DB, error) {
 		return nil, err
 	}
 	return &DB{dbdir: dbdir}, nil
+}
+
+func (db *DB) Path() string {
+	return db.dbdir
 }
 
 type txfunc func(*sql.Tx) error

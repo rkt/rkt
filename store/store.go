@@ -31,6 +31,7 @@ import (
 
 	"github.com/coreos/rkt/pkg/backup"
 	"github.com/coreos/rkt/pkg/lock"
+	"github.com/coreos/rkt/store/db"
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/pkg/acirenderer"
@@ -100,7 +101,7 @@ func (e *StoreRemovalError) Error() string {
 type Store struct {
 	dir       string
 	stores    []*diskv.Diskv
-	db        *DB
+	db        *db.DB
 	treestore *TreeStore
 	// storeLock is a lock on the whole store. It's used for store migration. If
 	// a previous version of rkt is using the store and in the meantime a
@@ -232,7 +233,7 @@ func NewStore(baseDir string) (*Store, error) {
 			Transform: blockTransform,
 		})
 	}
-	db, err := NewDB(filepath.Join(storeDir, "db"))
+	db, err := db.NewDB(filepath.Join(storeDir, "db"))
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +318,7 @@ func (s *Store) Close() error {
 // backupDB backs up current database.
 func (s *Store) backupDB() error {
 	backupsDir := filepath.Join(s.dir, "db-backups")
-	return backup.CreateBackup(s.db.dbdir, backupsDir, backupsNumber)
+	return backup.CreateBackup(s.db.Path(), backupsDir, backupsNumber)
 }
 
 // TmpFile returns an *os.File local to the same filesystem as the Store, or
