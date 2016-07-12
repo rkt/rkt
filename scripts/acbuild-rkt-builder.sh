@@ -17,7 +17,7 @@ fi
 MODIFY=${MODIFY:-""}
 FLAGS=${FLAGS:-""}
 IMG_NAME="coreos.com/rkt/builder"
-IMG_VERSION=${VERSION:-"v1.10.0"}
+IMG_VERSION=${VERSION:-"v1.10.1"}
 ACI_FILE=rkt-builder.aci
 BUILDDIR=/opt/build-rkt
 SRC_DIR=/opt/rkt
