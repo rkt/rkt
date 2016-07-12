@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -30,20 +31,32 @@ func TestRktStop(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
+	tmpDir := createTempDirOrPanic("rkt-TestRktStop-")
+	defer os.RemoveAll(tmpDir)
+
 	// Define tests
 	tests := []struct {
 		cmd        string
+		uuidFile   bool
 		expectKill bool
 	}{
 		// Test regular stop
 		{
 			"stop",
 			false,
+			false,
 		},
 		// Test forced stop
 		{
 			"stop --force",
+			false,
 			true,
+		},
+		// Test uuid-file
+		{
+			"stop",
+			true,
+			false,
 		},
 	}
 
@@ -62,7 +75,20 @@ func TestRktStop(t *testing.T) {
 			t.Fatalf("Can't start pod")
 		}
 
-		runCmd := fmt.Sprintf("%s %s %s", ctx.Cmd(), tt.cmd, podUUID)
+		args := podUUID
+		if tt.uuidFile {
+			uuidFile, err := ioutil.TempFile(tmpDir, "uuid-file")
+			if err != nil {
+				panic(fmt.Sprintf("Cannot create uuid-file: %v", err))
+			}
+			uuidFilePath := uuidFile.Name()
+			if err := ioutil.WriteFile(uuidFilePath, []byte(podUUID), 0600); err != nil {
+				panic(fmt.Sprintf("Cannot write pod UUID to uuid-file: %v", err))
+			}
+			args = fmt.Sprintf("--uuid-file=%s", uuidFilePath)
+		}
+
+		runCmd := fmt.Sprintf("%s %s %s", ctx.Cmd(), tt.cmd, args)
 		t.Logf("Running test #%d, %s", i, runCmd)
 		spawnOrFail(t, runCmd)
 

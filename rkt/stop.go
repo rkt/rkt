@@ -27,7 +27,7 @@ import (
 
 var (
 	cmdStop = &cobra.Command{
-		Use:   "stop UUID ...",
+		Use:   "stop --uuid-file=FILE | UUID ...",
 		Short: "Stop a pod",
 		Run:   runWrapper(runStop),
 	}
@@ -37,36 +37,51 @@ var (
 func init() {
 	cmdRkt.AddCommand(cmdStop)
 	cmdStop.Flags().BoolVar(&flagForce, "force", false, "forced stopping")
+	cmdStop.Flags().StringVar(&flagUUIDFile, "uuid-file", "", "read pod UUID from file instead of argument")
 }
 
 func runStop(cmd *cobra.Command, args []string) (exit int) {
 	var podUUID *types.UUID
 	var podUUIDs []*types.UUID
+	var err error
 	var errors int
 
-	if len(args) < 1 {
-		cmd.Usage()
-		return 1
-	}
-
-	for _, uuid := range args {
-		podUUID, err := resolveUUID(uuid)
+	ret := 0
+	switch {
+	case len(args) == 0 && flagUUIDFile != "":
+		podUUID, err = readUUIDFromFile(flagUUIDFile)
 		if err != nil {
-			stderr.PrintE("stop: unable to resolve UUID: %v", err)
+			stderr.PrintE("unable to resolve UUID from file", err)
+			ret = 1
 		} else {
 			podUUIDs = append(podUUIDs, podUUID)
 		}
+
+	case len(args) > 0 && flagUUIDFile == "":
+		for _, uuid := range args {
+			podUUID, err := resolveUUID(uuid)
+			if err != nil {
+				stderr.PrintE("unable to resolve UUID", err)
+				ret = 1
+			} else {
+				podUUIDs = append(podUUIDs, podUUID)
+			}
+		}
+
+	default:
+		cmd.Usage()
+		return 1
 	}
 
 	for _, podUUID = range podUUIDs {
 		p, err := getPod(podUUID)
 		if err != nil {
 			errors++
-			stderr.PrintE("stop: cannot get pod", err)
+			stderr.PrintE("cannot get pod", err)
 		}
 
 		if !p.isRunning() {
-			stderr.Error(fmt.Errorf("stop: pod %q is not running", p.uuid))
+			stderr.Error(fmt.Errorf("pod %q is not running", p.uuid))
 			errors++
 			continue
 		}
@@ -74,15 +89,15 @@ func runStop(cmd *cobra.Command, args []string) (exit int) {
 		if err := stage0.StopPod(p.path(), flagForce, podUUID); err == nil {
 			stdout.Printf("%q", p.uuid)
 		} else {
-			stderr.PrintE(fmt.Sprintf("stop: error stopping %q", p.uuid), err)
+			stderr.PrintE(fmt.Sprintf("error stopping %q", p.uuid), err)
 			errors++
 		}
 	}
 
 	if errors > 0 {
-		stderr.Error(fmt.Errorf("stop: failed to stop %d pod(s)", errors))
+		stderr.Error(fmt.Errorf("failed to stop %d pod(s)", errors))
 		return 1
 	}
 
-	return 0
+	return ret
 }
