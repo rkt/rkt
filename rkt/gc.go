@@ -229,7 +229,7 @@ func deletePod(p *pod) {
 	}
 
 	if p.isExitedGarbage {
-		s, err := store.NewStore(getDataDir())
+		s, err := store.NewStore(storeDir())
 		if err != nil {
 			stderr.PrintE("cannot open store", err)
 			return

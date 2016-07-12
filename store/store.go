@@ -191,33 +191,31 @@ func (s *Store) populateSize() error {
 	return nil
 }
 
-func NewStore(baseDir string) (*Store, error) {
+func NewStore(dir string) (*Store, error) {
 	// We need to allow the store's setgid bits (if any) to propagate, so
 	// disable umask
 	um := syscall.Umask(0)
 	defer syscall.Umask(um)
 
-	storeDir := filepath.Join(baseDir, "cas")
-
 	s := &Store{
-		dir:    storeDir,
+		dir:    dir,
 		stores: make([]*diskv.Diskv, len(diskvStores)),
 	}
 
-	s.imageLockDir = filepath.Join(storeDir, "imagelocks")
+	s.imageLockDir = filepath.Join(dir, "imagelocks")
 	err := os.MkdirAll(s.imageLockDir, defaultPathPerm)
 	if err != nil {
 		return nil, err
 	}
 
-	s.treeStoreLockDir = filepath.Join(storeDir, "treestorelocks")
+	s.treeStoreLockDir = filepath.Join(dir, "treestorelocks")
 	err = os.MkdirAll(s.treeStoreLockDir, defaultPathPerm)
 	if err != nil {
 		return nil, err
 	}
 
 	// Take a shared cas lock
-	s.storeLock, err = lock.NewLock(storeDir, lock.Dir)
+	s.storeLock, err = lock.NewLock(dir, lock.Dir)
 	if err != nil {
 		return nil, err
 	}
@@ -229,17 +227,17 @@ func NewStore(baseDir string) (*Store, error) {
 		s.stores[i] = diskv.New(diskv.Options{
 			PathPerm:  defaultPathPerm,
 			FilePerm:  defaultFilePerm,
-			BasePath:  filepath.Join(storeDir, p),
+			BasePath:  filepath.Join(dir, p),
 			Transform: blockTransform,
 		})
 	}
-	db, err := db.NewDB(filepath.Join(storeDir, "db"))
+	db, err := db.NewDB(filepath.Join(dir, "db"))
 	if err != nil {
 		return nil, err
 	}
 	s.db = db
 
-	s.treestore = &TreeStore{path: filepath.Join(storeDir, "tree")}
+	s.treestore = &TreeStore{path: filepath.Join(dir, "tree")}
 
 	needsMigrate := false
 	needsSizePopulation := false

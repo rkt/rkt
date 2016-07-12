@@ -555,7 +555,7 @@ func TestRemoveACI(t *testing.T) {
 	na.BlobKey = key
 	s.WriteRemote(na)
 
-	err = os.Remove(filepath.Join(dir, "cas", "blob", blockTransform(key)[0], blockTransform(key)[1], key))
+	err = os.Remove(filepath.Join(dir, "blob", blockTransform(key)[0], blockTransform(key)[1], key))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
