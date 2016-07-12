@@ -563,8 +563,10 @@ AS_VAR_IF([cross_compiling], [no],
                                       [GOARCH_FOR_BUILD="amd64"],
                               [aarch64],
                                       [GOARCH_FOR_BUILD="arm64"],
-                              [powerpc],
+                              [powerpc | powerpc64],
                                       [GOARCH_FOR_BUILD="ppc64"],
+                              [powerpc64le],
+                                      [GOARCH_FOR_BUILD="ppc64le"],
                               [AC_MSG_RESULT([unknown]); AC_MSG_ERROR([*** Unknown build cpu: ${build_cpu}.  Set GOARCH_FOR_BUILD variable.])])
                       AC_MSG_RESULT([${GOARCH_FOR_BUILD}])],
                      [AC_MSG_RESULT([user supplied ${GOARCH_FOR_BUILD}])])])
