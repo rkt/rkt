@@ -29,6 +29,7 @@ GO_TEST_FUNC_ARGS ?=
 GO_ENV := $(strip \
 	GO15VENDOREXPERIMENT=1 \
 	GOARCH="$(GOARCH)" \
+	$(if $(GOARM),GOARM="$(GOARM)") \
 	CGO_ENABLED=1 \
 	CC="$(CC)" \
 	CXX="$(CXX)" \
