@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package store
+package imagestore
 
 import (
 	"database/sql"
@@ -912,8 +912,8 @@ func testMigrate(tt migrateTest) error {
 	}
 	defer os.RemoveAll(dir)
 
-	casDir := filepath.Join(dir, "cas")
-	db, err := db.NewDB(filepath.Join(casDir, "db"))
+	storeDir := filepath.Join(dir, "store")
+	db, err := db.NewDB(filepath.Join(storeDir, "db"))
 	if err != nil {
 		return err
 	}

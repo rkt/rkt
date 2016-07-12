@@ -22,7 +22,7 @@ import (
 	"os"
 
 	"github.com/coreos/rkt/rkt/config"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -32,7 +32,7 @@ import (
 // remote fetcher for asc.
 type httpOps struct {
 	InsecureSkipTLSVerify bool
-	S                     *store.Store
+	S                     *imagestore.Store
 	Headers               map[string]config.Headerer
 	Debug                 bool
 }

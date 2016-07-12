@@ -26,7 +26,8 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
+	"github.com/coreos/rkt/store/treestore"
 	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
@@ -195,7 +196,7 @@ func emptyGarbage() error {
 	return nil
 }
 
-func mountPodStage1(s *store.Store, p *pod) error {
+func mountPodStage1(ts *treestore.Store, p *pod) error {
 	if !p.usesOverlay() {
 		return nil
 	}
@@ -204,7 +205,7 @@ func mountPodStage1(s *store.Store, p *pod) error {
 	if err != nil {
 		return errwrap.Wrap(errors.New("error getting stage1 treeStoreID"), err)
 	}
-	s1rootfs := s.GetTreeStoreRootFS(s1Id)
+	s1rootfs := ts.GetRootFS(s1Id)
 
 	stage1Dir := common.Stage1RootfsPath(p.path())
 	overlayDir := filepath.Join(p.path(), "overlay")
@@ -229,18 +230,24 @@ func deletePod(p *pod) {
 	}
 
 	if p.isExitedGarbage {
-		s, err := store.NewStore(storeDir())
+		s, err := imagestore.NewStore(storeDir())
 		if err != nil {
 			stderr.PrintE("cannot open store", err)
 			return
 		}
 		defer s.Close()
 
+		ts, err := treestore.NewStore(treeStoreDir(), s)
+		if err != nil {
+			stderr.PrintE("cannot open store", err)
+			return
+		}
+
 		if globalFlags.Debug {
 			stage0.InitDebug()
 		}
 
-		if err := mountPodStage1(s, p); err == nil {
+		if err := mountPodStage1(ts, p); err == nil {
 			if err = stage0.GC(p.path(), p.uuid); err != nil {
 				stderr.PrintE(fmt.Sprintf("problem performing stage1 GC on %q", p.uuid), err)
 			}

@@ -41,10 +41,6 @@ func NewDB(dbdir string) (*DB, error) {
 	return &DB{dbdir: dbdir}, nil
 }
 
-func (db *DB) Path() string {
-	return db.dbdir
-}
-
 type txfunc func(*sql.Tx) error
 
 // Do Opens the db, executes DoTx and then Closes the DB

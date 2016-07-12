@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package store
+package treestore
 
 import (
 	"archive/tar"
@@ -20,20 +20,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"syscall"
 
 	specaci "github.com/appc/spec/aci"
+	"github.com/appc/spec/pkg/acirenderer"
 	"github.com/appc/spec/pkg/tarheader"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/fileutil"
+	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/user"
+	"github.com/coreos/rkt/store/imagestore"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -41,19 +46,152 @@ const (
 	hashfilename     = "hash"
 	renderedfilename = "rendered"
 	imagefilename    = "image"
+
+	// To ameliorate excessively long paths, keys for the (blob)store use
+	// only the first half of a sha512 rather than the entire sum
+	hashPrefix = "sha512-"
+	lenHash    = sha512.Size       // raw byte size
+	lenHashKey = (lenHash / 2) * 2 // half length, in hex characters
+	lenKey     = len(hashPrefix) + lenHashKey
+	minlenKey  = len(hashPrefix) + 2 // at least sha512-aa
 )
 
-// TreeStore represents a store of rendered ACIs
-type TreeStore struct {
-	path string
+// Store represents a store of rendered ACIs
+type Store struct {
+	dir string
+	// TODO(sgotti) make this an interface (acirenderer.ACIRegistry) when the ACIStore functions to update treestore size will be removed
+	store   *imagestore.Store
+	lockDir string
 }
 
-// Write renders the ACI with the provided key in the treestore. id references
+func NewStore(dir string, store *imagestore.Store) (*Store, error) {
+	// TODO(sgotti) backward compatibility with the current tree store paths. Needs a migration path to better paths.
+	ts := &Store{dir: filepath.Join(dir, "tree"), store: store}
+
+	ts.lockDir = filepath.Join(dir, "treestorelocks")
+	if err := os.MkdirAll(ts.lockDir, 0755); err != nil {
+		return nil, err
+	}
+	return ts, nil
+}
+
+// GetID calculates the treestore ID for the given image key.
+// The treeStoreID is computed as an hash of the flattened dependency tree
+// image keys. In this way the ID may change for the same key if the image's
+// dependencies change.
+func (ts *Store) GetID(key string) (string, error) {
+	hash, err := types.NewHash(key)
+	if err != nil {
+		return "", err
+	}
+	images, err := acirenderer.CreateDepListFromImageID(*hash, ts.store)
+	if err != nil {
+		return "", err
+	}
+
+	var keys []string
+	for _, image := range images {
+		keys = append(keys, image.Key)
+	}
+	imagesString := strings.Join(keys, ",")
+	h := sha512.New()
+	h.Write([]byte(imagesString))
+	return "deps-" + hashToKey(h), nil
+}
+
+// Render renders a treestore for the given image key if it's not
+// already fully rendered.
+// Users of treestore should call s.Render before using it to ensure
+// that the treestore is completely rendered.
+// Returns the id and hash of the rendered treestore if it is newly rendered,
+// and only the id if it is already rendered.
+func (ts *Store) Render(key string, rebuild bool) (id string, hash string, err error) {
+	id, err = ts.GetID(key)
+	if err != nil {
+		return "", "", errwrap.Wrap(errors.New("cannot calculate treestore id"), err)
+	}
+
+	// this lock references the treestore dir for the specified id.
+	treeStoreKeyLock, err := lock.ExclusiveKeyLock(ts.lockDir, id)
+	if err != nil {
+		return "", "", errwrap.Wrap(errors.New("error locking tree store"), err)
+	}
+	defer treeStoreKeyLock.Close()
+
+	if !rebuild {
+		rendered, err := ts.IsRendered(id)
+		if err != nil {
+			return "", "", errwrap.Wrap(errors.New("cannot determine if tree is already rendered"), err)
+		}
+		if rendered {
+			return id, "", nil
+		}
+	}
+	// Firstly remove a possible partial treestore if existing.
+	// This is needed as a previous ACI removal operation could have failed
+	// cleaning the tree store leaving some stale files.
+	if err := ts.remove(id); err != nil {
+		return "", "", err
+	}
+	if hash, err = ts.render(id, key); err != nil {
+		return "", "", err
+	}
+
+	return id, hash, nil
+}
+
+// Check verifies the treestore consistency for the specified id.
+func (ts *Store) Check(id string) (string, error) {
+	treeStoreKeyLock, err := lock.SharedKeyLock(ts.lockDir, id)
+	if err != nil {
+		return "", errwrap.Wrap(errors.New("error locking tree store"), err)
+	}
+	defer treeStoreKeyLock.Close()
+
+	return ts.check(id)
+}
+
+// Remove removes the rendered image in tree store with the given id.
+func (ts *Store) Remove(id string) error {
+	treeStoreKeyLock, err := lock.ExclusiveKeyLock(ts.lockDir, id)
+	if err != nil {
+		return errwrap.Wrap(errors.New("error locking tree store"), err)
+	}
+	defer treeStoreKeyLock.Close()
+
+	if err := ts.remove(id); err != nil {
+		return errwrap.Wrap(errors.New("error removing the tree store"), err)
+	}
+
+	return nil
+}
+
+// GetIDs returns a slice containing all the treeStore's IDs available
+// (both fully or partially rendered).
+func (ts *Store) GetIDs() ([]string, error) {
+	var treeStoreIDs []string
+	ls, err := ioutil.ReadDir(ts.dir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, errwrap.Wrap(errors.New("cannot read treestore directory"), err)
+		}
+	}
+
+	for _, p := range ls {
+		if p.IsDir() {
+			id := filepath.Base(p.Name())
+			treeStoreIDs = append(treeStoreIDs, id)
+		}
+	}
+	return treeStoreIDs, nil
+}
+
+// render renders the ACI with the provided key in the treestore. id references
 // that specific tree store rendered image.
-// Write, to avoid having a rendered ACI with old stale files, requires that
-// the destination directory doesn't exist (usually Remove should be called
-// before Write)
-func (ts *TreeStore) Write(id string, key string, s *Store) (string, error) {
+// render, to avoid having a rendered ACI with old stale files, requires that
+// the destination directory doesn't exist (usually remove should be called
+// before render)
+func (ts *Store) render(id string, key string) (string, error) {
 	treepath := ts.GetPath(id)
 	fi, _ := os.Stat(treepath)
 	if fi != nil {
@@ -66,7 +204,7 @@ func (ts *TreeStore) Write(id string, key string, s *Store) (string, error) {
 	if err := os.MkdirAll(treepath, 0755); err != nil {
 		return "", errwrap.Wrap(fmt.Errorf("cannot create treestore directory %s", treepath), err)
 	}
-	err = aci.RenderACIWithImageID(*imageID, treepath, s, user.NewBlankUidRange())
+	err = aci.RenderACIWithImageID(*imageID, treepath, ts.store, user.NewBlankUidRange())
 	if err != nil {
 		return "", errwrap.Wrap(errors.New("cannot render aci"), err)
 	}
@@ -104,20 +242,26 @@ func (ts *TreeStore) Write(id string, key string, s *Store) (string, error) {
 		return "", errwrap.Wrap(errors.New("failed to sync tree store directory"), err)
 	}
 
+	// TODO(sgotti) this is wrong for various reasons:
+	// * Doesn't consider that can there can be multiple treestore per ACI
+	// (and fixing this adding/subtracting sizes is bad since cannot be
+	// atomic and could bring to duplicated/missing subtractions causing
+	// wrong sizes)
+	// * ImageStore and TreeStore are decoupled (TreeStore should just use acirenderer.ACIRegistry interface)
 	treeSize, err := ts.Size(id)
 	if err != nil {
 		return "", err
 	}
 
-	if err := s.UpdateTreeStoreSize(key, treeSize); err != nil {
+	if err := ts.store.UpdateTreeStoreSize(key, treeSize); err != nil {
 		return "", err
 	}
 
 	return string(hash), nil
 }
 
-// Remove cleans the directory for the provided id
-func (ts *TreeStore) Remove(id string, s *Store) error {
+// remove cleans the directory for the provided id
+func (ts *Store) remove(id string) error {
 	treepath := ts.GetPath(id)
 	// If tree path doesn't exist we're done
 	_, err := os.Stat(treepath)
@@ -151,24 +295,22 @@ func (ts *TreeStore) Remove(id string, s *Store) error {
 		}
 	}
 
-	key, err := ts.GetImageHash(id)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "store: warning: tree store in a bad state, forcing removal\n")
-	}
+	// Ignore error retrieving image hash
+	key, _ := ts.GetImageHash(id)
 
 	if err := os.RemoveAll(treepath); err != nil {
 		return err
 	}
 
 	if key != "" {
-		return s.UpdateTreeStoreSize(key, 0)
+		return ts.store.UpdateTreeStoreSize(key, 0)
 	}
 
 	return nil
 }
 
 // IsRendered checks if the tree store with the provided id is fully rendered
-func (ts *TreeStore) IsRendered(id string) (bool, error) {
+func (ts *Store) IsRendered(id string) (bool, error) {
 	// if the "rendered" flag file exists, assume that the store is already
 	// fully rendered.
 	treepath := ts.GetPath(id)
@@ -185,21 +327,21 @@ func (ts *TreeStore) IsRendered(id string) (bool, error) {
 // GetPath returns the absolute path of the treestore for the provided id.
 // It doesn't ensure that the path exists and is fully rendered. This should
 // be done calling IsRendered()
-func (ts *TreeStore) GetPath(id string) string {
-	return filepath.Join(ts.path, id)
+func (ts *Store) GetPath(id string) string {
+	return filepath.Join(ts.dir, id)
 }
 
 // GetRootFS returns the absolute path of the rootfs for the provided id.
 // It doesn't ensure that the rootfs exists and is fully rendered. This should
 // be done calling IsRendered()
-func (ts *TreeStore) GetRootFS(id string) string {
+func (ts *Store) GetRootFS(id string) string {
 	return filepath.Join(ts.GetPath(id), "rootfs")
 }
 
 // Hash calculates an hash of the rendered ACI. It uses the same functions
 // used to create a tar but instead of writing the full archive is just
 // computes the sha512 sum of the file infos and contents.
-func (ts *TreeStore) Hash(id string) (string, error) {
+func (ts *Store) Hash(id string) (string, error) {
 	treepath := ts.GetPath(id)
 
 	hash := sha512.New()
@@ -214,9 +356,9 @@ func (ts *TreeStore) Hash(id string) (string, error) {
 	return hashstring, nil
 }
 
-// Check calculates the actual rendered ACI's hash and verifies that it matches
+// check calculates the actual rendered ACI's hash and verifies that it matches
 // the saved value. Returns the calculated hash.
-func (ts *TreeStore) Check(id string) (string, error) {
+func (ts *Store) check(id string) (string, error) {
 	treepath := ts.GetPath(id)
 	hash, err := ioutil.ReadFile(filepath.Join(treepath, hashfilename))
 	if err != nil {
@@ -234,7 +376,7 @@ func (ts *TreeStore) Check(id string) (string, error) {
 
 // Size returns the size of the rootfs for the provided id. It is a relatively
 // expensive operation, it goes through all the files and adds up their size.
-func (ts *TreeStore) Size(id string) (int64, error) {
+func (ts *Store) Size(id string) (int64, error) {
 	sz, err := fileutil.DirSize(ts.GetPath(id))
 	if err != nil {
 		return -1, errwrap.Wrap(errors.New("error calculating size"), err)
@@ -244,7 +386,7 @@ func (ts *TreeStore) Size(id string) (int64, error) {
 
 // GetImageHash returns the hash of the image that uses the tree store
 // identified by id.
-func (ts *TreeStore) GetImageHash(id string) (string, error) {
+func (ts *Store) GetImageHash(id string) (string, error) {
 	treepath := ts.GetPath(id)
 
 	imgHash, err := ioutil.ReadFile(filepath.Join(treepath, imagefilename))
@@ -409,4 +551,9 @@ func (aw *imageHashWriter) AddFile(hdr *tar.Header, r io.Reader) error {
 
 func (aw *imageHashWriter) Close() error {
 	return nil
+}
+
+func hashToKey(h hash.Hash) string {
+	s := h.Sum(nil)
+	return fmt.Sprintf("%s%x", hashPrefix, s)[0:lenKey]
 }

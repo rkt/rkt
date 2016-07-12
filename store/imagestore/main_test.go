@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE.BSD file,
 // or at https://opensource.org/licenses/BSD-3-Clause
 
-package store
+package imagestore
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ func interestingGoroutines() (gs []string) {
 			strings.Contains(stack, "created by testing.RunTests") ||
 			strings.Contains(stack, "testing.Main(") ||
 			strings.Contains(stack, "runtime.goexit") ||
-			strings.Contains(stack, "github.com/coreos/rkt/store.interestingGoroutines") ||
+			strings.Contains(stack, "github.com/coreos/rkt/store/imagestore.interestingGoroutines") ||
 			strings.Contains(stack, "created by runtime.gc") ||
 			strings.Contains(stack, "runtime.MHeap_Scavenger") {
 			continue

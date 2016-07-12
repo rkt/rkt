@@ -32,7 +32,8 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/overlay"
 	"github.com/coreos/rkt/pkg/user"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
+	"github.com/coreos/rkt/store/treestore"
 	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 )
@@ -195,16 +196,21 @@ func mountOverlay(pod *pod, app *schema.RuntimeApp, dest string) error {
 		return err
 	}
 
-	s, err := store.NewStore(getDataDir())
+	s, err := imagestore.NewStore(getDataDir())
 	if err != nil {
 		return errwrap.Wrap(errors.New("cannot open store"), err)
+	}
+
+	ts, err := treestore.NewStore(treeStoreDir(), s)
+	if err != nil {
+		return errwrap.Wrap(errors.New("cannot open treestore"), err)
 	}
 
 	treeStoreID, err := pod.getAppTreeStoreID(app.Name)
 	if err != nil {
 		return err
 	}
-	lower := s.GetTreeStoreRootFS(treeStoreID)
+	lower := ts.GetRootFS(treeStoreID)
 	imgDir := filepath.Join(filepath.Join(pod.path(), "overlay"), treeStoreID)
 	if _, err := os.Stat(imgDir); err != nil {
 		return err

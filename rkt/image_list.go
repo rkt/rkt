@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	rktflag "github.com/coreos/rkt/rkt/flag"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
 	"github.com/dustin/go-humanize"
 
 	"github.com/appc/spec/schema"
@@ -164,7 +164,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 		fmt.Fprintf(tabOut, "%s\n", strings.Join(headerFields, "\t"))
 	}
 
-	s, err := store.NewStore(storeDir())
+	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
 		return 1
@@ -176,7 +176,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 		return 1
 	}
 
-	remoteMap := make(map[string]*store.Remote)
+	remoteMap := make(map[string]*imagestore.Remote)
 	for _, r := range remotes {
 		remoteMap[r.BlobKey] = r
 	}
