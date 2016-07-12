@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/networking"
 	rktlog "github.com/coreos/rkt/pkg/log"
 )
@@ -127,6 +128,16 @@ func cleanupCgroups() error {
 		return errwrap.Wrap(errors.New("error reading subcgroup file"), err)
 	}
 	subcgroup := string(b)
+
+	// if we're trying to clean up our own cgroup it means we're running in the
+	// same unit file as the rkt pod. We don't have to do anything, systemd
+	// will do the cleanup for us
+	ourCgroupPath, err := cgroup.GetOwnCgroupPath("name=systemd")
+	if err == nil {
+		if strings.HasPrefix(ourCgroupPath, "/"+subcgroup) {
+			return nil
+		}
+	}
 
 	f, err := os.Open(cgroupFsPath)
 	if err != nil {
