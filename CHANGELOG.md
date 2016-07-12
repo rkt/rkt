@@ -1,3 +1,11 @@
+## v1.10.1
+
+This is a minor bug fix release.
+
+#### Bug fixes
+- rkt/run: handle malformed environment files ([#2901](https://github.com/coreos/rkt/pull/2901))
+- stage1/enterexec: remove trailing `\n` in environment variables ([#2901](https://github.com/coreos/rkt/pull/2901))
+
 ## v1.10.0
 This release introduces a number of important features and improvements:
 

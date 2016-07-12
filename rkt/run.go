@@ -421,18 +421,6 @@ type envFileMap struct {
 	mapping map[string]string
 }
 
-func skipLine(s []string) bool {
-	// Empty line
-	if len(s) == 0 {
-		return true
-	}
-	// Line start with '#' and ';'
-	if string(s[0][0]) == "#" || string(s[0][0]) == ";" {
-		return true
-	}
-	return false
-}
-
 func (e *envFileMap) Set(s string) error {
 	if e.mapping == nil {
 		e.mapping = make(map[string]string)
@@ -445,13 +433,18 @@ func (e *envFileMap) Set(s string) error {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		// TODO parse '\' to skip new line character
-		pair := strings.SplitN(scanner.Text(), "=", 2)
-		if skipLine(pair) {
+		// Skip empty lines
+		if len(scanner.Text()) == 0 {
 			continue
 		}
-		if len(pair) != 2 {
+		pair := strings.SplitN(scanner.Text(), "=", 2)
+		// Malformed lines
+		if len(pair) != 2 || len(pair[0]) == 0 {
 			return fmt.Errorf("environment variable must be specified as name=value (file %q)", file)
+		}
+		// Skip comments
+		if string(pair[0][0]) == "#" || string(pair[0][0]) == ";" {
+			continue
 		}
 		if _, exists := e.mapping[pair[0]]; exists {
 			return fmt.Errorf("environment variable %q already set (file %q)", pair[0], file)
