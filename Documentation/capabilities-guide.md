@@ -7,6 +7,7 @@ This document is a walk-through guide describing how to use rkt isolators for
 * [Default Capabilities](#default-capabilities)
 * [Capability Isolators](#capability-isolators)
 * [Usage Example](#usage-example)
+* [Overriding Capabilities](#overriding-capabilities)
 * [Recommendations](#recommendations)
 
 ## About Linux Capabilities
@@ -210,9 +211,9 @@ For example, using `nc` to bind to port 80 will now result in a failure due to
 the missing `CAP_NET_BIND_SERVICE` capability:
 
 ```
-$ sudo rkt run --interactive --insecure-options=image caps-remove-set-example.aci
+$ sudo rkt run --interactive --insecure-options=image caps-retain-set-example.aci
 image: using image from file stage1-coreos.aci
-image: using image from file caps-remove-set-example.aci
+image: using image from file caps-retain-set-example.aci
 image: using image from local store for image name quay.io/coreos/alpine-sh
 
 / # whoami
@@ -221,6 +222,105 @@ root
 / # nc -v -l -p 80
 nc: bind: Permission denied
 ```
+
+## Overriding capabilities
+
+Capability sets are typically defined when creating images, as they are tightly
+linked to specific app requirements. However, image consumers may need to further
+tweak/restrict the set of available capabilities in specific local scenarios.
+This can be done either by permanently patching the manifest of specific images, or
+by overriding capability isolators with command line options.
+
+### Patching images
+
+Image manifests can be manipulated manually, by unpacking the image and editing
+the manifest file, or with helper tools like `actool`.
+To override an image's pre-defined capabilities set, replace the existing capabilities
+isolators in the image with new isolators defining the desired capabilities.
+
+The `patch-manifest` subcommand to `actool` manipulates the capabilities sets
+defined in an image.
+`actool patch-manifest --capability` changes the `retain` capabilities set.
+`actool patch-manifest --revoke-capability` changes the `remove` set.
+These commands take an input image, modify its existing capabilities sets, and
+write the changes to an output image, as shown in the example:
+
+```
+$ actool cat-manifest caps-retain-set-example.aci
+...
+    "isolators": [
+      {
+        "name": "os/linux/capabilities-retain-set",
+        "value": {
+          "set": [
+            "CAP_NET_RAW"
+          ]
+        }
+      }
+    ]
+...
+
+$ actool patch-manifest -capability CAP_NET_RAW,CAP_NET_BIND_SERVICE caps-retain-set-example.aci caps-retain-set-patched.aci
+
+$ actool cat-manifest caps-retain-set-patched.aci
+...
+    "isolators": [
+      {
+        "name": "os/linux/capabilities-retain-set",
+        "value": {
+          "set": [
+            "CAP_NET_RAW",
+            "CAP_NET_BIND_SERVICE"
+          ]
+        }
+      }
+    ]
+...
+
+```
+
+Now run the image to check that the `CAP_NET_BIND_SERVICE` capability added to
+the patched image is retained as expected by using `nc` to listen on a
+"privileged" port:
+
+```
+$ sudo rkt run --interactive --insecure-options=image caps-retain-set-patched.aci
+image: using image from file stage1-coreos.aci
+image: using image from file caps-retain-set-patched.aci
+image: using image from local store for image name quay.io/coreos/alpine-sh
+
+/ # nc -v -l -p 80
+listening on [::]:80 ...
+```
+
+### Overriding capabilities at run-time
+
+Capabilities can be directly overridden at run time from the command-line,
+without changing the executed images.
+The `--cap-retain` option to `rkt run` manipulates the `retain` capabilities set.
+The `--cap-remove` option manipulates the `remove` set.
+
+Capabilities isolators can be added on the command line at run time by
+specifying the desired overriding set, as shown in this example:
+
+```
+$ sudo rkt run --interactive quay.io/coreos/alpine-sh --cap-retain CAP_NET_BIND_SERVICE
+image: using image from file /usr/local/bin/stage1-coreos.aci
+image: using image from local store for image name quay.io/coreos/alpine-sh
+
+/ # whoami
+root
+
+/ # ping -c 1 8.8.8.8
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+ping: permission denied (are you root?)
+
+```
+
+Capability sets are application-specific configuration entries, and in a
+`rkt run` command line, they must follow the application container image to
+which they apply.
+Each application within a pod can have different capability sets.
 
 ## Recommendations
 
@@ -236,5 +336,5 @@ set of capabilities requirements and follow best practices:
  3. Avoid granting overly generic capabilities. For example, `CAP_SYS_ADMIN` and
     `CAP_SYS_PTRACE` are typically bad choices, as they open large attack
     surfaces.
- 4. Prefer a blacklisting approach, trying to keep the "retain-set" as small as
+ 4. Prefer a whitelisting approach, trying to keep the "retain-set" as small as
     possible.
