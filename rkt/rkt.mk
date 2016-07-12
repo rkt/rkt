@@ -43,8 +43,8 @@ bash-completion: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 		grep -vE '_test.go|main.go|_gen.go' | \
 		$(GO_ENV) xargs "$(GO)" run $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/bash_completion_gen.go
 
-protobuf:
-	scripts/genproto.sh
+protobuf: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
+	GOPATH=$(GOPATH_TO_CREATE) scripts/genproto.sh
 
 $(call undefine-namespaces,LOCAL)
 # RKT_STAMP deliberately not cleared
