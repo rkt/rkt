@@ -29,18 +29,22 @@ $(BGB_BINARY): $(MK_PATH) | $(TARGET_BINDIR)
 
 include makelib/build_go_bin.mk
 
+LOCAL_DIST_SRC_FILTER := '_test.go|main.go|_gen.go|_stub.go'
+
+$(call forward-vars,manpages,LOCAL_DIST_SRC_FILTER)
 manpages: GO_ENV += GOARCH=$(GOARCH_FOR_BUILD) CC=$(CC_FOR_BUILD)
 manpages: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 	mkdir -p dist/manpages/
 	ls $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/*.go | \
-		grep -vE '_test.go|main.go|_gen.go' | \
+		grep -vE $(LOCAL_DIST_SRC_FILTER) | \
 		$(GO_ENV) xargs "$(GO)" run $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/manpages_gen.go
 
+$(call forward-vars,bash-completion,LOCAL_DIST_SRC_FILTER)
 bash-completion: GO_ENV += GOARCH=$(GOARCH_FOR_BUILD) CC=$(CC_FOR_BUILD)
 bash-completion: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 	mkdir -p dist/bash_completion/
 	ls $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/*.go | \
-		grep -vE '_test.go|main.go|_gen.go' | \
+		grep -vE $(LOCAL_DIST_SRC_FILTER) | \
 		$(GO_ENV) xargs "$(GO)" run $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/bash_completion_gen.go
 
 protobuf:

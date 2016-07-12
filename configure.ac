@@ -142,6 +142,14 @@ AC_ARG_ENABLE([tpm],
               [RKT_ENABLE_TPM="${enableval}"],
               [RKT_ENABLE_TPM="yes"])
 
+## Systemd-journal support on host
+
+AC_ARG_ENABLE([sdjournal],
+              [AS_HELP_STRING([--enable-sdjournal],
+                              [enable systemd-journal features on host, use 'auto' to enable it if the required development files are found, default: 'yes'])],
+              [RKT_ENABLE_SDJOURNAL="${enableval}"],
+              [RKT_ENABLE_SDJOURNAL="yes"])
+
 ## insecure go
 
 AC_ARG_ENABLE([insecure-go],
@@ -573,12 +581,6 @@ AC_CHECK_LIB([c], [fork],
 # Check whether we can build TPM support code
 AC_CHECK_HEADER(trousers/tss.h, [HAVE_TPM=yes], [HAVE_TPM=no], [AC_INCLUDES_DEFAULT])
 
-# Check whether we have libsystemd-journal (needed by the API server)
-AC_CHECK_HEADER([systemd/sd-journal.h],
-                           [],
-                           [AC_MSG_ERROR([*** No development headers for libsystemd-journal found])],
-                           [AC_INCLUDES_DEFAULT])
-
 TPM_TAGS=''
 AS_CASE([${RKT_ENABLE_TPM}],
         [no],
@@ -599,6 +601,30 @@ AS_CASE([${RKT_ENABLE_TPM}],
                 [RKT_ADD_FEATURE '-TPM'],
         [yes],
                 [RKT_ADD_FEATURE '+TPM'])
+
+# Check whether we have libsystemd-journal (for go-systemd/sdjournal)
+AC_CHECK_HEADER([systemd/sd-journal.h], [HAVE_SDJOURNAL=yes], [HAVE_SDJOURNAL=no], [AC_INCLUDES_DEFAULT])
+
+SDJOURNAL_TAGS=''
+AS_CASE([${RKT_ENABLE_SDJOURNAL}],
+        [no],
+                dnl nothing to do
+                [:],
+        [auto],
+                [AS_VAR_IF([HAVE_SDJOURNAL],[yes],
+                           [SDJOURNAL_TAGS=sdjournal
+                            RKT_ENABLE_SDJOURNAL=yes],
+                           [RKT_ENABLE_SDJOURNAL=no])],
+        [yes],
+                [AS_VAR_IF([HAVE_SDJOURNAL],[no],
+                           [AC_MSG_ERROR([*** Host systemd-journal support enabled, but could not find required development files])])
+                 SDJOURNAL_TAGS=sdjournal],
+        [AC_MSG_ERROR([*** Invalid value passed to --enable-sdjournal, should be either 'yes', 'no' or 'auto'])])
+AS_CASE([${RKT_ENABLE_SDJOURNAL}],
+        [no],
+                [RKT_ADD_FEATURE '-SDJOURNAL'],
+        [yes],
+                [RKT_ADD_FEATURE '+SDJOURNAL'])
 
 AC_LANG_POP([C])
 
@@ -696,6 +722,7 @@ AC_SUBST(RKT_VERSION_LDFLAGS)
 AC_SUBST(RKT_FEATURES_LDFLAGS)
 
 AC_SUBST(TPM_TAGS)
+AC_SUBST(SDJOURNAL_TAGS)
 
 AC_SUBST(RKT_DEFINES_FOR_ENTER)
 
