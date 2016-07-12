@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package store
+package backup
 
 import (
 	"fmt"
@@ -23,6 +23,8 @@ import (
 	"testing"
 )
 
+const tstprefix = "backup-test"
+
 // TestBackup tests backup creation with limit 4
 func TestBackup(t *testing.T) {
 	dir, err := ioutil.TempDir("", tstprefix)
@@ -30,21 +32,21 @@ func TestBackup(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	dbDir := filepath.Join(dir, "db")
-	backupsDir := filepath.Join(dir, "db-backups")
+	srcDir := filepath.Join(dir, "src")
+	backupsDir := filepath.Join(dir, "backups")
 	limit := 4
 
 	for i := 0; i < limit*2; i++ {
-		if err := os.RemoveAll(dbDir); err != nil {
-			t.Fatalf("error removing dbdir: %v", err)
+		if err := os.RemoveAll(srcDir); err != nil {
+			t.Fatalf("error removing srcDir: %v", err)
 		}
-		if err := os.MkdirAll(dbDir, 0755); err != nil {
-			t.Fatalf("error creating dbdir: %v", err)
+		if err := os.MkdirAll(srcDir, 0755); err != nil {
+			t.Fatalf("error creating srcDir: %v", err)
 		}
-		if err := touch(filepath.Join(dbDir, strconv.Itoa(i))); err != nil {
+		if err := touch(filepath.Join(srcDir, strconv.Itoa(i))); err != nil {
 			t.Fatalf("error creating a file: %v", err)
 		}
-		if err := createBackup(dbDir, backupsDir, limit); err != nil {
+		if err := CreateBackup(srcDir, backupsDir, limit); err != nil {
 			t.Fatalf("error creating a backup: %v", err)
 		}
 		if err := checkBackups(backupsDir, limit, i); err != nil {
@@ -72,7 +74,7 @@ func checkBackups(backupsDir string, limit, i int) error {
 // Expectations for limit L
 //
 // for iteration I (0, 1, 2, ...)
-// at most D directories (where D = min(L,I + 1)
+// at most D srcDir (where D = min(L,I + 1)
 // dir 0 with file I
 // dir 1 with file I - 1
 // ...

@@ -29,14 +29,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/coreos/rkt/pkg/backup"
 	"github.com/coreos/rkt/pkg/lock"
-	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/pkg/acirenderer"
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/peterbourgon/diskv"
 )
 
@@ -316,7 +317,7 @@ func (s *Store) Close() error {
 // backupDB backs up current database.
 func (s *Store) backupDB() error {
 	backupsDir := filepath.Join(s.dir, "db-backups")
-	return createBackup(s.db.dbdir, backupsDir, backupsNumber)
+	return backup.CreateBackup(s.db.dbdir, backupsDir, backupsNumber)
 }
 
 // TmpFile returns an *os.File local to the same filesystem as the Store, or
