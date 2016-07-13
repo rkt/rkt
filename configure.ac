@@ -42,9 +42,12 @@ AC_CANONICAL_HOST
 AC_CANONICAL_BUILD
 
 AS_CASE([${host_cpu}],
-        [aarch64], [RKT_ACI_ARCH=aarch64; GOARCH=arm64;],
-        [x86_64],  [RKT_ACI_ARCH=amd64; GOARCH=amd64;],
-        [AC_MSG_ERROR([*** unsupported host architecture specified: ${host_cpu}])])
+        [aarch64],    [RKT_ACI_ARCH=aarch64; GOARCH=arm64;],
+        [armv6l],     [RKT_ACI_ARCH=armv6l;  GOARCH=arm; GOARM=6;],
+        [armv7l],     [RKT_ACI_ARCH=armv7l;  GOARCH=arm; GOARM=7;],
+        [i?86 | x86], [RKT_ACI_ARCH=i386;    GOARCH=i386;],
+        [x86_64],     [RKT_ACI_ARCH=amd64;   GOARCH=amd64;],
+        [AC_MSG_ERROR([*** unsupported host arch specified: ${host_cpu}])])
 
 #### FLAGS
 
@@ -550,6 +553,15 @@ AS_IF([test "x${RKT_RUN_FUNCTIONAL_TESTS}" = 'xyes' -o "x${RKT_RUN_FUNCTIONAL_TE
 
 ## Miscellaneous stuff
 
+# Check if arch is supported for coreos/kvm flavor.
+AS_CASE([${RKT_ACI_ARCH}],
+        dnl supported arches
+        [aarch64 | amd64], [],
+        dnl unsupported arches
+        [RKT_IF_HAS_FLAVOR([${RKT_STAGE1_FLAVORS}], [coreos,kvm],
+                           [AC_MSG_ERROR([*** ${RKT_ACI_ARCH}: no arch support for stage1 flavors {coreos,kvm}])],
+                           [AC_MSG_WARN([* ${RKT_ACI_ARCH}: unsupported arch])])])
+
 # cross_compiling is a standard autoconf variable.  See the autoconf manual for
 # details.
 AS_VAR_IF([cross_compiling], [no],
@@ -563,8 +575,10 @@ AS_VAR_IF([cross_compiling], [no],
                                       [GOARCH_FOR_BUILD="amd64"],
                               [aarch64],
                                       [GOARCH_FOR_BUILD="arm64"],
-                              [powerpc],
+                              [powerpc | powerpc64],
                                       [GOARCH_FOR_BUILD="ppc64"],
+                              [powerpc64le],
+                                      [GOARCH_FOR_BUILD="ppc64le"],
                               [AC_MSG_RESULT([unknown]); AC_MSG_ERROR([*** Unknown build cpu: ${build_cpu}.  Set GOARCH_FOR_BUILD variable.])])
                       AC_MSG_RESULT([${GOARCH_FOR_BUILD}])],
                      [AC_MSG_RESULT([user supplied ${GOARCH_FOR_BUILD}])])])
@@ -711,6 +725,7 @@ AC_SUBST(RKT_STAGE1_COREOS_BOARD)
 AC_SUBST(RKT_RUN_FUNCTIONAL_TESTS)
 
 AC_SUBST(GOARCH)
+AC_SUBST(GOARM)
 AC_SUBST(GOARCH_FOR_BUILD)
 
 AC_SUBST(RKT_STAGE1_DEFAULT_NAME_LDFLAGS)
