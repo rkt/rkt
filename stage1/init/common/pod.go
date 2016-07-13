@@ -155,7 +155,7 @@ func WritePrepareAppTemplate(p *stage1commontypes.Pod) error {
 	return nil
 }
 
-func writeAppReaper(p *stage1commontypes.Pod, appName string) error {
+func writeAppReaper(p *stage1commontypes.Pod, appName string, appRootDirectory string, binPath string) error {
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("%s Reaper", appName)),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
@@ -166,7 +166,7 @@ func writeAppReaper(p *stage1commontypes.Pod, appName string) error {
 		unit.NewUnitOption("Unit", "Conflicts", "halt.target"),
 		unit.NewUnitOption("Unit", "Conflicts", "poweroff.target"),
 		unit.NewUnitOption("Service", "RemainAfterExit", "yes"),
-		unit.NewUnitOption("Service", "ExecStop", fmt.Sprintf("/reaper.sh %s", appName)),
+		unit.NewUnitOption("Service", "ExecStop", fmt.Sprintf("/reaper.sh \"%s\" \"%s\" \"%s\"", appName, appRootDirectory, binPath)),
 	}
 
 	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), UnitsDir)
@@ -604,7 +604,7 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		return errwrap.Wrap(errors.New("failed to link service want"), err)
 	}
 
-	if err = writeAppReaper(p, appName.String()); err != nil {
+	if err = writeAppReaper(p, appName.String(), common.RelAppRootfsPath(appName), binPath); err != nil {
 		return errwrap.Wrap(fmt.Errorf("failed to write app %q reaper service", appName), err)
 	}
 
