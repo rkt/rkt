@@ -45,7 +45,7 @@ AS_CASE([${host_cpu}],
         [aarch64],    [RKT_ACI_ARCH=aarch64; GOARCH=arm64;],
         [armv6l],     [RKT_ACI_ARCH=armv6l;  GOARCH=arm; GOARM=6;],
         [armv7l],     [RKT_ACI_ARCH=armv7l;  GOARCH=arm; GOARM=7;],
-        [i?86 | x86], [RKT_ACI_ARCH=i386;    GOARCH=i386;],
+        [i?86 | x86], [RKT_ACI_ARCH=i386;    GOARCH=386;],
         [x86_64],     [RKT_ACI_ARCH=amd64;   GOARCH=amd64;],
         [AC_MSG_ERROR([*** unsupported host arch specified: ${host_cpu}])])
 
