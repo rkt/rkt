@@ -51,8 +51,6 @@ After merging and going back to master branch, we check out the release version 
 
 - `git checkout HEAD^` should work; sanity check configure.ac (2nd line) after doing this
 - Build rkt inside rkt (so make sure you have rkt in your $PATH), we'll use this in a minute:
-  - `git clean -ffdx && sudo ./scripts/acbuild-rkt-builder.sh`
-  - `rkt --insecure-options=image fetch ./rkt-builder.aci`
   - `export BUILDDIR=$PWD/release-build && mkdir -p $BUILDDIR && sudo BUILDDIR=$BUILDDIR ./scripts/build-rir.sh`
   - Sanity check `release-build/target/bin/rkt version`
   - Sanity check `ldd release-build/target/bin/rkt`: it can contain linux-vdso.so, libpthread.so, libc.so, libdl.so and ld-linux-x86-64.so but nothing else.
