@@ -16,16 +16,19 @@ package main
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/gzip"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/overlay"
 	"github.com/coreos/rkt/pkg/user"
@@ -48,6 +51,37 @@ Note that currently only pods with a single app can be exported.`,
 func init() {
 	cmdRkt.AddCommand(cmdExport)
 	cmdExport.Flags().BoolVar(&flagOverwriteACI, "overwrite", false, "overwrite output ACI")
+}
+
+func appHasMountpoints(podPath string, appName types.ACName) (bool, error) {
+	appRootfs := common.AppRootfsPath(podPath, appName)
+	// add a filepath separator so we don't match the appRootfs path
+	appRootfs += string(filepath.Separator)
+
+	mi, err := os.Open("/proc/self/mountinfo")
+	if err != nil {
+		return false, err
+	}
+	defer mi.Close()
+
+	sc := bufio.NewScanner(mi)
+	for sc.Scan() {
+		line := sc.Text()
+		lineResult := strings.Split(line, " ")
+		if len(lineResult) < 7 {
+			return false, fmt.Errorf("not enough fields from line %q: %+v", line, lineResult)
+		}
+
+		mp := lineResult[4]
+
+		if strings.HasPrefix(mp, appRootfs) {
+			return true, nil
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
 func runExport(cmd *cobra.Command, args []string) (exit int) {
@@ -123,6 +157,16 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 			}
 		}()
 		root = podDir
+	} else {
+		hasMPs, err := appHasMountpoints(p.path(), app.Name)
+		if err != nil {
+			stderr.PrintE("error parsing mountpoints", err)
+			return 1
+		}
+		if hasMPs {
+			stderr.Printf("pod has remaining mountpoints. Only pods using overlayfs or with no mountpoints can be exported")
+			return 1
+		}
 	}
 
 	// Check for user namespace (--private-user), if in use get uidRange
