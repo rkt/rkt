@@ -20,110 +20,110 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/tests/testutils"
 )
 
-func TestExport(t *testing.T) {
-	const (
-		testFile    = "test.txt"
-		testContent = "ThisIsATest"
-	)
+const (
+	testFile    = "test.txt"
+	testContent = "ThisIsATest"
+)
 
+type ExportTestCase struct {
+	runArgs        string
+	writeArgs      string
+	readArgs       string
+	expectedResult string
+	unmountOverlay bool
+}
+
+type exportTest []ExportTestCase
+
+var (
+	noOverlaySimpleTest = ExportTestCase{
+		"--no-overlay --insecure-options=image",
+		"--write-file --file-name=" + testFile + " --content=" + testContent,
+		"--read-file --file-name=" + testFile,
+		testContent,
+		false,
+	}
+
+	userNS = ExportTestCase{
+		"--private-users --no-overlay --insecure-options=image",
+		"--write-file --file-name=" + testFile + " --content=" + testContent,
+		"--read-file --file-name=" + testFile,
+		testContent,
+		false,
+	}
+
+	overlaySimpleTest = ExportTestCase{
+		"--insecure-options=image",
+		"--write-file --file-name=" + testFile + " --content=" + testContent,
+		"--read-file --file-name=" + testFile,
+		testContent,
+		false,
+	}
+
+	overlaySimulateReboot = ExportTestCase{
+		"--insecure-options=image",
+		"--write-file --file-name=" + testFile + " --content=" + testContent,
+		"--read-file --file-name=" + testFile,
+		testContent,
+		true,
+	}
+)
+
+func (ct exportTest) Execute(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	type testCfg struct {
-		runArgs        string
-		writeArgs      string
-		readArgs       string
-		expectedResult string
-		unmountOverlay bool
+	for _, testCase := range ct {
+		testCase.Execute(t, ctx)
+	}
+}
+
+func (ct ExportTestCase) Execute(t *testing.T, ctx *testutils.RktRunCtx) {
+	tmpDir := createTempDirOrPanic("rkt-TestExport-tmp-")
+	defer os.RemoveAll(tmpDir)
+
+	tmpTestAci := filepath.Join(tmpDir, "test.aci")
+
+	// Prepare the image with modifications
+	const runInspect = "%s %s %s %s --exec=/inspect -- %s"
+	prepareCmd := fmt.Sprintf(runInspect, ctx.Cmd(), "prepare", ct.runArgs, getInspectImagePath(), ct.writeArgs)
+	t.Logf("Preparing 'inspect --write-file'")
+	uuid := runRktAndGetUUID(t, prepareCmd)
+
+	runCmd := fmt.Sprintf("%s run-prepared %s", ctx.Cmd(), uuid)
+	t.Logf("Running 'inspect --write-file'")
+	child := spawnOrFail(t, runCmd)
+	waitOrFail(t, child, 0)
+
+	if ct.unmountOverlay {
+		unmountPod(t, ctx, uuid, true)
 	}
 
-	tests := []testCfg{
-		{
-			"--no-overlay --insecure-options=image",
-			"--write-file --file-name=" + testFile + " --content=" + testContent,
-			"--read-file --file-name=" + testFile,
-			testContent,
-			false,
-		},
-	}
+	// Export the image
+	exportCmd := fmt.Sprintf("%s export %s %s", ctx.Cmd(), uuid, tmpTestAci)
+	t.Logf("Running 'export'")
+	child = spawnOrFail(t, exportCmd)
+	waitOrFail(t, child, 0)
 
-	// Need to do both checks
-	if common.SupportsUserNS() && checkUserNS() == nil {
-		tests = append(tests, []testCfg{
-			{
-				"--private-users --no-overlay --insecure-options=image",
-				"--write-file --file-name=" + testFile + " --content=" + testContent,
-				"--read-file --file-name=" + testFile,
-				testContent,
-				false,
-			},
-		}...)
-	}
-
-	if common.SupportsOverlay() {
-		tests = append(tests, []testCfg{
-			{
-				"--insecure-options=image",
-				"--write-file --file-name=" + testFile + " --content=" + testContent,
-				"--read-file --file-name=" + testFile,
-				testContent,
-				false,
-			},
-			// Test unmounting overlay to simulate a reboot
-			{
-				"--insecure-options=image",
-				"--write-file --file-name=" + testFile + " --content=" + testContent,
-				"--read-file --file-name=" + testFile,
-				testContent,
-				true,
-			},
-		}...)
-	}
-
-	for _, tt := range tests {
-		tmpDir := createTempDirOrPanic("rkt-TestExport-tmp-")
-		defer os.RemoveAll(tmpDir)
-
-		tmpTestAci := filepath.Join(tmpDir, "test.aci")
-
-		// Prepare the image with modifications
-		const runInspect = "%s %s %s %s --exec=/inspect -- %s"
-		prepareCmd := fmt.Sprintf(runInspect, ctx.Cmd(), "prepare", tt.runArgs, getInspectImagePath(), tt.writeArgs)
-		t.Logf("Preparing 'inspect --write-file'")
-		uuid := runRktAndGetUUID(t, prepareCmd)
-
-		runCmd := fmt.Sprintf("%s run-prepared %s", ctx.Cmd(), uuid)
-		t.Logf("Running 'inspect --write-file'")
-		child := spawnOrFail(t, runCmd)
-		waitOrFail(t, child, 0)
-
-		if tt.unmountOverlay {
-			unmountPod(t, ctx, uuid, true)
+	// Run the newly created ACI and check the output
+	readCmd := fmt.Sprintf(runInspect, ctx.Cmd(), "run", ct.runArgs, tmpTestAci, ct.readArgs)
+	t.Logf("Running 'inspect --read-file'")
+	child = spawnOrFail(t, readCmd)
+	if ct.expectedResult != "" {
+		if _, out, err := expectRegexWithOutput(child, ct.expectedResult); err != nil {
+			t.Fatalf("expected %q but not found: %v\n%s", ct.expectedResult, err, out)
 		}
-
-		// Export the image
-		exportCmd := fmt.Sprintf("%s export %s %s", ctx.Cmd(), uuid, tmpTestAci)
-		t.Logf("Running 'export'")
-		child = spawnOrFail(t, exportCmd)
-		waitOrFail(t, child, 0)
-
-		// Run the newly created ACI and check the output
-		readCmd := fmt.Sprintf(runInspect, ctx.Cmd(), "run", tt.runArgs, tmpTestAci, tt.readArgs)
-		t.Logf("Running 'inspect --read-file'")
-		child = spawnOrFail(t, readCmd)
-		if tt.expectedResult != "" {
-			if _, out, err := expectRegexWithOutput(child, tt.expectedResult); err != nil {
-				t.Fatalf("expected %q but not found: %v\n%s", tt.expectedResult, err, out)
-			}
-		}
-		waitOrFail(t, child, 0)
-
-		// run garbage collector on pods and images
-		runGC(t, ctx)
-		runImageGC(t, ctx)
 	}
+	waitOrFail(t, child, 0)
+
+	// run garbage collector on pods and images
+	runGC(t, ctx)
+	runImageGC(t, ctx)
+}
+
+func NewTestExport(cases ...ExportTestCase) testutils.Test {
+	return exportTest(cases)
 }
