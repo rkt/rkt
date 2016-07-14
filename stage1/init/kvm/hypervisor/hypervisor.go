@@ -38,6 +38,7 @@ func (hv *KvmHypervisor) InitKernelParams(isDebug bool) {
 	} else {
 		hv.KernelParams = append(hv.KernelParams, []string{
 			"systemd.show_status=false",
+			"systemd.log_target=null",
 			"rd.udev.log-priority=3",
 			"quiet=vga",
 			"quiet systemd.log_level=emerg",
