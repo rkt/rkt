@@ -31,11 +31,19 @@ import (
 	"github.com/appc/spec/schema/types"
 )
 
+// Some of these tests persistently modify files; subsequent test rows
+// expect those modifications.
 var volTests = []struct {
 	rktCmd       string
 	expect       string
 	expectedExit int
 }{
+	// Check that mounting a non-existent directory fails
+	{
+		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=/this/directory/does/not/exist --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
+		`Failed to stat /this/directory/does/not/exist: No such file or directory`,
+		1,
+	},
 	// Check that we can read files in the ACI
 	{
 		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^READ_FILE^"`,
@@ -48,9 +56,16 @@ var volTests = []struct {
 		`<<<host>>>`,
 		0,
 	},
+	// ro case
 	{
 		`/bin/sh -c "export FILE=/dir1/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_READ_FILE^"`,
 		`<<<host>>>`,
+		0,
+	},
+	// Check that, when we create a nested mountpoint, the created parents have the right perms
+	{
+		`/bin/sh -c "export FILE=/a/b ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=/a/b/c ^STAT_FILE^"`,
+		`/a/b: mode: drwxr-xr-x`,
 		0,
 	},
 	// Check that we can write to files in the ACI
@@ -76,6 +91,12 @@ var volTests = []struct {
 		`<<<2>>>`,
 		0,
 	},
+	// Check that the file has changed on the host
+	{
+		`/bin/sh -c "cat ^TMPDIR^/file"`,
+		`2`,
+		0,
+	},
 	// Check that injecting a rw mount/volume works without any mountpoint in the image manifest
 	{
 		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ ^VOL_ADD_MOUNT_RW^ --mount=volume=dir1,target=dir1"`,
@@ -96,6 +117,18 @@ var volTests = []struct {
 	},
 	{
 		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --volume=dir1,kind=host,source=^TMPDIR^ --inherit-env=true ^VOL_RW_WRITE_FILE_ONLY^ ^VOL_RO_READ_FILE_ONLY^ --exec /inspect -- --pre-sleep=1 --read-file"`,
+		`<<<1>>>`,
+		0,
+	},
+	// Check that deeply nested mountpoints are created
+	{
+		`/bin/sh -c "export FILE=/dir1/dir2/dir3/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=/dir1/dir2/dir3 ^VOL_RW_READ_FILE^"`,
+		`<<<1>>>`,
+		0,
+	},
+	// Check that a non-existent mountpoint is OK
+	{
+		`/bin/sh -c "export FILE=/a/b/c/file ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=/a/b/c ^VOL_RW_READ_FILE^"`,
 		`<<<1>>>`,
 		0,
 	},
@@ -123,6 +156,9 @@ func NewVolumesTest() testutils.Test {
 		defer os.Remove(volAddMountRwImage)
 		volAddMountRoImage := patchTestACI("rkt-inspect-vol-add-mount-ro.aci", "--exec=/inspect --write-file --read-file")
 		defer os.Remove(volAddMountRoImage)
+		statFileImage := patchTestACI("rkt-inspect-stat.aci", "--exec=/inspect --stat-file")
+		defer os.Remove(statFileImage)
+
 		ctx := testutils.NewRktRunCtx()
 		defer ctx.Cleanup()
 
@@ -147,6 +183,7 @@ func NewVolumesTest() testutils.Test {
 			cmd = strings.Replace(cmd, "^VOL_RO_READ_FILE_ONLY^", volRoReadFileOnlyImage, -1)
 			cmd = strings.Replace(cmd, "^VOL_ADD_MOUNT_RW^", volAddMountRwImage, -1)
 			cmd = strings.Replace(cmd, "^VOL_ADD_MOUNT_RO^", volAddMountRoImage, -1)
+			cmd = strings.Replace(cmd, "^STAT_FILE^", statFileImage, -1)
 
 			t.Logf("Running test #%v", i)
 			child := spawnOrFail(t, cmd)
