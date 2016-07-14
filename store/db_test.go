@@ -78,10 +78,6 @@ func createTable(db *DB, t *testing.T) {
 }
 
 func TestDBRace(t *testing.T) {
-	// TODO(sgotti) this will not find concurrent accesses to ql db from
-	// multiple processes using multiple goroutines. A test that spawns at
-	// least two processes using multiple goroutines is needed.
-	// See https://github.com/coreos/rkt/pull/2391
 	oldGoMaxProcs := runtime.GOMAXPROCS(runtime.NumCPU())
 	defer runtime.GOMAXPROCS(oldGoMaxProcs)
 
