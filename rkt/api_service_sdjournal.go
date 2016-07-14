@@ -38,6 +38,8 @@ func (s *v1AlphaAPIServer) constrainedGetLogs(request *v1alpha.GetLogsRequest, s
 	if err != nil {
 		return err
 	}
+	defer pod.Close()
+
 	stage1Path := "stage1/rootfs"
 	if pod.usesOverlay() {
 		stage1TreeStoreID, err := pod.getStage1TreeStoreID()
