@@ -229,6 +229,12 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		return nil, nil, fmt.Errorf("error writing %s, %s", hostnamePath, err)
 	}
 
+	// systemd-nspawn needs /etc/machine-id to link the container's journal
+	// to the host. Since systemd-v230, /etc/machine-id is mandatory, see
+	// https://github.com/systemd/systemd/commit/e01ff70a77e781734e1e73a2238af2e9bf7967a8
+	mPath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "machine-id")
+	machineID := strings.Replace(p.UUID.String(), "-", "", -1)
+
 	switch flavor {
 	case "kvm":
 		if privateUsers != "" {
@@ -263,6 +269,10 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		// see https://github.com/coreos/rkt/issues/1393
 		if os.Getenv("HOME") == "" {
 			env = append(env, "HOME=/root")
+		}
+
+		if err := linkJournal(common.Stage1RootfsPath(p.Root), machineID); err != nil {
+			return nil, nil, errwrap.Wrap(errors.New("error linking pod's journal"), err)
 		}
 
 		return args, env, nil
@@ -350,13 +360,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
 	}
 
-	// systemd-nspawn needs /etc/machine-id to link the container's journal
-	// to the host. Since systemd-v230, /etc/machine-id is mandatory, see
-	// https://github.com/systemd/systemd/commit/e01ff70a77e781734e1e73a2238af2e9bf7967a8
-	mPath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "machine-id")
-	mID := strings.Replace(p.UUID.String(), "-", "", -1)
-
-	if err := ioutil.WriteFile(mPath, []byte(mID), 0644); err != nil {
+	if err := ioutil.WriteFile(mPath, []byte(machineID), 0644); err != nil {
 		log.FatalE("error writing /etc/machine-id", err)
 	}
 
