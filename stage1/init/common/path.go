@@ -65,7 +65,7 @@ func ServiceWantPath(root string, appName types.ACName) string {
 func InstantiatedPrepareAppUnitName(appName types.ACName) string {
 	// Naming respecting escaping rules, see systemd.unit(5) and systemd-escape(1)
 	escapedRoot := unit.UnitNamePathEscape(common.RelAppRootfsPath(appName))
-	return "prepare-app@" + escapedRoot + ".service"
+	return "prepare-app@-" + escapedRoot + ".service"
 }
 
 // SocketUnitName returns a systemd socket unit name for the given app name.
