@@ -143,13 +143,6 @@ func (f *Fetcher) fetchSingleImage(img string, a *asc, imgType apps.AppImageType
 	}
 }
 
-type remoteCheck int
-
-const (
-	remoteCheckLax remoteCheck = iota
-	remoteCheckStrict
-)
-
 func (f *Fetcher) fetchSingleImageByURL(urlStr string, a *asc) (string, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
@@ -175,7 +168,7 @@ func (f *Fetcher) fetchSingleImageByHTTPURL(u *url.URL, a *asc) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	if h := f.maybeCheckRemoteFromStore(rem, remoteCheckStrict); h != "" {
+	if h := f.maybeCheckRemoteFromStore(rem); h != "" {
 		return h, nil
 	}
 	if h, err := f.maybeFetchHTTPURLFromRemote(rem, u, a); h != "" || err != nil {
@@ -189,9 +182,7 @@ func (f *Fetcher) fetchSingleImageByDockerURL(u *url.URL) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// TODO(krnowak): use strict checking when we implement
-	// setting CacheMaxAge in store.Remote for docker images
-	if h := f.maybeCheckRemoteFromStore(rem, remoteCheckLax); h != "" {
+	if h := f.maybeCheckRemoteFromStore(rem); h != "" {
 		return h, nil
 	}
 	if h, err := f.maybeFetchDockerURLFromRemote(u); h != "" || err != nil {
@@ -213,22 +204,12 @@ func (f *Fetcher) getRemoteForURL(u *url.URL) (*imagestore.Remote, error) {
 	return nil, nil
 }
 
-func (f *Fetcher) maybeCheckRemoteFromStore(rem *imagestore.Remote, check remoteCheck) string {
+func (f *Fetcher) maybeCheckRemoteFromStore(rem *imagestore.Remote) string {
 	if f.NoStore || rem == nil {
 		return ""
 	}
-	useBlobKey := false
-	switch check {
-	case remoteCheckLax:
-		useBlobKey = true
-	case remoteCheckStrict:
-		useBlobKey = useCached(rem.DownloadTime, rem.CacheMaxAge)
-	}
-	if useBlobKey {
-		log.Printf("using image from local store for url %s", rem.ACIURL)
-		return rem.BlobKey
-	}
-	return ""
+	log.Printf("using image from local store for url %s", rem.ACIURL)
+	return rem.BlobKey
 }
 
 func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *imagestore.Remote, u *url.URL, a *asc) (string, error) {

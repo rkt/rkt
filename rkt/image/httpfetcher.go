@@ -44,6 +44,15 @@ func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 	ensureLogger(f.Debug)
 	urlStr := u.String()
 
+	if f.Rem != nil {
+		if useCached(f.Rem.DownloadTime, f.Rem.CacheMaxAge) {
+			if f.Debug {
+				log.Printf("image for %s isn't expired, not fetching.", urlStr)
+			}
+			return f.Rem.BlobKey, nil
+		}
+	}
+
 	if f.Debug {
 		log.Printf("fetching image from %s", urlStr)
 	}
@@ -53,6 +62,7 @@ func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 		return "", err
 	}
 	defer func() { maybeClose(aciFile) }()
+
 	if key := f.maybeUseCached(cd); key != "" {
 		// TODO(krnowak): that does not update the store with
 		// the new CacheMaxAge and Download Time, so it will
@@ -91,9 +101,6 @@ func (f *httpFetcher) maybeUseCached(cd *cacheData) string {
 		return ""
 	}
 	if cd.UseCached {
-		return f.Rem.BlobKey
-	}
-	if useCached(f.Rem.DownloadTime, cd.MaxAge) {
 		return f.Rem.BlobKey
 	}
 	return ""

@@ -106,6 +106,7 @@ func TestAuthOverride(t *testing.T) {
 	defer ctx.Cleanup()
 	server, image := runAuthServer(t, taas.AuthOauth)
 	defer authCleanup(server, image)
+	hash := "sha512-" + getHashOrPanic(image)
 	tests := []struct {
 		systemConfig         string
 		localConfig          string
@@ -119,6 +120,12 @@ func TestAuthOverride(t *testing.T) {
 	for _, tt := range tests {
 		writeConfig(t, authDir(ctx.SystemDir()), "test.json", tt.systemConfig)
 		expectedRunRkt(ctx, t, server.URL, tt.name+"-1", tt.resultBeforeOverride)
+		if tt.resultBeforeOverride == authSuccessfulDownload {
+			// Remove the image from the store since it was fetched in the
+			// previous run and the test aci-server returns a
+			// Cache-Control max-age header
+			removeFromCas(t, ctx, hash)
+		}
 		writeConfig(t, authDir(ctx.LocalDir()), "test.json", tt.localConfig)
 		expectedRunRkt(ctx, t, server.URL, tt.name+"-2", tt.resultAfterOverride)
 		ctx.Reset()
