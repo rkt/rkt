@@ -15,9 +15,13 @@
 package main
 
 import (
+	"io/ioutil"
+	"net"
+	"os"
 	"testing"
 
 	"github.com/coreos/rkt/api/v1alpha"
+	"github.com/coreos/rkt/pkg/log"
 )
 
 func TestFilterPod(t *testing.T) {
@@ -626,5 +630,73 @@ func TestFilterImageAny(t *testing.T) {
 		if result != tt.result {
 			t.Errorf("#%d: got %v, want %v", i, result, tt.result)
 		}
+	}
+}
+
+// Test that we open the correct kinds of sockets
+func TestOpenSocket(t *testing.T) {
+	stderr = log.New(os.Stderr, "TestOpenSocket", globalFlags.Debug)
+	// get a temp unix socket for us to play with
+	tempdir, err := ioutil.TempDir("", "TestOpenSocket")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempdir)
+
+	l, err := net.Listen("unix", tempdir+"/sock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	lfd, err := l.(*net.UnixListener).File()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lfd.Close()
+
+	// Mock out the systemd FD function
+	systemdFDs = func(x bool) []*os.File {
+		return []*os.File{lfd}
+	}
+
+	// Test that we will open a systemd socket when asked for
+	l1, err := openAPISockets()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(l1) != 1 {
+		t.Errorf("expected len(l1) = 1, got %d", len(l1))
+	}
+
+	// Test that we fail when --listen is passed with a systemd socket
+	flagAPIServiceListenAddr = "localhost:0"
+	_, err = openAPISockets()
+	if err == nil {
+		t.Error("openAPISockets() did not fail when passed systemd socket and --listen")
+	}
+
+	// Then, disable socket mode and ask it to open a random tcp server port
+	systemdFDs = func(x bool) []*os.File {
+		return nil
+	}
+
+	l2, err := openAPISockets()
+	if err != nil {
+		t.Fatal("failed to open socket", err)
+	}
+
+	for _, ll := range l2 {
+		defer ll.Close()
+	}
+
+	if len(l2) != 1 {
+		t.Errorf("expected len(l2) == 1, but got %d", len(l2))
+	}
+
+	switch l2[0].(type) {
+	case *net.TCPListener:
+	// ok
+	default:
+		t.Errorf("expected type=*net.TCPListener, got %T", l2[0])
 	}
 }

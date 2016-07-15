@@ -29,6 +29,7 @@ import (
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/coreos/go-systemd/activation"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
@@ -36,6 +37,7 @@ import (
 	"github.com/coreos/rkt/store"
 	"github.com/coreos/rkt/version"
 	"github.com/godbus/dbus"
+	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -44,21 +46,26 @@ import (
 var (
 	supportedAPIVersion = "1.0.0-alpha"
 	cmdAPIService       = &cobra.Command{
-		Use:   `api-service [--listen="localhost:15441"]`,
+		Use:   fmt.Sprintf(`api-service [--listen="%s"]`, common.APIServiceListenAddr),
 		Short: "Run API service (experimental)",
-		Long: `The API service listens for gRPC requests on the address and port specified by
-the --listen option.
+		Long: fmt.Sprintf(`The API service listens for gRPC requests on the address and port specified by
+the --listen option, by default %s
 
-Specify the address 0.0.0.0 to listen on all interfaces.`,
+Specify the address 0.0.0.0 to listen on all interfaces.
+
+It will also run correctly as a systemd socket-activated service, see
+systemd.socket(5).`, common.APIServiceListenAddr),
 		Run: runWrapper(runAPIService),
 	}
 
 	flagAPIServiceListenAddr string
+	flagSocketListen         bool
+	systemdFDs               = activation.Files // for mocking
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdAPIService)
-	cmdAPIService.Flags().StringVar(&flagAPIServiceListenAddr, "listen", common.APIServiceListenAddr, "address to listen for client API requests")
+	cmdAPIService.Flags().StringVar(&flagAPIServiceListenAddr, "listen", "", "address to listen for client API requests")
 }
 
 // v1AlphaAPIServer implements v1Alpha.APIServer interface.
@@ -760,6 +767,7 @@ func (s *v1AlphaAPIServer) ListenEvents(request *v1alpha.ListenEventsRequest, se
 	return fmt.Errorf("not implemented yet")
 }
 
+// Open one or more listening sockets, then start the gRPC server
 func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 	// Set up the signal handler here so we can make sure the
 	// signals are caught after print the starting message.
@@ -767,12 +775,15 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 
 	stderr.Print("API service starting...")
 
-	tcpl, err := net.Listen("tcp", flagAPIServiceListenAddr)
+	listeners, err := openAPISockets()
 	if err != nil {
-		stderr.Error(err)
+		stderr.PrintE("Failed to open sockets", err)
 		return 1
 	}
-	defer tcpl.Close()
+	if len(listeners) == 0 { // This is unlikely...
+		stderr.Println("No sockets to listen to. Quitting.")
+		return 1
+	}
 
 	publicServer := grpc.NewServer() // TODO(yifan): Add TLS credential option.
 
@@ -784,13 +795,53 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 
 	v1alpha.RegisterPublicAPIServer(publicServer, v1AlphaAPIServer)
 
-	go publicServer.Serve(tcpl)
+	for _, l := range listeners {
+		defer l.Close()
+		go publicServer.Serve(l)
+	}
 
-	stderr.Printf("API service running on %v...", flagAPIServiceListenAddr)
+	stderr.Printf("API service running")
 
 	<-exitCh
 
 	stderr.Print("API service exiting...")
 
 	return
+}
+
+// Open API sockets based on command line parameters and
+// the magic environment variable from systemd
+//
+// see sd_listen_fds(3)
+func openAPISockets() ([]net.Listener, error) {
+	listeners := []net.Listener{}
+
+	fds := systemdFDs(true) // Try to get the socket fds from systemd
+	if len(fds) > 0 {
+		if flagAPIServiceListenAddr != "" {
+			return nil, fmt.Errorf("started under systemd.socket(5), but --listen passed! Quitting.")
+		}
+
+		stderr.Printf("Listening on %d systemd-provided socket(s)\n", len(fds))
+		for _, fd := range fds {
+			l, err := net.FileListener(fd)
+			if err != nil {
+				return nil, errwrap.Wrap(fmt.Errorf("could not open listener"), err)
+			}
+			listeners = append(listeners, l)
+		}
+	} else {
+		if flagAPIServiceListenAddr == "" {
+			flagAPIServiceListenAddr = common.APIServiceListenAddr
+		}
+		stderr.Printf("Listening on %s\n", flagAPIServiceListenAddr)
+
+		l, err := net.Listen("tcp", flagAPIServiceListenAddr)
+		if err != nil {
+			return nil, errwrap.Wrap(fmt.Errorf("could not open tcp socket"), err)
+		}
+		listeners = append(listeners, l)
+	}
+
+	return listeners, nil
 }
