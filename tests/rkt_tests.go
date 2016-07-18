@@ -815,3 +815,31 @@ func writeConfig(t *testing.T, dir, filename, contents string) {
 		t.Fatalf("Failed to write file %q: %v", path, err)
 	}
 }
+
+func unmountPod(t *testing.T, ctx *testutils.RktRunCtx, uuid string, rmNetns bool) {
+	podDir := filepath.Join(ctx.DataDir(), "pods", "run", uuid)
+	stage1MntPath := filepath.Join(podDir, "stage1", "rootfs")
+	stage2MntPath := filepath.Join(stage1MntPath, "opt", "stage2", "rkt-inspect", "rootfs")
+	netnsPath := filepath.Join(podDir, "netns")
+	podNetNSPathBytes, err := ioutil.ReadFile(netnsPath)
+	if err != nil {
+		t.Fatalf(`cannot read "netns" stage1: %v`, err)
+	}
+	podNetNSPath := string(podNetNSPathBytes)
+
+	if err := syscall.Unmount(stage2MntPath, 0); err != nil {
+		t.Fatalf("cannot umount stage2: %v", err)
+	}
+
+	if err := syscall.Unmount(stage1MntPath, 0); err != nil {
+		t.Fatalf("cannot umount stage1: %v", err)
+	}
+
+	if err := syscall.Unmount(podNetNSPath, 0); err != nil {
+		t.Fatalf("cannot umount pod netns: %v", err)
+	}
+
+	if rmNetns {
+		_ = os.RemoveAll(podNetNSPath)
+	}
+}
