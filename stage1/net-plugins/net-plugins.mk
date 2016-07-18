@@ -41,7 +41,7 @@ BGB_BINARY := $$(NPM_PLUGIN)
 BGB_PKG_IN_REPO := vendor/github.com/containernetworking/cni/plugins/$1
 include makelib/build_go_bin.mk
 
-$$(NPM_PLUGIN): $(TARGET_TOOLSDIR)
+$$(NPM_PLUGIN): | $(TARGET_TOOLSDIR)
 
 $$(call generate-stamp-rule,$$(NPM_STAMP))
 

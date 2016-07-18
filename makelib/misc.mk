@@ -187,12 +187,20 @@ $(strip \
 	$(call undefine-namespaces,_MISC_GFD))
 endef
 
+# Escapes all single quotes in $1 (by replacing all ' with '"'"')
+define sq_escape
+$(subst ','"'"',$1)
+endef
+#'
+
 # Returns 1 if both parameters are equal, otherwise returns empty
 # string.
 # Example: is_a_equal_to_b := $(if $(call equal,a,b),yes,no)
 define equal
 $(strip \
-        $(eval _MISC_EQ_TMP_ := $(shell expr '$1' = '$2')) \
+        $(eval _MISC_EQ_OP1_ := $(call sq_escape,$1)) \
+        $(eval _MISC_EQ_OP2_ := $(call sq_escape,$2)) \
+        $(eval _MISC_EQ_TMP_ := $(shell expr '$(_MISC_EQ_OP1_)' = '$(_MISC_EQ_OP2_)')) \
         $(filter $(_MISC_EQ_TMP_),1) \
         $(call undefine-namespaces,_MISC_EQ))
 endef
