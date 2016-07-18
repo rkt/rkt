@@ -113,6 +113,13 @@ AC_ARG_WITH([stage1-systemd-version],
             [RKT_STAGE1_SYSTEMD_VER="${withval}"],
             [RKT_STAGE1_SYSTEMD_VER='auto'])
 
+# STAGE1 - KVM hypervisor. LKVM is the only choice for now
+AC_ARG_WITH([stage1-kvm-hypervisor],
+            [AS_HELP_STRING([--with-stage1-kvm-hypervisor],
+                            [hypervisor used by 'kvm' flavor; default and only option for now: 'lkvm'])],
+            [RKT_STAGE1_KVM_HV="${withval}"],
+            [RKT_STAGE1_KVM_HV='lkvm'])
+
 ## STAGE1 - path to coreos pxe and its systemd version for kvm and coreos flavors
 
 AC_ARG_WITH([coreos-local-pxe-image-path],
@@ -306,7 +313,7 @@ RKT_ITERATE_FLAVORS([${RKT_STAGE1_FLAVORS}],[flavor],
                              [coreos],
                                      [RKT_COMMON_COREOS_PROGS],
                              [kvm],
-                                     [AC_MSG_NOTICE([will build linux kernel and lkvm from source, make sure that all their build requirements are fulfilled])
+                                     [AC_MSG_NOTICE([will build linux kernel and ${RKT_STAGE1_KVM_HV} from source, make sure that all their build requirements are fulfilled])
                                       RKT_COMMON_COREOS_PROGS
                                       RKT_REQ_PROG([PATCH],[patch],[patch])
                                       RKT_REQ_PROG([TAR],[tar],[tar])
@@ -407,6 +414,14 @@ dnl Warn if version is HEAD, just use master.
 AS_VAR_IF([RKT_STAGE1_SYSTEMD_VER], [HEAD],
           [AC_MSG_WARN([* 'HEAD' is not a systemd version, setting it to 'master' instead])
            RKT_STAGE1_SYSTEMD_VER='master'])
+
+KVM_HV_TAG='hv_none'
+RKT_IF_HAS_FLAVOR([${RKT_STAGE1_FLAVORS}], [kvm],
+                  dnl for kvm check hypervisor
+                  AS_CASE([${RKT_STAGE1_KVM_HV}],
+                          [lkvm],
+                                  KVM_HV_TAG='hv_lkvm',
+                          [AC_MSG_ERROR([*** Invalid value passed to --with-stage1-kvm-hypervisor; lkvm is the only supported tool right now])]))
 
 ## Options specific to coreos/kvm flavors
 
@@ -736,6 +751,7 @@ AC_SUBST(RKT_STAGE1_DEFAULT_IMAGES_DIRECTORY_LDFLAGS)
 AC_SUBST(RKT_VERSION_LDFLAGS)
 AC_SUBST(RKT_FEATURES_LDFLAGS)
 
+AC_SUBST(KVM_HV_TAG)
 AC_SUBST(TPM_TAGS)
 AC_SUBST(SDJOURNAL_TAGS)
 
@@ -786,6 +802,13 @@ RKT_IF_HAS_FLAVOR([${RKT_STAGE1_FLAVORS}], [src],
 
         systemd git repo:                       '${RKT_STAGE1_SYSTEMD_SRC}'
         systemd version:                        '${RKT_STAGE1_SYSTEMD_VER}'])])
+
+RKT_IF_HAS_FLAVOR([${RKT_STAGE1_FLAVORS}], [kvm],
+                  [AC_MSG_RESULT([
+        kvm flavor specific build parameters
+
+        hypervisor:                             '${RKT_STAGE1_KVM_HV}'])])
+
 
 AC_MSG_RESULT([
         other build parameters
