@@ -29,3 +29,21 @@ temporary directory with `rkt_benchmark` prefix, `-v` will print out the current
 resource usage of each process every second. `-d` can be used to specify a
 duration to run the tests for (default of 10s). For example, `-d 30s` will run
 the tests for 30 seconds.
+
+# Profiling
+
+rkt will provide two hidden global flags `--cpuprofile` and `--memprofile` that can be used for performance profiling.
+Setting `--cpuprofile=$FILE` will make rkt write down the CPU profiles to the `$FILE`.
+Setting `--memprofile=$FILE` will make rkt write down the Memory profile to the `$FILE`.
+Note that memory profile will only be written down before rkt exits, so during the execution
+of rkt, the memory profile will be empty.
+
+The profile result can be viewed by go's profiling tool, for example:
+
+```shell
+$ sudo /usr/bin/rkt --cpuprofile=/tmp/cpu.profile --memprofile=/tmp/mem.profile gc --grace-period=0
+$ go tool pprof /usr/bin/rkt /tmp/cpu.profile
+$ go tool pprof /usr/bin/rkt /tmp/mem.profile
+```
+
+For more profiling tips, please see https://blog.golang.org/profiling-go-programs

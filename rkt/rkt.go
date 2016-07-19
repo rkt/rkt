@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime/pprof"
 	"text/tabwriter"
 
 	"github.com/coreos/rkt/common"
@@ -128,6 +129,10 @@ var (
 		Help               bool
 		InsecureFlags      *rktflag.SecFlags
 		TrustKeysFromHTTPS bool
+
+		// Hidden flags for profiling.
+		CPUProfile string
+		MemProfile string
 	}{
 		Dir:             defaultDataDir,
 		SystemConfigDir: common.DefaultSystemConfigDir,
@@ -171,6 +176,10 @@ func init() {
 			globalFlags.InsecureFlags.PermissibleString()))
 	cmdRkt.PersistentFlags().BoolVar(&globalFlags.TrustKeysFromHTTPS, "trust-keys-from-https",
 		false, "automatically trust gpg keys fetched from https")
+	cmdRkt.PersistentFlags().StringVar(&globalFlags.CPUProfile, "cpuprofile", "", "write CPU profile to the file")
+	cmdRkt.PersistentFlags().MarkHidden("cpuprofile")
+	cmdRkt.PersistentFlags().StringVar(&globalFlags.MemProfile, "memprofile", "", "write memory profile to the file")
+	cmdRkt.PersistentFlags().MarkHidden("memprofile")
 
 	// Run this before the execution of each subcommand to set up output
 	cmdRkt.PersistentPreRun = func(cmd *cobra.Command, args []string) {
@@ -189,11 +198,47 @@ func getTabOutWithWriter(writer io.Writer) *tabwriter.Writer {
 	return aTabOut
 }
 
+func startProfile() (cpufile *os.File, memfile *os.File, err error) {
+	if globalFlags.CPUProfile != "" {
+		cpufile, err = os.Create(globalFlags.CPUProfile)
+		if err != nil {
+			return nil, nil, fmt.Errorf("cannot create cpu profile file %q: %v", globalFlags.CPUProfile, err)
+		}
+		pprof.StartCPUProfile(cpufile)
+	}
+	if globalFlags.MemProfile != "" {
+		memfile, err = os.Create(globalFlags.MemProfile)
+		if err != nil {
+			return nil, nil, fmt.Errorf("cannot create memory profile file %q: %v", globalFlags.MemProfile, err)
+		}
+	}
+	return cpufile, memfile, nil
+}
+
+func stopProfile(cpuprofile, memprofile *os.File) {
+	if globalFlags.CPUProfile != "" {
+		pprof.StopCPUProfile()
+		cpuprofile.Close()
+	}
+	if globalFlags.MemProfile != "" {
+		pprof.WriteHeapProfile(memprofile)
+		memprofile.Close()
+	}
+}
+
 // runWrapper returns a func(cmd *cobra.Command, args []string) that internally
 // will add command function return code and the reinsertion of the "--" flag
 // terminator.
 func runWrapper(cf func(cmd *cobra.Command, args []string) (exit int)) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		cpufile, memfile, err := startProfile()
+		if err != nil {
+			stderr.PrintE("cannot setup profiling", err)
+			cmdExitCode = 1
+			return
+		}
+		defer stopProfile(cpufile, memfile)
+
 		cmdExitCode = cf(cmd, args)
 	}
 }

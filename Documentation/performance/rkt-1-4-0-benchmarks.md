@@ -4,7 +4,7 @@ model name  : Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz
 model name  : Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz
 model name  : Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz
 model name  : Intel(R) Core(TM) i7-6500U CPU @ 2.50GHz
-derek@proton ~> uname -a                             
+derek@proton ~> uname -a
 Linux proton 4.4.6 #1-NixOS SMP Wed Mar 16 15:43:17 UTC 2016 x86_64 GNU/Linux
 ```
 
@@ -25,7 +25,7 @@ container stop time: 17332926ns
 
 ### mem-stresser.aci
 ```
-derek@proton ~/go/src/github.com/coreos/rkt/tests/rkt-monitor> sudo ./rkt-monitor mem-stresser.aci 
+derek@proton ~/go/src/github.com/coreos/rkt/tests/rkt-monitor> sudo ./rkt-monitor mem-stresser.aci
 worker(18634): seconds alive: 9  avg CPU: 98.550401%  avg Mem: 318 mB  peak Mem: 555 mB
 rkt(18599): seconds alive: 10  avg CPU: 3.583814%  avg Mem: 2 mB  peak Mem: 2 mB
 systemd(18628): seconds alive: 9  avg CPU: 0.000000%  avg Mem: 4 mB  peak Mem: 4 mB
@@ -37,7 +37,7 @@ container stop time: 17593446ns
 
 ### cpu-stresser.aci
 ```
-derek@proton ~/go/src/github.com/coreos/rkt/tests/rkt-monitor> sudo ./rkt-monitor cpu-stresser.aci 
+derek@proton ~/go/src/github.com/coreos/rkt/tests/rkt-monitor> sudo ./rkt-monitor cpu-stresser.aci
 rkt(18706): seconds alive: 10  avg CPU: 3.587050%  avg Mem: 2 mB  peak Mem: 2 mB
 systemd(18736): seconds alive: 9  avg CPU: 0.000000%  avg Mem: 4 mB  peak Mem: 4 mB
 systemd-journal(18740): seconds alive: 9  avg CPU: 0.000000%  avg Mem: 6 mB  peak Mem: 6 mB
