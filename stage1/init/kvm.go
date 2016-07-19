@@ -25,6 +25,7 @@ import (
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/coreos/go-systemd/util"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
@@ -32,6 +33,8 @@ import (
 	"github.com/coreos/rkt/stage1/init/kvm"
 	"github.com/hashicorp/errwrap"
 )
+
+const journalDir = "/var/log/journal"
 
 // KvmNetworkingToSystemd generates systemd unit files for a pod according to network configuration
 func KvmNetworkingToSystemd(p *stage1commontypes.Pod, n *networking.Networking) error {
@@ -159,6 +162,69 @@ func KvmPrepareMounts(s1Root string, p *stage1commontypes.Pod) error {
 		if err := prepareMountsForApp(s1Root, p, ra); err != nil {
 			return errwrap.Wrap(fmt.Errorf("failed prepare mounts for app %q", ra.Name), err)
 		}
+	}
+
+	return nil
+}
+
+func linkJournal(s1Root, machineID string) error {
+	if !util.IsRunningSystemd() {
+		return nil
+	}
+
+	absS1Root, err := filepath.Abs(s1Root)
+	if err != nil {
+		return err
+	}
+
+	// /var/log/journal doesn't exist on the host, don't do anything
+	if _, err := os.Stat(journalDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	machineJournalDir := filepath.Join(journalDir, machineID)
+	podJournalDir := filepath.Join(absS1Root, machineJournalDir)
+
+	hostMachineID, err := util.GetMachineID()
+	if err != nil {
+		return err
+	}
+
+	// unlikely, machine ID is random (== pod UUID)
+	if hostMachineID == machineID {
+		return fmt.Errorf("host and pod machine IDs are equal (%s)", machineID)
+	}
+
+	fi, err := os.Lstat(machineJournalDir)
+	switch {
+	case os.IsNotExist(err):
+		// good, we'll create the symlink
+	case err != nil:
+		return err
+	// unlikely, machine ID is random (== pod UUID)
+	default:
+		if fi.IsDir() {
+			if err := os.Remove(machineJournalDir); err != nil {
+				return err
+			}
+		}
+
+		link, err := os.Readlink(machineJournalDir)
+		if err != nil {
+			return err
+		}
+
+		if link == podJournalDir {
+			return nil
+		} else {
+			if err := os.Remove(machineJournalDir); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := os.Symlink(podJournalDir, machineJournalDir); err != nil {
+		return err
 	}
 
 	return nil

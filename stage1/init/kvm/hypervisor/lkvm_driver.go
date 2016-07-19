@@ -25,14 +25,17 @@ import (
 	"github.com/coreos/rkt/stage1/init/kvm"
 )
 
-// StartCmd takes path to stage1, name of the machine, path to kernel, network describers, memory in megabytes
-// and quantity of cpus and prepares command line to run LKVM process
-func StartCmd(wdPath, name, kernelPath string, nds []kvm.NetDescriber, cpu, mem int64, debug bool) []string {
+// StartCmd takes path to stage1, UUID of the pod, path to kernel, network
+// describers, memory in megabytes and quantity of cpus and prepares command
+// line to run LKVM process
+func StartCmd(wdPath, uuid, kernelPath string, nds []kvm.NetDescriber, cpu, mem int64, debug bool) []string {
+	machineID := strings.Replace(uuid, "-", "", -1)
 	driverConfiguration := KvmHypervisor{
 		Bin: "./lkvm",
 		KernelParams: []string{
 			"systemd.default_standard_error=journal+console",
 			"systemd.default_standard_output=journal+console",
+			"systemd.machine_id=" + machineID,
 		},
 	}
 
@@ -41,14 +44,13 @@ func StartCmd(wdPath, name, kernelPath string, nds []kvm.NetDescriber, cpu, mem 
 	startCmd := []string{
 		filepath.Join(wdPath, driverConfiguration.Bin),
 		"run",
-		"--name", "rkt-" + name,
+		"--name", "rkt-" + uuid,
 		"--no-dhcp",
 		"--cpu", strconv.Itoa(int(cpu)),
 		"--mem", strconv.Itoa(int(mem)),
 		"--console=virtio",
 		"--kernel", kernelPath,
 		"--disk", "stage1/rootfs", // relative to run/pods/uuid dir this is a place where systemd resides
-		// MACHINEID will be available as environment variable
 		"--params", strings.Join(driverConfiguration.KernelParams, " "),
 	}
 	return append(startCmd, kvmNetArgs(nds)...)
