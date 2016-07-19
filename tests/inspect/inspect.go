@@ -42,6 +42,7 @@ var (
 	globalFlags   = struct {
 		ReadStdin          bool
 		CheckTty           bool
+		CheckPath          bool
 		PrintExec          bool
 		PrintMsg           string
 		SuffixMsg          string
@@ -83,6 +84,7 @@ var (
 func init() {
 	globalFlagset.BoolVar(&globalFlags.ReadStdin, "read-stdin", false, "Read a line from stdin")
 	globalFlagset.BoolVar(&globalFlags.CheckTty, "check-tty", false, "Check if stdin is a terminal")
+	globalFlagset.BoolVar(&globalFlags.CheckPath, "check-path", false, "Check if environment variable PATH does not contain \\n")
 	globalFlagset.BoolVar(&globalFlags.PrintExec, "print-exec", false, "Print the command we were execed as (i.e. argv[0])")
 	globalFlagset.StringVar(&globalFlags.PrintMsg, "print-msg", "", "Print the message given as parameter")
 	globalFlagset.StringVar(&globalFlags.SuffixMsg, "suffix-msg", "", "Print this suffix after some commands")
@@ -176,6 +178,32 @@ func main() {
 		} else {
 			fmt.Printf("stdin is not a terminal\n")
 		}
+	}
+
+	if globalFlags.CheckPath {
+		envBytes, err := ioutil.ReadFile("/proc/self/environ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading environment from \"/proc/self/environ\": %v\n", err)
+			os.Exit(1)
+		}
+		for _, v := range bytes.Split(envBytes, []byte{0}) {
+			if len(v) == 0 {
+				continue
+			}
+			if strings.HasPrefix(string(v), "PATH=") {
+				if strings.Contains(string(v), "\n") {
+					fmt.Fprintf(os.Stderr, "Malformed PATH: found new line")
+					os.Exit(1)
+				} else {
+					fmt.Printf("PATH is good\n")
+					os.Exit(0)
+				}
+			} else {
+				continue
+			}
+		}
+		fmt.Fprintf(os.Stderr, "PATH not found")
+		os.Exit(1)
 	}
 
 	if globalFlags.PrintExec {
