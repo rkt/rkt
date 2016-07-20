@@ -105,6 +105,7 @@ var (
 	hostname     string
 	log          *rktlog.Logger
 	diag         *rktlog.Logger
+	interpBin    string // Path to the interpreter within the stage1 rootfs, set by the linker
 )
 
 func init() {
