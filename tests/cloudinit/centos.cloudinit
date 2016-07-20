@@ -1,43 +1,25 @@
 #!/bin/bash
-cat > /var/tmp/rkt-test.sh <<TESTEOF
-#!/bin/bash
-
 set -e
 set -x
 
-# Sometimes journald does not work on CentOS :-(
-exec > >(tee -a "/var/tmp/rkt-test.log") 2>&1
-
-groupadd rkt
-gpasswd -a centos rkt
+groupadd rkt || true
+gpasswd -a centos rkt || true
 
 #yum update -y
 yum -y -v groupinstall "Development Tools"
-yum -y -v install wget squashfs-tools patch glibc-static gnupg libacl-devel systemd-devel
+yum -y -v install wget squashfs-tools patch glibc-static gnupg libacl-devel openssl-devel bc
+yum -y -v install java # for Jenkins
+dnf -y -v install iptables intltool
 
 pushd /tmp
-wget https://storage.googleapis.com/golang/go1.5.3.linux-amd64.tar.gz
+wget -c https://storage.googleapis.com/golang/go1.5.3.linux-amd64.tar.gz
 popd
 tar -C /usr/local -xzf /tmp/go1.5.3.linux-amd64.tar.gz
-ln -s /usr/local/go/bin/go /usr/local/bin/go
-ln -s /usr/local/go/bin/godoc /usr/local/bin/godoc
-ln -s /usr/local/go/bin/gofmt /usr/local/bin/gofmt
-export GOROOT=/usr/local/go
-
-/usr/sbin/setenforce 0
-
-# unsquashfs is in /usr/sbin
-export PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/centos/.local/bin:/home/centos/bin
+ln -sf /usr/local/go/bin/go /usr/local/bin/go
+ln -sf /usr/local/go/bin/godoc /usr/local/bin/godoc
+ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
 
 # sudo/su without tty is disabled on old CentOS.
 # https://bugzilla.redhat.com/show_bug.cgi?id=1020147
 # Cannot workaround with /usr/bin/expect because this would need expect > 2.27
 sed -i 's/ requiretty$/ !requiretty/g' /etc/sudoers
-
-su - centos --command="cd /var/tmp ; git clone --branch @GIT_BRANCH@ @GIT_URL@ rkt"
-su - centos --command="PATH=\$PATH ; cd /var/tmp/rkt ; ./tests/build-and-run-tests.sh -f @FLAVOR@"
-TESTEOF
-
-chmod +x /var/tmp/rkt-test.sh
-
-systemd-run --unit=rkt-test /var/tmp/rkt-test.sh
