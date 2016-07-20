@@ -1,7 +1,7 @@
 $(call setup-stamp-file,RKT_MONITOR_STAMP)
 
 # variables for makelib/build_go_bin.mk
-RKT_MONITOR := $(BINDIR)/rkt-monitor
+RKT_MONITOR := $(TARGET_BINDIR)/rkt-monitor
 BGB_STAMP := $(RKT_MONITOR_STAMP)
 BGB_PKG_IN_REPO := tests/rkt-monitor
 BGB_BINARY := $(RKT_MONITOR)

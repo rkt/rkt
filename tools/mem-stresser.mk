@@ -1,7 +1,7 @@
 $(call setup-stamp-file,MEM_STRESSER_STAMP)
 
 # variables for makelib/build_go_bin.mk
-MEM_STRESSER := $(BINDIR)/mem-stresser
+MEM_STRESSER := $(TARGET_BINDIR)/mem-stresser
 BGB_STAMP := $(MEM_STRESSER_STAMP)
 BGB_PKG_IN_REPO := tests/rkt-monitor/mem-stresser
 BGB_BINARY := $(MEM_STRESSER)

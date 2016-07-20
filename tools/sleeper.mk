@@ -1,7 +1,7 @@
 $(call setup-stamp-file,SLEEPER_STAMP)
 
 # variables for makelib/build_go_bin.mk
-SLEEPER := $(BINDIR)/sleeper
+SLEEPER := $(TARGET_BINDIR)/sleeper
 BGB_STAMP := $(SLEEPER_STAMP)
 BGB_PKG_IN_REPO := tests/rkt-monitor/sleeper
 BGB_BINARY := $(SLEEPER)

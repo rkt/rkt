@@ -1,7 +1,7 @@
 $(call setup-stamp-file,CPU_STRESSER_STAMP)
 
 # variables for makelib/build_go_bin.mk
-CPU_STRESSER := $(BINDIR)/cpu-stresser
+CPU_STRESSER := $(TARGET_BINDIR)/cpu-stresser
 BGB_STAMP := $(CPU_STRESSER_STAMP)
 BGB_PKG_IN_REPO := tests/rkt-monitor/cpu-stresser
 BGB_BINARY := $(CPU_STRESSER)
