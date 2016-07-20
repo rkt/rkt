@@ -19,10 +19,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -48,7 +48,10 @@ var (
 	flagDuration         string
 	flagShowOutput       bool
 	flagSaveToCsv        bool
+	flagCsvDir           string
 	flagRepetitionNumber int
+	flagRktDir           string
+	flagStage1Path       string
 
 	cmdRktMonitor = &cobra.Command{
 		Use:     "rkt-monitor IMAGE",
@@ -66,6 +69,9 @@ func init() {
 	cmdRktMonitor.Flags().StringVarP(&flagDuration, "duration", "d", "10s", "How long to run the ACI")
 	cmdRktMonitor.Flags().BoolVarP(&flagShowOutput, "show-output", "o", false, "Display rkt's stdout and stderr")
 	cmdRktMonitor.Flags().BoolVarP(&flagSaveToCsv, "to-file", "f", false, "Save benchmark results to files in a temp dir")
+	cmdRktMonitor.Flags().StringVarP(&flagCsvDir, "output-dir", "w", "/tmp", "Specify directory to write results")
+	cmdRktMonitor.Flags().StringVarP(&flagRktDir, "rkt-dir", "p", "", "Directory with rkt binary")
+	cmdRktMonitor.Flags().StringVarP(&flagStage1Path, "stage1-path", "s", "", "Path to Stage1 image to use")
 
 	flag.Parse()
 }
@@ -105,6 +111,13 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 		podManifest = true
 	}
 
+	var flavorType string
+	if flagStage1Path == "" {
+		flavorType = "stage1-coreos.aci"
+	} else {
+		_, flavorType = filepath.Split(flagStage1Path)
+	}
+
 	var execCmd *exec.Cmd
 	var loadAvg *load.AvgStat
 	var containerStarting, containerStarted, containerStopping, containerStopped time.Time
@@ -112,14 +125,31 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 	records := [][]string{{"Time", "PID name", "PID number", "RSS", "CPU"}}             // csv headers
 	summaryRecords := [][]string{{"Load1", "Load5", "Load15", "StartTime", "StopTime"}} // csv summary headers
 
+	var rktBinary string
+	if flagRktDir != "" {
+		rktBinary = flagRktDir + "/rkt"
+	} else {
+		rktBinary = "rkt"
+	}
+
 	for i := 0; i < flagRepetitionNumber; i++ {
 		containerStarting = time.Now()
 
-		if podManifest {
-			execCmd = exec.Command("rkt", "run", "--pod-manifest", args[0], "--net=default-restricted")
-		} else {
-			execCmd = exec.Command("rkt", "run", args[0], "--insecure-options=image", "--net=default-restricted")
+		// build argument list for execCmd
+		argv := []string{"run"}
+
+		if flagStage1Path != "" {
+			argv = append(argv, fmt.Sprintf("--stage1-path=%v", flagStage1Path))
 		}
+
+		if podManifest {
+			argv = append(argv, "--pod-manifest", args[0])
+		} else {
+			argv = append(argv, args[0], "--insecure-options=image")
+		}
+		argv = append(argv, "--net=default-restricted")
+
+		execCmd = exec.Command(rktBinary, argv...)
 
 		if flagShowOutput {
 			execCmd.Stdout = os.Stdout
@@ -216,19 +246,21 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 				strconv.FormatFloat(loadAvg.Load15, 'g', 3, 64),
 				strconv.FormatInt(containerStarted.Sub(containerStarting).Nanoseconds(), 10),
 				strconv.FormatInt(containerStopped.Sub(containerStopping).Nanoseconds(), 10)})
-		} else {
-			fmt.Printf("load average: Load1: %f Load5: %f Load15: %f\n", loadAvg.Load1, loadAvg.Load5, loadAvg.Load15)
-			fmt.Printf("container start time: %dns\n", containerStarted.Sub(containerStarting).Nanoseconds())
-			fmt.Printf("container stop time: %dns\n", containerStopped.Sub(containerStopping).Nanoseconds())
 		}
+
+		fmt.Printf("load average: Load1: %f Load5: %f Load15: %f\n", loadAvg.Load1, loadAvg.Load5, loadAvg.Load15)
+		fmt.Printf("container start time: %dns\n", containerStarted.Sub(containerStarting).Nanoseconds())
+		fmt.Printf("container stop time: %dns\n", containerStopped.Sub(containerStopping).Nanoseconds())
 	}
 
+	t := time.Now()
+	prefix := fmt.Sprintf("%d-%02d-%02d_%02d-%02d_%s_", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), flavorType)
 	if flagSaveToCsv {
-		err = saveRecords(records, "rkt_benchmark_interval_")
+		err = saveRecords(records, flagCsvDir, prefix+"rkt_benchmark_interval.csv")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Can't write to a file: %v\n", err)
 		}
-		err = saveRecords(summaryRecords, "rkt_benchmark_summary_")
+		err = saveRecords(summaryRecords, flagCsvDir, prefix+"rkt_benchmark_summary.csv")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Can't write to a summary file: %v\n", err)
 		}
@@ -352,8 +384,8 @@ func addRecords(statuses []*ProcessStatus, records [][]string) [][]string {
 	return records
 }
 
-func saveRecords(records [][]string, prefix string) error {
-	csvFile, err := ioutil.TempFile("", prefix)
+func saveRecords(records [][]string, dir, filename string) error {
+	csvFile, err := os.Create(filepath.Join(dir, filename))
 	defer csvFile.Close()
 	if err != nil {
 		return err
