@@ -38,7 +38,7 @@ function replace_all() {
 }
 
 function replace_version() {
-	replace_stuff $1 $2 configure.ac scripts/build-rir.sh scripts/acbuild-rkt-builder.sh
+	replace_stuff $1 $2 configure.ac scripts/build-rir.sh
 }
 
 NEXT=${1:1} 	        # 0.2.3
