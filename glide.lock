@@ -1,5 +1,5 @@
-hash: 79f133fbb4e0f79f65f0b5303420513c3e3f8859b9d11ef7b6ff65120dcd29e4
-updated: 2016-07-14T12:45:07.658245282+02:00
+hash: 05a0c03ecc6483a3a678d57fb25ad2077de5725245db02867e7123d38dfc7efe
+updated: 2016-07-21T14:46:44.37734022+02:00
 imports:
 - name: github.com/appc/docker2aci
   version: d77d6e4b99a0d8b6be6f70c623c86ba777110cbd
@@ -183,6 +183,8 @@ imports:
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jmespath/go-jmespath
   version: 0b12d6b521d83fc7f755e7cfc1b1fbdd35a01a74
+- name: github.com/jonboulle/clockwork
+  version: 2eee05ed794112d45db504eb05aa693efd2b8b09
 - name: github.com/kballard/go-shellquote
   version: e5c918b80c17694cbc49aab32a759f9a40067f5d
 - name: github.com/klauspost/compress
