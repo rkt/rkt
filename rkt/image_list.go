@@ -127,7 +127,7 @@ var (
 func init() {
 	sortFields := []string{l(name), l(importTime), l(lastUsed), l(size)}
 
-	fields := []string{l(id), l(name), l(aciURL), l(signatureURL), l(size), l(importTime), l(lastUsed)}
+	fields := []string{l(id), l(name), l(aciURL), l(signatureURL), l(insecureOptions), l(size), l(importTime), l(lastUsed)}
 
 	// Set defaults
 	var err error
@@ -252,7 +252,15 @@ func runImages(cmd *cobra.Command, args []string) int {
 					return 1
 				}
 
-				fieldValue = fmt.Sprintf("%s", f.String())
+				// remove ondisk, it's a runtime insecure option
+				sp := strings.Split(f.String(), ",")
+				for i, o := range sp {
+					if o == "ondisk" {
+						sp = append(sp[:i], sp[i+1:]...)
+					}
+				}
+
+				fieldValue = fmt.Sprintf("%s", strings.Join(sp, ","))
 			case l(aciURL):
 				if imageRemote := remoteMap[aciInfo.BlobKey]; imageRemote == nil {
 					fieldValue = ""

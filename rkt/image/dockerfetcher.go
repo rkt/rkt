@@ -83,7 +83,8 @@ func (f *dockerFetcher) fetchImageFrom(u *url.URL, latest bool) (string, error) 
 		return "", err
 	}
 
-	newRem := store.NewRemote(u.String(), ascURLFromImgURL(u).String())
+	// docker images don't have signature URL
+	newRem := store.NewRemote(u.String(), "")
 	newRem.BlobKey = key
 	newRem.DownloadTime = time.Now()
 	err = f.S.WriteRemote(newRem)

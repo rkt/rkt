@@ -102,8 +102,15 @@ func (sf *SecFlags) String() string {
 
 	for optstr, opt := range insecureOptionsMap {
 		if sf.hasFlag(opt) {
+			if opt == insecureNone || opt == insecureAll {
+				continue
+			}
 			opts = append(opts, optstr)
 		}
+	}
+
+	if len(opts) == 0 {
+		return "none"
 	}
 
 	return strings.Join(opts, ",")

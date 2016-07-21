@@ -623,13 +623,13 @@ func parseImageInfoOutput(t *testing.T, result string) *imageInfo {
 	if len(nameVersion) != 2 {
 		t.Fatalf("Failed to parse name version string: %q", fields[1])
 	}
-	importTime, err := time.Parse(defaultTimeLayout, fields[3])
+	importTime, err := time.Parse(defaultTimeLayout, fields[6])
 	if err != nil {
-		t.Fatalf("Failed to parse time string: %q", fields[3])
+		t.Fatalf("Failed to parse time string: %q", fields[6])
 	}
-	size, err := strconv.Atoi(fields[2])
+	size, err := strconv.Atoi(fields[5])
 	if err != nil {
-		t.Fatalf("Failed to parse image size string: %q", fields[2])
+		t.Fatalf("Failed to parse image size string: %q", fields[5])
 	}
 
 	return &imageInfo{
