@@ -1,3 +1,56 @@
+## 1.11.0
+
+This release sets the ground for the new upcoming KVM qemu flavor. It adds support for exporting a pod to an ACI including all modifications. The rkt API service now also supports systemd socket activation. Finally we have diagnostics back, helping users to find out why their app failed to execute.
+
+#### New features
+- KVM: Hypervisor support for KVM flavor focusing on qemu ([#2684](https://github.com/coreos/rkt/pull/2684)). This provides a generic mechanism to use different kvm hypervisors (such as lkvm, qemu-kvm).
+- rkt: add command to export a pod to an aci ([#2889](https://github.com/coreos/rkt/pull/2889)). Adds a new `export` command to rkt which generates an ACI from a pod; saving any changes made to the pod.
+- rkt/api: detect when run as a `systemd.socket(5)` service ([#2916](https://github.com/coreos/rkt/pull/2916)). This allows rkt to run as a systemd socket-based unit.
+- rkt/stop: implement `--uuid-file` ([#2902](https://github.com/coreos/rkt/pull/2902)). So the user can use the value saved on rkt run with `--uuid-file-save`.
+
+#### Bug fixes
+- scripts/glide-update: ensure running from $GOPATH ([#2885](https://github.com/coreos/rkt/pull/2885)). glide is confused when it's not running with the rkt repository inside $GOPATH.
+- store: fix missing shared storelock acquisition on NewStore ([#2896](https://github.com/coreos/rkt/pull/2896)).
+- store,rkt: fix fd leaks ([#2906](https://github.com/coreos/rkt/pull/2906)). Close db lock on store close. If we don't do it, there's a fd leak everytime we open a new Store, even if it was closed.
+- stage1/enterexec: remove trailing `\n` in environment variables ([#2901](https://github.com/coreos/rkt/pull/2901)). Loading environment retained the new line character (`\n`), this produced an incorrect evaluation of the environment variables.
+- stage1/gc: skip cleaning our own cgroup ([#2914](https://github.com/coreos/rkt/pull/2914)).
+- api_service/log: fix file descriptor leak in GetLogs() ([#2930](https://github.com/coreos/rkt/pull/2930)).
+- protobuf: fix protoc-gen-go build with vendoring ([#2913](https://github.com/coreos/rkt/pull/2913)).
+- build: fix x86 builds ([#2926](https://github.com/coreos/rkt/pull/2926)). This PR fixes a minor issue which leads to x86 builds failing.
+- functional tests: add some more volume/mount tests ([#2903](https://github.com/coreos/rkt/pull/2903)).
+- stage1/init: link pod's journal in kvm flavor ([#2934](https://github.com/coreos/rkt/pull/2934)). In nspawn flavors, nspawn creates a symlink from `/var/log/journal/${machine-id}` to the pod's journal directory. In kvm we need to do the link ourselves.
+- build: Build system fixes ([#2938](https://github.com/coreos/rkt/pull/2938)). This should fix the `expr: syntax error` and useless rebuilds of network plugins.
+
+#### Other changes
+- stage1: diagnostic functionality for rkt run ([#2872](https://github.com/coreos/rkt/pull/2872)). If the app exits with `ExecMainStatus == 203`, the app's reaper runs the diagnostic tool and prints the output on stdout. systemd sets `ExecMainstatus` to EXIT_EXEC (203) when execve() fails.
+- build: add support for more architectures at configure time ([#2907](https://github.com/coreos/rkt/pull/2907)).
+- stage1: update coreos image to 1097.0.0 ([#2884](https://github.com/coreos/rkt/pull/2884)). This is needed for a recent enough version of libseccomp (2.3.0), with support for new syscalls (eg. getrandom).
+- api: By adding labels to the image itself, we don't need to pass the manifest to filter function ([#2909](https://github.com/coreos/rkt/pull/2909)). api: Add labels to pod and image type.
+- api: optionally build systemd-journal support ([#2868](https://github.com/coreos/rkt/pull/2868)). This introduces a 'sdjournal' tag and corresponding stubs in api_service, turning libsystemd headers into a soft-dependency.
+- store: simplify db locking and functions ([#2897](https://github.com/coreos/rkt/pull/2897)). Instead of having a file lock to handle inter process locking and a sync.Mutex to handle locking between multiple goroutines, just create, lock and close a new file lock at every db.Do function.
+- stage1/enterexec: Add entry to ASSCB_EXTRA_HEADERS ([#2924](https://github.com/coreos/rkt/pull/2924)). Added entry to ASSCB_EXTRA_HEADERS for better change tracking.
+- build: use rkt-builder ACI ([#2923](https://github.com/coreos/rkt/pull/2923)).
+- Add hidden 'image fetch' next to the existing 'fetch' option ([#2860](https://github.com/coreos/rkt/pull/2860)).
+- stage1: prepare-app: don't mount /sys if path already used ([#2888](https://github.com/coreos/rkt/pull/2888)). When users mount /sys or a sub-directory of /sys as a volume, prepare-app should not mount /sys: that would mask the volume provided by users.
+- build,stage1/init: set interpBin at build time to fix other architecture builds (e.g. x86) ([#2950](https://github.com/coreos/rkt/pull/2950)).
+- functional tests: re-purpose aws.sh for generating AMIs ([#2736](https://github.com/coreos/rkt/pull/2736)).
+- rkt: Add `--cpuprofile` `--memprofile` for profiling rkt ([#2887](https://github.com/coreos/rkt/pull/2887)). Adds two hidden global flags and documentation to enable profiling rkt.
+- functional test: check PATH variable for trailer `\n` character ([#2942](https://github.com/coreos/rkt/pull/2942)).
+- functional tests: disable TestVolumeSysfs on kvm ([#2941](https://github.com/coreos/rkt/pull/2941)).
+- Documentation updates ([#2918](https://github.com/coreos/rkt/pull/2918))
+
+#### Library updates
+
+- glide: update docker2aci to v0.12.1 ([#2873](https://github.com/coreos/rkt/pull/2873)). Includes support for the docker image format v2.2 and OCI image format and allows fetching via digest.
+
+## 1.10.1
+
+This is a minor bug fix release.
+
+#### Bug fixes
+- rkt/run: handle malformed environment files ([#2901](https://github.com/coreos/rkt/pull/2901))
+- stage1/enterexec: remove trailing `\n` in environment variables ([#2901](https://github.com/coreos/rkt/pull/2901))
+
 ## v1.10.0
 This release introduces a number of important features and improvements:
 
