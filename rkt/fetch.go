@@ -20,7 +20,8 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/rkt/image"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
+	"github.com/coreos/rkt/store/treestore"
 
 	"github.com/spf13/cobra"
 )
@@ -78,11 +79,18 @@ func runFetch(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	s, err := store.NewStore(getDataDir())
+	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
 		return 1
 	}
+
+	ts, err := treestore.NewStore(treeStoreDir(), s)
+	if err != nil {
+		stderr.PrintE("cannot open treestore", err)
+		return 1
+	}
+
 	ks := getKeystore()
 	config, err := getConfig()
 	if err != nil {
@@ -91,6 +99,7 @@ func runFetch(cmd *cobra.Command, args []string) (exit int) {
 	}
 	ft := &image.Fetcher{
 		S:                  s,
+		Ts:                 ts,
 		Ks:                 ks,
 		Headers:            config.AuthPerHost,
 		DockerAuth:         config.DockerCredentialsPerRegistry,

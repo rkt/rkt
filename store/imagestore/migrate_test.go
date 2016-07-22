@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package store
+package imagestore
 
 import (
 	"database/sql"
@@ -24,14 +24,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coreos/rkt/store/db"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/jonboulle/clockwork"
 )
 
 type testdb interface {
 	version() int
-	populate(db *DB) error
-	load(db *DB) error
+	populate(db *db.DB) error
+	load(db *db.DB) error
 	compare(db testdb) bool
 }
 
@@ -44,7 +45,7 @@ func (d *DBV0) version() int {
 	return 0
 }
 
-func (d *DBV0) populate(db *DB) error {
+func (d *DBV0) populate(db *db.DB) error {
 	// As DBV0 and DBV1 have the same schema use a common populate
 	// function.
 	return populateDBV0_1(db, d.version(), d.aciinfos, d.remotes)
@@ -52,7 +53,7 @@ func (d *DBV0) populate(db *DB) error {
 
 // load populates the given struct with the data in db.
 // the given struct d should be empty
-func (d *DBV0) load(db *DB) error {
+func (d *DBV0) load(db *db.DB) error {
 	fn := func(tx *sql.Tx) error {
 		var err error
 		d.aciinfos, err = getAllACIInfosV0_2(tx)
@@ -93,11 +94,11 @@ type DBV1 struct {
 func (d *DBV1) version() int {
 	return 1
 }
-func (d *DBV1) populate(db *DB) error {
+func (d *DBV1) populate(db *db.DB) error {
 	return populateDBV0_1(db, d.version(), d.aciinfos, d.remotes)
 }
 
-func (d *DBV1) load(db *DB) error {
+func (d *DBV1) load(db *db.DB) error {
 	fn := func(tx *sql.Tx) error {
 		var err error
 		d.aciinfos, err = getAllACIInfosV0_2(tx)
@@ -138,11 +139,11 @@ type DBV2 struct {
 func (d *DBV2) version() int {
 	return 2
 }
-func (d *DBV2) populate(db *DB) error {
+func (d *DBV2) populate(db *db.DB) error {
 	return populateDBV2(db, d.version(), d.aciinfos, d.remotes)
 }
 
-func (d *DBV2) load(db *DB) error {
+func (d *DBV2) load(db *db.DB) error {
 	fn := func(tx *sql.Tx) error {
 		var err error
 		d.aciinfos, err = getAllACIInfosV0_2(tx)
@@ -183,11 +184,11 @@ type DBV3 struct {
 func (d *DBV3) version() int {
 	return 3
 }
-func (d *DBV3) populate(db *DB) error {
+func (d *DBV3) populate(db *db.DB) error {
 	return populateDBV3(db, d.version(), d.aciinfos, d.remotes)
 }
 
-func (d *DBV3) load(db *DB) error {
+func (d *DBV3) load(db *db.DB) error {
 	fn := func(tx *sql.Tx) error {
 		var err error
 		d.aciinfos, err = getAllACIInfosV3(tx)
@@ -228,11 +229,11 @@ type DBV4 struct {
 func (d *DBV4) version() int {
 	return 4
 }
-func (d *DBV4) populate(db *DB) error {
+func (d *DBV4) populate(db *db.DB) error {
 	return populateDBV4(db, d.version(), d.aciinfos, d.remotes)
 }
 
-func (d *DBV4) load(db *DB) error {
+func (d *DBV4) load(db *db.DB) error {
 	fn := func(tx *sql.Tx) error {
 		var err error
 		d.aciinfos, err = getAllACIInfosV4(tx)
@@ -273,11 +274,11 @@ type DBV5 struct {
 func (d *DBV5) version() int {
 	return 5
 }
-func (d *DBV5) populate(db *DB) error {
+func (d *DBV5) populate(db *db.DB) error {
 	return populateDBV5(db, d.version(), d.aciinfos, d.remotes)
 }
 
-func (d *DBV5) load(db *DB) error {
+func (d *DBV5) load(db *db.DB) error {
 	fn := func(tx *sql.Tx) error {
 		var err error
 		d.aciinfos, err = getAllACIInfosV5(tx)
@@ -318,11 +319,11 @@ type DBV6 struct {
 func (d *DBV6) version() int {
 	return 6
 }
-func (d *DBV6) populate(db *DB) error {
+func (d *DBV6) populate(db *db.DB) error {
 	return populateDBV6(db, d.version(), d.aciinfos, d.remotes)
 }
 
-func (d *DBV6) load(db *DB) error {
+func (d *DBV6) load(db *db.DB) error {
 	fn := func(tx *sql.Tx) error {
 		var err error
 		d.aciinfos, err = getAllACIInfosV6(tx)
@@ -553,7 +554,7 @@ func getAllRemoteV2_6(tx *sql.Tx) ([]*RemoteV2_6, error) {
 	return remotes, nil
 }
 
-func populateDBV0_1(db *DB, dbVersion int, aciInfos []*ACIInfoV0_2, remotes []*RemoteV0_1) error {
+func populateDBV0_1(db *db.DB, dbVersion int, aciInfos []*ACIInfoV0_2, remotes []*RemoteV0_1) error {
 	var dbCreateStmts = [...]string{
 		// version table
 		"CREATE TABLE IF NOT EXISTS version (version int);",
@@ -611,7 +612,7 @@ func populateDBV0_1(db *DB, dbVersion int, aciInfos []*ACIInfoV0_2, remotes []*R
 	return nil
 }
 
-func populateDBV2(db *DB, dbVersion int, aciInfos []*ACIInfoV0_2, remotes []*RemoteV2_6) error {
+func populateDBV2(db *db.DB, dbVersion int, aciInfos []*ACIInfoV0_2, remotes []*RemoteV2_6) error {
 	var dbCreateStmts = [...]string{
 		// version table
 		"CREATE TABLE IF NOT EXISTS version (version int);",
@@ -669,7 +670,7 @@ func populateDBV2(db *DB, dbVersion int, aciInfos []*ACIInfoV0_2, remotes []*Rem
 	return nil
 }
 
-func populateDBV3(db *DB, dbVersion int, aciInfos []*ACIInfoV3, remotes []*RemoteV2_6) error {
+func populateDBV3(db *db.DB, dbVersion int, aciInfos []*ACIInfoV3, remotes []*RemoteV2_6) error {
 	var dbCreateStmts = [...]string{
 		// version table
 		"CREATE TABLE IF NOT EXISTS version (version int);",
@@ -726,7 +727,7 @@ func populateDBV3(db *DB, dbVersion int, aciInfos []*ACIInfoV3, remotes []*Remot
 	return nil
 }
 
-func populateDBV4(db *DB, dbVersion int, aciInfos []*ACIInfoV4, remotes []*RemoteV2_6) error {
+func populateDBV4(db *db.DB, dbVersion int, aciInfos []*ACIInfoV4, remotes []*RemoteV2_6) error {
 	var dbCreateStmts = [...]string{
 		// version table
 		"CREATE TABLE IF NOT EXISTS version (version int);",
@@ -783,7 +784,7 @@ func populateDBV4(db *DB, dbVersion int, aciInfos []*ACIInfoV4, remotes []*Remot
 	return nil
 }
 
-func populateDBV5(db *DB, dbVersion int, aciInfos []*ACIInfoV5, remotes []*RemoteV2_6) error {
+func populateDBV5(db *db.DB, dbVersion int, aciInfos []*ACIInfoV5, remotes []*RemoteV2_6) error {
 	var dbCreateStmts = [...]string{
 		// version table
 		"CREATE TABLE IF NOT EXISTS version (version int);",
@@ -840,7 +841,7 @@ func populateDBV5(db *DB, dbVersion int, aciInfos []*ACIInfoV5, remotes []*Remot
 	return nil
 }
 
-func populateDBV6(db *DB, dbVersion int, aciInfos []*ACIInfoV6, remotes []*RemoteV2_6) error {
+func populateDBV6(db *db.DB, dbVersion int, aciInfos []*ACIInfoV6, remotes []*RemoteV2_6) error {
 	var dbCreateStmts = [...]string{
 		// version table
 		"CREATE TABLE IF NOT EXISTS version (version int);",
@@ -911,8 +912,8 @@ func testMigrate(tt migrateTest) error {
 	}
 	defer os.RemoveAll(dir)
 
-	casDir := filepath.Join(dir, "cas")
-	db, err := NewDB(filepath.Join(casDir, "db"))
+	storeDir := filepath.Join(dir, "store")
+	db, err := db.NewDB(filepath.Join(storeDir, "db"))
 	if err != nil {
 		return err
 	}

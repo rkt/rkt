@@ -34,7 +34,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/set"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
 	"github.com/coreos/rkt/version"
 	"github.com/godbus/dbus"
 	"github.com/hashicorp/errwrap"
@@ -70,13 +70,13 @@ func init() {
 
 // v1AlphaAPIServer implements v1Alpha.APIServer interface.
 type v1AlphaAPIServer struct {
-	store *store.Store
+	store *imagestore.Store
 }
 
 var _ v1alpha.PublicAPIServer = &v1AlphaAPIServer{}
 
 func newV1AlphaAPIServer() (*v1AlphaAPIServer, error) {
-	s, err := store.NewStore(getDataDir())
+	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +444,7 @@ func (s *v1AlphaAPIServer) ListPods(ctx context.Context, request *v1alpha.ListPo
 }
 
 // fillAppInfo fills the apps' state and image info of the pod.
-func fillAppInfo(store *store.Store, p *pod, v1pod *v1alpha.Pod) {
+func fillAppInfo(store *imagestore.Store, p *pod, v1pod *v1alpha.Pod) {
 	switch v1pod.State {
 	case v1alpha.PodState_POD_STATE_UNDEFINED:
 		return
@@ -537,7 +537,7 @@ func (s *v1AlphaAPIServer) InspectPod(ctx context.Context, request *v1alpha.Insp
 }
 
 // aciInfoToV1AlphaAPIImage takes an aciInfo object and construct the v1alpha.Image object.
-func aciInfoToV1AlphaAPIImage(store *store.Store, aciInfo *store.ACIInfo) (*v1alpha.Image, error) {
+func aciInfoToV1AlphaAPIImage(store *imagestore.Store, aciInfo *imagestore.ACIInfo) (*v1alpha.Image, error) {
 	manifest, err := store.GetImageManifestJSON(aciInfo.BlobKey)
 	if err != nil {
 		stderr.PrintE("failed to read the image manifest", err)
@@ -709,7 +709,7 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 }
 
 // getImageInfo for a given image ID, returns the *v1alpha.Image object.
-func getImageInfo(store *store.Store, imageID string) (*v1alpha.Image, error) {
+func getImageInfo(store *imagestore.Store, imageID string) (*v1alpha.Image, error) {
 	key, err := store.ResolveKey(imageID)
 	if err != nil {
 		stderr.PrintE(fmt.Sprintf("failed to resolve the image ID %q", imageID), err)

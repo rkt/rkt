@@ -24,16 +24,16 @@ import (
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
 	"github.com/hashicorp/errwrap"
 )
 
 // httpFetcher is used to download images from http or https URLs.
 type httpFetcher struct {
 	InsecureFlags *rktflag.SecFlags
-	S             *store.Store
+	S             *imagestore.Store
 	Ks            *keystore.Keystore
-	Rem           *store.Remote
+	Rem           *imagestore.Remote
 	Debug         bool
 	Headers       map[string]config.Headerer
 }
@@ -60,7 +60,7 @@ func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 		// CacheMaxAge is exceeded
 		return key, nil
 	}
-	key, err := f.S.WriteACI(aciFile, store.ACIFetchInfo{
+	key, err := f.S.WriteACI(aciFile, imagestore.ACIFetchInfo{
 		Latest:          false,
 		InsecureOptions: int64(f.InsecureFlags.Value()),
 	})
@@ -69,9 +69,9 @@ func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 	}
 
 	// TODO(krnowak): What's the point of the second parameter?
-	// The SigURL field in store.Remote seems to be completely
+	// The SigURL field in imagestore.Remote seems to be completely
 	// unused.
-	newRem := store.NewRemote(urlStr, a.Location)
+	newRem := imagestore.NewRemote(urlStr, a.Location)
 	newRem.BlobKey = key
 	newRem.DownloadTime = time.Now()
 	if cd != nil {

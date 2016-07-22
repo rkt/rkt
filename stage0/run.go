@@ -49,7 +49,8 @@ import (
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/tpm"
 	"github.com/coreos/rkt/pkg/user"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
+	"github.com/coreos/rkt/store/treestore"
 	"github.com/coreos/rkt/version"
 	"github.com/hashicorp/errwrap"
 )
@@ -88,11 +89,12 @@ type RunConfig struct {
 
 // configuration shared by both Run and Prepare
 type CommonConfig struct {
-	Store        *store.Store // store containing all of the configured application images
-	Stage1Image  types.Hash   // stage1 image containing usable /init and /enter entrypoints
-	UUID         *types.UUID  // UUID of the pod
-	RootHash     string       // Hash of the root filesystem
-	ManifestData string       // The pod manifest data
+	Store        *imagestore.Store // store containing all of the configured application images
+	TreeStore    *treestore.Store  // store containing all of the configured application images
+	Stage1Image  types.Hash        // stage1 image containing usable /init and /enter entrypoints
+	UUID         *types.UUID       // UUID of the pod
+	RootHash     string            // Hash of the root filesystem
+	ManifestData string            // The pod manifest data
 	Debug        bool
 	MountLabel   string // selinux label to use for fs
 	ProcessLabel string // selinux label to use for process
@@ -589,17 +591,17 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 		if cfg.PrivateUsers.Shift > 0 {
 			return fmt.Errorf("cannot use both overlay and user namespace: not implemented yet. (Try --no-overlay)")
 		}
-		treeStoreID, _, err := cfg.Store.RenderTreeStore(img.String(), false)
+		treeStoreID, _, err := cfg.TreeStore.Render(img.String(), false)
 		if err != nil {
 			return errwrap.Wrap(errors.New("error rendering tree image"), err)
 		}
 
 		if !cfg.SkipTreeStoreCheck {
-			hash, err := cfg.Store.CheckTreeStore(treeStoreID)
+			hash, err := cfg.TreeStore.Check(treeStoreID)
 			if err != nil {
 				log.PrintE("warning: tree cache is in a bad state.  Rebuilding...", err)
 				var err error
-				treeStoreID, hash, err = cfg.Store.RenderTreeStore(img.String(), true)
+				treeStoreID, hash, err = cfg.TreeStore.Render(img.String(), true)
 				if err != nil {
 					return errwrap.Wrap(errors.New("error rendering tree image"), err)
 				}
@@ -670,17 +672,17 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 		return errwrap.Wrap(errors.New("error creating stage1 directory"), err)
 	}
 
-	treeStoreID, _, err := cfg.Store.RenderTreeStore(img.String(), false)
+	treeStoreID, _, err := cfg.TreeStore.Render(img.String(), false)
 	if err != nil {
 		return errwrap.Wrap(errors.New("error rendering tree image"), err)
 	}
 
 	if !cfg.SkipTreeStoreCheck {
-		hash, err := cfg.Store.CheckTreeStore(treeStoreID)
+		hash, err := cfg.TreeStore.Check(treeStoreID)
 		if err != nil {
 			log.Printf("warning: tree cache is in a bad state: %v. Rebuilding...", err)
 			var err error
-			treeStoreID, hash, err = cfg.Store.RenderTreeStore(img.String(), true)
+			treeStoreID, hash, err = cfg.TreeStore.Render(img.String(), true)
 			if err != nil {
 				return errwrap.Wrap(errors.New("error rendering tree image"), err)
 			}
@@ -694,7 +696,7 @@ func prepareStage1Image(cfg PrepareConfig, img types.Hash, cdir string, useOverl
 
 	if !useOverlay {
 		destRootfs := filepath.Join(s1, "rootfs")
-		cachedTreePath := cfg.Store.GetTreeStoreRootFS(treeStoreID)
+		cachedTreePath := cfg.TreeStore.GetRootFS(treeStoreID)
 		if err := fileutil.CopyTree(cachedTreePath, destRootfs, cfg.PrivateUsers); err != nil {
 			return errwrap.Wrap(errors.New("error rendering ACI"), err)
 		}
@@ -765,7 +767,7 @@ func copyAppManifest(cdir string, appName types.ACName, dest string) error {
 // overlay filesystem. It mounts an overlay filesystem from the cached tree of
 // the image as rootfs.
 func overlayRender(cfg RunConfig, treeStoreID string, cdir string, dest string, appName string) error {
-	cachedTreePath := cfg.Store.GetTreeStoreRootFS(treeStoreID)
+	cachedTreePath := cfg.TreeStore.GetRootFS(treeStoreID)
 	mc, err := prepareOverlay(cachedTreePath, treeStoreID, cdir, dest, appName, cfg.MountLabel,
 		cfg.RktGid, common.DefaultRegularDirPerm)
 	if err != nil {

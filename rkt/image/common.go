@@ -28,7 +28,8 @@ import (
 	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
+	"github.com/coreos/rkt/store/treestore"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
@@ -37,8 +38,10 @@ import (
 
 // action is a common type for Finder and Fetcher
 type action struct {
-	// S is a store where images will be looked for or stored.
-	S *store.Store
+	// S is an aci store where images will be looked for or stored.
+	S *imagestore.Store
+	// Ts is an aci tree store.
+	Ts *treestore.Store
 	// Ks is a keystore used for verification of the image
 	Ks *keystore.Keystore
 	// Headers is a map of headers which might be used for

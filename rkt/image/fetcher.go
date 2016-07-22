@@ -25,7 +25,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/stage0"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
 	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/discovery"
@@ -56,7 +56,7 @@ func (f *Fetcher) FetchImage(img string, ascPath string, imgType apps.AppImageTy
 	// we need to be able to do a chroot and access to the tree store
 	// directories, check if we're root
 	if common.SupportsOverlay() && os.Geteuid() == 0 {
-		if _, _, err := f.S.RenderTreeStore(hash, false); err != nil {
+		if _, _, err := f.Ts.Render(hash, false); err != nil {
 			return "", errwrap.Wrap(errors.New("error rendering tree store"), err)
 		}
 	}
@@ -200,7 +200,7 @@ func (f *Fetcher) fetchSingleImageByDockerURL(u *url.URL) (string, error) {
 	return "", fmt.Errorf("unable to fetch docker image from URL %q: either image was not found in the store or store was disabled and fetching from remote yielded nothing or it was disabled", u.String())
 }
 
-func (f *Fetcher) getRemoteForURL(u *url.URL) (*store.Remote, error) {
+func (f *Fetcher) getRemoteForURL(u *url.URL) (*imagestore.Remote, error) {
 	if f.NoCache {
 		return nil, nil
 	}
@@ -213,7 +213,7 @@ func (f *Fetcher) getRemoteForURL(u *url.URL) (*store.Remote, error) {
 	return nil, nil
 }
 
-func (f *Fetcher) maybeCheckRemoteFromStore(rem *store.Remote, check remoteCheck) string {
+func (f *Fetcher) maybeCheckRemoteFromStore(rem *imagestore.Remote, check remoteCheck) string {
 	if f.NoStore || rem == nil {
 		return ""
 	}
@@ -231,7 +231,7 @@ func (f *Fetcher) maybeCheckRemoteFromStore(rem *store.Remote, check remoteCheck
 	return ""
 }
 
-func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *store.Remote, u *url.URL, a *asc) (string, error) {
+func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *imagestore.Remote, u *url.URL, a *asc) (string, error) {
 	if !f.StoreOnly {
 		log.Printf("remote fetching from URL %q", u.String())
 		hf := &httpFetcher{
@@ -320,7 +320,7 @@ func (f *Fetcher) maybeCheckStoreForApp(app *appBundle) (string, error) {
 			return key, nil
 		}
 		switch err.(type) {
-		case store.ACINotFoundError:
+		case imagestore.ACINotFoundError:
 			// ignore the "not found" error
 		default:
 			return "", err
@@ -337,7 +337,7 @@ func (f *Fetcher) getStoreKeyFromApp(app *appBundle) (string, error) {
 	key, err := f.S.GetACI(app.App.Name, labels)
 	if err != nil {
 		switch err.(type) {
-		case store.ACINotFoundError:
+		case imagestore.ACINotFoundError:
 			return "", err
 		default:
 			return "", errwrap.Wrap(fmt.Errorf("cannot find image %q", app.Str), err)

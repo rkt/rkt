@@ -25,7 +25,8 @@ import (
 	"github.com/coreos/rkt/pkg/user"
 	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/stage0"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
+	"github.com/coreos/rkt/store/treestore"
 	"github.com/spf13/cobra"
 )
 
@@ -121,9 +122,15 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	s, err := store.NewStore(getDataDir())
+	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
+		return 1
+	}
+
+	ts, err := treestore.NewStore(treeStoreDir(), s)
+	if err != nil {
+		stderr.PrintE("cannot open treestore", err)
 		return 1
 	}
 
@@ -133,7 +140,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	s1img, err := getStage1Hash(s, config)
+	s1img, err := getStage1Hash(s, ts, config)
 	if err != nil {
 		stderr.Error(err)
 		return 1
@@ -141,6 +148,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 
 	fn := &image.Finder{
 		S:                  s,
+		Ts:                 ts,
 		Ks:                 getKeystore(),
 		Headers:            config.AuthPerHost,
 		DockerAuth:         config.DockerCredentialsPerRegistry,
@@ -165,6 +173,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 
 	cfg := stage0.CommonConfig{
 		Store:       s,
+		TreeStore:   ts,
 		Stage1Image: *s1img,
 		UUID:        p.uuid,
 		Debug:       globalFlags.Debug,

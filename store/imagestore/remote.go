@@ -15,7 +15,7 @@
 // Package store implements a content-addressable-store on disk.
 // It leverages the `diskv` package to store items in a simple
 // key-value blob store: https://github.com/peterbourgon/diskv
-package store
+package imagestore
 
 import (
 	"database/sql"

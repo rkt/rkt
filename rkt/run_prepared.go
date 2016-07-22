@@ -19,7 +19,8 @@ package main
 import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/stage0"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
+	"github.com/coreos/rkt/store/treestore"
 	"github.com/spf13/cobra"
 )
 
@@ -62,9 +63,15 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 	}
 	defer p.Close()
 
-	s, err := store.NewStore(getDataDir())
+	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
+		return 1
+	}
+
+	ts, err := treestore.NewStore(treeStoreDir(), s)
+	if err != nil {
+		stderr.PrintE("cannot open treestore", err)
 		return 1
 	}
 
@@ -120,9 +127,10 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 
 	rcfg := stage0.RunConfig{
 		CommonConfig: &stage0.CommonConfig{
-			Store: s,
-			UUID:  p.uuid,
-			Debug: globalFlags.Debug,
+			Store:     s,
+			TreeStore: ts,
+			UUID:      p.uuid,
+			Debug:     globalFlags.Debug,
 		},
 		Net:         flagNet,
 		LockFd:      lfd,

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package store
+package backup
 
 import (
 	"io/ioutil"
@@ -24,7 +24,7 @@ import (
 	"github.com/coreos/rkt/pkg/user"
 )
 
-// createBackup backs a database up in a given directory. It basically
+// CreateBackup backs a directory up in a given directory. It basically
 // copies this directory into a given backups directory. The backups
 // directory has a simple structure - a directory inside named "0" is
 // the most recent backup. A directory name for oldest backup is
@@ -32,12 +32,12 @@ import (
 // name for the oldest backup would be "4". If a backups number
 // exceeds the given limit then only newest ones are kept and the rest
 // is removed.
-func createBackup(dbDir, backupsDir string, limit int) error {
+func CreateBackup(dir, backupsDir string, limit int) error {
 	tmpBackupDir := filepath.Join(backupsDir, "tmp")
-	if err := os.MkdirAll(backupsDir, defaultPathPerm); err != nil {
+	if err := os.MkdirAll(backupsDir, 0750); err != nil {
 		return err
 	}
-	if err := fileutil.CopyTree(dbDir, tmpBackupDir, user.NewBlankUidRange()); err != nil {
+	if err := fileutil.CopyTree(dir, tmpBackupDir, user.NewBlankUidRange()); err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmpBackupDir)

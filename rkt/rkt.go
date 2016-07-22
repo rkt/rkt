@@ -293,6 +293,15 @@ func garbageDir() string {
 	return filepath.Join(getDataDir(), "pods", "garbage")
 }
 
+func storeDir() string {
+	return filepath.Join(getDataDir(), "cas")
+}
+
+// TODO(sgotti) backward compatibility with the current tree store paths. Needs a migration path to better paths.
+func treeStoreDir() string {
+	return filepath.Join(getDataDir(), "cas")
+}
+
 func getKeystore() *keystore.Keystore {
 	if globalFlags.InsecureFlags.SkipImageCheck() {
 		return nil

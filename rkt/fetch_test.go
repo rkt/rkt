@@ -36,7 +36,7 @@ import (
 	"github.com/coreos/rkt/rkt/config"
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/rkt/image"
-	"github.com/coreos/rkt/store"
+	"github.com/coreos/rkt/store/imagestore"
 )
 
 type httpError struct {
@@ -253,7 +253,7 @@ func TestDownloading(t *testing.T) {
 		{denyAuthTS.URL, true, noAuth, false},
 	}
 
-	s, err := store.NewStore(dir)
+	s, err := imagestore.NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -299,7 +299,7 @@ func TestFetchImage(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	s, err := store.NewStore(dir)
+	s, err := imagestore.NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -366,7 +366,7 @@ func TestGetStoreKeyFromApp(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	s, err := store.NewStore(dir)
+	s, err := imagestore.NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -382,7 +382,7 @@ func TestGetStoreKeyFromApp(t *testing.T) {
 	if _, err := a.Seek(0, 0); err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
-	_, err = s.WriteACI(a, store.ACIFetchInfo{Latest: false})
+	_, err = s.WriteACI(a, imagestore.ACIFetchInfo{Latest: false})
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -437,7 +437,7 @@ func TestFetchImageCache(t *testing.T) {
 		t.Fatalf("error creating tempdir: %v", err)
 	}
 	defer os.RemoveAll(dir)
-	s, err := store.NewStore(dir)
+	s, err := imagestore.NewStore(dir)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}

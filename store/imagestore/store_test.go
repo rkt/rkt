@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package store
+package imagestore
 
 import (
-	"archive/tar"
 	"bytes"
 	"database/sql"
 	"encoding/hex"
@@ -27,7 +26,6 @@ import (
 
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/multicall"
-	"github.com/coreos/rkt/pkg/sys"
 
 	"github.com/appc/spec/schema/types"
 )
@@ -346,134 +344,6 @@ func TestGetAci(t *testing.T) {
 	}
 }
 
-func TestTreeStore(t *testing.T) {
-	if !sys.HasChrootCapability() {
-		t.Skipf("chroot capability not available. Disabling test.")
-	}
-
-	dir, err := ioutil.TempDir("", tstprefix)
-	if err != nil {
-		t.Fatalf("error creating tempdir: %v", err)
-	}
-	defer os.RemoveAll(dir)
-	s, err := NewStore(dir)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	defer s.Close()
-
-	imj := `
-		{
-		    "acKind": "ImageManifest",
-		    "acVersion": "0.7.4",
-		    "name": "example.com/test01"
-		}
-	`
-
-	entries := []*aci.ACIEntry{
-		// An empty dir
-		{
-			Header: &tar.Header{
-				Name:     "rootfs/a",
-				Typeflag: tar.TypeDir,
-			},
-		},
-		{
-			Contents: "hello",
-			Header: &tar.Header{
-				Name: "hello.txt",
-				Size: 5,
-			},
-		},
-		{
-			Header: &tar.Header{
-				Name:     "rootfs/link.txt",
-				Linkname: "rootfs/hello.txt",
-				Typeflag: tar.TypeSymlink,
-			},
-		},
-		// dangling symlink
-		{
-			Header: &tar.Header{
-				Name:     "rootfs/link2.txt",
-				Linkname: "rootfs/missingfile.txt",
-				Typeflag: tar.TypeSymlink,
-			},
-		},
-		{
-			Header: &tar.Header{
-				Name:     "rootfs/fifo",
-				Typeflag: tar.TypeFifo,
-			},
-		},
-	}
-	aci, err := aci.NewACI(dir, imj, entries)
-	if err != nil {
-		t.Fatalf("error creating test tar: %v", err)
-	}
-	defer aci.Close()
-
-	// Rewind the ACI
-	if _, err := aci.Seek(0, 0); err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	// Import the new ACI
-	key, err := s.WriteACI(aci, ACIFetchInfo{Latest: false})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Ask the store to render the treestore
-	id, _, err := s.RenderTreeStore(key, false)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Verify image Hash. Should be the same.
-	_, err = s.CheckTreeStore(id)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Change a file permission
-	rootfs := s.GetTreeStoreRootFS(id)
-	err = os.Chmod(filepath.Join(rootfs, "a"), 0600)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Verify image Hash. Should be different
-	_, err = s.CheckTreeStore(id)
-	if err == nil {
-		t.Errorf("expected non-nil error!")
-	}
-
-	// rebuild the tree
-	prevID := id
-	id, _, err = s.RenderTreeStore(key, true)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if id != prevID {
-		t.Fatalf("unexpected different IDs. prevID: %s, id: %s", prevID, id)
-	}
-
-	// Add a file
-	rootfs = s.GetTreeStoreRootFS(id)
-	err = ioutil.WriteFile(filepath.Join(rootfs, "newfile"), []byte("newfile"), 0644)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Verify image Hash. Should be different
-	_, err = s.CheckTreeStore(id)
-	if err == nil {
-		t.Errorf("expected non-nil error!")
-	}
-}
-
 func TestRemoveACI(t *testing.T) {
 	dir, err := ioutil.TempDir("", tstprefix)
 	if err != nil {
@@ -555,7 +425,7 @@ func TestRemoveACI(t *testing.T) {
 	na.BlobKey = key
 	s.WriteRemote(na)
 
-	err = os.Remove(filepath.Join(dir, "cas", "blob", blockTransform(key)[0], blockTransform(key)[1], key))
+	err = os.Remove(filepath.Join(dir, "blob", blockTransform(key)[0], blockTransform(key)[1], key))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

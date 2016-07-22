@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package store
+package imagestore
 
 import (
 	"crypto/sha512"
@@ -29,14 +29,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/coreos/rkt/pkg/backup"
 	"github.com/coreos/rkt/pkg/lock"
-	"github.com/hashicorp/errwrap"
+	"github.com/coreos/rkt/store/db"
 
 	"github.com/appc/spec/aci"
-	"github.com/appc/spec/pkg/acirenderer"
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/peterbourgon/diskv"
 )
 
@@ -80,7 +81,7 @@ func (e ACINotFoundError) Error() string {
 }
 
 // StoreRemovalError defines an error removing a non transactional store (like
-// a diskv store or the tree store).
+// a diskv store).
 // When this happen there's the possibility that the store is left in an
 // unclean state (for example with some stale files).
 type StoreRemovalError struct {
@@ -97,10 +98,9 @@ func (e *StoreRemovalError) Error() string {
 
 // Store encapsulates a content-addressable-storage for storing ACIs on disk.
 type Store struct {
-	dir       string
-	stores    []*diskv.Diskv
-	db        *DB
-	treestore *TreeStore
+	dir    string
+	stores []*diskv.Diskv
+	db     *db.DB
 	// storeLock is a lock on the whole store. It's used for store migration. If
 	// a previous version of rkt is using the store and in the meantime a
 	// new version is installed and executed it will try migrate the store
@@ -108,18 +108,18 @@ type Store struct {
 	// or behave badly after the migration as it's expecting another db format.
 	// For this reason, before executing migration, an exclusive lock must
 	// be taken on the whole store.
-	storeLock        *lock.FileLock
-	imageLockDir     string
-	treeStoreLockDir string
+	storeLock    *lock.FileLock
+	imageLockDir string
 }
 
-func (s *Store) UpdateSize(key string, newSize int64) error {
+func (s *Store) updateSize(key string, newSize int64) error {
 	return s.db.Do(func(tx *sql.Tx) error {
 		_, err := tx.Exec("UPDATE aciinfo SET size = $1 WHERE blobkey == $2", newSize, key)
 		return err
 	})
 }
 
+// TODO(sgotti) remove this when the treestore will save its images' sizes by itself
 func (s *Store) UpdateTreeStoreSize(key string, newSize int64) error {
 	return s.db.Do(func(tx *sql.Tx) error {
 		_, err := tx.Exec("UPDATE aciinfo SET treestoresize = $1 WHERE blobkey == $2", newSize, key)
@@ -139,7 +139,6 @@ func (s *Store) populateSize() error {
 	}
 
 	aciSizes := make(map[string]int64)
-	tsSizes := make(map[string]int64)
 	for _, ai := range ais {
 		key := ai.BlobKey
 
@@ -154,68 +153,34 @@ func (s *Store) populateSize() error {
 		}
 		aciSizes[key] = rd
 
-		id, err := s.GetTreeStoreID(key)
-		if err != nil {
-			return err
-		}
-
-		tsR, err := s.treestore.IsRendered(id)
-		if err != nil {
-			return errwrap.Wrap(errors.New("error determining whether the tree store is rendered"), err)
-		}
-		if tsR {
-			// We associate a tree store with an image by writing the image
-			// hash to a file. We need this so we can update the image size
-			// when we remove the rendered tree store.
-			treepath := s.treestore.GetPath(id)
-			if err := ioutil.WriteFile(filepath.Join(treepath, imagefilename), []byte(key), 0644); err != nil {
-				return errwrap.Wrap(errors.New("error writing app treeStoreID"), err)
-			}
-
-			tsSize, err := s.treestore.Size(id)
-			if err != nil {
-				return err
-			}
-
-			tsSizes[key] = tsSize
-		}
 	}
 
 	for k := range aciSizes {
-		s.UpdateSize(k, aciSizes[k])
-		s.UpdateTreeStoreSize(k, tsSizes[k])
+		s.updateSize(k, aciSizes[k])
 	}
 
 	return nil
 }
 
-func NewStore(baseDir string) (*Store, error) {
+func NewStore(dir string) (*Store, error) {
 	// We need to allow the store's setgid bits (if any) to propagate, so
 	// disable umask
 	um := syscall.Umask(0)
 	defer syscall.Umask(um)
 
-	storeDir := filepath.Join(baseDir, "cas")
-
 	s := &Store{
-		dir:    storeDir,
+		dir:    dir,
 		stores: make([]*diskv.Diskv, len(diskvStores)),
 	}
 
-	s.imageLockDir = filepath.Join(storeDir, "imagelocks")
+	s.imageLockDir = filepath.Join(dir, "imagelocks")
 	err := os.MkdirAll(s.imageLockDir, defaultPathPerm)
 	if err != nil {
 		return nil, err
 	}
 
-	s.treeStoreLockDir = filepath.Join(storeDir, "treestorelocks")
-	err = os.MkdirAll(s.treeStoreLockDir, defaultPathPerm)
-	if err != nil {
-		return nil, err
-	}
-
 	// Take a shared cas lock
-	s.storeLock, err = lock.NewLock(storeDir, lock.Dir)
+	s.storeLock, err = lock.NewLock(dir, lock.Dir)
 	if err != nil {
 		return nil, err
 	}
@@ -227,17 +192,15 @@ func NewStore(baseDir string) (*Store, error) {
 		s.stores[i] = diskv.New(diskv.Options{
 			PathPerm:  defaultPathPerm,
 			FilePerm:  defaultFilePerm,
-			BasePath:  filepath.Join(storeDir, p),
+			BasePath:  filepath.Join(dir, p),
 			Transform: blockTransform,
 		})
 	}
-	db, err := NewDB(filepath.Join(storeDir, "db"))
+	db, err := db.NewDB(s.dbDir())
 	if err != nil {
 		return nil, err
 	}
 	s.db = db
-
-	s.treestore = &TreeStore{path: filepath.Join(storeDir, "tree")}
 
 	needsMigrate := false
 	needsSizePopulation := false
@@ -316,9 +279,14 @@ func (s *Store) Close() error {
 // backupDB backs up current database.
 func (s *Store) backupDB() error {
 	backupsDir := filepath.Join(s.dir, "db-backups")
-	return createBackup(s.db.dbdir, backupsDir, backupsNumber)
+	return backup.CreateBackup(s.dbDir(), backupsDir, backupsNumber)
 }
 
+func (s *Store) dbDir() string {
+	return filepath.Join(s.dir, "db")
+}
+
+// TODO(sgotti), unexport this and provide other functions for external users
 // TmpFile returns an *os.File local to the same filesystem as the Store, or
 // any error encountered
 func (s *Store) TmpFile() (*os.File, error) {
@@ -329,6 +297,7 @@ func (s *Store) TmpFile() (*os.File, error) {
 	return ioutil.TempFile(dir, "")
 }
 
+// TODO(sgotti), unexport this and provide other functions for external users
 // TmpNamedFile returns an *os.File with the specified name local to the same
 // filesystem as the Store, or any error encountered. If the file already
 // exists it will return the existing file in read/write mode with the cursor
@@ -349,6 +318,7 @@ func (s Store) TmpNamedFile(name string) (*os.File, error) {
 	return os.OpenFile(fname, os.O_RDWR|os.O_APPEND, 0644)
 }
 
+// TODO(sgotti), unexport this and provide other functions for external users
 // TmpDir creates and returns dir local to the same filesystem as the Store,
 // or any error encountered
 func (s *Store) TmpDir() (string, error) {
@@ -521,10 +491,6 @@ func (s *Store) WriteACI(r io.ReadSeeker, fetchInfo ACIFetchInfo) (string, error
 		return "", errwrap.Wrap(errors.New("error writing ACI Info"), err)
 	}
 
-	// The treestore for this ACI is not written here as ACIs downloaded as
-	// dependencies of another ACI will be exploded also if never directly used.
-	// Users of treestore should call s.RenderTreeStore before using it.
-
 	return key, nil
 }
 
@@ -594,132 +560,6 @@ func (s *Store) RemoveACI(key string) error {
 		return &StoreRemovalError{errors: storeErrors}
 	}
 	return nil
-}
-
-// GetTreeStoreID calculates the treestore ID for the given image key.
-// The treeStoreID is computed as an hash of the flattened dependency tree
-// image keys. In this way the ID may change for the same key if the image's
-// dependencies change.
-func (s *Store) GetTreeStoreID(key string) (string, error) {
-	hash, err := types.NewHash(key)
-	if err != nil {
-		return "", err
-	}
-	images, err := acirenderer.CreateDepListFromImageID(*hash, s)
-	if err != nil {
-		return "", err
-	}
-
-	var keys []string
-	for _, image := range images {
-		keys = append(keys, image.Key)
-	}
-	imagesString := strings.Join(keys, ",")
-	h := sha512.New()
-	h.Write([]byte(imagesString))
-	return "deps-" + hashToKey(h), nil
-}
-
-// RenderTreeStore renders a treestore for the given image key if it's not
-// already fully rendered.
-// Users of treestore should call s.RenderTreeStore before using it to ensure
-// that the treestore is completely rendered.
-// Returns the id and hash of the rendered treestore if it is newly rendered,
-// and only the id if it is already rendered.
-func (s *Store) RenderTreeStore(key string, rebuild bool) (id string, hash string, err error) {
-	id, err = s.GetTreeStoreID(key)
-	if err != nil {
-		return "", "", errwrap.Wrap(errors.New("cannot calculate treestore id"), err)
-	}
-
-	// this lock references the treestore dir for the specified id.
-	treeStoreKeyLock, err := lock.ExclusiveKeyLock(s.treeStoreLockDir, id)
-	if err != nil {
-		return "", "", errwrap.Wrap(errors.New("error locking tree store"), err)
-	}
-	defer treeStoreKeyLock.Close()
-
-	if !rebuild {
-		rendered, err := s.treestore.IsRendered(id)
-		if err != nil {
-			return "", "", errwrap.Wrap(errors.New("cannot determine if tree is already rendered"), err)
-		}
-		if rendered {
-			return id, "", nil
-		}
-	}
-	// Firstly remove a possible partial treestore if existing.
-	// This is needed as a previous ACI removal operation could have failed
-	// cleaning the tree store leaving some stale files.
-	if err := s.treestore.Remove(id, s); err != nil {
-		return "", "", err
-	}
-	if hash, err = s.treestore.Write(id, key, s); err != nil {
-		return "", "", err
-	}
-
-	return id, hash, nil
-}
-
-// CheckTreeStore verifies the treestore consistency for the specified id.
-func (s *Store) CheckTreeStore(id string) (string, error) {
-	treeStoreKeyLock, err := lock.SharedKeyLock(s.treeStoreLockDir, id)
-	if err != nil {
-		return "", errwrap.Wrap(errors.New("error locking tree store"), err)
-	}
-	defer treeStoreKeyLock.Close()
-
-	return s.treestore.Check(id)
-}
-
-// GetTreeStorePath returns the absolute path of the treestore for the specified id.
-// It doesn't ensure that the path exists and is fully rendered. This should
-// be done calling IsRendered()
-func (s *Store) GetTreeStorePath(id string) string {
-	return s.treestore.GetPath(id)
-}
-
-// GetTreeStoreRootFS returns the absolute path of the rootfs in the treestore
-// for specified id.
-// It doesn't ensure that the rootfs exists and is fully rendered. This should
-// be done calling IsRendered()
-func (s *Store) GetTreeStoreRootFS(id string) string {
-	return s.treestore.GetRootFS(id)
-}
-
-// RemoveTreeStore removes the rendered image in tree store with the given id.
-func (s *Store) RemoveTreeStore(id string) error {
-	treeStoreKeyLock, err := lock.ExclusiveKeyLock(s.treeStoreLockDir, id)
-	if err != nil {
-		return errwrap.Wrap(errors.New("error locking tree store"), err)
-	}
-	defer treeStoreKeyLock.Close()
-
-	if err := s.treestore.Remove(id, s); err != nil {
-		return errwrap.Wrap(errors.New("error removing the tree store"), err)
-	}
-
-	return nil
-}
-
-// GetTreeStoreIDs returns a slice containing all the treeStore's IDs available
-// (both fully or partially rendered).
-func (s *Store) GetTreeStoreIDs() ([]string, error) {
-	var treeStoreIDs []string
-	ls, err := ioutil.ReadDir(s.treestore.path)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, errwrap.Wrap(errors.New("cannot read treestore directory"), err)
-		}
-	}
-
-	for _, p := range ls {
-		if p.IsDir() {
-			id := filepath.Base(p.Name())
-			treeStoreIDs = append(treeStoreIDs, id)
-		}
-	}
-	return treeStoreIDs, nil
 }
 
 // GetRemote tries to retrieve a remote with the given ACIURL. found will be
