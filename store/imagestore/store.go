@@ -66,7 +66,8 @@ var diskvStores = [...]string{
 }
 
 var (
-	ErrKeyNotFound = errors.New("no image IDs found")
+	ErrKeyNotFound       = errors.New("no image IDs found")
+	ErrDBUpdateNeedsRoot = errors.New("database schema needs to be updated, re-run as root to perform the update")
 )
 
 // ACINotFoundError is returned when an ACI cannot be found by GetACI
@@ -278,6 +279,9 @@ func (s *Store) Close() error {
 
 // backupDB backs up current database.
 func (s *Store) backupDB() error {
+	if os.Geteuid() != 0 {
+		return ErrDBUpdateNeedsRoot
+	}
 	backupsDir := filepath.Join(s.dir, "db-backups")
 	return backup.CreateBackup(s.dbDir(), backupsDir, backupsNumber)
 }
