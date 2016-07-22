@@ -255,6 +255,7 @@ func TestFetchNoStoreCacheControl(t *testing.T) {
 		imageURL string
 	}{
 		{"https://127.0.0.1/" + imageFileName, "https://127.0.0.1/" + imageFileName},
+		{"localhost/" + imageName, "https://127.0.0.1:443/localhost/" + imageFileName},
 	}
 
 	for _, tt := range tests {

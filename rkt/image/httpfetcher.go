@@ -34,6 +34,7 @@ type httpFetcher struct {
 	S             *imagestore.Store
 	Ks            *keystore.Keystore
 	Rem           *imagestore.Remote
+	NoCache       bool
 	Debug         bool
 	Headers       map[string]config.Headerer
 }
@@ -44,7 +45,7 @@ func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 	ensureLogger(f.Debug)
 	urlStr := u.String()
 
-	if f.Rem != nil {
+	if !f.NoCache && f.Rem != nil {
 		if useCached(f.Rem.DownloadTime, f.Rem.CacheMaxAge) {
 			if f.Debug {
 				log.Printf("image for %s isn't expired, not fetching.", urlStr)
@@ -57,13 +58,13 @@ func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 		log.Printf("fetching image from %s", urlStr)
 	}
 
-	aciFile, cd, err := f.fetchURL(u, a, f.eTag())
+	aciFile, cd, err := f.fetchURL(u, a, eTag(f.Rem))
 	if err != nil {
 		return "", err
 	}
 	defer func() { maybeClose(aciFile) }()
 
-	if key := f.maybeUseCached(cd); key != "" {
+	if key := maybeUseCached(f.Rem, cd); key != "" {
 		// TODO(krnowak): that does not update the store with
 		// the new CacheMaxAge and Download Time, so it will
 		// query the server every time after initial
@@ -94,16 +95,6 @@ func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 	}
 
 	return key, nil
-}
-
-func (f *httpFetcher) maybeUseCached(cd *cacheData) string {
-	if f.Rem == nil || cd == nil {
-		return ""
-	}
-	if cd.UseCached {
-		return f.Rem.BlobKey
-	}
-	return ""
 }
 
 func (f *httpFetcher) fetchURL(u *url.URL, a *asc, etag string) (readSeekCloser, *cacheData, error) {
@@ -183,13 +174,6 @@ func (f *httpFetcher) validate(aciFile, ascFile io.ReadSeeker) error {
 
 	printIdentities(entity)
 	return nil
-}
-
-func (f *httpFetcher) eTag() string {
-	if f.Rem != nil {
-		return f.Rem.ETag
-	}
-	return ""
 }
 
 func (f *httpFetcher) maybeOverrideAscFetcherWithRemote(o *httpOps, u *url.URL, a *asc) {

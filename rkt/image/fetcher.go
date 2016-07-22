@@ -164,7 +164,7 @@ func (f *Fetcher) fetchSingleImageByURL(urlStr string, a *asc) (string, error) {
 }
 
 func (f *Fetcher) fetchSingleImageByHTTPURL(u *url.URL, a *asc) (string, error) {
-	rem, err := f.getRemoteForURL(u)
+	rem, err := remoteForURL(f.S, u)
 	if err != nil {
 		return "", err
 	}
@@ -178,7 +178,7 @@ func (f *Fetcher) fetchSingleImageByHTTPURL(u *url.URL, a *asc) (string, error) 
 }
 
 func (f *Fetcher) fetchSingleImageByDockerURL(u *url.URL) (string, error) {
-	rem, err := f.getRemoteForURL(u)
+	rem, err := remoteForURL(f.S, u)
 	if err != nil {
 		return "", err
 	}
@@ -189,19 +189,6 @@ func (f *Fetcher) fetchSingleImageByDockerURL(u *url.URL) (string, error) {
 		return h, err
 	}
 	return "", fmt.Errorf("unable to fetch docker image from URL %q: either image was not found in the store or store was disabled and fetching from remote yielded nothing or it was disabled", u.String())
-}
-
-func (f *Fetcher) getRemoteForURL(u *url.URL) (*imagestore.Remote, error) {
-	if f.NoCache {
-		return nil, nil
-	}
-	urlStr := u.String()
-	if rem, ok, err := f.S.GetRemote(urlStr); err != nil {
-		return nil, errwrap.Wrap(fmt.Errorf("failed to fetch URL %q", urlStr), err)
-	} else if ok {
-		return rem, nil
-	}
-	return nil, nil
 }
 
 func (f *Fetcher) maybeCheckRemoteFromStore(rem *imagestore.Remote) string {
@@ -333,6 +320,7 @@ func (f *Fetcher) maybeFetchImageFromRemote(app *appBundle, a *asc) (string, err
 			InsecureFlags:      f.InsecureFlags,
 			S:                  f.S,
 			Ks:                 f.Ks,
+			NoCache:            f.NoCache,
 			Debug:              f.Debug,
 			Headers:            f.Headers,
 			TrustKeysFromHTTPS: f.TrustKeysFromHTTPS,
