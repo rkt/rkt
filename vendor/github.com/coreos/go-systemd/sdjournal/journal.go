@@ -257,6 +257,7 @@ package sdjournal
 //
 import "C"
 import (
+	"bytes"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -614,12 +615,10 @@ func (j *Journal) PreviousSkip(skip uint64) (uint64, error) {
 	return uint64(r), nil
 }
 
-// GetData gets the data object associated with a specific field from the
-// current journal entry.
-func (j *Journal) GetData(field string) (string, error) {
+func (j *Journal) getData(field string) (unsafe.Pointer, C.int, error) {
 	sd_journal_get_data, err := j.getFunction("sd_journal_get_data")
 	if err != nil {
-		return "", err
+		return nil, 0, err
 	}
 
 	f := C.CString(field)
@@ -633,12 +632,21 @@ func (j *Journal) GetData(field string) (string, error) {
 	j.mu.Unlock()
 
 	if r < 0 {
-		return "", fmt.Errorf("failed to read message: %d", syscall.Errno(-r))
+		return nil, 0, fmt.Errorf("failed to read message: %d", syscall.Errno(-r))
 	}
 
-	msg := C.GoStringN((*C.char)(d), C.int(l))
+	return d, C.int(l), nil
+}
 
-	return msg, nil
+// GetData gets the data object associated with a specific field from the
+// current journal entry.
+func (j *Journal) GetData(field string) (string, error) {
+	d, l, err := j.getData(field)
+	if err != nil {
+		return "", err
+	}
+
+	return C.GoStringN((*C.char)(d), l), nil
 }
 
 // GetDataValue gets the data object associated with a specific field from the
@@ -648,7 +656,30 @@ func (j *Journal) GetDataValue(field string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return strings.SplitN(val, "=", 2)[1], nil
+}
+
+// GetDataBytes gets the data object associated with a specific field from the
+// current journal entry.
+func (j *Journal) GetDataBytes(field string) ([]byte, error) {
+	d, l, err := j.getData(field)
+	if err != nil {
+		return nil, err
+	}
+
+	return C.GoBytes(d, l), nil
+}
+
+// GetDataValueBytes gets the data object associated with a specific field from the
+// current journal entry, returning only the value of the object.
+func (j *Journal) GetDataValueBytes(field string) ([]byte, error) {
+	val, err := j.GetDataBytes(field)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.SplitN(val, []byte("="), 2)[1], nil
 }
 
 // GetEntry returns a full representation of a journal entry with
