@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/coreos/rkt/common/apps"
-	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
@@ -173,7 +172,7 @@ func (al *appMount) Set(s string) error {
 		case "volume":
 			mv, err := types.NewACName(val[0])
 			if err != nil {
-				return errwrap.Wrap(fmt.Errorf("invalid volume name %q in --mount flag %q", val[0], s), err)
+				return fmt.Errorf("invalid volume name %q in --mount flag %q: %v", val[0], s, err)
 			}
 			mount.Volume = *mv
 		case "target":
@@ -225,7 +224,7 @@ type appsVolume apps.Apps
 func (al *appsVolume) Set(s string) error {
 	vol, err := types.VolumeFromString(s)
 	if err != nil {
-		return errwrap.Wrap(fmt.Errorf("invalid value in --volume flag %q", s), err)
+		return fmt.Errorf("invalid value in --volume flag %q: %v", s, err)
 	}
 
 	(*apps.Apps)(al).Volumes = append((*apps.Apps)(al).Volumes, *vol)
