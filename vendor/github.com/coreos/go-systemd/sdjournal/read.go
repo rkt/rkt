@@ -90,8 +90,16 @@ func NewJournalReader(config JournalReaderConfig) (*JournalReader, error) {
 		// Move the read pointer into position near the tail. Go one further than
 		// the option so that the initial cursor advancement positions us at the
 		// correct starting point.
-		if _, err := r.journal.PreviousSkip(config.NumFromTail + 1); err != nil {
+		skip, err := r.journal.PreviousSkip(config.NumFromTail + 1)
+		if err != nil {
 			return nil, err
+		}
+		// If we skipped fewer lines than expected, we have reached journal start.
+		// Thus, we seek to head so that next invocation can read the first line.
+		if skip != config.NumFromTail+1 {
+			if err := r.journal.SeekHead(); err != nil {
+				return nil, err
+			}
 		}
 	} else if config.Cursor != "" {
 		// Start based on a custom cursor
