@@ -361,7 +361,8 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		return nil, nil, fmt.Errorf("unrecognized stage1 flavor: %q", flavor)
 	}
 
-	if err := ioutil.WriteFile(mPath, []byte(machineID), 0644); err != nil {
+	machineIDBytes := append([]byte(machineID), '\n')
+	if err := ioutil.WriteFile(mPath, machineIDBytes, 0644); err != nil {
 		log.FatalE("error writing /etc/machine-id", err)
 	}
 
