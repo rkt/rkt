@@ -832,6 +832,82 @@ func NewNetOverrideTest() testutils.Test {
 	})
 }
 
+/*
+ * Pass the IP arg to the default networks, ensure it works
+ */
+func NewNetDefaultIPArgTest() testutils.Test {
+	doTest := func(netArg, expectedIP string, t *testing.T) {
+		ctx := testutils.NewRktRunCtx()
+		defer ctx.Cleanup()
+
+		appCmd := "--exec=/inspect -- --print-ipv4=eth0"
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=\"%s\" --mds-register=false %s %s",
+			ctx.Cmd(), netArg, getInspectImagePath(), appCmd)
+		child := spawnOrFail(t, cmd)
+		defer waitOrFail(t, child, 0)
+
+		expectedRegex := `IPv4: (\d+\.\d+\.\d+\.\d+)`
+		result, out, err := expectRegexTimeoutWithOutput(child, expectedRegex, 30*time.Second)
+		if err != nil {
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
+			return
+		}
+
+		containerIP := result[1]
+		if expectedIP != containerIP {
+			t.Fatalf("--net=%s setting IP failed: Got %q but expected %q", netArg, containerIP, expectedIP)
+		}
+	}
+	return testutils.TestFunc(func(t *testing.T) {
+		doTest("default:IP=172.16.28.123", "172.16.28.123", t)
+		doTest("default-restricted:IP=172.16.28.42", "172.16.28.42", t)
+	})
+}
+
+/*
+ * Try and start two containers with the same IP, ensure
+ * the second invocation fails
+ */
+func NewNetIPConflictTest() testutils.Test {
+	return testutils.TestFunc(func(t *testing.T) {
+		ctx := testutils.NewRktRunCtx()
+		defer ctx.Cleanup()
+
+		// Launch one container and grab the IP it uses -- and have it idle
+		appCmd := "--exec=/inspect -- --print-ipv4=eth0  --serve-http=0.0.0.0:80"
+		cmd1 := fmt.Sprintf("%s --debug --insecure-options=image run --mds-register=false %s %s",
+			ctx.Cmd(), getInspectImagePath(), appCmd)
+
+		child1 := spawnOrFail(t, cmd1)
+
+		expectedRegex := `IPv4: (\d+\.\d+\.\d+\.\d+)`
+		result, out, err := expectRegexTimeoutWithOutput(child1, expectedRegex, 30*time.Second)
+		if err != nil {
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
+			return
+		}
+		ip := result[1]
+
+		// Launch a second container with the same IP
+		cmd2 := fmt.Sprintf("%s --debug --insecure-options=image run --net=\"default:IP=%s\" %s --exec=/inspect -- --print-ipv4=eth0",
+			ctx.Cmd(), ip, getInspectImagePath())
+		child2 := spawnOrFail(t, cmd2)
+
+		expectedOutput := fmt.Sprintf(`requested IP address "%s" is not available in network: default`, ip)
+
+		_, out, err = expectRegexTimeoutWithOutput(child2, expectedOutput, 10*time.Second)
+		if err != nil {
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
+			return
+		}
+
+		// Clean up
+		waitOrFail(t, child2, 1)
+		syscall.Kill(child1.Cmd.Process.Pid, syscall.SIGTERM)
+		waitOrFail(t, child1, 0)
+	})
+}
+
 func NewTestNetLongName() testutils.Test {
 	return testutils.TestFunc(func(t *testing.T) {
 		nt := networkTemplateT{

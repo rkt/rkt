@@ -55,6 +55,14 @@ func TestNetOverride(t *testing.T) {
 	NewNetOverrideTest().Execute(t)
 }
 
+func TestNetDefaultIPArg(t *testing.T) {
+	NewNetDefaultIPArgTest().Execute(t)
+}
+
+func TestNetIPConflict(t *testing.T) {
+	NewNetIPConflictTest().Execute(t)
+}
+
 func TestNetCustomPtp(t *testing.T) {
 	// PTP means connection Point-To-Point. That is, connections to other pods/containers should be forbidden
 	NewNetCustomPtpTest(true).Execute(t)
