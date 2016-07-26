@@ -729,7 +729,7 @@ func TestPodManifest(t *testing.T) {
 							Isolators: []types.Isolator{
 								mustNewIsolator(`{
 									"name":     "resource/cpu",
-									"value":    { "request": "100", "limit": "100"}
+									"value":    { "request": "100m", "limit": "100m"}
 								}`),
 								mustNewIsolator(`{
 									"name":     "os/linux/capabilities-retain-set",
