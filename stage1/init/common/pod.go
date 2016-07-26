@@ -59,6 +59,12 @@ var (
 	}
 )
 
+type Stage1InsecureOptions struct {
+	DisablePaths        bool
+	DisableCapabilities bool
+	DisableSeccomp      bool
+}
+
 // execEscape uses Golang's string quoting for ", \, \n, and regex for special cases
 func execEscape(i int, str string) string {
 	escapeMap := map[string]string{
@@ -367,7 +373,7 @@ func findBinPath(p *stage1commontypes.Pod, appName types.ACName, app types.App, 
 }
 
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
-func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string) error {
+func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string, insecureOptions Stage1InsecureOptions) error {
 	app := ra.App
 	appName := ra.Name
 	imgName := p.AppNameToImageName(appName)
@@ -440,7 +446,6 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		unit.NewUnitOption("Service", "User", strconv.Itoa(u)),
 		unit.NewUnitOption("Service", "Group", strconv.Itoa(g)),
 		unit.NewUnitOption("Service", "SupplementaryGroups", strings.Join(supplementaryGroups, " ")),
-		unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")),
 		// This helps working around a race
 		// (https://github.com/systemd/systemd/issues/2913) that causes the
 		// systemd unit name not getting written to the journal if the unit is
@@ -448,8 +453,14 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		unit.NewUnitOption("Service", "SyslogIdentifier", appName.String()),
 	}
 
+	if !insecureOptions.DisableCapabilities {
+		opts = append(opts, unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")))
+	}
+
 	// Restrict access to sensitive paths (eg. procfs)
-	opts = protectSystemFiles(opts, appName)
+	if !insecureOptions.DisablePaths {
+		opts = protectSystemFiles(opts, appName)
+	}
 
 	// Apply seccomp isolator, if any and not opt-ing out;
 	// see https://www.freedesktop.org/software/systemd/man/systemd.exec.html#SystemCallFilter=
@@ -751,10 +762,10 @@ func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types
 
 // PodToSystemd creates the appropriate systemd service unit files for
 // all the constituent apps of the Pod
-func PodToSystemd(p *stage1commontypes.Pod, interactive bool, flavor string, privateUsers string) error {
+func PodToSystemd(p *stage1commontypes.Pod, interactive bool, flavor string, privateUsers string, insecureOptions Stage1InsecureOptions) error {
 	for i := range p.Manifest.Apps {
 		ra := &p.Manifest.Apps[i]
-		if err := appToSystemd(p, ra, interactive, flavor, privateUsers); err != nil {
+		if err := appToSystemd(p, ra, interactive, flavor, privateUsers, insecureOptions); err != nil {
 			return errwrap.Wrap(fmt.Errorf("failed to transform app %q into systemd service", ra.Name), err)
 		}
 	}
@@ -815,7 +826,7 @@ func EvaluateSymlinksInsideApp(appRootfs, path string) (string, error) {
 
 // appToNspawnArgs transforms the given app manifest, with the given associated
 // app name, into a subset of applicable systemd-nspawn argument
-func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string, error) {
+func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp, insecureOptions Stage1InsecureOptions) ([]string, error) {
 	var args []string
 	appName := ra.Name
 	app := ra.App
@@ -881,19 +892,21 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		args = append(args, strings.Join(opt, ""))
 	}
 
-	capabilitiesStr, err := getAppCapabilities(app.Isolators)
-	if err != nil {
-		return nil, err
+	if !insecureOptions.DisableCapabilities {
+		capabilitiesStr, err := getAppCapabilities(app.Isolators)
+		if err != nil {
+			return nil, err
+		}
+		capList := strings.Join(capabilitiesStr, ",")
+		args = append(args, "--capability="+capList)
 	}
-	capList := strings.Join(capabilitiesStr, ",")
-	args = append(args, "--capability="+capList)
 
 	return args, nil
 }
 
 // PodToNspawnArgs renders a prepared Pod as a systemd-nspawn
 // argument list ready to be executed
-func PodToNspawnArgs(p *stage1commontypes.Pod) ([]string, error) {
+func PodToNspawnArgs(p *stage1commontypes.Pod, insecureOptions Stage1InsecureOptions) ([]string, error) {
 	args := []string{
 		"--uuid=" + p.UUID.String(),
 		"--machine=" + GetMachineID(p),
@@ -901,11 +914,15 @@ func PodToNspawnArgs(p *stage1commontypes.Pod) ([]string, error) {
 	}
 
 	for i := range p.Manifest.Apps {
-		aa, err := appToNspawnArgs(p, &p.Manifest.Apps[i])
+		aa, err := appToNspawnArgs(p, &p.Manifest.Apps[i], insecureOptions)
 		if err != nil {
 			return nil, err
 		}
 		args = append(args, aa...)
+	}
+
+	if insecureOptions.DisableCapabilities {
+		args = append(args, "--capability=all")
 	}
 
 	return args, nil

@@ -95,17 +95,20 @@ func mirrorLocalZoneInfo(root string) {
 }
 
 var (
-	debug        bool
-	netList      common.NetList
-	interactive  bool
-	privateUsers string
-	mdsToken     string
-	localhostIP  net.IP
-	localConfig  string
-	hostname     string
-	log          *rktlog.Logger
-	diag         *rktlog.Logger
-	interpBin    string // Path to the interpreter within the stage1 rootfs, set by the linker
+	debug               bool
+	netList             common.NetList
+	interactive         bool
+	privateUsers        string
+	mdsToken            string
+	localhostIP         net.IP
+	localConfig         string
+	hostname            string
+	log                 *rktlog.Logger
+	diag                *rktlog.Logger
+	interpBin           string // Path to the interpreter within the stage1 rootfs, set by the linker
+	disableCapabilities bool
+	disablePaths        bool
+	disableSeccomp      bool
 )
 
 func init() {
@@ -116,6 +119,10 @@ func init() {
 	flag.StringVar(&mdsToken, "mds-token", "", "MDS auth token")
 	flag.StringVar(&localConfig, "local-config", common.DefaultLocalConfigDir, "Local config path")
 	flag.StringVar(&hostname, "hostname", "", "Hostname of the pod")
+	flag.BoolVar(&disableCapabilities, "disable-capabilities-restriction", false, "Disable capability restrictions")
+	flag.BoolVar(&disablePaths, "disable-paths", false, "Disable paths restrictions")
+	flag.BoolVar(&disableSeccomp, "disable-seccomp", false, "Disable seccomp restrictions")
+
 	// this ensures that main runs only on main thread (thread group leader).
 	// since namespace ops (unshare, setns) are done for a single thread, we
 	// must ensure that the goroutine does not jump from OS thread to thread
@@ -209,7 +216,7 @@ func installAssets() error {
 }
 
 // getArgsEnv returns the nspawn or lkvm args and env according to the flavor used
-func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networking.Networking) ([]string, []string, error) {
+func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networking.Networking, insecureOptions stage1initcommon.Stage1InsecureOptions) ([]string, []string, error) {
 	var args []string
 	env := os.Environ()
 
@@ -411,7 +418,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		args = append(args, "--private-users="+privateUsers)
 	}
 
-	nsargs, err := stage1initcommon.PodToNspawnArgs(p)
+	nsargs, err := stage1initcommon.PodToNspawnArgs(p, insecureOptions)
 	if err != nil {
 		return nil, nil, errwrap.Wrap(errors.New("failed to generate nspawn args"), err)
 	}
@@ -563,12 +570,18 @@ func stage1() int {
 		}
 	}
 
-	if err = stage1initcommon.PodToSystemd(p, interactive, flavor, privateUsers); err != nil {
+	insecureOptions := stage1initcommon.Stage1InsecureOptions{
+		DisablePaths:        disablePaths,
+		DisableCapabilities: disableCapabilities,
+		DisableSeccomp:      disableSeccomp,
+	}
+
+	if err = stage1initcommon.PodToSystemd(p, interactive, flavor, privateUsers, insecureOptions); err != nil {
 		log.PrintE("failed to configure systemd", err)
 		return 1
 	}
 
-	args, env, err := getArgsEnv(p, flavor, debug, n)
+	args, env, err := getArgsEnv(p, flavor, debug, n, insecureOptions)
 	if err != nil {
 		log.Error(err)
 		return 1
