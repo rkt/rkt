@@ -301,6 +301,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib"))
 
 	case "src":
+		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), interpBin))
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), nspawnBin))
 		args = append(args, "--boot") // Launch systemd in the pod
 
@@ -317,6 +318,11 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		} else {
 			args = append(args, fmt.Sprintf("--register=false"))
 		}
+
+		// use only dynamic libraries provided in the image
+		// from systemd v231 there's a new internal libsystemd-shared-v231.so
+		// which is present in /usr/lib/systemd
+		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib/systemd"))
 
 	case "host":
 		hostNspawnBin, err := common.LookupPath("systemd-nspawn", os.Getenv("PATH"))
