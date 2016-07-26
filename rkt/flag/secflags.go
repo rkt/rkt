@@ -23,21 +23,41 @@ const (
 	insecureOnDisk
 	insecureHTTP
 	insecurePubKey
+	insecureCapabilities
+	insecurePaths
 
-	insecureAll = (insecureImage | insecureTLS | insecureOnDisk | insecureHTTP | insecurePubKey)
+	insecureAllFetch = (insecureImage | insecureTLS | insecureHTTP | insecurePubKey)
+	insecureAllRun   = (insecureOnDisk | insecureCapabilities | insecurePaths)
+	insecureAll      = (insecureAllFetch | insecureAllRun)
 )
 
 var (
-	insecureOptions = []string{"none", "image", "tls", "ondisk", "http", "pubkey", "all"}
+	insecureOptions = []string{
+		"none",
+		"image",
+		"tls",
+		"ondisk",
+		"http",
+		"pubkey",
+		"capabilities",
+		"paths",
+		"all-fetch",
+		"all-run",
+		"all",
+	}
 
 	insecureOptionsMap = map[string]int{
-		insecureOptions[0]: insecureNone,
-		insecureOptions[1]: insecureImage,
-		insecureOptions[2]: insecureTLS,
-		insecureOptions[3]: insecureOnDisk,
-		insecureOptions[4]: insecureHTTP,
-		insecureOptions[5]: insecurePubKey,
-		insecureOptions[6]: insecureAll,
+		insecureOptions[0]:  insecureNone,
+		insecureOptions[1]:  insecureImage,
+		insecureOptions[2]:  insecureTLS,
+		insecureOptions[3]:  insecureOnDisk,
+		insecureOptions[4]:  insecureHTTP,
+		insecureOptions[5]:  insecurePubKey,
+		insecureOptions[6]:  insecureCapabilities,
+		insecureOptions[7]:  insecurePaths,
+		insecureOptions[8]:  insecureAllFetch,
+		insecureOptions[9]:  insecureAllRun,
+		insecureOptions[10]: insecureAll,
 	}
 )
 
@@ -83,6 +103,14 @@ func (sf *SecFlags) AllowHTTP() bool {
 
 func (sf *SecFlags) ConsiderInsecurePubKeys() bool {
 	return sf.hasFlag(insecurePubKey)
+}
+
+func (sf *SecFlags) SkipCapabilities() bool {
+	return sf.hasFlag(insecureCapabilities)
+}
+
+func (sf *SecFlags) SkipPaths() bool {
+	return sf.hasFlag(insecurePaths)
 }
 
 func (sf *SecFlags) SkipAllSecurityChecks() bool {

@@ -74,17 +74,19 @@ type PrepareConfig struct {
 // configuration parameters needed by Run
 type RunConfig struct {
 	*CommonConfig
-	Net         common.NetList // pod should have its own network stack
-	LockFd      int            // lock file descriptor
-	Interactive bool           // whether the pod is interactive or not
-	MDSRegister bool           // whether to register with metadata service or not
-	Apps        schema.AppList // applications (prepare gets them via Apps)
-	LocalConfig string         // Path to local configuration
-	Hostname    string         // hostname of the pod
-	RktGid      int            // group id of the 'rkt' group, -1 if there's no rkt group.
-	DNS         []string       // DNS name servers to write in /etc/resolv.conf
-	DNSSearch   []string       // DNS search domains to write in /etc/resolv.conf
-	DNSOpt      []string       // DNS options to write in /etc/resolv.conf
+	Net                  common.NetList // pod should have its own network stack
+	LockFd               int            // lock file descriptor
+	Interactive          bool           // whether the pod is interactive or not
+	MDSRegister          bool           // whether to register with metadata service or not
+	Apps                 schema.AppList // applications (prepare gets them via Apps)
+	LocalConfig          string         // Path to local configuration
+	Hostname             string         // hostname of the pod
+	RktGid               int            // group id of the 'rkt' group, -1 if there's no rkt group.
+	DNS                  []string       // DNS name servers to write in /etc/resolv.conf
+	DNSSearch            []string       // DNS search domains to write in /etc/resolv.conf
+	DNSOpt               []string       // DNS options to write in /etc/resolv.conf
+	InsecureCapabilities bool           // Do not restrict capabilities
+	InsecurePaths        bool           // Do not restrict access to files in sysfs or procfs
 }
 
 // configuration shared by both Run and Prepare
@@ -569,6 +571,15 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 			args = append(args, "--hostname="+cfg.Hostname)
 		} else {
 			log.Printf("warning: --hostname option is not supported by stage1")
+		}
+	}
+
+	if interfaceVersionSupportsInsecureOptions(s1v) {
+		if cfg.InsecureCapabilities {
+			args = append(args, "--disable-capabilities-restriction")
+		}
+		if cfg.InsecurePaths {
+			args = append(args, "--disable-paths")
 		}
 	}
 

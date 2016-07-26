@@ -311,17 +311,19 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	rcfg := stage0.RunConfig{
-		CommonConfig: &cfg,
-		Net:          flagNet,
-		LockFd:       lfd,
-		Interactive:  flagInteractive,
-		DNS:          flagDNS,
-		DNSSearch:    flagDNSSearch,
-		DNSOpt:       flagDNSOpt,
-		MDSRegister:  flagMDSRegister,
-		LocalConfig:  globalFlags.LocalConfigDir,
-		RktGid:       rktgid,
-		Hostname:     flagHostname,
+		CommonConfig:         &cfg,
+		Net:                  flagNet,
+		LockFd:               lfd,
+		Interactive:          flagInteractive,
+		DNS:                  flagDNS,
+		DNSSearch:            flagDNSSearch,
+		DNSOpt:               flagDNSOpt,
+		MDSRegister:          flagMDSRegister,
+		LocalConfig:          globalFlags.LocalConfigDir,
+		RktGid:               rktgid,
+		Hostname:             flagHostname,
+		InsecureCapabilities: globalFlags.InsecureFlags.SkipCapabilities(),
+		InsecurePaths:        globalFlags.InsecureFlags.SkipPaths(),
 	}
 
 	apps, err := p.getApps()
