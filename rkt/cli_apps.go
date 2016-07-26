@@ -353,13 +353,13 @@ func (ag *appGroup) Type() string {
 	return "appGroup"
 }
 
-// appCapsRetain is for --caps-retain flags in the form of: --caps-retain=CAP_KILL,CAP_NET_ADMIN
+// appCapsRetain is for --cap-retain flags in the form of: --cap-retain=CAP_KILL,CAP_NET_ADMIN
 type appCapsRetain apps.Apps
 
 func (au *appCapsRetain) Set(s string) error {
 	app := (*apps.Apps)(au).Last()
 	if app == nil {
-		return fmt.Errorf("--caps-retain must follow an image")
+		return fmt.Errorf("--cap-retain must follow an image")
 	}
 	capsRetain, err := types.NewLinuxCapabilitiesRetainSet(strings.Split(s, ",")...)
 	if err != nil {
@@ -385,13 +385,13 @@ func (au *appCapsRetain) Type() string {
 	return "appCapsRetain"
 }
 
-// appCapsRemove is for --caps-remove flags in the form of: --caps-remove=CAP_MKNOD,CAP_SYS_CHROOT
+// appCapsRemove is for --cap-remove flags in the form of: --cap-remove=CAP_MKNOD,CAP_SYS_CHROOT
 type appCapsRemove apps.Apps
 
 func (au *appCapsRemove) Set(s string) error {
 	app := (*apps.Apps)(au).Last()
 	if app == nil {
-		return fmt.Errorf("--caps-retain must follow an image")
+		return fmt.Errorf("--cap-retain must follow an image")
 	}
 	capsRemove, err := types.NewLinuxCapabilitiesRevokeSet(strings.Split(s, ",")...)
 	if err != nil {
