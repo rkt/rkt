@@ -31,6 +31,7 @@ import (
 	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/fileutil"
 	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/user"
@@ -264,6 +265,11 @@ func stage1() int {
 
 	rfs := filepath.Join(common.AppPath(p.Root, ra.Name), "rootfs")
 
+	if err := copyResolv(p); err != nil {
+		log.PrintE("can't copy /etc/resolv.conf", err)
+		return 1
+	}
+
 	argFlyMounts, err := evaluateMounts(rfs, string(ra.Name), p)
 	if err != nil {
 		log.PrintE("can't evaluate mounts", err)
@@ -422,6 +428,32 @@ func stage1() int {
 	}
 
 	return 0
+}
+
+func copyResolv(p *stage1commontypes.Pod) error {
+	ra := p.Manifest.Apps[0]
+
+	stage1Rootfs := common.Stage1RootfsPath(p.Root)
+	resolvPath := filepath.Join(stage1Rootfs, "etc", "rkt-resolv.conf")
+
+	appRootfs := common.AppRootfsPath(p.Root, ra.Name)
+	targetEtc := filepath.Join(appRootfs, "etc")
+	targetResolvPath := filepath.Join(targetEtc, "resolv.conf")
+
+	_, err := os.Stat(resolvPath)
+	switch {
+	case os.IsNotExist(err):
+		return nil
+	case err != nil:
+		return err
+	}
+
+	_, err = os.Stat(targetResolvPath)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	return fileutil.CopyRegularFile(resolvPath, targetResolvPath)
 }
 
 func main() {
