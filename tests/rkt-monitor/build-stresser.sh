@@ -28,7 +28,7 @@ trap acbuildEnd EXIT
 
 acbuild --debug set-name appc.io/rkt-"${1}"-stresser
 
-acbuild --debug copy build-rkt-1.8.0+git/bin/"${1}"-stresser /worker
+acbuild --debug copy build-rkt-1.10.0+git/target/bin/"${1}"-stresser /worker
 
 acbuild --debug set-exec -- /worker
 

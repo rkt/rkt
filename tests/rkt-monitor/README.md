@@ -15,6 +15,9 @@ rkt-monitor mem-stresser.aci -v -d 30s
 
 Flags:
   -f, --to-file[=false]: Save benchmark results to files in a temp dir
+  -w, --output-dir="/tmp": Specify directory to write results
+  -p, --rkt-dir="": Directory with rkt binary
+  -s, --stage1-path="": Path to Stage1 image to use, default: coreos
   -d, --duration="10s": How long to run the ACI
   -h, --help[=false]: help for rkt-monitor
   -r, --repetitions=1: Numbers of benchmark repetitions
@@ -28,7 +31,7 @@ attempt to eat up resources in different ways.
 An example usage:
 
 ```
-derek@rokot ~/go/src/github.com/coreos/rkt> ./tests/rkt-monitor/build-stresser.sh log
+$ ./tests/rkt-monitor/build-stresser.sh log
 Building worker...
 Beginning build with an empty ACI
 Setting name of ACI to appc.io/rkt-log-stresser
@@ -36,7 +39,7 @@ Copying host:worker-binary to aci:/worker
 Setting exec command [/worker]
 Writing ACI to log-stresser.aci
 Ending the build
-derek@rokot ~/go/src/github.com/coreos/rkt> sudo ./build-rkt-1.8.0+git/bin/rkt-monitor log-stresser.aci 
+$ sudo ./build-rkt-1.10.0+git/target/bin/rkt-monitor log-stresser.aci 
 [sudo] password for derek: 
 rkt(13261): seconds alive: 10  avg CPU: 33.113897%  avg Mem: 4 kB  peak Mem: 4 kB
 systemd(13302): seconds alive: 9  avg CPU: 0.000000%  avg Mem: 4 mB  peak Mem: 4 mB
