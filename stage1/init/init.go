@@ -398,6 +398,14 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 	}
 
 	env = append(env, "SYSTEMD_NSPAWN_CONTAINER_SERVICE=rkt")
+	// TODO (alepuccetti) remove this line when rkt will use cgroup namespace
+	// If the kernel has the cgroup namespace enabled, systemd v232 will use it by default.
+	// This was introduced by https://github.com/systemd/systemd/pull/3809 and it will cause
+	// problems in rkt when cgns is enabled and cgroup-v1 is used. For more information see
+	// https://github.com/systemd/systemd/pull/3589#discussion_r70277625.
+	// The following line tells systemd-nspawn not to use cgroup namespace using the environment variable
+	// introduced by https://github.com/systemd/systemd/pull/3809.
+	env = append(env, "SYSTEMD_NSPAWN_USE_CGNS=no")
 
 	if len(privateUsers) > 0 {
 		args = append(args, "--private-users="+privateUsers)
