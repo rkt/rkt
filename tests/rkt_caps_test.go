@@ -500,6 +500,94 @@ func TestCapsOverride(t *testing.T) {
 	}
 }
 
+// Tests that --insecure-options=capabilities allows everything
+func TestCapsInsecureOption(t *testing.T) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	imageFile := patchTestACI("insecure-options-caps.aci", "--exec=/inspect --print-caps-pid=0")
+	defer os.Remove(imageFile)
+
+	defaultCaps := strings.Join([]string{
+		"chown",
+		"dac_override",
+		"fowner",
+		"fsetid",
+		"kill",
+		"setgid",
+		"setuid",
+		"setpcap",
+		"net_bind_service",
+		"net_raw",
+		"sys_chroot",
+		"mknod",
+		"audit_write",
+		"setfcap",
+	}, ", ")
+
+	// All capabilities defined in Linux, in the same order as their definition:
+	// https://github.com/torvalds/linux/blob/v4.7/include/uapi/linux/capability.h#L90
+	allCaps := strings.Join([]string{
+		"chown",
+		"dac_override",
+		"dac_read_search",
+		"fowner",
+		"fsetid",
+		"kill",
+		"setgid",
+		"setuid",
+		"setpcap",
+		"linux_immutable",
+		"net_bind_service",
+		"net_broadcast",
+		"net_admin",
+		"net_raw",
+		"ipc_lock",
+		"ipc_owner",
+		"sys_module",
+		"sys_rawio",
+		"sys_chroot",
+		"sys_ptrace",
+		"sys_psacct",
+		"sys_admin",
+		"sys_boot",
+		"sys_nice",
+		"sys_resource",
+		"sys_time",
+		"sys_tty_config",
+		"mknod",
+		"lease",
+		"audit_write",
+		"audit_control",
+		"setfcap",
+		"mac_override",
+		"mac_admin",
+		"syslog",
+		"wake_alarm",
+		"block_suspend",
+		// do not check "audit_read" to support tests in older kernels
+		// "audit_read", // since Linux 3.16
+	}, ", ")
+
+	// Without --insecure-options=capabilities
+	for _, insecureOption := range []string{"image", "image,ondisk,paths", "all-fetch"} {
+		cmd := fmt.Sprintf(`%s --debug --insecure-options=%s run %s`,
+			ctx.Cmd(), insecureOption, imageFile)
+		t.Logf("Check caps with --insecure-options=%s\n", insecureOption)
+		expected := fmt.Sprintf("Capability set: bounding: %s", defaultCaps)
+		runRktAndCheckOutput(t, cmd, expected, false)
+	}
+
+	// With --insecure-options=capabilities
+	for _, insecureOption := range []string{"image,capabilities", "image,ondisk,paths,capabilities", "all-fetch,capabilities", "all"} {
+		cmd := fmt.Sprintf(`%s --debug --insecure-options=%s run %s`,
+			ctx.Cmd(), insecureOption, imageFile)
+		t.Logf("Check caps with --insecure-options=%s\n", insecureOption)
+		expected := fmt.Sprintf("Capability set: bounding: %s", allCaps)
+		runRktAndCheckOutput(t, cmd, expected, false)
+	}
+}
+
 var capsTests = []struct {
 	testName            string
 	capIsolator         string
