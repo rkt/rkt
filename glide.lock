@@ -1,5 +1,5 @@
-hash: 3664e0406cca66d626364cc1303ab1d94ff457d8274c3003f982019fafc9a1b8
-updated: 2016-07-22T17:45:52.776583272Z
+hash: e3d37aa49d23e987f708f967f805d4cd176295dbe852b278f325fd9e03b476d7
+updated: 2016-07-25T11:28:59.622207002-07:00
 imports:
 - name: github.com/appc/docker2aci
   version: d77d6e4b99a0d8b6be6f70c623c86ba777110cbd
@@ -181,6 +181,10 @@ imports:
   version: e444e69cbd2e2e3e0749a2f3c717cec491552bbf
 - name: github.com/hashicorp/errwrap
   version: 7554cd9344cec97297fa6649b055a8c98c2a1e55
+- name: github.com/hashicorp/golang-lru
+  version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
+  subpackages:
+  - simplelru
 - name: github.com/hydrogen18/stoppableListener
   version: 2eebd04b47ff393f4bc50b7fcacf8f048994c6fd
 - name: github.com/inconshreveable/mousetrap
