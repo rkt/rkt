@@ -43,6 +43,7 @@ func init() {
 	mcEntrypoint = multicall.Add(multicallName, extractTarCommand)
 }
 
+// Because this function is executed by multicall in a different process, it is not possible to use errwrap to return errors
 func extractTarCommand() error {
 	if len(os.Args) != 5 {
 		return fmt.Errorf("incorrect number of arguments. Usage: %s DIR {true|false} uidShift uidCount", multicallName)
@@ -56,38 +57,38 @@ func extractTarCommand() error {
 	}
 	overwrite, err := strconv.ParseBool(os.Args[2])
 	if err != nil {
-		return errwrap.Wrap(errors.New("error parsing overwrite argument"), err)
+		return fmt.Errorf("error parsing overwrite argument: %v", err)
 	}
 
 	us, err := strconv.ParseUint(os.Args[3], 10, 32)
 	if err != nil {
-		return errwrap.Wrap(errors.New("error parsing uidShift argument"), err)
+		return fmt.Errorf("error parsing uidShift argument: %v", err)
 	}
 	uc, err := strconv.ParseUint(os.Args[4], 10, 32)
 	if err != nil {
-		return errwrap.Wrap(errors.New("error parsing uidShift argument"), err)
+		return fmt.Errorf("error parsing uidShift argument: %v", err)
 	}
 
 	uidRange := &user.UidRange{Shift: uint32(us), Count: uint32(uc)}
 
 	if err := syscall.Chroot(dir); err != nil {
-		return errwrap.Wrap(fmt.Errorf("failed to chroot in %s", dir), err)
+		return fmt.Errorf("failed to chroot in %s: %v", dir, err)
 	}
 	if err := syscall.Chdir("/"); err != nil {
-		return errwrap.Wrap(errors.New("failed to chdir"), err)
+		return fmt.Errorf("failed to chdir: %v", err)
 	}
 	fileMapFile := os.NewFile(uintptr(fileMapFdNum), "fileMap")
 
 	fileMap := map[string]struct{}{}
 	if err := json.NewDecoder(fileMapFile).Decode(&fileMap); err != nil {
-		return errwrap.Wrap(errors.New("error decoding fileMap"), err)
+		return fmt.Errorf("error decoding fileMap: %v", err)
 	}
 	editor, err := NewUidShiftingFilePermEditor(uidRange)
 	if err != nil {
-		return errwrap.Wrap(errors.New("error determining current user"), err)
+		return fmt.Errorf("error determining current user: %v", err)
 	}
 	if err := ExtractTarInsecure(tar.NewReader(os.Stdin), "/", overwrite, fileMap, editor); err != nil {
-		return errwrap.Wrap(errors.New("error extracting tar"), err)
+		return fmt.Errorf("error extracting tar: %v", err)
 	}
 
 	// flush remaining bytes

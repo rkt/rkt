@@ -93,7 +93,7 @@ Tar:
 			}
 			err = extractFile(tr, target, hdr, overwrite, editor)
 			if err != nil {
-				return err
+				return fmt.Errorf("could not extract file %q in %q: %v", hdr.Name, target, err)
 			}
 			if hdr.Typeflag == tar.TypeDir {
 				dirhdrs = append(dirhdrs, hdr)
@@ -108,7 +108,7 @@ Tar:
 	for _, hdr := range dirhdrs {
 		p := filepath.Join(target, hdr.Name)
 		if err := syscall.UtimesNano(p, HdrToTimespec(hdr)); err != nil {
-			return err
+			return fmt.Errorf("UtimesNano failed on %q: %v", p, err)
 		}
 	}
 	return nil
