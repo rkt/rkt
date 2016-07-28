@@ -359,14 +359,7 @@ func fillStaticAppInfo(store *imagestore.Store, pod *pod, v1pod *v1alpha.Pod) er
 
 	// Fill static app image info.
 	for _, app := range v1pod.Apps {
-		// Fill app's image info (id, name, version).
-		fullImageID, err := store.ResolveKey(app.Image.Id)
-		if err != nil {
-			stderr.PrintE(fmt.Sprintf("failed to resolve the image ID %q", app.Image.Id), err)
-			errlist = append(errlist, err)
-		}
-
-		// The following information is always known
+		// Fill app's image info.
 		app.Image = &v1alpha.Image{
 			BaseFormat: &v1alpha.ImageFormat{
 				// Only support appc image now. If it's a docker image, then it
@@ -374,7 +367,7 @@ func fillStaticAppInfo(store *imagestore.Store, pod *pod, v1pod *v1alpha.Pod) er
 				Type:    v1alpha.ImageType_IMAGE_TYPE_APPC,
 				Version: schema.AppContainerVersion.String(),
 			},
-			Id: fullImageID,
+			Id: app.Image.Id,
 			// Other information are not available because they require the image
 			// info from store. Some of it is filled in below if possible.
 		}
@@ -801,21 +794,15 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 
 // getImageInfo for a given image ID, returns the *v1alpha.Image object.
 func getImageInfo(store *imagestore.Store, imageID string) (*v1alpha.Image, error) {
-	key, err := store.ResolveKey(imageID)
+	aciInfo, err := store.GetACIInfoWithBlobKey(imageID)
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("failed to resolve the image ID %q", imageID), err)
-		return nil, err
-	}
-
-	aciInfo, err := store.GetACIInfoWithBlobKey(key)
-	if err != nil {
-		stderr.PrintE(fmt.Sprintf("failed to get ACI info for image %q", key), err)
+		stderr.PrintE(fmt.Sprintf("failed to get ACI info for image %q", imageID), err)
 		return nil, err
 	}
 
 	image, err := aciInfoToV1AlphaAPIImage(store, aciInfo)
 	if err != nil {
-		stderr.PrintE(fmt.Sprintf("failed to convert ACI to v1alphaAPIImage for image %q", key), err)
+		stderr.PrintE(fmt.Sprintf("failed to convert ACI to v1alphaAPIImage for image %q", imageID), err)
 		return nil, err
 	}
 	return image, nil
