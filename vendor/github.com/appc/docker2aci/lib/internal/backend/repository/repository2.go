@@ -345,7 +345,7 @@ func (rb *RepositoryBackend) getManifestV21(dockerURL *types.ParsedDockerURL, re
 	layers := make([]string, len(manifest.FSLayers))
 
 	for i, layer := range manifest.FSLayers {
-		rb.reverseLayers[layer.BlobSum] = i
+		rb.reverseLayers[layer.BlobSum] = len(manifest.FSLayers) - 1 - i
 		layers[i] = layer.BlobSum
 	}
 
