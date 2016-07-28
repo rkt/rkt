@@ -247,7 +247,10 @@ func TestDockerVolumeSemanticsPodManifest(t *testing.T) {
 	for i, tt := range volDockerTests {
 		t.Logf("Running test #%v on directory %s", i, tt.dir)
 
-		hash := patchImportAndFetchHash(fmt.Sprintf("rkt-volume-image-pm-%d.aci", i), []string{fmt.Sprintf("--mounts=mydir,path=%s,readOnly=false", tt.dir)}, t, ctx)
+		hash, err := patchImportAndFetchHash(fmt.Sprintf("rkt-volume-image-pm-%d.aci", i), []string{fmt.Sprintf("--mounts=mydir,path=%s,readOnly=false", tt.dir)}, t, ctx)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
 
 		imgID, err := types.NewHash(hash)
 		if err != nil {

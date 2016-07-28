@@ -177,7 +177,10 @@ func TestFlyMountPodManifest(t *testing.T) {
 	for i, tt := range tests {
 		var hashesToRemove []string
 		for j, v := range tt.images {
-			hash := patchImportAndFetchHash(v.name, v.patches, t, ctx)
+			hash, err := patchImportAndFetchHash(v.name, v.patches, t, ctx)
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
 			hashesToRemove = append(hashesToRemove, hash)
 			imgName := types.MustACIdentifier(v.name)
 			imgID, err := types.NewHash(hash)

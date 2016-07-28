@@ -84,7 +84,9 @@ func generateComplexDependencyTree(t *testing.T, ctx *testutils.RktRunCtx) (map[
 	defer os.RemoveAll(tmpDir)
 
 	baseImage := getInspectImagePath()
-	_ = importImageAndFetchHash(t, ctx, "", baseImage)
+	if _, err := importImageAndFetchHash(t, ctx, "", baseImage); err != nil {
+		t.Fatalf("%v", err)
+	}
 	emptyImage := getEmptyImagePath()
 	fileSet := make(map[string]string)
 
@@ -188,7 +190,10 @@ func TestImageDependencies(t *testing.T) {
 		img := imageList[i]
 		if img.prefetch {
 			t.Logf("Importing image %q: %q", img.imageName, img.fileName)
-			testImageShortHash := importImageAndFetchHash(t, ctx, "", img.fileName)
+			testImageShortHash, err := importImageAndFetchHash(t, ctx, "", img.fileName)
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
 			t.Logf("Imported image %q: %s", img.imageName, testImageShortHash)
 		}
 	}
@@ -238,7 +243,10 @@ func TestRenderOnFetch(t *testing.T) {
 		img := imageList[i]
 		if img.prefetch {
 			t.Logf("Importing image %q: %q", img.imageName, img.fileName)
-			testImageShortHash := importImageAndFetchHash(t, ctx, "", img.fileName)
+			testImageShortHash, err := importImageAndFetchHash(t, ctx, "", img.fileName)
+			if err != nil {
+				t.Fatalf("%v", err)
+			}
 			t.Logf("Imported image %q: %s", img.imageName, testImageShortHash)
 		}
 	}

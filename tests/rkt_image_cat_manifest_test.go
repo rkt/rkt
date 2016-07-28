@@ -55,7 +55,10 @@ func TestImageCatManifest(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	testImageHash := importImageAndFetchHash(t, ctx, "", testImage)
+	testImageHash, err := importImageAndFetchHash(t, ctx, "", testImage)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 
 	tests := []struct {
 		image      string

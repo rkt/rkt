@@ -136,7 +136,10 @@ func TestFetchFullHash(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		hash := importImageAndFetchHash(t, ctx, tt.fetchArgs, imagePath)
+		hash, err := importImageAndFetchHash(t, ctx, tt.fetchArgs, imagePath)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
 		if len(hash) != tt.expectedHashLength {
 			t.Fatalf("expected hash length of %d, got %d", tt.expectedHashLength, len(hash))
 		}
@@ -187,7 +190,9 @@ func testFetchStoreOnly(t *testing.T, args string, image string, imageArgs strin
 	// 1. Run cmd with the image not available in the store should get $cannotFetchMsg.
 	runRktAndCheckRegexOutput(t, cmd, cannotFetchMsg)
 
-	importImageAndFetchHash(t, ctx, "", image)
+	if _, err := importImageAndFetchHash(t, ctx, "", image); err != nil {
+		t.Skip(fmt.Sprintf("%v, probably a network failure. Skipping...", err))
+	}
 
 	// 2. Run cmd with the image available in the store, should get $storeMsg.
 	runRktAndCheckRegexOutput(t, cmd, storeMsg)
@@ -200,7 +205,9 @@ func testFetchNoStore(t *testing.T, args string, image string, imageArgs string,
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	importImageAndFetchHash(t, ctx, "", image)
+	if _, err := importImageAndFetchHash(t, ctx, "", image); err != nil {
+		t.Skip(fmt.Sprintf("%v, probably a network failure. Skipping...", err))
+	}
 
 	cmd := fmt.Sprintf("%s --no-store %s %s %s", ctx.Cmd(), args, image, imageArgs)
 
