@@ -1,8 +1,8 @@
-hash: e3d37aa49d23e987f708f967f805d4cd176295dbe852b278f325fd9e03b476d7
-updated: 2016-07-25T11:28:59.622207002-07:00
+hash: 921b4843584237d360fb529fb07e2ba9e869968232e61db80e120c1fa4a15e8b
+updated: 2016-07-28T12:11:29.703586483+02:00
 imports:
 - name: github.com/appc/docker2aci
-  version: d77d6e4b99a0d8b6be6f70c623c86ba777110cbd
+  version: 90dfcf166a2967b926e77e4864fb616dc291c026
   subpackages:
   - lib
   - lib/common
