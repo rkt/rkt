@@ -21,12 +21,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/go-systemd/sdjournal"
 	"github.com/coreos/rkt/api/v1alpha"
+	"github.com/coreos/rkt/common"
 )
 
 func (s *v1AlphaAPIServer) constrainedGetLogs(request *v1alpha.GetLogsRequest, server v1alpha.PublicAPI_GetLogsServer) error {
@@ -87,12 +87,6 @@ func (s *v1AlphaAPIServer) constrainedGetLogs(request *v1alpha.GetLogsRequest, s
 	if err != nil {
 		return err
 	}
-	// Remove empty lines
-	lines := make([]string, 0)
-	for _, v := range strings.Split(string(data), "\n") {
-		if len(v) > 0 {
-			lines = append(lines, v)
-		}
-	}
-	return server.Send(&v1alpha.GetLogsResponse{Lines: lines})
+
+	return server.Send(&v1alpha.GetLogsResponse{Lines: common.RemoveEmptyLines(string(data))})
 }

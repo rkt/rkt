@@ -346,3 +346,17 @@ func FSSupportsOverlay(path string) bool {
 
 	return true
 }
+
+// RemoveEmptyLines removes empty lines from the given string
+// and breaks it up into a list of strings at newline characters
+func RemoveEmptyLines(str string) []string {
+	lines := make([]string, 0)
+
+	for _, v := range strings.Split(str, "\n") {
+		if len(v) > 0 {
+			lines = append(lines, v)
+		}
+	}
+
+	return lines
+}
