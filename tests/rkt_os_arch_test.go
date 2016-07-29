@@ -154,7 +154,10 @@ func TestMissingOrInvalidOSArchFetchRun(t *testing.T) {
 	defer osArchTestRemoveImages(tests)
 
 	for i, tt := range tests {
-		imgHash := importImageAndFetchHash(t, ctx, "", tt.image)
+		imgHash, err := importImageAndFetchHash(t, ctx, "", tt.image)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
 		rktCmd := fmt.Sprintf("%s run --mds-register=false %s", ctx.Cmd(), imgHash)
 		t.Logf("Running test #%v: %v", i, rktCmd)
 		runRktAndCheckOutput(t, rktCmd, tt.expectedLine, tt.expectError)

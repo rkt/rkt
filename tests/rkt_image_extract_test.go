@@ -41,7 +41,10 @@ func TestImageExtract(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	testImageShortHash := importImageAndFetchHash(t, ctx, "", testImage)
+	testImageShortHash, err := importImageAndFetchHash(t, ctx, "", testImage)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 
 	tests := []struct {
 		image        string

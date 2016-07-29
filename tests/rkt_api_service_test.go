@@ -346,7 +346,10 @@ func NewAPIServiceListInspectPodsTest() testutils.Test {
 		}
 
 		patches := []string{"--exec=/inspect --print-msg=HELLO_API --exit-code=0"}
-		imageHash := patchImportAndFetchHash("rkt-inspect-print.aci", patches, t, ctx)
+		imageHash, err := patchImportAndFetchHash("rkt-inspect-print.aci", patches, t, ctx)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
 		imgID, err := types.NewHash(imageHash)
 		if err != nil {
 			t.Fatalf("Cannot generate types.Hash from %v: %v", imageHash, err)
@@ -503,7 +506,10 @@ func TestAPIServiceListInspectImages(t *testing.T) {
 		t.Errorf("Unexpected result: %v, should see zero images", resp.Images)
 	}
 
-	patchImportAndFetchHash("rkt-inspect-sleep.aci", []string{"--exec=/inspect"}, t, ctx)
+	_, err = patchImportAndFetchHash("rkt-inspect-sleep.aci", []string{"--exec=/inspect"}, t, ctx)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 
 	// ListImages(detail=false).
 	resp, err = c.ListImages(context.Background(), &v1alpha.ListImagesRequest{})

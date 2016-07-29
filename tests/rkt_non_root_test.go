@@ -102,7 +102,10 @@ func TestNonRootFetchRmGCImage(t *testing.T) {
 
 	rootImg := patchTestACI("rkt-inspect-root-rm.aci", "--exec=/inspect --print-msg=foobar")
 	defer os.Remove(rootImg)
-	rootImgHash := importImageAndFetchHash(t, ctx, "", rootImg)
+	rootImgHash, err := importImageAndFetchHash(t, ctx, "", rootImg)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 
 	// Launch/gc a pod so we can test non-root image gc.
 	runCmd := fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s", ctx.Cmd(), rootImg)
@@ -124,7 +127,10 @@ func TestNonRootFetchRmGCImage(t *testing.T) {
 	// Should be able to remove the image fetched by ourselves.
 	nonrootImg := patchTestACI("rkt-inspect-non-root-rm.aci", "--exec=/inspect")
 	defer os.Remove(nonrootImg)
-	nonrootImgHash := importImageAndFetchHashAsGid(t, ctx, nonrootImg, "", gid)
+	nonrootImgHash, err := importImageAndFetchHashAsGid(t, ctx, nonrootImg, "", gid)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 
 	imgRmCmd = fmt.Sprintf("%s image rm %s", ctx.Cmd(), nonrootImgHash)
 	t.Logf("Running %s", imgRmCmd)

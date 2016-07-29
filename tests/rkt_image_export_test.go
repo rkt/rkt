@@ -57,7 +57,10 @@ func TestImageExport(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	testImageID := importImageAndFetchHash(t, ctx, "", testImage)
+	testImageID, err := importImageAndFetchHash(t, ctx, "", testImage)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 
 	testImageHash, err := getHash(testImage)
 	if err != nil {

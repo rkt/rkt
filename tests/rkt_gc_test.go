@@ -90,8 +90,10 @@ func TestGCAfterUnmount(t *testing.T) {
 	imagePath := getInspectImagePath()
 
 	for _, rmNetns := range []bool{false, true} {
-
-		importImageAndFetchHash(t, ctx, "", imagePath)
+		_, err := importImageAndFetchHash(t, ctx, "", imagePath)
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
 		cmd := fmt.Sprintf("%s --insecure-options=image prepare %s", ctx.Cmd(), imagePath)
 		uuid := runRktAndGetUUID(t, cmd)
 

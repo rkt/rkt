@@ -400,7 +400,10 @@ func TestStage1LoadingFromFlagsHash(t *testing.T) {
 	setup := newStubStage1Setup(t, nil)
 	defer setup.cleanup()
 
-	stubHash := importImageAndFetchHash(setup.t, setup.ctx, "", setup.getLocation(stubStage1PathAbs))
+	stubHash, err := importImageAndFetchHash(setup.t, setup.ctx, "", setup.getLocation(stubStage1PathAbs))
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
 	cmd := fmt.Sprintf("%s --insecure-options=image,tls --debug run --stage1-hash=%s %s", setup.ctx.Cmd(), stubHash, getInspectImagePath())
 	child := spawnOrFail(setup.t, cmd)
 	defer waitOrFail(setup.t, child, 0)

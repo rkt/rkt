@@ -186,7 +186,7 @@ func createTempDirOrPanic(dirName string) string {
 	return tmpDir
 }
 
-func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img string, fetchArgs string, gid int) string {
+func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img string, fetchArgs string, gid int) (string, error) {
 	// Import the test image into store manually.
 	cmd := fmt.Sprintf("%s --insecure-options=image,tls fetch %s %s", ctx.Cmd(), fetchArgs, img)
 
@@ -215,13 +215,17 @@ func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img st
 	if err != nil || len(result) != 1 {
 		t.Fatalf("Error: %v\nOutput: %v", err, out)
 	}
+	err = child.Wait()
+	status := getExitStatus(err)
+	if status != 0 {
+		t.Logf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, 0, child.Collect())
+		return "", fmt.Errorf("fetching of %q failed", img)
+	}
 
-	waitOrFail(t, child, 0)
-
-	return result[0]
+	return result[0], nil
 }
 
-func importImageAndFetchHash(t *testing.T, ctx *testutils.RktRunCtx, fetchArgs string, img string) string {
+func importImageAndFetchHash(t *testing.T, ctx *testutils.RktRunCtx, fetchArgs string, img string) (string, error) {
 	return importImageAndFetchHashAsGid(t, ctx, fetchArgs, img, 0)
 }
 
@@ -235,7 +239,7 @@ func importImageAndPrepare(imagePath string, t *testing.T, ctx *testutils.RktRun
 	spawnAndWaitOrFail(t, cmd, 0)
 }
 
-func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *testutils.RktRunCtx) string {
+func patchImportAndFetchHash(image string, patches []string, t *testing.T, ctx *testutils.RktRunCtx) (string, error) {
 	imagePath := patchTestACI(image, patches...)
 	defer os.Remove(imagePath)
 
