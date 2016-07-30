@@ -73,6 +73,8 @@ func init() {
 	cmdPrepare.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 	cmdPrepare.Flags().Var((*appUser)(&rktApps), "user", "user override for the preceding image (example: '--user=user')")
 	cmdPrepare.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
+	cmdPrepare.Flags().Var((*appCapsRetain)(&rktApps), "cap-retain", "capability to retain (example: '--cap-retain=CAP_SYS_ADMIN')")
+	cmdPrepare.Flags().Var((*appCapsRemove)(&rktApps), "cap-remove", "capability to remove (example: '--cap-remove=CAP_MKNOD')")
 
 	// Disable interspersed flags to stop parsing after the first non flag
 	// argument. This is need to permit to correctly handle
@@ -112,7 +114,8 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || flagStoreOnly || flagNoStore ||
 		flagInheritEnv || !flagExplicitEnv.IsEmpty() || !flagEnvFromFile.IsEmpty() ||
 		(*appsVolume)(&rktApps).String() != "" || (*appMount)(&rktApps).String() != "" || (*appExec)(&rktApps).String() != "" ||
-		(*appUser)(&rktApps).String() != "" || (*appGroup)(&rktApps).String() != "") {
+		(*appUser)(&rktApps).String() != "" || (*appGroup)(&rktApps).String() != "" ||
+		(*appCapsRetain)(&rktApps).String() != "" || (*appCapsRemove)(&rktApps).String() != "") {
 		stderr.Print("conflicting flags set with --pod-manifest (see --help)")
 		return 1
 	}
