@@ -65,7 +65,7 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request) (ServerTr
 	if r.Method != "POST" {
 		return nil, errors.New("invalid gRPC request method")
 	}
-	if !strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+	if !validContentType(r.Header.Get("Content-Type")) {
 		return nil, errors.New("invalid gRPC request content-type")
 	}
 	if _, ok := w.(http.Flusher); !ok {
@@ -92,9 +92,12 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request) (ServerTr
 	}
 
 	var metakv []string
+	if r.Host != "" {
+		metakv = append(metakv, ":authority", r.Host)
+	}
 	for k, vv := range r.Header {
 		k = strings.ToLower(k)
-		if isReservedHeader(k) {
+		if isReservedHeader(k) && !isWhitelistedPseudoHeader(k) {
 			continue
 		}
 		for _, v := range vv {
@@ -108,7 +111,6 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request) (ServerTr
 				}
 			}
 			metakv = append(metakv, k, v)
-
 		}
 	}
 	st.headerMD = metadata.Pairs(metakv...)
@@ -118,7 +120,7 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request) (ServerTr
 
 // serverHandlerTransport is an implementation of ServerTransport
 // which replies to exactly one gRPC request (exactly one HTTP request),
-// using the net/http.Handler interface. This http.Handler is guranteed
+// using the net/http.Handler interface. This http.Handler is guaranteed
 // at this point to be speaking over HTTP/2, so it's able to speak valid
 // gRPC.
 type serverHandlerTransport struct {
@@ -196,6 +198,10 @@ func (ht *serverHandlerTransport) WriteStatus(s *Stream, statusCode codes.Code, 
 		}
 		if md := s.Trailer(); len(md) > 0 {
 			for k, vv := range md {
+				// Clients don't tolerate reading restricted headers after some non restricted ones were sent.
+				if isReservedHeader(k) {
+					continue
+				}
 				for _, v := range vv {
 					// http2 ResponseWriter mechanism to
 					// send undeclared Trailers after the
@@ -249,6 +255,10 @@ func (ht *serverHandlerTransport) WriteHeader(s *Stream, md metadata.MD) error {
 		ht.writeCommonHeaders(s)
 		h := ht.rw.Header()
 		for k, vv := range md {
+			// Clients don't tolerate reading restricted headers after some non restricted ones were sent.
+			if isReservedHeader(k) {
+				continue
+			}
 			for _, v := range vv {
 				h.Add(k, v)
 			}
@@ -302,7 +312,7 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream)) {
 		Addr: ht.RemoteAddr(),
 	}
 	if req.TLS != nil {
-		pr.AuthInfo = credentials.TLSInfo{*req.TLS}
+		pr.AuthInfo = credentials.TLSInfo{State: *req.TLS}
 	}
 	ctx = metadata.NewContext(ctx, ht.headerMD)
 	ctx = peer.NewContext(ctx, pr)
@@ -313,15 +323,21 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream)) {
 	readerDone := make(chan struct{})
 	go func() {
 		defer close(readerDone)
-		for {
-			buf := make([]byte, 1024) // TODO: minimize garbage, optimize recvBuffer code/ownership
+
+		// TODO: minimize garbage, optimize recvBuffer code/ownership
+		const readSize = 8196
+		for buf := make([]byte, readSize); ; {
 			n, err := req.Body.Read(buf)
 			if n > 0 {
-				s.buf.put(&recvMsg{data: buf[:n]})
+				s.buf.put(&recvMsg{data: buf[:n:n]})
+				buf = buf[n:]
 			}
 			if err != nil {
 				s.buf.put(&recvMsg{err: mapRecvMsgError(err)})
 				return
+			}
+			if len(buf) == 0 {
+				buf = make([]byte, readSize)
 			}
 		}
 	}()
