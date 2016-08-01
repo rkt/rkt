@@ -212,14 +212,12 @@ func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img st
 
 	// Read out the image hash.
 	result, out, err := expectRegexWithOutput(child, "sha512-[0-9a-f]{32,64}")
+	if exitErr := checkExitStatus(child); exitErr != nil {
+		t.Logf("%v", exitErr)
+		return "", fmt.Errorf("fetching of %q failed", img)
+	}
 	if err != nil || len(result) != 1 {
 		t.Fatalf("Error: %v\nOutput: %v", err, out)
-	}
-	err = child.Wait()
-	status := getExitStatus(err)
-	if status != 0 {
-		t.Logf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, 0, child.Collect())
-		return "", fmt.Errorf("fetching of %q failed", img)
 	}
 
 	return result[0], nil
@@ -846,4 +844,14 @@ func unmountPod(t *testing.T, ctx *testutils.RktRunCtx, uuid string, rmNetns boo
 	if rmNetns {
 		_ = os.RemoveAll(podNetNSPath)
 	}
+}
+
+func checkExitStatus(child *gexpect.ExpectSubprocess) error {
+	err := child.Wait()
+	status := getExitStatus(err)
+	if status != 0 {
+		return fmt.Errorf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, 0, child.Collect())
+	}
+
+	return nil
 }
