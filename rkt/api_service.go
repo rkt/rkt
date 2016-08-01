@@ -823,13 +823,7 @@ type LogsStreamWriter struct {
 }
 
 func (sw LogsStreamWriter) Write(b []byte) (int, error) {
-	// Remove empty lines
-	lines := make([]string, 0)
-	for _, v := range strings.Split(string(b), "\n") {
-		if len(v) > 0 {
-			lines = append(lines, v)
-		}
-	}
+	lines := common.RemoveEmptyLines(string(b))
 
 	if err := sw.server.Send(&v1alpha.GetLogsResponse{Lines: lines}); err != nil {
 		return 0, err
