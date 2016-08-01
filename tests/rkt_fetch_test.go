@@ -224,6 +224,60 @@ func testFetchNoStore(t *testing.T, args string, image string, imageArgs string,
 	}
 }
 
+func TestFetchNoStoreCacheControl(t *testing.T) {
+	imageName := "rkt-inspect-fetch-nostore-cachecontrol"
+	imageFileName := fmt.Sprintf("%s.aci", imageName)
+	// no spaces between words, because of an actool limitation
+	successMsg := "deferredSignatureDownloadWasSuccessful"
+
+	args := []string{
+		fmt.Sprintf("--exec=/inspect --print-msg='%s'", successMsg),
+		fmt.Sprintf("--name=%s", imageName),
+	}
+	image := patchTestACI(imageFileName, args...)
+	defer os.Remove(image)
+
+	asc := runSignImage(t, image, 1)
+	defer os.Remove(asc)
+	ascBase := filepath.Base(asc)
+
+	setup := taas.GetDefaultServerSetup()
+	setup.Server = taas.ServerQuay
+	server := runServer(t, setup)
+	defer server.Close()
+	fileSet := make(map[string]string, 2)
+	fileSet[imageFileName] = image
+	fileSet[ascBase] = asc
+	if err := server.UpdateFileSet(fileSet); err != nil {
+		t.Fatalf("Failed to populate a file list in test aci server: %v", err)
+	}
+
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	runRktTrust(t, ctx, "", 1)
+
+	tests := []struct {
+		imageArg string
+		imageURL string
+	}{
+		{"https://127.0.0.1/" + imageFileName, "https://127.0.0.1/" + imageFileName},
+		{"localhost/" + imageName, "https://127.0.0.1:443/localhost/" + imageFileName},
+	}
+
+	for _, tt := range tests {
+		cmd := fmt.Sprintf("%s --no-store --debug --insecure-options=tls,image fetch %s", ctx.Cmd(), tt.imageArg)
+		expectedMessage := fmt.Sprintf("fetching image from %s", tt.imageURL)
+		runRktAndCheckRegexOutput(t, cmd, expectedMessage)
+
+		cmd = fmt.Sprintf("%s --no-store --debug --insecure-options=tls,image fetch %s", ctx.Cmd(), tt.imageArg)
+		expectedMessage = fmt.Sprintf("image for %s isn't expired, not fetching.", tt.imageURL)
+		runRktAndCheckRegexOutput(t, cmd, expectedMessage)
+
+		ctx.Reset()
+	}
+}
+
 type synchronizedBool struct {
 	value bool
 	lock  sync.Mutex

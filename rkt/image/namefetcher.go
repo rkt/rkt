@@ -38,6 +38,7 @@ type nameFetcher struct {
 	InsecureFlags      *rktflag.SecFlags
 	S                  *imagestore.Store
 	Ks                 *keystore.Keystore
+	NoCache            bool
 	Debug              bool
 	Headers            map[string]config.Headerer
 	TrustKeysFromHTTPS bool
@@ -102,12 +103,32 @@ func (f *nameFetcher) fetchImageFromSingleEndpoint(app *discovery.App, aciURL st
 		log.Printf("fetching image from %s", aciURL)
 	}
 
-	aciFile, cd, err := f.fetch(app, aciURL, a)
+	u, err := url.Parse(aciURL)
+	if err != nil {
+		return "", errwrap.Wrap(fmt.Errorf("failed to parse URL %q", aciURL), err)
+	}
+	rem, err := remoteForURL(f.S, u)
 	if err != nil {
 		return "", err
 	}
-	defer aciFile.Close()
+	if !f.NoCache && rem != nil {
+		if useCached(rem.DownloadTime, rem.CacheMaxAge) {
+			if f.Debug {
+				log.Printf("image for %s isn't expired, not fetching.", aciURL)
+			}
+			return rem.BlobKey, nil
+		}
+	}
 
+	aciFile, cd, err := f.fetch(app, aciURL, a, eTag(rem))
+	if err != nil {
+		return "", err
+	}
+	defer func() { maybeClose(aciFile) }()
+
+	if key := maybeUseCached(rem, cd); key != "" {
+		return key, nil
+	}
 	key, err := f.S.WriteACI(aciFile, imagestore.ACIFetchInfo{
 		Latest:          latest,
 		InsecureOptions: int64(f.InsecureFlags.Value()),
@@ -116,12 +137,14 @@ func (f *nameFetcher) fetchImageFromSingleEndpoint(app *discovery.App, aciURL st
 		return "", err
 	}
 
-	rem := imagestore.NewRemote(aciURL, a.Location)
-	rem.BlobKey = key
-	rem.DownloadTime = time.Now()
-	rem.ETag = cd.ETag
-	rem.CacheMaxAge = cd.MaxAge
-	err = f.S.WriteRemote(rem)
+	newRem := imagestore.NewRemote(aciURL, a.Location)
+	newRem.BlobKey = key
+	newRem.DownloadTime = time.Now()
+	if cd != nil {
+		newRem.ETag = cd.ETag
+		newRem.CacheMaxAge = cd.MaxAge
+	}
+	err = f.S.WriteRemote(newRem)
 	if err != nil {
 		return "", err
 	}
@@ -129,7 +152,7 @@ func (f *nameFetcher) fetchImageFromSingleEndpoint(app *discovery.App, aciURL st
 	return key, nil
 }
 
-func (f *nameFetcher) fetch(app *discovery.App, aciURL string, a *asc) (readSeekCloser, *cacheData, error) {
+func (f *nameFetcher) fetch(app *discovery.App, aciURL string, a *asc, etag string) (readSeekCloser, *cacheData, error) {
 	if f.InsecureFlags.SkipTLSCheck() && f.Ks != nil {
 		log.Print("warning: TLS verification has been disabled")
 	}
@@ -144,7 +167,7 @@ func (f *nameFetcher) fetch(app *discovery.App, aciURL string, a *asc) (readSeek
 
 	if f.InsecureFlags.SkipImageCheck() || f.Ks == nil {
 		o := f.httpOps()
-		aciFile, cd, err := o.DownloadImage(u)
+		aciFile, cd, err := o.DownloadImageWithETag(u, etag)
 		if err != nil {
 			return nil, nil, err
 		}

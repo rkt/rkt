@@ -30,6 +30,7 @@ import (
 	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/store/imagestore"
 	"github.com/coreos/rkt/store/treestore"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
@@ -65,10 +66,10 @@ type action struct {
 	// local filesystem or a remote location.
 	StoreOnly bool
 	// NoStore tells whether to avoid getting images from the
-	// store. Note that the store can be still used as a cache.
+	// store. Note that transport caching (like http Etags) can be still
+	// used to avoid refetching.
 	NoStore bool
-	// NoCache tells to avoid getting images from the store
-	// completely.
+	// NoCache tells to ignore transport caching.
 	NoCache bool
 	// WithDeps tells whether image dependencies should be
 	// downloaded too.
@@ -201,4 +202,31 @@ func guessImageType(image string) apps.AppImageType {
 	// off prepending the parameter with "./", because I'm gonna
 	// treat this as an image name otherwise.
 	return apps.AppImageName
+}
+
+func eTag(rem *imagestore.Remote) string {
+	if rem != nil {
+		return rem.ETag
+	}
+	return ""
+}
+
+func maybeUseCached(rem *imagestore.Remote, cd *cacheData) string {
+	if rem == nil || cd == nil {
+		return ""
+	}
+	if cd.UseCached {
+		return rem.BlobKey
+	}
+	return ""
+}
+
+func remoteForURL(s *imagestore.Store, u *url.URL) (*imagestore.Remote, error) {
+	urlStr := u.String()
+	if rem, ok, err := s.GetRemote(urlStr); err != nil {
+		return nil, errwrap.Wrap(fmt.Errorf("failed to fetch remote for URL %q", urlStr), err)
+	} else if ok {
+		return rem, nil
+	}
+	return nil, nil
 }
