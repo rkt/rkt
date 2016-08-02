@@ -27,38 +27,38 @@ import (
 func TestNoNewPrivileges(t *testing.T) {
 	for _, tt := range []struct {
 		rktParams string
-		patch     string
+		patch     []string
 		expected  string
 	}{
 		{
-			patch:    "--isolators=os/linux/no-new-privileges,true",
+			patch:    []string{"--isolators=os/linux/no-new-privileges,true"},
 			expected: "no_new_privs: 1 err: errno 0",
 		},
 		{
 			rktParams: "--user=1000 --group=100",
-			patch:     "--isolators=os/linux/no-new-privileges,true",
+			patch:     []string{"--isolators=os/linux/no-new-privileges,true"},
 			expected:  "no_new_privs: 1 err: errno 0",
 		},
 		{
-			patch:    "--isolators=os/linux/no-new-privileges,false",
+			patch:    []string{"--isolators=os/linux/no-new-privileges,false"},
 			expected: "no_new_privs: 0 err: errno 0",
 		},
 		{
 			rktParams: "--user=1000 --group=100",
-			patch:     "--isolators=os/linux/no-new-privileges,false",
+			patch:     []string{"--isolators=os/linux/no-new-privileges,false", "--seccomp-mode=retain", "--seccomp-set=@appc.io/all"},
 			expected:  "no_new_privs: 0 err: errno 0",
 		},
 		{
-			patch:    `--isolators=os/linux/no-new-privileges,false:os/linux/no-new-privileges,true`,
+			patch:    []string{`--isolators=os/linux/no-new-privileges,false:os/linux/no-new-privileges,true`},
 			expected: "no_new_privs: 1 err: errno 0",
 		},
 		{
 			rktParams: "--user=1000 --group=100",
-			patch:     `--isolators=os/linux/no-new-privileges,false:os/linux/no-new-privileges,true`,
+			patch:     []string{`--isolators=os/linux/no-new-privileges,false:os/linux/no-new-privileges,true`},
 			expected:  "no_new_privs: 1 err: errno 0",
 		},
 		{
-			patch:    "",
+			patch:    nil,
 			expected: "no_new_privs: 0 err: errno 0",
 		},
 	} {
@@ -67,8 +67,8 @@ func TestNoNewPrivileges(t *testing.T) {
 			defer ctx.Cleanup()
 
 			ps := []string{}
-			if tt.patch != "" {
-				ps = append(ps, tt.patch)
+			if len(tt.patch) > 0 {
+				ps = append(ps, tt.patch...)
 			}
 
 			image := patchTestACI("rkt-no-new-privs.aci", ps...)

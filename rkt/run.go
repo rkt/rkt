@@ -108,6 +108,7 @@ func init() {
 	cmdRun.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
 	cmdRun.Flags().Var((*appCapsRetain)(&rktApps), "cap-retain", "capability to retain (example: '--cap-retain=CAP_SYS_ADMIN')")
 	cmdRun.Flags().Var((*appCapsRemove)(&rktApps), "cap-remove", "capability to remove (example: '--cap-remove=CAP_MKNOD')")
+	cmdRun.Flags().Var((*appSeccompFilter)(&rktApps), "seccomp", "seccomp filter override (example: '--seccomp mode=retain,errno=EPERM,chmod,chown')")
 
 	flagPorts = portList{}
 	flagDNS = flagStringList{}

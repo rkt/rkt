@@ -416,3 +416,27 @@ func (au *appCapsRemove) String() string {
 func (au *appCapsRemove) Type() string {
 	return "appCapsRemove"
 }
+
+// appSeccompFilter is for --seccomp flags in the form of: --seccomp [errno=EPERM,]mode=retain,chown,chmod[,syscalls]
+type appSeccompFilter apps.Apps
+
+func (au *appSeccompFilter) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--seccomp must follow an image")
+	}
+	app.SeccompFilter = s
+	return nil
+}
+
+func (au *appSeccompFilter) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	return app.SeccompFilter
+}
+
+func (au *appSeccompFilter) Type() string {
+	return "appSeccompFilter"
+}

@@ -423,8 +423,6 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		return err
 	}
 
-	noNewPrivileges := getAppNoNewPrivileges(app.Isolators)
-
 	execStart := append([]string{binPath}, app.Exec[1:]...)
 	execStartString := quoteExec(execStart)
 	opts := []*unit.UnitOption{
@@ -443,7 +441,6 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		unit.NewUnitOption("Service", "Group", strconv.Itoa(g)),
 		unit.NewUnitOption("Service", "SupplementaryGroups", strings.Join(supplementaryGroups, " ")),
 		unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")),
-		unit.NewUnitOption("Service", "NoNewPrivileges", strconv.FormatBool(noNewPrivileges)),
 		// This helps working around a race
 		// (https://github.com/systemd/systemd/issues/2913) that causes the
 		// systemd unit name not getting written to the journal if the unit is
@@ -453,6 +450,21 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 
 	// Restrict access to sensitive paths (eg. procfs)
 	opts = protectSystemFiles(opts, appName)
+
+	// Apply seccomp isolator, if any and not opt-ing out;
+	// see https://www.freedesktop.org/software/systemd/man/systemd.exec.html#SystemCallFilter=
+	unprivileged := (u != 0)
+	opts, noNewPrivileges, err := getSeccompFilter(opts, p, unprivileged, app.Isolators)
+	if err != nil {
+		return err
+	}
+
+	// Seccomp filters require NoNewPrivileges for unprivileged apps, that may override
+	// manifest annotation.
+	if !noNewPrivileges {
+		noNewPrivileges = getAppNoNewPrivileges(app.Isolators)
+	}
+	opts = append(opts, unit.NewUnitOption("Service", "NoNewPrivileges", strconv.FormatBool(noNewPrivileges)))
 
 	if ra.ReadOnlyRootFS {
 		opts = append(opts, unit.NewUnitOption("Service", "ReadOnlyDirectories", common.RelAppRootfsPath(appName)))
