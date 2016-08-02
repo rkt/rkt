@@ -32,15 +32,12 @@ import (
 const (
 	defaultTimeLayout = "2006-01-02 15:04:05.999 -0700 MST"
 
-	id              = "id"
-	name            = "name"
-	importTime      = "import time"
-	lastUsed        = "last used"
-	size            = "size"
-	latest          = "latest"
-	insecureOptions = "insecure options"
-	aciURL          = "ACI URL"
-	signatureURL    = "signature URL"
+	id         = "id"
+	name       = "name"
+	importTime = "import time"
+	lastUsed   = "last used"
+	size       = "size"
+	latest     = "latest"
 )
 
 // Convenience methods for formatting fields
@@ -54,29 +51,23 @@ func u(s string) string {
 var (
 	// map of valid fields and related header name
 	ImagesFieldHeaderMap = map[string]string{
-		l(id):              u(id),
-		l(name):            u(name),
-		l(importTime):      u(importTime),
-		l(lastUsed):        u(lastUsed),
-		l(latest):          u(latest),
-		l(size):            u(size),
-		l(insecureOptions): u(insecureOptions),
-		l(aciURL):          u(aciURL),
-		l(signatureURL):    u(signatureURL),
+		l(id):         u(id),
+		l(name):       u(name),
+		l(importTime): u(importTime),
+		l(lastUsed):   u(lastUsed),
+		l(latest):     u(latest),
+		l(size):       u(size),
 	}
 
 	// map of valid sort fields containing the mapping between the provided field name
 	// and the related aciinfo's field name.
 	ImagesFieldAciInfoMap = map[string]string{
-		l(id):              "blobkey",
-		l(name):            l(name),
-		l(importTime):      l(importTime),
-		l(lastUsed):        l(lastUsed),
-		l(latest):          l(latest),
-		l(size):            l(size),
-		l(insecureOptions): u(insecureOptions),
-		l(aciURL):          u(aciURL),
-		l(signatureURL):    u(signatureURL),
+		l(id):         "blobkey",
+		l(name):       l(name),
+		l(importTime): l(importTime),
+		l(lastUsed):   l(lastUsed),
+		l(latest):     l(latest),
+		l(size):       l(size),
 	}
 
 	ImagesSortableFields = map[string]struct{}{
@@ -127,7 +118,7 @@ var (
 func init() {
 	sortFields := []string{l(name), l(importTime), l(lastUsed), l(size)}
 
-	fields := []string{l(id), l(name), l(aciURL), l(signatureURL), l(insecureOptions), l(size), l(importTime), l(lastUsed)}
+	fields := []string{l(id), l(name), l(size), l(importTime), l(lastUsed)}
 
 	// Set defaults
 	var err error
@@ -245,37 +236,8 @@ func runImages(cmd *cobra.Command, args []string) int {
 				}
 			case l(latest):
 				fieldValue = fmt.Sprintf("%t", aciInfo.Latest)
-			case l(insecureOptions):
-				f, err := rktflag.NewSecFlagsFromValue(int(aciInfo.InsecureOptions))
-				if err != nil {
-					stderr.Error(err)
-					return 1
-				}
-
-				// remove ondisk, it's a runtime insecure option
-				sp := strings.Split(f.String(), ",")
-				for i, o := range sp {
-					if o == "ondisk" {
-						sp = append(sp[:i], sp[i+1:]...)
-					}
-				}
-
-				fieldValue = fmt.Sprintf("%s", strings.Join(sp, ","))
-			case l(aciURL):
-				if imageRemote := remoteMap[aciInfo.BlobKey]; imageRemote == nil {
-					fieldValue = ""
-				} else {
-					fieldValue = fmt.Sprintf("%s", imageRemote.ACIURL)
-				}
-			case l(signatureURL):
-				if imageRemote := remoteMap[aciInfo.BlobKey]; imageRemote == nil {
-					fieldValue = ""
-				} else {
-					fieldValue = fmt.Sprintf("%s", imageRemote.SigURL)
-				}
 			}
 			fieldValues = append(fieldValues, fieldValue)
-
 		}
 		fmt.Fprintf(tabOut, "%s\n", strings.Join(fieldValues, "\t"))
 	}

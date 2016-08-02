@@ -482,13 +482,12 @@ func (s *Store) WriteACI(r io.ReadSeeker, fetchInfo ACIFetchInfo) (string, error
 	// Save aciinfo
 	if err = s.db.Do(func(tx *sql.Tx) error {
 		aciinfo := &ACIInfo{
-			BlobKey:         key,
-			Name:            im.Name.String(),
-			ImportTime:      time.Now(),
-			LastUsed:        time.Now(),
-			Latest:          fetchInfo.Latest,
-			Size:            sz,
-			InsecureOptions: fetchInfo.InsecureOptions,
+			BlobKey:    key,
+			Name:       im.Name.String(),
+			ImportTime: time.Now(),
+			LastUsed:   time.Now(),
+			Latest:     fetchInfo.Latest,
+			Size:       sz,
 		}
 		return WriteACIInfo(tx, aciinfo)
 	}); err != nil {
