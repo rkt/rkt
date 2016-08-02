@@ -162,14 +162,13 @@ func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, 
 
 	// 1. Run cmd with the image not available in the store, should get $remoteFetchMsg.
 	child := spawnOrFail(t, cmd)
-	if err := expectWithOutput(child, remoteFetchMsg); err != nil {
-		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
-	}
-	err := child.Wait()
-	status := getExitStatus(err)
-	if status != 0 {
-		t.Logf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, 0, child.Collect())
+	err := expectWithOutput(child, remoteFetchMsg)
+	if exitErr := checkExitStatus(child); exitErr != nil {
+		t.Logf("%v", exitErr)
 		t.Skip("remote fetching failed, probably a network failure. Skipping...")
+	}
+	if err != nil {
+		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}
 
 	// 2. Run cmd with the image available in the store, should get $storeMsg.
@@ -213,14 +212,13 @@ func testFetchNoStore(t *testing.T, args string, image string, imageArgs string,
 
 	// 1. Run cmd with the image available in the store, should get $remoteFetchMsg.
 	child := spawnOrFail(t, cmd)
-	if err := expectWithOutput(child, remoteFetchMsg); err != nil {
-		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
-	}
-	err := child.Wait()
-	status := getExitStatus(err)
-	if status != 0 {
-		t.Logf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, 0, child.Collect())
+	err := expectWithOutput(child, remoteFetchMsg)
+	if exitErr := checkExitStatus(child); exitErr != nil {
+		t.Logf("%v", exitErr)
 		t.Skip("remote fetching failed, probably a network failure. Skipping...")
+	}
+	if err != nil {
+		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}
 }
 
