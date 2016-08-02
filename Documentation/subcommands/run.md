@@ -344,8 +344,8 @@ For more details see the [hacking documentation](../hacking.md).
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
-| `--cap-remove` | none | capability to remove (example: '--cap-remove=CAP\_SYS\_CHROOT,CAP\_MKNOD') | Capabilities to remove from the process's capabilities bounding set, all others from the default set will be included |
-| `--cap-retain` | none | capability to retain (example: '--cap-remove=CAP\_SYS\_ADMIN,CAP\_NET\_ADMIN') | Capabilities to retain in the process's capabilities bounding set, all others will be removed |
+| `--caps-remove` | none | capability to remove (example: '--caps-remove=CAP\_SYS\_CHROOT,CAP\_MKNOD') | Capabilities to remove from the process's capabilities bounding set, all others from the default set will be included |
+| `--caps-retain` | none | capability to retain (example: '--caps-remove=CAP\_SYS\_ADMIN,CAP\_NET\_ADMIN') | Capabilities to retain in the process's capabilities bounding set, all others will be removed |
 | `--cpu` | none | CPU units (ex. `--cpu=500m`) | CPU limit for the preceding image in [Kubernetes resource model](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/resources.md) format. |
 | `--dns` | none | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times |
 | `--dns-opt` | none | DNS option  | DNS option from resolv.conf(5) to write in `/etc/resolv.conf`. It can be specified several times. |

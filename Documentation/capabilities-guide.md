@@ -297,8 +297,8 @@ listening on [::]:80 ...
 
 Capabilities can be directly overridden at run time from the command-line,
 without changing the executed images.
-The `--cap-retain` option to `rkt run` manipulates the `retain` capabilities set.
-The `--cap-remove` option manipulates the `remove` set.
+The `--caps-retain` option to `rkt run` manipulates the `retain` capabilities set.
+The `--caps-remove` option manipulates the `remove` set.
 
 Capabilities specified from the command-line will replace all capability settings in the image manifest.
 Also as stated above the options `--cap-retain`, and `--cap-remove` are mutually exclusive.
@@ -308,7 +308,7 @@ Capabilities isolators can be added on the command line at run time by
 specifying the desired overriding set, as shown in this example:
 
 ```
-$ sudo rkt run --interactive quay.io/coreos/alpine-sh --cap-retain CAP_NET_BIND_SERVICE
+$ sudo rkt run --interactive quay.io/coreos/alpine-sh --caps-retain CAP_NET_BIND_SERVICE
 image: using image from file /usr/local/bin/stage1-coreos.aci
 image: using image from local store for image name quay.io/coreos/alpine-sh
 

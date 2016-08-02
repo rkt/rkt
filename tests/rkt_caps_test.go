@@ -32,6 +32,7 @@ var appCapsTests = []struct {
 	capRetainSet string // only use value if != "x"
 	capRemoveSet string // only use value if != "x"
 	expected     string // caps bounding set as printed by gocapability
+	useOldFlag   bool   // use --cap-retain or --cap-remove instead of --caps-*; backwards compatibility testing
 
 	// set during the test
 	imageFile string
@@ -64,6 +65,13 @@ var appCapsTests = []struct {
 		capRetainSet: "CAP_NET_ADMIN",
 		capRemoveSet: "x",
 		expected:     "net_admin",
+	},
+	{
+		testName:     "image-only-one-cap-old",
+		capRetainSet: "CAP_NET_ADMIN",
+		capRemoveSet: "x",
+		expected:     "net_admin",
+		useOldFlag:   true,
 	},
 	{
 		testName:     "image-only-one-cap-from-default",
@@ -150,6 +158,15 @@ var appCapsTests = []struct {
 		testName:     "image-remove-one-from-default",
 		capRetainSet: "x",
 		capRemoveSet: "CAP_CHOWN",
+		expected: strings.Join([]string{
+			"dac_override, fowner, fsetid, kill, setgid, setuid, setpcap, net_bind_service, net_raw, sys_chroot, mknod, audit_write, setfcap",
+		}, ", "),
+	},
+	{
+		testName:     "image-remove-one-from-default-old",
+		capRetainSet: "x",
+		capRemoveSet: "CAP_CHOWN",
+		useOldFlag:   true,
 		expected: strings.Join([]string{
 			"dac_override, fowner, fsetid, kill, setgid, setuid, setpcap, net_bind_service, net_raw, sys_chroot, mknod, audit_write, setfcap",
 		}, ", "),
@@ -347,10 +364,18 @@ func TestCapsSeveralAppWithFlags(t *testing.T) {
 	for _, tt := range appCapsTests {
 		rktArgs += " " + tt.imageFile
 		if tt.capRetainSet != "x" {
-			rktArgs += " --cap-retain=" + tt.capRetainSet
+			capFlag := " --caps-retain"
+			if tt.useOldFlag {
+				capFlag = " --cap-retain"
+			}
+			rktArgs += fmt.Sprintf("%s=%s", capFlag, tt.capRetainSet)
 		}
 		if tt.capRemoveSet != "x" {
-			rktArgs += " --cap-remove=" + tt.capRemoveSet
+			capFlag := " --caps-remove"
+			if tt.useOldFlag {
+				capFlag = " --cap-remove"
+			}
+			rktArgs += fmt.Sprintf("%s=%s", capFlag, tt.capRemoveSet)
 		}
 	}
 	cmd := fmt.Sprintf("%s --insecure-options=image run %s", ctx.Cmd(), rktArgs)

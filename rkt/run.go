@@ -106,9 +106,15 @@ func init() {
 	cmdRun.Flags().Var((*appCPULimit)(&rktApps), "cpu", "cpu limit for the preceding image (example: '--cpu=500m')")
 	cmdRun.Flags().Var((*appUser)(&rktApps), "user", "user override for the preceding image (example: '--user=user')")
 	cmdRun.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
-	cmdRun.Flags().Var((*appCapsRetain)(&rktApps), "cap-retain", "capability to retain (example: '--cap-retain=CAP_SYS_ADMIN')")
-	cmdRun.Flags().Var((*appCapsRemove)(&rktApps), "cap-remove", "capability to remove (example: '--cap-remove=CAP_MKNOD')")
+	cmdRun.Flags().Var((*appCapsRetain)(&rktApps), "caps-retain", "capability to retain (example: '--caps-retain=CAP_SYS_ADMIN')")
+	cmdRun.Flags().Var((*appCapsRemove)(&rktApps), "caps-remove", "capability to remove (example: '--caps-remove=CAP_MKNOD')")
 	cmdRun.Flags().Var((*appSeccompFilter)(&rktApps), "seccomp", "seccomp filter override (example: '--seccomp mode=retain,errno=EPERM,chmod,chown')")
+
+	// For backwards compatibility
+	cmdRun.Flags().Var((*appCapsRetain)(&rktApps), "cap-retain", "capability to retain (example: '--caps-retain=CAP_SYS_ADMIN')")
+	cmdRun.Flags().Var((*appCapsRemove)(&rktApps), "cap-remove", "capability to remove (example: '--caps-remove=CAP_MKNOD')")
+	cmdRun.Flags().MarkDeprecated("cap-retain", "use --caps-retain instead")
+	cmdRun.Flags().MarkDeprecated("cap-remove", "use --caps-remove instead")
 
 	flagPorts = portList{}
 	flagDNS = flagStringList{}
