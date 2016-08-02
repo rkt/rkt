@@ -44,8 +44,12 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Default size for the pod manifest LRU cache.
-const defaultCacheSize = 512
+const (
+	// Default size for the pod LRU cache.
+	defaultPodCacheSize = 512
+	// Default size for the image LRU cache.
+	defaultImageCacheSize = 512
+)
 
 var (
 	supportedAPIVersion = "1.0.0-alpha"
@@ -77,6 +81,10 @@ type podCacheItem struct {
 	mtime time.Time
 }
 
+type imageCacheItem struct {
+	image *v1alpha.Image
+}
+
 // copyPod copies the immutable information of the pod into the new pod.
 func copyPod(pod *v1alpha.Pod) *v1alpha.Pod {
 	p := &v1alpha.Pod{
@@ -95,10 +103,26 @@ func copyPod(pod *v1alpha.Pod) *v1alpha.Pod {
 	return p
 }
 
+// copyImage copies the image object to avoid modification on the original one.
+func copyImage(img *v1alpha.Image) *v1alpha.Image {
+	return &v1alpha.Image{
+		BaseFormat:      img.BaseFormat,
+		Id:              img.Id,
+		Name:            img.Name,
+		Version:         img.Version,
+		ImportTimestamp: img.ImportTimestamp,
+		Manifest:        img.Manifest,
+		Size:            img.Size,
+		Annotations:     img.Annotations,
+		Labels:          img.Labels,
+	}
+}
+
 // v1AlphaAPIServer implements v1Alpha.APIServer interface.
 type v1AlphaAPIServer struct {
 	store    *imagestore.Store
 	podCache *lru.Cache
+	imgCache *lru.Cache
 }
 
 var _ v1alpha.PublicAPIServer = &v1AlphaAPIServer{}
@@ -109,14 +133,20 @@ func newV1AlphaAPIServer() (*v1AlphaAPIServer, error) {
 		return nil, err
 	}
 
-	cache, err := lru.New(defaultCacheSize)
+	podCache, err := lru.New(defaultPodCacheSize)
+	if err != nil {
+		return nil, err
+	}
+
+	imgCache, err := lru.New(defaultImageCacheSize)
 	if err != nil {
 		return nil, err
 	}
 
 	return &v1AlphaAPIServer{
 		store:    s,
-		podCache: cache,
+		podCache: podCache,
+		imgCache: imgCache,
 	}, nil
 }
 
@@ -777,7 +807,7 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 
 	var images []*v1alpha.Image
 	for _, aciInfo := range aciInfos {
-		image, err := aciInfoToV1AlphaAPIImage(s.store, aciInfo)
+		image, err := s.getImageInfo(aciInfo.BlobKey)
 		if err != nil {
 			continue
 		}
@@ -792,8 +822,37 @@ func (s *v1AlphaAPIServer) ListImages(ctx context.Context, request *v1alpha.List
 	return &v1alpha.ListImagesResponse{Images: images}, nil
 }
 
-// getImageInfo for a given image ID, returns the *v1alpha.Image object.
-func getImageInfo(store *imagestore.Store, imageID string) (*v1alpha.Image, error) {
+// getImageInfo returns the image info of a given image ID.
+// It will first try to read the image info from cache.
+// - If the image exists in cache:
+//   - If the image exists on disk, then return it directly.
+//   - Otherwise, return nil.
+// - Else, try to return the image from disk.
+func (s *v1AlphaAPIServer) getImageInfo(imageID string) (*v1alpha.Image, error) {
+	item, found := s.imgCache.Get(imageID)
+	if found {
+		image := item.(*imageCacheItem).image
+
+		// Check if the image has been removed.
+		if found := s.store.HasFullKey(image.Id); !found {
+			s.imgCache.Remove(imageID)
+			return nil, fmt.Errorf("no such image with ID %q", imageID)
+		}
+		return copyImage(image), nil
+	}
+
+	image, err := s.getImageInfoFromDisk(s.store, imageID)
+	if err != nil {
+		return nil, err
+	}
+
+	s.imgCache.Add(imageID, &imageCacheItem{image})
+
+	return copyImage(image), err
+}
+
+// getImageInfoFromDisk for a given image ID, returns the *v1alpha.Image object.
+func (s *v1AlphaAPIServer) getImageInfoFromDisk(store *imagestore.Store, imageID string) (*v1alpha.Image, error) {
 	aciInfo, err := store.GetACIInfoWithBlobKey(imageID)
 	if err != nil {
 		stderr.PrintE(fmt.Sprintf("failed to get ACI info for image %q", imageID), err)
@@ -809,7 +868,7 @@ func getImageInfo(store *imagestore.Store, imageID string) (*v1alpha.Image, erro
 }
 
 func (s *v1AlphaAPIServer) InspectImage(ctx context.Context, request *v1alpha.InspectImageRequest) (*v1alpha.InspectImageResponse, error) {
-	image, err := getImageInfo(s.store, request.Id)
+	image, err := s.getImageInfo(request.Id)
 	if err != nil {
 		return nil, err
 	}

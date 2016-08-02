@@ -743,6 +743,12 @@ func (s *Store) HashToKey(h hash.Hash) string {
 	return hashToKey(h)
 }
 
+// HasFullKey returns whether the image with the given key exists on the disk by
+// checking if the image manifest kv store contains the key.
+func (s *Store) HasFullKey(key string) bool {
+	return s.stores[imageManifestType].Has(key)
+}
+
 func hashToKey(h hash.Hash) string {
 	s := h.Sum(nil)
 	return keyToString(s)
