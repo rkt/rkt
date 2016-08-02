@@ -57,7 +57,7 @@ import (
 	"google.golang.org/grpc/transport"
 )
 
-type methodHandler func(srv interface{}, ctx context.Context, dec func(interface{}) error) (interface{}, error)
+type methodHandler func(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor UnaryServerInterceptor) (interface{}, error)
 
 // MethodDesc represents an RPC service's method specification.
 type MethodDesc struct {
@@ -73,6 +73,7 @@ type ServiceDesc struct {
 	HandlerType interface{}
 	Methods     []MethodDesc
 	Streams     []StreamDesc
+	Metadata    interface{}
 }
 
 // service consists of the information of the server serving this service and
@@ -81,6 +82,7 @@ type service struct {
 	server interface{} // the server for service methods
 	md     map[string]*MethodDesc
 	sd     map[string]*StreamDesc
+	mdata  interface{}
 }
 
 // Server is a gRPC server to serve RPC requests.
@@ -95,10 +97,12 @@ type Server struct {
 }
 
 type options struct {
-	creds                credentials.Credentials
+	creds                credentials.TransportCredentials
 	codec                Codec
 	cp                   Compressor
 	dc                   Decompressor
+	unaryInt             UnaryServerInterceptor
+	streamInt            StreamServerInterceptor
 	maxConcurrentStreams uint32
 	useHandlerImpl       bool // use http.Handler-based server
 }
@@ -113,12 +117,14 @@ func CustomCodec(codec Codec) ServerOption {
 	}
 }
 
+// RPCCompressor returns a ServerOption that sets a compressor for outbound message.
 func RPCCompressor(cp Compressor) ServerOption {
 	return func(o *options) {
 		o.cp = cp
 	}
 }
 
+// RPCDecompressor returns a ServerOption that sets a decompressor for inbound message.
 func RPCDecompressor(dc Decompressor) ServerOption {
 	return func(o *options) {
 		o.dc = dc
@@ -134,9 +140,32 @@ func MaxConcurrentStreams(n uint32) ServerOption {
 }
 
 // Creds returns a ServerOption that sets credentials for server connections.
-func Creds(c credentials.Credentials) ServerOption {
+func Creds(c credentials.TransportCredentials) ServerOption {
 	return func(o *options) {
 		o.creds = c
+	}
+}
+
+// UnaryInterceptor returns a ServerOption that sets the UnaryServerInterceptor for the
+// server. Only one unary interceptor can be installed. The construction of multiple
+// interceptors (e.g., chaining) can be implemented at the caller.
+func UnaryInterceptor(i UnaryServerInterceptor) ServerOption {
+	return func(o *options) {
+		if o.unaryInt != nil {
+			panic("The unary server interceptor has been set.")
+		}
+		o.unaryInt = i
+	}
+}
+
+// StreamInterceptor returns a ServerOption that sets the StreamServerInterceptor for the
+// server. Only one stream interceptor can be installed.
+func StreamInterceptor(i StreamServerInterceptor) ServerOption {
+	return func(o *options) {
+		if o.streamInt != nil {
+			panic("The stream server interceptor has been set.")
+		}
+		o.streamInt = i
 	}
 }
 
@@ -203,6 +232,7 @@ func (s *Server) register(sd *ServiceDesc, ss interface{}) {
 		server: ss,
 		md:     make(map[string]*MethodDesc),
 		sd:     make(map[string]*StreamDesc),
+		mdata:  sd.Metadata,
 	}
 	for i := range sd.Methods {
 		d := &sd.Methods[i]
@@ -215,6 +245,52 @@ func (s *Server) register(sd *ServiceDesc, ss interface{}) {
 	s.m[sd.ServiceName] = srv
 }
 
+// MethodInfo contains the information of an RPC including its method name and type.
+type MethodInfo struct {
+	// Name is the method name only, without the service name or package name.
+	Name string
+	// IsClientStream indicates whether the RPC is a client streaming RPC.
+	IsClientStream bool
+	// IsServerStream indicates whether the RPC is a server streaming RPC.
+	IsServerStream bool
+}
+
+// ServiceInfo contains unary RPC method info, streaming RPC methid info and metadata for a service.
+type ServiceInfo struct {
+	Methods []MethodInfo
+	// Metadata is the metadata specified in ServiceDesc when registering service.
+	Metadata interface{}
+}
+
+// GetServiceInfo returns a map from service names to ServiceInfo.
+// Service names include the package names, in the form of <package>.<service>.
+func (s *Server) GetServiceInfo() map[string]*ServiceInfo {
+	ret := make(map[string]*ServiceInfo)
+	for n, srv := range s.m {
+		methods := make([]MethodInfo, 0, len(srv.md)+len(srv.sd))
+		for m := range srv.md {
+			methods = append(methods, MethodInfo{
+				Name:           m,
+				IsClientStream: false,
+				IsServerStream: false,
+			})
+		}
+		for m, d := range srv.sd {
+			methods = append(methods, MethodInfo{
+				Name:           m,
+				IsClientStream: d.ClientStreams,
+				IsServerStream: d.ServerStreams,
+			})
+		}
+
+		ret[n] = &ServiceInfo{
+			Methods:  methods,
+			Metadata: srv.mdata,
+		}
+	}
+	return ret
+}
+
 var (
 	// ErrServerStopped indicates that the operation is now illegal because of
 	// the server being stopped.
@@ -222,33 +298,35 @@ var (
 )
 
 func (s *Server) useTransportAuthenticator(rawConn net.Conn) (net.Conn, credentials.AuthInfo, error) {
-	creds, ok := s.opts.creds.(credentials.TransportAuthenticator)
-	if !ok {
+	if s.opts.creds == nil {
 		return rawConn, nil, nil
 	}
-	return creds.ServerHandshake(rawConn)
+	return s.opts.creds.ServerHandshake(rawConn)
 }
 
 // Serve accepts incoming connections on the listener lis, creating a new
 // ServerTransport and service goroutine for each. The service goroutines
 // read gRPC requests and then call the registered handlers to reply to them.
-// Service returns when lis.Accept fails.
+// Service returns when lis.Accept fails. lis will be closed when
+// this method returns.
 func (s *Server) Serve(lis net.Listener) error {
 	s.mu.Lock()
 	s.printf("serving")
 	if s.lis == nil {
 		s.mu.Unlock()
+		lis.Close()
 		return ErrServerStopped
 	}
 	s.lis[lis] = true
 	s.mu.Unlock()
 	defer func() {
-		lis.Close()
 		s.mu.Lock()
-		delete(s.lis, lis)
+		if s.lis != nil && s.lis[lis] {
+			lis.Close()
+			delete(s.lis, lis)
+		}
 		s.mu.Unlock()
 	}()
-	listenerAddr := lis.Addr()
 	for {
 		rawConn, err := lis.Accept()
 		if err != nil {
@@ -259,13 +337,13 @@ func (s *Server) Serve(lis net.Listener) error {
 		}
 		// Start a new goroutine to deal with rawConn
 		// so we don't stall this Accept loop goroutine.
-		go s.handleRawConn(listenerAddr, rawConn)
+		go s.handleRawConn(rawConn)
 	}
 }
 
 // handleRawConn is run in its own goroutine and handles a just-accepted
 // connection that has not had any I/O performed on it yet.
-func (s *Server) handleRawConn(listenerAddr net.Addr, rawConn net.Conn) {
+func (s *Server) handleRawConn(rawConn net.Conn) {
 	conn, authInfo, err := s.useTransportAuthenticator(rawConn)
 	if err != nil {
 		s.mu.Lock()
@@ -285,7 +363,7 @@ func (s *Server) handleRawConn(listenerAddr net.Addr, rawConn net.Conn) {
 	s.mu.Unlock()
 
 	if s.opts.useHandlerImpl {
-		s.serveUsingHandler(listenerAddr, conn)
+		s.serveUsingHandler(conn)
 	} else {
 		s.serveNewHTTP2Transport(conn, authInfo)
 	}
@@ -341,29 +419,18 @@ var _ http.Handler = (*Server)(nil)
 // method as one of the environment types.
 //
 // conn is the *tls.Conn that's already been authenticated.
-func (s *Server) serveUsingHandler(listenerAddr net.Addr, conn net.Conn) {
+func (s *Server) serveUsingHandler(conn net.Conn) {
 	if !s.addConn(conn) {
 		conn.Close()
 		return
 	}
 	defer s.removeConn(conn)
-	connDone := make(chan struct{})
-	hs := &http.Server{
-		Handler: s,
-		ConnState: func(c net.Conn, cs http.ConnState) {
-			if cs == http.StateClosed {
-				close(connDone)
-			}
-		},
-	}
-	if err := http2.ConfigureServer(hs, &http2.Server{
+	h2s := &http2.Server{
 		MaxConcurrentStreams: s.opts.maxConcurrentStreams,
-	}); err != nil {
-		grpclog.Fatalf("grpc: http2.ConfigureServer: %v", err)
-		return
 	}
-	hs.Serve(&singleConnListener{addr: listenerAddr, conn: conn})
-	<-connDone
+	h2s.ServeConn(conn, &http2.ServeConnOpts{
+		Handler: s,
+	})
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -447,6 +514,10 @@ func (s *Server) processUnaryRPC(t transport.ServerTransport, stream *transport.
 			}
 		}()
 	}
+	if s.opts.cp != nil {
+		// NOTE: this needs to be ahead of all handling, https://github.com/grpc/grpc-go/issues/686.
+		stream.SetSendCompress(s.opts.cp.Type())
+	}
 	p := &parser{r: stream}
 	for {
 		pf, req, err := p.recvMsg()
@@ -506,9 +577,9 @@ func (s *Server) processUnaryRPC(t transport.ServerTransport, stream *transport.
 			}
 			return nil
 		}
-		reply, appErr := md.Handler(srv.server, stream.Context(), df)
+		reply, appErr := md.Handler(srv.server, stream.Context(), df, s.opts.unaryInt)
 		if appErr != nil {
-			if err, ok := appErr.(rpcError); ok {
+			if err, ok := appErr.(*rpcError); ok {
 				statusCode = err.code
 				statusDesc = err.desc
 			} else {
@@ -531,9 +602,6 @@ func (s *Server) processUnaryRPC(t transport.ServerTransport, stream *transport.
 		opts := &transport.Options{
 			Last:  true,
 			Delay: false,
-		}
-		if s.opts.cp != nil {
-			stream.SetSendCompress(s.opts.cp.Type())
 		}
 		if err := s.sendResponse(t, stream, reply, s.opts.cp, opts); err != nil {
 			switch err := err.(type) {
@@ -584,8 +652,19 @@ func (s *Server) processStreamingRPC(t transport.ServerTransport, stream *transp
 			ss.mu.Unlock()
 		}()
 	}
-	if appErr := sd.Handler(srv.server, ss); appErr != nil {
-		if err, ok := appErr.(rpcError); ok {
+	var appErr error
+	if s.opts.streamInt == nil {
+		appErr = sd.Handler(srv.server, ss)
+	} else {
+		info := &StreamServerInfo{
+			FullMethod:     stream.Method(),
+			IsClientStream: sd.ClientStreams,
+			IsServerStream: sd.ServerStreams,
+		}
+		appErr = s.opts.streamInt(srv.server, ss, info, sd.Handler)
+	}
+	if appErr != nil {
+		if err, ok := appErr.(*rpcError); ok {
 			ss.statusCode = err.code
 			ss.statusDesc = err.desc
 		} else if err, ok := appErr.(transport.StreamError); ok {
@@ -755,31 +834,4 @@ func SetTrailer(ctx context.Context, md metadata.MD) error {
 		return fmt.Errorf("grpc: failed to fetch the stream from the context %v", ctx)
 	}
 	return stream.SetTrailer(md)
-}
-
-// singleConnListener is a net.Listener that yields a single conn.
-type singleConnListener struct {
-	mu   sync.Mutex
-	addr net.Addr
-	conn net.Conn // nil if done
-}
-
-func (ln *singleConnListener) Addr() net.Addr { return ln.addr }
-
-func (ln *singleConnListener) Close() error {
-	ln.mu.Lock()
-	defer ln.mu.Unlock()
-	ln.conn = nil
-	return nil
-}
-
-func (ln *singleConnListener) Accept() (net.Conn, error) {
-	ln.mu.Lock()
-	defer ln.mu.Unlock()
-	c := ln.conn
-	if c == nil {
-		return nil, io.EOF
-	}
-	ln.conn = nil
-	return c, nil
 }

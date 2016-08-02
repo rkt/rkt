@@ -1,5 +1,5 @@
-hash: 921b4843584237d360fb529fb07e2ba9e869968232e61db80e120c1fa4a15e8b
-updated: 2016-07-28T12:11:29.703586483+02:00
+hash: 6dd4eb2d90cb8ac317ad1aeb1a1cd0ed0d29375f4fecddaf5ae168eb62f6bc4b
+updated: 2016-08-01T11:52:19.106454487-07:00
 imports:
 - name: github.com/appc/docker2aci
   version: 90dfcf166a2967b926e77e4864fb616dc291c026
@@ -165,7 +165,7 @@ imports:
   subpackages:
   - proto
 - name: github.com/golang/protobuf
-  version: 2402d76f3d41f928c7902a765dfc872356dd3aad
+  version: c3cefd437628a0b7d31b34fe44b3a7a540e98527
   subpackages:
   - proto
   - protoc-gen-go
@@ -173,6 +173,7 @@ imports:
   - protoc-gen-go/generator
   - protoc-gen-go/internal/grpc
   - protoc-gen-go/plugin
+  - protoc-gen-go/grpc
 - name: github.com/google/btree
   version: f06e229e679911bb31a04e07ac891115822e37c3
 - name: github.com/gorilla/context
@@ -259,7 +260,7 @@ imports:
   - openpgp/s2k
   - ssh/terminal
 - name: golang.org/x/net
-  version: d513e58596cd55e6f47cd1dcbff6b46035baeccb
+  version: 6a513affb38dc9788b449d59ffed099b8de18fa0
   subpackages:
   - context
   - html
@@ -268,6 +269,7 @@ imports:
   - http2/hpack
   - internal/timeseries
   - trace
+  - lex/httplex
 - name: golang.org/x/sys
   version: b44883b474ffefa37335017174e397412b633a4f
   subpackages:
@@ -277,7 +279,7 @@ imports:
   subpackages:
   - go/vcs
 - name: google.golang.org/grpc
-  version: 0f80f5b995e8332b1bdaac1bc37af0482c60147c
+  version: 02fca896ff5f50c6bbbee0860345a49344b37a03
   subpackages:
   - codes
   - credentials

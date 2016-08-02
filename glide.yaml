@@ -159,7 +159,7 @@ import:
   subpackages:
   - proto
 - package: github.com/golang/protobuf
-  version: 2402d76f3d41f928c7902a765dfc872356dd3aad
+  version: c3cefd437628a0b7d31b34fe44b3a7a540e98527
   subpackages:
   - proto
   - protoc-gen-go
@@ -167,6 +167,7 @@ import:
   - protoc-gen-go/generator
   - protoc-gen-go/internal/grpc
   - protoc-gen-go/plugin
+  - protoc-gen-go/grpc
 - package: github.com/google/btree
   version: f06e229e679911bb31a04e07ac891115822e37c3
 - package: github.com/gorilla/context
@@ -235,7 +236,7 @@ import:
   - openpgp/s2k
   - ssh/terminal
 - package: golang.org/x/net
-  version: d513e58596cd55e6f47cd1dcbff6b46035baeccb
+  version: 6a513affb38dc9788b449d59ffed099b8de18fa0
   subpackages:
   - context
   - html
@@ -253,7 +254,7 @@ import:
   subpackages:
   - go/vcs
 - package: google.golang.org/grpc
-  version: 0f80f5b995e8332b1bdaac1bc37af0482c60147c
+  version: 02fca896ff5f50c6bbbee0860345a49344b37a03
   subpackages:
   - codes
   - credentials
