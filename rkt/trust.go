@@ -91,10 +91,11 @@ Otherwise, trust at the root domain (not recommended) must be explicitly request
 
 	pkls := args
 	m := &pubkey.Manager{
-		InsecureAllowHTTP:  flagAllowHTTP,
-		TrustKeysFromHTTPS: globalFlags.TrustKeysFromHTTPS,
-		Ks:                 ks,
-		Debug:              globalFlags.Debug,
+		InsecureAllowHTTP:    flagAllowHTTP,
+		InsecureSkipTLSCheck: globalFlags.InsecureFlags.SkipTLSCheck(),
+		TrustKeysFromHTTPS:   globalFlags.TrustKeysFromHTTPS,
+		Ks:                   ks,
+		Debug:                globalFlags.Debug,
 	}
 	if len(pkls) == 0 {
 		pkls, err = m.GetPubKeyLocations(flagPrefix)
