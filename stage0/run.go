@@ -237,11 +237,11 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		}
 
 		if app.CapsRetain != nil && app.CapsRemove != nil {
-			return fmt.Errorf("error: cannot use both --cap-retain and --cap-remove on the same image")
+			return fmt.Errorf("error: cannot use both --caps-retain and --caps-remove on the same image")
 		}
 
 		// Delete existing caps isolators if the user wants to override
-		// them with either --cap-retain or --cap-remove
+		// them with either --caps-retain or --caps-remove
 		if app.CapsRetain != nil || app.CapsRemove != nil {
 			for i := len(ra.App.Isolators) - 1; i >= 0; i-- {
 				isolator := ra.App.Isolators[i]
