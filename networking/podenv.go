@@ -91,6 +91,11 @@ func (e *podEnv) loadNets() ([]activeNet, error) {
 		return nil, fmt.Errorf("networks not found: %v", strings.Join(missing, ", "))
 	}
 
+	// Add the runtime args to the network instances.
+	// We don't do this earlier because we also load networks in other contexts
+	for _, n := range nets {
+		n.runtime.Args = e.netsLoadList.SpecificArgs(n.conf.Name)
+	}
 	return nets, nil
 }
 
@@ -277,6 +282,9 @@ func copyFileToDir(src, dstdir string) (string, error) {
 	return dst, err
 }
 
+// loadUserNets will load all network configuration files from the user-supplied
+// configuration directory (typically /etc/rkt/net.d). Do not do any mutation here -
+// we also load networks in a few other code paths.
 func loadUserNets(localConfig string, netsLoadList common.NetList) ([]activeNet, error) {
 	if netsLoadList.None() {
 		stderr.Printf("networking namespace with loopback only")
@@ -318,8 +326,6 @@ func loadUserNets(localConfig string, netsLoadList common.NetList) ([]activeNet,
 			stderr.Printf("%q network already defined, ignoring %v", n.conf.Name, filename)
 			continue
 		}
-
-		n.runtime.Args = netsLoadList.SpecificArgs(n.conf.Name)
 
 		nets = append(nets, *n)
 	}
