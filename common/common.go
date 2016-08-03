@@ -30,6 +30,8 @@ import (
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema/types"
 	"github.com/hashicorp/errwrap"
+
+	"github.com/coreos/rkt/pkg/fileutil"
 )
 
 const (
@@ -302,12 +304,7 @@ func LookupPath(bin string, paths string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("unable to find absolute path for %s", binPath)
 		}
-		d, err := os.Stat(binAbsPath)
-		if err != nil {
-			continue
-		}
-		// Check the executable bit, inspired by os.exec.LookPath()
-		if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
+		if fileutil.IsExecutable(binAbsPath) {
 			return binAbsPath, nil
 		}
 	}
