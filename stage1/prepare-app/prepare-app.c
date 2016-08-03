@@ -230,6 +230,47 @@ static void mount_sys(const char *root)
 	mount_at(root, &sys_bind);
 }
 
+static void copy_volume_symlinks()
+{
+	DIR *volumes_dir;
+	struct dirent *de;
+	const char *rkt_volume_links_path = "/rkt/volumes";
+	const char *dev_rkt_path = "/dev/.rkt";
+
+	pexit_if(mkdir(dev_rkt_path, 0700) == -1 && errno != EEXIST,
+		"Failed to create directory \"%s\"", dev_rkt_path);
+
+	pexit_if((volumes_dir = opendir(rkt_volume_links_path)) == NULL && errno != ENOENT,
+                 "Failed to open directory \"%s\"", rkt_volume_links_path);
+	while (volumes_dir) {
+		errno = 0;
+		if ((de = readdir(volumes_dir)) != NULL) {
+			char *link_path;
+			char *new_link;
+			char target[4096] = {0,};
+
+			if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
+			  continue;
+
+			exit_if(asprintf(&link_path, "%s/%s", rkt_volume_links_path, de->d_name) == -1,
+				"Calling asprintf failed");
+			exit_if(asprintf(&new_link, "%s/%s", dev_rkt_path, de->d_name) == -1,
+				"Calling asprintf failed");
+
+			pexit_if(readlink(link_path, target, sizeof(target)) == -1,
+				 "Error reading \"%s\" link", link_path);
+			pexit_if(symlink(target, new_link) == -1 && errno != EEXIST,
+				"Failed to create volume symlink \"%s\"", new_link);
+		} else {
+			pexit_if(errno != 0,
+				"Error reading \"%s\" directory", rkt_volume_links_path);
+			pexit_if(closedir(volumes_dir),
+				 "Error closing \"%s\" directory", rkt_volume_links_path);
+			return;
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	static const char *unlink_paths[] = {
@@ -395,6 +436,11 @@ int main(int argc, char *argv[])
 		"Path too long: \"%s\"", to);
 	pexit_if(symlink("/dev/pts/ptmx", to) == -1 && errno != EEXIST,
 		"Failed to create /dev/ptmx symlink");
+
+	/* Copy symlinks to device node volumes to "/dev/.rkt" so they can be
+	 * used in the DeviceAllow= option of the app's unit file (systemd
+	 * needs the path to start with "/dev". */
+	copy_volume_symlinks();
 
 	/* /dev/log -> /run/systemd/journal/dev-log */
 	exit_if(snprintf(to, sizeof(to), "%s/dev/log", root) >= sizeof(to),

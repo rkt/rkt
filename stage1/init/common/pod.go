@@ -372,6 +372,63 @@ func findBinPath(p *stage1commontypes.Pod, appName types.ACName, app types.App, 
 	return binPath, nil
 }
 
+// generateDeviceAllows generates a DeviceAllow= line for an app.
+// To make it work, the path needs to start with "/dev" but the device won't
+// exist inside the container. So for a given mount, if the volume is a device
+// node, we create a symlink to its target in "/rkt/volumes". Later,
+// prepare-app will copy those to "/dev/.rkt/" so that's what we use in the
+// DeviceAllow= line.
+func generateDeviceAllows(root string, appName types.ACName, mountPoints []types.MountPoint, mounts []mountWrapper, vols map[types.ACName]types.Volume, uidRange *user.UidRange) ([]string, error) {
+	var devAllow []string
+	var toShift []string
+
+	rktVolumeLinksPath := filepath.Join(root, "rkt", "volumes")
+	if err := os.MkdirAll(rktVolumeLinksPath, 0600); err != nil {
+		return nil, err
+	}
+	toShift = append(toShift, rktVolumeLinksPath)
+
+	for _, m := range mounts {
+		v := vols[m.Volume]
+		if v.Kind == "host" {
+			if fileutil.IsDeviceNode(v.Source) {
+				mode := "r"
+				if !IsMountReadOnly(v, mountPoints) {
+					mode += "w"
+				}
+
+				tgt := filepath.Join(common.RelAppRootfsPath(appName), m.Path)
+				// the DeviceAllow= line needs the link path in /dev/.rkt/
+				linkRel := filepath.Join("/dev/.rkt", v.Name.String())
+				// the real link should be in /rkt/volumes for now
+				link := filepath.Join(rktVolumeLinksPath, v.Name.String())
+
+				err := os.Symlink(tgt, link)
+				switch {
+				case err == nil:
+					toShift = append(toShift, link)
+				case os.IsExist(err):
+					// it already exists, do nothing
+				default:
+					return nil, err
+				}
+
+				devAllow = append(devAllow, linkRel+" "+mode)
+			}
+		}
+	}
+
+	if uidRange.Shift != 0 && uidRange.Count != 0 {
+		for _, f := range toShift {
+			if err := os.Chown(f, int(uidRange.Shift), int(uidRange.Shift)); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return devAllow, nil
+}
+
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
 func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string, insecureOptions Stage1InsecureOptions) error {
 	app := ra.App
@@ -451,16 +508,10 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		// systemd unit name not getting written to the journal if the unit is
 		// short-lived and runs as non-root.
 		unit.NewUnitOption("Service", "SyslogIdentifier", appName.String()),
-		unit.NewUnitOption("Service", "DevicePolicy", "closed"),
 	}
 
 	if !insecureOptions.DisableCapabilities {
 		opts = append(opts, unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")))
-	}
-
-	// Restrict access to sensitive paths (eg. procfs)
-	if !insecureOptions.DisablePaths {
-		opts = protectSystemFiles(opts, appName)
 	}
 
 	noNewPrivileges := getAppNoNewPrivileges(app.Isolators)
@@ -503,7 +554,8 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 
 	rwDirs := []string{}
 	imageManifest := p.Images[appName.String()]
-	for _, m := range GenerateMounts(ra, vols, imageManifest) {
+	mounts := GenerateMounts(ra, vols, imageManifest)
+	for _, m := range mounts {
 		mntPath, err := EvaluateSymlinksInsideApp(appRootfs, m.Path)
 		if err != nil {
 			return err
@@ -511,6 +563,19 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 
 		if !IsMountReadOnly(vols[m.Volume], app.MountPoints) {
 			rwDirs = append(rwDirs, filepath.Join(common.RelAppRootfsPath(appName), mntPath))
+		}
+	}
+
+	// Restrict access to sensitive paths (eg. procfs) and devices
+	if !insecureOptions.DisablePaths {
+		opts = protectSystemFiles(opts, appName)
+		opts = append(opts, unit.NewUnitOption("Service", "DevicePolicy", "closed"))
+		deviceAllows, err := generateDeviceAllows(common.Stage1RootfsPath(absRoot), appName, app.MountPoints, mounts, vols, uidRange)
+		if err != nil {
+			return err
+		}
+		for _, dev := range deviceAllows {
+			opts = append(opts, unit.NewUnitOption("Service", "DeviceAllow", dev))
 		}
 	}
 
