@@ -1,3 +1,40 @@
+## 1.12.0
+
+This release introduces support for seccomp filtering via two new seccomp isolators. It also gives a boost to api-service performance by introducing manifest caching. Finally it fixes several regressions related to Docker images handling.
+
+#### New features and UX changes
+
+- cli: rename `--cap-retain` and `--cap-remove` to `--caps-*` ([#2994](https://github.com/coreos/rkt/pull/2994)).
+- stage1: apply seccomp isolators ([#2753](https://github.com/coreos/rkt/pull/2753)). This introduces support for appc seccomp isolators.
+- scripts: add /etc/rkt owned by group rkt-admin in setup-data-dir.sh ([#2944](https://github.com/coreos/rkt/pull/2944)).
+- rkt: add `--caps-retain` and `--caps-remove` to prepare ([#3007](https://github.com/coreos/rkt/pull/3007)).
+- store: allow users in the rkt group to delete images ([#2961](https://github.com/coreos/rkt/pull/2961)).
+- api_service: cache pod manifest ([#2891](https://github.com/coreos/rkt/pull/2891)). Manifest caching considerably improves api-service performances.
+- store: tell the user to run as root on db update ([#2966](https://github.com/coreos/rkt/pull/2966)).
+- stage1: disabling cgroup namespace in systemd-nspawn ([#2989](https://github.com/coreos/rkt/pull/2989)). For more information see [systemd#3589](https://github.com/systemd/systemd/pull/3589).
+- fly: copy rkt-resolv.conf in the app ([#2982](https://github.com/coreos/rkt/pull/2982)).
+- store: decouple aci store and treestore implementations ([#2919](https://github.com/coreos/rkt/pull/2919)).
+- store: record ACI fetching information ([#2960](https://github.com/coreos/rkt/pull/2960)).
+
+#### Bug fixes
+- stage1/init: fix writing of /etc/machine-id ([#2977](https://github.com/coreos/rkt/pull/2977)).
+- rkt-monitor: multiple fixes ([#2927](https://github.com/coreos/rkt/pull/2927), [#2988](https://github.com/coreos/rkt/pull/2988)).
+- rkt: don't errwrap cli_apps errors ([#2958](https://github.com/coreos/rkt/pull/2958)).
+- pkg/tar/chroot: avoid errwrap in function called by multicall ([#2997](https://github.com/coreos/rkt/pull/2997)).
+- networking: apply CNI args to the default networks as well ([#2985](https://github.com/coreos/rkt/pull/2985)).
+- trust: provide InsecureSkipTLSCheck to pubkey manager ([#3016](https://github.com/coreos/rkt/pull/3016)).
+- api_service: update grpc version ([#3015](https://github.com/coreos/rkt/pull/3015)).
+- fetcher: httpcaching fixes ([#2965](https://github.com/coreos/rkt/pull/2965)).
+
+#### Other changes
+- build,stage1/init: set interpBin at build time for src flavor ([#2978](https://github.com/coreos/rkt/pull/2978)).
+- common: introduce RemoveEmptyLines() ([#3004](https://github.com/coreos/rkt/pull/3004)).
+- glide: update docker2aci to v0.12.3 ([#3026](https://github.com/coreos/rkt/pull/3026)). This fixes multiple bugs in layers ordering for Docker images.
+- glide: update go-systemd to v11 ([#2970](https://github.com/coreos/rkt/pull/2970)). This fixes a buggy corner-case in journal seeking (implicit seek to head).
+- docs: document capabilities overriding ([#2917](https://github.com/coreos/rkt/pull/2917), [#2991](https://github.com/coreos/rkt/pull/2991)).
+- issue template: add '\n' to the end of environment output ([#3008](https://github.com/coreos/rkt/pull/3008)).
+- functional tests: multiple fixes ([#2999](https://github.com/coreos/rkt/pull/2999), [#2979](https://github.com/coreos/rkt/pull/2979), [#3014](https://github.com/coreos/rkt/pull/3014)).
+
 ## 1.11.0
 
 This release sets the ground for the new upcoming KVM qemu flavor. It adds support for exporting a pod to an ACI including all modifications. The rkt API service now also supports systemd socket activation. Finally we have diagnostics back, helping users to find out why their app failed to execute.
