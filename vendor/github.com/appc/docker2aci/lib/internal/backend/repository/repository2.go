@@ -102,7 +102,7 @@ func (rb *RepositoryBackend) buildACIV21(layerIDs []string, dockerURL *types.Par
 
 			manifest := rb.imageManifests[*dockerURL]
 
-			layerIndex, ok := rb.reverseLayers[layerID]
+			layerIndex, ok := rb.layersIndex[layerID]
 			if !ok {
 				errChan <- fmt.Errorf("layer not found in manifest: %s", layerID)
 				return
@@ -254,7 +254,8 @@ func (rb *RepositoryBackend) buildACIV22(layerIDs []string, dockerURL *types.Par
 	var aciLayerPaths []string
 	var aciManifests []*schema.ImageManifest
 	var curPwl []string
-	for i := len(layerIDs) - 1; i > 0; i-- {
+	var i int
+	for i = 0; i < len(layerIDs)-1; i++ {
 		log.Debug("Generating layer ACI...")
 		aciPath, aciManifest, err := internal.GenerateACI22LowerLayer(dockerURL, layerIDs[i], outputDir, layerFiles[i], curPwl, compression)
 		if err != nil {
@@ -264,7 +265,8 @@ func (rb *RepositoryBackend) buildACIV22(layerIDs []string, dockerURL *types.Par
 		aciManifests = append(aciManifests, aciManifest)
 		curPwl = aciManifest.PathWhitelist
 	}
-	aciPath, aciManifest, err := internal.GenerateACI22TopLayer(dockerURL, rb.imageConfigs[*dockerURL], layerIDs[0], outputDir, layerFiles[0], curPwl, compression, aciManifests)
+	log.Debug("Generating layer ACI...")
+	aciPath, aciManifest, err := internal.GenerateACI22TopLayer(dockerURL, rb.imageConfigs[*dockerURL], layerIDs[i], outputDir, layerFiles[i], curPwl, compression, aciManifests)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 	}
@@ -345,7 +347,9 @@ func (rb *RepositoryBackend) getManifestV21(dockerURL *types.ParsedDockerURL, re
 	layers := make([]string, len(manifest.FSLayers))
 
 	for i, layer := range manifest.FSLayers {
-		rb.reverseLayers[layer.BlobSum] = len(manifest.FSLayers) - 1 - i
+		if _, ok := rb.layersIndex[layer.BlobSum]; !ok {
+			rb.layersIndex[layer.BlobSum] = i
+		}
 		layers[i] = layer.BlobSum
 	}
 
