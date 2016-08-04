@@ -17,7 +17,6 @@ package image
 import (
 	"errors"
 	"io"
-
 	"net/url"
 	"time"
 
@@ -72,8 +71,7 @@ func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 		return key, nil
 	}
 	key, err := f.S.WriteACI(aciFile, imagestore.ACIFetchInfo{
-		Latest:          false,
-		InsecureOptions: int64(f.InsecureFlags.Value()),
+		Latest: false,
 	})
 	if err != nil {
 		return "", err

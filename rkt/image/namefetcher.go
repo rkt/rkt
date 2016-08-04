@@ -130,8 +130,7 @@ func (f *nameFetcher) fetchImageFromSingleEndpoint(app *discovery.App, aciURL st
 		return key, nil
 	}
 	key, err := f.S.WriteACI(aciFile, imagestore.ACIFetchInfo{
-		Latest:          latest,
-		InsecureOptions: int64(f.InsecureFlags.Value()),
+		Latest: latest,
 	})
 	if err != nil {
 		return "", err
