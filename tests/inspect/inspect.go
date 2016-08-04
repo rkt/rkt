@@ -155,8 +155,8 @@ func main() {
 	if globalFlags.CheckMknod != "" {
 		/* format: c:5:2:name */
 		dev := strings.SplitN(globalFlags.CheckMknod, ":", 4)
-		if len(dev) != 4 {
-			fmt.Fprintln(os.Stderr, "Wrong parameter for mknod")
+		if len(dev) < 4 {
+			fmt.Fprintln(os.Stderr, "Not enough parameters for mknod")
 			os.Exit(1)
 		}
 		typ := dev[0]
@@ -185,9 +185,11 @@ func main() {
 		}
 
 		if err := syscall.Mknod(nodeName, mode, int(majorMinor)); err != nil {
-			fmt.Printf("mknod %s: fail: %v\n", nodeName, err)
+			fmt.Fprintf(os.Stderr, "mknod %s: fail: %v\n", nodeName, err)
+			os.Exit(1)
 		} else {
 			fmt.Printf("mknod %s: succeed\n", nodeName)
+			os.Exit(0)
 		}
 	}
 
