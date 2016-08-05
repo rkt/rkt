@@ -102,3 +102,66 @@ This will activate all the reaper services when one of the targets is activated,
 ### Stage 2
 
 The final stage, stage2, is the actual environment in which the applications run, as launched by stage1.
+
+
+### Image lifecycle
+
+rkt commands like prepare and run, as a first step, need to retrieve all the images requested in the command line and prepare the stage2 directories with the application contents.
+
+This is done with the following chain:
+
+```
+ -----------            -----------            ------------
+|           |          |           |          |            |
+|   Fetch   |--------->|   Store   |--------->|   Render   |
+|           |          |           |          |            |
+ -----------            -----------            ------------
+
+```
+
+* Fetch: in the fetch phase rkt retrieves the requested images. The fetching implementation depends on the provided image argument such as an image string/hash/https URL/file (e.g. `example.com/app:v1.0`).
+* Store: in the store phase the fetched images are saved to the local store. The local store is a cache for fetched images and related data.
+* Render: in the render phase, a renderer pulls the required images from the store and renders them so they can be easily used as stage2 content.
+
+
+These three logical blocks are implemented inside rkt in this way:
+
+```
+ ------------            ---------------                -------------                    ------------------------
+|            |          |               |              |             |     overlayfs    |                        |
+|  Fetchers  |--------->|  Image Store  |<-------------|  TreeStore  |<-----------------|  Stage1-2 fs contents  |
+|            |          |               |<----         |             |           -------|                        |
+ ------------            ---------------      \         -------------           /        ------------------------
+                                               \                               /
+                                                \       -----------------     /
+                                                 \     |                 |   /
+                                                  -----| Direct stage1-2 |---
+                                                       |   renderer      |
+                                                       |                 |
+                                                        -----------------
+```
+
+Currently rkt implements the [appc][appc-spec] internally, converting to it from other container image formats for compatibility. In the future, additional formats like the [OCI image spec][oci-img-spec] may be added to rkt, keeping the same basic scheme for fetching, storing, and rendering application container images.
+
+* Fetchers: Fetchers retrieve images from either a provided URL, or a URL found by [image discovery][appc-discovery] on a given image string. Fetchers read data from the Image Store to check if an image is already present. Once fetched, images are verified with their signatures, then saved in the Image Store. An image's [dependencies][appc-dependencies] are also discovered and fetched. For details, see the [image fetching][rkt-image-fetching] documentation.
+* Image Store: the Image Store is used to store images (currently ACIs) and their related information.
+* The render phase can be done in different ways:
+ * Directly render the stage1-2 contents inside a pod. This will require more disk space and more stage1-2 preparation time.
+ * Render in the treestore. The treestore is a cache of rendered images (currently ACIs). When using the treestore, rkt mounts an overlayfs with the treestore rendered image as its lower directory.
+
+When using stage1-2 with overlayfs a pod will contain references to the required treestore rendered images. So there's an hard connection between pods and the treestore.
+
+*Aci Renderer*
+
+Both stage1-2 render modes internally uses the [aci renderer](https://github.com/appc/spec/tree/master/pkg/acirenderer).
+Since an ACI may depend on other ones the acirenderer may require other ACIs.
+The acirenderer only relies on the ACIStore, so all the required ACIs must already be available in the store.
+Additionally, since appc dependencies can be found only via discovery, a dependency may be updated and so there can be multiple rendered images for the same ACI.
+
+Given this 1:N relation between an ACI and their rendered images, the ACIStore and TreeStore are decoupled.
+
+[appc-spec]: https://github.com/appc/spec
+[appc-dependencies]: https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
+[appc-discovery]: https://github.com/appc/spec/blob/master/spec/discovery.md
+[oci-img-spec]: https://github.com/opencontainers/image-spec
+[rkt-image-fetching]: ../image-fetching-behavior.md
