@@ -324,6 +324,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		Hostname:             flagHostname,
 		InsecureCapabilities: globalFlags.InsecureFlags.SkipCapabilities(),
 		InsecurePaths:        globalFlags.InsecureFlags.SkipPaths(),
+		InsecureSeccomp:      globalFlags.InsecureFlags.SkipSeccomp(),
 	}
 
 	apps, err := p.getApps()

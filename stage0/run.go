@@ -87,6 +87,7 @@ type RunConfig struct {
 	DNSOpt               []string       // DNS options to write in /etc/resolv.conf
 	InsecureCapabilities bool           // Do not restrict capabilities
 	InsecurePaths        bool           // Do not restrict access to files in sysfs or procfs
+	InsecureSeccomp      bool           // Do not add seccomp restrictions
 }
 
 // configuration shared by both Run and Prepare
@@ -580,6 +581,9 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 		}
 		if cfg.InsecurePaths {
 			args = append(args, "--disable-paths")
+		}
+		if cfg.InsecureSeccomp {
+			args = append(args, "--disable-seccomp")
 		}
 	}
 

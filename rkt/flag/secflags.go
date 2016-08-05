@@ -25,9 +25,10 @@ const (
 	insecurePubKey
 	insecureCapabilities
 	insecurePaths
+	insecureSeccomp
 
 	insecureAllFetch = (insecureImage | insecureTLS | insecureHTTP | insecurePubKey)
-	insecureAllRun   = (insecureOnDisk | insecureCapabilities | insecurePaths)
+	insecureAllRun   = (insecureOnDisk | insecureCapabilities | insecurePaths | insecureSeccomp)
 	insecureAll      = (insecureAllFetch | insecureAllRun)
 )
 
@@ -41,6 +42,7 @@ var (
 		"pubkey",
 		"capabilities",
 		"paths",
+		"seccomp",
 		"all-fetch",
 		"all-run",
 		"all",
@@ -55,9 +57,10 @@ var (
 		insecureOptions[5]:  insecurePubKey,
 		insecureOptions[6]:  insecureCapabilities,
 		insecureOptions[7]:  insecurePaths,
-		insecureOptions[8]:  insecureAllFetch,
-		insecureOptions[9]:  insecureAllRun,
-		insecureOptions[10]: insecureAll,
+		insecureOptions[8]:  insecureSeccomp,
+		insecureOptions[9]:  insecureAllFetch,
+		insecureOptions[10]: insecureAllRun,
+		insecureOptions[11]: insecureAll,
 	}
 )
 
@@ -111,6 +114,10 @@ func (sf *SecFlags) SkipCapabilities() bool {
 
 func (sf *SecFlags) SkipPaths() bool {
 	return sf.hasFlag(insecurePaths)
+}
+
+func (sf *SecFlags) SkipSeccomp() bool {
+	return sf.hasFlag(insecureSeccomp)
 }
 
 func (sf *SecFlags) SkipAllSecurityChecks() bool {

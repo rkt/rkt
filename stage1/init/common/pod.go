@@ -462,19 +462,26 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		opts = protectSystemFiles(opts, appName)
 	}
 
+	noNewPrivileges := getAppNoNewPrivileges(app.Isolators)
+
 	// Apply seccomp isolator, if any and not opt-ing out;
 	// see https://www.freedesktop.org/software/systemd/man/systemd.exec.html#SystemCallFilter=
-	unprivileged := (u != 0)
-	opts, noNewPrivileges, err := getSeccompFilter(opts, p, unprivileged, app.Isolators)
-	if err != nil {
-		return err
+	if !insecureOptions.DisableSeccomp {
+		var forceNoNewPrivileges bool
+
+		unprivileged := (u != 0)
+		opts, forceNoNewPrivileges, err = getSeccompFilter(opts, p, unprivileged, app.Isolators)
+		if err != nil {
+			return err
+		}
+
+		// Seccomp filters require NoNewPrivileges for unprivileged apps, that may override
+		// manifest annotation.
+		if forceNoNewPrivileges {
+			noNewPrivileges = true
+		}
 	}
 
-	// Seccomp filters require NoNewPrivileges for unprivileged apps, that may override
-	// manifest annotation.
-	if !noNewPrivileges {
-		noNewPrivileges = getAppNoNewPrivileges(app.Isolators)
-	}
 	opts = append(opts, unit.NewUnitOption("Service", "NoNewPrivileges", strconv.FormatBool(noNewPrivileges)))
 
 	if ra.ReadOnlyRootFS {
