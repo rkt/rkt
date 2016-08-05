@@ -61,7 +61,7 @@ type pod struct {
 	mountLabel       string // Label to use for container image
 }
 
-// Exported state. See Documentation/container-lifecycle.md for some explanation
+// Exported state. See Documentation/devel/pod-lifecycle.md for some explanation
 const (
 	Embryo         = "embryo"
 	Preparing      = "preparing"
