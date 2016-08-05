@@ -120,6 +120,27 @@ var seccompTestCases = []struct {
 		"exchange full",
 		true,
 	},
+	{
+		`insecure-options fake override: remove-set blacklist stat with custom error`,
+		[]string{baseApp, "--seccomp-mode=remove,errno=EMULTIHOP", "--seccomp-set=stat"},
+		[]string{"--insecure-options=image,ondisk,capabilities,paths"},
+		"multihop attempted",
+		true,
+	},
+	{
+		`insecure-options simple override: remove-set blacklist stat with custom error`,
+		[]string{baseApp, "--seccomp-mode=remove,errno=EMULTIHOP", "--seccomp-set=stat"},
+		[]string{"--insecure-options=image,seccomp"},
+		`/: mode: d`,
+		false,
+	},
+	{
+		`insecure-options complete override: remove-set blacklist stat with custom error`,
+		[]string{baseApp, "--seccomp-mode=remove,errno=EMULTIHOP", "--seccomp-set=stat"},
+		[]string{"--insecure-options=image,all-run"},
+		`/: mode: d`,
+		false,
+	},
 }
 
 func TestAppIsolatorSeccomp(t *testing.T) {
