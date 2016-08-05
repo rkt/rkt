@@ -123,6 +123,14 @@ func (c dirsByLength) Less(i, j int) bool { return len(c[i]) < len(c[j]) }
 func (c dirsByLength) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 
 func cleanupCgroups() error {
+	isUnified, err := cgroup.IsCgroupUnified("/")
+	if err != nil {
+		return errwrap.Wrap(errors.New("failed to determine the cgroup version"), err)
+	}
+	if isUnified {
+		return nil
+	}
+
 	b, err := ioutil.ReadFile("subcgroup")
 	if err != nil {
 		return errwrap.Wrap(errors.New("error reading subcgroup file"), err)
