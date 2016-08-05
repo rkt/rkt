@@ -24,9 +24,9 @@ import (
 	"github.com/coreos/rkt/tests/testutils"
 )
 
-// TestPaths checks whether access to paths like /proc/sysrq-trigger are
+// TestPathsWrite checks whether access to paths like /proc/sysrq-trigger are
 // restricted
-func TestPaths(t *testing.T) {
+func TestPathsWrite(t *testing.T) {
 	imageFile := patchTestACI("rkt-inspect-paths.aci",
 		"--exec=/inspect --write-file --print-msg=testing-insecure-option")
 	defer os.Remove(imageFile)
@@ -62,4 +62,21 @@ func TestPaths(t *testing.T) {
 			runRktAndCheckOutput(t, cmd, "testing-insecure-option", false)
 		}
 	}
+}
+
+// TestPathsStat checks that access to inaccessible paths under
+// /proc or /sys is correctly restricted:
+// https://github.com/coreos/rkt/issues/2484
+func TestPathsStat(t *testing.T) {
+	hiddenEntry := "/sys/firmware/"
+	hiddenImage := patchTestACI("rkt-inspect-stat-procfs.aci", fmt.Sprintf("--exec=/inspect --stat-file --file-name %s", hiddenEntry))
+	defer os.Remove(hiddenImage)
+
+	hiddenCtx := testutils.NewRktRunCtx()
+	defer hiddenCtx.Cleanup()
+
+	hiddenCmd := fmt.Sprintf("%s --insecure-options=image run %s", hiddenCtx.Cmd(), hiddenImage)
+
+	hiddenExpectedLine := fmt.Sprintf("%s: mode: d---------", hiddenEntry)
+	runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
 }
