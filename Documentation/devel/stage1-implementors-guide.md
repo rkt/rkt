@@ -68,6 +68,12 @@ Stage1 implementors have two options for doing so; only one must be implemented:
 
 * `--hostname=$HOSTNAME` configures the host name of the pod. If empty, it will be "rkt-$PODUUID".
 
+#### Arguments added in interface version 3
+
+* `--disable-capabilities-restriction` gives all capabilities to apps (overrides `retain-set` and `remove-set`)
+* `--disable-paths` disables inaccessible and read-only paths (such as `/proc/sysrq-trigger`)
+* `--disable-seccomp` disables seccomp (overrides `retain-set` and `remove-set`)
+
 ### rkt enter
 
 `coreos.com/rkt/stage1/enter`
@@ -120,7 +126,7 @@ In the bundled rkt stage 1, the entrypoint is sending SIGTERM signal to systemd-
 The stage1 command line interface is versioned using an annotation with the name `coreos.com/rkt/stage1/interface-version`.
 If the annotation is not present, rkt assumes the version is 1.
 
-The current version of the stage1 interface is 2.
+The current version of the stage1 interface is 3.
 
 ## Examples
 

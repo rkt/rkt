@@ -102,35 +102,3 @@ func TestMountSymlink(t *testing.T) {
 		}
 	}
 }
-
-// TestProcFSRestrictions checks that access to sensitive paths under
-// /proc and /sys is correctly restricted:
-// https://github.com/coreos/rkt/issues/2484
-func TestProcFSRestrictions(t *testing.T) {
-	// check access to read-only paths
-	roEntry := "/proc/sysrq-trigger"
-	testContent := "h"
-	roImage := patchTestACI("rkt-inspect-write-procfs.aci", fmt.Sprintf("--exec=/inspect --write-file --file-name %s --content %s", roEntry, testContent))
-	defer os.Remove(roImage)
-
-	roCtx := testutils.NewRktRunCtx()
-	defer roCtx.Cleanup()
-
-	roCmd := fmt.Sprintf("%s --insecure-options=image run %s", roCtx.Cmd(), roImage)
-
-	roExpectedLine := fmt.Sprintf("Cannot write to file \"%s\"", roEntry)
-	runRktAndCheckOutput(t, roCmd, roExpectedLine, true)
-
-	// check access to inaccessible paths
-	hiddenEntry := "/sys/firmware/"
-	hiddenImage := patchTestACI("rkt-inspect-stat-procfs.aci", fmt.Sprintf("--exec=/inspect --stat-file --file-name %s", hiddenEntry))
-	defer os.Remove(hiddenImage)
-
-	hiddenCtx := testutils.NewRktRunCtx()
-	defer hiddenCtx.Cleanup()
-
-	hiddenCmd := fmt.Sprintf("%s --insecure-options=image run %s", hiddenCtx.Cmd(), hiddenImage)
-
-	hiddenExpectedLine := fmt.Sprintf("%s: mode: d---------", hiddenEntry)
-	runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
-}
