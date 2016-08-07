@@ -586,7 +586,7 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 
 		if n.conf.IPMasq {
 			chain := cniutils.FormatChainName(n.conf.Name, podID.String())
-			comment := cniutils.FormatChainName(n.conf.Name, podID.String())
+			comment := cniutils.FormatComment(n.conf.Name, podID.String())
 			if err := ip.SetupIPMasq(&net.IPNet{
 				IP:   n.runtime.IP,
 				Mask: net.IPMask(n.runtime.Mask),
