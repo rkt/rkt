@@ -5,6 +5,9 @@
 #
 # STAGE1_FSD_FLAVOR - a flavor which wants libraries from host
 
+SLD_FLAVOR := $(STAGE1_FSD_FLAVOR)
+$(call inc-one,stdlibdirs.mk)
+
 # a clean file for removing solibs in both the ACI rootfs and the tmp
 # lib dir.
 $(call setup-clean-file,STAGE1_FSD_SOLIBS_CLEANMK,/$(STAGE1_FSD_FLAVOR)-solibs)
@@ -33,11 +36,11 @@ STAGE1_FSD_ACIROOTFSDIR := $(STAGE1_ACIROOTFSDIR_$(STAGE1_FSD_FLAVOR))
 # actool to create the ACI
 STAGE1_FSD_ALL_STAMPS := $(STAGE1_ALL_STAMPS_$(STAGE1_FSD_FLAVOR))
 
+STAGE1_FSD_SPACE :=
+STAGE1_FSD_SPACE +=
+
 # additions to LD_LIBRARY_PATH environment variable
-# TODO: we should somehow query the ACI which libdirs it uses -
-# on fedora these would be /usr/lib and /usr/lib64, but on debian it
-# is probably /usr/lib and /usr/lib/x86_64 or something
-STAGE1_FSD_LD_LIBRARY_PATH := $(STAGE1_FSD_ACIROOTFSDIR)/lib:$(STAGE1_FSD_ACIROOTFSDIR)/lib64:$(STAGE1_FSD_ACIROOTFSDIR)/usr/lib:$(STAGE1_FSD_ACIROOTFSDIR)/usr/lib64
+STAGE1_FSD_LD_LIBRARY_PATH := $(subst $(STAGE1_FSD_SPACE),:,$(foreach l,$(SLD_LOCATIONS),$(STAGE1_FSD_ACIROOTFSDIR)/$l))
 
 ifneq ($(LD_LIBRARY_PATH),)
 

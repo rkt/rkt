@@ -1,8 +1,9 @@
+SLD_FLAVOR := $(S1_RF_FLAVOR)
+$(call inc-one,../stdlibdirs.mk)
+
 $(call setup-stamp-file,UFSN_STAMP)
 UFSN_LIBNSS_FILES_LINK := libnss_files.so.2
-# TODO: add this functionality to find-so-deps.mk
-UFSN_LIBS := $(shell ld --verbose | grep SEARCH_DIR | sed -e 's/SEARCH_DIR("=*\([^"]*\)");*/\1/g')
-UFSN_LIB_PATH := $(shell for l in $(UFSN_LIBS); do if [[ -e $${l}/$(UFSN_LIBNSS_FILES_LINK) ]]; then echo $${l}; break; fi; done)
+UFSN_LIB_PATH := $(shell for l in $(SLD_LOCATIONS); do if [[ -e $${l}/$(UFSN_LIBNSS_FILES_LINK) ]]; then echo $${l}; break; fi; done)
 
 UFSN_LIBNSS_FILES_PATH := $(UFSN_LIB_PATH)/$(UFSN_LIBNSS_FILES_LINK)
 UFSN_LIBNSS_FILES_REALPATH := $(shell realpath $(UFSN_LIBNSS_FILES_PATH))
