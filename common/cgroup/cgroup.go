@@ -52,9 +52,6 @@ var (
 		"cpu":     {"cpu.cfs_quota_us"},
 		"devices": {"devices.allow", "devices.deny"},
 	}
-	cgroupControllerRWFiles = map[string][]string{
-		"memory": {"memory.low", "memory.high", "memory.max", "memory.swap.max"},
-	}
 )
 
 func addCpuLimit(opts []*unit.UnitOption, limit *resource.Quantity) ([]*unit.UnitOption, error) {
@@ -87,38 +84,45 @@ func MaybeAddIsolator(opts []*unit.UnitOption, isolator string, limit *resource.
 
 	if isSupported {
 		opts, err = isolatorFuncs[isolator](opts, limit)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		fmt.Fprintf(os.Stderr, "warning: resource/%s isolator set but support disabled in the kernel, skipping\n", isolator)
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	return opts, nil
 }
 
 // IsIsolatorSupported returns whether an isolator is supported in the kernel
 func IsIsolatorSupported(isolator string) (bool, error) {
-	procCgroupFile, err := os.Open("/proc/cgroups")
+	isUnified, err := IsCgroupUnified("/")
 	if err != nil {
-		return false, err
+		return false, errwrap.Wrap(errors.New("error determining cgroup version"), err)
 	}
-	defer procCgroupFile.Close()
 
-	sc := bufio.NewScanner(procCgroupFile)
-
-	sc.Scan()
-
-	for sc.Scan() {
-		if strings.HasPrefix(sc.Text(), isolator) {
-			return true, nil
+	if isUnified {
+		controllers, err := GetEnabledControllers()
+		if err != nil {
+			return false, errwrap.Wrap(errors.New("error determining enabled controllers"), err)
 		}
+		for _, c := range controllers {
+			if c == isolator {
+				return true, nil
+			}
+		}
+		return false, nil
 	}
 
-	if err := sc.Err(); err != nil {
-		return false, err
+	if files, ok := legacyCgroupControllerRWFiles[isolator]; ok {
+		for _, f := range files {
+			isolatorPath := filepath.Join("/sys/fs/cgroup/", isolator, f)
+			if _, err := os.Stat(isolatorPath); os.IsNotExist(err) {
+				return false, nil
+			}
+		}
+		return true, nil
 	}
-
 	return false, nil
 }
 
@@ -181,7 +185,7 @@ func GetEnabledLegacyCgroups() (map[int][]string, error) {
 	return cgroups, nil
 }
 
-// GetEnabledControllers raturns a list of enabled cgroup controllers
+// GetEnabledControllers returns a list of enabled cgroup controllers
 func GetEnabledControllers() ([]string, error) {
 	controllersFile, err := os.Open("/sys/fs/cgroup/cgroup.controllers")
 	if err != nil {
@@ -238,15 +242,6 @@ func getLegacyControllerRWFiles(controller string) []string {
 	}
 
 	return nil
-}
-
-func getControllersRWFiles() []string {
-	files := []string{"cgroup.procs", "cgroup.controllers", "cgroup.subtree_control", "cgroup.events"}
-	for _, controllerRWFiles := range cgroupControllerRWFiles {
-		files = append(files, controllerRWFiles...)
-	}
-
-	return files
 }
 
 func parseLegacyCgroupController(cgroupPath, controller string) ([]string, error) {
@@ -324,20 +319,6 @@ func GetCgroupPathByPid(pid int) (string, error) {
 // particular controller
 func JoinLegacySubcgroup(controller string, subcgroup string) error {
 	subcgroupPath := filepath.Join("/sys/fs/cgroup", controller, subcgroup)
-	if err := os.MkdirAll(subcgroupPath, 0600); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error creating %q subcgroup", subcgroup), err)
-	}
-	pidBytes := []byte(strconv.Itoa(os.Getpid()))
-	if err := ioutil.WriteFile(filepath.Join(subcgroupPath, "cgroup.procs"), pidBytes, 0600); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error adding ourselves to the %q subcgroup", subcgroup), err)
-	}
-
-	return nil
-}
-
-// JoinCgroup makes the calling process join the subcgroup hierarchy
-func JoinSubcgroup(subcgroup string) error {
-	subcgroupPath := filepath.Join("/sys/fs/cgroup", subcgroup)
 	if err := os.MkdirAll(subcgroupPath, 0600); err != nil {
 		return errwrap.Wrap(fmt.Errorf("error creating %q subcgroup", subcgroup), err)
 	}
@@ -460,48 +441,9 @@ func CreateLegacyCgroups(root string, enabledCgroups map[int][]string, mountCont
 	return mountFsRO(cgroupTmpfs)
 }
 
-// CreateCgroups mounts the unigfied cgroup hierarchy in /sys/fs/cgroup
-// under root
-func CreateCgroups(root string) error {
-	var flags uintptr
-
-	sys := filepath.Join(root, "/sys")
-	if err := os.MkdirAll(sys, 0700); err != nil {
-		return err
-	}
-	flags = syscall.MS_NOSUID |
-		syscall.MS_NOEXEC |
-		syscall.MS_NODEV
-
-	if err := syscall.Mount("sysfs", sys, "sysfs", flags, ""); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error mounting %q", sys), err)
-	}
-
-	cgroupFs := filepath.Join(root, "/sys/fs/cgroup")
-	if err := os.MkdirAll(cgroupFs, 0700); err != nil {
-		return err
-	}
-
-	flags = syscall.MS_NOSUID |
-		syscall.MS_NOEXEC |
-		syscall.MS_NODEV |
-		syscall.MS_STRICTATIME
-
-	if err := syscall.Mount("cgroup2", cgroupFs, "cgroup2", flags, ""); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error mounting %q", cgroupFs), err)
-	}
-
-	machinePath := filepath.Join(root, "/sys/fs/cgroup/machine.slice")
-	if err := os.MkdirAll(machinePath, 0700); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// RemountCgroupsRO remounts the cgroup hierarchy under root read-only, leaving
-// the needed knobs in the subcgroup for each app read-write so the systemd
-// inside stage1 can apply isolators to them
+// RemountLegacyCgroupsRO remounts the cgroup hierarchy under root read-only,
+// leaving the needed knobs in the subcgroup for each app read-write so the
+// systemd inside stage1 can apply isolators to them
 func RemountLegacyCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
 	controllers := GetLegacyControllerDirs(enabledCgroups)
 	cgroupTmpfs := filepath.Join(root, "/sys/fs/cgroup")
@@ -556,50 +498,6 @@ func mountFsRO(mountPoint string) error {
 		syscall.MS_RDONLY
 	if err := syscall.Mount(mountPoint, mountPoint, "", flags, ""); err != nil {
 		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", mountPoint), err)
-	}
-
-	return nil
-}
-
-// RemountCgroupsRO remounts the cgroup hierarchy under root read-only, leaving
-// the needed knobs in the subcgroup for each app read-write so the systemd
-// inside stage1 can apply isolators to them
-func RemountCgroupsRO(root string, subcgroup string, serviceNames []string) error {
-	cgroupFsPath := filepath.Join(root, "sys/fs/cgroup")
-	subcgroupPath := filepath.Join(root, "sys/fs/cgroup", subcgroup)
-	sysPath := filepath.Join(root, "/sys")
-
-	var flags uintptr
-
-	if err := os.MkdirAll(subcgroupPath, 0700); err != nil {
-		return err
-	}
-
-	machineDir := strings.TrimSuffix(subcgroupPath, "/system.slice")
-	if err := syscall.Mount(machineDir, machineDir, "", syscall.MS_BIND, ""); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error bind mounting %q", subcgroupPath), err)
-	}
-
-	// Bind-mount cgroup filesystem read-only
-	flags = syscall.MS_BIND |
-		syscall.MS_REMOUNT |
-		syscall.MS_NOSUID |
-		syscall.MS_NOEXEC |
-		syscall.MS_NODEV |
-		syscall.MS_RDONLY
-	if err := syscall.Mount(cgroupFsPath, cgroupFsPath, "", flags, ""); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", cgroupFsPath), err)
-	}
-
-	// Bind-mount sys filesystem read-only
-	flags = syscall.MS_BIND |
-		syscall.MS_REMOUNT |
-		syscall.MS_NOSUID |
-		syscall.MS_NOEXEC |
-		syscall.MS_NODEV |
-		syscall.MS_RDONLY
-	if err := syscall.Mount(sysPath, sysPath, "", flags, ""); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", sysPath), err)
 	}
 
 	return nil

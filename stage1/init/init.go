@@ -663,7 +663,7 @@ func stage1() int {
 
 	unifiedCgroup, err := cgroup.IsCgroupUnified("/")
 	if err != nil {
-		log.FatalE("error determing cgroup version", err)
+		log.FatalE("error determining cgroup version", err)
 		return 1
 	}
 
