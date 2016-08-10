@@ -44,6 +44,13 @@ $(call setup-clean-file,UFS_SYSTEMD_BUILDDIR_CLEANMK,systemd-build)
 # build dir filelist
 $(call setup-filelist-file,UFS_SYSTEMD_BUILDDIR_FILELIST,systemd-build)
 
+# stamp for generating src dir clean file after build
+$(call setup-stamp-file,UFS_SYSTEMD_SRCDIR_AFTER_BUILD_CLEAN_STAMP,systemd-src-after-build-clean)
+# clean file for src dir after build
+$(call setup-clean-file,UFS_SYSTEMD_SRCDIR_AFTER_BUILD_CLEANMK,systemd-src-after-build)
+# src dir filelist after build
+$(call setup-filelist-file,UFS_SYSTEMD_SRCDIR_AFTER_BUILD_FILELIST,systemd-src-after-build)
+
 # stamp for generating dep file on patches dir
 $(call setup-stamp-file,UFS_PATCHES_DEPS_STAMP,systemd-patches-deps)
 # dep.mk file for patches dir, will cause git repo reset and clean if
@@ -102,7 +109,7 @@ $(call inc-one,libnss.mk)
 
 # this makes sure everything is done - ACI rootfs is populated,
 # clean/deps/filelist are generated
-$(call generate-stamp-rule,$(UFS_STAMP),$(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_STAMP) $(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP) $(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP) $(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP))
+$(call generate-stamp-rule,$(UFS_STAMP),$(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_STAMP) $(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP) $(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP) $(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP) $(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_CLEAN_STAMP))
 
 # this copies the temporary rootfs contents to ACI rootfs and adds
 # some misc files
@@ -190,6 +197,17 @@ $(call generate-deep-filelist,$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUI
 # Generate clean.mk for cleaning all files created during "make all"
 # in systemd.
 $(call generate-clean-mk,$(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP),$(UFS_SYSTEMD_BUILDDIR_CLEANMK),$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUILDDIR))
+
+# Generate the filelist of systemd's srcdir again. This can be done
+# only after building systemd was finished. This is to take some files
+# generated during build in the srcdir into account. Normally srcdir
+# should be considered read only at this point, but apparently python
+# likes to put compiled bytecode next to the src file.
+$(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_FILELIST): $(UFS_SYSTEMD_BUILD_STAMP)
+$(call generate-deep-filelist,$(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_FILELIST),$(UFS_SYSTEMD_SRCDIR))
+
+# Generate clean.mk file for cleaning all files in srcdir-after-build.
+$(call generate-clean-mk,$(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_CLEAN_STAMP),$(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_CLEANMK),$(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_FILELIST),$(UFS_SYSTEMD_SRCDIR))
 
 # this patch makes sure that systemd git repo was cloned and patched
 $(call generate-stamp-rule,$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),$(UFS_SYSTEMD_CONFIGURE))
