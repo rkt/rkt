@@ -140,7 +140,7 @@ RKT_STAGE1_COREOS_BOARD=${GOARCH}-usr;
 
 AC_ARG_ENABLE([functional-tests],
               [AS_HELP_STRING([--enable-functional-tests],
-                              [enable functional tests on make check (linux only, uses sudo, default: 'no', use 'auto' to enable if possible, for host stage1 flavor systemd version 220 or higher on host is required)])],
+                              [enable functional tests on make check (linux only, uses sudo, default: 'no', use 'auto' to enable if possible, for host stage1 flavor systemd version 227 or higher on host is required)])],
               [RKT_RUN_FUNCTIONAL_TESTS="${enableval}"],
               [RKT_RUN_FUNCTIONAL_TESTS="no"])
 
@@ -542,8 +542,8 @@ AS_IF([test "x${RKT_RUN_FUNCTIONAL_TESTS}" = 'xyes' -o "x${RKT_RUN_FUNCTIONAL_TE
                            [AS_IF([systemctl 2>/dev/null | grep --silent -e '-\.mount'],
                                   dnl systemd runs as init
                                   [sdv=`systemctl --version | head -1 | sed -e 's/^systemd \(@<:@0-9@:>@*\)$/\1/'`
-                                   AS_IF([test ${sdv} -lt 220],
-                                         [rkt_functional_tests_msg="Cannot run functional tests with ${RKT_STAGE1_DEFAULT_FLAVOR} stage1 flavor - systemd version on host is lower than 220 (currently running ${sdv})"])],
+                                   AS_IF([test ${sdv} -lt 227],
+                                         [rkt_functional_tests_msg="Cannot run functional tests with ${RKT_STAGE1_DEFAULT_FLAVOR} stage1 flavor - systemd version on host is lower than 227 (currently running ${sdv})"])],
                                   dnl systemd is not an init
                                   [rkt_functional_tests_msg="Cannot run functional tests with ${RKT_STAGE1_DEFAULT_FLAVOR} stage1 flavor - no systemd on host"])])])
       dnl gpg is required for functional tests
