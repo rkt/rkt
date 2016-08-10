@@ -34,6 +34,11 @@ import (
 )
 
 func TestSocketProxyd(t *testing.T) {
+	// Skip the test for now. See
+	// https://github.com/coreos/rkt/issues/2432#issuecomment-238858840 for
+	// details.
+	t.Skip("this test is racy, let's skip it until we fix it")
+
 	if !sd_util.IsRunningSystemd() {
 		t.Skip("Systemd is not running on the host.")
 	}
