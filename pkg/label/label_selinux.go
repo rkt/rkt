@@ -66,11 +66,6 @@ func InitLabels(options []string) (string, string, error) {
 	return processLabel, mountLabel, nil
 }
 
-// DEPRECATED: The GenLabels function is only to be used during the transition to the official API.
-func GenLabels(options string) (string, string, error) {
-	return InitLabels(strings.Fields(options))
-}
-
 // FormatMountLabel returns a string to be used by the mount command.
 // The format of this string will be used to alter the labeling of the mountpoint.
 // The string returned is suitable to be used as the options field of the mount command.

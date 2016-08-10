@@ -24,10 +24,6 @@ func InitLabels(options []string) (string, string, error) {
 	return "", "", nil
 }
 
-func GenLabels(options string) (string, string, error) {
-	return "", "", nil
-}
-
 func FormatMountLabel(src string, mountLabel string) string {
 	return src
 }
