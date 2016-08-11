@@ -40,17 +40,17 @@ import (
 
 var (
 	cmdExport = &cobra.Command{
-		Use:   "export UUID OUTPUT_ACI_FILE",
-		Short: "Export an exited pod to an ACI file",
-		Long: `UUID should be the uuid of an exited pod.
-
-Note that currently only pods with a single app can be exported.`,
-		Run: runWrapper(runExport),
+		Use:   "export [--app=APPNAME] UUID OUTPUT_ACI_FILE",
+		Short: "Export an app from an exited pod to an ACI file",
+		Long:  `UUID should be the uuid of an exited pod.`,
+		Run:   runWrapper(runExport),
 	}
+	flagExportAppName string
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdExport)
+	cmdExport.Flags().StringVar(&flagExportAppName, "app", "", "name of the app to export within the specified pod")
 	cmdExport.Flags().BoolVar(&flagOverwriteACI, "overwrite", false, "overwrite output ACI")
 }
 
@@ -110,17 +110,11 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	apps, err := p.getApps()
+	app, err := getApp(p)
 	if err != nil {
-		stderr.PrintE("problem getting the pod's app list", err)
+		stderr.PrintE("unable to find app", err)
 		return 1
 	}
-
-	if len(apps) != 1 {
-		stderr.Printf("pod has %d apps. Only pods with one app can be exported", len(apps))
-		return 1
-	}
-	app := apps[0]
 
 	root := common.AppPath(p.path(), app.Name)
 	manifestPath := filepath.Join(common.AppInfoPath(p.path(), app.Name), aci.ManifestFile)
@@ -147,7 +141,7 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 			return 1
 		}
 
-		if err := mountOverlay(p, &app, mntDir); err != nil {
+		if err := mountOverlay(p, app, mntDir); err != nil {
 			stderr.PrintE(fmt.Sprintf("couldn't mount directory at %s", mntDir), err)
 			return 1
 		}
@@ -188,6 +182,45 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 	return 0
+}
+
+// getApp returns the app to export
+// If one was supplied in the flags then it's returned if present
+// If the PM contains a single app, that app is returned
+// If the PM has multiple apps, the names are printed and an error is returned
+func getApp(p *pod) (*schema.RuntimeApp, error) {
+	apps, err := p.getApps()
+	if err != nil {
+		return nil, errwrap.Wrap(errors.New("problem getting the pod's app list"), err)
+	}
+
+	if flagExportAppName != "" {
+		exportAppName, err := types.NewACName(flagExportAppName)
+		if err != nil {
+			return nil, err
+		}
+		for _, ra := range apps {
+			if *exportAppName == ra.Name {
+				return &ra, nil
+			}
+		}
+		return nil, fmt.Errorf("app %s is not present in pod", flagExportAppName)
+	}
+
+	switch len(apps) {
+	case 0:
+		return nil, fmt.Errorf("pod contains zero apps")
+	case 1:
+		return &apps[0], nil
+	default:
+	}
+
+	stderr.Print("pod contains multiple apps:")
+	for _, ra := range apps {
+		stderr.Printf("\t%v", ra.Name)
+	}
+
+	return nil, fmt.Errorf("specify app using \"rkt export --app= ...\"")
 }
 
 // mountOverlay mounts the app from the overlay-rendered pod to the destination directory.

@@ -32,6 +32,7 @@ type ExportTestCase struct {
 	runArgs        string
 	writeArgs      string
 	readArgs       string
+	exportArgs     string
 	expectedResult string
 	unmountOverlay bool
 }
@@ -43,6 +44,16 @@ var (
 		"--no-overlay --insecure-options=image",
 		"--write-file --file-name=" + testFile + " --content=" + testContent,
 		"--read-file --file-name=" + testFile,
+		"",
+		testContent,
+		false,
+	}
+
+	specifiedAppTest = ExportTestCase{
+		"--no-overlay --insecure-options=image",
+		"--write-file --file-name=" + testFile + " --content=" + testContent,
+		"--read-file --file-name=" + testFile,
+		"--app=rkt-inspect",
 		testContent,
 		false,
 	}
@@ -51,6 +62,7 @@ var (
 		"--private-users --no-overlay --insecure-options=image",
 		"--write-file --file-name=" + testFile + " --content=" + testContent,
 		"--read-file --file-name=" + testFile,
+		"",
 		testContent,
 		false,
 	}
@@ -59,6 +71,7 @@ var (
 		"--insecure-options=image",
 		"--write-file --file-name=" + testFile + " --content=" + testContent,
 		"--read-file --file-name=" + testFile,
+		"",
 		testContent,
 		false,
 	}
@@ -67,6 +80,7 @@ var (
 		"--insecure-options=image",
 		"--write-file --file-name=" + testFile + " --content=" + testContent,
 		"--read-file --file-name=" + testFile,
+		"",
 		testContent,
 		true,
 	}
@@ -103,7 +117,7 @@ func (ct ExportTestCase) Execute(t *testing.T, ctx *testutils.RktRunCtx) {
 	}
 
 	// Export the image
-	exportCmd := fmt.Sprintf("%s export %s %s", ctx.Cmd(), uuid, tmpTestAci)
+	exportCmd := fmt.Sprintf("%s export %s %s %s", ctx.Cmd(), ct.exportArgs, uuid, tmpTestAci)
 	t.Logf("Running 'export'")
 	child = spawnOrFail(t, exportCmd)
 	waitOrFail(t, child, 0)
