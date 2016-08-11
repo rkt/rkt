@@ -406,12 +406,8 @@ func generateDeviceAllows(root string, appName types.ACName, mountPoints []types
 			link := filepath.Join(rktVolumeLinksPath, v.Name.String())
 
 			err := os.Symlink(tgt, link)
-			switch {
-			case err == nil:
-				toShift = append(toShift, tgt)
-			case os.IsExist(err):
-				// it already exists, do nothing
-			default:
+			// if the link already exists, we don't need to do anything
+			if err != nil && !os.IsExist(err) {
 				return nil, err
 			}
 
