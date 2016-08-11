@@ -390,31 +390,32 @@ func generateDeviceAllows(root string, appName types.ACName, mountPoints []types
 
 	for _, m := range mounts {
 		v := vols[m.Volume]
-		if v.Kind == "host" {
-			if fileutil.IsDeviceNode(v.Source) {
-				mode := "r"
-				if !IsMountReadOnly(v, mountPoints) {
-					mode += "w"
-				}
-
-				tgt := filepath.Join(common.RelAppRootfsPath(appName), m.Path)
-				// the DeviceAllow= line needs the link path in /dev/.rkt/
-				linkRel := filepath.Join("/dev/.rkt", v.Name.String())
-				// the real link should be in /rkt/volumes for now
-				link := filepath.Join(rktVolumeLinksPath, v.Name.String())
-
-				err := os.Symlink(tgt, link)
-				switch {
-				case err == nil:
-					toShift = append(toShift, link)
-				case os.IsExist(err):
-					// it already exists, do nothing
-				default:
-					return nil, err
-				}
-
-				devAllow = append(devAllow, linkRel+" "+mode)
+		if v.Kind != "host" {
+			continue
+		}
+		if fileutil.IsDeviceNode(v.Source) {
+			mode := "r"
+			if !IsMountReadOnly(v, mountPoints) {
+				mode += "w"
 			}
+
+			tgt := filepath.Join(common.RelAppRootfsPath(appName), m.Path)
+			// the DeviceAllow= line needs the link path in /dev/.rkt/
+			linkRel := filepath.Join("/dev/.rkt", v.Name.String())
+			// the real link should be in /rkt/volumes for now
+			link := filepath.Join(rktVolumeLinksPath, v.Name.String())
+
+			err := os.Symlink(tgt, link)
+			switch {
+			case err == nil:
+				toShift = append(toShift, tgt)
+			case os.IsExist(err):
+				// it already exists, do nothing
+			default:
+				return nil, err
+			}
+
+			devAllow = append(devAllow, linkRel+" "+mode)
 		}
 	}
 
