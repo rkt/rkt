@@ -239,7 +239,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		}
 	}
 
-	processLabel, mountLabel, err := label.InitLabels([]string{"mcsdir:/var/run/rkt/mcs"})
+	processLabel, mountLabel, err := label.InitLabels("/var/run/rkt/mcs", []string{})
 	if err != nil {
 		stderr.PrintE("error initialising SELinux", err)
 		return 1
