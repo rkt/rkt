@@ -469,6 +469,52 @@ define add-dependency
 $(eval $(call add-dependency-template,$1,$2))
 endef
 
+# 1 - stamp file, which will depend on the generated clean stamp
+# 2 - file list
+# 3 - a list of directory mappings
+# 4 - descriptor
+define generate-clean-mk-from-filelist
+$(strip \
+	$(eval _MISC_GCMFF_MAIN_STAMP_ := $(strip $1)) \
+	$(eval _MISC_GCMFF_FILELIST_ := $(strip $2)) \
+	$(eval _MISC_GCMFF_DIR_MAPS_ := $(strip $3)) \
+	$(eval _MISC_GCMFF_DESCRIPTOR_ := $(strip $4)) \
+	\
+	$(call setup-stamp-file,_MISC_GCMFF_CLEAN_STAMP_,$(_MISC_GCMFF_DESCRIPTOR_)-gcmff-generated-clean-stamp) \
+	$(call setup-clean-file,_MISC_GCMFF_CLEANMK_,$(_MISC_GCMFF_DESCRIPTOR_)-gcmff-generated-cleanmk) \
+	\
+	$(call add-dependency,$(_MISC_GCMFF_MAIN_STAMP_),$(_MISC_GCMFF_CLEAN_STAMP_)) \
+	$(call generate-clean-mk,$(_MISC_GCMFF_CLEAN_STAMP_),$(_MISC_GCMFF_CLEANMK_),$(_MISC_GCMFF_FILELIST_),$(_MISC_GCMFF_DIR_MAPS_)) \
+	\
+	$(call undefine-namespaces,_MISC_GCMFF))
+endef
+
+# 1 - stamp file, which will depend on the generated clean stamp
+# 2 - source directory
+# 3 - a list of directory mappings
+# 4 - filelist deps
+# 5 - descriptor
+define generate-clean-mk-simple
+$(strip \
+	$(eval _MISC_GCMS_MAIN_STAMP_ := $(strip $1)) \
+	$(eval _MISC_GCMS_SRCDIR_ := $(strip $2)) \
+	$(eval _MISC_GCMS_DIR_MAPS_ := $(strip $3)) \
+	$(eval _MISC_GCMS_DEPS_ := $(strip $4)) \
+	$(eval _MISC_GCMS_DESCRIPTOR_ := $(strip $5)) \
+	\
+	$(call setup-filelist-file,_MISC_GCMS_FILELIST_,$(_MISC_GCMS_DESCRIPTOR_)-gcms-generated-filelist) \
+	$(call add-dependency,$(_MISC_GCMS_FILELIST_),$(_MISC_GCMS_DEPS_)) \
+	$(call generate-deep-filelist,$(_MISC_GCMS_FILELIST_),$(_MISC_GCMS_SRCDIR_)) \
+	\
+	$(call generate-clean-mk-from-filelist, \
+		$(_MISC_GCMS_MAIN_STAMP_), \
+		$(_MISC_GCMS_FILELIST_), \
+		$(_MISC_GCMS_DIR_MAPS_), \
+		$(_MISC_GCMS_DESCRIPTOR_)) \
+	\
+	$(call undefine-namespaces,_MISC_GCMS))
+endef
+
 # Formats given lists of source and destination files for the
 # INSTALL_FILES variable.
 #
