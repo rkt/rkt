@@ -32,6 +32,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/appc/spec/pkg/device"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/tests/testutils"
 	"github.com/syndtr/gocapability/capability"
@@ -78,6 +79,7 @@ var (
 		SilentSigterm      bool
 		CheckMountNS       bool
 		PrintNoNewPrivs    bool
+		CheckMknod         string
 	}{}
 )
 
@@ -120,6 +122,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.SilentSigterm, "silent-sigterm", false, "Exit with a success exit status if we receive SIGTERM")
 	globalFlagset.BoolVar(&globalFlags.CheckMountNS, "check-mountns", false, "Check if app's mount ns is different than stage1's. Requires CAP_SYS_PTRACE")
 	globalFlagset.BoolVar(&globalFlags.PrintNoNewPrivs, "print-no-new-privs", false, "print the prctl PR_GET_NO_NEW_PRIVS value")
+	globalFlagset.StringVar(&globalFlags.CheckMknod, "check-mknod", "", "check whether mknod on restricted devices is allowed")
 }
 
 func in(list []int, el int) bool {
@@ -147,6 +150,47 @@ func main() {
 		)
 
 		fmt.Printf("no_new_privs: %v err: %v\n", r1, err)
+	}
+
+	if globalFlags.CheckMknod != "" {
+		/* format: c:5:2:name */
+		dev := strings.SplitN(globalFlags.CheckMknod, ":", 4)
+		if len(dev) < 4 {
+			fmt.Fprintln(os.Stderr, "Not enough parameters for mknod")
+			os.Exit(1)
+		}
+		typ := dev[0]
+		major, err := strconv.Atoi(dev[1])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Wrong major")
+			os.Exit(1)
+		}
+		minor, err := strconv.Atoi(dev[2])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Wrong minor")
+			os.Exit(1)
+		}
+		nodeName := dev[3]
+
+		majorMinor := device.Makedev(uint(major), uint(minor))
+		mode := uint32(0777)
+		switch typ {
+		case "c":
+			mode |= syscall.S_IFCHR
+		case "b":
+			mode |= syscall.S_IFBLK
+		default:
+			fmt.Fprintln(os.Stderr, "Wrong device node type")
+			os.Exit(1)
+		}
+
+		if err := syscall.Mknod(nodeName, mode, int(majorMinor)); err != nil {
+			fmt.Fprintf(os.Stderr, "mknod %s: fail: %v\n", nodeName, err)
+			os.Exit(1)
+		} else {
+			fmt.Printf("mknod %s: succeed\n", nodeName)
+			os.Exit(0)
+		}
 	}
 
 	if globalFlags.SilentSigterm {

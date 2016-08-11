@@ -238,3 +238,14 @@ func IsExecutable(path string) bool {
 	}
 	return false
 }
+
+// IsDeviceNode checks if the given path points to a block or char device.
+// It doesn't follow symlinks.
+func IsDeviceNode(path string) bool {
+	d, err := os.Lstat(path)
+	if err == nil {
+		m := d.Mode()
+		return m&os.ModeDevice == os.ModeDevice || m&os.ModeCharDevice == os.ModeCharDevice
+	}
+	return false
+}

@@ -41,8 +41,9 @@ var (
 		"memory": addMemoryLimit,
 	}
 	cgroupControllerRWFiles = map[string][]string{
-		"memory": {"memory.limit_in_bytes"},
-		"cpu":    {"cpu.cfs_quota_us"},
+		"memory":  {"memory.limit_in_bytes"},
+		"cpu":     {"cpu.cfs_quota_us"},
+		"devices": {"devices.allow", "devices.deny"},
 	}
 )
 
