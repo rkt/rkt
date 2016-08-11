@@ -245,7 +245,7 @@ func IsDeviceNode(path string) bool {
 	d, err := os.Lstat(path)
 	if err == nil {
 		m := d.Mode()
-		return m&os.ModeDevice == os.ModeDevice || m&os.ModeCharDevice == os.ModeCharDevice
+		return m&os.ModeDevice == os.ModeDevice
 	}
 	return false
 }

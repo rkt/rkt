@@ -286,12 +286,8 @@ func generateSysusers(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uid_ int,
 		return err
 	}
 
-	if uidRange.Shift != 0 && uidRange.Count != 0 {
-		for _, f := range toShift {
-			if err := os.Chown(f, int(uidRange.Shift), int(uidRange.Shift)); err != nil {
-				return err
-			}
-		}
+	if err := shiftFiles(toShift, uidRange); err != nil {
+		return err
 	}
 
 	return nil
@@ -372,6 +368,18 @@ func findBinPath(p *stage1commontypes.Pod, appName types.ACName, app types.App, 
 	return binPath, nil
 }
 
+// shiftFiles shifts filesToshift by the amounts specified in uidRange
+func shiftFiles(filesToShift []string, uidRange *user.UidRange) error {
+	if uidRange.Shift != 0 && uidRange.Count != 0 {
+		for _, f := range filesToShift {
+			if err := os.Chown(f, int(uidRange.Shift), int(uidRange.Shift)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // generateDeviceAllows generates a DeviceAllow= line for an app.
 // To make it work, the path needs to start with "/dev" but the device won't
 // exist inside the container. So for a given mount, if the volume is a device
@@ -380,49 +388,39 @@ func findBinPath(p *stage1commontypes.Pod, appName types.ACName, app types.App, 
 // DeviceAllow= line.
 func generateDeviceAllows(root string, appName types.ACName, mountPoints []types.MountPoint, mounts []mountWrapper, vols map[types.ACName]types.Volume, uidRange *user.UidRange) ([]string, error) {
 	var devAllow []string
-	var toShift []string
 
 	rktVolumeLinksPath := filepath.Join(root, "rkt", "volumes")
 	if err := os.MkdirAll(rktVolumeLinksPath, 0600); err != nil {
 		return nil, err
 	}
-	toShift = append(toShift, rktVolumeLinksPath)
+	if err := shiftFiles([]string{rktVolumeLinksPath}, uidRange); err != nil {
+		return nil, err
+	}
 
 	for _, m := range mounts {
 		v := vols[m.Volume]
-		if v.Kind == "host" {
-			if fileutil.IsDeviceNode(v.Source) {
-				mode := "r"
-				if !IsMountReadOnly(v, mountPoints) {
-					mode += "w"
-				}
-
-				tgt := filepath.Join(common.RelAppRootfsPath(appName), m.Path)
-				// the DeviceAllow= line needs the link path in /dev/.rkt/
-				linkRel := filepath.Join("/dev/.rkt", v.Name.String())
-				// the real link should be in /rkt/volumes for now
-				link := filepath.Join(rktVolumeLinksPath, v.Name.String())
-
-				err := os.Symlink(tgt, link)
-				switch {
-				case err == nil:
-					toShift = append(toShift, link)
-				case os.IsExist(err):
-					// it already exists, do nothing
-				default:
-					return nil, err
-				}
-
-				devAllow = append(devAllow, linkRel+" "+mode)
-			}
+		if v.Kind != "host" {
+			continue
 		}
-	}
+		if fileutil.IsDeviceNode(v.Source) {
+			mode := "r"
+			if !IsMountReadOnly(v, mountPoints) {
+				mode += "w"
+			}
 
-	if uidRange.Shift != 0 && uidRange.Count != 0 {
-		for _, f := range toShift {
-			if err := os.Chown(f, int(uidRange.Shift), int(uidRange.Shift)); err != nil {
+			tgt := filepath.Join(common.RelAppRootfsPath(appName), m.Path)
+			// the DeviceAllow= line needs the link path in /dev/.rkt/
+			linkRel := filepath.Join("/dev/.rkt", v.Name.String())
+			// the real link should be in /rkt/volumes for now
+			link := filepath.Join(rktVolumeLinksPath, v.Name.String())
+
+			err := os.Symlink(tgt, link)
+			// if the link already exists, we don't need to do anything
+			if err != nil && !os.IsExist(err) {
 				return nil, err
 			}
+
+			devAllow = append(devAllow, linkRel+" "+mode)
 		}
 	}
 
@@ -824,10 +822,8 @@ func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types
 		return err
 	}
 
-	if uidRange.Shift != 0 && uidRange.Count != 0 {
-		if err := os.Chown(envFilePath, int(uidRange.Shift), int(uidRange.Shift)); err != nil {
-			return err
-		}
+	if err := shiftFiles([]string{envFilePath}, uidRange); err != nil {
+		return err
 	}
 
 	return nil
