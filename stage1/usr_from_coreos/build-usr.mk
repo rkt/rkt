@@ -58,11 +58,6 @@ $(call setup-dep-file,CBU_MANIFEST_DEPMK,$(CBU_DIFF)-manifest)
 $(call setup-stamp-file,CBU_TMPROOTFS_DEPMK_STAMP,$(CBU_DIFF)-tmprootfs-deps)
 $(call setup-dep-file,CBU_TMPROOTFS_DEPMK,$(CBU_DIFF)-tmprootfs)
 
-# Stamp and clean file for cleaning partially ACI rootfs and whole tmp
-# rootfs.
-$(call setup-stamp-file,CBU_ROOTFS_CLEAN_STAMP,$(CBU_DIFF)-rootfs-clean)
-$(call setup-clean-file,CBU_ROOTFSDIR_CLEANMK,$(CBU_DIFF)-rootfs)
-
 # Filelist for stuff taken from squashfs - it is more detailed when
 # compared to complete manifest.
 $(call setup-filelist-file,CBU_DETAILED_FILELIST,$(CBU_DIFF)-acirootfs)
@@ -83,11 +78,10 @@ $(call setup-dep-file,CBU_ACIROOTFS_SYMLINKS_KV_DEPMK,$(CBU_DIFF)-acirootfs-syml
 $(call setup-stamp-file,CBU_ACIROOTFS_SYSTEMD_VERSION_KV_DEPMK_STAMP,$(CBU_DIFF)-systemd-version)
 $(call setup-dep-file,CBU_ACIROOTFS_SYSTEMD_VERSION_KV_DEPMK,$(CBU_DIFF)-systemd-version-kv)
 
-# All stamps in this file that generate deps or clean files
-CBU_DEPS_AND_CLEAN_STAMPS := \
+# All stamps in this file that generate deps files
+CBU_DEPS_STAMPS := \
 	$(CBU_TMPROOTFS_DEPMK_STAMP) \
 	$(CBU_MANIFEST_DEPS_STAMP) \
-	$(CBU_ROOTFS_CLEAN_STAMP) \
 	$(CBU_ACIROOTFS_SYMLINKS_KV_DEPMK_STAMP) \
 	$(CBU_ACIROOTFS_SYSTEMD_VERSION_KV_DEPMK_STAMP)
 
@@ -115,7 +109,7 @@ INSTALL_SYMLINKS += \
 
 # The main stamp - makes sure that ACI rootfs directory is prepared
 # with initial contents and all deps/clean files are generated.
-$(call generate-stamp-rule,$(CBU_STAMP),$(CBU_ACI_ROOTFS_STAMP) $(CBU_DEPS_AND_CLEAN_STAMPS))
+$(call generate-stamp-rule,$(CBU_STAMP),$(CBU_ACI_ROOTFS_STAMP) $(CBU_DEPS_STAMPS))
 
 # This stamp makes sure that ACI rootfs is fully populated - stuff is
 # copied, symlinks and systemd-version file are created.
@@ -156,9 +150,13 @@ $(call generate-kv-deps,$(CBU_ACIROOTFS_SYMLINKS_KV_DEPMK_STAMP),$(CBU_REMOVE_AC
 # temporary rootfs change.
 $(call generate-glob-deps,$(CBU_TMPROOTFS_DEPMK_STAMP),$(CBU_REMOVE_ACIROOTFSDIR_STAMP),$(CBU_TMPROOTFS_DEPMK),,$(CBU_DETAILED_FILELIST),$(CBU_ROOTFS))
 
-# This cleanmk can be generated only after the detailed filelist was
-# generated.
-$(call generate-clean-mk,$(CBU_ROOTFS_CLEAN_STAMP),$(CBU_ROOTFSDIR_CLEANMK),$(CBU_DETAILED_FILELIST),$(CBU_ACIROOTFSDIR) $(CBU_ROOTFS))
+# Generate clean file for files put in the ACI rootfs and in the
+# temporary rootfs.
+$(call generate-clean-mk-from-filelist, \
+	$(CBU_STAMP), \
+	$(CBU_DETAILED_FILELIST), \
+	$(CBU_ACIROOTFSDIR) $(CBU_ROOTFS), \
+	$(CBU_DIFF)-rootfs-cleanup)
 
 # This unpacks squashfs image to a temporary rootfs.
 $(call generate-stamp-rule,$(CBU_MKBASE_STAMP),$(CCN_SQUASHFS) $(CBU_COMPLETE_MANIFEST),$(CBU_ROOTFS), \
