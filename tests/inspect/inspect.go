@@ -412,7 +412,7 @@ func main() {
 
 		var limitPath string
 		if isUnified {
-			cgroupPath, err := cgroup.GetOwnCgroupPath()
+			cgroupPath, err := cgroup.GetOwnV2CgroupPath()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error getting own memory cgroup path: %v\n", err)
 				os.Exit(1)
@@ -420,7 +420,7 @@ func main() {
 			limitPath = filepath.Join("/proc/1/root/sys/fs/cgroup/", cgroupPath, "memory.max")
 			fmt.Fprintln(os.Stderr, "limitPath:", limitPath)
 		} else {
-			memCgroupPath, err := cgroup.GetOwnLegacyCgroupPath("memory")
+			memCgroupPath, err := cgroup.GetOwnV1CgroupPath("memory")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error getting own memory cgroup path: %v\n", err)
 				os.Exit(1)
@@ -438,7 +438,7 @@ func main() {
 	}
 
 	if globalFlags.PrintCPUQuota {
-		cpuCgroupPath, err := cgroup.GetOwnLegacyCgroupPath("cpu")
+		cpuCgroupPath, err := cgroup.GetOwnV1CgroupPath("cpu")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting own cpu cgroup path: %v\n", err)
 			os.Exit(1)

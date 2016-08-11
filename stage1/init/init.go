@@ -670,14 +670,14 @@ func stage1() int {
 	s1Root := common.Stage1RootfsPath(p.Root)
 	machineID := stage1initcommon.GetMachineID(p)
 	if !unifiedCgroup {
-		enabledCgroups, err := cgroup.GetEnabledLegacyCgroups()
+		enabledCgroups, err := cgroup.GetEnabledV1Cgroups()
 		if err != nil {
-			log.FatalE("error getting legacy cgroups", err)
+			log.FatalE("error getting v1 cgroups", err)
 			return 1
 		}
 
-		if err := mountHostLegacyCgroups(enabledCgroups); err != nil {
-			log.FatalE("couldn't mount the host legacy cgroups", err)
+		if err := mountHostV1Cgroups(enabledCgroups); err != nil {
+			log.FatalE("couldn't mount the host v1 cgroups", err)
 			return 1
 		}
 
@@ -685,15 +685,15 @@ func stage1() int {
 		for _, app := range p.Manifest.Apps {
 			serviceNames = append(serviceNames, stage1initcommon.ServiceUnitName(app.Name))
 		}
-		subcgroup, err := getContainerLegacySubCgroup(machineID, canMachinedRegister)
+		subcgroup, err := getContainerV1SubCgroup(machineID, canMachinedRegister)
 		if err == nil {
 			if err := ioutil.WriteFile(filepath.Join(p.Root, "subcgroup"),
 				[]byte(fmt.Sprintf("%s", subcgroup)), 0644); err != nil {
 				log.FatalE("cannot write subcgroup file", err)
 				return 1
 			}
-			if err := mountContainerLegacyCgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
-				log.PrintE("couldn't mount the container legacy cgroups", err)
+			if err := mountContainerV1Cgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
+				log.PrintE("couldn't mount the container v1 cgroups", err)
 				return 1
 			}
 		} else {
@@ -732,10 +732,10 @@ func stage1() int {
 	return 0
 }
 
-func areHostLegacyCgroupsMounted(enabledLegacyCgroups map[int][]string) bool {
-	controllers := cgroup.GetLegacyControllerDirs(enabledLegacyCgroups)
+func areHostV1CgroupsMounted(enabledV1Cgroups map[int][]string) bool {
+	controllers := cgroup.GetV1ControllerDirs(enabledV1Cgroups)
 	for _, c := range controllers {
-		if !cgroup.IsLegacyControllerMounted(c) {
+		if !cgroup.IsV1ControllerMounted(c) {
 			return false
 		}
 	}
@@ -743,21 +743,21 @@ func areHostLegacyCgroupsMounted(enabledLegacyCgroups map[int][]string) bool {
 	return true
 }
 
-// mountHostLegacyCgroups mounts the host legacy cgroup hierarchy as required by
+// mountHostV1Cgroups mounts the host v1 cgroup hierarchy as required by
 // systemd-nspawn. We need this because some distributions don't have the
 // "name=systemd" cgroup or don't mount the cgroup controllers in
 // "/sys/fs/cgroup", and systemd-nspawn needs this. Since this is mounted
 // inside the rkt mount namespace, it doesn't affect the host.
-func mountHostLegacyCgroups(enabledCgroups map[int][]string) error {
+func mountHostV1Cgroups(enabledCgroups map[int][]string) error {
 	systemdControllerPath := "/sys/fs/cgroup/systemd"
-	if !areHostLegacyCgroupsMounted(enabledCgroups) {
+	if !areHostV1CgroupsMounted(enabledCgroups) {
 		mountContext := os.Getenv(common.EnvSELinuxMountContext)
-		if err := cgroup.CreateLegacyCgroups("/", enabledCgroups, mountContext); err != nil {
+		if err := cgroup.CreateV1Cgroups("/", enabledCgroups, mountContext); err != nil {
 			return errwrap.Wrap(errors.New("error creating host cgroups"), err)
 		}
 	}
 
-	if !cgroup.IsLegacyControllerMounted("systemd") {
+	if !cgroup.IsV1ControllerMounted("systemd") {
 		if err := os.MkdirAll(systemdControllerPath, 0700); err != nil {
 			return err
 		}
@@ -769,22 +769,22 @@ func mountHostLegacyCgroups(enabledCgroups map[int][]string) error {
 	return nil
 }
 
-// mountContainerLegacyCgroups mounts the cgroup controllers hierarchy in the container's
+// mountContainerV1Cgroups mounts the cgroup controllers hierarchy in the container's
 // namespace read-only, leaving the needed knobs in the subcgroup for each-app
 // read-write so systemd inside stage1 can apply isolators to them
-func mountContainerLegacyCgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
+func mountContainerV1Cgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
 	mountContext := os.Getenv(common.EnvSELinuxMountContext)
-	if err := cgroup.CreateLegacyCgroups(s1Root, enabledCgroups, mountContext); err != nil {
+	if err := cgroup.CreateV1Cgroups(s1Root, enabledCgroups, mountContext); err != nil {
 		return errwrap.Wrap(errors.New("error creating container cgroups"), err)
 	}
-	if err := cgroup.RemountLegacyCgroupsRO(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
+	if err := cgroup.RemountV1CgroupsRO(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
 		return errwrap.Wrap(errors.New("error restricting container cgroups"), err)
 	}
 
 	return nil
 }
 
-func getContainerLegacySubCgroup(machineID string, canMachinedRegister bool) (string, error) {
+func getContainerV1SubCgroup(machineID string, canMachinedRegister bool) (string, error) {
 	var subcgroup string
 	fromUnit, err := util.RunningFromSystemService()
 	if err != nil {
@@ -815,16 +815,16 @@ func getContainerLegacySubCgroup(machineID string, canMachinedRegister bool) (st
 		} else {
 			// when registration is disabled the container will be directly
 			// under the current cgroup so we can look it up in /proc/self/cgroup
-			ownLegacyCgroupPath, err := cgroup.GetOwnLegacyCgroupPath("name=systemd")
+			ownV1CgroupPath, err := cgroup.GetOwnV1CgroupPath("name=systemd")
 			if err != nil {
-				return "", errwrap.Wrap(errors.New("could not get own legacy cgroup path"), err)
+				return "", errwrap.Wrap(errors.New("could not get own v1 cgroup path"), err)
 			}
 			// systemd-nspawn won't work if we are in the root cgroup. In addition,
 			// we want all rkt instances to be in distinct cgroups. Create a
 			// subcgroup and add ourselves to it.
-			subcgroup = filepath.Join(ownLegacyCgroupPath, machineDir)
-			if err := cgroup.JoinLegacySubcgroup("systemd", subcgroup); err != nil {
-				return "", errwrap.Wrap(fmt.Errorf("error joining %s subcgroup", ownLegacyCgroupPath), err)
+			subcgroup = filepath.Join(ownV1CgroupPath, machineDir)
+			if err := cgroup.JoinV1Subcgroup("systemd", subcgroup); err != nil {
+				return "", errwrap.Wrap(fmt.Errorf("error joining %s subcgroup", ownV1CgroupPath), err)
 			}
 		}
 	}

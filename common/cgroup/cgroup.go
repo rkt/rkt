@@ -47,7 +47,7 @@ var (
 		"cpu":    addCpuLimit,
 		"memory": addMemoryLimit,
 	}
-	legacyCgroupControllerRWFiles = map[string][]string{
+	v1CgroupControllerRWFiles = map[string][]string{
 		"memory":  {"memory.limit_in_bytes"},
 		"cpu":     {"cpu.cfs_quota_us"},
 		"devices": {"devices.allow", "devices.deny"},
@@ -66,6 +66,20 @@ func addCpuLimit(opts []*unit.UnitOption, limit *resource.Quantity) ([]*unit.Uni
 func addMemoryLimit(opts []*unit.UnitOption, limit *resource.Quantity) ([]*unit.UnitOption, error) {
 	opts = append(opts, unit.NewUnitOption("Service", "MemoryLimit", strconv.Itoa(int(limit.Value()))))
 	return opts, nil
+}
+
+func mountFsRO(mountPoint string) error {
+	var flags uintptr = syscall.MS_BIND |
+		syscall.MS_REMOUNT |
+		syscall.MS_NOSUID |
+		syscall.MS_NOEXEC |
+		syscall.MS_NODEV |
+		syscall.MS_RDONLY
+	if err := syscall.Mount(mountPoint, mountPoint, "", flags, ""); err != nil {
+		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", mountPoint), err)
+	}
+
+	return nil
 }
 
 // MaybeAddIsolator considers the given isolator; if the type is known
@@ -102,7 +116,7 @@ func IsIsolatorSupported(isolator string) (bool, error) {
 	}
 
 	if isUnified {
-		controllers, err := GetEnabledControllers()
+		controllers, err := GetEnabledV2Controllers()
 		if err != nil {
 			return false, errwrap.Wrap(errors.New("error determining enabled controllers"), err)
 		}
@@ -114,7 +128,7 @@ func IsIsolatorSupported(isolator string) (bool, error) {
 		return false, nil
 	}
 
-	if files, ok := legacyCgroupControllerRWFiles[isolator]; ok {
+	if files, ok := v1CgroupControllerRWFiles[isolator]; ok {
 		for _, f := range files {
 			isolatorPath := filepath.Join("/sys/fs/cgroup/", isolator, f)
 			if _, err := os.Stat(isolatorPath); os.IsNotExist(err) {
@@ -138,7 +152,60 @@ func IsCgroupUnified(root string) (bool, error) {
 	return statfs.Type == Cgroup2fsMagicNumber, nil
 }
 
-func parseLegacyCgroups(f io.Reader) (map[int][]string, error) {
+/*
+ * cgroup v2 functions
+ */
+
+// GetEnabledV2Controllers returns a list of enabled cgroup controllers
+func GetEnabledV2Controllers() ([]string, error) {
+	controllersFile, err := os.Open("/sys/fs/cgroup/cgroup.controllers")
+	if err != nil {
+		return nil, err
+	}
+	defer controllersFile.Close()
+
+	sc := bufio.NewScanner(controllersFile)
+
+	sc.Scan()
+	if err := sc.Err(); err != nil {
+		return nil, err
+	}
+
+	return strings.Split(sc.Text(), " "), nil
+}
+
+func parseV2ProcCgroupInfo(procCgroupInfoPath string) (string, error) {
+	cg, err := os.Open(procCgroupInfoPath)
+	if err != nil {
+		return "", errwrap.Wrap(errors.New("error opening /proc/self/cgroup"), err)
+	}
+	defer cg.Close()
+
+	s := bufio.NewScanner(cg)
+	s.Scan()
+	parts := strings.SplitN(s.Text(), ":", 3)
+	if len(parts) < 3 {
+		return "", fmt.Errorf("error parsing /proc/self/cgroup")
+	}
+
+	return parts[2], nil
+}
+
+// GetOwnCgroupPath returns the cgroup path of this process
+func GetOwnV2CgroupPath() (string, error) {
+	return parseV2ProcCgroupInfo("/proc/self/cgroup")
+}
+
+// GetCgroupPathByPid returns the cgroup path of the process
+func GetV2CgroupPathByPid(pid int) (string, error) {
+	return parseV2ProcCgroupInfo(fmt.Sprintf("/proc/%d/cgroup", pid))
+}
+
+/*
+ * cgroup v1 functions
+ */
+
+func parseV1Cgroups(f io.Reader) (map[int][]string, error) {
 	sc := bufio.NewScanner(f)
 
 	// skip first line since it is a comment
@@ -168,16 +235,16 @@ func parseLegacyCgroups(f io.Reader) (map[int][]string, error) {
 	return cgroups, nil
 }
 
-// GetEnabledLegacyCgroups returns a map with the enabled cgroup controllers grouped by
+// GetEnabledV1Cgroups returns a map with the enabled cgroup controllers grouped by
 // hierarchy
-func GetEnabledLegacyCgroups() (map[int][]string, error) {
+func GetEnabledV1Cgroups() (map[int][]string, error) {
 	cgroupsFile, err := os.Open("/proc/cgroups")
 	if err != nil {
 		return nil, err
 	}
 	defer cgroupsFile.Close()
 
-	cgroups, err := parseLegacyCgroups(cgroupsFile)
+	cgroups, err := parseV1Cgroups(cgroupsFile)
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("error parsing /proc/cgroups"), err)
 	}
@@ -185,28 +252,10 @@ func GetEnabledLegacyCgroups() (map[int][]string, error) {
 	return cgroups, nil
 }
 
-// GetEnabledControllers returns a list of enabled cgroup controllers
-func GetEnabledControllers() ([]string, error) {
-	controllersFile, err := os.Open("/sys/fs/cgroup/cgroup.controllers")
-	if err != nil {
-		return nil, err
-	}
-	defer controllersFile.Close()
-
-	sc := bufio.NewScanner(controllersFile)
-
-	sc.Scan()
-	if err := sc.Err(); err != nil {
-		return nil, err
-	}
-
-	return strings.Split(sc.Text(), " "), nil
-}
-
-// GetLegacyControllerDirs takes a map with the enabled cgroup controllers grouped by
+// GetV1ControllerDirs takes a map with the enabled cgroup controllers grouped by
 // hierarchy and returns the directory names as they should be in
 // /sys/fs/cgroup
-func GetLegacyControllerDirs(cgroups map[int][]string) []string {
+func GetV1ControllerDirs(cgroups map[int][]string) []string {
 	var controllers []string
 	for _, cs := range cgroups {
 		controllers = append(controllers, strings.Join(cs, ","))
@@ -215,7 +264,7 @@ func GetLegacyControllerDirs(cgroups map[int][]string) []string {
 	return controllers
 }
 
-func getLegacyControllerSymlinks(cgroups map[int][]string) map[string]string {
+func getV1ControllerSymlinks(cgroups map[int][]string) map[string]string {
 	symlinks := make(map[string]string)
 
 	for _, cs := range cgroups {
@@ -230,10 +279,10 @@ func getLegacyControllerSymlinks(cgroups map[int][]string) map[string]string {
 	return symlinks
 }
 
-func getLegacyControllerRWFiles(controller string) []string {
+func getV1ControllerRWFiles(controller string) []string {
 	parts := strings.Split(controller, ",")
 	for _, p := range parts {
-		if files, ok := legacyCgroupControllerRWFiles[p]; ok {
+		if files, ok := v1CgroupControllerRWFiles[p]; ok {
 			// cgroup.procs always needs to be RW for allowing systemd to add
 			// processes to the controller
 			files = append(files, "cgroup.procs")
@@ -244,7 +293,7 @@ func getLegacyControllerRWFiles(controller string) []string {
 	return nil
 }
 
-func parseLegacyCgroupController(cgroupPath, controller string) ([]string, error) {
+func parseV1CgroupController(cgroupPath, controller string) ([]string, error) {
 	cg, err := os.Open(cgroupPath)
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("error opening /proc/self/cgroup"), err)
@@ -268,56 +317,29 @@ func parseLegacyCgroupController(cgroupPath, controller string) ([]string, error
 	return nil, fmt.Errorf("controller %q not found", controller)
 }
 
-func parseProcCgroupInfo(procCgroupInfoPath string) (string, error) {
-	cg, err := os.Open(procCgroupInfoPath)
-	if err != nil {
-		return "", errwrap.Wrap(errors.New("error opening /proc/self/cgroup"), err)
-	}
-	defer cg.Close()
-
-	s := bufio.NewScanner(cg)
-	s.Scan()
-	parts := strings.SplitN(s.Text(), ":", 3)
-	if len(parts) < 3 {
-		return "", fmt.Errorf("error parsing /proc/self/cgroup")
-	}
-
-	return parts[2], nil
-}
-
-// GetOwnLegacyCgroupPath returns the cgroup path of this process in controller
+// GetOwnV1CgroupPath returns the cgroup path of this process in controller
 // hierarchy
-func GetOwnLegacyCgroupPath(controller string) (string, error) {
-	parts, err := parseLegacyCgroupController("/proc/self/cgroup", controller)
+func GetOwnV1CgroupPath(controller string) (string, error) {
+	parts, err := parseV1CgroupController("/proc/self/cgroup", controller)
 	if err != nil {
 		return "", err
 	}
 	return parts[2], nil
 }
 
-// GetOwnCgroupPath returns the cgroup path of this process
-func GetOwnCgroupPath() (string, error) {
-	return parseProcCgroupInfo("/proc/self/cgroup")
-}
-
-// GetLegacyCgroupPathByPid returns the cgroup path of the process with the given pid
+// GetV1CgroupPathByPid returns the cgroup path of the process with the given pid
 // and given controller.
-func GetLegacyCgroupPathByPid(pid int, controller string) (string, error) {
-	parts, err := parseLegacyCgroupController(fmt.Sprintf("/proc/%d/cgroup", pid), controller)
+func GetV1CgroupPathByPid(pid int, controller string) (string, error) {
+	parts, err := parseV1CgroupController(fmt.Sprintf("/proc/%d/cgroup", pid), controller)
 	if err != nil {
 		return "", err
 	}
 	return parts[2], nil
 }
 
-// GetCgroupPathByPid returns the cgroup path of the process
-func GetCgroupPathByPid(pid int) (string, error) {
-	return parseProcCgroupInfo(fmt.Sprintf("/proc/%d/cgroup", pid))
-}
-
-// JoinCgroup makes the calling process join the subcgroup hierarchy on a
+// JoinV1Subcgroup makes the calling process join the subcgroup hierarchy on a
 // particular controller
-func JoinLegacySubcgroup(controller string, subcgroup string) error {
+func JoinV1Subcgroup(controller string, subcgroup string) error {
 	subcgroupPath := filepath.Join("/sys/fs/cgroup", controller, subcgroup)
 	if err := os.MkdirAll(subcgroupPath, 0600); err != nil {
 		return errwrap.Wrap(fmt.Errorf("error creating %q subcgroup", subcgroup), err)
@@ -360,9 +382,9 @@ func fixCpusetKnobs(cpusetPath string) {
 	}
 }
 
-// IsLegacyControllerMounted returns whether a controller is mounted by checking that
+// IsV1ControllerMounted returns whether a controller is mounted by checking that
 // cgroup.procs is accessible
-func IsLegacyControllerMounted(c string) bool {
+func IsV1ControllerMounted(c string) bool {
 	cgroupProcsPath := filepath.Join("/sys/fs/cgroup", c, "cgroup.procs")
 	if _, err := os.Stat(cgroupProcsPath); err != nil {
 		return false
@@ -371,10 +393,10 @@ func IsLegacyControllerMounted(c string) bool {
 	return true
 }
 
-// CreateLegacyCgroups mounts the cgroup controllers hierarchy in /sys/fs/cgroup
+// CreateV1Cgroups mounts the v1 cgroup controllers hierarchy in /sys/fs/cgroup
 // under root
-func CreateLegacyCgroups(root string, enabledCgroups map[int][]string, mountContext string) error {
-	controllers := GetLegacyControllerDirs(enabledCgroups)
+func CreateV1Cgroups(root string, enabledCgroups map[int][]string, mountContext string) error {
+	controllers := GetV1ControllerDirs(enabledCgroups)
 	var flags uintptr
 
 	sys := filepath.Join(root, "/sys")
@@ -424,7 +446,7 @@ func CreateLegacyCgroups(root string, enabledCgroups map[int][]string, mountCont
 	}
 
 	// Create symlinks for combined controllers
-	symlinks := getLegacyControllerSymlinks(enabledCgroups)
+	symlinks := getV1ControllerSymlinks(enabledCgroups)
 	for ln, tgt := range symlinks {
 		lnPath := filepath.Join(cgroupTmpfs, ln)
 		if err := os.Symlink(tgt, lnPath); err != nil {
@@ -441,11 +463,11 @@ func CreateLegacyCgroups(root string, enabledCgroups map[int][]string, mountCont
 	return mountFsRO(cgroupTmpfs)
 }
 
-// RemountLegacyCgroupsRO remounts the cgroup hierarchy under root read-only,
+// RemountV1CgroupsRO remounts the v1 cgroup hierarchy under root read-only,
 // leaving the needed knobs in the subcgroup for each app read-write so the
 // systemd inside stage1 can apply isolators to them
-func RemountLegacyCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
-	controllers := GetLegacyControllerDirs(enabledCgroups)
+func RemountV1CgroupsRO(root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
+	controllers := GetV1ControllerDirs(enabledCgroups)
 	cgroupTmpfs := filepath.Join(root, "/sys/fs/cgroup")
 	sysPath := filepath.Join(root, "/sys")
 
@@ -466,7 +488,7 @@ func RemountLegacyCgroupsRO(root string, enabledCgroups map[int][]string, subcgr
 			if err := os.MkdirAll(appCgroup, 0755); err != nil {
 				return err
 			}
-			for _, f := range getLegacyControllerRWFiles(c) {
+			for _, f := range getV1ControllerRWFiles(c) {
 				cgroupFilePath := filepath.Join(appCgroup, f)
 				// the file may not be there if kernel doesn't support the
 				// feature, skip it in that case
@@ -487,18 +509,4 @@ func RemountLegacyCgroupsRO(root string, enabledCgroups map[int][]string, subcgr
 
 	// Bind-mount sys filesystem read-only
 	return mountFsRO(sysPath)
-}
-
-func mountFsRO(mountPoint string) error {
-	var flags uintptr = syscall.MS_BIND |
-		syscall.MS_REMOUNT |
-		syscall.MS_NOSUID |
-		syscall.MS_NOEXEC |
-		syscall.MS_NODEV |
-		syscall.MS_RDONLY
-	if err := syscall.Mount(mountPoint, mountPoint, "", flags, ""); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", mountPoint), err)
-	}
-
-	return nil
 }
