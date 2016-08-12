@@ -82,7 +82,7 @@ For more information, see the [CoreOS security disclosure page](https://coreos.c
 
 Due to a bug in the Linux kernel, using rkt's overlay support on top of an overlay filesystem requires Linux 4.3+ (see the [stacked overlay fix](https://github.com/torvalds/linux/commit/1c8a47d) and [#1537](https://github.com/coreos/rkt/issues/1537)).
 
-Due to a bug in the Linux kernel, rkt will not work when /var/lib/rkt is on btrfs ([#2175](https://github.com/coreos/rkt/issues/2175)).
+Due to a bug in the Linux kernel, using rkt when /var/lib/rkt is on btrfs requires Linux 4.5.2+ ([#2175](https://github.com/coreos/rkt/issues/2175)).
 
 Due to a bug in the Linux kernel, using rkt's overlay support in conjunction with SELinux requires a set of patches that are only currently available on some Linux distributions (for example, [CoreOS Linux](https://github.com/coreos/coreos-overlay/tree/master/sys-kernel/coreos-sources/files)). Work is ongoing to merge this work into the mainline Linux kernel ([#1727](https://github.com/coreos/rkt/issues/1727#issuecomment-173203129)).
 
