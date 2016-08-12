@@ -20,7 +20,7 @@ import:
   subpackages:
   - proj2aci
 - package: github.com/appc/spec
-  version: v0.8.5
+  version: v0.8.6
   subpackages:
   - ace
   - aci
@@ -267,7 +267,7 @@ import:
 - package: gopkg.in/inf.v0
   version: v0.9.0
 - package: k8s.io/kubernetes
-  version: v1.3.0-alpha.4
+  version: v1.3.0
   subpackages:
   - pkg/api/resource
   - pkg/conversion
