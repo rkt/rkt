@@ -159,14 +159,22 @@ func TestFlyMountPodManifest(t *testing.T) {
 								{"CONTENT", "host:foo"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: false,
+								},
 							},
 						},
 						ReadOnlyRootFS: true,
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil, nil, nil, nil},
+					{
+						Name:   "dir1",
+						Kind:   "host",
+						Source: tmpdir,
+					},
 				},
 			},
 			0,
