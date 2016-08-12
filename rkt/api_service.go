@@ -16,7 +16,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -479,15 +478,16 @@ func waitForMachinedRegistration(uuid string) error {
 	machined := conn.Object("org.freedesktop.machine1", "/org/freedesktop/machine1")
 	machineName := "rkt-" + uuid
 
+	var machinedErr error
 	var o dbus.ObjectPath
 	for i := 0; i < 10; i++ {
-		if err := machined.Call("org.freedesktop.machine1.Manager.GetMachine", 0, machineName).Store(&o); err == nil {
+		if machinedErr = machined.Call("org.freedesktop.machine1.Manager.GetMachine", 0, machineName).Store(&o); machinedErr == nil {
 			return nil
 		}
 		time.Sleep(time.Millisecond * 50)
 	}
 
-	return errors.New("pod not found")
+	return fmt.Errorf("pod %v not found in machined: %v", uuid, machinedErr)
 }
 
 // fillPodDetails fills the v1pod's dynamic info in place, e.g. the pod's state,
@@ -555,7 +555,7 @@ func fillPodDetails(store *imagestore.Store, p *pod, v1pod *v1alpha.Pod) {
 		if err := waitForMachinedRegistration(v1pod.Id); err != nil {
 			// If there's an error, it means we're not registered to machined
 			// in a reasonable time. Just output the cgroup we're in.
-			stderr.PrintE("checking for machined registration failed", err)
+			stderr.PrintE("checking for machined registration failed: ", err)
 		}
 		// Get cgroup for the "name=systemd" controller.
 		pid, err := p.getContainerPID1()
