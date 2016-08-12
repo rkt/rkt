@@ -30,26 +30,8 @@ $(call setup-stamp-file,UFS_ROOTFS_DEPS_STAMP,systemd-rootfs-deps)
 # dep.mk for install/tmp rootfs dir contents, will cause ACI rootfs
 # removal if they change
 $(call setup-dep-file,UFS_ROOTFS_DEPMK,systemd-rootfs)
-# stamp for generating install/tmp rootfs dir clean file
-$(call setup-stamp-file,UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP,systemd-rootfs-clean)
-# clean file for installdir/tmp rootfs dir
-$(call setup-clean-file,UFS_ROOTFSDIR_CLEANMK,systemd-rootfs)
 # install/tmp rootfs dir filelist
 $(call setup-filelist-file,UFS_ROOTFSDIR_FILELIST,systemd-rootfs)
-
-# stamp for generating build dir clean file
-$(call setup-stamp-file,UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP,systemd-build-clean)
-# clean file for build dir
-$(call setup-clean-file,UFS_SYSTEMD_BUILDDIR_CLEANMK,systemd-build)
-# build dir filelist
-$(call setup-filelist-file,UFS_SYSTEMD_BUILDDIR_FILELIST,systemd-build)
-
-# stamp for generating src dir clean file after build
-$(call setup-stamp-file,UFS_SYSTEMD_SRCDIR_AFTER_BUILD_CLEAN_STAMP,systemd-src-after-build-clean)
-# clean file for src dir after build
-$(call setup-clean-file,UFS_SYSTEMD_SRCDIR_AFTER_BUILD_CLEANMK,systemd-src-after-build)
-# src dir filelist after build
-$(call setup-filelist-file,UFS_SYSTEMD_SRCDIR_AFTER_BUILD_FILELIST,systemd-src-after-build)
 
 # stamp for generating dep file on patches dir
 $(call setup-stamp-file,UFS_PATCHES_DEPS_STAMP,systemd-patches-deps)
@@ -58,13 +40,6 @@ $(call setup-stamp-file,UFS_PATCHES_DEPS_STAMP,systemd-patches-deps)
 $(call setup-dep-file,UFS_PATCHES_DEPMK,systemd-patches)
 # patches dir filelist
 $(call setup-filelist-file,UFS_PATCHES_FILELIST,systemd-patches)
-
-# stamp for generating src dir clean file
-$(call setup-stamp-file,UFS_SYSTEMD_SRCDIR_CLEAN_STAMP,systemd-src-clean)
-# clean file for src dir
-$(call setup-clean-file,UFS_SYSTEMD_SRCDIR_CLEANMK,systemd-src)
-# src dir filelist
-$(call setup-filelist-file,UFS_SYSTEMD_SRCDIR_FILELIST,systemd-src)
 
 # stamp for removing builddir
 $(call setup-stamp-file,UFS_SYSTEMD_RM_BUILDDIR_STAMP,systemd-rm-build)
@@ -109,7 +84,7 @@ $(call inc-one,libnss.mk)
 
 # this makes sure everything is done - ACI rootfs is populated,
 # clean/deps/filelist are generated
-$(call generate-stamp-rule,$(UFS_STAMP),$(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_STAMP) $(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP) $(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP) $(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP) $(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_CLEAN_STAMP))
+$(call generate-stamp-rule,$(UFS_STAMP),$(UFS_ROOTFS_STAMP) $(UFS_ROOTFS_DEPS_STAMP) $(UFS_PATCHES_DEPS_STAMP))
 
 # this copies the temporary rootfs contents to ACI rootfs and adds
 # some misc files
@@ -135,10 +110,14 @@ $(call generate-deep-filelist,$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR))
 # recreated if any file in temporary rootfs changes.
 $(call generate-glob-deps,$(UFS_ROOTFS_DEPS_STAMP),$(UFS_SYSTEMD_RM_ACIROOTFSDIR_STAMP),$(UFS_ROOTFS_DEPMK),,$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR))
 
-# Generate a clean.mk files for cleaning everything that systemd's
-# "make install" put in a temporary rootfs and for the same files in
-# ACI rootfs.
-$(call generate-clean-mk,$(UFS_SYSTEMD_ROOTFSDIR_CLEAN_STAMP),$(UFS_ROOTFSDIR_CLEANMK),$(UFS_ROOTFSDIR_FILELIST),$(UFS_ROOTFSDIR) $(S1_RF_ACIROOTFSDIR))
+# Generate a clean file for cleaning everything that systemd's "make
+# install" put in a temporary rootfs directory and for the same files
+# in ACI rootfs.
+$(call generate-clean-mk-from-filelist, \
+	$(UFS_STAMP), \
+	$(UFS_ROOTFSDIR_FILELIST), \
+	$(UFS_ROOTFSDIR) $(S1_RF_ACIROOTFSDIR), \
+	systemd-rootfs-cleanup)
 
 # this builds systemd
 $(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),$(UFS_SYSTEMD_BUILDDIR), \
@@ -189,27 +168,28 @@ $(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PA
 	$(call vb,v2,BUILD EXT,systemd) \
 	$$(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" all V=0 $(call vl2,>/dev/null))
 
-# Generate filelist of a build directory. This can be done only after
-# building systemd was finished.
-$(UFS_SYSTEMD_BUILDDIR_FILELIST): $(UFS_SYSTEMD_BUILD_STAMP)
-$(call generate-deep-filelist,$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUILDDIR))
+# Generate a clean file for a build directory. This can be done only
+# after building systemd was finished.
+$(call generate-clean-mk-simple, \
+	$(UFS_STAMP), \
+	$(UFS_SYSTEMD_BUILDDIR), \
+	$(UFS_SYSTEMD_BUILDDIR), \
+	$(UFS_SYSTEMD_BUILD_STAMP), \
+	builddir-cleanup)
 
-# Generate clean.mk for cleaning all files created during "make all"
-# in systemd.
-$(call generate-clean-mk,$(UFS_SYSTEMD_BUILDDIR_CLEAN_STAMP),$(UFS_SYSTEMD_BUILDDIR_CLEANMK),$(UFS_SYSTEMD_BUILDDIR_FILELIST),$(UFS_SYSTEMD_BUILDDIR))
-
-# Generate the filelist of systemd's srcdir again. This can be done
+# Generate a clean file for systemd's srcdir again. This can be done
 # only after building systemd was finished. This is to take some files
 # generated during build in the srcdir into account. Normally srcdir
 # should be considered read only at this point, but apparently python
 # likes to put compiled bytecode next to the src file.
-$(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_FILELIST): $(UFS_SYSTEMD_BUILD_STAMP)
-$(call generate-deep-filelist,$(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_FILELIST),$(UFS_SYSTEMD_SRCDIR))
+$(call generate-clean-mk-simple, \
+	$(UFS_STAMP), \
+	$(UFS_SYSTEMD_SRCDIR), \
+	$(UFS_SYSTEMD_SRCDIR), \
+	$(UFS_SYSTEMD_BUILD_STAMP), \
+	srcdir-cleanup-again)
 
-# Generate clean.mk file for cleaning all files in srcdir-after-build.
-$(call generate-clean-mk,$(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_CLEAN_STAMP),$(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_CLEANMK),$(UFS_SYSTEMD_SRCDIR_AFTER_BUILD_FILELIST),$(UFS_SYSTEMD_SRCDIR))
-
-# this patch makes sure that systemd git repo was cloned and patched
+# this stamp makes sure that systemd git repo was cloned and patched
 $(call generate-stamp-rule,$(UFS_SYSTEMD_CLONE_AND_PATCH_STAMP),$(UFS_SYSTEMD_CONFIGURE))
 
 # this patches the git repo and generates the configure script
@@ -235,13 +215,14 @@ $(UFS_SYSTEMD_CONFIGURE):
 		fi); \
 	popd $(call vl3,>/dev/null)
 
-# Generate the filelist of systemd's srcdir. This can be done only
+# Generate the clean file for systemd's srcdir. This can be done only
 # after it was cloned, patched and configure script was generated.
-$(UFS_SYSTEMD_SRCDIR_FILELIST): $(UFS_SYSTEMD_CONFIGURE)
-$(call generate-deep-filelist,$(UFS_SYSTEMD_SRCDIR_FILELIST),$(UFS_SYSTEMD_SRCDIR))
-
-# Generate clean.mk file for cleaning all files in srcdir.
-$(call generate-clean-mk,$(UFS_SYSTEMD_SRCDIR_CLEAN_STAMP),$(UFS_SYSTEMD_SRCDIR_CLEANMK),$(UFS_SYSTEMD_SRCDIR_FILELIST),$(UFS_SYSTEMD_SRCDIR))
+$(call generate-clean-mk-simple, \
+	$(UFS_STAMP), \
+	$(UFS_SYSTEMD_SRCDIR), \
+	$(UFS_SYSTEMD_SRCDIR), \
+	$(UFS_SYSTEMD_CONFIGURE), \
+	srcdir-cleanup)
 
 # Generate a filelist of patches. Can happen anytime.
 $(call generate-patches-filelist,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR))

@@ -8,10 +8,6 @@
 SLD_FLAVOR := $(STAGE1_FSD_FLAVOR)
 $(call inc-one,stdlibdirs.mk)
 
-# a clean file for removing solibs in both the ACI rootfs and the tmp
-# lib dir.
-$(call setup-clean-file,STAGE1_FSD_SOLIBS_CLEANMK,/$(STAGE1_FSD_FLAVOR)-solibs)
-
 # temporary directory
 $(call setup-tmp-dir,STAGE1_FSD_TMPDIR)
 
@@ -24,10 +20,6 @@ STAGE1_FSD_LIBSDIR := $(STAGE1_FSD_TMPDIR)/libs-$(STAGE1_FSD_FLAVOR)
 $(call setup-stamp-file,STAGE1_FSD_STAMP,$(STAGE1_FSD_FLAVOR))
 # this stamp makes sure that libs were copied
 $(call setup-stamp-file,STAGE1_FSD_COPY_STAMP,/$(STAGE1_FSD_FLAVOR)-fsd_copy)
-# this stamp makes sure that clean file was generated
-$(call setup-stamp-file,STAGE1_FSD_CLEAN_STAMP,/$(STAGE1_FSD_FLAVOR)-fsd_clean)
-# filelist of all copied libs
-$(call setup-filelist-file,STAGE1_FSD_FILELIST,/$(STAGE1_FSD_FLAVOR)-fsd)
 
 # the ACI rootfs for given flavor
 STAGE1_FSD_ACIROOTFSDIR := $(STAGE1_ACIROOTFSDIR_$(STAGE1_FSD_FLAVOR))
@@ -54,7 +46,7 @@ endif
 INSTALL_DIRS += $(STAGE1_FSD_LIBSDIR):-
 
 # this makes sure that everything is done
-$(call generate-stamp-rule,$(STAGE1_FSD_STAMP),$(STAGE1_FSD_COPY_STAMP) $(STAGE1_FSD_CLEAN_STAMP))
+$(call generate-stamp-rule,$(STAGE1_FSD_STAMP),$(STAGE1_FSD_COPY_STAMP))
 
 # this detects which libs need to be copied and copies them into two
 # places - the libdirs in the ACI rootfs and a temporary directory at
@@ -67,13 +59,15 @@ $(call generate-stamp-rule,$(STAGE1_FSD_COPY_STAMP),$(STAGE1_FSD_ALL_STAMPS),$(S
 		$(INSTALL) -D "$$$${f}" "$(STAGE1_FSD_LIBSDIR)$$$${f}"; \
 	done)
 
-# This filelist can be generated only after the files were copied.
-$(STAGE1_FSD_FILELIST): $(STAGE1_FSD_COPY_STAMP)
-$(call generate-deep-filelist,$(STAGE1_FSD_FILELIST),$(STAGE1_FSD_LIBSDIR))
-
-# Generate clean.mk file cleaning libraries copied from the host to
-# both the temporary directory and the ACI rootfs directory.
-$(call generate-clean-mk,$(STAGE1_FSD_CLEAN_STAMP),$(STAGE1_FSD_SOLIBS_CLEANMK),$(STAGE1_FSD_FILELIST),$(STAGE1_FSD_LIBSDIR) $(STAGE1_FSD_ACIROOTFSDIR))
+# Generate clean file cleaning libraries copied from the host to both
+# the temporary directory and the ACI rootfs directory. Can happen
+# only after the files were copied.
+$(call generate-clean-mk-simple, \
+	$(STAGE1_FSD_STAMP), \
+	$(STAGE1_FSD_LIBSDIR), \
+	$(STAGE1_FSD_LIBSDIR) $(STAGE1_FSD_ACIROOTFSDIR), \
+	$(STAGE1_FSD_COPY_STAMP), \
+	libs-cleanup)
 
 # STAGE1_FSD_STAMP is deliberately not cleared - it will be used in
 # stage1.mk to create the stage1.aci dependency on the stamp.
