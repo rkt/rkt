@@ -13,7 +13,8 @@ apt-get install -y --no-install-recommends \
         ca-certificates \
         gnupg2 \
         bash-completion \
-        checkinstall
+        checkinstall \
+        curl
 
 curl -sSL https://coreos.com/dist/pubkeys/app-signing-pubkey.gpg | gpg2 --import -
 key=$(gpg2 --with-colons --keyid-format LONG -k security@coreos.com | egrep ^pub | cut -d ':' -f5)
