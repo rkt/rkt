@@ -277,8 +277,8 @@ isolators in the image with new isolators defining the desired syscalls.
 The `patch-manifest` subcommand to `actool` manipulates the syscalls sets
 defined in an image.
 `actool patch-manifest -seccomp-mode=... -seccomp-set=...` options
-can be used together to override any seccomp filters, by specifying a new mode 
-(retain or reset) and set of syscalls to filter.
+can be used together to override any seccomp filters by specifying a new mode
+(retain or reset), an optional custom errno, and a set of syscalls to filter.
 These commands take an input image, modify any existing seccomp isolators, and
 write the changes to an output image, as shown in the example:
 
@@ -299,7 +299,7 @@ $ actool cat-manifest seccomp-retain-set-example.aci
     ]
 ...
 
-$ actool patch-manifest -seccomp-mode=retain -seccomp-set=@rkt/default-whitelist seccomp-retain-set-example.aci seccomp-retain-set-patched.aci
+$ actool patch-manifest -seccomp-mode=retain,errno=ENOSYS -seccomp-set=@rkt/default-whitelist seccomp-retain-set-example.aci seccomp-retain-set-patched.aci
 
 $ actool cat-manifest seccomp-retain-set-patched.aci
 ...
@@ -309,7 +309,8 @@ $ actool cat-manifest seccomp-retain-set-patched.aci
         "value": {
           "set": [
             "@rkt/default-whitelist",
-          ]
+          ],
+          "errno": "ENOSYS"
         }
       }
     ]
@@ -317,7 +318,8 @@ $ actool cat-manifest seccomp-retain-set-patched.aci
 
 ```
 
-Now run the image to verify that the `umount(2)` syscall is no longer allowed:
+Now run the image to verify that the `umount(2)` syscall is no longer allowed,
+and a custom error is returned:
 
 ```
 $ sudo rkt run --interactive --insecure-options=image seccomp-retain-set-patched.aci
@@ -328,7 +330,7 @@ image: using image from local store for image name quay.io/coreos/alpine-sh
 / # mount | grep /proc/bus
 proc on /proc/bus type proc (ro,nosuid,nodev,noexec,relatime)
 / # umount /proc/bus/
-Bad system call
+umount: can't umount /proc/bus: Function not implemented
 ```
 
 ### Overriding seccomp filters at run-time
@@ -342,7 +344,7 @@ Isolator overridden from the command-line will replace all seccomp settings in
 the image manifest, and can be specified as shown in this example:
 
 ```
-$ sudo rkt run --interactive quay.io/coreos/alpine-sh --seccomp mode=remove,socket
+$ sudo rkt run --interactive quay.io/coreos/alpine-sh --seccomp mode=remove,errno=ENOTSUP,socket
 image: using image from file /usr/local/bin/stage1-coreos.aci
 image: using image from local store for image name quay.io/coreos/alpine-sh
 
@@ -351,8 +353,7 @@ root
 
 / # ping -c 1 8.8.8.8
 PING 8.8.8.8 (8.8.8.8): 56 data bytes
-Bad system call
-
+ping: can't create raw socket: Not supported
 ```
 
 Seccomp isolators are application-specific configuration entries, and in a
