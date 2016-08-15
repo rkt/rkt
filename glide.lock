@@ -1,5 +1,5 @@
-hash: d9834cb91d3632bb241bce57f16fba13fbdce46aee98c555774efcf73f94bb10
-updated: 2016-08-04T11:49:40.691485819+02:00
+hash: 641a1665288ef7ea9979edbab5541e39912a2a68f08a65c640ca4b29cd49e4bb
+updated: 2016-08-12T13:08:21.997452984+02:00
 imports:
 - name: github.com/appc/docker2aci
   version: 15d68b33bfee95a448c4da37dbe876baa8fcb5b6
@@ -12,15 +12,15 @@ imports:
   - lib/internal/docker
   - lib/internal/tarball
   - lib/internal/types
+  - lib/internal/typesV2
   - lib/internal/util
   - pkg/log
-  - lib/internal/typesV2
 - name: github.com/appc/goaci
   version: ba7b591f930783c0ab75f5bbfd6ff65c7bd011bf
   subpackages:
   - proj2aci
 - name: github.com/appc/spec
-  version: fd5e3d8f5d596c6fbd506e80b5e13ba8a97b704c
+  version: 01b1a0221620c2f394c0684686dcf111c484873e
   subpackages:
   - ace
   - aci
@@ -53,32 +53,32 @@ imports:
   - pkg/ipam
   - pkg/ns
   - pkg/skel
-  - pkg/testutils
   - pkg/skel
+  - pkg/testutils
   - pkg/testutils
   - pkg/types
   - pkg/utils
   - pkg/utils/sysctl
-  - plugins/ipam/dhcp
-  - plugins/ipam/host-local
-  - plugins/ipam/host-local/backend
-  - plugins/ipam/host-local/backend/disk
-  - plugins/main/bridge
-  - plugins/main/ipvlan
-  - plugins/main/macvlan
-  - plugins/main/ptp
-  - plugins/meta/flannel
-  - plugins/meta/tuning
   - pkg/utils/sysctl
   - plugins/ipam/dhcp
+  - plugins/ipam/dhcp
+  - plugins/ipam/host-local
   - plugins/ipam/host-local
   - plugins/ipam/host-local/backend
+  - plugins/ipam/host-local/backend
+  - plugins/ipam/host-local/backend/disk
   - plugins/ipam/host-local/backend/disk
   - plugins/main/bridge
+  - plugins/main/bridge
+  - plugins/main/ipvlan
   - plugins/main/ipvlan
   - plugins/main/macvlan
+  - plugins/main/macvlan
+  - plugins/main/ptp
   - plugins/main/ptp
   - plugins/meta/flannel
+  - plugins/meta/flannel
+  - plugins/meta/tuning
   - plugins/meta/tuning
 - name: github.com/coreos/gexpect
   version: ca42424d18c76d0d51a4cccd830d11878e9e5c17
@@ -171,9 +171,9 @@ imports:
   - protoc-gen-go
   - protoc-gen-go/descriptor
   - protoc-gen-go/generator
+  - protoc-gen-go/grpc
   - protoc-gen-go/internal/grpc
   - protoc-gen-go/plugin
-  - protoc-gen-go/grpc
 - name: github.com/google/btree
   version: f06e229e679911bb31a04e07ac891115822e37c3
 - name: github.com/gorilla/context
@@ -268,8 +268,8 @@ imports:
   - http2
   - http2/hpack
   - internal/timeseries
-  - trace
   - lex/httplex
+  - trace
 - name: golang.org/x/sys
   version: b44883b474ffefa37335017174e397412b633a4f
   subpackages:
@@ -284,15 +284,15 @@ imports:
   - codes
   - credentials
   - grpclog
+  - internal
   - metadata
   - naming
   - peer
   - transport
-  - internal
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: k8s.io/kubernetes
-  version: 9990f843cd62caa90445cf76b07d63ba7b5c86fd
+  version: 283137936a498aed572ee22af6774b6fb6e9fd94
   subpackages:
   - pkg/api/resource
   - pkg/conversion

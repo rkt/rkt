@@ -200,7 +200,11 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "empty:foo"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: false,
+								},
 							},
 						},
 					},
@@ -237,7 +241,11 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "empty:foo"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: false,
+								},
 							},
 						},
 						ReadOnlyRootFS: true,
@@ -274,7 +282,11 @@ func TestPodManifest(t *testing.T) {
 								{"FILE", "/dir1"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: false,
+								},
 							},
 						},
 					},
@@ -310,7 +322,11 @@ func TestPodManifest(t *testing.T) {
 								{"FILE", "/dir1"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: false,
+								},
 							},
 						},
 						ReadOnlyRootFS: true,
@@ -348,13 +364,21 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "host:foo"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: false,
+								},
 							},
 						},
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil, nil, nil, nil},
+					{
+						Name:   "dir1",
+						Kind:   "host",
+						Source: tmpdir,
+					},
 				},
 			},
 			0,
@@ -379,14 +403,22 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "host:foo"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: false,
+								},
 							},
 						},
 						ReadOnlyRootFS: true,
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil, nil, nil, nil},
+					{
+						Name:   "dir1",
+						Kind:   "host",
+						Source: tmpdir,
+					},
 				},
 			},
 			0,
@@ -411,13 +443,21 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "bar"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", true},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: true,
+								},
 							},
 						},
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil, nil, nil, nil},
+					{
+						Name:   "dir1",
+						Kind:   "host",
+						Source: tmpdir,
+					},
 				},
 			},
 			1,
@@ -442,14 +482,22 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "bar"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", true},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: true,
+								},
 							},
 						},
 						ReadOnlyRootFS: true,
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil, nil, nil, nil},
+					{
+						Name:   "dir1",
+						Kind:   "host",
+						Source: tmpdir,
+					},
 				},
 			},
 			1,
@@ -476,13 +524,22 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "bar"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: false,
+								},
 							},
 						},
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, &boolTrue, nil, nil, nil},
+					{
+						Name:     "dir1",
+						Kind:     "host",
+						Source:   tmpdir,
+						ReadOnly: &boolTrue,
+					},
 				},
 			},
 			1,
@@ -509,14 +566,23 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "bar"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir1", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir1",
+									ReadOnly: false,
+								},
 							},
 						},
 						ReadOnlyRootFS: true,
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, &boolTrue, nil, nil, nil},
+					{
+						Name:     "dir1",
+						Kind:     "host",
+						Source:   tmpdir,
+						ReadOnly: &boolTrue,
+					},
 				},
 			},
 			1,
@@ -542,13 +608,21 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "host:bar"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir2", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir2",
+									ReadOnly: false,
+								},
 							},
 						},
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil, nil, nil, nil},
+					{
+						Name:   "dir1",
+						Kind:   "host",
+						Source: tmpdir,
+					},
 				},
 			},
 			0,
@@ -574,14 +648,22 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "host:bar"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir1", "/dir2", false},
+								{
+									Name:     "dir1",
+									Path:     "/dir2",
+									ReadOnly: false,
+								},
 							},
 						},
 						ReadOnlyRootFS: true,
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil, nil, nil, nil},
+					{
+						Name:   "dir1",
+						Kind:   "host",
+						Source: tmpdir,
+					},
 				},
 			},
 			0,
@@ -604,7 +686,11 @@ func TestPodManifest(t *testing.T) {
 					{Name: baseAppName},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil, nil, nil, nil},
+					{
+						Name:   "dir1",
+						Kind:   "host",
+						Source: tmpdir,
+					},
 				},
 			},
 			0,
@@ -630,7 +716,11 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, nil, nil, nil, nil},
+					{
+						Name:   "dir1",
+						Kind:   "host",
+						Source: tmpdir,
+					},
 				},
 			},
 			0,
@@ -655,7 +745,12 @@ func TestPodManifest(t *testing.T) {
 					{Name: baseAppName},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, &boolFalse, nil, nil, nil},
+					{
+						Name:     "dir1",
+						Kind:     "host",
+						Source:   tmpdir,
+						ReadOnly: &boolFalse,
+					},
 				},
 			},
 			0,
@@ -679,7 +774,12 @@ func TestPodManifest(t *testing.T) {
 					{Name: baseAppName},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, &boolTrue, nil, nil, nil},
+					{
+						Name:     "dir1",
+						Kind:     "host",
+						Source:   tmpdir,
+						ReadOnly: &boolTrue,
+					},
 				},
 			},
 			1,
@@ -706,7 +806,12 @@ func TestPodManifest(t *testing.T) {
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir1", "host", tmpdir, &boolTrue, nil, nil, nil},
+					{
+						Name:     "dir1",
+						Kind:     "host",
+						Source:   tmpdir,
+						ReadOnly: &boolTrue,
+					},
 				},
 			},
 			1,
@@ -795,7 +900,11 @@ func TestPodManifest(t *testing.T) {
 								{"FILE", "/dir/file"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir", "/dir", false},
+								{
+									Name:     "dir",
+									Path:     "/dir",
+									ReadOnly: false,
+								},
 							},
 						},
 					},
@@ -810,13 +919,21 @@ func TestPodManifest(t *testing.T) {
 								{"CONTENT", "host:foo"},
 							},
 							MountPoints: []types.MountPoint{
-								{"dir", "/dir", false},
+								{
+									Name:     "dir",
+									Path:     "/dir",
+									ReadOnly: false,
+								},
 							},
 						},
 					},
 				},
 				Volumes: []types.Volume{
-					{"dir", "host", tmpdir, nil, nil, nil, nil},
+					{
+						Name:   "dir",
+						Kind:   "host",
+						Source: tmpdir,
+					},
 				},
 			},
 			0,
