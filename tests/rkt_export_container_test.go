@@ -23,7 +23,11 @@ import (
 )
 
 func TestExport(t *testing.T) {
-	testCases := []ExportTestCase{noOverlaySimpleTest, specifiedAppTest}
+	testCases := []ExportTestCase{
+		noOverlaySimpleTest,
+		specifiedAppTest,
+		multiAppPodTest,
+	}
 
 	// Need to do both checks
 	if common.SupportsUserNS() && checkUserNS() == nil {
