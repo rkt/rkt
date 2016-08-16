@@ -170,14 +170,7 @@ rkt commands like prepare and run, as a first step, need to retrieve all the ima
 
 This is done with the following chain:
 
-```
- -----------            -----------            ------------
-|           |          |           |          |            |
-|   Fetch   |--------->|   Store   |--------->|   Render   |
-|           |          |           |          |            |
- -----------            -----------            ------------
-
-```
+![image-chain](image-chain.png)
 
 * Fetch: in the fetch phase rkt retrieves the requested images. The fetching implementation depends on the provided image argument such as an image string/hash/https URL/file (e.g. `example.com/app:v1.0`).
 * Store: in the store phase the fetched images are saved to the local store. The local store is a cache for fetched images and related data.
@@ -186,20 +179,7 @@ This is done with the following chain:
 
 These three logical blocks are implemented inside rkt in this way:
 
-```
- ------------            ---------------                -------------                    ------------------------
-|            |          |               |              |             |     overlayfs    |                        |
-|  Fetchers  |--------->|  Image Store  |<-------------|  TreeStore  |<-----------------|  Stage1-2 fs contents  |
-|            |          |               |<----         |             |           -------|                        |
- ------------            ---------------      \         -------------           /        ------------------------
-                                               \                               /
-                                                \       -----------------     /
-                                                 \     |                 |   /
-                                                  -----| Direct stage1-2 |---
-                                                       |   renderer      |
-                                                       |                 |
-                                                        -----------------
-```
+![image-logical-blocks](image-logical-blocks.png)
 
 Currently rkt implements the [appc][appc-spec] internally, converting to it from other container image formats for compatibility. In the future, additional formats like the [OCI image spec][oci-img-spec] may be added to rkt, keeping the same basic scheme for fetching, storing, and rendering application container images.
 
