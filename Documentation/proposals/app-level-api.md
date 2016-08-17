@@ -1,84 +1,96 @@
-# Fine-Grained Pod Manipulations
+# Imperative app-level API for pod manipulation
 
-To provide and API for imperative application operations (e.g. start|stop|add)
+To provide an API for imperative application operations (e.g. start|stop|add)
 inside a pod for finer-grained control over rkt containerization concepts and
 debugging needs, this proposal introduces new stage1 entrypoints and a
 subcommand CLI API that will be used for manipulating applications inside pods.
 
-The motivation behind this change is the direction orchestration systems are
-taking and to facilitate this new direction. For more details, see
+The primary motivation behind this change is to facilitate the new direction
+orchestration systems are taking in how they integrate with container runtimes.
+For more details, see
 [kubernetes#25899](https://github.com/yujuhong/kubernetes/blob/08dc66113399c89e31f6872f3c638695a6ec6a8d/docs/proposals/container-runtime-interface-v1.md).
 
 # API
 
-The envisioned workflow for the app-level CLI API is that after a pod has been started, 
-the users will be invoking the rkt CLI which consist of application logic on top of aforementioned stage1 entrypoints.
+The envisioned workflow for the app-level API is that after a pod has been
+started, users will invoke the rkt CLI to manipulate the pod. The
+implementation behaviour consists of application logic on top of the
+aforementioned stage1 entrypoints.
 
-## rkt app add
-Injects an application image into a running pod.
+The proposed app-level commands are described below.
 
-It first prepares an application rootfs in stage0 for the application image/images
-and then the prepared-app is injected via the entrypoint.
+## `rkt app add`
+Injects an application image into a running pod. After this has been called,
+the app is prepared and ready to be run via `rkt app start`.
+
+It first prepares an application rootfs for the application image, creates a
+runtime manifest for the app, and then injects the prepared app via an
+entrypoint.
 
 ```bash
 rkt app add <pod-uuid> --app=<app-name> <image-name/hash/address/registry-URL> <arguments>
 ```
 
-**Note:** Not every pod will be injectable and it will be enabled through an option.
+**Note:** Not every pod will be injectable; it will be configured through an
+option when the pod is created..
 
-## rkt app rm
-Removes an application image into a running pod, meaning that the leftover resources are removed from the pod.
-
-```bash
-rkt app rm <pod-uuid> --app=<app-name> <arguments>
-```
-
-**Note:** when a pod becomes empty, currently it will terminate, but this
-proposal will introduce a `--mutable` or `--allow-empty` or `--dumb` flag to be
-used when starting pods, so that the lifecycle management of the pod is left to
-the user. Meaning that empty pods won't be terminated.
-
-### Resources Leftover by an Application in Default Stage1 Flavor
-- Rootfs (e.g. `/opt/stage/<app-name>`)
-- Mounts from volumes (e.g. `/opt/stage/<app-name>/<volume-name>`)
-- Mounts related to rkt operations (e.g. `/opt/stage/<app-name>/dev/null`)
-- Systemd service files (e.g. `<app-name>.service` and `reaper-<app-name>.service`)
-- Miscellaneous files (e.g. `/rkt/<app-name>.env`, `/rkt/status...`)
-
-## rkt app start
-Starts an application that was injected.
-This operation is idempotent.
+## `rkt app start`
+Starts an application that was previously added (injected) to a pod. This
+operation is idempotent; if the specified application is already started, it
+will have no effect.
 
 ```bash
 rkt app start <pod-uuid> --app=<app-name> <arguments>
 ```
 
-## rkt app stop
-Stops a running application gracefully (grace is defined in the `app stop` entrypoint section).
+## `rkt app stop`
+Stops a running application gracefully. Grace is defined in the `app/stop`
+entrypoint section. This does not remove associated resources (see `app rm`).
 
 ```bash
 rkt app stop <pod-uuid> --app=<app-name>
 ```
 
-## rkt app list
+## `rkt app rm`
+Removes a stopped application from a running pod, including all associated
+resources.
+
+```bash
+rkt app rm <pod-uuid> --app=<app-name> <arguments>
+```
+
+**Note:** currently, when a pod becomes empty (no apps are running), it will
+terminate. This proposal will introduce a `--mutable` or `--allow-empty` or
+`--dumb` flag to be used when starting pods, so that the lifecycle management
+of the pod is configurable by the user (i.e. it will be possible to create a
+pod that won't be terminated when it is empty).
+
+### Resources left over by a stopped application (in default stage1 flavor)
+- Rootfs (e.g. `/opt/stage2/<app-name>`)
+- Mounts from volumes (e.g. `/opt/stage2/<app-name>/<volume-name>`)
+- Mounts related to rkt operations (e.g. `/opt/stage2/<app-name>/dev/null`)
+- systemd service files (e.g. `<app-name>.service` and `reaper-<app-name>.service`)
+- Miscellaneous files (e.g. `/rkt/<app-name>.env`, `/rkt/status...`)
+
+## `rkt app list`
 Lists the applications that are inside a pod, running or stopped.
 
 ```bash
 rkt app list <pod-uuid> <arguments>
 ```
 
-**Note:** List should consist of an app specifier and status at the very least,
-the rest is up for discussions.
+**Note:** The information returned by list should consist of an app specifier
+and status at the very least, the rest is up for discussion.
 
-## rkt app status
-Returns the execution status of application inside a pod.
+## `rkt app status`
+Returns the execution status of an application inside a pod.
 
 ```bash
 rkt app status <pod-uuid> --app=<app-name> <arguments>
 ```
 
-The returned status information for an example mysql application would contain
-the following details (output format is up for discussion):
+The returned status information for an application would contain the following
+details (output format is up for discussion):
 
 ```go
 type AppStatus struct {
@@ -91,10 +103,11 @@ type AppStatus struct {
 }
 ```
 
-**Note:** status will be obtained from an annotated json file residing in stage1
+**Note:** status will be obtained from an annotated JSON file residing in stage1
 that contains the required information.
+_**OPEN QUESTION**: what is responsible for updating this file? How is concurrent access handled?_
 
-## rkt app exec
+## `rkt app exec`
 Executes a command inside an application.
 
 ```bash
@@ -103,69 +116,42 @@ rkt app exec <pod-uuid> --app=<app-name> <arguments> -- <command> <command-argum
 
 # Entrypoints
 
-In order to facilitate the app-level operations API, 4 new entrypoints are introduced.
+In order to facilitate the app-level operations API, four new stage1 entrypoints are introduced.
+Entrypoints are resolved via annotations found within a pod's stage1 manifest
+(e.g. `/var/lib/rkt/pods/run/$uuid/stage1/manifest`).
 
-For example, the `app start` entrypoint in default stage1 flavor sends a `start` signal
-(similar to `systemctl start`) for the service files of the application to the systemd which is the stage1.
+## `coreos.com/rkt/stage1/app/add`
 
-## rkt app add
+The responsibility of this entrypoint is to receive a prepared app and inject it
+into the pod, where it will be started using the `app/start` entrypoint.
 
-`coreos.com/rkt/stage1/app/add`
+The entrypoint should receive a reference to a runtime manifest of the prepared
+app, and perform any necessary setup based on that runtime manifest.
 
-1. `coreos.com/rkt/stage1/add` entrypoint is resolved via annotations found within `/var/lib/rkt/pods/run/$uuid/stage1/manifest`.
-2. The entrypoint will be executed and passed a reference to the runtime-manifest of the app that was prepared.
-3. Perform setup based on the runtime-manifest of the app.
+## `coreos.com/rkt/stage1/app/rm`
 
-The responsibility of this entrypoint is to receive a prepared app, inject it
-into the pod, where it will be started using `app/start` entrypoint.
-
-### Stage1 Default Flavor Example Workflow
-
-1. Render the application rootfs.
-2. Prepare the application/s
-3. Start the injected application using the `app/start` entrypoint.
-
-This approach is similar to using `rkt run`, instead of creating a new pod,
-an existing pod will be used.
-
-## rkt app rm
-
-`coreos.com/rkt/stage1/app/rm`
+The responsibility of this entrypoint is to remove an app from a pod. After
+`rm`, starting the application again is not possible - the app must be
+re-injected to be re-used.
 
 1. receive a reference to an application that resides inside the pod (running or stopped)
 2. stop the application if its running.
 3. remove the contents of the application (rootfs) from the pod (keep the logs?) and delete references to it (e.g. service files).
-   - Delegate these steps by creating `app/install` and `app/rm` entrypoints?
 
-The responsibility of this entrypoint is to receive an app inside a pod and to remove it from the pod, so that it is ready to be started by the stage1 (e.g. systemd for the default flavor).
-After `rm`, starting the application again is not possible and requires injecting the same
-application using the `app/add` entrypoint.
+## `coreos.com/rkt/stage1/app/start`
 
-### Stage1 Default Flavor Example Workflow
+The responsibility of this entrypoint is to start an application that is in the
+`Prepared` state, which is an app that was recently injected.
 
-1. Stop the application using the `app stop` entrypoint.
-2. Collect the garbage left by the app (e.g. rootfs, unit files, etc.)
-3. Reload the systemd daemon for changes to take place without disturbing the other tennant applications.
+## `coreos.com/rkt/stage1/app/stop`
 
-## rkt app start
+The responsibility of this entrypoint is to stop an application that is
+in the `Running` state, by instructing the stage1.
 
-`coreos.com/rkt/stage1/app/start`
-
-1. given a reference to an application that's in the `Prepared` state, start the application.
-
-The responsibility of this entrypoint is to start an application that is in the `Prepared` state, 
-which is an app that was recently injected, instruct the stage1 to start the application.
-
-## rkt app stop
-
-`coreos.com/rkt/stage1/app/stop`
-
-1. given a reference to an application that's in the `Running` state (see below), instruct the stage1 to stop the application.
-
-The responsibility of this entrypoint is to stop an application that is `Running` by instructing the stage1. 
-
-**Note:** there is a graceful shutdown which sends the termination signal to application and waits for a grace period
-for application to terminate and then the application is shutdown if it doesn't terminate by the end of the grace period.
+rkt will attempt a _graceful shutdown_: sending a termination signal
+(i.e. `SIGTERM`) to application and waiting for a grace period for the
+application to exit. If the application does not terminate by the end of the
+grace period, rkt will forcefully shut it down (i.e. `SIGKILL`).
 
 # App States
 
@@ -190,40 +176,39 @@ const (
 	// Apps that finish their execution naturally.
 	ExitedAppState AppState = "exited"
 
-	// Once an app is marked for ejection, while the ejection is being
+	// Once an app is marked for removal, while the removal is being
 	// performed, no further operations can be done on that app.
 	DeletingAppState AppState = "deleting"
 )
 ```
 
-**Note:** State transitions are linear in that an app that is in state `Exited` cannot transition into `Running` state.
+**Note:** State transitions are linear; an app that is in state `Exited` cannot
+transition into `Running` state.
+_**OPEN QUESTION** can a stopped app not be restarted?_
 
 # Use Cases
 
-## Low-level  Pods
+## Low-level Pod Control
 
-Grant granular access to pods for orchestration systems and allow orchestration systems to develop their
-own pod concept on top of the exposed app-level operations.
+Grant granular access to pods for orchestration systems and allow orchestration
+systems to develop their own pod concept on top of the exposed app-level
+operations.
 
-### Workflow
+### Example Workflow
 
 1. Create an empty pod (specified via an option that allows empty pods to stay alive).
 2. Inject applications into the pod.
 3. Orchestrate the workflow of applications (e.g. app1 has to terminate successfully before app2).
 
-## Pod Mutability
+## Updates
 
 Enable in-place updates of a pod without disrupting the operations of the pod.
 
-### Workflow
+### Example Workflow
 
-1. Remove the old applications without disturbing/restarting the whole pod.
+1. Remove old applications without disturbing/restarting the whole pod.
 2. Inject updated applications.
 3. Start the updated applications.
-
-### Note
-
-Allows the consumers to perform rolling updates inside running pods.
 
 ## Debugging Pods
 
@@ -233,5 +218,5 @@ Allow users to inject debug applications into a pod in production.
 
 1. Deploy an application containing only a Go web service binary.
 2. Encounter an error not decipherable via the available information (e.g. status info, logs, etc.).
-3. Inject a debug ACI containing binaries (e.g. `lsof`) for debugging the service.
+3. Add a debug app image containing binaries (e.g. `lsof`) for debugging the service.
 4. Enter the pod namespace and use the debug binaries.
