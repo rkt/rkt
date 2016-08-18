@@ -230,7 +230,7 @@ func TestDownloading(t *testing.T) {
 		denyAuthTS.URL: "deny auth",
 	}
 	tests := []struct {
-		ACIURL       string
+		aciURL       string
 		remoteExists bool
 		options      http.Header
 		authFail     bool
@@ -259,7 +259,7 @@ func TestDownloading(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		_, err := s.GetRemote(tt.ACIURL)
+		_, err := s.GetRemote(tt.aciURL)
 		if err != nil {
 			if err != imagestore.ErrRemoteNotFound {
 				t.Fatalf("unexpected err: %v", err)
@@ -272,9 +272,9 @@ func TestDownloading(t *testing.T) {
 			t.Fatalf("should've gotten a remote not found error")
 		}
 
-		parsed, err := url.Parse(tt.ACIURL)
+		parsed, err := url.Parse(tt.aciURL)
 		if err != nil {
-			panic(fmt.Sprintf("Invalid url from test server: %s", tt.ACIURL))
+			panic(fmt.Sprintf("Invalid url from test server: %s", tt.aciURL))
 		}
 		headers := map[string]config.Headerer{
 			parsed.Host: &testHeaderer{tt.options},
@@ -284,12 +284,12 @@ func TestDownloading(t *testing.T) {
 			Headers:       headers,
 			InsecureFlags: insecureFlags,
 		}
-		_, err = ft.FetchImage(tt.ACIURL, "", apps.AppImageURL)
+		_, err = ft.FetchImage(tt.aciURL, "", apps.AppImageURL)
 		if err != nil && !tt.authFail {
-			t.Fatalf("expected download to succeed, it failed: %v (server: %q, headers: `%v`)", err, urlToName[tt.ACIURL], tt.options)
+			t.Fatalf("expected download to succeed, it failed: %v (server: %q, headers: `%v`)", err, urlToName[tt.aciURL], tt.options)
 		}
 		if err == nil && tt.authFail {
-			t.Fatalf("expected download to fail, it succeeded (server: %q, headers: `%v`)", urlToName[tt.ACIURL], tt.options)
+			t.Fatalf("expected download to fail, it succeeded (server: %q, headers: `%v`)", urlToName[tt.aciURL], tt.options)
 		}
 	}
 
