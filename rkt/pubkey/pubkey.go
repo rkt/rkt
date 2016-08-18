@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/coreos/rkt/pkg/keystore"
 	rktlog "github.com/coreos/rkt/pkg/log"
@@ -52,8 +54,13 @@ const (
 	AcceptAsk
 )
 
-var log *rktlog.Logger
-var stdout *rktlog.Logger = rktlog.New(os.Stdout, "", false)
+var (
+	log    *rktlog.Logger
+	stdout *rktlog.Logger = rktlog.New(os.Stdout, "", false)
+
+	secureClient   = newClient(false)
+	insecureClient = newClient(true)
+)
 
 func ensureLogger(debug bool) {
 	if log == nil {
@@ -210,7 +217,13 @@ func downloadKey(u *url.URL, skipTLSCheck bool) (*os.File, error) {
 
 	// TODO(krnowak): we should probably apply credential headers
 	// from config here
-	client := getClient(skipTLSCheck)
+	var client *http.Client
+	if skipTLSCheck {
+		client = insecureClient
+	} else {
+		client = secureClient
+	}
+
 	res, err := client.Get(u.String())
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("error getting key"), err)
@@ -234,22 +247,32 @@ func downloadKey(u *url.URL, skipTLSCheck bool) (*os.File, error) {
 	return retTf, nil
 }
 
-func getClient(skipTLSCheck bool) *http.Client {
-	if !skipTLSCheck {
-		return http.DefaultClient
+func newClient(skipTLSCheck bool) *http.Client {
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	} // values taken from stdlib v1.5.3
+
+	tr := &http.Transport{
+		Proxy:               http.ProxyFromEnvironment,
+		Dial:                dialer.Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+	} // values taken from stdlib v1.5.3
+
+	if skipTLSCheck {
+		tr.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
 	}
-	client := *http.DefaultClient
-	// Default transport is hidden behind the RoundTripper
-	// interface, so we can't easily make a copy of it. If this
-	// ever panics, we will have to adapt.
-	realTransport := http.DefaultTransport.(*http.Transport)
-	tr := *realTransport
-	if tr.TLSClientConfig == nil {
-		tr.TLSClientConfig = &tls.Config{}
+
+	return &http.Client{
+		Transport: tr,
+
+		// keys are rather small, long download times are not expected, hence setting a client timeout.
+		// firefox uses a 30s read timeout, being pessimistic bump to 2 minutes.
+		// Note that this includes connection, and tls handshake times, see https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/#clienttimeouts
+		Timeout: 2 * time.Minute,
 	}
-	tr.TLSClientConfig.InsecureSkipVerify = true
-	client.Transport = &tr
-	return &client
 }
 
 // displayKey shows the key summary
