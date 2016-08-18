@@ -5,8 +5,9 @@ sudo: required
 dist: trusty
 
 go:
-  - 1.5.3
-  - 1.6
+  - 1.5.4
+  - 1.6.3
+  - 1.7
 
 env:
   - TARGET=amd64
