@@ -1,3 +1,36 @@
+## 1.13.0
+
+This release introduces support for exporting single applications out of multi-app pods. Moreover, it adds additional support to control device manipulation inside pods. Finally all runtime security features can now be optionally disabled at the pod level via new insecure options. This version also contains multiple bugfixes and supports Go 1.7.
+
+### New features and UX changes
+
+- export: name flag for exporting multi-app pods ([#3030](https://github.com/coreos/rkt/pull/3030)).
+- stage1: limit device node creation/reading/writing with DevicePolicy= and DeviceAllow= ([#3027](https://github.com/coreos/rkt/pull/3027), [#3058](https://github.com/coreos/rkt/pull/3058)).
+- rkt: implements --insecure-options={capabilities,paths,seccomp,run-all} ([#2983](https://github.com/coreos/rkt/pull/2983)).
+
+#### Bug fixes
+
+- kvm: use a properly formatted comment for iptables chains ([#3038](https://github.com/coreos/rkt/pull/3038)). rkt was using the chain name as comment, which could lead to confusion.
+- pkg/label: supply mcsdir as function argument to InitLabels() ([#3045](https://github.com/coreos/rkt/pull/3045)).
+- api_service: improve machined call error output ([#3059](https://github.com/coreos/rkt/pull/3059)).
+- general: fix old appc/spec version in various files ([#3055](https://github.com/coreos/rkt/pull/3055)).
+- rkt/pubkey: use custom http client including timeout ([#3084](https://github.com/coreos/rkt/pull/3084)).
+- dist: remove quotes from rkt-api.service ExecStart ([#3079](https://github.com/coreos/rkt/pull/3079)).
+- build: multiple fixes ([#3042](https://github.com/coreos/rkt/pull/3042), [#3041](https://github.com/coreos/rkt/pull/3041), [#3046](https://github.com/coreos/rkt/pull/3046)).
+- configure: disable tests on host flavor with systemd <227 ([#3047](https://github.com/coreos/rkt/pull/3047)).
+
+#### Other changes
+
+- travis: add go 1.7, bump go 1.5/1.6 ([#3077](https://github.com/coreos/rkt/pull/3077)).
+- api_service: Add lru cache to cache image info ([#2910](https://github.com/coreos/rkt/pull/2910)).
+- scripts: add curl as build dependency ([#3070](https://github.com/coreos/rkt/pull/3070)).
+- vendor: use appc/spec 0.8.6 and k8s.io/kubernetes v1.3.0 ([#3063](https://github.com/coreos/rkt/pull/3063)).
+- common: use fileutil.IsExecutable() ([#3023](https://github.com/coreos/rkt/pull/3023)).
+- build: Stop printing irrelevant invalidation messages ([#3050](https://github.com/coreos/rkt/pull/3050)).
+- build: Make generating clean files simpler to do ([#3057](https://github.com/coreos/rkt/pull/3057)).
+- Documentation: misc changes ([#3053](https://github.com/coreos/rkt/pull/3053), [#2911](https://github.com/coreos/rkt/pull/2911), [#3035](https://github.com/coreos/rkt/pull/3035), [#3036](https://github.com/coreos/rkt/pull/3036), [#3037](https://github.com/coreos/rkt/pull/3037), [#2945](https://github.com/coreos/rkt/pull/2945), [#3083](https://github.com/coreos/rkt/pull/3083), [#3076](https://github.com/coreos/rkt/pull/3076), [#3033](https://github.com/coreos/rkt/pull/3033), [#3064](https://github.com/coreos/rkt/pull/3064), [#2932](https://github.com/coreos/rkt/pull/2932)).
+- functional tests: misc fixes ([#3049](https://github.com/coreos/rkt/pull/3049)).
+
 ## 1.12.0
 
 This release introduces support for seccomp filtering via two new seccomp isolators. It also gives a boost to api-service performance by introducing manifest caching. Finally it fixes several regressions related to Docker images handling.
