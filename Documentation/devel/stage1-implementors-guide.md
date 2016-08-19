@@ -58,7 +58,7 @@ Stage1 implementors have two options for doing so; only one must be implemented:
 
 * `--debug` to activate debugging
 * `--net[=$NET1,$NET2,...]` to configure the creation of a contained network.
-  See the [rkt networking documentation](../networking.html) for details.
+  See the [rkt networking documentation](../networking/overview.md) for details.
 * `--mds-token=$TOKEN` passes the auth token to the apps via `AC_METADATA_URL` env var
 * `--interactive` to run a pod interactively, that is, pass standard input to the application (only for pods with one application)
 * `--local-config=$PATH` to override the local configuration directory
