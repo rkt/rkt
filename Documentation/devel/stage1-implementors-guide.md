@@ -62,7 +62,7 @@ Stage1 implementors have two options for doing so; only one must be implemented:
 * `--mds-token=$TOKEN` passes the auth token to the apps via `AC_METADATA_URL` env var
 * `--interactive` to run a pod interactively, that is, pass standard input to the application (only for pods with one application)
 * `--local-config=$PATH` to override the local configuration directory
-* `--private-users=$SHIFT` to define a UID/GID shift when using user namespaces. SHIFT is a two-value colon-separated parameter, the first value is the first host UID to assign to the container and the second one is the number of host UIDs to assign.
+* `--private-users=$SHIFT` to define a UID/GID shift when using user namespaces. SHIFT is a two-value colon-separated parameter, the first value is the host UID to assign to the container and the second one is the number of host UIDs to assign.
 
 #### Arguments added in interface version 2
 
@@ -110,11 +110,13 @@ For example, it removes the network namespace of a pod.
 * `--debug` to activate debugging
 * UUID of the pod
 
-### `rkt stop` => "coreos.com/rkt/stage1/stop"
+### rkt stop
+
+`coreos.com/rkt/stage1/stop`
 
 The optional stop entrypoint initiates an orderly shutdown of stage1.
 
-In the bundled rkt stage 1, the entrypoint is sending SIGTERM signal to systemd-nspawn. Fore kvm flavor, it is calling `systemctl halt` on the container (through SSH) for kvm flavor
+In the bundled rkt stage 1, the entrypoint is sending SIGTERM signal to systemd-nspawn. For kvm flavor, it is calling `systemctl halt` on the container (through SSH).
 
 #### Arguments
 
