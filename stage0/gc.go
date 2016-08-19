@@ -83,7 +83,7 @@ func (m mounts) getMountDepth(i int) int {
 		found = false
 		for _, mnt := range m {
 			if mnt.id == current.parentID {
-				ancestorCount += 1
+				ancestorCount++
 				current = mnt
 				found = true
 				break
@@ -189,7 +189,7 @@ func MountGC(path, uuid string) error {
 		return errwrap.Wrap(fmt.Errorf("error getting mounts for pod %s from mountinfo", uuid), err)
 	}
 
-	for i := len(mnts) - 1; i >= 0; i -= 1 {
+	for i := len(mnts) - 1; i >= 0; i-- {
 		mnt := mnts[i]
 		if needsRemountPrivate(mnt) {
 			if err := syscall.Mount("", mnt.mountPoint, "", syscall.MS_PRIVATE, ""); err != nil {

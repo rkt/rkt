@@ -27,6 +27,7 @@ import (
 	"github.com/appc/spec/schema/types"
 )
 
+// StopPod stops the given pod.
 func StopPod(dir string, force bool, uuid *types.UUID) error {
 	s1rootfs := common.Stage1RootfsPath(dir)
 

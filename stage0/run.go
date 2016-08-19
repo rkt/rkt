@@ -57,7 +57,7 @@ import (
 
 var debugEnabled bool
 
-// configuration parameters required by Prepare
+// PrepareConfig defines the configuration parameters required by Prepare
 type PrepareConfig struct {
 	*CommonConfig
 	Apps               *apps.Apps          // apps to prepare
@@ -71,7 +71,7 @@ type PrepareConfig struct {
 	PrivateUsers       *user.UidRange      // User namespaces
 }
 
-// configuration parameters needed by Run
+// RunConfig defines the configuration parameters needed by Run
 type RunConfig struct {
 	*CommonConfig
 	Net                  common.NetList // pod should have its own network stack
@@ -90,7 +90,7 @@ type RunConfig struct {
 	InsecureSeccomp      bool           // Do not add seccomp restrictions
 }
 
-// configuration shared by both Run and Prepare
+// CommonConfig defines the configuration shared by both Run and Prepare
 type CommonConfig struct {
 	Store        *imagestore.Store // store containing all of the configured application images
 	TreeStore    *treestore.Store  // store containing all of the configured application images
@@ -110,6 +110,7 @@ func init() {
 	runtime.LockOSThread()
 }
 
+// InitDebug enables debugging
 func InitDebug() {
 	debugEnabled = true
 	log.SetDebug(true)
