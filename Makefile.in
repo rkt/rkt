@@ -19,7 +19,7 @@ ABS_GO := @ABS_GO@
 # [STAGE1] build settings
 
 # selinux tags for rkt and functional tests
-RKT_TAGS := -tags "selinux @TPM_TAGS@ @SDJOURNAL_TAGS@ @KVM_HV_TAG@"
+RKT_TAGS := -tags "selinux @TPM_TAGS@ @SDJOURNAL_TAGS@"
 # stage1 build mode
 
 RKT_VERSION := @RKT_VERSION@

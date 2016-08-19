@@ -116,7 +116,6 @@ AC_ARG_WITH([stage1-systemd-version],
             [RKT_STAGE1_SYSTEMD_VER='auto'])
 
 # STAGE1 - kvm hypervisor. lkvm or/and qemu can be chosen
-KVM_HV_TAG=hv_lkvm
 AC_ARG_WITH([stage1-kvm-hypervisors],
             [AS_HELP_STRING([--with-stage1-kvm-hypervisors],
                             [select hypervisors for kvm flavor; build stage1 aci for each of them. select "lkvm", "qemu" or both (default: 'lkvm')])],
@@ -799,8 +798,6 @@ AC_SUBST(RKT_STAGE1_KVM_ALL_HV)
 AC_SUBST(RKT_STAGE1_KVM_HV)
 AC_SUBST(TPM_TAGS)
 AC_SUBST(SDJOURNAL_TAGS)
-
-AC_SUBST(KVM_HV_TAG)
 
 AC_SUBST(RKT_DEFINES_FOR_ENTER)
 
