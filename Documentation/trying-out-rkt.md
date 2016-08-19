@@ -96,7 +96,7 @@ The following command starts an `nginx` container, for simplicity using [*host n
 sudo rkt run --net=host --insecure-options=image docker://nginx
 ```
 
-The nginx container is now accessible on the host under http://172.28.128.3.
+The nginx container is now accessible on the host under `http://172.28.128.3`.
 
 In order to use containers with the default [*contained network*][contained-network], a route to the 172.16.28.0/24 container network must be configured from the host through the VM:
 
@@ -121,7 +121,7 @@ UUID		APP	IMAGE NAME					STATE	CREATED		STARTED		NETWORKS
 0c3ab969	nginx	registry-1.docker.io/library/nginx:latest	running	2 minutes ago	2 minutes ago	default:ip4=172.16.28.2
 ```
 
-In this example, the nginx container was assigned the IP address 172.16.28.2 (the address assigned on your system may vary). Since we established a route from the host to the `172.16.28.0/24` pod network the nginx container is now accessible on the host under http://172.16.28.2.
+In this example, the nginx container was assigned the IP address 172.16.28.2 (the address assigned on your system may vary). Since we established a route from the host to the `172.16.28.0/24` pod network the nginx container is now accessible on the host under `http://172.16.28.2`.
 
 Success! The rest of the guide can now be followed normally.
 
