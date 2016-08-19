@@ -35,6 +35,7 @@ type ExportTestCase struct {
 	exportArgs     string
 	expectedResult string
 	unmountOverlay bool
+	multiAppPod    bool
 }
 
 type exportTest []ExportTestCase
@@ -47,6 +48,7 @@ var (
 		"",
 		testContent,
 		false,
+		false,
 	}
 
 	specifiedAppTest = ExportTestCase{
@@ -56,6 +58,17 @@ var (
 		"--app=rkt-inspect",
 		testContent,
 		false,
+		false,
+	}
+
+	multiAppPodTest = ExportTestCase{
+		"--no-overlay --insecure-options=image",
+		"--write-file --file-name=" + testFile + " --content=" + testContent,
+		"--read-file --file-name=" + testFile,
+		"--app=rkt-inspect",
+		testContent,
+		false,
+		true,
 	}
 
 	userNS = ExportTestCase{
@@ -64,6 +77,7 @@ var (
 		"--read-file --file-name=" + testFile,
 		"",
 		testContent,
+		false,
 		false,
 	}
 
@@ -74,6 +88,7 @@ var (
 		"",
 		testContent,
 		false,
+		false,
 	}
 
 	overlaySimulateReboot = ExportTestCase{
@@ -83,6 +98,7 @@ var (
 		"",
 		testContent,
 		true,
+		false,
 	}
 )
 
@@ -102,8 +118,17 @@ func (ct ExportTestCase) Execute(t *testing.T, ctx *testutils.RktRunCtx) {
 	tmpTestAci := filepath.Join(tmpDir, "test.aci")
 
 	// Prepare the image with modifications
-	const runInspect = "%s %s %s %s --exec=/inspect -- %s"
-	prepareCmd := fmt.Sprintf(runInspect, ctx.Cmd(), "prepare", ct.runArgs, getInspectImagePath(), ct.writeArgs)
+	var additionalRunArgs string
+	if ct.multiAppPod {
+		tmpAdditionalAci := patchTestACI("other.aci", "--name=other")
+		defer os.Remove(tmpAdditionalAci)
+		const otherArgs = "--write-file --file-name=test.txt --content=NotTheRightContent"
+		additionalRunArgs = fmt.Sprintf("%s --exec=/inspect -- %s", tmpAdditionalAci, otherArgs)
+	} else {
+		additionalRunArgs = ""
+	}
+	const runInspect = "%s %s %s %s --exec=/inspect -- %s --- %s"
+	prepareCmd := fmt.Sprintf(runInspect, ctx.Cmd(), "prepare", ct.runArgs, getInspectImagePath(), ct.writeArgs, additionalRunArgs)
 	t.Logf("Preparing 'inspect --write-file'")
 	uuid := runRktAndGetUUID(t, prepareCmd)
 
@@ -123,7 +148,7 @@ func (ct ExportTestCase) Execute(t *testing.T, ctx *testutils.RktRunCtx) {
 	waitOrFail(t, child, 0)
 
 	// Run the newly created ACI and check the output
-	readCmd := fmt.Sprintf(runInspect, ctx.Cmd(), "run", ct.runArgs, tmpTestAci, ct.readArgs)
+	readCmd := fmt.Sprintf(runInspect, ctx.Cmd(), "run", ct.runArgs, tmpTestAci, ct.readArgs, "")
 	t.Logf("Running 'inspect --read-file'")
 	child = spawnOrFail(t, readCmd)
 	if ct.expectedResult != "" {
