@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build hv_qemu
-
-package hypervisor
+package hvqemu
 
 import (
 	"fmt"
@@ -23,13 +21,14 @@ import (
 	"strings"
 
 	"github.com/coreos/rkt/stage1/init/kvm"
+	"github.com/coreos/rkt/stage1/init/kvm/hypervisor"
 )
 
 // StartCmd takes path to stage1, name of the machine, path to kernel, network describers, memory in megabytes
 // and quantity of cpus and prepares command line to run QEMU process
 func StartCmd(wdPath, name, kernelPath string, nds []kvm.NetDescriber, cpu, mem int64, debug bool) []string {
 	var (
-		driverConfiguration = KvmHypervisor{
+		driverConfiguration = hypervisor.KvmHypervisor{
 			Bin: "./qemu",
 			KernelParams: []string{
 				"root=/dev/root",
