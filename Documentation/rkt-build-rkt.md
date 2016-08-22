@@ -62,8 +62,8 @@ The build output will be in `${SRC_DIR}/build-rkt-${RKT_VERSION}+git`.
 ## Debian Sid
 ```
 rkt run \
-    --volume rslvconf,kind=host,source=/etc/resolv.conf
-    --mount volume=rslvconf,target=/etc/resolv.conf
+    --volume rslvconf,kind=host,source=/etc/resolv.conf \
+    --mount volume=rslvconf,target=/etc/resolv.conf \
     --volume src-dir,kind=host,source=$SRC_DIR \
     --mount volume=src-dir,target=/opt/rkt \
     --interactive \
@@ -76,8 +76,8 @@ rkt run \
 ## Fedora 22
 ```
 rkt run \
-    --volume rslvconf,kind=host,source=/etc/resolv.conf
-    --mount volume=rslvconf,target=/etc/resolv.conf
+    --volume rslvconf,kind=host,source=/etc/resolv.conf \
+    --mount volume=rslvconf,target=/etc/resolv.conf \
     --volume src-dir,kind=host,source=$SRC_DIR \
     --mount volume=src-dir,target=/opt/rkt \
     --interactive \
