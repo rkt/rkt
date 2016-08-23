@@ -215,8 +215,9 @@ func installAssets() error {
 	return proj2aci.PrepareAssets(assets, "./stage1/rootfs/", nil)
 }
 
-// getArgsEnv returns the nspawn or lkvm args and env according to the flavor used
-func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networking.Networking, insecureOptions stage1initcommon.Stage1InsecureOptions) ([]string, []string, error) {
+// getArgsEnv returns the nspawn or lkvm args and env according to the flavor
+// as the first two return values respectively.
+func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister bool, debug bool, n *networking.Networking, insecureOptions stage1initcommon.Stage1InsecureOptions) ([]string, []string, error) {
 	var args []string
 	env := os.Environ()
 
@@ -298,7 +299,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 			args = append(args, fmt.Sprintf("-L%s", context))
 		}
 
-		if machinedRegister() {
+		if canMachinedRegister {
 			args = append(args, fmt.Sprintf("--register=true"))
 		} else {
 			args = append(args, fmt.Sprintf("--register=false"))
@@ -320,7 +321,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 			args = append(args, fmt.Sprintf("-L%s", context))
 		}
 
-		if machinedRegister() {
+		if canMachinedRegister {
 			args = append(args, fmt.Sprintf("--register=true"))
 		} else {
 			args = append(args, fmt.Sprintf("--register=false"))
@@ -581,7 +582,12 @@ func stage1() int {
 		return 1
 	}
 
-	args, env, err := getArgsEnv(p, flavor, debug, n, insecureOptions)
+	canMachinedRegister := false
+	if flavor != "kvm" {
+		// kvm doesn't register with systemd right now, see #2664.
+		canMachinedRegister = machinedRegister()
+	}
+	args, env, err := getArgsEnv(p, flavor, canMachinedRegister, debug, n, insecureOptions)
 	if err != nil {
 		log.Error(err)
 		return 1
@@ -622,13 +628,14 @@ func stage1() int {
 	}
 	s1Root := common.Stage1RootfsPath(p.Root)
 	machineID := stage1initcommon.GetMachineID(p)
-	subcgroup, err := getContainerSubCgroup(machineID)
+	subcgroup, err := getContainerSubCgroup(machineID, canMachinedRegister)
 	if err == nil {
 		if err := ioutil.WriteFile(filepath.Join(p.Root, "subcgroup"),
 			[]byte(fmt.Sprintf("%s", subcgroup)), 0644); err != nil {
 			log.FatalE("cannot write subcgroup file", err)
 			return 1
 		}
+
 		if err := mountContainerCgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
 			log.PrintE("couldn't mount the container cgroups", err)
 			return 1
@@ -720,7 +727,7 @@ func mountContainerCgroups(s1Root string, enabledCgroups map[int][]string, subcg
 	return nil
 }
 
-func getContainerSubCgroup(machineID string) (string, error) {
+func getContainerSubCgroup(machineID string, canMachinedRegister bool) (string, error) {
 	var subcgroup string
 	fromUnit, err := util.RunningFromSystemService()
 	if err != nil {
@@ -743,7 +750,7 @@ func getContainerSubCgroup(machineID string) (string, error) {
 	} else {
 		escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
 		machineDir := "machine-" + escapedmID + ".scope"
-		if machinedRegister() {
+		if canMachinedRegister {
 			// we are not in the final cgroup yet: systemd-nspawn will move us
 			// to the correct cgroup later during registration so we can't
 			// look it up in /proc/self/cgroup
