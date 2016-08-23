@@ -221,8 +221,8 @@ func TestImageDependencies(t *testing.T) {
 
 func TestRenderOnFetch(t *testing.T) {
 	// If overlayfs is not supported, we don't render images on fetch
-	if !common.SupportsOverlay() {
-		t.Skip("Overlay fs not supported.")
+	if err := common.SupportsOverlay(); err != nil {
+		t.Skipf("Overlay fs not supported: %v", err)
 	}
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()

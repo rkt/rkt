@@ -88,6 +88,7 @@ type RunConfig struct {
 	InsecureCapabilities bool           // Do not restrict capabilities
 	InsecurePaths        bool           // Do not restrict access to files in sysfs or procfs
 	InsecureSeccomp      bool           // Do not add seccomp restrictions
+	UseOverlay           bool           // run pod with overlay fs
 }
 
 // CommonConfig defines the configuration shared by both Run and Prepare
@@ -423,22 +424,6 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 	return nil
 }
 
-func preparedWithOverlay(dir string) (bool, error) {
-	_, err := os.Stat(filepath.Join(dir, common.OverlayPreparedFilename))
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-
-	if !common.SupportsOverlay() {
-		return false, fmt.Errorf("the pod was prepared with overlay but overlay is not supported")
-	}
-
-	return true, nil
-}
-
 func preparedWithPrivateUsers(dir string) (string, error) {
 	bytes, err := ioutil.ReadFile(filepath.Join(dir, common.PrivateUsersPreparedFilename))
 	if os.IsNotExist(err) {
@@ -486,24 +471,19 @@ func addResolvConf(cfg RunConfig, rootfs string) {
 // Run mounts the right overlay filesystems and actually runs the prepared
 // pod by exec()ing the stage1 init inside the pod filesystem.
 func Run(cfg RunConfig, dir string, dataDir string) {
-	useOverlay, err := preparedWithOverlay(dir)
-	if err != nil {
-		log.FatalE("error preparing overlay", err)
-	}
-
 	privateUsers, err := preparedWithPrivateUsers(dir)
 	if err != nil {
 		log.FatalE("error preparing private users", err)
 	}
 
 	debug("Setting up stage1")
-	if err := setupStage1Image(cfg, dir, useOverlay); err != nil {
+	if err := setupStage1Image(cfg, dir, cfg.UseOverlay); err != nil {
 		log.FatalE("error setting up stage1", err)
 	}
 	debug("Wrote filesystem to %s\n", dir)
 
 	for _, app := range cfg.Apps {
-		if err := setupAppImage(cfg, app.Name, app.Image.ID, dir, useOverlay); err != nil {
+		if err := setupAppImage(cfg, app.Name, app.Image.ID, dir, cfg.UseOverlay); err != nil {
 			log.FatalE("error setting up app image", err)
 		}
 	}

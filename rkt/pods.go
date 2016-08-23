@@ -1134,3 +1134,17 @@ func (p *pod) sync() error {
 	}
 	return nil
 }
+
+// overlayPrepared returns true if the given pod was prepared using overlay else false.
+// It returns an error if the operation failed.
+func (p *pod) overlayPrepared() (bool, error) {
+	_, err := os.Stat(filepath.Join(p.path(), common.OverlayPreparedFilename))
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

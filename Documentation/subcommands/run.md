@@ -340,6 +340,16 @@ rkt expects stage1 images to be signed except in the following cases:
 
 For more details see the [hacking documentation](../hacking.md).
 
+## Disabling overlay
+
+rkt uses overlayfs by default when running application containers. This provides immense benefits to performance and efficiency: start times for large containers are much faster, and multiple pods using the same images will consume less disk space and can share page cache entries.
+
+This feature will be disabled automatically if the underlying filesystem does not support overlay fs, see the [prepare](prepare.md) subcommand for details. This feature can also be explicitly disabled with the `--no-overlay` option:
+
+```
+# rkt run --no-overlay=true --insecure-options=image coreos.com/etcd:v2.0.0
+```
+
 ## Options
 
 | Flag | Default | Options | Description |

@@ -53,9 +53,12 @@ func (f *Fetcher) FetchImage(img string, ascPath string, imgType apps.AppImageTy
 			return "", err
 		}
 	}
+
 	// we need to be able to do a chroot and access to the tree store
-	// directories, check if we're root
-	if common.SupportsOverlay() && os.Geteuid() == 0 {
+	// directories, we need to
+	// 1) check if the system supports OverlayFS
+	// 2) check if we're root
+	if common.SupportsOverlay() == nil && os.Geteuid() == 0 {
 		if _, _, err := f.Ts.Render(hash, false); err != nil {
 			return "", errwrap.Wrap(errors.New("error rendering tree store"), err)
 		}

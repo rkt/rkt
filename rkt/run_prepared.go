@@ -125,6 +125,30 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		rktgid = -1
 	}
 
+	ovlOk := true
+	if err := common.PathSupportsOverlay(getDataDir()); err != nil {
+		if oerr, ok := err.(common.ErrOverlayUnsupported); ok {
+			stderr.Printf("disabling overlay support: %q", oerr.Error())
+			ovlOk = false
+		} else {
+			stderr.PrintE("error determining overlay support", err)
+			return 1
+		}
+	}
+
+	ovlPrep, err := p.overlayPrepared()
+	if err != nil {
+		stderr.PrintE("unable to determine prepared overlay state", err)
+		return 1
+	}
+
+	// should not happen, maybe the data directory moved from an overlay-enabled fs to another location
+	// between prepare and run-prepared
+	if ovlPrep && !ovlOk {
+		stderr.Print("unable to run prepared overlay-enabled pod: overlay not supported")
+		return 1
+	}
+
 	rcfg := stage0.RunConfig{
 		CommonConfig: &stage0.CommonConfig{
 			Store:     s,
@@ -145,6 +169,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		InsecureCapabilities: globalFlags.InsecureFlags.SkipCapabilities(),
 		InsecurePaths:        globalFlags.InsecureFlags.SkipPaths(),
 		InsecureSeccomp:      globalFlags.InsecureFlags.SkipSeccomp(),
+		UseOverlay:           ovlPrep && ovlOk,
 	}
 	if globalFlags.Debug {
 		stage0.InitDebug()

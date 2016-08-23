@@ -23,8 +23,8 @@ import (
 )
 
 func TestExport(t *testing.T) {
-	if !common.SupportsOverlay() {
-		t.Skip("Overlay fs not supported.")
+	if err := common.SupportsOverlay(); err != nil {
+		t.Skipf("Overlay fs not supported: %v", err)
 	}
 
 	// TODO(iaguis): we need a new function to unmount the fly pod so we can also test

@@ -182,9 +182,20 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		Debug:       globalFlags.Debug,
 	}
 
+	ovlOk := true
+	if err := common.PathSupportsOverlay(getDataDir()); err != nil {
+		if oerr, ok := err.(common.ErrOverlayUnsupported); ok {
+			stderr.Printf("disabling overlay support: %q", oerr.Error())
+			ovlOk = false
+		} else {
+			stderr.PrintE("error determining overlay support", err)
+			return 1
+		}
+	}
+
 	pcfg := stage0.PrepareConfig{
 		CommonConfig:       &cfg,
-		UseOverlay:         !flagNoOverlay && common.SupportsOverlay() && common.FSSupportsOverlay(getDataDir()),
+		UseOverlay:         !flagNoOverlay && ovlOk,
 		PrivateUsers:       privateUsers,
 		SkipTreeStoreCheck: globalFlags.InsecureFlags.SkipOnDiskCheck(),
 	}
