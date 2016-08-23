@@ -63,3 +63,8 @@ func interfaceVersionSupportsHostname(version int) bool {
 func interfaceVersionSupportsInsecureOptions(version int) bool {
 	return version > 2
 }
+
+// support --dns-mode and --hostentry
+func interfaceVersionSupportsDNSConfMode(version int) bool {
+	return version > 3
+}

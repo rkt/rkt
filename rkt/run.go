@@ -19,11 +19,13 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/appc/spec/schema/types"
+	cnitypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/label"
 	"github.com/coreos/rkt/pkg/lock"
@@ -65,6 +67,7 @@ image arguments with a lone "---" to resume argument parsing.`,
 	flagDNS          flagStringList
 	flagDNSSearch    flagStringList
 	flagDNSOpt       flagStringList
+	flagDNSDomain    string
 	flagNoOverlay    bool
 	flagStoreOnly    bool
 	flagNoStore      bool
@@ -72,10 +75,16 @@ image arguments with a lone "---" to resume argument parsing.`,
 	flagMDSRegister  bool
 	flagUUIDFileSave string
 	flagHostname     string
+	flagHostsEntries flagStringList
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdRun)
+
+	/*
+	   Careful!
+	   Be sure to add common flags to run-prepared as well!
+	*/
 
 	addStage1ImageFlags(cmdRun.Flags())
 	cmdRun.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires contained network). Syntax: --port=NAME:HOSTPORT")
@@ -87,9 +96,11 @@ func init() {
 	cmdRun.Flags().Var(&flagExplicitEnv, "set-env", "environment variable to set for apps in the form name=value")
 	cmdRun.Flags().Var(&flagEnvFromFile, "set-env-file", "path to an environment variables file")
 	cmdRun.Flags().BoolVar(&flagInteractive, "interactive", false, "run pod interactively. If true, only one image may be supplied.")
-	cmdRun.Flags().Var(&flagDNS, "dns", "name servers to write in /etc/resolv.conf")
+	cmdRun.Flags().Var(&flagDNS, "dns", "name servers to write in /etc/resolv.conf. Pass 'host' to use host's resolv.conf. Pass 'none' to ignore CNI DNS config")
 	cmdRun.Flags().Var(&flagDNSSearch, "dns-search", "DNS search domains to write in /etc/resolv.conf")
 	cmdRun.Flags().Var(&flagDNSOpt, "dns-opt", "DNS options to write in /etc/resolv.conf")
+	cmdRun.Flags().StringVar(&flagDNSDomain, "dns-domain", "", "DNS domain to write in /etc/resolv.conf")
+	cmdRun.Flags().Var(&flagHostsEntries, "hosts-entry", "Entries to add to the pod-wide /etc/hosts. Pass 'host' to use the host's /etc/hosts")
 	cmdRun.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
 	cmdRun.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
 	cmdRun.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--net', '--no-overlay' and '--interactive' will have effect")
@@ -120,6 +131,7 @@ func init() {
 	flagDNS = flagStringList{}
 	flagDNSSearch = flagStringList{}
 	flagDNSOpt = flagStringList{}
+	flagHostsEntries = flagStringList{}
 
 	// Disable interspersed flags to stop parsing after the first non flag
 	// argument. All the subsequent parsing will be done by parseApps.
@@ -323,14 +335,19 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		rktgid = -1
 	}
 
+	DNSConfMode, DNSConfig, HostsEntries, err := parseDNSFlags(flagHostsEntries, flagDNS, flagDNSSearch, flagDNSOpt, flagDNSDomain)
+	if err != nil {
+		stderr.PrintE("error with dns flags", err)
+		return 1
+	}
+
 	rcfg := stage0.RunConfig{
 		CommonConfig:         &cfg,
 		Net:                  flagNet,
 		LockFd:               lfd,
 		Interactive:          flagInteractive,
-		DNS:                  flagDNS,
-		DNSSearch:            flagDNSSearch,
-		DNSOpt:               flagDNSOpt,
+		DNSConfMode:          DNSConfMode,
+		DNSConfig:            DNSConfig,
 		MDSRegister:          flagMDSRegister,
 		LocalConfig:          globalFlags.LocalConfigDir,
 		RktGid:               rktgid,
@@ -339,6 +356,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		InsecurePaths:        globalFlags.InsecureFlags.SkipPaths(),
 		InsecureSeccomp:      globalFlags.InsecureFlags.SkipSeccomp(),
 		UseOverlay:           useOverlay,
+		HostsEntries:         *HostsEntries,
 	}
 
 	apps, err := p.getApps()
@@ -510,4 +528,100 @@ func (e *envFileMap) Strings() []string {
 
 func (e *envFileMap) Type() string {
 	return "envFileMap"
+}
+
+/*
+ * Parse out the --hosts-entries, --dns, --dns-search, and --dns-opt flags
+ * This includes decoding the "magic" values for hosts-entries and dns.
+ * Try to detect any obvious insanity, namely invalid IPs or more than one
+ * magic option
+ */
+func parseDNSFlags(flagHostsEntries, flagDNS, flagDNSSearch, flagDNSOpt []string, flagDNSDomain string) (stage0.DNSConfMode, cnitypes.DNS, *stage0.HostsEntries, error) {
+	DNSConfMode := stage0.DNSConfMode{
+		Resolv: "default",
+		Hosts:  "default",
+	}
+	DNSConfig := cnitypes.DNS{}
+	HostsEntries := make(stage0.HostsEntries)
+
+	// Loop through --dns and look for magic option
+	// Check for obvious insanity - only one magic option allowed
+	for _, d := range flagDNS {
+		// parse magic values
+		if d == "host" || d == "none" {
+			if len(flagDNS) > 1 {
+				return DNSConfMode, DNSConfig, &HostsEntries,
+					fmt.Errorf("no other --dns options allowed when --dns=%s is passed", d)
+			}
+			DNSConfMode.Resolv = d
+			break
+
+		} else {
+			// parse list of IPS
+			for _, d := range strings.Split(d, ",") {
+				if net.ParseIP(d) == nil {
+					return DNSConfMode, DNSConfig, &HostsEntries,
+						fmt.Errorf("Invalid IP passed to --dns: %s", d)
+				}
+				DNSConfig.Nameservers = append(DNSConfig.Nameservers, d)
+			}
+		}
+	}
+
+	DNSConfig.Search = flagDNSSearch
+	DNSConfig.Options = flagDNSOpt
+	DNSConfig.Domain = flagDNSDomain
+
+	if !common.IsDNSZero(&DNSConfig) {
+		if DNSConfMode.Resolv == "default" {
+			DNSConfMode.Resolv = "stage0"
+		}
+
+		if DNSConfMode.Resolv != "stage0" {
+			return DNSConfMode, DNSConfig, &HostsEntries,
+				fmt.Errorf("Cannot call --dns-opt, --dns-search, or --dns-domain with --dns=%v", DNSConfMode.Resolv)
+		}
+	}
+
+	// Parse out --hosts-entries, also looking for the magic value "host"
+	for _, entry := range flagHostsEntries {
+		if entry == "host" {
+			if len(flagHostsEntries) == 1 {
+				DNSConfMode.Hosts = "host"
+			} else {
+				return DNSConfMode, DNSConfig, &HostsEntries,
+					fmt.Errorf("cannot pass --hosts-entry=host with multiple hosts-entries")
+			}
+			break
+		}
+		for _, entry := range strings.Split(entry, ",") {
+			vals := strings.SplitN(entry, "=", 2)
+			if len(vals) != 2 {
+				return DNSConfMode, DNSConfig, &HostsEntries,
+					fmt.Errorf("Did not understand --hosts-entry %s", entry)
+			}
+			ipStr := vals[0]
+			hostname := vals[1]
+
+			// validate IP address
+			ip := net.ParseIP(ipStr)
+			if ip == nil {
+				return DNSConfMode, DNSConfig, &HostsEntries,
+					fmt.Errorf("Invalid IP passed to --hosts-entry: %s", ipStr)
+			}
+
+			_, exists := HostsEntries[ipStr]
+			if !exists {
+				HostsEntries[ipStr] = []string{hostname}
+			} else {
+				HostsEntries[ipStr] = append(HostsEntries[ipStr], hostname)
+			}
+		}
+	}
+
+	if len(HostsEntries) > 0 {
+		DNSConfMode.Hosts = "stage0"
+	}
+
+	return DNSConfMode, DNSConfig, &HostsEntries, nil
 }

@@ -15,10 +15,19 @@
 package flag
 
 import (
+	"flag"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/spf13/pflag"
 )
+
+// Ensure all these types implement the pflag.Value and flag.Value interface
+var _ pflag.Value = (*OptionList)(nil)
+var _ pflag.Value = (*PairList)(nil)
+var _ flag.Value = (*OptionList)(nil)
+var _ flag.Value = (*PairList)(nil)
 
 var options = []string{"zero", "one", "two"}
 

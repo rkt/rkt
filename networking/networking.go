@@ -62,12 +62,12 @@ var stderr *log.Logger
 
 // Setup creates a new networking namespace and executes network plugins to
 // set up networking. It returns in the new pod namespace
-func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common.NetList, localConfig, flavor string, debug bool) (*Networking, error) {
+func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common.NetList, localConfig, flavor string, noDNS, debug bool) (*Networking, error) {
 
 	stderr = log.New(os.Stderr, "networking", debug)
 
 	if flavor == "kvm" {
-		return kvmSetup(podRoot, podID, fps, netList, localConfig)
+		return kvmSetup(podRoot, podID, fps, netList, localConfig, noDNS)
 	}
 
 	// Create namespace for Pod and write path to a file
@@ -93,7 +93,7 @@ func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common
 		return nil, errwrap.Wrap(errors.New("error loading network definitions"), err)
 	}
 
-	if err := n.setupNets(n.nets); err != nil {
+	if err := n.setupNets(n.nets, noDNS); err != nil {
 		return nil, err
 	}
 

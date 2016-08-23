@@ -47,6 +47,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/networking"
+	pkgflag "github.com/coreos/rkt/pkg/flag"
 	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/stage1/init/kvm"
@@ -110,6 +111,7 @@ var (
 	disableCapabilities bool
 	disablePaths        bool
 	disableSeccomp      bool
+	dnsConfMode         *pkgflag.PairList
 )
 
 func init() {
@@ -123,6 +125,14 @@ func init() {
 	flag.BoolVar(&disableCapabilities, "disable-capabilities-restriction", false, "Disable capability restrictions")
 	flag.BoolVar(&disablePaths, "disable-paths", false, "Disable paths restrictions")
 	flag.BoolVar(&disableSeccomp, "disable-seccomp", false, "Disable seccomp restrictions")
+	dnsConfMode = pkgflag.MustNewPairList(map[string][]string{
+		"resolv": {"host", "stage0", "none", "default"},
+		"hosts":  {"host", "stage0", "default"},
+	}, map[string]string{
+		"resolv": "default",
+		"hosts":  "default",
+	})
+	flag.Var(dnsConfMode, "dns-conf-mode", "DNS config file modes")
 
 	// this ensures that main runs only on main thread (thread group leader).
 	// since namespace ops (unshare, setns) are done for a single thread, we
@@ -545,7 +555,8 @@ func stage1() int {
 			return 1
 		}
 
-		n, err = networking.Setup(root, p.UUID, fps, netList, localConfig, flavor, debug)
+		noDNS := dnsConfMode.Pairs["resolv"] != "default" // force ignore CNI DNS results
+		n, err = networking.Setup(root, p.UUID, fps, netList, localConfig, flavor, noDNS, debug)
 		if err != nil {
 			log.PrintE("failed to setup network", err)
 			return 1
@@ -574,6 +585,13 @@ func stage1() int {
 		if len(mdsToken) > 0 {
 			p.MetadataServiceURL = common.MetadataServicePublicURL(localhostIP, mdsToken)
 		}
+	}
+
+	if dnsConfMode.Pairs["resolv"] == "host" {
+		stage1initcommon.UseHostResolv(root)
+	}
+	if dnsConfMode.Pairs["hosts"] == "host" {
+		stage1initcommon.UseHostHosts(root)
 	}
 
 	if err = stage1initcommon.WriteDefaultTarget(p); err != nil {

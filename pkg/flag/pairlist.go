@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-
-	"github.com/spf13/pflag"
 )
 
 // PairList is a flag value supporting a list of key=value pairs
@@ -30,8 +28,6 @@ type PairList struct {
 	permissible map[string](map[string]struct{}) // map of allowed keys and, optionally, allowed values
 	typeName    string
 }
-
-var _ pflag.Value = (*PairList)(nil)
 
 // NewPairList initializes a new pair list
 // If permissiblePairs is not empty, then it will validate keys and values. For

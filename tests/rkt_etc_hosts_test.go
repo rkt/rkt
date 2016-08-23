@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build host coreos src
+// +build !fly
 
 package main
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -31,25 +32,14 @@ import (
 
 // stage1/prepare-app will populate /etc/hosts with a 127.0.0.1 entry when absent,
 // or leave it alone when present.  These tests verify that behavior.
-var etcHostsTests = []struct {
-	rktCmd      string
-	expectRegEx string
-}{
-	{
-		`/bin/sh -c "export FILE=/etc/hosts; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true ^ETC_HOSTS_CREATE^"`,
-		`127\.0\.0\.1.*`,
-	},
-	{
-		`/bin/sh -c "export FILE=/etc/hosts; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=etc,kind=host,source=^TMPETC^ ^ETC_HOSTS_EXISTS^"`,
-		`<<<preexisting etc>>>`,
-	},
-}
 
-func TestPrepareAppEnsureEtcHosts(t *testing.T) {
-	etcHostsCreateImage := patchTestACI("rkt-inspect-etc-hosts-create.aci", "--exec=/inspect --read-file")
-	defer os.Remove(etcHostsCreateImage)
-	etcHostsExistsImage := patchTestACI("rkt-inspect-etc-hosts-exists.aci", "--exec=/inspect --read-file", "--mounts=etc,path=/etc,readOnly=false")
-	defer os.Remove(etcHostsExistsImage)
+/*
+	The stage0 can create an etc hosts
+
+	prepare-app will overwrite the app's /etc/hosts if the stage0 created one
+	Otherwise, it will create a fallback /etc/hosts if the stage2 does not have one
+*/
+func TestEtcHosts(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
@@ -63,12 +53,47 @@ func TestPrepareAppEnsureEtcHosts(t *testing.T) {
 		t.Fatalf("Cannot create etc/hosts file: %v", err)
 	}
 
-	for i, tt := range etcHostsTests {
-		cmd := strings.Replace(tt.rktCmd, "^TMPDIR^", tmpdir, -1)
-		cmd = strings.Replace(cmd, "^RKT_BIN^", ctx.Cmd(), -1)
-		cmd = strings.Replace(cmd, "^ETC_HOSTS_CREATE^", etcHostsCreateImage, -1)
-		cmd = strings.Replace(cmd, "^ETC_HOSTS_EXISTS^", etcHostsExistsImage, -1)
-		cmd = strings.Replace(cmd, "^TMPETC^", tmpetc, -1)
+	dat, err := ioutil.ReadFile("/etc/hosts")
+	if err != nil {
+		t.Fatal("Could not read host's /etc/hosts", err)
+	}
+
+	sum := fmt.Sprintf("%x", sha1.Sum(dat))
+
+	tests := []struct {
+		rktArgs     string
+		inspectArgs string
+		expectRegEx string
+	}{
+		{
+			fmt.Sprintf("--volume hosts,kind=host,source=%s", tmpfile),
+			"--mount volume=hosts,target=/etc/hosts --exec=/inspect -- -file-name=/etc/hosts -read-file",
+			"<<<preexisting etc>>>",
+		},
+		{ // Test that with no /etc/hosts, the fallback is created
+			"",
+			"--exec=/inspect -- -file-name=/etc/hosts -hash-file",
+			"192f716fb0db669de1c537b845b632f03c9aeb40",
+		},
+		{ // Test that with --hosts-entry=host, the host's is copied
+			"--hosts-entry=host",
+			"--exec=/inspect -- -file-name=/etc/hosts -hash-file",
+			sum,
+		},
+		{ // test that we create our own
+			"--hosts-entry=128.66.0.99=host1",
+			"--exec=/inspect -- -file-name=/etc/hosts -read-file",
+			"128.66.0.99 host1",
+		},
+	}
+
+	for i, tt := range tests {
+		cmd := fmt.Sprintf(
+			"%s run --insecure-options=image %s %s %s",
+			ctx.Cmd(),
+			tt.rktArgs,
+			getInspectImagePath(),
+			tt.inspectArgs)
 
 		t.Logf("Running test #%v: %v", i, cmd)
 
@@ -77,9 +102,9 @@ func TestPrepareAppEnsureEtcHosts(t *testing.T) {
 			t.Fatalf("Cannot exec rkt #%v: %v", i, err)
 		}
 
-		_, _, err = expectRegexTimeoutWithOutput(child, tt.expectRegEx, time.Minute)
+		_, out, err := expectRegexTimeoutWithOutput(child, tt.expectRegEx, 30*time.Second)
 		if err != nil {
-			t.Fatalf("Expected %q but not found #%v: %v", tt.expectRegEx, i, err)
+			t.Fatalf("Test %d %v %v", i, err, out)
 		}
 
 		err = child.Wait()

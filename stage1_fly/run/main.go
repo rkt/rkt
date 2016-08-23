@@ -32,6 +32,7 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/fileutil"
+	pkgflag "github.com/coreos/rkt/pkg/flag"
 	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/user"
@@ -64,8 +65,9 @@ var (
 	discardBool    bool
 	discardString  string
 
-	log  *rktlog.Logger
-	diag *rktlog.Logger
+	log         *rktlog.Logger
+	diag        *rktlog.Logger
+	dnsConfMode *pkgflag.PairList
 )
 
 func getHostMounts() (map[string]struct{}, error) {
@@ -105,11 +107,30 @@ func init() {
 
 	// The following flags need to be supported by stage1 according to
 	// https://github.com/coreos/rkt/blob/master/Documentation/devel/stage1-implementors-guide.md
-	// TODO: either implement functionality or give not implemented warnings
+	// Most of them are ignored
+	// These are ignored, but stage0 always passes them
 	flag.Var(&discardNetlist, "net", "Setup networking")
-	flag.BoolVar(&discardBool, "interactive", true, "The pod is interactive")
-	flag.StringVar(&discardString, "mds-token", "", "MDS auth token")
 	flag.StringVar(&discardString, "local-config", common.DefaultLocalConfigDir, "Local config path")
+
+	// These are discarded with a warning
+	// TODO either implement these, or stop passing them
+	flag.Bool("interactive", true, "The pod is interactive (ignored, always true)")
+	flag.Var(pkgflag.NewDiscardFlag("mds-token"), "mds-token", "MDS auth token (not implemented)")
+
+	flag.Var(pkgflag.NewDiscardFlag("hostname"), "hostname", "Set hostname (not implemented)")
+	flag.Bool("disable-capabilities-restriction", true, "ignored")
+	flag.Bool("disable-paths", true, "ignored")
+	flag.Bool("disable-seccomp", true, "ignored")
+
+	dnsConfMode = pkgflag.MustNewPairList(map[string][]string{
+		"resolv": {"host", "stage0", "none", "default"},
+		"hosts":  {"host", "stage0", "default"},
+	}, map[string]string{
+		"resolv": "default",
+		"hosts":  "default",
+	})
+	flag.Var(dnsConfMode, "dns-conf-mode", "DNS config file modes")
+
 }
 
 func addMountPoints(namedVolumeMounts map[types.ACName]volumeMountTuple, mountpoints []types.MountPoint) error {
@@ -292,11 +313,6 @@ func stage1() int {
 
 	rfs := filepath.Join(common.AppPath(p.Root, ra.Name), "rootfs")
 
-	if err := copyResolv(p); err != nil {
-		log.PrintE("can't copy /etc/resolv.conf", err)
-		return 1
-	}
-
 	argFlyMounts, err := evaluateMounts(rfs, string(ra.Name), p)
 	if err != nil {
 		log.PrintE("can't evaluate mounts", err)
@@ -318,6 +334,51 @@ func stage1() int {
 		},
 		argFlyMounts...,
 	)
+
+	/* Process DNS config files
+	 *
+	 * /etc/resolv.conf: four modes
+	 * 'host' - bind-mount host's file
+	 * 'stage0' - bind-mount the file created by stage0
+	 * 'default' - do nothing (we would respect CNI if fly had networking)
+	 * 'none' - do nothing
+	 */
+	switch dnsConfMode.Pairs["resolv"] {
+	case "host":
+		effectiveMounts = append(effectiveMounts,
+			flyMount{"/etc/resolv.conf", rfs, "/etc/resolv.conf", "none", syscall.MS_BIND | syscall.MS_RDONLY})
+	case "stage0":
+		if err := copyResolv(p); err != nil {
+			log.PrintE("can't copy /etc/resolv.conf", err)
+			return 1
+		}
+	}
+
+	/*
+	 * /etc/hosts: three modes:
+	 * 'host' - bind-mount hosts's file
+	 * 'stage0' - bind mount the file created by stage1
+	 * 'default' - create a stub /etc/hosts if needed
+	 */
+
+	switch dnsConfMode.Pairs["hosts"] {
+	case "host":
+		effectiveMounts = append(effectiveMounts,
+			flyMount{"/etc/hosts", rfs, "/etc/hosts", "none", syscall.MS_BIND | syscall.MS_RDONLY})
+	case "stage0":
+		effectiveMounts = append(effectiveMounts, flyMount{
+			filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "rkt-hosts"),
+			rfs,
+			"/etc/hosts",
+			"none",
+			syscall.MS_BIND | syscall.MS_RDONLY})
+	case "default":
+		stage2HostsPath := filepath.Join(common.AppRootfsPath(p.Root, ra.Name), "etc", "hosts")
+		if _, err := os.Stat(stage2HostsPath); err != nil && os.IsNotExist(err) {
+			fallbackHosts := []byte("127.0.0.1 localhost localdomain\n")
+			ioutil.WriteFile(stage2HostsPath, fallbackHosts, 0644)
+		}
+	}
 
 	for _, mount := range effectiveMounts {
 		log.Printf("Processing %+v", mount)

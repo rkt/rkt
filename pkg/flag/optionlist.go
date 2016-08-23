@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/spf13/pflag"
 )
 
 // OptionList is a flag value type supporting a csv list of options
@@ -32,8 +31,6 @@ type OptionList struct {
 	permissible map[string]struct{}
 	typeName    string
 }
-
-var _ pflag.Value = (*OptionList)(nil)
 
 // NewOptionList initializes an OptionList. PermissibleOptions is the complete
 // set of allowable options. It will set all options specified in defaultOptions

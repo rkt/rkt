@@ -80,6 +80,15 @@ Any stage1 that supports and expects machined registration to occur will likely 
 * `--disable-paths` disables inaccessible and read-only paths (such as `/proc/sysrq-trigger`)
 * `--disable-seccomp` disables seccomp (overrides `retain-set` and `remove-set`)
 
+#### Arguments added in interface version 4
+
+* `--dns-conf-mode=resolv=(host|stage0|none|default),hosts=(host|stage0|default)`: Configures how the stage1 should set up
+	the DNS configuration files `/etc/resolv.conf` and `/etc/hosts`. For all, `host` means to bind-mount the host's
+	version of that file. `none` means the stage1 should not create it. `stage0` means the stage0 has created an entry
+	in the stage1's rootfs, which should be exposed in the apps. `default` means the standard behavior, which for 
+	`resolv.conf` is to create /etc/rkt-resolv.conf iff a CNI plugin specifies it, and for `hosts` is to create 
+	a fallback if the app does not provide it.
+
 ### rkt enter
 
 `coreos.com/rkt/stage1/enter`

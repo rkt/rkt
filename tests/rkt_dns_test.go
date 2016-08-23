@@ -12,26 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build host coreos src fly
-
 package main
 
 import (
+	"crypto/sha1"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/coreos/rkt/tests/testutils"
 )
 
 // TestDNS is checking how rkt fills /etc/resolv.conf
-func TestDNS(t *testing.T) {
+func TestDNSParam(t *testing.T) {
 	imageFile := patchTestACI("rkt-inspect-exit.aci", "--exec=/inspect --print-msg=Hello --read-file")
 	defer os.Remove(imageFile)
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	for _, tt := range []struct {
+	for i, tt := range []struct {
 		paramDNS      string
 		expectedLine  string
 		expectedError bool
@@ -39,7 +40,7 @@ func TestDNS(t *testing.T) {
 		{
 			paramDNS:      "",
 			expectedLine:  "Cannot read file",
-			expectedError: true,
+			expectedError: TestedFlavor.ExitStatusPreserved,
 		},
 		{
 			paramDNS:      "--dns=8.8.4.4",
@@ -66,11 +67,49 @@ func TestDNS(t *testing.T) {
 			expectedLine:  "options debug use-vc rotate",
 			expectedError: false,
 		},
+		{
+			paramDNS:      "--dns-opt=debug --dns-opt=use-vc --dns-opt=rotate --dns-domain=example.net",
+			expectedLine:  "domain example.net",
+			expectedError: false,
+		},
 	} {
 
 		rktCmd := fmt.Sprintf(`%s --insecure-options=image run --set-env=FILE=/etc/resolv.conf %s %s`,
 			ctx.Cmd(), tt.paramDNS, imageFile)
-		t.Logf("%s\n", rktCmd)
+		_ = i
+		// t.Logf("%d: %s\n", i, rktCmd)
 		runRktAndCheckOutput(t, rktCmd, tt.expectedLine, tt.expectedError)
+	}
+}
+
+// TestHostDNS checks that --dns=host reflects the host's /etc/resolv.conf
+func TestDNSHost(t *testing.T) {
+	dat, err := ioutil.ReadFile("/etc/resolv.conf")
+	if err != nil {
+		t.Fatal("Could not read host's resolv.conf", err)
+	}
+
+	sum := fmt.Sprintf("%x", sha1.Sum(dat))
+	t.Log("Expecting sum", sum)
+
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	appCmd := "--exec=/inspect -- --hash-file"
+	rktCmd := fmt.Sprintf("%s --insecure-options=image run --dns=host --set-env=FILE=/etc/resolv.conf %s %s",
+		ctx.Cmd(), getInspectImagePath(), appCmd)
+
+	child := spawnOrFail(t, rktCmd)
+	ctx.RegisterChild(child)
+	defer waitOrFail(t, child, 0)
+
+	expectedRegex := `sha1sum: ([0-9a-f]+)`
+	result, out, err := expectRegexTimeoutWithOutput(child, expectedRegex, 30*time.Second)
+	if err != nil {
+		t.Fatalf("Error: %v\nOutput: %v", err, out)
+	}
+
+	if result[1] != sum {
+		t.Fatalf("container's /etc/host has sha1sum %s expected %s", result[1], sum)
 	}
 }
