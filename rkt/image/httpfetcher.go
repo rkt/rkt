@@ -58,7 +58,7 @@ func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer func() { maybeClose(aciFile) }()
+	defer aciFile.Close()
 
 	if key := maybeUseCached(f.Rem, cd); key != "" {
 		// TODO(krnowak): that does not update the store with
@@ -113,36 +113,48 @@ func (f *httpFetcher) fetchURL(u *url.URL, a *asc, etag string) (readSeekCloser,
 }
 
 func (f *httpFetcher) fetchVerifiedURL(u *url.URL, a *asc, etag string) (readSeekCloser, *cacheData, error) {
+	var aciFile readSeekCloser // closed on error
+	var errClose error         // error signaling to close aciFile
+
 	o := f.httpOps()
 	f.maybeOverrideAscFetcherWithRemote(o, u, a)
 	ascFile, retry, err := o.DownloadSignature(a)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer func() { maybeClose(ascFile) }()
+	defer ascFile.Close()
 
 	aciFile, cd, err := o.DownloadImageWithETag(u, etag)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer func() { maybeClose(aciFile) }()
+
+	defer func() {
+		if errClose != nil {
+			aciFile.Close()
+		}
+	}()
+
 	if cd.UseCached {
-		return nil, cd, nil
+		aciFile.Close()
+		return NopReadSeekCloser(nil), cd, nil
 	}
 
 	if retry {
-		ascFile, err = o.DownloadSignatureAgain(a)
-		if err != nil {
-			return nil, nil, err
+		ascFile.Close()
+		ascFile, errClose = o.DownloadSignatureAgain(a)
+		if errClose != nil {
+			ascFile = NopReadSeekCloser(nil)
+			return nil, nil, errClose
 		}
 	}
 
-	if err := f.validate(aciFile, ascFile); err != nil {
-		return nil, nil, err
+	errClose = f.validate(aciFile, ascFile)
+	if errClose != nil {
+		return nil, nil, errClose
 	}
-	retAciFile := aciFile
-	aciFile = nil
-	return retAciFile, cd, nil
+
+	return aciFile, cd, nil
 }
 
 func (f *httpFetcher) httpOps() *httpOps {
