@@ -35,12 +35,15 @@ type OptionList struct {
 
 var _ pflag.Value = (*OptionList)(nil)
 
+// NewOptionList initializes an OptionList. PermissibleOptions is the complete
+// set of allowable options. It will set all options specified in defaultOptions
+// as provided; they will all be cleared if this flag is passed in the CLI
 func NewOptionList(permissibleOptions []string, defaultOptions string) (*OptionList, error) {
 	permissible := make(map[string]struct{})
 	ol := &OptionList{
 		allOptions:  permissibleOptions,
 		permissible: permissible,
-		typeName:    "optionList",
+		typeName:    "OptionList",
 	}
 
 	for _, o := range permissibleOptions {

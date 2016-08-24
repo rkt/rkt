@@ -22,9 +22,10 @@ import (
 	"net/url"
 	"time"
 
+	rktflag "github.com/coreos/rkt/rkt/flag"
+
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/rkt/config"
-	rktflag "github.com/coreos/rkt/rkt/flag"
 	"github.com/coreos/rkt/rkt/pubkey"
 	"github.com/coreos/rkt/store/imagestore"
 	"github.com/hashicorp/errwrap"
