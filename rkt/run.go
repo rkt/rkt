@@ -440,6 +440,10 @@ type envFileMap struct {
 	mapping map[string]string
 }
 
+func commentLine(s string) bool {
+	return strings.HasPrefix(s, "#") || strings.HasPrefix(s, ";")
+}
+
 func (e *envFileMap) Set(s string) error {
 	if e.mapping == nil {
 		e.mapping = make(map[string]string)
@@ -452,18 +456,19 @@ func (e *envFileMap) Set(s string) error {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		line := scanner.Text()
 		// Skip empty lines
-		if len(scanner.Text()) == 0 {
+		if len(line) == 0 {
 			continue
 		}
-		pair := strings.SplitN(scanner.Text(), "=", 2)
+		// Skip comments
+		if commentLine(line) {
+			continue
+		}
+		pair := strings.SplitN(line, "=", 2)
 		// Malformed lines
 		if len(pair) != 2 || len(pair[0]) == 0 {
 			return fmt.Errorf("environment variable must be specified as name=value (file %q)", file)
-		}
-		// Skip comments
-		if string(pair[0][0]) == "#" || string(pair[0][0]) == ";" {
-			continue
 		}
 		if _, exists := e.mapping[pair[0]]; exists {
 			return fmt.Errorf("environment variable %q already set (file %q)", pair[0], file)
