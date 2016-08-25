@@ -873,6 +873,10 @@ func getChildPID(ppid int) (int, error) {
 		if err != nil {
 			return -1, err
 		}
+		if len(fi) == 0 {
+			// See https://github.com/coreos/rkt/issues/3109#issuecomment-242209246
+			continue
+		}
 		var pid64 int64
 		if pid64, err = strconv.ParseInt(fi[0].Name(), 10, 0); err != nil {
 			continue
