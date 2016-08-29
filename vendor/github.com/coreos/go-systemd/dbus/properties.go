@@ -216,3 +216,13 @@ func PropSlice(slice string) Property {
 		Value: dbus.MakeVariant(slice),
 	}
 }
+
+// PropPids sets the PIDs field of scope units used in the initial construction
+// of the scope only and specifies the initial PIDs to add to the scope object.
+// See https://www.freedesktop.org/wiki/Software/systemd/ControlGroupInterface/#properties
+func PropPids(pids ...uint32) Property {
+	return Property{
+		Name:  "PIDs",
+		Value: dbus.MakeVariant(pids),
+	}
+}

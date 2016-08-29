@@ -259,17 +259,12 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 	"unsafe"
-
-	"github.com/coreos/pkg/dlopen"
 )
-
-var libsystemdFunctions = map[string]unsafe.Pointer{}
 
 // Journal entry field strings which correspond to:
 // http://www.freedesktop.org/software/systemd/man/systemd.journal-fields.html
@@ -330,21 +325,10 @@ const (
 	IndefiniteWait time.Duration = 1<<63 - 1
 )
 
-var libsystemdNames = []string{
-	// systemd < 209
-	"libsystemd-journal.so.0",
-	"libsystemd-journal.so",
-
-	// systemd >= 209 merged libsystemd-journal into libsystemd proper
-	"libsystemd.so.0",
-	"libsystemd.so",
-}
-
 // Journal is a Go wrapper of an sd_journal structure.
 type Journal struct {
 	cjournal *C.sd_journal
 	mu       sync.Mutex
-	lib      *dlopen.LibHandle
 }
 
 // JournalEntry represents all fields of a journal entry plus address fields.
@@ -366,42 +350,11 @@ func (m *Match) String() string {
 	return m.Field + "=" + m.Value
 }
 
-func (j *Journal) getFunction(name string) (unsafe.Pointer, error) {
-	j.mu.Lock()
-	defer j.mu.Unlock()
-	f, ok := libsystemdFunctions[name]
-	if !ok {
-		var err error
-		f, err = j.lib.GetSymbolPointer(name)
-		if err != nil {
-			return nil, err
-		}
-
-		libsystemdFunctions[name] = f
-	}
-
-	return f, nil
-}
-
 // NewJournal returns a new Journal instance pointing to the local journal
 func NewJournal() (j *Journal, err error) {
-	h, err := dlopen.GetHandle(libsystemdNames)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err == nil {
-			return
-		}
-		err2 := h.Close()
-		if err2 != nil {
-			err = fmt.Errorf(`%q and "error closing handle: %v"`, err, err2)
-		}
-	}()
+	j = &Journal{}
 
-	j = &Journal{lib: h}
-
-	sd_journal_open, err := j.getFunction("sd_journal_open")
+	sd_journal_open, err := getFunction("sd_journal_open")
 	if err != nil {
 		return nil, err
 	}
@@ -419,28 +372,9 @@ func NewJournal() (j *Journal, err error) {
 // in a given directory. The supplied path may be relative or absolute; if
 // relative, it will be converted to an absolute path before being opened.
 func NewJournalFromDir(path string) (j *Journal, err error) {
-	h, err := dlopen.GetHandle(libsystemdNames)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err == nil {
-			return
-		}
-		err2 := h.Close()
-		if err2 != nil {
-			err = fmt.Errorf(`%q and "error closing handle: %v"`, err, err2)
-		}
-	}()
+	j = &Journal{}
 
-	path, err = filepath.Abs(path)
-	if err != nil {
-		return nil, err
-	}
-
-	j = &Journal{lib: h}
-
-	sd_journal_open_directory, err := j.getFunction("sd_journal_open_directory")
+	sd_journal_open_directory, err := getFunction("sd_journal_open_directory")
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +392,7 @@ func NewJournalFromDir(path string) (j *Journal, err error) {
 
 // Close closes a journal opened with NewJournal.
 func (j *Journal) Close() error {
-	sd_journal_close, err := j.getFunction("sd_journal_close")
+	sd_journal_close, err := getFunction("sd_journal_close")
 	if err != nil {
 		return err
 	}
@@ -467,14 +401,12 @@ func (j *Journal) Close() error {
 	C.my_sd_journal_close(sd_journal_close, j.cjournal)
 	j.mu.Unlock()
 
-	// we don't close the handle to reuse the symbol cache between Journal
-	// instances. It will go away when the process exits.
 	return nil
 }
 
 // AddMatch adds a match by which to filter the entries of the journal.
 func (j *Journal) AddMatch(match string) error {
-	sd_journal_add_match, err := j.getFunction("sd_journal_add_match")
+	sd_journal_add_match, err := getFunction("sd_journal_add_match")
 	if err != nil {
 		return err
 	}
@@ -495,7 +427,7 @@ func (j *Journal) AddMatch(match string) error {
 
 // AddDisjunction inserts a logical OR in the match list.
 func (j *Journal) AddDisjunction() error {
-	sd_journal_add_disjunction, err := j.getFunction("sd_journal_add_disjunction")
+	sd_journal_add_disjunction, err := getFunction("sd_journal_add_disjunction")
 	if err != nil {
 		return err
 	}
@@ -513,7 +445,7 @@ func (j *Journal) AddDisjunction() error {
 
 // AddConjunction inserts a logical AND in the match list.
 func (j *Journal) AddConjunction() error {
-	sd_journal_add_conjunction, err := j.getFunction("sd_journal_add_conjunction")
+	sd_journal_add_conjunction, err := getFunction("sd_journal_add_conjunction")
 	if err != nil {
 		return err
 	}
@@ -531,7 +463,7 @@ func (j *Journal) AddConjunction() error {
 
 // FlushMatches flushes all matches, disjunctions and conjunctions.
 func (j *Journal) FlushMatches() {
-	sd_journal_flush_matches, err := j.getFunction("sd_journal_flush_matches")
+	sd_journal_flush_matches, err := getFunction("sd_journal_flush_matches")
 	if err != nil {
 		return
 	}
@@ -543,7 +475,7 @@ func (j *Journal) FlushMatches() {
 
 // Next advances the read pointer into the journal by one entry.
 func (j *Journal) Next() (int, error) {
-	sd_journal_next, err := j.getFunction("sd_journal_next")
+	sd_journal_next, err := getFunction("sd_journal_next")
 	if err != nil {
 		return -1, err
 	}
@@ -562,7 +494,7 @@ func (j *Journal) Next() (int, error) {
 // NextSkip advances the read pointer by multiple entries at once,
 // as specified by the skip parameter.
 func (j *Journal) NextSkip(skip uint64) (uint64, error) {
-	sd_journal_next_skip, err := j.getFunction("sd_journal_next_skip")
+	sd_journal_next_skip, err := getFunction("sd_journal_next_skip")
 	if err != nil {
 		return 0, err
 	}
@@ -580,7 +512,7 @@ func (j *Journal) NextSkip(skip uint64) (uint64, error) {
 
 // Previous sets the read pointer into the journal back by one entry.
 func (j *Journal) Previous() (uint64, error) {
-	sd_journal_previous, err := j.getFunction("sd_journal_previous")
+	sd_journal_previous, err := getFunction("sd_journal_previous")
 	if err != nil {
 		return 0, err
 	}
@@ -599,7 +531,7 @@ func (j *Journal) Previous() (uint64, error) {
 // PreviousSkip sets back the read pointer by multiple entries at once,
 // as specified by the skip parameter.
 func (j *Journal) PreviousSkip(skip uint64) (uint64, error) {
-	sd_journal_previous_skip, err := j.getFunction("sd_journal_previous_skip")
+	sd_journal_previous_skip, err := getFunction("sd_journal_previous_skip")
 	if err != nil {
 		return 0, err
 	}
@@ -616,7 +548,7 @@ func (j *Journal) PreviousSkip(skip uint64) (uint64, error) {
 }
 
 func (j *Journal) getData(field string) (unsafe.Pointer, C.int, error) {
-	sd_journal_get_data, err := j.getFunction("sd_journal_get_data")
+	sd_journal_get_data, err := getFunction("sd_journal_get_data")
 	if err != nil {
 		return nil, 0, err
 	}
@@ -686,27 +618,27 @@ func (j *Journal) GetDataValueBytes(field string) ([]byte, error) {
 // all key-value pairs of data as well as address fields (cursor, realtime
 // timestamp and monotonic timestamp)
 func (j *Journal) GetEntry() (*JournalEntry, error) {
-	sd_journal_get_realtime_usec, err := j.getFunction("sd_journal_get_realtime_usec")
+	sd_journal_get_realtime_usec, err := getFunction("sd_journal_get_realtime_usec")
 	if err != nil {
 		return nil, err
 	}
 
-	sd_journal_get_monotonic_usec, err := j.getFunction("sd_journal_get_monotonic_usec")
+	sd_journal_get_monotonic_usec, err := getFunction("sd_journal_get_monotonic_usec")
 	if err != nil {
 		return nil, err
 	}
 
-	sd_journal_get_cursor, err := j.getFunction("sd_journal_get_cursor")
+	sd_journal_get_cursor, err := getFunction("sd_journal_get_cursor")
 	if err != nil {
 		return nil, err
 	}
 
-	sd_journal_restart_data, err := j.getFunction("sd_journal_restart_data")
+	sd_journal_restart_data, err := getFunction("sd_journal_restart_data")
 	if err != nil {
 		return nil, err
 	}
 
-	sd_journal_enumerate_data, err := j.getFunction("sd_journal_enumerate_data")
+	sd_journal_enumerate_data, err := getFunction("sd_journal_enumerate_data")
 	if err != nil {
 		return nil, err
 	}
@@ -736,7 +668,10 @@ func (j *Journal) GetEntry() (*JournalEntry, error) {
 	entry.MonotonicTimestamp = uint64(monotonicUsec)
 
 	var c *C.char
+	// since the pointer is mutated by sd_journal_get_cursor, need to wait
+	// until after the call to free the memory
 	r = C.my_sd_journal_get_cursor(sd_journal_get_cursor, j.cjournal, &c)
+	defer C.free(unsafe.Pointer(c))
 	if r < 0 {
 		return nil, fmt.Errorf("failed to get cursor: %d", syscall.Errno(-r))
 	}
@@ -774,7 +709,7 @@ func (j *Journal) GetEntry() (*JournalEntry, error) {
 // turned off by setting it to 0, so that the library always returns the
 // complete data objects.
 func (j *Journal) SetDataThreshold(threshold uint64) error {
-	sd_journal_set_data_threshold, err := j.getFunction("sd_journal_set_data_threshold")
+	sd_journal_set_data_threshold, err := getFunction("sd_journal_set_data_threshold")
 	if err != nil {
 		return err
 	}
@@ -795,7 +730,7 @@ func (j *Journal) SetDataThreshold(threshold uint64) error {
 func (j *Journal) GetRealtimeUsec() (uint64, error) {
 	var usec C.uint64_t
 
-	sd_journal_get_realtime_usec, err := j.getFunction("sd_journal_get_realtime_usec")
+	sd_journal_get_realtime_usec, err := getFunction("sd_journal_get_realtime_usec")
 	if err != nil {
 		return 0, err
 	}
@@ -816,7 +751,7 @@ func (j *Journal) GetMonotonicUsec() (uint64, error) {
 	var usec C.uint64_t
 	var boot_id C.sd_id128_t
 
-	sd_journal_get_monotonic_usec, err := j.getFunction("sd_journal_get_monotonic_usec")
+	sd_journal_get_monotonic_usec, err := getFunction("sd_journal_get_monotonic_usec")
 	if err != nil {
 		return 0, err
 	}
@@ -834,16 +769,19 @@ func (j *Journal) GetMonotonicUsec() (uint64, error) {
 
 // GetCursor gets the cursor of the current journal entry.
 func (j *Journal) GetCursor() (string, error) {
-	var d *C.char
-
-	sd_journal_get_cursor, err := j.getFunction("sd_journal_get_cursor")
+	sd_journal_get_cursor, err := getFunction("sd_journal_get_cursor")
 	if err != nil {
 		return "", err
 	}
 
+	var d *C.char
+	// since the pointer is mutated by sd_journal_get_cursor, need to wait
+	// until after the call to free the memory
+
 	j.mu.Lock()
 	r := C.my_sd_journal_get_cursor(sd_journal_get_cursor, j.cjournal, &d)
 	j.mu.Unlock()
+	defer C.free(unsafe.Pointer(d))
 
 	if r < 0 {
 		return "", fmt.Errorf("failed to get cursor: %d", syscall.Errno(-r))
@@ -857,7 +795,7 @@ func (j *Journal) GetCursor() (string, error) {
 // TestCursor checks whether the current position in the journal matches the
 // specified cursor
 func (j *Journal) TestCursor(cursor string) error {
-	sd_journal_test_cursor, err := j.getFunction("sd_journal_test_cursor")
+	sd_journal_test_cursor, err := getFunction("sd_journal_test_cursor")
 	if err != nil {
 		return err
 	}
@@ -879,7 +817,7 @@ func (j *Journal) TestCursor(cursor string) error {
 // SeekHead seeks to the beginning of the journal, i.e. the oldest available
 // entry.
 func (j *Journal) SeekHead() error {
-	sd_journal_seek_head, err := j.getFunction("sd_journal_seek_head")
+	sd_journal_seek_head, err := getFunction("sd_journal_seek_head")
 	if err != nil {
 		return err
 	}
@@ -898,7 +836,7 @@ func (j *Journal) SeekHead() error {
 // SeekTail may be used to seek to the end of the journal, i.e. the most recent
 // available entry.
 func (j *Journal) SeekTail() error {
-	sd_journal_seek_tail, err := j.getFunction("sd_journal_seek_tail")
+	sd_journal_seek_tail, err := getFunction("sd_journal_seek_tail")
 	if err != nil {
 		return err
 	}
@@ -917,7 +855,7 @@ func (j *Journal) SeekTail() error {
 // SeekRealtimeUsec seeks to the entry with the specified realtime (wallclock)
 // timestamp, i.e. CLOCK_REALTIME.
 func (j *Journal) SeekRealtimeUsec(usec uint64) error {
-	sd_journal_seek_realtime_usec, err := j.getFunction("sd_journal_seek_realtime_usec")
+	sd_journal_seek_realtime_usec, err := getFunction("sd_journal_seek_realtime_usec")
 	if err != nil {
 		return err
 	}
@@ -935,7 +873,7 @@ func (j *Journal) SeekRealtimeUsec(usec uint64) error {
 
 // SeekCursor seeks to a concrete journal cursor.
 func (j *Journal) SeekCursor(cursor string) error {
-	sd_journal_seek_cursor, err := j.getFunction("sd_journal_seek_cursor")
+	sd_journal_seek_cursor, err := getFunction("sd_journal_seek_cursor")
 	if err != nil {
 		return err
 	}
@@ -961,7 +899,7 @@ func (j *Journal) SeekCursor(cursor string) error {
 func (j *Journal) Wait(timeout time.Duration) int {
 	var to uint64
 
-	sd_journal_wait, err := j.getFunction("sd_journal_wait")
+	sd_journal_wait, err := getFunction("sd_journal_wait")
 	if err != nil {
 		return -1
 	}
@@ -985,7 +923,7 @@ func (j *Journal) Wait(timeout time.Duration) int {
 func (j *Journal) GetUsage() (uint64, error) {
 	var out C.uint64_t
 
-	sd_journal_get_usage, err := j.getFunction("sd_journal_get_usage")
+	sd_journal_get_usage, err := getFunction("sd_journal_get_usage")
 	if err != nil {
 		return 0, err
 	}

@@ -473,6 +473,87 @@ type DisableUnitFileChange struct {
 	Destination string // Destination of the symlink
 }
 
+// MaskUnitFiles masks one or more units in the system
+//
+// It takes three arguments:
+//   * list of units to mask (either just file names or full
+//     absolute paths if the unit files are residing outside
+//     the usual unit search paths)
+//   * runtime to specify whether the unit was enabled for runtime
+//     only (true, /run/systemd/..), or persistently (false, /etc/systemd/..)
+//   * force flag
+func (c *Conn) MaskUnitFiles(files []string, runtime bool, force bool) ([]MaskUnitFileChange, error) {
+	result := make([][]interface{}, 0)
+	err := c.sysobj.Call("org.freedesktop.systemd1.Manager.MaskUnitFiles", 0, files, runtime, force).Store(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	resultInterface := make([]interface{}, len(result))
+	for i := range result {
+		resultInterface[i] = result[i]
+	}
+
+	changes := make([]MaskUnitFileChange, len(result))
+	changesInterface := make([]interface{}, len(changes))
+	for i := range changes {
+		changesInterface[i] = &changes[i]
+	}
+
+	err = dbus.Store(resultInterface, changesInterface...)
+	if err != nil {
+		return nil, err
+	}
+
+	return changes, nil
+}
+
+type MaskUnitFileChange struct {
+	Type        string // Type of the change (one of symlink or unlink)
+	Filename    string // File name of the symlink
+	Destination string // Destination of the symlink
+}
+
+// UnmaskUnitFiles unmasks one or more units in the system
+//
+// It takes two arguments:
+//   * list of unit files to mask (either just file names or full
+//     absolute paths if the unit files are residing outside
+//     the usual unit search paths)
+//   * runtime to specify whether the unit was enabled for runtime
+//     only (true, /run/systemd/..), or persistently (false, /etc/systemd/..)
+func (c *Conn) UnmaskUnitFiles(files []string, runtime bool) ([]UnmaskUnitFileChange, error) {
+	result := make([][]interface{}, 0)
+	err := c.sysobj.Call("org.freedesktop.systemd1.Manager.UnmaskUnitFiles", 0, files, runtime).Store(&result)
+	if err != nil {
+		return nil, err
+	}
+
+	resultInterface := make([]interface{}, len(result))
+	for i := range result {
+		resultInterface[i] = result[i]
+	}
+
+	changes := make([]UnmaskUnitFileChange, len(result))
+	changesInterface := make([]interface{}, len(changes))
+	for i := range changes {
+		changesInterface[i] = &changes[i]
+	}
+
+	err = dbus.Store(resultInterface, changesInterface...)
+	if err != nil {
+		return nil, err
+	}
+
+	return changes, nil
+}
+
+type UnmaskUnitFileChange struct {
+	Type        string // Type of the change (one of symlink or unlink)
+	Filename    string // File name of the symlink
+	Destination string // Destination of the symlink
+}
+
 // Reload instructs systemd to scan for and reload unit files. This is
 // equivalent to a 'systemctl daemon-reload'.
 func (c *Conn) Reload() error {
