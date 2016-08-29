@@ -65,6 +65,16 @@ MACHINE CLASS SERVICE
 0 machines listed.
 ```
 
+Note that journald integration is only supported if systemd is compiled with `xz` compression enabled. To inspect this, use `systemctl`:
+
+```
+$ systemctl --version
+systemd v231
+[...] +XZ [...]
+```
+
+If the output contains `-XZ`, journal entries will not be available.
+
 ## Managing pods as systemd services
 
 ### Simple Unit File
