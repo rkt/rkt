@@ -283,6 +283,11 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 			return nil, nil, errwrap.Wrap(errors.New("error linking pod's journal"), err)
 		}
 
+		// use only dynamic libraries provided in the image
+		// from systemd v231 there's a new internal libsystemd-shared-v231.so
+		// which is present in /usr/lib/systemd
+		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib/systemd"))
+
 		return args, env, nil
 
 	case "coreos":
@@ -305,7 +310,11 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, debug bool, n *networki
 		}
 
 		// use only dynamic libraries provided in the image
-		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib"))
+		// from systemd v231 there's a new internal libsystemd-shared-v231.so
+		// which is present in /usr/lib/systemd
+		env = append(env, "LD_LIBRARY_PATH="+
+			filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib")+":"+
+			filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib/systemd"))
 
 	case "src":
 		args = append(args, filepath.Join(common.Stage1RootfsPath(p.Root), interpBin))
