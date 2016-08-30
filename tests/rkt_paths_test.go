@@ -46,20 +46,37 @@ func TestPathsWrite(t *testing.T) {
 
 	for _, tt := range tests {
 		// Without --insecure-options=paths
+		expectErr := fmt.Sprintf("open %s: read-only file system", tt.Path)
 		for _, insecureOption := range []string{"image", "image,ondisk,capabilities", "all-fetch"} {
+			// run
 			cmd := fmt.Sprintf(`%s --debug --insecure-options=%s run --set-env=FILE=%s --set-env=CONTENT=%s %s`,
 				ctx.Cmd(), insecureOption, tt.Path, tt.Content, imageFile)
-			t.Logf("Attempting to write on %q with --insecure-options=%s (expecting error)\n", tt.Path, insecureOption)
-			expect := fmt.Sprintf("open %s: read-only file system", tt.Path)
-			runRktAndCheckOutput(t, cmd, expect, true)
+			t.Logf("run: attempting to write on %q with --insecure-options=%s (expecting error)\n", tt.Path, insecureOption)
+			runRktAndCheckOutput(t, cmd, expectErr, true)
+			// run-prepared
+			t.Logf("run-prepared: attempting to write on %q with --insecure-options=%s (expecting error)\n", tt.Path, insecureOption)
+			cmd = fmt.Sprintf(`%s --insecure-options=%s prepare --set-env=FILE=%s --set-env=CONTENT=%s %s`,
+				ctx.Cmd(), insecureOption, tt.Path, tt.Content, imageFile)
+			uuid := runRktAndGetUUID(t, cmd)
+			cmd = fmt.Sprintf("%s --debug --insecure-options=%s run-prepared --mds-register=false %s", ctx.Cmd(), insecureOption, uuid)
+			runRktAndCheckOutput(t, cmd, expectErr, true)
 		}
 
 		// With --insecure-options=paths
+		expectOk := "testing-insecure-option"
 		for _, insecureOption := range []string{"image,paths", "image,paths,ondisk,capabilities", "image,all-run", "all"} {
+			// run
+			t.Logf("run: attempting to write on %q with --insecure-options=%s (expecting success)\n", tt.Path, insecureOption)
 			cmd := fmt.Sprintf(`%s --debug --insecure-options=%s run --set-env=FILE=%s --set-env=CONTENT=%s %s`,
 				ctx.Cmd(), insecureOption, tt.Path, tt.Content, imageFile)
-			t.Logf("Attempting to write on %q with --insecure-options=%s (expecting success)\n", tt.Path, insecureOption)
-			runRktAndCheckOutput(t, cmd, "testing-insecure-option", false)
+			runRktAndCheckOutput(t, cmd, expectOk, false)
+			// run-prepared
+			t.Logf("run-prepared: attempting to write on %q with --insecure-options=%s (expecting success)\n", tt.Path, insecureOption)
+			cmd = fmt.Sprintf(`%s --insecure-options=%s prepare --set-env=FILE=%s --set-env=CONTENT=%s %s`,
+				ctx.Cmd(), insecureOption, tt.Path, tt.Content, imageFile)
+			uuid := runRktAndGetUUID(t, cmd)
+			cmd = fmt.Sprintf("%s --debug --insecure-options=%s run-prepared --mds-register=false %s", ctx.Cmd(), insecureOption, uuid)
+			runRktAndCheckOutput(t, cmd, expectOk, false)
 		}
 	}
 }
@@ -75,8 +92,13 @@ func TestPathsStat(t *testing.T) {
 	hiddenCtx := testutils.NewRktRunCtx()
 	defer hiddenCtx.Cleanup()
 
+	//run
 	hiddenCmd := fmt.Sprintf("%s --insecure-options=image run %s", hiddenCtx.Cmd(), hiddenImage)
-
 	hiddenExpectedLine := fmt.Sprintf("%s: mode: d---------", hiddenEntry)
+	runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
+	// run-prepared
+	hiddenCmd = fmt.Sprintf(`%s --insecure-options=image prepare %s`, hiddenCtx.Cmd(), hiddenImage)
+	uuid := runRktAndGetUUID(t, hiddenCmd)
+	hiddenCmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", hiddenCtx.Cmd(), uuid)
 	runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
 }
