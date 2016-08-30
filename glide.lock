@@ -1,5 +1,5 @@
-hash: 85887ddac777e118486cde0a7d15ce8b2e1f05aeab1af97600d74d8f22ebb109
-updated: 2016-08-29T07:52:29.649451159Z
+hash: f9a3d5488f0ccf2c1d7e3ee1d725a3c6bf4f4b5128950b44df34c3eee657c2e6
+updated: 2016-08-30T12:00:39.148220845Z
 imports:
 - name: github.com/appc/docker2aci
   version: 15d68b33bfee95a448c4da37dbe876baa8fcb5b6
@@ -20,7 +20,7 @@ imports:
   subpackages:
   - proj2aci
 - name: github.com/appc/spec
-  version: 01b1a0221620c2f394c0684686dcf111c484873e
+  version: f329150233aa3ac6c83ab5ba02a2b5a8bd03d365
   subpackages:
   - ace
   - aci

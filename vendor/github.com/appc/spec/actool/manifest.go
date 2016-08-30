@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -205,41 +206,32 @@ func patchManifest(im *schema.ImageManifest) error {
 		}
 	}
 
-	if patchCaps != "" {
-		isolator := app.Isolators.GetByName(types.LinuxCapabilitiesRetainSetName)
-		if isolator != nil {
-			return fmt.Errorf("isolator already exists (os/linux/capabilities-retain-set)")
-		}
-
-		// Instantiate a Isolator with the content specified by the --capability
-		// parameter.
-		caps, err := types.NewLinuxCapabilitiesRetainSet(strings.Split(patchCaps, ",")...)
-		if err != nil {
-			return fmt.Errorf("cannot parse capability %q: %v", patchCaps, err)
-		}
-		isolator, err = caps.AsIsolator()
-		if err != nil {
-			return err
-		}
-		app.Isolators = append(app.Isolators, *isolator)
+	if patchCaps != "" && patchRevokeCaps != "" {
+		return errors.New("conflicting capabilities isolators provided")
 	}
-	if patchRevokeCaps != "" {
-		isolator := app.Isolators.GetByName(types.LinuxCapabilitiesRevokeSetName)
-		if isolator != nil {
-			return fmt.Errorf("isolator already exists (os/linux/capabilities-remove-set)")
+	if patchCaps != "" || patchRevokeCaps != "" {
+		var capsAsIsolator types.AsIsolator
+		var err error
+		if patchCaps != "" {
+			// Instantiate Isolator with content specified by --capability
+			capsAsIsolator, err = types.NewLinuxCapabilitiesRetainSet(strings.Split(patchCaps, ",")...)
+			if err != nil {
+				return fmt.Errorf("cannot parse capability retain set %q: %v", patchCaps, err)
+			}
 		}
-
-		// Instantiate a Isolator with the content specified by the --revoke-capability
-		// parameter.
-		caps, err := types.NewLinuxCapabilitiesRevokeSet(strings.Split(patchRevokeCaps, ",")...)
-		if err != nil {
-			return fmt.Errorf("cannot parse capability %q: %v", patchRevokeCaps, err)
+		if patchRevokeCaps != "" {
+			// Instantiate Isolator with content specified by --revoke-capability
+			capsAsIsolator, err = types.NewLinuxCapabilitiesRevokeSet(strings.Split(patchRevokeCaps, ",")...)
+			if err != nil {
+				return fmt.Errorf("cannot parse capability remove set %q: %v", patchRevokeCaps, err)
+			}
 		}
-		isolator, err = caps.AsIsolator()
+		capsIsolator, err := capsAsIsolator.AsIsolator()
 		if err != nil {
 			return err
 		}
-		app.Isolators = append(app.Isolators, *isolator)
+		capsKeys := []types.ACIdentifier{types.LinuxCapabilitiesRevokeSetName, types.LinuxCapabilitiesRetainSetName}
+		app.Isolators.ReplaceIsolatorsByName(*capsIsolator, capsKeys)
 	}
 
 	if patchMounts != "" {
