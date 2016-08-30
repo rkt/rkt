@@ -54,6 +54,12 @@ Stage1 implementors have two options for doing so; only one must be implemented:
 * `/var/lib/rkt/pods/run/$uuid/pid`: the PID of the process that will be given to the "enter" entrypoint.
 * `/var/lib/rkt/pods/run/$uuid/ppid`: the PID of the parent of the process that will be given to the "enter" entrypoint. That parent process must have exactly one child process.
 
+The entrypoint of a stage1 may also optionally inform rkt of the "pod cgroup", the `name=systemd` cgroup the pod's applications are expected to reside under, via the `subcgroup` file. If this file is written, it must be written before the `pid` or `ppid` files are written. This information is useful for any external monitoring system that wishes to reliably link a given cgroup to its associated rkt pod. The file should be written in the pod directory at `/var/lib/rkt/pods/run/$uuid/subcgroup`.
+
+The file's contents should be a text string, for example of the form `machine-rkt\xuuid.scope`, which will match the control in the cgroup hierarchy of the `ppid` or `pid` of the pod.
+
+Any stage1 that supports and expects machined registration to occur will likely want to write such a file.
+
 #### Arguments
 
 * `--debug` to activate debugging
