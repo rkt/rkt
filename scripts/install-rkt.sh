@@ -29,6 +29,16 @@ tar xvzf rkt-v"${version}".tar.gz
 cat <<EOF >install-pak
 #!/bin/bash
 
+# fix mkdir issues with checkinstall and fstrans
+for dir in /usr/lib/rkt/stage1-images/\\
+        /usr/share/man/man1/\\
+        /usr/share/bash-completion/completions/\\
+        /usr/lib/tmpfiles.d/\\
+        /usr/lib/systemd/system/
+do
+    mkdir -p \$dir 2>/dev/null || :
+done
+
 for flavor in fly coreos kvm; do
     install -Dm644 rkt-v${version}/stage1-\${flavor}.aci /usr/lib/rkt/stage1-images/stage1-\${flavor}.aci
 done
