@@ -4,6 +4,24 @@ rkt can prepare images to run in a pod.
 This means it will fetch (if necessary) the images, extract them in its internal tree store, and allocate a pod UUID.
 If overlay fs is not supported or disabled, it will also copy the tree in the pod rootfs.
 
+Support for overlay fs will be auto-detected if `--no-overlay` is set to `false`. If an unsupported filesystem is detected, rkt will print a warning message and continue preparing the pod by falling back in non-overlay mode as described above:
+
+```
+# rkt prepare --insecure-options=image docker://busybox --exec=/bin/sh
+image: using image from local store for image name coreos.com/rkt/stage1-coreos:1.13.0
+image: remote fetching from URL "docker://busybox"
+Downloading sha256:8ddc19f1652 [===============================] 668 KB / 668 KB
+prepare: disabling overlay support: "unsupported filesystem: missing d_type support"
+```
+
+The following conditions can lead to non-overlay mode:
+
+The data directory (usually `/var/lib/rkt`) is on ...
+- an AUFS filesystem
+- a ZFS filesystem
+- a XFS filesystem having `ftype=0`
+- a file system where the `d_type` field is set to `DT_UNKNOWN`, see getdents(2)
+
 In this way, the pod is ready to be launched immediately by the [run-prepared](run-prepared.md) command.
 
 Running `rkt prepare` + `rkt run-prepared` is semantically equivalent to running [rkt run](run.md).

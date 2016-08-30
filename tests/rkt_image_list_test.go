@@ -81,7 +81,7 @@ func TestImageSize(t *testing.T) {
 	imageListCmd := fmt.Sprintf("%s image list --no-legend --full", ctx.Cmd())
 
 	// if we don't support overlay fs, we don't render the image on fetch
-	if !common.SupportsOverlay() {
+	if common.SupportsOverlay() != nil {
 		// check that the printed size is the same as the actual image size
 		expectedStr := fmt.Sprintf("(?s)%s.*%d.*", imageHash, imageSize)
 

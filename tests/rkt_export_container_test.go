@@ -34,7 +34,7 @@ func TestExport(t *testing.T) {
 		testCases = append(testCases, userNS)
 	}
 
-	if common.SupportsOverlay() {
+	if common.SupportsOverlay() == nil {
 		testCases = append(testCases, overlaySimpleTest)
 		testCases = append(testCases, overlaySimulateReboot)
 	}

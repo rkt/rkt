@@ -80,8 +80,8 @@ func podsRemaining(t *testing.T, ctx *testutils.RktRunCtx) []os.FileInfo {
 }
 
 func TestGCAfterUnmount(t *testing.T) {
-	if !common.SupportsOverlay() {
-		t.Skip("Overlay fs not supported.")
+	if err := common.SupportsOverlay(); err != nil {
+		t.Skipf("Overlay fs not supported: %v", err)
 	}
 
 	ctx := testutils.NewRktRunCtx()
