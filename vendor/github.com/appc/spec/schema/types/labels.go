@@ -21,7 +21,7 @@ import (
 )
 
 var ValidOSArch = map[string][]string{
-	"linux":   {"amd64", "i386", "aarch64", "aarch64_be", "armv6l", "armv7l", "armv7b"},
+	"linux":   {"amd64", "i386", "aarch64", "aarch64_be", "armv6l", "armv7l", "armv7b", "ppc64", "ppc64le", "s390x"},
 	"freebsd": {"amd64", "i386", "arm"},
 	"darwin":  {"x86_64", "i386"},
 }

@@ -328,14 +328,10 @@ func validatePodMetadata(metadataURL string, pm *schema.PodManifest) results {
 func validateAppAnnotations(metadataURL string, pm *schema.PodManifest, app *schema.RuntimeApp, img *schema.ImageManifest) results {
 	r := results{}
 
-	// build a map of expected annotations by merging app.Annotations
+	// build a map of expected annotations by merging img.Annotations
 	// with PodManifest overrides
-	expectedAnnots := app.Annotations
-	a := pm.Apps.Get(app.Name)
-	if a == nil {
-		panic("could not find app in manifest!")
-	}
-	for _, annot := range a.Annotations {
+	expectedAnnots := img.Annotations
+	for _, annot := range app.Annotations {
 		expectedAnnots.Set(annot.Name, annot.Value)
 	}
 	if len(expectedAnnots) == 0 {

@@ -28,7 +28,7 @@ import (
 type InsecureOption int
 
 const (
-	defaultDialTimeout = 5 * time.Second
+	defaultDialTimeout = 20 * time.Second
 )
 
 const (
