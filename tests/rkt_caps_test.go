@@ -570,21 +570,33 @@ func TestCapsInsecureOption(t *testing.T) {
 	}, ", ")
 
 	// Without --insecure-options=capabilities
+	expectedDefault := fmt.Sprintf("Capability set: bounding: %s", defaultCaps)
 	for _, insecureOption := range []string{"image", "image,ondisk,paths", "all-fetch"} {
-		cmd := fmt.Sprintf(`%s --debug --insecure-options=%s run %s`,
-			ctx.Cmd(), insecureOption, imageFile)
-		t.Logf("Check caps with --insecure-options=%s\n", insecureOption)
-		expected := fmt.Sprintf("Capability set: bounding: %s", defaultCaps)
-		runRktAndCheckOutput(t, cmd, expected, false)
+		// run
+		t.Logf("run: check caps with --insecure-options=%s\n", insecureOption)
+		cmd := fmt.Sprintf(`%s --debug --insecure-options=%s run %s`, ctx.Cmd(), insecureOption, imageFile)
+		runRktAndCheckOutput(t, cmd, expectedDefault, false)
+		// run-prepared
+		t.Logf("run-prepared: check caps with --insecure-options=%s\n", insecureOption)
+		cmd = fmt.Sprintf(`%s --insecure-options=%s prepare %s`, ctx.Cmd(), insecureOption, imageFile)
+		uuid := runRktAndGetUUID(t, cmd)
+		cmd = fmt.Sprintf("%s --insecure-options=%s --debug run-prepared %s", ctx.Cmd(), insecureOption, uuid)
+		runRktAndCheckOutput(t, cmd, expectedDefault, false)
 	}
 
 	// With --insecure-options=capabilities
+	expectedAll := fmt.Sprintf("Capability set: bounding: %s", allCaps)
 	for _, insecureOption := range []string{"image,capabilities", "image,ondisk,paths,capabilities", "all-fetch,capabilities", "all"} {
-		cmd := fmt.Sprintf(`%s --debug --insecure-options=%s run %s`,
-			ctx.Cmd(), insecureOption, imageFile)
-		t.Logf("Check caps with --insecure-options=%s\n", insecureOption)
-		expected := fmt.Sprintf("Capability set: bounding: %s", allCaps)
-		runRktAndCheckOutput(t, cmd, expected, false)
+		// run
+		t.Logf("run: check caps with --insecure-options=%s\n", insecureOption)
+		cmd := fmt.Sprintf(`%s --debug --insecure-options=%s run %s`, ctx.Cmd(), insecureOption, imageFile)
+		runRktAndCheckOutput(t, cmd, expectedAll, false)
+		// run-prepared
+		t.Logf("run-prepared: check caps with --insecure-options=%s\n", insecureOption)
+		cmd = fmt.Sprintf(`%s --insecure-options=%s prepare %s`, ctx.Cmd(), insecureOption, imageFile)
+		uuid := runRktAndGetUUID(t, cmd)
+		cmd = fmt.Sprintf("%s --insecure-options=%s --debug run-prepared %s", ctx.Cmd(), insecureOption, uuid)
+		runRktAndCheckOutput(t, cmd, expectedAll, false)
 	}
 }
 
