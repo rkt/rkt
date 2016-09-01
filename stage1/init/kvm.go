@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/appc/spec/schema"
@@ -28,6 +29,7 @@ import (
 	"github.com/coreos/go-systemd/util"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking"
+	"github.com/coreos/rkt/stage0"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
 	"github.com/coreos/rkt/stage1/init/kvm"
@@ -105,20 +107,46 @@ func mountSharedVolumes(root string, p *stage1commontypes.Pod, ra *schema.Runtim
 			return errwrap.Wrap(fmt.Errorf("could not resolve symlink for source: %v", source), err)
 		} else if err := ensureDestinationExists(cleanedSource, absDestination); err != nil {
 			return errwrap.Wrap(fmt.Errorf("could not create destination mount point: %v", absDestination), err)
-		} else if err := doBindMount(cleanedSource, absDestination, readOnly); err != nil {
+		} else if err := doBindMount(cleanedSource, absDestination, readOnly, vol.Recursive); err != nil {
 			return errwrap.Wrap(fmt.Errorf("could not bind mount path %v (s: %v, d: %v)", m.Path, source, absDestination), err)
 		}
 	}
 	return nil
 }
 
-func doBindMount(source, destination string, readOnly bool) error {
-	if err := syscall.Mount(source, destination, "bind", syscall.MS_BIND, ""); err != nil {
+func doBindMount(source, destination string, readOnly bool, recursive *bool) error {
+	var flags uintptr = syscall.MS_BIND
+
+	if readOnly {
+		flags |= syscall.MS_RDONLY
+	}
+
+	// Enable recursive by default and remove it if explicitly requested
+	recursiveBool := recursive == nil || *recursive == true
+	if recursiveBool {
+		flags |= syscall.MS_REC
+	}
+
+	if err := syscall.Mount(source, destination, "bind", flags, ""); err != nil {
 		return err
 	}
-	if readOnly {
-		return syscall.Mount(source, destination, "bind", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, "")
+
+	if readOnly && recursiveBool {
+		// Sub-mounts are still read-write, so find them and remount them read-only
+
+		mnts, err := stage0.GetMountsForPrefix(source + "/")
+		if err != nil {
+			return errwrap.Wrap(fmt.Errorf("error getting mounts under %q from mountinfo", source), err)
+		}
+
+		for _, mnt := range mnts {
+			innerAbsPath := destination + strings.Replace(mnt.MountPoint, source, "", -1)
+			if err := syscall.Mount("", innerAbsPath, "none", syscall.MS_REMOUNT|syscall.MS_RDONLY, ""); err != nil {
+				return err
+			}
+		}
 	}
+
 	return nil
 }
 
