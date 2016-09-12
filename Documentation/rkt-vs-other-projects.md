@@ -135,4 +135,4 @@ qemu-kvm and lkvm do not have a centralized daemon and can be integrated with in
 rkt can download, cryptographically verify, and run application container images.
 It is not designed to run "full system images" but instead individual applications such as web apps, databases, or caches.
 As rkt does not have a centralized daemon it can be integrated with init systems such as upstart and systemd.
-rkt can optionally use lkvm as an additional security measure over a Linux container, at a slight cost to performance and flexibility; this feature can be configured using the [lkvm (aka Clear Containers) stage1](running-lkvm-stage1.md).
+rkt can optionally use lkvm or qemu-kvm as an additional security measure over a Linux container, at a slight cost to performance and flexibility; this feature can be configured using the [kvm (aka Clear Containers) stage1](running-lkvm-stage1.md).

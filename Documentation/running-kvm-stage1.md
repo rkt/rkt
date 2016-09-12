@@ -1,19 +1,19 @@
-# Running rkt with an LKVM stage1
+# Running rkt with KVM stage1
 
-rkt has support for executing pods with an [LKVM](https://kernel.googlesource.com/pub/scm/linux/kernel/git/will/kvmtool/+/master/README) [stage1](devel/architecture.md#stage-1). rkt employs this [alternative stage1](devel/stage1-implementors-guide.md) to run a pod within a virtual machine with its own operating system kernel and hypervisor isolation, rather than creating a container using Linux cgroups and namespaces.
+rkt has support for executing pods with KVM hypervisor - [LKVM](https://kernel.googlesource.com/pub/scm/linux/kernel/git/will/kvmtool/+/master/README) or [QEMU](https://github.com/qemu/qemu/blob/master/README) as a [stage1](devel/architecture.md#stage-1). rkt employs this [alternative stage1](devel/stage1-implementors-guide.md) to run a pod within a virtual machine with its own operating system kernel and hypervisor isolation, rather than creating a container using Linux cgroups and namespaces.
 
-The LKVM stage1 does not yet implement all of the default stage1's features and semantics. While the same app container can be executed under isolation by either stage1, it may require different configuration, especially for networking. However, several deployments of the LKVM stage1 are operational outside of CoreOS, and we encourage testing of this feature and welcome your contributions.
+The KVM stage1 does not yet implement all of the default stage1's features and semantics. While the same app container can be executed under isolation by either stage1, it may require different configuration, especially for networking. However, several deployments of the KVM stage1 are operational outside of CoreOS, and we encourage testing of this feature and welcome your contributions.
 
 ## Getting started
 
-You can either use `stage1-kvm.aci` (or `stage1-lkvm.aci`) from the official release, or build rkt yourself with the right options:
+For LKVM you can use `stage1-kvm.aci` or `stage1-kvm-lkvm.aci`, for QEMU - `stage1-kvm-qemu.aci` from the official release. You can also build rkt yourself with the right options:
 
 ```
-$ ./autogen.sh && ./configure --with-stage1-flavors=kvm && make
+$ ./autogen.sh && ./configure --with-stage1-flavors=kvm --with-stage1-kvm-hypervisors=lkvm,qemu && make
 ```
 
 For more details about configure parameters, see [configure script parameters documentation](build-configure.md).
-This will build the rkt binary and the LKVM stage1-kvm.aci in `build-rkt-1.14.0+git/bin/`.
+This will build the rkt binary and the KVM stage1 aci image in `build-rkt-1.14.0+git/target/bin/`. Depending on the configuration options, it will be `stage1-kvm.aci` (if one hypervisor is set), or `stage1-kvm-lkvm.aci` and `stage1-kvm-qemu.aci` (if you want to have both images built once).
 
 Provided you have hardware virtualization support and the [kernel KVM module](http://www.linux-kvm.org/page/Getting_the_kvm_kernel_modules) loaded (refer to your distribution for instructions), you can then run an image like you would normally do with rkt:
 
@@ -81,7 +81,7 @@ Currently, the memory allocated to the virtual machine is a sum of memory requir
 
 If you want to run software that requires hypervisor isolation along with trusted software that only needs container isolation, you can [choose which stage1 to use at runtime](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#use-a-custom-stage-1).
 
-For example, to use the official lkvm stage1:
+For example, to use the official kvm stage1:
 
 ```
 # rkt run --stage1-name=coreos.com/rkt/stage1-kvm:1.14.0 coreos.com/etcd:v2.0.9
@@ -93,12 +93,12 @@ If the image is not in the store, `--stage1-name` will perform discovery and fet
 ## How does it work?
 
 It leverages the work done by Intel with their [Clear Containers system](https://lwn.net/Articles/644675/).
-Stage1 contains a Linux kernel that is executed under LKVM.
+Stage1 contains a Linux kernel that is executed under hypervisor (LKVM or QEMU).
 This kernel will then start systemd, which in turn will start the applications in the pod.
 
-A LKVM-based rkt is very similar to a container-based one, it just uses lkvm to execute pods instead of systemd-nspawn.
+A KVM-based rkt is very similar to a container-based one, it just uses hypervisor to execute pods instead of systemd-nspawn.
 
-Here's a comparison of the components involved between a container-based and a LKVM based rkt.
+Here's a comparison of the components involved between a container-based and a KVM based rkt.
 
 Container-based:
 
@@ -112,12 +112,12 @@ host OS
 ```
 
 
-LKVM based:
+KVM based:
 
 ```
 host OS
   └─ rkt
-    └─ lkvm
+    └─ hypervisor
       └─ kernel
         └─ systemd
           └─ chroot
