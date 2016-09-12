@@ -10,6 +10,7 @@ ifeq ($(SLD_INCLUDED),)
 
 SLD_INCLUDED := x
 SLD_LOCATIONS := $(shell ld --verbose | grep SEARCH_DIR | sed -e 's/SEARCH_DIR("=*\([^"]*\)");*/\1/g')
+SLD_LOCATIONS += $(foreach l,$(SLD_LOCATIONS),$l/systemd)
 
 endif
 
