@@ -25,6 +25,10 @@ Check out the coreos-kubernetes repo if you want to spin up a cluster on [AWS](h
 
 For baremetal, check out the Kubernetes guides [here](https://github.com/coreos/coreos-baremetal/blob/master/Documentation/kubernetes.md)
 
+## Using [Minikube](https://github.com/kubernetes/minikube)
+
+Minikube is a tool that makes it easy to run Kubernetes locally. It launches a single-node cluster inside a VM aimed at users looking to try out Kubernetes. Follow the instructions in the Minikube [Quickstart](https://github.com/kubernetes/minikube/blob/master/README.md#quickstart) section on how to get started with rktnetes.
+
 ### Current Status
 
 Integration of rkt as a container runtime was officially [announced in the Kubernetes 1.3 release](http://blog.kubernetes.io/2016/07/rktnetes-brings-rkt-container-engine-to-Kubernetes.html).
