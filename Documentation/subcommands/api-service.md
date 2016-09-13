@@ -17,8 +17,8 @@ Typically, the API service will be run via a unit file similar to the one includ
 
 ## Using the API service
 
-The interfaces are defined in the [protobuf here](../../api/v1alpha/api.proto).
-Here is a small [Go program](../../api/v1alpha/client_example.go) that illustrates how to use the API service.
+The interfaces are defined in the [protobuf here](https://github.com/coreos/rkt/blob/master/api/v1alpha/api.proto).
+Here is a small [Go program](https://github.com/coreos/rkt/blob/master/api/v1alpha/client_example.go) that illustrates how to use the API service.
 
 ## Options
 
