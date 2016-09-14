@@ -301,7 +301,7 @@ The `--caps-retain` option to `rkt run` manipulates the `retain` capabilities se
 The `--caps-remove` option manipulates the `remove` set.
 
 Capabilities specified from the command-line will replace all capability settings in the image manifest.
-Also as stated above the options `--cap-retain`, and `--cap-remove` are mutually exclusive.
+Also as stated above the options `--caps-retain`, and `--caps-remove` are mutually exclusive.
 Only one can be specified at a time.
 
 Capabilities isolators can be added on the command line at run time by
