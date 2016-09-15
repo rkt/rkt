@@ -669,6 +669,19 @@ func stage1() int {
 
 	s1Root := common.Stage1RootfsPath(p.Root)
 	machineID := stage1initcommon.GetMachineID(p)
+
+	subcgroup, err := getContainerSubCgroup(machineID, canMachinedRegister, unifiedCgroup)
+	if err != nil {
+		log.FatalE("error getting container subcgroup", err)
+		return 1
+	}
+
+	if err := ioutil.WriteFile(filepath.Join(p.Root, "subcgroup"),
+		[]byte(fmt.Sprintf("%s", subcgroup)), 0644); err != nil {
+		log.FatalE("cannot write subcgroup file", err)
+		return 1
+	}
+
 	if !unifiedCgroup {
 		enabledCgroups, err := cgroup.GetEnabledV1Cgroups()
 		if err != nil {
@@ -685,20 +698,12 @@ func stage1() int {
 		for _, app := range p.Manifest.Apps {
 			serviceNames = append(serviceNames, stage1initcommon.ServiceUnitName(app.Name))
 		}
-		subcgroup, err := getContainerV1SubCgroup(machineID, canMachinedRegister)
-		if err == nil {
-			if err := ioutil.WriteFile(filepath.Join(p.Root, "subcgroup"),
-				[]byte(fmt.Sprintf("%s", subcgroup)), 0644); err != nil {
-				log.FatalE("cannot write subcgroup file", err)
-				return 1
-			}
-			if err := mountContainerV1Cgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
-				log.PrintE("couldn't mount the container v1 cgroups", err)
-				return 1
-			}
-		} else {
-			log.PrintE("continuing with per-app isolators disabled", err)
+
+		if err := mountContainerV1Cgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
+			log.PrintE("couldn't mount the container v1 cgroups", err)
+			return 1
 		}
+
 	}
 
 	// KVM flavor has a bit different logic in handling pid vs ppid, for details look into #2389
@@ -784,7 +789,7 @@ func mountContainerV1Cgroups(s1Root string, enabledCgroups map[int][]string, sub
 	return nil
 }
 
-func getContainerV1SubCgroup(machineID string, canMachinedRegister bool) (string, error) {
+func getContainerSubCgroup(machineID string, canMachinedRegister, unified bool) (string, error) {
 	var subcgroup string
 	fromUnit, err := util.RunningFromSystemService()
 	if err != nil {
@@ -804,6 +809,10 @@ func getContainerV1SubCgroup(machineID string, canMachinedRegister bool) (string
 			return "", errwrap.Wrap(errors.New("could not get unit name"), err)
 		}
 		subcgroup = filepath.Join(slicePath, unit)
+
+		if unified {
+			subcgroup = filepath.Join(subcgroup, "payload")
+		}
 	} else {
 		escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
 		machineDir := "machine-" + escapedmID + ".scope"
@@ -813,18 +822,26 @@ func getContainerV1SubCgroup(machineID string, canMachinedRegister bool) (string
 			// look it up in /proc/self/cgroup
 			subcgroup = filepath.Join("machine.slice", machineDir)
 		} else {
-			// when registration is disabled the container will be directly
-			// under the current cgroup so we can look it up in /proc/self/cgroup
-			ownV1CgroupPath, err := cgroup.GetOwnV1CgroupPath("name=systemd")
-			if err != nil {
-				return "", errwrap.Wrap(errors.New("could not get own v1 cgroup path"), err)
-			}
-			// systemd-nspawn won't work if we are in the root cgroup. In addition,
-			// we want all rkt instances to be in distinct cgroups. Create a
-			// subcgroup and add ourselves to it.
-			subcgroup = filepath.Join(ownV1CgroupPath, machineDir)
-			if err := cgroup.JoinV1Subcgroup("systemd", subcgroup); err != nil {
-				return "", errwrap.Wrap(fmt.Errorf("error joining %s subcgroup", ownV1CgroupPath), err)
+			if unified {
+				var err error
+				subcgroup, err = cgroup.GetOwnV2CgroupPath()
+				if err != nil {
+					return "", errwrap.Wrap(errors.New("could not get own v2 cgroup path"), err)
+				}
+			} else {
+				// when registration is disabled the container will be directly
+				// under the current cgroup so we can look it up in /proc/self/cgroup
+				ownV1CgroupPath, err := cgroup.GetOwnV1CgroupPath("name=systemd")
+				if err != nil {
+					return "", errwrap.Wrap(errors.New("could not get own v1 cgroup path"), err)
+				}
+				// systemd-nspawn won't work if we are in the root cgroup. In addition,
+				// we want all rkt instances to be in distinct cgroups. Create a
+				// subcgroup and add ourselves to it.
+				subcgroup = filepath.Join(ownV1CgroupPath, machineDir)
+				if err := cgroup.JoinV1Subcgroup("systemd", subcgroup); err != nil {
+					return "", errwrap.Wrap(fmt.Errorf("error joining %s subcgroup", ownV1CgroupPath), err)
+				}
 			}
 		}
 	}
