@@ -46,15 +46,22 @@ The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/b
 - File a PR and get a review from another [MAINTAINER](https://github.com/coreos/rkt/blob/master/MAINTAINERS).
   This is useful to a) sanity check the diff, and b) be very explicit/public that a release is happening
 - Ensure the CI on the release PR is green!
+- Merge the PR
 
-After merging and going back to master branch, we check out the release version and tag it:
+Check out the release commit and build it!
 
-- `git checkout HEAD^` should work; sanity check configure.ac (2nd line) after doing this
-- Build rkt inside rkt (so make sure you have rkt in your $PATH), we'll use this in a minute:
+- `git checkout HEAD^` should work. You want to be at the commit where the version is without "+git". Sanity check configure.ac (2nd line).
+- Build rkt inside rkt (so make sure you have rkt in your $PATH):
   - `export BUILDDIR=$PWD/release-build && mkdir -p $BUILDDIR && sudo BUILDDIR=$BUILDDIR ./scripts/build-rir.sh`
-  - Sanity check `release-build/target/bin/rkt version`
-  - Sanity check `ldd release-build/target/bin/rkt`: it can contain linux-vdso.so, libpthread.so, libc.so, libdl.so and ld-linux-x86-64.so but nothing else.
-  - Sanity check `ldd release-build/target/tools/init`: same as above.
+- Sanity check the binary:
+  - Check `release-build/target/bin/rkt version`
+  - Check `ldd release-build/target/bin/rkt`: it can contain linux-vdso.so, libpthread.so, libc.so, libdl.so and ld-linux-x86-64.so but nothing else.
+  - Check `ldd release-build/target/tools/init`: same as above.
+- Build convenience packages:
+  - `sudo BUILDDIR=$BUILDDIR ./scripts/build-rir.sh --exec=./scripts/pkg/build-pkgs.sh -- 1.2.0` (add correct version)
+
+Sign a tagged release and push it to GitHub:
+
 - Grab the release key (see details below) and add a signed tag: `GIT_COMMITTER_NAME="CoreOS Application Signing Key" GIT_COMMITTER_EMAIL="security@coreos.com" git tag -u $RKTSUBKEYID'!' -s v1.2.0 -m "rkt v1.2.0"`
 - Push the tag to GitHub: `git push --tags`
 
@@ -93,8 +100,8 @@ The public key for GPG signing can be found at [CoreOS Application Signing Key](
 The following commands are used for public release signing:
 
 ```
-for i in $NAME.tar.gz stage1-*.aci; do gpg2 -u $RKTSUBKEYID'!' --armor --output ${i}.asc --detach-sign ${i}; done
-for i in $NAME.tar.gz stage1-*.aci; do gpg2 --verify ${i}.asc ${i}; done
+for i in $NAME.tar.gz stage1-*.aci *.deb *.rpm; do gpg2 -u $RKTSUBKEYID'!' --armor --output ${i}.asc --detach-sign ${i}; done
+for i in $NAME.tar.gz stage1-*.aci *.deb *.rpm; do gpg2 --verify ${i}.asc ${i}; done
 ```
 
 - Once signed and uploaded, double-check that all artifacts and signatures are on github. There should be 8 files in attachments (1x tar.gz, 3x ACI, 4x armored signatures).
