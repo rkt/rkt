@@ -180,23 +180,24 @@ $$(call forward-vars,$$(STAGE1_ACI_IMAGE_$1-$i), \
 # and ensure that all of them will be removed
 $(if $(strip $2), \
         $(eval IMG := $(foreach h,$2,$1-$h)) \
-        $(foreach s,$(IMG), \
+        $(foreach s,$(IMG),
                 $(call setup-stamp-file,STAGE1_COPY_IMAGE_FILES_$s,/copy-files-$s) \
 		$$(STAGE1_COPY_IMAGE_FILES_$s): $$(STAGE1_ALL_STAMPS_$1)
-			$(VQ) $(call vb,vt,COPY FILES,$$(call vsp,$s)) cp -rn $(STAGE1_ACIDIR_$1)/rootfs $(STAGE1_ACIDIR_$1)/manifest $(STAGE1_ACIDIR_$1)/$s \
+			$(VQ) $(call vb,vt,COPY FILES,$$(call vsp,$s)) cp -rn $(STAGE1_ACIDIR_$1)/rootfs $(STAGE1_ACIDIR_$1)/manifest $(STAGE1_ACIDIR_$1)/$s
 		$(eval CLEAN_DIRS += $(STAGE1_ACIDIR_$1)/$s)
-		$(call generate-clean-mk-simple, \
-		        $(STAGE1_ACI_IMAGE_$s), \
-		        $(STAGE1_ACIDIR_$1)/$s, \
-		        $(STAGE1_ACIDIR_$1)/$s, \
-		        $(STAGE1_COPY_IMAGE_FILES_$s), \
+		$(call generate-clean-mk-simple,
+		        $(STAGE1_ACI_IMAGE_$s),
+		        $(STAGE1_ACIDIR_$1)/$s,
+		        $(STAGE1_ACIDIR_$1)/$s,
+		        $(STAGE1_COPY_IMAGE_FILES_$s),
 		        copy-$s)), \
         $(eval IMG := $1))
 
 # Build images. Common files are stored in STAGE1_ACIDIR_$1,
 # image specific files in STAGE1_ACIDIR_$1/flavor-image/...
+# Add dependency for copying image-specific files, if any ($2 is not empty)
 $(foreach s,$(IMG),
-$$(STAGE1_ACI_IMAGE_$s): $$(ACTOOL_STAMP) | $$(TARGET_BINDIR)
+$$(STAGE1_ACI_IMAGE_$s): $$(ACTOOL_STAMP) | $$(TARGET_BINDIR) $$(if $(strip $2),$$(STAGE1_COPY_IMAGE_FILES_$s),)
 	$(eval ACI_OUTPUT := "$(if $(filter 1,$(words $2)),$(STAGE1_ACI_IMAGE_$1),$(STAGE1_ACI_IMAGE_$s))")
 	$(VQ) \
 	$(call vb,vt,ACTOOL,$$(call vsp,$(ACI_OUTPUT))) \
