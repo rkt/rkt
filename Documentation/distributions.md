@@ -25,10 +25,22 @@ If you prefer to install the newest version of rkt follow the instructions in th
 
 ## Ubuntu
 
-rkt is not packaged currently in Ubuntu. If you want the newest version of rkt the easiest method to install it is using the `install-rkt.sh` script:
+rkt is not packaged currently in Ubuntu. If you want the newest version of rkt the easiest method to install it is using the `install-rkt.sh` script. This script can be found in the *scripts* directory of the [rkt Github repository](https://github.com/coreos/rkt).
+
+Either clone the repository and run the script:
 
 ```
+git clone https://github.com/coreos/rkt
+cd rkt
 sudo ./scripts/install-rkt.sh
+```
+
+Or just get the script:
+
+```
+wget https://raw.githubusercontent.com/coreos/rkt/master/scripts/install-rkt.sh
+chmod +x install-rkt.sh
+sudo ./install-rkt.sh
 ```
 
 The above script will install the "gnupg2", and "checkinstall" packages, download rkt, verify it, and finally invoke "checkinstall" to create a deb pakage and install rkt. To uninstall rkt, execute:
