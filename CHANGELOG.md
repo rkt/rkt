@@ -1,3 +1,31 @@
+## 1.15.0
+
+This relase brings some expanded DNS configuration options, beta support for QEMU, recursive volume mounts, and improved sd_notify support.
+
+### New features
+- DNS configuration improvements ([#3161](https://github.com/coreos/rkt/pull/3161)):
+    - Respect DNS results from CNI
+    - Add --dns=host mode to bind-mount the host's /etc/resolv.conf
+    - Add --dns=none mode to ignore CNI DNS
+    - Add --hosts-entry (IP=HOSTNAME) to tweak the pod's /etc/hosts
+    - Add --hosts-entry=host to bind-mount the host's /etc/hosts
+- Introduce QEMU support as an alternative KVM hypervisor ([#2952](https://github.com/coreos/rkt/pull/2952))
+- add support for recursive volume/mounts ([#2880](https://github.com/coreos/rkt/pull/2880))
+- stage1: allow sd_notify from the app in the container to the host ([#2826](https://github.com/coreos/rkt/pull/2826)).
+
+### Other changes
+- rkt-monitor: bunch of improvements ([#3093](https://github.com/coreos/rkt/pull/3093))
+- makefile/kvm: add dependency for copied files ([#3197](https://github.com/coreos/rkt/pull/3197))
+- store: refactor GetRemote ([#2975](https://github.com/coreos/rkt/pull/2975)).
+- build,stage1: include systemd dir when checking libs ([#3186](https://github.com/coreos/rkt/pull/3186))
+- tests: volumes: add missing test `volumeMountTestCasesNonRecursive` ([#3165](https://github.com/coreos/rkt/pull/3165))
+- kvm/pod: disable insecure-options=paths for kvm flavor ([#3155](https://github.com/coreos/rkt/pull/3155))
+- stage0: don't copy image annotations to pod manifest RuntimeApp annotations ([#3100](https://github.com/coreos/rkt/pull/3100))
+- stage1: shutdown.service: don't use /dev/console ([#3148](https://github.com/coreos/rkt/pull/3148))
+- build: build simple .deb and .rpm packages ([#3177](https://github.com/coreos/rkt/pull/3177)). Add a simple script to build .deb and .rpm packages. This is not a substitute for a proper distro-maintained package.
+- Documentation updates: ([#3196](https://github.com/coreos/rkt/pull/3196)) ([#3192](https://github.com/coreos/rkt/pull/3192)) ([#3187](https://github.com/coreos/rkt/pull/3187)) ([#3185](https://github.com/coreos/rkt/pull/3185)) ([#3182](https://github.com/coreos/rkt/pull/3182)) ([#3180](https://github.com/coreos/rkt/pull/3180)) ([#3166](https://github.com/coreos/rkt/pull/3166))
+- proposals/app-level-api: add rkt app sandbox subcommand ([#3147](https://github.com/coreos/rkt/pull/3147)). This adds a new subcommand `app init` to create an initial empty pod.
+
 ## 1.14.0
 
 This release updates the coreos and kvm flavors, bringing in a newer stable systemd (v231). Several fixes and cgroups-related changes landed in `api-service`, and better heuristics have been introduced to avoid using overlays in non-supported environments. Finally, `run-prepared` now honors options for insecure/privileged pods too.
