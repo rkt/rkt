@@ -70,6 +70,10 @@
         {
             "name": "coreos.com/rkt/stage1/gc",
             "value": "/ex/gc"
+        },
+        {
+            "name": "appc.io/executor/supports-systemd-notify",
+            "value": "true"
         }
     ]
 }

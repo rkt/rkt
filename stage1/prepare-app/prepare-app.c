@@ -263,6 +263,8 @@ int main(int argc, char *argv[])
 		{ "/etc/rkt-hosts", "/etc/hosts", "bind", NULL, MS_BIND, false },
 		{ "/etc/hosts-fallback", "/etc/hosts", "bind", NULL, MS_BIND, true }, // only create as fallback
 		{ "/proc/sys/kernel/hostname", "/etc/hostname", "bind", NULL, MS_BIND, false },
+		// TODO @alepuccetti this could be removed when https://github.com/systemd/systemd/issues/3544 is solved
+		{ "/run/systemd/notify", "/run/systemd/notify", "bind", NULL, MS_BIND, false },
 	};
 	const char *root;
 	int rootfd;

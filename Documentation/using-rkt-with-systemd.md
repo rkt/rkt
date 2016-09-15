@@ -77,6 +77,78 @@ If the output contains `-XZ`, journal entries will not be available.
 
 ## Managing pods as systemd services
 
+### Notifications
+
+systemd inside stage1 can notify systemd on the host that it is ready, to make sure that stage1 systemd send the notification at the right time you can use the [sd_notify][sd_notify] mechanism.
+To make use of this feature, you need to set the annotation `appc.io/executor/supports-systemd-notify` to true in the image manifest whenever the app supports sd\_notify (see example manifest below).
+If you build your image with acbuild you can use the command: `acbuild annotation add appc.io/executor/supports-systemd-notify true`.
+
+```
+{
+	"acKind": "ImageManifest",
+	"acVersion": "0.8.4",
+	"name": "coreos.com/etcd",
+	...
+	"app": {
+		"exec": [
+			"/etcd"
+		],
+		...
+	},
+	"annotations": [
+	    "name": "appc.io/executor/supports-systemd-notify",
+	    "value": "true"
+	]
+}
+```
+
+This feature is always available when using the "coreos" stage1 flavor.
+If you use the "host" stage1 flavor (e.g. Fedora RPM or Debian deb package), you will need systemd >= v231.
+To verify how it works, run in a terminal the command: `sudo systemd-run --unit=test --service-type=notify rkt run --insecure-options=image /path/to/your/app/image`, then periodically check the status with `systemctl status test`.
+
+If the pod uses a stage1 image with systemd v231 (or greater), then the pod will be seen active form the host when systemd inside stage1 will reach default target.
+Instead, before it was marked as active as soon as it started.
+In this way it is possible to easily set up dependencies between pods and host services.
+Moreover, using [`SdNotify()`](https://github.com/coreos/go-systemd/blob/master/daemon/sdnotify.go) in the application it is possible to make the pod marked as ready when all the apps or a particular one is ready.
+For more information check [systemd services unit](https://www.freedesktop.org/software/systemd/man/systemd.unit.html) documentation.
+Below there is a simple example of an app using the systemd notification mechanism via [go-systemd](https://github.com/coreos/go-systemd) binding library.
+
+```go
+package main
+
+import (
+		"log"
+		"net"
+		"net/http"
+
+		"github.com/coreos/go-systemd/daemon"
+)
+
+func main() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("request from %v\n", r.RemoteAddr)
+		w.Write([]byte("hello\n"))
+	})
+	ln, err := net.Listen("tcp", ":5000")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+	err = daemon.SdNotify("READY=1")
+	if err != nil {
+		log.Printf("daemon.SdNotify READY=1 return: %s", err)
+	}
+	log.Fatal(http.Serve(ln, nil))
+}
+```
+
+You can run an app that supports `sd\_notify()` with this command:
+
+```
+# systemd-run --slice=machine --service-type=notify rkt run coreos.com/etcd:v2.2.5
+Running as unit run-29486.service.
+```
+
 ### Simple Unit File
 
 The following is a simple example of a unit file using `rkt` to run an `etcd` instance under systemd service management:
@@ -403,3 +475,4 @@ $ systemd-cgls --all
 [systemd-run]: http://www.freedesktop.org/software/systemd/man/systemd-run.html
 [systemd-socket-activated]: http://www.freedesktop.org/software/systemd/man/sd_listen_fds.html
 [systemd-socket-proxyd]: https://www.freedesktop.org/software/systemd/man/systemd-socket-proxyd.html
+[sd_notify]: https://www.freedesktop.org/software/systemd/man/sd_notify.html

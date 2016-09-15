@@ -427,6 +427,20 @@ func generateDeviceAllows(root string, appName types.ACName, mountPoints []types
 	return devAllow, nil
 }
 
+// supportsNotify returns true if in the image manifest appc.io/executor/supports-systemd-notify is set to true
+func supportsNotify(p *stage1commontypes.Pod, appName string) bool {
+	appImg := p.Images[appName]
+	if appImg == nil {
+		return false
+	}
+	supportNotifyAnnotation, ok := appImg.Annotations.Get("appc.io/executor/supports-systemd-notify")
+	supportNotify, err := strconv.ParseBool(supportNotifyAnnotation)
+	if ok && supportNotify && err == nil {
+		return true
+	}
+	return false
+}
+
 // appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
 func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string, insecureOptions Stage1InsecureOptions) error {
 	app := ra.App
@@ -506,6 +520,10 @@ func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive b
 		// systemd unit name not getting written to the journal if the unit is
 		// short-lived and runs as non-root.
 		unit.NewUnitOption("Service", "SyslogIdentifier", appName.String()),
+	}
+
+	if supportsNotify(p, appName.String()) {
+		opts = append(opts, unit.NewUnitOption("Service", "Type", "notify"))
 	}
 
 	if !insecureOptions.DisableCapabilities {
