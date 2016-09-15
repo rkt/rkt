@@ -52,8 +52,8 @@ c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
-| `--cap-remove` | none | capability to remove (example: '--cap-remove=CAP\_SYS\_CHROOT,CAP\_MKNOD') | Capabilities to remove from the process's capabilities bounding set, all others from the default set will be included |
-| `--cap-retain` | none | capability to retain (example: '--cap-remove=CAP\_SYS\_ADMIN,CAP\_NET\_ADMIN') | Capabilities to retain in the process's capabilities bounding set, all others will be removed |
+| `--caps-remove` | none | capability to remove (example: '--cap-remove=CAP\_SYS\_CHROOT,CAP\_MKNOD') | Capabilities to remove from the process's capabilities bounding set, all others from the default set will be included |
+| `--caps-retain` | none | capability to retain (example: '--cap-remove=CAP\_SYS\_ADMIN,CAP\_NET\_ADMIN') | Capabilities to retain in the process's capabilities bounding set, all others will be removed |
 | `--exec` | none | Path to executable | Override the exec command for the preceding image. |
 | `--group` | root | gid, groupname or file path | Group override for the preceding image (example: '--group=group') |
 | `--inherit-env` | `false` | `true` or `false` | Inherit all environment variables not set by apps. |
