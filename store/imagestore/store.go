@@ -548,17 +548,23 @@ func (s *Store) RemoveACI(key string) error {
 	return nil
 }
 
-// GetRemote tries to retrieve a remote with the given ACIURL. found will be
-// false if remote doesn't exist.
-func (s *Store) GetRemote(aciURL string) (*Remote, bool, error) {
+// GetRemote tries to retrieve a remote with the given ACIURL.
+// If remote doesn't exist, it returns ErrRemoteNotFound error.
+func (s *Store) GetRemote(aciURL string) (*Remote, error) {
 	var remote *Remote
-	found := false
+
 	err := s.db.Do(func(tx *sql.Tx) error {
 		var err error
-		remote, found, err = GetRemote(tx, aciURL)
+
+		remote, err = GetRemote(tx, aciURL)
+
 		return err
 	})
-	return remote, found, err
+	if err != nil {
+		return nil, err
+	}
+
+	return remote, nil
 }
 
 // WriteRemote adds or updates the provided Remote.

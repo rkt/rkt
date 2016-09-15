@@ -42,25 +42,24 @@ func TestNewRemote(t *testing.T) {
 	s.WriteRemote(na)
 
 	// Get a new remote w the same parameters, reading from table should be fine
-	nb, ok, err := s.GetRemote(u1)
+	nb, err := s.GetRemote(u1)
 	if err != nil {
 		t.Fatalf("unexpected error reading index: %v", err)
 	}
-	if !ok {
-		t.Fatalf("unexpected index not found")
-	}
+
 	if nb.BlobKey != data {
 		t.Fatalf("bad data returned from store: got %v, want %v", nb.BlobKey, data)
 	}
 
 	// Get a remote with a different URI
-	nc, ok, err := s.GetRemote(u2)
+	nc, err := s.GetRemote(u2)
 	// Should get an error, since the URI shouldn't be present in the table
-	if ok {
-		t.Fatalf("unexpected index found")
+	if err == nil {
+		t.Fatalf("expected error, got nil")
 	}
+
 	// Remote shouldn't be populated
-	if nc.BlobKey != "" {
-		t.Errorf("unexpected blob: got %v", nc.BlobKey)
+	if nc != nil {
+		t.Errorf("unexpected remote: got %v", nc)
 	}
 }

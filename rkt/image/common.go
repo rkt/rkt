@@ -223,10 +223,14 @@ func maybeUseCached(rem *imagestore.Remote, cd *cacheData) string {
 
 func remoteForURL(s *imagestore.Store, u *url.URL) (*imagestore.Remote, error) {
 	urlStr := u.String()
-	if rem, ok, err := s.GetRemote(urlStr); err != nil {
+	rem, err := s.GetRemote(urlStr)
+	if err != nil {
+		if err == imagestore.ErrRemoteNotFound {
+			return nil, nil
+		}
+
 		return nil, errwrap.Wrap(fmt.Errorf("failed to fetch remote for URL %q", urlStr), err)
-	} else if ok {
-		return rem, nil
 	}
-	return nil, nil
+
+	return rem, nil
 }

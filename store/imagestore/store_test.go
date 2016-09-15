@@ -386,12 +386,9 @@ func TestRemoveACI(t *testing.T) {
 	}
 
 	// Verify that no remote for the specified key exists
-	_, found, err := s.GetRemote(aciURL)
-	if err != nil {
+	_, err = s.GetRemote(aciURL)
+	if err != ErrRemoteNotFound {
 		t.Fatalf("unexpected error: %v", err)
-	}
-	if found {
-		t.Fatalf("expected to find no remote, but a remote was found")
 	}
 
 	// Try to remove a non-existent key
@@ -437,5 +434,4 @@ func TestRemoveACI(t *testing.T) {
 	if _, ok := err.(*StoreRemovalError); !ok {
 		t.Fatalf("expected StoreRemovalError got: %v", err)
 	}
-
 }
