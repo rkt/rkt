@@ -569,3 +569,23 @@ $(strip \
 		$(call generate-empty-filelist,$(_MISC_GPF_FILELIST)))) \
 	$(call undefine-namespaces,_MISC_GPF))
 endef
+
+# Recursive wildcard - recursively generate a list of files
+#
+# 1 - root directory
+# 2 - filter pattern
+define rwildcard
+$(foreach d, $(wildcard $1/*), \
+	$(filter $(subst *, %, $2), $d) $(call rwildcard, $d, $2))
+endef
+
+# Recursively list all files in a given path
+# This just shells out to `find`.
+#
+# 1 - the path (file or directory)
+define rlist-files
+$(strip \
+	$(eval _MISC_RLIST_OP1_ := $(call sq_escape,$1)) \
+	$(eval _MISC_RLIST_FILES_ := $(shell find $(_MISC_RLIST_OP1_) -type f)) \
+	$(_MISC_RLIST_FILES_))
+endef

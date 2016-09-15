@@ -42,9 +42,12 @@ func init() {
 
 	cmdRunPrepared.Flags().Var(&flagNet, "net", "configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively. Syntax: --net[=n[:args]][,]")
 	cmdRunPrepared.Flags().Lookup("net").NoOptDefVal = "default"
-	cmdRunPrepared.Flags().Var(&flagDNS, "dns", "name servers to write in /etc/resolv.conf")
+	cmdRunPrepared.Flags().Var(&flagDNS, "dns", "name servers to write in /etc/resolv.conf. Pass 'host' to use host's resolv.conf. Pass 'none' to ignore CNI DNS config")
 	cmdRunPrepared.Flags().Var(&flagDNSSearch, "dns-search", "DNS search domains to write in /etc/resolv.conf")
 	cmdRunPrepared.Flags().Var(&flagDNSOpt, "dns-opt", "DNS options to write in /etc/resolv.conf")
+	cmdRunPrepared.Flags().StringVar(&flagDNSDomain, "dns-domain", "", "DNS domain to write in /etc/resolv.conf")
+	cmdRunPrepared.Flags().Var(&flagHostsEntries, "hosts-entry", "Entries to add to the pod-wide /etc/hosts. Pass 'host' to use the host's /etc/hosts")
+
 	cmdRunPrepared.Flags().BoolVar(&flagInteractive, "interactive", false, "run pod interactively")
 	cmdRunPrepared.Flags().BoolVar(&flagMDSRegister, "mds-register", false, "register pod with metadata service")
 	cmdRunPrepared.Flags().StringVar(&flagHostname, "hostname", "", `pod's hostname. If empty, it will be "rkt-$PODUUID"`)
@@ -149,6 +152,12 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
+	DNSConfMode, DNSConfig, HostsEntries, err := parseDNSFlags(flagHostsEntries, flagDNS, flagDNSSearch, flagDNSOpt, flagDNSDomain)
+	if err != nil {
+		stderr.PrintE("error with dns flags", err)
+		return 1
+	}
+
 	rcfg := stage0.RunConfig{
 		CommonConfig: &stage0.CommonConfig{
 			Store:     s,
@@ -159,9 +168,9 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		Net:                  flagNet,
 		LockFd:               lfd,
 		Interactive:          flagInteractive,
-		DNS:                  flagDNS,
-		DNSSearch:            flagDNSSearch,
-		DNSOpt:               flagDNSOpt,
+		DNSConfMode:          DNSConfMode,
+		DNSConfig:            DNSConfig,
+		HostsEntries:         *HostsEntries,
 		MDSRegister:          flagMDSRegister,
 		Apps:                 apps,
 		RktGid:               rktgid,

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	rktflag "github.com/coreos/rkt/rkt/flag"
+	rktflag "github.com/coreos/rkt/pkg/flag"
 	"github.com/coreos/rkt/store/imagestore"
 	"github.com/dustin/go-humanize"
 

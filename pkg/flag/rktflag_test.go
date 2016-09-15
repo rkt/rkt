@@ -15,9 +15,19 @@
 package flag
 
 import (
+	"flag"
+	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/spf13/pflag"
 )
+
+// Ensure all these types implement the pflag.Value and flag.Value interface
+var _ pflag.Value = (*OptionList)(nil)
+var _ pflag.Value = (*PairList)(nil)
+var _ flag.Value = (*OptionList)(nil)
+var _ flag.Value = (*PairList)(nil)
 
 var options = []string{"zero", "one", "two"}
 
@@ -110,12 +120,12 @@ func TestBitFlags(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		// test newBitFlags
-		if _, err := newBitFlags(options, tt.opts, bfMap); (err != nil) != tt.parseErr {
-			t.Errorf("test %d: unexpected error in newBitFlags: %v", i, err)
+		// test NewBitFlags
+		if _, err := NewBitFlags(options, tt.opts, bfMap); (err != nil) != tt.parseErr {
+			t.Errorf("test %d: unexpected error in NewBitFlags: %v", i, err)
 		}
 
-		bf, err := newBitFlags(options, strings.Join(options, ","), bfMap)
+		bf, err := NewBitFlags(options, strings.Join(options, ","), bfMap)
 		if err != nil {
 			t.Errorf("test %d: unexpected error preparing test: %v", i, err)
 		}
@@ -124,112 +134,97 @@ func TestBitFlags(t *testing.T) {
 		if err := bf.Set(tt.opts); (err != nil) != tt.parseErr {
 			t.Errorf("test %d: Could not parse options as expected: %v", i, err)
 		}
-		if tt.ex >= 0 && bf.hasFlag(tt.ex) == tt.logicErr {
+		if tt.ex >= 0 && bf.HasFlag(tt.ex) == tt.logicErr {
 			t.Errorf("test %d: Result was unexpected: %d != %d",
-				i, tt.ex, bf.flags)
+				i, tt.ex, bf.Flags)
 		}
 	}
 }
 
-func TestSecFlags(t *testing.T) {
+type ss []string
+type sm map[string]string
+
+func TestPairList(t *testing.T) {
+	options := map[string][]string{
+		"one":   {"a", "b", "ll"},
+		"two":   {},
+		"three": nil,
+	}
+
 	tests := []struct {
-		opts   string
-		image  bool
-		tls    bool
-		onDisk bool
-		http   bool
-		err    bool
+		args     ss
+		expected sm
+		hasError bool
 	}{
 		{
-			opts:   "none",
-			image:  false,
-			tls:    false,
-			onDisk: false,
-			http:   false,
-		},
-		{
-			opts:   "image",
-			image:  true,
-			tls:    false,
-			onDisk: false,
-			http:   false,
-		},
-		{
-			opts:   "tls",
-			image:  false,
-			tls:    true,
-			onDisk: false,
-			http:   false,
-		},
-		{
-			opts:   "onDisk",
-			image:  false,
-			tls:    false,
-			onDisk: true,
-			http:   false,
-		},
-		{
-			opts:   "http",
-			image:  false,
-			tls:    false,
-			onDisk: false,
-			http:   true,
-		},
-		{
-			opts:   "all",
-			image:  true,
-			tls:    true,
-			onDisk: true,
-			http:   true,
-		},
-		{
-			opts:   "image,tls",
-			image:  true,
-			tls:    true,
-			onDisk: false,
-			http:   false,
-		},
-		{
-			opts: "i-am-sure-we-will-not-get-this-insecure-flag",
-			err:  true,
+			args:     ss{},
+			expected: sm{},
+			hasError: false,
+		}, {
+			args:     ss{"one=a"},
+			expected: sm{"one": "a"},
+			hasError: false,
+		}, {
+			args:     ss{"one=a", "two=bar"},
+			expected: sm{"one": "a", "two": "bar"},
+			hasError: false,
+		}, {
+			args:     ss{"one=ll,two=bar"},
+			expected: sm{"one": "ll", "two": "bar"},
+			hasError: false,
+		}, {
+			args:     ss{"one=bar,two=bar"},
+			expected: sm{},
+			hasError: true,
+		}, {
+			args:     ss{"one=ll,two=bar", "one=a"},
+			expected: sm{"one": "a", "two": "bar"},
+			hasError: false,
 		},
 	}
 
 	for i, tt := range tests {
-		sf, err := NewSecFlags(tt.opts)
-		if err != nil && !tt.err {
-			t.Errorf("test %d: unexpected error in NewSecFlags: %v", i, err)
-		} else if err == nil && tt.err {
-			t.Errorf("test %d: unexpected success in NewSecFlags for options %q", i, tt.opts)
+
+		pl := MustNewPairList(options, nil)
+
+		var argErr error
+		for _, arg := range tt.args {
+			err := pl.Set(arg)
+			if err != nil {
+				argErr = err
+			}
 		}
-		if err != nil {
-			continue
+		if argErr != nil {
+			if !tt.hasError {
+				t.Errorf("test %d: pl.Set unexpected error %v", i, argErr)
+			} else {
+				continue // no point in testing equality
+			}
 		}
 
-		if got := sf.SkipImageCheck(); tt.image != got {
-			t.Errorf("test %d: expected image skip to be %v, got %v", i, tt.image, got)
+		if !reflect.DeepEqual(map[string]string(tt.expected), pl.Pairs) {
+			t.Errorf("test %d: pl.Pairs expected %v got %v", i, tt.expected, pl.Pairs)
 		}
+	}
 
-		if got := sf.SkipTLSCheck(); tt.tls != got {
-			t.Errorf("test %d: expected tls skip to be %v, got %v", i, tt.tls, got)
-		}
+	pl := MustNewPairList(options, nil)
+	got := pl.PermissibleString()
+	expected := "one=[a|b|ll] three=* two=*" // order!
+	if got != expected {
+		t.Errorf("pl.PermissibleString() expected %v got %v", expected, got)
+	}
 
-		if got := sf.SkipOnDiskCheck(); tt.onDisk != got {
-			t.Errorf("test %d: expected on disk skip to be %v, got %v", i, tt.onDisk, got)
-		}
+	pl = MustNewPairList(options, sm{"one": "a", "two": "bar"})
+	got = pl.String()
+	expected = "one=a two=bar"
+	if got != expected {
+		t.Errorf("pl.String expected %v got %v", expected, got)
+	}
 
-		if got := sf.AllowHTTP(); tt.http != got {
-			t.Errorf("test %d: expected http allowed to be %v, got %v", i, tt.http, got)
-		}
-
-		all := tt.http && tt.onDisk && tt.tls && tt.image
-		if got := sf.SkipAllSecurityChecks(); all != got {
-			t.Errorf("test %d: expected all skip to be %v, got %v", i, all, got)
-		}
-
-		any := tt.http || tt.onDisk || tt.tls || tt.image
-		if got := sf.SkipAnySecurityChecks(); any != got {
-			t.Errorf("test %d: expected all skip to be %v, got %v", i, any, got)
-		}
+	ser := SerializePairs(pl.Pairs)
+	pl2 := MustNewPairList(options, nil)
+	pl2.Set(ser)
+	if !reflect.DeepEqual(pl.Pairs, pl2.Pairs) {
+		t.Errorf("serialize - unserialize did not match")
 	}
 }

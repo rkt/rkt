@@ -17,6 +17,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha1"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -56,6 +57,7 @@ var (
 		ReadFile           bool
 		WriteFile          bool
 		StatFile           bool
+		HashFile           bool
 		Sleep              int
 		PreSleep           int
 		PrintMemoryLimit   bool
@@ -99,6 +101,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.ReadFile, "read-file", false, "Print the content of the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.StatFile, "stat-file", false, "Print the ownership and mode of the file $FILE")
+	globalFlagset.BoolVar(&globalFlags.HashFile, "hash-file", false, "Print the SHA1SUM of the file $FILE")
 	globalFlagset.IntVar(&globalFlags.Sleep, "sleep", -1, "Sleep before exiting (in seconds)")
 	globalFlagset.IntVar(&globalFlags.PreSleep, "pre-sleep", -1, "Sleep before executing (in seconds)")
 	globalFlagset.BoolVar(&globalFlags.PrintMemoryLimit, "print-memorylimit", false, "Print cgroup memory limit")
@@ -369,6 +372,21 @@ func main() {
 		fmt.Printf("%s: mode: %s\n", fileName, fi.Mode().String())
 		fmt.Printf("%s: user: %v\n", fileName, fi.Sys().(*syscall.Stat_t).Uid)
 		fmt.Printf("%s: group: %v\n", fileName, fi.Sys().(*syscall.Stat_t).Gid)
+	}
+
+	if globalFlags.HashFile {
+		fileName := os.Getenv("FILE")
+		if globalFlags.FileName != "" {
+			fileName = globalFlags.FileName
+		}
+
+		dat, err := ioutil.ReadFile(fileName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot read file %q: %v\n", fileName, err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("sha1sum: %x\n", sha1.Sum(dat))
 	}
 
 	if globalFlags.PrintCwd {

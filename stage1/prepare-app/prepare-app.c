@@ -25,6 +25,7 @@
 #include <sys/vfs.h>
 #include <dirent.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 #define err_out(_fmt, _args...)						\
 		fprintf(stderr, "Error: " _fmt "\n", ##_args);
@@ -71,63 +72,11 @@ typedef struct _mount_point_t {
 	const char	*type;
 	const char	*options;
 	unsigned long	flags;
+	const bool	skip_if_dst_exists; // Only respected for files_mount_table
 } mount_point;
 
 #define dir(_name, _mode) \
 	{ .name = _name, .mode = _mode }
-
-static int get_machine_name(char *out, int out_len) {
-	int	fd;
-	char	buf[MACHINE_ID_LEN + 1];
-
-	pgoto_if((fd = open("/etc/machine-id", O_RDONLY)) == -1,
-		_fail, "Error opening \"/etc/machine-id\"");
-	pgoto_if(read(fd, buf, MACHINE_ID_LEN) == -1,
-		_fail_fd, "Error reading \"/etc/machine-id\"");
-	pgoto_if(close(fd) != 0,
-		_fail, "Error closing \"/etc/machine-id\"");
-	goto_if(snprintf(out, out_len,
-			"rkt-%.8s-%.4s-%.4s-%.4s-%.12s",
-			buf, buf+8, buf+12, buf+16, buf+20) >= out_len,
-		_fail, "Error constructing machine name");
-
-	return 1;
-
-_fail_fd:
-	close(fd);
-_fail:
-	return 0;
-}
-
-static int ensure_etc_hosts_exists(const char *root, int rootfd) {
-	char	name[MACHINE_NAME_LEN + 1];
-	char	hosts[128];
-	int	fd, len;
-
-	if(faccessat(rootfd, "etc/hosts", F_OK, AT_EACCESS) == 0)
-		return 1;
-
-	goto_if(!get_machine_name(name, sizeof(name)),
-		_fail, "Failed to get machine name");
-	goto_if((len = snprintf(hosts, sizeof(hosts),
-			"%s\t%s\t%s\t%s\n",
-			"127.0.0.1", name,
-			"localhost", "localhost.localdomain")) >= sizeof(hosts),
-		_fail, "/etc/hosts line too long: \"%s\"", hosts);
-	pgoto_if((fd = openat(rootfd, "etc/hosts", O_WRONLY|O_CREAT, 0644)) == -1,
-		_fail, "Failed to create \"%s/etc/hosts\"", root);
-	pgoto_if(write(fd, hosts, len) != len,
-		_fail_fd, "Failed to write \"%s/etc/hosts\"", root);
-	pgoto_if(close(fd) != 0,
-		_fail, "Failed to close \"%s/etc/hosts\"", root);
-
-	return 1;
-
-_fail_fd:
-	close(fd);
-_fail:
-	return 0;
-}
 
 static void mount_at(const char *root, const mount_point *mnt)
 {
@@ -181,8 +130,8 @@ static int mount_sys_required(const char *root)
 static void mount_sys(const char *root)
 {
 	struct statfs fs;
-	const mount_point sys_bind_rec = { "/sys", "sys", "bind", NULL, MS_BIND|MS_REC };
-	const mount_point sys_bind = { "/sys", "sys", "bind", NULL, MS_BIND };
+	const mount_point sys_bind_rec = { "/sys", "sys", "bind", NULL, MS_BIND|MS_REC, false };
+	const mount_point sys_bind = { "/sys", "sys", "bind", NULL, MS_BIND, false };
 
 	pexit_if(statfs("/sys/fs/cgroup", &fs) != 0,
 	         "Cannot statfs /sys/fs/cgroup");
@@ -303,15 +252,17 @@ int main(int argc, char *argv[])
 		NULL
 	};
 	static const mount_point dirs_mount_table[] = {
-		{ "/proc", "/proc", "bind", NULL, MS_BIND|MS_REC },
-		{ "/dev/shm", "/dev/shm", "bind", NULL, MS_BIND },
-		{ "/dev/pts", "/dev/pts", "bind", NULL, MS_BIND },
-		{ "/run/systemd/journal", "/run/systemd/journal", "bind", NULL, MS_BIND },
+		{ "/proc", "/proc", "bind", NULL, MS_BIND|MS_REC, false },
+		{ "/dev/shm", "/dev/shm", "bind", NULL, MS_BIND, false },
+		{ "/dev/pts", "/dev/pts", "bind", NULL, MS_BIND, false },
+		{ "/run/systemd/journal", "/run/systemd/journal", "bind", NULL, MS_BIND, false },
 		/* /sys is handled separately */
 	};
 	static const mount_point files_mount_table[] = {
-		{ "/etc/rkt-resolv.conf", "/etc/resolv.conf", "bind", NULL, MS_BIND },
-		{ "/proc/sys/kernel/hostname", "/etc/hostname", "bind", NULL, MS_BIND },
+		{ "/etc/rkt-resolv.conf", "/etc/resolv.conf", "bind", NULL, MS_BIND, false },
+		{ "/etc/rkt-hosts", "/etc/hosts", "bind", NULL, MS_BIND, false },
+		{ "/etc/hosts-fallback", "/etc/hosts", "bind", NULL, MS_BIND, true }, // only create as fallback
+		{ "/proc/sys/kernel/hostname", "/etc/hostname", "bind", NULL, MS_BIND, false },
 	};
 	const char *root;
 	int rootfd;
@@ -355,9 +306,6 @@ int main(int argc, char *argv[])
 			 errno != EEXIST,
 			"Failed to create directory \"%s/%s\"", root, d->name);
 	}
-
-	exit_if(!ensure_etc_hosts_exists(root, rootfd),
-		"Failed to ensure \"%s/etc/hosts\" exists", root);
 
 	close(rootfd);
 
@@ -411,7 +359,8 @@ int main(int argc, char *argv[])
 	if (mount_sys_required(root))
 		mount_sys(root);
 
-	/* Bind mount files, if the source exists */
+	/* Bind mount files, if the source exists.
+	 * By default, overwrite dst unless skip_if_dst_exists is true. */
 	for (i = 0; i < nelems(files_mount_table); i++) {
 		const mount_point *mnt = &files_mount_table[i];
 		int fd;
@@ -419,6 +368,8 @@ int main(int argc, char *argv[])
 		exit_if(snprintf(to, sizeof(to), "%s/%s", root, mnt->target) >= sizeof(to),
 			"Path too long: \"%s\"", to);
 		if (access(mnt->source, F_OK) != 0)
+			continue;
+		if( mnt->skip_if_dst_exists && access(to, F_OK) == 0)
 			continue;
 		if (access(to, F_OK) != 0) {
 			pexit_if((fd = creat(to, 0644)) == -1,

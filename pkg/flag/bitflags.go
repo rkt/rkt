@@ -21,24 +21,26 @@ import (
 	"github.com/hashicorp/errwrap"
 )
 
-// bitFlags is a flag value type supporting a csv list of options stored as bits
-type bitFlags struct {
+// BitFlags is a flag value type supporting a csv list of options stored as bits
+type BitFlags struct {
 	*OptionList
-	flags   int
-	flagMap map[string]int
+	Flags   int
+	FlagMap map[string]int
 }
 
-func newBitFlags(permissibleOptions []string, defaultOptions string, flagMap map[string]int) (*bitFlags, error) {
+// NewBitFlags initializes a simple bitflag version of the OptionList Type.
+// flagMap is the mapping from option names to the integer value
+func NewBitFlags(permissibleOptions []string, defaultOptions string, flagMap map[string]int) (*BitFlags, error) {
 	ol, err := NewOptionList(permissibleOptions, defaultOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	bf := &bitFlags{
+	bf := &BitFlags{
 		OptionList: ol,
-		flagMap:    flagMap,
+		FlagMap:    flagMap,
 	}
-	bf.typeName = "bitFlags"
+	bf.typeName = "BitFlags"
 
 	if err := bf.Set(defaultOptions); err != nil {
 		return nil, errwrap.Wrap(errors.New("problem setting defaults"), err)
@@ -47,14 +49,14 @@ func newBitFlags(permissibleOptions []string, defaultOptions string, flagMap map
 	return bf, nil
 }
 
-func (bf *bitFlags) Set(s string) error {
+func (bf *BitFlags) Set(s string) error {
 	if err := bf.OptionList.Set(s); err != nil {
 		return err
 	}
-	bf.flags = 0
+	bf.Flags = 0
 	for _, o := range bf.Options {
-		if b, ok := bf.flagMap[o]; ok {
-			bf.flags |= b
+		if b, ok := bf.FlagMap[o]; ok {
+			bf.Flags |= b
 		} else {
 			return fmt.Errorf("couldn't find flag for %v", o)
 		}
@@ -62,6 +64,6 @@ func (bf *bitFlags) Set(s string) error {
 	return nil
 }
 
-func (bf *bitFlags) hasFlag(f int) bool {
-	return (bf.flags & f) == f
+func (bf *BitFlags) HasFlag(f int) bool {
+	return (bf.Flags & f) == f
 }

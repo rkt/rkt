@@ -17,6 +17,7 @@ package common
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"syscall"
 
@@ -27,6 +28,12 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/hashicorp/errwrap"
 )
+
+/*
+ * Some common stage1 mount tasks
+ *
+ * TODO(cdc) De-duplicate code from stage0/gc.go
+ */
 
 // mountWrapper is a wrapper around a schema.Mount with an additional field indicating
 // whether it is an implicit empty volume converted from a Docker image.
@@ -174,5 +181,60 @@ func PrepareMountpoints(volPath string, targetPath string, vol *types.Volume, do
 		return errwrap.Wrap(fmt.Errorf("could not change permissions of %q", volPath), err)
 	}
 
+	return nil
+}
+
+// BindMount, well, bind mounts a source in to a destination. This will
+// do some bookkeeping:
+// * evaluate all symlinks
+// * ensure the source exists
+// * recursively create the destination
+func BindMount(source, destination string, readOnly bool) error {
+	absSource, err := filepath.EvalSymlinks(source)
+	if err != nil {
+		return errwrap.Wrap(fmt.Errorf("Could not resolve symlink for source %v", source), err)
+	}
+
+	if err := ensureDestinationExists(absSource, destination); err != nil {
+		return errwrap.Wrap(fmt.Errorf("Could not create destination mount point: %v", destination), err)
+	} else if err := syscall.Mount(absSource, destination, "bind", syscall.MS_BIND, ""); err != nil {
+		return errwrap.Wrap(fmt.Errorf("Could not bind mount %v to %v", absSource, destination), err)
+	}
+	if readOnly {
+		err := syscall.Mount(source, destination, "bind", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, "")
+
+		// If we failed to remount ro, unmount
+		if err != nil {
+			syscall.Unmount(destination, 0) // if this fails, oh well
+			return errwrap.Wrap(fmt.Errorf("Could not remount %v read-only", destination), err)
+		}
+	}
+	return nil
+}
+
+// ensureDestinationExists will recursively create a given mountpoint. If directories
+// are created, their permissions are initialized to stage1/init/common.SharedVolPerm
+func ensureDestinationExists(source, destination string) error {
+	fileInfo, err := os.Stat(source)
+	if err != nil {
+		return errwrap.Wrap(fmt.Errorf("could not stat source location: %v", source), err)
+	}
+
+	targetPathParent, _ := filepath.Split(destination)
+	if err := os.MkdirAll(targetPathParent, SharedVolPerm); err != nil {
+		return errwrap.Wrap(fmt.Errorf("could not create parent directory: %v", targetPathParent), err)
+	}
+
+	if fileInfo.IsDir() {
+		if err := os.Mkdir(destination, SharedVolPerm); !os.IsExist(err) {
+			return err
+		}
+	} else {
+		if file, err := os.OpenFile(destination, os.O_CREATE, SharedVolPerm); err != nil {
+			return err
+		} else {
+			file.Close()
+		}
+	}
 	return nil
 }
