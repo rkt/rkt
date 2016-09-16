@@ -40,8 +40,8 @@ type idsFromEtc struct {
 
 // IDsFromEtc returns a new UID/GID resolver by parsing etc/passwd, and etc/group
 // relative from the given rootPath looking for the given username, or group.
-// If username is empty string the etc/passwd lookup will be ommitted.
-// If group is empty string the etc/group lookup will be ommitted.
+// If username is empty string the etc/passwd lookup will be omitted.
+// If group is empty string the etc/group lookup will be omitted.
 func IDsFromEtc(rootPath, username, group string) (Resolver, error) {
 	return idsFromEtc{
 		rootPath: rootPath,

@@ -431,7 +431,7 @@ func (e errs) Error() string {
 	return fmt.Sprintf("%v", e.errs)
 }
 
-// fillStaticAppInfo will modify the 'v1pod' in place with the infomation retrived with 'pod'.
+// fillStaticAppInfo will modify the 'v1pod' in place with the information retrieved with 'pod'.
 // Today, these information are static and will not change during the pod's lifecycle.
 func fillStaticAppInfo(store *imagestore.Store, pod *pod, v1pod *v1alpha.Pod) error {
 	var errlist []error

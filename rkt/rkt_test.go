@@ -59,12 +59,12 @@ func TestCalculateDataDir(t *testing.T) {
 
 	// TODO(tmrts): Write a utility function that generates unused random paths.
 	// Example signature would be fileutils.GenerateUniquePath(prefix string) (string, error).
-	nonExistantDir, err := ioutil.TempDir("", "non-existant-")
+	nonExistentDir, err := ioutil.TempDir("", "non-existent-")
 	if err != nil {
 		panic(fmt.Errorf("ioutil.TempDir(%q, %q) got error %q", "", "", err))
 	}
-	if err := os.Remove(nonExistantDir); err != nil {
-		panic(fmt.Errorf("os.Remove(%q) got error %q", nonExistantDir, err))
+	if err := os.Remove(nonExistentDir); err != nil {
+		panic(fmt.Errorf("os.Remove(%q) got error %q", nonExistentDir, err))
 	}
 
 	testCases := []struct {
@@ -75,8 +75,8 @@ func TestCalculateDataDir(t *testing.T) {
 		{"", "", defaultDataDir},
 		{"", tmpDir, tmpDir},
 		{tmpDir, "", tmpDir},
-		{nonExistantDir, "", nonExistantDir},
-		{"", nonExistantDir, nonExistantDir},
+		{nonExistentDir, "", nonExistentDir},
+		{"", nonExistentDir, nonExistentDir},
 	}
 
 	for _, tc := range testCases {

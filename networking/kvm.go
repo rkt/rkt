@@ -595,7 +595,7 @@ func kvmSetup(podRoot string, podID types.UUID, fps []ForwardedPort, netList com
 		}
 
 		// Generate rkt-resolv.conf if it's not already there.
-		// The first network plugin that supplies a non-emtpy
+		// The first network plugin that supplies a non-empty
 		// DNS response will win, unless noDNS is true (--dns passed to rkt run)
 		if !common.IsDNSZero(&n.runtime.DNS) && !noDNS {
 			if !podHasResolvConf {
