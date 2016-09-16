@@ -57,12 +57,18 @@ type StopConfig struct {
 }
 
 // TODO(iaguis): add override options for Exec, Environment (à la patch-manifest)
-func AddApp(cfg RunConfig, dir string, img *types.Hash) error {
-	im, err := cfg.Store.GetImageManifest(img.String())
+func AddApp(pcfg PrepareConfig, cfg RunConfig, dir string, img *types.Hash) error {
+	// there should be only one app in the config
+	app := pcfg.Apps.Last()
+	if app == nil {
+		return errors.New("no image specified")
+	}
+
+	am, err := cfg.Store.GetImageManifest(img.String())
 	if err != nil {
 		return err
 	}
-	appName, err := imageNameToAppName(im.Name)
+	appName, err := imageNameToAppName(am.Name)
 	if err != nil {
 		return err
 	}
@@ -90,8 +96,8 @@ func AddApp(cfg RunConfig, dir string, img *types.Hash) error {
 	if pm.Apps.Get(*appName) != nil {
 		return fmt.Errorf("error: multiple apps with name %s", *appName)
 	}
-	if im.App == nil {
-		return fmt.Errorf("error: image %s has no app section)", img)
+	if am.App == nil && app.Exec == "" {
+		return fmt.Errorf("error: image %s has no app section and --exec argument is not provided", img)
 	}
 
 	appInfoDir := common.AppInfoPath(dir, *appName)
@@ -170,13 +176,39 @@ func AddApp(cfg RunConfig, dir string, img *types.Hash) error {
 
 	ra := schema.RuntimeApp{
 		Name: *appName,
-		App:  im.App,
+		App:  am.App,
 		Image: schema.RuntimeImage{
-			Name:   &im.Name,
+			Name:   &am.Name,
 			ID:     *img,
-			Labels: im.Labels,
+			Labels: am.Labels,
 		},
-		// TODO(iaguis): default isolators
+	}
+
+	if execOverride := app.Exec; execOverride != "" {
+		// Create a minimal App section if not present
+		if am.App == nil {
+			ra.App = &types.App{
+				User:  strconv.Itoa(os.Getuid()),
+				Group: strconv.Itoa(os.Getgid()),
+			}
+		}
+		ra.App.Exec = []string{execOverride}
+	}
+
+	if execAppends := app.Args; execAppends != nil {
+		ra.App.Exec = append(ra.App.Exec, execAppends...)
+	}
+
+	if err := prepareIsolators(app, ra.App); err != nil {
+		return err
+	}
+
+	if user := app.User; user != "" {
+		ra.App.User = user
+	}
+
+	if group := app.Group; group != "" {
+		ra.App.Group = group
 	}
 
 	env := ra.App.Environment
