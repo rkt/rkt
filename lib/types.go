@@ -58,8 +58,10 @@ type (
 		ImageID string `json:"image_id"`
 		// Mount points of the container.
 		Mounts []*Mount `json:"mounts,omitempty"`
-		// Annotations of the container.
-		Annotations map[string]string `json:"annotations,omitempty"`
+		// CRIAnnotations of the container.
+		CRIAnnotations map[string]string `json:"cri_annotations,omitempty"`
+		// CRILabels of the container.
+		CRILabels map[string]string `json:"cri_labels,omitempty"`
 	}
 
 	// Pod defines the pod object.

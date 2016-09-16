@@ -59,9 +59,10 @@ func AppsForPod(uuid, dataDir string, appName string) ([]*App, error) {
 // newApp constructs the App object with the runtime app and pod manifest.
 func newApp(ra *schema.RuntimeApp, podManifest *schema.PodManifest, pod *pkgPod.Pod) (*App, error) {
 	app := &App{
-		Name:        ra.Name.String(),
-		ImageID:     ra.Image.ID.String(),
-		Annotations: make(map[string]string),
+		Name:           ra.Name.String(),
+		ImageID:        ra.Image.ID.String(),
+		CRIAnnotations: ra.App.CRIAnnotations,
+		CRILabels:      ra.App.CRILabels,
 	}
 
 	// Generate mounts
@@ -93,11 +94,6 @@ func newApp(ra *schema.RuntimeApp, podManifest *schema.PodManifest, pod *pkgPod.
 			HostPath:      hostPath,
 			ReadOnly:      readOnly,
 		})
-	}
-
-	// Generate annotations.
-	for _, anno := range ra.Annotations {
-		app.Annotations[anno.Name.String()] = anno.Value
 	}
 
 	// Generate state.

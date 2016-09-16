@@ -151,6 +151,18 @@ func (ae *appExec) Set(s string) error {
 	return nil
 }
 
+func (ae *appExec) String() string {
+	app := (*apps.Apps)(ae).Last()
+	if app == nil {
+		return ""
+	}
+	return app.Exec
+}
+
+func (ae *appExec) Type() string {
+	return "appExec"
+}
+
 // appMount is for --mount flags in the form of: --mount volume=VOLNAME,target=PATH
 type appMount apps.Apps
 
@@ -193,19 +205,6 @@ func (al *appMount) Set(s string) error {
 	return nil
 }
 
-func (ae *appExec) String() string {
-	app := (*apps.Apps)(ae).Last()
-	if app == nil {
-		return ""
-	}
-	return app.Exec
-}
-
-func (ae *appExec) Type() string {
-	return "appExec"
-}
-
-// TODO(vc): --set-env should also be per-app and should implement the flags.Value interface.
 func (al *appMount) String() string {
 	var ms []string
 	for _, m := range ((*apps.Apps)(al)).Mounts {
@@ -439,4 +438,139 @@ func (au *appSeccompFilter) String() string {
 
 func (au *appSeccompFilter) Type() string {
 	return "appSeccompFilter"
+}
+
+// appName is for --name flags in the form of: --name=APPNAME.
+type appName apps.Apps
+
+func (au *appName) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--name must follow an image")
+	}
+	app.Name = s
+	return nil
+}
+
+func (au *appName) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	return app.Name
+}
+
+func (au *appName) Type() string {
+	return "appName"
+}
+
+// appAnnotation is for --annotation flags in the form of: --annotation=NAME=VALUE.
+type appAnnotation apps.Apps
+
+func (au *appAnnotation) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--annotation must follow an image")
+	}
+
+	fields := strings.SplitN(s, "=", 2)
+	if len(fields) != 2 {
+		return fmt.Errorf("invalid format of --annotation flag %q", s)
+	}
+
+	if app.CRIAnnotations == nil {
+		app.CRIAnnotations = make(map[string]string)
+	}
+	app.CRIAnnotations[fields[0]] = fields[1]
+	return nil
+}
+
+func (au *appAnnotation) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	var annotations []string
+	for name, value := range app.CRIAnnotations {
+		annotations = append(annotations, fmt.Sprintf("%s=%s", name, value))
+	}
+	return strings.Join(annotations, ",")
+}
+
+func (au *appAnnotation) Type() string {
+	return "appAnnotation"
+}
+
+// appLabel is for --label flags in the form of: --label=NAME=VALUE.
+type appLabel apps.Apps
+
+func (au *appLabel) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--label must follow an image")
+	}
+
+	fields := strings.SplitN(s, "=", 2)
+	if len(fields) != 2 {
+		return fmt.Errorf("invalid format of --Label flag %q", s)
+	}
+
+	if app.CRILabels == nil {
+		app.CRILabels = make(map[string]string)
+	}
+	app.CRILabels[fields[0]] = fields[1]
+	return nil
+}
+
+func (au *appLabel) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	var labels []string
+	for name, value := range app.CRILabels {
+		labels = append(labels, fmt.Sprintf("%s=%s", name, value))
+	}
+	return strings.Join(labels, ",")
+}
+
+func (au *appLabel) Type() string {
+	return "appLabel"
+}
+
+// appEnv is for --environment flags in the form of --environment=NAME=VALUE.
+type appEnv apps.Apps
+
+func (au *appEnv) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--environment must follow an image")
+	}
+
+	fields := strings.SplitN(s, "=", 2)
+	if len(fields) != 2 {
+		return fmt.Errorf("invalid format of --environment flag %q", s)
+	}
+
+	if app.Environments == nil {
+		app.Environments = make(map[string]string)
+	}
+	app.Environments[fields[0]] = fields[1]
+	return nil
+}
+
+func (au *appEnv) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	var environments []string
+	for name, value := range app.Environments {
+		environments = append(environments, fmt.Sprintf("%s=%s", name, value))
+	}
+	return strings.Join(environments, ",")
+}
+
+func (au *appEnv) Type() string {
+	return "appEnv"
 }

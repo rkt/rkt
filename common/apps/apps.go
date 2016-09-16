@@ -45,18 +45,22 @@ const (
 )
 
 type App struct {
-	Image         string                            // the image reference as supplied by the user on the cli
-	ImType        AppImageType                      // the type of the image reference (to be guessed, url, path or hash)
-	Args          []string                          // any arguments the user supplied for this app
-	Asc           string                            // signature file override for image verification (if fetching occurs)
-	Exec          string                            // exec override for image
-	Mounts        []schema.Mount                    // mounts for this app (superseding any mounts in rktApps.mounts of same MountPoint)
-	MemoryLimit   *types.ResourceMemory             // memory isolator override
-	CPULimit      *types.ResourceCPU                // cpu isolator override
-	User, Group   string                            // user, group overrides
-	CapsRetain    *types.LinuxCapabilitiesRetainSet // os/linux/capabilities-retain-set overrides
-	CapsRemove    *types.LinuxCapabilitiesRevokeSet // os/linux/capabilities-remove-set overrides
-	SeccompFilter string                            // seccomp CLI overrides
+	Name           string                            // the name of the app. If not set, the the image's name will be used.
+	Image          string                            // the image reference as supplied by the user on the cli
+	ImType         AppImageType                      // the type of the image reference (to be guessed, url, path or hash)
+	Args           []string                          // any arguments the user supplied for this app
+	Asc            string                            // signature file override for image verification (if fetching occurs)
+	Exec           string                            // exec override for image
+	Mounts         []schema.Mount                    // mounts for this app (superseding any mounts in rktApps.mounts of same MountPoint)
+	MemoryLimit    *types.ResourceMemory             // memory isolator override
+	CPULimit       *types.ResourceCPU                // cpu isolator override
+	User, Group    string                            // user, group overrides
+	CapsRetain     *types.LinuxCapabilitiesRetainSet // os/linux/capabilities-retain-set overrides
+	CapsRemove     *types.LinuxCapabilitiesRevokeSet // os/linux/capabilities-remove-set overrides
+	SeccompFilter  string                            // seccomp CLI overrides
+	CRIAnnotations map[string]string                 // the CRI annotations of the app.
+	CRILabels      map[string]string                 // the CRI labels of the app.
+	Environments   map[string]string                 // the environments of the app.
 
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
 	ImageID types.Hash // resolved image identifier

@@ -100,6 +100,10 @@ func addAppFlags(cmd *cobra.Command) {
 	cmd.Flags().Var((*appMount)(&rktApps), "mount", "mount point binding a volume to a path within an app")
 	cmd.Flags().Var((*appUser)(&rktApps), "user", "user override for the preceding image (example: '--user=user')")
 	cmd.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
+	cmd.Flags().Var((*appName)(&rktApps), "name", "set the name of the app (example: '--name=foo'). If not set, then the app name default to the image's name")
+	cmd.Flags().Var((*appAnnotation)(&rktApps), "annotation", "set the app's annotations (example: '--annotation=foo=bar')")
+	cmd.Flags().Var((*appLabel)(&rktApps), "label", "set the app's labels (example: '--label=foo=bar')")
+	cmd.Flags().Var((*appEnv)(&rktApps), "environment", "set the app's environment variables (example: '--environment=foo=bar')")
 }
 
 func init() {

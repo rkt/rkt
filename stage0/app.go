@@ -56,7 +56,11 @@ type StopConfig struct {
 	PodPID  int
 }
 
-// TODO(iaguis): add override options for Exec, Environment (à la patch-manifest)
+type AddConfig struct {
+	Name        *types.ACName
+	Annotations types.Annotations
+}
+
 func AddApp(pcfg PrepareConfig, cfg RunConfig, dir string, img *types.Hash) error {
 	// there should be only one app in the config
 	app := pcfg.Apps.Last()
@@ -68,9 +72,18 @@ func AddApp(pcfg PrepareConfig, cfg RunConfig, dir string, img *types.Hash) erro
 	if err != nil {
 		return err
 	}
-	appName, err := imageNameToAppName(am.Name)
-	if err != nil {
-		return err
+
+	var appName *types.ACName
+	if app.Name != "" {
+		appName, err = types.NewACName(app.Name)
+		if err != nil {
+			return err
+		}
+	} else {
+		appName, err = imageNameToAppName(am.Name)
+		if err != nil {
+			return err
+		}
 	}
 
 	p, err := stage1types.LoadPod(dir, cfg.UUID)
@@ -209,6 +222,23 @@ func AddApp(pcfg PrepareConfig, cfg RunConfig, dir string, img *types.Hash) erro
 
 	if group := app.Group; group != "" {
 		ra.App.Group = group
+	}
+
+	if app.CRIAnnotations != nil {
+		ra.App.CRIAnnotations = app.CRIAnnotations
+	}
+
+	if app.CRILabels != nil {
+		ra.App.CRILabels = app.CRILabels
+	}
+
+	if app.Environments != nil {
+		envs := make([]string, 0, len(app.Environments))
+		for name, value := range app.Environments {
+			envs = append(envs, fmt.Sprintf("%s=%s", name, value))
+		}
+		// Let the app level environment override the environment variables.
+		mergeEnvs(&ra.App.Environment, envs, true)
 	}
 
 	env := ra.App.Environment
