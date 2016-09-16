@@ -78,6 +78,14 @@ image arguments with a lone "---" to resume argument parsing.`,
 	flagHostsEntries flagStringList
 )
 
+func addIsolatorFlags(cmd *cobra.Command) {
+	cmd.Flags().Var((*appMemoryLimit)(&rktApps), "memory", "memory limit for the preceding image (example: '--memory=16Mi', '--memory=50M', '--memory=1G')")
+	cmd.Flags().Var((*appCPULimit)(&rktApps), "cpu", "cpu limit for the preceding image (example: '--cpu=500m')")
+	cmd.Flags().Var((*appCapsRetain)(&rktApps), "caps-retain", "capability to retain (example: '--caps-retain=CAP_SYS_ADMIN')")
+	cmd.Flags().Var((*appCapsRemove)(&rktApps), "caps-remove", "capability to remove (example: '--caps-remove=CAP_MKNOD')")
+	cmd.Flags().Var((*appSeccompFilter)(&rktApps), "seccomp", "seccomp filter override (example: '--seccomp mode=retain,errno=EPERM,chmod,chown')")
+}
+
 func init() {
 	cmdRkt.AddCommand(cmdRun)
 
@@ -113,13 +121,9 @@ func init() {
 	cmdRun.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 	cmdRun.Flags().Var((*appExec)(&rktApps), "exec", "override the exec command for the preceding image")
 	cmdRun.Flags().Var((*appMount)(&rktApps), "mount", "mount point binding a volume to a path within an app")
-	cmdRun.Flags().Var((*appMemoryLimit)(&rktApps), "memory", "memory limit for the preceding image (example: '--memory=16Mi', '--memory=50M', '--memory=1G')")
-	cmdRun.Flags().Var((*appCPULimit)(&rktApps), "cpu", "cpu limit for the preceding image (example: '--cpu=500m')")
 	cmdRun.Flags().Var((*appUser)(&rktApps), "user", "user override for the preceding image (example: '--user=user')")
 	cmdRun.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
-	cmdRun.Flags().Var((*appCapsRetain)(&rktApps), "caps-retain", "capability to retain (example: '--caps-retain=CAP_SYS_ADMIN')")
-	cmdRun.Flags().Var((*appCapsRemove)(&rktApps), "caps-remove", "capability to remove (example: '--caps-remove=CAP_MKNOD')")
-	cmdRun.Flags().Var((*appSeccompFilter)(&rktApps), "seccomp", "seccomp filter override (example: '--seccomp mode=retain,errno=EPERM,chmod,chown')")
+	addIsolatorFlags(cmdRun)
 
 	// For backwards compatibility
 	cmdRun.Flags().Var((*appCapsRetain)(&rktApps), "cap-retain", "capability to retain (example: '--caps-retain=CAP_SYS_ADMIN')")
