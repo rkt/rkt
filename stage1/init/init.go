@@ -392,9 +392,6 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 		if n != 1 || version < 220 {
 			return nil, nil, fmt.Errorf("rkt needs systemd-nspawn >= 220. %s version not supported: %v", hostNspawnBin, versionStr)
 		}
-		if version >= 231 {
-			args = append(args, "--notify-ready=yes") // From systemd v231
-		}
 
 		// Copy systemd, bash, etc. in stage1 at run-time
 		if err := installAssets(); err != nil {
@@ -404,6 +401,10 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 		args = append(args, hostNspawnBin)
 		args = append(args, "--boot") // Launch systemd in the pod
 		args = append(args, fmt.Sprintf("--register=true"))
+
+		if version >= 231 {
+			args = append(args, "--notify-ready=yes") // From systemd v231
+		}
 
 		if context := os.Getenv(common.EnvSELinuxContext); context != "" {
 			args = append(args, fmt.Sprintf("-Z%s", context))
