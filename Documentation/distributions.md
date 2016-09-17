@@ -1,15 +1,36 @@
 # Installing rkt on popular Linux distributions
 
+- [Arch](#arch)
+- [CentOS](#centos)
+- [CoreOS](#coreos)
+- [Debian](#debian)
+- [Fedora](#fedora)
+- [NixOS](#nixos)
+- [openSUSE](#opensuse)
+- [Ubuntu](#ubuntu)
+- [Void](#void)
+
+## Arch
+
+rkt is available in the [Community Repository](https://www.archlinux.org/packages/community/x86_64/rkt/) and can be installed using pacman:
+```
+sudo pacman -S rkt
+```
+
+## CentOS
+
+rkt is available in the [CentOS Community Build Service](https://cbs.centos.org/koji/packageinfo?packageID=4464) for CentOS 7.
+
 ## CoreOS
 
 rkt is an integral part of CoreOS, installed with the operating system.
 The [CoreOS releases page](https://coreos.com/releases/) lists the version of rkt available in each CoreOS release channel.
 
-If the version of rkt included in CoreOS is too old, it's fairly trivial to fetch the desired version [via a systemd unit](install-rkt-in-coreos.md)
+If the version of rkt included in CoreOS is too old, it's fairly trivial to fetch the desired version [via a systemd unit](install-rkt-in-coreos.md).
 
 ## Debian
 
-rkt currently is packaged in Debian sid (unstable) available at https://packages.debian.org/sid/utils/rkt:
+rkt is currently packaged in Debian sid (unstable) available at https://packages.debian.org/sid/utils/rkt:
 
 ```
 sudo apt-get install rkt
@@ -22,32 +43,6 @@ sudo rkt run --insecure-options=image --stage1-name=coreos.com/rkt/stage1-coreos
 ```
 
 If you prefer to install the newest version of rkt follow the instructions in the Ubuntu section below.
-
-## Ubuntu
-
-rkt is not packaged currently in Ubuntu. If you want the newest version of rkt the easiest method to install it is using the `install-rkt.sh` script. This script can be found in the *scripts* directory of the [rkt Github repository](https://github.com/coreos/rkt).
-
-Either clone the repository and run the script:
-
-```
-git clone https://github.com/coreos/rkt
-cd rkt
-sudo ./scripts/install-rkt.sh
-```
-
-Or just get the script:
-
-```
-wget https://raw.githubusercontent.com/coreos/rkt/master/scripts/install-rkt.sh
-chmod +x install-rkt.sh
-sudo ./install-rkt.sh
-```
-
-The above script will install the "gnupg2", and "checkinstall" packages, download rkt, verify it, and finally invoke "checkinstall" to create a deb pakage and install rkt. To uninstall rkt, execute:
-
-```
-sudo apt-get remove rkt
-```
 
 ## Fedora
 
@@ -90,14 +85,6 @@ sudo firewall-cmd --add-source=172.16.28.0/24 --zone=trusted
 
 172.16.28.0/24 is the subnet of the [default pod network](https://github.com/coreos/rkt/blob/master/Documentation/networking/overview.md#the-default-network). The command must be adapted when rkt is configured to use a [different network](https://github.com/coreos/rkt/blob/master/Documentation/networking/overview.md#setting-up-additional-networks) with a different subnet.
 
-
-## Arch
-
-rkt is available in the [Community Repository](https://www.archlinux.org/packages/community/x86_64/rkt/) and can be installed using pacman:
-```
-sudo pacman -S rkt
-```
-
 ## NixOS
 
 rkt can be installed on NixOS using the following command:
@@ -123,6 +110,32 @@ Install rkt using zypper:
 
 ```
 sudo zypper in rkt
+```
+
+## Ubuntu
+
+rkt is not packaged currently in Ubuntu. If you want the newest version of rkt the easiest method to install it is using the `install-rkt.sh` script. This script can be found in the *scripts* directory of the [rkt Github repository](https://github.com/coreos/rkt).
+
+Either clone the repository and run the script:
+
+```
+git clone https://github.com/coreos/rkt
+cd rkt
+sudo ./scripts/install-rkt.sh
+```
+
+Or just get the script:
+
+```
+wget https://raw.githubusercontent.com/coreos/rkt/master/scripts/install-rkt.sh
+chmod +x install-rkt.sh
+sudo ./install-rkt.sh
+```
+
+The above script will install the "gnupg2", and "checkinstall" packages, download rkt, verify it, and finally invoke "checkinstall" to create a deb package and install rkt. To uninstall rkt, execute:
+
+```
+sudo apt-get remove rkt
 ```
 
 ## Void
