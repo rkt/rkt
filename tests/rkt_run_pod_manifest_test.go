@@ -752,7 +752,7 @@ func TestPodManifest(t *testing.T) {
 		{
 			// Simple read after write with volume mounted, no apps in pod manifest.
 			// This should succeed even the mount point in image manifest is readOnly,
-			// because it is overriden by the volume's readOnly.
+			// because it is overridden by the volume's readOnly.
 			[]imagePatch{
 				{
 					"rkt-test-run-pod-manifest-vol-ro-no-app.aci",
