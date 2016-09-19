@@ -22,6 +22,9 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
+
+	"github.com/coreos/rkt/common/cgroup"
 
 	rktlog "github.com/coreos/rkt/pkg/log"
 	stage1types "github.com/coreos/rkt/stage1/common/types"
@@ -72,7 +75,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	enterEP := flag.Arg(2)
+	enterCmd := []string{flag.Arg(2)}
+	enterCmd = append(enterCmd, fmt.Sprintf("--pid=%s", flag.Arg(3)), "--")
 
 	root := "."
 	p, err := stage1types.LoadPod(root, uuid)
@@ -97,6 +101,26 @@ func main() {
 		ra.App.WorkingDirectory = "/"
 	}
 
+	/* prepare cgroups */
+	enabledCgroups, err := cgroup.GetEnabledCgroups()
+	if err != nil {
+		log.FatalE("error getting cgroups", err)
+		os.Exit(1)
+	}
+	b, err := ioutil.ReadFile(filepath.Join(p.Root, "subcgroup"))
+	if err == nil {
+		subcgroup := string(b)
+		serviceName := stage1initcommon.ServiceUnitName(ra.Name)
+
+		if err := cgroup.RemountCgroupKnobsRW(enabledCgroups, subcgroup, serviceName, enterCmd); err != nil {
+			log.FatalE("error restricting container cgroups", err)
+			os.Exit(1)
+		}
+	} else {
+		log.PrintE("continuing with per-app isolators disabled", err)
+	}
+
+	/* write service file */
 	binPath, err := stage1initcommon.FindBinPath(p, ra)
 	if err != nil {
 		log.PrintE("failed to find bin path", err)
@@ -119,9 +143,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	args := []string{enterEP}
-
-	args = append(args, fmt.Sprintf("--pid=%s", flag.Arg(3)))
+	args := enterCmd
 	args = append(args, "/usr/bin/systemctl")
 	args = append(args, "daemon-reload")
 
@@ -135,9 +157,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	args = []string{enterEP}
-
-	args = append(args, fmt.Sprintf("--pid=%s", flag.Arg(3)))
+	args = enterCmd
 	args = append(args, "/usr/bin/systemctl")
 	args = append(args, "start")
 	args = append(args, appName.String())
