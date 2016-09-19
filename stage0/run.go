@@ -245,74 +245,8 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 			ra.App.Exec = append(ra.App.Exec, execAppends...)
 		}
 
-		if memoryOverride := app.MemoryLimit; memoryOverride != nil {
-			isolator := memoryOverride.AsIsolator()
-			ra.App.Isolators = append(ra.App.Isolators, isolator)
-		}
-
-		if cpuOverride := app.CPULimit; cpuOverride != nil {
-			isolator := cpuOverride.AsIsolator()
-			ra.App.Isolators = append(ra.App.Isolators, isolator)
-		}
-
-		if app.CapsRetain != nil && app.CapsRemove != nil {
-			return fmt.Errorf("error: cannot use both --caps-retain and --caps-remove on the same image")
-		}
-
-		// Delete existing caps isolators if the user wants to override
-		// them with either --caps-retain or --caps-remove
-		if app.CapsRetain != nil || app.CapsRemove != nil {
-			for i := len(ra.App.Isolators) - 1; i >= 0; i-- {
-				isolator := ra.App.Isolators[i]
-				if _, ok := isolator.Value().(types.LinuxCapabilitiesSet); ok {
-					ra.App.Isolators = append(ra.App.Isolators[:i],
-						ra.App.Isolators[i+1:]...)
-				}
-			}
-		}
-
-		if capsRetain := app.CapsRetain; capsRetain != nil {
-			isolator, err := capsRetain.AsIsolator()
-			if err != nil {
-				return err
-			}
-			ra.App.Isolators = append(ra.App.Isolators, *isolator)
-		} else if capsRemove := app.CapsRemove; capsRemove != nil {
-			isolator, err := capsRemove.AsIsolator()
-			if err != nil {
-				return err
-			}
-			ra.App.Isolators = append(ra.App.Isolators, *isolator)
-		}
-
-		// Override seccomp isolators via --seccomp CLI switch
-		if app.SeccompFilter != "" {
-			var is *types.Isolator
-			mode, errno, set, err := app.SeccompOverride()
-			if err != nil {
-				return err
-			}
-			switch mode {
-			case "retain":
-				lss, err := types.NewLinuxSeccompRetainSet(errno, set...)
-				if err != nil {
-					return err
-				}
-				if is, err = lss.AsIsolator(); err != nil {
-					return err
-				}
-			case "remove":
-				lss, err := types.NewLinuxSeccompRemoveSet(errno, set...)
-				if err != nil {
-					return err
-				}
-				if is, err = lss.AsIsolator(); err != nil {
-					return err
-				}
-			default:
-				return apps.ErrInvalidSeccompMode
-			}
-			ra.App.Isolators.ReplaceIsolatorsByName(*is, []types.ACIdentifier{types.LinuxSeccompRemoveSetName, types.LinuxSeccompRetainSetName})
+		if err := prepareIsolators(app, ra.App); err != nil {
+			return err
 		}
 
 		if user := app.User; user != "" {
@@ -347,6 +281,79 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		return nil, errwrap.Wrap(errors.New("error marshalling pod manifest"), err)
 	}
 	return pmb, nil
+}
+
+func prepareIsolators(setup *apps.App, app *types.App) error {
+	if memoryOverride := setup.MemoryLimit; memoryOverride != nil {
+		isolator := memoryOverride.AsIsolator()
+		app.Isolators = append(app.Isolators, isolator)
+	}
+
+	if cpuOverride := setup.CPULimit; cpuOverride != nil {
+		isolator := cpuOverride.AsIsolator()
+		app.Isolators = append(app.Isolators, isolator)
+	}
+
+	if setup.CapsRetain != nil && setup.CapsRemove != nil {
+		return fmt.Errorf("error: cannot use both --caps-retain and --caps-remove on the same image")
+	}
+
+	// Delete existing caps isolators if the user wants to override
+	// them with either --caps-retain or --caps-remove
+	if setup.CapsRetain != nil || setup.CapsRemove != nil {
+		for i := len(app.Isolators) - 1; i >= 0; i-- {
+			isolator := app.Isolators[i]
+			if _, ok := isolator.Value().(types.LinuxCapabilitiesSet); ok {
+				app.Isolators = append(app.Isolators[:i],
+					app.Isolators[i+1:]...)
+			}
+		}
+	}
+
+	if capsRetain := setup.CapsRetain; capsRetain != nil {
+		isolator, err := capsRetain.AsIsolator()
+		if err != nil {
+			return err
+		}
+		app.Isolators = append(app.Isolators, *isolator)
+	} else if capsRemove := setup.CapsRemove; capsRemove != nil {
+		isolator, err := capsRemove.AsIsolator()
+		if err != nil {
+			return err
+		}
+		app.Isolators = append(app.Isolators, *isolator)
+	}
+
+	// Override seccomp isolators via --seccomp CLI switch
+	if setup.SeccompFilter != "" {
+		var is *types.Isolator
+		mode, errno, set, err := setup.SeccompOverride()
+		if err != nil {
+			return err
+		}
+		switch mode {
+		case "retain":
+			lss, err := types.NewLinuxSeccompRetainSet(errno, set...)
+			if err != nil {
+				return err
+			}
+			if is, err = lss.AsIsolator(); err != nil {
+				return err
+			}
+		case "remove":
+			lss, err := types.NewLinuxSeccompRemoveSet(errno, set...)
+			if err != nil {
+				return err
+			}
+			if is, err = lss.AsIsolator(); err != nil {
+				return err
+			}
+		default:
+			return apps.ErrInvalidSeccompMode
+		}
+		app.Isolators.ReplaceIsolatorsByName(*is, []types.ACIdentifier{types.LinuxSeccompRemoveSetName, types.LinuxSeccompRetainSetName})
+	}
+	return nil
 }
 
 // validatePodManifest reads the user-specified pod manifest, prepares the app images
