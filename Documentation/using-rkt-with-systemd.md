@@ -131,12 +131,14 @@ func main() {
 	})
 	ln, err := net.Listen("tcp", ":5000")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		log.Fatalf("Listen failed: %s", err)
 	}
-	err = daemon.SdNotify("READY=1")
+	sent, err := daemon.SdNotify("READY=1")
 	if err != nil {
-		log.Printf("daemon.SdNotify READY=1 return: %s", err)
+		log.Fatalf("Notification failed: %s", err)
+	}
+	if !sent {
+		log.Fatalf("Notification not supported: %s", err)
 	}
 	log.Fatal(http.Serve(ln, nil))
 }
