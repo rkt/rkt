@@ -30,6 +30,21 @@ var (
 	ErrInvalidSeccompOverride = errors.New("invalid seccomp command-line override")
 )
 
+// AppIO describes the type of an application stream at runtime (stdin/stdout/stderr).
+type AppIO string
+
+func (a AppIO) String() string {
+	return string(a)
+}
+
+const (
+	AppIOInteractive AppIO = "interactive" // interactive I/O (parent terminal)
+	AppIOLog         AppIO = "log"         // log-only I/O
+	AppIONull        AppIO = "null"        // null I/O
+	AppIOStream      AppIO = "stream"      // attachable I/O
+	AppIOTTY         AppIO = "tty"         // I/O over TTY
+)
+
 type App struct {
 	Name              string                            // the name of the app. If not set, the image's name will be used.
 	Image             string                            // the image reference as supplied by the user on the cli
@@ -51,6 +66,9 @@ type App struct {
 	UserAnnotations   map[string]string                 // the user annotations of the app.
 	UserLabels        map[string]string                 // the user labels of the app.
 	Environments      map[string]string                 // the environments of the app.
+	Stdin             AppIO                             // mode for stdin
+	Stdout            AppIO                             // mode for stdout
+	Stderr            AppIO                             // mode for stderr
 
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.
 	ImageID types.Hash // resolved image identifier

@@ -6,6 +6,8 @@ _S1_SS_SUBDIRS_ := \
 	diagnostic \
 	gc \
 	init \
+	attach \
+	iottymux \
 	net \
 	net-plugins \
 	prepare-app \

@@ -15,6 +15,7 @@ AMI_ACI_DIRS_BASE := $(AMI_ACIROOTFSDIR)
 AMI_ACI_DIRS_RESTS := \
 	etc \
 	opt/stage2 \
+	rkt/iottymux \
 	rkt/status \
 	rkt/env
 # all the directories we want to be created in the ACI rootfs

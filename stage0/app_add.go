@@ -21,9 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 
-	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
@@ -138,69 +136,14 @@ func AddApp(cfg AddConfig) error {
 		}
 	}
 
-	ra := schema.RuntimeApp{
-		Name: *appName,
-		App:  am.App,
-		Image: schema.RuntimeImage{
-			Name:   &am.Name,
-			ID:     cfg.Image,
-			Labels: am.Labels,
-		},
-		Mounts:         MergeMounts(cfg.Apps.Mounts, app.Mounts),
-		ReadOnlyRootFS: app.ReadOnlyRootFS,
+	ra, err := generateRuntimeApp(app, am, cfg.Apps.Mounts)
+	if err != nil {
+		return err
 	}
-
-	if app.Exec != "" {
-		// Create a minimal App section if not present
-		if am.App == nil {
-			ra.App = &types.App{
-				User:  strconv.Itoa(os.Getuid()),
-				Group: strconv.Itoa(os.Getgid()),
-			}
-		}
-		ra.App.Exec = []string{app.Exec}
-	}
-
 	if app.Args != nil {
 		ra.App.Exec = append(ra.App.Exec[:1], app.Args...)
 	}
-
-	if app.WorkingDir != "" {
-		ra.App.WorkingDirectory = app.WorkingDir
-	}
-
-	if err := prepareIsolators(app, ra.App); err != nil {
-		return err
-	}
-
-	if app.User != "" {
-		ra.App.User = app.User
-	}
-
-	if app.Group != "" {
-		ra.App.Group = app.Group
-	}
-
-	if app.SupplementaryGIDs != nil {
-		ra.App.SupplementaryGIDs = app.SupplementaryGIDs
-	}
-
-	if app.UserAnnotations != nil {
-		ra.App.UserAnnotations = app.UserAnnotations
-	}
-
-	if app.UserLabels != nil {
-		ra.App.UserLabels = app.UserLabels
-	}
-
-	if app.Environments != nil {
-		envs := make([]string, 0, len(app.Environments))
-		for name, value := range app.Environments {
-			envs = append(envs, fmt.Sprintf("%s=%s", name, value))
-		}
-		// Let the app level environment override the environment variables.
-		mergeEnvs(&ra.App.Environment, envs, true)
-	}
+	pm.Apps = append(pm.Apps, ra)
 
 	env := ra.App.Environment
 
@@ -212,7 +155,6 @@ func AddApp(cfg AddConfig) error {
 	}
 
 	debug("adding app to sandbox")
-	pm.Apps = append(pm.Apps, ra)
 	if err := pod.UpdateManifest(pm, cfg.PodPath); err != nil {
 		return err
 	}

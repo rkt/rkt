@@ -192,7 +192,7 @@ func runAppSandbox(cmd *cobra.Command, args []string) int {
 		CommonConfig:         &cfg,
 		Net:                  flagNet,
 		LockFd:               lfd,
-		Interactive:          true,
+		Interactive:          false,
 		DNSConfMode:          DNSConfMode,
 		DNSConfig:            DNSConfig,
 		MDSRegister:          false,

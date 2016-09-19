@@ -133,8 +133,6 @@ func appAddStage0(appName *types.ACName, uuid *types.UUID) error {
 	w.AppUnit(ra, binPath,
 		unit.NewUnitOption("Unit", "Before", "halt.target"),
 		unit.NewUnitOption("Unit", "Conflicts", "halt.target"),
-		unit.NewUnitOption("Service", "StandardOutput", "journal+console"),
-		unit.NewUnitOption("Service", "StandardError", "journal+console"),
 	)
 	w.AppReaperUnit(ra.Name, binPath)
 	if err := w.Error(); err != nil {

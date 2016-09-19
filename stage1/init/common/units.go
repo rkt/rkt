@@ -168,22 +168,9 @@ func ImmutableEnv(p *stage1commontypes.Pod) error {
 			return err
 		}
 
-		var opts []*unit.UnitOption
-		if p.Interactive {
-			opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "tty"))
-			opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "tty"))
-			opts = append(opts, unit.NewUnitOption("Service", "StandardError", "tty"))
-		} else {
-			opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
-			opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
-		}
-
-		opts = append(opts,
+		uw.AppUnit(ra, binPath,
 			// When an app fails, we shut down the pod
-			unit.NewUnitOption("Unit", "OnFailure", "halt.target"),
-		)
-
-		uw.AppUnit(ra, binPath, opts...)
+			unit.NewUnitOption("Unit", "OnFailure", "halt.target"))
 
 		uw.AppReaperUnit(ra.Name, binPath,
 			unit.NewUnitOption("Service", "Environment", `"EXIT_POD=true"`),
@@ -193,6 +180,157 @@ func ImmutableEnv(p *stage1commontypes.Pod) error {
 	}
 
 	return uw.Error()
+}
+
+// SetupAppIO prepares all properties related to streams (stdin/stdout/stderr) and TTY
+// for an application service unit.
+//
+// It works according to the following steps:
+//  1. short-circuit interactive pods and legacy systemd, for backward compatibility
+//  2. parse app-level annotations to determine stdin/stdout/stderr mode
+//     2a. if an annotation is missing/invalid, it fallbacks to legacy mode (in: null, out/err: journald)
+//     2b. if a valid annotation is found, it prepares:
+//          - TTY and stream properties for the systemd service unit
+//          - env variables for iottymux binary
+//  3. if any of stdin/stdout/stderr is in TTY or streaming mode:
+//     3a. the env file for iottymux is written to `/rkt/iottymux/<appname>/env` with the above content
+//     3b. for TTY mode, a `TTYPath` property and an `After=ttymux@<appname>.service` dependency are added
+//     3c. for streaming mode, a `Before=iomux@<appname>.service` dependency is added
+//
+// For complete details, see dev-docs at Documentation/devel/log-attach-design.md
+func (uw *UnitWriter) SetupAppIO(p *stage1commontypes.Pod, ra *schema.RuntimeApp, binPath string, opts ...*unit.UnitOption) []*unit.UnitOption {
+	if uw.err != nil {
+		return opts
+	}
+
+	if p.Interactive {
+		opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "tty"))
+		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "tty"))
+		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "tty"))
+		return opts
+	}
+
+	flavor, systemdVersion, err := GetFlavor(uw.p)
+	if err != nil {
+		uw.err = err
+		return opts
+	}
+
+	stdin, _ := ra.Annotations.Get(stage1commontypes.AppStdinMode)
+	stdout, _ := ra.Annotations.Get(stage1commontypes.AppStdoutMode)
+	stderr, _ := ra.Annotations.Get(stage1commontypes.AppStderrMode)
+
+	// Attach needs https://github.com/systemd/systemd/pull/4179, ie. systemd v232 or a backport
+	if ((flavor == "src" || flavor == "host") && systemdVersion < 232) ||
+		((flavor == "coreos" || flavor == "kvm") && systemdVersion < 231) {
+		// Explicit error if systemd is too old for attaching
+		if stdin != "" || stdout != "" || stderr != "" {
+			uw.err = fmt.Errorf("stage1 systemd %q does not support attachable I/O", systemdVersion)
+			return opts
+		}
+		opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "null"))
+		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
+		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
+		return opts
+	}
+
+	var iottymuxEnvFlags []string
+	needsIOMux := false
+	needsTTYMux := false
+
+	switch stdin {
+	case "stream":
+		needsIOMux = true
+		uw.AppSocketUnit(ra.Name, binPath, "stdin")
+		iottymuxEnvFlags = append(iottymuxEnvFlags, "STAGE2_STDIN=true")
+		opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "fd"))
+		opts = append(opts, unit.NewUnitOption("Service", "Sockets", fmt.Sprintf("%s-%s.socket", ra.Name, "stdin")))
+	case "tty":
+		needsTTYMux = true
+		iottymuxEnvFlags = append(iottymuxEnvFlags, "STAGE2_STDIN=true")
+		opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "tty-force"))
+	case "interactive":
+		opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "tty"))
+	default:
+		// null mode
+		opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "null"))
+	}
+
+	switch stdout {
+	case "stream":
+		needsIOMux = true
+		uw.AppSocketUnit(ra.Name, binPath, "stdout")
+		iottymuxEnvFlags = append(iottymuxEnvFlags, "STAGE2_STDOUT=true")
+		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "fd"))
+		opts = append(opts, unit.NewUnitOption("Service", "Sockets", fmt.Sprintf("%s-%s.socket", ra.Name, "stdout")))
+	case "tty":
+		needsTTYMux = true
+		iottymuxEnvFlags = append(iottymuxEnvFlags, "STAGE2_STDOUT=true")
+		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "tty"))
+	case "interactive":
+		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "tty"))
+	case "null":
+		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "null"))
+	default:
+		// log mode
+		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
+	}
+
+	switch stderr {
+	case "stream":
+		needsIOMux = true
+		uw.AppSocketUnit(ra.Name, binPath, "stderr")
+		iottymuxEnvFlags = append(iottymuxEnvFlags, "STAGE2_STDERR=true")
+		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "fd"))
+		opts = append(opts, unit.NewUnitOption("Service", "Sockets", fmt.Sprintf("%s-%s.socket", ra.Name, "stderr")))
+	case "tty":
+		needsTTYMux = true
+		iottymuxEnvFlags = append(iottymuxEnvFlags, "STAGE2_STDERR=true")
+		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "tty"))
+	case "interactive":
+		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "tty"))
+	case "null":
+		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "null"))
+	default:
+		// log mode
+		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
+	}
+
+	// if at least one stream requires I/O muxing, an appropriate iottymux dependency needs to be setup
+	if needsIOMux || needsTTYMux {
+		// an env file is written here for iottymux, containing service configuration.
+		appIODir := IOMuxDir(p.Root, ra.Name)
+		os.MkdirAll(appIODir, 0644)
+		file, err := os.OpenFile(filepath.Join(appIODir, "env"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			uw.err = err
+			return nil
+		}
+		defer file.Close()
+
+		// env file specifies: debug verbosity, which streams to mux and whether a dedicated TTY is needed.
+		file.WriteString(fmt.Sprintf("STAGE2_TTY=%t\n", needsTTYMux))
+		file.WriteString(fmt.Sprintf("STAGE1_DEBUG=%t\n", p.Debug))
+		for _, l := range iottymuxEnvFlags {
+			file.WriteString(l + "\n")
+		}
+
+		if needsIOMux {
+			// streaming mode brings in a `iomux@.service` before-dependency
+			opts = append(opts, unit.NewUnitOption("Unit", "Requires", fmt.Sprintf("iomux@%s.service", ra.Name)))
+			opts = append(opts, unit.NewUnitOption("Unit", "Before", fmt.Sprintf("iomux@%s.service", ra.Name)))
+			logMode, ok := p.Manifest.Annotations.Get("coreos.com/rkt/experiment/logmode")
+			if ok {
+				file.WriteString(fmt.Sprintf("STAGE1_LOGMODE=%s\n", logMode))
+			}
+		} else if needsTTYMux {
+			// tty mode brings in a `ttymux@.service` after-dependency (it needs to create the TTY first)
+			opts = append(opts, unit.NewUnitOption("Service", "TTYPath", filepath.Join("/rkt/iottymux", ra.Name.String(), "stage2-pts")))
+			opts = append(opts, unit.NewUnitOption("Unit", "Requires", fmt.Sprintf("ttymux@%s.service", ra.Name)))
+			opts = append(opts, unit.NewUnitOption("Unit", "After", fmt.Sprintf("ttymux@%s.service", ra.Name)))
+		}
+	}
+	return opts
 }
 
 // UnitWriter is the type that writes systemd units preserving the first previously occured error.
@@ -301,6 +439,7 @@ func (uw *UnitWriter) Error() error {
 	return uw.err
 }
 
+// AppUnit sets up the main systemd service unit for the application.
 func (uw *UnitWriter) AppUnit(ra *schema.RuntimeApp, binPath string, opts ...*unit.UnitOption) {
 	if uw.err != nil {
 		return
@@ -333,6 +472,9 @@ func (uw *UnitWriter) AppUnit(ra *schema.RuntimeApp, binPath string, opts ...*un
 		// short-lived and runs as non-root.
 		unit.NewUnitOption("Service", "SyslogIdentifier", appName),
 	}...)
+
+	// Setup I/O for iottymux (stdin/stdout/stderr)
+	opts = append(opts, uw.SetupAppIO(uw.p, ra, binPath)...)
 
 	if supportsNotify(uw.p, ra.Name.String()) {
 		opts = append(opts, unit.NewUnitOption("Service", "Type", "notify"))
@@ -591,6 +733,28 @@ func (uw *UnitWriter) AppReaperUnit(appName types.ACName, binPath string, opts .
 	uw.WriteUnit(
 		ServiceUnitPath(uw.p.Root, types.ACName(fmt.Sprintf("reaper-%s", appName))),
 		fmt.Sprintf("failed to write app %q reaper service", appName),
+		opts...,
+	)
+}
+
+// AppSocketUnits writes a stream socket-unit for the given app in the given path.
+func (uw *UnitWriter) AppSocketUnit(appName types.ACName, binPath string, streamName string, opts ...*unit.UnitOption) {
+	opts = append(opts, []*unit.UnitOption{
+		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("%s socket for %s", streamName, appName)),
+		unit.NewUnitOption("Unit", "DefaultDependencies", "no"),
+		unit.NewUnitOption("Unit", "StopWhenUnneeded", "yes"),
+		unit.NewUnitOption("Unit", "RefuseManualStart", "yes"),
+		unit.NewUnitOption("Unit", "RefuseManualStop", "yes"),
+		unit.NewUnitOption("Unit", "BindsTo", fmt.Sprintf("%s.service", appName)),
+		unit.NewUnitOption("Socket", "RemoveOnStop", "yes"),
+		unit.NewUnitOption("Socket", "Service", fmt.Sprintf("%s.service", appName)),
+		unit.NewUnitOption("Socket", "FileDescriptorName", streamName),
+		unit.NewUnitOption("Socket", "ListenFIFO", filepath.Join("/rkt/iottymux", appName.String(), "stage2-"+streamName)),
+	}...)
+
+	uw.WriteUnit(
+		TypedUnitPath(uw.p.Root, appName.String()+"-"+streamName, "socket"),
+		fmt.Sprintf("failed to write %s socket for %q service", streamName, appName),
 		opts...,
 	)
 }

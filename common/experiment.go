@@ -20,9 +20,10 @@ import (
 	"strings"
 )
 
-// a string set of known rkt experiments
-var experiments = map[string]struct{}{
-	"app": {}, // rkt app subcommands for CRI
+// a string set of known rkt experiments, gated stage0 features
+var stage0Experiments = map[string]struct{}{
+	"app":    {}, // rkt app subcommands for CRI
+	"attach": {}, // rkt attach subcommands and streaming options
 }
 
 // IsExperimentEnabled returns true if the given rkt experiment is enabled.
@@ -32,7 +33,7 @@ var experiments = map[string]struct{}{
 // If the environment variable does not contain a valid bool value
 // according to strconv.ParseBool, false is returned.
 func IsExperimentEnabled(name string) bool {
-	if _, ok := experiments[name]; !ok {
+	if _, ok := stage0Experiments[name]; !ok {
 		return false
 	}
 

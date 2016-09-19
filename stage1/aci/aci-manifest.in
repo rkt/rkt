@@ -50,6 +50,10 @@
             "value": "/app_stop"
         },
         {
+            "name": "coreos.com/rkt/stage1/attach",
+            "value": "/attach"
+        },
+        {
             "name": "coreos.com/rkt/stage1/interface-version",
             "value": "5"
         }
