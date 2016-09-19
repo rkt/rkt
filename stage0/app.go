@@ -313,19 +313,24 @@ func RmApp(dir string, uuid *types.UUID, usesOverlay bool, appName *types.ACName
 		return errwrap.Wrap(errors.New("error determining 'enter' entrypoint"), err)
 	}
 
-	args := []string{
-		uuid.String(),
-		appName.String(),
-		filepath.Join(common.Stage1RootfsPath(dir), eep),
-		strconv.Itoa(podPID),
-	}
+	if podPID > 0 {
+		// Call app-stop and app-rm entrypoint only if the pod is still running.
+		// Otherwise, there's not much we can do about it except unmounting/removing
+		// the file system.
+		args := []string{
+			uuid.String(),
+			appName.String(),
+			filepath.Join(common.Stage1RootfsPath(dir), eep),
+			strconv.Itoa(podPID),
+		}
 
-	if err := callEntrypoint(dir, appStopEntrypoint, args); err != nil {
-		return err
-	}
+		if err := callEntrypoint(dir, appStopEntrypoint, args); err != nil {
+			return err
+		}
 
-	if err := callEntrypoint(dir, appRmEntrypoint, args); err != nil {
-		return err
+		if err := callEntrypoint(dir, appRmEntrypoint, args); err != nil {
+			return err
+		}
 	}
 
 	appInfoDir := common.AppInfoPath(dir, *appName)
