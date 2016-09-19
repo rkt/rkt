@@ -43,6 +43,12 @@ func ServiceUnitPath(root string, appName types.ACName) string {
 	return filepath.Join(common.Stage1RootfsPath(root), UnitsDir, ServiceUnitName(appName))
 }
 
+// ServiceUnitPath returns the path to the systemd service file for the given
+// app name.
+func TargetUnitPath(root string, name string) string {
+	return filepath.Join(common.Stage1RootfsPath(root), UnitsDir, name+".target")
+}
+
 // RelEnvFilePath returns the path to the environment file for the given
 // app name relative to the pod's root.
 func RelEnvFilePath(appName types.ACName) string {

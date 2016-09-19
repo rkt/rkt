@@ -1,4 +1,0 @@
-[Unit]
-Description=Halt
-DefaultDependencies=no
-AllowIsolate=yes

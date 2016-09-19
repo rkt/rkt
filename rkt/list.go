@@ -18,6 +18,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -25,8 +26,9 @@ import (
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/lastditch"
 	"github.com/appc/spec/schema/types"
-	common "github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/lib"
 	"github.com/coreos/rkt/networking/netinfo"
+	pkgPod "github.com/coreos/rkt/pkg/pod"
 	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/errwrap"
 	"github.com/spf13/cobra"
@@ -41,12 +43,14 @@ var (
 	}
 	flagNoLegend   bool
 	flagFullOutput bool
+	flagFormat     string
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdList)
 	cmdList.Flags().BoolVar(&flagNoLegend, "no-legend", false, "suppress a legend with the list")
 	cmdList.Flags().BoolVar(&flagFullOutput, "full", false, "use long output format")
+	cmdList.Flags().StringVar(&flagFormat, "format", "", "choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs")
 }
 
 func runList(cmd *cobra.Command, args []string) int {
@@ -54,7 +58,7 @@ func runList(cmd *cobra.Command, args []string) int {
 	tabBuffer := new(bytes.Buffer)
 	tabOut := getTabOutWithWriter(tabBuffer)
 
-	if !flagNoLegend {
+	if !flagNoLegend && flagFormat == "" {
 		if flagFullOutput {
 			fmt.Fprintf(tabOut, "UUID\tAPP\tIMAGE NAME\tIMAGE ID\tSTATE\tCREATED\tSTARTED\tNETWORKS\n")
 		} else {
@@ -62,24 +66,33 @@ func runList(cmd *cobra.Command, args []string) int {
 		}
 	}
 
-	if err := walkPods(includeMostDirs, func(p *pod) {
-		pm := schema.PodManifest{}
+	var pods []*rkt.Pod
 
-		if !p.isPreparing && !p.isAbortedPrepare && !p.isExitedDeleting {
+	if err := pkgPod.WalkPods(getDataDir(), pkgPod.IncludeMostDirs, func(p *pkgPod.Pod) {
+		var pm schema.PodManifest
+		var err error
+
+		podState := p.State()
+		if podState != pkgPod.Preparing && podState != pkgPod.AbortedPrepare && podState != pkgPod.Deleting {
 			// TODO(vc): we should really hold a shared lock here to prevent gc of the pod
-			pmf, err := p.readFile(common.PodManifestPath(""))
+
+			_, manifest, err := p.PodManifest()
 			if err != nil {
 				errors = append(errors, newPodListReadError(p, err))
 				return
 			}
+			pm = *manifest
 
-			if err := pm.UnmarshalJSON(pmf); err != nil {
-				errors = append(errors, newPodListLoadError(p, err, pmf))
-				return
-			}
-
-			if len(pm.Apps) == 0 {
-				errors = append(errors, newPodListZeroAppsError(p))
+			if flagFormat != "" {
+				pod := &rkt.Pod{
+					UUID:     p.UUID.String(),
+					State:    podState,
+					Networks: p.Nets,
+				}
+				for _, app := range pm.Apps {
+					pod.AppNames = append(pod.AppNames, app.Name.String())
+				}
+				pods = append(pods, pod)
 				return
 			}
 		}
@@ -96,11 +109,11 @@ func runList(cmd *cobra.Command, args []string) int {
 		}
 
 		var appsToPrint []printedApp
-		uuid := p.uuid.String()
-		state := p.getState()
-		nets := fmtNets(p.nets)
+		uuid := p.UUID.String()
+		state := p.State()
+		nets := fmtNets(p.Nets)
 
-		created, err := p.getCreationTime()
+		created, err := p.CreationTime()
 		if err != nil {
 			errors = append(errors, errwrap.Wrap(fmt.Errorf("unable to get creation time for pod %q", uuid), err))
 		}
@@ -111,7 +124,7 @@ func runList(cmd *cobra.Command, args []string) int {
 			createdStr = humanize.Time(created)
 		}
 
-		started, err := p.getStartTime()
+		started, err := p.StartTime()
 		if err != nil {
 			errors = append(errors, errwrap.Wrap(fmt.Errorf("unable to get start time for pod %q", uuid), err))
 		}
@@ -126,6 +139,18 @@ func runList(cmd *cobra.Command, args []string) int {
 
 		if !flagFullOutput {
 			uuid = uuid[:8]
+		}
+		if len(pm.Apps) == 0 {
+			appsToPrint = append(appsToPrint, printedApp{
+				uuid:    uuid,
+				appName: "-",
+				imgName: "-",
+				imgID:   "-",
+				state:   state,
+				nets:    nets,
+				created: createdStr,
+				started: startedStr,
+			})
 		}
 		for _, app := range pm.Apps {
 			imageName, err := getImageName(p, app.Name)
@@ -174,62 +199,47 @@ func runList(cmd *cobra.Command, args []string) int {
 		return 1
 	}
 
-	if len(errors) > 0 {
-		sep := "----------------------------------------"
-		stderr.Printf("%d error(s) encountered when listing pods:", len(errors))
-		stderr.Print(sep)
-		for _, err := range errors {
-			stderr.Error(err)
-			stderr.Print(sep)
+	switch flagFormat {
+	case "":
+		tabOut.Flush()
+		stdout.Print(tabBuffer)
+	case "json":
+		result, err := json.Marshal(pods)
+		if err != nil {
+			stderr.PrintE("error marshaling the pods", err)
+			return 1
 		}
-		stderr.Print("misc:")
-		stderr.Printf("  rkt's appc version: %s", schema.AppContainerVersion)
-		stderr.Print(sep)
-		// make a visible break between errors and the listing
-		stderr.Print("")
+		stdout.Print(string(result))
+	case "json-pretty":
+		result, err := json.MarshalIndent(pods, "", "\t")
+		if err != nil {
+			stderr.PrintE("error marshaling the pods", err)
+			return 1
+		}
+		stdout.Print(string(result))
 	}
 
-	tabOut.Flush()
-	stdout.Print(tabBuffer)
+	if len(errors) > 0 {
+		printErrors(errors, "listing pods")
+	}
+
 	return 0
 }
 
-func newPodListReadError(p *pod, err error) error {
+func newPodListReadError(p *pkgPod.Pod, err error) error {
 	lines := []string{
-		fmt.Sprintf("Unable to read pod %s manifest:", p.uuid.String()),
+		fmt.Sprintf("Unable to read pod %s manifest:", p.UUID.String()),
 		fmt.Sprintf("  %v", err),
 	}
 	return fmt.Errorf("%s", strings.Join(lines, "\n"))
 }
 
-func newPodListLoadError(p *pod, err error, pmj []byte) error {
-	lines := []string{
-		fmt.Sprintf("Unable to load pod %s manifest, because it is invalid:", p.uuid.String()),
-		fmt.Sprintf("  %v", err),
-	}
-	pm := lastditch.PodManifest{}
-	if err := pm.UnmarshalJSON(pmj); err != nil {
-		lines = append(lines, "  Also, failed to get any information about invalid pod manifest:")
-		lines = append(lines, fmt.Sprintf("    %v", err))
-	} else {
-		if len(pm.Apps) > 0 {
-			lines = append(lines, "Objects related to this error:")
-			for _, app := range pm.Apps {
-				lines = append(lines, fmt.Sprintf("  %s", appLine(app)))
-			}
-		} else {
-			lines = append(lines, "No other objects related to this error")
-		}
-	}
-	return fmt.Errorf("%s", strings.Join(lines, "\n"))
+func newPodListZeroAppsError(p *pkgPod.Pod) error {
+	return fmt.Errorf("pod %s contains zero apps", p.UUID.String())
 }
 
-func newPodListZeroAppsError(p *pod) error {
-	return fmt.Errorf("pod %s contains zero apps", p.uuid.String())
-}
-
-func newPodListLoadImageManifestError(p *pod, err error) error {
-	return errwrap.Wrap(fmt.Errorf("pod %s ImageManifest could not be loaded", p.uuid.String()), err)
+func newPodListLoadImageManifestError(p *pkgPod.Pod, err error) error {
+	return errwrap.Wrap(fmt.Errorf("pod %s ImageManifest could not be loaded", p.UUID.String()), err)
 }
 
 func appLine(app lastditch.RuntimeApp) string {
@@ -246,8 +256,8 @@ func fmtNets(nis []netinfo.NetInfo) string {
 	return strings.Join(parts, ", ")
 }
 
-func getImageName(p *pod, appName types.ACName) (string, error) {
-	aim, err := p.getAppImageManifest(appName)
+func getImageName(p *pkgPod.Pod, appName types.ACName) (string, error) {
+	aim, err := p.AppImageManifest(appName.String())
 	if err != nil {
 		return "", errwrap.Wrap(errors.New("problem retrieving ImageManifests from pod"), err)
 	}
