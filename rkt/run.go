@@ -62,7 +62,7 @@ image arguments with a lone "---" to resume argument parsing.`,
 	flagNet          common.NetList
 	flagPrivateUsers bool
 	flagInheritEnv   bool
-	flagExplicitEnv  envMap
+	flagExplicitEnv  kvMap
 	flagEnvFromFile  envFileMap
 	flagInteractive  bool
 	flagDNS          flagStringList
@@ -117,7 +117,7 @@ func init() {
 	cmdRun.Flags().BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	cmdRun.Flags().BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	cmdRun.Flags().BoolVar(&flagPrivateUsers, "private-users", false, "run within user namespaces.")
-	cmdRun.Flags().Var(&flagExplicitEnv, "set-env", "environment variable to set for apps in the form name=value")
+	cmdRun.Flags().Var(&flagExplicitEnv, "set-env", "environment variable to set for apps in the form key=value")
 	cmdRun.Flags().Var(&flagEnvFromFile, "set-env-file", "path to an environment variables file")
 	cmdRun.Flags().BoolVar(&flagInteractive, "interactive", false, "run pod interactively. If true, only one image may be supplied.")
 	cmdRun.Flags().Var(&flagDNS, "dns", "name servers to write in /etc/resolv.conf. Pass 'host' to use host's resolv.conf. Pass 'none' to ignore CNI DNS config")
@@ -450,35 +450,35 @@ func (dns *flagStringList) Type() string {
 	return "flagStringList"
 }
 
-// envMap implements the flag.Value interface to contain a set of name=value mappings
-type envMap struct {
+// kvMap implements the flag.Value interface to contain a set of key=value mappings
+type kvMap struct {
 	mapping map[string]string
 }
 
-func (e *envMap) Set(s string) error {
+func (e *kvMap) Set(s string) error {
 	if e.mapping == nil {
 		e.mapping = make(map[string]string)
 	}
 	pair := strings.SplitN(s, "=", 2)
 	if len(pair) != 2 {
-		return fmt.Errorf("environment variable must be specified as name=value")
+		return fmt.Errorf("must be specified as key=value")
 	}
 	if _, exists := e.mapping[pair[0]]; exists {
-		return fmt.Errorf("environment variable %q already set", pair[0])
+		return fmt.Errorf("key %q already set", pair[0])
 	}
 	e.mapping[pair[0]] = pair[1]
 	return nil
 }
 
-func (e *envMap) IsEmpty() bool {
+func (e *kvMap) IsEmpty() bool {
 	return len(e.mapping) == 0
 }
 
-func (e *envMap) String() string {
+func (e *kvMap) String() string {
 	return strings.Join(e.Strings(), "\n")
 }
 
-func (e *envMap) Strings() []string {
+func (e *kvMap) Strings() []string {
 	var env []string
 	for n, v := range e.mapping {
 		env = append(env, n+"="+v)
@@ -486,8 +486,8 @@ func (e *envMap) Strings() []string {
 	return env
 }
 
-func (e *envMap) Type() string {
-	return "envMap"
+func (e *kvMap) Type() string {
+	return "kvMap"
 }
 
 // envFileMap

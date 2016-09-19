@@ -24,16 +24,27 @@ func NewPodFromInternalPod(p *pkgPod.Pod) (*Pod, error) {
 	}
 
 	pod := &Pod{
-		UUID:        p.UUID.String(),
-		State:       p.State(),
-		Networks:    p.Nets,
-		Annotations: make(map[string]string),
+		UUID:     p.UUID.String(),
+		State:    p.State(),
+		Networks: p.Nets,
 	}
+
 	for _, app := range manifest.Apps {
 		pod.AppNames = append(pod.AppNames, app.Name.String())
 	}
-	for _, anno := range manifest.Annotations {
-		pod.Annotations[anno.Name.String()] = anno.Value
+
+	if len(manifest.CRIAnnotations) > 0 {
+		pod.CRIAnnotations = make(map[string]string)
+		for name, value := range manifest.CRIAnnotations {
+			pod.CRIAnnotations[name] = value
+		}
+	}
+
+	if len(manifest.CRILabels) > 0 {
+		pod.CRILabels = make(map[string]string)
+		for name, value := range manifest.CRILabels {
+			pod.CRILabels[name] = value
+		}
 	}
 
 	startTime, err := p.StartTime()

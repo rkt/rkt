@@ -61,15 +61,17 @@ var debugEnabled bool
 // PrepareConfig defines the configuration parameters required by Prepare
 type PrepareConfig struct {
 	*CommonConfig
-	Apps               *apps.Apps          // apps to prepare
-	InheritEnv         bool                // inherit parent environment into apps
-	ExplicitEnv        []string            // always set these environment variables for all the apps
-	EnvFromFile        []string            // environment variables loaded from files, set for all the apps
-	Ports              []types.ExposedPort // list of ports that rkt will expose on the host
-	UseOverlay         bool                // prepare pod with overlay fs
-	SkipTreeStoreCheck bool                // skip checking the treestore before rendering
-	PodManifest        string              // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
-	PrivateUsers       *user.UidRange      // User namespaces
+	Apps               *apps.Apps           // apps to prepare
+	InheritEnv         bool                 // inherit parent environment into apps
+	ExplicitEnv        []string             // always set these environment variables for all the apps
+	EnvFromFile        []string             // environment variables loaded from files, set for all the apps
+	Ports              []types.ExposedPort  // list of ports that rkt will expose on the host
+	UseOverlay         bool                 // prepare pod with overlay fs
+	SkipTreeStoreCheck bool                 // skip checking the treestore before rendering
+	PodManifest        string               // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
+	PrivateUsers       *user.UidRange       // user namespaces
+	CRIAnnotations     types.CRIAnnotations // CRI annotations for the pod.
+	CRILabels          types.CRILabels      // CRI labels for the pod.
 }
 
 // RunConfig defines the configuration parameters needed by Run
@@ -288,6 +290,9 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		Name:  "coreos.com/rkt/stage1/mutable",
 		Value: strconv.FormatBool(cfg.Mutable),
 	})
+
+	pm.CRIAnnotations = cfg.CRIAnnotations
+	pm.CRILabels = cfg.CRILabels
 
 	pmb, err := json.Marshal(pm)
 	if err != nil {

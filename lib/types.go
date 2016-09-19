@@ -72,9 +72,11 @@ type (
 		Networks []netinfo.NetInfo `json:"networks,omitempty"`
 		// AppNames are the names of the apps.
 		AppNames []string `json:"app_names,omitempty"`
-		// Annotations are annotations of the pod.
-		Annotations map[string]string `json:"annotations,omitempty"`
 		// The start time of the pod.
 		StartedAt *int64 `json:"started_at,omitempty"`
+		// CRIAnnotations are the pod annotations used for CRI.
+		CRIAnnotations map[string]string `json:"cri_annotations,omitempty"`
+		// CRILabels are the pod labels used for CRI.
+		CRILabels map[string]string `json:"cri_labels,omitempty"`
 	}
 )
