@@ -122,7 +122,7 @@ func appState(app *App, pod *pkgPod.Pod) error {
 					fmt.Fprintf(os.Stderr, "Cannot get GC marked time: %v", err)
 				}
 				if !t.IsZero() {
-					finishedAt := t.UnixNano()
+					finishedAt := t.Unix()
 					app.FinishedAt = &finishedAt
 				}
 			}
@@ -139,7 +139,7 @@ func appState(app *App, pod *pkgPod.Pod) error {
 	}
 
 	app.State = AppStateCreated
-	createdAt := fi.ModTime().UnixNano()
+	createdAt := fi.ModTime().Unix()
 	app.CreatedAt = &createdAt
 
 	// Check if the app is started.
@@ -152,7 +152,7 @@ func appState(app *App, pod *pkgPod.Pod) error {
 	}
 
 	app.State = AppStateRunning
-	startedAt := fi.ModTime().UnixNano()
+	startedAt := fi.ModTime().Unix()
 	app.StartedAt = &startedAt
 
 	// Check if the app is exited.
@@ -166,7 +166,7 @@ func appState(app *App, pod *pkgPod.Pod) error {
 	}
 
 	app.State = AppStateExited
-	finishedAt := fi.ModTime().UnixNano()
+	finishedAt := fi.ModTime().Unix()
 	app.FinishedAt = &finishedAt
 
 	// Read exit code.
