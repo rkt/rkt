@@ -193,6 +193,14 @@ func installAssets() error {
 	if err != nil {
 		return err
 	}
+	mountBin, err := common.LookupPath("mount", os.Getenv("PATH"))
+	if err != nil {
+		return err
+	}
+	umountBin, err := common.LookupPath("umount", os.Getenv("PATH"))
+	if err != nil {
+		return err
+	}
 	// More paths could be added in that list if some Linux distributions install it in a different path
 	// Note that we look in /usr/lib/... first because of the merge:
 	// http://www.freedesktop.org/wiki/Software/systemd/TheCaseForTheUsrMerge/
@@ -216,6 +224,8 @@ func installAssets() error {
 		proj2aci.GetAssetString("/usr/bin/systemd-sysusers", systemdSysusersBin),
 		proj2aci.GetAssetString("/usr/lib/systemd/systemd-journald", systemdJournaldBin),
 		proj2aci.GetAssetString("/usr/bin/bash", bashBin),
+		proj2aci.GetAssetString("/bin/mount", mountBin),
+		proj2aci.GetAssetString("/bin/umount", umountBin),
 		proj2aci.GetAssetString(fmt.Sprintf("%s/systemd-journald.service", systemdUnitsPath), fmt.Sprintf("%s/systemd-journald.service", systemdUnitsPath)),
 		proj2aci.GetAssetString(fmt.Sprintf("%s/systemd-journald.socket", systemdUnitsPath), fmt.Sprintf("%s/systemd-journald.socket", systemdUnitsPath)),
 		proj2aci.GetAssetString(fmt.Sprintf("%s/systemd-journald-dev-log.socket", systemdUnitsPath), fmt.Sprintf("%s/systemd-journald-dev-log.socket", systemdUnitsPath)),
