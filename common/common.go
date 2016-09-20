@@ -102,6 +102,28 @@ func PodManifestPath(root string) string {
 	return filepath.Join(root, "pod")
 }
 
+// AppsStatusesPath returns the path of the status dir for all apps.
+func AppsStatusesPath(root string) string {
+	return filepath.Join(Stage1RootfsPath(root), "/rkt/status")
+}
+
+// AppStatusPath returns the path of the status file of an app.
+func AppStatusPath(root, appName string) string {
+	return filepath.Join(AppsStatusesPath(root), appName)
+}
+
+// AppCreatedPath returns the path of the ${appname}-created file, which is used to record
+// the creation timestamp of the app.
+func AppCreatedPath(root, appName string) string {
+	return filepath.Join(AppsStatusesPath(root), fmt.Sprintf("%s-created", appName))
+}
+
+// AppStartedPath returns the path of the ${appname}-started file, which is used to record
+// the start timestamp of the app.
+func AppStartedPath(root, appName string) string {
+	return filepath.Join(AppsStatusesPath(root), fmt.Sprintf("%s-started", appName))
+}
+
 // AppsPath returns the path where the apps within a pod live.
 func AppsPath(root string) string {
 	return filepath.Join(Stage1RootfsPath(root), stage2Dir)

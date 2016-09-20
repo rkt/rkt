@@ -45,6 +45,9 @@ func init() {
 func getAppexecArgs() []string {
 	// Documentation/devel/stage1-implementors-guide.md#arguments-1
 	// also from ../enter/enter.c
+	if appName == "" {
+		return flag.Args()
+	}
 	args := []string{
 		"/enterexec",
 		fmt.Sprintf("/opt/stage2/%s/rootfs", appName),
@@ -66,10 +69,6 @@ func main() {
 
 	if !debug {
 		diag.SetOutput(ioutil.Discard)
-	}
-
-	if appName == "" {
-		log.Fatal("--appname not set to correct value")
 	}
 
 	// ExecSSH() should return only with error

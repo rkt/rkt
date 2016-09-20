@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 		int option_index = 0;
 		static struct option long_options[] = {
 		   {"pid",     required_argument, 0,  'p' },
-		   {"appname", required_argument, 0,  'a' },
+		   {"appname", optional_argument, 0,  'a' },
 		   {0,         0,                 0,  0 }
 		};
 
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 		case '?':
 		default:
 			fprintf(stderr, "Usage: %s --pid=1234 "
-					"--appname=name -- cmd [args...]",
+					"[--appname=name] -- cmd [args...]",
 					argv[0]);
 			exit(1);
 		}
@@ -139,28 +139,33 @@ int main(int argc, char *argv[])
 		char		*args[ENTEREXEC_ARGV_FWD_OFFSET + argc - optind + 1 /* NULL terminator */];
 		int		argsind;
 
-		/* Child goes on to execute /enterexec */
+		if (appname == NULL) {
+			argsind = 0;
+			while (optind < argc)
+				args[argsind++] = argv[optind++];
+		} else {
+			/* Child goes on to execute /enterexec */
 
-		exit_if(snprintf(root, sizeof(root),
-				 "/opt/stage2/%s/rootfs", appname) == sizeof(root),
-			"Root path overflow");
+			exit_if(snprintf(root, sizeof(root),
+				     "/opt/stage2/%s/rootfs", appname) == sizeof(root),
+			    "Root path overflow");
 
-		exit_if(snprintf(env, sizeof(env),
-				 "/rkt/env/%s", appname) == sizeof(env),
-			"Env path overflow");
+			exit_if(snprintf(env, sizeof(env),
+				     "/rkt/env/%s", appname) == sizeof(env),
+			    "Env path overflow");
 
-		args[0] = "/enterexec";
-		args[1] = root;
-		args[2] = "/";	/* TODO(vc): plumb this into app.WorkingDirectory */
-		args[3] = env;
-		args[4] = "0"; /* uid */
-		args[5] = "0"; /* gid */
-		args[6] = "-e"; /* entering phase */
-		args[7] = "--";
-		argsind = ENTEREXEC_ARGV_FWD_OFFSET;
-		while (optind < argc)
-			args[argsind++] = argv[optind++];
-
+			args[0] = "/enterexec";
+			args[1] = root;
+			args[2] = "/";	/* TODO(vc): plumb this into app.WorkingDirectory */
+			args[3] = env;
+			args[4] = "0"; /* uid */
+			args[5] = "0"; /* gid */
+			args[6] = "-e"; /* entering phase */
+			args[7] = "--";
+			argsind = ENTEREXEC_ARGV_FWD_OFFSET;
+			while (optind < argc)
+				args[argsind++] = argv[optind++];
+		}
 		args[argsind] = NULL;
 
 		pexit_if(execv(args[0], args) == -1,

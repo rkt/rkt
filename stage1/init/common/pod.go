@@ -17,7 +17,6 @@
 package common
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -38,7 +37,6 @@ import (
 	"github.com/hashicorp/errwrap"
 
 	"github.com/coreos/rkt/common"
-	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/user"
 )
@@ -47,16 +45,6 @@ const (
 	// FlavorFile names the file storing the pod's flavor
 	FlavorFile    = "flavor"
 	SharedVolPerm = os.FileMode(0755)
-)
-
-var (
-	defaultEnv = map[string]string{
-		"PATH":    "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-		"SHELL":   "/bin/sh",
-		"USER":    "root",
-		"LOGNAME": "root",
-		"HOME":    "/root",
-	}
 )
 
 type Stage1InsecureOptions struct {
@@ -100,65 +88,6 @@ func quoteExec(exec []string) string {
 		qexec = append(qexec, escArg)
 	}
 	return strings.Join(qexec, " ")
-}
-
-// WriteDefaultTarget writes the default.target unit file
-// which is responsible for bringing up the applications
-func WriteDefaultTarget(p *stage1commontypes.Pod) error {
-	opts := []*unit.UnitOption{
-		unit.NewUnitOption("Unit", "Description", "rkt apps target"),
-		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
-	}
-
-	for i := range p.Manifest.Apps {
-		ra := &p.Manifest.Apps[i]
-		serviceName := ServiceUnitName(ra.Name)
-		opts = append(opts, unit.NewUnitOption("Unit", "After", serviceName))
-		opts = append(opts, unit.NewUnitOption("Unit", "Wants", serviceName))
-	}
-
-	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), UnitsDir)
-	file, err := os.OpenFile(filepath.Join(unitsPath, "default.target"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// WritePrepareAppTemplate writes service unit files for preparing the pod's applications
-func WritePrepareAppTemplate(p *stage1commontypes.Pod) error {
-	opts := []*unit.UnitOption{
-		unit.NewUnitOption("Unit", "Description", "Prepare minimum environment for chrooted applications"),
-		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
-		unit.NewUnitOption("Unit", "OnFailureJobMode", "fail"),
-		unit.NewUnitOption("Unit", "Requires", "systemd-journald.service"),
-		unit.NewUnitOption("Unit", "After", "systemd-journald.service"),
-		unit.NewUnitOption("Service", "Type", "oneshot"),
-		unit.NewUnitOption("Service", "Restart", "no"),
-		unit.NewUnitOption("Service", "ExecStart", "/prepare-app %I"),
-		unit.NewUnitOption("Service", "User", "0"),
-		unit.NewUnitOption("Service", "Group", "0"),
-		unit.NewUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE"),
-	}
-
-	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), UnitsDir)
-	file, err := os.OpenFile(filepath.Join(unitsPath, "prepare-app@.service"), os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return errwrap.Wrap(errors.New("failed to create service unit file"), err)
-	}
-	defer file.Close()
-
-	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
-		return errwrap.Wrap(errors.New("failed to write service unit file"), err)
-	}
-
-	return nil
 }
 
 func writeAppReaper(p *stage1commontypes.Pod, appName string, appRootDirectory string, binPath string) error {
@@ -286,7 +215,7 @@ func generateSysusers(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uid_ int,
 		return err
 	}
 
-	if err := shiftFiles(toShift, uidRange); err != nil {
+	if err := user.ShiftFiles(toShift, uidRange); err != nil {
 		return err
 	}
 
@@ -337,10 +266,16 @@ func appSearchPaths(p *stage1commontypes.Pod, workDir string, app types.App) []s
 	return []string{workDir, "/bin", "/usr/bin"}
 }
 
-// findBinPath takes a binary path and returns a the absolute path of the
+// FindBinPath takes a binary path and returns a the absolute path of the
 // binary relative to the app rootfs. This can be passed to ExecStart on the
 // app's systemd service file directly.
-func findBinPath(p *stage1commontypes.Pod, appName types.ACName, app types.App, workDir string, bin string) (string, error) {
+func FindBinPath(p *stage1commontypes.Pod, ra *schema.RuntimeApp) (string, error) {
+	if len(ra.App.Exec) == 0 {
+		return "", errors.New("app has no executable")
+	}
+
+	bin := ra.App.Exec[0]
+
 	var binPath string
 	switch {
 	// absolute path, just use it
@@ -348,36 +283,24 @@ func findBinPath(p *stage1commontypes.Pod, appName types.ACName, app types.App, 
 		binPath = bin
 	// non-absolute path containing a slash, look in the working dir
 	case strings.Contains(bin, "/"):
-		binPath = filepath.Join(workDir, bin)
+		binPath = filepath.Join(ra.App.WorkingDirectory, bin)
 	// filename, search in the app's $PATH
 	default:
 		absRoot, err := filepath.Abs(p.Root)
 		if err != nil {
 			return "", errwrap.Wrap(errors.New("could not get pod's root absolute path"), err)
 		}
-		appRootfs := common.AppRootfsPath(absRoot, appName)
-		appPathDirs := appSearchPaths(p, workDir, app)
+		appRootfs := common.AppRootfsPath(absRoot, ra.Name)
+		appPathDirs := appSearchPaths(p, ra.App.WorkingDirectory, *ra.App)
 		appPath := strings.Join(appPathDirs, ":")
 
-		binPath, err = lookupPathInsideApp(bin, appPath, appRootfs, workDir)
+		binPath, err = lookupPathInsideApp(bin, appPath, appRootfs, ra.App.WorkingDirectory)
 		if err != nil {
 			return "", errwrap.Wrap(fmt.Errorf("error looking up %q", bin), err)
 		}
 	}
 
 	return binPath, nil
-}
-
-// shiftFiles shifts filesToshift by the amounts specified in uidRange
-func shiftFiles(filesToShift []string, uidRange *user.UidRange) error {
-	if uidRange.Shift != 0 && uidRange.Count != 0 {
-		for _, f := range filesToShift {
-			if err := os.Chown(f, int(uidRange.Shift), int(uidRange.Shift)); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // generateDeviceAllows generates a DeviceAllow= line for an app.
@@ -393,7 +316,7 @@ func generateDeviceAllows(root string, appName types.ACName, mountPoints []types
 	if err := os.MkdirAll(rktVolumeLinksPath, 0600); err != nil {
 		return nil, err
 	}
-	if err := shiftFiles([]string{rktVolumeLinksPath}, uidRange); err != nil {
+	if err := user.ShiftFiles([]string{rktVolumeLinksPath}, uidRange); err != nil {
 		return nil, err
 	}
 
@@ -439,289 +362,6 @@ func supportsNotify(p *stage1commontypes.Pod, appName string) bool {
 		return true
 	}
 	return false
-}
-
-// appToSystemd transforms the provided RuntimeApp+ImageManifest into systemd units
-func appToSystemd(p *stage1commontypes.Pod, ra *schema.RuntimeApp, interactive bool, flavor string, privateUsers string, insecureOptions Stage1InsecureOptions) error {
-	app := ra.App
-	appName := ra.Name
-	imgName := p.AppNameToImageName(appName)
-
-	if len(app.Exec) == 0 {
-		return fmt.Errorf(`image %q has an empty "exec" (try --exec=BINARY)`, imgName)
-	}
-
-	workDir := "/"
-	if app.WorkingDirectory != "" {
-		workDir = app.WorkingDirectory
-	}
-
-	env := app.Environment
-
-	env.Set("AC_APP_NAME", appName.String())
-	if p.MetadataServiceURL != "" {
-		env.Set("AC_METADATA_URL", p.MetadataServiceURL)
-	}
-
-	envFilePath := EnvFilePath(p.Root, appName)
-
-	uidRange := user.NewBlankUidRange()
-	if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
-		return err
-	}
-
-	if err := writeEnvFile(p, env, appName, uidRange, '\n', envFilePath); err != nil {
-		return errwrap.Wrap(errors.New("unable to write environment file for systemd"), err)
-	}
-
-	u, g, err := parseUserGroup(p, ra, uidRange)
-	if err != nil {
-		return err
-	}
-
-	if err := generateSysusers(p, ra, u, g, uidRange); err != nil {
-		return errwrap.Wrap(errors.New("unable to generate sysusers"), err)
-	}
-
-	binPath, err := findBinPath(p, appName, *app, workDir, app.Exec[0])
-	if err != nil {
-		return err
-	}
-
-	var supplementaryGroups []string
-	for _, g := range app.SupplementaryGIDs {
-		supplementaryGroups = append(supplementaryGroups, strconv.Itoa(g))
-	}
-
-	capabilitiesStr, err := getAppCapabilities(app.Isolators)
-	if err != nil {
-		return err
-	}
-
-	execStart := append([]string{binPath}, app.Exec[1:]...)
-	execStartString := quoteExec(execStart)
-	opts := []*unit.UnitOption{
-		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v", appName, imgName)),
-		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
-		unit.NewUnitOption("Unit", "Wants", fmt.Sprintf("reaper-%s.service", appName)),
-		unit.NewUnitOption("Service", "Restart", "no"),
-		unit.NewUnitOption("Service", "ExecStart", execStartString),
-		unit.NewUnitOption("Service", "RootDirectory", common.RelAppRootfsPath(appName)),
-		// MountFlags=shared creates a new mount namespace and (as unintuitive
-		// as it might seem) makes sure the mount is slave+shared.
-		unit.NewUnitOption("Service", "MountFlags", "shared"),
-		unit.NewUnitOption("Service", "WorkingDirectory", workDir),
-		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePath(appName)),
-		unit.NewUnitOption("Service", "User", strconv.Itoa(u)),
-		unit.NewUnitOption("Service", "Group", strconv.Itoa(g)),
-		unit.NewUnitOption("Service", "SupplementaryGroups", strings.Join(supplementaryGroups, " ")),
-		// This helps working around a race
-		// (https://github.com/systemd/systemd/issues/2913) that causes the
-		// systemd unit name not getting written to the journal if the unit is
-		// short-lived and runs as non-root.
-		unit.NewUnitOption("Service", "SyslogIdentifier", appName.String()),
-	}
-
-	if supportsNotify(p, appName.String()) {
-		opts = append(opts, unit.NewUnitOption("Service", "Type", "notify"))
-	}
-
-	if !insecureOptions.DisableCapabilities {
-		opts = append(opts, unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")))
-	}
-
-	noNewPrivileges := getAppNoNewPrivileges(app.Isolators)
-
-	// Apply seccomp isolator, if any and not opt-ing out;
-	// see https://www.freedesktop.org/software/systemd/man/systemd.exec.html#SystemCallFilter=
-	if !insecureOptions.DisableSeccomp {
-		var forceNoNewPrivileges bool
-
-		unprivileged := (u != 0)
-		opts, forceNoNewPrivileges, err = getSeccompFilter(opts, p, unprivileged, app.Isolators)
-		if err != nil {
-			return err
-		}
-
-		// Seccomp filters require NoNewPrivileges for unprivileged apps, that may override
-		// manifest annotation.
-		if forceNoNewPrivileges {
-			noNewPrivileges = true
-		}
-	}
-
-	opts = append(opts, unit.NewUnitOption("Service", "NoNewPrivileges", strconv.FormatBool(noNewPrivileges)))
-
-	if ra.ReadOnlyRootFS {
-		opts = append(opts, unit.NewUnitOption("Service", "ReadOnlyDirectories", common.RelAppRootfsPath(appName)))
-	}
-
-	// TODO(tmrts): Extract this logic into a utility function.
-	vols := make(map[types.ACName]types.Volume)
-	for _, v := range p.Manifest.Volumes {
-		vols[v.Name] = v
-	}
-
-	absRoot, err := filepath.Abs(p.Root) // Absolute path to the pod's rootfs.
-	if err != nil {
-		return err
-	}
-	appRootfs := common.AppRootfsPath(absRoot, appName)
-
-	rwDirs := []string{}
-	imageManifest := p.Images[appName.String()]
-	mounts := GenerateMounts(ra, vols, imageManifest)
-	for _, m := range mounts {
-		mntPath, err := EvaluateSymlinksInsideApp(appRootfs, m.Path)
-		if err != nil {
-			return err
-		}
-
-		if !IsMountReadOnly(vols[m.Volume], app.MountPoints) {
-			rwDirs = append(rwDirs, filepath.Join(common.RelAppRootfsPath(appName), mntPath))
-		}
-	}
-
-	// Restrict access to sensitive paths (eg. procfs) and devices. For kvm flavor,
-	// these paths are stored inside the vm, without influence to the host.
-	if !insecureOptions.DisablePaths && flavor != "kvm" {
-		opts = protectSystemFiles(opts, appName)
-		opts = append(opts, unit.NewUnitOption("Service", "DevicePolicy", "closed"))
-		deviceAllows, err := generateDeviceAllows(common.Stage1RootfsPath(absRoot), appName, app.MountPoints, mounts, vols, uidRange)
-		if err != nil {
-			return err
-		}
-		for _, dev := range deviceAllows {
-			opts = append(opts, unit.NewUnitOption("Service", "DeviceAllow", dev))
-		}
-	}
-
-	opts = append(opts, unit.NewUnitOption("Service", "ReadWriteDirectories", strings.Join(rwDirs, " ")))
-
-	if interactive {
-		opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "tty"))
-		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "tty"))
-		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "tty"))
-	} else {
-		opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
-		opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
-	}
-
-	// When an app fails, we shut down the pod
-	opts = append(opts, unit.NewUnitOption("Unit", "OnFailure", "halt.target"))
-
-	for _, eh := range app.EventHandlers {
-		var typ string
-		switch eh.Name {
-		case "pre-start":
-			typ = "ExecStartPre"
-		case "post-stop":
-			typ = "ExecStopPost"
-		default:
-			return fmt.Errorf("unrecognized eventHandler: %v", eh.Name)
-		}
-		exec := quoteExec(eh.Exec)
-		opts = append(opts, unit.NewUnitOption("Service", typ, exec))
-	}
-
-	// Some pre-start jobs take a long time, set the timeout to 0
-	opts = append(opts, unit.NewUnitOption("Service", "TimeoutStartSec", "0"))
-
-	var saPorts []types.Port
-	for _, p := range app.Ports {
-		if p.SocketActivated {
-			saPorts = append(saPorts, p)
-		}
-	}
-
-	for _, i := range app.Isolators {
-		switch v := i.Value().(type) {
-		case *types.ResourceMemory:
-			opts, err = cgroup.MaybeAddIsolator(opts, "memory", v.Limit())
-			if err != nil {
-				return err
-			}
-		case *types.ResourceCPU:
-			opts, err = cgroup.MaybeAddIsolator(opts, "cpu", v.Limit())
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(saPorts) > 0 {
-		sockopts := []*unit.UnitOption{
-			unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v %s", appName, imgName, "socket-activated ports")),
-			unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
-			unit.NewUnitOption("Socket", "BindIPv6Only", "both"),
-			unit.NewUnitOption("Socket", "Service", ServiceUnitName(appName)),
-		}
-
-		for _, sap := range saPorts {
-			var proto string
-			switch sap.Protocol {
-			case "tcp":
-				proto = "ListenStream"
-			case "udp":
-				proto = "ListenDatagram"
-			default:
-				return fmt.Errorf("unrecognized protocol: %v", sap.Protocol)
-			}
-			// We find the host port for the pod's port and use that in the
-			// socket unit file.
-			// This is so because systemd inside the pod will match based on
-			// the socket port number, and since the socket was created on the
-			// host, it will have the host port number.
-			port := findHostPort(*p.Manifest, sap.Name)
-			if port == 0 {
-				log.Printf("warning: no --port option for socket-activated port %q, assuming port %d as specified in the manifest", sap.Name, sap.Port)
-				port = sap.Port
-			}
-			sockopts = append(sockopts, unit.NewUnitOption("Socket", proto, fmt.Sprintf("%v", port)))
-		}
-
-		file, err := os.OpenFile(SocketUnitPath(p.Root, appName), os.O_WRONLY|os.O_CREATE, 0644)
-		if err != nil {
-			return errwrap.Wrap(errors.New("failed to create socket file"), err)
-		}
-		defer file.Close()
-
-		if _, err = io.Copy(file, unit.Serialize(sockopts)); err != nil {
-			return errwrap.Wrap(errors.New("failed to write socket unit file"), err)
-		}
-
-		if err = os.Symlink(path.Join("..", SocketUnitName(appName)), SocketWantPath(p.Root, appName)); err != nil {
-			return errwrap.Wrap(errors.New("failed to link socket want"), err)
-		}
-
-		opts = append(opts, unit.NewUnitOption("Unit", "Requires", SocketUnitName(appName)))
-	}
-
-	opts = append(opts, unit.NewUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(appName)))
-	opts = append(opts, unit.NewUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(appName)))
-
-	opts = append(opts, unit.NewUnitOption("Unit", "Requires", "sysusers.service"))
-	opts = append(opts, unit.NewUnitOption("Unit", "After", "sysusers.service"))
-
-	file, err := os.OpenFile(ServiceUnitPath(p.Root, appName), os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return errwrap.Wrap(errors.New("failed to create service unit file"), err)
-	}
-	defer file.Close()
-
-	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
-		return errwrap.Wrap(errors.New("failed to write service unit file"), err)
-	}
-
-	if err = os.Symlink(path.Join("..", ServiceUnitName(appName)), ServiceWantPath(p.Root, appName)); err != nil {
-		return errwrap.Wrap(errors.New("failed to link service want"), err)
-	}
-
-	if err = writeAppReaper(p, appName.String(), common.RelAppRootfsPath(appName), binPath); err != nil {
-		return errwrap.Wrap(fmt.Errorf("failed to write app %q reaper service", appName), err)
-	}
-
-	return nil
 }
 
 // parseUserGroup parses the User and Group fields of an App and returns its
@@ -774,104 +414,6 @@ func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uidRange *u
 	}
 
 	return uid, gid, nil
-}
-
-func writeShutdownService(p *stage1commontypes.Pod) error {
-	flavor, systemdVersion, err := GetFlavor(p)
-	if err != nil {
-		return err
-	}
-
-	opts := []*unit.UnitOption{
-		unit.NewUnitOption("Unit", "Description", "Pod shutdown"),
-		unit.NewUnitOption("Unit", "AllowIsolate", "true"),
-		unit.NewUnitOption("Unit", "StopWhenUnneeded", "yes"),
-		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
-		unit.NewUnitOption("Service", "RemainAfterExit", "yes"),
-
-		// The default stdout is /dev/console (the tty created by nspawn).
-		// But the tty might be destroyed if rkt is executed via ssh and
-		// the user terminates the ssh session. We still want
-		// shutdown.service to succeed in that case, so don't use
-		// /dev/console.
-		unit.NewUnitOption("Service", "StandardInput", "null"),
-		unit.NewUnitOption("Service", "StandardOutput", "null"),
-		unit.NewUnitOption("Service", "StandardError", "null"),
-	}
-
-	shutdownVerb := "exit"
-	// systemd <v227 doesn't allow the "exit" verb when running as PID 1, so
-	// use "halt".
-	// If systemdVersion is 0 it means it couldn't be guessed, assume it's new
-	// enough for "systemctl exit".
-	// This can happen, for example, when building rkt with:
-	//
-	// ./configure --with-stage1-flavors=src --with-stage1-systemd-version=master
-	//
-	// The patches for the "exit" verb are backported to the "coreos" flavor, so
-	// don't rely on the systemd version on the "coreos" flavor.
-	if flavor != "coreos" && systemdVersion != 0 && systemdVersion < 227 {
-		shutdownVerb = "halt"
-	}
-
-	opts = append(opts, unit.NewUnitOption("Service", "ExecStop", fmt.Sprintf("/usr/bin/systemctl --force %s", shutdownVerb)))
-
-	unitsPath := filepath.Join(common.Stage1RootfsPath(p.Root), UnitsDir)
-	file, err := os.OpenFile(filepath.Join(unitsPath, "shutdown.service"), os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		return errwrap.Wrap(errors.New("failed to create unit file"), err)
-	}
-	defer file.Close()
-
-	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
-		return errwrap.Wrap(errors.New("failed to write unit file"), err)
-	}
-
-	return nil
-}
-
-// writeEnvFile creates an environment file for given app name, the minimum
-// required environment variables by the appc spec will be set to sensible
-// defaults here if they're not provided by env.
-func writeEnvFile(p *stage1commontypes.Pod, env types.Environment, appName types.ACName, uidRange *user.UidRange, separator byte, envFilePath string) error {
-	ef := bytes.Buffer{}
-
-	for dk, dv := range defaultEnv {
-		if _, exists := env.Get(dk); !exists {
-			fmt.Fprintf(&ef, "%s=%s%c", dk, dv, separator)
-		}
-	}
-
-	for _, e := range env {
-		fmt.Fprintf(&ef, "%s=%s%c", e.Name, e.Value, separator)
-	}
-
-	if err := ioutil.WriteFile(envFilePath, ef.Bytes(), 0644); err != nil {
-		return err
-	}
-
-	if err := shiftFiles([]string{envFilePath}, uidRange); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// PodToSystemd creates the appropriate systemd service unit files for
-// all the constituent apps of the Pod
-func PodToSystemd(p *stage1commontypes.Pod, interactive bool, flavor string, privateUsers string, insecureOptions Stage1InsecureOptions) error {
-	for i := range p.Manifest.Apps {
-		ra := &p.Manifest.Apps[i]
-		if err := appToSystemd(p, ra, interactive, flavor, privateUsers, insecureOptions); err != nil {
-			return errwrap.Wrap(fmt.Errorf("failed to transform app %q into systemd service", ra.Name), err)
-		}
-	}
-
-	if err := writeShutdownService(p); err != nil {
-		return errwrap.Wrap(errors.New("failed to write shutdown service"), err)
-	}
-
-	return nil
 }
 
 // EvaluateSymlinksInsideApp tries to resolve symlinks within the path.

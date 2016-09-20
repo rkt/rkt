@@ -29,6 +29,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/label"
 	"github.com/coreos/rkt/pkg/lock"
+	pkgPod "github.com/coreos/rkt/pkg/pod"
 	"github.com/coreos/rkt/pkg/user"
 	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/stage0"
@@ -246,7 +247,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	p, err := newPod()
+	p, err := pkgPod.NewPod(getDataDir())
 	if err != nil {
 		stderr.PrintE("error creating new pod", err)
 		return 1
@@ -255,7 +256,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	// if requested, write out pod UUID early so "rkt rm" can
 	// clean it up even if something goes wrong
 	if flagUUIDFileSave != "" {
-		if err := writeUUIDToFile(p.uuid, flagUUIDFileSave); err != nil {
+		if err := pkgPod.WriteUUIDToFile(p.UUID, flagUUIDFileSave); err != nil {
 			stderr.PrintE("error saving pod UUID to file", err)
 			return 1
 		}
@@ -267,7 +268,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	p.mountLabel = mountLabel
+	p.MountLabel = mountLabel
 
 	cfg := stage0.CommonConfig{
 		MountLabel:   mountLabel,
@@ -275,8 +276,9 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		Store:        s,
 		TreeStore:    ts,
 		Stage1Image:  *s1img,
-		UUID:         p.uuid,
+		UUID:         p.UUID,
 		Debug:        globalFlags.Debug,
+		Mutable:      false,
 	}
 
 	ovlOk := true
@@ -318,7 +320,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		stderr.PrintE("cannot get shared prepare lock", err)
 		return 1
 	}
-	err = stage0.Prepare(pcfg, p.path(), p.uuid)
+	err = stage0.Prepare(pcfg, p.Path(), p.UUID)
 	if err != nil {
 		stderr.PrintE("error setting up stage0", err)
 		keyLock.Close()
@@ -334,7 +336,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	// skip prepared by jumping directly to run, we own this pod
-	if err := p.xToRun(); err != nil {
+	if err := p.ToRun(); err != nil {
 		stderr.PrintE("unable to transition to run", err)
 		return 1
 	}
@@ -369,13 +371,13 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		HostsEntries:         *HostsEntries,
 	}
 
-	apps, err := p.getApps()
+	_, manifest, err := p.PodManifest()
 	if err != nil {
-		stderr.PrintE("cannot get the appList in the pod manifest", err)
+		stderr.PrintE("cannot get the pod manifest", err)
 		return 1
 	}
-	rcfg.Apps = apps
-	stage0.Run(rcfg, p.path(), getDataDir()) // execs, never returns
+	rcfg.Apps = manifest.Apps
+	stage0.Run(rcfg, p.Path(), getDataDir()) // execs, never returns
 
 	return 1
 }
