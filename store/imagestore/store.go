@@ -78,7 +78,9 @@ type ACINotFoundError struct {
 }
 
 func (e ACINotFoundError) Error() string {
-	return fmt.Sprintf("cannot find aci satisfying name: %q and labels: %s in the local store", e.name, labelsToString(e.labels))
+	return fmt.Sprintf(
+		"cannot find aci satisfying name: %q and labels: %q in the local store",
+		e.name, e.labels)
 }
 
 // StoreRemovalError defines an error removing a non transactional store (like

@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/rkt/common/apps"
+	dist "github.com/coreos/rkt/pkg/distribution"
 	"github.com/coreos/rkt/pkg/keystore"
 	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/rkt/config"
@@ -32,9 +32,16 @@ import (
 	"github.com/coreos/rkt/store/treestore"
 	"github.com/hashicorp/errwrap"
 
+	"github.com/appc/spec/discovery"
 	"github.com/appc/spec/schema"
-	"github.com/appc/spec/schema/types"
 	"golang.org/x/crypto/openpgp"
+)
+
+type imageStringType int
+
+const (
+	imageStringName imageStringType = iota // image type to be guessed
+	imageStringPath                        // absolute or relative path
 )
 
 // action is a common type for Finder and Fetcher
@@ -124,15 +131,78 @@ func printIdentities(entity *openpgp.Entity) {
 	log.Print(strings.Join(lines, "\n"))
 }
 
-func guessImageType(image string) apps.AppImageType {
-	if _, err := types.NewHash(image); err == nil {
-		return apps.AppImageHash
+// DistFromImageString return the distribution for the given input image string
+func DistFromImageString(is string) (dist.Distribution, error) {
+	u, err := url.Parse(is)
+	if err != nil {
+		return nil, errwrap.Wrap(fmt.Errorf("failed to parse image url %q", is), err)
 	}
-	if u, err := url.Parse(image); err == nil && u.Scheme != "" {
-		return apps.AppImageURL
+
+	// Convert user friendly image string names to internal distribution URIs
+	// file:///full/path/to/aci/file.aci -> archive:aci:file%3A%2F%2F%2Ffull%2Fpath%2Fto%2Faci%2Ffile.aci
+	switch u.Scheme {
+	case "":
+		// no scheme given, hence should be an appc image path
+		appImageType := guessAppcOrPath(is, []string{schema.ACIExtension})
+
+		switch appImageType {
+		case imageStringName:
+			app, err := discovery.NewAppFromString(is)
+			if err != nil {
+				return nil, fmt.Errorf("invalid appc image string %q: %v", is, err)
+			}
+			return dist.NewAppcFromApp(app), nil
+		case imageStringPath:
+			absPath, err := filepath.Abs(is)
+			if err != nil {
+				return nil, errwrap.Wrap(fmt.Errorf("failed to get an absolute path for %q", is), err)
+			}
+			is = "file://" + absPath
+
+			// given a file:// image string, call this function again to return an ACI distribution
+			return DistFromImageString(is)
+		default:
+			return nil, fmt.Errorf("invalid image string type %q", appImageType)
+		}
+	case "file", "http", "https":
+		// An ACI archive with any transport type (file, http, s3 etc...) and final aci extension
+		if filepath.Ext(u.Path) == schema.ACIExtension {
+			dist, err := dist.NewACIArchiveFromTransportURL(u)
+			if err != nil {
+				return nil, fmt.Errorf("archive distribution creation error: %v", err)
+			}
+			return dist, nil
+		}
+	case "docker":
+		// Accept both docker: and docker:// uri
+		dockerStr := is
+		if strings.HasPrefix(dockerStr, "docker://") {
+			dockerStr = strings.TrimPrefix(dockerStr, "docker://")
+		} else if strings.HasPrefix(dockerStr, "docker:") {
+			dockerStr = strings.TrimPrefix(dockerStr, "docker:")
+		}
+
+		dist, err := dist.NewDockerFromString(dockerStr)
+		if err != nil {
+			return nil, fmt.Errorf("docker distribution creation error: %v", err)
+		}
+		return dist, nil
+	default:
+		// any other scheme is a an appc image name, i.e. "my-app:v1.0"
+		app, err := discovery.NewAppFromString(is)
+		if err != nil {
+			return nil, fmt.Errorf("invalid appc image string %q: %v", is, err)
+		}
+
+		return dist.NewAppcFromApp(app), nil
 	}
-	if filepath.IsAbs(image) {
-		return apps.AppImagePath
+
+	return nil, fmt.Errorf("invalid image string %q", is)
+}
+
+func guessAppcOrPath(is string, extensions []string) imageStringType {
+	if filepath.IsAbs(is) {
+		return imageStringPath
 	}
 
 	// Well, at this point is basically heuristics time. The image
@@ -140,9 +210,9 @@ func guessImageType(image string) apps.AppImageType {
 
 	// First, let's try to stat whatever file the URL would specify. If it
 	// exists, that's probably what the user wanted.
-	f, err := os.Stat(image)
+	f, err := os.Stat(is)
 	if err == nil && f.Mode().IsRegular() {
-		return apps.AppImagePath
+		return imageStringPath
 	}
 
 	// Second, let's check if there is a colon in the image
@@ -151,21 +221,23 @@ func guessImageType(image string) apps.AppImageType {
 	// highly unlikely that the image parameter is a path. Colon
 	// in this context is often used for specifying a version of
 	// an image, like in "example.com/reduce-worker:1.0.0".
-	if strings.ContainsRune(image, ':') {
-		return apps.AppImageName
+	if strings.ContainsRune(is, ':') {
+		return imageStringName
 	}
 
 	// Third, let's check if there is a dot followed by a slash
 	// (./) - if so, it is likely that the image parameter is path
 	// like ./aci-in-this-dir or ../aci-in-parent-dir
-	if strings.Contains(image, "./") {
-		return apps.AppImagePath
+	if strings.Contains(is, "./") {
+		return imageStringPath
 	}
 
 	// Fourth, let's check if the image parameter has an .aci
 	// extension. If so, likely a path like "stage1-coreos.aci".
-	if filepath.Ext(image) == schema.ACIExtension {
-		return apps.AppImagePath
+	for _, e := range extensions {
+		if filepath.Ext(is) == e {
+			return imageStringPath
+		}
 	}
 
 	// At this point, if the image parameter is something like
@@ -175,7 +247,7 @@ func guessImageType(image string) apps.AppImageType {
 	// "stage1-coreos" in this directory tree, then you better be
 	// off prepending the parameter with "./", because I'm gonna
 	// treat this as an image name otherwise.
-	return apps.AppImageName
+	return imageStringName
 }
 
 func eTag(rem *imagestore.Remote) string {
