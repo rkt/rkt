@@ -102,7 +102,7 @@ func main() {
 	}
 
 	/* prepare cgroups */
-	enabledCgroups, err := cgroup.GetEnabledCgroups()
+	enabledCgroups, err := cgroup.GetEnabledV1Cgroups()
 	if err != nil {
 		log.FatalE("error getting cgroups", err)
 		os.Exit(1)
