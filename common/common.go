@@ -432,3 +432,18 @@ func RemoveEmptyLines(str string) []string {
 
 	return lines
 }
+
+// GetExitStatus converts an error to an exit status. If it wasn't an exit
+// status != 0 it returns the same error that it was called with
+func GetExitStatus(err error) (int, error) {
+	if err == nil {
+		return 0, nil
+	}
+	if exiterr, ok := err.(*exec.ExitError); ok {
+		// the program has exited with an exit code != 0
+		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+			return status.ExitStatus(), nil
+		}
+	}
+	return -1, err
+}
