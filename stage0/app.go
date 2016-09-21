@@ -337,7 +337,7 @@ func callEntrypoint(dir, entrypoint string, args []string) error {
 	}
 
 	if err := c.Run(); err != nil {
-		return fmt.Errorf("error executing stage1's app rm: %v", err)
+		return err
 	}
 
 	if err := os.Chdir(previousDir); err != nil {
@@ -396,7 +396,14 @@ func RmApp(dir string, uuid *types.UUID, usesOverlay bool, appName *types.ACName
 		}
 
 		if err := callEntrypoint(dir, appStopEntrypoint, args); err != nil {
-			return err
+			status, err := common.GetExitStatus(err)
+			// ignore nonexistent units failing to stop. Exit status 5
+			// comes from systemctl and means the unit doesn't exist
+			if err != nil {
+				return err
+			} else if status != 5 {
+				return fmt.Errorf("exit status %d", status)
+			}
 		}
 
 		if err := callEntrypoint(dir, appRmEntrypoint, args); err != nil {
@@ -559,6 +566,12 @@ func StopApp(cfg StopConfig) error {
 	}
 
 	if err := callEntrypoint(cfg.Dir, appStopEntrypoint, args); err != nil {
+		status, err := common.GetExitStatus(err)
+		// exit status 5 comes from systemctl and means the unit doesn't exist
+		if status == 5 {
+			return fmt.Errorf("app %q is not running", app.Name)
+		}
+
 		return err
 	}
 
