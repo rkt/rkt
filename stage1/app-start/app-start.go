@@ -102,22 +102,29 @@ func main() {
 	}
 
 	/* prepare cgroups */
-	enabledCgroups, err := cgroup.GetEnabledV1Cgroups()
+	isUnified, err := cgroup.IsCgroupUnified("/")
 	if err != nil {
-		log.FatalE("error getting cgroups", err)
+		log.FatalE("failed to determine the cgroup version", err)
 		os.Exit(1)
 	}
-	b, err := ioutil.ReadFile(filepath.Join(p.Root, "subcgroup"))
-	if err == nil {
-		subcgroup := string(b)
-		serviceName := stage1initcommon.ServiceUnitName(ra.Name)
-
-		if err := cgroup.RemountCgroupKnobsRW(enabledCgroups, subcgroup, serviceName, enterCmd); err != nil {
-			log.FatalE("error restricting container cgroups", err)
+	if !isUnified {
+		enabledCgroups, err := cgroup.GetEnabledV1Cgroups()
+		if err != nil {
+			log.FatalE("error getting cgroups", err)
 			os.Exit(1)
 		}
-	} else {
-		log.PrintE("continuing with per-app isolators disabled", err)
+		b, err := ioutil.ReadFile(filepath.Join(p.Root, "subcgroup"))
+		if err == nil {
+			subcgroup := string(b)
+			serviceName := stage1initcommon.ServiceUnitName(ra.Name)
+
+			if err := cgroup.RemountCgroupKnobsRW(enabledCgroups, subcgroup, serviceName, enterCmd); err != nil {
+				log.FatalE("error restricting container cgroups", err)
+				os.Exit(1)
+			}
+		} else {
+			log.PrintE("continuing with per-app isolators disabled", err)
+		}
 	}
 
 	/* write service file */
