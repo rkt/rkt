@@ -111,7 +111,7 @@ func init() {
 	*/
 
 	addStage1ImageFlags(cmdRun.Flags())
-	cmdRun.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires contained network). Syntax: --port=NAME:HOSTPORT")
+	cmdRun.Flags().Var(&flagPorts, "port", "ports to expose on the host (requires contained network). Syntax: --port=NAME:[HOSTIP:]HOSTPORT")
 	cmdRun.Flags().Var(&flagNet, "net", "configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively. Syntax: --net[=n[:args], ...]")
 	cmdRun.Flags().Lookup("net").NoOptDefVal = "default"
 	cmdRun.Flags().BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
@@ -387,9 +387,9 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 type portList []types.ExposedPort
 
 func (pl *portList) Set(s string) error {
-	parts := strings.SplitN(s, ":", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("%q is not in name:port format", s)
+	parts := strings.SplitN(s, ":", 3)
+	if len(parts) < 2 {
+		return fmt.Errorf("%q is not in name:[ip:]port format", s)
 	}
 
 	name, err := types.NewACName(parts[0])
@@ -397,7 +397,17 @@ func (pl *portList) Set(s string) error {
 		return errwrap.Wrap(fmt.Errorf("%q is not a valid port name", parts[0]), err)
 	}
 
-	port, err := strconv.ParseUint(parts[1], 10, 16)
+	portStr := parts[1]
+	var ip net.IP
+	if len(parts) == 3 {
+		portStr = parts[2]
+		ip = net.ParseIP(parts[1])
+		if ip == nil {
+			return fmt.Errorf("%q is not a valid IP", parts[1])
+		}
+	}
+
+	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
 		return fmt.Errorf("%q is not a valid port number", parts[1])
 	}
@@ -405,6 +415,7 @@ func (pl *portList) Set(s string) error {
 	p := types.ExposedPort{
 		Name:     *name,
 		HostPort: uint(port),
+		HostIP:   ip,
 	}
 
 	*pl = append(*pl, p)

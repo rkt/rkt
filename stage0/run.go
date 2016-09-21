@@ -42,6 +42,7 @@ import (
 	cnitypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
+	commonnet "github.com/coreos/rkt/common/networking"
 	"github.com/coreos/rkt/common/overlay"
 	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/fileutil"
@@ -275,7 +276,12 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 	// TODO(jonboulle): check that app mountpoint expectations are
 	// satisfied here, rather than waiting for stage1
 	pm.Volumes = cfg.Apps.Volumes
+
+	// Check to see if ports have any errors
 	pm.Ports = cfg.Ports
+	if _, err := commonnet.ForwardedPorts(&pm); err != nil {
+		return nil, err
+	}
 
 	// TODO(sur): add to stage1-implementors-guide and to the spec
 	pm.Annotations = append(pm.Annotations, types.Annotation{
@@ -398,6 +404,11 @@ func validatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		if ra.App == nil && am.App == nil {
 			return nil, fmt.Errorf("no app section in the pod manifest or the image manifest")
 		}
+	}
+
+	// Validate forwarded ports
+	if _, err := commonnet.ForwardedPorts(&pm); err != nil {
+		return nil, err
 	}
 	return pmb, nil
 }

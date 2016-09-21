@@ -46,6 +46,7 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
+	commonnet "github.com/coreos/rkt/common/networking"
 	"github.com/coreos/rkt/networking"
 	pkgflag "github.com/coreos/rkt/pkg/flag"
 	rktlog "github.com/coreos/rkt/pkg/log"
@@ -495,45 +496,6 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 	return args, env, nil
 }
 
-func forwardedPorts(pod *stage1commontypes.Pod) ([]networking.ForwardedPort, error) {
-	var fps []networking.ForwardedPort
-
-NextPort:
-	for _, ep := range pod.Manifest.Ports {
-		n := ""
-		fp := networking.ForwardedPort{}
-
-		for _, a := range pod.Manifest.Apps {
-			for _, p := range a.App.Ports {
-				if p.Name == ep.Name {
-					if n == "" {
-						// skip socket-activated ports, they don't need port forwarding
-						if p.SocketActivated {
-							continue NextPort
-						}
-						fp.Protocol = p.Protocol
-						fp.HostPort = ep.HostPort
-						fp.PodPort = p.Port
-						n = a.Name.String()
-					} else {
-						return nil, fmt.Errorf("ambiguous exposed port in PodManifest: %q and %q both define port %q", n, a.Name, p.Name)
-					}
-				}
-			}
-		}
-
-		if n == "" {
-			return nil, fmt.Errorf("port name %q is not defined by any apps", ep.Name)
-		}
-
-		fps = append(fps, fp)
-	}
-
-	// TODO(eyakubovich): validate that there're no conflicts
-
-	return fps, nil
-}
-
 func stage1() int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
@@ -571,7 +533,7 @@ func stage1() int {
 
 	var n *networking.Networking
 	if netList.Contained() {
-		fps, err := forwardedPorts(p)
+		fps, err := commonnet.ForwardedPorts(p.Manifest)
 		if err != nil {
 			log.Error(err)
 			return 1
