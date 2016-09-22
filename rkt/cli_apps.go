@@ -441,6 +441,43 @@ func (au *appSeccompFilter) Type() string {
 	return "appSeccompFilter"
 }
 
+// appOOMScoreAdj is to adjust /proc/$pid/oom_score_adj
+type appOOMScoreAdj apps.Apps
+
+func (aml *appOOMScoreAdj) Set(s string) error {
+	app := (*apps.Apps)(aml).Last()
+	if app == nil {
+		return fmt.Errorf("--oom-score-adj must follow an image")
+	}
+	limit, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+	score, err := types.NewLinuxOOMScoreAdj(limit)
+	if err != nil {
+		return err
+	}
+
+	app.OOMScoreAdj = score
+	return nil
+}
+
+func (aml *appOOMScoreAdj) String() string {
+	app := (*apps.Apps)(aml).Last()
+	if app == nil {
+		return ""
+	}
+	adj := app.OOMScoreAdj
+	if adj == nil {
+		return ""
+	}
+	return strconv.Itoa(int(*adj))
+}
+
+func (aml *appOOMScoreAdj) Type() string {
+	return "appOOMScoreAdj"
+}
+
 // appName is for --name flags in the form of: --name=APPNAME.
 type appName apps.Apps
 

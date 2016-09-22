@@ -310,6 +310,7 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 	return pmb, nil
 }
 
+// prepareIsolators merges the CLI app parameters with the manifest's app
 func prepareIsolators(setup *apps.App, app *types.App) error {
 	if memoryOverride := setup.MemoryLimit; memoryOverride != nil {
 		isolator := memoryOverride.AsIsolator()
@@ -319,6 +320,10 @@ func prepareIsolators(setup *apps.App, app *types.App) error {
 	if cpuOverride := setup.CPULimit; cpuOverride != nil {
 		isolator := cpuOverride.AsIsolator()
 		app.Isolators = append(app.Isolators, isolator)
+	}
+
+	if oomAdjOverride := setup.OOMScoreAdj; oomAdjOverride != nil {
+		app.Isolators.ReplaceIsolatorsByName(oomAdjOverride.AsIsolator(), []types.ACIdentifier{types.LinuxOOMScoreAdjName})
 	}
 
 	if setup.CapsRetain != nil && setup.CapsRemove != nil {

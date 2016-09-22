@@ -85,6 +85,7 @@ func addIsolatorFlags(cmd *cobra.Command, compat bool) {
 	cmd.Flags().Var((*appCapsRetain)(&rktApps), "caps-retain", "capability to retain (example: '--caps-retain=CAP_SYS_ADMIN')")
 	cmd.Flags().Var((*appCapsRemove)(&rktApps), "caps-remove", "capability to remove (example: '--caps-remove=CAP_MKNOD')")
 	cmd.Flags().Var((*appSeccompFilter)(&rktApps), "seccomp", "seccomp filter override (example: '--seccomp mode=retain,errno=EPERM,chmod,chown')")
+	cmd.Flags().Var((*appOOMScoreAdj)(&rktApps), "oom-score-adj", "oom-score-adj isolator override")
 
 	// For backwards compatibility
 	if compat {

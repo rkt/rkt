@@ -61,6 +61,7 @@ type App struct {
 	CapsRetain        *types.LinuxCapabilitiesRetainSet // os/linux/capabilities-retain-set overrides
 	CapsRemove        *types.LinuxCapabilitiesRevokeSet // os/linux/capabilities-remove-set overrides
 	SeccompFilter     string                            // seccomp CLI overrides
+	OOMScoreAdj       *types.LinuxOOMScoreAdj           // oom-score-adj isolator override
 	CRIAnnotations    map[string]string                 // the CRI annotations of the app.
 	CRILabels         map[string]string                 // the CRI labels of the app.
 	Environments      map[string]string                 // the environments of the app.

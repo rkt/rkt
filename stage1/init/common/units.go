@@ -488,6 +488,8 @@ func (uw *UnitWriter) AppUnit(
 				uw.err = err
 				return
 			}
+		case *types.LinuxOOMScoreAdj:
+			opts = append(opts, unit.NewUnitOption("Service", "OOMScoreAdjust", strconv.Itoa(int(*v))))
 		}
 	}
 
