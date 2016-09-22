@@ -274,10 +274,6 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 			return nil, nil, fmt.Errorf("flag --private-users cannot be used with an lkvm stage1")
 		}
 
-		if mutable {
-			return nil, nil, fmt.Errorf("flag --mutable is not implemented in lkvm stage1")
-		}
-
 		// kernel and hypervisor binaries are located relative to the working directory
 		// of init (/var/lib/rkt/..../uuid)
 		// TODO: move to path.go
