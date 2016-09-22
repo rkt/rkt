@@ -58,10 +58,10 @@ type (
 		ImageID string `json:"image_id"`
 		// Mount points of the container.
 		Mounts []*Mount `json:"mounts,omitempty"`
-		// CRIAnnotations of the container.
-		CRIAnnotations map[string]string `json:"cri_annotations,omitempty"`
-		// CRILabels of the container.
-		CRILabels map[string]string `json:"cri_labels,omitempty"`
+		// User annotations of the container.
+		UserAnnotations map[string]string `json:"user_annotations,omitempty"`
+		// User labels of the container.
+		UserLabels map[string]string `json:"user_labels,omitempty"`
 	}
 
 	// Pod defines the pod object.
@@ -76,9 +76,9 @@ type (
 		AppNames []string `json:"app_names,omitempty"`
 		// The start time of the pod.
 		StartedAt *int64 `json:"started_at,omitempty"`
-		// CRIAnnotations are the pod annotations used for CRI.
-		CRIAnnotations map[string]string `json:"cri_annotations,omitempty"`
-		// CRILabels are the pod labels used for CRI.
-		CRILabels map[string]string `json:"cri_labels,omitempty"`
+		// UserAnnotations are the pod user annotations.
+		UserAnnotations map[string]string `json:"user_annotations,omitempty"`
+		// UserLabels are the pod user labels.
+		UserLabels map[string]string `json:"user_labels,omitempty"`
 	}
 )

@@ -70,8 +70,8 @@ type PrepareConfig struct {
 	SkipTreeStoreCheck bool                 // skip checking the treestore before rendering
 	PodManifest        string               // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
 	PrivateUsers       *user.UidRange       // user namespaces
-	CRIAnnotations     types.CRIAnnotations // CRI annotations for the pod.
-	CRILabels          types.CRILabels      // CRI labels for the pod.
+	UserAnnotations    types.CRIAnnotations // user annotations for the pod.
+	UserLabels         types.CRILabels      // user labels for the pod.
 }
 
 // RunConfig defines the configuration parameters needed by Run
@@ -208,9 +208,18 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		if err != nil {
 			return errwrap.Wrap(errors.New("error getting the manifest"), err)
 		}
-		appName, err := imageNameToAppName(am.Name)
-		if err != nil {
-			return errwrap.Wrap(errors.New("error converting image name to app name"), err)
+
+		var appName *types.ACName
+		if app.Name != "" {
+			appName, err = types.NewACName(app.Name)
+			if err != nil {
+				return errwrap.Wrap(errors.New("invalid app name format"), err)
+			}
+		} else {
+			appName, err = imageNameToAppName(am.Name)
+			if err != nil {
+				return errwrap.Wrap(errors.New("error converting image name to app name"), err)
+			}
 		}
 
 		if err := prepareAppImage(cfg, *appName, img, dir, cfg.UseOverlay); err != nil {
@@ -270,6 +279,14 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 			ra.App.SupplementaryGIDs = app.SupplementaryGIDs
 		}
 
+		if app.UserAnnotations != nil {
+			ra.App.CRIAnnotations = app.UserAnnotations
+		}
+
+		if app.UserLabels != nil {
+			ra.App.CRILabels = app.UserLabels
+		}
+
 		// loading the environment from the lowest priority to highest
 		if cfg.InheritEnv {
 			// Inherit environment does not override app image environment
@@ -278,6 +295,15 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 
 		mergeEnvs(&ra.App.Environment, cfg.EnvFromFile, true)
 		mergeEnvs(&ra.App.Environment, cfg.ExplicitEnv, true)
+
+		if app.Environments != nil {
+			envs := make([]string, 0, len(app.Environments))
+			for name, value := range app.Environments {
+				envs = append(envs, fmt.Sprintf("%s=%s", name, value))
+			}
+			mergeEnvs(&ra.App.Environment, envs, true)
+		}
+
 		pm.Apps = append(pm.Apps, ra)
 		return nil
 	}); err != nil {
@@ -300,8 +326,8 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		Value: strconv.FormatBool(cfg.Mutable),
 	})
 
-	pm.CRIAnnotations = cfg.CRIAnnotations
-	pm.CRILabels = cfg.CRILabels
+	pm.CRIAnnotations = cfg.UserAnnotations
+	pm.CRILabels = cfg.UserLabels
 
 	pmb, err := json.Marshal(pm)
 	if err != nil {

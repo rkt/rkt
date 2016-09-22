@@ -502,24 +502,24 @@ func (au *appName) Type() string {
 	return "appName"
 }
 
-// appAnnotation is for --annotation flags in the form of: --annotation=NAME=VALUE.
+// appAnnotation is for --user-annotation flags in the form of: --user-annotation=NAME=VALUE.
 type appAnnotation apps.Apps
 
 func (au *appAnnotation) Set(s string) error {
 	app := (*apps.Apps)(au).Last()
 	if app == nil {
-		return fmt.Errorf("--annotation must follow an image")
+		return fmt.Errorf("--user-annotation must follow an image")
 	}
 
 	fields := strings.SplitN(s, "=", 2)
 	if len(fields) != 2 {
-		return fmt.Errorf("invalid format of --annotation flag %q", s)
+		return fmt.Errorf("invalid format of --user-annotation flag %q", s)
 	}
 
-	if app.CRIAnnotations == nil {
-		app.CRIAnnotations = make(map[string]string)
+	if app.UserAnnotations == nil {
+		app.UserAnnotations = make(map[string]string)
 	}
-	app.CRIAnnotations[fields[0]] = fields[1]
+	app.UserAnnotations[fields[0]] = fields[1]
 	return nil
 }
 
@@ -529,7 +529,7 @@ func (au *appAnnotation) String() string {
 		return ""
 	}
 	var annotations []string
-	for name, value := range app.CRIAnnotations {
+	for name, value := range app.UserAnnotations {
 		annotations = append(annotations, fmt.Sprintf("%s=%s", name, value))
 	}
 	return strings.Join(annotations, ",")
@@ -539,24 +539,24 @@ func (au *appAnnotation) Type() string {
 	return "appAnnotation"
 }
 
-// appLabel is for --label flags in the form of: --label=NAME=VALUE.
+// appLabel is for --user-label flags in the form of: --user-label=NAME=VALUE.
 type appLabel apps.Apps
 
 func (au *appLabel) Set(s string) error {
 	app := (*apps.Apps)(au).Last()
 	if app == nil {
-		return fmt.Errorf("--label must follow an image")
+		return fmt.Errorf("--user-label must follow an image")
 	}
 
 	fields := strings.SplitN(s, "=", 2)
 	if len(fields) != 2 {
-		return fmt.Errorf("invalid format of --Label flag %q", s)
+		return fmt.Errorf("invalid format of --user-label flag %q", s)
 	}
 
-	if app.CRILabels == nil {
-		app.CRILabels = make(map[string]string)
+	if app.UserLabels == nil {
+		app.UserLabels = make(map[string]string)
 	}
-	app.CRILabels[fields[0]] = fields[1]
+	app.UserLabels[fields[0]] = fields[1]
 	return nil
 }
 
@@ -566,7 +566,7 @@ func (au *appLabel) String() string {
 		return ""
 	}
 	var labels []string
-	for name, value := range app.CRILabels {
+	for name, value := range app.UserLabels {
 		labels = append(labels, fmt.Sprintf("%s=%s", name, value))
 	}
 	return strings.Join(labels, ",")

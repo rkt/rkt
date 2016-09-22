@@ -62,8 +62,8 @@ type App struct {
 	CapsRemove        *types.LinuxCapabilitiesRevokeSet // os/linux/capabilities-remove-set overrides
 	SeccompFilter     string                            // seccomp CLI overrides
 	OOMScoreAdj       *types.LinuxOOMScoreAdj           // oom-score-adj isolator override
-	CRIAnnotations    map[string]string                 // the CRI annotations of the app.
-	CRILabels         map[string]string                 // the CRI labels of the app.
+	UserAnnotations   map[string]string                 // the user annotations of the app.
+	UserLabels        map[string]string                 // the user labels of the app.
 	Environments      map[string]string                 // the environments of the app.
 
 	// TODO(jonboulle): These images are partially-populated hashes, this should be clarified.

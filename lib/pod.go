@@ -34,16 +34,16 @@ func NewPodFromInternalPod(p *pkgPod.Pod) (*Pod, error) {
 	}
 
 	if len(manifest.CRIAnnotations) > 0 {
-		pod.CRIAnnotations = make(map[string]string)
+		pod.UserAnnotations = make(map[string]string)
 		for name, value := range manifest.CRIAnnotations {
-			pod.CRIAnnotations[name] = value
+			pod.UserAnnotations[name] = value
 		}
 	}
 
 	if len(manifest.CRILabels) > 0 {
-		pod.CRILabels = make(map[string]string)
+		pod.UserLabels = make(map[string]string)
 		for name, value := range manifest.CRILabels {
-			pod.CRILabels[name] = value
+			pod.UserLabels[name] = value
 		}
 	}
 

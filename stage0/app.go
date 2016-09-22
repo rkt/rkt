@@ -233,12 +233,12 @@ func AddApp(pcfg PrepareConfig, cfg RunConfig, dir string, img *types.Hash) erro
 		ra.App.SupplementaryGIDs = app.SupplementaryGIDs
 	}
 
-	if app.CRIAnnotations != nil {
-		ra.App.CRIAnnotations = app.CRIAnnotations
+	if app.UserAnnotations != nil {
+		ra.App.CRIAnnotations = app.UserAnnotations
 	}
 
-	if app.CRILabels != nil {
-		ra.App.CRILabels = app.CRILabels
+	if app.UserLabels != nil {
+		ra.App.CRILabels = app.UserLabels
 	}
 
 	if app.Environments != nil {

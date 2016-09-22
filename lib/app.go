@@ -59,10 +59,10 @@ func AppsForPod(uuid, dataDir string, appName string) ([]*App, error) {
 // newApp constructs the App object with the runtime app and pod manifest.
 func newApp(ra *schema.RuntimeApp, podManifest *schema.PodManifest, pod *pkgPod.Pod) (*App, error) {
 	app := &App{
-		Name:           ra.Name.String(),
-		ImageID:        ra.Image.ID.String(),
-		CRIAnnotations: ra.App.CRIAnnotations,
-		CRILabels:      ra.App.CRILabels,
+		Name:            ra.Name.String(),
+		ImageID:         ra.Image.ID.String(),
+		UserAnnotations: ra.App.CRIAnnotations,
+		UserLabels:      ra.App.CRILabels,
 	}
 
 	// Generate mounts

@@ -105,8 +105,8 @@ func addAppFlags(cmd *cobra.Command) {
 	cmd.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
 	cmd.Flags().Var((*appSupplementaryGIDs)(&rktApps), "supplementary-gids", "supplementary group IDs override for the preceding image (examples: '--supplementary-gids=1024,2048'")
 	cmd.Flags().Var((*appName)(&rktApps), "name", "set the name of the app (example: '--name=foo'). If not set, then the app name default to the image's name")
-	cmd.Flags().Var((*appAnnotation)(&rktApps), "annotation", "set the app's annotations (example: '--annotation=foo=bar')")
-	cmd.Flags().Var((*appLabel)(&rktApps), "label", "set the app's labels (example: '--label=foo=bar')")
+	cmd.Flags().Var((*appAnnotation)(&rktApps), "user-annotation", "set the app's annotations (example: '--user-annotation=foo=bar')")
+	cmd.Flags().Var((*appLabel)(&rktApps), "user-label", "set the app's labels (example: '--user-label=foo=bar')")
 	cmd.Flags().Var((*appEnv)(&rktApps), "environment", "set the app's environment variables (example: '--environment=foo=bar')")
 }
 
@@ -125,7 +125,7 @@ func init() {
 	cmdRun.Flags().BoolVar(&flagInheritEnv, "inherit-env", false, "inherit all environment variables not set by apps")
 	cmdRun.Flags().BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
 	cmdRun.Flags().BoolVar(&flagPrivateUsers, "private-users", false, "run within user namespaces.")
-	cmdRun.Flags().Var(&flagExplicitEnv, "set-env", "environment variable to set for apps in the form key=value")
+	cmdRun.Flags().Var(&flagExplicitEnv, "set-env", "environment variable to set for all the apps in the form key=value, this will be overriden by --environment")
 	cmdRun.Flags().Var(&flagEnvFromFile, "set-env-file", "path to an environment variables file")
 	cmdRun.Flags().BoolVar(&flagInteractive, "interactive", false, "run pod interactively. If true, only one image may be supplied.")
 	cmdRun.Flags().Var(&flagDNS, "dns", "name servers to write in /etc/resolv.conf. Pass 'host' to use host's resolv.conf. Pass 'none' to ignore CNI DNS config")
@@ -193,11 +193,10 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		return 1
 	}
 
-	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || rktApps.Count() > 0 || flagStoreOnly || flagNoStore ||
-		flagInheritEnv || !flagExplicitEnv.IsEmpty() || !flagEnvFromFile.IsEmpty() ||
-		(*appsVolume)(&rktApps).String() != "" || (*appMount)(&rktApps).String() != "" || (*appExec)(&rktApps).String() != "" ||
-		(*appUser)(&rktApps).String() != "" || (*appGroup)(&rktApps).String() != "" ||
-		(*appCapsRetain)(&rktApps).String() != "" || (*appCapsRemove)(&rktApps).String() != "") {
+	if len(flagPodManifest) > 0 && (rktApps.Count() > 0 ||
+		(*appsVolume)(&rktApps).String() != "" || (*appMount)(&rktApps).String() != "" ||
+		len(flagPorts) > 0 || flagStoreOnly || flagNoStore ||
+		flagInheritEnv || !flagExplicitEnv.IsEmpty() || !flagEnvFromFile.IsEmpty()) {
 		stderr.Print("conflicting flags set with --pod-manifest (see --help)")
 		return 1
 	}
