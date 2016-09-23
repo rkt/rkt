@@ -656,8 +656,16 @@ func Run(cfg RunConfig, dir string, dataDir string) {
 		}
 	}
 
-	// TODO(sur): spec out a boolean coreos.com/rkt/stage1/mutable, and introspect here
 	if cfg.Mutable {
+		mutable, err := supportsMutableEnvironment(dir)
+
+		switch {
+		case err != nil:
+			log.FatalE("error determining stage1 mutable support", err)
+		case !mutable:
+			log.Fatalln("stage1 does not support mutable pods")
+		}
+
 		args = append(args, "--mutable")
 	}
 
