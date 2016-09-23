@@ -97,9 +97,12 @@ func addIsolatorFlags(cmd *cobra.Command, compat bool) {
 
 func addAppFlags(cmd *cobra.Command) {
 	cmd.Flags().Var((*appExec)(&rktApps), "exec", "override the exec command for the preceding image")
+	cmd.Flags().Var((*appWorkingDir)(&rktApps), "working-dir", "override the working directory of the preceding image")
+	cmd.Flags().Var((*appReadOnlyRootFS)(&rktApps), "readonly-rootfs", "if set, the app's rootfs will be mounted read-only")
 	cmd.Flags().Var((*appMount)(&rktApps), "mount", "mount point binding a volume to a path within an app")
 	cmd.Flags().Var((*appUser)(&rktApps), "user", "user override for the preceding image (example: '--user=user')")
 	cmd.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
+	cmd.Flags().Var((*appSupplementaryGIDs)(&rktApps), "supplementary-gids", "supplementary group IDs override for the preceding image (examples: '--supplementary-gids=1024,2048'")
 	cmd.Flags().Var((*appName)(&rktApps), "name", "set the name of the app (example: '--name=foo'). If not set, then the app name default to the image's name")
 	cmd.Flags().Var((*appAnnotation)(&rktApps), "annotation", "set the app's annotations (example: '--annotation=foo=bar')")
 	cmd.Flags().Var((*appLabel)(&rktApps), "label", "set the app's labels (example: '--label=foo=bar')")

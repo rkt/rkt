@@ -195,9 +195,10 @@ func AddApp(pcfg PrepareConfig, cfg RunConfig, dir string, img *types.Hash) erro
 			ID:     *img,
 			Labels: am.Labels,
 		},
+		ReadOnlyRootFS: app.ReadOnlyRootFS,
 	}
 
-	if execOverride := app.Exec; execOverride != "" {
+	if app.Exec != "" {
 		// Create a minimal App section if not present
 		if am.App == nil {
 			ra.App = &types.App{
@@ -205,23 +206,31 @@ func AddApp(pcfg PrepareConfig, cfg RunConfig, dir string, img *types.Hash) erro
 				Group: strconv.Itoa(os.Getgid()),
 			}
 		}
-		ra.App.Exec = []string{execOverride}
+		ra.App.Exec = []string{app.Exec}
 	}
 
-	if execAppends := app.Args; execAppends != nil {
-		ra.App.Exec = append(ra.App.Exec, execAppends...)
+	if app.Args != nil {
+		ra.App.Exec = append(ra.App.Exec, app.Args...)
+	}
+
+	if app.WorkingDir != "" {
+		ra.App.WorkingDirectory = app.WorkingDir
 	}
 
 	if err := prepareIsolators(app, ra.App); err != nil {
 		return err
 	}
 
-	if user := app.User; user != "" {
-		ra.App.User = user
+	if app.User != "" {
+		ra.App.User = app.User
 	}
 
-	if group := app.Group; group != "" {
-		ra.App.Group = group
+	if app.Group != "" {
+		ra.App.Group = app.Group
+	}
+
+	if app.SupplementaryGIDs != nil {
+		ra.App.SupplementaryGIDs = app.SupplementaryGIDs
 	}
 
 	if app.CRIAnnotations != nil {

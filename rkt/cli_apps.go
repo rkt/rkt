@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/coreos/rkt/common/apps"
@@ -573,4 +574,88 @@ func (au *appEnv) String() string {
 
 func (au *appEnv) Type() string {
 	return "appEnv"
+}
+
+type appWorkingDir apps.Apps
+
+func (au *appWorkingDir) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--working-dir must follow an image")
+	}
+	app.WorkingDir = s
+	return nil
+}
+
+func (au *appWorkingDir) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	return app.WorkingDir
+}
+
+func (au *appWorkingDir) Type() string {
+	return "appWorkingDir"
+}
+
+type appReadOnlyRootFS apps.Apps
+
+func (au *appReadOnlyRootFS) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--readonly-rootfs must follow an image")
+	}
+	value, err := strconv.ParseBool(s)
+	if err != nil {
+		return fmt.Errorf("--readonly-rootfs must be set with a boolean")
+	}
+	app.ReadOnlyRootFS = value
+	return nil
+}
+
+func (au *appReadOnlyRootFS) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v", app.ReadOnlyRootFS)
+}
+
+func (au *appReadOnlyRootFS) Type() string {
+	return "appReadOnlyRootFS"
+}
+
+type appSupplementaryGIDs apps.Apps
+
+func (au *appSupplementaryGIDs) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--supplementary-gids must follow an image")
+	}
+	values := strings.Split(s, ",")
+	for _, v := range values {
+		gid, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("--supplementary-gids must be integers")
+		}
+		app.SupplementaryGIDs = append(app.SupplementaryGIDs, gid)
+	}
+	return nil
+}
+
+func (au *appSupplementaryGIDs) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	var gids []string
+	for _, gid := range app.SupplementaryGIDs {
+		gids = append(gids, strconv.Itoa(gid))
+	}
+	return strings.Join(gids, ",")
+}
+
+func (au *appSupplementaryGIDs) Type() string {
+	return "appSupplementaryGIDs"
 }
