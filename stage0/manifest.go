@@ -34,6 +34,7 @@ const (
 	gcEntrypoint    = "coreos.com/rkt/stage1/gc"
 	stopEntrypoint  = "coreos.com/rkt/stage1/stop"
 
+	appAddEntrypoint   = "coreos.com/rkt/stage1/app/add"
 	appRmEntrypoint    = "coreos.com/rkt/stage1/app/rm"
 	appStartEntrypoint = "coreos.com/rkt/stage1/app/start"
 	appStopEntrypoint  = "coreos.com/rkt/stage1/app/stop"
