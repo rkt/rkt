@@ -29,7 +29,6 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
-	"github.com/coreos/rkt/pkg/aci"
 	"github.com/coreos/rkt/pkg/user"
 	// FIXME this should not be in stage1 anymore
 	stage1types "github.com/coreos/rkt/stage1/common/types"
@@ -125,62 +124,25 @@ func AddApp(cfg AddConfig) error {
 		return errwrap.Wrap(errors.New("error creating apps info directory"), err)
 	}
 
-	uidRange := user.NewBlankUidRange()
-	// TODO(iaguis): DRY: refactor this
-	var treeStoreID string
+	pcfg := PrepareConfig{
+		CommonConfig: cfg.CommonConfig,
+		PrivateUsers: user.NewBlankUidRange(),
+	}
+
 	if cfg.UsesOverlay {
-		treeStoreID, _, err := cfg.TreeStore.Render(cfg.Image.String(), false)
-		if err != nil {
-			return errwrap.Wrap(errors.New("error rendering tree image"), err)
-		}
-
-		hash, err := cfg.TreeStore.Check(treeStoreID)
-		if err != nil {
-			log.PrintE("warning: tree cache is in a bad state.  Rebuilding...", err)
-			var err error
-			treeStoreID, hash, err = cfg.TreeStore.Render(cfg.Image.String(), true)
-			if err != nil {
-				return errwrap.Wrap(errors.New("error rendering tree image"), err)
-			}
-		}
-		cfg.RootHash = hash
-
-		if err := ioutil.WriteFile(common.AppTreeStoreIDPath(cfg.PodPath, *appName), []byte(treeStoreID), common.DefaultRegularFilePerm); err != nil {
-			return errwrap.Wrap(errors.New("error writing app treeStoreID"), err)
-		}
-	} else {
-		ad := common.AppPath(cfg.PodPath, *appName)
-
-		err := os.MkdirAll(ad, common.DefaultRegularDirPerm)
-		if err != nil {
-			return errwrap.Wrap(errors.New("error creating image directory"), err)
-		}
-
 		privateUsers, err := preparedWithPrivateUsers(cfg.PodPath)
 		if err != nil {
 			log.FatalE("error reading user namespace information", err)
 		}
 
-		if err := uidRange.Deserialize([]byte(privateUsers)); err != nil {
+		if err := pcfg.PrivateUsers.Deserialize([]byte(privateUsers)); err != nil {
 			return err
-		}
-
-		shiftedUid, shiftedGid, err := uidRange.ShiftRange(uint32(os.Getuid()), uint32(os.Getgid()))
-		if err != nil {
-			return errwrap.Wrap(errors.New("error getting uid, gid"), err)
-		}
-
-		if err := os.Chown(ad, int(shiftedUid), int(shiftedGid)); err != nil {
-			return errwrap.Wrap(fmt.Errorf("error shifting app %q's stage2 dir", *appName), err)
-		}
-
-		if err := aci.RenderACIWithImageID(cfg.Image, ad, cfg.Store, uidRange); err != nil {
-			return errwrap.Wrap(errors.New("error rendering ACI"), err)
 		}
 	}
 
-	if err := writeManifest(*cfg.CommonConfig, cfg.Image, appInfoDir); err != nil {
-		return errwrap.Wrap(errors.New("error writing manifest"), err)
+	treeStoreID, err := prepareAppImage(pcfg, *appName, cfg.Image, cfg.PodPath, cfg.UsesOverlay)
+	if err != nil {
+		return errwrap.Wrap(fmt.Errorf("error preparing image %s", cfg.Image), err)
 	}
 
 	rcfg := RunConfig{
@@ -268,7 +230,7 @@ func AddApp(cfg AddConfig) error {
 	env.Set("AC_APP_NAME", appName.String())
 	envFilePath := filepath.Join(common.Stage1RootfsPath(cfg.PodPath), "rkt", "env", appName.String())
 
-	if err := common.WriteEnvFile(env, uidRange, envFilePath); err != nil {
+	if err := common.WriteEnvFile(env, pcfg.PrivateUsers, envFilePath); err != nil {
 		return err
 	}
 
@@ -286,7 +248,7 @@ func AddApp(cfg AddConfig) error {
 
 	args := []string{
 		cfg.UUID.String(),
-		app.Name,
+		appName.String(),
 		filepath.Join(common.Stage1RootfsPath(cfg.PodPath), eep),
 		strconv.Itoa(cfg.PodPID),
 	}
