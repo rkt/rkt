@@ -1,3 +1,21 @@
+## 1.16.0
+
+This release contains an important bugfix for the stage1-host flavor, as well as initial internal support for cgroup2 and pod sandboxes as specified by kubernetes CRI (Container Runtime Interface).
+
+### Bug fixes
+- stage1/host: fix systemd-nspawn args ordering ([#3216](https://github.com/coreos/rkt/pull/3216)). Fixes https://github.com/coreos/rkt/issues/3215.
+
+### New features
+- rkt: support for unified cgroups (cgroup2) ([#3032](https://github.com/coreos/rkt/pull/3032)). This implements support for cgroups v2 along support for legacy version.
+- cri: initial implementation of stage1 changes ([#3218](https://github.com/coreos/rkt/pull/3218)). This PR pulls the stage1-based changes from the CRI branch back into
+master, leaving out the changes in stage0 (new app subcommands).
+
+### Other changes
+- doc/using-rkt-with-systemd: fix the go app example ([#3217](https://github.com/coreos/rkt/pull/3217)).
+- rkt: refactor app-level flags handling ([#3209](https://github.com/coreos/rkt/pull/3209)). This is in preparation for https://github.com/coreos/rkt/pull/3205
+- docs/distributions: rearrange, add centos ([#3212](https://github.com/coreos/rkt/pull/3212)).
+- rkt: Correct typos listed by the tool misspell ([#3208](https://github.com/coreos/rkt/pull/3208)).
+
 ## 1.15.0
 
 This relase brings some expanded DNS configuration options, beta support for QEMU, recursive volume mounts, and improved sd_notify support.
