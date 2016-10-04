@@ -481,6 +481,13 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 
 	cfg.CommonConfig.ManifestData = string(pmb)
 
+	// create pod lock file for app add/rm operations.
+	f, err := os.OpenFile(common.PodManifestLockPath(dir), os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return err
+	}
+	f.Close()
+
 	debug("Writing pod manifest")
 	fn := common.PodManifestPath(dir)
 	if err := ioutil.WriteFile(fn, pmb, common.DefaultRegularFilePerm); err != nil {

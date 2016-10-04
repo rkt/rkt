@@ -29,6 +29,7 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
+	"github.com/coreos/rkt/pkg/lock"
 	"github.com/coreos/rkt/pkg/user"
 	// FIXME this should not be in stage1 anymore
 	stage1types "github.com/coreos/rkt/stage1/common/types"
@@ -98,6 +99,13 @@ func AddApp(cfg AddConfig) error {
 			return err
 		}
 	}
+
+	debug("locking pod")
+	l, err := lock.ExclusiveLock(common.PodManifestLockPath(cfg.PodPath), lock.RegFile)
+	if err != nil {
+		return errwrap.Wrap(errors.New("failed to lock pod"), err)
+	}
+	defer l.Close()
 
 	p, err := stage1types.LoadPod(cfg.PodPath, cfg.UUID)
 	if err != nil {
@@ -368,6 +376,13 @@ func callEntrypoint(dir, entrypoint string, args []string) error {
 }
 
 func RmApp(cfg RmConfig) error {
+	debug("locking pod")
+	l, err := lock.ExclusiveLock(common.PodManifestLockPath(cfg.PodPath), lock.RegFile)
+	if err != nil {
+		return errwrap.Wrap(errors.New("failed to lock pod"), err)
+	}
+	defer l.Close()
+
 	p, err := stage1types.LoadPod(cfg.PodPath, cfg.UUID)
 	if err != nil {
 		return errwrap.Wrap(errors.New("error loading pod manifest"), err)

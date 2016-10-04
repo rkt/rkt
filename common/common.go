@@ -102,6 +102,13 @@ func PodManifestPath(root string) string {
 	return filepath.Join(root, "pod")
 }
 
+// PodManifestLockPath returns the path in root to the Pod Manifest lock file.
+// This must be different from the PodManifestPath since mutations on the pod manifest file
+// happen by overwriting the original file.
+func PodManifestLockPath(root string) string {
+	return filepath.Join(root, "pod.lck")
+}
+
 // AppsStatusesPath returns the path of the status dir for all apps.
 func AppsStatusesPath(root string) string {
 	return filepath.Join(Stage1RootfsPath(root), "/rkt/status")
