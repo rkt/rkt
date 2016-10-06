@@ -52,17 +52,17 @@ func main() {
 		pid, err := readIntFromFile("pid")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 
 		if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
 			fmt.Fprintf(os.Stderr, "error sending %v: %v\n", syscall.SIGKILL, err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 		return
 	}
 
 	// ExecSSH() should return only with error
 	log.Error(ssh.ExecSSH([]string{"systemctl", "halt"}))
-	os.Exit(1)
+	os.Exit(254)
 }

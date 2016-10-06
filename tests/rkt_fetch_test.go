@@ -596,7 +596,7 @@ func testDifferentDiscoveryNameLabels(t *testing.T, imageName string, expectedMe
 	// and always get the same ACI
 	runCmd := fmt.Sprintf("%s --debug --insecure-options=tls fetch %s", ctx.Cmd(), imageName)
 	child := spawnOrFail(t, runCmd)
-	defer waitOrFail(t, child, 1)
+	defer waitOrFail(t, child, 254)
 
 	if err := expectWithOutput(child, expectedMessage); err != nil {
 		t.Fatalf("Could not find expected msg %q, output follows:\n%v", expectedMessage, err)

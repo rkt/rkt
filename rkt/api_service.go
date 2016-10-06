@@ -908,11 +908,11 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 	listeners, err := openAPISockets()
 	if err != nil {
 		stderr.PrintE("Failed to open sockets", err)
-		return 1
+		return 254
 	}
 	if len(listeners) == 0 { // This is unlikely...
 		stderr.Println("No sockets to listen to. Quitting.")
-		return 1
+		return 254
 	}
 
 	publicServer := grpc.NewServer() // TODO(yifan): Add TLS credential option.
@@ -920,7 +920,7 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 	v1AlphaAPIServer, err := newV1AlphaAPIServer()
 	if err != nil {
 		stderr.PrintE("failed to create API service", err)
-		return 1
+		return 254
 	}
 
 	v1alpha.RegisterPublicAPIServer(publicServer, v1AlphaAPIServer)

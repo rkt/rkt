@@ -31,7 +31,7 @@ func main() {
 
 	if err := cmdRkt.Execute(); err != nil && cmdExitCode == 0 {
 		// err already printed by cobra on stderr
-		cmdExitCode = 2 // invalid argument
+		cmdExitCode = 254 // invalid argument
 	}
 	os.Exit(cmdExitCode)
 }

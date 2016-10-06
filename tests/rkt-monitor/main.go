@@ -85,24 +85,24 @@ func main() {
 func runRktMonitor(cmd *cobra.Command, args []string) {
 	if len(args) != 1 {
 		cmd.Usage()
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	d, err := time.ParseDuration(flagDuration)
 	if err != nil {
 		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	if os.Getuid() != 0 {
 		fmt.Printf("need to be root to run rkt images\n")
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	f, err := os.Open(args[0])
 	if err != nil {
 		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 	decoder := json.NewDecoder(f)
 
@@ -119,7 +119,7 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 	} else {
 		if !fileExist(flagStage1Path) {
 			fmt.Fprintln(os.Stderr, "Given stage1 file path doesn't exist")
-			os.Exit(1)
+			os.Exit(254)
 		}
 		_, flavorType = filepath.Split(flagStage1Path)
 	}
@@ -167,7 +167,7 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 		cmdReader, err := execCmd.StdoutPipe()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error creating StdoutPipe for execCmd", err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 
 		execCmdScanner := bufio.NewScanner(cmdReader)
@@ -200,7 +200,7 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 
 		if err != nil {
 			fmt.Printf("%v\n", err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 
 		usages := make(map[int32][]*ProcessStatus)
@@ -244,7 +244,7 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 		cmdStopReader, err := stopCmd.StdoutPipe()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error creating StdoutPipe for stopCmd", err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 		cmdStopScanner := bufio.NewScanner(cmdStopReader)
 
@@ -268,7 +268,7 @@ func runRktMonitor(cmd *cobra.Command, args []string) {
 
 		if err != nil {
 			fmt.Printf("%v\n", err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 
 		gcCmd = exec.Command(rktBinary, "gc", "--grace-period=0")

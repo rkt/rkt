@@ -83,7 +83,7 @@ var volTests = []struct {
 	{
 		`/bin/sh -c "export FILE=/dir1/file CONTENT=3 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^ --mount=volume=dir1,target=dir1 ^VOL_RO_WRITE_FILE^"`,
 		`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
-		1,
+		254,
 	},
 	// Check that the volume still contains the file previously written
 	{
@@ -107,7 +107,7 @@ var volTests = []struct {
 	{
 		`/bin/sh -c "export FILE=/dir1/file CONTENT=1 ; ^RKT_BIN^ --debug --insecure-options=image run --mds-register=false --inherit-env=true --volume=dir1,kind=host,source=^TMPDIR^,readOnly=true ^VOL_ADD_MOUNT_RO^ --mount=volume=dir1,target=dir1"`,
 		`Cannot write to file "/dir1/file": open /dir1/file: read-only file system`,
-		1,
+		254,
 	},
 	// Check that an implicit empty volume is created if the user didn't provide it but there's a mount point in the app
 	{

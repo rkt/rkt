@@ -53,7 +53,7 @@ func main() {
 	appName, err := types.NewACName(flag.Arg(1))
 	if err != nil {
 		log.PrintE("invalid app name", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	enterEP := flag.Arg(2)
@@ -72,7 +72,7 @@ func main() {
 
 	if err := cmd.Run(); err != nil {
 		log.PrintE(fmt.Sprintf("error stopping app %q", appName.String()), err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	os.Exit(0)

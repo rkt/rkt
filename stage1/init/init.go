@@ -528,14 +528,14 @@ func stage1() int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
 		log.PrintE("UUID is missing or malformed", err)
-		return 1
+		return 254
 	}
 
 	root := "."
 	p, err := stage1commontypes.LoadPod(root, uuid)
 	if err != nil {
 		log.PrintE("failed to load pod", err)
-		return 1
+		return 254
 	}
 
 	// set close-on-exec flag on RKT_LOCK_FD so it gets correctly closed when invoking
@@ -543,12 +543,12 @@ func stage1() int {
 	lfd, err := common.GetRktLockFD()
 	if err != nil {
 		log.PrintE("failed to get rkt lock fd", err)
-		return 1
+		return 254
 	}
 
 	if err := sys.CloseOnExec(lfd, true); err != nil {
 		log.PrintE("failed to set FD_CLOEXEC on rkt lock", err)
-		return 1
+		return 254
 	}
 
 	mirrorLocalZoneInfo(p.Root)
@@ -556,7 +556,7 @@ func stage1() int {
 	flavor, _, err := stage1initcommon.GetFlavor(p)
 	if err != nil {
 		log.PrintE("failed to get stage1 flavor", err)
-		return 1
+		return 254
 	}
 
 	var n *networking.Networking
@@ -564,27 +564,27 @@ func stage1() int {
 		fps, err := forwardedPorts(p)
 		if err != nil {
 			log.Error(err)
-			return 1
+			return 254
 		}
 
 		noDNS := dnsConfMode.Pairs["resolv"] != "default" // force ignore CNI DNS results
 		n, err = networking.Setup(root, p.UUID, fps, netList, localConfig, flavor, noDNS, debug)
 		if err != nil {
 			log.PrintE("failed to setup network", err)
-			return 1
+			return 254
 		}
 
 		if err = n.Save(); err != nil {
 			log.PrintE("failed to save networking state", err)
 			n.Teardown(flavor, debug)
-			return 1
+			return 254
 		}
 
 		if len(mdsToken) > 0 {
 			hostIP, err := n.GetForwardableNetHostIP()
 			if err != nil {
 				log.PrintE("failed to get default Host IP", err)
-				return 1
+				return 254
 			}
 
 			p.MetadataServiceURL = common.MetadataServicePublicURL(hostIP, mdsToken)
@@ -592,7 +592,7 @@ func stage1() int {
 	} else {
 		if flavor == "kvm" {
 			log.Print("flavor kvm requires private network configuration (try --net)")
-			return 1
+			return 254
 		}
 		if len(mdsToken) > 0 {
 			p.MetadataServiceURL = common.MetadataServicePublicURL(localhostIP, mdsToken)
@@ -616,12 +616,12 @@ func stage1() int {
 	if mutable {
 		if err = stage1initcommon.MutableEnv(p); err != nil {
 			log.Error(err)
-			return 1
+			return 254
 		}
 	} else {
 		if err = stage1initcommon.ImmutableEnv(p, interactive, privateUsers, insecureOptions); err != nil {
 			log.Error(err)
-			return 1
+			return 254
 		}
 	}
 
@@ -633,7 +633,7 @@ func stage1() int {
 		kvm.InitDebug(debug)
 		if err := KvmNetworkingToSystemd(p, n); err != nil {
 			log.PrintE("failed to configure systemd for kvm", err)
-			return 1
+			return 254
 		}
 	}
 
@@ -645,7 +645,7 @@ func stage1() int {
 	args, env, err := getArgsEnv(p, flavor, canMachinedRegister, debug, n, insecureOptions)
 	if err != nil {
 		log.Error(err)
-		return 1
+		return 254
 	}
 
 	// create a separate mount namespace so the cgroup filesystems
@@ -669,7 +669,7 @@ func stage1() int {
 	unifiedCgroup, err := cgroup.IsCgroupUnified("/")
 	if err != nil {
 		log.FatalE("error determining cgroup version", err)
-		return 1
+		return 254
 	}
 
 	s1Root := common.Stage1RootfsPath(p.Root)
@@ -678,25 +678,25 @@ func stage1() int {
 	subcgroup, err := getContainerSubCgroup(machineID, canMachinedRegister, unifiedCgroup)
 	if err != nil {
 		log.FatalE("error getting container subcgroup", err)
-		return 1
+		return 254
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(p.Root, "subcgroup"),
 		[]byte(fmt.Sprintf("%s", subcgroup)), 0644); err != nil {
 		log.FatalE("cannot write subcgroup file", err)
-		return 1
+		return 254
 	}
 
 	if !unifiedCgroup {
 		enabledCgroups, err := cgroup.GetEnabledV1Cgroups()
 		if err != nil {
 			log.FatalE("error getting v1 cgroups", err)
-			return 1
+			return 254
 		}
 
 		if err := mountHostV1Cgroups(enabledCgroups); err != nil {
 			log.FatalE("couldn't mount the host v1 cgroups", err)
-			return 1
+			return 254
 		}
 
 		var serviceNames []string
@@ -706,7 +706,7 @@ func stage1() int {
 
 		if err := mountContainerV1Cgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
 			log.PrintE("couldn't mount the container v1 cgroups", err)
-			return 1
+			return 254
 		}
 
 	}
@@ -721,13 +721,13 @@ func stage1() int {
 
 	if err = stage1common.WritePid(os.Getpid(), pid_filename); err != nil {
 		log.Error(err)
-		return 1
+		return 254
 	}
 
 	if flavor == "kvm" {
 		if err := KvmPrepareMounts(s1Root, p); err != nil {
 			log.PrintE("could not prepare mounts", err)
-			return 1
+			return 254
 		}
 	}
 
@@ -736,7 +736,7 @@ func stage1() int {
 	})
 	if err != nil {
 		log.PrintE(fmt.Sprintf("failed to execute %q", args[0]), err)
-		return 1
+		return 254
 	}
 
 	return 0

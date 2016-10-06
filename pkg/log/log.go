@@ -111,9 +111,10 @@ func (l *Logger) Error(e error) {
 	l.Print(l.formatErr(e, ""))
 }
 
-// FatalE prints a string and error then calls os.Exit(1).
+// FatalE prints a string and error then calls os.Exit(254).
 func (l *Logger) FatalE(msg string, e error) {
-	l.Fatal(l.formatErr(e, msg))
+	l.Print(l.formatErr(e, msg))
+	os.Exit(254)
 }
 
 // PanicE prints a string and error then calls panic.

@@ -47,7 +47,7 @@ func runRm(cmd *cobra.Command, args []string) (exit int) {
 		podUUID, err := pkgPod.ReadUUIDFromFile(flagUUIDFile)
 		if err != nil {
 			stderr.PrintE("unable to resolve UUID from file", err)
-			ret = 1
+			ret = 254
 		} else {
 			podUUIDs = append(podUUIDs, podUUID)
 		}
@@ -57,13 +57,13 @@ func runRm(cmd *cobra.Command, args []string) (exit int) {
 
 	default:
 		cmd.Usage()
-		return 1
+		return 254
 	}
 
 	for _, podUUID := range podUUIDs {
 		p, err := pkgPod.PodFromUUIDString(getDataDir(), podUUID)
 		if err != nil {
-			ret = 1
+			ret = 254
 			stderr.PrintE("cannot get pod", err)
 			continue
 		}
@@ -71,11 +71,11 @@ func runRm(cmd *cobra.Command, args []string) (exit int) {
 		if removePod(p) {
 			stdout.Printf("%q", p.UUID)
 		} else {
-			ret = 1
+			ret = 254
 		}
 	}
 
-	if ret == 1 {
+	if ret == 254 {
 		stderr.Print("failed to remove one or more pods")
 	}
 

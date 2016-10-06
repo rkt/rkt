@@ -55,7 +55,7 @@ func main() {
 	appName, err := types.NewACName(flag.Arg(1))
 	if err != nil {
 		log.PrintE("invalid app name", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	enterEP := flag.Arg(2)
@@ -77,7 +77,7 @@ func main() {
 
 	if string(out) != "inactive\n" {
 		log.Printf("app %q is still running", appName.String())
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	s1rootfs := common.Stage1RootfsPath(".")
@@ -90,7 +90,7 @@ func main() {
 	for _, p := range appServicePaths {
 		if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
 			log.PrintE("error removing app service file", err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 	}
 
@@ -105,7 +105,7 @@ func main() {
 	}
 	if err := cmd.Run(); err != nil {
 		log.PrintE(`error executing "systemctl daemon-reload"`, err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	// TODO unmount all the volumes

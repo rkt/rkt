@@ -155,34 +155,34 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	err := parseApps(&rktApps, args, cmd.Flags(), true)
 	if err != nil {
 		stderr.PrintE("error parsing app image arguments", err)
-		return 1
+		return 254
 	}
 
 	if flagStoreOnly && flagNoStore {
 		stderr.Print("both --store-only and --no-store specified")
-		return 1
+		return 254
 	}
 
 	if flagPrivateUsers {
 		if !common.SupportsUserNS() {
 			stderr.Print("--private-users is not supported, kernel compiled without user namespace support")
-			return 1
+			return 254
 		}
 		privateUsers.SetRandomUidRange(user.DefaultRangeCount)
 	}
 
 	if len(flagPorts) > 0 && flagNet.None() {
 		stderr.Print("--port flag does not work with 'none' networking")
-		return 1
+		return 254
 	}
 	if len(flagPorts) > 0 && flagNet.Host() {
 		stderr.Print("--port flag does not work with 'host' networking")
-		return 1
+		return 254
 	}
 
 	if flagMDSRegister && flagNet.None() {
 		stderr.Print("--mds-register flag does not work with --net=none. Please use 'host', 'default' or an equivalent network")
-		return 1
+		return 254
 	}
 
 	if len(flagPodManifest) > 0 && (len(flagPorts) > 0 || rktApps.Count() > 0 || flagStoreOnly || flagNoStore ||
@@ -191,41 +191,41 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		(*appUser)(&rktApps).String() != "" || (*appGroup)(&rktApps).String() != "" ||
 		(*appCapsRetain)(&rktApps).String() != "" || (*appCapsRemove)(&rktApps).String() != "") {
 		stderr.Print("conflicting flags set with --pod-manifest (see --help)")
-		return 1
+		return 254
 	}
 
 	if flagInteractive && rktApps.Count() > 1 {
 		stderr.Print("interactive option only supports one image")
-		return 1
+		return 254
 	}
 
 	if rktApps.Count() < 1 && len(flagPodManifest) == 0 {
 		stderr.Print("must provide at least one image or specify the pod manifest")
-		return 1
+		return 254
 	}
 
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	ts, err := treestore.NewStore(treeStoreDir(), s)
 	if err != nil {
 		stderr.PrintE("cannot open treestore", err)
-		return 1
+		return 254
 	}
 
 	config, err := getConfig()
 	if err != nil {
 		stderr.PrintE("cannot get configuration", err)
-		return 1
+		return 254
 	}
 
 	s1img, err := getStage1Hash(s, ts, config)
 	if err != nil {
 		stderr.Error(err)
-		return 1
+		return 254
 	}
 
 	fn := &image.Finder{
@@ -244,13 +244,13 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	}
 	if err := fn.FindImages(&rktApps); err != nil {
 		stderr.Error(err)
-		return 1
+		return 254
 	}
 
 	p, err := pkgPod.NewPod(getDataDir())
 	if err != nil {
 		stderr.PrintE("error creating new pod", err)
-		return 1
+		return 254
 	}
 
 	// if requested, write out pod UUID early so "rkt rm" can
@@ -258,14 +258,14 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	if flagUUIDFileSave != "" {
 		if err := pkgPod.WriteUUIDToFile(p.UUID, flagUUIDFileSave); err != nil {
 			stderr.PrintE("error saving pod UUID to file", err)
-			return 1
+			return 254
 		}
 	}
 
 	processLabel, mountLabel, err := label.InitLabels("/var/run/rkt/mcs", []string{})
 	if err != nil {
 		stderr.PrintE("error initialising SELinux", err)
-		return 1
+		return 254
 	}
 
 	p.MountLabel = mountLabel
@@ -288,7 +288,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 			ovlOk = false
 		} else {
 			stderr.PrintE("error determining overlay support", err)
-			return 1
+			return 254
 		}
 	}
 
@@ -318,13 +318,13 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	keyLock, err := lock.SharedKeyLock(lockDir(), common.PrepareLock)
 	if err != nil {
 		stderr.PrintE("cannot get shared prepare lock", err)
-		return 1
+		return 254
 	}
 	err = stage0.Prepare(pcfg, p.Path(), p.UUID)
 	if err != nil {
 		stderr.PrintE("error setting up stage0", err)
 		keyLock.Close()
-		return 1
+		return 254
 	}
 	keyLock.Close()
 
@@ -332,13 +332,13 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	lfd, err := p.Fd()
 	if err != nil {
 		stderr.PrintE("error getting pod lock fd", err)
-		return 1
+		return 254
 	}
 
 	// skip prepared by jumping directly to run, we own this pod
 	if err := p.ToRun(); err != nil {
 		stderr.PrintE("unable to transition to run", err)
-		return 1
+		return 254
 	}
 
 	rktgid, err := common.LookupGid(common.RktGroup)
@@ -350,7 +350,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	DNSConfMode, DNSConfig, HostsEntries, err := parseDNSFlags(flagHostsEntries, flagDNS, flagDNSSearch, flagDNSOpt, flagDNSDomain)
 	if err != nil {
 		stderr.PrintE("error with dns flags", err)
-		return 1
+		return 254
 	}
 
 	rcfg := stage0.RunConfig{
@@ -374,12 +374,12 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	_, manifest, err := p.PodManifest()
 	if err != nil {
 		stderr.PrintE("cannot get the pod manifest", err)
-		return 1
+		return 254
 	}
 	rcfg.Apps = manifest.Apps
 	stage0.Run(rcfg, p.Path(), getDataDir()) // execs, never returns
 
-	return 1
+	return 254
 }
 
 // portList implements the flag.Value interface to contain a set of mappings

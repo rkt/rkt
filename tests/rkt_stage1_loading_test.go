@@ -232,7 +232,7 @@ func TestStage1LoadingFromConfigRelativePathFail(t *testing.T) {
 	setup.generateStage1Config(cfg)
 	cmd := fmt.Sprintf("%s --insecure-options=image,tls --debug run %s", setup.ctx.Cmd(), getInspectImagePath())
 	child := spawnOrFail(setup.t, cmd)
-	defer waitOrFail(setup.t, child, 1)
+	defer waitOrFail(setup.t, child, 254)
 	expectedLine := "default stage1 image location is either a relative path or a URL without scheme"
 	setup.getExpectedOrFail(child, expectedLine)
 }

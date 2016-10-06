@@ -137,7 +137,7 @@ var (
 				volDir, mountDir,
 			),
 			nil,
-			1,
+			254,
 			"",
 		},
 	}
@@ -224,7 +224,7 @@ var (
 						Mode: nil, UID: nil, GID: nil},
 				},
 			},
-			1,
+			254,
 			"",
 		},
 	}

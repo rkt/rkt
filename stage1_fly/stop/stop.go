@@ -48,24 +48,24 @@ func main() {
 	pid, err := readIntFromFile("pid")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error reading pid: %v\n", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	process, err := process.NewProcess(pid)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "unable to create process %d instance: %v\n", pid, err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	if force {
 		if process.Kill() != nil {
 			fmt.Fprintf(os.Stderr, "unable to kill process %d: %v\n", pid, err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 	} else {
 		if process.Terminate() != nil {
 			fmt.Fprintf(os.Stderr, "unable to terminate process %d: %v\n", pid, err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 	}
 }

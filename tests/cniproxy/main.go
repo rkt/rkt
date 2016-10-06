@@ -48,9 +48,9 @@ func main() {
 	x_fail := cniArgs["X_FAIL"]
 	if x_fail == "exit" {
 		os.Stdout.WriteString(`{"cniVersion": "0.1.0", "code": 100, "msg": "this is a failure message"}`)
-		os.Exit(1)
+		os.Exit(254)
 	} else if x_fail == "crash" {
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	realPluginPath := findRealPlugin()
@@ -182,7 +182,7 @@ func findRealPlugin() string {
 
 func fail(msgs ...interface{}) {
 	fmt.Fprintln(os.Stderr, append([]interface{}{"CNIPROXY fail:"}, msgs...)...)
-	os.Exit(1)
+	os.Exit(254)
 }
 
 func getArgOrFail(key string) string {

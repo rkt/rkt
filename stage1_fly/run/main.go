@@ -264,20 +264,20 @@ func stage1() int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
 		log.Print("UUID is missing or malformed\n")
-		return 1
+		return 254
 	}
 
 	root := "."
 	p, err := stage1commontypes.LoadPod(root, uuid)
 	if err != nil {
 		log.PrintE("can't load pod", err)
-		return 1
+		return 254
 	}
 
 	// Sanity checks
 	if len(p.Manifest.Apps) != 1 {
 		log.Printf("flavor %q only supports 1 application per Pod for now", flavor)
-		return 1
+		return 254
 	}
 
 	ra := p.Manifest.Apps[0]
@@ -286,19 +286,19 @@ func stage1() int {
 	args := ra.App.Exec
 	if len(args) == 0 {
 		log.Printf(`image %q has an empty "exec" (try --exec=BINARY)`, imgName)
-		return 1
+		return 254
 	}
 
 	lfd, err := common.GetRktLockFD()
 	if err != nil {
 		log.PrintE("can't get rkt lock fd", err)
-		return 1
+		return 254
 	}
 
 	// set close-on-exec flag on RKT_LOCK_FD so it gets correctly closed after execution is finished
 	if err := sys.CloseOnExec(lfd, true); err != nil {
 		log.PrintE("can't set FD_CLOEXEC on rkt lock", err)
-		return 1
+		return 254
 	}
 
 	workDir := "/"
@@ -316,7 +316,7 @@ func stage1() int {
 	argFlyMounts, err := evaluateMounts(rfs, string(ra.Name), p)
 	if err != nil {
 		log.PrintE("can't evaluate mounts", err)
-		return 1
+		return 254
 	}
 
 	effectiveMounts := append(
@@ -350,7 +350,7 @@ func stage1() int {
 	case "stage0":
 		if err := copyResolv(p); err != nil {
 			log.PrintE("can't copy /etc/resolv.conf", err)
-			return 1
+			return 254
 		}
 	}
 
@@ -392,7 +392,7 @@ func stage1() int {
 		if strings.HasPrefix(mount.HostPath, "/") {
 			if hostPathInfo, err = os.Stat(mount.HostPath); err != nil {
 				log.PrintE(fmt.Sprintf("stat of host path %s", mount.HostPath), err)
-				return 1
+				return 254
 			}
 		} else {
 			hostPathInfo = nil
@@ -401,7 +401,7 @@ func stage1() int {
 		absTargetPath := filepath.Join(mount.TargetPrefixPath, mount.RelTargetPath)
 		if targetPathInfo, err = os.Stat(absTargetPath); err != nil && !os.IsNotExist(err) {
 			log.PrintE(fmt.Sprintf("stat of target path %s", absTargetPath), err)
-			return 1
+			return 254
 		}
 
 		switch {
@@ -413,19 +413,19 @@ func stage1() int {
 			absTargetPathParent, _ := filepath.Split(absTargetPath)
 			if err := os.MkdirAll(absTargetPathParent, 0755); err != nil {
 				log.PrintE(fmt.Sprintf("can't create directory %q", absTargetPath), err)
-				return 1
+				return 254
 			}
 			switch {
 			case hostPathInfo == nil || hostPathInfo.IsDir():
 				if err := os.Mkdir(absTargetPath, 0755); err != nil {
 					log.PrintE(fmt.Sprintf("can't create directory %q", absTargetPath), err)
-					return 1
+					return 254
 				}
 			case !hostPathInfo.IsDir():
 				file, err := os.OpenFile(absTargetPath, os.O_CREATE, 0700)
 				if err != nil {
 					log.PrintE(fmt.Sprintf("can't create file %q", absTargetPath), err)
-					return 1
+					return 254
 				}
 				file.Close()
 			}
@@ -433,22 +433,22 @@ func stage1() int {
 			switch {
 			case hostPathInfo.IsDir() && !targetPathInfo.IsDir():
 				log.Printf("can't mount because %q is a directory while %q is not", mount.HostPath, absTargetPath)
-				return 1
+				return 254
 			case !hostPathInfo.IsDir() && targetPathInfo.IsDir():
 				log.Printf("can't mount because %q is not a directory while %q is", mount.HostPath, absTargetPath)
-				return 1
+				return 254
 			}
 		}
 
 		if err := syscall.Mount(mount.HostPath, absTargetPath, mount.Fs, mount.Flags, ""); err != nil {
 			log.PrintE(fmt.Sprintf("can't mount %q on %q with flags %v", mount.HostPath, absTargetPath, mount.Flags), err)
-			return 1
+			return 254
 		}
 	}
 
 	if err = stage1common.WritePid(os.Getpid(), "pid"); err != nil {
 		log.Error(err)
-		return 1
+		return 254
 	}
 
 	var uidResolver, gidResolver user.Resolver
@@ -461,12 +461,12 @@ func stage1() int {
 
 	if err != nil { // give up
 		log.PrintE(fmt.Sprintf("invalid user %q", ra.App.User), err)
-		return 1
+		return 254
 	}
 
 	if uid, _, err = uidResolver.IDs(); err != nil {
 		log.PrintE(fmt.Sprintf("failed to configure user %q", ra.App.User), err)
-		return 1
+		return 254
 	}
 
 	gidResolver, err = user.NumericIDs(ra.App.Group)
@@ -476,23 +476,23 @@ func stage1() int {
 
 	if err != nil { // give up
 		log.PrintE(fmt.Sprintf("invalid group %q", ra.App.Group), err)
-		return 1
+		return 254
 	}
 
 	if _, gid, err = gidResolver.IDs(); err != nil {
 		log.PrintE(fmt.Sprintf("failed to configure group %q", ra.App.Group), err)
-		return 1
+		return 254
 	}
 
 	diag.Printf("chroot to %q", rfs)
 	if err := syscall.Chroot(rfs); err != nil {
 		log.PrintE("can't chroot", err)
-		return 1
+		return 254
 	}
 
 	if err := os.Chdir(workDir); err != nil {
 		log.PrintE(fmt.Sprintf("can't change to working directory %q", workDir), err)
-		return 1
+		return 254
 	}
 
 	// lock the current goroutine to its current OS thread.
@@ -504,12 +504,12 @@ func stage1() int {
 
 	if err := syscall.Setresgid(gid, gid, gid); err != nil {
 		log.PrintE(fmt.Sprintf("can't set gid %d", gid), err)
-		return 1
+		return 254
 	}
 
 	if err := syscall.Setresuid(uid, uid, uid); err != nil {
 		log.PrintE(fmt.Sprintf("can't set uid %d", uid), err)
-		return 1
+		return 254
 	}
 
 	diag.Printf("execing %q in %q", args, rfs)
@@ -518,7 +518,7 @@ func stage1() int {
 	})
 	if err != nil {
 		log.PrintE(fmt.Sprintf("can't execute %q", args[0]), err)
-		return 1
+		return 254
 	}
 
 	return 0

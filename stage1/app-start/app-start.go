@@ -63,13 +63,13 @@ func main() {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
 		log.PrintE("UUID is missing or malformed", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	appName, err := types.NewACName(flag.Arg(1))
 	if err != nil {
 		log.PrintE("invalid app name", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	enterEP := flag.Arg(2)
@@ -78,7 +78,7 @@ func main() {
 	p, err := stage1types.LoadPod(root, uuid)
 	if err != nil {
 		log.PrintE("failed to load pod", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	insecureOptions := stage1initcommon.Stage1InsecureOptions{
@@ -90,7 +90,7 @@ func main() {
 	ra := p.Manifest.Apps.Get(*appName)
 	if ra == nil {
 		log.Printf("failed to get app")
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	if ra.App.WorkingDirectory == "" {
@@ -100,7 +100,7 @@ func main() {
 	binPath, err := stage1initcommon.FindBinPath(p, ra)
 	if err != nil {
 		log.PrintE("failed to find bin path", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	w := stage1initcommon.NewUnitWriter(p)
@@ -116,7 +116,7 @@ func main() {
 
 	if err := w.Error(); err != nil {
 		log.PrintE("error generating app units", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	args := []string{enterEP}
@@ -132,7 +132,7 @@ func main() {
 
 	if err := cmd.Run(); err != nil {
 		log.PrintE("error executing daemon-reload", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	args = []string{enterEP}
@@ -149,7 +149,7 @@ func main() {
 
 	if err := cmd.Run(); err != nil {
 		log.PrintE(fmt.Sprintf("error starting app %q", appName.String()), err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	// TODO unmount all the volumes

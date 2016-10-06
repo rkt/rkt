@@ -663,20 +663,20 @@ func runMetadataService(cmd *cobra.Command, args []string) (exit int) {
 	unixl, err := unixListener()
 	if err != nil {
 		stderr.Error(err)
-		return 1
+		return 254
 	}
 	defer unixl.Close()
 
 	tcpl, err := net.ListenTCP("tcp4", &net.TCPAddr{Port: flagListenPort})
 	if err != nil {
 		stderr.PrintE(fmt.Sprintf("error listening on port %v", flagListenPort), err)
-		return 1
+		return 254
 	}
 	defer tcpl.Close()
 
 	if err := initCrypto(); err != nil {
 		stderr.Error(err)
-		return 1
+		return 254
 	}
 
 	go runRegistrationServer(unixl)

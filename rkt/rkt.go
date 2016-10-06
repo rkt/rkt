@@ -161,7 +161,7 @@ func init() {
 	sf, err := rktflag.NewSecFlags("none")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "rkt: problem initializing: %v", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	globalFlags.InsecureFlags = sf
@@ -234,7 +234,7 @@ func runWrapper(cf func(cmd *cobra.Command, args []string) (exit int)) func(cmd 
 		cpufile, memfile, err := startProfile()
 		if err != nil {
 			stderr.PrintE("cannot setup profiling", err)
-			cmdExitCode = 1
+			cmdExitCode = 254
 			return
 		}
 		defer stopProfile(cpufile, memfile)
@@ -249,7 +249,7 @@ func ensureSuperuser(cf func(cmd *cobra.Command, args []string)) func(cmd *cobra
 	return func(cmd *cobra.Command, args []string) {
 		if os.Geteuid() != 0 {
 			stderr.Print("cannot run as unprivileged user")
-			cmdExitCode = 1
+			cmdExitCode = 254
 			return
 		}
 
@@ -337,7 +337,7 @@ func calculateDataDir() string {
 		config, err := getConfig()
 		if err != nil {
 			stderr.PrintE("cannot get configuration", err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 
 		if config.Paths.DataDir != "" {
@@ -354,7 +354,7 @@ func calculateDataDir() string {
 			realDataDir = dataDir
 		} else {
 			stderr.PrintE(fmt.Sprintf("cannot evaluate dataDir %q real path", dataDir), err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 	}
 
