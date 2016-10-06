@@ -744,8 +744,9 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 }
 
 // setupAppImage mounts the overlay filesystem for the app image that
-// corresponds to the given hash. Then, it creates the tmp directory.
-// When useOverlay is false it just creates the tmp directory for this app.
+// corresponds to the given hash if useOverlay is true.
+// It also creates an mtab file in the application's rootfs if one is not
+// present.
 func setupAppImage(cfg RunConfig, appName types.ACName, img types.Hash, cdir string, useOverlay bool) error {
 	ad := common.AppPath(cdir, appName)
 	if useOverlay {
@@ -764,7 +765,39 @@ func setupAppImage(cfg RunConfig, appName types.ACName, img types.Hash, cdir str
 			return errwrap.Wrap(errors.New("error rendering overlay filesystem"), err)
 		}
 	}
+	return ensureMtabExists(filepath.Join(ad, "rootfs"))
+}
 
+// ensureMtabExists creates a symlink from /etc/mtab -> /proc/self/mounts if
+// nothing exists at /etc/mtab.
+// Various tools, such as mount from util-linux 2.25, expect the mtab file to
+// be populated.
+func ensureMtabExists(rootfs string) error {
+	stat, err := os.Stat(filepath.Join(rootfs, "etc"))
+	if os.IsNotExist(err) {
+		// If your image has no /etc you don't get /etc/mtab either
+		return nil
+	}
+	if err != nil {
+		return errwrap.Wrap(errors.New("error determining if /etc existed in the image", err))
+	}
+	if !stat.IsDir() {
+		return nil
+	}
+	mtabPath := filepath.Join(rootfs, "etc", "mtab")
+	if _, err = os.Lstat(mtabPath); err == nil {
+		// If the image already has an mtab, don't replace it
+		return nil
+	}
+	if !os.IsNotExist(err) {
+		return errwrap.Wrap(errors.New("error determining if /etc/mtab exists in the image"), err)
+	}
+
+	target := "../proc/self/mounts"
+	err = os.Symlink(target, mtabPath)
+	if err != nil {
+		return errwrap.Wrap(errors.New("error creating mtab symlink", err))
+	}
 	return nil
 }
 
