@@ -58,6 +58,7 @@ var (
 		WriteFile          bool
 		StatFile           bool
 		HashFile           bool
+		FileSymlinkTarget  bool
 		Sleep              int
 		PreSleep           int
 		PrintMemoryLimit   bool
@@ -102,6 +103,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.WriteFile, "write-file", false, "Write $CONTENT in the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.StatFile, "stat-file", false, "Print the ownership and mode of the file $FILE")
 	globalFlagset.BoolVar(&globalFlags.HashFile, "hash-file", false, "Print the SHA1SUM of the file $FILE")
+	globalFlagset.BoolVar(&globalFlags.FileSymlinkTarget, "file-symlink-target", false, "Print the symlink target of $FILE")
 	globalFlagset.IntVar(&globalFlags.Sleep, "sleep", -1, "Sleep before exiting (in seconds)")
 	globalFlagset.IntVar(&globalFlags.PreSleep, "pre-sleep", -1, "Sleep before executing (in seconds)")
 	globalFlagset.BoolVar(&globalFlags.PrintMemoryLimit, "print-memorylimit", false, "Print cgroup memory limit")
@@ -387,6 +389,21 @@ func main() {
 		}
 
 		fmt.Printf("sha1sum: %x\n", sha1.Sum(dat))
+	}
+
+	if globalFlags.FileSymlinkTarget {
+		fileName := os.Getenv("FILE")
+		if globalFlags.FileName != "" {
+			fileName = globalFlags.FileName
+		}
+
+		dst, err := os.Readlink(fileName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot read file target %q: %v\n", fileName, err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("symlink: %q -> %q\n", fileName, dst)
 	}
 
 	if globalFlags.PrintCwd {

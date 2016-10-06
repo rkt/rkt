@@ -779,7 +779,7 @@ func ensureMtabExists(rootfs string) error {
 		return nil
 	}
 	if err != nil {
-		return errwrap.Wrap(errors.New("error determining if /etc existed in the image", err))
+		return errwrap.Wrap(errors.New("error determining if /etc existed in the image"), err)
 	}
 	if !stat.IsDir() {
 		return nil
@@ -796,7 +796,7 @@ func ensureMtabExists(rootfs string) error {
 	target := "../proc/self/mounts"
 	err = os.Symlink(target, mtabPath)
 	if err != nil {
-		return errwrap.Wrap(errors.New("error creating mtab symlink", err))
+		return errwrap.Wrap(errors.New("error creating mtab symlink"), err)
 	}
 	return nil
 }
