@@ -20,6 +20,7 @@ sudo pacman -S rkt
 ## CentOS
 
 rkt is available in the [CentOS Community Build Service](https://cbs.centos.org/koji/packageinfo?packageID=4464) for CentOS 7.
+However, this is [not yet ready for production use](https://github.com/coreos/rkt/issues/1305) due to pending systemd upgrade issues.
 
 ## CoreOS
 
