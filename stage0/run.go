@@ -105,7 +105,8 @@ type CommonConfig struct {
 	Mutable      bool   // whether this pod is mutable
 }
 
-// An etc-hosts file: mapping from IP to arbitrary list of hostnames
+// HostsEntries encapsulates the entries in an etc-hosts file: mapping from IP
+// to arbitrary list of hostnames
 type HostsEntries map[string][]string
 
 // DNSConfMode indicates what the stage1 should do with dns config files
@@ -114,7 +115,6 @@ type HostsEntries map[string][]string
 // 'stage0': the stage0 has generated it
 // 'none' : do not generate it
 // 'default' : do whatever was the default
-
 type DNSConfMode struct {
 	Resolv string // /etc/rkt-resolv.conf
 	Hosts  string // /etc/rkt-hosts
@@ -493,11 +493,9 @@ func writeResolvConf(cfg *RunConfig, rootfs string) {
 	}
 }
 
-/*
- * Write /etc/rkt-hosts in to the stage1 rootfs, if there is anything there
- * This will read defaults from <rootfs>/etc/hosts-fallback if it exists.
- * Therefore, this should be called after the stage1 is mounted
- */
+// writeEtcHosts writes the file /etc/rkt-hosts into the stage1 rootfs.
+// This will read defaults from <rootfs>/etc/hosts-fallback if it exists.
+// Therefore, this should be called after the stage1 is mounted
 func writeEtcHosts(cfg *RunConfig, rootfs string) {
 	if cfg.DNSConfMode.Hosts != "stage0" {
 		return
@@ -517,7 +515,7 @@ func writeEtcHosts(cfg *RunConfig, rootfs string) {
 		hostsText = fmt.Sprintf("%s%s %s\n", hostsText, ip, strings.Join(hostnames, " "))
 	}
 
-	// Create /etc if it does not exists
+	// Create /etc if it does not exist
 	etcPath := filepath.Join(rootfs, "etc")
 	if _, err := os.Stat(etcPath); err != nil && os.IsNotExist(err) {
 		err = os.Mkdir(etcPath, 0755)
