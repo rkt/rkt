@@ -686,6 +686,7 @@ func stage1() int {
 			return 1
 		}
 	}
+	diag.Println(args)
 
 	err = stage1common.WithClearedCloExec(lfd, func() error {
 		return syscall.Exec(args[0], args, env)

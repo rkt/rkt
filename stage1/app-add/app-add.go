@@ -128,6 +128,8 @@ func main() {
 		}
 	}
 
+	stage1initcommon.AppAddMounts(p, ra, enterCmd)
+
 	/* write service file */
 	binPath, err := stage1initcommon.FindBinPath(p, ra)
 	if err != nil {

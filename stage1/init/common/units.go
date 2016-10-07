@@ -402,12 +402,6 @@ func (uw *UnitWriter) AppUnit(
 		opts = append(opts, unit.NewUnitOption("Service", "ReadOnlyDirectories", common.RelAppRootfsPath(appName)))
 	}
 
-	// TODO(tmrts): Extract this logic into a utility function.
-	vols := make(map[types.ACName]types.Volume)
-	for _, v := range uw.p.Manifest.Volumes {
-		vols[v.Name] = v
-	}
-
 	absRoot, err := filepath.Abs(uw.p.Root) // Absolute path to the pod's rootfs.
 	if err != nil {
 		uw.err = err
@@ -417,15 +411,20 @@ func (uw *UnitWriter) AppUnit(
 
 	rwDirs := []string{}
 	imageManifest := uw.p.Images[appName.String()]
-	mounts := GenerateMounts(ra, vols, imageManifest)
+	mounts, err := GenerateMounts(ra, uw.p.Manifest.Volumes, ConvertedFromDocker(imageManifest))
+	if err != nil {
+		uw.err = err
+		return
+	}
+
 	for _, m := range mounts {
-		mntPath, err := EvaluateSymlinksInsideApp(appRootfs, m.Path)
+		mntPath, err := EvaluateSymlinksInsideApp(appRootfs, m.Mount.Path)
 		if err != nil {
 			uw.err = err
 			return
 		}
 
-		if !IsMountReadOnly(vols[m.Volume], app.MountPoints) {
+		if !m.ReadOnly {
 			rwDirs = append(rwDirs, filepath.Join(common.RelAppRootfsPath(appName), mntPath))
 		}
 	}
@@ -435,7 +434,7 @@ func (uw *UnitWriter) AppUnit(
 	if !insecureOptions.DisablePaths && flavor != "kvm" {
 		opts = protectSystemFiles(opts, appName)
 		opts = append(opts, unit.NewUnitOption("Service", "DevicePolicy", "closed"))
-		deviceAllows, err := generateDeviceAllows(common.Stage1RootfsPath(absRoot), appName, app.MountPoints, mounts, vols, uidRange)
+		deviceAllows, err := generateDeviceAllows(common.Stage1RootfsPath(absRoot), appName, app.MountPoints, mounts, uidRange)
 		if err != nil {
 			uw.err = err
 			return

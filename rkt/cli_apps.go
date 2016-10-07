@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/coreos/rkt/common/apps"
+	"github.com/hashicorp/errwrap"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
@@ -241,6 +242,67 @@ func (al *appsVolume) String() string {
 		vs = append(vs, v.String())
 	}
 	return strings.Join(vs, " ")
+}
+
+// appMountVolume is for CRI style per-app-volumes
+// this is a mount and volume in a single argument
+// It is exactly like --volume, but with a "target" param
+type appMountVolume apps.Apps
+
+func (am *appMountVolume) Set(s string) error {
+	pairs, err := url.ParseQuery(strings.Replace(s, ",", "&", -1))
+	if err != nil {
+		return err
+	}
+
+	mount := schema.Mount{}
+
+	target, ok := pairs["target"]
+	if !ok {
+		return fmt.Errorf("missing target= parameter")
+	}
+	if len(target) != 1 {
+		return fmt.Errorf("label %s with multiple values %q", "target", target)
+	}
+	mount.Path = target[0]
+
+	delete(pairs, "target")
+
+	vol, err := types.VolumeFromParams(pairs)
+	if err != nil {
+		return errwrap.Wrap(fmt.Errorf("error parsing volume component of MountVolume"), err)
+	}
+
+	mount.AppVolume = vol
+	mount.Volume = vol.Name
+
+	as := (*apps.Apps)(am)
+	if as.Count() == 0 {
+		return fmt.Errorf("an image is required before any MountVolumes")
+	}
+	app := as.Last()
+	app.Mounts = append(app.Mounts, mount)
+	return nil
+}
+
+func (am *appMountVolume) String() string {
+	as := (*apps.Apps)(am)
+	app := as.Last()
+	if app == nil {
+		return ""
+	}
+	out := ""
+	for _, mnt := range app.Mounts {
+		if mnt.AppVolume == nil {
+			continue
+		}
+		out = fmt.Sprintf("%s target=%s,%s", out, mnt.Path, mnt.AppVolume.String())
+	}
+	return out
+}
+
+func (am *appMountVolume) Type() string {
+	return "appMountVolume"
 }
 
 // appMemoryLimit is for --memory flags in the form of: --memory=128M

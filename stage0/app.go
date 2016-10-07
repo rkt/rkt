@@ -186,6 +186,7 @@ func AddApp(cfg AddConfig) error {
 			ID:     cfg.Image,
 			Labels: am.Labels,
 		},
+		Mounts:         MergeMounts(cfg.Apps.Mounts, app.Mounts),
 		ReadOnlyRootFS: app.ReadOnlyRootFS,
 	}
 
