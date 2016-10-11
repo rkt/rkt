@@ -429,6 +429,9 @@ func (uw *UnitWriter) AppUnit(
 			rwDirs = append(rwDirs, filepath.Join(common.RelAppRootfsPath(appName), mntPath))
 		}
 	}
+	if len(rwDirs) > 0 {
+		opts = append(opts, unit.NewUnitOption("Service", "ReadWriteDirectories", strings.Join(rwDirs, " ")))
+	}
 
 	// Restrict access to sensitive paths (eg. procfs) and devices. For kvm flavor,
 	// these paths are stored inside the vm, without influence to the host.
@@ -445,7 +448,6 @@ func (uw *UnitWriter) AppUnit(
 		}
 	}
 
-	opts = append(opts, unit.NewUnitOption("Service", "ReadWriteDirectories", strings.Join(rwDirs, " ")))
 	// When an app fails, we shut down the pod
 	opts = append(opts, unit.NewUnitOption("Unit", "OnFailure", "halt.target"))
 
