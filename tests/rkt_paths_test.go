@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build host coreos src
+// +build coreos src
 
 package main
 
@@ -85,20 +85,35 @@ func TestPathsWrite(t *testing.T) {
 // /proc or /sys is correctly restricted:
 // https://github.com/coreos/rkt/issues/2484
 func TestPathsStat(t *testing.T) {
-	hiddenEntry := "/sys/firmware/"
-	hiddenImage := patchTestACI("rkt-inspect-stat-procfs.aci", fmt.Sprintf("--exec=/inspect --stat-file --file-name %s", hiddenEntry))
-	defer os.Remove(hiddenImage)
+	tests := []struct {
+		Path         string
+		ExpectedMode string
+	}{
+		{
+			Path:         "/sys/firmware",
+			ExpectedMode: "d---------",
+		},
+		{
+			Path:         "/proc/kcore",
+			ExpectedMode: "----------",
+		},
+	}
 
-	hiddenCtx := testutils.NewRktRunCtx()
-	defer hiddenCtx.Cleanup()
+	for _, tt := range tests {
+		hiddenImage := patchTestACI("rkt-inspect-stat-procfs.aci", fmt.Sprintf("--exec=/inspect --stat-file --file-name %s", tt.Path))
+		defer os.Remove(hiddenImage)
 
-	//run
-	hiddenCmd := fmt.Sprintf("%s --insecure-options=image run %s", hiddenCtx.Cmd(), hiddenImage)
-	hiddenExpectedLine := fmt.Sprintf("%s: mode: d---------", hiddenEntry)
-	runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
-	// run-prepared
-	hiddenCmd = fmt.Sprintf(`%s --insecure-options=image prepare %s`, hiddenCtx.Cmd(), hiddenImage)
-	uuid := runRktAndGetUUID(t, hiddenCmd)
-	hiddenCmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", hiddenCtx.Cmd(), uuid)
-	runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
+		hiddenCtx := testutils.NewRktRunCtx()
+		defer hiddenCtx.Cleanup()
+
+		//run
+		hiddenCmd := fmt.Sprintf("%s --insecure-options=image run %s", hiddenCtx.Cmd(), hiddenImage)
+		hiddenExpectedLine := fmt.Sprintf("%s: mode: %s", tt.Path, tt.ExpectedMode)
+		runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
+		// run-prepared
+		hiddenCmd = fmt.Sprintf(`%s --insecure-options=image prepare %s`, hiddenCtx.Cmd(), hiddenImage)
+		uuid := runRktAndGetUUID(t, hiddenCmd)
+		hiddenCmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", hiddenCtx.Cmd(), uuid)
+		runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
+	}
 }

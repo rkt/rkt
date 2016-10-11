@@ -285,9 +285,9 @@ func (uw *UnitWriter) AppUnit(
 		return
 	}
 
-	flavor, _, err := GetFlavor(uw.p)
+	flavor, systemdVersion, err := GetFlavor(uw.p)
 	if err != nil {
-		uw.err = errwrap.Wrap(errors.New("failed to create shutdown service"), err)
+		uw.err = errwrap.Wrap(errors.New("unable to determine stage1 flavor"), err)
 		return
 	}
 
@@ -433,10 +433,14 @@ func (uw *UnitWriter) AppUnit(
 		opts = append(opts, unit.NewUnitOption("Service", "ReadWriteDirectories", strings.Join(rwDirs, " ")))
 	}
 
-	// Restrict access to sensitive paths (eg. procfs) and devices. For kvm flavor,
-	// these paths are stored inside the vm, without influence to the host.
+	// Restrict access to sensitive paths (eg. procfs and sysfs entries).
+	if !insecureOptions.DisablePaths {
+		opts = protectKernelTunables(opts, appName, systemdVersion)
+	}
+
+	// Generate default device policy for the app, as well as the list of allowed devices.
+	// For kvm flavor, devices are VM-specific and restricting them is not strictly needed.
 	if !insecureOptions.DisablePaths && flavor != "kvm" {
-		opts = protectSystemFiles(opts, appName)
 		opts = append(opts, unit.NewUnitOption("Service", "DevicePolicy", "closed"))
 		deviceAllows, err := generateDeviceAllows(common.Stage1RootfsPath(absRoot), appName, app.MountPoints, mounts, vols, uidRange)
 		if err != nil {
