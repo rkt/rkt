@@ -33,6 +33,7 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
+	"github.com/coreos/rkt/common/cgroup/v1"
 	"github.com/coreos/rkt/networking"
 	rktlog "github.com/coreos/rkt/pkg/log"
 )
@@ -140,7 +141,7 @@ func cleanupV1Cgroups() error {
 	// if we're trying to clean up our own cgroup it means we're running in the
 	// same unit file as the rkt pod. We don't have to do anything, systemd
 	// will do the cleanup for us
-	ourCgroupPath, err := cgroup.GetOwnV1CgroupPath("name=systemd")
+	ourCgroupPath, err := v1.GetOwnCgroupPath("name=systemd")
 	if err == nil {
 		if strings.HasPrefix(ourCgroupPath, "/"+subcgroup) {
 			return nil

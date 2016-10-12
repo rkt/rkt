@@ -35,6 +35,8 @@ import (
 
 	"github.com/appc/spec/pkg/device"
 	"github.com/coreos/rkt/common/cgroup"
+	"github.com/coreos/rkt/common/cgroup/v1"
+	"github.com/coreos/rkt/common/cgroup/v2"
 	"github.com/coreos/rkt/tests/testutils"
 	"github.com/syndtr/gocapability/capability"
 )
@@ -429,7 +431,7 @@ func main() {
 
 		var limitPath string
 		if isUnified {
-			cgroupPath, err := cgroup.GetOwnV2CgroupPath()
+			cgroupPath, err := v2.GetOwnCgroupPath()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error getting own memory cgroup path: %v\n", err)
 				os.Exit(1)
@@ -437,7 +439,7 @@ func main() {
 			limitPath = filepath.Join("/proc/1/root/sys/fs/cgroup/", cgroupPath, "memory.max")
 			fmt.Fprintln(os.Stderr, "limitPath:", limitPath)
 		} else {
-			memCgroupPath, err := cgroup.GetOwnV1CgroupPath("memory")
+			memCgroupPath, err := v1.GetOwnCgroupPath("memory")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error getting own memory cgroup path: %v\n", err)
 				os.Exit(1)
@@ -455,7 +457,7 @@ func main() {
 	}
 
 	if globalFlags.PrintCPUQuota {
-		cpuCgroupPath, err := cgroup.GetOwnV1CgroupPath("cpu")
+		cpuCgroupPath, err := v1.GetOwnCgroupPath("cpu")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting own cpu cgroup path: %v\n", err)
 			os.Exit(1)

@@ -32,7 +32,7 @@ import (
 	"github.com/coreos/go-systemd/activation"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/common"
-	"github.com/coreos/rkt/common/cgroup"
+	"github.com/coreos/rkt/common/cgroup/v1"
 	pkgPod "github.com/coreos/rkt/pkg/pod"
 	"github.com/coreos/rkt/pkg/set"
 	"github.com/coreos/rkt/store/imagestore"
@@ -353,7 +353,7 @@ func getPodCgroup(p *pkgPod.Pod, pid int) (string, error) {
 	// Get cgroup for the "name=systemd" controller; we assume the api-server is
 	// running on a system using systemd for returning cgroups, and will just not
 	// set it otherwise.
-	cgroup, err := cgroup.GetV1CgroupPathByPid(pid, "name=systemd")
+	cgroup, err := v1.GetCgroupPathByPid(pid, "name=systemd")
 	if err != nil {
 		return "", err
 	}
