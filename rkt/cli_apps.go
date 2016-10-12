@@ -367,6 +367,42 @@ func (aml *appCPULimit) Type() string {
 	return "appCPULimit"
 }
 
+// appCPUShares is for --cpu-shares flags in the form of: --cpu-shares=2048
+type appCPUShares apps.Apps
+
+func (aml *appCPUShares) Set(s string) error {
+	app := (*apps.Apps)(aml).Last()
+	if app == nil {
+		return fmt.Errorf("--cpu-shares must follow an image")
+	}
+	shares, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+	isolator, err := types.NewLinuxCPUShares(shares)
+	if err != nil {
+		return err
+	}
+	app.CPUShares = isolator
+	return nil
+}
+
+func (aml *appCPUShares) String() string {
+	app := (*apps.Apps)(aml).Last()
+	if app == nil {
+		return ""
+	}
+	shares := app.CPUShares
+	if shares == nil {
+		return ""
+	}
+	return strconv.Itoa(int(*shares))
+}
+
+func (aml *appCPUShares) Type() string {
+	return "appCPUShares"
+}
+
 // appUser is for --user flags in the form of: --user=user
 type appUser apps.Apps
 

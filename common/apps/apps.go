@@ -56,6 +56,7 @@ type App struct {
 	Mounts            []schema.Mount                    // mounts for this app (superseding any mounts in rktApps.mounts of same MountPoint)
 	MemoryLimit       *types.ResourceMemory             // memory isolator override
 	CPULimit          *types.ResourceCPU                // cpu isolator override
+	CPUShares         *types.LinuxCPUShares             // cpu-shares isolator override
 	User, Group       string                            // user, group overrides
 	SupplementaryGIDs []int                             // supplementary gids override
 	CapsRetain        *types.LinuxCapabilitiesRetainSet // os/linux/capabilities-retain-set overrides

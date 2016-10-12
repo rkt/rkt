@@ -489,6 +489,11 @@ func (uw *UnitWriter) AppUnit(
 			}
 		case *types.LinuxOOMScoreAdj:
 			opts = append(opts, unit.NewUnitOption("Service", "OOMScoreAdjust", strconv.Itoa(int(*v))))
+		case *types.LinuxCPUShares:
+			exit = doWithIsolator("cpu", func() error {
+				opts = append(opts, unit.NewUnitOption("Service", "CPUShares", strconv.Itoa(int(*v))))
+				return nil
+			})
 		}
 	}
 

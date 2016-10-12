@@ -320,7 +320,6 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		return nil, err
 	}
 
-	// TODO(sur): add to stage1-implementors-guide and to the spec
 	pm.Annotations = append(pm.Annotations, types.Annotation{
 		Name:  "coreos.com/rkt/stage1/mutable",
 		Value: strconv.FormatBool(cfg.Mutable),
@@ -346,6 +345,11 @@ func prepareIsolators(setup *apps.App, app *types.App) error {
 	if cpuOverride := setup.CPULimit; cpuOverride != nil {
 		isolator := cpuOverride.AsIsolator()
 		app.Isolators = append(app.Isolators, isolator)
+	}
+
+	if cpuSharesOverride := setup.CPUShares; cpuSharesOverride != nil {
+		isolator := cpuSharesOverride.AsIsolator()
+		app.Isolators.ReplaceIsolatorsByName(isolator, []types.ACIdentifier{types.LinuxCPUSharesName})
 	}
 
 	if oomAdjOverride := setup.OOMScoreAdj; oomAdjOverride != nil {

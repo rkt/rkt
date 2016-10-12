@@ -82,6 +82,7 @@ image arguments with a lone "---" to resume argument parsing.`,
 func addIsolatorFlags(cmd *cobra.Command, compat bool) {
 	cmd.Flags().Var((*appMemoryLimit)(&rktApps), "memory", "memory limit for the preceding image (example: '--memory=16Mi', '--memory=50M', '--memory=1G')")
 	cmd.Flags().Var((*appCPULimit)(&rktApps), "cpu", "cpu limit for the preceding image (example: '--cpu=500m')")
+	cmd.Flags().Var((*appCPUShares)(&rktApps), "cpu-shares", "cpu-shares assigns the specified CPU time share weight (example: '--cpu-shares=2048')")
 	cmd.Flags().Var((*appCapsRetain)(&rktApps), "caps-retain", "capability to retain (example: '--caps-retain=CAP_SYS_ADMIN')")
 	cmd.Flags().Var((*appCapsRemove)(&rktApps), "caps-remove", "capability to remove (example: '--caps-remove=CAP_MKNOD')")
 	cmd.Flags().Var((*appSeccompFilter)(&rktApps), "seccomp", "seccomp filter override (example: '--seccomp mode=retain,errno=EPERM,chmod,chown')")
