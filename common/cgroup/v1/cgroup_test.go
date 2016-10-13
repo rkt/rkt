@@ -14,7 +14,7 @@
 
 //+build linux
 
-package cgroup
+package v1
 
 import (
 	"io"
@@ -100,7 +100,7 @@ net_prio	6	432	1`
 	}
 
 	for i, tt := range tests {
-		o, err := parseV1Cgroups(tt.input)
+		o, err := parseCgroups(tt.input)
 		if err != nil {
 			t.Errorf("#%d: unexpected error `%v`", i, err)
 		}

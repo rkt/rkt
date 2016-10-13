@@ -28,13 +28,14 @@ import (
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/user"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 
 	"github.com/coreos/go-systemd/unit"
-	"github.com/coreos/rkt/common"
 	"github.com/hashicorp/errwrap"
+	"k8s.io/kubernetes/pkg/api/resource"
 )
 
 func MutableEnv(p *stage1commontypes.Pod) error {
@@ -483,20 +484,56 @@ func (uw *UnitWriter) AppUnit(
 		}
 	}
 
+	doWithIsolator := func(isolator string, f func() error) bool {
+		ok, err := cgroup.IsIsolatorSupported(isolator)
+		if err != nil {
+			uw.err = err
+			return true
+		}
+
+		if !ok {
+			fmt.Fprintf(os.Stderr, "warning: resource/%s isolator set but support disabled in the kernel, skipping\n", isolator)
+		}
+
+		if err := f(); err != nil {
+			uw.err = err
+			return true
+		}
+
+		return false
+	}
+
+	exit := false
 	for _, i := range app.Isolators {
+		if exit {
+			return
+		}
+
 		switch v := i.Value().(type) {
 		case *types.ResourceMemory:
-			opts, err = cgroup.MaybeAddIsolator(opts, "memory", v.Limit())
-			if err != nil {
-				uw.err = err
-				return
-			}
+			exit = doWithIsolator("memory", func() error {
+				if v.Limit() == nil {
+					return nil
+				}
+
+				opts = append(opts, unit.NewUnitOption("Service", "MemoryLimit", strconv.Itoa(int(v.Limit().Value()))))
+				return nil
+			})
 		case *types.ResourceCPU:
-			opts, err = cgroup.MaybeAddIsolator(opts, "cpu", v.Limit())
-			if err != nil {
-				uw.err = err
-				return
-			}
+			exit = doWithIsolator("cpu", func() error {
+				if v.Limit() == nil {
+					return nil
+				}
+
+				if v.Limit().Value() > resource.MaxMilliValue {
+					return fmt.Errorf("cpu limit exceeds the maximum millivalue: %v", v.Limit().String())
+				}
+
+				quota := strconv.Itoa(int(v.Limit().MilliValue()/10)) + "%"
+				opts = append(opts, unit.NewUnitOption("Service", "CPUQuota", quota))
+
+				return nil
+			})
 		}
 	}
 
