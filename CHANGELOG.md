@@ -1,3 +1,20 @@
+## 1.17.0
+
+This is a minor release packaging rkt-api systemd service units, and fixing a bug caused by overly long lines in generated stage1 unit files.
+
+### New features and UX changes
+- dist: Add systemd rkt-api service and socket ([#3271](https://github.com/coreos/rkt/pull/3271)).
+- dist: package rkt-api unit files ([#3275](https://github.com/coreos/rkt/pull/3275)).
+
+### Bug fixes
+- stage1: break down overlong property lines ([#3279](https://github.com/coreos/rkt/pull/3279)).
+
+### Other changes
+- stage0: fix typo and some docstring style ([#3266](https://github.com/coreos/rkt/pull/3266)).
+- stage0: Create an mtab symlink if not present ([#3265](https://github.com/coreos/rkt/pull/3265)).
+- stage1: use systemd protection for kernel tunables ([#3273](https://github.com/coreos/rkt/pull/3273)).
+- Documentation updates: ([#3280](https://github.com/coreos/rkt/pull/3280), [#3263](https://github.com/coreos/rkt/pull/3263), [#3268](https://github.com/coreos/rkt/pull/3268), [#3254](https://github.com/coreos/rkt/pull/3254), [#3199](https://github.com/coreos/rkt/pull/3199), [#3256](https://github.com/coreos/rkt/pull/3256))
+
 ## 1.16.0
 
 This release contains an important bugfix for the stage1-host flavor, as well as initial internal support for cgroup2 and pod sandboxes as specified by kubernetes CRI (Container Runtime Interface).

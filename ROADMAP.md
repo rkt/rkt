@@ -15,13 +15,17 @@ rkt's version 1.0 release marks the command line user interface and on-disk data
 
 ## Next releases
 
-### rkt 1.17.0 (October)
-
-Up-to-date planning at https://github.com/coreos/rkt/milestone/51.
-
 ### rkt 1.18.0 (October)
 
 Up-to-date planning at https://github.com/coreos/rkt/milestone/52.
+
+### rkt 1.19.0 (November)
+
+Up-to-date planning at https://github.com/coreos/rkt/milestone/53.
+
+### rkt 1.20.0 (November)
+
+Up-to-date planning at https://github.com/coreos/rkt/milestone/54.
 
 ### Upcoming
 
