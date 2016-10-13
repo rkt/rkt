@@ -33,16 +33,16 @@ func NewPodFromInternalPod(p *pkgPod.Pod) (*Pod, error) {
 		pod.AppNames = append(pod.AppNames, app.Name.String())
 	}
 
-	if len(manifest.CRIAnnotations) > 0 {
+	if len(manifest.UserAnnotations) > 0 {
 		pod.UserAnnotations = make(map[string]string)
-		for name, value := range manifest.CRIAnnotations {
+		for name, value := range manifest.UserAnnotations {
 			pod.UserAnnotations[name] = value
 		}
 	}
 
-	if len(manifest.CRILabels) > 0 {
+	if len(manifest.UserLabels) > 0 {
 		pod.UserLabels = make(map[string]string)
-		for name, value := range manifest.CRILabels {
+		for name, value := range manifest.UserLabels {
 			pod.UserLabels[name] = value
 		}
 	}

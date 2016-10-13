@@ -61,8 +61,8 @@ func newApp(ra *schema.RuntimeApp, podManifest *schema.PodManifest, pod *pkgPod.
 	app := &App{
 		Name:            ra.Name.String(),
 		ImageID:         ra.Image.ID.String(),
-		UserAnnotations: ra.App.CRIAnnotations,
-		UserLabels:      ra.App.CRILabels,
+		UserAnnotations: ra.App.UserAnnotations,
+		UserLabels:      ra.App.UserLabels,
 	}
 
 	// Generate mounts
