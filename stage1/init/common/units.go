@@ -358,7 +358,6 @@ func (uw *UnitWriter) AppUnit(
 		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePath(appName)),
 		unit.NewUnitOption("Service", "User", strconv.Itoa(u)),
 		unit.NewUnitOption("Service", "Group", strconv.Itoa(g)),
-		unit.NewUnitOption("Service", "SupplementaryGroups", strings.Join(supplementaryGroups, " ")),
 
 		// This helps working around a race
 		// (https://github.com/systemd/systemd/issues/2913) that causes the
@@ -366,6 +365,10 @@ func (uw *UnitWriter) AppUnit(
 		// short-lived and runs as non-root.
 		unit.NewUnitOption("Service", "SyslogIdentifier", appName.String()),
 	}...)
+
+	if len(supplementaryGroups) > 0 {
+		opts = appendOptionsList(opts, "Service", "SupplementaryGroups", "", supplementaryGroups)
+	}
 
 	if supportsNotify(uw.p, appName.String()) {
 		opts = append(opts, unit.NewUnitOption("Service", "Type", "notify"))
@@ -430,7 +433,7 @@ func (uw *UnitWriter) AppUnit(
 		}
 	}
 	if len(rwDirs) > 0 {
-		opts = append(opts, unit.NewUnitOption("Service", "ReadWriteDirectories", strings.Join(rwDirs, " ")))
+		opts = appendOptionsList(opts, "Service", "ReadWriteDirectories", "", rwDirs)
 	}
 
 	// Restrict access to sensitive paths (eg. procfs and sysfs entries).
@@ -586,4 +589,15 @@ func (uw *UnitWriter) AppReaperUnit(appName types.ACName, binPath string, opts .
 		fmt.Sprintf("failed to write app %q reaper service", appName),
 		opts...,
 	)
+}
+
+// appendOptionsList updates an existing unit options list appending
+// an array of new properties, one entry at a time.
+// This is the preferred method to avoid hitting line length limits
+// in unit files. Target property must support multi-line entries.
+func appendOptionsList(opts []*unit.UnitOption, section string, property string, prefix string, vals []string) []*unit.UnitOption {
+	for _, v := range vals {
+		opts = append(opts, unit.NewUnitOption(section, property, fmt.Sprintf("%s%s", prefix, v)))
+	}
+	return opts
 }

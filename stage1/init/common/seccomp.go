@@ -18,7 +18,6 @@ package common
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
@@ -92,17 +91,9 @@ func getSeccompFilter(opts []*unit.UnitOption, p *stage1commontypes.Pod, unprivi
 	if seccompErrno != "" {
 		opts = append(opts, unit.NewUnitOption("Service", "SystemCallErrorNumber", seccompErrno))
 	}
-	// SystemCallFilter options are written down in batches of 50 entries per line, because
+	// SystemCallFilter options are written down one entry per line, because
 	// filtering sets may be quite large and overlong lines break unit serialization.
-	seccompStr := ""
-	for i, s := range seccompSet {
-		next := i + 1
-		seccompStr += (s + " ")
-		if next%50 == 0 || next == len(seccompSet) {
-			opts = append(opts, unit.NewUnitOption("Service", "SystemCallFilter", fmt.Sprintf("%s%s", filterMode, seccompStr)))
-			seccompStr = ""
-		}
-	}
+	opts = appendOptionsList(opts, "Service", "SystemCallFilter", filterMode, seccompSet)
 	// In order to install seccomp filters, unprivileged process must first set no-news-privs.
 	if unprivileged {
 		noNewPrivs = true
