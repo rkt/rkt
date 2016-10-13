@@ -66,7 +66,16 @@ You should have now the rootfs of the image in the `squashfs-root` directory.
 
 Back to the rkt repo, in the directory `stage1/usr_from_coreos/manifest.d`, there are some manifest files that define which files are copied from the CoreOS image to the stage1 image.
 
-You need to go through all of them and check that the files listed correspond to files that are in the actual rootfs of the image (which we extracted in the previous step).
+You need to go through all of them and check that the files listed correspond to files that are in the actual rootfs of the image (which we extracted in the previous step). Do this from your root directory:
+
+```bash
+for f in $(cat stage1/usr_from_coreos/manifest-amd64-usr.d/*.manifest); do
+	fspath=/tmp/coreos-image/squashfs-root/$f
+	if [ ! -e $fspath -a ! -h $fspath ]; then
+		echo missing: $f
+	fi
+done
+```
 
 Usually, there are some updated libraries which need an update on their version numbers.
 In our case, there are no updates and all the files mentioned in the manifest are present in the updated CoreOS image.
@@ -95,9 +104,38 @@ index b5bfa77..f864f56 100644
  # path to downloaded pxe image
 ```
 
-## Check that things work
+# Check that things work
 
-Once you're finished updating the manifest files and `coreos-common.mk`, do a clean build and try to run rkt.
+Once you're finished updating the manifest files and `coreos-common.mk`, we'll do some sanity checks.
+
+First, do a clean build.
+
+
+### Test all binaries
+Make sure that every binary links:
+
+```bash
+for f in $(cat stage1/usr_from_coreos/manifest-amd64-usr.d/*.manifest); do
+	if [[ $f =~ ^bin/ ]]; then
+		sudo chroot build*/aci-for-coreos-flavor/rootfs /usr/lib64/ld-linux-x86-64.so.2 --list $f >/dev/null
+		st=$?
+		if [ $st -ne 0 ] ; then
+			echo $f failed with exit code $st
+			break
+		fi
+	fi
+done
+```
+
+### run rkt
+Run a quick smoketest:
+
+```bash
+sudo build*/target/bin/rkt run quay.io/coreos/alpine-sh
+```
+
+
+## Fixing errors
 If there are some new libraries missing from the image, you need to add them to the correspoding manifest file.
 
 For example, this update breaks systemd.
@@ -126,4 +164,4 @@ index fca30bb..51d5fbc 100644
  lib64/libpcre.so.1.2.4
 ```
 
-After those two patches, the update is complete and rkt works fine with the new image.
+Then build and test again.
