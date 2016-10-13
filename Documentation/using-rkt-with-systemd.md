@@ -228,6 +228,46 @@ In most cases, the parameters `Environment=` and `ExecStartPre=` can simply be u
 ExecStart=/bin/sh -c "foo ; exec rkt run ..."
 ```
 
+### Resource restrictions (CPU, IO, Memory)
+
+`rkt` inherits resource limits configured in the systemd service unit file. The systemd documentation explains various [execution environment](https://www.freedesktop.org/software/systemd/man/systemd.exec.html), and [resource control](https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html) settings to restrict the CPU, IO, and memory resources.
+
+For example to restrict the CPU time quota, configure the corresponding [CPUQuota](https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#CPUQuota=) setting:
+
+```
+[Service]
+ExecStart=/usr/bin/rkt run s-urbaniak.github.io/images/stress:0.0.1
+CPUQuota=30%
+```
+
+```
+$ ps -p <PID> -o %cpu%
+CPU
+30.0
+```
+
+Moreover to pin the rkt pod to certain CPUs, configure the corresponding [CPUAffinity](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#CPUAffinity=) setting:
+
+```
+[Service]
+ExecStart=/usr/bin/rkt run s-urbaniak.github.io/images/stress:0.0.1
+CPUAffinity=0,3
+```
+
+```
+$ top
+Tasks: 235 total,   1 running, 234 sleeping,   0 stopped,   0 zombie
+%Cpu0  : 100.0/0.0   100[||||||||||||||||||||||||||||||||||||||||||||||
+%Cpu1  :   6.0/0.7     7[|||                                           
+%Cpu2  :   0.7/0.0     1[                                              
+%Cpu3  : 100.0/0.0   100[||||||||||||||||||||||||||||||||||||||||||||||
+GiB Mem : 25.7/19.484   [                                              
+GiB Swap:  0.0/8.000    [                                              
+
+  PID USER      PR  NI    VIRT    RES  %CPU %MEM     TIME+ S COMMAND   
+11684 root      20   0    3.6m   1.1m 200.0  0.0   8:58.63 S stress    
+```
+
 ### Socket-activated service
 
 `rkt` supports [socket-activated services][systemd-socket-activated]. This means systemd will listen on a port on behalf of a container, and start the container when receiving a connection. An application needs to be able to accept sockets from systemd's native socket passing interface in order to handle socket activation.
@@ -367,7 +407,6 @@ Now, a new connection to localhost port 6371 will start your container with redi
 ```
 $ curl http://localhost:6371/
 ```
-
 
 ## Other tools for managing pods
 
