@@ -54,14 +54,14 @@ func init() {
 func runImageRender(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 2 {
 		cmd.Usage()
-		return 1
+		return 254
 	}
 	outputDir := args[1]
 
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	ts, err := treestore.NewStore(treeStoreDir(), s)
@@ -73,70 +73,70 @@ func runImageRender(cmd *cobra.Command, args []string) (exit int) {
 	key, err := getStoreKeyFromAppOrHash(s, args[0])
 	if err != nil {
 		stderr.Error(err)
-		return 1
+		return 254
 	}
 
 	id, _, err := ts.Render(key, false)
 	if err != nil {
 		stderr.PrintE("error rendering ACI", err)
-		return 1
+		return 254
 	}
 	if _, err := ts.Check(id); err != nil {
 		stderr.Print("warning: tree cache is in a bad state. Rebuilding...")
 		var err error
 		if id, _, err = ts.Render(key, true); err != nil {
 			stderr.PrintE("error rendering ACI", err)
-			return 1
+			return 254
 		}
 	}
 
 	if _, err := os.Stat(outputDir); err == nil {
 		if !flagRenderOverwrite {
 			stderr.Print("output directory exists (try --overwrite)")
-			return 1
+			return 254
 		}
 
 		// don't allow the user to delete the root filesystem by mistake
 		if outputDir == "/" {
 			stderr.Print("this would delete your root filesystem. Refusing.")
-			return 1
+			return 254
 		}
 
 		if err := os.RemoveAll(outputDir); err != nil {
 			stderr.PrintE("error removing existing output dir", err)
-			return 1
+			return 254
 		}
 	}
 	rootfsOutDir := outputDir
 	if !flagRenderRootfsOnly {
 		if err := os.MkdirAll(outputDir, 0755); err != nil {
 			stderr.PrintE("error creating output directory", err)
-			return 1
+			return 254
 		}
 		rootfsOutDir = filepath.Join(rootfsOutDir, "rootfs")
 
 		manifest, err := s.GetImageManifest(key)
 		if err != nil {
 			stderr.PrintE("error getting manifest", err)
-			return 1
+			return 254
 		}
 
 		mb, err := json.Marshal(manifest)
 		if err != nil {
 			stderr.PrintE("error marshalling image manifest", err)
-			return 1
+			return 254
 		}
 
 		if err := ioutil.WriteFile(filepath.Join(outputDir, "manifest"), mb, 0700); err != nil {
 			stderr.PrintE("error writing image manifest", err)
-			return 1
+			return 254
 		}
 	}
 
 	cachedTreePath := ts.GetRootFS(id)
 	if err := fileutil.CopyTree(cachedTreePath, rootfsOutDir, user.NewBlankUidRange()); err != nil {
 		stderr.PrintE("error copying ACI rootfs", err)
-		return 1
+		return 254
 	}
 
 	return 0

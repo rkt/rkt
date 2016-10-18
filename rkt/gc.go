@@ -67,12 +67,12 @@ func init() {
 func runGC(cmd *cobra.Command, args []string) (exit int) {
 	if err := renameExited(); err != nil {
 		stderr.PrintE("failed to rename exited pods", err)
-		return 1
+		return 254
 	}
 
 	if err := renameAborted(); err != nil {
 		stderr.PrintE("failed to rename aborted pods", err)
-		return 1
+		return 254
 	}
 
 	if flagMarkOnly {
@@ -81,17 +81,17 @@ func runGC(cmd *cobra.Command, args []string) (exit int) {
 
 	if err := renameExpired(flagPreparedExpiration); err != nil {
 		stderr.PrintE("failed to rename expired prepared pods", err)
-		return 1
+		return 254
 	}
 
 	if err := emptyExitedGarbage(flagGracePeriod); err != nil {
 		stderr.PrintE("failed to empty exitedGarbage", err)
-		return 1
+		return 254
 	}
 
 	if err := emptyGarbage(); err != nil {
 		stderr.PrintE("failed to empty garbage", err)
-		return 1
+		return 254
 	}
 
 	return
@@ -275,6 +275,6 @@ func deletePod(p *pkgPod.Pod) {
 
 	if err := os.RemoveAll(p.Path()); err != nil {
 		stderr.PrintE(fmt.Sprintf("unable to remove pod %q", p.UUID), err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 }

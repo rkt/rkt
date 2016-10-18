@@ -40,7 +40,7 @@ func runConfig(cmd *cobra.Command, args []string) int {
 	config, err := getConfig()
 	if err != nil {
 		stderr.PrintE("cannot get configuration", err)
-		return 1
+		return 254
 	}
 
 	var b []byte

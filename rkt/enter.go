@@ -60,62 +60,62 @@ func init() {
 func runEnter(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) < 1 {
 		cmd.Usage()
-		return 1
+		return 254
 	}
 
 	p, err := pkgPod.PodFromUUIDString(getDataDir(), args[0])
 	if err != nil {
 		stderr.PrintE("problem retrieving pod", err)
-		return 1
+		return 254
 	}
 	defer p.Close()
 
 	if p.State() != pkgPod.Running {
 		stderr.Printf("pod %q isn't currently running", p.UUID)
-		return 1
+		return 254
 	}
 
 	podPID, err := p.ContainerPid1()
 	if err != nil {
 		stderr.PrintE(fmt.Sprintf("unable to determine the pid for pod %q", p.UUID), err)
-		return 1
+		return 254
 	}
 
 	appName, err := getAppName(p)
 	if err != nil {
 		stderr.PrintE("unable to determine app name", err)
-		return 1
+		return 254
 	}
 
 	argv, err := getEnterArgv(p, args)
 	if err != nil {
 		stderr.PrintE("enter failed", err)
-		return 1
+		return 254
 	}
 
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	ts, err := treestore.NewStore(treeStoreDir(), s)
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	stage1TreeStoreID, err := p.GetStage1TreeStoreID()
 	if err != nil {
 		stderr.PrintE("error getting stage1 treeStoreID", err)
-		return 1
+		return 254
 	}
 
 	stage1RootFS := ts.GetRootFS(stage1TreeStoreID)
 
 	if err = stage0.Enter(p.Path(), podPID, *appName, stage1RootFS, argv); err != nil {
 		stderr.PrintE("enter failed", err)
-		return 1
+		return 254
 	}
 	// not reached when stage0.Enter execs /enter
 	return 0

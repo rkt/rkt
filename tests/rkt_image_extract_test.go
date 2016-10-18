@@ -74,7 +74,7 @@ func TestImageExtract(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		expectedStatus := 1
+		expectedStatus := 254
 		if tt.shouldFind {
 			expectedStatus = 0
 		}

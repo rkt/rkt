@@ -68,25 +68,25 @@ Otherwise, trust at the root domain (not recommended) must be explicitly request
 		} else {
 			cmd.Usage()
 		}
-		return 1
+		return 254
 	}
 
 	if flagPrefix != "" && flagRoot {
 		stderr.Print("--root and --prefix usage mutually exclusive")
-		return 1
+		return 254
 	}
 
 	ks := getKeystore()
 	if ks == nil {
 		stderr.Print("could not get the keystore")
-		return 1
+		return 254
 	}
 
 	// if the user included a scheme with the prefix, error on it
 	u, err := url.Parse(flagPrefix)
 	if err == nil && u.Scheme != "" {
 		stderr.Printf("--prefix must not contain a URL scheme, omit %s://", u.Scheme)
-		return 1
+		return 254
 	}
 
 	pkls := args
@@ -101,7 +101,7 @@ Otherwise, trust at the root domain (not recommended) must be explicitly request
 		pkls, err = m.GetPubKeyLocations(flagPrefix)
 		if err != nil {
 			stderr.PrintE("error determining key location", err)
-			return 1
+			return 254
 		}
 	}
 
@@ -112,7 +112,7 @@ Otherwise, trust at the root domain (not recommended) must be explicitly request
 
 	if err := m.AddKeys(pkls, flagPrefix, acceptOpt); err != nil {
 		stderr.PrintE("error adding keys", err)
-		return 1
+		return 254
 	}
 
 	return 0

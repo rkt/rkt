@@ -43,7 +43,7 @@ func interestingGoroutines() (gs []string) {
 func TestMain(m *testing.M) {
 	v := m.Run()
 	if v == 0 && goroutineLeaked() {
-		os.Exit(1)
+		os.Exit(254)
 	}
 	os.Exit(v)
 }

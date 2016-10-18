@@ -43,7 +43,7 @@ func TestVolumeMount(t *testing.T) {
 					volDir, mountDir,
 				),
 				nil,
-				1, /* TODO: decide on consistency with other stage1s */
+				254, /* TODO: decide on consistency with other stage1s */
 				`run: can't evaluate mounts: missing mount for volume "test2"`,
 			},
 		}}).Execute(t)

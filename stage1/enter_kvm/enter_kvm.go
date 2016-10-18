@@ -74,5 +74,5 @@ func main() {
 	// ExecSSH() should return only with error
 	log.Error(ssh.ExecSSH(getAppexecArgs()))
 
-	os.Exit(2)
+	os.Exit(254)
 }

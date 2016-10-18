@@ -39,19 +39,19 @@ func init() {
 func runCatManifest(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 1 {
 		cmd.Usage()
-		return 1
+		return 254
 	}
 
 	pod, err := pkgPod.PodFromUUIDString(getDataDir(), args[0])
 	if err != nil {
 		stderr.PrintE("problem retrieving pod", err)
-		return 1
+		return 254
 	}
 	defer pod.Close()
 
 	_, manifest, err := pod.PodManifest()
 	if err != nil {
-		return 1
+		return 254
 	}
 
 	var b []byte
@@ -62,7 +62,7 @@ func runCatManifest(cmd *cobra.Command, args []string) (exit int) {
 	}
 	if err != nil {
 		stderr.PrintE("cannot read the pod manifest", err)
-		return 1
+		return 254
 	}
 
 	stdout.Print(string(b))

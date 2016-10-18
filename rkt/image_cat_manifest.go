@@ -40,25 +40,25 @@ func init() {
 func runImageCatManifest(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 1 {
 		cmd.Usage()
-		return 1
+		return 254
 	}
 
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	key, err := getStoreKeyFromAppOrHash(s, args[0])
 	if err != nil {
 		stderr.Error(err)
-		return 1
+		return 254
 	}
 
 	manifest, err := s.GetImageManifest(key)
 	if err != nil {
 		stderr.PrintE("cannot get image manifest", err)
-		return 1
+		return 254
 	}
 
 	var b []byte
@@ -69,7 +69,7 @@ func runImageCatManifest(cmd *cobra.Command, args []string) (exit int) {
 	}
 	if err != nil {
 		stderr.PrintE("cannot read the image manifest", err)
-		return 1
+		return 254
 	}
 
 	stdout.Print(string(b))

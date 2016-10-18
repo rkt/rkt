@@ -54,7 +54,7 @@ func runGCImage(cmd *cobra.Command, args []string) (exit int) {
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	ts, err := treestore.NewStore(treeStoreDir(), s)
@@ -65,12 +65,12 @@ func runGCImage(cmd *cobra.Command, args []string) (exit int) {
 
 	if err := gcTreeStore(ts); err != nil {
 		stderr.PrintE("failed to remove unreferenced treestores", err)
-		return 1
+		return 254
 	}
 
 	if err := gcStore(s, flagImageGracePeriod); err != nil {
 		stderr.Error(err)
-		return 1
+		return 254
 	}
 
 	return 0

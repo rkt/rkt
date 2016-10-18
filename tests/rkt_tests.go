@@ -315,7 +315,7 @@ func runRktAsUidGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, exp
 	}
 	expectedStatus := 0
 	if expectError {
-		expectedStatus = 1
+		expectedStatus = 254
 	}
 	defer waitOrFail(t, child, expectedStatus)
 

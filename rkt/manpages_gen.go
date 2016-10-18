@@ -34,6 +34,6 @@ func main() {
 	err := doc.GenManTree(cmdRkt, header, "dist/manpages")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate the man pages: %v\n", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 }
