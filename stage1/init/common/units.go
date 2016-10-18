@@ -352,9 +352,6 @@ func (uw *UnitWriter) AppUnit(
 		unit.NewUnitOption("Service", "Restart", "no"),
 		unit.NewUnitOption("Service", "ExecStart", execStartString),
 		unit.NewUnitOption("Service", "RootDirectory", common.RelAppRootfsPath(appName)),
-		// MountFlags=shared creates a new mount namespace and (as unintuitive
-		// as it might seem) makes sure the mount is slave+shared.
-		unit.NewUnitOption("Service", "MountFlags", "shared"),
 		unit.NewUnitOption("Service", "WorkingDirectory", app.WorkingDirectory),
 		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePath(appName)),
 		unit.NewUnitOption("Service", "User", strconv.Itoa(u)),
@@ -436,9 +433,13 @@ func (uw *UnitWriter) AppUnit(
 		opts = appendOptionsList(opts, "Service", "ReadWriteDirectories", "", rwDirs)
 	}
 
-	// Restrict access to sensitive paths (eg. procfs and sysfs entries).
 	if !insecureOptions.DisablePaths {
+		// Restrict access to sensitive paths (eg. procfs and sysfs entries).
 		opts = protectKernelTunables(opts, appName, systemdVersion)
+
+		// MountFlags=shared creates a new mount namespace and (as unintuitive
+		// as it might seem) makes sure the mount is slave+shared.
+		opts = append(opts, unit.NewUnitOption("Service", "MountFlags", "shared"))
 	}
 
 	// Generate default device policy for the app, as well as the list of allowed devices.
