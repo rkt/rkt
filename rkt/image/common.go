@@ -16,6 +16,7 @@ package image
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -78,12 +79,16 @@ type action struct {
 
 var (
 	log    *rktlog.Logger
-	stdout *rktlog.Logger = rktlog.New(os.Stdout, "", false)
+	diag   *rktlog.Logger
+	stdout *rktlog.Logger
 )
 
 func ensureLogger(debug bool) {
-	if log == nil {
-		log = rktlog.New(os.Stderr, "image", debug)
+	if log == nil || diag == nil || stdout == nil {
+		log, diag, stdout = rktlog.NewLogSet("image", debug)
+	}
+	if !debug {
+		diag.SetOutput(ioutil.Discard)
 	}
 }
 

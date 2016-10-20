@@ -42,7 +42,7 @@ type httpOps struct {
 // this function will return true and no error and no file.
 func (o *httpOps) DownloadSignature(a *asc) (readSeekCloser, bool, error) {
 	ensureLogger(o.Debug)
-	log.Printf("downloading signature from %v", a.Location)
+	diag.Printf("downloading signature from %v", a.Location)
 	ascFile, err := a.Get()
 	if err == nil {
 		return ascFile, false, nil

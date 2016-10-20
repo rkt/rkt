@@ -47,16 +47,12 @@ func (f *httpFetcher) Hash(u *url.URL, a *asc) (string, error) {
 
 	if !f.NoCache && f.Rem != nil {
 		if useCached(f.Rem.DownloadTime, f.Rem.CacheMaxAge) {
-			if f.Debug {
-				log.Printf("image for %s isn't expired, not fetching.", urlStr)
-			}
+			diag.Printf("image for %s isn't expired, not fetching.", urlStr)
 			return f.Rem.BlobKey, nil
 		}
 	}
 
-	if f.Debug {
-		log.Printf("fetching image from %s", urlStr)
-	}
+	diag.Printf("fetching image from %s", urlStr)
 
 	aciFile, cd, err := f.fetchURL(u, a, eTag(f.Rem))
 	if err != nil {

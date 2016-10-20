@@ -198,13 +198,13 @@ func (f *Fetcher) maybeCheckRemoteFromStore(rem *imagestore.Remote) string {
 	if f.NoStore || rem == nil {
 		return ""
 	}
-	log.Printf("using image from local store for url %s", rem.ACIURL)
+	diag.Printf("using image from local store for url %s", rem.ACIURL)
 	return rem.BlobKey
 }
 
 func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *imagestore.Remote, u *url.URL, a *asc) (string, error) {
 	if !f.StoreOnly {
-		log.Printf("remote fetching from URL %q", u.String())
+		diag.Printf("remote fetching from URL %q", u.String())
 		hf := &httpFetcher{
 			InsecureFlags: f.InsecureFlags,
 			S:             f.S,
@@ -220,7 +220,7 @@ func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *imagestore.Remote, u *url.URL
 
 func (f *Fetcher) maybeFetchDockerURLFromRemote(u *url.URL) (string, error) {
 	if !f.StoreOnly {
-		log.Printf("remote fetching from URL %q", u.String())
+		diag.Printf("remote fetching from URL %q", u.String())
 		df := &dockerFetcher{
 			InsecureFlags: f.InsecureFlags,
 			DockerAuth:    f.DockerAuth,
@@ -233,7 +233,7 @@ func (f *Fetcher) maybeFetchDockerURLFromRemote(u *url.URL) (string, error) {
 }
 
 func (f *Fetcher) fetchSingleImageByPath(path string, a *asc) (string, error) {
-	log.Printf("using image from file %s", path)
+	diag.Printf("using image from file %s", path)
 	ff := &fileFetcher{
 		InsecureFlags: f.InsecureFlags,
 		S:             f.S,
@@ -287,7 +287,7 @@ func (f *Fetcher) maybeCheckStoreForApp(app *appBundle) (string, error) {
 	if !f.NoStore {
 		key, err := f.getStoreKeyFromApp(app)
 		if err == nil {
-			log.Printf("using image from local store for image name %s", app.Str)
+			diag.Printf("using image from local store for image name %s", app.Str)
 			return key, nil
 		}
 		switch err.(type) {
