@@ -58,13 +58,17 @@ type NetConf struct {
 	IsDefaultGateway bool `json:"isDefaultGateway"`
 }
 
-var stderr *log.Logger
+var (
+	stderr   *log.Logger
+	debuglog bool
+)
 
 // Setup creates a new networking namespace and executes network plugins to
 // set up networking. It returns in the new pod namespace
 func Setup(podRoot string, podID types.UUID, fps []ForwardedPort, netList common.NetList, localConfig, flavor string, noDNS, debug bool) (*Networking, error) {
 
 	stderr = log.New(os.Stderr, "networking", debug)
+	debuglog = debug
 
 	if flavor == "kvm" {
 		return kvmSetup(podRoot, podID, fps, netList, localConfig, noDNS)
@@ -260,6 +264,7 @@ func (n *Networking) GetIfacesByIP(ifaceIP net.IP) ([]net.Interface, error) {
 func (n *Networking) Teardown(flavor string, debug bool) {
 
 	stderr = log.New(os.Stderr, "networking", debug)
+	debuglog = debug
 
 	// Teardown everything in reverse order of setup.
 	// This should be idempotent -- be tolerant of missing stuff

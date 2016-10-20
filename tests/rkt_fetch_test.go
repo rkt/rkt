@@ -48,15 +48,15 @@ func TestFetchFromFile(t *testing.T) {
 		args  string
 		image string
 	}{
-		{"--insecure-options=image fetch", imagePath},
-		{"--insecure-options=image fetch --store-only", imagePath},
-		{"--insecure-options=image fetch --no-store", imagePath},
-		{"--insecure-options=image run --mds-register=false", imagePath},
-		{"--insecure-options=image run --mds-register=false --store-only", imagePath},
-		{"--insecure-options=image run --mds-register=false --no-store", imagePath},
-		{"--insecure-options=image prepare", imagePath},
-		{"--insecure-options=image prepare --store-only", imagePath},
-		{"--insecure-options=image prepare --no-store", imagePath},
+		{"--insecure-options=image --debug fetch", imagePath},
+		{"--insecure-options=image --debug fetch --store-only", imagePath},
+		{"--insecure-options=image --debug fetch --no-store", imagePath},
+		{"--insecure-options=image --debug run --mds-register=false", imagePath},
+		{"--insecure-options=image --debug run --mds-register=false --store-only", imagePath},
+		{"--insecure-options=image --debug run --mds-register=false --no-store", imagePath},
+		{"--insecure-options=image --debug prepare", imagePath},
+		{"--insecure-options=image --debug prepare --store-only", imagePath},
+		{"--insecure-options=image --debug prepare --no-store", imagePath},
 	}
 
 	for _, tt := range tests {
@@ -98,20 +98,20 @@ func TestFetch(t *testing.T) {
 		imageArgs string
 		finalURL  string
 	}{
-		{"--insecure-options=image fetch", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image fetch", "docker://busybox", "", "docker://busybox"},
-		{"--insecure-options=image fetch", "docker://busybox:latest", "", "docker://busybox:latest"},
-		{"--insecure-options=image run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /etcdctl", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /etcdctl", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image run --mds-register=false", "docker://busybox", "", "docker://busybox"},
-		{"--insecure-options=image run --mds-register=false", "docker://busybox:latest", "", "docker://busybox:latest"},
-		{"--insecure-options=image prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image --debug fetch", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image --debug fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image --debug fetch", "docker://busybox", "", "docker://busybox"},
+		{"--insecure-options=image --debug fetch", "docker://busybox:latest", "", "docker://busybox:latest"},
+		{"--insecure-options=image --debug run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /etcdctl", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image --debug run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /etcdctl", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image --debug run --mds-register=false", "docker://busybox", "", "docker://busybox"},
+		{"--insecure-options=image --debug run --mds-register=false", "docker://busybox:latest", "", "docker://busybox:latest"},
+		{"--insecure-options=image --debug prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image --debug prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
 		// test --insecure-options=tls to make sure
 		// https://github.com/coreos/rkt/issues/1829 is not an issue anymore
-		{"--insecure-options=image,tls prepare", "docker://busybox", "", "docker://busybox"},
-		{"--insecure-options=image prepare", "docker://busybox:latest", "", "docker://busybox:latest"},
+		{"--insecure-options=image,tls --debug prepare", "docker://busybox", "", "docker://busybox"},
+		{"--insecure-options=image --debug prepare", "docker://busybox:latest", "", "docker://busybox:latest"},
 	}
 
 	for _, tt := range tests {

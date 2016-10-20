@@ -107,7 +107,7 @@ func TestGCAfterUnmount(t *testing.T) {
 			t.Fatalf("pods should still be present in rkt's data directory")
 		}
 
-		gcCmd := fmt.Sprintf("%s gc --mark-only=false --expire-prepared=0 --grace-period=0", ctx.Cmd())
+		gcCmd := fmt.Sprintf("%s gc --debug --mark-only=false --expire-prepared=0 --grace-period=0", ctx.Cmd())
 		// check we don't get any output (an error) after "executing net-plugin..."
 		runRktAndCheckRegexOutput(t, gcCmd, `executing net-plugin .*\n\z`)
 
