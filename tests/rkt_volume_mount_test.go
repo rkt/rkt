@@ -102,7 +102,6 @@ type volumeMountTestCase struct {
 	images         []imagePatch
 	cmdArgs        string
 	podManifest    *schema.PodManifest
-	expectedExit   int
 	expectedResult string
 }
 
@@ -121,7 +120,6 @@ var (
 				volDir, mountDir,
 			),
 			nil,
-			0,
 			innerFileContent,
 		},
 		{
@@ -137,8 +135,7 @@ var (
 				volDir, mountDir,
 			),
 			nil,
-			254,
-			"",
+			"read-only file system",
 		},
 	}
 
@@ -156,8 +153,22 @@ var (
 				volDir, mountDir,
 			),
 			nil,
-			0,
 			outerFileContent,
+		},
+		{
+			"CLI: read-only non-recursive write file must fail",
+			[]imagePatch{
+				{
+					"rkt-test-run-write-file.aci",
+					[]string{fmt.Sprintf("--exec=/inspect --write-file --file-name %s", "/mnt/lol")},
+				},
+			},
+			fmt.Sprintf(
+				"--volume=test1,kind=host,source=%s,readOnly=true,recursive=false --mount volume=test1,target=%s",
+				volDir, mountDir,
+			),
+			nil,
+			"read-only file system",
 		},
 	}
 
@@ -191,7 +202,6 @@ var (
 						Mode: nil, UID: nil, GID: nil},
 				},
 			},
-			0,
 			innerFileContent,
 		},
 		{
@@ -224,8 +234,7 @@ var (
 						Mode: nil, UID: nil, GID: nil},
 				},
 			},
-			254,
-			"",
+			"read-only file system",
 		},
 	}
 
@@ -261,7 +270,6 @@ var (
 						Mode: nil, UID: nil, GID: nil},
 				},
 			},
-			0,
 			"host:foo",
 		},
 	}
@@ -296,7 +304,6 @@ var (
 						Mode: nil, UID: nil, GID: nil},
 				},
 			},
-			0,
 			outerFileContent,
 		},
 	}
@@ -357,7 +364,7 @@ func NewTestVolumeMount(volumeMountTestCases [][]volumeMountTestCase) testutils.
 						t.Fatalf("Expected %q but not found: %v\n%s", tt.expectedResult, err, out)
 					}
 				}
-				waitOrFail(t, child, tt.expectedExit)
+				child.Wait()
 				verifyHostFile(t, volDir, "file", i, tt.expectedResult)
 
 				// 2. Test 'rkt prepare' + 'rkt run-prepared'.
@@ -379,8 +386,7 @@ func NewTestVolumeMount(volumeMountTestCases [][]volumeMountTestCase) testutils.
 						t.Fatalf("Expected %q but not found: %v\n%s", tt.expectedResult, err, out)
 					}
 				}
-
-				waitOrFail(t, child, tt.expectedExit)
+				child.Wait()
 				verifyHostFile(t, volDir, "file", i, tt.expectedResult)
 
 				// we run the garbage collector and remove the imported images to save
