@@ -278,6 +278,7 @@ func (s *resumableSession) getClient() *http.Client {
 	transport := http.DefaultTransport
 	if s.InsecureSkipTLSVerify {
 		transport = &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
