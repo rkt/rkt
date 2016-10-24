@@ -281,7 +281,7 @@ func runRktAndGetUUID(t *testing.T, rktCmd string) string {
 	child := spawnOrFail(t, rktCmd)
 	defer waitOrFail(t, child, 0)
 
-	result, out, err := expectRegexWithOutput(child, "\n[0-9a-f-]{36}")
+	result, out, err := expectRegexWithOutput(child, "[0-9a-f-]{36}")
 	if err != nil || len(result) != 1 {
 		t.Fatalf("Error: %v\nOutput: %v", err, out)
 	}

@@ -381,7 +381,7 @@ func stage1() int {
 	}
 
 	for _, mount := range effectiveMounts {
-		log.Printf("Processing %+v", mount)
+		diag.Printf("Processing %+v", mount)
 
 		var (
 			err            error
@@ -407,7 +407,7 @@ func stage1() int {
 		switch {
 		case (mount.Flags & syscall.MS_REMOUNT) != 0:
 			{
-				log.Printf("don't attempt to create files for remount of %q", absTargetPath)
+				diag.Printf("don't attempt to create files for remount of %q", absTargetPath)
 			}
 		case targetPathInfo == nil:
 			absTargetPathParent, _ := filepath.Split(absTargetPath)
