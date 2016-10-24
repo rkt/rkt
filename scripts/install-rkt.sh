@@ -15,6 +15,7 @@ apt-get install -y --no-install-recommends \
         bash-completion \
         checkinstall \
         curl \
+        iptables \
         wget
 
 curl -sSL https://coreos.com/dist/pubkeys/app-signing-pubkey.gpg | gpg2 --import -
