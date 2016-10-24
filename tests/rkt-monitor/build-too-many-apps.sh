@@ -45,7 +45,7 @@ OUTPUT=${PWD}/too-many-apps.podmanifest
 
 cat <<EOF >${OUTPUT}
 {
-    "acVersion": "0.8.7",
+    "acVersion": "0.8.8",
     "acKind": "PodManifest",
     "apps": [
 EOF

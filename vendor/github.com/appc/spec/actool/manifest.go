@@ -279,7 +279,7 @@ func patchManifest(im *schema.ImageManifest) error {
 			_, ok := types.ResourceIsolatorNames[name]
 
 			switch name {
-			case types.LinuxNoNewPrivilegesName:
+			case types.LinuxNoNewPrivilegesName, types.LinuxOOMScoreAdjName:
 				ok = true
 				kv := strings.Split(is, ",")
 				if len(kv) != 2 {
