@@ -156,8 +156,6 @@ func (v Volume) String() string {
 // Example volume parameters:
 // 	database,kind=host,source=/tmp,readOnly=true,recursive=true
 func VolumeFromString(vp string) (*Volume, error) {
-	var vol Volume
-
 	vp = "name=" + vp
 	vpQuery, err := common.MakeQueryString(vp)
 	if err != nil {
@@ -168,7 +166,12 @@ func VolumeFromString(vp string) (*Volume, error) {
 	if err != nil {
 		return nil, err
 	}
-	for key, val := range v {
+	return VolumeFromParams(v)
+}
+
+func VolumeFromParams(params map[string][]string) (*Volume, error) {
+	var vol Volume
+	for key, val := range params {
 		val := val
 		if len(val) > 1 {
 			return nil, fmt.Errorf("label %s with multiple values %q", key, val)
@@ -218,8 +221,7 @@ func VolumeFromString(vp string) (*Volume, error) {
 
 	maybeSetDefaults(&vol)
 
-	err = vol.assertValid()
-	if err != nil {
+	if err := vol.assertValid(); err != nil {
 		return nil, err
 	}
 
