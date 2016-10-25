@@ -3,7 +3,7 @@ import:
 - package: github.com/StackExchange/wmi
   version: f3e2bae1e0cb5aef83e319133eabfee30013a4a5
 - package: github.com/appc/docker2aci
-  version: v0.12.3
+  version: v0.13.0
   subpackages:
   - lib
   - lib/common
