@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/appc/spec/pkg/device"
@@ -34,22 +35,27 @@ const DEFAULT_DIR_MODE os.FileMode = 0755
 
 var ErrNotSupportedPlatform = errors.New("platform and architecture is not supported")
 
+var xattrPrefixWhitelist = []string{
+	"security.capability",
+	"user",
+}
+
 // Map of paths that should be whitelisted. The paths should be relative to the
 // root of the tar file and should be cleaned (for example using filepath.Clean)
 type PathWhitelistMap map[string]struct{}
 
-type FilePermissionsEditor func(string, int, int, byte, os.FileInfo) error
+type FilePermissionsEditor func(path string, uid, gid int, typ byte, _ os.FileInfo, xattr map[string]string) error
 
 func NewUidShiftingFilePermEditor(uidRange *user.UidRange) (FilePermissionsEditor, error) {
 	if os.Geteuid() != 0 {
-		return func(_ string, _, _ int, _ byte, _ os.FileInfo) error {
+		return func(_ string, _, _ int, _ byte, _ os.FileInfo, _ map[string]string) error {
 			// The files are owned by the current user on creation.
 			// If we do nothing, they will remain so.
 			return nil
 		}, nil
 	}
 
-	return func(path string, uid, gid int, typ byte, fi os.FileInfo) error {
+	return func(path string, uid, gid int, typ byte, fi os.FileInfo, xattr map[string]string) error {
 		shiftedUid, shiftedGid, err := uidRange.ShiftRange(uint32(uid), uint32(gid))
 		if err != nil {
 			return err
@@ -66,6 +72,20 @@ func NewUidShiftingFilePermEditor(uidRange *user.UidRange) (FilePermissionsEdito
 				return err
 			}
 		}
+
+		if typ == tar.TypeReg || typ == tar.TypeRegA {
+			for k, v := range xattr {
+				if !isXattrAllowed(k) {
+					continue
+				}
+
+				err := syscall.Setxattr(path, k, []byte(v), 0)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 		return nil
 	}, nil
 }
@@ -201,7 +221,7 @@ func extractFile(tr *tar.Reader, target string, hdr *tar.Header, overwrite bool,
 	}
 
 	if editor != nil {
-		if err := editor(p, hdr.Uid, hdr.Gid, hdr.Typeflag, fi); err != nil {
+		if err := editor(p, hdr.Uid, hdr.Gid, hdr.Typeflag, fi, hdr.Xattrs); err != nil {
 			return err
 		}
 	}
@@ -254,4 +274,14 @@ func extractFileFromTar(tr *tar.Reader, file string) ([]byte, error) {
 
 func HdrToTimespec(hdr *tar.Header) []syscall.Timespec {
 	return []syscall.Timespec{fileutil.TimeToTimespec(hdr.AccessTime), fileutil.TimeToTimespec(hdr.ModTime)}
+}
+
+func isXattrAllowed(xattr string) bool {
+	for _, v := range xattrPrefixWhitelist {
+		if strings.HasPrefix(xattr, v) {
+			return true
+		}
+	}
+
+	return false
 }

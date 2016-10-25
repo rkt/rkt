@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -784,6 +785,93 @@ func testExtractTarHardLink(t *testing.T, extractTar func(io.Reader, string) err
 	}
 	if origFile.Ino != linkedFile.Ino {
 		t.Errorf("original file and linked file have different inodes")
+	}
+}
+
+func TestExtractTarXattr(t *testing.T) {
+	if !sys.HasChrootCapability() {
+		t.Skipf("chroot capability not available. Disabling test.")
+	}
+
+	entries := []*testTarEntry{
+		{
+			contents: "foo",
+			header: &tar.Header{
+				Name: "folder/foo.txt",
+				Size: 3,
+				Mode: int64(0755),
+				Xattrs: map[string]string{
+					"security.capability": "foo",
+					"user.baz":            "bar",
+					"faulty":              "xattr",
+				},
+			},
+		},
+	}
+
+	expected := []struct {
+		Xattrs map[string]string
+	}{
+		{
+			Xattrs: map[string]string{
+				"security.capability": "foo",
+				"user.baz":            "bar",
+			},
+		},
+	}
+
+	testTarPath, err := newTestTar(entries)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	defer os.Remove(testTarPath)
+
+	containerTar, err := os.Open(testTarPath)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	defer containerTar.Close()
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	tmpdir, err := ioutil.TempDir(wd, "rkt-temp-dir")
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	os.RemoveAll(tmpdir)
+
+	err = os.MkdirAll(tmpdir, 0755)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	err = ExtractTar(containerTar, tmpdir, true, user.NewBlankUidRange(), nil)
+	if err != nil {
+		if strings.Contains(err.Error(), "operation not supported") {
+			t.Skipf("xattr unsupported, disabling test, error %v", err)
+		}
+
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	for i, expected := range expected {
+		for k, v := range expected.Xattrs {
+			p := filepath.Join(tmpdir, entries[i].header.Name)
+			dest := make([]byte, len(v))
+
+			_, err := syscall.Getxattr(p, k, dest)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+
+			if got := string(dest); got != v {
+				t.Errorf("Expected xattr %q=%q, got %q", k, v, got)
+			}
+		}
 	}
 }
 
