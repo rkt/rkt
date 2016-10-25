@@ -140,13 +140,14 @@ func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
 		return nil, err
 	}
 
-	tag := defaultTag
-	var digest string
+	var tag, digest string
 	switch x := r.(type) {
 	case reference.Canonical:
 		digest = x.Digest().String()
 	case reference.NamedTagged:
 		tag = x.Tag()
+	default:
+		tag = defaultTag
 	}
 
 	indexURL, remoteName := SplitReposName(r.Name())

@@ -75,6 +75,9 @@ func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *types.Pars
 
 	var doneChannels []chan error
 	for i, layerID := range layerIDs {
+		if err := common.ValidateLayerId(layerID); err != nil {
+			return nil, nil, err
+		}
 		doneChan := make(chan error)
 		doneChannels = append(doneChannels, doneChan)
 		// https://github.com/golang/go/wiki/CommonMistakes

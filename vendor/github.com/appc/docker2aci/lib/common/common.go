@@ -16,6 +16,9 @@
 package common
 
 import (
+	"fmt"
+	"regexp"
+
 	"github.com/appc/docker2aci/lib/internal/docker"
 	"github.com/appc/docker2aci/lib/internal/types"
 )
@@ -25,6 +28,10 @@ type Compression int
 const (
 	NoCompression = iota
 	GzipCompression
+)
+
+var (
+	validId = regexp.MustCompile(`^(\w+:)?([A-Fa-f0-9]+)$`)
 )
 
 type ParsedDockerURL types.ParsedDockerURL
@@ -59,4 +66,12 @@ func (e *ErrSeveralImages) Error() string {
 func ParseDockerURL(arg string) (*ParsedDockerURL, error) {
 	p, err := docker.ParseDockerURL(arg)
 	return (*ParsedDockerURL)(p), err
+}
+
+// ValidateLayerId validates a layer ID
+func ValidateLayerId(id string) error {
+	if ok := validId.MatchString(id); !ok {
+		return fmt.Errorf("invalid layer ID %q", id)
+	}
+	return nil
 }

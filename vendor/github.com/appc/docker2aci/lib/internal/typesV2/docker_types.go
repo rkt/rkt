@@ -31,9 +31,8 @@ const (
 
 	MediaTypeOCIManifest     = "application/vnd.oci.image.manifest.v1+json"
 	MediaTypeOCIManifestList = "application/vnd.oci.image.manifest.list.v1+json"
-	MediaTypeOCIConfig       = "application/vnd.oci.image.serialization.config.v1+json"
-	MediaTypeOCIRootFS       = "application/vnd.oci.image.serialization.rootfs.tar.gzip"
-	MediaTypeOCICombined     = "application/vnd.oci.image.serialization.combined.v1+json"
+	MediaTypeOCIConfig       = "application/vnd.oci.image.config.v1+json"
+	MediaTypeOCILayer        = "application/vnd.oci.image.layer.tar+gzip"
 )
 
 var (
