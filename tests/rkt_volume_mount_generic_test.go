@@ -43,8 +43,8 @@ func TestVolumeMount(t *testing.T) {
 					volDir, mountDir,
 				),
 				nil,
-				0,
 				innerFileContent,
 			},
-		}}).Execute(t)
+		},
+	}).Execute(t)
 }
