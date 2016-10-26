@@ -102,7 +102,10 @@ func gcNetworking(podID *types.UUID) error {
 	case err == nil:
 		n.Teardown(flavor, debug)
 	case os.IsNotExist(err):
-		// probably ran with --net=host
+		// either ran with --net=host, or failed during setup
+		if err := networking.CleanUpGarbage(".", podID); err != nil {
+			diag.PrintE("failed cleaning up nework NS", err)
+		}
 	default:
 		return errwrap.Wrap(errors.New("failed loading networking state"), err)
 	}
@@ -142,7 +145,7 @@ func cleanupV1Cgroups() error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			diag.Printf("subcgroup file missing, probably a failed pod. Skipping cgroup cleanup.")
-			return nil // Probably a failed startup
+			return nil
 		}
 		return errwrap.Wrap(errors.New("error reading subcgroup file"), err)
 	}
