@@ -44,7 +44,8 @@ const (
 
 var (
 	debug bool
-	log   *rktlog.Logger = rktlog.New(os.Stderr, "stage1 gc", debug)
+	log   *rktlog.Logger
+	diag  *rktlog.Logger
 )
 
 func init() {
@@ -58,6 +59,11 @@ func init() {
 
 func main() {
 	flag.Parse()
+
+	log, diag, _ = rktlog.NewLogSet("stage1 gc", debug)
+	if !debug {
+		diag.SetOutput(ioutil.Discard)
+	}
 
 	podID, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
@@ -134,6 +140,10 @@ func cleanupV1Cgroups() error {
 
 	b, err := ioutil.ReadFile("subcgroup")
 	if err != nil {
+		if os.IsNotExist(err) {
+			diag.Printf("subcgroup file missing, probably a failed pod. Skipping cgroup cleanup.")
+			return nil // Probably a failed startup
+		}
 		return errwrap.Wrap(errors.New("error reading subcgroup file"), err)
 	}
 	subcgroup := string(b)
