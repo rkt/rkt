@@ -1,4 +1,4 @@
-// Copyright 2016 The appc Authors
+// Copyright 2016 The Linux Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package docker2aci
+package specs
 
-import "github.com/appc/spec/schema"
+// Descriptor describes the disposition of targeted content.
+type Descriptor struct {
+	// MediaType contains the MIME type of the referenced object.
+	MediaType string `json:"mediaType"`
 
-var Version = "0.13.0"
-var AppcVersion = schema.AppContainerVersion
+	// Digest is the digest of the targeted content.
+	Digest string `json:"digest"`
+
+	// Size specifies the size in bytes of the blob.
+	Size int64 `json:"size"`
+}

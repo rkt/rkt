@@ -21,9 +21,16 @@ package util
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/appc/spec/pkg/acirenderer"
+)
+
+var (
+	secureClient   = newClient(false)
+	insecureClient = newClient(true)
 )
 
 // Quote takes a slice of strings and returns another slice with them quoted.
@@ -65,19 +72,32 @@ func IndexOf(list []string, el string) int {
 // GetTLSClient gets an HTTP client that behaves like the default HTTP
 // client, but optionally skips the TLS certificate verification.
 func GetTLSClient(skipTLSCheck bool) *http.Client {
-	if !skipTLSCheck {
-		return http.DefaultClient
+	if skipTLSCheck {
+		return insecureClient
 	}
-	client := *http.DefaultClient
-	// Default transport is hidden behind the RoundTripper
-	// interface, so we can't easily make a copy of it. If this
-	// ever panics, we will have to adapt.
-	realTransport := http.DefaultTransport.(*http.Transport)
-	tr := *realTransport
-	if tr.TLSClientConfig == nil {
-		tr.TLSClientConfig = &tls.Config{}
+
+	return secureClient
+}
+
+func newClient(skipTLSCheck bool) *http.Client {
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	} // values taken from stdlib v1.5.3
+
+	tr := &http.Transport{
+		Proxy:               http.ProxyFromEnvironment,
+		Dial:                dialer.Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+	} // values taken from stdlib v1.5.3
+
+	if skipTLSCheck {
+		tr.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
 	}
-	tr.TLSClientConfig.InsecureSkipVerify = true
-	client.Transport = &tr
-	return &client
+
+	return &http.Client{
+		Transport: tr,
+	}
 }

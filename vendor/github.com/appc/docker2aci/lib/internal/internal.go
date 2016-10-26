@@ -146,6 +146,26 @@ func generateACIPath(outputDir, imageName, digest, tag, osString, arch string, l
 	return path.Join(outputDir, aciPath)
 }
 
+func generateEPCmdAnnotation(dockerEP, dockerCmd []string) (string, string, error) {
+	var entrypointAnnotation, cmdAnnotation string
+	if len(dockerEP) > 0 {
+		entry, err := json.Marshal(dockerEP)
+		if err != nil {
+			return "", "", err
+		}
+		entrypointAnnotation = string(entry)
+	}
+	if len(dockerCmd) > 0 {
+		cmd, err := json.Marshal(dockerCmd)
+		if err != nil {
+			return "", "", err
+		}
+		cmdAnnotation = string(cmd)
+	}
+
+	return entrypointAnnotation, cmdAnnotation, nil
+}
+
 // GenerateManifest converts the docker manifest format to an appc
 // ImageManifest.
 func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDockerURL) (*schema.ImageManifest, error) {
@@ -170,68 +190,48 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 	genManifest.ACKind = appctypes.ACKind(schema.ImageManifestKind)
 
-	var (
-		labels       appctypes.Labels
-		parentLabels appctypes.Labels
-		annotations  appctypes.Annotations
-	)
+	var annotations appctypes.Annotations
 
-	layer := appctypes.MustACIdentifier("layer")
-	labels = append(labels, appctypes.Label{Name: *layer, Value: layerData.ID})
+	labels := make(map[appctypes.ACIdentifier]string)
+	parentLabels := make(map[appctypes.ACIdentifier]string)
 
-	tag := dockerURL.Tag
-	version := appctypes.MustACIdentifier("version")
-	labels = append(labels, appctypes.Label{Name: *version, Value: tag})
-
-	if layerData.OS != "" {
-		os := appctypes.MustACIdentifier("os")
-		labels = append(labels, appctypes.Label{Name: *os, Value: layerData.OS})
-		parentLabels = append(parentLabels, appctypes.Label{Name: *os, Value: layerData.OS})
-
-		if layerData.Architecture != "" {
-			arch := appctypes.MustACIdentifier("arch")
-			labels = append(labels, appctypes.Label{Name: *arch, Value: layerData.Architecture})
-			parentLabels = append(parentLabels, appctypes.Label{Name: *arch, Value: layerData.Architecture})
+	addLabel := func(key, val string) {
+		if key != "" && val != "" {
+			labels[*appctypes.MustACIdentifier(key)] = val
 		}
 	}
 
-	if layerData.Author != "" {
-		authorsKey := appctypes.MustACIdentifier("authors")
-		annotations = append(annotations, appctypes.Annotation{Name: *authorsKey, Value: layerData.Author})
+	addParentLabel := func(key, val string) {
+		if key != "" && val != "" {
+			parentLabels[*appctypes.MustACIdentifier(key)] = val
+		}
 	}
+
+	addAnno := func(key, val string) {
+		if key != "" && val != "" {
+			annotations.Set(*appctypes.MustACIdentifier(key), val)
+		}
+	}
+
+	addLabel("layer", layerData.ID)
+	addLabel("version", dockerURL.Tag)
+	addLabel("os", layerData.OS)
+	addParentLabel("os", layerData.OS)
+	addLabel("arch", layerData.Architecture)
+	addParentLabel("arch", layerData.OS)
+
+	addAnno("authors", layerData.Author)
 	epoch := time.Unix(0, 0)
 	if !layerData.Created.Equal(epoch) {
-		createdKey := appctypes.MustACIdentifier("created")
-		annotations = append(annotations, appctypes.Annotation{Name: *createdKey, Value: layerData.Created.Format(time.RFC3339)})
+		addAnno("created", layerData.Created.Format(time.RFC3339))
 	}
-	if layerData.Comment != "" {
-		commentKey := appctypes.MustACIdentifier("docker-comment")
-		annotations = append(annotations, appctypes.Annotation{Name: *commentKey, Value: layerData.Comment})
-	}
-
-	if dockerURL.IndexURL != "" {
-		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerRegistryURL), Value: dockerURL.IndexURL})
-	}
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerRepository), Value: dockerURL.ImageName})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerImageID), Value: layerData.ID})
-	annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerParentImageID), Value: layerData.Parent})
+	addAnno("docker-comment", layerData.Comment)
+	addAnno(common.AppcDockerRegistryURL, dockerURL.IndexURL)
+	addAnno(common.AppcDockerRepository, dockerURL.ImageName)
+	addAnno(common.AppcDockerImageID, layerData.ID)
+	addAnno(common.AppcDockerParentImageID, layerData.Parent)
 
 	if dockerConfig != nil {
-		if len(dockerConfig.Entrypoint) > 0 {
-			entry, err := json.Marshal(dockerConfig.Entrypoint)
-			if err != nil {
-				return nil, err
-			}
-			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerEntrypoint), Value: string(entry)})
-		}
-		if len(dockerConfig.Cmd) > 0 {
-			cmd, err := json.Marshal(dockerConfig.Cmd)
-			if err != nil {
-				return nil, err
-			}
-			annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerCmd), Value: string(cmd)})
-		}
-
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
 		if exec != nil {
 			user, group := parseDockerUser(dockerConfig.User)
@@ -258,6 +258,17 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 				return nil, err
 			}
 
+			ep, cmd, err := generateEPCmdAnnotation(dockerConfig.Entrypoint, dockerConfig.Cmd)
+			if err != nil {
+				return nil, err
+			}
+			if len(ep) > 0 {
+				addAnno(common.AppcDockerEntrypoint, ep)
+			}
+			if len(cmd) > 0 {
+				addAnno(common.AppcDockerCmd, cmd)
+			}
+
 			genManifest.App = app
 		}
 	}
@@ -273,12 +284,20 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		}
 		parentImageName := appctypes.MustACIdentifier(parentImageNameString)
 
-		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{ImageName: *parentImageName, Labels: parentLabels})
+		plbl, err := appctypes.LabelsFromMap(labels)
+		if err != nil {
+			return nil, err
+		}
 
-		annotations = append(annotations, appctypes.Annotation{Name: *appctypes.MustACIdentifier(common.AppcDockerTag), Value: dockerURL.Tag})
+		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{ImageName: *parentImageName, Labels: plbl})
+
+		addAnno(common.AppcDockerTag, dockerURL.Tag)
 	}
 
-	genManifest.Labels = labels
+	genManifest.Labels, err = appctypes.LabelsFromMap(labels)
+	if err != nil {
+		return nil, err
+	}
 	genManifest.Annotations = annotations
 
 	return genManifest, nil
@@ -290,20 +309,22 @@ func GenerateEmptyManifest(name string) (*schema.ImageManifest, error) {
 		return nil, err
 	}
 
+	labels := appctypes.Labels{
+		appctypes.Label{
+			Name:  *appctypes.MustACIdentifier("arch"),
+			Value: runtime.GOARCH,
+		},
+		appctypes.Label{
+			Name:  *appctypes.MustACIdentifier("os"),
+			Value: runtime.GOOS,
+		},
+	}
+
 	return &schema.ImageManifest{
 		ACKind:    schema.ImageManifestKind,
 		ACVersion: schema.AppContainerVersion,
 		Name:      *acid,
-		Labels: appctypes.Labels{
-			appctypes.Label{
-				*appctypes.MustACIdentifier("arch"),
-				runtime.GOARCH,
-			},
-			appctypes.Label{
-				*appctypes.MustACIdentifier("os"),
-				runtime.GOOS,
-			},
-		},
+		Labels:    labels,
 	}, nil
 }
 
@@ -341,10 +362,11 @@ func GenerateManifestV22(name string, dockerURL *types.ParsedDockerURL, config *
 	addAnno("created", config.Created)
 
 	if config.Config != nil {
-		exec := getExecCommand(config.Config.Entrypoint, config.Config.Cmd)
-		user, group := parseDockerUser(config.Config.User)
+		innerCfg := config.Config
+		exec := getExecCommand(innerCfg.Entrypoint, innerCfg.Cmd)
+		user, group := parseDockerUser(innerCfg.User)
 		var env appctypes.Environment
-		for _, v := range config.Config.Env {
+		for _, v := range innerCfg.Env {
 			parts := strings.SplitN(v, "=", 2)
 			env.Set(parts[0], parts[1])
 		}
@@ -353,15 +375,26 @@ func GenerateManifestV22(name string, dockerURL *types.ParsedDockerURL, config *
 			User:             user,
 			Group:            group,
 			Environment:      env,
-			WorkingDirectory: config.Config.WorkingDir,
+			WorkingDirectory: innerCfg.WorkingDir,
 		}
-		manifest.App.MountPoints, err = convertVolumesToMPs(config.Config.Volumes)
+		manifest.App.MountPoints, err = convertVolumesToMPs(innerCfg.Volumes)
 		if err != nil {
 			return nil, err
 		}
-		manifest.App.Ports, err = convertPorts(config.Config.ExposedPorts, nil)
+		manifest.App.Ports, err = convertPorts(innerCfg.ExposedPorts, nil)
 		if err != nil {
 			return nil, err
+		}
+
+		ep, cmd, err := generateEPCmdAnnotation(innerCfg.Entrypoint, innerCfg.Cmd)
+		if err != nil {
+			return nil, err
+		}
+		if len(ep) > 0 {
+			addAnno(common.AppcDockerEntrypoint, ep)
+		}
+		if len(cmd) > 0 {
+			addAnno(common.AppcDockerCmd, cmd)
 		}
 	}
 
@@ -520,9 +553,11 @@ func convertVolumesToMPs(dockerVolumes map[string]struct{}) ([]appctypes.MountPo
 
 func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []string, output string, compression common.Compression) (*schema.ImageManifest, error) {
 	dir, _ := path.Split(output)
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		return nil, fmt.Errorf("error creating ACI parent dir: %v", err)
+	if dir != "" {
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return nil, fmt.Errorf("error creating ACI parent dir: %v", err)
+		}
 	}
 	aciFile, err := os.Create(output)
 	if err != nil {
@@ -623,9 +658,9 @@ func parseDockerUser(dockerUser string) (string, string) {
 
 	// when only the user is given, the docker spec says that the default and
 	// supplementary groups of the user in /etc/passwd should be applied.
-	// Assume root group for now in this case.
+	// To avoid inspecting image content, we set gid to the same value as uid.
 	if len(dockerUserParts) < 2 {
-		return dockerUserParts[0], "0"
+		return dockerUserParts[0], dockerUserParts[0]
 	}
 
 	return dockerUserParts[0], dockerUserParts[1]

@@ -1,4 +1,4 @@
-// Copyright 2016 The appc Authors
+// Copyright 2016 The Linux Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package docker2aci
+package specs
 
-import "github.com/appc/spec/schema"
+// Versioned provides a struct with the manifest schemaVersion and mediaType.
+// Incoming content with unknown schema version can be decoded against this
+// struct to check the version.
+type Versioned struct {
+	// SchemaVersion is the image manifest schema that this image follows
+	SchemaVersion int `json:"schemaVersion"`
 
-var Version = "0.13.0"
-var AppcVersion = schema.AppContainerVersion
+	// MediaType is the media type of this schema.
+	MediaType string `json:"mediaType,omitempty"`
+}
