@@ -14,9 +14,9 @@ By default, the rkt build will download a CoreOS PXE image from the internet and
 
 Most Linux distributions don't allow the use of prebuilt binaries, or reuse of code that is already otherwise packaged. systemd falls in this category, as Debian and Fedora already package systemd, and rkt needs systemd.
 
-- [Debian Policy Manual, section 4.13 Convenience copies of code](https://www.debian.org/doc/debian-policy/ch-source.html#s-embeddedfiles)
-- [Fedora Packaging Guidelines](https://fedoraproject.org/wiki/Packaging:Guidelines#No_inclusion_of_pre-built_binaries_or_libraries)
-- [Fedora Packaging Committee](https://www.mail-archive.com/devel@lists.fedoraproject.org/msg88276.html)
+- [Debian Policy Manual, section 4.13 Convenience copies of code][debian-policy-4.13]
+- [Fedora Packaging Guidelines][fedora-packaging-guidelines]
+- [Fedora Packaging Committee][fedora-packaging-committee]
 
 The configure script's `--with-stage1-flavors` option can be set to `host` to avoid rkt's dependency on systemd in these environments:
 
@@ -30,7 +30,7 @@ For more details, see the [configure script parameters documentation][build-conf
 
 ### Glide
 
-rkt uses [Glide](https://github.com/Masterminds/glide) to maintain [a copy of dependencies in its source repository](https://github.com/coreos/rkt/tree/master/vendor).
+rkt uses [Glide][glide] to maintain [a copy of dependencies in its source repository][rkt-vendor].
 
 ## Run-time dependencies
 
@@ -40,7 +40,7 @@ Please see [the list of run-time dependencies][run-deps].
 
 ### Ownership and permissions of rkt directories
 
-In general, subdirectories of `/var/lib/rkt`, and `/etc/rkt` should be created with the same ownership and permissions as described in the [directory list](https://github.com/coreos/rkt/blob/master/dist/init/systemd/tmpfiles.d/rkt.conf).
+In general, subdirectories of `/var/lib/rkt`, and `/etc/rkt` should be created with the same ownership and permissions as described in the [directory list][rkt-dirs].
 
 Any rkt package should create a system group `rkt`, and `rkt-admin`. The directory `/var/lib/rkt` should belong to group `rkt` with the `setgid` bit set (`chmod g+s`). The directory `/etc/rkt` should belong to group `rkt-admin` with the `setgid` bit set (`chmod g+s`).
 
@@ -53,9 +53,15 @@ The motivation to have separate `rkt`, and `rkt-admin` groups is that the person
 A few [example systemd unit files for rkt helper services][rkt-units] are included in the rkt sources. These units demonstrate systemd-managed units to run the rkt [metadata-service][rkt-metadata-svc] with socket-activation, the rkt [api-service][api-service], and a periodic [garbage collection][rkt-gc] service invoked at 12-hour intervals to purge dead pods.
 
 [build-config]: build-configure.md
+[build-deps]: dependencies.md#build-time-dependencies
+[debian-policy-4.13]: https://www.debian.org/doc/debian-policy/ch-source.html#s-embeddedfiles
+[fedora-packaging-committee]: https://www.mail-archive.com/devel@lists.fedoraproject.org/msg88276.html
+[fedora-packaging-guidelines]: https://fedoraproject.org/wiki/Packaging:Guidelines#No_inclusion_of_pre-built_binaries_or_libraries
+[glide]: https://glide.sh
 [rkt-gc]: subcommands/gc.md
 [rkt-metadata-svc]: subcommands/metadata-service.md
 [api-service]: subcommands/api-service.md
 [rkt-units]: https://github.com/coreos/rkt/tree/master/dist/init/systemd
-[build-deps]: dependencies.md#build-time-dependencies
+[rkt-vendor]: https://github.com/coreos/rkt/tree/master/vendor
 [run-deps]: dependencies.md#run-time-dependencies
+[rkt-dirs]: https://github.com/coreos/rkt/blob/master/dist/init/systemd/tmpfiles.d/rkt.conf

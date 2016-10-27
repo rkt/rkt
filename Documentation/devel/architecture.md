@@ -23,7 +23,7 @@ After calling `rkt` the execution chain follows the numbering of stages, having 
 The invoking process uses its own mechanism to invoke the rkt binary (stage0). When started via a regular shell or a supervisor, stage0 is usually forked and exec'ed becoming a child process of the invoking shell or supervisor.
 
 2. stage0 -> stage1:
-An ordinary `exec(3)` is being used to replace the stage0 process with the stage1 entrypoint. The entrypoint is referenced by the `coreos.com/rkt/stage1/run` annotation in the stage1 image manifest.
+An ordinary [`exec(3)`][man-exec] is being used to replace the stage0 process with the stage1 entrypoint. The entrypoint is referenced by the `coreos.com/rkt/stage1/run` annotation in the stage1 image manifest.
 
 3. stage1 -> stage2:
 The stage1 entrypoint uses its mechanism to invoke the stage2 app executables. The app executables are referenced by the `apps.app.exec` settings in the stage2 image manifest.
@@ -108,21 +108,21 @@ We will now detail how the starting, shutdown, and exit status collection of the
 
 ![rkt-systemd](rkt-systemd.png)
 
-There's a systemd rkt apps target (`default.target`) which has a [*Wants*](http://www.freedesktop.org/software/systemd/man/systemd.unit.html#Wants=) and [*After*](http://www.freedesktop.org/software/systemd/man/systemd.unit.html#Before=) dependency on each app's service file, making sure they all start.
+There's a systemd rkt apps target (`default.target`) which has a [*Wants*][systemd-wants] and [*After*][systemd-beforeafter] dependency on each app's service file, making sure they all start.
 
 Each app's service has a *Wants* dependency on an associated reaper service that deals with writing the app's status exit.
 Each reaper service has a *Wants* and *After* dependency with a shutdown service that simply shuts down the pod.
 
-The reaper services and the shutdown service all start at the beginning but do nothing and remain after exit (with the [*RemainAfterExit*](http://www.freedesktop.org/software/systemd/man/systemd.service.html#RemainAfterExit=) flag).
-By using the [*StopWhenUnneeded*](http://www.freedesktop.org/software/systemd/man/systemd.unit.html#StopWhenUnneeded=) flag, whenever they stop being referenced, they'll do the actual work via the *ExecStop* command.
+The reaper services and the shutdown service all start at the beginning but do nothing and remain after exit (with the [*RemainAfterExit*][systemd-remainafterexit] flag).
+By using the [*StopWhenUnneeded*][systemd-stopwhenunneeded] flag, whenever they stop being referenced, they'll do the actual work via the *ExecStop* command.
 
 This means that when an app service is stopped, its associated reaper will run and will write its exit status to `/rkt/status/${app}` and the other apps will continue running.
 When all apps' services stop, their associated reaper services will also stop and will cease referencing the shutdown service causing the pod to exit.
-Every app service has an [*OnFailure*](http://www.freedesktop.org/software/systemd/man/systemd.unit.html#OnFailure=) flag that starts the `halt.target`.
+Every app service has an [*OnFailure*][systemd-onfailure] flag that starts the `halt.target`.
 This means that if any app in the pod exits with a failed status, the systemd shutdown process will start, the other apps' services will automatically stop and the pod will exit.
 In this case, the failed app's exit status will get propagated to rkt.
 
-A [*Conflicts*](http://www.freedesktop.org/software/systemd/man/systemd.unit.html#Conflicts=) dependency was also added between each reaper service and the halt and poweroff targets (they are triggered when the pod is stopped from the outside when rkt receives `SIGINT`).
+A [*Conflicts*][systemd-conflicts] dependency was also added between each reaper service and the halt and poweroff targets (they are triggered when the pod is stopped from the outside when rkt receives `SIGINT`).
 This will activate all the reaper services when one of the targets is activated, causing the exit statuses to be saved and the pod to finish like it was described in the previous paragraph.
 
 We will now detail the execution chain for the stage1 systemd/nspawn flavors. The entrypoint is implemented in the `stage1/init/init.go` binary and sets up the following execution chain:
@@ -193,15 +193,23 @@ When using stage1-2 with overlayfs a pod will contain references to the required
 
 *Aci Renderer*
 
-Both stage1-2 render modes internally uses the [aci renderer](https://github.com/appc/spec/tree/master/pkg/acirenderer).
+Both stage1-2 render modes internally uses the [aci renderer][acirenderer].
 Since an ACI may depend on other ones the acirenderer may require other ACIs.
 The acirenderer only relies on the ACIStore, so all the required ACIs must already be available in the store.
 Additionally, since appc dependencies can be found only via discovery, a dependency may be updated and so there can be multiple rendered images for the same ACI.
 
 Given this 1:N relation between an ACI and their rendered images, the ACIStore and TreeStore are decoupled.
 
+[acirenderer]: https://github.com/appc/spec/tree/master/pkg/acirenderer
 [appc-spec]: https://github.com/appc/spec
 [appc-dependencies]: https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
 [appc-discovery]: https://github.com/appc/spec/blob/master/spec/discovery.md
+[man-exec]: http://man7.org/linux/man-pages/man3/exec.3.html
 [oci-img-spec]: https://github.com/opencontainers/image-spec
 [rkt-image-fetching]: ../image-fetching-behavior.md
+[systemd-beforeafter]: http://www.freedesktop.org/software/systemd/man/systemd.unit.html#Before=
+[systemd-conflicts]: http://www.freedesktop.org/software/systemd/man/systemd.unit.html#Conflicts=
+[systemd-wants]: http://www.freedesktop.org/software/systemd/man/systemd.unit.html#Wants=
+[systemd-onfailure]: http://www.freedesktop.org/software/systemd/man/systemd.unit.html#OnFailure=
+[systemd-remainafterexit]: http://www.freedesktop.org/software/systemd/man/systemd.service.html#RemainAfterExit=
+[systemd-stopwhenunneeded]: http://www.freedesktop.org/software/systemd/man/systemd.unit.html#StopWhenUnneeded=

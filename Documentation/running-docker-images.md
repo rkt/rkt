@@ -8,7 +8,7 @@ To reference a Docker image, use the `docker://` prefix when fetching or running
 
 Note that Docker images do not support signature verification, and hence it's necessary to use the `--insecure-options=image` flag.
 
-As a simple example, let's run the latest `redis` container image from the default Docker registry:
+As a simple example, let's run the latest [`redis`][docker-redis] container image from the default Docker registry:
 
 ```
 # rkt --insecure-options=image run docker://redis
@@ -45,10 +45,10 @@ Downloading layer: f2fb89b0a711a7178528c7785d247ba3572924353b0d5e23e9b28f0518253
 4:M 19 Apr 06:09:02.375 * The server is now ready to accept connections on port 6379
 ```
 
-This behaves similarly to the Docker client: if no specific registry is named, the [Docker Hub](https://hub.docker.com) is used by default.
+This behaves similarly to the Docker client: if no specific registry is named, the [Docker Hub][docker-hub] is used by default.
 
 As with Docker, alternative registries can be used by specifying the registry as part of the image reference.
-For example, the following command will fetch an nginx Docker image hosted on quay.io:
+For example, the following command will fetch an [nginx][quay-nginx] Docker image hosted on [quay.io][quay]:
 
 ```
 # rkt --insecure-options=image fetch docker://quay.io/zanui/nginx
@@ -67,3 +67,9 @@ After the image has been retrieved, it can be run by referencing this hash:
 ```
 # rkt --insecure-options=image run sha512-c6d6efd98f506380ff128e473ca239ed
 ```
+
+
+[docker-redis]: https://hub.docker.com/_/redis/
+[docker-hub]: https://hub.docker.com
+[quay]: https://quay.io/
+[quay-nginx]: https://quay.io/repository/zanui/nginx

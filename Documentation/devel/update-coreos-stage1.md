@@ -10,7 +10,7 @@ The process is quite manual because it's not done often, but improvements are we
 Let's assume you want to update from version 991.0.0 to version 1032.0.0.
 
 First, you need to download and verify the image.
-Make sure you trust the [CoreOS Image Signing Key](https://coreos.com/security/image-signing-key/).
+Make sure you trust the [CoreOS Image Signing Key][coreos-key].
 
 Since 1032.0.0 is currently only available in the Alpha channel, we'll use the alpha URL:
 
@@ -165,3 +165,6 @@ index fca30bb..51d5fbc 100644
 ```
 
 Then build and test again.
+
+
+[coreos-key]: https://coreos.com/security/image-signing-key/

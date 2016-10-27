@@ -28,10 +28,12 @@ In order to avoid collisions, it is planned to implement a locking mechanism so 
 The initial implementation works only with `--no-overlay`.
 Ideally, preparing a pod should not have to iterate over all files to call `chown`.
 
-It is planned to add kernel support for a mount option to shift the user IDs in the correct range (https://github.com/coreos/rkt/issues/1057).
+It is planned to add kernel support for a mount option to shift the user IDs in the correct range (see [#1057][rkt-1057]).
 It would make it work with overlayfs.
 
 ### Inconvenient UID shift on volumes
 
 When mounting a volume from the host into the pod, the ownership of the files is not shifted, so it makes volumes difficult if not impossible to use with user namespaces.
-The same kernel support should help here too (https://github.com/coreos/rkt/issues/1057).
+The same kernel support should help here too ([#1057][rkt-1057]).
+
+[rkt-1057]: https://github.com/coreos/rkt/issues/1057

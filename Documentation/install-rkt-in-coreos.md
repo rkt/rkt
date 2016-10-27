@@ -26,13 +26,13 @@ ExecStart=/usr/bin/tar --strip-components=1 -xf /opt/rkt.tar.gz -C /opt/rkt
 ```
 
 The URLs in this unit must be filled in before the unit is installed. Valid
-URLs can be found on [rkt's releases page][1].
+URLs can be found on [rkt's releases page][rkt-releases].
 
-This unit should be installed with either [ignition][2] or a [cloud config][3].
+This unit should be installed with either [ignition][ignition] or a [cloud config][cloud-config].
 Other units being added can then contain a `After=rkt-install.service` (or
 whatever the service was named) to delay their running until rkt has been
 installed.
 
-[1]: https://github.com/coreos/rkt/releases
-[2]: https://coreos.com/ignition/docs/latest/
-[3]: https://coreos.com/os/docs/latest/cloud-config.html
+[rkt-releases]: https://github.com/coreos/rkt/releases
+[ignition]: https://coreos.com/ignition/docs/latest/
+[cloud-config]: https://coreos.com/os/docs/latest/cloud-config.html

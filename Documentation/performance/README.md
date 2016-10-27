@@ -46,4 +46,7 @@ $ go tool pprof /usr/bin/rkt /tmp/cpu.profile
 $ go tool pprof /usr/bin/rkt /tmp/mem.profile
 ```
 
-For more profiling tips, please see https://blog.golang.org/profiling-go-programs
+For more profiling tips, please see [Profiling Go Programs][profiling].
+
+
+[profiling]: https://blog.golang.org/profiling-go-programs

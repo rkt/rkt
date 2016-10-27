@@ -143,4 +143,7 @@ rkt: 2 image(s) successfully removed
 
 ## Global options
 
-See the table with [global options in general commands documentation](../commands.md#global-options).
+See the table with [global options in general commands documentation][global-options].
+
+
+[global-options]: ../commands.md#global-options

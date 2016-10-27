@@ -5,8 +5,6 @@ Stopped pods are moved to the garbage and cleaned up during a subsequent garbage
 Each `gc` pass removes any pods remaining in the garbage past the grace period.
 [Read more about the pod lifecycle][gc-docs].
 
-[gc-docs]: ../devel/pod-lifecycle.md#garbage-collection
-
 ```
 # rkt gc --grace-period=30m0s
 Moving pod "21b1cb32-c156-4d26-82ae-eda1ab60f595" to garbage
@@ -33,4 +31,8 @@ Garbage collecting pod "f07a4070-79a9-4db0-ae65-a090c9c393a3"
 
 ## Global options
 
-See the table with [global options in general commands documentation](../commands.md#global-options).
+See the table with [global options in general commands documentation][global-options].
+
+
+[gc-docs]: ../devel/pod-lifecycle.md#garbage-collection
+[global-options]: ../commands.md#global-options
