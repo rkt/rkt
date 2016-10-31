@@ -1,5 +1,5 @@
-hash: bbc3d4989ff4b5a1643ba6f3830314a3aea89f9d06cf030a22aac0856bfa5760
-updated: 2016-10-31T11:08:20.737588464Z
+hash: 3db4d7c6fc89de6c3454b8a74846d0286ab1a3eeb281322010055cea8a12fa4f
+updated: 2016-10-31T11:10:26.586363363Z
 imports:
 - name: github.com/appc/docker2aci
   version: 0cac1a3ecc114941cf643ec25f4daaeee8c3d538
@@ -91,9 +91,10 @@ imports:
   subpackages:
   - semver
 - name: github.com/coreos/go-systemd
-  version: 43e4800a6165b4e02bb2a36673c54b230d6f7b26
+  version: 61c7ee68bddeb1e66b491c3e1045c4f72b2cd6e3
   subpackages:
   - activation
+  - daemon
   - dbus
   - sdjournal
   - unit

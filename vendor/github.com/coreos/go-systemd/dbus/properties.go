@@ -78,6 +78,15 @@ func PropRemainAfterExit(b bool) Property {
 	}
 }
 
+// PropType sets the Type service property. See
+// http://www.freedesktop.org/software/systemd/man/systemd.service.html#Type=
+func PropType(t string) Property {
+	return Property{
+		Name:  "Type",
+		Value: dbus.MakeVariant(t),
+	}
+}
+
 // PropDescription sets the Description unit property. See
 // http://www.freedesktop.org/software/systemd/man/systemd.unit#Description=
 func PropDescription(desc string) Property {
