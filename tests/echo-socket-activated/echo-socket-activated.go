@@ -75,17 +75,17 @@ func main() {
 	n, err := sdListenFDs(false)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error getting socket-activated FDs: %v\n", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 	switch {
 	case n == 1:
 		fd = SD_LISTEN_FDS_START
 	case n > 1:
 		fmt.Fprintf(os.Stderr, "Too many file descriptors received.\n")
-		os.Exit(1)
+		os.Exit(254)
 	default:
 		fmt.Fprintf(os.Stderr, "Not socket activated.\n")
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	f := os.NewFile(fd, "")
@@ -94,13 +94,13 @@ func main() {
 	l, err := net.FileListener(f)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "FileListener: %v.\n", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	conn, err := l.Accept()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Accept: %v.\n", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 
 	buf := make([]byte, 1024)
@@ -109,7 +109,7 @@ func main() {
 		if err != nil {
 			if err != io.EOF {
 				fmt.Fprintf(os.Stderr, "Read: %v.\n", err)
-				os.Exit(1)
+				os.Exit(254)
 			}
 			break
 		}
@@ -117,7 +117,7 @@ func main() {
 		data := buf[0:nr]
 		if _, err := conn.Write(data); err != nil {
 			fmt.Fprintf(os.Stderr, "Write: %v.\n", err)
-			os.Exit(1)
+			os.Exit(254)
 		}
 	}
 }

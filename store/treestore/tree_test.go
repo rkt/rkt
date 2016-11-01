@@ -34,7 +34,7 @@ func testStoreWriteACI(dir string, s *imagestore.Store) (string, error) {
 	imj := `
 		{
 		    "acKind": "ImageManifest",
-		    "acVersion": "0.8.7",
+		    "acVersion": "0.8.8",
 		    "name": "example.com/test01"
 		}
 	`
@@ -202,7 +202,7 @@ func TestTreeStore(t *testing.T) {
 	imj := `
 		{
 		    "acKind": "ImageManifest",
-		    "acVersion": "0.8.7",
+		    "acVersion": "0.8.8",
 		    "name": "example.com/test01"
 		}
 	`

@@ -113,10 +113,6 @@ func mountSharedVolumes(root string, p *stage1commontypes.Pod, ra *schema.Runtim
 func doBindMount(source, destination string, readOnly bool, recursive *bool) error {
 	var flags uintptr = syscall.MS_BIND
 
-	if readOnly {
-		flags |= syscall.MS_RDONLY
-	}
-
 	// Enable recursive by default and remove it if explicitly requested
 	recursiveBool := recursive == nil || *recursive == true
 	if recursiveBool {
@@ -124,7 +120,14 @@ func doBindMount(source, destination string, readOnly bool, recursive *bool) err
 	}
 
 	if err := syscall.Mount(source, destination, "bind", flags, ""); err != nil {
-		return err
+		return errwrap.Wrap(fmt.Errorf("error mounting %s", destination), err)
+	}
+
+	// Linux can't bind-mount with readonly in a single operation, so remount +ro
+	if readOnly {
+		if err := syscall.Mount("", destination, "none", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, ""); err != nil {
+			return errwrap.Wrap(fmt.Errorf("error remounting read-only %s", destination), err)
+		}
 	}
 
 	if readOnly && recursiveBool {
@@ -137,8 +140,8 @@ func doBindMount(source, destination string, readOnly bool, recursive *bool) err
 
 		for _, mnt := range mnts {
 			innerAbsPath := destination + strings.Replace(mnt.MountPoint, source, "", -1)
-			if err := syscall.Mount("", innerAbsPath, "none", syscall.MS_REMOUNT|syscall.MS_RDONLY, ""); err != nil {
-				return err
+			if err := syscall.Mount("", innerAbsPath, "none", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, ""); err != nil {
+				return errwrap.Wrap(fmt.Errorf("error remounting child mount %s read-only", innerAbsPath), err)
 			}
 		}
 	}

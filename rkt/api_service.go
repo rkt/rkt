@@ -32,7 +32,7 @@ import (
 	"github.com/coreos/go-systemd/activation"
 	"github.com/coreos/rkt/api/v1alpha"
 	"github.com/coreos/rkt/common"
-	"github.com/coreos/rkt/common/cgroup"
+	"github.com/coreos/rkt/common/cgroup/v1"
 	pkgPod "github.com/coreos/rkt/pkg/pod"
 	"github.com/coreos/rkt/pkg/set"
 	"github.com/coreos/rkt/store/imagestore"
@@ -353,7 +353,7 @@ func getPodCgroup(p *pkgPod.Pod, pid int) (string, error) {
 	// Get cgroup for the "name=systemd" controller; we assume the api-server is
 	// running on a system using systemd for returning cgroups, and will just not
 	// set it otherwise.
-	cgroup, err := cgroup.GetCgroupPathByPid(pid, "name=systemd")
+	cgroup, err := v1.GetCgroupPathByPid(pid, "name=systemd")
 	if err != nil {
 		return "", err
 	}
@@ -908,11 +908,11 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 	listeners, err := openAPISockets()
 	if err != nil {
 		stderr.PrintE("Failed to open sockets", err)
-		return 1
+		return 254
 	}
 	if len(listeners) == 0 { // This is unlikely...
 		stderr.Println("No sockets to listen to. Quitting.")
-		return 1
+		return 254
 	}
 
 	publicServer := grpc.NewServer() // TODO(yifan): Add TLS credential option.
@@ -920,7 +920,7 @@ func runAPIService(cmd *cobra.Command, args []string) (exit int) {
 	v1AlphaAPIServer, err := newV1AlphaAPIServer()
 	if err != nil {
 		stderr.PrintE("failed to create API service", err)
-		return 1
+		return 254
 	}
 
 	v1alpha.RegisterPublicAPIServer(publicServer, v1AlphaAPIServer)

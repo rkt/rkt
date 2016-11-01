@@ -66,36 +66,36 @@ func init() {
 func runFetch(cmd *cobra.Command, args []string) (exit int) {
 	if err := parseApps(&rktApps, args, cmd.Flags(), false); err != nil {
 		stderr.PrintE("unable to parse arguments", err)
-		return 1
+		return 254
 	}
 
 	if rktApps.Count() < 1 {
 		stderr.Print("must provide at least one image")
-		return 1
+		return 254
 	}
 
 	if flagStoreOnly && flagNoStore {
 		stderr.Print("both --store-only and --no-store specified")
-		return 1
+		return 254
 	}
 
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	ts, err := treestore.NewStore(treeStoreDir(), s)
 	if err != nil {
 		stderr.PrintE("cannot open treestore", err)
-		return 1
+		return 254
 	}
 
 	ks := getKeystore()
 	config, err := getConfig()
 	if err != nil {
 		stderr.PrintE("cannot get configuration", err)
-		return 1
+		return 254
 	}
 	ft := &image.Fetcher{
 		S:                  s,
@@ -125,7 +125,7 @@ func runFetch(cmd *cobra.Command, args []string) (exit int) {
 	})
 	if err != nil {
 		stderr.Error(err)
-		return 1
+		return 254
 	}
 
 	return

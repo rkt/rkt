@@ -742,9 +742,10 @@ func getAppNoNewPrivileges(isolators types.Isolators) bool {
 	return false
 }
 
-// restrictProcFS restricts access to some security-sensitive paths under
+// protectKernelTunables restricts access to some security-sensitive paths under
 // /proc and /sys. Entries are either hidden or just made read-only to app.
-func protectSystemFiles(opts []*unit.UnitOption, appName types.ACName) []*unit.UnitOption {
+// This protection is enabled by default.
+func protectKernelTunables(opts []*unit.UnitOption, appName types.ACName, systemdVersion int) []*unit.UnitOption {
 	roPaths := []string{
 		"/proc/bus/",
 		"/proc/sys/kernel/core_pattern",
@@ -758,27 +759,38 @@ func protectSystemFiles(opts []*unit.UnitOption, appName types.ACName) []*unit.U
 		"/sys/devices/",
 		"/sys/kernel/",
 	}
-	hiddenPaths := []string{
-		// TODO(lucab): file-paths restrictions need support in systemd first
-		//"/proc/config.gz",
-		//"/proc/kallsyms",
-		//"/proc/sched_debug",
-		//"/proc/kcore",
-		//"/proc/kmem",
-		//"/proc/mem",
+	hiddenDirs := []string{
 		"/sys/firmware/",
 		"/sys/fs/",
 		"/sys/hypervisor/",
 		"/sys/module/",
 		"/sys/power/",
 	}
+	hiddenPaths := []string{
+		"/proc/config.gz",
+		"/proc/kallsyms",
+		"/proc/sched_debug",
+		"/proc/kcore",
+		"/proc/kmem",
+		"/proc/mem",
+	}
+
 	// Paths prefixed with "-" are ignored if they do not exist:
 	// https://www.freedesktop.org/software/systemd/man/systemd.exec.html#ReadWriteDirectories=
-	for _, p := range hiddenPaths {
-		opts = append(opts, unit.NewUnitOption("Service", "InaccessibleDirectories", fmt.Sprintf("-%s", filepath.Join(common.RelAppRootfsPath(appName), p))))
-	}
 	for _, p := range roPaths {
 		opts = append(opts, unit.NewUnitOption("Service", "ReadOnlyDirectories", fmt.Sprintf("-%s", filepath.Join(common.RelAppRootfsPath(appName), p))))
 	}
+	for _, p := range hiddenDirs {
+		opts = append(opts, unit.NewUnitOption("Service", "InaccessibleDirectories", fmt.Sprintf("-%s", filepath.Join(common.RelAppRootfsPath(appName), p))))
+	}
+	if systemdVersion >= 231 {
+		for _, p := range hiddenPaths {
+			opts = append(opts, unit.NewUnitOption("Service", "InaccessiblePaths", fmt.Sprintf("-%s", filepath.Join(common.RelAppRootfsPath(appName), p))))
+		}
+	}
+	if systemdVersion >= 232 {
+		opts = append(opts, unit.NewUnitOption("Service", "ProtectKernelTunables", "true"))
+	}
+
 	return opts
 }

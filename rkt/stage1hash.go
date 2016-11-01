@@ -340,6 +340,7 @@ func getStage1Finder(s *imagestore.Store, ts *treestore.Store, withKeystore bool
 	fn := &image.Finder{
 		S:                  s,
 		Ts:                 ts,
+		Debug:              globalFlags.Debug,
 		InsecureFlags:      globalFlags.InsecureFlags,
 		TrustKeysFromHTTPS: globalFlags.TrustKeysFromHTTPS,
 

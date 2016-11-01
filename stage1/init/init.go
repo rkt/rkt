@@ -46,6 +46,8 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
+	"github.com/coreos/rkt/common/cgroup/v1"
+	"github.com/coreos/rkt/common/cgroup/v2"
 	commonnet "github.com/coreos/rkt/common/networking"
 	"github.com/coreos/rkt/networking"
 	pkgflag "github.com/coreos/rkt/pkg/flag"
@@ -496,14 +498,14 @@ func stage1() int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
 		log.PrintE("UUID is missing or malformed", err)
-		return 1
+		return 254
 	}
 
 	root := "."
 	p, err := stage1commontypes.LoadPod(root, uuid)
 	if err != nil {
 		log.PrintE("failed to load pod", err)
-		return 1
+		return 254
 	}
 
 	// set close-on-exec flag on RKT_LOCK_FD so it gets correctly closed when invoking
@@ -511,12 +513,12 @@ func stage1() int {
 	lfd, err := common.GetRktLockFD()
 	if err != nil {
 		log.PrintE("failed to get rkt lock fd", err)
-		return 1
+		return 254
 	}
 
 	if err := sys.CloseOnExec(lfd, true); err != nil {
 		log.PrintE("failed to set FD_CLOEXEC on rkt lock", err)
-		return 1
+		return 254
 	}
 
 	mirrorLocalZoneInfo(p.Root)
@@ -524,7 +526,7 @@ func stage1() int {
 	flavor, _, err := stage1initcommon.GetFlavor(p)
 	if err != nil {
 		log.PrintE("failed to get stage1 flavor", err)
-		return 1
+		return 254
 	}
 
 	var n *networking.Networking
@@ -532,27 +534,27 @@ func stage1() int {
 		fps, err := commonnet.ForwardedPorts(p.Manifest)
 		if err != nil {
 			log.Error(err)
-			return 1
+			return 254
 		}
 
 		noDNS := dnsConfMode.Pairs["resolv"] != "default" // force ignore CNI DNS results
 		n, err = networking.Setup(root, p.UUID, fps, netList, localConfig, flavor, noDNS, debug)
 		if err != nil {
 			log.PrintE("failed to setup network", err)
-			return 1
+			return 254
 		}
 
 		if err = n.Save(); err != nil {
 			log.PrintE("failed to save networking state", err)
 			n.Teardown(flavor, debug)
-			return 1
+			return 254
 		}
 
 		if len(mdsToken) > 0 {
 			hostIP, err := n.GetForwardableNetHostIP()
 			if err != nil {
 				log.PrintE("failed to get default Host IP", err)
-				return 1
+				return 254
 			}
 
 			p.MetadataServiceURL = common.MetadataServicePublicURL(hostIP, mdsToken)
@@ -560,7 +562,7 @@ func stage1() int {
 	} else {
 		if flavor == "kvm" {
 			log.Print("flavor kvm requires private network configuration (try --net)")
-			return 1
+			return 254
 		}
 		if len(mdsToken) > 0 {
 			p.MetadataServiceURL = common.MetadataServicePublicURL(localhostIP, mdsToken)
@@ -584,12 +586,12 @@ func stage1() int {
 	if mutable {
 		if err = stage1initcommon.MutableEnv(p); err != nil {
 			log.Error(err)
-			return 1
+			return 254
 		}
 	} else {
 		if err = stage1initcommon.ImmutableEnv(p, interactive, privateUsers, insecureOptions); err != nil {
 			log.Error(err)
-			return 1
+			return 254
 		}
 	}
 
@@ -601,7 +603,7 @@ func stage1() int {
 		kvm.InitDebug(debug)
 		if err := KvmNetworkingToSystemd(p, n); err != nil {
 			log.PrintE("failed to configure systemd for kvm", err)
-			return 1
+			return 254
 		}
 	}
 
@@ -613,7 +615,7 @@ func stage1() int {
 	args, env, err := getArgsEnv(p, flavor, canMachinedRegister, debug, n, insecureOptions)
 	if err != nil {
 		log.Error(err)
-		return 1
+		return 254
 	}
 
 	// create a separate mount namespace so the cgroup filesystems
@@ -634,37 +636,49 @@ func stage1() int {
 		log.FatalE("error making / a shared and slave mount", err)
 	}
 
-	enabledCgroups, err := cgroup.GetEnabledCgroups()
+	unifiedCgroup, err := cgroup.IsCgroupUnified("/")
 	if err != nil {
-		log.FatalE("error getting cgroups", err)
-		return 1
+		log.FatalE("error determining cgroup version", err)
+		return 254
 	}
 
-	if err := mountHostCgroups(enabledCgroups); err != nil {
-		log.FatalE("couldn't mount the host cgroups", err)
-		return 1
-	}
-
-	var serviceNames []string
-	for _, app := range p.Manifest.Apps {
-		serviceNames = append(serviceNames, stage1initcommon.ServiceUnitName(app.Name))
-	}
 	s1Root := common.Stage1RootfsPath(p.Root)
 	machineID := stage1initcommon.GetMachineID(p)
-	subcgroup, err := getContainerSubCgroup(machineID, canMachinedRegister)
-	if err == nil {
-		if err := ioutil.WriteFile(filepath.Join(p.Root, "subcgroup"),
-			[]byte(fmt.Sprintf("%s", subcgroup)), 0644); err != nil {
-			log.FatalE("cannot write subcgroup file", err)
-			return 1
+
+	subcgroup, err := getContainerSubCgroup(machineID, canMachinedRegister, unifiedCgroup)
+	if err != nil {
+		log.FatalE("error getting container subcgroup", err)
+		return 254
+	}
+
+	if err := ioutil.WriteFile(filepath.Join(p.Root, "subcgroup"),
+		[]byte(fmt.Sprintf("%s", subcgroup)), 0644); err != nil {
+		log.FatalE("cannot write subcgroup file", err)
+		return 254
+	}
+
+	if !unifiedCgroup {
+		enabledCgroups, err := v1.GetEnabledCgroups()
+		if err != nil {
+			log.FatalE("error getting v1 cgroups", err)
+			return 254
 		}
 
-		if err := mountContainerCgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
-			log.PrintE("couldn't mount the container cgroups", err)
-			return 1
+		if err := mountHostV1Cgroups(enabledCgroups); err != nil {
+			log.FatalE("couldn't mount the host v1 cgroups", err)
+			return 254
 		}
-	} else {
-		log.PrintE("continuing with per-app isolators disabled", err)
+
+		var serviceNames []string
+		for _, app := range p.Manifest.Apps {
+			serviceNames = append(serviceNames, stage1initcommon.ServiceUnitName(app.Name))
+		}
+
+		if err := mountContainerV1Cgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
+			log.PrintE("couldn't mount the container v1 cgroups", err)
+			return 254
+		}
+
 	}
 
 	// KVM flavor has a bit different logic in handling pid vs ppid, for details look into #2389
@@ -677,13 +691,13 @@ func stage1() int {
 
 	if err = stage1common.WritePid(os.Getpid(), pid_filename); err != nil {
 		log.Error(err)
-		return 1
+		return 254
 	}
 
 	if flavor == "kvm" {
 		if err := KvmPrepareMounts(s1Root, p); err != nil {
 			log.PrintE("could not prepare mounts", err)
-			return 1
+			return 254
 		}
 	}
 	diag.Println(args)
@@ -693,16 +707,16 @@ func stage1() int {
 	})
 	if err != nil {
 		log.PrintE(fmt.Sprintf("failed to execute %q", args[0]), err)
-		return 1
+		return 254
 	}
 
 	return 0
 }
 
-func areHostCgroupsMounted(enabledCgroups map[int][]string) bool {
-	controllers := cgroup.GetControllerDirs(enabledCgroups)
+func areHostV1CgroupsMounted(enabledV1Cgroups map[int][]string) bool {
+	controllers := v1.GetControllerDirs(enabledV1Cgroups)
 	for _, c := range controllers {
-		if !cgroup.IsControllerMounted(c) {
+		if !v1.IsControllerMounted(c) {
 			return false
 		}
 	}
@@ -710,21 +724,21 @@ func areHostCgroupsMounted(enabledCgroups map[int][]string) bool {
 	return true
 }
 
-// mountHostCgroups mounts the host cgroup hierarchy as required by
+// mountHostV1Cgroups mounts the host v1 cgroup hierarchy as required by
 // systemd-nspawn. We need this because some distributions don't have the
 // "name=systemd" cgroup or don't mount the cgroup controllers in
 // "/sys/fs/cgroup", and systemd-nspawn needs this. Since this is mounted
 // inside the rkt mount namespace, it doesn't affect the host.
-func mountHostCgroups(enabledCgroups map[int][]string) error {
+func mountHostV1Cgroups(enabledCgroups map[int][]string) error {
 	systemdControllerPath := "/sys/fs/cgroup/systemd"
-	if !areHostCgroupsMounted(enabledCgroups) {
+	if !areHostV1CgroupsMounted(enabledCgroups) {
 		mountContext := os.Getenv(common.EnvSELinuxMountContext)
-		if err := cgroup.CreateCgroups("/", enabledCgroups, mountContext); err != nil {
+		if err := v1.CreateCgroups("/", enabledCgroups, mountContext); err != nil {
 			return errwrap.Wrap(errors.New("error creating host cgroups"), err)
 		}
 	}
 
-	if !cgroup.IsControllerMounted("systemd") {
+	if !v1.IsControllerMounted("systemd") {
 		if err := os.MkdirAll(systemdControllerPath, 0700); err != nil {
 			return err
 		}
@@ -736,22 +750,22 @@ func mountHostCgroups(enabledCgroups map[int][]string) error {
 	return nil
 }
 
-// mountContainerCgroups mounts the cgroup controllers hierarchy in the container's
+// mountContainerV1Cgroups mounts the cgroup controllers hierarchy in the container's
 // namespace read-only, leaving the needed knobs in the subcgroup for each-app
 // read-write so systemd inside stage1 can apply isolators to them
-func mountContainerCgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
+func mountContainerV1Cgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
 	mountContext := os.Getenv(common.EnvSELinuxMountContext)
-	if err := cgroup.CreateCgroups(s1Root, enabledCgroups, mountContext); err != nil {
+	if err := v1.CreateCgroups(s1Root, enabledCgroups, mountContext); err != nil {
 		return errwrap.Wrap(errors.New("error creating container cgroups"), err)
 	}
-	if err := cgroup.RemountCgroupsRO(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
+	if err := v1.RemountCgroupsRO(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
 		return errwrap.Wrap(errors.New("error restricting container cgroups"), err)
 	}
 
 	return nil
 }
 
-func getContainerSubCgroup(machineID string, canMachinedRegister bool) (string, error) {
+func getContainerSubCgroup(machineID string, canMachinedRegister, unified bool) (string, error) {
 	var subcgroup string
 	fromUnit, err := util.RunningFromSystemService()
 	if err != nil {
@@ -771,6 +785,10 @@ func getContainerSubCgroup(machineID string, canMachinedRegister bool) (string, 
 			return "", errwrap.Wrap(errors.New("could not get unit name"), err)
 		}
 		subcgroup = filepath.Join(slicePath, unit)
+
+		if unified {
+			subcgroup = filepath.Join(subcgroup, "payload")
+		}
 	} else {
 		escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
 		machineDir := "machine-" + escapedmID + ".scope"
@@ -780,18 +798,26 @@ func getContainerSubCgroup(machineID string, canMachinedRegister bool) (string, 
 			// look it up in /proc/self/cgroup
 			subcgroup = filepath.Join("machine.slice", machineDir)
 		} else {
-			// when registration is disabled the container will be directly
-			// under the current cgroup so we can look it up in /proc/self/cgroup
-			ownCgroupPath, err := cgroup.GetOwnCgroupPath("name=systemd")
-			if err != nil {
-				return "", errwrap.Wrap(errors.New("could not get own cgroup path"), err)
-			}
-			// systemd-nspawn won't work if we are in the root cgroup. In addition,
-			// we want all rkt instances to be in distinct cgroups. Create a
-			// subcgroup and add ourselves to it.
-			subcgroup = filepath.Join(ownCgroupPath, machineDir)
-			if err := cgroup.JoinSubcgroup("systemd", subcgroup); err != nil {
-				return "", errwrap.Wrap(fmt.Errorf("error joining %s subcgroup", subcgroup), err)
+			if unified {
+				var err error
+				subcgroup, err = v2.GetOwnCgroupPath()
+				if err != nil {
+					return "", errwrap.Wrap(errors.New("could not get own v2 cgroup path"), err)
+				}
+			} else {
+				// when registration is disabled the container will be directly
+				// under the current cgroup so we can look it up in /proc/self/cgroup
+				ownV1CgroupPath, err := v1.GetOwnCgroupPath("name=systemd")
+				if err != nil {
+					return "", errwrap.Wrap(errors.New("could not get own v1 cgroup path"), err)
+				}
+				// systemd-nspawn won't work if we are in the root cgroup. In addition,
+				// we want all rkt instances to be in distinct cgroups. Create a
+				// subcgroup and add ourselves to it.
+				subcgroup = filepath.Join(ownV1CgroupPath, machineDir)
+				if err := v1.JoinSubcgroup("systemd", subcgroup); err != nil {
+					return "", errwrap.Wrap(fmt.Errorf("error joining %s subcgroup", ownV1CgroupPath), err)
+				}
 			}
 		}
 	}

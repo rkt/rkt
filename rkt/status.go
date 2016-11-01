@@ -52,26 +52,26 @@ func init() {
 func runStatus(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 1 {
 		cmd.Usage()
-		return 1
+		return 254
 	}
 
 	p, err := pkgPod.PodFromUUIDString(getDataDir(), args[0])
 	if err != nil {
 		stderr.PrintE("problem retrieving pod", err)
-		return 1
+		return 254
 	}
 	defer p.Close()
 
 	if flagWait {
 		if err := p.WaitExited(); err != nil {
 			stderr.PrintE("unable to wait for pod", err)
-			return 1
+			return 254
 		}
 	}
 
 	if err = printStatus(p); err != nil {
 		stderr.PrintE("unable to print status", err)
-		return 1
+		return 254
 	}
 
 	return 0

@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	manifestExportTemplate = `{"acKind":"ImageManifest","acVersion":"0.8.7","name":"IMG_NAME","labels":[{"name":"version","value":"1.15.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}],"app":{"exec":["/inspect"],"user":"0","group":"0","workingDirectory":"/","environment":[{"name":"VAR_FROM_MANIFEST","value":"manifest"}]}}`
+	manifestExportTemplate = `{"acKind":"ImageManifest","acVersion":"0.8.8","name":"IMG_NAME","labels":[{"name":"version","value":"1.18.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}],"app":{"exec":["/inspect"],"user":"0","group":"0","workingDirectory":"/","environment":[{"name":"VAR_FROM_MANIFEST","value":"manifest"}]}}`
 )
 
 // TestImageExport tests 'rkt image export', it will import some existing
@@ -95,7 +95,7 @@ func TestImageExport(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		expectedStatus := 1
+		expectedStatus := 254
 		if tt.shouldFind {
 			expectedStatus = 0
 		}

@@ -158,13 +158,13 @@ func runImages(cmd *cobra.Command, args []string) int {
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	remotes, err := s.GetAllRemotes()
 	if err != nil {
 		stderr.PrintE("unable to get remotes", err)
-		return 1
+		return 254
 	}
 
 	remoteMap := make(map[string]*imagestore.Remote)
@@ -179,7 +179,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 	aciInfos, err := s.GetAllACIInfos(sortAciinfoFields, bool(flagImagesSortAsc))
 	if err != nil {
 		stderr.PrintE("unable to get aci infos", err)
-		return 1
+		return 254
 	}
 
 	for _, aciInfo := range aciInfos {

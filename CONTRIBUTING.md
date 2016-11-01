@@ -55,6 +55,11 @@ CoreOS projects written in Go follow a set of style guidelines that we've docume
 [here](https://github.com/coreos/docs/tree/master/golang). Please follow them when
 working on your contributions.
 
+### Documentation Style
+
+CoreOS project docs should follow the [Documentation style and formatting
+guide](https://github.com/coreos/docs/tree/master/STYLE.md). Thank you for documenting!
+
 ### Format of the Commit Message
 
 We follow a rough convention for commit messages that is designed to answer two

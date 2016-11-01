@@ -68,8 +68,13 @@ func init() {
 	httpDo = Client
 
 	// copy for InsecureTLS
-	tInsecureTLS := *t
-	tInsecureTLS.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	tInsecureTLS := http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: func(n, a string) (net.Conn, error) {
+			return net.DialTimeout(n, a, defaultDialTimeout)
+		},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 	ClientInsecureTLS = &http.Client{
 		Transport: &tInsecureTLS,
 	}

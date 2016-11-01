@@ -192,7 +192,7 @@ func runList(cmd *cobra.Command, args []string) int {
 
 	}); err != nil {
 		stderr.PrintE("failed to get pod handles", err)
-		return 1
+		return 254
 	}
 
 	switch flagFormat {
@@ -203,14 +203,14 @@ func runList(cmd *cobra.Command, args []string) int {
 		result, err := json.Marshal(pods)
 		if err != nil {
 			stderr.PrintE("error marshaling the pods", err)
-			return 1
+			return 254
 		}
 		stdout.Print(string(result))
 	case "json-pretty":
 		result, err := json.MarshalIndent(pods, "", "\t")
 		if err != nil {
 			stderr.PrintE("error marshaling the pods", err)
-			return 1
+			return 254
 		}
 		stdout.Print(string(result))
 	}

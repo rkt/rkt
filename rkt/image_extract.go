@@ -51,50 +51,50 @@ func init() {
 func runImageExtract(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 2 {
 		cmd.Usage()
-		return 1
+		return 254
 	}
 	outputDir := args[1]
 
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	key, err := getStoreKeyFromAppOrHash(s, args[0])
 	if err != nil {
 		stderr.Error(err)
-		return 1
+		return 254
 	}
 
 	aci, err := s.ReadStream(key)
 	if err != nil {
 		stderr.PrintE("error reading ACI from the store", err)
-		return 1
+		return 254
 	}
 
 	// ExtractTar needs an absolute path
 	absOutputDir, err := filepath.Abs(outputDir)
 	if err != nil {
 		stderr.PrintE("error converting output to an absolute path", err)
-		return 1
+		return 254
 	}
 
 	if _, err := os.Stat(absOutputDir); err == nil {
 		if !flagExtractOverwrite {
 			stderr.Print("output directory exists (try --overwrite)")
-			return 1
+			return 254
 		}
 
 		// don't allow the user to delete the root filesystem by mistake
 		if absOutputDir == "/" {
 			stderr.Print("this would delete your root filesystem. Refusing.")
-			return 1
+			return 254
 		}
 
 		if err := os.RemoveAll(absOutputDir); err != nil {
 			stderr.PrintE("error removing existing output dir", err)
-			return 1
+			return 254
 		}
 	}
 
@@ -106,13 +106,13 @@ func runImageExtract(cmd *cobra.Command, args []string) (exit int) {
 		rktTmpDir, err := s.TmpDir()
 		if err != nil {
 			stderr.PrintE("error creating rkt temporary directory", err)
-			return 1
+			return 254
 		}
 
 		tmpDir, err := ioutil.TempDir(rktTmpDir, "rkt-image-extract-")
 		if err != nil {
 			stderr.PrintE("error creating temporary directory", err)
-			return 1
+			return 254
 		}
 		defer os.RemoveAll(tmpDir)
 
@@ -120,13 +120,13 @@ func runImageExtract(cmd *cobra.Command, args []string) (exit int) {
 	} else {
 		if err := os.MkdirAll(absOutputDir, 0755); err != nil {
 			stderr.PrintE("error creating output directory", err)
-			return 1
+			return 254
 		}
 	}
 
 	if err := tar.ExtractTar(aci, extractDir, false, user.NewBlankUidRange(), nil); err != nil {
 		stderr.PrintE("error extracting ACI", err)
-		return 1
+		return 254
 	}
 
 	if flagExtractRootfsOnly {
@@ -136,11 +136,11 @@ func runImageExtract(cmd *cobra.Command, args []string) (exit int) {
 				// it's on a different device, fall back to copying
 				if err := fileutil.CopyTree(rootfsDir, absOutputDir, user.NewBlankUidRange()); err != nil {
 					stderr.PrintE("error copying ACI rootfs", err)
-					return 1
+					return 254
 				}
 			} else {
 				stderr.PrintE("error moving ACI rootfs", err)
-				return 1
+				return 254
 			}
 		}
 	}

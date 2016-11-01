@@ -205,7 +205,7 @@ The current version of the stage1 interface is 3.
 ```json
 {
     "acKind": "ImageManifest",
-    "acVersion": "0.8.7",
+    "acVersion": "0.8.8",
     "name": "foo.com/rkt/stage1",
     "labels": [
         {

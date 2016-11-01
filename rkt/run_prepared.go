@@ -57,43 +57,43 @@ func init() {
 func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 1 {
 		cmd.Usage()
-		return 1
+		return 254
 	}
 
 	p, err := pkgPod.PodFromUUIDString(getDataDir(), args[0])
 	if err != nil {
 		stderr.PrintE("problem retrieving pod", err)
-		return 1
+		return 254
 	}
 	defer p.Close()
 
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	ts, err := treestore.NewStore(treeStoreDir(), s)
 	if err != nil {
 		stderr.PrintE("cannot open treestore", err)
-		return 1
+		return 254
 	}
 
 	if p.State() != pkgPod.Prepared {
 		stderr.Printf("pod %q is not prepared", p.UUID)
-		return 1
+		return 254
 	}
 
 	_, manifest, err := p.PodManifest()
 	if err != nil {
 		stderr.PrintE("cannot read pod manifest", err)
-		return 1
+		return 254
 	}
 
 	if flagInteractive {
 		if len(manifest.Apps) > 1 {
 			stderr.Print("interactive option only supports pods with one app")
-			return 1
+			return 254
 		}
 	}
 
@@ -103,19 +103,19 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 	if flagMDSRegister {
 		if err := stage0.CheckMdsAvailability(); err != nil {
 			stderr.Error(err)
-			return 1
+			return 254
 		}
 	}
 
 	if err := p.ToRun(); err != nil {
 		stderr.PrintE("cannot transition to run", err)
-		return 1
+		return 254
 	}
 
 	lfd, err := p.Fd()
 	if err != nil {
 		stderr.PrintE("unable to get lock fd", err)
-		return 1
+		return 254
 	}
 
 	rktgid, err := common.LookupGid(common.RktGroup)
@@ -131,7 +131,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 			ovlOk = false
 		} else {
 			stderr.PrintE("error determining overlay support", err)
-			return 1
+			return 254
 		}
 	}
 
@@ -141,13 +141,13 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 	// between prepare and run-prepared
 	if ovlPrep && !ovlOk {
 		stderr.Print("unable to run prepared overlay-enabled pod: overlay not supported")
-		return 1
+		return 254
 	}
 
 	DNSConfMode, DNSConfig, HostsEntries, err := parseDNSFlags(flagHostsEntries, flagDNS, flagDNSSearch, flagDNSOpt, flagDNSDomain)
 	if err != nil {
 		stderr.PrintE("error with dns flags", err)
-		return 1
+		return 254
 	}
 
 	rcfg := stage0.RunConfig{
@@ -176,5 +176,5 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 		stage0.InitDebug()
 	}
 	stage0.Run(rcfg, p.Path(), getDataDir()) // execs, never returns
-	return 1
+	return 254
 }

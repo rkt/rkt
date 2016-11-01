@@ -108,27 +108,26 @@ func (rb *RepositoryBackend) BuildACI(layerIDs []string, dockerURL *types.Parsed
 	}
 }
 
+// checkRegistryStatus determines registry API version compatibility according to spec:
+// https://docs.docker.com/registry/spec/api/#/api-version-check
 func checkRegistryStatus(statusCode int, hdr http.Header, version registryVersion) (bool, error) {
 	switch statusCode {
 	case http.StatusOK, http.StatusUnauthorized:
 		ok := true
 		if version == registryV2 {
-			// v2 API requires this check
+			// According to v2 spec, registries SHOULD set this header value
+			// and clients MAY fallback to v1 if missing, as done here.
 			ok = hdr.Get("Docker-Distribution-API-Version") == "registry/2.0"
 		}
 		return ok, nil
-	case http.StatusNotFound:
-		return false, nil
 	}
-
-	return false, fmt.Errorf("unexpected http code: %d", statusCode)
+	return false, nil
 }
 
 func (rb *RepositoryBackend) supportsRegistry(indexURL string, version registryVersion) (schema string, ok bool, err error) {
 	var URLPath string
 	switch version {
 	case registryV1:
-		// the v1 API defines this URL to check if the registry's status
 		URLPath = "v1/_ping"
 	case registryV2:
 		URLPath = "v2"

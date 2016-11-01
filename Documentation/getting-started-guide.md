@@ -42,7 +42,7 @@ $ ldd hello
 
 ## Create the image
 
-To create the image, we can use `acbuild`, which can be downloaded via one of the [releases in the acbuild repository](https://github.com/appc/acbuild/releases)
+To create the image, we can use `acbuild`, which can be downloaded via one of the [releases in the containers/build repository](https://github.com/containers/build/releases)
 
 The following commands will create an ACI containing our application and important metadata.
 

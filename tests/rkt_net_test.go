@@ -1022,7 +1022,7 @@ func NewNetCNIDNSArgNoneTest() testutils.Test {
 			ctx.Cmd(), nt.NetParameter(), getInspectImagePath(), appCmd)
 		child := spawnOrFail(t, cmd)
 		ctx.RegisterChild(child)
-		defer waitOrFail(t, child, 1)
+		defer waitOrFail(t, child, 254)
 
 		expectedRegex := `Cannot stat file "/etc/resolv.conf": stat /etc/resolv.conf: no such file or directory`
 
@@ -1226,7 +1226,7 @@ func NewNetIPConflictTest() testutils.Test {
 		}
 
 		// Clean up
-		waitOrFail(t, child2, 1)
+		waitOrFail(t, child2, 254)
 		syscall.Kill(child1.Cmd.Process.Pid, syscall.SIGTERM)
 		waitOrFail(t, child1, 0)
 	})

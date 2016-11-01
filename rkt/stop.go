@@ -60,7 +60,7 @@ func runStop(cmd *cobra.Command, args []string) (exit int) {
 
 	default:
 		cmd.Usage()
-		return 1
+		return 254
 	}
 
 	for _, podUUID := range podUUIDs {
@@ -92,7 +92,7 @@ func runStop(cmd *cobra.Command, args []string) (exit int) {
 
 	if errors > 0 {
 		stderr.Error(fmt.Errorf("failed to stop %d pod(s)", errors))
-		return 1
+		return 254
 	}
 
 	return ret

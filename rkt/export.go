@@ -89,33 +89,33 @@ func appHasMountpoints(podPath string, appName types.ACName) (bool, error) {
 func runExport(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 2 {
 		cmd.Usage()
-		return 1
+		return 254
 	}
 
 	outACI := args[1]
 	ext := filepath.Ext(outACI)
 	if ext != schema.ACIExtension {
 		stderr.Printf("extension must be %s (given %s)", schema.ACIExtension, outACI)
-		return 1
+		return 254
 	}
 
 	p, err := pkgPod.PodFromUUIDString(getDataDir(), args[0])
 	if err != nil {
 		stderr.PrintE("problem retrieving pod", err)
-		return 1
+		return 254
 	}
 	defer p.Close()
 
 	state := p.State()
 	if state != pkgPod.Exited && state != pkgPod.ExitedGarbage {
 		stderr.Print("pod is not exited. Only exited pods can be exported")
-		return 1
+		return 254
 	}
 
 	app, err := getApp(p)
 	if err != nil {
 		stderr.PrintE("unable to find app", err)
-		return 1
+		return 254
 	}
 
 	root := common.AppPath(p.Path(), app.Name)
@@ -124,12 +124,12 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 		tmpDir := filepath.Join(getDataDir(), "tmp")
 		if err := os.MkdirAll(tmpDir, common.DefaultRegularDirPerm); err != nil {
 			stderr.PrintE("unable to create temp directory", err)
-			return 1
+			return 254
 		}
 		podDir, err := ioutil.TempDir(tmpDir, fmt.Sprintf("rkt-export-%s", p.UUID))
 		if err != nil {
 			stderr.PrintE("unable to create export temp directory", err)
-			return 1
+			return 254
 		}
 		defer func() {
 			if err := os.RemoveAll(podDir); err != nil {
@@ -140,12 +140,12 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 		mntDir := filepath.Join(podDir, "rootfs")
 		if err := os.Mkdir(mntDir, common.DefaultRegularDirPerm); err != nil {
 			stderr.PrintE("unable to create rootfs directory inside temp directory", err)
-			return 1
+			return 254
 		}
 
 		if err := mountOverlay(p, app, mntDir); err != nil {
 			stderr.PrintE(fmt.Sprintf("couldn't mount directory at %s", mntDir), err)
-			return 1
+			return 254
 		}
 		defer func() {
 			if err := syscall.Unmount(mntDir, 0); err != nil {
@@ -158,11 +158,11 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 		hasMPs, err := appHasMountpoints(p.Path(), app.Name)
 		if err != nil {
 			stderr.PrintE("error parsing mountpoints", err)
-			return 1
+			return 254
 		}
 		if hasMPs {
 			stderr.Printf("pod has remaining mountpoints. Only pods using overlayfs or with no mountpoints can be exported")
-			return 1
+			return 254
 		}
 	}
 
@@ -175,13 +175,13 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 		// The file was found, save uid & gid shift and count
 		if err := uidRange.Deserialize(privUserContent); err != nil {
 			stderr.PrintE(fmt.Sprintf("problem deserializing the content of %s", common.PrivateUsersPreparedFilename), err)
-			return 1
+			return 254
 		}
 	}
 
 	if err = buildAci(root, manifestPath, outACI, uidRange); err != nil {
 		stderr.PrintE("error building aci", err)
-		return 1
+		return 254
 	}
 	return 0
 }

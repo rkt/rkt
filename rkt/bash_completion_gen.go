@@ -27,6 +27,6 @@ func main() {
 	err := cmdRkt.GenBashCompletionFile("dist/bash_completion/rkt.bash")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate the bash completion file: %v\n", err)
-		os.Exit(1)
+		os.Exit(254)
 	}
 }

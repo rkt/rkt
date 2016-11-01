@@ -28,13 +28,14 @@ import (
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/user"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 
 	"github.com/coreos/go-systemd/unit"
-	"github.com/coreos/rkt/common"
 	"github.com/hashicorp/errwrap"
+	"k8s.io/kubernetes/pkg/api/resource"
 )
 
 func MutableEnv(p *stage1commontypes.Pod) error {
@@ -285,9 +286,9 @@ func (uw *UnitWriter) AppUnit(
 		return
 	}
 
-	flavor, _, err := GetFlavor(uw.p)
+	flavor, systemdVersion, err := GetFlavor(uw.p)
 	if err != nil {
-		uw.err = errwrap.Wrap(errors.New("failed to create shutdown service"), err)
+		uw.err = errwrap.Wrap(errors.New("unable to determine stage1 flavor"), err)
 		return
 	}
 
@@ -358,7 +359,6 @@ func (uw *UnitWriter) AppUnit(
 		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePath(appName)),
 		unit.NewUnitOption("Service", "User", strconv.Itoa(u)),
 		unit.NewUnitOption("Service", "Group", strconv.Itoa(g)),
-		unit.NewUnitOption("Service", "SupplementaryGroups", strings.Join(supplementaryGroups, " ")),
 
 		// This helps working around a race
 		// (https://github.com/systemd/systemd/issues/2913) that causes the
@@ -366,6 +366,10 @@ func (uw *UnitWriter) AppUnit(
 		// short-lived and runs as non-root.
 		unit.NewUnitOption("Service", "SyslogIdentifier", appName.String()),
 	}...)
+
+	if len(supplementaryGroups) > 0 {
+		opts = appendOptionsList(opts, "Service", "SupplementaryGroups", "", supplementaryGroups)
+	}
 
 	if supportsNotify(uw.p, appName.String()) {
 		opts = append(opts, unit.NewUnitOption("Service", "Type", "notify"))
@@ -428,11 +432,18 @@ func (uw *UnitWriter) AppUnit(
 			rwDirs = append(rwDirs, filepath.Join(common.RelAppRootfsPath(appName), mntPath))
 		}
 	}
+	if len(rwDirs) > 0 {
+		opts = appendOptionsList(opts, "Service", "ReadWriteDirectories", "", rwDirs)
+	}
 
-	// Restrict access to sensitive paths (eg. procfs) and devices. For kvm flavor,
-	// these paths are stored inside the vm, without influence to the host.
+	// Restrict access to sensitive paths (eg. procfs and sysfs entries).
+	if !insecureOptions.DisablePaths {
+		opts = protectKernelTunables(opts, appName, systemdVersion)
+	}
+
+	// Generate default device policy for the app, as well as the list of allowed devices.
+	// For kvm flavor, devices are VM-specific and restricting them is not strictly needed.
 	if !insecureOptions.DisablePaths && flavor != "kvm" {
-		opts = protectSystemFiles(opts, appName)
 		opts = append(opts, unit.NewUnitOption("Service", "DevicePolicy", "closed"))
 		deviceAllows, err := generateDeviceAllows(common.Stage1RootfsPath(absRoot), appName, app.MountPoints, mounts, uidRange)
 		if err != nil {
@@ -444,7 +455,6 @@ func (uw *UnitWriter) AppUnit(
 		}
 	}
 
-	opts = append(opts, unit.NewUnitOption("Service", "ReadWriteDirectories", strings.Join(rwDirs, " ")))
 	// When an app fails, we shut down the pod
 	opts = append(opts, unit.NewUnitOption("Unit", "OnFailure", "halt.target"))
 
@@ -473,20 +483,56 @@ func (uw *UnitWriter) AppUnit(
 		}
 	}
 
+	doWithIsolator := func(isolator string, f func() error) bool {
+		ok, err := cgroup.IsIsolatorSupported(isolator)
+		if err != nil {
+			uw.err = err
+			return true
+		}
+
+		if !ok {
+			fmt.Fprintf(os.Stderr, "warning: resource/%s isolator set but support disabled in the kernel, skipping\n", isolator)
+		}
+
+		if err := f(); err != nil {
+			uw.err = err
+			return true
+		}
+
+		return false
+	}
+
+	exit := false
 	for _, i := range app.Isolators {
+		if exit {
+			return
+		}
+
 		switch v := i.Value().(type) {
 		case *types.ResourceMemory:
-			opts, err = cgroup.MaybeAddIsolator(opts, "memory", v.Limit())
-			if err != nil {
-				uw.err = err
-				return
-			}
+			exit = doWithIsolator("memory", func() error {
+				if v.Limit() == nil {
+					return nil
+				}
+
+				opts = append(opts, unit.NewUnitOption("Service", "MemoryLimit", strconv.Itoa(int(v.Limit().Value()))))
+				return nil
+			})
 		case *types.ResourceCPU:
-			opts, err = cgroup.MaybeAddIsolator(opts, "cpu", v.Limit())
-			if err != nil {
-				uw.err = err
-				return
-			}
+			exit = doWithIsolator("cpu", func() error {
+				if v.Limit() == nil {
+					return nil
+				}
+
+				if v.Limit().Value() > resource.MaxMilliValue {
+					return fmt.Errorf("cpu limit exceeds the maximum millivalue: %v", v.Limit().String())
+				}
+
+				quota := strconv.Itoa(int(v.Limit().MilliValue()/10)) + "%"
+				opts = append(opts, unit.NewUnitOption("Service", "CPUQuota", quota))
+
+				return nil
+			})
 		case *types.LinuxOOMScoreAdj:
 			opts = append(opts, unit.NewUnitOption("Service", "OOMScoreAdjust", strconv.Itoa(int(*v))))
 		case *types.LinuxCPUShares:
@@ -586,4 +632,15 @@ func (uw *UnitWriter) AppReaperUnit(appName types.ACName, binPath string, opts .
 		fmt.Sprintf("failed to write app %q reaper service", appName),
 		opts...,
 	)
+}
+
+// appendOptionsList updates an existing unit options list appending
+// an array of new properties, one entry at a time.
+// This is the preferred method to avoid hitting line length limits
+// in unit files. Target property must support multi-line entries.
+func appendOptionsList(opts []*unit.UnitOption, section string, property string, prefix string, vals []string) []*unit.UnitOption {
+	for _, v := range vals {
+		opts = append(opts, unit.NewUnitOption(section, property, fmt.Sprintf("%s%s", prefix, v)))
+	}
+	return opts
 }

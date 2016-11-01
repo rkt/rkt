@@ -31,17 +31,17 @@ func run() int {
 	lfd, err := common.GetRktLockFD()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get rkt lock fd: %v\n", err)
-		return 1
+		return 254
 	}
 
 	if err := sys.CloseOnExec(lfd, true); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to set FD_CLOEXEC on rkt lock: %v\n", err)
-		return 1
+		return 254
 	}
 
 	if err := stage1common.WritePid(os.Getpid(), "ppid"); err != nil {
 		fmt.Fprintf(os.Stderr, "write ppid: %v", err)
-		return 1
+		return 254
 	}
 	fmt.Println("success, stub stage1 would at this point switch to stage2")
 	return 0

@@ -1,3 +1,62 @@
+## 1.18.0
+
+This minor release contains bugfixes, UX enhancements, and other improvements.
+
+### UX changes:
+- rkt: gate diagnostic output behind `--debug` ([#3297](https://github.com/coreos/rkt/pull/3297)).
+- rkt: Change exit codes to 254 ([#3261](https://github.com/coreos/rkt/pull/3261)). 
+
+
+### Bug fixes:
+- stage1/kvm: correctly bind-mount read-only volumes ([#3304](https://github.com/coreos/rkt/pull/3304)). 
+- stage0/cas: apply xattr attributes ([#3305](https://github.com/coreos/rkt/pull/3305)). 
+- scripts/install-rkt: add iptables dependency ([#3309](https://github.com/coreos/rkt/pull/3309)). 
+- stage0/image: set proxy if InsecureSkipVerify is set ([#3303](https://github.com/coreos/rkt/pull/3303)).
+
+### Other changes
+- vendor: update docker2aci to 0.13.0 ([#3314](https://github.com/coreos/rkt/pull/3314)). This fixes multiple fetching and conversion bugs, including two security issues.
+- scripts: update glide vendor script ([#3313](https://github.com/coreos/rkt/pull/3313)). 
+- vendor: update appc/spec to v0.8.8 ([#3310](https://github.com/coreos/rkt/pull/3310)). 
+- stage1: update to CoreOS 1192.0.0 (and update sanity checks) ([#3283](https://github.com/coreos/rkt/pull/3283)). 
+- cgroup: introduce proper cgroup/v1, cgroup/v2 packages ([#3277](https://github.com/coreos/rkt/pull/3277)).
+- Documentation updates: ([#3281](https://github.com/coreos/rkt/pull/3281)), ([#3319](https://github.com/coreos/rkt/pull/3319)), ([#3308](https://github.com/coreos/rkt/pull/3308)).
+
+
+## 1.17.0
+
+This is a minor release packaging rkt-api systemd service units, and fixing a bug caused by overly long lines in generated stage1 unit files.
+
+### New features and UX changes
+- dist: Add systemd rkt-api service and socket ([#3271](https://github.com/coreos/rkt/pull/3271)).
+- dist: package rkt-api unit files ([#3275](https://github.com/coreos/rkt/pull/3275)).
+
+### Bug fixes
+- stage1: break down overlong property lines ([#3279](https://github.com/coreos/rkt/pull/3279)).
+
+### Other changes
+- stage0: fix typo and some docstring style ([#3266](https://github.com/coreos/rkt/pull/3266)).
+- stage0: Create an mtab symlink if not present ([#3265](https://github.com/coreos/rkt/pull/3265)).
+- stage1: use systemd protection for kernel tunables ([#3273](https://github.com/coreos/rkt/pull/3273)).
+- Documentation updates: ([#3280](https://github.com/coreos/rkt/pull/3280), [#3263](https://github.com/coreos/rkt/pull/3263), [#3268](https://github.com/coreos/rkt/pull/3268), [#3254](https://github.com/coreos/rkt/pull/3254), [#3199](https://github.com/coreos/rkt/pull/3199), [#3256](https://github.com/coreos/rkt/pull/3256))
+
+## 1.16.0
+
+This release contains an important bugfix for the stage1-host flavor, as well as initial internal support for cgroup2 and pod sandboxes as specified by kubernetes CRI (Container Runtime Interface).
+
+### Bug fixes
+- stage1/host: fix systemd-nspawn args ordering ([#3216](https://github.com/coreos/rkt/pull/3216)). Fixes https://github.com/coreos/rkt/issues/3215.
+
+### New features
+- rkt: support for unified cgroups (cgroup2) ([#3032](https://github.com/coreos/rkt/pull/3032)). This implements support for cgroups v2 along support for legacy version.
+- cri: initial implementation of stage1 changes ([#3218](https://github.com/coreos/rkt/pull/3218)). This PR pulls the stage1-based changes from the CRI branch back into
+master, leaving out the changes in stage0 (new app subcommands).
+
+### Other changes
+- doc/using-rkt-with-systemd: fix the go app example ([#3217](https://github.com/coreos/rkt/pull/3217)).
+- rkt: refactor app-level flags handling ([#3209](https://github.com/coreos/rkt/pull/3209)). This is in preparation for https://github.com/coreos/rkt/pull/3205
+- docs/distributions: rearrange, add centos ([#3212](https://github.com/coreos/rkt/pull/3212)).
+- rkt: Correct typos listed by the tool misspell ([#3208](https://github.com/coreos/rkt/pull/3208)).
+
 ## 1.15.0
 
 This relase brings some expanded DNS configuration options, beta support for QEMU, recursive volume mounts, and improved sd_notify support.

@@ -4,7 +4,7 @@ set -x
 
 cd $(mktemp -d)
 
-version="1.15.0"
+version="1.18.0"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -15,6 +15,7 @@ apt-get install -y --no-install-recommends \
         bash-completion \
         checkinstall \
         curl \
+        iptables \
         wget
 
 curl -sSL https://coreos.com/dist/pubkeys/app-signing-pubkey.gpg | gpg2 --import -

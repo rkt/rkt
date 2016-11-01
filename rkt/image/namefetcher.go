@@ -50,7 +50,7 @@ type nameFetcher struct {
 func (f *nameFetcher) Hash(app *discovery.App, a *asc) (string, error) {
 	ensureLogger(f.Debug)
 	name := app.Name.String()
-	log.Printf("searching for app image %s", name)
+	diag.Printf("searching for app image %s", name)
 	ep, err := f.discoverApp(app)
 	if err != nil {
 		return "", errwrap.Wrap(fmt.Errorf("discovery failed for %q", name), err)
@@ -94,15 +94,13 @@ func (f *nameFetcher) fetchImageFromEndpoints(app *discovery.App, ep discovery.A
 	// maybeOverrideAscFetcherWithRemote on the clone
 	aciURL := ep[0].ACI
 	ascURL := ep[0].ASC
-	log.Printf("remote fetching from URL %q", aciURL)
+	diag.Printf("remote fetching from URL %q", aciURL)
 	f.maybeOverrideAscFetcherWithRemote(ascURL, a)
 	return f.fetchImageFromSingleEndpoint(app, aciURL, a, latest)
 }
 
 func (f *nameFetcher) fetchImageFromSingleEndpoint(app *discovery.App, aciURL string, a *asc, latest bool) (string, error) {
-	if f.Debug {
-		log.Printf("fetching image from %s", aciURL)
-	}
+	diag.Printf("fetching image from %s", aciURL)
 
 	u, err := url.Parse(aciURL)
 	if err != nil {
@@ -114,9 +112,7 @@ func (f *nameFetcher) fetchImageFromSingleEndpoint(app *discovery.App, aciURL st
 	}
 	if !f.NoCache && rem != nil {
 		if useCached(rem.DownloadTime, rem.CacheMaxAge) {
-			if f.Debug {
-				log.Printf("image for %s isn't expired, not fetching.", aciURL)
-			}
+			diag.Printf("image for %s isn't expired, not fetching.", aciURL)
 			return rem.BlobKey, nil
 		}
 	}

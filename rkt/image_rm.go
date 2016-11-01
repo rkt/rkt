@@ -128,18 +128,18 @@ func rmImages(s *imagestore.Store, images []string) error {
 func runRmImage(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) < 1 {
 		stderr.Print("must provide at least one image ID")
-		return 1
+		return 254
 	}
 
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	if err := rmImages(s, args); err != nil {
 		stderr.Error(err)
-		return 1
+		return 254
 	}
 
 	return 0

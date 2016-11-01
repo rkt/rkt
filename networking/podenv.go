@@ -182,7 +182,9 @@ func (e *podEnv) setupNets(nets []activeNet, noDNS bool) error {
 	podHasResolvConf := err == nil
 
 	for i, n = range nets {
-		stderr.Printf("loading network %v with type %v", n.conf.Name, n.conf.Type)
+		if debuglog {
+			stderr.Printf("loading network %v with type %v", n.conf.Name, n.conf.Type)
+		}
 
 		n.runtime.IfName = fmt.Sprintf(IfNamePattern, i)
 		if n.runtime.ConfPath, err = copyFileToDir(n.runtime.ConfPath, e.netDir()); err != nil {
@@ -219,7 +221,9 @@ func (e *podEnv) setupNets(nets []activeNet, noDNS bool) error {
 func (e *podEnv) teardownNets(nets []activeNet) {
 
 	for i := len(nets) - 1; i >= 0; i-- {
-		stderr.Printf("teardown - executing net-plugin %v", nets[i].conf.Type)
+		if debuglog {
+			stderr.Printf("teardown - executing net-plugin %v", nets[i].conf.Type)
+		}
 
 		podNSpath := ""
 		if e.podNS != nil {
@@ -320,7 +324,9 @@ func loadUserNets(localConfig string, netsLoadList common.NetList) ([]activeNet,
 	}
 
 	userNetPath := filepath.Join(localConfig, UserNetPathSuffix)
-	stderr.Printf("loading networks from %v", userNetPath)
+	if debuglog {
+		stderr.Printf("loading networks from %v", userNetPath)
+	}
 
 	files, err := listFiles(userNetPath)
 	if err != nil {
