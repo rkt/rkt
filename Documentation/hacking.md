@@ -7,7 +7,9 @@ For more information on the rkt internals, see the [`devel`](devel/) documentati
 
 ## Building rkt
 
-You should be able build rkt on any modern Linux system with [Go](https://golang.org/) (1.5+) installed.
+The easiest way to build rkt is by using the coreos.com/rkt/builder ACI image. See instructions for how to use it in the README at [github.com/coreos/rkt-builder](https://github.com/coreos/rkt-builder).
+
+Alternatively, you should be able build rkt on any modern Linux system with [Go](https://golang.org/) (1.5+) installed.
 For the most part the codebase is self-contained (e.g. all dependencies are vendored), but assembly of the stage1 requires some other tools to be installed on the system.
 Please see [the list of the build-time dependencies](dependencies.md#build-time-dependencies).
 Once the dependencies have been satisfied you can build rkt with a default configuration by running the following commands:
