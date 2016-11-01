@@ -14,15 +14,21 @@
 
 package main
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/coreos/rkt/common"
+	"github.com/spf13/cobra"
+)
 
 var (
 	cmdApp = &cobra.Command{
-		Use:   "app [command]",
-		Short: "Operate on app level operations",
+		Use:    "app [command]",
+		Short:  "Operate on app level operations",
+		Hidden: true,
 	}
 )
 
 func init() {
-	cmdRkt.AddCommand(cmdApp)
+	if common.IsExperimentEnabled("app") {
+		cmdRkt.AddCommand(cmdApp)
+	}
 }
