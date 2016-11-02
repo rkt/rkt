@@ -262,7 +262,7 @@ The DHCP type requires a special client daemon, part of the [CNI DHCP plugin][cn
 This acts as a proxy between a DHCP client running inside the container and a DHCP service already running on the network, as well as renewing leases appropriately.
 
 The DHCP plugin binary can be executed in the daemon mode by launching it with `daemon` argument.
-However in rkt the DHCP plugin is bundled in stage1.aci so this requires extracting the binary from it:
+However, in rkt the DHCP plugin is bundled in stage1.aci so this requires extracting the binary from it:
 
 ```
 $ sudo ./rkt fetch --insecure-options=image ./stage1.aci
@@ -289,7 +289,7 @@ It is now possible to use the DHCP type by specifying it in the ipam section of 
 }
 ```
 
-For more information about DHCP plugin, see the [CNI docs][cni-dhcp].
+For more information about the DHCP plugin, see the [CNI docs][cni-dhcp].
 
 [cni-dhcp]: https://github.com/appc/cni/blob/master/Documentation/dhcp.md
 
