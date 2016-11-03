@@ -107,13 +107,13 @@ func TestPathsStat(t *testing.T) {
 		defer hiddenCtx.Cleanup()
 
 		//run
-		hiddenCmd := fmt.Sprintf("%s --insecure-options=image run %s", hiddenCtx.Cmd(), hiddenImage)
+		hiddenCmd := fmt.Sprintf("%s --debug --insecure-options=image run %s", hiddenCtx.Cmd(), hiddenImage)
 		hiddenExpectedLine := fmt.Sprintf("%s: mode: %s", tt.Path, tt.ExpectedMode)
 		runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
 		// run-prepared
 		hiddenCmd = fmt.Sprintf(`%s --insecure-options=image prepare %s`, hiddenCtx.Cmd(), hiddenImage)
 		uuid := runRktAndGetUUID(t, hiddenCmd)
-		hiddenCmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", hiddenCtx.Cmd(), uuid)
+		hiddenCmd = fmt.Sprintf("%s --debug run-prepared --mds-register=false %s", hiddenCtx.Cmd(), uuid)
 		runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
 	}
 }
