@@ -4,7 +4,7 @@
 
 This section describes the typical release cycle of rkt:
 
-1. A GitHub [milestone](https://github.com/coreos/rkt/milestones) sets the target date for a future rkt release. Releases occur approximately every two to three weeks.
+1. A GitHub [milestone][milestones] sets the target date for a future rkt release. Releases occur approximately every two to three weeks.
 2. Issues grouped into the next release milestone are worked on in order of priority.
 3. Changes are submitted for review in the form of a GitHub Pull Request (PR). Each PR undergoes review and must pass continuous integration (CI) tests before being accepted and merged into the main line of rkt source code.
 4. The day before each release is a short code freeze during which no new code or dependencies may be merged. Instead, this period focuses on polishing the release, with tasks concerning:
@@ -24,17 +24,17 @@ The following example assumes we're going from version 1.1.0 (`v1.1.0`) to 1.2.0
 Let's get started:
 
 - Start at the relevant milestone on GitHub (e.g. https://github.com/coreos/rkt/milestones/v1.2.0): ensure all referenced issues are closed (or moved elsewhere, if they're not done). Close the milestone.
-- Update the [roadmap](https://github.com/coreos/rkt/blob/master/ROADMAP.md) to remove the release you're performing, if necessary
+- Update the [roadmap][roadmap] to remove the release you're performing, if necessary
 - Ensure that `stage1/aci/aci-manifest.in` is the same version of appc/spec vendored with rkt. Otherwise, update it.
 - Branch from the latest master, make sure your git status is clean
 - Ensure the build is clean!
   - `git clean -ffdx && ./autogen.sh && ./configure --enable-tpm=no --enable-functional-tests && make && make check` should work
   - Integration tests on CI should be green
-- Update the [release notes](https://github.com/coreos/rkt/blob/master/CHANGELOG.md).
+- Update the [release notes][changelog].
   Try to capture most of the salient changes since the last release, but don't go into unnecessary detail (better to link/reference the documentation wherever possible).
   `scripts/changelog.sh` will help generating an initial list of changes. Correct/fix entries if necessary, and group them by category.
 
-The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/blob/master/configure.ac#L2), so the first thing to do is bump it:
+The rkt version is [hardcoded in the repository][configure_ac], so the first thing to do is bump it:
 
 - Run `scripts/bump-release v1.2.0`.
   This should generate two commits: a bump to the actual release (e.g. v1.2.0, including CHANGELOG updates), and then a bump to the release+git (e.g. v1.2.0+git).
@@ -43,7 +43,7 @@ The rkt version is [hardcoded in the repository](https://github.com/coreos/rkt/b
   As well as changing the actual version, it also attempts to fix a bunch of references in the documentation etc.
 - If the script didn't work, yell at the author and/or fix it.
   It can almost certainly be improved.
-- File a PR and get a review from another [MAINTAINER](https://github.com/coreos/rkt/blob/master/MAINTAINERS).
+- File a PR and get a review from another [maintainer][maintainers].
   This is useful to a) sanity check the diff, and b) be very explicit/public that a release is happening
 - Ensure the CI on the release PR is green!
 - Merge the PR
@@ -67,9 +67,9 @@ Sign a tagged release and push it to GitHub:
 
 Now we switch to the GitHub web UI to conduct the release:
 
-- https://github.com/coreos/rkt/releases/new
+- Start a [new release][gh-new-release] on Github
 - Tag "v1.2.0", release title "v1.2.0"
-- Copy-paste the release notes you added earlier in [CHANGELOG.md](https://github.com/coreos/rkt/blob/master/CHANGELOG.md)
+- Copy-paste the release notes you added earlier in [CHANGELOG.md][changelog]
 - You can also add a little more detail and polish to the release notes here if you wish, as it is more targeted towards users (vs the changelog being more for developers); use your best judgement and see previous releases on GH for examples.
 - Attach the release.
   This is a simple tarball:
@@ -95,7 +95,7 @@ cp release-build/target/bin/stage1-fly.aci stage1-fly-$RKTVER-linux-amd64.aci
 - Sign all release artifacts.
 
 rkt project key must be used to sign the generated binaries and images.`$RKTSUBKEYID` is the key ID of rkt project Yubikey. Connect the key and run `gpg2 --card-status` to get the ID.
-The public key for GPG signing can be found at [CoreOS Application Signing Key](https://coreos.com/security/app-signing-key) and is assumed as trusted.
+The public key for GPG signing can be found at [CoreOS Application Signing Key][coreos-key] and is assumed as trusted.
 
 The following commands are used for public release signing:
 
@@ -112,9 +112,19 @@ for i in $NAME.tar.gz stage1-*.aci *.deb *.rpm; do gpg2 --verify ${i}.asc ${i}; 
 
 Now it's announcement time: send an email to rkt-dev@googlegroups.com describing the release.
 Generally this is higher level overview outlining some of the major features, not a copy-paste of the release notes.
-Use your discretion and see [previous release emails](https://groups.google.com/forum/#!forum/rkt-dev) for examples.
+Use your discretion and see [previous release emails][rkt-dev-list] for examples.
 Make sure to include a list of authors that contributed since the previous release - something like the following might be handy:
 
 ```
 git log v1.1.0..v1.2.0 --pretty=format:"%an" | sort | uniq | tr '\n' ',' | sed -e 's#,#, #g' -e 's#, $#\n#'
 ```
+
+
+[changelog]: https://github.com/coreos/rkt/blob/master/CHANGELOG.md
+[configure_ac]: https://github.com/coreos/rkt/blob/master/configure.ac#L2
+[coreos-key]: https://coreos.com/security/app-signing-key
+[gh-new-release]: https://github.com/coreos/rkt/releases/new
+[milestones]: https://github.com/coreos/rkt/milestones
+[maintainers]: https://github.com/coreos/rkt/blob/master/MAINTAINERS
+[rkt-dev-list]: https://groups.google.com/forum/#!forum/rkt-dev
+[roadmap]: https://github.com/coreos/rkt/blob/master/ROADMAP.md

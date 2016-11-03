@@ -29,4 +29,7 @@ UUID                                   APP     IMAGE NAME              IMAGE ID 
 
 ## Global options
 
-See the table with [global options in general commands documentation](../commands.md#global-options).
+See the table with [global options in general commands documentation][global-options].
+
+
+[global-options]: ../commands.md#global-options

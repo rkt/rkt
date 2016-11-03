@@ -1,7 +1,7 @@
 # Capabilities Isolators Guide
 
 This document is a walk-through guide describing how to use rkt isolators for
-[Linux Capabilities](https://lwn.net/Kernel/Index/#Capabilities).
+[Linux Capabilities][capabilities].
 
 * [About Linux Capabilities](#about-linux-capabilities)
 * [Default Capabilities](#default-capabilities)
@@ -31,13 +31,11 @@ In the context of containers, capabilities are useful for:
    having to run them as root
 
 For the complete list of existing Linux capabilities and a detailed description
-of this security mechanism, see [capabilities(7)](http://man7.org/linux/man-pages/man7/capabilities.7.html).
+of this security mechanism, see the [capabilities(7) man page][man-capabilities].
 
 ## Default capabilities
 
-By default, rkt enforces [a default set of
-capabilities](https://github.com/appc/spec/blob/master/spec/ace.md#oslinuxcapabilities-remove-set)
-onto applications.
+By default, rkt enforces [a default set of capabilities][default-caps] onto applications.
 This default set is tailored to stop applications from performing a large
 variety of privileged actions, while not impacting their normal behavior.
 Operations which are typically not needed in containers and which may
@@ -68,7 +66,7 @@ completely subvert the sandbox: for example, `CAP_SYS_PTRACE` allows to access
 stage1 environment and `CAP_SYS_ADMIN` grants a broad range of privileges,
 effectively equivalent to root.
 Many other ways to maliciously transition across capabilities have already been
-[reported](https://forums.grsecurity.net/viewtopic.php?f=7&t=2522) too.
+[reported][grsec-forums].
 
 ### Retain-set
 
@@ -101,7 +99,7 @@ operations but is known to never open a raw socket, will have
 
 ## Usage Example
 
-The goal of these examples is to show how to build ACI images with acbuild,
+The goal of these examples is to show how to build ACIs with [`acbuild`][acbuild],
 where some capabilities are either explicitly blocked or allowed.
 For simplicity, the starting point will be the official Alpine Linux image from
 CoreOS which ships with `ping` and `nc` commands (from busybox). Those
@@ -234,7 +232,7 @@ by overriding capability isolators with command line options.
 ### Patching images
 
 Image manifests can be manipulated manually, by unpacking the image and editing
-the manifest file, or with helper tools like `actool`.
+the manifest file, or with helper tools like [`actool`][actool].
 To override an image's pre-defined capabilities set, replace the existing capabilities
 isolators in the image with new isolators defining the desired capabilities.
 
@@ -342,3 +340,10 @@ set of capabilities requirements and follow best practices:
     surfaces.
  4. Prefer a whitelisting approach, trying to keep the "retain-set" as small as
     possible.
+
+[acbuild]: https://github.com/containers/build
+[actool]: https://github.com/appc/spec#building-acis
+[capabilities]: https://lwn.net/Kernel/Index/#Capabilities
+[default-caps]: https://github.com/appc/spec/blob/master/spec/ace.md#oslinuxcapabilities-remove-set
+[grsec-forums]: https://forums.grsecurity.net/viewtopic.php?f=7&t=2522
+[man-capabilities]: http://man7.org/linux/man-pages/man7/capabilities.7.html

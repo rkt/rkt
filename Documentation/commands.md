@@ -5,9 +5,6 @@ Please contribute if you see an area that needs more detail.
 
 ## Downloading Images (ACIs)
 
-[aci-images]: https://github.com/appc/spec/blob/master/spec/aci.md#app-container-image
-[appc-discovery]: https://github.com/appc/spec/blob/master/spec/discovery.md#app-container-image-discovery
-
 rkt runs applications packaged according to the open-source [App Container Image][aci-images] specification.
 ACIs consist of the root filesystem of the application container, a manifest, and an optional signature.
 
@@ -19,9 +16,6 @@ rkt uses these hints to execute [meta discovery][appc-discovery].
 * [fetch](subcommands/fetch.md)
 
 ## Running Pods
-
-[metadata-spec]: https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service
-[rkt-mds]: subcommands/metadata-service.md
 
 rkt can execute ACIs identified by name, hash, local file path, or URL.
 If an ACI hasn't been cached on disk, rkt will attempt to find and download it.
@@ -127,7 +121,7 @@ $ journalctl -M rkt-bc3c1451-2e81-45c6-aeb0-807db44e31b4 -t redis
 [...]
 ```
 
-Additionaly, logs can be programmatically accessed via the [sd-journal API](https://www.freedesktop.org/software/systemd/man/sd-journal.html).
+Additionaly, logs can be programmatically accessed via the [sd-journal API][sd-journal].
 
 Currently there are two known main issues with logging in rkt:
 * In some rare situations when an application inside the pod is writing to `/dev/stdout` and `/dev/stderr` (i.e. nginx) there is no way to obtain logs.
@@ -149,7 +143,7 @@ Currently there are two known main issues with logging in rkt:
  $ journalctl -M rkt-bc3c1451-2e81-45c6-aeb0-807db44e31b4
  ```
 
- Etcd case will be solved when [flag allowing forcing output to stdout](https://github.com/coreos/etcd/issues/5449) is added.
+ Etcd case will be solved when [flag allowing forcing output to stdout][etcd-5449] is added.
 
 ##### Stopped pod
 
@@ -162,3 +156,11 @@ journalctl -m _MACHINE_ID=132f9d560e3f4d1eba8668efd488bb62
 ```
 
 On some distributions such as Ubuntu, persistent journal storage is not enabled by default. In this case, it is not possible to get the logs of a stopped pod. Persistent journal storage can be enabled with `sudo mkdir /var/log/journal` before starting the pods.
+
+
+[aci-images]: https://github.com/appc/spec/blob/master/spec/aci.md#app-container-image
+[appc-discovery]: https://github.com/appc/spec/blob/master/spec/discovery.md#app-container-image-discovery
+[etcd-5449]: https://github.com/coreos/etcd/issues/5449
+[metadata-spec]: https://github.com/appc/spec/blob/master/spec/ace.md#app-container-metadata-service
+[rkt-mds]: subcommands/metadata-service.md
+[sd-journal]: https://www.freedesktop.org/software/systemd/man/sd-journal.html

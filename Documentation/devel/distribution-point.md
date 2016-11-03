@@ -154,13 +154,15 @@ A Distribution Point implementation will also provide a function to compare if D
 
 ## Fetching logic with Distribution Points
 
-A Distribution Point will be the base for a future refactor of the fetchers logic (see #2964)
+A Distribution Point will be the base for a future refactor of the fetchers logic (see [#2964][rkt-2964])
 
 This also creates a better separation between the distribution points and the transport layers.
 
 For example there may exist multiple transport plugins (file, http, s3, bittorrent etc...) to be called by an ACIArchive distribution point.
 
-[docker2aci_GH]: https://github.com/appc/docker2aci
+
 [3986]: https://tools.ietf.org/html/rfc3986
+[docker2aci_GH]: https://github.com/appc/docker2aci
+[oci_image_spec_readme]: https://github.com/opencontainers/image-spec#running-an-oci-imag://github.com/appc/docker2aci
 [oci_layout]: https://github.com/opencontainers/image-spec/blob/master/image-layout.md
-[oci_image_spec_readme]: https://github.com/opencontainers/image-spec#running-an-oci-imag://github.com/appc/docker2aci 
+[rkt-2964]: https://github.com/coreos/rkt/pull/2964

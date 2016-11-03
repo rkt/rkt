@@ -8,7 +8,7 @@ subcommand CLI API that will be used for manipulating applications inside pods.
 The primary motivation behind this change is to facilitate the new direction
 orchestration systems are taking in how they integrate with container runtimes.
 For more details, see
-[kubernetes#25899](https://github.com/yujuhong/kubernetes/blob/08dc66113399c89e31f6872f3c638695a6ec6a8d/docs/proposals/container-runtime-interface-v1.md).
+[kubernetes#25899][k8s-25899].
 
 # API
 
@@ -229,3 +229,6 @@ Allow users to inject debug applications into a pod in production.
 2. Encounter an error not decipherable via the available information (e.g. status info, logs, etc.).
 3. Add a debug app image containing binaries (e.g. `lsof`) for debugging the service.
 4. Enter the pod namespace and use the debug binaries.
+
+
+[k8s-25899]: https://github.com/yujuhong/kubernetes/blob/08dc66113399c89e31f6872f3c638695a6ec6a8d/docs/proposals/container-runtime-interface-v1.md

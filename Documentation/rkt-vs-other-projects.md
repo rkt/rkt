@@ -16,8 +16,8 @@ This document describes how rkt compares to various other projects in the contai
 ## rkt vs Docker
 
 The Docker Engine is an application container runtime implemented as a central API daemon.
-Docker can resolve a ["Docker Image"](https://github.com/docker/docker/blob/master/image/spec/v1.md) name, such as `quay.io/coreos/etcd`, and download, execute, and monitor the application container.
-Functionally, this is all similar to rkt; however, along with "Docker Images", rkt can also download and run "App Container Images" (ACIs) specified by the [App Container Specification](https://github.com/appc/spec) (appc).
+Docker can resolve a "[Docker Image][docker-image-spec]" name, such as `quay.io/coreos/etcd`, and download, execute, and monitor the application container.
+Functionally, this is all similar to rkt; however, along with "Docker Images", rkt can also download and run "App Container Images" (ACIs) specified by the [App Container Specification][appc-spec] (appc).
 
 Besides also supporting ACIs, rkt has a substantially different architecture that is designed with composability and security in mind.
 
@@ -28,8 +28,8 @@ Prior to Docker version 1.11, the Docker Engine daemon downloaded container imag
 While such a centralized architecture is convenient for deployment, it does not follow best practices for Unix process and privilege separation; further, it makes Docker difficult to properly integrate with Linux init systems such as upstart and systemd.
 
 Since version 1.11, the Docker daemon no longer handles the execution of containers itself.
-Instead, this is now handled by [containerd][containerd-github].
-More precisely, the Docker daemon prepares the image as an [Open Container Image](https://www.opencontainers.org/) (OCI) bundle and makes an API call to containerd to start the OCI bundle.
+Instead, this is now handled by [containerd][containerd].
+More precisely, the Docker daemon prepares the image as an [Open Container Image][oci] (OCI) bundle and makes an API call to containerd to start the OCI bundle.
 containerd then starts the container using [runC][runc-github].
 
 ![rkt-vs-docker-process-model](rkt-vs-docker-process-model.png)
@@ -53,23 +53,18 @@ It requires the user to separately download or cryptographically verify containe
 runC does not have a centralized daemon, and, given a properly configured "OCI bundle", can be integrated with init systems such as upstart and systemd.
 
 rkt includes the same functionality as runC but does not expect a user to understand low-level details of the operating system to use, and can be invoked as simply as `rkt run coreos.com/etcd,version=v2.2.0`.
-It can download both ["Docker Images"](https://github.com/docker/docker/blob/master/image/spec/v1.md) and ["App Container Images"](https://github.com/appc/spec).
+It can download both "[Docker Images][docker-image-spec]" and "[App Container Images][appc-spec]".
 As rkt does not have a centralized daemon it can also be easily integrated with init systems such as upstart and systemd.
-
-[runc-github]: https://github.com/opencontainers/runc
-[oci-spec-github]: https://github.com/opencontainers/specs
 
 ## rkt vs containerd
 
-[containerd][containerd-github] is a daemon to control runC.
+[containerd][containerd] is a daemon to control [runC][runc-github].
 It has a command-line tool called `ctr` which is used to interact with the containerd daemon.
 This makes the containerd process model similar to that of the Docker process model, illustrated above.
 
 Unlike the Docker daemon it has a reduced feature set; not supporting image download, for example.
 
 rkt has no centralized daemon to manage containers, instead launching containers directly from client commands, making it compatible with init systems such as systemd, upstart, and others.
-
-[containerd-github]: https://github.com/docker/containerd
 
 ## rkt vs LXC/LXD
 
@@ -126,7 +121,7 @@ Furthermore, in addition to namespace isolation, rkt can set up various other ki
 
 ## rkt vs qemu-kvm, lkvm
 
-qemu-kvm and lkvm are userspace tools that execute a full system image inside of a Virtual Machine using the [Linux KVM infrastructure](https://en.wikipedia.org/wiki/Kernel-based_Virtual_Machine).
+qemu-kvm and lkvm are userspace tools that execute a full system image inside of a Virtual Machine using the [Linux KVM infrastructure][kvm-wiki].
 A system image will commonly include a boot loader, kernel, root filesystem and be pre-installed with applications to run on boot.
 Most commonly qemu-kvm is used for IaaS systems such as OpenStack, Eucalyptus, etc.
 The Linux KVM infrastructure is trusted for running multi-tenanted virtual machine infrastructures and is generally accepted as being secure enough to run untrusted system images.
@@ -135,4 +130,14 @@ qemu-kvm and lkvm do not have a centralized daemon and can be integrated with in
 rkt can download, cryptographically verify, and run application container images.
 It is not designed to run "full system images" but instead individual applications such as web apps, databases, or caches.
 As rkt does not have a centralized daemon it can be integrated with init systems such as upstart and systemd.
-rkt can optionally use lkvm or qemu-kvm as an additional security measure over a Linux container, at a slight cost to performance and flexibility; this feature can be configured using the [kvm (aka Clear Containers) stage1](running-lkvm-stage1.md).
+rkt can optionally use lkvm or qemu-kvm as an additional security measure over a Linux container, at a slight cost to performance and flexibility; this feature can be configured using the [kvm (aka Clear Containers) stage1][kvm-stage1].
+
+
+[appc-spec]: https://github.com/appc/spec
+[containerd]: https://containerd.tools
+[docker-image-spec]: https://github.com/docker/docker/blob/master/image/spec/v1.md
+[kvm-wiki]: https://en.wikipedia.org/wiki/Kernel-based_Virtual_Machine
+[kvm-stage1]: running-kvm-stage1.md
+[oci]: https://www.opencontainers.org/
+[oci-spec-github]: https://github.com/opencontainers/specs
+[runc-github]: https://github.com/opencontainers/runc

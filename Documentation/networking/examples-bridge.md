@@ -1,6 +1,6 @@
 ## Using NAT with bridge
 
-The [bridge plugin](https://github.com/appc/cni/blob/master/Documentation/bridge.md) can be configured to create a separate network on the host that will be NAT'ed similar to the _default_ network.
+The [bridge plugin][cni-bridge] can be configured to create a separate network on the host that will be NAT'ed similar to the _default_ network.
 The difference to a ptp configured network is that the pods will be able to communicate directly through the bridge and don't have to pass the host as a gateway.
 
 ```json
@@ -46,4 +46,8 @@ default via 10.2.0.1 dev eth0
 172.16.28.1 dev eth1  src 172.16.28.2
 ```
 
-Note that the _[default-restricted](overview.md#the-default-restricted-network)_ network has been loaded in addition to the requested network.
+Note that the _[default-restricted][default-restricted]_ network has been loaded in addition to the requested network.
+
+
+[cni-bridge]: https://github.com/appc/cni/blob/master/Documentation/bridge.md
+[default-restricted]: overview.md#the-default-restricted-network

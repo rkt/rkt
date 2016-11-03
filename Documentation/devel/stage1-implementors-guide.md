@@ -64,7 +64,7 @@ Any stage1 that supports and expects machined registration to occur will likely 
 
 * `--debug` to activate debugging
 * `--net[=$NET1,$NET2,...]` to configure the creation of a contained network.
-  See the [rkt networking documentation](../networking/overview.md) for details.
+  See the [rkt networking documentation][rkt-networking] for details.
 * `--mds-token=$TOKEN` passes the auth token to the apps via `AC_METADATA_URL` env var
 * `--interactive` to run a pod interactively, that is, pass standard input to the application (only for pods with one application)
 * `--local-config=$PATH` to override the local configuration directory
@@ -221,3 +221,6 @@ Later the exit status can be retrieved and shown by `rkt status $uuid`.
 
 This directory path is used for passing environment variables to each app.
 For example, environment variables for an app named `foo` will be stored in `rkt/env/foo`.
+
+
+[rkt-networking]: ../networking/overview.md

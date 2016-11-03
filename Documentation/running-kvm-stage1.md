@@ -1,6 +1,6 @@
 # Running rkt with KVM stage1
 
-rkt has support for executing pods with KVM hypervisor - [LKVM](https://kernel.googlesource.com/pub/scm/linux/kernel/git/will/kvmtool/+/master/README) or [QEMU](https://github.com/qemu/qemu/blob/master/README) as a [stage1](devel/architecture.md#stage-1). rkt employs this [alternative stage1](devel/stage1-implementors-guide.md) to run a pod within a virtual machine with its own operating system kernel and hypervisor isolation, rather than creating a container using Linux cgroups and namespaces.
+rkt has support for executing pods with KVM hypervisor - [LKVM][lkvm] or [QEMU][qemu] as a [stage1][rkt-arch-stage1]. rkt employs this [alternative stage1][stage1-implementers-guide] to run a pod within a virtual machine with its own operating system kernel and hypervisor isolation, rather than creating a container using Linux cgroups and namespaces.
 
 The KVM stage1 does not yet implement all of the default stage1's features and semantics. While the same app container can be executed under isolation by either stage1, it may require different configuration, especially for networking. However, several deployments of the KVM stage1 are operational outside of CoreOS, and we encourage testing of this feature and welcome your contributions.
 
@@ -12,10 +12,10 @@ For LKVM you can use `stage1-kvm.aci` or `stage1-kvm-lkvm.aci`, for QEMU - `stag
 $ ./autogen.sh && ./configure --with-stage1-flavors=kvm --with-stage1-kvm-hypervisors=lkvm,qemu && make
 ```
 
-For more details about configure parameters, see [configure script parameters documentation](build-configure.md).
+For more details about configure parameters, see [configure script parameters documentation][build-configure].
 This will build the rkt binary and the KVM stage1 aci image in `build-rkt-1.18.0+git/target/bin/`. Depending on the configuration options, it will be `stage1-kvm.aci` (if one hypervisor is set), or `stage1-kvm-lkvm.aci` and `stage1-kvm-qemu.aci` (if you want to have both images built once).
 
-Provided you have hardware virtualization support and the [kernel KVM module](http://www.linux-kvm.org/page/Getting_the_kvm_kernel_modules) loaded (refer to your distribution for instructions), you can then run an image like you would normally do with rkt:
+Provided you have hardware virtualization support and the [kernel KVM module][kvm-module] loaded (refer to your distribution for instructions), you can then run an image like you would normally do with rkt:
 
 ```
 # rkt trust --prefix coreos.com/etcd
@@ -79,7 +79,7 @@ Currently, the memory allocated to the virtual machine is a sum of memory requir
 
 ### Selecting stage1 at runtime
 
-If you want to run software that requires hypervisor isolation along with trusted software that only needs container isolation, you can [choose which stage1 to use at runtime](https://github.com/coreos/rkt/blob/master/Documentation/subcommands/run.md#use-a-custom-stage-1).
+If you want to run software that requires hypervisor isolation along with trusted software that only needs container isolation, you can [choose which stage1 to use at runtime][rkt-run].
 
 For example, to use the official kvm stage1:
 
@@ -92,7 +92,7 @@ If the image is not in the store, `--stage1-name` will perform discovery and fet
 
 ## How does it work?
 
-It leverages the work done by Intel with their [Clear Containers system](https://lwn.net/Articles/644675/).
+It leverages the work done by Intel with their [Clear Containers system][clear-containers].
 Stage1 contains a Linux kernel that is executed under hypervisor (LKVM or QEMU).
 This kernel will then start systemd, which in turn will start the applications in the pod.
 
@@ -123,3 +123,13 @@ host OS
           └─ chroot
             └─ user-app1
 ```
+
+
+[build-configure]: build-configure.md
+[clear-containers]: https://lwn.net/Articles/644675/
+[kvm-module]: http://www.linux-kvm.org/page/Getting_the_kvm_kernel_modules
+[lkvm]: https://kernel.googlesource.com/pub/scm/linux/kernel/git/will/kvmtool/+/master/README
+[qemu]: http://qemu-project.org/Main_Page
+[rkt-arch-stage1]: devel/architecture.md#stage-1
+[rkt-run]: subcommands/run.md#use-a-custom-stage-1
+[stage1-implementers-guide]: devel/stage1-implementors-guide.md
