@@ -5,6 +5,7 @@ QEMU_BINARY := $(QEMU_SRCDIR)/x86_64-softmmu/qemu-system-x86_64
 QEMU_BIOS_BINARIES := bios-256k.bin \
     kvmvapic.bin \
     linuxboot.bin \
+    linuxboot_dma.bin \
     vgabios-stdvga.bin \
     efi-virtio.rom
 
@@ -16,9 +17,9 @@ QEMU_CONFIGURATION_OPTS := --disable-bsd-user --disable-docs --disable-guest-age
     --python=/usr/bin/python2 --disable-werror
 QEMU_ACI_BINARY := $(HV_ACIROOTFSDIR)/qemu
 
-# Using 2.6.0 stable release from official repository
+# Using 2.7.0 stable release from official repository
 QEMU_GIT := git://git.qemu-project.org/qemu.git
-QEMU_GIT_COMMIT := v2.6.1
+QEMU_GIT_COMMIT := v2.7.0
 
 $(call setup-stamp-file,QEMU_BUILD_STAMP,/build)
 $(call setup-stamp-file,QEMU_BIOS_BUILD_STAMP,/bios_build)
