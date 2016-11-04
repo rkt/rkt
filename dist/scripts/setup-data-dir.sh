@@ -55,8 +55,7 @@ getent group rkt-admin || groupadd --force --system rkt-admin
 getent group rkt || groupadd --force --system rkt
 
 if which systemd-tmpfiles; then
-    systemd-tmpfiles --create /usr/lib/tmpfiles.d/rkt.conf
-    exit
+    systemd-tmpfiles --create "$(realpath "$(dirname "$0")")/../init/systemd/tmpfiles.d/rkt.conf" && exit
 fi
 
 make_directory "${datadir}" 2750 "rkt"

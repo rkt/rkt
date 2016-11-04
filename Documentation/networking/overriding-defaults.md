@@ -1,7 +1,7 @@
 # Overriding defaults
 
 This document holds information about modifying or replacing builtin defaults and is only recommended to advanced users.
-Please make sure to have read the [networking overview page](overview.md) before treading into these things.
+Please make sure to have read the [networking overview page][overview] before treading into these things.
 
 ## Overriding the "default" network
 
@@ -10,7 +10,7 @@ It is strongly recommended that such network also has type "ptp" as it protects 
 
 ## Overriding network settings
 
-The network backend CNI allows the passing of [arguments as plugin parameters](https://github.com/appc/cni/blob/master/SPEC.md#parameters), specifically `CNI_ARGS`, at runtime.
+The network backend CNI allows the passing of [arguments as plugin parameters][cni-plugin-parameters], specifically `CNI_ARGS`, at runtime.
 These arguments can be used to reconfigure a network without changing the configuration file.
 rkt supports the `CNI_ARGS` variable through the command line argument `--net`.
 
@@ -42,4 +42,9 @@ rkt run --net="all,net1:IP=1.2.3.4" --net="net2:IP=1.2.4.5" pod.aci
 ### Supported CNI\_ARGS
 
 This is not documented yet.
-Please follow [this issue on CNI](https://github.com/appc/cni/issues/56) to track the progress of the documentation.
+Please follow CNI issue [#56][cni-56] to track the progress of the documentation.
+
+
+[cni-56]: https://github.com/appc/cni/issues/56
+[cni-plugin-parameters]: https://github.com/appc/cni/blob/master/SPEC.md#parameters
+[overview]: overview.md

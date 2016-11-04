@@ -54,7 +54,7 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
 * patch
 * tar
 * xz
-* [build dependencies for kernel](https://www.kernel.org/doc/Documentation/Changes)
+* [build dependencies for kernel][kernel-build-deps]
   * bc
   * binutils
   * openssl
@@ -88,3 +88,5 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
   * systemd-shutdown
   * systemd
   * systemd-journald
+
+[kernel-build-deps]: https://www.kernel.org/doc/Documentation/Changes

@@ -1,6 +1,6 @@
 # Signing and Verification Guide
 
-This guide will walk you through signing, distributing, and verifying the hello ACI created in the [getting started guide](getting-started-guide.md).
+This guide will walk you through signing, distributing, and verifying the hello ACI created in the [getting started guide][getting-started].
 
 ```
 hello-0.0.1-linux-amd64.aci
@@ -200,7 +200,7 @@ The image's name will be used to locate trusted public keys in the rkt keystore 
 
 By default rkt does not trust any signing keys.
 Trust is established by storing public keys in the rkt keystore.
-This can be done using `rkt trust` or manually, using the procedures described in the next section.
+This can be done using [`rkt trust`][rkt-trust] or manually, using the procedures described in the next section.
 
 The following directories make up the default rkt keystore layout:
 
@@ -232,7 +232,7 @@ As an example, let's look at how we can trust a key used to sign images of the p
 
 #### Using rkt trust
 
-The easiest way to trust a key is to use the `rkt trust` subcommand.
+The easiest way to trust a key is to use the [`rkt trust`][rkt-trust] subcommand.
 In this case, we directly pass it the URI containing the public key we wish to trust:
 
 ```
@@ -250,7 +250,7 @@ Now the public key with fingerprint `b346e31de7e3c6f9d1d4603f4dfb61bf26ef7a14` w
 
 #### Manually adding keys
 
-An alternative to using `rkt trust` is to manually trust keys by adding them to rkt's database.
+An alternative to using [`rkt trust`][rkt-trust] is to manually trust keys by adding them to rkt's database.
 We do this by downloading the key, capturing its fingerprint, and storing it in the database using the fingerprint as filename
 
 ##### Download the public key
@@ -335,7 +335,7 @@ rkt: warning: image signature verification has been disabled
 
 #### Download and verify an ACI
 
-Using the fetch subcommand you can download and verify an ACI without immediately running a pod.
+Using the [`fetch`][rkt-fetch] subcommand you can download and verify an ACI without immediately running a pod.
 This can be useful to precache ACIs on a large number of hosts:
 
 ```
@@ -358,3 +358,8 @@ rkt: warning: image signature verification has been disabled
 Downloading aci: [                                             ] 4.34 KB/1.26 MB
 sha512-b3f138e10482d4b5f334294d69ae5c40
 ```
+
+
+[getting-started]: getting-started-guide.md
+[rkt-fetch]: subcommands/fetch.md
+[rkt-trust]: subcommands/trust.md

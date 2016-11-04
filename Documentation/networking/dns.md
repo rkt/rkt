@@ -76,7 +76,7 @@ When passing IP=HOST pairs:
 $ rkt run ... --hosts-entry 198.51.100.0=host1,198.51.100.1=host2 --hosts-entry 198.51.100.0=host3
 ```
 
-rkt will take some [standard defaults](../../stage1/net/rootfs/etc/hosts-fallback)
+rkt will take some [standard defaults][standard-defaults]
 and append the requested entries.
 
 ```
@@ -111,3 +111,6 @@ PING coreos.com (104.20.47.236): 56 data bytes
 1 packets transmitted, 1 packets received, 0% packet loss
 round-trip min/avg/max = 5.421/5.421/5.421 ms
 ```
+
+
+[standard-defaults]: https://github.com/coreos/rkt/blob/master/stage1/net/rootfs/etc/hosts-fallback

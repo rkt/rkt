@@ -1,6 +1,6 @@
 # Networking
 
-On some of rkt's subcommands *([run](../subcommands/run.md), [run-prepared](../subcommands/run-prepared.md))*, the `--net` flag allows you to configure the pod's network.
+On some of rkt's subcommands *([run][rkt-run], [run-prepared][rkt-run-prepared])*, the `--net` flag allows you to configure the pod's network.
 The various options can be grouped by two categories:
 
 * [host mode](#host-mode)
@@ -22,7 +22,7 @@ This risk can be avoided by configuring a separate namespace for pod.
 
 ## Contained mode
 
-If anything other than `host` is passed to `--net=`, the pod will live in a separate network namespace with the help of [CNI](https://github.com/appc/cni) and its plugin system.
+If anything other than `host` is passed to `--net=`, the pod will live in a separate network namespace with the help of [CNI][cni] and its plugin system.
 The network setup for the pod's network namespace depends on the available CNI configuration files that are shipped with rkt and also configured by the user.
 
 ### Network selection
@@ -161,7 +161,7 @@ Before traffic gets sent to the underlying network it can be evaluated within th
   This field is required.
 - **mode** (string): one of "bridge", "private", "vepa", or "passthru".
   This controls how traffic is handled between different macvlan interfaces on the same host.
-  See [this guide](http://www.pocketnix.org/posts/Linux%20Networking:%20MAC%20VLANs%20and%20Virtual%20Ethernets) for discussion of modes.
+  See [this guide][macvlan-modes] for discussion of modes.
   Defaults to "bridge".
 - **mtu** (integer): the size of the MTU in bytes for the macvlan interface.
   Defaults to MTU of the master device.
@@ -183,7 +183,7 @@ ipvlan interfaces are able to have different IP addresses than the master interf
 - **master** (string): the name of the host interface to copy.
   This field is required.
 - **mode** (string): one of "l2", "l3".
-  See [kernel documentation on ipvlan](https://www.kernel.org/doc/Documentation/networking/ipvlan.txt).
+  See [kernel documentation on ipvlan][ipvlan].
   Defaults to "l2".
 - **mtu** (integer): the size of the MTU in bytes for the ipvlan interface.
   Defaults to MTU of the master device.
@@ -193,7 +193,7 @@ ipvlan interfaces are able to have different IP addresses than the master interf
 **Notes**
 
 * ipvlan can cause problems with duplicated IPv6 link-local addresses since they are partially constructed using the MAC address.
-  This issue is being currently [addressed by the ipvlan kernel module developers](http://thread.gmane.org/gmane.linux.network/363346/focus=363345)
+  This issue is being currently addressed by the ipvlan kernel module developers.
 
 ## IP Address Management
 
@@ -258,9 +258,11 @@ The gateway is configured for the default route, allowing the pod to access exte
 
 ### dhcp
 
-DHCP type requires a daemon to be running on the host.
+The DHCP type requires a special client daemon, part of the [CNI DHCP plugin][cni-dhcp], to be running on the host.
+This acts as a proxy between a DHCP client running inside the container and a DHCP service already running on the network, as well as renewing leases appropriately.
+
 The DHCP plugin binary can be executed in the daemon mode by launching it with `daemon` argument.
-However the DHCP plugin is bundled in stage1.aci so this requires extracting the binary from it:
+However, in rkt the DHCP plugin is bundled in stage1.aci so this requires extracting the binary from it:
 
 ```
 $ sudo ./rkt fetch --insecure-options=image ./stage1.aci
@@ -287,7 +289,7 @@ It is now possible to use the DHCP type by specifying it in the ipam section of 
 }
 ```
 
-For more information about DHCP plugin, see [CNI docs](https://github.com/appc/cni/blob/master/Documentation/dhcp.md).
+For more information about the DHCP plugin, see the [CNI docs][cni-dhcp].
 
 ## Other plugins
 
@@ -304,7 +306,7 @@ The basic network configuration is as follows:
 ```
 
 This will set up a linux-bridge, connect the container to the bridge and assign container IPs out of the subnet that flannel assigned to the host.
-For more information included advanced configuration options, see [CNI docs](https://github.com/appc/cni/blob/master/Documentation/flannel.md).
+For more information included advanced configuration options, see [CNI docs][cni-flannel].
 
 ## Exposing container ports on the host
 
@@ -341,13 +343,26 @@ As a reminder, the sort order of the loaded networks is detailed in the chapter 
 
 ### Socket Activation
 rkt also supports socket activation.
-This is documented in [Socket-activated service](../using-rkt-with-systemd.md#socket-activated-service).
+This is documented in [Socket-activated service][socket-activated].
 
 ## More Docs
 
 ##### Examples
-* [bridge plugin](examples-bridge.md)
+* [bridge plugin][examples-bridge]
 
 ##### Other topics:
-* [DNS configuration](dns.md)
-* [Overriding defaults](overriding-defaults.md)
+* [DNS configuration][dns]
+* [Overriding defaults][overriding]
+
+
+[cni]: https://github.com/appc/cni
+[cni-dhcp]: https://github.com/appc/cni/blob/master/Documentation/dhcp.md
+[cni-flannel]: https://github.com/appc/cni/blob/master/Documentation/flannel.md
+[dns]: dns.md
+[examples-bridge]: examples-bridge.md
+[ipvlan]: https://www.kernel.org/doc/Documentation/networking/ipvlan.txt
+[macvlan-modes]: http://www.pocketnix.org/posts/Linux%20Networking:%20MAC%20VLANs%20and%20Virtual%20Ethernets
+[overriding]: overriding-defaults.md
+[rkt-run]: ../subcommands/run.md
+[rkt-run-prepared]: ../subcommands/run-prepared.md
+[socket-activated]: ../using-rkt-with-systemd.md#socket-activated-service

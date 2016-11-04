@@ -1,6 +1,6 @@
 # rkt run-prepared
 
-Once a pod is prepared with rkt [prepare](prepare.md), it can be run by executing `rkt run-prepared UUID`.
+Once a pod is prepared with rkt [prepare][prepare], it can be run by executing `rkt run-prepared UUID`.
 
 ## Example
 
@@ -55,4 +55,8 @@ c9fad0e6    etcd    coreos.com/etcd prepared
 
 ## Global options
 
-See the table with [global options in general commands documentation](../commands.md#global-options).
+See the table with [global options in general commands documentation][global-options].
+
+
+[global-options]: ../commands.md#global-options
+[prepare]: prepare.md

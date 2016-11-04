@@ -6,7 +6,7 @@ The *fly* stage1 is an alternative stage1 that runs a single-application ACI wit
 ## Motivation
 
 The motivation of the fly feature is to add the ability to run applications with full privileges on the host but still benefit from the image management and discovery from rkt.
-The Kubernetes `kubelet` is one candidate for rkt fly.
+The Kubernetes [`kubelet`][kubelet] is one candidate for rkt fly.
 
 
 ## How does it work?
@@ -42,7 +42,7 @@ After the mounts are set up, rkt `chroot`s to the application's RootFS and final
 
 ### Mount propagation modes
 
-The *fly* stage1 makes use of Linux [mount propagation modes](https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt).
+The *fly* stage1 makes use of Linux [mount propagation modes][sharedsubtree].
 If a volume source path is a mountpoint on the host, this mountpoint is made recursively shared before the host path is mounted on the target path in the container.
 Hence, changes to the mounts inside the container will be propagated back to the host.
 
@@ -59,7 +59,7 @@ You can either use `stage1-fly.aci` from the official release, or build rkt your
 $ ./autogen.sh && ./configure --with-stage1-flavors=fly && make
 ```
 
-For more details about configure parameters, see the [configure script parameters documentation](build-configure.md).
+For more details about configure parameters, see the [configure script parameters documentation][build-configure].
 This will build the rkt binary and the stage1-fly.aci in `build-rkt-1.18.0+git/bin/`.
 
 ### Selecting stage1 at runtime
@@ -86,7 +86,15 @@ Specifically, the following constraints are not available when using the *fly* s
 
 ### Providing additional isolation with systemd
 
-When using systemd on the host it is possible to [wrap rkt with a systemd unit file](using-rkt-with-systemd.md#advanced-unit-file) to provide additional isolation.
+When using systemd on the host it is possible to [wrap rkt with a systemd unit file][systemd-unit] to provide additional isolation.
 For more information please consult the systemd manual.
-* [systemd.resource-control](http://www.freedesktop.org/software/systemd/man/systemd.resource-control.html)
-* [systemd.directives](http://www.freedesktop.org/software/systemd/man/systemd.directives.html)
+* [systemd.resource-control][systemd.resource-control]
+* [systemd.directives][systemd.directives]
+
+
+[build-configure]: build-configure.md
+[kubelet]: http://kubernetes.io/docs/admin/kubelet/
+[sharedsubtree]: https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
+[systemd.directives]: http://www.freedesktop.org/software/systemd/man/systemd.directives.html
+[systemd.resource-control]: http://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
+[systemd-unit]: using-rkt-with-systemd.md#advanced-unit-file

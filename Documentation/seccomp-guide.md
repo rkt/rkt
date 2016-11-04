@@ -1,7 +1,7 @@
 # Seccomp Isolators Guide
 
 This document is a walk-through guide describing how to use rkt isolators for
-[Linux seccomp filtering](https://lwn.net/Articles/656307/).
+[Linux seccomp filtering][lwn-seccomp].
 
 * [About Seccomp](#about-seccomp)
 * [Predefined Seccomp Filters](#predefined-seccomp-filter)
@@ -24,7 +24,7 @@ In the context of containers, seccomp filtering is useful for:
 * Reducing kernel attack surface in case of security bugs
 
 For more details on how Linux seccomp filtering works, see
-[seccomp(2)](http://man7.org/linux/man-pages/man2/seccomp.2.html).
+[seccomp(2)][man-seccomp].
 
 ## Predefined seccomp filters
 
@@ -37,7 +37,7 @@ system calls. To distinguish these predefined groups from real syscall names,
 wildcard labels are prefixed with a `@` symbols and are namespaced.
 
 The App Container Spec (appc) defines
-[two groups](https://github.com/appc/spec/blob/master/spec/ace.md#linux-isolators):
+[two groups][appc-isolators]:
 
  * `@appc.io/all` represents the set of all available syscalls.
  * `@appc.io/empty` represents the empty set.
@@ -47,14 +47,13 @@ rkt provides two default groups for generic usage:
  * `@rkt/default-blacklist` represents a broad-scope filter than can be used for generic blacklisting
  * `@rkt/default-whitelist` represents a broad-scope filter than can be used for generic whitelisting
 
-For compatibility reasons, two groups are provided mirroring [default Docker
-profiles](https://github.com/docker/docker/blob/v1.12.0/docs/security/seccomp.md):
+For compatibility reasons, two groups are provided mirroring [default Docker profiles][docker-seccomp]:
 
  * `@docker/default-blacklist`
  * `@docker/default-whitelist`
 
 When using stage1 images with systemd >= v231, some
-[predefined groups](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#SystemCallFilter=)
+[predefined groups][systemd-seccomp]
 are also available:
 
  * `@systemd/clock` for syscalls manipulating the system clock
@@ -73,7 +72,7 @@ the same set defined by `@rkt/default-whitelist`.
 The default set is tailored to stop applications from performing a large
 variety of privileged actions, while not impacting their normal behavior.
 Operations which are typically not needed in containers and which may
-impact host state, eg. invoking `umount(2)`, are denied in this way.
+impact host state, eg. invoking [`umount(2)`][man-umount], are denied in this way.
 
 However, this default set is mostly meant as a safety precaution against erratic
 and misbehaving applications, and will not suffice against tailored attacks.
@@ -107,7 +106,7 @@ terminating it.
 
 For both isolators, this can be customized by specifying an additional `errno`
 parameter with the desired symbolic errno name. For a list of errno labels, check
-the [reference](http://man7.org/linux/man-pages/man3/errno.3.html) at `man 3 errno`.
+the [reference][man-errno] at `man 3 errno`.
 
 ### Retain-set
 
@@ -141,11 +140,11 @@ known to never touch mountpoints could have `@systemd/mount` specified in its
 
 ## Usage Example
 
-The goal of these examples is to show how to build ACI images with `acbuild`,
+The goal of these examples is to show how to build ACI images with [`acbuild`][acbuild],
 where some syscalls are either explicitly blocked or allowed.
 For simplicity, the starting point will be a bare Alpine Linux image which
 ships with `ping` and `umount` commands (from busybox). Those
-commands respectively requires `socket(2)` and `umount(2)` syscalls in order to
+commands respectively requires [`socket(2)`][man-socket] and [`umount(2)`][man-umount] syscalls in order to
 perform privileged operations.
 To block their usage, a syscalls filter can be installed via
 `os/linux/seccomp-remove-set` or `os/linux/seccomp-retain-set`; both approaches
@@ -216,8 +215,8 @@ $ acbuild end
 ```
 
 Once run, it can be easily verified that both `ping` and `umount` are now
-functional inside the container. These operations also require additional
-capabilities to be retained in order to work:
+functional inside the container. These operations also require [additional
+capabilities][capabilities-guide] to be retained in order to work:
 
 ```
 $ sudo rkt run --interactive --insecure-options=image seccomp-retain-set-example.aci --caps-retain=CAP_SYS_ADMIN,CAP_NET_RAW
@@ -270,7 +269,7 @@ or by overriding seccomp isolators with command line options.
 ### Patching images
 
 Image manifests can be manipulated manually, by unpacking the image and editing
-the manifest file, or with helper tools like `actool`.
+the manifest file, or with helper tools like [`actool`][actool].
 To override an image's pre-defined syscalls set, just replace the existing seccomp
 isolators in the image with new isolators defining the desired syscalls.
 
@@ -372,7 +371,22 @@ set of syscalls requirements and follow best practices:
  2. While it is possible to completely disable seccomp, it is rarely needed and
     should be generally avoided. Tweaking the syscalls set is a better approach
     instead.
- 3. Avoid granting access to dangerous syscalls. For example, `mount(2)` and
-    `ptrace(2)` are typically abused to escape containers.
+ 3. Avoid granting access to dangerous syscalls. For example, [`mount(2)`][man-mount] and
+    [`ptrace(2)`][man-ptrace] are typically abused to escape containers.
  4. Prefer a whitelisting approach, trying to keep the "retain-set" as small as
     possible.
+
+
+[acbuild]: https://github.com/containers/build
+[actool]: https://github.com/appc/spec#building-acis
+[appc-isolators]: https://github.com/appc/spec/blob/master/spec/ace.md#linux-isolators
+[capabilities-guide]: capabilities-guide.md
+[docker-seccomp]: https://docs.docker.com/engine/security/seccomp/
+[lwm-seccomp]: https://lwn.net/Articles/656307/
+[man-errno]: http://man7.org/linux/man-pages/man3/errno.3.html
+[man-mount]: http://man7.org/linux/man-pages/man2/mount.2.html
+[man-ptrace]: http://man7.org/linux/man-pages/man2/ptrace.2.html
+[man-seccomp]: http://man7.org/linux/man-pages/man2/seccomp.2.html
+[man-socket]: http://man7.org/linux/man-pages/man2/socket.2.html
+[man-umount]: http://man7.org/linux/man-pages/man2/umount.2.html
+[systemd-seccomp]: https://www.freedesktop.org/software/systemd/man/systemd.exec.html#SystemCallFilter=
