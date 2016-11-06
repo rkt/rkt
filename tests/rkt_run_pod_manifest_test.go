@@ -1281,3 +1281,24 @@ func TestPodManifest(t *testing.T) {
 		}
 	}
 }
+
+func TestPodManifestWithEmptyApps(t *testing.T) {
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+
+	tmpdir := createTempDirOrPanic("rkt-tests.")
+	defer os.RemoveAll(tmpdir)
+
+	manifest := &schema.PodManifest{
+		Apps:      []schema.RuntimeApp{},
+		ACKind:    schema.PodManifestKind,
+		ACVersion: schema.AppContainerVersion,
+	}
+
+	manifestFile := generatePodManifestFile(t, manifest)
+	defer os.Remove(manifestFile)
+
+	runCmd := fmt.Sprintf("%s run --mds-register=false --pod-manifest=%s", ctx.Cmd(), manifestFile)
+	runEmptyAppsMsg := "pod must contain at least one application"
+	runRktAndCheckOutput(t, runCmd, runEmptyAppsMsg, true)
+}
