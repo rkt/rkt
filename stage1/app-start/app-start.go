@@ -24,18 +24,21 @@ import (
 	"os/exec"
 
 	rktlog "github.com/coreos/rkt/pkg/log"
+	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
 
 	"github.com/appc/spec/schema/types"
 )
 
 var (
-	debug bool
-	log   *rktlog.Logger
-	diag  *rktlog.Logger
+	flagApp string
+	debug   bool
+	log     *rktlog.Logger
+	diag    *rktlog.Logger
 )
 
 func init() {
+	flag.StringVar(&flagApp, "app", "", "Application name")
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
 }
 
@@ -49,14 +52,13 @@ func main() {
 		diag.SetOutput(ioutil.Discard)
 	}
 
-	appName, err := types.NewACName(flag.Arg(1))
+	appName, err := types.NewACName(flagApp)
 	if err != nil {
 		log.PrintE("invalid app name", err)
 		os.Exit(254)
 	}
 
-	enterCmd := []string{flag.Arg(2)}
-	enterCmd = append(enterCmd, fmt.Sprintf("--pid=%s", flag.Arg(3)), "--")
+	enterCmd := stage1common.PrepareEnterCmd(false)
 
 	args := enterCmd
 	args = append(args, "/usr/bin/systemctl")

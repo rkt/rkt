@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -258,16 +257,9 @@ func AddApp(cfg AddConfig) error {
 		return err
 	}
 
-	eep, err := getStage1Entrypoint(cfg.PodPath, enterEntrypoint)
-	if err != nil {
-		return errwrap.Wrap(errors.New("error determining 'enter' entrypoint"), err)
-	}
-
 	args := []string{
-		cfg.UUID.String(),
-		appName.String(),
-		filepath.Join(common.Stage1RootfsPath(cfg.PodPath), eep),
-		strconv.Itoa(cfg.PodPID),
+		fmt.Sprintf("--uuid=%s", cfg.UUID),
+		fmt.Sprintf("--app=%s", appName),
 	}
 
 	if cfg.InsecureCapabilities {
@@ -295,7 +287,7 @@ func AddApp(cfg AddConfig) error {
 		return err
 	}
 
-	if err := callEntrypoint(cfg.PodPath, appAddEntrypoint, args); err != nil {
+	if err := RunCrossingEntrypoint(cfg.PodPath, cfg.PodPID, appName.String(), appAddEntrypoint, args); err != nil {
 		return err
 	}
 
@@ -339,43 +331,6 @@ func updateFile(path string, contents []byte) error {
 	return nil
 }
 
-func callEntrypoint(dir, entrypoint string, args []string) error {
-	previousDir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	debug("Pivoting to filesystem %s", dir)
-	if err := os.Chdir(dir); err != nil {
-		return errwrap.Wrap(errors.New("failed changing to dir"), err)
-	}
-
-	ep, err := getStage1Entrypoint(dir, entrypoint)
-	if err != nil {
-		return fmt.Errorf("%q not implemented for pod's stage1: %v", entrypoint, err)
-	}
-	execArgs := []string{filepath.Join(common.Stage1RootfsPath(dir), ep)}
-	debug("Execing %s", ep)
-	execArgs = append(execArgs, args...)
-
-	c := exec.Cmd{
-		Path:   execArgs[0],
-		Args:   execArgs,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-
-	if err := c.Run(); err != nil {
-		return fmt.Errorf("error executing stage1's entrypoint %q: %v", entrypoint, err)
-	}
-
-	if err := os.Chdir(previousDir); err != nil {
-		return errwrap.Wrap(errors.New("failed changing to dir"), err)
-	}
-
-	return nil
-}
-
 func RmApp(cfg RmConfig) error {
 	debug("locking pod")
 	l, err := lock.ExclusiveLock(common.PodManifestLockPath(cfg.PodPath), lock.RegFile)
@@ -414,23 +369,15 @@ func RmApp(cfg RmConfig) error {
 		return err
 	}
 
-	eep, err := getStage1Entrypoint(cfg.PodPath, enterEntrypoint)
-	if err != nil {
-		return errwrap.Wrap(errors.New("error determining 'enter' entrypoint"), err)
-	}
-
 	if cfg.PodPID > 0 {
 		// Call app-stop and app-rm entrypoint only if the pod is still running.
 		// Otherwise, there's not much we can do about it except unmounting/removing
 		// the file system.
 		args := []string{
-			cfg.UUID.String(),
-			cfg.AppName.String(),
-			filepath.Join(common.Stage1RootfsPath(cfg.PodPath), eep),
-			strconv.Itoa(cfg.PodPID),
+			fmt.Sprintf("--app=%s", cfg.AppName),
 		}
 
-		if err := callEntrypoint(cfg.PodPath, appStopEntrypoint, args); err != nil {
+		if err := RunCrossingEntrypoint(cfg.PodPath, cfg.PodPID, cfg.AppName.String(), appStopEntrypoint, args); err != nil {
 			status, err := common.GetExitStatus(err)
 			// ignore nonexistent units failing to stop. Exit status 5
 			// comes from systemctl and means the unit doesn't exist
@@ -441,7 +388,7 @@ func RmApp(cfg RmConfig) error {
 			}
 		}
 
-		if err := callEntrypoint(cfg.PodPath, appRmEntrypoint, args); err != nil {
+		if err := RunCrossingEntrypoint(cfg.PodPath, cfg.PodPID, cfg.AppName.String(), appRmEntrypoint, args); err != nil {
 			return err
 		}
 	}
@@ -520,23 +467,15 @@ func StartApp(cfg StartConfig) error {
 		return fmt.Errorf("error: nonexistent app %q", *cfg.AppName)
 	}
 
-	eep, err := getStage1Entrypoint(cfg.Dir, enterEntrypoint)
-	if err != nil {
-		return errwrap.Wrap(errors.New("error determining 'enter' entrypoint"), err)
-	}
-
 	args := []string{
-		cfg.UUID.String(),
-		cfg.AppName.String(),
-		filepath.Join(common.Stage1RootfsPath(cfg.Dir), eep),
-		strconv.Itoa(cfg.PodPID),
+		fmt.Sprintf("--app=%s", cfg.AppName),
 	}
 
 	if _, err := os.Create(common.AppStartedPath(p.Root, cfg.AppName.String())); err != nil {
 		log.FatalE(fmt.Sprintf("error creating %s-started file", cfg.AppName.String()), err)
 	}
 
-	if err := callEntrypoint(cfg.Dir, appStartEntrypoint, args); err != nil {
+	if err := RunCrossingEntrypoint(cfg.Dir, cfg.PodPID, cfg.AppName.String(), appStartEntrypoint, args); err != nil {
 		return err
 	}
 
@@ -569,19 +508,11 @@ func StopApp(cfg StopConfig) error {
 		return fmt.Errorf("error: nonexistent app %q", *cfg.AppName)
 	}
 
-	eep, err := getStage1Entrypoint(cfg.Dir, enterEntrypoint)
-	if err != nil {
-		return errwrap.Wrap(errors.New("error determining 'enter' entrypoint"), err)
-	}
-
 	args := []string{
-		cfg.UUID.String(),
-		cfg.AppName.String(),
-		filepath.Join(common.Stage1RootfsPath(cfg.Dir), eep),
-		strconv.Itoa(cfg.PodPID),
+		fmt.Sprintf("--app=%s", cfg.AppName),
 	}
 
-	if err := callEntrypoint(cfg.Dir, appStopEntrypoint, args); err != nil {
+	if err := RunCrossingEntrypoint(cfg.Dir, cfg.PodPID, cfg.AppName.String(), appStopEntrypoint, args); err != nil {
 		status, err := common.GetExitStatus(err)
 		// exit status 5 comes from systemctl and means the unit doesn't exist
 		if status == 5 {

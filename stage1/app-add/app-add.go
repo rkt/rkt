@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -28,6 +27,7 @@ import (
 	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/common/cgroup/v1"
 	rktlog "github.com/coreos/rkt/pkg/log"
+	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1types "github.com/coreos/rkt/stage1/common/types"
 	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
 
@@ -35,6 +35,8 @@ import (
 )
 
 var (
+	flagApp             string
+	flagUUID            string
 	debug               bool
 	disableCapabilities bool
 	disablePaths        bool
@@ -45,6 +47,8 @@ var (
 )
 
 func init() {
+	flag.StringVar(&flagApp, "app", "", "Application name")
+	flag.StringVar(&flagUUID, "uuid", "", "Pod UUID")
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
 	flag.BoolVar(&disableCapabilities, "disable-capabilities-restriction", false, "Disable capability restrictions")
 	flag.BoolVar(&disablePaths, "disable-paths", false, "Disable paths restrictions")
@@ -52,7 +56,6 @@ func init() {
 	flag.StringVar(&privateUsers, "private-users", "", "Run within user namespace. Can be set to [=UIDBASE[:NUIDS]]")
 }
 
-// TODO use named flags instead of positional
 func main() {
 	flag.Parse()
 
@@ -63,20 +66,19 @@ func main() {
 		diag.SetOutput(ioutil.Discard)
 	}
 
-	uuid, err := types.NewUUID(flag.Arg(0))
+	enterCmd := stage1common.PrepareEnterCmd(false)
+
+	uuid, err := types.NewUUID(flagUUID)
 	if err != nil {
 		log.PrintE("UUID is missing or malformed", err)
 		os.Exit(254)
 	}
 
-	appName, err := types.NewACName(flag.Arg(1))
+	appName, err := types.NewACName(flagApp)
 	if err != nil {
 		log.PrintE("invalid app name", err)
 		os.Exit(254)
 	}
-
-	enterCmd := []string{flag.Arg(2)}
-	enterCmd = append(enterCmd, fmt.Sprintf("--pid=%s", flag.Arg(3)), "--")
 
 	root := "."
 	p, err := stage1types.LoadPod(root, uuid)
