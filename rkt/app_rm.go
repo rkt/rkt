@@ -28,7 +28,7 @@ var (
 	cmdAppRm = &cobra.Command{
 		Use:   "rm UUID --app=NAME",
 		Short: "Remove an app from a pod",
-		Long:  `This allows removing an app from a running pod, it will stop it if it's still running`,
+		Long:  "This removes an appplication from a mutable pod, stopping it beforehand if still running.",
 		Run:   runWrapper(runAppRm),
 	}
 )
