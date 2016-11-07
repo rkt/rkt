@@ -78,6 +78,59 @@ var (
 	}
 )
 
+type printedImage struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	ImportTime string `json:"import_time"`
+	LastUsed   string `json:"last_used"`
+	Size       string `json:"size"`
+}
+
+func (r *printedImage) attributes() []string {
+	return []string{r.ID, r.Name, r.Size, r.ImportTime, r.LastUsed}
+}
+
+func (r *printedImage) printableString() string {
+	return strings.Join(r.attributes(), "\t")
+}
+
+type outputFormat int
+
+const (
+	outputFormatTabbed = iota
+	outputFormatJSON
+	outputFormatPrettyJSON
+)
+
+func (e *outputFormat) Set(s string) error {
+	switch s {
+	case "":
+		*e = outputFormatTabbed
+	case "json":
+		*e = outputFormatJSON
+	case "json-pretty":
+		*e = outputFormatPrettyJSON
+	default:
+		return fmt.Errorf("Invalid format option: %s", s)
+	}
+	return nil
+}
+
+func (s *outputFormat) String() string {
+	switch int(*s) {
+	case outputFormatJSON:
+		return "json"
+	case outputFormatPrettyJSON:
+		return "json-pretty"
+	default:
+		return ""
+	}
+}
+
+func (s *outputFormat) Type() string {
+	return "outputFormat"
+}
+
 type ImagesSortAsc bool
 
 func (isa *ImagesSortAsc) Set(s string) error {
@@ -113,6 +166,7 @@ var (
 	flagImagesFields     *rktflag.OptionList
 	flagImagesSortFields *rktflag.OptionList
 	flagImagesSortAsc    ImagesSortAsc
+	flagImageFormat      outputFormat
 )
 
 func init() {
@@ -140,20 +194,13 @@ func init() {
 	cmdImageList.Flags().Var(&flagImagesSortAsc, "order", `choose the sorting order if at least one sort field is provided (--sort). Accepted values: "asc", "desc"`)
 	cmdImageList.Flags().BoolVar(&flagNoLegend, "no-legend", false, "suppress a legend with the list")
 	cmdImageList.Flags().BoolVar(&flagFullOutput, "full", false, "use long output format")
+	cmdImageList.Flags().Var(&flagImageFormat, "format", fmt.Sprintf("choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs"))
 }
 
 func runImages(cmd *cobra.Command, args []string) int {
 	var errors []error
 	tabBuffer := new(bytes.Buffer)
 	tabOut := getTabOutWithWriter(tabBuffer)
-
-	if !flagNoLegend {
-		var headerFields []string
-		for _, f := range flagImagesFields.Options {
-			headerFields = append(headerFields, ImagesFieldHeaderMap[f])
-		}
-		fmt.Fprintf(tabOut, "%s\n", strings.Join(headerFields, "\t"))
-	}
 
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
@@ -182,6 +229,8 @@ func runImages(cmd *cobra.Command, args []string) int {
 		return 254
 	}
 
+	var imagesToPrint []printedImage
+
 	for _, aciInfo := range aciInfos {
 		imj, err := s.GetImageManifestJSON(aciInfo.BlobKey)
 		if err != nil {
@@ -194,52 +243,64 @@ func runImages(cmd *cobra.Command, args []string) int {
 			continue
 		}
 		version, ok := im.Labels.Get("version")
-		var fieldValues []string
-		for _, f := range flagImagesFields.Options {
-			fieldValue := ""
-			switch f {
-			case l(id):
-				hashKey := aciInfo.BlobKey
-				if !flagFullOutput {
-					// The short hash form is [HASH_ALGO]-[FIRST 12 CHAR]
-					// For example, sha512-123456789012
-					pos := strings.Index(hashKey, "-")
-					trimLength := pos + 13
-					if pos > 0 && trimLength < len(hashKey) {
-						hashKey = hashKey[:trimLength]
-					}
-				}
-				fieldValue = hashKey
-			case l(name):
-				fieldValue = aciInfo.Name
-				if ok {
-					fieldValue = fmt.Sprintf("%s:%s", fieldValue, version)
-				}
-			case l(importTime):
-				if flagFullOutput {
-					fieldValue = aciInfo.ImportTime.Format(defaultTimeLayout)
-				} else {
-					fieldValue = humanize.Time(aciInfo.ImportTime)
-				}
-			case l(lastUsed):
-				if flagFullOutput {
-					fieldValue = aciInfo.LastUsed.Format(defaultTimeLayout)
-				} else {
-					fieldValue = humanize.Time(aciInfo.LastUsed)
-				}
-			case l(size):
-				totalSize := aciInfo.Size + aciInfo.TreeStoreSize
-				if flagFullOutput {
-					fieldValue = fmt.Sprintf("%d", totalSize)
-				} else {
-					fieldValue = humanize.IBytes(uint64(totalSize))
-				}
-			case l(latest):
-				fieldValue = fmt.Sprintf("%t", aciInfo.Latest)
-			}
-			fieldValues = append(fieldValues, fieldValue)
+
+		imageID := aciInfo.BlobKey
+		imageName := aciInfo.Name
+		if ok {
+			imageName = fmt.Sprintf("%s:%s", imageName, version)
 		}
-		fmt.Fprintf(tabOut, "%s\n", strings.Join(fieldValues, "\t"))
+
+		totalSize := aciInfo.Size + aciInfo.TreeStoreSize
+
+		imageImportTime := humanize.Time(aciInfo.ImportTime)
+		imageLastUsed := humanize.Time(aciInfo.LastUsed)
+		imageSize := humanize.IBytes(uint64(totalSize))
+
+		if flagImageFormat != outputFormatTabbed || flagFullOutput {
+			imageImportTime = aciInfo.ImportTime.Format(defaultTimeLayout)
+			imageLastUsed = aciInfo.LastUsed.Format(defaultTimeLayout)
+			imageSize = fmt.Sprintf("%d", totalSize)
+		}
+
+		if !flagFullOutput && flagImageFormat == outputFormatTabbed {
+			imageID = trimImageID(imageID)
+		}
+
+		imagesToPrint = append(imagesToPrint, printedImage{
+			ID:         imageID,
+			Name:       imageName,
+			ImportTime: imageImportTime,
+			LastUsed:   imageLastUsed,
+			Size:       imageSize,
+		})
+	}
+
+	switch flagImageFormat {
+	case outputFormatTabbed:
+		if !flagNoLegend {
+			var headerFields []string
+			for _, f := range flagImagesFields.Options {
+				headerFields = append(headerFields, ImagesFieldHeaderMap[f])
+			}
+			fmt.Fprintf(tabOut, "%s\n", strings.Join(headerFields, "\t"))
+		}
+		for _, image := range imagesToPrint {
+			fmt.Fprintf(tabOut, "%s\n", image.printableString())
+		}
+	case outputFormatJSON:
+		result, err := json.Marshal(imagesToPrint)
+		if err != nil {
+			errors = append(errors, err)
+		} else {
+			fmt.Fprintf(tabOut, "%s\n", result)
+		}
+	case outputFormatPrettyJSON:
+		result, err := json.MarshalIndent(imagesToPrint, "", "\t")
+		if err != nil {
+			errors = append(errors, err)
+		} else {
+			fmt.Fprintf(tabOut, "%s\n", result)
+		}
 	}
 
 	if len(errors) > 0 {
@@ -249,6 +310,17 @@ func runImages(cmd *cobra.Command, args []string) int {
 	tabOut.Flush()
 	stdout.Print(tabBuffer.String())
 	return 0
+}
+
+func trimImageID(imageID string) string {
+	// The short hash form is [HASH_ALGO]-[FIRST 12 CHAR]
+	// For example, sha512-123456789012
+	pos := strings.Index(imageID, "-")
+	trimLength := pos + 13
+	if pos > 0 && trimLength < len(imageID) {
+		imageID = imageID[:trimLength]
+	}
+	return imageID
 }
 
 func newImgListLoadError(err error, imj []byte, blobKey string) error {
