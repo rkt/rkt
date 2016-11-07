@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -26,22 +25,24 @@ import (
 
 	"github.com/coreos/rkt/common"
 	rktlog "github.com/coreos/rkt/pkg/log"
+	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
 
 	"github.com/appc/spec/schema/types"
 )
 
 var (
-	debug bool
-	log   *rktlog.Logger
-	diag  *rktlog.Logger
+	flagApp string
+	debug   bool
+	log     *rktlog.Logger
+	diag    *rktlog.Logger
 )
 
 func init() {
+	flag.StringVar(&flagApp, "app", "", "Application name")
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
 }
 
-// TODO use named flags instead of positional
 func main() {
 	flag.Parse()
 
@@ -52,17 +53,15 @@ func main() {
 		diag.SetOutput(ioutil.Discard)
 	}
 
-	appName, err := types.NewACName(flag.Arg(1))
+	appName, err := types.NewACName(flagApp)
 	if err != nil {
 		log.PrintE("invalid app name", err)
 		os.Exit(254)
 	}
 
-	enterEP := flag.Arg(2)
+	enterCmd := stage1common.PrepareEnterCmd(false)
 
-	args := []string{enterEP}
-
-	args = append(args, fmt.Sprintf("--pid=%s", flag.Arg(3)))
+	args := enterCmd
 	args = append(args, "/usr/bin/systemctl")
 	args = append(args, "is-active")
 	args = append(args, appName.String())
@@ -94,8 +93,7 @@ func main() {
 		}
 	}
 
-	args = []string{enterEP}
-	args = append(args, fmt.Sprintf("--pid=%s", flag.Arg(3)))
+	args = enterCmd
 	args = append(args, "/usr/bin/systemctl")
 	args = append(args, "daemon-reload")
 

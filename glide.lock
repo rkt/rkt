@@ -1,5 +1,5 @@
 hash: 3db4d7c6fc89de6c3454b8a74846d0286ab1a3eeb281322010055cea8a12fa4f
-updated: 2016-10-31T11:10:26.586363363Z
+updated: 2016-11-01T08:47:55.25498114+01:00
 imports:
 - name: github.com/appc/docker2aci
   version: 0cac1a3ecc114941cf643ec25f4daaeee8c3d538
@@ -304,4 +304,6 @@ imports:
   - pkg/api/resource
   - pkg/conversion
   - third_party/forked/reflect
-testImports: []
+testImports:
+- name: github.com/kr/text
+  version: 7cafcd837844e784b526369c9bce262804aebc60

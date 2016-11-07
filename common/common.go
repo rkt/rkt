@@ -67,6 +67,13 @@ const (
 	// Default perm bits for the regular directories
 	// within the stage1 directory.
 	DefaultRegularDirPerm = os.FileMode(0750)
+
+	// Enter command for crossing entrypoints.
+	CrossingEnterCmd = "RKT_STAGE1_ENTERCMD"
+	// Stage1 (PID) to enter, used by crossing entrypoints.
+	CrossingEnterPID = "RKT_STAGE1_ENTERPID"
+	// Stage2 (application name) to enter, optionally used by crossing entrypoints.
+	CrossingEnterApp = "RKT_STAGE1_ENTERAPP"
 )
 
 const (
@@ -100,6 +107,13 @@ func Stage1ManifestPath(root string) string {
 // PodManifestPath returns the path in root to the Pod Manifest
 func PodManifestPath(root string) string {
 	return filepath.Join(root, "pod")
+}
+
+// PodManifestLockPath returns the path in root to the Pod Manifest lock file.
+// This must be different from the PodManifestPath since mutations on the pod manifest file
+// happen by overwriting the original file.
+func PodManifestLockPath(root string) string {
+	return filepath.Join(root, "pod.lck")
 }
 
 // AppsStatusesPath returns the path of the status dir for all apps.
@@ -431,4 +445,19 @@ func RemoveEmptyLines(str string) []string {
 	}
 
 	return lines
+}
+
+// GetExitStatus converts an error to an exit status. If it wasn't an exit
+// status != 0 it returns the same error that it was called with
+func GetExitStatus(err error) (int, error) {
+	if err == nil {
+		return 0, nil
+	}
+	if exiterr, ok := err.(*exec.ExitError); ok {
+		// the program has exited with an exit code != 0
+		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+			return status.ExitStatus(), nil
+		}
+	}
+	return -1, err
 }
