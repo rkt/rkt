@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/hashicorp/errwrap"
 )
@@ -51,4 +52,21 @@ func WritePid(pid int, filename string) error {
 		return errwrap.Wrap(errors.New("cannot write pid file"), err)
 	}
 	return nil
+}
+
+// PrepareEnterCmd retrieves enter argument and prepare a command list
+// to further run a command in stage1 context
+func PrepareEnterCmd(enterStage2 bool) []string {
+	var args []string
+	enterCmd := os.Getenv(common.CrossingEnterCmd)
+	enterPID := os.Getenv(common.CrossingEnterPID)
+	if enterCmd != "" && enterPID != "" {
+		args = append(args, []string{enterCmd, fmt.Sprintf("--pid=%s", enterPID)}...)
+		enterApp := os.Getenv(common.CrossingEnterApp)
+		if enterApp != "" && enterStage2 {
+			args = append(args, fmt.Sprintf("--app=%s", enterApp))
+		}
+		args = append(args, "--")
+	}
+	return args
 }

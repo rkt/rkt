@@ -67,6 +67,13 @@ const (
 	// Default perm bits for the regular directories
 	// within the stage1 directory.
 	DefaultRegularDirPerm = os.FileMode(0750)
+
+	// Enter command for crossing entrypoints.
+	CrossingEnterCmd = "RKT_STAGE1_ENTERCMD"
+	// Stage1 (PID) to enter, used by crossing entrypoints.
+	CrossingEnterPID = "RKT_STAGE1_ENTERPID"
+	// Stage2 (application name) to enter, optionally used by crossing entrypoints.
+	CrossingEnterApp = "RKT_STAGE1_ENTERAPP"
 )
 
 const (

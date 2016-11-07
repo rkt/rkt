@@ -90,6 +90,12 @@ Any stage1 that supports and expects machined registration to occur will likely 
 	`resolv.conf` is to create /etc/rkt-resolv.conf iff a CNI plugin specifies it, and for `hosts` is to create 
 	a fallback if the app does not provide it.
 
+#### Arguments added in interface version 5 (experimental)
+
+This interface version is not yet finalized, thus marked as experimental.
+
+* `--mutable` to run a mutable pod
+
 ### rkt enter
 
 `coreos.com/rkt/stage1/enter`
@@ -139,15 +145,27 @@ In the bundled rkt stage 1, the entrypoint is sending SIGTERM signal to systemd-
 * `--force` to force the stopping of the pod. E.g. in the bundled rkt stage 1, stop sends SIGKILL
 * UUID of the pod
 
+## Crossing Entrypoints
+
+Some entrypoints need to perform actions in the context of stage1 or stage2. As such they need to cross stage boundaries (thus the name) and depend on the `enter` entrypoint existence. All crossing entrypoints receive additional options for entering via the following environmental flags:
+
+* `RKT_STAGE1_ENTERCMD` specify the command to be called to enter a stage1 or a stage2 environment
+* `RKT_STAGE1_ENTERPID` specify the PID of the stage1 to enter
+* `RKT_STAGE1_ENTERAPP` optionally specify the application name of the stage2 to enter
+
 ### rkt app add
+
+(Experimental, to be stabilized in version 5)
 
 `coreos.com/rkt/stage1/app/add`
 
+This is a crossing entrypoint.
+
 #### Arguments
 
-`start $OPTIONS UUID APPNAME ENTERENTRYPOINT PID`
-
+* `--app` application name
 * `--debug` to activate debugging
+* `--uuid` UUID of the pod
 * `--disable-capabilities-restriction` gives all capabilities to apps (overrides `retain-set` and `remove-set`)
 * `--disable-paths` disables inaccessible and read-only paths (such as `/proc/sysrq-trigger`)
 * `--disable-seccomp` disables seccomp (overrides `retain-set` and `remove-set`)
@@ -155,48 +173,68 @@ In the bundled rkt stage 1, the entrypoint is sending SIGTERM signal to systemd-
 
 ### rkt app start
 
+(Experimental, to be stabilized in version 5)
+
 `coreos.com/rkt/stage1/app/start`
+
+This is a crossing entrypoint.
 
 #### Arguments
 
-`start $OPTIONS UUID APPNAME ENTERENTRYPOINT PID`
-
+* `--app` application name
 * `--debug` to activate debugging
 
 ### rkt app stop
 
+(Experimental, to be stabilized in version 5)
+
 `coreos.com/rkt/stage1/app/stop`
+
+This is a crossing entrypoint.
 
 #### Arguments
 
-`stop $OPTIONS UUID APPNAME ENTERENTRYPOINT PID`
-
+* `--app` application name
 * `--debug` to activate debugging
 
 ### rkt app rm
 
+(Experimental, to be stabilized in version 5)
+
 `coreos.com/rkt/stage1/app/rm`
+
+This is a crossing entrypoint.
 
 #### Arguments
 
-`rm $OPTIONS UUID APPNAME ENTERENTRYPOINT PID`
-
+* `--app` application name
 * `--debug` to activate debugging
 
-## Metadata
+### rkt attach
 
-### Mutable pods
+(Experimental, to be stabilized in version 5)
 
-Stage1 images can support mutable pod environments, where, once a pod has been started, applications can be added/started/stopped/removed while the actual pod is running. This information is persisted at runtime in the pod manifest using the `coreos.com/rkt/stage1/mutable` annotation.
+`coreos.com/rkt/stage1/attach`
 
-If the annotation is not present, `false` is assumed.
+This is a crossing entrypoint.
+
+#### Arguments
+
+* `--action` action to perform (`auto-attach`, `custom-attach` or `list`)
+* `--app` application name
+* `--debug` to activate debugging
+* `--tty-in` whether to attach TTY input (`true` or `false`)
+* `--tty-out` whether to attach TTY output (`true` or `false`)
+* `--stdin` whether to attach stdin (`true` or `false`)
+* `--stdout` whether to attach stdout (`true` or `false`)
+* `--stderr` whether to attach stderr (`true` or `false`)
+
+## Stage1 Metadata
 
 ### Versioning
 
 The stage1 command line interface is versioned using an annotation with the name `coreos.com/rkt/stage1/interface-version`.
 If the annotation is not present, rkt assumes the version is 1.
-
-The current version of the stage1 interface is 3.
 
 ## Examples
 
@@ -246,6 +284,24 @@ The current version of the stage1 interface is 3.
 }
 ```
 
+## Runtime Metadata
+
+Pods and applications can be annotated at runtime to signal support for specific features.
+
+### Mutable pods (experimental v5)
+
+Stage1 images can support mutable pod environments, where, once a pod has been started, applications can be added/started/stopped/removed while the actual pod is running. This information is persisted at runtime in the pod manifest using the `coreos.com/rkt/stage1/mutable` annotation.
+
+If the annotation is not present, `false` is assumed.
+
+### Attachable applications (experimental v5)
+
+Stage1 images can support attachable applications, where I/O and TTY from each applications can be dynamically redirected and attached to.
+In that case, this information is persisted at runtime in each application manifest using the following annotations:
+ - `coreos.com/rkt/stage2/stdin`
+ - `coreos.com/rkt/stage2/stdout`
+ - `coreos.com/rkt/stage2/stderr`
+
 ## Filesystem Layout Assumptions
 
 The following paths are reserved for the stage1 image, and they will be created during stage0.
@@ -275,5 +331,11 @@ Later the exit status can be retrieved and shown by `rkt status $uuid`.
 This directory path is used for passing environment variables to each app.
 For example, environment variables for an app named `foo` will be stored in `rkt/env/foo`.
 
+### iottymux (experimental v5)
+
+`rkt/iottymux`
+
+This directory path is used for TTY and streaming attach helper.
+When attach mode is enabled each application will have a `rkt/iottymux/$appname/` directory, used by the I/O and TTY mux sidecar.
 
 [rkt-networking]: ../networking/overview.md
