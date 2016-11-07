@@ -810,32 +810,26 @@ func NewNetCNIEnvTest() testutils.Test {
 		netdir := prepareTestNet(t, ctx, nt)
 		defer os.RemoveAll(netdir)
 
-		ga := testutils.NewGoroutineAssistant(t)
-		ga.Add(1)
+		appCmd := "--exec=/inspect -- --print-defaultgwv4 "
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=%v --mds-register=false %s %s",
+			ctx.Cmd(), nt.NetParameter(), getInspectImagePath(), appCmd)
+		child := spawnOrFail(t, cmd)
+		waitOrFail(t, child, 0)
 
-		go func() {
-			defer ga.Done()
-			appCmd := "--exec=/inspect -- --print-defaultgwv4 "
-			cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=%v --mds-register=false %s %s",
-				ctx.Cmd(), nt.NetParameter(), getInspectImagePath(), appCmd)
-			child := ga.SpawnOrFail(cmd)
-			defer ga.WaitOrFail(child)
+		expectedRegex := "DefaultGWv4: 11.11.3.1"
 
-			expectedRegex := "DefaultGWv4: 11.11.3.1"
-
-			_, out, err := expectRegexTimeoutWithOutput(child, expectedRegex, 30*time.Second)
-			if err != nil {
-				ga.Fatalf("Error: %v\nOutput: %v", err, out)
-			}
-		}()
-
-		ga.Wait()
+		_, out, err := expectRegexTimeoutWithOutput(child, expectedRegex, 30*time.Second)
+		if err != nil {
+			t.Fatalf("Error: %v\nOutput: %v", err, out)
+		}
 
 		// Parse the log file
-		proxyLog, err := parseCNIProxyLog(filepath.Join(netdir, "output.json"))
+		cniLogFilename := filepath.Join(netdir, "output.json")
+		proxyLog, err := parseCNIProxyLog(cniLogFilename)
 		if err != nil {
-			t.Fatal("Failed to read cniproxy log", err)
+			t.Fatal("Failed to read cniproxy ADD log", err)
 		}
+		os.Remove(cniLogFilename)
 
 		// Check that the stdin matches the network config file
 		expectedConfig, err := ioutil.ReadFile(filepath.Join(netdir, nt.Name+".conf"))
@@ -847,31 +841,48 @@ func NewNetCNIEnvTest() testutils.Test {
 			t.Fatalf("CNI plugin stdin incorrect, expected <<%v>>, actual <<%v>>", expectedConfig, proxyLog.Stdin)
 		}
 
-		// Check that the environment is sane - these are regexes
+		// compare the CNI env against a set of regexes
+		checkEnv := func(step string, expectedEnv, actualEnv map[string]string) {
+			for k, v := range expectedEnv {
+				actual, exists := actualEnv[k]
+				if !exists {
+					t.Fatalf("Step %s, expected proxy CNI arg %s but not found", step, k)
+				}
+
+				re, err := regexp.Compile(v)
+				if err != nil {
+					t.Fatalf("Step %s, invalid CNI env regex for key %s %v", step, k, err)
+				}
+				found := re.FindString(actual)
+				if found == "" {
+					t.Fatalf("step %s cni environment %s was %s but expected pattern %s", step, k, actual, v)
+				}
+			}
+		}
+
 		expectedEnv := map[string]string{
-			"CNI_VERSION":     "0.3.0",
-			"CNI_COMMAND":     "ADD",
-			"CNI_IFNAME":      `eth\d`,
-			"CNI_PATH":        netdir,
-			"CNI_NETNS":       `/var/run/netns/cni-`,
-			"CNI_CONTAINERID": `^[a-fA-F0-9-]{36}`, //UUID, close enough
+			"CNI_VERSION":     `^0\.1\.0$`,
+			"CNI_COMMAND":     `^ADD$`,
+			"CNI_IFNAME":      `^eth\d$`,
+			"CNI_PATH":        "^" + netdir + ":/usr/lib/rkt/plugins/net:stage1/rootfs/usr/lib/rkt/plugins/net$",
+			"CNI_NETNS":       `^/var/run/netns/cni-`,
+			"CNI_CONTAINERID": `^[a-fA-F0-9-]{36}$`, //UUID, close enough
 		}
+		checkEnv("add", expectedEnv, proxyLog.EnvMap)
 
-		for k, v := range expectedEnv {
-			actual, exists := proxyLog.EnvMap[k]
-			if !exists {
-				t.Fatalf("Expected proxy CNI arg %s but not found", k)
-			}
-
-			re, err := regexp.Compile(v)
-			if err != nil {
-				t.Fatal("Invalid CNI env regex", v, err)
-			}
-			found := re.FindString(actual)
-			if found == "" {
-				t.Fatalf("CNI_ARG %s was %s but expected pattern %s", k, actual, v)
-			}
+		/*
+			Run rkt GC, ensure the CNI invocation looks sane
+		*/
+		ctx.RunGC()
+		proxyLog, err = parseCNIProxyLog(cniLogFilename)
+		if err != nil {
+			t.Fatal("Failed to read cniproxy DEL log", err)
 		}
+		os.Remove(cniLogFilename)
+
+		expectedEnv["CNI_COMMAND"] = `^DEL$`
+		checkEnv("del", expectedEnv, proxyLog.EnvMap)
+
 	})
 }
 

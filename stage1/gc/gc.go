@@ -43,13 +43,15 @@ const (
 )
 
 var (
-	debug bool
-	log   *rktlog.Logger
-	diag  *rktlog.Logger
+	debug       bool
+	log         *rktlog.Logger
+	diag        *rktlog.Logger
+	localConfig string
 )
 
 func init() {
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
+	flag.StringVar(&localConfig, "local-config", common.DefaultLocalConfigDir, "Local config path")
 
 	// this ensures that main runs only on main thread (thread group leader).
 	// since namespace ops (unshare, setns) are done for a single thread, we
@@ -70,14 +72,17 @@ func main() {
 		log.Fatal("UUID is missing or malformed")
 	}
 
+	diag.Printf("Removing journal link.")
 	if err := removeJournalLink(podID); err != nil {
 		log.PrintE("error removing journal link", err)
 	}
 
+	diag.Printf("Cleaning up cgroups.")
 	if err := cleanupV1Cgroups(); err != nil {
 		log.PrintE("error cleaning up cgroups", err)
 	}
 
+	diag.Printf("Tearing down networks.")
 	if err := gcNetworking(podID); err != nil {
 		log.FatalE("", err)
 	}
@@ -97,7 +102,7 @@ func gcNetworking(podID *types.UUID) error {
 		}
 	}
 
-	n, err := networking.Load(".", podID)
+	n, err := networking.Load(".", podID, localConfig)
 	switch {
 	case err == nil:
 		n.Teardown(flavor, debug)

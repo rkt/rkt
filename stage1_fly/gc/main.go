@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/coreos/rkt/common"
 	rktlog "github.com/coreos/rkt/pkg/log"
 )
 
@@ -29,11 +30,13 @@ const (
 var (
 	debug bool
 
-	diag *rktlog.Logger
+	diag        *rktlog.Logger
+	localConfig string
 )
 
 func init() {
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
+	flag.StringVar(&localConfig, "local-config", common.DefaultLocalConfigDir, "Local config path (ignored)")
 }
 
 func main() {
