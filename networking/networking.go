@@ -25,7 +25,6 @@ import (
 	"syscall"
 
 	"github.com/appc/spec/schema/types"
-	"github.com/containernetworking/cni/pkg/ns"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/hashicorp/errwrap"
 	"github.com/vishvananda/netlink"
@@ -34,8 +33,6 @@ import (
 	commonnet "github.com/coreos/rkt/common/networking"
 	"github.com/coreos/rkt/networking/netinfo"
 	"github.com/coreos/rkt/pkg/log"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -75,12 +72,6 @@ func Setup(podRoot string, podID types.UUID, fps []commonnet.ForwardedPort, netL
 		return kvmSetup(podRoot, podID, fps, netList, localConfig, noDNS)
 	}
 
-	// Create namespace for Pod and write path to a file
-	podNS, err := ns.NewNS()
-	if err != nil {
-		return nil, err
-	}
-
 	// TODO(jonboulle): currently podRoot is _always_ ".", and behaviour in other
 	// circumstances is untested. This should be cleaned up.
 	n := Networking{
@@ -89,8 +80,13 @@ func Setup(podRoot string, podID types.UUID, fps []commonnet.ForwardedPort, netL
 			podID:        podID,
 			netsLoadList: netList,
 			localConfig:  localConfig,
-			podNS:        podNS,
 		},
+	}
+
+	// Create the network namespace (and save its name in a file)
+	err := n.podNSCreate()
+	if err != nil {
+		return nil, err
 	}
 
 	n.nets, err = n.loadNets()
@@ -121,7 +117,7 @@ func Setup(podRoot string, podID types.UUID, fps []commonnet.ForwardedPort, netL
 	}
 
 	// Switch to the podNS
-	if err := podNS.Set(); err != nil {
+	if err := n.podNS.Set(); err != nil {
 		return nil, err
 	}
 
@@ -215,11 +211,10 @@ func Load(podRoot string, podID *types.UUID) (*Networking, error) {
 		podID:   *podID,
 	}
 
-	podNS, err := p.podNSLoad()
+	err = p.podNSLoad()
 	if err != nil {
 		return nil, err
 	}
-	p.podNS = podNS
 
 	return &Networking{
 		podEnv: p,
@@ -283,29 +278,13 @@ func (n *Networking) Teardown(flavor string, debug bool) {
 		stderr.PrintE("error removing forwarded ports", err)
 	}
 
-	podNS, err := n.podNSLoad()
+	err := n.podNSLoad()
 	if err != nil {
 		stderr.PrintE("error loading podNS", err)
 	}
-	if podNS != nil {
-		defer func() {
-			n.podNS.Close()
 
-			if err := syscall.Unmount(n.podNS.Path(), unix.MNT_DETACH); err != nil {
-				// if already unmounted, umount(2) returns EINVAL
-				if !os.IsNotExist(err) && err != syscall.EINVAL {
-					stderr.PrintE(fmt.Sprintf("error unmounting %q", n.podNS.Path()), err)
-				}
-			}
-
-			if err := os.RemoveAll(n.podNS.Path()); err != nil {
-				stderr.PrintE(fmt.Sprintf("failed to remove namespace %s", n.podNS.Path()), err)
-			}
-		}()
-	}
-
-	n.podNS = podNS
 	n.teardownNets(n.nets)
+	n.podNSDestroy()
 }
 
 // Save writes out the info about active nets
@@ -324,6 +303,21 @@ func (e *Networking) Save() error {
 	}
 
 	return netinfo.Save(e.podRoot, nis)
+}
+
+// CleanUpGarbage can be called when Load fails, but there may still
+// be some garbage lying around. Right now, this deletes the namespace.
+func CleanUpGarbage(podRoot string, podID *types.UUID) error {
+	p := podEnv{
+		podRoot: podRoot,
+		podID:   *podID,
+	}
+
+	err := p.podNSLoad()
+	if err != nil {
+		return err
+	}
+	return p.podNSDestroy()
 }
 
 func loUp() error {

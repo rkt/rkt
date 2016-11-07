@@ -24,6 +24,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/appc/spec/schema/types"
 	"github.com/hashicorp/errwrap"
@@ -99,6 +102,22 @@ func (e *podEnv) loadNets() ([]activeNet, error) {
 	return nets, nil
 }
 
+// podNSCreate creates the network namespace and saves a reference to its path.
+// NewNS will bind-mount the namespace in /run/netns, so we write that filename
+// to disk.
+func (e *podEnv) podNSCreate() error {
+	podNS, err := ns.NewNS()
+	if err != nil {
+		return err
+	}
+	e.podNS = podNS
+
+	if err := e.podNSPathSave(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (e *podEnv) podNSFilePath() string {
 	return filepath.Join(e.podRoot, "netns")
 }
@@ -127,16 +146,17 @@ func podNSerrorOK(podNSPath string, err error) bool {
 	}
 }
 
-func (e *podEnv) podNSLoad() (ns.NetNS, error) {
+func (e *podEnv) podNSLoad() error {
 	podNSPath, err := e.podNSPathLoad()
 	if err != nil && !podNSerrorOK(podNSPath, err) {
-		return nil, err
+		return err
 	} else {
 		podNS, err := ns.GetNS(podNSPath)
 		if err != nil && !podNSerrorOK(podNSPath, err) {
-			return nil, err
+			return err
 		}
-		return podNS, nil
+		e.podNS = podNS
+		return nil
 	}
 }
 
@@ -151,6 +171,33 @@ func (e *podEnv) podNSPathSave() error {
 		return err
 	}
 
+	return nil
+}
+
+func (e *podEnv) podNSDestroy() error {
+	if e.podNS == nil {
+		return nil
+	}
+
+	// Close the namespace handle
+	// If this handle also *created* the namespace, it will delete it for us.
+	_ = e.podNS.Close()
+
+	// We still need to try and delete the namespace ourselves - no way to know
+	// if podNS.Close() did it for us.
+	// Unmount the ns bind-mount, and delete the mountpoint if successful
+
+	if err := syscall.Unmount(e.podNS.Path(), unix.MNT_DETACH); err != nil {
+		// if already unmounted, umount(2) returns EINVAL - continue
+		if !os.IsNotExist(err) && err != syscall.EINVAL {
+			return errwrap.Wrap(fmt.Errorf("error unmounting netns %q", e.podNS.Path()), err)
+		}
+	}
+	if err := os.RemoveAll(e.podNS.Path()); err != nil {
+		if !os.IsNotExist(err) {
+			return errwrap.Wrap(fmt.Errorf("failed to remove netns %s", e.podNS.Path()), err)
+		}
+	}
 	return nil
 }
 
