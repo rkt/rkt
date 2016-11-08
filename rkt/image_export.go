@@ -28,7 +28,7 @@ var (
 	cmdImageExport = &cobra.Command{
 		Use:   "export IMAGE OUTPUT_ACI_FILE",
 		Short: "Export a stored image to an ACI file",
-		Long: `IMAGE should be a string referencing an image: either a hash or an image name.
+		Long: `IMAGE should be a string referencing an image: either an ID or an image name.
 
 Note that images must be fetched prior to running export and that this command
 always returns uncompressed ACIs`,

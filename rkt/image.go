@@ -20,6 +20,19 @@ var (
 	cmdImage = &cobra.Command{
 		Use:   "image [command]",
 		Short: "Operate on image(s) in the local store",
+		Long: `This subcommand operates on image(s) in the local store.
+
+The "cat-manifest", "export", "extract", "render", and "rm" subcommands
+take the ID or image name to reference images in the local store.
+
+The ID can be specified using the long or short version, i.e. "sha512-78c08a541997",
+or "sha512-78c08a5419979fff71e615f27aad75b84362a3cd9a13703b9d47ec27d1cfd029".
+
+The image name can be specified including the version tag as stored in the local store,
+i.e. "quay.io/coreos/etcd:latest", or "quay.io/coreos/etcd:v3.0.13".
+
+The version tag may be left out, i.e. "quay.io/coreos/etcd".
+In case of ambiguity, the least recently fetched image with this name will be chosen.`,
 	}
 )
 

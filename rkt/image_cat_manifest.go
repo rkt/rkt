@@ -26,7 +26,7 @@ var (
 	cmdImageCatManifest = &cobra.Command{
 		Use:   "cat-manifest IMAGE",
 		Short: "Inspect and print the image manifest",
-		Long:  `IMAGE should be a string referencing an image; either a hash or an image name.`,
+		Long:  `IMAGE should be a string referencing an image; either a ID or an image name.`,
 		Run:   runWrapper(runImageCatManifest),
 	}
 	flagPrettyPrint bool
