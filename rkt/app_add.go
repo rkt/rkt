@@ -32,7 +32,7 @@ var (
 	cmdAppAdd = &cobra.Command{
 		Use:   "add UUID IMAGEID ...",
 		Short: "Add an app to a pod",
-		Long:  `This allows addin an app that's present on the store to a running pod`,
+		Long:  "This adds an application available in the local image store to a running mutable pod.",
 		Run:   runWrapper(runAppAdd),
 	}
 )
