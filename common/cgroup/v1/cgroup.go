@@ -40,15 +40,15 @@ var (
 	}
 )
 
-func mountFsRO(mountPoint string) error {
-	var flags uintptr = syscall.MS_BIND |
+// mountFsRO remounts the given mountPoint using the given flags read-only.
+func mountFsRO(mountPoint string, flags uintptr) error {
+	flags = flags |
+		syscall.MS_BIND |
 		syscall.MS_REMOUNT |
-		syscall.MS_NOSUID |
-		syscall.MS_NOEXEC |
-		syscall.MS_NODEV |
 		syscall.MS_RDONLY
+
 	if err := syscall.Mount(mountPoint, mountPoint, "", flags, ""); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error remounting RO %q", mountPoint), err)
+		return errwrap.Wrap(fmt.Errorf("error remounting read-only %q", mountPoint), err)
 	}
 
 	return nil
@@ -251,18 +251,19 @@ func IsControllerMounted(c string) bool {
 // under root
 func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext string) error {
 	controllers := GetControllerDirs(enabledCgroups)
-	var flags uintptr
 
 	sys := filepath.Join(root, "/sys")
 	if err := os.MkdirAll(sys, 0700); err != nil {
 		return err
 	}
-	flags = syscall.MS_NOSUID |
+
+	var sysfsFlags uintptr = syscall.MS_NOSUID |
 		syscall.MS_NOEXEC |
 		syscall.MS_NODEV
+
 	// If we're mounting the host cgroups, /sys is probably mounted so we
 	// ignore EBUSY
-	if err := syscall.Mount("sysfs", sys, "sysfs", flags, ""); err != nil && err != syscall.EBUSY {
+	if err := syscall.Mount("sysfs", sys, "sysfs", sysfsFlags, ""); err != nil && err != syscall.EBUSY {
 		return errwrap.Wrap(fmt.Errorf("error mounting %q", sys), err)
 	}
 
@@ -270,7 +271,8 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 	if err := os.MkdirAll(cgroupTmpfs, 0700); err != nil {
 		return err
 	}
-	flags = syscall.MS_NOSUID |
+
+	var cgroupTmpfsFlags uintptr = syscall.MS_NOSUID |
 		syscall.MS_NOEXEC |
 		syscall.MS_NODEV |
 		syscall.MS_STRICTATIME
@@ -280,7 +282,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 		options = fmt.Sprintf("mode=755,context=\"%s\"", mountContext)
 	}
 
-	if err := syscall.Mount("tmpfs", cgroupTmpfs, "tmpfs", flags, options); err != nil {
+	if err := syscall.Mount("tmpfs", cgroupTmpfs, "tmpfs", cgroupTmpfsFlags, options); err != nil {
 		return errwrap.Wrap(fmt.Errorf("error mounting %q", cgroupTmpfs), err)
 	}
 
@@ -291,9 +293,10 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 			return err
 		}
 
-		flags = syscall.MS_NOSUID |
+		var flags uintptr = syscall.MS_NOSUID |
 			syscall.MS_NOEXEC |
 			syscall.MS_NODEV
+
 		if err := syscall.Mount("cgroup", cPath, "cgroup", flags, c); err != nil {
 			return errwrap.Wrap(fmt.Errorf("error mounting %q", cPath), err)
 		}
@@ -314,7 +317,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 	}
 
 	// Bind-mount cgroup tmpfs filesystem read-only
-	return mountFsRO(cgroupTmpfs)
+	return mountFsRO(cgroupTmpfs, cgroupTmpfsFlags)
 }
 
 // RemountCgroupsRO remounts the v1 cgroup hierarchy under root read-only,
@@ -324,6 +327,10 @@ func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup st
 	controllers := GetControllerDirs(enabledCgroups)
 	cgroupTmpfs := filepath.Join(root, "/sys/fs/cgroup")
 	sysPath := filepath.Join(root, "/sys")
+
+	var flags uintptr = syscall.MS_NOSUID |
+		syscall.MS_NOEXEC |
+		syscall.MS_NODEV
 
 	// Mount RW knobs we need to make the enabled isolators work
 	for _, c := range controllers {
@@ -356,13 +363,13 @@ func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup st
 		}
 
 		// Re-mount controller read-only to prevent the container modifying host controllers
-		if err := mountFsRO(cPath); err != nil {
+		if err := mountFsRO(cPath, flags); err != nil {
 			return err
 		}
 	}
 
 	// Bind-mount sys filesystem read-only
-	return mountFsRO(sysPath)
+	return mountFsRO(sysPath, flags)
 }
 
 // RemountCgroupKnobsRW remounts the needed knobs in the subcgroup for one
