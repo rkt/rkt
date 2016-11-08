@@ -15,32 +15,37 @@
 package log
 
 import (
-	"fmt"
 	"io"
-	"os"
-	"strings"
+	stdlog "log"
 )
 
-var debugEnabled bool
-
-func printTo(w io.Writer, i ...interface{}) {
-	s := fmt.Sprint(i...)
-	fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
+// Logger is the interface that enables logging.
+// It is compatible with the stdlib "log" methods.
+// It is also compatible with https://godoc.org/github.com/Sirupsen/logrus#StdLogger.
+type Logger interface {
+	Print(...interface{})
+	Printf(string, ...interface{})
+	Println(...interface{})
 }
 
-// Info prints a message to stderr.
-func Info(i ...interface{}) {
-	printTo(os.Stderr, i...)
+func NewStdLogger(out io.Writer) Logger {
+	return stdlog.New(out, "", 0)
 }
 
-// Debug prints a message to stderr if debug is enabled.
-func Debug(i ...interface{}) {
-	if debugEnabled {
-		printTo(os.Stderr, i...)
-	}
+type nopLogger struct{}
+
+func NewNopLogger() Logger {
+	return &nopLogger{}
 }
 
-// InitDebug enables debug output.
-func InitDebug() {
-	debugEnabled = true
+func (l *nopLogger) Print(...interface{}) {
+	// nop
+}
+
+func (l *nopLogger) Printf(string, ...interface{}) {
+	// nop
+}
+
+func (l *nopLogger) Println(...interface{}) {
+	// nop
 }

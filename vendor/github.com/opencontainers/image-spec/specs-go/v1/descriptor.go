@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package specs
+package v1
 
 // Descriptor describes the disposition of targeted content.
 type Descriptor struct {

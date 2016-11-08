@@ -53,13 +53,13 @@ import (
 // BuildACI takes a Docker layer, converts it to ACI and returns its output
 // path and its converted ImageManifest.
 type Docker2ACIBackend interface {
-	GetImageInfo(dockerUrl string) ([]string, *types.ParsedDockerURL, error)
-	BuildACI(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error)
+	GetImageInfo(dockerUrl string) ([]string, *common.ParsedDockerURL, error)
+	BuildACI(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error)
 }
 
 // GenerateACI takes a Docker layer and generates an ACI from it.
-func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *types.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression) (string, *schema.ImageManifest, error) {
-	manifest, err := GenerateManifest(layerData, dockerURL)
+func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *common.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression, debug log.Logger) (string, *schema.ImageManifest, error) {
+	manifest, err := GenerateManifest(layerData, dockerURL, debug)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating the manifest: %v", err)
 	}
@@ -79,7 +79,7 @@ func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *ty
 	return aciPath, manifest, nil
 }
 
-func GenerateACI22LowerLayer(dockerURL *types.ParsedDockerURL, layerDigest string, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression) (string, *schema.ImageManifest, error) {
+func GenerateACI22LowerLayer(dockerURL *common.ParsedDockerURL, layerDigest string, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression) (string, *schema.ImageManifest, error) {
 	formattedDigest := strings.Replace(layerDigest, ":", "-", -1)
 	aciName := fmt.Sprintf("%s/%s-%s", dockerURL.IndexURL, dockerURL.ImageName, formattedDigest)
 	sanitizedAciName, err := appctypes.SanitizeACIdentifier(aciName)
@@ -104,13 +104,13 @@ func GenerateACI22LowerLayer(dockerURL *types.ParsedDockerURL, layerDigest strin
 	return aciPath, manifest, nil
 }
 
-func GenerateACI22TopLayer(dockerURL *types.ParsedDockerURL, imageConfig *typesV2.ImageConfig, layerDigest string, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression, lowerLayers []*schema.ImageManifest) (string, *schema.ImageManifest, error) {
+func GenerateACI22TopLayer(dockerURL *common.ParsedDockerURL, imageConfig *typesV2.ImageConfig, layerDigest string, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression, lowerLayers []*schema.ImageManifest, debug log.Logger) (string, *schema.ImageManifest, error) {
 	aciName := fmt.Sprintf("%s/%s-%s", dockerURL.IndexURL, dockerURL.ImageName, layerDigest)
 	sanitizedAciName, err := appctypes.SanitizeACIdentifier(aciName)
 	if err != nil {
 		return "", nil, err
 	}
-	manifest, err := GenerateManifestV22(sanitizedAciName, dockerURL, imageConfig, layerDigest, lowerLayers)
+	manifest, err := GenerateManifestV22(sanitizedAciName, dockerURL, imageConfig, layerDigest, lowerLayers, debug)
 	if err != nil {
 		return "", nil, err
 	}
@@ -168,7 +168,7 @@ func generateEPCmdAnnotation(dockerEP, dockerCmd []string) (string, string, erro
 
 // GenerateManifest converts the docker manifest format to an appc
 // ImageManifest.
-func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDockerURL) (*schema.ImageManifest, error) {
+func GenerateManifest(layerData types.DockerImageData, dockerURL *common.ParsedDockerURL, debug log.Logger) (*schema.ImageManifest, error) {
 	dockerConfig := layerData.Config
 	genManifest := &schema.ImageManifest{}
 
@@ -226,6 +226,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 		addAnno("created", layerData.Created.Format(time.RFC3339))
 	}
 	addAnno("docker-comment", layerData.Comment)
+	addAnno(common.AppcDockerOriginalName, dockerURL.OriginalName)
 	addAnno(common.AppcDockerRegistryURL, dockerURL.IndexURL)
 	addAnno(common.AppcDockerRepository, dockerURL.ImageName)
 	addAnno(common.AppcDockerImageID, layerData.ID)
@@ -233,44 +234,44 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *types.ParsedDo
 
 	if dockerConfig != nil {
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
-		if exec != nil {
-			user, group := parseDockerUser(dockerConfig.User)
-			var env appctypes.Environment
-			for _, v := range dockerConfig.Env {
-				parts := strings.SplitN(v, "=", 2)
-				env.Set(parts[0], parts[1])
-			}
-			app := &appctypes.App{
-				Exec:             exec,
-				User:             user,
-				Group:            group,
-				Environment:      env,
-				WorkingDirectory: dockerConfig.WorkingDir,
-			}
-
-			app.MountPoints, err = convertVolumesToMPs(dockerConfig.Volumes)
-			if err != nil {
-				return nil, err
-			}
-
-			app.Ports, err = convertPorts(dockerConfig.ExposedPorts, dockerConfig.PortSpecs)
-			if err != nil {
-				return nil, err
-			}
-
-			ep, cmd, err := generateEPCmdAnnotation(dockerConfig.Entrypoint, dockerConfig.Cmd)
-			if err != nil {
-				return nil, err
-			}
-			if len(ep) > 0 {
-				addAnno(common.AppcDockerEntrypoint, ep)
-			}
-			if len(cmd) > 0 {
-				addAnno(common.AppcDockerCmd, cmd)
-			}
-
-			genManifest.App = app
+		user, group := parseDockerUser(dockerConfig.User)
+		var env appctypes.Environment
+		for _, v := range dockerConfig.Env {
+			parts := strings.SplitN(v, "=", 2)
+			env.Set(parts[0], parts[1])
 		}
+		app := &appctypes.App{
+			Exec:             exec,
+			User:             user,
+			Group:            group,
+			Environment:      env,
+			WorkingDirectory: dockerConfig.WorkingDir,
+		}
+
+		app.UserLabels = dockerConfig.Labels
+
+		app.MountPoints, err = convertVolumesToMPs(dockerConfig.Volumes)
+		if err != nil {
+			return nil, err
+		}
+
+		app.Ports, err = convertPorts(dockerConfig.ExposedPorts, dockerConfig.PortSpecs, debug)
+		if err != nil {
+			return nil, err
+		}
+
+		ep, cmd, err := generateEPCmdAnnotation(dockerConfig.Entrypoint, dockerConfig.Cmd)
+		if err != nil {
+			return nil, err
+		}
+		if len(ep) > 0 {
+			addAnno(common.AppcDockerEntrypoint, ep)
+		}
+		if len(cmd) > 0 {
+			addAnno(common.AppcDockerCmd, cmd)
+		}
+
+		genManifest.App = app
 	}
 
 	if layerData.Parent != "" {
@@ -328,7 +329,7 @@ func GenerateEmptyManifest(name string) (*schema.ImageManifest, error) {
 	}, nil
 }
 
-func GenerateManifestV22(name string, dockerURL *types.ParsedDockerURL, config *typesV2.ImageConfig, imageDigest string, lowerLayers []*schema.ImageManifest) (*schema.ImageManifest, error) {
+func GenerateManifestV22(name string, dockerURL *common.ParsedDockerURL, config *typesV2.ImageConfig, imageDigest string, lowerLayers []*schema.ImageManifest, debug log.Logger) (*schema.ImageManifest, error) {
 	manifest, err := GenerateEmptyManifest(name)
 	if err != nil {
 		return nil, err
@@ -356,6 +357,7 @@ func GenerateManifestV22(name string, dockerURL *types.ParsedDockerURL, config *
 	addAnno("author", config.Author)
 	addAnno("created", config.Created)
 
+	addAnno(common.AppcDockerOriginalName, dockerURL.OriginalName)
 	addAnno(common.AppcDockerRegistryURL, dockerURL.IndexURL)
 	addAnno(common.AppcDockerRepository, dockerURL.ImageName)
 	addAnno(common.AppcDockerImageID, imageDigest)
@@ -381,7 +383,7 @@ func GenerateManifestV22(name string, dockerURL *types.ParsedDockerURL, config *
 		if err != nil {
 			return nil, err
 		}
-		manifest.App.Ports, err = convertPorts(innerCfg.ExposedPorts, nil)
+		manifest.App.Ports, err = convertPorts(innerCfg.ExposedPorts, nil, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -448,7 +450,7 @@ func (s appcPortSorter) Less(i, j int) bool {
 	return s[i].Name.String() < s[j].Name.String()
 }
 
-func convertPorts(dockerExposedPorts map[string]struct{}, dockerPortSpecs []string) ([]appctypes.Port, error) {
+func convertPorts(dockerExposedPorts map[string]struct{}, dockerPortSpecs []string, debug log.Logger) ([]appctypes.Port, error) {
 	ports := []appctypes.Port{}
 
 	for ep := range dockerExposedPorts {
@@ -460,7 +462,7 @@ func convertPorts(dockerExposedPorts map[string]struct{}, dockerPortSpecs []stri
 	}
 
 	if dockerExposedPorts == nil && dockerPortSpecs != nil {
-		log.Debug("warning: docker image uses deprecated PortSpecs field")
+		debug.Println("warning: docker image uses deprecated PortSpecs field")
 		for _, ep := range dockerPortSpecs {
 			appcPort, err := parseDockerPort(ep)
 			if err != nil {

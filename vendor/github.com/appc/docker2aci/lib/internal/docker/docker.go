@@ -25,8 +25,6 @@ import (
 	"strings"
 
 	"github.com/appc/docker2aci/lib/internal/types"
-
-	"github.com/docker/distribution/reference"
 )
 
 const (
@@ -34,7 +32,6 @@ const (
 	dockercfgFileNameOld = ".dockercfg"
 	defaultIndexURL      = "registry-1.docker.io"
 	defaultIndexURLAuth  = "https://index.docker.io/v1/"
-	defaultTag           = "latest"
 	defaultRepoPrefix    = "library/"
 )
 
@@ -130,33 +127,4 @@ func GetAuthInfo(indexServer string) (string, string, error) {
 		return "", "", fmt.Errorf("%s - %v", dockerCfgPath, err)
 	}
 	return "", "", nil
-}
-
-// ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
-// index URL, image name, and tag.
-func ParseDockerURL(arg string) (*types.ParsedDockerURL, error) {
-	r, err := reference.ParseNamed(arg)
-	if err != nil {
-		return nil, err
-	}
-
-	var tag, digest string
-	switch x := r.(type) {
-	case reference.Canonical:
-		digest = x.Digest().String()
-	case reference.NamedTagged:
-		tag = x.Tag()
-	default:
-		tag = defaultTag
-	}
-
-	indexURL, remoteName := SplitReposName(r.Name())
-
-	p := &types.ParsedDockerURL{
-		IndexURL:  indexURL,
-		ImageName: remoteName,
-		Tag:       tag,
-		Digest:    digest,
-	}
-	return p, nil
 }
