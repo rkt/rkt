@@ -101,10 +101,17 @@ You may want to change it to point the build system to use some local repository
 
 #### `--with-stage1-systemd-version`
 
+This parameter specifies the systemd version to be built.
+Version names are usually in form of `v<number>`, where number is a systemd version.
+The default is `v999`.
+
+#### `--with-stage1-systemd-revision`
+
 This parameter takes either a tag name or a branch name.
-Tag names are usually in form of `v<number>`, where number is a systemd version.
-The default is `v229`.
-You can use branch name `master` to test the bleeding edge version of systemd.
+You can use branch name `master` to test the bleeding edge version of systemd or any working branch, or tag name.
+Since arbitrary branch names do not imply which systemd version is being built, the actual systemd version
+is specified using `--with-stage1-systemd-version`.
+The default is `master`.
 
 ### `coreos` and `kvm` flavor
 

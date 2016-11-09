@@ -86,6 +86,13 @@ function parseParameters {
                 echo "Only \`src\` flavor requires systemd version"
             fi
             ;;
+        r)
+            if [[ $RKT_STAGE1_USR_FROM == "src" ]]; then
+                RKT_STAGE1_SYSTEMD_REV="${OPTARG}"
+            else
+                echo "Only \`src\` flavor requires systemd revision"
+            fi
+            ;;
         x)
             FORCE=true
             ;;
@@ -133,7 +140,8 @@ function configure {
         src)
         ./configure --with-stage1-flavors="${RKT_STAGE1_USR_FROM}" \
                 --with-stage1-default-flavor="${RKT_STAGE1_USR_FROM}" \
-                --with-stage1-systemd-version="${RKT_STAGE1_SYSTEMD_VER}" \
+                --with-stage1-systemd-version="${RKT_STAGE1_SYSTEMD_VER:-v999}" \
+                --with-stage1-systemd-revision="${RKT_STAGE1_SYSTEMD_REV:-master}" \
                 --enable-functional-tests --enable-tpm=auto \
                 --enable-insecure-go
         ;;
