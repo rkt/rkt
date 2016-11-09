@@ -4,7 +4,7 @@ set -xe
 
 SRC_DIR="${SRC_DIR:-$PWD}"
 BUILDDIR="${BUILDDIR:-$PWD/build-rir}"
-RKT_BUILDER_ACI="${RKT_BUILDER_ACI:-coreos.com/rkt/builder:1.1.0}"
+RKT_BUILDER_ACI="${RKT_BUILDER_ACI:-coreos.com/rkt/builder:1.1.1}"
 RKT_CMD="${RKT_CMD:-rkt}"
 
 mkdir -p $BUILDDIR
