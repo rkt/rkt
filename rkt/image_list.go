@@ -81,17 +81,33 @@ var (
 type printedImage struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
-	ImportTime string `json:"import_time"`
-	LastUsed   string `json:"last_used"`
+	ImportTime string `json:"importtime"`
+	LastUsed   string `json:"lastused"`
 	Size       string `json:"size"`
 }
 
-func (r *printedImage) attributes() []string {
-	return []string{r.ID, r.Name, r.Size, r.ImportTime, r.LastUsed}
+func (pi *printedImage) attributes(fields *rktflag.OptionList) []string {
+	if fields == nil {
+		return []string{pi.ID, pi.Name, pi.Size, pi.ImportTime, pi.LastUsed}
+	}
+	optionMapping := map[string]string{
+		l(id):         pi.ID,
+		l(name):       pi.Name,
+		l(size):       pi.Size,
+		l(importTime): pi.ImportTime,
+		l(lastUsed):   pi.LastUsed,
+	}
+	attrs := []string{}
+	for _, f := range fields.Options {
+		if a, ok := optionMapping[f]; ok {
+			attrs = append(attrs, a)
+		}
+	}
+	return attrs
 }
 
-func (r *printedImage) printableString() string {
-	return strings.Join(r.attributes(), "\t")
+func (pi *printedImage) printableString(fields *rktflag.OptionList) string {
+	return strings.Join(pi.attributes(fields), "\t")
 }
 
 type outputFormat int
@@ -285,7 +301,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 			fmt.Fprintf(tabOut, "%s\n", strings.Join(headerFields, "\t"))
 		}
 		for _, image := range imagesToPrint {
-			fmt.Fprintf(tabOut, "%s\n", image.printableString())
+			fmt.Fprintf(tabOut, "%s\n", image.printableString(flagImagesFields))
 		}
 	case outputFormatJSON:
 		result, err := json.Marshal(imagesToPrint)

@@ -60,6 +60,82 @@ func (imgID *ImageID) containsConflictingHash(imgIDs []ImageID) (imgIDPair []Ima
 	return
 }
 
+func TestImageList(t *testing.T) {
+	imageName := "coreos.com/rkt/test-image-list-plaintext"
+	imageFile := patchTestACI(unreferencedACI, fmt.Sprintf("--name=%s", imageName))
+	defer os.Remove(imageFile)
+	imageLongHash := "sha512-" + getHashOrPanic(imageFile)[:64]
+	imageShortHash := "sha512-" + getHashOrPanic(imageFile)[:32]
+	imageTruncatedHash := "sha512-" + getHashOrPanic(imageFile)[:12]
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+	fetchCmd := fmt.Sprintf("%s --insecure-options=image fetch %s", ctx.Cmd(), imageFile)
+	runRktAndCheckOutput(t, fetchCmd, imageShortHash, false)
+
+	tests := []struct {
+		testName      string
+		options       string
+		lookupKeyword string
+		expect        string
+		shouldFail    bool
+	}{
+		{
+			"--no-legend suppress header",
+			"--no-legend",
+			"ID",
+			"",
+			true,
+		},
+		{
+			"--fields emits selected fields (truncated hash)",
+			"--fields=id",
+			"",
+			imageTruncatedHash,
+			false,
+		},
+		{
+			"--fields does not emit unwanted fields",
+			"--no-legend --fields=name",
+			"sha",
+			"",
+			true,
+		},
+		{
+			"--full emits long hash",
+			"--fields=id --full",
+			"sha",
+			imageLongHash,
+			false,
+		},
+		{
+			"--format=json suppress header",
+			"--format=json",
+			"ID",
+			"",
+			true,
+		},
+		{
+			"--format=json prints a JSON array",
+			"--format=json",
+			"",
+			"[{",
+			false,
+		},
+		{
+			"--format=json-pretty introduces proper spacing",
+			"--format=json-pretty",
+			"",
+			`"id": "`,
+			false,
+		},
+	}
+	for i, tt := range tests {
+		t.Logf("image-list test #%d: %s", i, tt.testName)
+		runCmd := fmt.Sprintf(`/bin/sh -c '%s image list %s | grep "%s" || exit 254'`, ctx.Cmd(), tt.options, tt.lookupKeyword)
+		runRktAndCheckOutput(t, runCmd, tt.expect, tt.shouldFail)
+	}
+}
+
 func TestImageSize(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
