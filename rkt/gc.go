@@ -250,7 +250,7 @@ func deletePod(p *pkgPod.Pod) {
 		}
 
 		if err := mountPodStage1(ts, p); err == nil {
-			if err = stage0.GC(p.Path(), p.UUID); err != nil {
+			if err = stage0.GC(p.Path(), p.UUID, globalFlags.LocalConfigDir); err != nil {
 				stderr.PrintE(fmt.Sprintf("problem performing stage1 GC on %q", p.UUID), err)
 			}
 			// an overlay fs can be mounted over itself, let's unmount it here

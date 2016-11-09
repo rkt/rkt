@@ -51,7 +51,7 @@
         },
         {
             "name": "coreos.com/rkt/stage1/interface-version",
-            "value": "4"
+            "value": "5"
         }
     ]
 }

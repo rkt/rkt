@@ -120,3 +120,7 @@ func interfaceVersionSupportsInsecureOptions(version int) bool {
 func interfaceVersionSupportsDNSConfMode(version int) bool {
 	return version > 3
 }
+
+func interfaceVersionSupportsGCLocalConfig(version int) bool {
+	return version >= 5
+}

@@ -119,7 +119,7 @@ func (e *podEnv) execNetPlugin(cmd string, n *activeNet, netns string) ([]byte, 
 	}
 
 	vars := [][2]string{
-		{"CNI_VERSION", "0.3.0"},
+		{"CNI_VERSION", "0.1.0"},
 		{"CNI_COMMAND", cmd},
 		{"CNI_CONTAINERID", e.podID.String()},
 		{"CNI_NETNS", netns},

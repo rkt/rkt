@@ -37,7 +37,7 @@ import (
 
 // GC enters the pod by fork/exec()ing the stage1's /gc similar to /init.
 // /gc can expect to have its CWD set to the pod root.
-func GC(pdir string, uuid *types.UUID) error {
+func GC(pdir string, uuid *types.UUID, localConfig string) error {
 	err := unregisterPod(pdir, uuid)
 	if err != nil {
 		// Probably not worth abandoning the rest
@@ -45,6 +45,10 @@ func GC(pdir string, uuid *types.UUID) error {
 	}
 
 	stage1Path := common.Stage1RootfsPath(pdir)
+	s1v, err := getStage1InterfaceVersion(pdir)
+	if err != nil {
+		return errwrap.Wrap(errors.New("Could not determine stage1 version"), err)
+	}
 
 	ep, err := getStage1Entrypoint(pdir, gcEntrypoint)
 	if err != nil {
@@ -55,8 +59,12 @@ func GC(pdir string, uuid *types.UUID) error {
 	if debugEnabled {
 		args = append(args, "--debug")
 	}
+	if interfaceVersionSupportsGCLocalConfig(s1v) && localConfig != "" {
+		args = append(args, "--local-config", localConfig)
+	}
 	args = append(args, uuid.String())
 
+	debug("Execing %v", args)
 	c := exec.Cmd{
 		Path:   args[0],
 		Args:   args,
