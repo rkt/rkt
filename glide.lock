@@ -1,8 +1,8 @@
-hash: 3db4d7c6fc89de6c3454b8a74846d0286ab1a3eeb281322010055cea8a12fa4f
-updated: 2016-11-01T08:47:55.25498114+01:00
+hash: 7876896e8d0dd84e6a10a9a0360a166488234254141cd772c9bdb0594c9c2ff2
+updated: 2016-11-08T19:17:19.934464985Z
 imports:
 - name: github.com/appc/docker2aci
-  version: 0cac1a3ecc114941cf643ec25f4daaeee8c3d538
+  version: 64543c1e0a7306b17d0d214549ec08049b234abc
   subpackages:
   - lib
   - lib/common
@@ -212,9 +212,10 @@ imports:
 - name: github.com/kr/pty
   version: f7ee69f31298ecbe5d2b349c711e2547a617d398
 - name: github.com/opencontainers/image-spec
-  version: b472d5f4067ddca5cfbfea148dfaf7b42d43c5f0
+  version: 6e820ec55259e89ccd7092f3131c63e8419a349b
   subpackages:
   - specs-go
+  - specs-go/v1
 - name: github.com/pborman/uuid
   version: cccd189d45f7ac3368a0d127efb7f4d08ae0b655
 - name: github.com/peterbourgon/diskv

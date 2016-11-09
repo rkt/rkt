@@ -32,27 +32,29 @@ import (
 
 	"github.com/appc/docker2aci/lib/common"
 	"github.com/appc/docker2aci/lib/internal"
-	"github.com/appc/docker2aci/lib/internal/docker"
 	"github.com/appc/docker2aci/lib/internal/tarball"
 	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/docker2aci/lib/internal/typesV2"
 	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
-	spec "github.com/opencontainers/image-spec/specs-go"
+	spec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type FileBackend struct {
-	file *os.File
+	file        *os.File
+	debug, info log.Logger
 }
 
-func NewFileBackend(file *os.File) *FileBackend {
+func NewFileBackend(file *os.File, debug, info log.Logger) *FileBackend {
 	return &FileBackend{
-		file: file,
+		file:  file,
+		debug: debug,
+		info:  info,
 	}
 }
 
-func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDockerURL, error) {
-	parsedDockerURL, err := docker.ParseDockerURL(dockerURL)
+func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *common.ParsedDockerURL, error) {
+	parsedDockerURL, err := common.ParseDockerURL(dockerURL)
 	if err != nil {
 		// a missing Docker URL could mean that the file only contains one
 		// image, so we ignore the error here, we'll handle it in getImageID
@@ -61,13 +63,13 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDo
 	var ancestry []string
 	// default file name is the tar name stripped
 	name := strings.Split(filepath.Base(lb.file.Name()), ".")[0]
-	appImageID, ancestry, parsedDockerURL, err := getImageID(lb.file, parsedDockerURL, name)
+	appImageID, ancestry, parsedDockerURL, err := getImageID(lb.file, parsedDockerURL, name, lb.debug)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if len(ancestry) == 0 {
-		ancestry, err = getAncestry(lb.file, appImageID)
+		ancestry, err = getAncestry(lb.file, appImageID, lb.debug)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error getting ancestry: %v", err)
 		}
@@ -79,7 +81,7 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *types.ParsedDo
 	return ancestry, parsedDockerURL, nil
 }
 
-func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	if strings.Contains(layerIDs[0], ":") {
 		return lb.BuildACIV22(layerIDs, dockerURL, outputDir, tmpBaseDir, compression)
 	}
@@ -111,14 +113,14 @@ func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *types.ParsedDocker
 		tmpLayerPath += ".tar"
 
 		layerTarPath := path.Join(layerIDs[i], "layer.tar")
-		layerFile, err := extractEmbeddedLayer(lb.file, layerTarPath, tmpLayerPath)
+		layerFile, err := extractEmbeddedLayer(lb.file, layerTarPath, tmpLayerPath, lb.info)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error getting layer from file: %v", err)
 		}
 		defer layerFile.Close()
 
-		log.Debug("Generating layer ACI...")
-		aciPath, manifest, err := internal.GenerateACI(i, layerData, dockerURL, outputDir, layerFile, curPwl, compression)
+		lb.debug.Println("Generating layer ACI...")
+		aciPath, manifest, err := internal.GenerateACI(i, layerData, dockerURL, outputDir, layerFile, curPwl, compression, lb.debug)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 		}
@@ -131,7 +133,7 @@ func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *types.ParsedDocker
 	return aciLayerPaths, aciManifests, nil
 }
 
-func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	if len(layerIDs) < 2 {
 		return nil, nil, fmt.Errorf("insufficient layers for oci image")
 	}
@@ -161,18 +163,18 @@ func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *types.ParsedDoc
 		tmpLayerPath := path.Join(tmpDir, parts[1])
 		tmpLayerPath += ".tar"
 		layerTarPath := path.Join(append([]string{"blobs"}, parts...)...)
-		layerFile, err := extractEmbeddedLayer(lb.file, layerTarPath, tmpLayerPath)
+		layerFile, err := extractEmbeddedLayer(lb.file, layerTarPath, tmpLayerPath, lb.info)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error getting layer from file: %v", err)
 		}
 		defer layerFile.Close()
-		log.Debug("Generating layer ACI...")
+		lb.debug.Println("Generating layer ACI...")
 		var aciPath string
 		var manifest *schema.ImageManifest
 		if i != 0 {
 			aciPath, manifest, err = internal.GenerateACI22LowerLayer(dockerURL, parts[1], outputDir, layerFile, curPwl, compression)
 		} else {
-			aciPath, manifest, err = internal.GenerateACI22TopLayer(dockerURL, &imageConfig, parts[1], outputDir, layerFile, curPwl, compression, aciManifests)
+			aciPath, manifest, err = internal.GenerateACI22TopLayer(dockerURL, &imageConfig, parts[1], outputDir, layerFile, curPwl, compression, aciManifests, lb.debug)
 		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
@@ -186,8 +188,8 @@ func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *types.ParsedDoc
 	return aciLayerPaths, aciManifests, nil
 }
 
-func getImageID(file *os.File, dockerURL *types.ParsedDockerURL, name string) (string, []string, *types.ParsedDockerURL, error) {
-	log.Debug("getting image id...")
+func getImageID(file *os.File, dockerURL *common.ParsedDockerURL, name string, debug log.Logger) (string, []string, *common.ParsedDockerURL, error) {
+	debug.Println("getting image id...")
 	type tags map[string]string
 	type apps map[string]tags
 
@@ -257,10 +259,11 @@ func getImageID(file *os.File, dockerURL *types.ParsedDockerURL, name string) (s
 			}
 
 			if dockerURL == nil {
-				dockerURL = &types.ParsedDockerURL{
-					IndexURL:  "",
-					Tag:       tag,
-					ImageName: appName,
+				dockerURL = &common.ParsedDockerURL{
+					OriginalName: "",
+					IndexURL:     "",
+					Tag:          tag,
+					ImageName:    appName,
 				}
 			}
 
@@ -274,7 +277,7 @@ func getImageID(file *os.File, dockerURL *types.ParsedDockerURL, name string) (s
 			}
 
 			if dockerURL == nil {
-				dockerURL = &types.ParsedDockerURL{
+				dockerURL = &common.ParsedDockerURL{
 					IndexURL:  "",
 					Tag:       tag,
 					ImageName: name,
@@ -391,8 +394,8 @@ func getTarFileBytes(file *os.File, path string) ([]byte, error) {
 	return fileBytes, nil
 }
 
-func extractEmbeddedLayer(file *os.File, layerTarPath string, outputPath string) (*os.File, error) {
-	log.Info("Extracting ", layerTarPath, "\n")
+func extractEmbeddedLayer(file *os.File, layerTarPath string, outputPath string, info log.Logger) (*os.File, error) {
+	info.Println("Extracting ", layerTarPath)
 	_, err := file.Seek(0, 0)
 	if err != nil {
 		return nil, fmt.Errorf("error seeking file: %v", err)
@@ -431,7 +434,7 @@ func extractEmbeddedLayer(file *os.File, layerTarPath string, outputPath string)
 // of dependencies starting from the topmost image to the base.
 // It checks for dependency loops via duplicate detection in the image
 // chain and errors out in such cases.
-func getAncestry(file *os.File, imgID string) ([]string, error) {
+func getAncestry(file *os.File, imgID string, debug log.Logger) ([]string, error) {
 	var ancestry []string
 	deps := make(map[string]bool)
 
@@ -444,8 +447,8 @@ func getAncestry(file *os.File, imgID string) ([]string, error) {
 		}
 		deps[curImgID] = true
 		ancestry = append(ancestry, curImgID)
-		log.Debug(fmt.Sprintf("Getting ancestry for layer %q", curImgID))
-		curImgID, err = getParent(file, curImgID)
+		debug.Printf("Getting ancestry for layer %q", curImgID)
+		curImgID, err = getParent(file, curImgID, debug)
 		if err != nil {
 			return nil, err
 		}
@@ -453,7 +456,7 @@ func getAncestry(file *os.File, imgID string) ([]string, error) {
 	return ancestry, nil
 }
 
-func getParent(file *os.File, imgID string) (string, error) {
+func getParent(file *os.File, imgID string, debug log.Logger) (string, error) {
 	var parent string
 
 	_, err := file.Seek(0, 0)
@@ -485,6 +488,6 @@ func getParent(file *os.File, imgID string) (string, error) {
 		return "", err
 	}
 
-	log.Debug(fmt.Sprintf("Layer %q depends on layer %q", imgID, parent))
+	debug.Printf("Layer %q depends on layer %q", imgID, parent)
 	return parent, nil
 }

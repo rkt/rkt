@@ -30,7 +30,6 @@ import (
 	"github.com/appc/docker2aci/lib/internal"
 	"github.com/appc/docker2aci/lib/internal/types"
 	"github.com/appc/docker2aci/lib/internal/util"
-	"github.com/appc/docker2aci/pkg/log"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/ioprogress"
 )
@@ -41,7 +40,7 @@ type RepoData struct {
 	Cookie    []string
 }
 
-func (rb *RepositoryBackend) getImageInfoV1(dockerURL *types.ParsedDockerURL) ([]string, *types.ParsedDockerURL, error) {
+func (rb *RepositoryBackend) getImageInfoV1(dockerURL *common.ParsedDockerURL) ([]string, *common.ParsedDockerURL, error) {
 	repoData, err := rb.getRepoDataV1(dockerURL.IndexURL, dockerURL.ImageName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting repository data: %v", err)
@@ -63,7 +62,7 @@ func (rb *RepositoryBackend) getImageInfoV1(dockerURL *types.ParsedDockerURL) ([
 	return ancestry, dockerURL, nil
 }
 
-func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *types.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	layerFiles := make([]*os.File, len(layerIDs))
 	layerDatas := make([]types.DockerImageData, len(layerIDs))
 
@@ -121,8 +120,8 @@ func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *types.Pars
 	var curPwl []string
 
 	for i := len(layerIDs) - 1; i >= 0; i-- {
-		log.Debug("Generating layer ACI...")
-		aciPath, manifest, err := internal.GenerateACI(i, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression)
+		rb.debug.Println("Generating layer ACI...")
+		aciPath, manifest, err := internal.GenerateACI(i, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression, rb.debug)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 		}
@@ -158,7 +157,7 @@ func (rb *RepositoryBackend) getRepoDataV1(indexURL string, remote string) (*Rep
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP code: %d, URL: %s", res.StatusCode, req.URL)
+		return nil, &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	var tokens []string
@@ -206,7 +205,7 @@ func (rb *RepositoryBackend) getImageIDFromTagV1(registry string, appName string
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return "", fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
+		return "", &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	j, err := ioutil.ReadAll(res.Body)
@@ -245,7 +244,7 @@ func (rb *RepositoryBackend) getAncestryV1(imgID, registry string, repoData *Rep
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
+		return nil, &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	var ancestry []string
@@ -277,7 +276,7 @@ func (rb *RepositoryBackend) getJsonV1(imgID, registry string, repoData *RepoDat
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		return nil, -1, fmt.Errorf("HTTP code: %d, URL: %s", res.StatusCode, req.URL)
+		return nil, -1, &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	imageSize := int64(-1)
@@ -315,7 +314,7 @@ func (rb *RepositoryBackend) getLayerV1(imgID, registry string, repoData *RepoDa
 
 	if res.StatusCode != 200 {
 		res.Body.Close()
-		return nil, fmt.Errorf("HTTP code: %d. URL: %s", res.StatusCode, req.URL)
+		return nil, &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	// if we didn't receive the size via X-Docker-Size when we retrieved the

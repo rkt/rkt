@@ -17,6 +17,8 @@ package typesV2
 import (
 	"encoding/json"
 	"errors"
+
+	spec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 const (
@@ -29,10 +31,10 @@ const (
 	MediaTypeDockerV22Config       = "application/vnd.docker.container.image.v1+json"
 	MediaTypeDockerV22RootFS       = "application/vnd.docker.image.rootfs.diff.tar.gzip"
 
-	MediaTypeOCIManifest     = "application/vnd.oci.image.manifest.v1+json"
-	MediaTypeOCIManifestList = "application/vnd.oci.image.manifest.list.v1+json"
-	MediaTypeOCIConfig       = "application/vnd.oci.image.config.v1+json"
-	MediaTypeOCILayer        = "application/vnd.oci.image.layer.tar+gzip"
+	MediaTypeOCIManifest     = spec.MediaTypeImageManifest
+	MediaTypeOCIManifestList = spec.MediaTypeImageManifestList
+	MediaTypeOCIConfig       = spec.MediaTypeImageConfig
+	MediaTypeOCILayer        = spec.MediaTypeImageLayer
 )
 
 var (

@@ -62,6 +62,7 @@ type DockerImageConfig struct {
 	NetworkDisabled bool
 	MacAddress      string
 	OnBuild         []string
+	Labels          map[string]string
 }
 
 // DockerAuthConfigOld represents the deprecated ~/.dockercfg auth

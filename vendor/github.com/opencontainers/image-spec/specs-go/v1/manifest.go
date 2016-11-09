@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package specs
+package v1
 
-import "fmt"
+import "github.com/opencontainers/image-spec/specs-go"
 
-const (
-	// VersionMajor is for an API incompatible changes
-	VersionMajor = 1
-	// VersionMinor is for functionality in a backwards-compatible manner
-	VersionMinor = 0
-	// VersionPatch is for backwards-compatible bug fixes
-	VersionPatch = 0
+// Manifest defines a schema2 manifest
+type Manifest struct {
+	specs.Versioned
 
-	// VersionDev indicates development branch. Releases will be empty string.
-	VersionDev = "-rc2"
-)
+	// Config references a configuration object for a container, by digest.
+	// The referenced configuration object is a JSON blob that the runtime uses to set up the container.
+	Config Descriptor `json:"config"`
 
-// Version is the specification version that the package types support.
-var Version = fmt.Sprintf("%d.%d.%d%s", VersionMajor, VersionMinor, VersionPatch, VersionDev)
+	// Layers is an indexed list of layers referenced by the manifest.
+	Layers []Descriptor `json:"layers"`
+
+	// Annotations contains arbitrary metadata for the manifest list.
+	Annotations map[string]string `json:"annotations"`
+}

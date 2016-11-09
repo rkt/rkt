@@ -55,9 +55,13 @@ func printVersion() {
 }
 
 func runDocker2ACI(arg string) error {
+	debug := log.NewNopLogger()
+	info := log.NewStdLogger(os.Stderr)
+
 	if flagDebug {
-		log.InitDebug()
+		debug = log.NewStdLogger(os.Stderr)
 	}
+
 	squash := !flagNoSquash
 
 	var aciLayerPaths []string
@@ -83,6 +87,8 @@ func runDocker2ACI(arg string) error {
 		OutputDir:   ".",
 		TmpDir:      os.TempDir(),
 		Compression: compression,
+		Debug:       debug,
+		Info:        info,
 	}
 	if u.Scheme == "docker" {
 		if flagImage != "" {
