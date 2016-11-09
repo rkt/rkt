@@ -295,6 +295,13 @@ func (uw *UnitWriter) AppUnit(
 	app := ra.App
 	appName := ra.Name
 	imgName := uw.p.AppNameToImageName(appName)
+	imageManifest := uw.p.Images[appName.String()]
+
+	podAbsRoot, err := filepath.Abs(uw.p.Root)
+	if err != nil {
+		uw.err = err
+		return
+	}
 
 	if len(app.Exec) == 0 {
 		uw.err = fmt.Errorf(`image %q has an empty "exec" (try --exec=BINARY)`, imgName)
@@ -352,9 +359,6 @@ func (uw *UnitWriter) AppUnit(
 		unit.NewUnitOption("Service", "Restart", "no"),
 		unit.NewUnitOption("Service", "ExecStart", execStartString),
 		unit.NewUnitOption("Service", "RootDirectory", common.RelAppRootfsPath(appName)),
-		// MountFlags=shared creates a new mount namespace and (as unintuitive
-		// as it might seem) makes sure the mount is slave+shared.
-		unit.NewUnitOption("Service", "MountFlags", "shared"),
 		unit.NewUnitOption("Service", "WorkingDirectory", app.WorkingDirectory),
 		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePath(appName)),
 		unit.NewUnitOption("Service", "User", strconv.Itoa(u)),
@@ -368,7 +372,7 @@ func (uw *UnitWriter) AppUnit(
 	}...)
 
 	if len(supplementaryGroups) > 0 {
-		opts = appendOptionsList(opts, "Service", "SupplementaryGroups", "", supplementaryGroups)
+		opts = appendOptionsList(opts, "Service", "SupplementaryGroups", "", supplementaryGroups...)
 	}
 
 	if supportsNotify(uw.p, appName.String()) {
@@ -379,10 +383,9 @@ func (uw *UnitWriter) AppUnit(
 		opts = append(opts, unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")))
 	}
 
-	noNewPrivileges := getAppNoNewPrivileges(app.Isolators)
-
 	// Apply seccomp isolator, if any and not opt-ing out;
 	// see https://www.freedesktop.org/software/systemd/man/systemd.exec.html#SystemCallFilter=
+	noNewPrivileges := getAppNoNewPrivileges(app.Isolators)
 	if !insecureOptions.DisableSeccomp {
 		var forceNoNewPrivileges bool
 
@@ -399,53 +402,44 @@ func (uw *UnitWriter) AppUnit(
 			noNewPrivileges = true
 		}
 	}
-
 	opts = append(opts, unit.NewUnitOption("Service", "NoNewPrivileges", strconv.FormatBool(noNewPrivileges)))
 
-	if ra.ReadOnlyRootFS {
-		opts = append(opts, unit.NewUnitOption("Service", "ReadOnlyDirectories", common.RelAppRootfsPath(appName)))
-	}
-
-	absRoot, err := filepath.Abs(uw.p.Root) // Absolute path to the pod's rootfs.
-	if err != nil {
-		uw.err = err
-		return
-	}
-	appRootfs := common.AppRootfsPath(absRoot, appName)
-
-	rwDirs := []string{}
-	imageManifest := uw.p.Images[appName.String()]
 	mounts, err := GenerateMounts(ra, uw.p.Manifest.Volumes, ConvertedFromDocker(imageManifest))
 	if err != nil {
 		uw.err = err
 		return
 	}
 
-	for _, m := range mounts {
-		mntPath, err := EvaluateSymlinksInsideApp(appRootfs, m.Mount.Path)
-		if err != nil {
-			uw.err = err
-			return
-		}
+	if ra.ReadOnlyRootFS {
+		for _, m := range mounts {
+			mntPath, err := EvaluateSymlinksInsideApp(podAbsRoot, m.Mount.Path)
+			if err != nil {
+				uw.err = err
+				return
+			}
 
-		if !m.ReadOnly {
-			rwDirs = append(rwDirs, filepath.Join(common.RelAppRootfsPath(appName), mntPath))
+			if !m.ReadOnly {
+				rwDir := filepath.Join(common.RelAppRootfsPath(ra.Name), mntPath)
+				opts = appendOptionsList(opts, "Service", "ReadWriteDirectories", "", rwDir)
+			}
 		}
-	}
-	if len(rwDirs) > 0 {
-		opts = appendOptionsList(opts, "Service", "ReadWriteDirectories", "", rwDirs)
+		opts = appendOptionsList(opts, "Service", "ReadOnlyDirectories", "", common.RelAppRootfsPath(ra.Name))
 	}
 
-	// Restrict access to sensitive paths (eg. procfs and sysfs entries).
 	if !insecureOptions.DisablePaths {
+		// Restrict access to sensitive paths (eg. procfs and sysfs entries).
 		opts = protectKernelTunables(opts, appName, systemdVersion)
+
+		// MountFlags=shared creates a new mount namespace and (as unintuitive
+		// as it might seem) makes sure the mount is slave+shared.
+		opts = append(opts, unit.NewUnitOption("Service", "MountFlags", "shared"))
 	}
 
 	// Generate default device policy for the app, as well as the list of allowed devices.
 	// For kvm flavor, devices are VM-specific and restricting them is not strictly needed.
 	if !insecureOptions.DisablePaths && flavor != "kvm" {
 		opts = append(opts, unit.NewUnitOption("Service", "DevicePolicy", "closed"))
-		deviceAllows, err := generateDeviceAllows(common.Stage1RootfsPath(absRoot), appName, app.MountPoints, mounts, uidRange)
+		deviceAllows, err := generateDeviceAllows(common.Stage1RootfsPath(podAbsRoot), appName, app.MountPoints, mounts, uidRange)
 		if err != nil {
 			uw.err = err
 			return
@@ -638,7 +632,7 @@ func (uw *UnitWriter) AppReaperUnit(appName types.ACName, binPath string, opts .
 // an array of new properties, one entry at a time.
 // This is the preferred method to avoid hitting line length limits
 // in unit files. Target property must support multi-line entries.
-func appendOptionsList(opts []*unit.UnitOption, section string, property string, prefix string, vals []string) []*unit.UnitOption {
+func appendOptionsList(opts []*unit.UnitOption, section, property, prefix string, vals ...string) []*unit.UnitOption {
 	for _, v := range vals {
 		opts = append(opts, unit.NewUnitOption(section, property, fmt.Sprintf("%s%s", prefix, v)))
 	}

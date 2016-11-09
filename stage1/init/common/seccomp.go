@@ -93,7 +93,7 @@ func getSeccompFilter(opts []*unit.UnitOption, p *stage1commontypes.Pod, unprivi
 	}
 	// SystemCallFilter options are written down one entry per line, because
 	// filtering sets may be quite large and overlong lines break unit serialization.
-	opts = appendOptionsList(opts, "Service", "SystemCallFilter", filterMode, seccompSet)
+	opts = appendOptionsList(opts, "Service", "SystemCallFilter", filterMode, seccompSet...)
 	// In order to install seccomp filters, unprivileged process must first set no-news-privs.
 	if unprivileged {
 		noNewPrivs = true
