@@ -384,6 +384,11 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		stderr.PrintE("cannot get the pod manifest", err)
 		return 254
 	}
+
+	if len(manifest.Apps) == 0 {
+		stderr.Print("pod must contain at least one application")
+		return 254
+	}
 	rcfg.Apps = manifest.Apps
 	stage0.Run(rcfg, p.Path(), getDataDir()) // execs, never returns
 
