@@ -84,9 +84,11 @@ sudo chown -R root:root $NAME/
 tar czvf $NAME.tar.gz --numeric-owner $NAME/
 ```
 
-- Attach each stage1 file individually so they can be fetched by the ACI discovery mechanism. The files must be named as follows:
+- Attach packages, as well as each stage1 file individually so they can be fetched by the ACI discovery mechanism:
 
 ```
+cp release-build/target/bin/*.deb .
+cp release-build/target/bin/*.rpm .
 cp release-build/target/bin/stage1-coreos.aci stage1-coreos-$RKTVER-linux-amd64.aci
 cp release-build/target/bin/stage1-kvm.aci stage1-kvm-$RKTVER-linux-amd64.aci
 cp release-build/target/bin/stage1-fly.aci stage1-fly-$RKTVER-linux-amd64.aci
