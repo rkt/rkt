@@ -296,7 +296,7 @@ func TestImagePrepareRmDuplicate(t *testing.T) {
 }
 
 func getImageName(t *testing.T, ctx *testutils.RktRunCtx, name string) string {
-	cmd := fmt.Sprintf(`/bin/sh -c "%s image list --fields=name --no-legend | grep %s | cut -d: -f1"`, ctx.Cmd(), name)
+	cmd := fmt.Sprintf(`/bin/sh -c "%s image list --fields=name --no-legend | grep %s"`, ctx.Cmd(), name)
 	child := spawnOrFail(t, cmd)
 	imageName, err := child.ReadLine()
 	imageName = strings.TrimSpace(imageName)

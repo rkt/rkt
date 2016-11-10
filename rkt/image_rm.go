@@ -17,7 +17,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/store/imagestore"
 	"github.com/spf13/cobra"
 )
@@ -25,7 +24,7 @@ import (
 var (
 	cmdImageRm = &cobra.Command{
 		Use:   "rm IMAGE...",
-		Short: "Remove image(s) with the given ID(s) or name(s) from the local store",
+		Short: "Remove one or more images with the given IDs or image names from the local store",
 		Long:  `Unlike image gc, image rm allows users to remove specific images.`,
 		Run:   runWrapper(runRmImage),
 	}
@@ -36,61 +35,27 @@ func init() {
 }
 
 func rmImages(s *imagestore.Store, images []string) error {
+	imageMap := make(map[string]string)
+
+	for _, img := range images {
+		key, err := getStoreKeyFromAppOrHash(s, img)
+		if err != nil {
+			stderr.Error(err)
+			continue
+		}
+
+		aciinfo, err := s.GetACIInfoWithBlobKey(key)
+		if err != nil {
+			stderr.PrintE(fmt.Sprintf("error retrieving aci infos for image %q", key), err)
+			continue
+		}
+
+		imageMap[key] = aciinfo.Name
+	}
+
 	done := 0
 	errors := 0
 	staleErrors := 0
-	imageMap := make(map[string]string)
-	imageCounter := make(map[string]int)
-
-	for _, pkey := range images {
-		errors++
-		h, err := types.NewHash(pkey)
-		if err != nil {
-			var found bool
-			keys, found, err := s.ResolveName(pkey)
-			if len(keys) > 0 {
-				errors += len(keys) - 1
-			}
-			if err != nil {
-				stderr.Error(err)
-				continue
-			}
-			if !found {
-				stderr.Printf("image name %q not found", pkey)
-				continue
-			}
-			for _, key := range keys {
-				imageMap[key] = pkey
-				imageCounter[key]++
-			}
-		} else {
-			key, err := s.ResolveKey(h.String())
-			if err != nil {
-				stderr.PrintE(fmt.Sprintf("image ID %q not valid", pkey), err)
-				continue
-			}
-			if key == "" {
-				stderr.Printf("image ID %q doesn't exist", pkey)
-				continue
-			}
-
-			aciinfo, err := s.GetACIInfoWithBlobKey(key)
-			if err != nil {
-				stderr.PrintE(fmt.Sprintf("error retrieving aci infos for image %q", key), err)
-				continue
-			}
-			imageMap[key] = aciinfo.Name
-			imageCounter[key]++
-		}
-	}
-
-	// Adjust the error count by subtracting duplicate IDs from it,
-	// therefore allowing only one error per ID.
-	for _, c := range imageCounter {
-		if c > 1 {
-			errors -= c - 1
-		}
-	}
 
 	for key, name := range imageMap {
 		if err := s.RemoveACI(key); err != nil {
@@ -98,12 +63,12 @@ func rmImages(s *imagestore.Store, images []string) error {
 				staleErrors++
 				stderr.PrintE(fmt.Sprintf("some files cannot be removed for image %q (%q)", key, name), serr)
 			} else {
+				errors++
 				stderr.PrintE(fmt.Sprintf("error removing aci for image %q (%q)", key, name), err)
 				continue
 			}
 		}
 		stdout.Printf("successfully removed aci for image: %q", key)
-		errors--
 		done++
 	}
 

@@ -32,7 +32,7 @@ var (
 	cmdImageRender = &cobra.Command{
 		Use:   "render IMAGE OUTPUT_DIR",
 		Short: "Render a stored image to a directory with all its dependencies",
-		Long: `IMAGE should be a string referencing an image: either a hash or an image name.
+		Long: `IMAGE should be a string referencing an image: either a ID or an image name.
 
 This differs from extract in that the rendered image is in the state the app
 would see when running in rkt, dependencies and all.
