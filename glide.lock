@@ -1,5 +1,5 @@
-hash: 7876896e8d0dd84e6a10a9a0360a166488234254141cd772c9bdb0594c9c2ff2
-updated: 2016-11-08T19:17:19.934464985Z
+hash: 309278f619d7e1fbd1c0ba76a134929de1412d1065a088dee1f0e8ad40d3c7a3
+updated: 2016-11-09T19:40:53.22783374-08:00
 imports:
 - name: github.com/appc/docker2aci
   version: 64543c1e0a7306b17d0d214549ec08049b234abc
@@ -300,7 +300,7 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: k8s.io/kubernetes
-  version: 283137936a498aed572ee22af6774b6fb6e9fd94
+  version: 759dd0dfb826658c78db42d97b77b9594cd43333
   subpackages:
   - pkg/api/resource
   - pkg/conversion

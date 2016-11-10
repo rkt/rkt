@@ -35,8 +35,10 @@ import (
 
 	"github.com/coreos/go-systemd/unit"
 	"github.com/hashicorp/errwrap"
-	"k8s.io/kubernetes/pkg/api/resource"
 )
+
+// The maximum value for the MilliValue of an appc resource limit.
+const MaxMilliValue = int64(((1 << 63) - 1) / 1000)
 
 func MutableEnv(p *stage1commontypes.Pod) error {
 	w := NewUnitWriter(p)
@@ -518,7 +520,7 @@ func (uw *UnitWriter) AppUnit(
 					return nil
 				}
 
-				if v.Limit().Value() > resource.MaxMilliValue {
+				if v.Limit().Value() > MaxMilliValue {
 					return fmt.Errorf("cpu limit exceeds the maximum millivalue: %v", v.Limit().String())
 				}
 

@@ -267,12 +267,6 @@ import:
   - internal
 - package: gopkg.in/inf.v0
   version: v0.9.0
-- package: k8s.io/kubernetes
-  version: v1.3.0
-  subpackages:
-  - pkg/api/resource
-  - pkg/conversion
-  - third_party/forked/reflect
 - package: github.com/klauspost/pgzip
   version: v1.0
 - package: github.com/klauspost/compress
