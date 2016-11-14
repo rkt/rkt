@@ -170,10 +170,10 @@ func (f *nameFetcher) fetch(app *discovery.App, aciURL string, a *asc, etag stri
 		return aciFile, cd, nil
 	}
 
-	return f.fetchVerifiedURL(app, u, a)
+	return f.fetchVerifiedURL(app, u, a, etag)
 }
 
-func (f *nameFetcher) fetchVerifiedURL(app *discovery.App, u *url.URL, a *asc) (readSeekCloser, *cacheData, error) {
+func (f *nameFetcher) fetchVerifiedURL(app *discovery.App, u *url.URL, a *asc, etag string) (readSeekCloser, *cacheData, error) {
 	appName := app.Name.String()
 	f.maybeFetchPubKeys(appName)
 
@@ -190,11 +190,14 @@ func (f *nameFetcher) fetchVerifiedURL(app *discovery.App, u *url.URL, a *asc) (
 		}
 	}
 
-	aciFile, cd, err := o.DownloadImage(u)
+	aciFile, cd, err := o.DownloadImageWithETag(u, etag)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer func() { maybeClose(aciFile) }()
+	if cd.UseCached {
+		return nil, cd, nil
+	}
 
 	if retry {
 		ascFile, err = o.DownloadSignatureAgain(a)
