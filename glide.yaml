@@ -77,7 +77,7 @@ import:
   subpackages:
   - semver
 - package: github.com/coreos/go-systemd
-  version: v13
+  version: v14
   subpackages:
   - activation
   - daemon
