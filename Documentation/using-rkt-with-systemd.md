@@ -133,7 +133,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Listen failed: %s", err)
 	}
-	sent, err := daemon.SdNotify("READY=1")
+	sent, err := daemon.SdNotify(true, "READY=1")
 	if err != nil {
 		log.Fatalf("Notification failed: %s", err)
 	}

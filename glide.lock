@@ -1,5 +1,5 @@
-hash: 309278f619d7e1fbd1c0ba76a134929de1412d1065a088dee1f0e8ad40d3c7a3
-updated: 2016-11-09T19:40:53.22783374-08:00
+hash: 7d6124bf5a7eb501cdcbe7521bce6c90c55cd20be2986a85797c3ba4b72f0ee3
+updated: 2016-11-14T14:39:35.870828214Z
 imports:
 - name: github.com/appc/docker2aci
   version: 64543c1e0a7306b17d0d214549ec08049b234abc
@@ -50,35 +50,21 @@ imports:
   - pkg/invoke
   - pkg/ip
   - pkg/ipam
-  - pkg/ipam
   - pkg/ns
   - pkg/skel
-  - pkg/skel
-  - pkg/testutils
   - pkg/testutils
   - pkg/types
   - pkg/utils
   - pkg/utils/sysctl
-  - pkg/utils/sysctl
-  - plugins/ipam/dhcp
   - plugins/ipam/dhcp
   - plugins/ipam/host-local
-  - plugins/ipam/host-local
-  - plugins/ipam/host-local/backend
   - plugins/ipam/host-local/backend
   - plugins/ipam/host-local/backend/disk
-  - plugins/ipam/host-local/backend/disk
-  - plugins/main/bridge
   - plugins/main/bridge
   - plugins/main/ipvlan
-  - plugins/main/ipvlan
-  - plugins/main/macvlan
   - plugins/main/macvlan
   - plugins/main/ptp
-  - plugins/main/ptp
   - plugins/meta/flannel
-  - plugins/meta/flannel
-  - plugins/meta/tuning
   - plugins/meta/tuning
 - name: github.com/coreos/gexpect
   version: ca42424d18c76d0d51a4cccd830d11878e9e5c17
@@ -91,7 +77,7 @@ imports:
   subpackages:
   - semver
 - name: github.com/coreos/go-systemd
-  version: 61c7ee68bddeb1e66b491c3e1045c4f72b2cd6e3
+  version: 48702e0da86bd25e76cfef347e2adeb434a0d0a6
   subpackages:
   - activation
   - daemon
