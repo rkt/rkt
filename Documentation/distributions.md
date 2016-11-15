@@ -46,12 +46,6 @@ rkt is currently packaged in [Debian sid][pkg-debian] (unstable).
 sudo apt-get install rkt
 ```
 
-Note that due to an [outstanding bug][debian-823322] one has to use the "coreos" stage1 image:
-
-```
-sudo rkt run --insecure-options=image --stage1-name=coreos.com/rkt/stage1-coreos:1.16.0 docker://nginx
-```
-
 If you don't run sid, or wish for a newer version, you can [install manually](#deb-based).
 
 ## Fedora
