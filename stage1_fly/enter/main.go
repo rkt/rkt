@@ -15,15 +15,76 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"io/ioutil"
 	"os"
+	"syscall"
 
 	rktlog "github.com/coreos/rkt/pkg/log"
 )
 
-var log *rktlog.Logger
+var (
+	debug   bool
+	podPid  string
+	appName string
+
+	log  *rktlog.Logger
+	diag *rktlog.Logger
+)
+
+func init() {
+	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
+	flag.StringVar(&podPid, "pid", "", "Pod PID")
+	flag.StringVar(&appName, "appname", "", "Application (Ignored in rkt fly)")
+
+	log, diag, _ = rktlog.NewLogSet("fly-enter", false)
+}
+
+func getRootDir(pid string) (string, error) {
+	rootLink := fmt.Sprintf("/proc/%s/root", pid)
+
+	return os.Readlink(rootLink)
+}
+
+func execArgs() error {
+	argv0 := flag.Arg(0)
+	argv := flag.Args()
+	envv := []string{}
+
+	return syscall.Exec(argv0, argv, envv)
+}
 
 func main() {
-	log = rktlog.New(os.Stderr, "enter", false)
-	log.Printf("not doing anything here! (%+v)", os.Args)
-	return
+	flag.Parse()
+
+	log.SetDebug(debug)
+	diag.SetDebug(debug)
+
+	if !debug {
+		diag.SetOutput(ioutil.Discard)
+	}
+
+	root, err := getRootDir(podPid)
+	if err != nil {
+		log.FatalE("Failed to get pod root", err)
+	}
+
+	if err := os.Chdir(root); err != nil {
+		log.FatalE("Failed to change to new root", err)
+	}
+
+	if err := syscall.Chroot(root); err != nil {
+		log.FatalE("Failed to chroot", err)
+	}
+
+	diag.Println("PID:", podPid)
+	diag.Println("APP:", appName)
+	diag.Println("ARGS:", flag.Args())
+
+	if err := execArgs(); err != nil {
+		log.PrintE("exec failed", err)
+	}
+
+	os.Exit(254)
 }
