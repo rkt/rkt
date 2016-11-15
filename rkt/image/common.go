@@ -142,7 +142,7 @@ func DistFromImageString(is string) (dist.Distribution, error) {
 	// file:///full/path/to/aci/file.aci -> archive:aci:file%3A%2F%2F%2Ffull%2Fpath%2Fto%2Faci%2Ffile.aci
 	switch u.Scheme {
 	case "":
-		// no scheme given, hence should be an appc image path
+		// no scheme given, hence it is an appc image name or path
 		appImageType := guessAppcOrPath(is, []string{schema.ACIExtension})
 
 		switch appImageType {
@@ -187,6 +187,8 @@ func DistFromImageString(is string) (dist.Distribution, error) {
 			return nil, fmt.Errorf("docker distribution creation error: %v", err)
 		}
 		return dist, nil
+	case dist.Scheme: // cimd
+		return dist.Parse(is)
 	default:
 		// any other scheme is a an appc image name, i.e. "my-app:v1.0"
 		app, err := discovery.NewAppFromString(is)

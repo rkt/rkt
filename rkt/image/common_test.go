@@ -200,6 +200,21 @@ func TestDistFromImageString(t *testing.T) {
 			"cimd:appc:v=0:example.com/app01?label01=%3F%26%2A%2F&version=v1.0.0",
 			nil,
 		},
+		{
+			"some-image-name",
+			"cimd:appc:v=0:some-image-name",
+			nil,
+		},
+		{
+			"some-image-name:v1.0.0",
+			"cimd:appc:v=0:some-image-name?version=v1.0.0",
+			nil,
+		},
+		{
+			"some-image-name:f6432b725a9a5f27eaecfa47a0cbab3c0ea00f22",
+			"cimd:appc:v=0:some-image-name?version=f6432b725a9a5f27eaecfa47a0cbab3c0ea00f22",
+			nil,
+		},
 		// ACIArchive
 		{
 			"file:///absolute/path/to/file.aci",

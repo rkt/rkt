@@ -120,7 +120,6 @@ func NewAppcFromApp(app *discovery.App) Distribution {
 	}
 }
 
-// URI returns a copy of the Distribution URI
 func (a *Appc) CIMD() *url.URL {
 	// Create a copy of the URL
 	u, err := url.Parse(a.cimd.String())
