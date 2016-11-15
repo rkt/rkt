@@ -364,11 +364,6 @@ func RmApp(cfg RmConfig) error {
 		return fmt.Errorf("error: nonexistent app %q", *cfg.AppName)
 	}
 
-	treeStoreID, err := ioutil.ReadFile(common.AppTreeStoreIDPath(cfg.PodPath, *cfg.AppName))
-	if err != nil {
-		return err
-	}
-
 	if cfg.PodPID > 0 {
 		// Call app-stop and app-rm entrypoint only if the pod is still running.
 		// Otherwise, there's not much we can do about it except unmounting/removing
@@ -393,12 +388,12 @@ func RmApp(cfg RmConfig) error {
 		}
 	}
 
-	appInfoDir := common.AppInfoPath(cfg.PodPath, *cfg.AppName)
-	if err := os.RemoveAll(appInfoDir); err != nil {
-		return errwrap.Wrap(errors.New("error removing app info directory"), err)
-	}
-
 	if cfg.UsesOverlay {
+		treeStoreID, err := ioutil.ReadFile(common.AppTreeStoreIDPath(cfg.PodPath, *cfg.AppName))
+		if err != nil {
+			return err
+		}
+
 		appRootfs := common.AppRootfsPath(cfg.PodPath, *cfg.AppName)
 		if err := syscall.Unmount(appRootfs, 0); err != nil {
 			return err
@@ -408,6 +403,11 @@ func RmApp(cfg RmConfig) error {
 		if err := os.RemoveAll(ts); err != nil {
 			return errwrap.Wrap(errors.New("error removing app info directory"), err)
 		}
+	}
+
+	appInfoDir := common.AppInfoPath(cfg.PodPath, *cfg.AppName)
+	if err := os.RemoveAll(appInfoDir); err != nil {
+		return errwrap.Wrap(errors.New("error removing app info directory"), err)
 	}
 
 	if err := os.RemoveAll(common.AppPath(cfg.PodPath, *cfg.AppName)); err != nil {
