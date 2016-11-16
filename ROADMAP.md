@@ -4,14 +4,13 @@ This document defines a high level roadmap for rkt development.
 The dates below should not be considered authoritative, but rather indicative of the projected timeline of the project.
 The [milestones defined in GitHub](https://github.com/coreos/rkt/milestones) represent the most up-to-date state of affairs.
 
-rkt is an implementation of the [App Container spec](https://github.com/appc/spec), which is still under active development on an approximately similar timeframe.
-The version of the spec that rkt implements can be seen in the output of `rkt version`.
-
-rkt's version 1.0 release marks the command line user interface and on-disk data structures as stable and reliable for external development. The (optional) API for pod inspection is not yet completely stabilized, but is quite usable.
+rkt's version 1.0 release marks the command line user interface and on-disk data structures as stable and reliable for external development.
 
 ## Ongoing projects
 
-- [CRI](https://github.com/coreos/rkt/projects/1): implementation of the new Container Runtime Interface from Kubernetes.
+- [Kuerbenetes CRI](https://github.com/coreos/rkt/projects/1): adapting rkt to offer first class implementation of Kubernetes Container Runtime Interface.
+- [OCI native support](https://github.com/coreos/rkt/projects/4): supporting OCI specs natively in rkt.
+- [AppC phasing-out](https://github.com/coreos/rkt/projects/5): following OCI evolution and stabilization, AppC will be naturally deprecated and phased-out.
 
 ## Next releases
 
