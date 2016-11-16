@@ -64,7 +64,7 @@ func main() {
 
 	stage1initcommon.InitDebug(debug)
 
-	log, diag, _ = rktlog.NewLogSet("stage1", debug)
+	log, diag, _ = rktlog.NewLogSet("app-add", debug)
 	if !debug {
 		diag.SetOutput(ioutil.Discard)
 	}
@@ -98,8 +98,7 @@ func main() {
 
 	ra := p.Manifest.Apps.Get(*appName)
 	if ra == nil {
-		log.Error(fmt.Errorf("failed to find app %q", *appName))
-		os.Exit(254)
+		log.Fatalf("failed to find app %q", *appName)
 	}
 
 	binPath, err := stage1initcommon.FindBinPath(p, ra)
@@ -146,9 +145,8 @@ func main() {
 		Args: args,
 	}
 
-	if err := cmd.Run(); err != nil {
-		log.PrintE(`error executing "systemctl daemon-reload"`, err)
-		os.Exit(254)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		log.Fatalf("%q failed at daemon-reload:\n%s", appName, out)
 	}
 
 	os.Exit(0)

@@ -287,7 +287,15 @@ func AddApp(cfg AddConfig) error {
 		return err
 	}
 
-	if err := RunCrossingEntrypoint(cfg.PodPath, cfg.PodPID, appName.String(), appAddEntrypoint, args); err != nil {
+	ce := CrossingEntrypoint{
+		PodPath:        cfg.PodPath,
+		PodPID:         cfg.PodPID,
+		AppName:        appName.String(),
+		EntrypointName: appAddEntrypoint,
+		EntrypointArgs: args,
+		Interactive:    false,
+	}
+	if err := ce.Run(); err != nil {
 		return err
 	}
 
@@ -372,7 +380,15 @@ func RmApp(cfg RmConfig) error {
 			fmt.Sprintf("--app=%s", cfg.AppName),
 		}
 
-		if err := RunCrossingEntrypoint(cfg.PodPath, cfg.PodPID, cfg.AppName.String(), appStopEntrypoint, args); err != nil {
+		ce := CrossingEntrypoint{
+			PodPath:        cfg.PodPath,
+			PodPID:         cfg.PodPID,
+			AppName:        cfg.AppName.String(),
+			EntrypointName: appStopEntrypoint,
+			EntrypointArgs: args,
+			Interactive:    false,
+		}
+		if err := ce.Run(); err != nil {
 			status, err := common.GetExitStatus(err)
 			// ignore nonexistent units failing to stop. Exit status 5
 			// comes from systemctl and means the unit doesn't exist
@@ -383,7 +399,8 @@ func RmApp(cfg RmConfig) error {
 			}
 		}
 
-		if err := RunCrossingEntrypoint(cfg.PodPath, cfg.PodPID, cfg.AppName.String(), appRmEntrypoint, args); err != nil {
+		ce.EntrypointName = appRmEntrypoint
+		if err := ce.Run(); err != nil {
 			return err
 		}
 	}
@@ -475,7 +492,15 @@ func StartApp(cfg StartConfig) error {
 		log.FatalE(fmt.Sprintf("error creating %s-started file", cfg.AppName.String()), err)
 	}
 
-	if err := RunCrossingEntrypoint(cfg.Dir, cfg.PodPID, cfg.AppName.String(), appStartEntrypoint, args); err != nil {
+	ce := CrossingEntrypoint{
+		PodPath:        cfg.Dir,
+		PodPID:         cfg.PodPID,
+		AppName:        cfg.AppName.String(),
+		EntrypointName: appStartEntrypoint,
+		EntrypointArgs: args,
+		Interactive:    false,
+	}
+	if err := ce.Run(); err != nil {
 		return err
 	}
 
@@ -512,7 +537,15 @@ func StopApp(cfg StopConfig) error {
 		fmt.Sprintf("--app=%s", cfg.AppName),
 	}
 
-	if err := RunCrossingEntrypoint(cfg.Dir, cfg.PodPID, cfg.AppName.String(), appStopEntrypoint, args); err != nil {
+	ce := CrossingEntrypoint{
+		PodPath:        cfg.Dir,
+		PodPID:         cfg.PodPID,
+		AppName:        cfg.AppName.String(),
+		EntrypointName: appStopEntrypoint,
+		EntrypointArgs: args,
+		Interactive:    false,
+	}
+	if err := ce.Run(); err != nil {
 		status, err := common.GetExitStatus(err)
 		// exit status 5 comes from systemctl and means the unit doesn't exist
 		if status == 5 {

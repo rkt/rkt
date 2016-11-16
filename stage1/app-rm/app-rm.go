@@ -48,15 +48,14 @@ func main() {
 
 	stage1initcommon.InitDebug(debug)
 
-	log, diag, _ = rktlog.NewLogSet("stage1", debug)
+	log, diag, _ = rktlog.NewLogSet("app-rm", debug)
 	if !debug {
 		diag.SetOutput(ioutil.Discard)
 	}
 
 	appName, err := types.NewACName(flagApp)
 	if err != nil {
-		log.PrintE("invalid app name", err)
-		os.Exit(254)
+		log.FatalE("invalid app name", err)
 	}
 
 	enterCmd := stage1common.PrepareEnterCmd(false)
@@ -71,12 +70,11 @@ func main() {
 		Args: args,
 	}
 
-	// rely only on the output, since it returns non-zero for inactive units
+	// rely only on the output, since is-active returns non-zero for inactive units
 	out, _ := cmd.Output()
 
 	if string(out) != "inactive\n" {
-		log.Printf("app %q is still running", appName.String())
-		os.Exit(254)
+		log.Fatalf("app %q is still running", appName.String())
 	}
 
 	s1rootfs := common.Stage1RootfsPath(".")
@@ -88,8 +86,7 @@ func main() {
 
 	for _, p := range appServicePaths {
 		if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
-			log.PrintE("error removing app service file", err)
-			os.Exit(254)
+			log.FatalE("error removing app service file", err)
 		}
 	}
 
@@ -101,9 +98,9 @@ func main() {
 		Path: args[0],
 		Args: args,
 	}
-	if err := cmd.Run(); err != nil {
-		log.PrintE(`error executing "systemctl daemon-reload"`, err)
-		os.Exit(254)
+
+	if out, err := cmd.CombinedOutput(); err != nil {
+		log.Fatalf("%q failed at daemon-reload:\n%s", appName, out)
 	}
 
 	// TODO unmount all the volumes

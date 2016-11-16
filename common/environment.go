@@ -24,8 +24,10 @@ import (
 	"github.com/appc/spec/schema/types"
 )
 
+const DefaultPath = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 var defaultEnv = map[string]string{
-	"PATH":    "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+	"PATH":    DefaultPath,
 	"SHELL":   "/bin/sh",
 	"USER":    "root",
 	"LOGNAME": "root",

@@ -25,11 +25,22 @@ import (
 	"github.com/hashicorp/errwrap"
 )
 
-// RunCrossingEntrypoint wraps the execution of a stage1 entrypoint which
+// CrossingEntrypoint represents a stage1 entrypoint whose execution
+// needs to cross the stage0/stage1/stage2 boundary.
+type CrossingEntrypoint struct {
+	PodPath        string
+	PodPID         int
+	AppName        string
+	EntrypointName string
+	EntrypointArgs []string
+	Interactive    bool
+}
+
+// Run wraps the execution of a stage1 entrypoint which
 // requires crossing the stage0/stage1/stage2 boundary during its execution,
 // by setting up proper environment variables for enter.
-func RunCrossingEntrypoint(dir string, podPID int, appName string, entrypoint string, entrypointArgs []string) error {
-	enterCmd, err := getStage1Entrypoint(dir, enterEntrypoint)
+func (ce CrossingEntrypoint) Run() error {
+	enterCmd, err := getStage1Entrypoint(ce.PodPath, enterEntrypoint)
 	if err != nil {
 		return errwrap.Wrap(errors.New("error determining 'enter' entrypoint"), err)
 	}
@@ -39,31 +50,45 @@ func RunCrossingEntrypoint(dir string, podPID int, appName string, entrypoint st
 		return err
 	}
 
-	if err := os.Chdir(dir); err != nil {
+	if err := os.Chdir(ce.PodPath); err != nil {
 		return errwrap.Wrap(errors.New("failed changing to dir"), err)
 	}
 
-	ep, err := getStage1Entrypoint(dir, entrypoint)
+	ep, err := getStage1Entrypoint(ce.PodPath, ce.EntrypointName)
 	if err != nil {
-		return fmt.Errorf("%q not implemented for pod's stage1: %v", entrypoint, err)
+		return fmt.Errorf("%q not implemented for pod's stage1: %v", ce.EntrypointName, err)
 	}
-	execArgs := []string{filepath.Join(common.Stage1RootfsPath(dir), ep)}
-	execArgs = append(execArgs, entrypointArgs...)
+	execArgs := []string{filepath.Join(common.Stage1RootfsPath(ce.PodPath), ep)}
+	execArgs = append(execArgs, ce.EntrypointArgs...)
+
+	pathEnv := os.Getenv("PATH")
+	if pathEnv == "" {
+		pathEnv = common.DefaultPath
+	}
+	execEnv := []string{
+		fmt.Sprintf("%s=%s", common.CrossingEnterCmd, filepath.Join(common.Stage1RootfsPath(ce.PodPath), enterCmd)),
+		fmt.Sprintf("%s=%d", common.CrossingEnterPID, ce.PodPID),
+		fmt.Sprintf("PATH=%s", pathEnv),
+	}
 
 	c := exec.Cmd{
-		Path:   execArgs[0],
-		Args:   execArgs,
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-		Env: []string{
-			fmt.Sprintf("%s=%s", common.CrossingEnterCmd, filepath.Join(common.Stage1RootfsPath(dir), enterCmd)),
-			fmt.Sprintf("%s=%d", common.CrossingEnterPID, podPID),
-		},
+		Path: execArgs[0],
+		Args: execArgs,
+		Env:  execEnv,
 	}
 
-	if err := c.Run(); err != nil {
-		return fmt.Errorf("error executing stage1 entrypoint: %v", err)
+	if ce.Interactive {
+		c.Stdin = os.Stdin
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		if err := c.Run(); err != nil {
+			return fmt.Errorf("error executing stage1 entrypoint: %v", err)
+		}
+	} else {
+		out, err := c.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("error executing stage1 entrypoint: %s", string(out))
+		}
 	}
 
 	if err := os.Chdir(previousDir); err != nil {
