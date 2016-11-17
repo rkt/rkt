@@ -7,6 +7,6 @@ This command prints the rkt version, the appc version rkt is built against, and 
 ```
 $ rkt version
 rkt Version: 1.19.0
-appc Version: 0.8.8
+appc Version: 0.8.9
 Go Version: go1.5.3
 Go OS/Arch: linux/amd64
