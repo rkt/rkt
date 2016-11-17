@@ -8,9 +8,9 @@ rkt's version 1.0 release marks the command line user interface and on-disk data
 
 ## Ongoing projects
 
-- [Kuerbenetes CRI](https://github.com/coreos/rkt/projects/1): adapting rkt to offer first class implementation of Kubernetes Container Runtime Interface.
+- [Kubernetes CRI](https://github.com/coreos/rkt/projects/1): adapting rkt to offer first-class implementation of the Kubernetes Container Runtime Interface.
 - [OCI native support](https://github.com/coreos/rkt/projects/4): supporting OCI specs natively in rkt.
-- [AppC phasing-out](https://github.com/coreos/rkt/projects/5): following OCI evolution and stabilization, AppC will be naturally deprecated and phased-out.
+- [appc phase-out](https://github.com/coreos/rkt/projects/5): following OCI evolution and stabilization, appc will be naturally deprecated and phased-out.
 
 ## Next releases
 
