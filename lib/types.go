@@ -81,4 +81,19 @@ type (
 		// UserLabels are the pod user labels.
 		UserLabels map[string]string `json:"user_labels,omitempty"`
 	}
+
+	ImageListEntry struct {
+		// ID is the Image ID for this image
+		ID string `json:"id"`
+		// Name is the name of this image, such as example.com/some/image
+		Name string `json:"name"`
+		// ImportTime indicates when this image was imported in nanoseconds
+		// since the unix epoch
+		ImportTime int64 `json:"import_time"`
+		// LastUsedTime indicates when was last used in nanoseconds since the
+		// unix epoch
+		LastUsedTime int64 `json:"last_used_time"`
+		// Size is the size of this image in bytes
+		Size int64 `json:"size"`
+	}
 )
