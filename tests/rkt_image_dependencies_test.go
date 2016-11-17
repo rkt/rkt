@@ -33,7 +33,7 @@ const (
 	manifestDepsTemplate = `
 {
    "acKind" : "ImageManifest",
-   "acVersion" : "0.8.8",
+   "acVersion" : "0.8.9",
    "dependencies" : [
       DEPENDENCIES
    ],

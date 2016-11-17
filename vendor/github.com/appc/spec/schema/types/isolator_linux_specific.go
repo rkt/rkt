@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"unicode"
 )
 
@@ -29,6 +30,7 @@ const (
 	LinuxSeccompRetainSetName      = "os/linux/seccomp-retain-set"
 	LinuxOOMScoreAdjName           = "os/linux/oom-score-adj"
 	LinuxCPUSharesName             = "os/linux/cpu-shares"
+	LinuxSELinuxContextName        = "os/linux/selinux-context"
 )
 
 var LinuxIsolatorNames = make(map[ACIdentifier]struct{})
@@ -42,6 +44,7 @@ func init() {
 		LinuxCPUSharesName:             func() IsolatorValue { v := LinuxCPUShares(1024); return &v },
 		LinuxSeccompRemoveSetName:      func() IsolatorValue { return &LinuxSeccompRemoveSet{} },
 		LinuxSeccompRetainSetName:      func() IsolatorValue { return &LinuxSeccompRetainSet{} },
+		LinuxSELinuxContextName:        func() IsolatorValue { return &LinuxSELinuxContext{} },
 	} {
 		AddIsolatorName(name, LinuxIsolatorNames)
 		AddIsolatorValueConstructor(name, con)
@@ -429,4 +432,98 @@ func (l LinuxOOMScoreAdj) AsIsolator() Isolator {
 		ValueRaw: &rm,
 		value:    &l,
 	}
+}
+
+type LinuxSELinuxUser string
+type LinuxSELinuxRole string
+type LinuxSELinuxType string
+type LinuxSELinuxLevel string
+
+type linuxSELinuxValue struct {
+	User  LinuxSELinuxUser  `json:"user"`
+	Role  LinuxSELinuxRole  `json:"role"`
+	Type  LinuxSELinuxType  `json:"type"`
+	Level LinuxSELinuxLevel `json:"level"`
+}
+
+type LinuxSELinuxContext struct {
+	val linuxSELinuxValue
+}
+
+func (l LinuxSELinuxContext) AssertValid() error {
+	if l.val.User == "" || strings.Contains(string(l.val.User), ":") {
+		return fmt.Errorf("invalid user value %q", l.val.User)
+	}
+	if l.val.Role == "" || strings.Contains(string(l.val.Role), ":") {
+		return fmt.Errorf("invalid role value %q", l.val.Role)
+	}
+	if l.val.Type == "" || strings.Contains(string(l.val.Type), ":") {
+		return fmt.Errorf("invalid type value %q", l.val.Type)
+	}
+	if l.val.Level == "" {
+		return fmt.Errorf("invalid level value %q", l.val.Level)
+	}
+	return nil
+}
+
+func (l *LinuxSELinuxContext) UnmarshalJSON(b []byte) error {
+	var v linuxSELinuxValue
+	err := json.Unmarshal(b, &v)
+	if err != nil {
+		return err
+	}
+	l.val = v
+	return nil
+}
+
+func (l LinuxSELinuxContext) User() LinuxSELinuxUser {
+	return l.val.User
+}
+
+func (l LinuxSELinuxContext) Role() LinuxSELinuxRole {
+	return l.val.Role
+}
+
+func (l LinuxSELinuxContext) Type() LinuxSELinuxType {
+	return l.val.Type
+}
+
+func (l LinuxSELinuxContext) Level() LinuxSELinuxLevel {
+	return l.val.Level
+}
+
+func (l LinuxSELinuxContext) multipleAllowed() bool {
+	return false
+}
+
+func (l LinuxSELinuxContext) Conflicts() []ACIdentifier {
+	return nil
+}
+
+func NewLinuxSELinuxContext(selinuxUser, selinuxRole, selinuxType, selinuxLevel string) (*LinuxSELinuxContext, error) {
+	l := LinuxSELinuxContext{
+		linuxSELinuxValue{
+			LinuxSELinuxUser(selinuxUser),
+			LinuxSELinuxRole(selinuxRole),
+			LinuxSELinuxType(selinuxType),
+			LinuxSELinuxLevel(selinuxLevel),
+		},
+	}
+	if err := l.AssertValid(); err != nil {
+		return nil, err
+	}
+	return &l, nil
+}
+
+func (l LinuxSELinuxContext) AsIsolator() (*Isolator, error) {
+	b, err := json.Marshal(l.val)
+	if err != nil {
+		return nil, err
+	}
+	rm := json.RawMessage(b)
+	return &Isolator{
+		Name:     LinuxSELinuxContextName,
+		ValueRaw: &rm,
+		value:    &l,
+	}, nil
 }

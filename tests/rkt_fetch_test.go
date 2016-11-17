@@ -536,7 +536,7 @@ func TestDeferredSignatureDownload(t *testing.T) {
 }
 
 func TestDifferentDiscoveryLabels(t *testing.T) {
-	manifestTemplate := `{"acKind":"ImageManifest","acVersion":"0.8.8","name":"IMG_NAME","labels":[{"name":"version","value":"1.2.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}]}`
+	manifestTemplate := `{"acKind":"ImageManifest","acVersion":"0.8.9","name":"IMG_NAME","labels":[{"name":"version","value":"1.2.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}]}`
 	emptyImage := getEmptyImagePath()
 	imageName := "localhost/rkt-test-different-discovery-labels-image"
 	manifest := strings.Replace(manifestTemplate, "IMG_NAME", imageName, -1)
