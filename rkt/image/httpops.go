@@ -49,7 +49,7 @@ func (o *httpOps) DownloadSignature(a *asc) (readSeekCloser, bool, error) {
 	}
 	if _, ok := err.(*statusAcceptedError); ok {
 		log.Printf("server requested deferring the signature download")
-		return nil, true, nil
+		return NopReadSeekCloser(nil), true, nil
 	}
 	return nil, false, errwrap.Wrap(errors.New("error downloading the signature file"), err)
 }
@@ -86,24 +86,34 @@ func (o *httpOps) DownloadImage(u *url.URL) (readSeekCloser, *cacheData, error) 
 // DownloadImageWithETag might download an image or tell you to use
 // the cached image. In the latter case the returned file will be nil.
 func (o *httpOps) DownloadImageWithETag(u *url.URL, etag string) (readSeekCloser, *cacheData, error) {
+	var aciFile *removeOnClose // closed on error
+	var errClose error         // error signaling to close aciFile
+
 	ensureLogger(o.Debug)
 	aciFile, err := getTmpROC(o.S, u.String())
 	if err != nil {
 		return nil, nil, err
 	}
-	defer func() { maybeClose(aciFile) }()
+
+	defer func() {
+		if errClose != nil {
+			aciFile.Close()
+		}
+	}()
 
 	session := o.getSession(u, aciFile.File, "ACI", etag)
 	dl := o.getDownloader(session)
-	if err := dl.Download(u, aciFile.File); err != nil {
-		return nil, nil, errwrap.Wrap(errors.New("error downloading ACI"), err)
+	errClose = dl.Download(u, aciFile.File)
+	if errClose != nil {
+		return nil, nil, errwrap.Wrap(errors.New("error downloading ACI"), errClose)
 	}
+
 	if session.Cd.UseCached {
-		return nil, session.Cd, nil
+		aciFile.Close()
+		return NopReadSeekCloser(nil), session.Cd, nil
 	}
-	retAciFile := aciFile
-	aciFile = nil
-	return retAciFile, session.Cd, nil
+
+	return aciFile, session.Cd, nil
 }
 
 // AscRemoteFetcher provides a remoteAscFetcher for asc.

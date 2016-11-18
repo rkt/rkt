@@ -48,22 +48,31 @@ type remoteAscFetcher struct {
 }
 
 func (f *remoteAscFetcher) Get(location string) (readSeekCloser, error) {
+	var roc *removeOnClose // closed on error
+	var errClose error     // error signaling to close roc
+
 	roc, err := getTmpROC(f.S, location)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { maybeClose(roc) }()
 
-	u, err := url.Parse(location)
-	if err != nil {
-		return nil, errwrap.Wrap(errors.New("invalid signature location"), err)
+	defer func() {
+		if errClose != nil {
+			roc.Close()
+		}
+	}()
+
+	u, errClose := url.Parse(location)
+	if errClose != nil {
+		return nil, errwrap.Wrap(errors.New("invalid signature location"), errClose)
 	}
-	if err := f.F(u, roc.File); err != nil {
-		return nil, err
+
+	errClose = f.F(u, roc.File)
+	if errClose != nil {
+		return nil, errClose
 	}
-	retRoc := roc
-	roc = nil
-	return retRoc, nil
+
+	return roc, nil
 }
 
 // asc is an abstraction for getting signature files.
@@ -81,5 +90,5 @@ func (a *asc) Get() (readSeekCloser, error) {
 	if a.Fetcher != nil {
 		return a.Fetcher.Get(a.Location)
 	}
-	return nil, nil
+	return NopReadSeekCloser(nil), nil
 }

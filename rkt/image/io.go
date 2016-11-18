@@ -43,6 +43,18 @@ type readSeekCloser interface {
 	io.Closer
 }
 
+type nopReadSeekCloser struct {
+	io.ReadSeeker
+}
+
+func (nopReadSeekCloser) Close() error { return nil }
+
+// NopReadSeekCloser wraps the given ReadSeeker
+// and returns one that does nothing when Close() is being invoked.
+func NopReadSeekCloser(rs io.ReadSeeker) readSeekCloser {
+	return nopReadSeekCloser{rs}
+}
+
 // getIoProgressReader returns a reader that wraps the HTTP response
 // body, so it prints a pretty progress bar when reading data from it.
 func getIoProgressReader(label string, res *http.Response) io.Reader {
@@ -93,6 +105,9 @@ func (f *removeOnClose) Seek(offset int64, whence int) (int64, error) {
 // Close closes the file and then removes it from disk. No error is
 // returned if the file did not exist at the point of removal.
 func (f *removeOnClose) Close() error {
+	if f == nil || f.File == nil {
+		return nil
+	}
 	name := f.File.Name()
 	if err := f.File.Close(); err != nil {
 		return err
@@ -115,6 +130,7 @@ func getTmpROC(s *imagestore.Store, path string) (*removeOnClose, error) {
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("error setting up temporary file"), err)
 	}
+
 	// let's lock the file to avoid concurrent writes to the temporary file, it
 	// will go away when removing the temp file
 	_, err = lock.TryExclusiveLock(tmp.Name(), lock.RegFile)
@@ -128,14 +144,6 @@ func getTmpROC(s *imagestore.Store, path string) (*removeOnClose, error) {
 			return nil, errwrap.Wrap(errors.New("failed to lock temporary file"), err)
 		}
 	}
-	roc := &removeOnClose{File: tmp}
-	return roc, nil
-}
 
-// maybeClose is a convenient function for closing io.Closers if they
-// are not nil. Useful in defers.
-func maybeClose(c io.Closer) {
-	if !isReallyNil(c) {
-		c.Close()
-	}
+	return &removeOnClose{File: tmp}, nil
 }
