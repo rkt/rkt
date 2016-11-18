@@ -473,6 +473,10 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 	// introduced by https://github.com/systemd/systemd/pull/3809.
 	env = append(env, "SYSTEMD_NSPAWN_USE_CGNS=no")
 
+	if insecureOptions.DisablePaths {
+		env = append(env, "SYSTEMD_NSPAWN_API_VFS_WRITABLE=yes")
+	}
+
 	if len(privateUsers) > 0 {
 		args = append(args, "--private-users="+privateUsers)
 	}
@@ -674,7 +678,7 @@ func stage1() int {
 			serviceNames = append(serviceNames, stage1initcommon.ServiceUnitName(app.Name))
 		}
 
-		if err := mountContainerV1Cgroups(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
+		if err := mountContainerV1Cgroups(s1Root, enabledCgroups, subcgroup, serviceNames, insecureOptions); err != nil {
 			log.PrintE("couldn't mount the container v1 cgroups", err)
 			return 254
 		}
@@ -753,12 +757,13 @@ func mountHostV1Cgroups(enabledCgroups map[int][]string) error {
 // mountContainerV1Cgroups mounts the cgroup controllers hierarchy in the container's
 // namespace read-only, leaving the needed knobs in the subcgroup for each-app
 // read-write so systemd inside stage1 can apply isolators to them
-func mountContainerV1Cgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
+func mountContainerV1Cgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string, secopts stage1initcommon.Stage1InsecureOptions) error {
 	mountContext := os.Getenv(common.EnvSELinuxMountContext)
 	if err := v1.CreateCgroups(s1Root, enabledCgroups, mountContext); err != nil {
 		return errwrap.Wrap(errors.New("error creating container cgroups"), err)
 	}
-	if err := v1.RemountCgroupsRO(s1Root, enabledCgroups, subcgroup, serviceNames); err != nil {
+
+	if err := v1.RemountCgroups(m, s1Root, enabledCgroups, subcgroup, serviceNames, secopts.DisablePaths); err != nil {
 		return errwrap.Wrap(errors.New("error restricting container cgroups"), err)
 	}
 

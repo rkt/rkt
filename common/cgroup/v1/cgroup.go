@@ -320,10 +320,12 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 	return mountFsRO(cgroupTmpfs, cgroupTmpfsFlags)
 }
 
-// RemountCgroupsRO remounts the v1 cgroup hierarchy under root read-only,
-// leaving the needed knobs in the subcgroup for each app read-write so the
-// systemd inside stage1 can apply isolators to them
-func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
+// RemountCgroups remounts the v1 cgroup hierarchy under root.
+// It mounts /sys/fs/cgroup/[controller] read-only,
+// but leaves needed knobs in the subcgroup for each app read-write,
+// such that systemd inside stage1 can apply isolators to them.
+// It leaves /sys read-write, if the given readWrite parameter is true.
+func RemountCgroups(root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string, readWrite bool) error {
 	controllers := GetControllerDirs(enabledCgroups)
 	cgroupTmpfs := filepath.Join(root, "/sys/fs/cgroup")
 	sysPath := filepath.Join(root, "/sys")
@@ -366,6 +368,10 @@ func RemountCgroupsRO(root string, enabledCgroups map[int][]string, subcgroup st
 		if err := mountFsRO(cPath, flags); err != nil {
 			return err
 		}
+	}
+
+	if readWrite {
+		return nil
 	}
 
 	// Bind-mount sys filesystem read-only
