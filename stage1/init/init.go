@@ -51,6 +51,7 @@ import (
 	commonnet "github.com/coreos/rkt/common/networking"
 	"github.com/coreos/rkt/networking"
 	pkgflag "github.com/coreos/rkt/pkg/flag"
+	"github.com/coreos/rkt/pkg/fs"
 	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/stage1/init/kvm"
@@ -570,12 +571,18 @@ func stage1() int {
 		DisableSeccomp:      disableSeccomp,
 	}
 
+	mnt := fs.NewLoggingMounter(
+		fs.MounterFunc(syscall.Mount),
+		fs.UnmounterFunc(syscall.Unmount),
+		diag.Printf,
+	)
+
 	if dnsConfMode.Pairs["resolv"] == "host" {
-		stage1initcommon.UseHostResolv(root)
+		stage1initcommon.UseHostResolv(mnt, root)
 	}
 
 	if dnsConfMode.Pairs["hosts"] == "host" {
-		stage1initcommon.UseHostHosts(root)
+		stage1initcommon.UseHostHosts(mnt, root)
 	}
 
 	if mutable {
@@ -620,10 +627,10 @@ func stage1() int {
 	// from the host propagate to the new namespace and are forwarded to
 	// its peer group
 	// See https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
-	if err := syscall.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SLAVE, ""); err != nil {
+	if err := mnt.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SLAVE, ""); err != nil {
 		log.FatalE("error making / a slave mount", err)
 	}
-	if err := syscall.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SHARED, ""); err != nil {
+	if err := mnt.Mount("", "/", "none", syscall.MS_REC|syscall.MS_SHARED, ""); err != nil {
 		log.FatalE("error making / a shared and slave mount", err)
 	}
 
@@ -651,7 +658,7 @@ func stage1() int {
 			log.FatalE("error getting v1 cgroups", err)
 		}
 
-		if err := mountHostV1Cgroups(enabledCgroups); err != nil {
+		if err := mountHostV1Cgroups(mnt, enabledCgroups); err != nil {
 			log.FatalE("couldn't mount the host v1 cgroups", err)
 		}
 
@@ -666,7 +673,7 @@ func stage1() int {
 			serviceNames = append(serviceNames, stage1initcommon.ServiceUnitName(app.Name))
 		}
 
-		if err := mountContainerV1Cgroups(s1Root, enabledCgroups, subcgroup, serviceNames, insecureOptions); err != nil {
+		if err := mountContainerV1Cgroups(mnt, s1Root, enabledCgroups, subcgroup, serviceNames, insecureOptions); err != nil {
 			log.FatalE("couldn't mount the container v1 cgroups", err)
 		}
 
@@ -718,11 +725,11 @@ func areHostV1CgroupsMounted(enabledV1Cgroups map[int][]string) bool {
 // "name=systemd" cgroup or don't mount the cgroup controllers in
 // "/sys/fs/cgroup", and systemd-nspawn needs this. Since this is mounted
 // inside the rkt mount namespace, it doesn't affect the host.
-func mountHostV1Cgroups(enabledCgroups map[int][]string) error {
+func mountHostV1Cgroups(m fs.Mounter, enabledCgroups map[int][]string) error {
 	systemdControllerPath := "/sys/fs/cgroup/systemd"
 	if !areHostV1CgroupsMounted(enabledCgroups) {
 		mountContext := os.Getenv(common.EnvSELinuxMountContext)
-		if err := v1.CreateCgroups("/", enabledCgroups, mountContext); err != nil {
+		if err := v1.CreateCgroups(m, "/", enabledCgroups, mountContext); err != nil {
 			return errwrap.Wrap(errors.New("error creating host cgroups"), err)
 		}
 	}
@@ -731,7 +738,7 @@ func mountHostV1Cgroups(enabledCgroups map[int][]string) error {
 		if err := os.MkdirAll(systemdControllerPath, 0700); err != nil {
 			return err
 		}
-		if err := syscall.Mount("cgroup", systemdControllerPath, "cgroup", 0, "none,name=systemd"); err != nil {
+		if err := m.Mount("cgroup", systemdControllerPath, "cgroup", 0, "none,name=systemd"); err != nil {
 			return errwrap.Wrap(fmt.Errorf("error mounting name=systemd hierarchy on %q", systemdControllerPath), err)
 		}
 	}
@@ -742,9 +749,9 @@ func mountHostV1Cgroups(enabledCgroups map[int][]string) error {
 // mountContainerV1Cgroups mounts the cgroup controllers hierarchy in the container's
 // namespace read-only, leaving the needed knobs in the subcgroup for each-app
 // read-write so systemd inside stage1 can apply isolators to them
-func mountContainerV1Cgroups(s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string, secopts stage1initcommon.Stage1InsecureOptions) error {
+func mountContainerV1Cgroups(m fs.Mounter, s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string, secopts stage1initcommon.Stage1InsecureOptions) error {
 	mountContext := os.Getenv(common.EnvSELinuxMountContext)
-	if err := v1.CreateCgroups(s1Root, enabledCgroups, mountContext); err != nil {
+	if err := v1.CreateCgroups(m, s1Root, enabledCgroups, mountContext); err != nil {
 		return errwrap.Wrap(errors.New("error creating container cgroups"), err)
 	}
 

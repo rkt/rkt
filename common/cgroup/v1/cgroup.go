@@ -29,6 +29,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/coreos/rkt/pkg/fs"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -41,13 +42,13 @@ var (
 )
 
 // mountFsRO remounts the given mountPoint using the given flags read-only.
-func mountFsRO(mountPoint string, flags uintptr) error {
+func mountFsRO(m fs.Mounter, mountPoint string, flags uintptr) error {
 	flags = flags |
 		syscall.MS_BIND |
 		syscall.MS_REMOUNT |
 		syscall.MS_RDONLY
 
-	if err := syscall.Mount(mountPoint, mountPoint, "", flags, ""); err != nil {
+	if err := m.Mount(mountPoint, mountPoint, "", flags, ""); err != nil {
 		return errwrap.Wrap(fmt.Errorf("error remounting read-only %q", mountPoint), err)
 	}
 
@@ -249,7 +250,7 @@ func IsControllerMounted(c string) bool {
 
 // CreateCgroups mounts the v1 cgroup controllers hierarchy in /sys/fs/cgroup
 // under root
-func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext string) error {
+func CreateCgroups(m fs.Mounter, root string, enabledCgroups map[int][]string, mountContext string) error {
 	controllers := GetControllerDirs(enabledCgroups)
 
 	sys := filepath.Join(root, "/sys")
@@ -263,7 +264,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 
 	// If we're mounting the host cgroups, /sys is probably mounted so we
 	// ignore EBUSY
-	if err := syscall.Mount("sysfs", sys, "sysfs", sysfsFlags, ""); err != nil && err != syscall.EBUSY {
+	if err := m.Mount("sysfs", sys, "sysfs", sysfsFlags, ""); err != nil && err != syscall.EBUSY {
 		return errwrap.Wrap(fmt.Errorf("error mounting %q", sys), err)
 	}
 
@@ -282,7 +283,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 		options = fmt.Sprintf("mode=755,context=\"%s\"", mountContext)
 	}
 
-	if err := syscall.Mount("tmpfs", cgroupTmpfs, "tmpfs", cgroupTmpfsFlags, options); err != nil {
+	if err := m.Mount("tmpfs", cgroupTmpfs, "tmpfs", cgroupTmpfsFlags, options); err != nil {
 		return errwrap.Wrap(fmt.Errorf("error mounting %q", cgroupTmpfs), err)
 	}
 
@@ -297,7 +298,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 			syscall.MS_NOEXEC |
 			syscall.MS_NODEV
 
-		if err := syscall.Mount("cgroup", cPath, "cgroup", flags, c); err != nil {
+		if err := m.Mount("cgroup", cPath, "cgroup", flags, c); err != nil {
 			return errwrap.Wrap(fmt.Errorf("error mounting %q", cPath), err)
 		}
 	}
@@ -317,7 +318,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 	}
 
 	// Bind-mount cgroup tmpfs filesystem read-only
-	return mountFsRO(cgroupTmpfs, cgroupTmpfsFlags)
+	return mountFsRO(m, cgroupTmpfs, cgroupTmpfsFlags)
 }
 
 // RemountCgroups remounts the v1 cgroup hierarchy under root.
@@ -325,7 +326,7 @@ func CreateCgroups(root string, enabledCgroups map[int][]string, mountContext st
 // but leaves needed knobs in the subcgroup for each app read-write,
 // such that systemd inside stage1 can apply isolators to them.
 // It leaves /sys read-write, if the given readWrite parameter is true.
-func RemountCgroups(root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string, readWrite bool) error {
+func RemountCgroups(m fs.Mounter, root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string, readWrite bool) error {
 	controllers := GetControllerDirs(enabledCgroups)
 	cgroupTmpfs := filepath.Join(root, "/sys/fs/cgroup")
 	sysPath := filepath.Join(root, "/sys")
@@ -358,14 +359,14 @@ func RemountCgroups(root string, enabledCgroups map[int][]string, subcgroup stri
 				if _, err := os.Stat(cgroupFilePath); os.IsNotExist(err) {
 					continue
 				}
-				if err := syscall.Mount(cgroupFilePath, cgroupFilePath, "", syscall.MS_BIND, ""); err != nil {
+				if err := m.Mount(cgroupFilePath, cgroupFilePath, "", syscall.MS_BIND, ""); err != nil {
 					return errwrap.Wrap(fmt.Errorf("error bind mounting %q", cgroupFilePath), err)
 				}
 			}
 		}
 
 		// Re-mount controller read-only to prevent the container modifying host controllers
-		if err := mountFsRO(cPath, flags); err != nil {
+		if err := mountFsRO(m, cPath, flags); err != nil {
 			return err
 		}
 	}
@@ -375,7 +376,7 @@ func RemountCgroups(root string, enabledCgroups map[int][]string, subcgroup stri
 	}
 
 	// Bind-mount sys filesystem read-only
-	return mountFsRO(sysPath, flags)
+	return mountFsRO(m, sysPath, flags)
 }
 
 // RemountCgroupKnobsRW remounts the needed knobs in the subcgroup for one
