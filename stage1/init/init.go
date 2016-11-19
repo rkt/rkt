@@ -655,6 +655,12 @@ func stage1() int {
 			log.FatalE("couldn't mount the host v1 cgroups", err)
 		}
 
+		if !canMachinedRegister {
+			if err := v1.JoinSubcgroup("systemd", subcgroup); err != nil {
+				log.FatalE(fmt.Sprintf("error joining subcgroup %q", subcgroup), err)
+			}
+		}
+
 		var serviceNames []string
 		for _, app := range p.Manifest.Apps {
 			serviceNames = append(serviceNames, stage1initcommon.ServiceUnitName(app.Name))
@@ -759,7 +765,6 @@ func getContainerSubCgroup(machineID string, canMachinedRegister, unified bool) 
 		}
 	}
 
-	var subcgroup string
 	if fromUnit {
 		slice, err := util.GetRunningSlice()
 		if err != nil {
@@ -773,45 +778,44 @@ func getContainerSubCgroup(machineID string, canMachinedRegister, unified bool) 
 		if err != nil {
 			return "", errwrap.Wrap(errors.New("could not get unit name"), err)
 		}
-		subcgroup = filepath.Join(slicePath, unit)
+		subcgroup := filepath.Join(slicePath, unit)
 
 		if unified {
-			subcgroup = filepath.Join(subcgroup, "payload")
+			return filepath.Join(subcgroup, "payload"), nil
 		}
-	} else {
-		escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
-		machineDir := "machine-" + escapedmID + ".scope"
-		if canMachinedRegister {
-			// we are not in the final cgroup yet: systemd-nspawn will move us
-			// to the correct cgroup later during registration so we can't
-			// look it up in /proc/self/cgroup
-			subcgroup = filepath.Join("machine.slice", machineDir)
-		} else {
-			if unified {
-				var err error
-				subcgroup, err = v2.GetOwnCgroupPath()
-				if err != nil {
-					return "", errwrap.Wrap(errors.New("could not get own v2 cgroup path"), err)
-				}
-			} else {
-				// when registration is disabled the container will be directly
-				// under the current cgroup so we can look it up in /proc/self/cgroup
-				ownV1CgroupPath, err := v1.GetOwnCgroupPath("name=systemd")
-				if err != nil {
-					return "", errwrap.Wrap(errors.New("could not get own v1 cgroup path"), err)
-				}
-				// systemd-nspawn won't work if we are in the root cgroup. In addition,
-				// we want all rkt instances to be in distinct cgroups. Create a
-				// subcgroup and add ourselves to it.
-				subcgroup = filepath.Join(ownV1CgroupPath, machineDir)
-				if err := v1.JoinSubcgroup("systemd", subcgroup); err != nil {
-					return "", errwrap.Wrap(fmt.Errorf("error joining %s subcgroup", ownV1CgroupPath), err)
-				}
-			}
-		}
+
+		return subcgroup, nil
 	}
 
-	return subcgroup, nil
+	escapedmID := strings.Replace(machineID, "-", "\\x2d", -1)
+	machineDir := "machine-" + escapedmID + ".scope"
+
+	if canMachinedRegister {
+		// we are not in the final cgroup yet: systemd-nspawn will move us
+		// to the correct cgroup later during registration so we can't
+		// look it up in /proc/self/cgroup
+		return filepath.Join("machine.slice", machineDir), nil
+	}
+
+	if unified {
+		subcgroup, err := v2.GetOwnCgroupPath()
+		if err != nil {
+			return "", errwrap.Wrap(errors.New("could not get own v2 cgroup path"), err)
+		}
+		return subcgroup, nil
+	}
+
+	// when registration is disabled the container will be directly
+	// under the current cgroup so we can look it up in /proc/self/cgroup
+	ownV1CgroupPath, err := v1.GetOwnCgroupPath("name=systemd")
+	if err != nil {
+		return "", errwrap.Wrap(errors.New("could not get own v1 cgroup path"), err)
+	}
+
+	// systemd-nspawn won't work if we are in the root cgroup. In addition,
+	// we want all rkt instances to be in distinct cgroups. Create a
+	// subcgroup and add ourselves to it.
+	return filepath.Join(ownV1CgroupPath, machineDir), nil
 }
 
 func main() {
