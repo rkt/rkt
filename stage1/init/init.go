@@ -385,7 +385,9 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 		// use only dynamic libraries provided in the image
 		// from systemd v231 there's a new internal libsystemd-shared-v231.so
 		// which is present in /usr/lib/systemd
-		env = append(env, "LD_LIBRARY_PATH="+filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib/systemd"))
+		env = append(env, "LD_LIBRARY_PATH="+
+			filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib")+":"+
+			filepath.Join(common.Stage1RootfsPath(p.Root), "usr/lib/systemd"))
 
 	case "host":
 		hostNspawnBin, err := common.LookupPath("systemd-nspawn", os.Getenv("PATH"))
