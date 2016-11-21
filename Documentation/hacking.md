@@ -47,13 +47,14 @@ To do this, use the following `configure` parameters after running `./autogen.sh
 - `--with-stage1-flavors`
 - `--with-stage1-default-flavor` (optional)
 - `--with-stage1-systemd-version`
+- `--with-stage1-systemd-revision` (optional)
 - `--with-stage1-systemd-src`
 
 For more details, see [configure script parameters documentation][build-configure].
 Example:
 
 ```
-./autogen.sh && ./configure --with-stage1-flavors=src --with-stage1-systemd-version=master --with-stage1-systemd-src=$HOME/src/systemd && make
+./autogen.sh && ./configure --with-stage1-flavors=src --with-stage1-systemd-version=v231 --with-stage1-systemd-revision=master --with-stage1-systemd-src=$HOME/src/systemd && make
 ```
 
 ### Building stage1 with kvm as execution engine
