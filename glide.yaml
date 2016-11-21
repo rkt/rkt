@@ -278,3 +278,5 @@ import:
   version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
 - package: github.com/PuerkitoBio/purell
   version: v1.1.0
+- package: github.com/PuerkitoBio/urlesc
+  version: 5bd2802263f21d8788851d5305584c82a5c75d7e
