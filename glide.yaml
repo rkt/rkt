@@ -56,6 +56,7 @@ import:
   - pkg/types
   - pkg/utils
   - pkg/utils/sysctl
+  - pkg/utils/hwaddr
   - plugins/ipam/dhcp
   - plugins/ipam/host-local
   - plugins/ipam/host-local/backend
@@ -251,6 +252,8 @@ import:
   - peer
   - transport
   - internal
+  - tap
+  - stats
 - package: gopkg.in/inf.v0
   version: v0.9.0
 - package: github.com/klauspost/pgzip
