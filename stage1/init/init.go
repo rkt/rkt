@@ -771,11 +771,16 @@ func mountContainerV1Cgroups(s1Root string, enabledCgroups map[int][]string, sub
 }
 
 func getContainerSubCgroup(machineID string, canMachinedRegister, unified bool) (string, error) {
-	var subcgroup string
-	fromUnit, err := util.RunningFromSystemService()
-	if err != nil {
-		return "", errwrap.Wrap(errors.New("could not determine if we're running from a unit file"), err)
+	var fromUnit bool
+
+	if util.IsRunningSystemd() {
+		var err error
+		if fromUnit, err = util.RunningFromSystemService(); err != nil {
+			return "", errwrap.Wrap(errors.New("could not determine if we're running from a unit file"), err)
+		}
 	}
+
+	var subcgroup string
 	if fromUnit {
 		slice, err := util.GetRunningSlice()
 		if err != nil {
