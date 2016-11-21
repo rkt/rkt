@@ -1,5 +1,5 @@
-hash: 4ee26cc723790bfe9e984b7e646dbc5175432a16ef280402df1d507e014cc648
-updated: 2016-11-21T08:59:45.827536562+01:00
+hash: a35f3c5403e592b061fc61292c9d690d5a4779d014fcd632315e4560b7a9c3e7
+updated: 2016-11-21T09:45:33.766283869+01:00
 imports:
 - name: github.com/appc/docker2aci
   version: 64543c1e0a7306b17d0d214549ec08049b234abc
@@ -209,6 +209,8 @@ imports:
   version: 937c5a91d7fb1477fa6d2bb71410b2ae7a0f2143
 - name: github.com/PuerkitoBio/purell
   version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
+- name: github.com/PuerkitoBio/urlesc
+  version: 5bd2802263f21d8788851d5305584c82a5c75d7e
 - name: github.com/russross/blackfriday
   version: 300106c228d52c8941d4b3de6054a6062a86dda3
 - name: github.com/shirou/gopsutil
@@ -264,6 +266,7 @@ imports:
   - html/atom
   - http2
   - http2/hpack
+  - idna
   - internal/timeseries
   - lex/httplex
   - trace
@@ -271,6 +274,12 @@ imports:
   version: b44883b474ffefa37335017174e397412b633a4f
   subpackages:
   - unix
+- name: golang.org/x/text
+  version: 2910a502d2bf9e43193af9d68ca516529614eed3
+  subpackages:
+  - transform
+  - unicode/norm
+  - width
 - name: golang.org/x/tools
   version: 27e692e6ec36d8f48be794f32553e1400c70dbf2
   subpackages:
