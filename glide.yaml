@@ -276,3 +276,5 @@ import:
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
 - package: github.com/kr/pretty
   version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
+- package: github.com/PuerkitoBio/purell
+  version: v1.1.0
