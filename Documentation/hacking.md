@@ -117,7 +117,7 @@ Ensure you have the **latest version** of `glide` and `glide-vc` available in yo
 
 Use the glide tool to add a new dependency. In order to add a dependency to a package i.e. `github.com/fizz/buzz` for version `1.2.3`, execute:
 ```
-$ glide get -u github.com/fizz/buzz#1.2.3
+$ glide get github.com/fizz/buzz#v1.2.3
 $ ./scripts/glide-update.sh
 ```
 
