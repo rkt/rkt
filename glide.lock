@@ -1,5 +1,5 @@
-hash: 3fa95da14ae3ac1b7fe893c005baacb4b967028f1d376f1b622ac28386f557f9
-updated: 2016-11-17T15:01:09.909898138Z
+hash: 4ee26cc723790bfe9e984b7e646dbc5175432a16ef280402df1d507e014cc648
+updated: 2016-11-21T08:59:45.827536562+01:00
 imports:
 - name: github.com/appc/docker2aci
   version: 64543c1e0a7306b17d0d214549ec08049b234abc
@@ -55,6 +55,7 @@ imports:
   - pkg/testutils
   - pkg/types
   - pkg/utils
+  - pkg/utils/hwaddr
   - pkg/utils/sysctl
   - plugins/ipam/dhcp
   - plugins/ipam/host-local
@@ -206,6 +207,8 @@ imports:
   version: cccd189d45f7ac3368a0d127efb7f4d08ae0b655
 - name: github.com/peterbourgon/diskv
   version: 937c5a91d7fb1477fa6d2bb71410b2ae7a0f2143
+- name: github.com/PuerkitoBio/purell
+  version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
 - name: github.com/russross/blackfriday
   version: 300106c228d52c8941d4b3de6054a6062a86dda3
 - name: github.com/shirou/gopsutil
@@ -282,6 +285,8 @@ imports:
   - metadata
   - naming
   - peer
+  - stats
+  - tap
   - transport
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
