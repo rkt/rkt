@@ -74,7 +74,7 @@ function checkFlavorValue {
 
 # Parse user provided parameters
 function parseParameters {
-    while getopts "f:s:cxujd" option; do
+    while getopts "f:s:r:cxujd" option; do
         case ${option} in
         f)
             RKT_STAGE1_USR_FROM="${OPTARG}"
@@ -228,6 +228,7 @@ function usage {
     echo -e "-f\tSelect flavor"
     echo -e "-j\tDon't run tests after build"
     echo -e "-s\tSystemd version"
+    echo -e "-r\tSystemd revision"
     echo -e "-u\tShow this message"
     echo -e "-x\tUse with '-c' to force cleanup on non-CI systems"
 }
