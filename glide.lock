@@ -1,5 +1,5 @@
-hash: 3fa95da14ae3ac1b7fe893c005baacb4b967028f1d376f1b622ac28386f557f9
-updated: 2016-11-17T15:01:09.909898138Z
+hash: a35f3c5403e592b061fc61292c9d690d5a4779d014fcd632315e4560b7a9c3e7
+updated: 2016-11-21T09:45:33.766283869+01:00
 imports:
 - name: github.com/appc/docker2aci
   version: 64543c1e0a7306b17d0d214549ec08049b234abc
@@ -55,6 +55,7 @@ imports:
   - pkg/testutils
   - pkg/types
   - pkg/utils
+  - pkg/utils/hwaddr
   - pkg/utils/sysctl
   - plugins/ipam/dhcp
   - plugins/ipam/host-local
@@ -206,6 +207,10 @@ imports:
   version: cccd189d45f7ac3368a0d127efb7f4d08ae0b655
 - name: github.com/peterbourgon/diskv
   version: 937c5a91d7fb1477fa6d2bb71410b2ae7a0f2143
+- name: github.com/PuerkitoBio/purell
+  version: 0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4
+- name: github.com/PuerkitoBio/urlesc
+  version: 5bd2802263f21d8788851d5305584c82a5c75d7e
 - name: github.com/russross/blackfriday
   version: 300106c228d52c8941d4b3de6054a6062a86dda3
 - name: github.com/shirou/gopsutil
@@ -261,6 +266,7 @@ imports:
   - html/atom
   - http2
   - http2/hpack
+  - idna
   - internal/timeseries
   - lex/httplex
   - trace
@@ -268,6 +274,12 @@ imports:
   version: b44883b474ffefa37335017174e397412b633a4f
   subpackages:
   - unix
+- name: golang.org/x/text
+  version: 2910a502d2bf9e43193af9d68ca516529614eed3
+  subpackages:
+  - transform
+  - unicode/norm
+  - width
 - name: golang.org/x/tools
   version: 27e692e6ec36d8f48be794f32553e1400c70dbf2
   subpackages:
@@ -282,6 +294,8 @@ imports:
   - metadata
   - naming
   - peer
+  - stats
+  - tap
   - transport
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4

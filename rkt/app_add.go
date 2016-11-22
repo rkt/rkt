@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/coreos/rkt/common"
-	"github.com/coreos/rkt/common/apps"
 	pkgPod "github.com/coreos/rkt/pkg/pod"
 	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/stage0"
@@ -101,7 +100,7 @@ func runAppAdd(cmd *cobra.Command, args []string) (exit int) {
 		NoStore:   false,
 	}
 
-	img, err := fn.FindImage(args[1], "", apps.AppImageGuess)
+	img, err := fn.FindImage(args[1], "")
 	if err != nil {
 		stderr.PrintE("error finding images", err)
 		return 1
