@@ -80,7 +80,7 @@ func TestNoNewPrivileges(t *testing.T) {
 			)
 
 			rktCmd := fmt.Sprintf(
-				"%s --debug --insecure-options=image run %s %s",
+				"%s --debug --insecure-options=image,paths run %s %s",
 				ctx.Cmd(),
 				image,
 				rktParams,
