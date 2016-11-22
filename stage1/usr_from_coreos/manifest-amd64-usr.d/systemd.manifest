@@ -42,10 +42,10 @@ lib64/libgcc_s.so
 lib64/libgcc_s.so.1
 lib64/libgcrypt.so
 lib64/libgcrypt.so.20
-lib64/libgcrypt.so.20.0.5
+lib64/libgcrypt.so.20.1.3
 lib64/libgpg-error.so
 lib64/libgpg-error.so.0
-lib64/libgpg-error.so.0.15.0
+lib64/libgpg-error.so.0.19.1
 lib64/libip4tc.so
 lib64/libip4tc.so.0
 lib64/libip4tc.so.0.1.0
