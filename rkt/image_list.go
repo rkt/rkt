@@ -19,7 +19,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
+	rktlib "github.com/coreos/rkt/lib"
 	rktflag "github.com/coreos/rkt/pkg/flag"
 	"github.com/coreos/rkt/store/imagestore"
 	"github.com/dustin/go-humanize"
@@ -30,8 +32,6 @@ import (
 )
 
 const (
-	defaultTimeLayout = "2006-01-02 15:04:05.999 -0700 MST"
-
 	id         = "id"
 	name       = "name"
 	importTime = "import time"
@@ -39,6 +39,8 @@ const (
 	size       = "size"
 	latest     = "latest"
 )
+
+const defaultTimeLayout = "2006-01-02 15:04:05.999 -0700 MST"
 
 // Convenience methods for formatting fields
 func l(s string) string {
@@ -78,24 +80,58 @@ var (
 	}
 )
 
-type printedImage struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	ImportTime string `json:"importtime"`
-	LastUsed   string `json:"lastused"`
-	Size       string `json:"size"`
+type printableImage struct {
+	rktlib.ImageListEntry
+
+	format outputFormat
+	full   bool
 }
 
-func (pi *printedImage) attributes(fields *rktflag.OptionList) []string {
+func (pi *printableImage) MarshalJSON() ([]byte, error) {
+	return json.Marshal(pi.ImageListEntry)
+}
+
+type outputFormat int
+
+const (
+	outputFormatTabbed = iota
+	outputFormatJSON
+	outputFormatPrettyJSON
+)
+
+func (pi *printableImage) imageSize() string {
+	if pi.format != outputFormatTabbed || pi.full {
+		return fmt.Sprintf("%d", pi.Size)
+	}
+	return humanize.IBytes(uint64(pi.Size))
+}
+
+func (pi *printableImage) importTime() string {
+	t := time.Unix(0, pi.ImportTime)
+	if pi.format != outputFormatTabbed || pi.full {
+		return t.Format(defaultTimeLayout)
+	}
+	return humanize.Time(t)
+}
+
+func (pi *printableImage) lastUsedTime() string {
+	t := time.Unix(0, pi.LastUsedTime)
+	if pi.format != outputFormatTabbed || pi.full {
+		return t.Format(defaultTimeLayout)
+	}
+	return humanize.Time(t)
+}
+
+func (pi *printableImage) attributes(fields *rktflag.OptionList) []string {
 	if fields == nil {
-		return []string{pi.ID, pi.Name, pi.Size, pi.ImportTime, pi.LastUsed}
+		return []string{pi.ID, pi.Name, pi.imageSize(), pi.importTime(), pi.lastUsedTime()}
 	}
 	optionMapping := map[string]string{
 		l(id):         pi.ID,
 		l(name):       pi.Name,
-		l(size):       pi.Size,
-		l(importTime): pi.ImportTime,
-		l(lastUsed):   pi.LastUsed,
+		l(size):       pi.imageSize(),
+		l(importTime): pi.importTime(),
+		l(lastUsed):   pi.lastUsedTime(),
 	}
 	attrs := []string{}
 	for _, f := range fields.Options {
@@ -106,17 +142,9 @@ func (pi *printedImage) attributes(fields *rktflag.OptionList) []string {
 	return attrs
 }
 
-func (pi *printedImage) printableString(fields *rktflag.OptionList) string {
+func (pi *printableImage) printableString(fields *rktflag.OptionList) string {
 	return strings.Join(pi.attributes(fields), "\t")
 }
-
-type outputFormat int
-
-const (
-	outputFormatTabbed = iota
-	outputFormatJSON
-	outputFormatPrettyJSON
-)
 
 func (e *outputFormat) Set(s string) error {
 	switch s {
@@ -245,7 +273,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 		return 254
 	}
 
-	var imagesToPrint []printedImage
+	var imagesToPrint []printableImage
 
 	for _, aciInfo := range aciInfos {
 		imj, err := s.GetImageManifestJSON(aciInfo.BlobKey)
@@ -268,26 +296,20 @@ func runImages(cmd *cobra.Command, args []string) int {
 
 		totalSize := aciInfo.Size + aciInfo.TreeStoreSize
 
-		imageImportTime := humanize.Time(aciInfo.ImportTime)
-		imageLastUsed := humanize.Time(aciInfo.LastUsed)
-		imageSize := humanize.IBytes(uint64(totalSize))
-
-		if flagImageFormat != outputFormatTabbed || flagFullOutput {
-			imageImportTime = aciInfo.ImportTime.Format(defaultTimeLayout)
-			imageLastUsed = aciInfo.LastUsed.Format(defaultTimeLayout)
-			imageSize = fmt.Sprintf("%d", totalSize)
-		}
-
 		if !flagFullOutput && flagImageFormat == outputFormatTabbed {
 			imageID = trimImageID(imageID)
 		}
 
-		imagesToPrint = append(imagesToPrint, printedImage{
-			ID:         imageID,
-			Name:       imageName,
-			ImportTime: imageImportTime,
-			LastUsed:   imageLastUsed,
-			Size:       imageSize,
+		imagesToPrint = append(imagesToPrint, printableImage{
+			ImageListEntry: rktlib.ImageListEntry{
+				ID:           imageID,
+				Name:         imageName,
+				ImportTime:   aciInfo.ImportTime.UnixNano(),
+				LastUsedTime: aciInfo.LastUsed.UnixNano(),
+				Size:         totalSize,
+			},
+			format: flagImageFormat,
+			full:   flagFullOutput,
 		})
 	}
 
