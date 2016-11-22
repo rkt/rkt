@@ -42,6 +42,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/tests/testutils"
 	taas "github.com/coreos/rkt/tests/testutils/aci-server"
+	shellquote "github.com/kballard/go-shellquote"
 	"google.golang.org/grpc"
 )
 
@@ -385,14 +386,28 @@ func startRktAsUidGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, e
 	return child
 }
 
-func runRktAndCheckRegexOutput(t *testing.T, rktCmd, match string) {
-	child := spawnOrFail(t, rktCmd)
-	defer child.Wait()
-
-	result, out, err := expectRegexWithOutput(child, match)
-	if err != nil || len(result) != 1 {
-		t.Fatalf("%q regex must be found one time, Error: %v\nOutput: %v", match, err, out)
+func runRktAndCheckRegexOutput(t *testing.T, rktCmd, match string) error {
+	re, err := regexp.Compile(match)
+	if err != nil {
+		t.Fatalf("error compiling regex %q: %v", match, err)
 	}
+
+	args, err := shellquote.Split(rktCmd)
+	if err != nil {
+		t.Fatalf("error splitting cmd %q: %v", rktCmd, err)
+	}
+
+	path, err := exec.LookPath(args[0])
+	cmd := exec.Command(path, args[1:]...)
+
+	out, err := cmd.CombinedOutput()
+
+	result := re.MatchString(string(out))
+	if !result {
+		t.Fatalf("%q regex must be found\nOutput: %q", match, string(out))
+	}
+
+	return err
 }
 
 func runRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool) {
