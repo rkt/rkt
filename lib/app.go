@@ -168,7 +168,7 @@ func appState(app *App, pod *pkgPod.Pod) error {
 	// Read exit code.
 	exitCode, err := readExitCode(appStatusFile)
 	if err != nil {
-		return fmt.Errorf("cannot read exit code: %v", err)
+		return err
 	}
 	app.ExitCode = &exitCode
 

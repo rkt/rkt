@@ -498,6 +498,12 @@ func Prepare(cfg PrepareConfig, dir string, uuid *types.UUID) error {
 		return errwrap.Wrap(errors.New("error writing pod manifest"), err)
 	}
 
+	f, err = os.OpenFile(common.PodCreatedPath(dir), os.O_CREATE|os.O_RDWR, common.DefaultRegularFilePerm)
+	if err != nil {
+		return err
+	}
+	f.Close()
+
 	if cfg.UseOverlay {
 		// mark the pod as prepared with overlay
 		f, err := os.Create(filepath.Join(dir, common.OverlayPreparedFilename))
