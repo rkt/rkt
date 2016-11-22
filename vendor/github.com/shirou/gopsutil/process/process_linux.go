@@ -20,10 +20,14 @@ import (
 	"github.com/shirou/gopsutil/net"
 )
 
-var ErrorNoChildren = errors.New("process does not have children")
+var (
+	ErrorNoChildren = errors.New("process does not have children")
+	PageSize        = uint64(os.Getpagesize())
+)
 
 const (
-	PrioProcess = 0 // linux/resource.h
+	PrioProcess = 0   // linux/resource.h
+	ClockTicks  = 100 // C.sysconf(C._SC_CLK_TCK)
 )
 
 // MemoryInfoExStat is different between OSes
@@ -527,9 +531,9 @@ func (p *Process) fillFromIO() (*IOCountersStat, error) {
 			ret.ReadCount = t
 		case "syscw":
 			ret.WriteCount = t
-		case "readBytes":
+		case "read_bytes":
 			ret.ReadBytes = t
-		case "writeBytes":
+		case "write_bytes":
 			ret.WriteBytes = t
 		}
 	}

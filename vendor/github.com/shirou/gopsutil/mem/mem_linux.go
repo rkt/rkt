@@ -46,6 +46,12 @@ func VirtualMemory() (*VirtualMemoryStat, error) {
 			ret.Active = t * 1024
 		case "Inactive":
 			ret.Inactive = t * 1024
+		case "Writeback":
+			ret.Writeback = t * 1024
+		case "WritebackTmp":
+			ret.WritebackTmp = t * 1024
+		case "Dirty":
+			ret.Dirty = t * 1024
 		}
 	}
 	if !memavail {
@@ -64,8 +70,8 @@ func SwapMemory() (*SwapMemoryStat, error) {
 		return nil, err
 	}
 	ret := &SwapMemoryStat{
-		Total: uint64(sysinfo.Totalswap),
-		Free:  uint64(sysinfo.Freeswap),
+		Total: uint64(sysinfo.Totalswap) * uint64(sysinfo.Unit),
+		Free:  uint64(sysinfo.Freeswap) * uint64(sysinfo.Unit),
 	}
 	ret.Used = ret.Total - ret.Free
 	//check Infinity
