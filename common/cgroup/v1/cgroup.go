@@ -35,9 +35,20 @@ import (
 
 var (
 	cgroupControllerRWFiles = map[string][]string{
-		"memory":  {"memory.limit_in_bytes"},
-		"cpu":     {"cpu.cfs_quota_us", "cpu.shares"},
-		"devices": {"devices.allow", "devices.deny"},
+		"memory": {
+			"memory.limit_in_bytes",
+			"cgroup.procs",
+		},
+		"cpu": {
+			"cpu.cfs_quota_us",
+			"cpu.shares",
+			"cgroup.procs",
+		},
+		"devices": {
+			"devices.allow",
+			"devices.deny",
+			"cgroup.procs",
+		},
 	}
 )
 
@@ -136,11 +147,9 @@ func CgroupControllerRWFiles(isolator string) []string {
 
 func getControllerRWFiles(controller string) []string {
 	parts := strings.Split(controller, ",")
+
 	for _, p := range parts {
 		if files, ok := cgroupControllerRWFiles[p]; ok {
-			// cgroup.procs always needs to be RW for allowing systemd to add
-			// processes to the controller
-			files = append(files, "cgroup.procs")
 			return files
 		}
 	}
