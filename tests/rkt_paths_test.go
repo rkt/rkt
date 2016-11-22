@@ -62,22 +62,25 @@ func TestPathsWrite(t *testing.T) {
 			runRktAndCheckOutput(t, cmd, expectErr, true)
 		}
 
-		// With --insecure-options=paths
-		expectOk := "testing-insecure-option"
-		for _, insecureOption := range []string{"image,paths", "image,paths,ondisk,capabilities", "image,all-run", "all"} {
-			// run
-			t.Logf("run: attempting to write on %q with --insecure-options=%s (expecting success)\n", tt.Path, insecureOption)
-			cmd := fmt.Sprintf(`%s --debug --insecure-options=%s run --set-env=FILE=%s --set-env=CONTENT=%s %s`,
-				ctx.Cmd(), insecureOption, tt.Path, tt.Content, imageFile)
-			runRktAndCheckOutput(t, cmd, expectOk, false)
-			// run-prepared
-			t.Logf("run-prepared: attempting to write on %q with --insecure-options=%s (expecting success)\n", tt.Path, insecureOption)
-			cmd = fmt.Sprintf(`%s --insecure-options=%s prepare --set-env=FILE=%s --set-env=CONTENT=%s %s`,
-				ctx.Cmd(), insecureOption, tt.Path, tt.Content, imageFile)
-			uuid := runRktAndGetUUID(t, cmd)
-			cmd = fmt.Sprintf("%s --debug --insecure-options=%s run-prepared --mds-register=false %s", ctx.Cmd(), insecureOption, uuid)
-			runRktAndCheckOutput(t, cmd, expectOk, false)
-		}
+		/* TODO(lucab): re-enable once stage1 has https://github.com/systemd/systemd/pull/4395
+		 *
+		 * // With --insecure-options=paths
+		 * expectOk := "testing-insecure-option"
+		 * for _, insecureOption := range []string{"image,paths", "image,paths,ondisk,capabilities", "image,all-run", "all"} {
+		 * 	// run
+		 * 	t.Logf("run: attempting to write on %q with --insecure-options=%s (expecting success)\n", tt.Path, insecureOption)
+		 * 	cmd := fmt.Sprintf(`%s --debug --insecure-options=%s run --set-env=FILE=%s --set-env=CONTENT=%s %s`,
+		 * 		ctx.Cmd(), insecureOption, tt.Path, tt.Content, imageFile)
+		 * 	runRktAndCheckOutput(t, cmd, expectOk, false)
+		 * 	// run-prepared
+		 * 	t.Logf("run-prepared: attempting to write on %q with --insecure-options=%s (expecting success)\n", tt.Path, insecureOption)
+		 * 	cmd = fmt.Sprintf(`%s --insecure-options=%s prepare --set-env=FILE=%s --set-env=CONTENT=%s %s`,
+		 * 		ctx.Cmd(), insecureOption, tt.Path, tt.Content, imageFile)
+		 * 	uuid := runRktAndGetUUID(t, cmd)
+		 * 	cmd = fmt.Sprintf("%s --debug --insecure-options=%s run-prepared --mds-register=false %s", ctx.Cmd(), insecureOption, uuid)
+		 * 	runRktAndCheckOutput(t, cmd, expectOk, false)
+		 * }
+		 */
 	}
 }
 
