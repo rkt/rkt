@@ -18,15 +18,29 @@ import pkgPod "github.com/coreos/rkt/pkg/pod"
 
 // NewPodFromInternalPod converts *pkgPod.Pod to *Pod
 func NewPodFromInternalPod(p *pkgPod.Pod) (*Pod, error) {
-	_, manifest, err := p.PodManifest()
-	if err != nil {
-		return nil, err
-	}
-
 	pod := &Pod{
 		UUID:     p.UUID.String(),
 		State:    p.State(),
 		Networks: p.Nets,
+	}
+
+	startTime, err := p.StartTime()
+	if err != nil {
+		return nil, err
+	}
+
+	if !startTime.IsZero() {
+		startedAt := startTime.Unix()
+		pod.StartedAt = &startedAt
+	}
+
+	if !p.PodManifestAvailable() {
+		return pod, nil
+	}
+	// TODO(vc): we should really hold a shared lock here to prevent gc of the pod
+	_, manifest, err := p.PodManifest()
+	if err != nil {
+		return nil, err
 	}
 
 	for _, app := range manifest.Apps {
@@ -45,16 +59,6 @@ func NewPodFromInternalPod(p *pkgPod.Pod) (*Pod, error) {
 		for name, value := range manifest.UserLabels {
 			pod.UserLabels[name] = value
 		}
-	}
-
-	startTime, err := p.StartTime()
-	if err != nil {
-		return nil, err
-	}
-
-	if !startTime.IsZero() {
-		startedAt := startTime.Unix()
-		pod.StartedAt = &startedAt
 	}
 
 	return pod, nil

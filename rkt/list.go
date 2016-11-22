@@ -43,14 +43,14 @@ var (
 	}
 	flagNoLegend   bool
 	flagFullOutput bool
-	flagFormat     string
+	flagFormat     outputFormat
 )
 
 func init() {
 	cmdRkt.AddCommand(cmdList)
 	cmdList.Flags().BoolVar(&flagNoLegend, "no-legend", false, "suppress a legend with the list")
 	cmdList.Flags().BoolVar(&flagFullOutput, "full", false, "use long output format")
-	cmdList.Flags().StringVar(&flagFormat, "format", "", "choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs")
+	cmdList.Flags().Var(&flagFormat, "format", "choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs")
 }
 
 func runList(cmd *cobra.Command, args []string) int {
@@ -58,7 +58,7 @@ func runList(cmd *cobra.Command, args []string) int {
 	tabBuffer := new(bytes.Buffer)
 	tabOut := getTabOutWithWriter(tabBuffer)
 
-	if !flagNoLegend && flagFormat == "" {
+	if !flagNoLegend && flagFormat == outputFormatTabbed {
 		if flagFullOutput {
 			fmt.Fprintf(tabOut, "UUID\tAPP\tIMAGE NAME\tIMAGE ID\tSTATE\tCREATED\tSTARTED\tNETWORKS\n")
 		} else {
@@ -69,22 +69,21 @@ func runList(cmd *cobra.Command, args []string) int {
 	var pods []*lib.Pod
 
 	if err := pkgPod.WalkPods(getDataDir(), pkgPod.IncludeMostDirs, func(p *pkgPod.Pod) {
-		if flagFormat != "" {
+		if flagFormat != outputFormatTabbed {
 			pod, err := lib.NewPodFromInternalPod(p)
 			if err != nil {
 				errors = append(errors, err)
+			} else {
+				pods = append(pods, pod)
 			}
-			pods = append(pods, pod)
 			return
 		}
 
 		var pm schema.PodManifest
 		var err error
 
-		podState := p.State()
-		if podState != pkgPod.Preparing && podState != pkgPod.AbortedPrepare && podState != pkgPod.Deleting {
+		if p.PodManifestAvailable() {
 			// TODO(vc): we should really hold a shared lock here to prevent gc of the pod
-
 			_, manifest, err := p.PodManifest()
 			if err != nil {
 				errors = append(errors, newPodListReadError(p, err))
@@ -196,17 +195,17 @@ func runList(cmd *cobra.Command, args []string) int {
 	}
 
 	switch flagFormat {
-	case "":
+	case outputFormatTabbed:
 		tabOut.Flush()
 		stdout.Print(tabBuffer)
-	case "json":
+	case outputFormatJSON:
 		result, err := json.Marshal(pods)
 		if err != nil {
 			stderr.PrintE("error marshaling the pods", err)
 			return 254
 		}
 		stdout.Print(string(result))
-	case "json-pretty":
+	case outputFormatPrettyJSON:
 		result, err := json.MarshalIndent(pods, "", "\t")
 		if err != nil {
 			stderr.PrintE("error marshaling the pods", err)

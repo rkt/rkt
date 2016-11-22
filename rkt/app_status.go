@@ -36,7 +36,7 @@ var (
 func init() {
 	cmdApp.AddCommand(cmdAppStatus)
 	cmdAppStatus.Flags().StringVar(&flagAppName, "app", "", "choose app within the pod, this flag must be set")
-	cmdAppStatus.Flags().StringVar(&flagFormat, "format", "", "choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs")
+	cmdAppStatus.Flags().Var(&flagFormat, "format", "choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs")
 }
 
 func printApp(app *rkt.App) {
@@ -112,14 +112,14 @@ func runAppStatus(cmd *cobra.Command, args []string) (exit int) {
 
 	// TODO(yifan): Print yamls.
 	switch flagFormat {
-	case "json":
+	case outputFormatJSON:
 		result, err := json.Marshal(apps[0])
 		if err != nil {
 			stderr.PrintE("error marshaling the app status", err)
 			return 1
 		}
 		stdout.Print(string(result))
-	case "json-pretty":
+	case outputFormatPrettyJSON:
 		result, err := json.MarshalIndent(apps[0], "", "\t")
 		if err != nil {
 			stderr.PrintE("error marshaling the app status", err)
