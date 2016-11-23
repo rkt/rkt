@@ -18,8 +18,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/pkg/lock"
 )
 
@@ -192,5 +194,160 @@ func TestWalkPods(t *testing.T) {
 			}
 		}
 	}
+}
 
+type states struct {
+	isEmbryo         bool
+	isPreparing      bool
+	isAbortedPrepare bool
+	isPrepared       bool
+	isExited         bool
+	isExitedGarbage  bool
+	isExitedDeleting bool
+	isGarbage        bool
+	isDeleting       bool
+	isGone           bool
+}
+
+type dirFn func(string) string
+
+func TestGetPodAndRefreshState(t *testing.T) {
+	testCases := []struct {
+		paths    []dirFn
+		locks    []dirFn
+		expected states
+	}{
+		{
+			paths:    []dirFn{embryoDir},
+			expected: states{isEmbryo: true},
+		},
+		{
+			paths:    []dirFn{prepareDir},
+			locks:    []dirFn{prepareDir},
+			expected: states{isPreparing: true},
+		},
+		{
+			paths:    []dirFn{prepareDir},
+			expected: states{isAbortedPrepare: true},
+		},
+		{
+			paths:    []dirFn{runDir},
+			locks:    []dirFn{runDir},
+			expected: states{},
+		},
+		{
+			paths:    []dirFn{runDir},
+			expected: states{isExited: true},
+		},
+		{
+			paths:    []dirFn{garbageDir},
+			expected: states{isGarbage: true},
+		},
+		{
+			paths:    []dirFn{garbageDir},
+			locks:    []dirFn{garbageDir},
+			expected: states{isGarbage: true, isDeleting: true},
+		},
+	}
+
+	uuid, err := types.NewUUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+	if err != nil {
+		panic(err)
+	}
+
+	for i, tcase := range testCases {
+		tmpDir, err := ioutil.TempDir("", "")
+		if err != nil {
+			panic(err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		for _, pfn := range tcase.paths {
+			podPath := filepath.Join(pfn(tmpDir), uuid.String())
+			if err := os.MkdirAll(podPath, 0777); err != nil {
+				panic(err)
+			}
+		}
+
+		for _, lfn := range tcase.locks {
+			podPath := filepath.Join(lfn(tmpDir), uuid.String())
+			l, err := lock.NewLock(podPath, lock.Dir)
+			if err != nil {
+				t.Fatalf("error taking lock on directory: %v", err)
+			}
+			err = l.ExclusiveLock()
+			if err != nil {
+				t.Fatalf("could not get exclusive lock on directory: %v", err)
+			}
+			defer l.Unlock()
+		}
+
+		p, err := getPod(tmpDir, uuid)
+		if err != nil {
+			t.Fatalf("%v: unable to get pod: %v", i, err)
+		}
+
+		pstate := podToStates(p)
+		if !reflect.DeepEqual(tcase.expected, pstate) {
+			t.Errorf("%v: expected %+v == %+v after getPod", i, tcase.expected, pstate)
+		}
+
+		err = p.refreshState()
+		if err != nil {
+			t.Errorf("error refreshing state: %v", err)
+			continue
+		}
+
+		pstate = podToStates(p)
+		if !reflect.DeepEqual(tcase.expected, pstate) {
+			t.Errorf("%v: expected %+v == %+v after refrshState", i, tcase.expected, pstate)
+		}
+	}
+}
+
+func TestRefreshPodIsGone(t *testing.T) {
+	uuid, err := types.NewUUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+	if err != nil {
+		panic(err)
+	}
+	tmpDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(tmpDir)
+	podPath := filepath.Join(embryoDir(tmpDir), uuid.String())
+	os.MkdirAll(podPath, 0777)
+
+	p, err := getPod(tmpDir, uuid)
+	if err != nil {
+		t.Fatalf("unable to get pod: %v", err)
+	}
+
+	os.RemoveAll(tmpDir)
+
+	err = p.refreshState()
+	if err != nil {
+		t.Fatalf("error refreshing state: %v", err)
+	}
+
+	pstate := podToStates(p)
+	expected := states{isGone: true}
+	if !reflect.DeepEqual(expected, pstate) {
+		t.Errorf("expected %+v == %+v after refrshState", expected, pstate)
+	}
+}
+
+func podToStates(p *Pod) states {
+	return states{
+		isEmbryo:         p.isEmbryo,
+		isPreparing:      p.isPreparing,
+		isAbortedPrepare: p.isAbortedPrepare,
+		isPrepared:       p.isPrepared,
+		isExited:         p.isExited,
+		isExitedGarbage:  p.isExitedGarbage,
+		isExitedDeleting: p.isExitedDeleting,
+		isGarbage:        p.isGarbage,
+		isDeleting:       p.isDeleting,
+		isGone:           p.isGone,
+	}
 }
