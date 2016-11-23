@@ -39,7 +39,7 @@ To prevent the period between first creating a pod's directory and acquiring its
 
 ## App
 
-The `rkt app` family of subcommands allow mutating operations on a running pod, namely adding, starting, stopping, and removing applications.
+The `rkt app` experimental family of subcommands allow mutating operations on a running pod, namely adding, starting, stopping, and removing applications. To be able to use these subcommands the environment variable `RKT_EXPERIMENT_APP=true` has to be set.
 The `rkt app sandbox` subcommand transitions to the Run phase as described above, whereas the remaining subcommands mutate the pod while staying in the Run phase.
 To synchronize operations inside the Run phase an additional advisory lock `$var/run/$uuid/pod.lck` is being introduced.
 Locking on the `$var/run/$uuid/pod` manifest won't work because changes on it need to be atomic, realized by overwriting the original manifest.
