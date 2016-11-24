@@ -15,7 +15,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -34,9 +33,9 @@ import (
 	"github.com/coreos/rkt/pkg/fileutil"
 	pkgflag "github.com/coreos/rkt/pkg/flag"
 	rktlog "github.com/coreos/rkt/pkg/log"
+	"github.com/coreos/rkt/pkg/mountinfo"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/user"
-	"github.com/coreos/rkt/stage0"
 	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 )
@@ -243,10 +242,11 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 
 			if recursive {
 				// Every sub-mount needs to be remounted read-only separately
-				mnts, err := stage0.GetMountsForPrefix(tuple.V.Source + "/")
+				mnts, err := mountinfo.ParseMounts(0)
 				if err != nil {
 					return nil, errwrap.Wrap(fmt.Errorf("error getting mounts under %q from mountinfo", tuple.V.Source), err)
 				}
+				mnts = mnts.Filter(mountinfo.HasPrefix(tuple.V.Source + "/"))
 
 				for _, mnt := range mnts {
 					innerRelPath := tuple.M.Path + strings.Replace(mnt.MountPoint, tuple.V.Source, "", -1)

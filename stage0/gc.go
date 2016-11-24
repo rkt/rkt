@@ -17,19 +17,15 @@
 package stage0
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
-	"strconv"
-	"strings"
 	"syscall"
 
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/mountinfo"
 
 	"github.com/appc/spec/schema/types"
 	"github.com/hashicorp/errwrap"
@@ -74,147 +70,17 @@ func GC(pdir string, uuid *types.UUID, localConfig string) error {
 	return c.Run()
 }
 
-type mount struct {
-	id         int
-	parentID   int
-	MountPoint string
-	opt        map[string]struct{}
-}
-
-type mounts []*mount
-
-// getMountDepth determines and returns the number of ancestors of the mount at index i
-func (m mounts) getMountDepth(i int) int {
-	ancestorCount := 0
-	current := m[i]
-	for found := true; found; {
-		found = false
-		for _, mnt := range m {
-			if mnt.id == current.parentID {
-				ancestorCount++
-				current = mnt
-				found = true
-				break
-			}
-		}
-	}
-	return ancestorCount
-}
-
-// Less ensures that mounts are sorted in an order we can unmount; descendant before ancestor.
-// The requirement of transitivity for Less has to be fulfilled otherwise the sort algorithm will fail.
-func (m mounts) Less(i, j int) (result bool) { return m.getMountDepth(i) >= m.getMountDepth(j) }
-func (m mounts) Len() int                    { return len(m) }
-func (m mounts) Swap(i, j int)               { m[i], m[j] = m[j], m[i] }
-
-func GetMountsForPrefix(path string) (mounts, error) {
-	mi, err := os.Open("/proc/self/mountinfo")
-	if err != nil {
-		return nil, err
-	}
-	defer mi.Close()
-
-	mnts, err := getMountsForPrefix(path, mi)
-	if err != nil {
-		return nil, errwrap.Wrap(fmt.Errorf("error getting sub-mounts under %q from mountinfo", path), err)
-	}
-
-	return mnts, nil
-}
-
-// getMountsForPrefix parses mi (/proc/PID/mountinfo) and returns mounts for path prefix
-func getMountsForPrefix(path string, mi io.Reader) (mounts, error) {
-	var podMounts mounts
-	sc := bufio.NewScanner(mi)
-	var (
-		mountID    int
-		parentID   int
-		mountPoint string
-		opt        map[string]struct{}
-	)
-
-	for sc.Scan() {
-		line := sc.Text()
-		lineResult := strings.Split(line, " ")
-		if len(lineResult) < 7 {
-			return nil, fmt.Errorf("Not enough fields from line %q: %+v", line, lineResult)
-		}
-
-		opt = map[string]struct{}{}
-		for i, s := range lineResult {
-			if s == "-" {
-				break
-			}
-			var err error
-			switch i {
-			case 0:
-				mountID, err = strconv.Atoi(s)
-			case 1:
-				parentID, err = strconv.Atoi(s)
-			case 2, 3:
-			case 4:
-				mountPoint = s
-			default:
-				split := strings.Split(s, ":")
-				switch len(split) {
-				case 1:
-					// we ignore modes like rw, relatime, etc.
-				case 2:
-					opt[split[0]] = struct{}{}
-				default:
-					err = fmt.Errorf("found unexpected key:value field with more than two colons: %s", s)
-				}
-			}
-			if err != nil {
-				return nil, errwrap.Wrap(fmt.Errorf("could not parse mountinfo line %q", line), err)
-			}
-		}
-
-		if strings.HasPrefix(mountPoint, path) {
-			mnt := &mount{
-				id:         mountID,
-				parentID:   parentID,
-				MountPoint: mountPoint,
-				opt:        opt,
-			}
-			podMounts = append(podMounts, mnt)
-		}
-	}
-	if err := sc.Err(); err != nil {
-		return nil, errwrap.Wrap(errors.New("problem parsing mountinfo"), err)
-	}
-	sort.Sort(podMounts)
-	return podMounts, nil
-}
-
-func needsRemountPrivate(mnt *mount) bool {
-	for _, key := range []string{
-		"shared",
-		"master",
-	} {
-		if _, needsRemount := mnt.opt[key]; needsRemount {
-			return true
-		}
-	}
-	return false
-}
-
 // MountGC removes mounts from pods that couldn't be GCed cleanly.
 func MountGC(path, uuid string) error {
-	mi, err := os.Open("/proc/self/mountinfo")
-	if err != nil {
-		return err
-	}
-	defer mi.Close()
-
-	mnts, err := getMountsForPrefix(path, mi)
+	mnts, err := mountinfo.ParseMounts(0)
 	if err != nil {
 		return errwrap.Wrap(fmt.Errorf("error getting mounts for pod %s from mountinfo", uuid), err)
 	}
+	mnts = mnts.Filter(mountinfo.HasPrefix(path))
 
 	for i := len(mnts) - 1; i >= 0; i-- {
 		mnt := mnts[i]
-		if needsRemountPrivate(mnt) {
+		if mnt.NeedsRemountPrivate() {
 			if err := syscall.Mount("", mnt.MountPoint, "", syscall.MS_PRIVATE, ""); err != nil {
 				return errwrap.Wrap(fmt.Errorf("could not remount at %v", mnt.MountPoint), err)
 			}

@@ -28,7 +28,7 @@ import (
 	"github.com/coreos/go-systemd/util"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/networking"
-	"github.com/coreos/rkt/stage0"
+	"github.com/coreos/rkt/pkg/mountinfo"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
 	"github.com/coreos/rkt/stage1/init/kvm"
@@ -133,10 +133,11 @@ func doBindMount(source, destination string, readOnly bool, recursive *bool) err
 	if readOnly && recursiveBool {
 		// Sub-mounts are still read-write, so find them and remount them read-only
 
-		mnts, err := stage0.GetMountsForPrefix(source + "/")
+		mnts, err := mountinfo.ParseMounts(0)
 		if err != nil {
 			return errwrap.Wrap(fmt.Errorf("error getting mounts under %q from mountinfo", source), err)
 		}
+		mnts = mnts.Filter(mountinfo.HasPrefix(source + "/"))
 
 		for _, mnt := range mnts {
 			innerAbsPath := destination + strings.Replace(mnt.MountPoint, source, "", -1)
