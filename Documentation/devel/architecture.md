@@ -106,24 +106,53 @@ This process is slightly different for the qemu-kvm stage1 but a similar workflo
 
 We will now detail how the starting, shutdown, and exit status collection of the apps in a pod are implemented internally.
 
+rkt supports two kinds of pod runtime environments, an immutable, and a new experimental mutable runtime environment. The mutable runtime environment allows to add, and remove applications once a pod has been started. Currently the mutable runtime environment is only available in the experimental `rkt app` family of subcommands, see the [app pod lifecycle documentation](pod-lifecycle.md#app) for a more detailed description.
+
+The immutable runtime environment is currently the default one, i.e. when executing `rkt prepare`, or `rkt run`. Once a pod has been prepared in this environment, no modifications can be applied any more.
+
+Both runtime environments are supervised by systemd, and a custom dependency graph. The differences between both dependency graphs are described below.
+
+#### Immutable runtime environment
+
 ![rkt-systemd](rkt-systemd.png)
 
 There's a systemd rkt apps target (`default.target`) which has a [*Wants*][systemd-wants] and [*After*][systemd-beforeafter] dependency on each app's service file, making sure they all start.
 
 Each app's service has a *Wants* dependency on an associated reaper service that deals with writing the app's status exit.
-Each reaper service has a *Wants* and *After* dependency with a shutdown service that simply shuts down the pod.
+Each reaper service has a *Wants* and *After* dependency with `shutdown.service` that simply shuts down the pod.
 
-The reaper services and the shutdown service all start at the beginning but do nothing and remain after exit (with the [*RemainAfterExit*][systemd-remainafterexit] flag).
+The reaper services and the `shutdown.service` all start at the beginning but do nothing and remain after exit (with the [*RemainAfterExit*][systemd-remainafterexit] flag).
 By using the [*StopWhenUnneeded*][systemd-stopwhenunneeded] flag, whenever they stop being referenced, they'll do the actual work via the *ExecStop* command.
 
 This means that when an app service is stopped, its associated reaper will run and will write its exit status to `/rkt/status/${app}` and the other apps will continue running.
-When all apps' services stop, their associated reaper services will also stop and will cease referencing the shutdown service causing the pod to exit.
+When all apps' services stop, their associated reaper services will also stop and will cease referencing `shutdown.service` causing the pod to exit.
 Every app service has an [*OnFailure*][systemd-onfailure] flag that starts the `halt.target`.
 This means that if any app in the pod exits with a failed status, the systemd shutdown process will start, the other apps' services will automatically stop and the pod will exit.
 In this case, the failed app's exit status will get propagated to rkt.
 
 A [*Conflicts*][systemd-conflicts] dependency was also added between each reaper service and the halt and poweroff targets (they are triggered when the pod is stopped from the outside when rkt receives `SIGINT`).
 This will activate all the reaper services when one of the targets is activated, causing the exit statuses to be saved and the pod to finish like it was described in the previous paragraph.
+
+#### Mutable runtime environment
+
+The initial mutable runtime environment is very simple and resembles a minimal empty systemd system. Once `default.target` has been reached, apps can be added/removed. Unlike the immutable runtime environment the `default.target` has no dependencies on any apps, but only on `systemd-journald.service` to ensure the journald daemon is started before apps are added.
+
+In order for the pod not to shut down immediately the `default.target` has a `Before`, and `Conflicts` dependency on `halt.target`. This "deadlock" state between `default.target` and `halt.target` keeps the mutable pod alive. `halt.target` has a `After`, and `Requires` dependency on `shutdown.service`.
+
+![rkt-mutable](mutable.png)
+
+When adding an app the corresponding application service unit `[app].service`, and `reaper-[app].service` are being generated, where `[app]` is being replaced with the actual app name. In order not to stop the whole pod when all apps stop, there is no dependency to `shutdown.service`. The `OnFailure` behavior is the same as in an immutable environment. When an app fails, `halt.target`, and `shutdown.service` will be started, and `default.target` will be stopped.
+
+![rkt-mutable-app](mutable-app.png)
+
+The following table enumerates the service unit behavior differences in the two environments:
+
+ Unit | Immutable | Mutable
+------|-----------|--------
+`shutdown.service`  | In **Started** state when the pod starts. *Stopped*, when there is no dependency on it (`StopWhenUnneeded`) or `OnFailure` of any app. | In **Stopped** state when the pod starts. *Started* at explicit shutdown or `OnFailure` of any app. |
+`reaper-app.service` | `Wants`, and `After` dependency on `shutdown.service`. `Conflicts`, and `Before` dependency on `halt.target`. | `Conflicts`, and `Before` dependency on `halt.target`. |
+
+#### Execution chain
 
 We will now detail the execution chain for the stage1 systemd/nspawn flavors. The entrypoint is implemented in the `stage1/init/init.go` binary and sets up the following execution chain:
 
@@ -164,7 +193,7 @@ $ ps auxf
     \_ nginx
 ```
 
-### Image lifecycle
+## Image lifecycle
 
 rkt commands like prepare and run, as a first step, need to retrieve all the images requested in the command line and prepare the stage2 directories with the application contents.
 
