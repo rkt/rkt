@@ -23,10 +23,6 @@ import (
 	rktlog "github.com/coreos/rkt/pkg/log"
 )
 
-const (
-	mountinfoPath = "/proc/self/mountinfo"
-)
-
 var (
 	debug bool
 
