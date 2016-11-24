@@ -46,7 +46,7 @@ const (
 func init() {
 	cmdRkt.AddCommand(cmdStatus)
 	cmdStatus.Flags().BoolVar(&flagWait, "wait", false, "toggle waiting for the pod to exit")
-	cmdStatus.Flags().StringVar(&flagFormat, "format", "", "choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs")
+	cmdStatus.Flags().Var(&flagFormat, "format", "choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs")
 }
 
 func runStatus(cmd *cobra.Command, args []string) (exit int) {
@@ -97,19 +97,19 @@ func getExitStatuses(p *pkgPod.Pod) (map[string]int, error) {
 
 // printStatus prints the pod's pid and per-app status codes
 func printStatus(p *pkgPod.Pod) error {
-	if flagFormat != "" {
+	if flagFormat != outputFormatTabbed {
 		pod, err := lib.NewPodFromInternalPod(p)
 		if err != nil {
 			return fmt.Errorf("error converting pod: %v", err)
 		}
 		switch flagFormat {
-		case "json":
+		case outputFormatJSON:
 			result, err := json.Marshal(pod)
 			if err != nil {
 				return fmt.Errorf("error marshaling the pod: %v", err)
 			}
 			stdout.Print(string(result))
-		case "json-pretty":
+		case outputFormatPrettyJSON:
 			result, err := json.MarshalIndent(pod, "", "\t")
 			if err != nil {
 				return fmt.Errorf("error marshaling the pod: %v", err)

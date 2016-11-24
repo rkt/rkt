@@ -979,24 +979,29 @@ func (p *Pod) CreationTime() (time.Time, error) {
 // StartTime returns the time when the pod was started.
 func (p *Pod) StartTime() (time.Time, error) {
 	var (
-		t   time.Time
-		err error
+		t      time.Time
+		retErr error
 	)
-	if p.isRunning() || p.AfterRun() {
-		// check pid and ppid files, since stage1 implementations can choose
-		// which one to implement.
-		t, err = p.getModTime("pid")
-		if os.IsNotExist(err) {
-			t, err = p.getModTime("ppid")
-			// if there's an error starting the pod, it can be "exited" without
-			// the "ppid" (or "pid") files being created, return an error only
-			// if it's different than ENOENT.
-			if os.IsNotExist(err) {
-				err = nil
-			}
+
+	if !p.isRunning() && !p.AfterRun() {
+		// hasn't started
+		return t, nil
+	}
+
+	// check pid and ppid since stage1s can choose one xor the other
+	for _, ctimeFile := range []string{"pid", "ppid"} {
+		t, err := p.getModTime(ctimeFile)
+		if err == nil {
+			return t, nil
+		}
+		// if there's an error starting the pod, it can go to "exited" without
+		// creating a ppid/pid file, so ignore not-exist errors.
+		if !os.IsNotExist(err) {
+			retErr = err
 		}
 	}
-	return t, err
+
+	return t, retErr
 }
 
 // GCMarkedTime returns the time when the pod is marked by gc.
@@ -1153,6 +1158,17 @@ func (p *Pod) isRunning() bool {
 	// when none of these things, running!
 	return !p.isEmbryo && !p.isAbortedPrepare && !p.isPreparing && !p.isPrepared &&
 		!p.isExited && !p.isExitedGarbage && !p.isExitedDeleting && !p.isGarbage && !p.isDeleting && !p.isGone
+}
+
+// PodManifestAvailable returns whether the caller should reasonably expect
+// PodManifest to function in the pod's current state.
+// Namely, in Preparing, AbortedPrepare, and Deleting it's possible for the
+// manifest to not be present
+func (p *Pod) PodManifestAvailable() bool {
+	if p.isPreparing || p.isAbortedPrepare || p.isDeleting {
+		return false
+	}
+	return true
 }
 
 // AfterRun returns true if the pod is in a post-running state, otherwise it returns false.
