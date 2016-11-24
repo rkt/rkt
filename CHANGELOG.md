@@ -1,3 +1,33 @@
+## 1.20.0
+
+This release contains additional bug fixes for the new experimental `app` subcommand, following the path towards the Container Runtime Interface (CRI).
+It also adds first step towards OCI by introducing an internal concept called "distribution points", which will allow rkt to recognize multiple image formats internally.
+Finally the rkt fly flavor gained support for `rkt enter`.
+
+### New features and UX changes
+- stage1/fly: Add a working `rkt enter` implementation ([#3377](https://github.com/coreos/rkt/pull/3377)).
+
+### Bug fixes:
+- tests/build-and-run-test.sh: fix systemd revision parameter ([#3395](https://github.com/coreos/rkt/pull/3395)).
+- namefetcher: Use ETag in fetchVerifiedURL() ([#3374](https://github.com/coreos/rkt/pull/3374)).
+- rkt/run: validates pod manifest to make sure it contains at least one app ([#3363](https://github.com/coreos/rkt/pull/3363)).
+- rkt/app: multiple bugfixes ([#3405](https://github.com/coreos/rkt/pull/3405)).
+
+### Other changes
+- glide: deduplicate cni entries and update go-systemd ([#3372](https://github.com/coreos/rkt/pull/3372)).
+- stage0: improve list --format behavior and flags ([#3403](https://github.com/coreos/rkt/pull/3403)).
+- pkg/pod: flatten the pod state if-ladders ([#3404](https://github.com/coreos/rkt/pull/3404)).
+- tests: adjust security tests for systemd v232 ([#3401](https://github.com/coreos/rkt/pull/3401)).
+- image: export `ImageListEntry` type for image list ([#3383](https://github.com/coreos/rkt/pull/3383)).
+- glide: bump gopsutil to v2.16.10 ([#3400](https://github.com/coreos/rkt/pull/3400)).
+- stage1: update coreos base to alpha 1235.0.0 ([#3388](https://github.com/coreos/rkt/pull/3388)).
+- rkt: Implement distribution points ([#3369](https://github.com/coreos/rkt/pull/3369)). This is the implementation of the distribution concept proposed in [#2953](https://github.com/coreos/rkt/pull/2953).
+- build: add --with-stage1-systemd-revision option for src build ([#3362](https://github.com/coreos/rkt/pull/3362)).
+- remove isReallyNil() ([#3381](https://github.com/coreos/rkt/pull/3381)). This is cleanup PR, removing some reflection based code.
+- vendor: update appc/spec to 0.8.9 ([#3384](https://github.com/coreos/rkt/pull/3384)).
+- vendor: Remove direct k8s dependency ([#3312](https://github.com/coreos/rkt/pull/3312)).
+- Documentation updates: [#3366](https://github.com/coreos/rkt/pull/3366), [#3376](https://github.com/coreos/rkt/pull/3376), [#3379](https://github.com/coreos/rkt/pull/3379), [#3406](https://github.com/coreos/rkt/pull/3406), [#3410](https://github.com/coreos/rkt/pull/3410).
+
 ## 1.19.0
 
 This release contains multiple changes to rkt core, bringing it more in line with the new Container Runtime Interface (CRI) from Kubernetes.
