@@ -47,15 +47,14 @@ func main() {
 
 	stage1initcommon.InitDebug(debug)
 
-	log, diag, _ = rktlog.NewLogSet("stage1", debug)
+	log, diag, _ = rktlog.NewLogSet("app-stop", debug)
 	if !debug {
 		diag.SetOutput(ioutil.Discard)
 	}
 
 	appName, err := types.NewACName(flagApp)
 	if err != nil {
-		log.PrintE("invalid app name", err)
-		os.Exit(254)
+		log.FatalE("invalid app name", err)
 	}
 
 	enterCmd := stage1common.PrepareEnterCmd(false)

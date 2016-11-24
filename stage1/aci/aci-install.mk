@@ -33,10 +33,11 @@ AMI_GEN_MANIFEST := $(AMI_TMPDIR)/aci-manifest-$(AMI_FLAVOR)
 AMI_SRC_MANIFEST := $(MK_SRCDIR)/aci-manifest.in
 # a name for this flavor
 AMI_NAME := coreos.com/rkt/stage1-$(AMI_FLAVOR)
-# list of installed files
+# list of installed files and symlinks
 AMI_INSTALLED_FILES := \
 	$(AMI_ACI_OS_RELEASE) \
-	$(AMI_ACI_MANIFEST)
+	$(AMI_ACI_MANIFEST) \
+	$(AMI_ACI_DIRS_BASE)/etc/mtab
 
 ifeq ($(AMI_FLAVOR),src)
 
@@ -115,6 +116,8 @@ STAGE1_INSTALL_DIRS_$(AMI_FLAVOR) += $(addsuffix :0755,$(AMI_ACI_DIR_CHAINS))
 STAGE1_INSTALL_FILES_$(AMI_FLAVOR) += \
 	$(AMI_GEN_MANIFEST):$(AMI_ACI_MANIFEST):0644 \
 	$(MK_SRCDIR)/os-release:$(AMI_ACI_OS_RELEASE):0644
+STAGE1_INSTALL_SYMLINKS_$(AMI_FLAVOR) += \
+	../proc/self/mounts:$(AMI_ACI_DIRS_BASE)/etc/mtab
 STAGE1_SECONDARY_STAMPS_$(AMI_FLAVOR) += $(AMI_STAMP)
 CLEAN_FILES += $(AMI_GEN_MANIFEST)
 

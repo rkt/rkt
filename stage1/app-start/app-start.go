@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -47,15 +46,14 @@ func main() {
 
 	stage1initcommon.InitDebug(debug)
 
-	log, diag, _ = rktlog.NewLogSet("stage1", debug)
+	log, diag, _ = rktlog.NewLogSet("app-start", debug)
 	if !debug {
 		diag.SetOutput(ioutil.Discard)
 	}
 
 	appName, err := types.NewACName(flagApp)
 	if err != nil {
-		log.PrintE("invalid app name", err)
-		os.Exit(254)
+		log.FatalE("invalid app name", err)
 	}
 
 	enterCmd := stage1common.PrepareEnterCmd(false)
@@ -70,9 +68,8 @@ func main() {
 		Args: args,
 	}
 
-	if err := cmd.Run(); err != nil {
-		log.PrintE(fmt.Sprintf("error starting app %q", appName.String()), err)
-		os.Exit(254)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		log.Fatalf("%q failed to start:\n%s", appName, out)
 	}
 
 	os.Exit(0)

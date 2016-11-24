@@ -287,7 +287,15 @@ func AddApp(cfg AddConfig) error {
 		return err
 	}
 
-	if err := RunCrossingEntrypoint(cfg.PodPath, cfg.PodPID, appName.String(), appAddEntrypoint, args); err != nil {
+	ce := CrossingEntrypoint{
+		PodPath:        cfg.PodPath,
+		PodPID:         cfg.PodPID,
+		AppName:        appName.String(),
+		EntrypointName: appAddEntrypoint,
+		EntrypointArgs: args,
+		Interactive:    false,
+	}
+	if err := ce.Run(); err != nil {
 		return err
 	}
 
@@ -364,11 +372,6 @@ func RmApp(cfg RmConfig) error {
 		return fmt.Errorf("error: nonexistent app %q", *cfg.AppName)
 	}
 
-	treeStoreID, err := ioutil.ReadFile(common.AppTreeStoreIDPath(cfg.PodPath, *cfg.AppName))
-	if err != nil {
-		return err
-	}
-
 	if cfg.PodPID > 0 {
 		// Call app-stop and app-rm entrypoint only if the pod is still running.
 		// Otherwise, there's not much we can do about it except unmounting/removing
@@ -377,7 +380,15 @@ func RmApp(cfg RmConfig) error {
 			fmt.Sprintf("--app=%s", cfg.AppName),
 		}
 
-		if err := RunCrossingEntrypoint(cfg.PodPath, cfg.PodPID, cfg.AppName.String(), appStopEntrypoint, args); err != nil {
+		ce := CrossingEntrypoint{
+			PodPath:        cfg.PodPath,
+			PodPID:         cfg.PodPID,
+			AppName:        cfg.AppName.String(),
+			EntrypointName: appStopEntrypoint,
+			EntrypointArgs: args,
+			Interactive:    false,
+		}
+		if err := ce.Run(); err != nil {
 			status, err := common.GetExitStatus(err)
 			// ignore nonexistent units failing to stop. Exit status 5
 			// comes from systemctl and means the unit doesn't exist
@@ -388,17 +399,18 @@ func RmApp(cfg RmConfig) error {
 			}
 		}
 
-		if err := RunCrossingEntrypoint(cfg.PodPath, cfg.PodPID, cfg.AppName.String(), appRmEntrypoint, args); err != nil {
+		ce.EntrypointName = appRmEntrypoint
+		if err := ce.Run(); err != nil {
 			return err
 		}
 	}
 
-	appInfoDir := common.AppInfoPath(cfg.PodPath, *cfg.AppName)
-	if err := os.RemoveAll(appInfoDir); err != nil {
-		return errwrap.Wrap(errors.New("error removing app info directory"), err)
-	}
-
 	if cfg.UsesOverlay {
+		treeStoreID, err := ioutil.ReadFile(common.AppTreeStoreIDPath(cfg.PodPath, *cfg.AppName))
+		if err != nil {
+			return err
+		}
+
 		appRootfs := common.AppRootfsPath(cfg.PodPath, *cfg.AppName)
 		if err := syscall.Unmount(appRootfs, 0); err != nil {
 			return err
@@ -408,6 +420,11 @@ func RmApp(cfg RmConfig) error {
 		if err := os.RemoveAll(ts); err != nil {
 			return errwrap.Wrap(errors.New("error removing app info directory"), err)
 		}
+	}
+
+	appInfoDir := common.AppInfoPath(cfg.PodPath, *cfg.AppName)
+	if err := os.RemoveAll(appInfoDir); err != nil {
+		return errwrap.Wrap(errors.New("error removing app info directory"), err)
 	}
 
 	if err := os.RemoveAll(common.AppPath(cfg.PodPath, *cfg.AppName)); err != nil {
@@ -475,7 +492,15 @@ func StartApp(cfg StartConfig) error {
 		log.FatalE(fmt.Sprintf("error creating %s-started file", cfg.AppName.String()), err)
 	}
 
-	if err := RunCrossingEntrypoint(cfg.Dir, cfg.PodPID, cfg.AppName.String(), appStartEntrypoint, args); err != nil {
+	ce := CrossingEntrypoint{
+		PodPath:        cfg.Dir,
+		PodPID:         cfg.PodPID,
+		AppName:        cfg.AppName.String(),
+		EntrypointName: appStartEntrypoint,
+		EntrypointArgs: args,
+		Interactive:    false,
+	}
+	if err := ce.Run(); err != nil {
 		return err
 	}
 
@@ -512,7 +537,15 @@ func StopApp(cfg StopConfig) error {
 		fmt.Sprintf("--app=%s", cfg.AppName),
 	}
 
-	if err := RunCrossingEntrypoint(cfg.Dir, cfg.PodPID, cfg.AppName.String(), appStopEntrypoint, args); err != nil {
+	ce := CrossingEntrypoint{
+		PodPath:        cfg.Dir,
+		PodPID:         cfg.PodPID,
+		AppName:        cfg.AppName.String(),
+		EntrypointName: appStopEntrypoint,
+		EntrypointArgs: args,
+		Interactive:    false,
+	}
+	if err := ce.Run(); err != nil {
 		status, err := common.GetExitStatus(err)
 		// exit status 5 comes from systemctl and means the unit doesn't exist
 		if status == 5 {

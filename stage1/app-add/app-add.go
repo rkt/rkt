@@ -17,6 +17,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"io/ioutil"
 	"os"
@@ -30,7 +31,9 @@ import (
 	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1types "github.com/coreos/rkt/stage1/common/types"
 	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
+	"github.com/hashicorp/errwrap"
 
+	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 )
 
@@ -61,30 +64,30 @@ func main() {
 
 	stage1initcommon.InitDebug(debug)
 
-	log, diag, _ = rktlog.NewLogSet("stage1", debug)
+	log, diag, _ = rktlog.NewLogSet("app-add", debug)
 	if !debug {
 		diag.SetOutput(ioutil.Discard)
 	}
 
-	enterCmd := stage1common.PrepareEnterCmd(false)
-
 	uuid, err := types.NewUUID(flagUUID)
 	if err != nil {
-		log.PrintE("UUID is missing or malformed", err)
-		os.Exit(254)
+		log.FatalE("UUID is missing or malformed", err)
 	}
 
 	appName, err := types.NewACName(flagApp)
 	if err != nil {
-		log.PrintE("invalid app name", err)
-		os.Exit(254)
+		log.FatalE("invalid app name", err)
 	}
 
 	root := "."
 	p, err := stage1types.LoadPod(root, uuid)
 	if err != nil {
-		log.PrintE("failed to load pod", err)
-		os.Exit(254)
+		log.FatalE("failed to load pod", err)
+	}
+
+	flavor, _, err := stage1initcommon.GetFlavor(p)
+	if err != nil {
+		log.FatalE("failed to get stage1 flavor", err)
 	}
 
 	insecureOptions := stage1initcommon.Stage1InsecureOptions{
@@ -95,67 +98,44 @@ func main() {
 
 	ra := p.Manifest.Apps.Get(*appName)
 	if ra == nil {
-		log.Printf("failed to get app")
-		os.Exit(254)
+		log.Fatalf("failed to find app %q", *appName)
+	}
+
+	binPath, err := stage1initcommon.FindBinPath(p, ra)
+	if err != nil {
+		log.FatalE("failed to find bin path", err)
 	}
 
 	if ra.App.WorkingDirectory == "" {
 		ra.App.WorkingDirectory = "/"
 	}
 
-	/* prepare cgroups */
-	isUnified, err := cgroup.IsCgroupUnified("/")
-	if err != nil {
-		log.FatalE("failed to determine the cgroup version", err)
-		os.Exit(254)
-	}
-
-	if !isUnified {
-		enabledCgroups, err := v1.GetEnabledCgroups()
-		if err != nil {
-			log.FatalE("error getting cgroups", err)
-			os.Exit(254)
-		}
-
-		b, err := ioutil.ReadFile(filepath.Join(p.Root, "subcgroup"))
-		if err == nil {
-			subcgroup := string(b)
-			serviceName := stage1initcommon.ServiceUnitName(ra.Name)
-
-			if err := v1.RemountCgroupKnobsRW(enabledCgroups, subcgroup, serviceName, enterCmd); err != nil {
-				log.FatalE("error restricting container cgroups", err)
-				os.Exit(254)
-			}
-		} else {
-			log.PrintE("continuing with per-app isolators disabled", err)
-		}
-	}
-
+	enterCmd := stage1common.PrepareEnterCmd(false)
 	stage1initcommon.AppAddMounts(p, ra, enterCmd)
 
-	/* write service file */
-	binPath, err := stage1initcommon.FindBinPath(p, ra)
-	if err != nil {
-		log.PrintE("failed to find bin path", err)
-		os.Exit(254)
+	// when using host cgroups, make the subgroup writable by pod systemd
+	if flavor != "kvm" {
+		err = prepareAppCgroups(p, ra, enterCmd)
+		if err != nil {
+			log.FatalE("error preparing cgroups", err)
+		}
 	}
 
+	// write service files
 	w := stage1initcommon.NewUnitWriter(p)
-
 	w.AppUnit(ra, binPath, privateUsers, insecureOptions,
 		unit.NewUnitOption("Unit", "Before", "halt.target"),
 		unit.NewUnitOption("Unit", "Conflicts", "halt.target"),
 		unit.NewUnitOption("Service", "StandardOutput", "journal+console"),
 		unit.NewUnitOption("Service", "StandardError", "journal+console"),
 	)
-
 	w.AppReaperUnit(ra.Name, binPath)
-
 	if err := w.Error(); err != nil {
-		log.PrintE("error generating app units", err)
-		os.Exit(254)
+		log.FatalE("error generating app units", err)
 	}
 
+	// stage2 environment is ready at this point, but systemd does not know
+	// about the new application yet
 	args := enterCmd
 	args = append(args, "/usr/bin/systemctl")
 	args = append(args, "daemon-reload")
@@ -165,10 +145,41 @@ func main() {
 		Args: args,
 	}
 
-	if err := cmd.Run(); err != nil {
-		log.PrintE(`error executing "systemctl daemon-reload"`, err)
-		os.Exit(254)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		log.Fatalf("%q failed at daemon-reload:\n%s", appName, out)
 	}
 
 	os.Exit(0)
+}
+
+// prepareAppCgroups makes the cgroups-v1 hierarchy for this application writable
+// by pod supervisor
+func prepareAppCgroups(p *stage1types.Pod, ra *schema.RuntimeApp, enterCmd []string) error {
+	isUnified, err := cgroup.IsCgroupUnified("/")
+	if err != nil {
+		return errwrap.Wrap(errors.New("failed to determine cgroup version"), err)
+	}
+
+	if isUnified {
+		return nil
+	}
+
+	enabledCgroups, err := v1.GetEnabledCgroups()
+	if err != nil {
+		return errwrap.Wrap(errors.New("error getting cgroups"), err)
+	}
+
+	b, err := ioutil.ReadFile(filepath.Join(p.Root, "subcgroup"))
+	if err != nil {
+		log.PrintE("continuing with per-app isolators disabled", err)
+		return nil
+	}
+
+	subcgroup := string(b)
+	serviceName := stage1initcommon.ServiceUnitName(ra.Name)
+	if err := v1.RemountCgroupKnobsRW(enabledCgroups, subcgroup, serviceName, enterCmd); err != nil {
+		return errwrap.Wrap(errors.New("error restricting application cgroups"), err)
+	}
+
+	return nil
 }
