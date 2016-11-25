@@ -48,7 +48,6 @@ func init() {
 	cmdApp.AddCommand(cmdAppSandbox)
 
 	addStage1ImageFlags(cmdAppSandbox.Flags())
-	// TODO(sur)
 	cmdAppSandbox.Flags().StringVar(&flagUUIDFileSave, "uuid-file-save", "", "write out pod UUID to specified file")
 	cmdAppSandbox.Flags().Var(&flagNet, "net", "configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively. Syntax: --net[=n[:args], ...]")
 	cmdAppSandbox.Flags().BoolVar(&flagNoOverlay, "no-overlay", false, "disable overlay filesystem")
