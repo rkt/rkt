@@ -106,11 +106,18 @@ This process is slightly different for the qemu-kvm stage1 but a similar workflo
 
 We will now detail how the starting, shutdown, and exit status collection of the apps in a pod are implemented internally.
 
-rkt supports two kinds of pod runtime environments, an immutable, and a new experimental mutable runtime environment. The mutable runtime environment allows to add, and remove applications once a pod has been started. Currently the mutable runtime environment is only available in the experimental `rkt app` family of subcommands, see the [app pod lifecycle documentation](pod-lifecycle.md#app) for a more detailed description.
+### Immutable vs. mutable pods
 
-The immutable runtime environment is currently the default one, i.e. when executing `rkt prepare`, or `rkt run`. Once a pod has been prepared in this environment, no modifications can be applied any more.
+rkt supports two kinds of pod runtime environments: an _immutable pod_ runtime environment, and a new, experimental _mutable pod_ runtime environment.
 
-Both runtime environments are supervised by systemd, and a custom dependency graph. The differences between both dependency graphs are described below.
+The immutable runtime environment is currently the default, i.e. when executing any `rkt prepare` or `rkt run` command.
+Once a pod has been created in this mode, no modifications can be applied.
+
+Conversely, the mutable runtime environment allows users to add, remove, start, and stop applications after a pod has been started.
+Currently this mode is only available in the experimental `rkt app` family of subcommands; see the [app pod lifecycle documentation](pod-lifecycle.md#app) for a more detailed description.
+
+Both runtime environments are supervised internally by systemd, using a custom dependency graph.
+The differences between both dependency graphs are described below.
 
 #### Immutable runtime environment
 
@@ -135,13 +142,20 @@ This will activate all the reaper services when one of the targets is activated,
 
 #### Mutable runtime environment
 
-The initial mutable runtime environment is very simple and resembles a minimal empty systemd system. Once `default.target` has been reached, apps can be added/removed. Unlike the immutable runtime environment the `default.target` has no dependencies on any apps, but only on `systemd-journald.service` to ensure the journald daemon is started before apps are added.
+The initial mutable runtime environment is very simple and resembles a minimal systemd system without any applications installed.
+Once `default.target` has been reached, apps can be added/removed.
+Unlike the immutable runtime environment, the `default.target` has no dependencies on any apps, but only on `systemd-journald.service`, to ensure the journald daemon is started before apps are added.
 
-In order for the pod not to shut down immediately the `default.target` has a `Before`, and `Conflicts` dependency on `halt.target`. This "deadlock" state between `default.target` and `halt.target` keeps the mutable pod alive. `halt.target` has a `After`, and `Requires` dependency on `shutdown.service`.
+In order for the pod to not shut down immediately on its creation, the `default.target` has `Before` and `Conflicts` dependencies on `halt.target`.
+This "deadlock" state between `default.target` and `halt.target` keeps the mutable pod alive.
+`halt.target` has `After` and `Requires` dependencies on `shutdown.service`.
 
 ![rkt-mutable](mutable.png)
 
-When adding an app the corresponding application service unit `[app].service`, and `reaper-[app].service` are being generated, where `[app]` is being replaced with the actual app name. In order not to stop the whole pod when all apps stop, there is no dependency to `shutdown.service`. The `OnFailure` behavior is the same as in an immutable environment. When an app fails, `halt.target`, and `shutdown.service` will be started, and `default.target` will be stopped.
+When adding an app, the corresponding application service units `[app].service` and `reaper-[app].service` are generated (where `[app]` is the actual app name).
+In order for the pod to not shut down when all apps stop, there is no dependency on `shutdown.service`.
+The `OnFailure` behavior is the same as in an immutable environment.
+When an app fails, `halt.target`, and `shutdown.service` will be started, and `default.target` will be stopped.
 
 ![rkt-mutable-app](mutable-app.png)
 
