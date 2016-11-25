@@ -16,14 +16,12 @@ package main
 
 import (
 	"archive/tar"
-	"bufio"
 	"compress/gzip"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 
 	"github.com/appc/spec/aci"
@@ -31,6 +29,7 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/overlay"
+	"github.com/coreos/rkt/pkg/mountinfo"
 	pkgPod "github.com/coreos/rkt/pkg/pod"
 	"github.com/coreos/rkt/pkg/user"
 	"github.com/coreos/rkt/store/imagestore"
@@ -53,37 +52,6 @@ func init() {
 	cmdRkt.AddCommand(cmdExport)
 	cmdExport.Flags().StringVar(&flagExportAppName, "app", "", "name of the app to export within the specified pod")
 	cmdExport.Flags().BoolVar(&flagOverwriteACI, "overwrite", false, "overwrite output ACI")
-}
-
-func appHasMountpoints(podPath string, appName types.ACName) (bool, error) {
-	appRootfs := common.AppRootfsPath(podPath, appName)
-	// add a filepath separator so we don't match the appRootfs path
-	appRootfs += string(filepath.Separator)
-
-	mi, err := os.Open("/proc/self/mountinfo")
-	if err != nil {
-		return false, err
-	}
-	defer mi.Close()
-
-	sc := bufio.NewScanner(mi)
-	for sc.Scan() {
-		line := sc.Text()
-		lineResult := strings.Split(line, " ")
-		if len(lineResult) < 7 {
-			return false, fmt.Errorf("not enough fields from line %q: %+v", line, lineResult)
-		}
-
-		mp := lineResult[4]
-
-		if strings.HasPrefix(mp, appRootfs) {
-			return true, nil
-		}
-	}
-	if err := sc.Err(); err != nil {
-		return false, err
-	}
-	return false, nil
 }
 
 func runExport(cmd *cobra.Command, args []string) (exit int) {
@@ -155,12 +123,15 @@ func runExport(cmd *cobra.Command, args []string) (exit int) {
 		}()
 		root = podDir
 	} else {
-		hasMPs, err := appHasMountpoints(p.Path(), app.Name)
+		// trailing filepath separator so we don't match the appRootfs path
+		appRootfs := common.AppRootfsPath(p.Path(), app.Name) + string(filepath.Separator)
+		mnts, err := mountinfo.ParseMounts(0)
 		if err != nil {
 			stderr.PrintE("error parsing mountpoints", err)
 			return 254
 		}
-		if hasMPs {
+		mnts = mnts.Filter(mountinfo.HasPrefix(appRootfs))
+		if len(mnts) > 0 {
 			stderr.Printf("pod has remaining mountpoints. Only pods using overlayfs or with no mountpoints can be exported")
 			return 254
 		}
