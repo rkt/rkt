@@ -55,6 +55,8 @@ $(_GCL_FULL_PATH_): | $(GCL_DIRECTORY)
 	$(_GCL_GIT_) reset --hard $(call vl3,--quiet) "$${rev}"; \
 	$(call vb,vt,GIT CLEAN,$(call vsp,$(GCL_DIRECTORY))) \
 	$(_GCL_GIT_) clean -ffdx $(call vl3,--quiet); \
+	human_rev="$$($(_GCL_GIT_) describe --always)"; \
+	$(call vb,vt,GIT DESCRIBE,$(GCL_REPOSITORY) ($(GCL_COMMITTISH)) => "$${human_rev}") \
 	touch "$@"
 
 # remove the GCL_DIRECTORY if GCL_REPOSITORY changes
