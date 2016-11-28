@@ -10,7 +10,7 @@
 
 When a recent version of systemd is running on the host and `rkt` is not started as a systemd service (typically, from the command line), `rkt` will call `systemd-nspawn` with `--register=true`. This will cause `systemd-nspawn` to call the D-Bus method `CreateMachineWithNetwork` on `systemd-machined` and the cgroup `/machine.slice/machine-rkt...` will be created. This requires systemd v216+ as detected by the [machinedRegister][machinedRegister] function in stage1's `init`.
 
-When systemd is not running on the host, or the systemd version is too old (< v216) to support the D-Bus method `CreateMachineWithNetwork`, `rkt` uses `systemd-nspawn` with the `--register=false` parameter. In this case, `systemd-nspawn` or other systemd components will not create new cgroups for rkt. On older `rkt` versions (<= 0.13.0), the pod was staying in the same cgroup as the caller. For example, it could be something like `/user.slice/user-1000.slice/session-1.scope`. Since [#1844](rkt-1844) (rkt >= 0.14.0), `rkt` creates a new cgroup for each pod, like `$CALLER_CGROUP/machine-some-id.slice`.
+When systemd is not running on the host, or the systemd version is too old (< v216) to support the D-Bus method `CreateMachineWithNetwork`, `rkt` uses `systemd-nspawn` with the `--register=false` parameter. In this case, `systemd-nspawn` or other systemd components will not create new cgroups for rkt. On older `rkt` versions (<= 0.13.0), the pod was staying in the same cgroup as the caller. For example, it could be something like `/user.slice/user-1000.slice/session-1.scope`. Since [#1844][rkt-1844] (rkt >= 0.14.0), `rkt` creates a new cgroup for each pod, like `$CALLER_CGROUP/machine-some-id.slice`.
 
 ### `rkt` started as a systemd service
 

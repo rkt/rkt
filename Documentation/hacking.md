@@ -210,6 +210,6 @@ If something looks awry, restart, pray to your preferred deity, and try again.
 [glide-vc]: https://github.com/sgotti/glide-vc
 [glide-versioning]: https://glide.readthedocs.io/en/latest/versions/
 [go]: https://golang.org/
-[rkt-builer]: https://github.com/coreos/rkt-builder
+[rkt-builder]: https://github.com/coreos/rkt-builder
 [run-time-dependencies]: dependencies.md#run-time-dependencies
 [update-coreos-stage1]: devel/update-coreos-stage1.md
