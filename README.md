@@ -13,7 +13,7 @@ Some of rkt's key features and goals include:
 
 - _Security_: rkt is developed with a principle of "secure-by-default", and includes a number of important security features like support for [SELinux][selinux], [TPM measurement][tpm], and running app containers in [hardware-isolated VMs][kvm].
 - _Composability_: rkt is designed for first-class integration with init systems ([systemd][systemd], upstart) and cluster orchestration tools (fleet, [Kubernetes][kubernetes], [Nomad][nomad]), and supports [swappable execution engines][architecture].
-- _Open standards and compatibility_: rkt implements the [appc specification][rkt-and-appc], supports the [Container Networking Interface specification][CNI], and can also run [Docker images][docker].
+- _Open standards and compatibility_: rkt implements the [appc specification][rkt-and-appc], supports the [Container Networking Interface specification][CNI], can also run [Docker images][docker], and [OCI images][oci] via [docker2aci][docker2aci]. Native OCI image support is [in development][oci-rkt].
 
 For more on the background and motivation behind rkt, read the original [launch announcement][blog-post].
 
@@ -29,6 +29,9 @@ For more on the background and motivation behind rkt, read the original [launch 
 [selinux]: Documentation/selinux.md
 [tpm]: Documentation/devel/tpm.md
 [blog-post]: https://coreos.com/blog/rocket
+[oci]: https://github.com/opencontainers/image-spec
+[oci-rkt]: Documentation/proposals/oci.md
+[docker2aci]: https://github.com/appc/docker2aci
 
 ## Project status
 
