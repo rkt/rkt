@@ -788,7 +788,7 @@ func protectKernelTunables(opts []*unit.UnitOption, appName types.ACName, system
 			opts = append(opts, unit.NewUnitOption("Service", "InaccessiblePaths", fmt.Sprintf("-%s", filepath.Join(common.RelAppRootfsPath(appName), p))))
 		}
 	}
-	if systemdVersion >= 232 {
+	if systemdVersion >= 233 {
 		opts = append(opts, unit.NewUnitOption("Service", "ProtectKernelTunables", "true"))
 	}
 
