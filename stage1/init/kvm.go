@@ -53,10 +53,10 @@ func KvmNetworkingToSystemd(p *stage1commontypes.Pod, n *networking.Networking) 
 	return nil
 }
 
-func mountSharedVolumes(root string, p *stage1commontypes.Pod, ra *schema.RuntimeApp) error {
+func mountSharedVolumes(p *stage1commontypes.Pod, ra *schema.RuntimeApp) error {
 	appName := ra.Name
 
-	sharedVolPath := common.SharedVolumesPath(root)
+	sharedVolPath := common.SharedVolumesPath(p.Root)
 	if err := os.MkdirAll(sharedVolPath, stage1initcommon.SharedVolPerm); err != nil {
 		return errwrap.Wrap(errors.New("could not create shared volumes directory"), err)
 	}
@@ -95,7 +95,7 @@ func mountSharedVolumes(root string, p *stage1commontypes.Pod, ra *schema.Runtim
 		case "host":
 			source = m.Volume.Source
 		case "empty":
-			source = filepath.Join(common.SharedVolumesPath(root), m.Volume.Name.String())
+			source = filepath.Join(common.SharedVolumesPath(p.Root), m.Volume.Name.String())
 		default:
 			return fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty"`, m.Volume.Kind)
 		}
@@ -175,19 +175,19 @@ func ensureDestinationExists(source, destination string) error {
 	return nil
 }
 
-func prepareMountsForApp(s1Root string, p *stage1commontypes.Pod, ra *schema.RuntimeApp) error {
+func prepareMountsForApp(p *stage1commontypes.Pod, ra *schema.RuntimeApp) error {
 	// bind mount all shared volumes (we don't use mechanism for bind-mounting given by nspawn)
-	if err := mountSharedVolumes(s1Root, p, ra); err != nil {
+	if err := mountSharedVolumes(p, ra); err != nil {
 		return errwrap.Wrap(errors.New("failed to prepare mount point"), err)
 	}
 
 	return nil
 }
 
-func KvmPrepareMounts(s1Root string, p *stage1commontypes.Pod) error {
+func KvmPrepareMounts(p *stage1commontypes.Pod) error {
 	for i := range p.Manifest.Apps {
 		ra := &p.Manifest.Apps[i]
-		if err := prepareMountsForApp(s1Root, p, ra); err != nil {
+		if err := prepareMountsForApp(p, ra); err != nil {
 			return errwrap.Wrap(fmt.Errorf("failed prepare mounts for app %q", ra.Name), err)
 		}
 	}

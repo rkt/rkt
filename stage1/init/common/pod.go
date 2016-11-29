@@ -47,12 +47,6 @@ const (
 	SharedVolPerm = os.FileMode(0755)
 )
 
-type Stage1InsecureOptions struct {
-	DisablePaths        bool
-	DisableCapabilities bool
-	DisableSeccomp      bool
-}
-
 // execEscape uses Golang's string quoting for ", \, \n, and regex for special cases
 func execEscape(i int, str string) string {
 	escapeMap := map[string]string{
@@ -371,7 +365,7 @@ func supportsNotify(p *stage1commontypes.Pod, appName string) bool {
 //   3. a number
 //   4. a name in reference to /etc/{group,passwd} in the image
 // See https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
-func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uidRange *user.UidRange) (int, int, error) {
+func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp) (int, int, error) {
 	var uidResolver, gidResolver user.Resolver
 	var uid, gid int
 	var err error
@@ -380,7 +374,7 @@ func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uidRange *u
 
 	uidResolver, err = user.NumericIDs(ra.App.User)
 	if err != nil {
-		uidResolver, err = user.IDsFromStat(root, ra.App.User, uidRange)
+		uidResolver, err = user.IDsFromStat(root, ra.App.User, &p.UidRange)
 	}
 
 	if err != nil {
@@ -397,7 +391,7 @@ func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp, uidRange *u
 
 	gidResolver, err = user.NumericIDs(ra.App.Group)
 	if err != nil {
-		gidResolver, err = user.IDsFromStat(root, ra.App.Group, uidRange)
+		gidResolver, err = user.IDsFromStat(root, ra.App.Group, &p.UidRange)
 	}
 
 	if err != nil {
@@ -464,7 +458,7 @@ func EvaluateSymlinksInsideApp(appRootfs, path string) (string, error) {
 
 // appToNspawnArgs transforms the given app manifest, with the given associated
 // app name, into a subset of applicable systemd-nspawn argument
-func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp, insecureOptions Stage1InsecureOptions) ([]string, error) {
+func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string, error) {
 	var args []string
 	appName := ra.Name
 	app := ra.App
@@ -546,7 +540,7 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp, insecureOp
 		args = append(args, strings.Join(opt, ""))
 	}
 
-	if !insecureOptions.DisableCapabilities {
+	if !p.InsecureOptions.DisableCapabilities {
 		capabilitiesStr, err := getAppCapabilities(app.Isolators)
 		if err != nil {
 			return nil, err
@@ -560,7 +554,7 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp, insecureOp
 
 // PodToNspawnArgs renders a prepared Pod as a systemd-nspawn
 // argument list ready to be executed
-func PodToNspawnArgs(p *stage1commontypes.Pod, insecureOptions Stage1InsecureOptions) ([]string, error) {
+func PodToNspawnArgs(p *stage1commontypes.Pod) ([]string, error) {
 	args := []string{
 		"--uuid=" + p.UUID.String(),
 		"--machine=" + GetMachineID(p),
@@ -568,14 +562,14 @@ func PodToNspawnArgs(p *stage1commontypes.Pod, insecureOptions Stage1InsecureOpt
 	}
 
 	for i := range p.Manifest.Apps {
-		aa, err := appToNspawnArgs(p, &p.Manifest.Apps[i], insecureOptions)
+		aa, err := appToNspawnArgs(p, &p.Manifest.Apps[i])
 		if err != nil {
 			return nil, err
 		}
 		args = append(args, aa...)
 	}
 
-	if insecureOptions.DisableCapabilities {
+	if p.InsecureOptions.DisableCapabilities {
 		args = append(args, "--capability=all")
 	}
 
