@@ -382,7 +382,7 @@ set of syscalls requirements and follow best practices:
 [appc-isolators]: https://github.com/appc/spec/blob/master/spec/ace.md#linux-isolators
 [capabilities-guide]: capabilities-guide.md
 [docker-seccomp]: https://docs.docker.com/engine/security/seccomp/
-[lwm-seccomp]: https://lwn.net/Articles/656307/
+[lwn-seccomp]: https://lwn.net/Articles/656307/
 [man-errno]: http://man7.org/linux/man-pages/man3/errno.3.html
 [man-mount]: http://man7.org/linux/man-pages/man2/mount.2.html
 [man-ptrace]: http://man7.org/linux/man-pages/man2/ptrace.2.html
