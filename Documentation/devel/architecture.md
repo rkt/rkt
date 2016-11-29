@@ -124,6 +124,7 @@ The differences between both dependency graphs are described below.
 ![rkt-systemd](rkt-systemd.png)
 
 There's a systemd rkt apps target (`default.target`) which has a [*Wants*][systemd-wants] and [*After*][systemd-beforeafter] dependency on each app's service file, making sure they all start.
+Once this target is reached, the pod is in its steady-state. This is signaled by the pod supervisor via a dedicated `supervisor-ready.service`, which is triggered by `default.target` with a [*Wants*][systemd-wants] dependency on it.
 
 Each app's service has a *Wants* dependency on an associated reaper service that deals with writing the app's status exit.
 Each reaper service has a *Wants* and *After* dependency with `shutdown.service` that simply shuts down the pod.
@@ -144,7 +145,7 @@ This will activate all the reaper services when one of the targets is activated,
 
 The initial mutable runtime environment is very simple and resembles a minimal systemd system without any applications installed.
 Once `default.target` has been reached, apps can be added/removed.
-Unlike the immutable runtime environment, the `default.target` has no dependencies on any apps, but only on `systemd-journald.service`, to ensure the journald daemon is started before apps are added.
+Unlike the immutable runtime environment, the `default.target` has no dependencies on any apps, but only on `supervisor-ready.service` and `systemd-journald.service`, to ensure the journald daemon is started before apps are added.
 
 In order for the pod to not shut down immediately on its creation, the `default.target` has `Before` and `Conflicts` dependencies on `halt.target`.
 This "deadlock" state between `default.target` and `halt.target` keeps the mutable pod alive.

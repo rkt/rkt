@@ -1040,6 +1040,24 @@ func (p *Pod) Pid() (int, error) {
 	}
 }
 
+// IsSupervisorReady checks if the pod supervisor (typically systemd-pid1)
+// has reached its ready state. All errors are handled as non-readiness.
+func (p *Pod) IsSupervisorReady() bool {
+	s1rootfs, err := p.Stage1RootfsPath()
+	if err != nil {
+		return false
+	}
+	target, err := os.Readlink(filepath.Join(s1rootfs, "/rkt/supervisor-status"))
+	if err != nil {
+		return false
+	}
+	if target == "ready" {
+		return true
+	}
+
+	return false
+}
+
 // ContainerPid1 returns the pid of the process with pid 1 in the pod.
 func (p *Pod) ContainerPid1() (pid int, err error) {
 	// rkt supports two methods to find the container's PID 1: the pid

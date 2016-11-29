@@ -308,8 +308,8 @@ In that case, this information is persisted at runtime in each application manif
 
 ## Filesystem Layout Assumptions
 
-The following paths are reserved for the stage1 image, and they will be created during stage0.
-When creating a stage1 image, developers SHOULD NOT create or use these paths in the image's filesystem.
+The following paths are reserved for the stage1 image, and they will be populated at runtime.
+When creating a stage1 image, developers SHOULD NOT use these paths to store content in the image's filesystem.
 
 ### stage2
 
@@ -341,5 +341,14 @@ For example, environment variables for an app named `foo` will be stored in `rkt
 
 This directory path is used for TTY and streaming attach helper.
 When attach mode is enabled each application will have a `rkt/iottymux/$appname/` directory, used by the I/O and TTY mux sidecar.
+
+### supervisor-status (experimental v5)
+
+`rkt/supervisor-status`
+
+This path is used by the pod supervisor to signal its readiness.
+Once the supervisor in the pod has reached its ready state, it MUST write a `rkt/supervisor-status -> ready` symlink.
+A symlink missing or pointing to a different target means that the pod supervisor is not ready.
+
 
 [rkt-networking]: ../networking/overview.md

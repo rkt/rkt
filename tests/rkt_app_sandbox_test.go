@@ -53,9 +53,10 @@ func TestAppSandboxSmoke(t *testing.T) {
 	}
 
 	tmpDir := createTempDirOrPanic("rkt-test-cri-")
+	uuidFile := filepath.Join(tmpDir, "uuid")
 	defer os.RemoveAll(tmpDir)
 
-	rktCmd := fmt.Sprintf("%s app sandbox --debug --uuid-file-save=%s/uuid", ctx.Cmd(), tmpDir)
+	rktCmd := fmt.Sprintf("%s app sandbox --uuid-file-save=%s", ctx.Cmd(), uuidFile)
 	err = os.Setenv("RKT_EXPERIMENT_APP", "true")
 	if err != nil {
 		panic(err)
@@ -66,14 +67,31 @@ func TestAppSandboxSmoke(t *testing.T) {
 		panic(err)
 	}
 
-	expected := "Reached target rkt apps target."
-	if err := expectTimeoutWithOutput(child, expected, actionTimeout); err != nil {
-		t.Fatalf("Expected %q but not found: %v", expected, err)
+	// wait for the sandbox to start
+	var podUUID []byte
+	for i := 0; i < 20; i++ {
+		time.Sleep(500 * time.Millisecond)
+		podUUID, err = ioutil.ReadFile(uuidFile)
+		if err == nil {
+			break
+		}
 	}
-
-	podUUID, err := ioutil.ReadFile(filepath.Join(tmpDir, "uuid"))
 	if err != nil {
 		t.Fatalf("Can't read pod UUID: %v", err)
+	}
+
+	// wait for the pod supervisor to be ready
+	podReadyFile := filepath.Join(ctx.DataDir(), "pods", "run", string(podUUID), "stage1/rootfs/rkt/supervisor-status")
+	target := ""
+	for i := 0; i < 20; i++ {
+		time.Sleep(500 * time.Millisecond)
+		target, err = os.Readlink(podReadyFile)
+		if err == nil && target == "ready" {
+			break
+		}
+	}
+	if err != nil || target != "ready" {
+		t.Fatalf("Pod failed to become ready while checking %q", podReadyFile)
 	}
 
 	cmd = strings.Fields(fmt.Sprintf("%s app add --debug %s %s --name=%s", ctx.Cmd(), podUUID, imageName, appName))
@@ -93,7 +111,7 @@ func TestAppSandboxSmoke(t *testing.T) {
 	}
 
 	if err := expectTimeoutWithOutput(child, msg, actionTimeout); err != nil {
-		t.Fatalf("Expected %q but not found: %v", expected, err)
+		t.Fatalf("Expected %q but not found: %v", msg, err)
 	}
 
 	cmd = strings.Fields(fmt.Sprintf("%s app rm --debug %s --app=%s", ctx.Cmd(), podUUID, appName))

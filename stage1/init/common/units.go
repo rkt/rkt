@@ -50,6 +50,8 @@ func MutableEnv(p *stage1commontypes.Pod) error {
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
 		unit.NewUnitOption("Unit", "Requires", "systemd-journald.service"),
 		unit.NewUnitOption("Unit", "After", "systemd-journald.service"),
+		unit.NewUnitOption("Unit", "Wants", "supervisor-ready.service"),
+		unit.NewUnitOption("Unit", "Before", "supervisor-ready.service"),
 		unit.NewUnitOption("Unit", "Before", "halt.target"),
 		unit.NewUnitOption("Unit", "Conflicts", "halt.target"),
 	)
@@ -95,6 +97,8 @@ func ImmutableEnv(p *stage1commontypes.Pod, interactive bool, privateUsers strin
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", "rkt apps target"),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
+		unit.NewUnitOption("Unit", "Wants", "supervisor-ready.service"),
+		unit.NewUnitOption("Unit", "Before", "supervisor-ready.service"),
 	}
 
 	for i := range p.Manifest.Apps {
