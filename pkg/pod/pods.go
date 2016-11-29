@@ -46,6 +46,8 @@ type Pod struct {
 	MountLabel string            // Label to use for container image
 
 	*lock.FileLock
+	manifestLock *lock.FileLock
+
 	dataDir string // The data directory where the pod lives in.
 
 	createdByMe bool // true if we're the creator of this pod (only the creator can ToPrepare or ToRun directly from preparing)
@@ -1186,4 +1188,34 @@ func (p *Pod) AppExitCode(appName string) (int, error) {
 
 	statusFile := filepath.Join(stage1RootfsPath, "/rkt/status/", appName)
 	return p.readIntFromFile(statusFile)
+}
+
+// ManifestExclusiveLock gets an exclusive lock on only the pod manifest.
+// This is used in the app sandbox - since the pod is already running, we
+// won't be able to get an exclusive lock on the pod itself.
+func (p *Pod) ExclusiveManifestLock() error {
+	if p.manifestLock != nil {
+		return p.manifestLock.ExclusiveLock() // This is idempotent
+	}
+
+	l, err := lock.ExclusiveLock(common.PodManifestLockPath(p.Path()), lock.RegFile)
+	if err != nil {
+		return err
+	}
+
+	p.manifestLock = l
+	return nil
+}
+
+// ManifestUnlock unlocks the pod manifest lock.
+func (p *Pod) ManifestUnlock() error {
+	if p.manifestLock == nil {
+		return nil
+	}
+
+	if err := p.manifestLock.Close(); err != nil {
+		return err
+	}
+	p.manifestLock = nil
+	return nil
 }

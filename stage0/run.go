@@ -96,6 +96,7 @@ type RunConfig struct {
 
 // CommonConfig defines the configuration shared by both Run and Prepare
 type CommonConfig struct {
+	DataDir      string            // The path to the data directory, e.g. /var/lib/rkt/pods
 	Store        *imagestore.Store // store containing all of the configured application images
 	TreeStore    *treestore.Store  // store containing all of the configured application images
 	Stage1Image  types.Hash        // stage1 image containing usable /init and /enter entrypoints

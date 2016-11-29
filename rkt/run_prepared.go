@@ -152,6 +152,7 @@ func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {
 
 	rcfg := stage0.RunConfig{
 		CommonConfig: &stage0.CommonConfig{
+			DataDir:   getDataDir(),
 			Store:     s,
 			TreeStore: ts,
 			UUID:      p.UUID,

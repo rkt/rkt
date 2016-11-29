@@ -113,6 +113,7 @@ func runAppAdd(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	ccfg := stage0.CommonConfig{
+		DataDir:   getDataDir(),
 		Store:     s,
 		TreeStore: ts,
 		UUID:      p.UUID,
@@ -133,6 +134,10 @@ func runAppAdd(cmd *cobra.Command, args []string) (exit int) {
 		UsesOverlay:  p.UsesOverlay(),
 		PodPath:      p.Path(),
 		PodPID:       podPID,
+	}
+
+	if globalFlags.Debug {
+		stage0.InitDebug()
 	}
 
 	err = stage0.AddApp(cfg)
