@@ -108,6 +108,7 @@ func runAppSandbox(cmd *cobra.Command, args []string) int {
 
 	p.MountLabel = mountLabel
 	cfg := stage0.CommonConfig{
+		DataDir:      getDataDir(),
 		MountLabel:   mountLabel,
 		ProcessLabel: processLabel,
 		Store:        s,

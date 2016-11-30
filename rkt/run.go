@@ -279,6 +279,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	p.MountLabel = mountLabel
 
 	cfg := stage0.CommonConfig{
+		DataDir:      getDataDir(),
 		MountLabel:   mountLabel,
 		ProcessLabel: processLabel,
 		Store:        s,

@@ -71,8 +71,9 @@ func runAppRm(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	ccfg := stage0.CommonConfig{
-		UUID:  p.UUID,
-		Debug: globalFlags.Debug,
+		DataDir: getDataDir(),
+		UUID:    p.UUID,
+		Debug:   globalFlags.Debug,
 	}
 
 	cfg := stage0.RmConfig{
@@ -81,6 +82,10 @@ func runAppRm(cmd *cobra.Command, args []string) (exit int) {
 		AppName:      appName,
 		PodPath:      p.Path(),
 		PodPID:       podPID,
+	}
+
+	if globalFlags.Debug {
+		stage0.InitDebug()
 	}
 
 	err = stage0.RmApp(cfg)

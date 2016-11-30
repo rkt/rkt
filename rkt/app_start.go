@@ -75,15 +75,20 @@ func runAppStart(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	cfg := stage0.CommonConfig{
-		UUID:  p.UUID,
-		Debug: globalFlags.Debug,
+		DataDir: getDataDir(),
+		UUID:    p.UUID,
+		Debug:   globalFlags.Debug,
 	}
 
 	scfg := stage0.StartConfig{
 		CommonConfig: &cfg,
-		Dir:          p.Path(),
+		PodPath:      p.Path(),
 		AppName:      appName,
 		PodPID:       podPID,
+	}
+
+	if globalFlags.Debug {
+		stage0.InitDebug()
 	}
 
 	err = stage0.StartApp(scfg)

@@ -28,10 +28,8 @@ import (
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
-	"github.com/coreos/rkt/pkg/lock"
+	pkgPod "github.com/coreos/rkt/pkg/pod"
 	"github.com/coreos/rkt/pkg/user"
-	// FIXME this should not be in stage1 anymore
-	stage1types "github.com/coreos/rkt/stage1/common/types"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
@@ -40,7 +38,7 @@ import (
 
 type StartConfig struct {
 	*CommonConfig
-	Dir         string
+	PodPath     string
 	UsesOverlay bool
 	AppName     *types.ACName
 	PodPID      int
@@ -48,7 +46,7 @@ type StartConfig struct {
 
 type StopConfig struct {
 	*CommonConfig
-	Dir     string
+	PodPath string
 	AppName *types.ACName
 	PodPID  int
 }
@@ -99,19 +97,22 @@ func AddApp(cfg AddConfig) error {
 		}
 	}
 
-	debug("locking pod")
-	l, err := lock.ExclusiveLock(common.PodManifestLockPath(cfg.PodPath), lock.RegFile)
+	pod, err := pkgPod.PodFromUUIDString(cfg.DataDir, cfg.UUID.String())
 	if err != nil {
-		return errwrap.Wrap(errors.New("failed to lock pod"), err)
+		return errwrap.Wrap(errors.New("error loading pod"), err)
 	}
-	defer l.Close()
+	defer pod.Close()
 
-	p, err := stage1types.LoadPod(cfg.PodPath, cfg.UUID)
+	debug("locking pod manifest")
+	if err := pod.ExclusiveManifestLock(); err != nil {
+		return errwrap.Wrap(errors.New("failed to lock pod manifest"), err)
+	}
+	defer pod.ManifestUnlock()
+
+	_, pm, err := pod.PodManifest()
 	if err != nil {
 		return errwrap.Wrap(errors.New("error loading pod manifest"), err)
 	}
-
-	pm := p.Manifest
 
 	var mutable bool
 	ms, ok := pm.Annotations.Get("coreos.com/rkt/stage1/mutable")
@@ -250,10 +251,9 @@ func AddApp(cfg AddConfig) error {
 		return err
 	}
 
-	apps := append(p.Manifest.Apps, ra)
-	p.Manifest.Apps = apps
+	pm.Apps = append(pm.Apps, ra)
 
-	if err := updatePodManifest(cfg.PodPath, p.Manifest); err != nil {
+	if err := updatePodManifest(cfg.PodPath, pm); err != nil {
 		return err
 	}
 
@@ -283,7 +283,7 @@ func AddApp(cfg AddConfig) error {
 		args = append(args, fmt.Sprintf("--private-users=%s", privateUsers))
 	}
 
-	if _, err := os.Create(common.AppCreatedPath(p.Root, appName.String())); err != nil {
+	if _, err := os.Create(common.AppCreatedPath(pod.Path(), appName.String())); err != nil {
 		return err
 	}
 
@@ -340,19 +340,22 @@ func updateFile(path string, contents []byte) error {
 }
 
 func RmApp(cfg RmConfig) error {
-	debug("locking pod")
-	l, err := lock.ExclusiveLock(common.PodManifestLockPath(cfg.PodPath), lock.RegFile)
+	pod, err := pkgPod.PodFromUUIDString(cfg.DataDir, cfg.UUID.String())
 	if err != nil {
-		return errwrap.Wrap(errors.New("failed to lock pod"), err)
+		return errwrap.Wrap(errors.New("error loading pod"), err)
 	}
-	defer l.Close()
+	defer pod.Close()
 
-	p, err := stage1types.LoadPod(cfg.PodPath, cfg.UUID)
+	debug("locking pod manifest")
+	if err := pod.ExclusiveManifestLock(); err != nil {
+		return errwrap.Wrap(errors.New("failed to lock pod manifest"), err)
+	}
+	defer pod.ManifestUnlock()
+
+	_, pm, err := pod.PodManifest()
 	if err != nil {
 		return errwrap.Wrap(errors.New("error loading pod manifest"), err)
 	}
-
-	pm := p.Manifest
 
 	var mutable bool
 	ms, ok := pm.Annotations.Get("coreos.com/rkt/stage1/mutable")
@@ -459,12 +462,16 @@ func removeAppFromPodManifest(pm *schema.PodManifest, appName *types.ACName) {
 }
 
 func StartApp(cfg StartConfig) error {
-	p, err := stage1types.LoadPod(cfg.Dir, cfg.UUID)
+	pod, err := pkgPod.PodFromUUIDString(cfg.DataDir, cfg.UUID.String())
+	if err != nil {
+		return errwrap.Wrap(errors.New("error loading pod"), err)
+	}
+	defer pod.Close()
+
+	_, pm, err := pod.PodManifest()
 	if err != nil {
 		return errwrap.Wrap(errors.New("error loading pod manifest"), err)
 	}
-
-	pm := p.Manifest
 
 	var mutable bool
 	ms, ok := pm.Annotations.Get("coreos.com/rkt/stage1/mutable")
@@ -488,12 +495,12 @@ func StartApp(cfg StartConfig) error {
 		fmt.Sprintf("--app=%s", cfg.AppName),
 	}
 
-	if _, err := os.Create(common.AppStartedPath(p.Root, cfg.AppName.String())); err != nil {
+	if _, err := os.Create(common.AppStartedPath(cfg.PodPath, cfg.AppName.String())); err != nil {
 		log.FatalE(fmt.Sprintf("error creating %s-started file", cfg.AppName.String()), err)
 	}
 
 	ce := CrossingEntrypoint{
-		PodPath:        cfg.Dir,
+		PodPath:        cfg.PodPath,
 		PodPID:         cfg.PodPID,
 		AppName:        cfg.AppName.String(),
 		EntrypointName: appStartEntrypoint,
@@ -508,12 +515,16 @@ func StartApp(cfg StartConfig) error {
 }
 
 func StopApp(cfg StopConfig) error {
-	p, err := stage1types.LoadPod(cfg.Dir, cfg.UUID)
+	pod, err := pkgPod.PodFromUUIDString(cfg.DataDir, cfg.UUID.String())
 	if err != nil {
 		return errwrap.Wrap(errors.New("error loading pod manifest"), err)
 	}
+	defer pod.Close()
 
-	pm := p.Manifest
+	_, pm, err := pod.PodManifest()
+	if err != nil {
+		return errwrap.Wrap(errors.New("error loading pod manifest"), err)
+	}
 
 	var mutable bool
 	ms, ok := pm.Annotations.Get("coreos.com/rkt/stage1/mutable")
@@ -538,7 +549,7 @@ func StopApp(cfg StopConfig) error {
 	}
 
 	ce := CrossingEntrypoint{
-		PodPath:        cfg.Dir,
+		PodPath:        cfg.PodPath,
 		PodPID:         cfg.PodPID,
 		AppName:        cfg.AppName.String(),
 		EntrypointName: appStopEntrypoint,

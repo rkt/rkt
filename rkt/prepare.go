@@ -171,6 +171,7 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	cfg := stage0.CommonConfig{
+		DataDir:     getDataDir(),
 		Store:       s,
 		TreeStore:   ts,
 		Stage1Image: *s1img,
