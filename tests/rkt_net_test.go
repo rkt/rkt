@@ -307,20 +307,17 @@ func NewTestNetDefaultRestrictedConnectivity() testutils.Test {
 		defer ctx.Cleanup()
 
 		f := func(argument string) {
-			httpPort, err := testutils.GetNextFreePort4()
-			if err != nil {
-				t.Fatalf("%v", err)
-			}
-			httpServeAddr := fmt.Sprintf("0.0.0.0:%v", httpPort)
+			httpPort := "8080"
 			iface := "eth0"
 
-			testImageArgs := []string{fmt.Sprintf("--exec=/inspect --print-ipv4=%v --serve-http=%v", iface, httpServeAddr)}
+			testImageArgs := []string{fmt.Sprintf("--exec=/inspect --print-ipv4=%v --serve-http=0.0.0.0:%v", iface, httpPort)}
 			testImage := patchTestACI("rkt-inspect-networking.aci", testImageArgs...)
 			defer os.Remove(testImage)
 
-			cmd := fmt.Sprintf("%s --debug --insecure-options=image run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
+			cmd := fmt.Sprintf("%s --insecure-options=image run %s --mds-register=false %s", ctx.Cmd(), argument, testImage)
 			child := spawnOrFail(t, cmd)
 
+			// Wait for the container to print out the IP address
 			expectedRegex := `IPv4: (\d+\.\d+\.\d+\.\d+)`
 			result, out, err := expectRegexWithOutput(child, expectedRegex)
 			if err != nil {
@@ -328,31 +325,18 @@ func NewTestNetDefaultRestrictedConnectivity() testutils.Test {
 			}
 			httpGetAddr := fmt.Sprintf("http://%v:%v", result[1], httpPort)
 
-			ga := testutils.NewGoroutineAssistant(t)
-			ga.Add(2)
-
-			// Child opens the server
-			go func() {
-				defer ga.Done()
-				ga.WaitOrFail(child)
-			}()
-
-			// Host connects to the child
-			go func() {
-				defer ga.Done()
-				expectedRegex := `serving on`
-				_, out, err := expectRegexWithOutput(child, expectedRegex)
-				if err != nil {
-					ga.Fatalf("Error: %v\nOutput: %v", err, out)
-				}
-				body, err := testutils.HTTPGet(httpGetAddr)
-				if err != nil {
-					ga.Fatalf("%v\n", err)
-				}
-				t.Logf("HTTP-Get received: %s", body)
-			}()
-
-			ga.Wait()
+			// Wait for the container to open the port
+			expectedRegex = `serving on`
+			_, out, err = expectRegexWithOutput(child, expectedRegex)
+			if err != nil {
+				t.Fatalf("Error: %v\nOutput: %v", err, out)
+			}
+			body, err := testutils.HTTPGet(httpGetAddr)
+			if err != nil {
+				t.Fatalf("%v\n", err)
+			}
+			t.Logf("HTTP-Get received: %s", body)
+			waitOrFail(t, child, 0)
 		}
 		f("--net=default-restricted")
 	})
