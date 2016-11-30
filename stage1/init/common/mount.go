@@ -24,6 +24,7 @@ import (
 	"syscall"
 
 	"github.com/coreos/rkt/pkg/fileutil"
+	"github.com/coreos/rkt/pkg/fs"
 	"github.com/coreos/rkt/pkg/user"
 
 	"github.com/appc/spec/schema"
@@ -229,7 +230,7 @@ func PrepareMountpoints(volPath string, targetPath string, vol *types.Volume, do
 // * evaluate all symlinks
 // * ensure the source exists
 // * recursively create the destination
-func BindMount(source, destination string, readOnly bool) error {
+func BindMount(mnt fs.MountUnmounter, source, destination string, readOnly bool) error {
 	absSource, err := filepath.EvalSymlinks(source)
 	if err != nil {
 		return errwrap.Wrap(fmt.Errorf("Could not resolve symlink for source %v", source), err)
@@ -241,11 +242,11 @@ func BindMount(source, destination string, readOnly bool) error {
 		return errwrap.Wrap(fmt.Errorf("Could not bind mount %v to %v", absSource, destination), err)
 	}
 	if readOnly {
-		err := syscall.Mount(source, destination, "bind", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, "")
+		err := mnt.Mount(source, destination, "bind", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, "")
 
 		// If we failed to remount ro, unmount
 		if err != nil {
-			syscall.Unmount(destination, 0) // if this fails, oh well
+			mnt.Unmount(destination, 0) // if this fails, oh well
 			return errwrap.Wrap(fmt.Errorf("Could not remount %v read-only", destination), err)
 		}
 	}

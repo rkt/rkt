@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/tests/testutils"
 	taas "github.com/coreos/rkt/tests/testutils/aci-server"
 )
@@ -83,10 +84,10 @@ func testFetchFromFile(t *testing.T, arg string, image string) {
 	runRktAndCheckOutput(t, cmd, fetchFromFileMsg, false)
 }
 
-// TestFetch tests that 'rkt fetch/run/prepare' for any type (image name string
+// TestFetchAny tests that 'rkt fetch/run/prepare' for any type (image name string
 // or URL) except file:// URL will work with the default, store only
 // (--store-only) and remote only (--no-store) behaviors.
-func TestFetch(t *testing.T) {
+func TestFetchAny(t *testing.T) {
 	image := "rkt-inspect-implicit-fetch.aci"
 	imagePath := patchTestACI(image, "--exec=/inspect")
 
@@ -161,14 +162,11 @@ func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, 
 	cmd := fmt.Sprintf("%s %s %s %s", ctx.Cmd(), arg, image, imageArgs)
 
 	// 1. Run cmd with the image not available in the store, should get $remoteFetchMsg.
-	child := spawnOrFail(t, cmd)
-	err := expectWithOutput(child, remoteFetchMsg)
-	if exitErr := checkExitStatus(child); exitErr != nil {
-		t.Logf("%v", exitErr)
+	err := runRktAndCheckRegexOutput(t, cmd, remoteFetchMsg)
+	status, _ := common.GetExitStatus(err)
+	if status != 0 {
+		t.Logf("%v", err)
 		t.Skip("remote fetching failed, probably a network failure. Skipping...")
-	}
-	if err != nil {
-		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}
 
 	// 2. Run cmd with the image available in the store, should get $storeMsg.
@@ -211,12 +209,13 @@ func testFetchNoStore(t *testing.T, args string, image string, imageArgs string,
 	cmd := fmt.Sprintf("%s --no-store %s %s %s", ctx.Cmd(), args, image, imageArgs)
 
 	// 1. Run cmd with the image available in the store, should get $remoteFetchMsg.
-	child := spawnOrFail(t, cmd)
-	err := expectWithOutput(child, remoteFetchMsg)
-	if exitErr := checkExitStatus(child); exitErr != nil {
-		t.Logf("%v", exitErr)
+	err := runRktAndCheckRegexOutput(t, cmd, remoteFetchMsg)
+	status, _ := common.GetExitStatus(err)
+	if status != 0 {
+		t.Logf("%v", err)
 		t.Skip("remote fetching failed, probably a network failure. Skipping...")
 	}
+
 	if err != nil {
 		t.Fatalf("%q should be found: %v", remoteFetchMsg, err)
 	}

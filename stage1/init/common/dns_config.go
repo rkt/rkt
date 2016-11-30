@@ -18,14 +18,16 @@ import (
 	"path/filepath"
 
 	_common "github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/fs"
 )
 
 /*
  Bind-mount the hosts /etc/resolv.conf in to the stage1's /etc/rkt-resolv.conf.
  That file will then be bind-mounted in to the stage2 by perpare-app.c
 */
-func UseHostResolv(podRoot string) error {
+func UseHostResolv(mnt fs.MountUnmounter, podRoot string) error {
 	return BindMount(
+		mnt,
 		"/etc/resolv.conf",
 		filepath.Join(_common.Stage1RootfsPath(podRoot), "etc/rkt-resolv.conf"),
 		true)
@@ -35,8 +37,9 @@ func UseHostResolv(podRoot string) error {
  Bind-mount the hosts /etc/hosts in to the stage1's /etc/rkt-hosts
  That file will then be bind-mounted in to the stage2 by perpare-app.c
 */
-func UseHostHosts(podRoot string) error {
+func UseHostHosts(mnt fs.MountUnmounter, podRoot string) error {
 	return BindMount(
+		mnt,
 		"/etc/hosts",
 		filepath.Join(_common.Stage1RootfsPath(podRoot), "etc/rkt-hosts"),
 		true)
