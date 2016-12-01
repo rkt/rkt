@@ -66,7 +66,7 @@ func extractTarCommand() error {
 	}
 	uc, err := strconv.ParseUint(os.Args[4], 10, 32)
 	if err != nil {
-		return fmt.Errorf("error parsing uidShift argument: %v", err)
+		return fmt.Errorf("error parsing uidCount argument: %v", err)
 	}
 
 	uidRange := &user.UidRange{Shift: uint32(us), Count: uint32(uc)}
