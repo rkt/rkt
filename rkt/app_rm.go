@@ -41,18 +41,18 @@ func init() {
 func runAppRm(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) < 1 {
 		stderr.Print("must provide the pod UUID")
-		return 1
+		return 254
 	}
 
 	if flagAppName == "" {
 		stderr.Print("must provide the app to remove")
-		return 1
+		return 254
 	}
 
 	p, err := pkgPod.PodFromUUIDString(getDataDir(), args[0])
 	if err != nil {
 		stderr.PrintE("problem retrieving pod", err)
-		return 1
+		return 254
 	}
 	defer p.Close()
 
@@ -61,13 +61,20 @@ func runAppRm(cmd *cobra.Command, args []string) (exit int) {
 		stderr.PrintE("invalid app name", err)
 	}
 
-	podPID := -1
-	if p.State() == pkgPod.Running {
-		podPID, err = p.ContainerPid1()
-		if err != nil {
-			stderr.PrintE(fmt.Sprintf("unable to determine the pid for pod %q", p.UUID), err)
-			return 1
-		}
+	if p.State() != pkgPod.Running {
+		stderr.Printf("pod %q is not running", p.UUID)
+		return 254
+	}
+
+	if !p.IsSupervisorReady() {
+		stderr.Printf("supervisor for pod %q is not ready yet", p.UUID)
+		return 254
+	}
+
+	podPID, err := p.ContainerPid1()
+	if err != nil {
+		stderr.PrintE(fmt.Sprintf("unable to determine the pid for pod %q", p.UUID), err)
+		return 254
 	}
 
 	ccfg := stage0.CommonConfig{
@@ -91,7 +98,7 @@ func runAppRm(cmd *cobra.Command, args []string) (exit int) {
 	err = stage0.RmApp(cfg)
 	if err != nil {
 		stderr.PrintE("error removing app", err)
-		return 1
+		return 254
 	}
 
 	return 0

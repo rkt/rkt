@@ -43,35 +43,41 @@ func init() {
 func runAppStart(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) < 1 {
 		stderr.Print("must provide the pod UUID")
-		return 1
+		return 254
 	}
 
 	if flagAppName == "" {
 		stderr.Print("must provide the app to start")
-		return 1
+		return 254
 	}
 
 	p, err := pkgPod.PodFromUUIDString(getDataDir(), args[0])
 	if err != nil {
 		stderr.PrintE("problem retrieving pod", err)
-		return 1
+		return 254
 	}
 	defer p.Close()
 
 	if p.State() != pkgPod.Running {
 		stderr.Printf("pod %q isn't currently running", p.UUID)
-		return 1
+		return 254
+	}
+
+	if !p.IsSupervisorReady() {
+		stderr.Printf("supervisor for pod %q is not yet ready", p.UUID)
+		return 254
 	}
 
 	appName, err := types.NewACName(flagAppName)
 	if err != nil {
 		stderr.PrintE("invalid app name", err)
+		return 254
 	}
 
 	podPID, err := p.ContainerPid1()
 	if err != nil {
 		stderr.PrintE(fmt.Sprintf("unable to determine the pid for pod %q", p.UUID), err)
-		return 1
+		return 254
 	}
 
 	cfg := stage0.CommonConfig{
@@ -94,7 +100,7 @@ func runAppStart(cmd *cobra.Command, args []string) (exit int) {
 	err = stage0.StartApp(scfg)
 	if err != nil {
 		stderr.PrintE("error starting app", err)
-		return 1
+		return 254
 	}
 
 	return 0

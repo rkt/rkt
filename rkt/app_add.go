@@ -53,42 +53,47 @@ func init() {
 func runAppAdd(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) < 2 {
 		stderr.Print("must provide the pod UUID and an IMAGEID")
-		return 1
+		return 254
 	}
 
 	err := parseApps(&rktApps, args[1:], cmd.Flags(), true)
 	if err != nil {
 		stderr.PrintE("error parsing app image arguments", err)
-		return 1
+		return 254
 	}
 
 	if rktApps.Count() > 1 {
 		stderr.Print("must give only one app")
-		return 1
+		return 254
 	}
 
 	p, err := pkgPod.PodFromUUIDString(getDataDir(), args[0])
 	if err != nil {
 		stderr.PrintE("problem retrieving pod", err)
-		return 1
+		return 254
 	}
 	defer p.Close()
 
 	if p.State() != pkgPod.Running {
 		stderr.Printf("pod %q isn't currently running", p.UUID)
-		return 1
+		return 254
+	}
+
+	if !p.IsSupervisorReady() {
+		stderr.Printf("supervisor for pod %q is not yet ready", p.UUID)
+		return 254
 	}
 
 	s, err := imagestore.NewStore(storeDir())
 	if err != nil {
 		stderr.PrintE("cannot open store", err)
-		return 1
+		return 254
 	}
 
 	ts, err := treestore.NewStore(treeStoreDir(), s)
 	if err != nil {
 		stderr.PrintE("cannot open treestore", err)
-		return 1
+		return 254
 	}
 
 	fn := &image.Finder{
@@ -103,13 +108,13 @@ func runAppAdd(cmd *cobra.Command, args []string) (exit int) {
 	img, err := fn.FindImage(args[1], "")
 	if err != nil {
 		stderr.PrintE("error finding images", err)
-		return 1
+		return 254
 	}
 
 	podPID, err := p.ContainerPid1()
 	if err != nil {
 		stderr.PrintE(fmt.Sprintf("unable to determine the pid for pod %q", p.UUID), err)
-		return 1
+		return 254
 	}
 
 	ccfg := stage0.CommonConfig{
@@ -143,7 +148,7 @@ func runAppAdd(cmd *cobra.Command, args []string) (exit int) {
 	err = stage0.AddApp(cfg)
 	if err != nil {
 		stderr.PrintE("error adding app to pod", err)
-		return 1
+		return 254
 	}
 
 	return 0
