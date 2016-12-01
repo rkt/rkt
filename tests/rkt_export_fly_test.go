@@ -20,14 +20,17 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 func TestExport(t *testing.T) {
 	if err := common.SupportsOverlay(); err != nil {
 		t.Skipf("Overlay fs not supported: %v", err)
 	}
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
 
 	// TODO(iaguis): we need a new function to unmount the fly pod so we can also test
 	// overlaySimulateReboot
-	NewTestExport(overlaySimpleTest).Execute(t)
+	exportTestCases["overlaySimpleTest"].Execute(t, ctx)
 }

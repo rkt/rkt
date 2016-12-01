@@ -17,10 +17,6 @@
 package main
 
 var TestedFlavor = Flavor{
-	false,
-	false,
-	true,
-	false,
-	false,
-	true,
+	Src:                 true,
+	ExitStatusPreserved: true,
 }

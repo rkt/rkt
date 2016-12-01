@@ -866,12 +866,17 @@ func unmountPod(t *testing.T, ctx *testutils.RktRunCtx, uuid string, rmNetns boo
 	podDir := filepath.Join(ctx.DataDir(), "pods", "run", uuid)
 	stage1MntPath := filepath.Join(podDir, "stage1", "rootfs")
 	stage2MntPath := filepath.Join(stage1MntPath, "opt", "stage2", "rkt-inspect", "rootfs")
+
 	netnsPath := filepath.Join(podDir, "netns")
 	podNetNSPathBytes, err := ioutil.ReadFile(netnsPath)
+	// There may be no netns, e.g. kvm or --net=host
 	if err != nil {
-		t.Fatalf(`cannot read "netns" stage1: %v`, err)
+		if !os.IsNotExist(err) {
+			t.Fatalf(`cannot read "netns" stage1: %v`, err)
+		} else {
+			rmNetns = false
+		}
 	}
-	podNetNSPath := string(podNetNSPathBytes)
 
 	if err := syscall.Unmount(stage2MntPath, 0); err != nil {
 		t.Fatalf("cannot umount stage2: %v", err)
@@ -881,11 +886,13 @@ func unmountPod(t *testing.T, ctx *testutils.RktRunCtx, uuid string, rmNetns boo
 		t.Fatalf("cannot umount stage1: %v", err)
 	}
 
-	if err := syscall.Unmount(podNetNSPath, 0); err != nil {
-		t.Fatalf("cannot umount pod netns: %v", err)
-	}
-
 	if rmNetns {
+		podNetNSPath := string(podNetNSPathBytes)
+
+		if err := syscall.Unmount(podNetNSPath, 0); err != nil {
+			t.Fatalf("cannot umount pod netns: %v", err)
+		}
+
 		_ = os.RemoveAll(podNetNSPath)
 	}
 }
