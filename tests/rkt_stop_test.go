@@ -95,7 +95,7 @@ func TestRktStop(t *testing.T) {
 		// Make sure the pod is stopped
 		var podInfo *podInfo
 		exitedSuccessfully := false
-		for i := 0; i < 10; i++ {
+		for i := 0; i < 30; i++ {
 			time.Sleep(500 * time.Millisecond)
 			podInfo = getPodInfo(t, ctx, podUUID)
 			if podInfo.state == "exited" {
