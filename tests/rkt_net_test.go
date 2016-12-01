@@ -798,7 +798,6 @@ func NewNetCNIEnvTest() testutils.Test {
 		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=%v --mds-register=false %s %s",
 			ctx.Cmd(), nt.NetParameter(), getInspectImagePath(), appCmd)
 		child := spawnOrFail(t, cmd)
-		waitOrFail(t, child, 0)
 
 		expectedRegex := "DefaultGWv4: 11.11.3.1"
 
@@ -806,6 +805,7 @@ func NewNetCNIEnvTest() testutils.Test {
 		if err != nil {
 			t.Fatalf("Error: %v\nOutput: %v", err, out)
 		}
+		waitOrFail(t, child, 0)
 
 		// Parse the log file
 		cniLogFilename := filepath.Join(netdir, "output.json")
