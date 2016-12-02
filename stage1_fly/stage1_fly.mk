@@ -11,7 +11,7 @@ $(call inc-many,$(foreach sd,$(FLY_SUBDIRS),$(sd)/$(sd).mk))
 
 $(call inc-one,stop/stop.mk)
 
-$(call generate-stamp-rule,$(FLY_STAMP),$(FLY_STAMPS) $(ACTOOL_STAMP),, \
+$(call generate-stamp-rule,$(FLY_STAMP),$(FLY_STAMPS) $(ACTOOL_STAMP),$(TARGET_BINDIR), \
 	$(call vb,vt,ACTOOL,$(call vsp,$(FLY_STAGE1))) \
 	"$(ACTOOL)" build --overwrite --owner-root "$(FLY_ACIDIR)" "$(FLY_STAGE1)")
 
