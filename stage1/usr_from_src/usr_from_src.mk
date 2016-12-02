@@ -126,6 +126,8 @@ $(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PA
 	$(call vb,v2,CONFIGURE,systemd) \
 	"$(abspath $(UFS_SYSTEMD_SRCDIR))/configure" \
 		$(call vl3,--quiet) \
+		--enable-seccomp \
+		--enable-tmpfiles \
 		--disable-dbus \
 		--disable-kmod \
 		--disable-blkid \
@@ -142,7 +144,6 @@ $(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PA
 		--disable-binfmt \
 		--disable-vconsole \
 		--disable-quotacheck \
-		--disable-tmpfiles \
 		--disable-randomseed \
 		--disable-backlight \
 		--disable-rfkill \
@@ -163,8 +164,7 @@ $(call generate-stamp-rule,$(UFS_SYSTEMD_BUILD_STAMP),$(UFS_SYSTEMD_CLONE_AND_PA
 		--disable-hibernate \
 		--disable-hwdb \
 		--disable-importd \
-		--disable-firstboot \
-		--enable-seccomp; \
+		--disable-firstboot; \
 	popd $(call vl3,>/dev/null); \
 	$(call vb,v2,BUILD EXT,systemd) \
 	$$(MAKE) -C "$(UFS_SYSTEMD_BUILDDIR)" all V=0 $(call vl2,>/dev/null))

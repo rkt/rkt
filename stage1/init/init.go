@@ -193,6 +193,10 @@ func installAssets() error {
 	if err != nil {
 		return err
 	}
+	systemdTmpfilesBin, err := common.LookupPath("systemd-tmpfiles", os.Getenv("PATH"))
+	if err != nil {
+		return err
+	}
 	bashBin, err := common.LookupPath("bash", os.Getenv("PATH"))
 	if err != nil {
 		return err
@@ -226,6 +230,7 @@ func installAssets() error {
 		proj2aci.GetAssetString("/usr/lib/systemd/systemd", systemdBin),
 		proj2aci.GetAssetString("/usr/bin/systemctl", systemctlBin),
 		proj2aci.GetAssetString("/usr/bin/systemd-sysusers", systemdSysusersBin),
+		proj2aci.GetAssetString("/usr/bin/systemd-tmpfiles", systemdTmpfilesBin),
 		proj2aci.GetAssetString("/usr/lib/systemd/systemd-journald", systemdJournaldBin),
 		proj2aci.GetAssetString("/usr/bin/bash", bashBin),
 		proj2aci.GetAssetString("/bin/mount", mountBin),
