@@ -124,11 +124,21 @@ func spawnOrFail(t *testing.T, cmd string) *gexpect.ExpectSubprocess {
 	return child
 }
 
+// waitOrFail waits for the child to exit, draining all its output.
+// If a non-negative return value is provided, child exit status must match.
 func waitOrFail(t *testing.T, child *gexpect.ExpectSubprocess, expectedStatus int) {
+	bufOut := []string{}
+	// TODO(lucab): gexpect should accept those channels from the caller
+	ttyIn, ttyOut := child.AsyncInteractChannels()
+	close(ttyIn)
+	// drain output till gexpect closes the channel (on EOF or error)
+	for line := range ttyOut {
+		bufOut = append(bufOut, line)
+	}
 	err := child.Wait()
 	status, _ := common.GetExitStatus(err)
-	if status != expectedStatus {
-		t.Fatalf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, expectedStatus, child.Collect())
+	if expectedStatus >= 0 && status != expectedStatus {
+		t.Fatalf("rkt terminated with unexpected status %d, expected %d\nOutput:\n%s", status, expectedStatus, bufOut)
 	}
 }
 
