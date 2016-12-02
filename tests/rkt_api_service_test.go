@@ -397,7 +397,7 @@ func NewAPIServiceListInspectPodsTest() testutils.Test {
 						},
 					},
 				},
-				"non-existed-network",
+				"non-existent-network",
 				254,
 			},
 		}

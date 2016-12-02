@@ -972,10 +972,18 @@ func (p *Pod) AppImageManifest(appName string) (*schema.ImageManifest, error) {
 // CreationTime returns the time when the pod was created.
 // This happens at prepare time.
 func (p *Pod) CreationTime() (time.Time, error) {
-	if p.isPrepared || p.isRunning() || p.AfterRun() {
-		return p.getModTime("pod")
+	if !(p.isPrepared || p.isRunning() || p.AfterRun()) {
+		return time.Time{}, nil
 	}
-	return time.Time{}, nil
+	t, err := p.getModTime("pod-created")
+	if err == nil {
+		return t, nil
+	}
+	if !os.IsNotExist(err) {
+		return t, err
+	}
+	// backwards compatibility with rkt before v1.20
+	return p.getModTime("pod")
 }
 
 // StartTime returns the time when the pod was started.

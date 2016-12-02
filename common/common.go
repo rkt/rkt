@@ -109,6 +109,12 @@ func PodManifestPath(root string) string {
 	return filepath.Join(root, "pod")
 }
 
+// PodCreatedPath returns the path in root to the Pod Created file used to
+// denote the time of creation.
+func PodCreatedPath(root string) string {
+	return filepath.Join(root, "pod-created")
+}
+
 // PodManifestLockPath returns the path in root to the Pod Manifest lock file.
 // This must be different from the PodManifestPath since mutations on the pod manifest file
 // happen by overwriting the original file.
