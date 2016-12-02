@@ -46,9 +46,7 @@ func TestImageGCTreeStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot exec: %v", err)
 	}
-	if err := child.Wait(); err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	waitOrFail(t, child, 0)
 
 	treeStoreIDs, err := getTreeStoreIDs(ctx)
 	if err != nil {

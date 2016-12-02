@@ -78,7 +78,7 @@ func testFetchFromFile(t *testing.T, arg string, image string) {
 	if err := expectWithOutput(child, fetchFromFileMsg); err != nil {
 		t.Fatalf("%q should be found: %v", fetchFromFileMsg, err)
 	}
-	child.Wait()
+	waitOrFail(t, child, 0)
 
 	// 1. Run cmd again, should get $fetchFromFileMsg.
 	runRktAndCheckOutput(t, cmd, fetchFromFileMsg, false)

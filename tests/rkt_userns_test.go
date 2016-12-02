@@ -96,11 +96,7 @@ func TestUserns(t *testing.T) {
 				if err != nil || result[0] == tt.expectGid {
 					t.Fatalf("Expected %q but not found: %v", tt.expectGid, result)
 				}
-
-				err = child.Wait()
-				if err != nil {
-					t.Fatalf("rkt didn't terminate correctly: %v", err)
-				}
+				waitOrFail(t, child, 0)
 
 				ctx.Reset()
 			}

@@ -107,10 +107,10 @@ func TestRktStop(t *testing.T) {
 			t.Fatalf("Expected pod %q to be exited, but it is %q", podUUID, podInfo.state)
 		}
 
+		exitStatus := 0
 		if tt.expectKill {
-			child.Wait()
-		} else {
-			waitOrFail(t, child, 0)
+			exitStatus = -1
 		}
+		waitOrFail(t, child, exitStatus)
 	}
 }
