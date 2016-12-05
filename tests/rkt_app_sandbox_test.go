@@ -128,7 +128,5 @@ func TestAppSandboxSmoke(t *testing.T) {
 		t.Fatalf("Unexpected error: %v\n%s", err, output)
 	}
 
-	if err := child.Wait(); err != nil {
-		t.Fatalf("rkt didn't terminate correctly: %v", err)
-	}
+	waitOrFail(t, child, 0)
 }

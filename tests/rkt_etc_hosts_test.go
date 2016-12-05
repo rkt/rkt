@@ -107,10 +107,7 @@ func TestEtcHosts(t *testing.T) {
 			t.Fatalf("Test %d %v %v", i, err, out)
 		}
 
-		err = child.Wait()
-		if err != nil {
-			t.Fatalf("rkt didn't terminate correctly: %v", err)
-		}
+		waitOrFail(t, child, 0)
 	}
 }
 
