@@ -61,12 +61,7 @@ rkt's entry in the [Fedora package database][pkg-fedora] tracks packaging work f
 
 #### Caveat: SELinux
 
-rkt can integrate with SELinux on Fedora but in a limited way.
-This has the following caveats:
-- running as systemd service restricted (see [#2322][rkt-2322])
-- access to host volumes restricted (see [#2325][rkt-2325])
-- socket activation restricted (see [#2326][rkt-2326])
-- metadata service restricted (see [#1978][rkt-1978])
+Rkt does not work with the SELinux policies currently shipped with Fedora versions 24 and 25.
 
 As a workaround, SELinux can be temporarily disabled:
 ```
