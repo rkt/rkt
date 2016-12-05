@@ -38,25 +38,17 @@ import (
 )
 
 var (
-	flagApp             string
-	flagUUID            string
-	debug               bool
-	disableCapabilities bool
-	disablePaths        bool
-	disableSeccomp      bool
-	privateUsers        string
-	log                 *rktlog.Logger
-	diag                *rktlog.Logger
+	flagApp  string
+	flagUUID string
+	debug    bool
+	log      *rktlog.Logger
+	diag     *rktlog.Logger
 )
 
 func init() {
 	flag.StringVar(&flagApp, "app", "", "Application name")
 	flag.StringVar(&flagUUID, "uuid", "", "Pod UUID")
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
-	flag.BoolVar(&disableCapabilities, "disable-capabilities-restriction", false, "Disable capability restrictions")
-	flag.BoolVar(&disablePaths, "disable-paths", false, "Disable paths restrictions")
-	flag.BoolVar(&disableSeccomp, "disable-seccomp", false, "Disable seccomp restrictions")
-	flag.StringVar(&privateUsers, "private-users", "", "Run within user namespace. Can be set to [=UIDBASE[:NUIDS]]")
 }
 
 func main() {
@@ -80,7 +72,7 @@ func main() {
 	}
 
 	root := "."
-	p, err := stage1types.LoadPod(root, uuid)
+	p, err := stage1types.LoadPod(root, uuid, nil)
 	if err != nil {
 		log.FatalE("failed to load pod", err)
 	}
@@ -88,12 +80,6 @@ func main() {
 	flavor, _, err := stage1initcommon.GetFlavor(p)
 	if err != nil {
 		log.FatalE("failed to get stage1 flavor", err)
-	}
-
-	insecureOptions := stage1initcommon.Stage1InsecureOptions{
-		DisablePaths:        disablePaths,
-		DisableCapabilities: disableCapabilities,
-		DisableSeccomp:      disableSeccomp,
 	}
 
 	ra := p.Manifest.Apps.Get(*appName)
@@ -123,7 +109,7 @@ func main() {
 
 	// write service files
 	w := stage1initcommon.NewUnitWriter(p)
-	w.AppUnit(ra, binPath, privateUsers, insecureOptions,
+	w.AppUnit(ra, binPath,
 		unit.NewUnitOption("Unit", "Before", "halt.target"),
 		unit.NewUnitOption("Unit", "Conflicts", "halt.target"),
 		unit.NewUnitOption("Service", "StandardOutput", "journal+console"),

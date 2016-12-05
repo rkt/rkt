@@ -64,12 +64,13 @@ var (
 	discardBool    bool
 	discardString  string
 
-	log         *rktlog.Logger
-	diag        *rktlog.Logger
-	dnsConfMode *pkgflag.PairList
+	log  *rktlog.Logger
+	diag *rktlog.Logger
 )
 
-func init() {
+func parseFlags() *stage1commontypes.RuntimePod {
+	rp := stage1commontypes.RuntimePod{}
+
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
 
 	// The following flags need to be supported by stage1 according to
@@ -89,7 +90,7 @@ func init() {
 	flag.Bool("disable-paths", true, "ignored")
 	flag.Bool("disable-seccomp", true, "ignored")
 
-	dnsConfMode = pkgflag.MustNewPairList(map[string][]string{
+	dnsConfMode := pkgflag.MustNewPairList(map[string][]string{
 		"resolv": {"host", "stage0", "none", "default"},
 		"hosts":  {"host", "stage0", "default"},
 	}, map[string]string{
@@ -98,6 +99,12 @@ func init() {
 	})
 	flag.Var(dnsConfMode, "dns-conf-mode", "DNS config file modes")
 
+	flag.Parse()
+
+	rp.ResolvConfMode = dnsConfMode.Pairs["resolv"]
+	rp.EtcHostsMode = dnsConfMode.Pairs["hosts"]
+
+	return &rp
 }
 
 func addMountPoints(namedVolumeMounts map[types.ACName]volumeMountTuple, mountpoints []types.MountPoint) error {
@@ -232,7 +239,7 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 	return argFlyMounts, nil
 }
 
-func stage1() int {
+func stage1(rp *stage1commontypes.RuntimePod) int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
 		log.Print("UUID is missing or malformed\n")
@@ -240,10 +247,14 @@ func stage1() int {
 	}
 
 	root := "."
-	p, err := stage1commontypes.LoadPod(root, uuid)
+	p, err := stage1commontypes.LoadPod(root, uuid, rp)
 	if err != nil {
 		log.PrintE("can't load pod", err)
 		return 254
+	}
+
+	if err := p.SaveRuntime(); err != nil {
+		log.FatalE("failed to save runtime parameters", err)
 	}
 
 	// Sanity checks
@@ -315,7 +326,7 @@ func stage1() int {
 	 * 'default' - do nothing (we would respect CNI if fly had networking)
 	 * 'none' - do nothing
 	 */
-	switch dnsConfMode.Pairs["resolv"] {
+	switch p.ResolvConfMode {
 	case "host":
 		effectiveMounts = append(effectiveMounts,
 			flyMount{"/etc/resolv.conf", rfs, "/etc/resolv.conf", "none", syscall.MS_BIND | syscall.MS_RDONLY})
@@ -333,7 +344,7 @@ func stage1() int {
 	 * 'default' - create a stub /etc/hosts if needed
 	 */
 
-	switch dnsConfMode.Pairs["hosts"] {
+	switch p.EtcHostsMode {
 	case "host":
 		effectiveMounts = append(effectiveMounts,
 			flyMount{"/etc/hosts", rfs, "/etc/hosts", "none", syscall.MS_BIND | syscall.MS_RDONLY})
@@ -523,7 +534,7 @@ func copyResolv(p *stage1commontypes.Pod) error {
 }
 
 func main() {
-	flag.Parse()
+	rp := parseFlags()
 
 	log, diag, _ = rktlog.NewLogSet("run", debug)
 	if !debug {
@@ -531,5 +542,5 @@ func main() {
 	}
 
 	// move code into stage1() helper so defered fns get run
-	os.Exit(stage1())
+	os.Exit(stage1(rp))
 }

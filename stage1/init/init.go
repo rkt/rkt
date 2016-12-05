@@ -101,36 +101,32 @@ func mirrorLocalZoneInfo(root string) {
 }
 
 var (
-	debug               bool
-	netList             common.NetList
-	interactive         bool
-	privateUsers        string
-	mdsToken            string
-	localhostIP         net.IP
-	localConfig         string
-	hostname            string
-	log                 *rktlog.Logger
-	diag                *rktlog.Logger
-	interpBin           string // Path to the interpreter within the stage1 rootfs, set by the linker
-	disableCapabilities bool
-	disablePaths        bool
-	disableSeccomp      bool
-	dnsConfMode         *pkgflag.PairList
-	mutable             bool
+	debug       bool
+	interactive bool
+	localhostIP net.IP
+	localConfig string
+	log         *rktlog.Logger
+	diag        *rktlog.Logger
+	interpBin   string // Path to the interpreter within the stage1 rootfs, set by the linker
 )
 
-func init() {
+func parseFlags() *stage1commontypes.RuntimePod {
+	rp := stage1commontypes.RuntimePod{}
+
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
-	flag.Var(&netList, "net", "Setup networking")
 	flag.BoolVar(&interactive, "interactive", false, "The pod is interactive")
-	flag.StringVar(&privateUsers, "private-users", "", "Run within user namespace. Can be set to [=UIDBASE[:NUIDS]]")
-	flag.StringVar(&mdsToken, "mds-token", "", "MDS auth token")
 	flag.StringVar(&localConfig, "local-config", common.DefaultLocalConfigDir, "Local config path")
-	flag.StringVar(&hostname, "hostname", "", "Hostname of the pod")
-	flag.BoolVar(&disableCapabilities, "disable-capabilities-restriction", false, "Disable capability restrictions")
-	flag.BoolVar(&disablePaths, "disable-paths", false, "Disable paths restrictions")
-	flag.BoolVar(&disableSeccomp, "disable-seccomp", false, "Disable seccomp restrictions")
-	dnsConfMode = pkgflag.MustNewPairList(map[string][]string{
+
+	// These flags are persisted in the PodRuntime
+	flag.BoolVar(&rp.Mutable, "mutable", false, "Enable mutable operations on this pod, including starting an empty one")
+	flag.Var(&rp.NetList, "net", "Setup networking")
+	flag.StringVar(&rp.PrivateUsers, "private-users", "", "Run within user namespace. Can be set to [=UIDBASE[:NUIDS]]")
+	flag.StringVar(&rp.MDSToken, "mds-token", "", "MDS auth token")
+	flag.StringVar(&rp.Hostname, "hostname", "", "Hostname of the pod")
+	flag.BoolVar(&rp.InsecureOptions.DisableCapabilities, "disable-capabilities-restriction", false, "Disable capability restrictions")
+	flag.BoolVar(&rp.InsecureOptions.DisablePaths, "disable-paths", false, "Disable paths restrictions")
+	flag.BoolVar(&rp.InsecureOptions.DisableSeccomp, "disable-seccomp", false, "Disable seccomp restrictions")
+	dnsConfMode := pkgflag.MustNewPairList(map[string][]string{
 		"resolv": {"host", "stage0", "none", "default"},
 		"hosts":  {"host", "stage0", "default"},
 	}, map[string]string{
@@ -138,13 +134,22 @@ func init() {
 		"hosts":  "default",
 	})
 	flag.Var(dnsConfMode, "dns-conf-mode", "DNS config file modes")
-	flag.BoolVar(&mutable, "mutable", false, "Enable mutable operations on this pod, including starting an empty one")
 
+	flag.Parse()
+
+	rp.ResolvConfMode = dnsConfMode.Pairs["resolv"]
+	rp.EtcHostsMode = dnsConfMode.Pairs["hosts"]
+
+	return &rp
+}
+
+func init() {
 	// this ensures that main runs only on main thread (thread group leader).
 	// since namespace ops (unshare, setns) are done for a single thread, we
 	// must ensure that the goroutine does not jump from OS thread to thread
 	runtime.LockOSThread()
 
+	// We'll need this later
 	localhostIP = net.ParseIP("127.0.0.1")
 	if localhostIP == nil {
 		panic("localhost IP failed to parse")
@@ -249,7 +254,7 @@ func installAssets() error {
 
 // getArgsEnv returns the nspawn or lkvm args and env according to the flavor
 // as the first two return values respectively.
-func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister bool, debug bool, n *networking.Networking, insecureOptions stage1initcommon.Stage1InsecureOptions) ([]string, []string, error) {
+func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister bool, debug bool, n *networking.Networking) ([]string, []string, error) {
 	var args []string
 	env := os.Environ()
 
@@ -262,11 +267,11 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 	// According to systemd manual (https://www.freedesktop.org/software/systemd/man/hostname.html) :
 	// "The /etc/hostname file configures the name of the local system that is set
 	// during boot using the sethostname system call"
-	if hostname == "" {
-		hostname = stage1initcommon.GetMachineID(p)
+	if p.Hostname == "" {
+		p.Hostname = stage1initcommon.GetMachineID(p)
 	}
 	hostnamePath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc/hostname")
-	if err := ioutil.WriteFile(hostnamePath, []byte(hostname), 0644); err != nil {
+	if err := ioutil.WriteFile(hostnamePath, []byte(p.Hostname), 0644); err != nil {
 		return nil, nil, fmt.Errorf("error writing %s, %s", hostnamePath, err)
 	}
 
@@ -278,7 +283,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 
 	switch flavor {
 	case "kvm":
-		if privateUsers != "" {
+		if p.PrivateUsers != "" {
 			return nil, nil, fmt.Errorf("flag --private-users cannot be used with an lkvm stage1")
 		}
 
@@ -481,15 +486,15 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 	// introduced by https://github.com/systemd/systemd/pull/3809.
 	env = append(env, "SYSTEMD_NSPAWN_USE_CGNS=no")
 
-	if insecureOptions.DisablePaths {
+	if p.InsecureOptions.DisablePaths {
 		env = append(env, "SYSTEMD_NSPAWN_API_VFS_WRITABLE=yes")
 	}
 
-	if len(privateUsers) > 0 {
-		args = append(args, "--private-users="+privateUsers)
+	if len(p.PrivateUsers) > 0 {
+		args = append(args, "--private-users="+p.PrivateUsers)
 	}
 
-	nsargs, err := stage1initcommon.PodToNspawnArgs(p, insecureOptions)
+	nsargs, err := stage1initcommon.PodToNspawnArgs(p)
 	if err != nil {
 		return nil, nil, errwrap.Wrap(errors.New("failed to generate nspawn args"), err)
 	}
@@ -506,16 +511,20 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 	return args, env, nil
 }
 
-func stage1() int {
+func stage1(rp *stage1commontypes.RuntimePod) int {
 	uuid, err := types.NewUUID(flag.Arg(0))
 	if err != nil {
 		log.FatalE("UUID is missing or malformed", err)
 	}
 
 	root := "."
-	p, err := stage1commontypes.LoadPod(root, uuid)
+	p, err := stage1commontypes.LoadPod(root, uuid, rp)
 	if err != nil {
 		log.FatalE("failed to load pod", err)
+	}
+
+	if err := p.SaveRuntime(); err != nil {
+		log.FatalE("failed to save runtime parameters", err)
 	}
 
 	// set close-on-exec flag on RKT_LOCK_FD so it gets correctly closed when invoking
@@ -537,14 +546,14 @@ func stage1() int {
 	}
 
 	var n *networking.Networking
-	if netList.Contained() {
+	if p.NetList.Contained() {
 		fps, err := commonnet.ForwardedPorts(p.Manifest)
 		if err != nil {
 			log.FatalE("error initializing forwarding ports", err)
 		}
 
-		noDNS := dnsConfMode.Pairs["resolv"] != "default" // force ignore CNI DNS results
-		n, err = networking.Setup(root, p.UUID, fps, netList, localConfig, flavor, noDNS, debug)
+		noDNS := p.ResolvConfMode != "default" // force ignore CNI DNS results
+		n, err = networking.Setup(root, p.UUID, fps, p.NetList, localConfig, flavor, noDNS, debug)
 		if err != nil {
 			log.FatalE("failed to setup network", err)
 		}
@@ -555,27 +564,21 @@ func stage1() int {
 			return 254
 		}
 
-		if len(mdsToken) > 0 {
+		if len(p.MDSToken) > 0 {
 			hostIP, err := n.GetForwardableNetHostIP()
 			if err != nil {
 				log.FatalE("failed to get default Host IP", err)
 			}
 
-			p.MetadataServiceURL = common.MetadataServicePublicURL(hostIP, mdsToken)
+			p.MetadataServiceURL = common.MetadataServicePublicURL(hostIP, p.MDSToken)
 		}
 	} else {
 		if flavor == "kvm" {
 			log.Fatal("flavor kvm requires private network configuration (try --net)")
 		}
-		if len(mdsToken) > 0 {
-			p.MetadataServiceURL = common.MetadataServicePublicURL(localhostIP, mdsToken)
+		if len(p.MDSToken) > 0 {
+			p.MetadataServiceURL = common.MetadataServicePublicURL(localhostIP, p.MDSToken)
 		}
-	}
-
-	insecureOptions := stage1initcommon.Stage1InsecureOptions{
-		DisablePaths:        disablePaths,
-		DisableCapabilities: disableCapabilities,
-		DisableSeccomp:      disableSeccomp,
 	}
 
 	mnt := fs.NewLoggingMounter(
@@ -584,20 +587,20 @@ func stage1() int {
 		diag.Printf,
 	)
 
-	if dnsConfMode.Pairs["resolv"] == "host" {
+	if p.ResolvConfMode == "host" {
 		stage1initcommon.UseHostResolv(mnt, root)
 	}
 
-	if dnsConfMode.Pairs["hosts"] == "host" {
+	if p.EtcHostsMode == "host" {
 		stage1initcommon.UseHostHosts(mnt, root)
 	}
 
-	if mutable {
+	if p.Mutable {
 		if err = stage1initcommon.MutableEnv(p); err != nil {
 			log.FatalE("cannot initialize mutable environment", err)
 		}
 	} else {
-		if err = stage1initcommon.ImmutableEnv(p, interactive, privateUsers, insecureOptions); err != nil {
+		if err = stage1initcommon.ImmutableEnv(p, interactive); err != nil {
 			log.FatalE("cannot initialize immutable environment", err)
 		}
 	}
@@ -620,7 +623,7 @@ func stage1() int {
 	}
 	diag.Printf("canMachinedRegister %t", canMachinedRegister)
 
-	args, env, err := getArgsEnv(p, flavor, canMachinedRegister, debug, n, insecureOptions)
+	args, env, err := getArgsEnv(p, flavor, canMachinedRegister, debug, n)
 	if err != nil {
 		log.FatalE("cannot get environment", err)
 	}
@@ -651,7 +654,6 @@ func stage1() int {
 	}
 	diag.Printf("unifiedCgroup %t", unifiedCgroup)
 
-	s1Root := common.Stage1RootfsPath(p.Root)
 	machineID := stage1initcommon.GetMachineID(p)
 
 	subcgroup, err := getContainerSubCgroup(machineID, canMachinedRegister, unifiedCgroup)
@@ -688,7 +690,7 @@ func stage1() int {
 		}
 		diag.Printf("serviceNames %q", serviceNames)
 
-		if err := mountContainerV1Cgroups(mnt, s1Root, enabledCgroups, subcgroup, serviceNames, insecureOptions); err != nil {
+		if err := mountContainerV1Cgroups(mnt, p, enabledCgroups, subcgroup, serviceNames); err != nil {
 			log.FatalE("couldn't mount the container v1 cgroups", err)
 		}
 
@@ -707,7 +709,7 @@ func stage1() int {
 	}
 
 	if flavor == "kvm" {
-		if err := KvmPrepareMounts(s1Root, p); err != nil {
+		if err := KvmPrepareMounts(p); err != nil {
 			log.FatalE("error preparing mounts", err)
 		}
 	}
@@ -763,13 +765,14 @@ func mountHostV1Cgroups(m fs.Mounter, enabledCgroups map[int][]string) error {
 // mountContainerV1Cgroups mounts the cgroup controllers hierarchy in the container's
 // namespace read-only, leaving the needed knobs in the subcgroup for each-app
 // read-write so systemd inside stage1 can apply isolators to them
-func mountContainerV1Cgroups(m fs.Mounter, s1Root string, enabledCgroups map[int][]string, subcgroup string, serviceNames []string, secopts stage1initcommon.Stage1InsecureOptions) error {
+func mountContainerV1Cgroups(m fs.Mounter, p *stage1commontypes.Pod, enabledCgroups map[int][]string, subcgroup string, serviceNames []string) error {
 	mountContext := os.Getenv(common.EnvSELinuxMountContext)
-	if err := v1.CreateCgroups(m, s1Root, enabledCgroups, mountContext); err != nil {
+	stage1Root := common.Stage1RootfsPath(p.Root)
+	if err := v1.CreateCgroups(m, stage1Root, enabledCgroups, mountContext); err != nil {
 		return errwrap.Wrap(errors.New("error creating container cgroups"), err)
 	}
 
-	if err := v1.RemountCgroups(m, s1Root, enabledCgroups, subcgroup, serviceNames, secopts.DisablePaths); err != nil {
+	if err := v1.RemountCgroups(m, stage1Root, enabledCgroups, subcgroup, serviceNames, p.InsecureOptions.DisablePaths); err != nil {
 		return errwrap.Wrap(errors.New("error restricting container cgroups"), err)
 	}
 
@@ -840,8 +843,7 @@ func getContainerSubCgroup(machineID string, canMachinedRegister, unified bool) 
 }
 
 func main() {
-	flag.Parse()
-
+	rp := parseFlags()
 	stage1initcommon.InitDebug(debug)
 
 	log, diag, _ = rktlog.NewLogSet("stage1", debug)
@@ -850,5 +852,5 @@ func main() {
 	}
 
 	// move code into stage1() helper so deferred fns get run
-	os.Exit(stage1())
+	os.Exit(stage1(rp))
 }

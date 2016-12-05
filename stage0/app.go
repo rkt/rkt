@@ -262,27 +262,6 @@ func AddApp(cfg AddConfig) error {
 		fmt.Sprintf("--app=%s", appName),
 	}
 
-	if cfg.InsecureCapabilities {
-		args = append(args, "--disable-capabilities-restriction")
-	}
-
-	if cfg.InsecurePaths {
-		args = append(args, "--disable-paths")
-	}
-
-	if cfg.InsecureSeccomp {
-		args = append(args, "--disable-seccomp")
-	}
-
-	privateUsers, err := preparedWithPrivateUsers(cfg.PodPath)
-	if err != nil {
-		log.FatalE("error reading user namespace information", err)
-	}
-
-	if privateUsers != "" {
-		args = append(args, fmt.Sprintf("--private-users=%s", privateUsers))
-	}
-
 	if _, err := os.Create(common.AppCreatedPath(pod.Path(), appName.String())); err != nil {
 		return err
 	}

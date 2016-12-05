@@ -19,22 +19,49 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/user"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/hashicorp/errwrap"
 )
 
+// The filename where we persist the RuntimePod data
+const RuntimeConfigPath = "runtime-config"
+
 // Pod encapsulates a PodManifest and ImageManifests
 type Pod struct {
-	Root               string // root directory where the pod will be located
-	UUID               types.UUID
-	Manifest           *schema.PodManifest
-	Images             map[string]*schema.ImageManifest
-	MetadataServiceURL string
-	Networks           []string
+	RuntimePod        // embedded runtime parameters
+	Root       string // root directory where the pod will be located
+	UUID       types.UUID
+	Manifest   *schema.PodManifest
+	Images     map[string]*schema.ImageManifest
+	UidRange   user.UidRange
+}
+
+// RuntimePod stores internal state we'd like access to. There is no interface,
+// and noone outside the stage1 should access it. If you find yourself needing
+// one of these members outside of the stage1, then it should be set as an
+// annotation on the pod.
+// This includes things like insecure options and the mds token - they are provided
+// during init but needed for `app add`.
+type RuntimePod struct {
+	MetadataServiceURL string         `json:"MetadataServiceURL"`
+	PrivateUsers       string         `json:"PrivateUsers"`
+	MDSToken           string         `json:"MDSToken"`
+	Hostname           string         `json:"Hostname"`
+	Mutable            bool           `json:"Mutable"`
+	ResolvConfMode     string         `json:"ResolvConfMode"`
+	EtcHostsMode       string         `json:"EtcHostsMode"`
+	NetList            common.NetList `json:"NetList"`
+	InsecureOptions    struct {
+		DisablePaths        bool `json:"DisablePaths"`
+		DisableCapabilities bool `json:"DisableCapabilities"`
+		DisableSeccomp      bool `json:"DisableSeccomp"`
+	} `json:"InsecureOptions"`
 }
 
 // AppNameToImageName takes the name of an app in the Pod and returns the name
@@ -49,13 +76,39 @@ func (p *Pod) AppNameToImageName(appName types.ACName) types.ACIdentifier {
 	return image.Name
 }
 
-// LoadPod loads a Pod Manifest (as prepared by stage0) and
+// SaveRuntime persists just the runtime state. This should be called when the
+// pod is started.
+func (p *Pod) SaveRuntime() error {
+	path := filepath.Join(p.Root, RuntimeConfigPath)
+	buf, err := json.Marshal(p.RuntimePod)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(path, buf, 0644)
+}
+
+// LoadPod loads a Pod Manifest (as prepared by stage0), the runtime data, and
 // its associated Application Manifests, under $root/stage1/opt/stage1/$apphash
-func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
+func LoadPod(root string, uuid *types.UUID, rp *RuntimePod) (*Pod, error) {
 	p := &Pod{
-		Root:   root,
-		UUID:   *uuid,
-		Images: make(map[string]*schema.ImageManifest),
+		Root:     root,
+		UUID:     *uuid,
+		Images:   make(map[string]*schema.ImageManifest),
+		UidRange: *user.NewBlankUidRange(),
+	}
+
+	// Unserialize runtime parameters
+	if rp != nil {
+		p.RuntimePod = *rp
+	} else {
+		buf, err := ioutil.ReadFile(filepath.Join(p.Root, RuntimeConfigPath))
+		if err != nil {
+			return nil, errwrap.Wrap(errors.New("failed reading runtime params"), err)
+		}
+		if err := json.Unmarshal(buf, &p.RuntimePod); err != nil {
+			return nil, errwrap.Wrap(errors.New("failed unmarshalling runtime params"), err)
+		}
 	}
 
 	buf, err := ioutil.ReadFile(common.PodManifestPath(p.Root))
@@ -88,6 +141,10 @@ func LoadPod(root string, uuid *types.UUID) (*Pod, error) {
 			p.Manifest.Apps[i].App = im.App
 		}
 		p.Images[app.Name.String()] = im
+	}
+
+	if err := p.UidRange.Deserialize([]byte(p.PrivateUsers)); err != nil {
+		return nil, err
 	}
 
 	return p, nil
