@@ -19,7 +19,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -68,30 +67,9 @@ func TestAppSandboxSmoke(t *testing.T) {
 	}
 
 	// wait for the sandbox to start
-	var podUUID []byte
-	for i := 0; i < 20; i++ {
-		time.Sleep(500 * time.Millisecond)
-		podUUID, err = ioutil.ReadFile(uuidFile)
-		if err == nil {
-			break
-		}
-	}
+	podUUID, err := waitPodReady(ctx, uuidFile, actionTimeout)
 	if err != nil {
-		t.Fatalf("Can't read pod UUID: %v", err)
-	}
-
-	// wait for the pod supervisor to be ready
-	podReadyFile := filepath.Join(ctx.DataDir(), "pods", "run", string(podUUID), "stage1/rootfs/rkt/supervisor-status")
-	target := ""
-	for i := 0; i < 20; i++ {
-		time.Sleep(500 * time.Millisecond)
-		target, err = os.Readlink(podReadyFile)
-		if err == nil && target == "ready" {
-			break
-		}
-	}
-	if err != nil || target != "ready" {
-		t.Fatalf("Pod failed to become ready while checking %q", podReadyFile)
+		t.Fatal(err)
 	}
 
 	cmd = strings.Fields(fmt.Sprintf("%s app add --debug %s %s --name=%s", ctx.Cmd(), podUUID, imageName, appName))
