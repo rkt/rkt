@@ -423,6 +423,14 @@ This feature will be disabled automatically if the underlying filesystem does no
 | `--uuid-file-save` | none | A file path | Write out the pod UUID to a file. |
 | `--volume` | none | Volume syntax (e.g. `--volume NAME,kind=KIND,source=PATH,readOnly=BOOL`) | Volumes to make available in the pod. See [Mount Volumes into a Pod](#mount-volumes-into-a-pod). |
 
+## Per-application options
+
+| Flag | Default | Options | Description |
+| ---  | ---     | ---     | ---         |
+| `--stdin`  | "null" | "null", "tty", "stream"        | Mode for this application stdin.  |
+| `--stdout` | "log"  | "null", "tty", "stream", "log" | Mode for this application stdout. |
+| `--stderr` | "log"  | "null", "tty", "stream", "log" | Mode for this application stderr. |
+
 ## Global options
 
 See the table with [global options in general commands documentation][global-options].
