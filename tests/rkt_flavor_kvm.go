@@ -17,10 +17,5 @@
 package main
 
 var TestedFlavor = Flavor{
-	false,
-	false,
-	false,
-	false,
-	true,
-	false,
+	Kvm: true,
 }

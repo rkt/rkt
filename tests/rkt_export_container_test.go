@@ -20,24 +20,25 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/tests/testutils"
 )
 
 func TestExport(t *testing.T) {
-	testCases := []ExportTestCase{
-		noOverlaySimpleTest,
-		specifiedAppTest,
-		multiAppPodTest,
-	}
+	ctx := testutils.NewRktRunCtx()
+	defer ctx.Cleanup()
+	overlay := (common.SupportsOverlay() == nil)
+	userns := (common.SupportsUserNS() && checkUserNS() == nil && !TestedFlavor.Kvm)
 
-	// Need to do both checks
-	if common.SupportsUserNS() && checkUserNS() == nil {
-		testCases = append(testCases, userNS)
+	for name, testCase := range exportTestCases {
+		if testCase.NeedsOverlay && !overlay {
+			t.Logf("TestExport/%v needs overlay, skipping", name)
+			continue
+		}
+		if testCase.NeedsUserNS && !userns {
+			t.Logf("TestExport/%v needs userns, skipping", name)
+			continue
+		}
+		t.Logf("TestExport/%v", name)
+		testCase.Execute(t, ctx)
 	}
-
-	if common.SupportsOverlay() == nil {
-		testCases = append(testCases, overlaySimpleTest)
-		testCases = append(testCases, overlaySimulateReboot)
-	}
-
-	NewTestExport(testCases...).Execute(t)
 }

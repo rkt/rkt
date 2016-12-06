@@ -17,10 +17,6 @@
 package main
 
 var TestedFlavor = Flavor{
-	true,
-	false,
-	false,
-	false,
-	false,
-	true,
+	Coreos:              true,
+	ExitStatusPreserved: true,
 }

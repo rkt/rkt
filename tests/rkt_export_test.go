@@ -36,12 +36,14 @@ type ExportTestCase struct {
 	expectedResult string
 	unmountOverlay bool
 	multiAppPod    bool
+	NeedsOverlay   bool
+	NeedsUserNS    bool
 }
 
 type exportTest []ExportTestCase
 
-var (
-	noOverlaySimpleTest = ExportTestCase{
+var exportTestCases = map[string]ExportTestCase{
+	"noOverlaySimpleTest": {
 		"--no-overlay --insecure-options=image",
 		"--write-file --file-name=" + testFile + " --content=" + testContent,
 		"--read-file --file-name=" + testFile,
@@ -49,9 +51,11 @@ var (
 		testContent,
 		false,
 		false,
-	}
+		false,
+		false,
+	},
 
-	specifiedAppTest = ExportTestCase{
+	"specifiedAppTest": {
 		"--no-overlay --insecure-options=image",
 		"--write-file --file-name=" + testFile + " --content=" + testContent,
 		"--read-file --file-name=" + testFile,
@@ -59,9 +63,11 @@ var (
 		testContent,
 		false,
 		false,
-	}
+		false,
+		false,
+	},
 
-	multiAppPodTest = ExportTestCase{
+	"multiAppPodTest": {
 		"--no-overlay --insecure-options=image",
 		"--write-file --file-name=" + testFile + " --content=" + testContent,
 		"--read-file --file-name=" + testFile,
@@ -69,9 +75,11 @@ var (
 		testContent,
 		false,
 		true,
-	}
+		false,
+		false,
+	},
 
-	userNS = ExportTestCase{
+	"userNS": {
 		"--private-users --no-overlay --insecure-options=image",
 		"--write-file --file-name=" + testFile + " --content=" + testContent,
 		"--read-file --file-name=" + testFile,
@@ -79,9 +87,11 @@ var (
 		testContent,
 		false,
 		false,
-	}
+		false,
+		true,
+	},
 
-	overlaySimpleTest = ExportTestCase{
+	"overlaySimpleTest": {
 		"--insecure-options=image",
 		"--write-file --file-name=" + testFile + " --content=" + testContent,
 		"--read-file --file-name=" + testFile,
@@ -89,9 +99,11 @@ var (
 		testContent,
 		false,
 		false,
-	}
+		true,
+		false,
+	},
 
-	overlaySimulateReboot = ExportTestCase{
+	"overlaySimulateReboot": {
 		"--insecure-options=image",
 		"--write-file --file-name=" + testFile + " --content=" + testContent,
 		"--read-file --file-name=" + testFile,
@@ -99,16 +111,9 @@ var (
 		testContent,
 		true,
 		false,
-	}
-)
-
-func (ct exportTest) Execute(t *testing.T) {
-	ctx := testutils.NewRktRunCtx()
-	defer ctx.Cleanup()
-
-	for _, testCase := range ct {
-		testCase.Execute(t, ctx)
-	}
+		true,
+		false,
+	},
 }
 
 func (ct ExportTestCase) Execute(t *testing.T, ctx *testutils.RktRunCtx) {
@@ -161,8 +166,4 @@ func (ct ExportTestCase) Execute(t *testing.T, ctx *testutils.RktRunCtx) {
 	// run garbage collector on pods and images
 	runGC(t, ctx)
 	runImageGC(t, ctx)
-}
-
-func NewTestExport(cases ...ExportTestCase) testutils.Test {
-	return exportTest(cases)
 }
