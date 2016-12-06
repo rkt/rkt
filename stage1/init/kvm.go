@@ -90,15 +90,7 @@ func mountSharedVolumes(p *stage1commontypes.Pod, ra *schema.RuntimeApp) error {
 			return err
 		}
 
-		var source string
-		switch m.Volume.Kind {
-		case "host":
-			source = m.Volume.Source
-		case "empty":
-			source = filepath.Join(common.SharedVolumesPath(p.Root), m.Volume.Name.String())
-		default:
-			return fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty"`, m.Volume.Kind)
-		}
+		source := m.Source(p.Root)
 		if cleanedSource, err := filepath.EvalSymlinks(source); err != nil {
 			return errwrap.Wrap(fmt.Errorf("could not resolve symlink for source: %v", source), err)
 		} else if err := ensureDestinationExists(cleanedSource, absDestination); err != nil {
