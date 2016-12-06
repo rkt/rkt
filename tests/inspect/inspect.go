@@ -151,6 +151,26 @@ func main() {
 		os.Exit(254)
 	}
 
+	if globalFlags.SilentSigterm {
+		terminateCh := make(chan os.Signal, 1)
+		signal.Notify(terminateCh, syscall.SIGTERM)
+		go func() {
+			<-terminateCh
+			os.Exit(0)
+		}()
+	}
+
+	if globalFlags.PreSleep >= 0 {
+		time.Sleep(time.Duration(globalFlags.PreSleep) * time.Second)
+	}
+
+	if globalFlags.ReadStdin {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Printf("Enter text:\n")
+		text, _ := reader.ReadString('\n')
+		fmt.Printf("Received text: %s\n", text)
+	}
+
 	if globalFlags.PrintNoNewPrivs {
 		r1, _, err := syscall.Syscall(
 			syscall.SYS_PRCTL,
@@ -200,26 +220,6 @@ func main() {
 			fmt.Printf("mknod %s: succeed\n", nodeName)
 			os.Exit(0)
 		}
-	}
-
-	if globalFlags.SilentSigterm {
-		terminateCh := make(chan os.Signal, 1)
-		signal.Notify(terminateCh, syscall.SIGTERM)
-		go func() {
-			<-terminateCh
-			os.Exit(0)
-		}()
-	}
-
-	if globalFlags.PreSleep >= 0 {
-		time.Sleep(time.Duration(globalFlags.PreSleep) * time.Second)
-	}
-
-	if globalFlags.ReadStdin {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf("Enter text:\n")
-		text, _ := reader.ReadString('\n')
-		fmt.Printf("Received text: %s\n", text)
 	}
 
 	if globalFlags.CheckTty {
@@ -417,10 +417,6 @@ func main() {
 			os.Exit(254)
 		}
 		fmt.Printf("cwd: %s\n", wd)
-	}
-
-	if globalFlags.Sleep >= 0 {
-		time.Sleep(time.Duration(globalFlags.Sleep) * time.Second)
 	}
 
 	if globalFlags.PrintMemoryLimit {
@@ -656,6 +652,10 @@ func main() {
 			fmt.Println("check-mountns: IDENTICAL")
 			os.Exit(254)
 		}
+	}
+
+	if globalFlags.Sleep >= 0 {
+		time.Sleep(time.Duration(globalFlags.Sleep) * time.Second)
 	}
 
 	os.Exit(globalFlags.ExitCode)
