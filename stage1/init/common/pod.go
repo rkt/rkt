@@ -411,6 +411,7 @@ func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp) (int, int, 
 
 // EvaluateSymlinksInsideApp tries to resolve symlinks within the path.
 // It returns the actual path relative to the app rootfs for the given path.
+// This is needed for absolute symlinks - we are in a different rootfs.
 func EvaluateSymlinksInsideApp(appRootfs, path string) (string, error) {
 	link := appRootfs
 
@@ -492,9 +493,10 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 
 		appRootfs := common.AppRootfsPath(absRoot, appName)
 
-		// TODO(yifan): This is a temporary fix for systemd-nspawn not handling symlink mounts well.
-		// Could be removed when https://github.com/systemd/systemd/issues/2860 is resolved, and systemd
-		// version is bumped.
+		// Evaluate symlinks within the app's rootfs. This is needed because symlinks
+		// within the container can be absolute, which will, of course, be wrong in our ns.
+		// Systemd also gets this wrong, see https://github.com/systemd/systemd/issues/2860
+		// When the above issue is fixed, we can pass the un-evaluated path to --bind instead.
 		mntPath, err := EvaluateSymlinksInsideApp(appRootfs, m.Mount.Path)
 		if err != nil {
 			return nil, errwrap.Wrap(fmt.Errorf("could not evaluate path %v", m.Mount.Path), err)
@@ -513,14 +515,7 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 			opt[0] = "--bind="
 		}
 
-		switch m.Volume.Kind {
-		case "host":
-			opt[1] = m.Volume.Source
-		case "empty":
-			opt[1] = filepath.Join(common.SharedVolumesPath(absRoot), m.Volume.Name.String())
-		default:
-			return nil, fmt.Errorf(`invalid volume kind %q. Must be one of "host" or "empty"`, m.Volume.Kind)
-		}
+		opt[1] = m.Source(absRoot)
 		opt[2] = ":"
 		opt[3] = filepath.Join(common.RelAppRootfsPath(appName), mntPath)
 		opt[4] = ":"

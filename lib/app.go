@@ -84,10 +84,6 @@ func newApp(ra *schema.RuntimeApp, podManifest *schema.PodManifest, pod *pkgPod.
 			break
 		}
 
-		if hostPath == "" { // This should not happen.
-			return nil, fmt.Errorf("cannot find corresponded volume for mount %v", mnt)
-		}
-
 		app.Mounts = append(app.Mounts, &Mount{
 			Name:          name,
 			ContainerPath: containerPath,

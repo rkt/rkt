@@ -15,6 +15,7 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -23,6 +24,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/fileutil"
 	"github.com/coreos/rkt/pkg/fs"
 	"github.com/coreos/rkt/pkg/user"
@@ -59,6 +61,18 @@ func ConvertedFromDocker(im *schema.ImageManifest) bool {
 	ann := im.Annotations
 	_, ok := ann.Get("appc.io/docker/repository")
 	return ok
+}
+
+// Source computes the real volume source for a volume.
+// Volumes of type 'empty' use a workdir relative to podRoot
+func (m *mountWrapper) Source(podRoot string) string {
+	switch m.Volume.Kind {
+	case "host":
+		return m.Volume.Source
+	case "empty":
+		return filepath.Join(common.SharedVolumesPath(podRoot), m.Volume.Name.String())
+	}
+	return "" // We validate in GenerateMounts that it's valid
 }
 
 // GenerateMounts maps MountPoint paths to volumes, returning a list of mounts,
@@ -108,6 +122,12 @@ func GenerateMounts(ra *schema.RuntimeApp, podVolumes []types.Volume, convertedF
 			ro = *vol.ReadOnly
 		}
 
+		switch vol.Kind {
+		case "host":
+		case "empty":
+		default:
+			return nil, fmt.Errorf("Volume %s has invalid kind %s", vol.Name, vol.Kind)
+		}
 		genMnts = append(genMnts,
 			mountWrapper{
 				Mount:          m,
@@ -267,12 +287,12 @@ func ensureDestinationExists(source, destination string) error {
 	}
 
 	if fileInfo.IsDir() {
-		if err := os.Mkdir(destination, SharedVolPerm); !os.IsExist(err) {
-			return err
+		if err := os.Mkdir(destination, SharedVolPerm); err != nil && !os.IsExist(err) {
+			return errwrap.Wrap(errors.New("could not create destination directory "+destination), err)
 		}
 	} else {
 		if file, err := os.OpenFile(destination, os.O_CREATE, SharedVolPerm); err != nil {
-			return err
+			return errwrap.Wrap(errors.New("could not create destination file"), err)
 		} else {
 			file.Close()
 		}
@@ -294,8 +314,30 @@ func AppAddMounts(p *stage1commontypes.Pod, ra *schema.RuntimeApp, enterCmd []st
 		os.Exit(254)
 	}
 
+	absRoot, err := filepath.Abs(p.Root)
+	if err != nil {
+		log.FatalE("could not determine pod's absolute path", err)
+	}
+
+	appRootfs := common.AppRootfsPath(absRoot, ra.Name)
+
+	// This logic is mostly copied from appToNspawnArgs
+	// TODO(cdc): deduplicate
 	for _, m := range mounts {
-		err := AppAddOneMount(p, ra, m.Volume.Source, m.Mount.Path, m.ReadOnly, enterCmd)
+		shPath := filepath.Join(common.SharedVolumesPath(p.Root), m.Volume.Name.String())
+
+		// Evaluate symlinks within the app's rootfs - otherwise absolute
+		// symlinks will be wrong.
+		mntPath, err := EvaluateSymlinksInsideApp(appRootfs, m.Mount.Path)
+		if err != nil {
+			log.Fatalf("Could not evaluate path %v: %v", m.Mount.Path, err)
+		}
+		mntAbsPath := filepath.Join(appRootfs, mntPath)
+		// Create the stage1 destination
+		if err := PrepareMountpoints(shPath, mntAbsPath, &m.Volume, m.DockerImplicit); err != nil {
+			log.FatalE("could not prepare mountpoint", err)
+		}
+		err = AppAddOneMount(p, ra, m.Source(absRoot), m.Mount.Path, m.ReadOnly, enterCmd)
 		if err != nil {
 			log.FatalE("Unable to setup app mounts", err)
 		}
