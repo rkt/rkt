@@ -53,6 +53,7 @@ type RuntimePod struct {
 	PrivateUsers       string         `json:"PrivateUsers"`
 	MDSToken           string         `json:"MDSToken"`
 	Hostname           string         `json:"Hostname"`
+	Debug              bool           `json:"Debug"`
 	Mutable            bool           `json:"Mutable"`
 	ResolvConfMode     string         `json:"ResolvConfMode"`
 	EtcHostsMode       string         `json:"EtcHostsMode"`

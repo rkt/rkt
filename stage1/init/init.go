@@ -137,6 +137,7 @@ func parseFlags() *stage1commontypes.RuntimePod {
 
 	flag.Parse()
 
+	rp.Debug = debug
 	rp.ResolvConfMode = dnsConfMode.Pairs["resolv"]
 	rp.EtcHostsMode = dnsConfMode.Pairs["hosts"]
 
