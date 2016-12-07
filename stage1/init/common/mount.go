@@ -295,7 +295,10 @@ func AppAddMounts(p *stage1commontypes.Pod, ra *schema.RuntimeApp, enterCmd []st
 	}
 
 	for _, m := range mounts {
-		AppAddOneMount(p, ra, m.Volume.Source, m.Mount.Path, m.ReadOnly, enterCmd)
+		err := AppAddOneMount(p, ra, m.Volume.Source, m.Mount.Path, m.ReadOnly, enterCmd)
+		if err != nil {
+			log.FatalE("Unable to setup app mounts", err)
+		}
 	}
 }
 
@@ -333,7 +336,7 @@ func AppAddMounts(p *stage1commontypes.Pod, ra *schema.RuntimeApp, enterCmd []st
  * We set up the temporary playground as a slave bind mount to avoid this
  * limitation.
  */
-func AppAddOneMount(p *stage1commontypes.Pod, ra *schema.RuntimeApp, sourcePath string, dstPath string, readOnly bool, enterCmd []string) {
+func AppAddOneMount(p *stage1commontypes.Pod, ra *schema.RuntimeApp, sourcePath string, dstPath string, readOnly bool, enterCmd []string) error {
 	/* The general plan:
 	 * - bind-mount sourcePath to mountTmp
 	 * - MS_MOVE mountTmp to mountOutside, the systemd propagate dir
@@ -344,44 +347,38 @@ func AppAddOneMount(p *stage1commontypes.Pod, ra *schema.RuntimeApp, sourcePath 
 	/* Prepare a temporary playground that is not a shared mount */
 	playgroundMount, err := ioutil.TempDir("", "rkt.propagate.")
 	if err != nil {
-		log.FatalE("error creating temporary propagation directory", err)
-		os.Exit(254)
+		return errwrap.Wrapf("error creating temporary propagation directory", err)
 	}
 	defer os.Remove(playgroundMount)
 
 	err = syscall.Mount(playgroundMount, playgroundMount, "bind", syscall.MS_BIND, "")
 	if err != nil {
-		log.FatalE("error mounting temporary directory", err)
-		os.Exit(254)
+		return errwrap.Wrapf("error mounting temporary directory", err)
 	}
 	defer syscall.Unmount(playgroundMount, 0)
 
 	err = syscall.Mount("", playgroundMount, "none", syscall.MS_SLAVE, "")
 	if err != nil {
-		log.FatalE("error mounting temporary directory", err)
-		os.Exit(254)
+		return errwrap.Wrapf("error mounting temporary directory", err)
 	}
 
 	/* Bind mount the source into the playground, possibly read-only */
 	mountTmp := filepath.Join(playgroundMount, "mount")
 	if err := ensureDestinationExists(sourcePath, mountTmp); err != nil {
-		log.FatalE("error creating temporary mountpoint", err)
-		os.Exit(254)
+		return errwrap.Wrapf("error creating temporary mountpoint", err)
 	}
 	defer os.Remove(mountTmp)
 
 	err = syscall.Mount(sourcePath, mountTmp, "bind", syscall.MS_BIND, "")
 	if err != nil {
-		log.FatalE("error mounting temporary mountpoint", err)
-		os.Exit(254)
+		return errwrap.Wrapf("error mounting temporary mountpoint", err)
 	}
 	defer syscall.Unmount(mountTmp, 0)
 
 	if readOnly {
 		err = syscall.Mount("", mountTmp, "bind", syscall.MS_REMOUNT|syscall.MS_RDONLY|syscall.MS_BIND, "")
 		if err != nil {
-			log.FatalE("error remounting temporary mountpoint read-only", err)
-			os.Exit(254)
+			return errwrap.Wrapf("error remounting temporary mountpoint read-only", err)
 		}
 	}
 
@@ -390,15 +387,13 @@ func AppAddOneMount(p *stage1commontypes.Pod, ra *schema.RuntimeApp, sourcePath 
 	mountOutside := filepath.Join("/run/systemd/nspawn/propagate/", "rkt-"+p.UUID.String(), "rkt.mount")
 	mountInside := filepath.Join("/run/systemd/nspawn/incoming/", filepath.Base(mountOutside))
 	if err := ensureDestinationExists(sourcePath, mountOutside); err != nil {
-		log.FatalE("error creating propagate mountpoint", err)
-		os.Exit(254)
+		return errwrap.Wrapf("error creating propagate mountpoint", err)
 	}
 	defer os.Remove(mountOutside)
 
 	err = syscall.Mount(mountTmp, mountOutside, "", syscall.MS_MOVE, "")
 	if err != nil {
-		log.FatalE("error moving temporary mountpoint to propagate directory", err)
-		os.Exit(254)
+		return errwrap.Wrapf("error moving temporary mountpoint to propagate directory", err)
 	}
 	defer syscall.Unmount(mountOutside, 0)
 
@@ -406,8 +401,7 @@ func AppAddOneMount(p *stage1commontypes.Pod, ra *schema.RuntimeApp, sourcePath 
 	mountDst := filepath.Join("/opt/stage2", ra.Name.String(), "rootfs", dstPath)
 	mountDstOutside := filepath.Join(p.Root, "stage1/rootfs", mountDst)
 	if err := ensureDestinationExists(sourcePath, mountDstOutside); err != nil {
-		log.FatalE("error creating destination directory", err)
-		os.Exit(254)
+		return errwrap.Wrapf("error creating destination directory", err)
 	}
 
 	args := enterCmd
@@ -419,7 +413,7 @@ func AppAddOneMount(p *stage1commontypes.Pod, ra *schema.RuntimeApp, sourcePath 
 	}
 
 	if err := cmd.Run(); err != nil {
-		log.PrintE("error executing mount move", err)
-		os.Exit(254)
+		return errwrap.Wrapf("error executing mount move", err)
 	}
+	return nil
 }
