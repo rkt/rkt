@@ -1,3 +1,36 @@
+## 1.21.0
+
+This release includes bugfixes for the experimental CRI support, more stable integration tests, and some other interesting changes:
+
+- The `default-restricted` network changed from 172.16.28.0/24 to 172.17.0.0/26.
+- The detailed roadmap for OCI support has been finalized.
+
+
+### New features
+- Change the subnet for the default-restricted network ([#3440](https://github.com/coreos/rkt/pull/3440)), ([#3459](https://github.com/coreos/rkt/pull/3459)).
+- Prepare for writable /proc/sys, and /sys ([#3389](https://github.com/coreos/rkt/pull/3389)).
+- Documentation/proposals: add OCI Image Format roadmap ([#3425](https://github.com/coreos/rkt/pull/3425)).
+
+### Bug fixes
+- stage1: app add, status didn't work with empty vols ([#3451](https://github.com/coreos/rkt/pull/3451)).
+- stage1: properly run defer'd umounts in app add ([#3455](https://github.com/coreos/rkt/pull/3455)).
+- cri: correct 'created' timestamp ([#3399](https://github.com/coreos/rkt/pull/3399)).
+- fly: ensure the target bin directory exists before building ([#3436](https://github.com/coreos/rkt/pull/3436)).
+- rkt: misc systemd-related fixes ([#3418](https://github.com/coreos/rkt/pull/3418)).
+
+### Other changes
+- pkg/mountinfo: move mountinfo parser to its own package ([#3415](https://github.com/coreos/rkt/pull/3415)).
+- stage1: persist runtime parameters ([#3432](https://github.com/coreos/rkt/pull/3432)), ([#3450](https://github.com/coreos/rkt/pull/3450)).
+- stage1: signal supervisor readiness ([#3424](https://github.com/coreos/rkt/pull/3424)), ([#3439](https://github.com/coreos/rkt/pull/3439)).
+- sandbox: add missing flagDNSDomain and flagHostsEntries parameters ([#3430](https://github.com/coreos/rkt/pull/3430)).
+- pkg/tar: fix variable name in error ([#3433](https://github.com/coreos/rkt/pull/3433)).
+- tests: fix TestExport for the KVM+overlay case ([#3435](https://github.com/coreos/rkt/pull/3435)).
+- tests: fix some potential gexpect hangs ([#3443](https://github.com/coreos/rkt/pull/3443)).
+- tests: add smoke test for app sandbox ([#3371](https://github.com/coreos/rkt/pull/3371)).
+- tests: tentative fixes for sporadic host and kvm failures ([#3434](https://github.com/coreos/rkt/pull/3434)).
+- rkt: remove empty TODO ([#3417](https://github.com/coreos/rkt/pull/3417)).
+- Documentation updates: [#3446](https://github.com/coreos/rkt/pull/3446), ([#3421](https://github.com/coreos/rkt/pull/3421)), ([#3412](https://github.com/coreos/rkt/pull/3412)).
+
 ## 1.20.0
 
 This release contains additional bug fixes for the new experimental `app` subcommand, following the path towards the Container Runtime Interface (CRI).
