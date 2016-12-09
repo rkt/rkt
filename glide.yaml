@@ -68,7 +68,7 @@ import:
   - plugins/meta/flannel
   - plugins/meta/tuning
 - package: github.com/coreos/gexpect
-  version: v0.1.0
+  version: v0.1.1
 - package: github.com/coreos/go-iptables
   version: v0.1.0
   subpackages:
