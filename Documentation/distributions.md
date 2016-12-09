@@ -61,7 +61,7 @@ rkt's entry in the [Fedora package database][pkg-fedora] tracks packaging work f
 
 #### Caveat: SELinux
 
-Rkt does not work with the SELinux policies currently shipped with Fedora versions 24 and 25.
+rkt does not work with the SELinux policies currently shipped with Fedora versions 24 and 25.
 
 As a workaround, SELinux can be temporarily disabled:
 ```
