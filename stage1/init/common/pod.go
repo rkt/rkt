@@ -483,7 +483,6 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		return nil, errwrap.Wrap(fmt.Errorf("could not generate app %q mounts", appName), err)
 	}
 	for _, m := range mounts {
-
 		shPath := filepath.Join(sharedVolPath, m.Volume.Name.String())
 
 		absRoot, err := filepath.Abs(p.Root) // Absolute path to the pod's rootfs.

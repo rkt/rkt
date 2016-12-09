@@ -97,7 +97,10 @@ func main() {
 	}
 
 	enterCmd := stage1common.PrepareEnterCmd(false)
-	stage1initcommon.AppAddMounts(p, ra, enterCmd)
+	err = stage1initcommon.AppAddMounts(p, ra, enterCmd)
+	if err != nil {
+		log.FatalE("error adding app mounts", err)
+	}
 
 	// when using host cgroups, make the subgroup writable by pod systemd
 	if flavor != "kvm" {

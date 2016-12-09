@@ -300,7 +300,15 @@ func ensureDestinationExists(source, destination string) error {
 	return nil
 }
 
-func AppAddMounts(p *stage1commontypes.Pod, ra *schema.RuntimeApp, enterCmd []string) {
+func AppAddMounts(p *stage1commontypes.Pod, ra *schema.RuntimeApp, enterCmd []string) error {
+	sharedVolPath := common.SharedVolumesPath(p.Root)
+	if err := os.MkdirAll(sharedVolPath, SharedVolPerm); err != nil {
+		return errwrap.Wrap(errors.New("could not create shared volumes directory"), err)
+	}
+	if err := os.Chmod(sharedVolPath, SharedVolPerm); err != nil {
+		return errwrap.Wrap(fmt.Errorf("could not change permissions of %q", sharedVolPath), err)
+	}
+
 	vols := make(map[types.ACName]types.Volume)
 	for _, v := range p.Manifest.Volumes {
 		vols[v.Name] = v
@@ -324,7 +332,7 @@ func AppAddMounts(p *stage1commontypes.Pod, ra *schema.RuntimeApp, enterCmd []st
 	// This logic is mostly copied from appToNspawnArgs
 	// TODO(cdc): deduplicate
 	for _, m := range mounts {
-		shPath := filepath.Join(common.SharedVolumesPath(p.Root), m.Volume.Name.String())
+		shPath := filepath.Join(sharedVolPath, m.Volume.Name.String())
 
 		// Evaluate symlinks within the app's rootfs - otherwise absolute
 		// symlinks will be wrong.
@@ -342,6 +350,7 @@ func AppAddMounts(p *stage1commontypes.Pod, ra *schema.RuntimeApp, enterCmd []st
 			log.FatalE("Unable to setup app mounts", err)
 		}
 	}
+	return nil
 }
 
 /* AppAddOneMount bind-mounts "sourcePath" from the host into "dstPath" in
