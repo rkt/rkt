@@ -1,5 +1,5 @@
-hash: 9c5ba5b4d8b105b7abb52deedfdc16c33f0e0449cbb130202dac3cf2bed88748
-updated: 2016-11-22T16:37:00.043435766+01:00
+hash: cd7bf107f8962ba89c5471bc6d883112b33a7b2d91f97dc3057c3430f3b2cc42
+updated: 2016-12-09T16:05:25.074433175Z
 imports:
 - name: github.com/appc/docker2aci
   version: 64543c1e0a7306b17d0d214549ec08049b234abc
@@ -68,7 +68,7 @@ imports:
   - plugins/meta/flannel
   - plugins/meta/tuning
 - name: github.com/coreos/gexpect
-  version: ca42424d18c76d0d51a4cccd830d11878e9e5c17
+  version: 8d6e05eaaeb840725b2c2aba77483919659bb95e
 - name: github.com/coreos/go-iptables
   version: fbb73372b87f6e89951c2b6b31470c2c9d5cfae3
   subpackages:

@@ -318,7 +318,7 @@ func (expect *ExpectSubprocess) Expect(searchString string) (e error) {
 
 	for {
 		n, err := expect.buf.Read(chunk)
-		if err != nil {
+		if n == 0 && err != nil {
 			return err
 		}
 		if expect.outputBuffer != nil {
