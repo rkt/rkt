@@ -274,7 +274,7 @@ func BindMount(mnt fs.MountUnmounter, source, destination string, readOnly bool)
 }
 
 // ensureDestinationExists will recursively create a given mountpoint. If directories
-// are created, their permissions are initialized to stage1/init/common.SharedVolPerm
+// are created, their permissions are initialized to common.SharedVolumePerm
 func ensureDestinationExists(source, destination string) error {
 	fileInfo, err := os.Stat(source)
 	if err != nil {
@@ -282,16 +282,16 @@ func ensureDestinationExists(source, destination string) error {
 	}
 
 	targetPathParent, _ := filepath.Split(destination)
-	if err := os.MkdirAll(targetPathParent, SharedVolPerm); err != nil {
+	if err := os.MkdirAll(targetPathParent, common.SharedVolumePerm); err != nil {
 		return errwrap.Wrap(fmt.Errorf("could not create parent directory: %v", targetPathParent), err)
 	}
 
 	if fileInfo.IsDir() {
-		if err := os.Mkdir(destination, SharedVolPerm); err != nil && !os.IsExist(err) {
+		if err := os.Mkdir(destination, common.SharedVolumePerm); err != nil && !os.IsExist(err) {
 			return errwrap.Wrap(errors.New("could not create destination directory "+destination), err)
 		}
 	} else {
-		if file, err := os.OpenFile(destination, os.O_CREATE, SharedVolPerm); err != nil {
+		if file, err := os.OpenFile(destination, os.O_CREATE, common.SharedVolumePerm); err != nil {
 			return errwrap.Wrap(errors.New("could not create destination file"), err)
 		} else {
 			file.Close()
@@ -301,12 +301,9 @@ func ensureDestinationExists(source, destination string) error {
 }
 
 func AppAddMounts(p *stage1commontypes.Pod, ra *schema.RuntimeApp, enterCmd []string) error {
-	sharedVolPath := common.SharedVolumesPath(p.Root)
-	if err := os.MkdirAll(sharedVolPath, SharedVolPerm); err != nil {
-		return errwrap.Wrap(errors.New("could not create shared volumes directory"), err)
-	}
-	if err := os.Chmod(sharedVolPath, SharedVolPerm); err != nil {
-		return errwrap.Wrap(fmt.Errorf("could not change permissions of %q", sharedVolPath), err)
+	sharedVolPath, err := common.CreateSharedVolumesPath(p.Root)
+	if err != nil {
+		return err
 	}
 
 	vols := make(map[types.ACName]types.Volume)

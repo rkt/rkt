@@ -18,6 +18,7 @@ package common
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -37,6 +38,7 @@ import (
 
 const (
 	sharedVolumesDir = "/sharedVolumes"
+	SharedVolumePerm = os.FileMode(0755)
 	stage1Dir        = "/stage1"
 	stage2Dir        = "/opt/stage2"
 	AppsInfoDir      = "/appsinfo"
@@ -197,6 +199,23 @@ func AppImageManifestPath(root string, appName types.ACName) string {
 // SharedVolumesPath returns the path to the shared (empty) volumes of a pod.
 func SharedVolumesPath(root string) string {
 	return filepath.Join(root, sharedVolumesDir)
+}
+
+// CreateSharedVolumesPath ensures the sharedVolumePath for the pod root passed
+// in exists. It returns the shared volume path or an error.
+func CreateSharedVolumesPath(root string) (string, error) {
+	sharedVolPath := SharedVolumesPath(root)
+
+	if err := os.MkdirAll(sharedVolPath, SharedVolumePerm); err != nil {
+		return "", errwrap.Wrap(errors.New("could not create shared volumes directory"), err)
+	}
+	// In case it already existed and we didn't make it, ensure permissions are
+	// what the caller expects them to be.
+	if err := os.Chmod(sharedVolPath, SharedVolumePerm); err != nil {
+		return "", errwrap.Wrap(fmt.Errorf("could not change permissions of %q", sharedVolPath), err)
+	}
+
+	return sharedVolPath, nil
 }
 
 // MetadataServicePublicURL returns the public URL used to host the metadata service
