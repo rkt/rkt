@@ -24,17 +24,19 @@ import (
 	lib "github.com/coreos/rkt/lib"
 	pkgPod "github.com/coreos/rkt/pkg/pod"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
 )
 
 var (
 	cmdStatus = &cobra.Command{
-		Use:   "status [--wait] UUID",
+		Use:   "status [--wait] [--wait-ready=timeout] UUID",
 		Short: "Check the status of a rkt pod",
 		Long: `Prints assorted information about the pod such as its state, pid and exit
 status`,
 		Run: runWrapper(runStatus),
 	}
-	flagWait bool
+	flagWait      bool
+	flagWaitReady time.Duration
 )
 
 const (
@@ -46,6 +48,7 @@ const (
 func init() {
 	cmdRkt.AddCommand(cmdStatus)
 	cmdStatus.Flags().BoolVar(&flagWait, "wait", false, "toggle waiting for the pod to exit")
+	cmdStatus.Flags().DurationVar(&flagWaitReady, "wait-ready", time.Duration(0), "time to wait until the pod is ready. If time is less or equal zero it doesn't wait at all.")
 	cmdStatus.Flags().Var(&flagFormat, "format", "choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs")
 }
 
@@ -62,9 +65,17 @@ func runStatus(cmd *cobra.Command, args []string) (exit int) {
 	}
 	defer p.Close()
 
+	if flagWaitReady > 0 {
+		ctx, _ := context.WithTimeout(context.Background(), flagWaitReady)
+		if err := p.WaitReady(ctx); err != nil {
+			stderr.PrintE("wait for pod readyiness failed", err)
+			return 254
+		}
+	}
+
 	if flagWait {
 		if err := p.WaitExited(); err != nil {
-			stderr.PrintE("unable to wait for pod", err)
+			stderr.PrintE("wait for pod exit failed", err)
 			return 254
 		}
 	}

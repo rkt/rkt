@@ -645,33 +645,6 @@ func (p *Pod) refreshState() error {
 	return nil
 }
 
-// WaitExited waits for a pod to (run and) exit.
-func (p *Pod) WaitExited() error {
-	// isExited implies isExitedGarbage.
-	for !p.isExited && !p.isAbortedPrepare && !p.isGarbage && !p.isGone {
-		if err := p.SharedLock(); err != nil {
-			return err
-		}
-
-		if err := p.Unlock(); err != nil {
-			return err
-		}
-
-		if err := p.refreshState(); err != nil {
-			return err
-		}
-
-		// if we're in the gap between preparing and running in a split prepare/run-prepared usage, take a nap
-		if p.isPrepared {
-			time.Sleep(time.Second)
-		}
-	}
-
-	// TODO(vc): return error or let caller detect the !p.isExited possibilities?
-
-	return nil
-}
-
 // readFile reads an entire file from a pod's directory.
 func (p *Pod) readFile(path string) ([]byte, error) {
 	f, err := p.openFile(path, syscall.O_RDONLY)
