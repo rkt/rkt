@@ -43,8 +43,7 @@ import (
 
 const (
 	// FlavorFile names the file storing the pod's flavor
-	FlavorFile    = "flavor"
-	SharedVolPerm = os.FileMode(0755)
+	FlavorFile = "flavor"
 )
 
 // execEscape uses Golang's string quoting for ", \, \n, and regex for special cases
@@ -464,12 +463,9 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 	appName := ra.Name
 	app := ra.App
 
-	sharedVolPath := common.SharedVolumesPath(p.Root)
-	if err := os.MkdirAll(sharedVolPath, SharedVolPerm); err != nil {
-		return nil, errwrap.Wrap(errors.New("could not create shared volumes directory"), err)
-	}
-	if err := os.Chmod(sharedVolPath, SharedVolPerm); err != nil {
-		return nil, errwrap.Wrap(fmt.Errorf("could not change permissions of %q", sharedVolPath), err)
+	sharedVolPath, err := common.CreateSharedVolumesPath(p.Root)
+	if err != nil {
+		return nil, err
 	}
 
 	vols := make(map[types.ACName]types.Volume)
@@ -483,7 +479,6 @@ func appToNspawnArgs(p *stage1commontypes.Pod, ra *schema.RuntimeApp) ([]string,
 		return nil, errwrap.Wrap(fmt.Errorf("could not generate app %q mounts", appName), err)
 	}
 	for _, m := range mounts {
-
 		shPath := filepath.Join(sharedVolPath, m.Volume.Name.String())
 
 		absRoot, err := filepath.Abs(p.Root) // Absolute path to the pod's rootfs.

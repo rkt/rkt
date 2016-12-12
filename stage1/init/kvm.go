@@ -56,12 +56,9 @@ func KvmNetworkingToSystemd(p *stage1commontypes.Pod, n *networking.Networking) 
 func mountSharedVolumes(p *stage1commontypes.Pod, ra *schema.RuntimeApp) error {
 	appName := ra.Name
 
-	sharedVolPath := common.SharedVolumesPath(p.Root)
-	if err := os.MkdirAll(sharedVolPath, stage1initcommon.SharedVolPerm); err != nil {
-		return errwrap.Wrap(errors.New("could not create shared volumes directory"), err)
-	}
-	if err := os.Chmod(sharedVolPath, stage1initcommon.SharedVolPerm); err != nil {
-		return errwrap.Wrap(fmt.Errorf("could not change permissions of %q", sharedVolPath), err)
+	sharedVolPath, err := common.CreateSharedVolumesPath(p.Root)
+	if err != nil {
+		return err
 	}
 
 	imageManifest := p.Images[appName.String()]
@@ -149,16 +146,16 @@ func ensureDestinationExists(source, destination string) error {
 	}
 
 	targetPathParent, _ := filepath.Split(destination)
-	if err := os.MkdirAll(targetPathParent, stage1initcommon.SharedVolPerm); err != nil {
+	if err := os.MkdirAll(targetPathParent, common.SharedVolumePerm); err != nil {
 		return errwrap.Wrap(fmt.Errorf("could not create parent directory: %v", targetPathParent), err)
 	}
 
 	if fileInfo.IsDir() {
-		if err := os.Mkdir(destination, stage1initcommon.SharedVolPerm); !os.IsExist(err) {
+		if err := os.Mkdir(destination, common.SharedVolumePerm); !os.IsExist(err) {
 			return err
 		}
 	} else {
-		if file, err := os.OpenFile(destination, os.O_CREATE, stage1initcommon.SharedVolPerm); err != nil {
+		if file, err := os.OpenFile(destination, os.O_CREATE, common.SharedVolumePerm); err != nil {
 			return err
 		} else {
 			file.Close()
