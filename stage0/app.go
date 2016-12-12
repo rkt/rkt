@@ -17,7 +17,6 @@
 package stage0
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -104,27 +103,14 @@ func AddApp(cfg AddConfig) error {
 	defer pod.Close()
 
 	debug("locking pod manifest")
-	if err := pod.ExclusiveManifestLock(); err != nil {
+	if err := pod.ExclusiveLockManifest(); err != nil {
 		return errwrap.Wrap(errors.New("failed to lock pod manifest"), err)
 	}
-	defer pod.ManifestUnlock()
+	defer pod.UnlockManifest()
 
-	_, pm, err := pod.PodManifest()
+	pm, err := pod.SandboxManifest()
 	if err != nil {
-		return errwrap.Wrap(errors.New("error loading pod manifest"), err)
-	}
-
-	var mutable bool
-	ms, ok := pm.Annotations.Get("coreos.com/rkt/stage1/mutable")
-	if ok {
-		mutable, err = strconv.ParseBool(ms)
-		if err != nil {
-			return errwrap.Wrap(errors.New("error parsing mutable annotation"), err)
-		}
-	}
-
-	if !mutable {
-		return errors.New("immutable pod: cannot add application")
+		return errwrap.Wrap(errors.New("cannot add application"), err)
 	}
 
 	if pm.Apps.Get(*appName) != nil {
@@ -251,9 +237,9 @@ func AddApp(cfg AddConfig) error {
 		return err
 	}
 
+	debug("adding app to sandbox")
 	pm.Apps = append(pm.Apps, ra)
-
-	if err := updatePodManifest(cfg.PodPath, pm); err != nil {
+	if err := pod.UpdateManifest(pm, cfg.PodPath); err != nil {
 		return err
 	}
 
@@ -282,43 +268,6 @@ func AddApp(cfg AddConfig) error {
 	return nil
 }
 
-func updatePodManifest(dir string, newPodManifest *schema.PodManifest) error {
-	pmb, err := json.Marshal(newPodManifest)
-	if err != nil {
-		return err
-	}
-
-	debug("Writing pod manifest")
-	return updateFile(common.PodManifestPath(dir), pmb)
-}
-
-func updateFile(path string, contents []byte) error {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	f, err := ioutil.TempFile(filepath.Dir(path), "")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if err := f.Chmod(fi.Mode().Perm()); err != nil {
-		return err
-	}
-
-	if _, err := f.Write(contents); err != nil {
-		return errwrap.Wrap(errors.New("error writing to temp file"), err)
-	}
-
-	if err := os.Rename(f.Name(), path); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func RmApp(cfg RmConfig) error {
 	pod, err := pkgPod.PodFromUUIDString(cfg.DataDir, cfg.UUID.String())
 	if err != nil {
@@ -326,28 +275,15 @@ func RmApp(cfg RmConfig) error {
 	}
 	defer pod.Close()
 
-	debug("locking pod manifest")
-	if err := pod.ExclusiveManifestLock(); err != nil {
-		return errwrap.Wrap(errors.New("failed to lock pod manifest"), err)
+	debug("locking sandbox manifest")
+	if err := pod.ExclusiveLockManifest(); err != nil {
+		return errwrap.Wrap(errors.New("failed to lock sandbox manifest"), err)
 	}
-	defer pod.ManifestUnlock()
+	defer pod.UnlockManifest()
 
-	_, pm, err := pod.PodManifest()
+	pm, err := pod.SandboxManifest()
 	if err != nil {
-		return errwrap.Wrap(errors.New("error loading pod manifest"), err)
-	}
-
-	var mutable bool
-	ms, ok := pm.Annotations.Get("coreos.com/rkt/stage1/mutable")
-	if ok {
-		mutable, err = strconv.ParseBool(ms)
-		if err != nil {
-			return errwrap.Wrap(errors.New("error parsing mutable annotation"), err)
-		}
-	}
-
-	if !mutable {
-		return errors.New("immutable pod: cannot remove application")
+		return errwrap.Wrap(errors.New("cannot remove application, sandbox validation failed"), err)
 	}
 
 	app := pm.Apps.Get(*cfg.AppName)
@@ -425,21 +361,14 @@ func RmApp(cfg RmConfig) error {
 		return err
 	}
 
-	removeAppFromPodManifest(pm, cfg.AppName)
-
-	if err := updatePodManifest(cfg.PodPath, pm); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func removeAppFromPodManifest(pm *schema.PodManifest, appName *types.ACName) {
 	for i, app := range pm.Apps {
-		if app.Name == *appName {
+		if app.Name == *cfg.AppName {
 			pm.Apps = append(pm.Apps[:i], pm.Apps[i+1:]...)
+			break
 		}
 	}
+
+	return pod.UpdateManifest(pm, cfg.PodPath)
 }
 
 func StartApp(cfg StartConfig) error {
@@ -449,22 +378,9 @@ func StartApp(cfg StartConfig) error {
 	}
 	defer pod.Close()
 
-	_, pm, err := pod.PodManifest()
+	pm, err := pod.SandboxManifest()
 	if err != nil {
-		return errwrap.Wrap(errors.New("error loading pod manifest"), err)
-	}
-
-	var mutable bool
-	ms, ok := pm.Annotations.Get("coreos.com/rkt/stage1/mutable")
-	if ok {
-		mutable, err = strconv.ParseBool(ms)
-		if err != nil {
-			return errwrap.Wrap(errors.New("error parsing mutable annotation"), err)
-		}
-	}
-
-	if !mutable {
-		return errors.New("immutable pod: cannot start application")
+		return errwrap.Wrap(errors.New("cannot start application"), err)
 	}
 
 	app := pm.Apps.Get(*cfg.AppName)
@@ -503,22 +419,9 @@ func StopApp(cfg StopConfig) error {
 	}
 	defer pod.Close()
 
-	_, pm, err := pod.PodManifest()
+	pm, err := pod.SandboxManifest()
 	if err != nil {
-		return errwrap.Wrap(errors.New("error loading pod manifest"), err)
-	}
-
-	var mutable bool
-	ms, ok := pm.Annotations.Get("coreos.com/rkt/stage1/mutable")
-	if ok {
-		mutable, err = strconv.ParseBool(ms)
-		if err != nil {
-			return errwrap.Wrap(errors.New("error parsing mutable annotation"), err)
-		}
-	}
-
-	if !mutable {
-		return errors.New("immutable pod: cannot start application")
+		return errwrap.Wrap(errors.New("cannot stop application"), err)
 	}
 
 	app := pm.Apps.Get(*cfg.AppName)
