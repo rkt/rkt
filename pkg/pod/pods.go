@@ -38,8 +38,13 @@ import (
 	"github.com/pborman/uuid"
 )
 
-// see Documentation/devel/pod-lifecycle.md for some explanation
-
+// Pod is the struct that reflects a pod and its lifecycle.
+// It provides the necessary methods for state transitions and methods for querying internal state.
+//
+// Unless documented otherwise methods do not refresh the pod state as it is reflected on the file system
+// but only the pod state at the point where this struct was created.
+//
+// See Documentation/devel/pod-lifecycle.md for some explanation.
 type Pod struct {
 	UUID       *types.UUID
 	Nets       []netinfo.NetInfo // list of networks (name, IP, iface) this pod is using
@@ -321,6 +326,7 @@ func (p *Pod) garbagePath() string {
 
 // ToPrepare transitions a pod from embryo -> preparing, leaves the pod locked in the prepare directory.
 // only the creator of the pod (via NewPod()) may do this, nobody to race with.
+// This method refreshes the pod state.
 func (p *Pod) ToPreparing() error {
 	if !p.createdByMe {
 		return fmt.Errorf("bug: only pods created by me may transition to preparing")
@@ -355,6 +361,7 @@ func (p *Pod) ToPreparing() error {
 
 // ToPrepared transitions a pod from preparing -> prepared, leaves the pod unlocked in the prepared directory.
 // only the creator of the pod (via NewPod()) may do this, nobody to race with.
+// This method refreshes the pod state.
 func (p *Pod) ToPrepared() error {
 	if !p.createdByMe {
 		return fmt.Errorf("bug: only pods created by me may transition to prepared")
@@ -388,6 +395,7 @@ func (p *Pod) ToPrepared() error {
 
 // ToRun transitions a pod from prepared -> run, leaves the pod locked in the run directory.
 // the creator of the pod (via NewPod()) may also jump directly from preparing -> run
+// This method refreshes the pod state.
 func (p *Pod) ToRun() error {
 	if !p.createdByMe && !p.isPrepared {
 		return fmt.Errorf("bug: only prepared pods may transition to run")
@@ -423,6 +431,7 @@ func (p *Pod) ToRun() error {
 }
 
 // ToExitedGarbage transitions a pod from run -> exitedGarbage
+// This method refreshes the pod state.
 func (p *Pod) ToExitedGarbage() error {
 	if !p.isExited || p.isExitedGarbage {
 		return fmt.Errorf("bug: only exited non-garbage pods may transition to exited-garbage")
@@ -448,6 +457,7 @@ func (p *Pod) ToExitedGarbage() error {
 }
 
 // ToGarbage transitions a pod from abortedPrepared -> garbage or prepared -> garbage
+// This method refreshes the pod state.
 func (p *Pod) ToGarbage() error {
 	if !p.isAbortedPrepare && !p.isPrepared {
 		return fmt.Errorf("bug: only failed prepare or prepared pods may transition to garbage")
@@ -545,8 +555,8 @@ func listPodsFromDir(cdir string) ([]string, error) {
 	return ps, nil
 }
 
-// refreshState() updates the cached members of c to reflect current reality
-// assumes p.FileLock is currently unlocked, and always returns with it unlocked.
+// refreshState() updates the cached members of the pod to reflect current reality.
+// Assumes p.FileLock is currently unlocked, and always returns with it unlocked.
 func (p *Pod) refreshState() error {
 	p.isEmbryo = false
 	p.isPreparing = false
@@ -1070,6 +1080,7 @@ func (p *Pod) IsSupervisorReady() bool {
 }
 
 // ContainerPid1 returns the pid of the process with pid 1 in the pod.
+// Note: This method blocks indefinitely and refreshes the pod state.
 func (p *Pod) ContainerPid1() (pid int, err error) {
 	// rkt supports two methods to find the container's PID 1: the pid
 	// file and the ppid file.
