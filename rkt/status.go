@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	lib "github.com/coreos/rkt/lib"
@@ -29,14 +30,16 @@ import (
 
 var (
 	cmdStatus = &cobra.Command{
-		Use:   "status [--wait] [--wait-ready=timeout] UUID",
+		Use:   "status [--wait=bool|timeout] [--wait-ready=bool|timeout] UUID",
 		Short: "Check the status of a rkt pod",
-		Long: `Prints assorted information about the pod such as its state, pid and exit
-status`,
+		Long: `Prints assorted information about the pod such as its state, pid and exit status.
+
+The --wait and --wait-ready flags accept boolean or timeout values. If set to true, wait indefinitely. If set to false, don't wait at all.
+They can also be set to a duration. If the duration is less than zero, wait indefinitely. If the duration is zero, don't wait at all.`,
 		Run: runWrapper(runStatus),
 	}
-	flagWait      bool
-	flagWaitReady time.Duration
+	flagWait      string
+	flagWaitReady string
 )
 
 const (
@@ -47,13 +50,28 @@ const (
 
 func init() {
 	cmdRkt.AddCommand(cmdStatus)
-	cmdStatus.Flags().BoolVar(&flagWait, "wait", false, "toggle waiting for the pod to exit")
-	cmdStatus.Flags().DurationVar(&flagWaitReady, "wait-ready", time.Duration(0), "time to wait until the pod is ready. If time is less or equal zero it doesn't wait at all.")
-	cmdStatus.Flags().Var(&flagFormat, "format", "choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs")
+	cmdStatus.Flags().StringVar(&flagWait, "wait", "false", `toggles waiting for the pod to finish. Use the output to determine the actual terminal state.`)
+	cmdStatus.Flags().StringVar(&flagWaitReady, "wait-ready", "false", `toggles waiting until the pod is ready.`)
+	cmdStatus.Flags().Var(&flagFormat, "format", `choose the output format. Allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs`)
+
+	cmdStatus.Flags().Lookup("wait").NoOptDefVal = "true"
+	cmdStatus.Flags().Lookup("wait-ready").NoOptDefVal = "true"
 }
 
 func runStatus(cmd *cobra.Command, args []string) (exit int) {
 	if len(args) != 1 {
+		cmd.Usage()
+		return 254
+	}
+
+	dWait, err := parseDuration(flagWait)
+	if err != nil {
+		cmd.Usage()
+		return 254
+	}
+
+	dReady, err := parseDuration(flagWaitReady)
+	if err != nil {
 		cmd.Usage()
 		return 254
 	}
@@ -65,17 +83,16 @@ func runStatus(cmd *cobra.Command, args []string) (exit int) {
 	}
 	defer p.Close()
 
-	if flagWaitReady > 0 {
-		ctx, _ := context.WithTimeout(context.Background(), flagWaitReady)
-		if err := p.WaitReady(ctx); err != nil {
-			stderr.PrintE("wait for pod readyiness failed", err)
+	if dReady != 0 {
+		if err := p.WaitReady(newContext(dReady)); err != nil {
+			stderr.PrintE("error waiting for pod readiness", err)
 			return 254
 		}
 	}
 
-	if flagWait {
-		if err := p.WaitFinished(); err != nil {
-			stderr.PrintE("wait for pod exit failed", err)
+	if dWait != 0 {
+		if err := p.WaitFinished(newContext(dWait)); err != nil {
+			stderr.PrintE("error waiting for pod to finish", err)
 			return 254
 		}
 	}
@@ -86,6 +103,37 @@ func runStatus(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	return 0
+}
+
+// parseDuration converts the given string s to a duration value.
+// If it is empty string or a true boolean value according to strconv.ParseBool, a negative duration is returned.
+// If the boolean value is false, a 0 duration is returned.
+// If the string s is a duration value, then it is returned.
+// It returns an error if the duration conversion failed.
+func parseDuration(s string) (time.Duration, error) {
+	if s == "" {
+		return time.Duration(-1), nil
+	}
+
+	b, err := strconv.ParseBool(s)
+
+	switch {
+	case err != nil:
+		return time.ParseDuration(s)
+	case b:
+		return time.Duration(-1), nil
+	}
+
+	return time.Duration(0), nil
+}
+
+// newContext returns a new context with timeout t if t > 0.
+func newContext(t time.Duration) context.Context {
+	ctx := context.Background()
+	if t > 0 {
+		ctx, _ = context.WithTimeout(ctx, t)
+	}
+	return ctx
 }
 
 // getExitStatuses returns a map of the statuses of the pod.

@@ -144,7 +144,7 @@ func waitOrFail(t *testing.T, child *gexpect.ExpectSubprocess, expectedStatus in
 
 // waitPodReady waits for the pod supervisor to get ready, busy-looping until `timeout`
 // while waiting for it. It returns the pod UUID or an error on failure.
-func waitPodReady(ctx *testutils.RktRunCtx, uuidFile string, timeout time.Duration) (string, error) {
+func waitPodReady(ctx *testutils.RktRunCtx, t *testing.T, uuidFile string, timeout time.Duration) (string, error) {
 	var podUUID []byte
 	var err error
 	interval := 500 * time.Millisecond
@@ -165,10 +165,10 @@ func waitPodReady(ctx *testutils.RktRunCtx, uuidFile string, timeout time.Durati
 	// wait up to one minute for the pod supervisor to be ready
 	cmd := strings.Fields(fmt.Sprintf("%s status --wait-ready=%s %s", ctx.Cmd(), timeout, podUUID))
 	statusCmd := exec.Command(cmd[0], cmd[1:]...)
-	fmt.Printf("Running command: %v\n", cmd)
+	t.Logf("Running command: %v\n", cmd)
 	output, err := statusCmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("Failed to wait for pod readyness, error %v output %v", err, string(output))
+		return "", fmt.Errorf("Failed to wait for pod readiness, error %v output %v", err, string(output))
 	}
 
 	return string(podUUID), nil

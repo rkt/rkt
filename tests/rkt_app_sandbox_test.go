@@ -67,7 +67,7 @@ func TestAppSandboxSmoke(t *testing.T) {
 	}
 
 	// wait for the sandbox to start
-	podUUID, err := waitPodReady(ctx, uuidFile, actionTimeout)
+	podUUID, err := waitPodReady(ctx, t, uuidFile, actionTimeout)
 	if err != nil {
 		t.Fatal(err)
 	}

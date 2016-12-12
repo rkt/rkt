@@ -17,36 +17,47 @@ package pod
 import (
 	"time"
 
+	"github.com/coreos/rkt/pkg/lock"
+
 	"golang.org/x/net/context"
 )
 
-// WaitFinished waits for a pod to (run and) finish.
-// This method blocks indefinitely and refreshes the pod state.
+// WaitFinished waits for a pod to finish by polling every 100 milliseconds
+// or until the given context is cancelled. This method refreshes the pod state.
 // It is the caller's responsibility to determine the actual terminal state.
-func (p *Pod) WaitFinished() error {
-	// isExited implies isExitedGarbage.
-	for !p.IsFinished() {
-		// this blocks (waits) as long as the pod is locked, i.e. in pepare, run, exitedGarbage, garbage state
-		if err := p.SharedLock(); err != nil {
-			return err
+func (p *Pod) WaitFinished(ctx context.Context) error {
+	f := func() bool {
+		switch err := p.TrySharedLock(); err {
+		case nil:
+			// the pod is now locked successfully, hence one of the running phases passed.
+			// continue with unlocking the pod immediately below.
+		case lock.ErrLocked:
+			// pod is still locked, hence we are still in a running phase.
+			// i.e. in pepare, run, exitedGarbage, garbage state.
+			return false
+		default:
+			// some error occured, bail out.
+			return true
 		}
 
 		// unlock immediately
 		if err := p.Unlock(); err != nil {
-			return err
+			return true
 		}
 
 		if err := p.refreshState(); err != nil {
-			return err
+			return true
 		}
 
 		// if we're in the gap between preparing and running in a split prepare/run-prepared usage, take a nap
 		if p.isPrepared {
 			time.Sleep(time.Second)
 		}
+
+		return p.IsFinished()
 	}
 
-	return nil
+	return retry(ctx, f, 100*time.Millisecond)
 }
 
 // WaitReady blocks until the pod is ready by polling the readiness state every 100 milliseconds

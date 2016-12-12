@@ -1189,7 +1189,7 @@ func (p *Pod) IsAfterRun() bool {
 	return p.isExitedDeleting || p.isDeleting || p.isExited || p.isGarbage
 }
 
-// IsFinshed returns true if the pod is in a terminal state, else false.
+// IsFinished returns true if the pod is in a terminal state, else false.
 func (p *Pod) IsFinished() bool {
 	return p.isExited || p.isAbortedPrepare || p.isGarbage || p.isGone
 }

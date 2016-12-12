@@ -14,13 +14,16 @@ app-redis=0
 app-etcd=0
 ```
 
-If the pod is still running, you can wait for it to finish and then get the status with `rkt status --wait UUID`
+If the pod is still running, you can wait for it to finish and then get the status with `rkt status --wait UUID`.
+To wait for the pod to become ready, execute `rkt status --wait-ready`.
+Both options also accept a duration. To wait up to 10 seconds until the pod is finished, execute `rkt status --wait=10s UUID`.
 
 ## Options
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
-| `--wait` |  `false` | `true` or `false` | Toggle waiting for the pod to exit |
+| `--wait` |  `false` | `true` or `false` or duration | Toggle waiting for the pod to finish. |
+| `--wait-ready` |  `false` | `true` or `false` or duration | Toggle waiting until the pod is ready. |
 
 ## Global options
 
