@@ -24,7 +24,6 @@ QEMU_GIT_COMMIT := v2.7.0
 $(call setup-stamp-file,QEMU_BUILD_STAMP,/build)
 $(call setup-stamp-file,QEMU_BIOS_BUILD_STAMP,/bios_build)
 $(call setup-stamp-file,QEMU_CONF_STAMP,/conf)
-$(call setup-stamp-file,QEMU_CLONE_STAMP,/clone)
 $(call setup-stamp-file,QEMU_DIR_CLEAN_STAMP,/dir-clean)
 $(call setup-filelist-file,QEMU_DIR_FILELIST,/dir)
 $(call setup-clean-file,QEMU_CLEANMK,/src)
@@ -38,7 +37,7 @@ INSTALL_DIRS += \
 # Bios files needs to be removed (source will be removed by QEMU_DIR_CLEAN_STAMP)
 CLEAN_FILES += $(foreach bios,$(QEMU_BIOS_BINARIES),$(HV_ACIROOTFSDIR)/${bios})
 
-$(call generate-stamp-rule,$(QEMU_STAMP),$(QEMU_CLONE_STAMP) $(QEMU_CONF_STAMP) $(QEMU_BUILD_STAMP) $(QEMU_ACI_BINARY) $(QEMU_BIOS_BUILD_STAMP) $(QEMU_DIR_CLEAN_STAMP),,)
+$(call generate-stamp-rule,$(QEMU_STAMP),$(QEMU_CONF_STAMP) $(QEMU_BUILD_STAMP) $(QEMU_ACI_BINARY) $(QEMU_BIOS_BUILD_STAMP) $(QEMU_DIR_CLEAN_STAMP),,)
 
 $(QEMU_BINARY): $(QEMU_BUILD_STAMP)
 
@@ -52,7 +51,7 @@ $(call generate-stamp-rule,$(QEMU_BUILD_STAMP),$(QEMU_CONF_STAMP),, \
     $(call vb,vt,BUILD EXT,qemu) \
 	$$(MAKE) $(call vl2,--silent) -C "$(QEMU_SRCDIR)" $(call vl2,>/dev/null))
 
-$(call generate-stamp-rule,$(QEMU_CONF_STAMP),$(QEMU_CLONE_STAMP),, \
+$(call generate-stamp-rule,$(QEMU_CONF_STAMP),,, \
 	$(call vb,vt,CONFIG EXT,qemu) \
 	cd $(QEMU_SRCDIR); ./configure $(QEMU_CONFIGURATION_OPTS) $(call vl2,>/dev/null))
 
@@ -68,7 +67,7 @@ GCL_REPOSITORY := $(QEMU_GIT)
 GCL_DIRECTORY := $(QEMU_SRCDIR)
 GCL_COMMITTISH := $(QEMU_GIT_COMMIT)
 GCL_EXPECTED_FILE := Makefile
-GCL_TARGET := $(QEMU_CLONE_STAMP)
+GCL_TARGET := $(QEMU_CONF_STAMP)
 GCL_DO_CHECK :=
 
 include makelib/git.mk
