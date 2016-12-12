@@ -258,6 +258,7 @@ func AddApp(cfg AddConfig) error {
 	}
 
 	args := []string{
+		fmt.Sprintf("--debug=%t", cfg.Debug),
 		fmt.Sprintf("--uuid=%s", cfg.UUID),
 		fmt.Sprintf("--app=%s", appName),
 	}
@@ -359,6 +360,7 @@ func RmApp(cfg RmConfig) error {
 		// Otherwise, there's not much we can do about it except unmounting/removing
 		// the file system.
 		args := []string{
+			fmt.Sprintf("--debug=%t", cfg.Debug),
 			fmt.Sprintf("--app=%s", cfg.AppName),
 		}
 
@@ -471,6 +473,7 @@ func StartApp(cfg StartConfig) error {
 	}
 
 	args := []string{
+		fmt.Sprintf("--debug=%t", cfg.Debug),
 		fmt.Sprintf("--app=%s", cfg.AppName),
 	}
 
@@ -524,6 +527,7 @@ func StopApp(cfg StopConfig) error {
 	}
 
 	args := []string{
+		fmt.Sprintf("--debug=%t", cfg.Debug),
 		fmt.Sprintf("--app=%s", cfg.AppName),
 	}
 
