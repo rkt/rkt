@@ -75,6 +75,7 @@ func TestAppSandboxSmoke(t *testing.T) {
 	cmd = strings.Fields(fmt.Sprintf("%s app add --debug %s %s --name=%s", ctx.Cmd(), podUUID, imageName, appName))
 	addCmd := exec.Command(cmd[0], cmd[1:]...)
 	addCmd.Env = append(addCmd.Env, "RKT_EXPERIMENT_APP=true")
+	t.Logf("Running command: %v\n", cmd)
 	output, err := addCmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Unexpected error: %v\n%s", err, output)
@@ -83,6 +84,7 @@ func TestAppSandboxSmoke(t *testing.T) {
 	cmd = strings.Fields(fmt.Sprintf("%s app start --debug %s --app=%s", ctx.Cmd(), podUUID, appName))
 	startCmd := exec.Command(cmd[0], cmd[1:]...)
 	startCmd.Env = append(startCmd.Env, "RKT_EXPERIMENT_APP=true")
+	t.Logf("Running command: %v\n", cmd)
 	output, err = startCmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Unexpected error: %v\n%s", err, output)
@@ -95,12 +97,14 @@ func TestAppSandboxSmoke(t *testing.T) {
 	cmd = strings.Fields(fmt.Sprintf("%s app rm --debug %s --app=%s", ctx.Cmd(), podUUID, appName))
 	removeCmd := exec.Command(cmd[0], cmd[1:]...)
 	removeCmd.Env = append(removeCmd.Env, "RKT_EXPERIMENT_APP=true")
+	t.Logf("Running command: %v\n", cmd)
 	output, err = removeCmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Unexpected error: %v\n%s", err, output)
 	}
 
 	cmd = strings.Fields(fmt.Sprintf("%s stop %s", ctx.Cmd(), podUUID))
+	t.Logf("Running command: %v\n", cmd)
 	output, err = exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("Unexpected error: %v\n%s", err, output)
