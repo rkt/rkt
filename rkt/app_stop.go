@@ -62,7 +62,7 @@ func runAppStop(cmd *cobra.Command, args []string) (exit int) {
 	}
 	defer p.Close()
 
-	if p.AfterRun() {
+	if p.IsAfterRun() {
 		stdout.Printf("pod %q is already stopped", p.UUID)
 		return 0
 	}

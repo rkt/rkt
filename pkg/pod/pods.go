@@ -956,7 +956,7 @@ func (p *Pod) AppImageManifest(appName string) (*schema.ImageManifest, error) {
 // CreationTime returns the time when the pod was created.
 // This happens at prepare time.
 func (p *Pod) CreationTime() (time.Time, error) {
-	if !(p.isPrepared || p.isRunning() || p.AfterRun()) {
+	if !(p.isPrepared || p.isRunning() || p.IsAfterRun()) {
 		return time.Time{}, nil
 	}
 	t, err := p.getModTime("pod-created")
@@ -977,7 +977,7 @@ func (p *Pod) StartTime() (time.Time, error) {
 		retErr error
 	)
 
-	if !p.isRunning() && !p.AfterRun() {
+	if !p.isRunning() && !p.IsAfterRun() {
 		// hasn't started
 		return t, nil
 	}
@@ -1184,9 +1184,14 @@ func (p *Pod) PodManifestAvailable() bool {
 	return true
 }
 
-// AfterRun returns true if the pod is in a post-running state, otherwise it returns false.
-func (p *Pod) AfterRun() bool {
+// IsAfterRun returns true if the pod is in a post-running state, otherwise it returns false.
+func (p *Pod) IsAfterRun() bool {
 	return p.isExitedDeleting || p.isDeleting || p.isExited || p.isGarbage
+}
+
+// IsFinshed returns true if the pod is in a terminal state, else false.
+func (p *Pod) IsFinished() bool {
+	return p.isExited || p.isAbortedPrepare || p.isGarbage || p.isGone
 }
 
 // AppExitCode returns the app's exit code.

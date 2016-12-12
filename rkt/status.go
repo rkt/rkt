@@ -74,7 +74,7 @@ func runStatus(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	if flagWait {
-		if err := p.WaitExited(); err != nil {
+		if err := p.WaitFinished(); err != nil {
 			stderr.PrintE("wait for pod exit failed", err)
 			return 254
 		}

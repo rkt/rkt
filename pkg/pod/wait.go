@@ -20,11 +20,12 @@ import (
 	"golang.org/x/net/context"
 )
 
-// WaitExited waits for a pod to (run and) exit.
+// WaitFinished waits for a pod to (run and) finish.
 // This method blocks indefinitely and refreshes the pod state.
-func (p *Pod) WaitExited() error {
+// It is the caller's responsibility to determine the actual terminal state.
+func (p *Pod) WaitFinished() error {
 	// isExited implies isExitedGarbage.
-	for !p.isExited && !p.isAbortedPrepare && !p.isGarbage && !p.isGone {
+	for !p.IsFinished() {
 		// this blocks (waits) as long as the pod is locked, i.e. in pepare, run, exitedGarbage, garbage state
 		if err := p.SharedLock(); err != nil {
 			return err
@@ -44,8 +45,6 @@ func (p *Pod) WaitExited() error {
 			time.Sleep(time.Second)
 		}
 	}
-
-	// TODO(vc): return error or let caller detect the !p.isExited possibilities?
 
 	return nil
 }
