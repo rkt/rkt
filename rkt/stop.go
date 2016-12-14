@@ -71,7 +71,7 @@ func runStop(cmd *cobra.Command, args []string) (exit int) {
 			continue
 		}
 
-		if p.AfterRun() {
+		if p.IsAfterRun() {
 			stdout.Printf("pod %q is already stopped", p.UUID)
 			continue
 		}

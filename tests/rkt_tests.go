@@ -116,7 +116,7 @@ func patchTestACI(newFileName string, args ...string) string {
 }
 
 func spawnOrFail(t *testing.T, cmd string) *gexpect.ExpectSubprocess {
-	t.Logf("Running command: %v", cmd)
+	t.Logf("Spawning command: %v\n", cmd)
 	child, err := gexpect.Spawn(cmd)
 	if err != nil {
 		t.Fatalf("Cannot exec rkt: %v", err)
@@ -144,7 +144,7 @@ func waitOrFail(t *testing.T, child *gexpect.ExpectSubprocess, expectedStatus in
 
 // waitPodReady waits for the pod supervisor to get ready, busy-looping until `timeout`
 // while waiting for it. It returns the pod UUID or an error on failure.
-func waitPodReady(ctx *testutils.RktRunCtx, uuidFile string, timeout time.Duration) (string, error) {
+func waitPodReady(ctx *testutils.RktRunCtx, t *testing.T, uuidFile string, timeout time.Duration) (string, error) {
 	var podUUID []byte
 	var err error
 	interval := 500 * time.Millisecond
@@ -162,20 +162,13 @@ func waitPodReady(ctx *testutils.RktRunCtx, uuidFile string, timeout time.Durati
 		return "", fmt.Errorf("Can't read pod UUID: %v", err)
 	}
 
-	// wait for the pod supervisor to be ready
-	podReadyFile := filepath.Join(ctx.DataDir(), "pods", "run", string(podUUID), "stage1/rootfs/rkt/supervisor-status")
-	target := ""
-	elapsed = time.Duration(0)
-	for elapsed < timeout {
-		time.Sleep(interval)
-		elapsed += interval
-		target, err = os.Readlink(podReadyFile)
-		if err == nil && target == "ready" {
-			break
-		}
-	}
-	if err != nil || target != "ready" {
-		return "", fmt.Errorf("Pod failed to become ready while checking %q", podReadyFile)
+	// wait up to one minute for the pod supervisor to be ready
+	cmd := strings.Fields(fmt.Sprintf("%s status --wait-ready=%s %s", ctx.Cmd(), timeout, podUUID))
+	statusCmd := exec.Command(cmd[0], cmd[1:]...)
+	t.Logf("Running command: %v\n", cmd)
+	output, err := statusCmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("Failed to wait for pod readiness, error %v output %v", err, string(output))
 	}
 
 	return string(podUUID), nil

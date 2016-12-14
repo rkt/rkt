@@ -104,7 +104,7 @@ func appState(app *App, pod *pkgPod.Pod) error {
 	app.State = AppStateUnknown
 
 	defer func() {
-		if pod.AfterRun() {
+		if pod.IsAfterRun() {
 			// If the pod is hard killed, set the app to 'exited' state.
 			// Other than this case, status file is guaranteed to be written.
 			if app.State != AppStateExited {
