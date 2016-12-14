@@ -61,6 +61,10 @@ static int exit_err;
 #define CGROUP2_SUPER_MAGIC 0x63677270
 #endif
 
+/* permission masks */
+#define WORLD_READABLE          0444
+#define WORLD_WRITABLE          0222
+
 typedef struct _dir_op_t {
 	const char	*name;
 	mode_t		mode;
@@ -220,12 +224,50 @@ static void copy_volume_symlinks()
 	}
 }
 
+/* Determine if the specified ptmx device (or symlink to a device)
+ * is usable by all users.
+ *
+ * dirfd: Open file descriptor of a root directory.
+ * path: Relative path to ptmx device below the path specified by dirfd.
+ *
+ * Returns true on success, else false.
+ */
+bool
+ptmx_device_usable (int dirfd, const char *path)
+{
+	struct stat st;
+	int perms;
+	bool world_readable, world_writable;
+	bool is_char;
+	bool dev_type;
+	dev_t expected_dev;
+
+	if (dirfd < 0 || ! path) {
+		return false;
+	}
+
+	expected_dev = makedev(5, 2);
+
+	if (fstatat (dirfd, path, &st, 0) < 0) {
+		return false;
+	}
+
+	is_char = S_ISCHR (st.st_mode);
+	dev_type = (expected_dev == st.st_rdev);
+
+	perms = (st.st_mode & ACCESSPERMS);
+
+	world_readable = (perms & WORLD_READABLE) == WORLD_READABLE;
+	world_writable = (perms & WORLD_WRITABLE) == WORLD_WRITABLE;
+
+	return (is_char && dev_type && world_readable && world_writable);
+}
+
 int main(int argc, char *argv[])
 {
 	static const char *unlink_paths[] = {
 		"dev/shm",
-		"dev/ptmx",
-		NULL
+		 NULL
 	};
 	static const dir_op_t dirs[] = {
 		dir("dev",	0755),
@@ -270,6 +312,7 @@ int main(int argc, char *argv[])
 	int rootfd;
 	char to[4096];
 	int i;
+	bool ptmx_usable, pts_ptmx_usable;
 
 	exit_if(argc < 2,
 		"Usage: %s /path/to/root", argv[0]);
@@ -384,11 +427,37 @@ int main(int argc, char *argv[])
 				"Mounting \"%s\" on \"%s\" failed", mnt->source, to);
 	}
 
-	/* /dev/ptmx -> /dev/pts/ptmx */
-	exit_if(snprintf(to, sizeof(to), "%s/dev/ptmx", root) >= sizeof(to),
-		"Path too long: \"%s\"", to);
-	pexit_if(symlink("/dev/pts/ptmx", to) == -1 && errno != EEXIST,
-		"Failed to create /dev/ptmx symlink");
+	/* Now that all mounts have been handled, reopen the root
+	 * directory to special-case the handling of ptmx devices.
+	 */
+	rootfd = open(root, O_DIRECTORY | O_CLOEXEC);
+	pexit_if(rootfd < 0,
+		"Failed to open directory \"%s\"", root);
+
+	ptmx_usable = ptmx_device_usable (rootfd, "dev/ptmx");
+	pts_ptmx_usable = ptmx_device_usable (rootfd, "dev/pts/ptmx");
+
+	if (pts_ptmx_usable) {
+		if (! ptmx_usable) {
+			pexit_if(unlinkat(rootfd, "dev/ptmx", 0) != 0
+					&& errno != ENOENT,
+					"Failed to unlink \"%s\"", "dev/ptmx");
+			pexit_if(symlinkat("/dev/pts/ptmx", rootfd, "dev/ptmx") == -1,
+					"Failed to create /dev/ptmx symlink");
+		}
+	} else {
+		if (! ptmx_usable) {
+			int perms = (WORLD_READABLE + WORLD_WRITABLE);
+
+			pexit_if(unlinkat(rootfd, "dev/ptmx", 0) != 0
+					&& errno != ENOENT,
+					"Failed to unlink \"%s\"", "dev/ptmx");
+			pexit_if(mknodat (rootfd, "dev/ptmx", (S_IFCHR|perms), makedev (5, 2)) < 0,
+					"Failed to create device: \"%s\"", "dev/ptmx");
+		}
+	}
+
+	close(rootfd);
 
 	/* Copy symlinks to device node volumes to "/dev/.rkt" so they can be
 	 * used in the DeviceAllow= option of the app's unit file (systemd

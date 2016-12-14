@@ -72,7 +72,7 @@ func MutableEnv(p *stage1commontypes.Pod) error {
 		unit.NewUnitOption("Service", "ExecStart", "/prepare-app %I"),
 		unit.NewUnitOption("Service", "User", "0"),
 		unit.NewUnitOption("Service", "Group", "0"),
-		unit.NewUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE"),
+		unit.NewUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE CAP_MKNOD"),
 	)
 
 	w.WriteUnit(
@@ -132,7 +132,7 @@ func ImmutableEnv(p *stage1commontypes.Pod) error {
 		unit.NewUnitOption("Service", "ExecStart", "/prepare-app %I"),
 		unit.NewUnitOption("Service", "User", "0"),
 		unit.NewUnitOption("Service", "Group", "0"),
-		unit.NewUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE"),
+		unit.NewUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE CAP_MKNOD"),
 	)
 
 	uw.WriteUnit(
