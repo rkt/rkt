@@ -393,7 +393,25 @@ func StartApp(cfg StartConfig) error {
 		fmt.Sprintf("--app=%s", cfg.AppName),
 	}
 
-	if _, err := os.Create(common.AppStartedPath(cfg.PodPath, cfg.AppName.String())); err != nil {
+	appStatusPath := common.AppStatusPath(cfg.PodPath, cfg.AppName.String())
+	appStartedPath := common.AppStartedPath(cfg.PodPath, cfg.AppName.String())
+
+	// The app may be restarted. In this case the /rkt/status/app and
+	// rkt/status/app-started files already exist.
+	// We could touch app-started file and compare its mtime with the app status file
+	// to determine the actual status but this won't work if the server time was modified.
+	//
+	// Instead we:
+	// 1. remove the app-started file
+	//    In this window rkt app list may report that the application exited.
+	// 2. remove the app status file
+	//    In this window rkt app list may report that the app was created.
+	// 3. re-create the the app-started file
+
+	_ = os.Remove(appStartedPath)
+	_ = os.Remove(appStatusPath)
+
+	if _, err := os.Create(appStartedPath); err != nil {
 		log.FatalE(fmt.Sprintf("error creating %s-started file", cfg.AppName.String()), err)
 	}
 

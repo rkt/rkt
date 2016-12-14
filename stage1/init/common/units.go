@@ -61,6 +61,12 @@ func MutableEnv(p *stage1commontypes.Pod) error {
 		unit.NewUnitOption("Unit", "Description", "Prepare minimum environment for chrooted applications"),
 		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
 		unit.NewUnitOption("Unit", "OnFailureJobMode", "fail"),
+
+		// prepare-app is meant to be executed at most once.
+		// We must ensure that the prepare-app service unit remains started after the prepare-app binary exits
+		// such that it is not executed again during restarts of the target app.
+		unit.NewUnitOption("Service", "RemainAfterExit", "yes"),
+
 		unit.NewUnitOption("Service", "Type", "oneshot"),
 		unit.NewUnitOption("Service", "Restart", "no"),
 		unit.NewUnitOption("Service", "ExecStart", "/prepare-app %I"),
@@ -171,9 +177,16 @@ func ImmutableEnv(p *stage1commontypes.Pod, interactive bool) error {
 			opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "journal+console"))
 			opts = append(opts, unit.NewUnitOption("Service", "StandardError", "journal+console"))
 		}
+
+		opts = append(opts,
+			// When an app fails, we shut down the pod
+			unit.NewUnitOption("Unit", "OnFailure", "halt.target"),
+		)
+
 		w.AppUnit(ra, binPath, opts...)
 
 		w.AppReaperUnit(ra.Name, binPath,
+			unit.NewUnitOption("Service", "Environment", `"EXIT_POD=true"`),
 			unit.NewUnitOption("Unit", "Wants", "shutdown.service"),
 			unit.NewUnitOption("Unit", "After", "shutdown.service"),
 		)
@@ -444,9 +457,6 @@ func (uw *UnitWriter) AppUnit(ra *schema.RuntimeApp, binPath string, opts ...*un
 			opts = append(opts, unit.NewUnitOption("Service", "DeviceAllow", dev))
 		}
 	}
-
-	// When an app fails, we shut down the pod
-	opts = append(opts, unit.NewUnitOption("Unit", "OnFailure", "halt.target"))
 
 	for _, eh := range app.EventHandlers {
 		var typ string
