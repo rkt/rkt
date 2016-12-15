@@ -136,14 +136,14 @@ Currently there are two known main issues with logging in rkt:
  ```
  should be added to ```/etc/nginx/nginx.conf```
 
-* Some applications, like newer version of etcd, write directly to journald. Such log entries will not be written to stdout or stderr.
+* Some applications, like etcd 3.0, write directly to journald. Such log entries will not be written to stdout or stderr.
  These logs can be retrieved by passing the machine ID to journalctl:
 
  ```
  $ journalctl -M rkt-bc3c1451-2e81-45c6-aeb0-807db44e31b4
  ```
 
- Etcd case will be solved when [flag allowing forcing output to stdout][etcd-5449] is added.
+ For the specific etcd case, since release 3.1.0-rc.1 it is possible to force emitting logs to stdout via a `--log-output=stdout` command-line option.
 
 ##### Stopped pod
 
