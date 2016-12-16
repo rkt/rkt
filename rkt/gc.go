@@ -273,8 +273,19 @@ func deletePod(p *pkgPod.Pod) {
 		}
 	}
 
+	// remove the rootfs first; if this fails (eg. due to busy mountpoints), pod manifest
+	// is left in place and clean-up can be re-tried later.
+	rootfsPath, err := p.Stage1RootfsPath()
+	if err == nil {
+		if e := os.RemoveAll(rootfsPath); e != nil {
+			stderr.PrintE(fmt.Sprintf("unable to remove pod rootfs %q", p.UUID), e)
+			return
+		}
+	}
+
+	// finally remove all remaining pieces
 	if err := os.RemoveAll(p.Path()); err != nil {
 		stderr.PrintE(fmt.Sprintf("unable to remove pod %q", p.UUID), err)
-		os.Exit(254)
+		return
 	}
 }

@@ -22,12 +22,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
-
-	"github.com/coreos/rkt/common"
-	"github.com/coreos/rkt/pkg/mountinfo"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/common"
 	"github.com/hashicorp/errwrap"
 )
 
@@ -72,27 +69,9 @@ func GC(pdir string, uuid *types.UUID, localConfig string) error {
 
 // MountGC removes mounts from pods that couldn't be GCed cleanly.
 func MountGC(path, uuid string) error {
-	mnts, err := mountinfo.ParseMounts(0)
+	err := common.ChrootPrivateUnmount(path, log, debug)
 	if err != nil {
-		return errwrap.Wrap(fmt.Errorf("error getting mounts for pod %s from mountinfo", uuid), err)
-	}
-	mnts = mnts.Filter(mountinfo.HasPrefix(path))
-
-	for i := len(mnts) - 1; i >= 0; i-- {
-		mnt := mnts[i]
-		if mnt.NeedsRemountPrivate() {
-			if err := syscall.Mount("", mnt.MountPoint, "", syscall.MS_PRIVATE, ""); err != nil {
-				return errwrap.Wrap(fmt.Errorf("could not remount at %v", mnt.MountPoint), err)
-			}
-		}
-	}
-
-	for _, mnt := range mnts {
-		if err := syscall.Unmount(mnt.MountPoint, 0); err != nil {
-			if err != syscall.ENOENT && err != syscall.EINVAL {
-				return errwrap.Wrap(fmt.Errorf("could not unmount %v", mnt.MountPoint), err)
-			}
-		}
+		return errwrap.Wrap(fmt.Errorf("error cleaning mounts for pod %s", uuid), err)
 	}
 	return nil
 }
