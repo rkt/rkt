@@ -126,7 +126,5 @@ func removePod(p *pkgPod.Pod) bool {
 		return false
 	}
 
-	deletePod(p)
-
-	return true
+	return deletePod(p)
 }
