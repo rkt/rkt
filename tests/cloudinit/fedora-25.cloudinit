@@ -22,3 +22,13 @@ dnf -y -v install iptables intltool
 
 groupadd rkt || true
 gpasswd -a fedora rkt || true
+
+cat << EOF > /etc/sysconfig/network-scripts/ifcfg-eth0
+DEVICE=eth0
+BOOTPROTO=dhcp
+ONBOOT=yes
+TYPE=Ethernet
+USERCTL=yes
+PEERDNS=yes
+IPV6INIT=no
+EOF

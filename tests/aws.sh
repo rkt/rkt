@@ -26,22 +26,18 @@ DISTRO=$1
 test -f cloudinit/${DISTRO}.cloudinit
 CLOUDINIT=$PWD/cloudinit/${DISTRO}.cloudinit
 
-if [ "$DISTRO" = "fedora-22" ] ; then
+if [ "$DISTRO" = "fedora-24" ] ; then
   # https://getfedora.org/en/cloud/download/
   # Search on aws --region $REGION or look at
   # https://apps.fedoraproject.org/datagrepper/raw?category=fedimg
   # Sources: https://github.com/fedora-infra/fedimg/blob/develop/bin/list-the-amis.py
 
-  # Fedora-Cloud-Base-22-20160218.x86_64-us-west-1-HVM-standard-0
-  AMI=ami-e291e082
-  AWS_USER=fedora
-elif [ "$DISTRO" = "fedora-23" ] ; then
-  # Fedora-Cloud-Base-23-20151030.x86_64-us-west-1-HVM-standard-0
-  AMI=ami-a6fc90c6
-  AWS_USER=fedora
-elif [ "$DISTRO" = "fedora-24" ] ; then
   # Fedora-Cloud-Base-24-20160507.n.0.x86_64-us-west-1-HVM-standard-0
   AMI=ami-8b4c35eb
+  AWS_USER=fedora
+elif [ "$DISTRO" = "fedora-25" ] ; then
+  # Fedora-Cloud-Base-25-20161220.0.x86_64-us-west-1-HVM-standard-0
+  AMI=ami-c70d5ca7
   AWS_USER=fedora
 elif [ "$DISTRO" = "fedora-rawhide" ] ; then
   # Fedora-Cloud-Base-rawhide-20160129.x86_64-us-west-1-HVM-standard-0
@@ -52,22 +48,11 @@ elif [ "$DISTRO" = "ubuntu-1604" ] ; then
   # ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-20160627
   AMI=ami-b20542d2
   AWS_USER=ubuntu
-elif [ "$DISTRO" = "ubuntu-1510" ] ; then
-  # https://cloud-images.ubuntu.com/locator/ec2/
-  # ubuntu/images/hvm-instance/ubuntu-wily-15.10-amd64-server-20160715
-  AMI=ami-cee8aeae
-  AWS_USER=ubuntu
-elif [ "$DISTRO" = "debian" ] ; then
+elif [ "$DISTRO" = "debian-testing" ] ; then
   # https://wiki.debian.org/Cloud/AmazonEC2Image/Jessie
-  # Debian 8.4
-  AMI=ami-45374b25
+  # Debian 8.6+1
+  AMI=ami-db6c39bb
   AWS_USER=admin
-elif [ "$DISTRO" = "centos" ] ; then
-  # Needs to subscribe first, see:
-  # https://wiki.centos.org/Cloud/AWS
-  # CentOS-7 x86_64 HVM
-  AMI=ami-af4333cf
-  AWS_USER=centos
 fi
 
 test -n "$AMI"
@@ -122,7 +107,7 @@ do
 done
 
 
-NAME=$DISTRO-rkt-test-$(date +"%d-%m-%Y")
+NAME=rkt-ci-jenkins-$(date +"%Y-%m-%d")-$DISTRO
 AMI_ID=$(aws --region $REGION ec2 create-image --instance-id $INSTANCE_ID --name $NAME --output text)
 
 echo -e "\nWaiting for the AMI to be avaliable..."
@@ -131,8 +116,6 @@ do
   echo -n '.'
   sleep 30
 done
-
-aws --region $REGION ec2 modify-image-attribute --image-id $AMI_ID --launch-permission "{\"Add\":[{\"Group\":\"all\"}]}"
 
 echo -e "\nRemoving instance..."
 
