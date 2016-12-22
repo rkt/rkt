@@ -1,5 +1,5 @@
-hash: cd7bf107f8962ba89c5471bc6d883112b33a7b2d91f97dc3057c3430f3b2cc42
-updated: 2016-12-09T16:05:25.074433175Z
+hash: d539e0ee23575e8a3fbb83bd56ccd2d59b7e2bd9ac0058863800a61841fb35ae
+updated: 2016-12-22T11:41:11.44338079-05:00
 imports:
 - name: github.com/appc/docker2aci
   version: 64543c1e0a7306b17d0d214549ec08049b234abc
@@ -236,7 +236,7 @@ imports:
 - name: github.com/StackExchange/wmi
   version: f3e2bae1e0cb5aef83e319133eabfee30013a4a5
 - name: github.com/syndtr/gocapability
-  version: 8e4cdcb3c22b40d5e330ade0b68cb2e2a3cf6f98
+  version: e7cb7fa329f456b3855136a2642b197bad7366ba
   subpackages:
   - capability
 - name: github.com/vishvananda/netlink
@@ -300,7 +300,7 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: k8s.io/kubernetes
-  version: fd8fac83034df346529c6e11aabceea2db48d663
+  version: ba5b2fcee9d938dae74d4474f68d9d0933f3ec04
   subpackages:
   - pkg/api/resource
 testImports:
