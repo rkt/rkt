@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -45,26 +46,50 @@ func TestCatManifest(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	tests := []struct {
-		uuid  string
-		match string
+		uuid     string
+		match    string
+		uuidFile bool
 	}{
 		{
 			podUuid,
 			imgName,
+			false,
 		},
 		{
 			podUuid,
 			imageHash[:20],
+			false,
 		},
 		{
 			"1234567890abcdef",
 			"no matches found for",
+			false,
+		},
+		{
+			"",
+			imageHash[:20],
+			true,
 		},
 	}
 
 	for i, tt := range tests {
-		runCmd := fmt.Sprintf("%s cat-manifest --pretty-print=false %s", ctx.Cmd(), tt.uuid)
-		t.Logf("Running test #%d", i)
-		runRktAndCheckRegexOutput(t, runCmd, tt.match)
+		if tt.uuidFile == true {
+			podUUID := runRktAndGetUUID(t, cmd)
+			uuidFile, err := ioutil.TempFile(tmpDir, "uuid-file")
+			if err != nil {
+				panic(fmt.Sprintf("Cannot create uuid-file: %v", err))
+			}
+			uuidFilePath := uuidFile.Name()
+			if err := ioutil.WriteFile(uuidFilePath, []byte(podUUID), 0600); err != nil {
+				panic(fmt.Sprintf("Cannot write pod UUID to uuid-file: %v", err))
+			}
+			runCmd := fmt.Sprintf("%s cat-manifest --uuid-file=%s --pretty-print=false %s", ctx.Cmd(), uuidFilePath)
+			t.Logf("Running test #%d", i)
+			runRktAndCheckRegexOutput(t, runCmd, tt.match)
+		} else {
+			runCmd := fmt.Sprintf("%s cat-manifest --pretty-print=false %s", ctx.Cmd(), tt.uuid)
+			t.Logf("Running test #%d", i)
+			runRktAndCheckRegexOutput(t, runCmd, tt.match)
+		}
 	}
 }
