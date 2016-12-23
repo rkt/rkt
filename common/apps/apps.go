@@ -31,7 +31,7 @@ var (
 )
 
 type App struct {
-	Name              string                            // the name of the app. If not set, the the image's name will be used.
+	Name              string                            // the name of the app. If not set, the image's name will be used.
 	Image             string                            // the image reference as supplied by the user on the cli
 	Args              []string                          // any arguments the user supplied for this app
 	Asc               string                            // signature file override for image verification (if fetching occurs)
