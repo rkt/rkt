@@ -183,3 +183,81 @@ func TestFileIsExecutable(t *testing.T) {
 		}
 	}
 }
+
+func TestDeviceInfo(t *testing.T) {
+	// First, test the main call
+	{
+		kind, major, minor, err := GetDeviceInfo("/dev/null")
+		if kind != 'c' || major != 1 || minor != 3 || err != nil {
+			t.Errorf("GetDeviceInfo(/dev/null) wrong result")
+		}
+	}
+
+	{
+		_, _, _, err := GetDeviceInfo("/usr")
+		if err == nil {
+			t.Errorf("GetDeviceInfo(/usr) should return err")
+		}
+	}
+
+	// Then test the logic more specifically
+	for i, tt := range []struct {
+		mode  os.FileMode
+		rdev  uint64
+		kind  rune
+		major uint64
+		minor uint64
+	}{
+		// /dev/null
+		{
+			69206454,
+			259,
+			'c',
+			1,
+			3,
+		},
+		// /dev/sda1
+		{
+			67109296,
+			2049,
+			'b',
+			8,
+			1,
+		},
+		// /dev/pts/3
+		{
+			69206416,
+			34819,
+			'c',
+			136,
+			3,
+		},
+		// /dev/dm-0
+		{
+			67109296,
+			64768,
+			'b',
+			253,
+			0,
+		},
+	} {
+		kind, major, minor, err := getDeviceInfo(tt.mode, tt.rdev)
+		if err != nil {
+			t.Errorf("getDeviceInfo %d not as expected, got err %s", i, err)
+		}
+		// don't care about result when err
+		if err != nil {
+			continue
+		}
+
+		if tt.kind != kind {
+			t.Errorf("getDeviceInfo %d kind expected %v got %v", i, tt.kind, kind)
+		}
+		if tt.major != major {
+			t.Errorf("getDeviceInfo %d major expected %v got %v", i, tt.major, major)
+		}
+		if tt.minor != minor {
+			t.Errorf("getDeviceInfo %d minor expected %v got %v", i, tt.minor, minor)
+		}
+	}
+}
