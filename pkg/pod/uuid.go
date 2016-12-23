@@ -32,7 +32,7 @@ func matchUUID(dataDir, uuid string) ([]string, error) {
 		return nil, types.ErrNoEmptyUUID
 	}
 
-	ls, err := listPods(dataDir, IncludePrepareDir|IncludePreparedDir|IncludeRunDir|IncludeExitedGarbageDir)
+	ls, err := listPods(dataDir, IncludeMostDirs)
 	if err != nil {
 		return nil, err
 	}
