@@ -18,6 +18,7 @@ package common
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
@@ -33,73 +34,101 @@ var (
 // Systemd filter mode, see
 // https://www.freedesktop.org/software/systemd/man/systemd.exec.html#SystemCallFilter=
 const (
-	sdBlacklistMode = "~"
-	sdWhitelistMode = ""
+	sdBlacklistPrefix = "~"
+	sdWhitelistPrefix = ""
 )
 
-// getSeccompFilter gets an appc seccomp set and an optional error mode,
-// returning those values in a format suitable for systemd consumption.
-func getSeccompFilter(opts []*unit.UnitOption, p *stage1commontypes.Pod, unprivileged bool, isolators types.Isolators) ([]*unit.UnitOption, bool, error) {
-	var filterMode string
-	flag := ""
-	seccompIsolators := 0
-	seccompErrno := ""
-	noNewPrivs := false
-	var err error
-	var seccompSet []string
-	for _, i := range isolators {
+type filterType int
+
+const (
+	ModeBlacklist filterType = iota
+	ModeWhitelist
+)
+
+// seccompFilter is an internal representation of the seccomp filtering
+// supplied by the isolators.
+type seccompFilter struct {
+	syscalls             []string   // List of syscalls to filter
+	mode                 filterType // whitelist or blacklist
+	errno                string     // optional - empty string = use default
+	forceNoNewPrivileges bool       // If true, then override the NoNewPrivileges isolator
+}
+
+// generateSeccompFilter computes the concrete seccomp filter from the isolators
+func generateSeccompFilter(p *stage1commontypes.Pod, pa *preparedApp) (*seccompFilter, error) {
+	sf := seccompFilter{}
+	seenIsolators := 0
+	for _, i := range pa.app.App.Isolators {
+		var flag string
+		var err error
 		if seccomp, ok := i.Value().(types.LinuxSeccompSet); ok {
-			seccompIsolators++
+			seenIsolators++
 			// By appc spec, only one seccomp isolator per app is allowed
-			if seccompIsolators > 1 {
-				return nil, false, ErrTooManySeccompIsolators
+			if seenIsolators > 1 {
+				return nil, ErrTooManySeccompIsolators
 			}
 			switch i.Name {
 			case types.LinuxSeccompRemoveSetName:
-				filterMode = sdBlacklistMode
-				seccompSet, flag, err = parseLinuxSeccompSet(p, seccomp)
+				sf.mode = ModeBlacklist
+				sf.syscalls, flag, err = parseLinuxSeccompSet(p, seccomp)
 				if err != nil {
-					return nil, false, err
+					return nil, err
 				}
 				if flag == "empty" {
-					// Opt-in to rkt default whitelist
-					seccompSet = nil
-					break
+					// we interpret "remove @empty" to mean "default whitelist"
+					sf.mode = ModeWhitelist
+					sf.syscalls = RktDefaultSeccompWhitelist
 				}
 			case types.LinuxSeccompRetainSetName:
-				filterMode = sdWhitelistMode
-				seccompSet, flag, err = parseLinuxSeccompSet(p, seccomp)
+				sf.mode = ModeWhitelist
+				sf.syscalls, flag, err = parseLinuxSeccompSet(p, seccomp)
 				if err != nil {
-					return nil, false, err
+					return nil, err
 				}
 				if flag == "all" {
 					// Opt-out seccomp filtering
-					return opts, false, nil
+					return nil, nil
 				}
 			}
-			seccompErrno = string(seccomp.Errno())
+			sf.errno = string(seccomp.Errno())
 		}
 	}
 
 	// If unset, use rkt default whitelist
-	if len(seccompSet) == 0 {
-		filterMode = sdWhitelistMode
-		seccompSet = RktDefaultSeccompWhitelist
+	if seenIsolators == 0 {
+		sf.mode = ModeWhitelist
+		sf.syscalls = RktDefaultSeccompWhitelist
 	}
 
-	// Append computed options
-	if seccompErrno != "" {
-		opts = append(opts, unit.NewUnitOption("Service", "SystemCallErrorNumber", seccompErrno))
+	// Non-priv apps *must* have NoNewPrivileges set if they have seccomp
+	sf.forceNoNewPrivileges = (pa.uid != 0)
+
+	return &sf, nil
+}
+
+// seccompUnitOptions converts a concrete seccomp filter to systemd unit options
+func seccompUnitOptions(opts []*unit.UnitOption, sf *seccompFilter) ([]*unit.UnitOption, error) {
+	if sf == nil {
+		return opts, nil
 	}
+	if sf.errno != "" {
+		opts = append(opts, unit.NewUnitOption("Service", "SystemCallErrorNumber", sf.errno))
+	}
+
+	var filterPrefix string
+	switch sf.mode {
+	case ModeWhitelist:
+		filterPrefix = sdWhitelistPrefix
+	case ModeBlacklist:
+		filterPrefix = sdBlacklistPrefix
+	default:
+		return nil, fmt.Errorf("unkown filter mode %v", sf.mode)
+	}
+
 	// SystemCallFilter options are written down one entry per line, because
 	// filtering sets may be quite large and overlong lines break unit serialization.
-	opts = appendOptionsList(opts, "Service", "SystemCallFilter", filterMode, seccompSet...)
-	// In order to install seccomp filters, unprivileged process must first set no-news-privs.
-	if unprivileged {
-		noNewPrivs = true
-	}
-
-	return opts, noNewPrivs, nil
+	opts = appendOptionsList(opts, "Service", "SystemCallFilter", filterPrefix, sf.syscalls...)
+	return opts, nil
 }
 
 // parseLinuxSeccompSet gets an appc LinuxSeccompSet and returns an array

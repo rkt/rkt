@@ -29,7 +29,6 @@ import (
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
-	"github.com/coreos/rkt/common/cgroup"
 	"github.com/coreos/rkt/pkg/user"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 
@@ -97,8 +96,8 @@ func MutableEnv(p *stage1commontypes.Pod) error {
 	return w.Error()
 }
 
-func ImmutableEnv(p *stage1commontypes.Pod, interactive bool) error {
-	w := NewUnitWriter(p)
+func ImmutableEnv(p *stage1commontypes.Pod) error {
+	uw := NewUnitWriter(p)
 
 	opts := []*unit.UnitOption{
 		unit.NewUnitOption("Unit", "Description", "rkt apps target"),
@@ -114,13 +113,13 @@ func ImmutableEnv(p *stage1commontypes.Pod, interactive bool) error {
 		opts = append(opts, unit.NewUnitOption("Unit", "Wants", serviceName))
 	}
 
-	w.WriteUnit(
+	uw.WriteUnit(
 		TargetUnitPath(p.Root, "default"),
 		"failed to write default.target",
 		opts...,
 	)
 
-	w.WriteUnit(
+	uw.WriteUnit(
 		ServiceUnitPath(p.Root, "prepare-app@"),
 		"failed to write prepare-app service template",
 		unit.NewUnitOption("Unit", "Description", "Prepare minimum environment for chrooted applications"),
@@ -136,7 +135,7 @@ func ImmutableEnv(p *stage1commontypes.Pod, interactive bool) error {
 		unit.NewUnitOption("Service", "CapabilityBoundingSet", "CAP_SYS_ADMIN CAP_DAC_OVERRIDE"),
 	)
 
-	w.WriteUnit(
+	uw.WriteUnit(
 		TargetUnitPath(p.Root, "halt"),
 		"failed to write halt target",
 		unit.NewUnitOption("Unit", "Description", "Halt"),
@@ -144,7 +143,7 @@ func ImmutableEnv(p *stage1commontypes.Pod, interactive bool) error {
 		unit.NewUnitOption("Unit", "AllowIsolate", "true"),
 	)
 
-	w.writeShutdownService(
+	uw.writeShutdownService(
 		"ExecStop",
 		unit.NewUnitOption("Unit", "Description", "Pod shutdown"),
 		unit.NewUnitOption("Unit", "AllowIsolate", "true"),
@@ -153,7 +152,7 @@ func ImmutableEnv(p *stage1commontypes.Pod, interactive bool) error {
 		unit.NewUnitOption("Service", "RemainAfterExit", "yes"),
 	)
 
-	if err := w.Error(); err != nil {
+	if err := uw.Error(); err != nil {
 		return err
 	}
 
@@ -170,7 +169,7 @@ func ImmutableEnv(p *stage1commontypes.Pod, interactive bool) error {
 		}
 
 		var opts []*unit.UnitOption
-		if interactive {
+		if p.Interactive {
 			opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "tty"))
 			opts = append(opts, unit.NewUnitOption("Service", "StandardOutput", "tty"))
 			opts = append(opts, unit.NewUnitOption("Service", "StandardError", "tty"))
@@ -184,16 +183,16 @@ func ImmutableEnv(p *stage1commontypes.Pod, interactive bool) error {
 			unit.NewUnitOption("Unit", "OnFailure", "halt.target"),
 		)
 
-		w.AppUnit(ra, binPath, opts...)
+		uw.AppUnit(ra, binPath, opts...)
 
-		w.AppReaperUnit(ra.Name, binPath,
+		uw.AppReaperUnit(ra.Name, binPath,
 			unit.NewUnitOption("Service", "Environment", `"EXIT_POD=true"`),
 			unit.NewUnitOption("Unit", "Wants", "shutdown.service"),
 			unit.NewUnitOption("Unit", "After", "shutdown.service"),
 		)
 	}
 
-	return w.Error()
+	return uw.Error()
 }
 
 // UnitWriter is the type that writes systemd units preserving the first previously occured error.
@@ -307,51 +306,72 @@ func (uw *UnitWriter) AppUnit(ra *schema.RuntimeApp, binPath string, opts ...*un
 		return
 	}
 
-	flavor, systemdVersion, err := GetFlavor(uw.p)
-	if err != nil {
-		uw.err = errwrap.Wrap(errors.New("unable to determine stage1 flavor"), err)
+	if len(ra.App.Exec) == 0 {
+		uw.err = fmt.Errorf(`image %q has an empty "exec" (try --exec=BINARY)`,
+			uw.p.AppNameToImageName(ra.Name))
 		return
 	}
 
+	pa, err := prepareApp(uw.p, ra)
+	if err != nil {
+		uw.err = err
+		return
+	}
+
+	appName := ra.Name.String()
+	imgName := uw.p.AppNameToImageName(ra.Name)
+	/* Write the generic unit options */
+	opts = append(opts, []*unit.UnitOption{
+		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v", appName, imgName)),
+		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
+		unit.NewUnitOption("Unit", "Wants", fmt.Sprintf("reaper-%s.service", appName)),
+		unit.NewUnitOption("Service", "Restart", "no"),
+
+		// This helps working around a race
+		// (https://github.com/systemd/systemd/issues/2913) that causes the
+		// systemd unit name not getting written to the journal if the unit is
+		// short-lived and runs as non-root.
+		unit.NewUnitOption("Service", "SyslogIdentifier", appName),
+	}...)
+
+	if supportsNotify(uw.p, ra.Name.String()) {
+		opts = append(opts, unit.NewUnitOption("Service", "Type", "notify"))
+	}
+
+	// Some pre-start jobs take a long time, set the timeout to 0
+	opts = append(opts, unit.NewUnitOption("Service", "TimeoutStartSec", "0"))
+
+	opts = append(opts, unit.NewUnitOption("Unit", "Requires", "sysusers.service"))
+	opts = append(opts, unit.NewUnitOption("Unit", "After", "sysusers.service"))
+
+	opts = uw.appSystemdUnit(pa, binPath, opts)
+
+	uw.WriteUnit(ServiceUnitPath(uw.p.Root, ra.Name), "failed to create service unit file", opts...)
+	uw.Activate(ServiceUnitName(ra.Name), ServiceWantPath(uw.p.Root, ra.Name))
+
+}
+
+// appSystemdUnit sets up an application for isolation via systemd
+func (uw *UnitWriter) appSystemdUnit(pa *preparedApp, binPath string, opts []*unit.UnitOption) []*unit.UnitOption {
+	if uw.err != nil {
+		return nil
+	}
+
+	flavor, systemdVersion, err := GetFlavor(uw.p)
+	if err != nil {
+		uw.err = errwrap.Wrap(errors.New("unable to determine stage1 flavor"), err)
+		return nil
+	}
+
+	ra := pa.app
 	app := ra.App
 	appName := ra.Name
-	imgName := uw.p.AppNameToImageName(appName)
-	imageManifest := uw.p.Images[appName.String()]
+	imgName := uw.p.AppNameToImageName(ra.Name)
 
 	podAbsRoot, err := filepath.Abs(uw.p.Root)
 	if err != nil {
 		uw.err = err
-		return
-	}
-
-	if len(app.Exec) == 0 {
-		uw.err = fmt.Errorf(`image %q has an empty "exec" (try --exec=BINARY)`, imgName)
-		return
-	}
-
-	env := app.Environment
-
-	env.Set("AC_APP_NAME", appName.String())
-	if uw.p.MetadataServiceURL != "" {
-		env.Set("AC_METADATA_URL", uw.p.MetadataServiceURL)
-	}
-
-	envFilePath := EnvFilePath(uw.p.Root, appName)
-
-	if err := common.WriteEnvFile(env, &uw.p.UidRange, envFilePath); err != nil {
-		uw.err = errwrap.Wrap(errors.New("unable to write environment file for systemd"), err)
-		return
-	}
-
-	u, g, err := parseUserGroup(uw.p, ra)
-	if err != nil {
-		uw.err = err
-		return
-	}
-
-	if err := generateSysusers(uw.p, ra, u, g, &uw.p.UidRange); err != nil {
-		uw.err = errwrap.Wrap(errors.New("unable to generate sysusers"), err)
-		return
+		return nil
 	}
 
 	var supplementaryGroups []string
@@ -359,78 +379,50 @@ func (uw *UnitWriter) AppUnit(ra *schema.RuntimeApp, binPath string, opts ...*un
 		supplementaryGroups = append(supplementaryGroups, strconv.Itoa(g))
 	}
 
-	capabilitiesStr, err := getAppCapabilities(app.Isolators)
-	if err != nil {
-		uw.err = err
-		return
+	// Write env file
+	if err := common.WriteEnvFile(pa.env, &uw.p.UidRange, EnvFilePath(uw.p.Root, pa.app.Name)); err != nil {
+		uw.err = errwrap.Wrapf("unable to write environment file", err)
+		return nil
 	}
 
 	execStart := append([]string{binPath}, app.Exec[1:]...)
 	execStartString := quoteExec(execStart)
-	opts = append(opts, []*unit.UnitOption{
-		unit.NewUnitOption("Unit", "Description", fmt.Sprintf("Application=%v Image=%v", appName, imgName)),
-		unit.NewUnitOption("Unit", "DefaultDependencies", "false"),
-		unit.NewUnitOption("Unit", "Wants", fmt.Sprintf("reaper-%s.service", appName)),
-		unit.NewUnitOption("Service", "Restart", "no"),
+	opts = append(opts,
 		unit.NewUnitOption("Service", "ExecStart", execStartString),
 		unit.NewUnitOption("Service", "RootDirectory", common.RelAppRootfsPath(appName)),
 		unit.NewUnitOption("Service", "WorkingDirectory", app.WorkingDirectory),
 		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePath(appName)),
-		unit.NewUnitOption("Service", "User", strconv.Itoa(u)),
-		unit.NewUnitOption("Service", "Group", strconv.Itoa(g)),
-
-		// This helps working around a race
-		// (https://github.com/systemd/systemd/issues/2913) that causes the
-		// systemd unit name not getting written to the journal if the unit is
-		// short-lived and runs as non-root.
-		unit.NewUnitOption("Service", "SyslogIdentifier", appName.String()),
-	}...)
+		unit.NewUnitOption("Service", "User", strconv.Itoa(int(pa.uid))),
+		unit.NewUnitOption("Service", "Group", strconv.Itoa(int(pa.gid))),
+		unit.NewUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(ra.Name)),
+		unit.NewUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(ra.Name)),
+	)
 
 	if len(supplementaryGroups) > 0 {
 		opts = appendOptionsList(opts, "Service", "SupplementaryGroups", "", supplementaryGroups...)
 	}
 
-	if supportsNotify(uw.p, appName.String()) {
-		opts = append(opts, unit.NewUnitOption("Service", "Type", "notify"))
-	}
-
 	if !uw.p.InsecureOptions.DisableCapabilities {
-		opts = append(opts, unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(capabilitiesStr, " ")))
+		opts = append(opts, unit.NewUnitOption("Service", "CapabilityBoundingSet", strings.Join(pa.capabilities, " ")))
 	}
 
 	// Apply seccomp isolator, if any and not opt-ing out;
 	// see https://www.freedesktop.org/software/systemd/man/systemd.exec.html#SystemCallFilter=
-	noNewPrivileges := getAppNoNewPrivileges(app.Isolators)
-	if !uw.p.InsecureOptions.DisableSeccomp {
-		var forceNoNewPrivileges bool
-
-		unprivileged := (u != 0)
-		opts, forceNoNewPrivileges, err = getSeccompFilter(opts, uw.p, unprivileged, app.Isolators)
+	if pa.seccomp != nil {
+		opts, err = seccompUnitOptions(opts, pa.seccomp)
 		if err != nil {
-			uw.err = err
-			return
-		}
-
-		// Seccomp filters require NoNewPrivileges for unprivileged apps, that may override
-		// manifest annotation.
-		if forceNoNewPrivileges {
-			noNewPrivileges = true
+			uw.err = errwrap.Wrapf("unable to apply seccomp options", err)
+			return nil
 		}
 	}
-	opts = append(opts, unit.NewUnitOption("Service", "NoNewPrivileges", strconv.FormatBool(noNewPrivileges)))
-
-	mounts, err := GenerateMounts(ra, uw.p.Manifest.Volumes, ConvertedFromDocker(imageManifest))
-	if err != nil {
-		uw.err = err
-		return
-	}
+	opts = append(opts, unit.NewUnitOption("Service", "NoNewPrivileges", strconv.FormatBool(pa.noNewPrivileges)))
 
 	if ra.ReadOnlyRootFS {
-		for _, m := range mounts {
+		for _, m := range pa.mounts {
 			mntPath, err := EvaluateSymlinksInsideApp(podAbsRoot, m.Mount.Path)
 			if err != nil {
 				uw.err = err
-				return
+				return nil
 			}
 
 			if !m.ReadOnly {
@@ -441,9 +433,27 @@ func (uw *UnitWriter) AppUnit(ra *schema.RuntimeApp, binPath string, opts ...*un
 		opts = appendOptionsList(opts, "Service", "ReadOnlyDirectories", "", common.RelAppRootfsPath(ra.Name))
 	}
 
+	// Unless we have --insecure-options=paths, then do some path protections:
+	//
+	// * prevent access to sensitive kernel tunables
+	// * Run the app in a separate mount namespace
+	//
 	if !uw.p.InsecureOptions.DisablePaths {
-		// Restrict access to sensitive paths (eg. procfs and sysfs entries).
-		opts = protectKernelTunables(opts, appName, systemdVersion)
+		// Systemd 231+ has InaccessiblePaths
+		// older versions only have InaccessibleDirectories
+		// Paths prepended with "-" are ignored if they don't exist.
+		if systemdVersion >= 231 {
+			opts = appendOptionsList(opts, "Service", "InaccessiblePaths", "-", pa.relAppPaths(pa.hiddenPaths)...)
+			opts = appendOptionsList(opts, "Service", "InaccessiblePaths", "-", pa.relAppPaths(pa.hiddenDirs)...)
+			opts = appendOptionsList(opts, "Service", "ReadOnlyPaths", "-", pa.relAppPaths(pa.roPaths)...)
+		} else {
+			opts = appendOptionsList(opts, "Service", "InaccessibleDirectories", "-", pa.relAppPaths(pa.hiddenDirs)...)
+			opts = appendOptionsList(opts, "Service", "ReadOnlyDirectories", "-", pa.relAppPaths(pa.roPaths)...)
+		}
+
+		if systemdVersion >= 233 {
+			opts = append(opts, unit.NewUnitOption("Service", "ProtectKernelTunables", "true"))
+		}
 
 		// MountFlags=shared creates a new mount namespace and (as unintuitive
 		// as it might seem) makes sure the mount is slave+shared.
@@ -454,10 +464,10 @@ func (uw *UnitWriter) AppUnit(ra *schema.RuntimeApp, binPath string, opts ...*un
 	// For kvm flavor, devices are VM-specific and restricting them is not strictly needed.
 	if !uw.p.InsecureOptions.DisablePaths && flavor != "kvm" {
 		opts = append(opts, unit.NewUnitOption("Service", "DevicePolicy", "closed"))
-		deviceAllows, err := generateDeviceAllows(common.Stage1RootfsPath(podAbsRoot), appName, app.MountPoints, mounts, &uw.p.UidRange)
+		deviceAllows, err := generateDeviceAllows(common.Stage1RootfsPath(podAbsRoot), appName, app.MountPoints, pa.mounts, &uw.p.UidRange)
 		if err != nil {
 			uw.err = err
-			return
+			return nil
 		}
 		for _, dev := range deviceAllows {
 			opts = append(opts, unit.NewUnitOption("Service", "DeviceAllow", dev))
@@ -473,79 +483,31 @@ func (uw *UnitWriter) AppUnit(ra *schema.RuntimeApp, binPath string, opts ...*un
 			typ = "ExecStopPost"
 		default:
 			uw.err = fmt.Errorf("unrecognized eventHandler: %v", eh.Name)
-			return
+			return nil
 		}
 		exec := quoteExec(eh.Exec)
 		opts = append(opts, unit.NewUnitOption("Service", typ, exec))
 	}
 
-	// Some pre-start jobs take a long time, set the timeout to 0
-	opts = append(opts, unit.NewUnitOption("Service", "TimeoutStartSec", "0"))
+	// Resource isolators
+	if pa.resources.MemoryLimit != nil {
+		opts = append(opts, unit.NewUnitOption("Service", "MemoryLimit", strconv.FormatUint(*pa.resources.MemoryLimit, 10)))
+	}
+	if pa.resources.CPUQuota != nil {
+		quota := strconv.FormatUint(*pa.resources.CPUQuota, 10) + "%"
+		opts = append(opts, unit.NewUnitOption("Service", "CPUQuota", quota))
+	}
+	if pa.resources.LinuxCPUShares != nil {
+		opts = append(opts, unit.NewUnitOption("Service", "CPUShares", strconv.FormatUint(*pa.resources.LinuxCPUShares, 10)))
+	}
+	if pa.resources.LinuxOOMScoreAdjust != nil {
+		opts = append(opts, unit.NewUnitOption("Service", "OOMScoreAdjust", strconv.Itoa(*pa.resources.LinuxOOMScoreAdjust)))
+	}
 
 	var saPorts []types.Port
-	for _, p := range app.Ports {
+	for _, p := range ra.App.Ports {
 		if p.SocketActivated {
 			saPorts = append(saPorts, p)
-		}
-	}
-
-	doWithIsolator := func(isolator string, f func() error) bool {
-		ok, err := cgroup.IsIsolatorSupported(isolator)
-		if err != nil {
-			uw.err = err
-			return true
-		}
-
-		if !ok {
-			fmt.Fprintf(os.Stderr, "warning: resource/%s isolator set but support disabled in the kernel, skipping\n", isolator)
-		}
-
-		if err := f(); err != nil {
-			uw.err = err
-			return true
-		}
-
-		return false
-	}
-
-	exit := false
-	for _, i := range app.Isolators {
-		if exit {
-			return
-		}
-
-		switch v := i.Value().(type) {
-		case *types.ResourceMemory:
-			exit = doWithIsolator("memory", func() error {
-				if v.Limit() == nil {
-					return nil
-				}
-
-				opts = append(opts, unit.NewUnitOption("Service", "MemoryLimit", strconv.Itoa(int(v.Limit().Value()))))
-				return nil
-			})
-		case *types.ResourceCPU:
-			exit = doWithIsolator("cpu", func() error {
-				if v.Limit() == nil {
-					return nil
-				}
-
-				if v.Limit().Value() > MaxMilliValue {
-					return fmt.Errorf("cpu limit exceeds the maximum millivalue: %v", v.Limit().String())
-				}
-
-				quota := strconv.Itoa(int(v.Limit().MilliValue()/10)) + "%"
-				opts = append(opts, unit.NewUnitOption("Service", "CPUQuota", quota))
-
-				return nil
-			})
-		case *types.LinuxOOMScoreAdj:
-			opts = append(opts, unit.NewUnitOption("Service", "OOMScoreAdjust", strconv.Itoa(int(*v))))
-		case *types.LinuxCPUShares:
-			exit = doWithIsolator("cpu", func() error {
-				opts = append(opts, unit.NewUnitOption("Service", "CPUShares", strconv.Itoa(int(*v))))
-				return nil
-			})
 		}
 	}
 
@@ -566,7 +528,7 @@ func (uw *UnitWriter) AppUnit(ra *schema.RuntimeApp, binPath string, opts ...*un
 				proto = "ListenDatagram"
 			default:
 				uw.err = fmt.Errorf("unrecognized protocol: %v", sap.Protocol)
-				return
+				return nil
 			}
 			// We find the host port for the pod's port and use that in the
 			// socket unit file.
@@ -584,30 +546,23 @@ func (uw *UnitWriter) AppUnit(ra *schema.RuntimeApp, binPath string, opts ...*un
 		file, err := os.OpenFile(SocketUnitPath(uw.p.Root, appName), os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
 			uw.err = errwrap.Wrap(errors.New("failed to create socket file"), err)
-			return
+			return nil
 		}
 		defer file.Close()
 
 		if _, err = io.Copy(file, unit.Serialize(sockopts)); err != nil {
 			uw.err = errwrap.Wrap(errors.New("failed to write socket unit file"), err)
-			return
+			return nil
 		}
 
 		if err = os.Symlink(path.Join("..", SocketUnitName(appName)), SocketWantPath(uw.p.Root, appName)); err != nil {
 			uw.err = errwrap.Wrap(errors.New("failed to link socket want"), err)
-			return
+			return nil
 		}
 
 		opts = append(opts, unit.NewUnitOption("Unit", "Requires", SocketUnitName(appName)))
 	}
-
-	opts = append(opts, unit.NewUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(appName)))
-	opts = append(opts, unit.NewUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(appName)))
-	opts = append(opts, unit.NewUnitOption("Unit", "Requires", "sysusers.service"))
-	opts = append(opts, unit.NewUnitOption("Unit", "After", "sysusers.service"))
-
-	uw.WriteUnit(ServiceUnitPath(uw.p.Root, appName), "failed to create service unit file", opts...)
-	uw.Activate(ServiceUnitName(appName), ServiceWantPath(uw.p.Root, appName))
+	return opts
 }
 
 // AppReaperUnit writes an app reaper service unit for the given app in the given path using the given unit options.

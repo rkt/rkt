@@ -103,7 +103,6 @@ func mirrorLocalZoneInfo(root string) {
 
 var (
 	debug       bool
-	interactive bool
 	localhostIP net.IP
 	localConfig string
 	log         *rktlog.Logger
@@ -115,10 +114,10 @@ func parseFlags() *stage1commontypes.RuntimePod {
 	rp := stage1commontypes.RuntimePod{}
 
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
-	flag.BoolVar(&interactive, "interactive", false, "The pod is interactive")
 	flag.StringVar(&localConfig, "local-config", common.DefaultLocalConfigDir, "Local config path")
 
 	// These flags are persisted in the PodRuntime
+	flag.BoolVar(&rp.Interactive, "interactive", false, "The pod is interactive")
 	flag.BoolVar(&rp.Mutable, "mutable", false, "Enable mutable operations on this pod, including starting an empty one")
 	flag.Var(&rp.NetList, "net", "Setup networking")
 	flag.StringVar(&rp.PrivateUsers, "private-users", "", "Run within user namespace. Can be set to [=UIDBASE[:NUIDS]]")
@@ -626,7 +625,7 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 			log.FatalE("cannot initialize mutable environment", err)
 		}
 	} else {
-		if err = stage1initcommon.ImmutableEnv(p, interactive); err != nil {
+		if err = stage1initcommon.ImmutableEnv(p); err != nil {
 			log.FatalE("cannot initialize immutable environment", err)
 		}
 	}
