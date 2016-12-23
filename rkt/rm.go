@@ -67,6 +67,7 @@ func runRm(cmd *cobra.Command, args []string) (exit int) {
 			stderr.PrintE("cannot get pod", err)
 			continue
 		}
+		defer p.Close()
 
 		if removePod(p) {
 			stdout.Printf("%q", p.UUID)
