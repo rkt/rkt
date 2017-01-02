@@ -1,4 +1,4 @@
-# rkt - App Container runtime
+# rkt - the pod-native container engine
 
 [![godoc](https://godoc.org/github.com/coreos/rkt?status.svg)](http://godoc.org/github.com/coreos/rkt)
 [![Build Status (Travis)](https://travis-ci.org/coreos/rkt.svg?branch=master)](https://travis-ci.org/coreos/rkt)
@@ -7,16 +7,16 @@
 
 ![rkt Logo](logos/rkt-horizontal-color.png)
 
-rkt (pronounced _"rock-it"_) is a CLI for running app containers on Linux. rkt is designed to be secure, composable, and standards-based.
+rkt (pronounced _"rock-it"_) is a CLI for running application containers on Linux. rkt is designed to be secure, composable, and standards-based.
 
 Some of rkt's key features and goals include:
 
+- _Pod-native_: rkt's basic unit of execution is a [pod][coreos-rkt-pod-blog], linking together resources and user applications in a self-contained environment.
 - _Security_: rkt is developed with a principle of "secure-by-default", and includes a number of important security features like support for [SELinux][selinux], [TPM measurement][tpm], and running app containers in [hardware-isolated VMs][kvm].
-- _Composability_: rkt is designed for first-class integration with init systems ([systemd][systemd], upstart) and cluster orchestration tools (fleet, [Kubernetes][kubernetes], [Nomad][nomad]), and supports [swappable execution engines][architecture].
-- _Open standards and compatibility_: rkt implements the [appc specification][rkt-and-appc], supports the [Container Networking Interface specification][CNI], can also run [Docker images][docker], and [OCI images][oci] via [docker2aci][docker2aci]. Native OCI image support is [in development][oci-rkt].
+- _Composability_: rkt is designed for first-class integration with init systems (like [systemd][systemd], upstart) and cluster orchestration tools (like [Kubernetes][kubernetes] and [Nomad][nomad]), and supports [swappable execution engines][architecture].
+- _Open standards and compatibility_: rkt implements the [appc specification][rkt-and-appc], supports the [Container Networking Interface specification][cni], and can run [Docker images][docker] and [OCI images][oci-image-spec]. Broader native support for OCI images and runtimes is [in development][rkt-oci].
 
-For more on the background and motivation behind rkt, read the original [launch announcement][blog-post].
-
+[coreos-rkt-pod-blog]: https://coreos.com/blog/rkt-and-kubernetes.html
 [architecture]: Documentation/devel/architecture.md
 [systemd]: Documentation/using-rkt-with-systemd.md
 [kubernetes]: Documentation/using-rkt-with-kubernetes.md
@@ -28,14 +28,12 @@ For more on the background and motivation behind rkt, read the original [launch 
 [cni]: https://github.com/appc/cni
 [selinux]: Documentation/selinux.md
 [tpm]: Documentation/devel/tpm.md
-[blog-post]: https://coreos.com/blog/rocket
-[oci]: https://github.com/opencontainers/image-spec
-[oci-rkt]: Documentation/proposals/oci.md
-[docker2aci]: https://github.com/appc/docker2aci
+[oci-image-spec]: https://github.com/opencontainers/image-spec
+[rkt-oci]: https://github.com/coreos/rkt/projects/4
 
 ## Project status
 
-rkt's version 1.0 release marks the command line user interface and on-disk data structures as stable and reliable for external development. Any major changes to those primary areas will be clearly communicated, and a formal deprecation process conducted for any retired features. The (optional) API for pod inspection is not yet completely stabilized, but is quite usable, and an excellent area for testing and participation as it matures.
+The rkt v1.x series provides command line user interface and on-disk data structures stability for external development. Any major changes to those primary areas will be clearly communicated, and a formal deprecation process conducted for any retired features.
 
 Check out the [roadmap](ROADMAP.md) for more details on the future of rkt.
 
