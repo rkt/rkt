@@ -23,7 +23,7 @@ import (
 
 var (
 	cmdCatManifest = &cobra.Command{
-		Use:   "cat-manifest UUID",
+		Use:   "cat-manifest --uuid-file=FILE | UUID ...",
 		Short: "Inspect and print the pod manifest",
 		Long:  `UUID should be the UUID of a pod`,
 		Run:   runWrapper(runCatManifest),
@@ -34,19 +34,33 @@ var (
 func init() {
 	cmdRkt.AddCommand(cmdCatManifest)
 	cmdCatManifest.Flags().BoolVar(&flagPMPrettyPrint, "pretty-print", true, "apply indent to format the output")
+	cmdCatManifest.Flags().StringVar(&flagUUIDFile, "uuid-file", "", "read pod UUID from file instead of argument")
 }
 
 func runCatManifest(cmd *cobra.Command, args []string) (exit int) {
-	if len(args) != 1 {
-		cmd.Usage()
-		return 254
+	var podUUID string
+
+	if flagUUIDFile != "" {
+		uuid, err := pkgPod.ReadUUIDFromFile(flagUUIDFile)
+		if err != nil {
+			stderr.PrintE("unable to resolve UUID from file", err)
+			return 254
+		}
+		podUUID = uuid
+	} else {
+		if len(args) != 1 {
+			cmd.Usage()
+			return 254
+		}
+		podUUID = args[0]
 	}
 
-	pod, err := pkgPod.PodFromUUIDString(getDataDir(), args[0])
+	pod, err := pkgPod.PodFromUUIDString(getDataDir(), podUUID)
 	if err != nil {
 		stderr.PrintE("problem retrieving pod", err)
 		return 254
 	}
+
 	defer pod.Close()
 
 	_, manifest, err := pod.PodManifest()
