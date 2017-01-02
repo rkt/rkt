@@ -33,7 +33,7 @@ Some of rkt's key features and goals include:
 
 ## Project status
 
-The rkt v1.x series provides command line user interface and on-disk data structures stability for external development. Any major changes to those primary areas will be clearly communicated, and a formal deprecation process conducted for any retired features. The (optional) API for pod inspection is not yet completely stabilized, but is quite usable, and an excellent area for testing and participation as it matures.
+The rkt v1.x series provides command line user interface and on-disk data structures stability for external development. Any major changes to those primary areas will be clearly communicated, and a formal deprecation process conducted for any retired features.
 
 Check out the [roadmap](ROADMAP.md) for more details on the future of rkt.
 
