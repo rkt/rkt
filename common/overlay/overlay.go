@@ -16,11 +16,16 @@ package overlay
 
 import (
 	"fmt"
+	"strings"
 	"syscall"
 
 	"github.com/coreos/rkt/pkg/label"
 	"github.com/hashicorp/errwrap"
 )
+
+// sanitizer defines a string translator used to escape colon and comma
+// characters in the directories names.
+var sanitizer = strings.NewReplacer(`:`, `\:`, `,`, `\,`)
 
 // MountCfg contains the needed data to construct the overlay mount syscall.
 // The Lower and Upper fields are paths to the filesystems to be merged. The
@@ -34,14 +39,31 @@ type MountCfg struct {
 	Lbl string
 }
 
+// sanitize escapes the colon and comma symbols in order to support the dir
+// names with these characters, otherwise they will be treated as separators
+// between the directory names.
+func sanitize(dir string) string {
+	return sanitizer.Replace(dir)
+}
+
+// Opts returns options for mount system call.
+func (cfg *MountCfg) Opts() string {
+	opts := fmt.Sprintf(
+		"lowerdir=%s,upperdir=%s,workdir=%s",
+		sanitize(cfg.Lower), sanitize(cfg.Upper), sanitize(cfg.Work),
+	)
+
+	return label.FormatMountLabel(opts, cfg.Lbl)
+}
+
 // Mount mounts the upper and lower directories to the destination directory.
 // The MountCfg struct supplies information required to build the mount system
 // call.
 func Mount(cfg *MountCfg) error {
-	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", cfg.Lower, cfg.Upper, cfg.Work)
-	opts = label.FormatMountLabel(opts, cfg.Lbl)
-	if err := syscall.Mount("overlay", cfg.Dest, "overlay", 0, opts); err != nil {
-		return errwrap.Wrap(fmt.Errorf("error mounting overlay with options '%s' and dest '%s'", opts, cfg.Dest), err)
+	err := syscall.Mount("overlay", cfg.Dest, "overlay", 0, cfg.Opts())
+	if err != nil {
+		const text = "error mounting overlay with options '%s' and dest '%s'"
+		return errwrap.Wrap(fmt.Errorf(text, cfg.Opts(), cfg.Dest), err)
 	}
 
 	return nil
