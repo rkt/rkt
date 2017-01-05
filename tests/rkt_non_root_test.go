@@ -119,12 +119,12 @@ func TestNonRootFetchRmGCImage(t *testing.T) {
 	// We can't touch the treestores even as members of the rkt group.
 	imgGCCmd := fmt.Sprintf("%s image gc", ctx.Cmd())
 	t.Logf("Running %s", imgGCCmd)
-	runRktAsUidGidAndCheckOutput(t, imgGCCmd, "permission denied", true, uid, rktGid)
+	runRktAsUidGidAndCheckOutput(t, imgGCCmd, "permission denied", false, true, uid, rktGid)
 
 	// Should be able to remove the image fetched by root since we're in the rkt group.
 	imgRmCmd := fmt.Sprintf("%s image rm %s", ctx.Cmd(), rootImgHash)
 	t.Logf("Running %s", imgRmCmd)
-	runRktAsUidGidAndCheckOutput(t, imgRmCmd, "successfully removed", false, uid, rktGid)
+	runRktAsUidGidAndCheckOutput(t, imgRmCmd, "successfully removed", false, false, uid, rktGid)
 
 	// Should be able to remove the image fetched by ourselves.
 	nonrootImg := patchTestACI("rkt-inspect-non-root-rm.aci", "--exec=/inspect")
@@ -136,5 +136,5 @@ func TestNonRootFetchRmGCImage(t *testing.T) {
 
 	imgRmCmd = fmt.Sprintf("%s image rm %s", ctx.Cmd(), nonrootImgHash)
 	t.Logf("Running %s", imgRmCmd)
-	runRktAsUidGidAndCheckOutput(t, imgRmCmd, "successfully removed", false, uid, rktGid)
+	runRktAsUidGidAndCheckOutput(t, imgRmCmd, "successfully removed", false, false, uid, rktGid)
 }
