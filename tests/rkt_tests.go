@@ -400,14 +400,17 @@ func runRktAsUidGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, lin
 
 	if expectedLine != "" {
 		if lineIsRegex == true {
-			_, _, err = expectRegexWithOutput(child, expectedLine)
+			_, _, err := expectRegexWithOutput(child, expectedLine)
+			if err != nil {
+				t.Fatalf("didn't receive expected regex %q in output: %v", expectedLine, err)
+			}
 		} else {
 			err = expectWithOutput(child, expectedLine)
+			if err != nil {
+				t.Fatalf("didn't receive expected output %q: %v", expectedLine, err)
+			}
 		}
 
-		if err != nil {
-			t.Fatalf("didn't receive expected output %q (regex=%v): %v", expectedLine, lineIsRegex, err)
-		}
 	}
 }
 
