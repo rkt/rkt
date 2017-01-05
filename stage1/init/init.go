@@ -832,9 +832,14 @@ func getContainerSubCgroup(machineID string, canMachinedRegister, unified bool) 
 
 	// when registration is disabled the container will be directly
 	// under the current cgroup so we can look it up in /proc/self/cgroup
+	// Try the systemd slice first, falling back to cpu if that fails (e.g. on
+	// systems not running systemd). See issue #3502.
 	ownV1CgroupPath, err := v1.GetOwnCgroupPath("name=systemd")
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("could not get own v1 cgroup path"), err)
+		ownV1CgroupPath, err = v1.GetOwnCgroupPath("cpu")
+		if err != nil {
+			return "", errwrap.Wrap(errors.New("could not get own v1 cgroup path"), err)
+		}
 	}
 
 	// systemd-nspawn won't work if we are in the root cgroup. In addition,
