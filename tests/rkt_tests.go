@@ -514,6 +514,10 @@ func runRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError
 	runRktAsGidAndCheckOutput(t, rktCmd, expectedLine, expectError, 0)
 }
 
+func runRktAndCheckREOutput(t *testing.T, rktCmd, expectedLine string, expectError bool) {
+	runRktAsGidAndCheckREOutput(t, rktCmd, expectedLine, expectError, 0)
+}
+
 func startRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string) *gexpect.ExpectSubprocess {
 	return startRktAsGidAndCheckOutput(t, rktCmd, expectedLine, 0)
 }
