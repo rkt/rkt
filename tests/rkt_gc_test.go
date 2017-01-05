@@ -55,7 +55,7 @@ func TestGC(t *testing.T) {
 
 	pods = podsRemaining(t, ctx)
 	if len(pods) != 0 {
-		t.Fatalf("no pods should exist rkt's data directory, but found: %v", pods)
+		t.Fatalf("no pods should exist in rkt data directory, but found: %s", pods)
 	}
 }
 

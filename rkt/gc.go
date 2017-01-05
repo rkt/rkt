@@ -225,24 +225,25 @@ func mountPodStage1(ts *treestore.Store, p *pkgPod.Pod) error {
 // deletePod cleans up files and resource associated with the pod
 // pod must be under exclusive lock and be in either ExitedGarbage
 // or Garbage state
-func deletePod(p *pkgPod.Pod) {
+func deletePod(p *pkgPod.Pod) bool {
 	podState := p.State()
 	if podState != pkgPod.ExitedGarbage && podState != pkgPod.Garbage {
-		stderr.Panicf("logic error: deletePod called with non-garbage pod %q (status %q)", p.UUID, p.State())
+		stderr.Errorf("non-garbage pod %q (status %q), skipped", p.UUID, p.State())
+		return false
 	}
 
 	if podState == pkgPod.ExitedGarbage {
 		s, err := imagestore.NewStore(storeDir())
 		if err != nil {
 			stderr.PrintE("cannot open store", err)
-			return
+			return false
 		}
 		defer s.Close()
 
 		ts, err := treestore.NewStore(treeStoreDir(), s)
 		if err != nil {
 			stderr.PrintE("cannot open store", err)
-			return
+			return false
 		}
 
 		if globalFlags.Debug {
@@ -269,12 +270,25 @@ func deletePod(p *pkgPod.Pod) {
 		// unmount all leftover mounts
 		if err := stage0.MountGC(p.Path(), p.UUID.String()); err != nil {
 			stderr.PrintE(fmt.Sprintf("GC of leftover mounts for pod %q failed", p.UUID), err)
-			return
+			return false
 		}
 	}
 
+	// remove the rootfs first; if this fails (eg. due to busy mountpoints), pod manifest
+	// is left in place and clean-up can be re-tried later.
+	rootfsPath, err := p.Stage1RootfsPath()
+	if err == nil {
+		if e := os.RemoveAll(rootfsPath); e != nil {
+			stderr.PrintE(fmt.Sprintf("unable to remove pod rootfs %q", p.UUID), e)
+			return false
+		}
+	}
+
+	// finally remove all remaining pieces
 	if err := os.RemoveAll(p.Path()); err != nil {
 		stderr.PrintE(fmt.Sprintf("unable to remove pod %q", p.UUID), err)
-		os.Exit(254)
+		return false
 	}
+
+	return true
 }
