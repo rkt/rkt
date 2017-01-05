@@ -1,3 +1,28 @@
+## 1.22.0
+
+This is a stabilization release which includes better support for environments without systemd, improvements to GC behavior in complex scenarios, and several additional fixes.
+
+### New features and UX changes
+
+- rkt/cat-manifest: add support for --uuid-file ([#3498](https://github.com/coreos/rkt/pull/3498)).
+- stage1: fallback if systemd cgroup doesn't exist ([#3507](https://github.com/coreos/rkt/pull/3507)).
+- vendor: bump gocapability ([#3493](https://github.com/coreos/rkt/pull/3493)). This change renames `sys_psacct` to `sys_pacct`.
+- stage0/app: pass debug flag to entrypoints ([#3469](https://github.com/coreos/rkt/pull/3469)).
+
+### Bug fixes
+- gc: fix cleaning mounts and files ([#3486](https://github.com/coreos/rkt/pull/3486)). This improves GC behavior in case of busy mounts and other complex scenarios.
+- mount: ensure empty volume paths exist for copy-up ([#3468](https://github.com/coreos/rkt/pull/3468)).
+- rkt stop/rm: a pod must be closed after PodFromUUIDString() ([#3492](https://github.com/coreos/rkt/pull/3492)).
+
+### Other changes
+- stage1/kvm: add a dash in kernel LOCALVERSION ([#3489](https://github.com/coreos/rkt/pull/3489)).
+- stage1/kvm: Improve QEMU Makefile rules ([#3474](https://github.com/coreos/rkt/pull/3474)).
+- pkg/pod: use IncludeMostDirs bitmask instead of constructing it ([#3506](https://github.com/coreos/rkt/pull/3506)).
+- pkg/pod: add WaitReady, dry Sandbox methods ([#3462](https://github.com/coreos/rkt/pull/3462)).
+- vendor: bump gexpect to 0.1.1 ([#3467](https://github.com/coreos/rkt/pull/3467)).
+- common: fix 'the the' duplication in comment ([#3497](https://github.com/coreos/rkt/pull/3497)).
+- docs: multiple updates ([#3479](https://github.com/coreos/rkt/pull/3479), [#3501](https://github.com/coreos/rkt/pull/3501), [#3464](https://github.com/coreos/rkt/pull/3464), [#3495](https://github.com/coreos/rkt/pull/3495)).
+
 ## 1.21.0
 
 This release includes bugfixes for the experimental CRI support, more stable integration tests, and some other interesting changes:
