@@ -21,22 +21,40 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
+	"github.com/coreos/rkt/pkg/aci/acitest"
 	"github.com/coreos/rkt/tests/testutils"
-)
 
-const (
-	manifestExportTemplate = `{"acKind":"ImageManifest","acVersion":"0.8.9","name":"IMG_NAME","labels":[{"name":"version","value":"1.22.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}],"app":{"exec":["/inspect"],"user":"0","group":"0","workingDirectory":"/","environment":[{"name":"VAR_FROM_MANIFEST","value":"manifest"}]}}`
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
 
 // TestImageExport tests 'rkt image export', it will import some existing
 // image, export it with rkt image export and check that the exported ACI hash
 // matches the hash of the imported ACI
 func TestImageExport(t *testing.T) {
-	testImageName := "coreos.com/rkt-image-export-test"
-	expectManifest := strings.Replace(manifestExportTemplate, "IMG_NAME", testImageName, -1)
+	manifest := schema.ImageManifest{
+		Name: "coreos.com/rkt-image-export-test",
+		App: &types.App{
+			Exec: types.Exec{"/inspect"},
+			User: "0", Group: "0",
+			WorkingDirectory: "/",
+			Environment: types.Environment{
+				{"VAR_FROM_MANIFEST", "manifest"},
+			},
+		},
+		Labels: types.Labels{
+			{"version", "1.22.0"},
+			{"arch", "amd64"},
+			{"os", "linux"},
+		},
+	}
+
+	expectManifest, err := acitest.ImageManifestString(&manifest)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	tmpDir := createTempDirOrPanic("rkt-TestImageExport-")
 	defer os.RemoveAll(tmpDir)
@@ -73,7 +91,7 @@ func TestImageExport(t *testing.T) {
 		expectedHash string
 	}{
 		{
-			testImageName,
+			string(manifest.Name),
 			true,
 			testImageHash,
 		},

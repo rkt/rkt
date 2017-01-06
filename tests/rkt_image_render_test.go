@@ -21,14 +21,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
+	"github.com/coreos/rkt/pkg/aci/acitest"
 	"github.com/coreos/rkt/tests/testutils"
-)
 
-const (
-	manifestRenderTemplate = `{"acKind":"ImageManifest","acVersion":"0.8.9","name":"IMG_NAME","labels":[{"name":"version","value":"1.22.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}],"dependencies":[{"imageName":"coreos.com/rkt-inspect"}],"app":{"exec":["/inspect"],"user":"0","group":"0","workingDirectory":"/","environment":[{"name":"VAR_FROM_MANIFEST","value":"manifest"}]}}`
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
 
 // TestImageRender tests 'rkt image render', it will import some existing empty
@@ -39,12 +38,33 @@ func TestImageRender(t *testing.T) {
 	baseImage := getInspectImagePath()
 	emptyImage := getEmptyImagePath()
 
-	testImageName := "coreos.com/rkt-image-render-test"
-
 	inspectFile := testutils.GetValueFromEnvOrPanic("INSPECT_BINARY")
 	inspectHash := getHashOrPanic(inspectFile)
 
-	expectManifest := strings.Replace(manifestRenderTemplate, "IMG_NAME", testImageName, -1)
+	manifestRender := schema.ImageManifest{
+		Name: "coreos.com/rkt-image-render-test",
+		App: &types.App{
+			Exec: types.Exec{"/inspect"},
+			User: "0", Group: "0",
+			WorkingDirectory: "/",
+			Environment: types.Environment{
+				{"VAR_FROM_MANIFEST", "manifest"},
+			},
+		},
+		Dependencies: types.Dependencies{
+			{ImageName: "coreos.com/rkt-inspect"},
+		},
+		Labels: types.Labels{
+			{"version", "1.22.0"},
+			{"arch", "amd64"},
+			{"os", "linux"},
+		},
+	}
+
+	expectManifest, err := acitest.ImageManifestString(&manifestRender)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	tmpDir := createTempDirOrPanic("rkt-TestImageRender-")
 	defer os.RemoveAll(tmpDir)
@@ -78,7 +98,7 @@ func TestImageRender(t *testing.T) {
 		expectedHash string
 	}{
 		{
-			testImageName,
+			string(manifestRender.Name),
 			true,
 			inspectHash,
 		},

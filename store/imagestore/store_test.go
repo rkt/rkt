@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/aci/acitest"
 	"github.com/coreos/rkt/pkg/multicall"
 
 	"github.com/appc/spec/schema/types"
@@ -161,11 +162,10 @@ func TestGetImageManifest(t *testing.T) {
 	}
 	defer s.Close()
 
-	imj := `{
-			"acKind": "ImageManifest",
-			"acVersion": "0.8.9",
-			"name": "example.com/test01"
-		}`
+	imj, err := acitest.ImageManifestString(nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	aci, err := aci.NewACI(dir, imj, nil)
 	if err != nil {
@@ -356,11 +356,10 @@ func TestRemoveACI(t *testing.T) {
 	}
 	defer s.Close()
 
-	imj := `{
-                    "acKind": "ImageManifest",
-                    "acVersion": "0.8.9",
-                    "name": "example.com/test01"
-                }`
+	imj, err := acitest.ImageManifestString(nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	aciFile, err := aci.NewACI(dir, imj, nil)
 	if err != nil {
@@ -396,13 +395,6 @@ func TestRemoveACI(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error")
 	}
-
-	// Simulate error removing from the
-	imj = `{
-                   "acKind": "ImageManifest",
-                   "acVersion": "0.8.9",
-                   "name": "example.com/test01"
-               }`
 
 	aciFile, err = aci.NewACI(dir, imj, nil)
 	if err != nil {

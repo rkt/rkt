@@ -20,14 +20,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
 
+	"github.com/coreos/rkt/pkg/aci/acitest"
 	"github.com/coreos/rkt/tests/testutils"
-)
 
-const (
-	manifestOSArchTemplate = `{"acKind":"ImageManifest","acVersion":"0.8.9","name":"IMG_NAME","labels":[{"name":"version","value":"1.22.0"}ARCH_OS],"app":{"exec":["/inspect", "--print-msg=HelloWorld"],"user":"0","group":"0","workingDirectory":"/"}}`
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
 
 type osArchTest struct {
@@ -47,12 +46,40 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	var tests []osArchTest
 
 	defer osArchTestRemoveImages(tests)
-	testImageName := "coreos.com/rkt-missing-os-arch-test"
-	manifest := strings.Replace(manifestOSArchTemplate, "IMG_NAME", testImageName, 1)
+
+	manifestOSArch := schema.ImageManifest{
+		Name: "coreos.com/rkt-missing-os-arch-test",
+		App: &types.App{
+			Exec: types.Exec{
+				"/inspect",
+				"--print-msg=HelloWorld",
+			},
+			User: "0", Group: "0",
+			WorkingDirectory: "/",
+		},
+		Labels: types.Labels{
+			{"version", "1.22.0"},
+		},
+	}
+
+	// Copy the lables of the image manifest to use the common
+	// part in all test cases.
+	labels := make(types.Labels, len(manifestOSArch.Labels))
+	copy(labels, manifestOSArch.Labels)
 
 	// Test a valid image as a sanity check
-	goodManifestStr := strings.Replace(manifest, "ARCH_OS", `,{"name":"os","value":"linux"},{"name":"arch","value":"amd64"}`, 1)
+	manifestOSArch.Labels = append(
+		labels,
+		types.Label{"os", "linux"},
+		types.Label{"arch", "amd64"},
+	)
+
 	goodManifestFile := "good-manifest.json"
+	goodManifestStr, err := acitest.ImageManifestString(&manifestOSArch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	if err := ioutil.WriteFile(goodManifestFile, []byte(goodManifestStr), 0600); err != nil {
 		t.Fatalf("Cannot write good manifest: %v", err)
 	}
@@ -68,8 +95,14 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	tests = append(tests, goodTest)
 
 	// Test an image with a missing os label
-	missingOSManifestStr := strings.Replace(manifest, "ARCH_OS", `,{"name":"arch","value":"amd64"}`, 1)
+	manifestOSArch.Labels = append(labels, types.Label{"arch", "amd64"})
+
 	missingOSManifestFile := "missingOS-manifest.json"
+	missingOSManifestStr, err := acitest.ImageManifestString(&manifestOSArch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	if err := ioutil.WriteFile(missingOSManifestFile, []byte(missingOSManifestStr), 0600); err != nil {
 		t.Fatalf("Cannot write missing OS manifest: %v", err)
 	}
@@ -85,8 +118,14 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	tests = append(tests, missingOSTest)
 
 	// Test an image with a missing arch label
-	missingArchManifestStr := strings.Replace(manifest, "ARCH_OS", `,{"name":"os","value":"linux"}`, 1)
+	manifestOSArch.Labels = append(labels, types.Label{"os", "linux"})
+
 	missingArchManifestFile := "missingArch-manifest.json"
+	missingArchManifestStr, err := acitest.ImageManifestString(&manifestOSArch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	if err := ioutil.WriteFile(missingArchManifestFile, []byte(missingArchManifestStr), 0600); err != nil {
 		t.Fatalf("Cannot write missing Arch manifest: %v", err)
 	}
@@ -102,8 +141,18 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	tests = append(tests, missingArchTest)
 
 	// Test an image with an invalid os
-	invalidOSManifestStr := strings.Replace(manifest, "ARCH_OS", `,{"name":"os","value":"freebsd"},{"name":"arch","value":"amd64"}`, 1)
+	manifestOSArch.Labels = append(
+		labels,
+		types.Label{"os", "freebsd"},
+		types.Label{"arch", "amd64"},
+	)
+
 	invalidOSManifestFile := "invalid-os-manifest.json"
+	invalidOSManifestStr, err := acitest.ImageManifestString(&manifestOSArch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	if err := ioutil.WriteFile(invalidOSManifestFile, []byte(invalidOSManifestStr), 0600); err != nil {
 		t.Fatalf("Cannot write invalid os manifest: %v", err)
 	}
@@ -119,8 +168,18 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	tests = append(tests, invalidOSTest)
 
 	// Test an image with an invalid arch
-	invalidArchManifestStr := strings.Replace(manifest, "ARCH_OS", `,{"name":"os","value":"linux"},{"name":"arch","value":"armv5l"}`, 1)
+	manifestOSArch.Labels = append(
+		labels,
+		types.Label{"os", "linux"},
+		types.Label{"arch", "armv5l"},
+	)
+
 	invalidArchManifestFile := "invalid-arch-manifest.json"
+	invalidArchManifestStr, err := acitest.ImageManifestString(&manifestOSArch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	if err := ioutil.WriteFile(invalidArchManifestFile, []byte(invalidArchManifestStr), 0600); err != nil {
 		t.Fatalf("Cannot write invalid arch manifest: %v", err)
 	}

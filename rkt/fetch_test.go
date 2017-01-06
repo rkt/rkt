@@ -30,6 +30,7 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/aci/acitest"
 	dist "github.com/coreos/rkt/pkg/distribution"
 	"github.com/coreos/rkt/pkg/keystore"
 	"github.com/coreos/rkt/pkg/keystore/keystoretest"
@@ -162,11 +163,10 @@ func TestDownloading(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	imj := `{
-			"acKind": "ImageManifest",
-			"acVersion": "0.7.4",
-			"name": "example.com/test01"
-		}`
+	imj, err := acitest.ImageManifestString(nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	entries := []*aci.ACIEntry{
 		// An empty file

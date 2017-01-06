@@ -30,10 +30,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/aci/acitest"
 	"github.com/coreos/rkt/tests/testutils"
 	taas "github.com/coreos/rkt/tests/testutils/aci-server"
+
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
 
 // TestFetchFromFile tests that 'rkt fetch/run/prepare' for a file will always
@@ -535,10 +538,21 @@ func TestDeferredSignatureDownload(t *testing.T) {
 }
 
 func TestDifferentDiscoveryLabels(t *testing.T) {
-	manifestTemplate := `{"acKind":"ImageManifest","acVersion":"0.8.9","name":"IMG_NAME","labels":[{"name":"version","value":"1.2.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}]}`
+	const imageName = "localhost/rkt-test-different-discovery-labels-image"
+
+	manifest, err := acitest.ImageManifestString(&schema.ImageManifest{
+		Name: imageName, Labels: types.Labels{
+			{"version", "1.2.0"},
+			{"arch", "amd64"},
+			{"os", "linux"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+
 	emptyImage := getEmptyImagePath()
-	imageName := "localhost/rkt-test-different-discovery-labels-image"
-	manifest := strings.Replace(manifestTemplate, "IMG_NAME", imageName, -1)
 	tmpDir := createTempDirOrPanic("rkt-TestDifferentDiscoveryLabels-")
 	defer os.RemoveAll(tmpDir)
 
@@ -551,8 +565,8 @@ func TestDifferentDiscoveryLabels(t *testing.T) {
 	}
 	defer os.Remove(tmpManifest.Name())
 
-	image := patchACI(emptyImage, "rkt-test-different-discovery-labels-image.aci", "--manifest", tmpManifest.Name())
 	imageFileName := fmt.Sprintf("%s.aci", filepath.Base(imageName))
+	image := patchACI(emptyImage, imageFileName, "--manifest", tmpManifest.Name())
 	defer os.Remove(image)
 
 	asc := runSignImage(t, image, 1)

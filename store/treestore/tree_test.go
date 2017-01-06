@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/coreos/rkt/pkg/aci"
+	"github.com/coreos/rkt/pkg/aci/acitest"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/store/imagestore"
 )
@@ -31,13 +32,10 @@ const tstprefix = "treestore-test"
 // TODO(sgotti) when the TreeStore will use an interface, change it to a
 // test implementation without relying on store/imagestore
 func testStoreWriteACI(dir string, s *imagestore.Store) (string, error) {
-	imj := `
-		{
-		    "acKind": "ImageManifest",
-		    "acVersion": "0.8.9",
-		    "name": "example.com/test01"
-		}
-	`
+	imj, err := acitest.ImageManifestString(nil)
+	if err != nil {
+		return "", err
+	}
 
 	entries := []*aci.ACIEntry{
 		// An empty dir
@@ -199,13 +197,10 @@ func TestTreeStore(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	imj := `
-		{
-		    "acKind": "ImageManifest",
-		    "acVersion": "0.8.9",
-		    "name": "example.com/test01"
-		}
-	`
+	imj, err := acitest.ImageManifestString(nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	entries := []*aci.ACIEntry{
 		// An empty dir

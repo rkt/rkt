@@ -22,14 +22,30 @@ import (
 	"os"
 	"testing"
 
+	"github.com/coreos/rkt/pkg/aci/acitest"
 	"github.com/coreos/rkt/tests/testutils"
-)
 
-const (
-	noappManifestStr = `{"acKind":"ImageManifest","acVersion":"0.8.9","name":"coreos.com/rkt-inspect","labels":[{"name":"version","value":"1.22.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}]}`
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
 
 func TestRunOverrideExec(t *testing.T) {
+	// noappManifest specifies an image manifest configuration without
+	// an application section.
+	noappManifest := schema.ImageManifest{
+		Name: "coreos.com/rkt-inspect",
+		Labels: types.Labels{
+			{"version", "1.22.0"},
+			{"arch", "amd64"},
+			{"os", "linux"},
+		},
+	}
+
+	noappManifestStr, err := acitest.ImageManifestString(&noappManifest)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
 	noappManifestFile := "noapp-manifest.json"
 	if err := ioutil.WriteFile(noappManifestFile, []byte(noappManifestStr), 0600); err != nil {
 		t.Fatalf("Cannot write noapp manifest: %v", err)
