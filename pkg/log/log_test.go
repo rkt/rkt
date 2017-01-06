@@ -64,3 +64,16 @@ func TestLogOutput(t *testing.T) {
 		}
 	}
 }
+
+func TestLogFormatting(t *testing.T) {
+	var logBuf bytes.Buffer
+	l := New(&logBuf, "prefix", false)
+
+	l.Errorf("format args: %s %d", "string", 1)
+
+	expected := "prefix: format args: string 1\n"
+
+	if logBuf.String() != expected {
+		t.Errorf("expected %q, got %q", expected, logBuf.String())
+	}
+}
