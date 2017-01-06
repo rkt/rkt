@@ -227,7 +227,7 @@ func mountPodStage1(ts *treestore.Store, p *pkgPod.Pod) error {
 // or Garbage state
 func deletePod(p *pkgPod.Pod) bool {
 	podState := p.State()
-	if podState != pkgPod.ExitedGarbage && podState != pkgPod.Garbage {
+	if podState != pkgPod.ExitedGarbage && podState != pkgPod.Garbage && podState != pkgPod.ExitedDeleting {
 		stderr.Errorf("non-garbage pod %q (status %q), skipped", p.UUID, p.State())
 		return false
 	}
