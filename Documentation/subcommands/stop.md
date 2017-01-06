@@ -20,6 +20,14 @@ The `--force` flag will stop a pod forcibly, that is:
 "93e516b0-e84b-40cf-a45b-531b14dfcce2"
 ```
 
+The `--uuid-file` flag may be used to pass a text file with UUID to `stop` command.
+This can be paired with `--uuid-file-save` flag to stop pods by name:
+
+```
+rkt run --uuid-file-save=/run/rkt-uuids/mypod ...
+rkt stop --uuid-file=/run/rkt-uuids/mypod
+```
+
 ## Other ways to stop a rkt pod
 
 If you started rkt as a systemd service, you can stop the pod with `systemctl stop`.
