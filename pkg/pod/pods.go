@@ -234,6 +234,12 @@ func getPod(dataDir string, uuid *types.UUID) (*Pod, error) {
 		return nil, errwrap.Wrap(fmt.Errorf("error opening pod %q", uuid), err)
 	}
 
+	if err == lock.ErrNotExist {
+		// This means it didn't exist in any state, something else might have
+		// deleted it.
+		return nil, errwrap.Wrap(fmt.Errorf("pod %q was not present", uuid), err)
+	}
+
 	if !p.isPrepared && !p.isEmbryo {
 		// preparing, run, exitedGarbage, and garbage dirs use exclusive locks to indicate preparing/aborted, running/exited, and deleting/marked
 		if err = l.TrySharedLock(); err != nil {
