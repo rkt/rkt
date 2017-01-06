@@ -90,7 +90,9 @@ func TestRktStop(t *testing.T) {
 
 		runCmd := fmt.Sprintf("%s %s %s", ctx.Cmd(), tt.cmd, args)
 		t.Logf("Running test #%d, %s", i, runCmd)
-		spawnOrFail(t, runCmd)
+		exitStatus := 0
+		// Issue stop command, and wait for it to complete
+		spawnAndWaitOrFail(t, runCmd, exitStatus)
 
 		// Make sure the pod is stopped
 		var podInfo *podInfo
@@ -107,7 +109,7 @@ func TestRktStop(t *testing.T) {
 			t.Fatalf("Expected pod %q to be exited, but it is %q", podUUID, podInfo.state)
 		}
 
-		exitStatus := 0
+		exitStatus = 0
 		if tt.expectKill {
 			exitStatus = -1
 		}
