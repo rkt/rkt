@@ -15,7 +15,11 @@
 package common
 
 import (
+	"bufio"
+	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 
 	_common "github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/fs"
@@ -43,4 +47,51 @@ func UseHostHosts(mnt fs.MountUnmounter, podRoot string) error {
 		"/etc/hosts",
 		filepath.Join(_common.Stage1RootfsPath(podRoot), "etc/rkt-hosts"),
 		true)
+}
+
+// AddHostsEntry adds an entry to an *existing* hosts file, appending
+// to the existing IP if needed
+func AddHostsEntry(filename string, ip string, hostname string) error {
+	fp, err := os.OpenFile(filename, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+
+	out := ""
+	found := false
+
+	scanner := bufio.NewScanner(fp)
+	for scanner.Scan() {
+		line := scanner.Text()
+		words := strings.Fields(line)
+		if !found && len(words) > 0 && words[0] == ip {
+			found = true
+			out += fmt.Sprintf("%s %s\n", line, hostname)
+		} else {
+			out += line
+			out += "\n"
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	// If that IP was not found, add a new line
+	if !found {
+		out += fmt.Sprintf("%s\t%s\n", ip, hostname)
+	}
+
+	// Seek to the beginning, truncate, and write again
+	if _, err := fp.Seek(0, 0); err != nil {
+		return err
+	}
+	if err := fp.Truncate(0); err != nil {
+		return err
+	}
+	if _, err := fp.Write([]byte(out)); err != nil {
+		return err
+	}
+
+	return nil
 }
