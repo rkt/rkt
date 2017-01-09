@@ -18,11 +18,8 @@
 package main
 
 import (
-	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -37,34 +34,30 @@ func TestAppSandboxSmoke(t *testing.T) {
 	appName := "hello-app"
 	msg := "HelloFromAppInSandbox"
 
-	aciHello := patchTestACI("rkt-inspect-hello.aci", fmt.Sprintf("--name=%s", imageName), fmt.Sprintf("--exec=/inspect --print-msg=%s", msg))
+	aciHello := patchTestACI("rkt-inspect-hello.aci", "--name="+imageName, "--exec=/inspect --print-msg="+msg)
 	defer os.Remove(aciHello)
 
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := strings.Fields(fmt.Sprintf("%s fetch --insecure-options=image %s", ctx.Cmd(), aciHello))
-	fetchCmd := exec.Command(cmd[0], cmd[1:]...)
-	fetchCmd.Env = append(fetchCmd.Env, "RKT_EXPERIMENT_APP=true")
-	fetchOutput, err := fetchCmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Unexpected error: %v\n%s", err, fetchOutput)
+	if err := os.Setenv("RKT_EXPERIMENT_APP", "true"); err != nil {
+		panic(err)
+	}
+	defer os.Unsetenv("RKT_EXPERIMENT_APP")
+
+	fetch := ctx.ExecCmd("fetch", "--insecure-options=image", aciHello)
+	fetch.Env = append(fetch.Env, "RKT_EXPERIMENT_APP=true")
+	t.Log("Running", fetch.Args)
+	if out, err := fetch.CombinedOutput(); err != nil {
+		t.Fatal(err, "output", out)
 	}
 
 	tmpDir := createTempDirOrPanic("rkt-test-cri-")
 	uuidFile := filepath.Join(tmpDir, "uuid")
 	defer os.RemoveAll(tmpDir)
 
-	rktCmd := fmt.Sprintf("%s app sandbox --uuid-file-save=%s", ctx.Cmd(), uuidFile)
-	err = os.Setenv("RKT_EXPERIMENT_APP", "true")
-	if err != nil {
-		panic(err)
-	}
-	child := spawnOrFail(t, rktCmd)
-	err = os.Unsetenv("RKT_EXPERIMENT_APP")
-	if err != nil {
-		panic(err)
-	}
+	rkt := ctx.Cmd() + " app sandbox --uuid-file-save=" + uuidFile
+	child := spawnOrFail(t, rkt)
 
 	// wait for the sandbox to start
 	podUUID, err := waitPodReady(ctx, t, uuidFile, actionTimeout)
@@ -72,42 +65,32 @@ func TestAppSandboxSmoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cmd = strings.Fields(fmt.Sprintf("%s app add --debug %s %s --name=%s", ctx.Cmd(), podUUID, imageName, appName))
-	addCmd := exec.Command(cmd[0], cmd[1:]...)
-	addCmd.Env = append(addCmd.Env, "RKT_EXPERIMENT_APP=true")
-	t.Logf("Running command: %v\n", cmd)
-	output, err := addCmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Unexpected error: %v\n%s", err, output)
+	add := ctx.ExecCmd("app", "add", "--debug", podUUID, imageName, "--name="+appName)
+	t.Log("Running", add.Args)
+	if out, err := add.CombinedOutput(); err != nil {
+		t.Fatal(err, "output", out)
 	}
 
-	cmd = strings.Fields(fmt.Sprintf("%s app start --debug %s --app=%s", ctx.Cmd(), podUUID, appName))
-	startCmd := exec.Command(cmd[0], cmd[1:]...)
-	startCmd.Env = append(startCmd.Env, "RKT_EXPERIMENT_APP=true")
-	t.Logf("Running command: %v\n", cmd)
-	output, err = startCmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Unexpected error: %v\n%s", err, output)
+	start := ctx.ExecCmd("app", "start", "--debug", podUUID, "--app="+appName)
+	t.Log("Running", start.Args)
+	if out, err := start.CombinedOutput(); err != nil {
+		t.Fatal(err, "output", out)
 	}
 
 	if err := expectTimeoutWithOutput(child, msg, actionTimeout); err != nil {
 		t.Fatalf("Expected %q but not found: %v", msg, err)
 	}
 
-	cmd = strings.Fields(fmt.Sprintf("%s app rm --debug %s --app=%s", ctx.Cmd(), podUUID, appName))
-	removeCmd := exec.Command(cmd[0], cmd[1:]...)
-	removeCmd.Env = append(removeCmd.Env, "RKT_EXPERIMENT_APP=true")
-	t.Logf("Running command: %v\n", cmd)
-	output, err = removeCmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Unexpected error: %v\n%s", err, output)
+	remove := ctx.ExecCmd("app", "rm", "--debug", podUUID, "--app="+appName)
+	t.Log("Running", remove.Args)
+	if out, err := remove.CombinedOutput(); err != nil {
+		t.Fatal(err, "output", out)
 	}
 
-	cmd = strings.Fields(fmt.Sprintf("%s stop %s", ctx.Cmd(), podUUID))
-	t.Logf("Running command: %v\n", cmd)
-	output, err = exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
-	if err != nil {
-		t.Fatalf("Unexpected error: %v\n%s", err, output)
+	stop := ctx.ExecCmd("stop", podUUID)
+	t.Log("Running", stop.Args)
+	if out, err := stop.CombinedOutput(); err != nil {
+		t.Fatal(err, "output", out)
 	}
 
 	waitOrFail(t, child, 0)

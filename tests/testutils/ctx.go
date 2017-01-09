@@ -197,6 +197,12 @@ func (ctx *RktRunCtx) Cmd() string {
 	)
 }
 
+func (ctx *RktRunCtx) ExecCmd(arg ...string) *exec.Cmd {
+	args := ctx.rktOptions()
+	args = append(args, arg...)
+	return exec.Command(ctx.rktBin(), args...)
+}
+
 // TODO(jonboulle): clean this up
 func (ctx *RktRunCtx) CmdNoConfig() string {
 	return fmt.Sprintf("%s %s",
