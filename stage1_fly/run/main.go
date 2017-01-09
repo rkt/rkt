@@ -279,12 +279,6 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 		return 254
 	}
 
-	// set close-on-exec flag on RKT_LOCK_FD so it gets correctly closed after execution is finished
-	if err := sys.CloseOnExec(lfd, true); err != nil {
-		log.PrintE("can't set FD_CLOEXEC on rkt lock", err)
-		return 254
-	}
-
 	workDir := "/"
 	if ra.App.WorkingDirectory != "" {
 		workDir = ra.App.WorkingDirectory
@@ -484,27 +478,30 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 	// see https://github.com/golang/go/issues/1435#issuecomment-66054163.
 	runtime.LockOSThread()
 
-	diag.Printf("setting uid %d gid %d", uid, gid)
-
+	// set process credentials
+	diag.Printf("setting credentials: uid=%d, gid=%d", uid, gid)
 	if err := syscall.Setresgid(gid, gid, gid); err != nil {
 		log.PrintE(fmt.Sprintf("can't set gid %d", gid), err)
 		return 254
 	}
-
 	if err := syscall.Setresuid(uid, uid, uid); err != nil {
 		log.PrintE(fmt.Sprintf("can't set uid %d", uid), err)
 		return 254
 	}
 
+	// clear close-on-exec flag on RKT_LOCK_FD, to keep pod status as running after exec().
+	if err := sys.CloseOnExec(lfd, false); err != nil {
+		log.PrintE("unable to clear FD_CLOEXEC on pod lock", err)
+		return 254
+	}
+
 	diag.Printf("execing %q in %q", args, rfs)
-	err = stage1common.WithClearedCloExec(lfd, func() error {
-		return syscall.Exec(args[0], args, env)
-	})
-	if err != nil {
+	if err = syscall.Exec(args[0], args, env); err != nil {
 		log.PrintE(fmt.Sprintf("can't execute %q", args[0]), err)
 		return 254
 	}
 
+	// unreachable, as successful exec() never returns.
 	return 0
 }
 
