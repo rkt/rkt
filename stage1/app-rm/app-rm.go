@@ -107,7 +107,10 @@ func cleanupStage0(appName *types.ACName, enterCmd []string) error {
 	// rely only on the output, since is-active returns non-zero for inactive units
 	out, _ := cmd.Output()
 
-	if string(out) != "inactive\n" {
+	switch string(out) {
+	case "failed\n":
+	case "inactive\n":
+	default:
 		return fmt.Errorf("app %q is still running", appName.String())
 	}
 
