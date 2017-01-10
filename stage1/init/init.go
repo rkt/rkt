@@ -264,18 +264,6 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 		return nil, nil, errwrap.Wrap(errors.New("failed to create flavor symlink"), err)
 	}
 
-	// set hostname inside pod
-	// According to systemd manual (https://www.freedesktop.org/software/systemd/man/hostname.html) :
-	// "The /etc/hostname file configures the name of the local system that is set
-	// during boot using the sethostname system call"
-	if p.Hostname == "" {
-		p.Hostname = stage1initcommon.GetMachineID(p)
-	}
-	hostnamePath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc/hostname")
-	if err := ioutil.WriteFile(hostnamePath, []byte(p.Hostname), 0644); err != nil {
-		return nil, nil, fmt.Errorf("error writing %s, %s", hostnamePath, err)
-	}
-
 	// systemd-nspawn needs /etc/machine-id to link the container's journal
 	// to the host. Since systemd-v230, /etc/machine-id is mandatory, see
 	// https://github.com/systemd/systemd/commit/e01ff70a77e781734e1e73a2238af2e9bf7967a8
@@ -588,12 +576,42 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 		diag.Printf,
 	)
 
+	// set hostname inside pod
+	// According to systemd manual (https://www.freedesktop.org/software/systemd/man/hostname.html) :
+	// "The /etc/hostname file configures the name of the local system that is set
+	// during boot using the sethostname system call"
+	if p.Hostname == "" {
+		p.Hostname = stage1initcommon.GetMachineID(p)
+	}
+	hostnamePath := filepath.Join(common.Stage1RootfsPath(p.Root), "etc/hostname")
+	if err := ioutil.WriteFile(hostnamePath, []byte(p.Hostname), 0644); err != nil {
+		log.PrintE("error writing "+hostnamePath, err)
+		return 254
+	}
+
 	if p.ResolvConfMode == "host" {
 		stage1initcommon.UseHostResolv(mnt, root)
 	}
 
-	if p.EtcHostsMode == "host" {
+	// Set up the hosts file.
+	// We write <stage1>/etc/rkt-hosts if we want to override each app's hosts,
+	// and <stage1>/etc/hosts-fallback if we want to let the app "win"
+	// Either way, we should add our hostname to it, unless the hosts's
+	// /etc/hosts is bind-mounted in.
+	if p.EtcHostsMode == "host" { // We should bind-mount the hosts's /etc/hosts
 		stage1initcommon.UseHostHosts(mnt, root)
+	} else if p.EtcHostsMode == "default" { // Create hosts-fallback
+		hostsFile := filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "hosts-fallback")
+		if err := stage1initcommon.AddHostsEntry(hostsFile, "127.0.0.1", p.Hostname); err != nil {
+			log.PrintE("Failed to write hostname to "+hostsFile, err)
+			return 254
+		}
+	} else if p.EtcHostsMode == "stage0" { // The stage0 has created rkt-hosts
+		hostsFile := filepath.Join(common.Stage1RootfsPath(p.Root), "etc", "rkt-hosts")
+		if err := stage1initcommon.AddHostsEntry(hostsFile, "127.0.0.1", p.Hostname); err != nil {
+			log.PrintE("Failed to write hostname to "+hostsFile, err)
+			return 254
+		}
 	}
 
 	if p.Mutable {

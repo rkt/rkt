@@ -70,10 +70,10 @@ func TestEtcHosts(t *testing.T) {
 			"--mount volume=hosts,target=/etc/hosts --exec=/inspect -- -file-name=/etc/hosts -read-file",
 			"<<<preexisting etc>>>",
 		},
-		{ // Test that with no /etc/hosts, the fallback is created
+		{ // Test that with no /etc/hosts, the fallback is created with container hostname
 			"",
-			"--exec=/inspect -- -file-name=/etc/hosts -hash-file",
-			"192f716fb0db669de1c537b845b632f03c9aeb40",
+			"--exec=/inspect -- -file-name=/etc/hosts -read-file",
+			"127.0.0.1 localhost localhost.domain localhost4 localhost4.localdomain4 rkt-[a-z0-9-]{36}",
 		},
 		{ // Test that with --hosts-entry=host, the host's is copied
 			"--hosts-entry=host",
@@ -104,7 +104,7 @@ func TestEtcHosts(t *testing.T) {
 
 		_, out, err := expectRegexTimeoutWithOutput(child, tt.expectRegEx, 30*time.Second)
 		if err != nil {
-			t.Fatalf("Test %d %v %v", i, err, out)
+			t.Fatalf("Test %d %v output: %v", i, err, out)
 		}
 
 		waitOrFail(t, child, 0)
