@@ -424,7 +424,15 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 		}
 	}
 
+	// stage1 interface: pod-leader pid
 	if err = stage1common.WritePid(os.Getpid(), "pid"); err != nil {
+		log.Error(err)
+		return 254
+	}
+
+	// stage1-fly internal: pod pgid
+	// (used by stop, as fly has weak pod-grouping of processes)
+	if err = stage1common.WritePid(syscall.Getpgrp(), "pgid"); err != nil {
 		log.Error(err)
 		return 254
 	}

@@ -21,8 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-
-	"github.com/shirou/gopsutil/process"
+	"syscall"
 )
 
 var (
@@ -33,7 +32,7 @@ func init() {
 	flag.BoolVar(&force, "force", false, "Forced stopping")
 }
 
-func readIntFromFile(path string) (i int32, err error) {
+func readIntFromFile(path string) (i int, err error) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return
@@ -44,6 +43,13 @@ func readIntFromFile(path string) (i int32, err error) {
 
 func main() {
 	flag.Parse()
+	var sig syscall.Signal
+
+	if force {
+		sig = syscall.SIGKILL
+	} else {
+		sig = syscall.SIGTERM
+	}
 
 	pid, err := readIntFromFile("pid")
 	if err != nil {
@@ -51,20 +57,23 @@ func main() {
 		os.Exit(254)
 	}
 
-	process, err := process.NewProcess(pid)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "unable to create process %d instance: %v\n", pid, err)
-		os.Exit(254)
-	}
-
-	if force {
-		if process.Kill() != nil {
-			fmt.Fprintf(os.Stderr, "unable to kill process %d: %v\n", pid, err)
+	// check for process existence, then kill the process otherwise the group
+	err = syscall.Kill(pid, syscall.Signal(0))
+	if err == nil {
+		err = syscall.Kill(pid, sig)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error stopping process %d: %v\n", pid, err)
 			os.Exit(254)
 		}
 	} else {
-		if process.Terminate() != nil {
-			fmt.Fprintf(os.Stderr, "unable to terminate process %d: %v\n", pid, err)
+		pgid, err := readIntFromFile("pgid")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error reading pgid: %v\n", err)
+			os.Exit(254)
+		}
+		err = syscall.Kill(-pgid, sig)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error stopping process group %d: %v\n", pgid, err)
 			os.Exit(254)
 		}
 	}
