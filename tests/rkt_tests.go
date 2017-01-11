@@ -219,6 +219,19 @@ func createTempDirOrPanic(dirName string) string {
 	return tmpDir
 }
 
+// createFileOrPanic creates an empty file within the given directory
+// with a specified name. Panics if file creation fails for any reason.
+func createFileOrPanic(dirName, fileName string) string {
+	name := filepath.Join(dirName, fileName)
+	file, err := os.Create(name)
+	if err != nil {
+		panic(err)
+	}
+
+	defer file.Close()
+	return name
+}
+
 func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img string, fetchArgs string, gid int) (string, error) {
 	// Import the test image into store manually.
 	cmd := fmt.Sprintf("%s --insecure-options=image,tls fetch %s %s", ctx.Cmd(), fetchArgs, img)
