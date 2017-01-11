@@ -107,7 +107,10 @@ func cleanupStage0(appName *types.ACName, enterCmd []string) error {
 	// rely only on the output, since is-active returns non-zero for inactive units
 	out, _ := cmd.Output()
 
-	if string(out) != "inactive\n" {
+	switch string(out) {
+	case "failed\n":
+	case "inactive\n":
+	default:
 		return fmt.Errorf("app %q is still running", appName.String())
 	}
 
@@ -129,7 +132,7 @@ func cleanupStage0(appName *types.ACName, enterCmd []string) error {
 	// last cleaning steps are performed after entering pod context
 	tasks := [][]string{
 		// inception: call itself to clean stage1 before proceeding
-		{"/app-rm", "--stage=1", fmt.Sprintf("--app=%s", appName), fmt.Sprintf("--debug=%t", debug)},
+		{"/app_rm", "--stage=1", fmt.Sprintf("--app=%s", appName), fmt.Sprintf("--debug=%t", debug)},
 		// all cleaned-up, let systemd reload and forget about this app
 		{"/usr/bin/systemctl", "daemon-reload"},
 	}

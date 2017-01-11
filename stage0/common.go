@@ -86,8 +86,11 @@ func (ce CrossingEntrypoint) Run() error {
 		}
 	} else {
 		out, err := c.CombinedOutput()
+		if len(out) > 0 {
+			debug("%s\n", out)
+		}
 		if err != nil {
-			return fmt.Errorf("error executing stage1 entrypoint: %s", string(out))
+			return fmt.Errorf("error executing stage1 entrypoint: %v", err)
 		}
 	}
 

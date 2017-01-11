@@ -12,10 +12,10 @@ _S1_SS_SUBDIRS_ := \
 	reaper \
 	stop \
 	stop_kvm \
-	app-add \
-	app-rm \
-	app-start \
-	app-stop \
+	app_add \
+	app_rm \
+	app_start \
+	app_stop \
 	units \
 	aci
 
