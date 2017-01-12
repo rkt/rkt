@@ -206,7 +206,7 @@ func (f *nameFetcher) fetchVerifiedURL(app *discovery.App, u *url.URL, a *asc, e
 
 	if cd.UseCached {
 		aciFile.Close()
-		return nil, cd, nil
+		return NopReadSeekCloser(nil), cd, nil
 	}
 
 	if retry {
