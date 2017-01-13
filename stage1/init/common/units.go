@@ -30,6 +30,7 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/cgroup"
+	"github.com/coreos/rkt/pkg/user"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
 
 	"github.com/coreos/go-systemd/unit"
@@ -225,6 +226,11 @@ func (uw *UnitWriter) WriteUnit(path string, errmsg string, opts ...*unit.UnitOp
 
 	if _, err = io.Copy(file, unit.Serialize(opts)); err != nil {
 		uw.err = errwrap.Wrap(errors.New(errmsg), err)
+		return
+	}
+	if err := user.ShiftFiles([]string{path}, &uw.p.UidRange); err != nil {
+		uw.err = errwrap.Wrap(errors.New(errmsg), err)
+		return
 	}
 }
 
