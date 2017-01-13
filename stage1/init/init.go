@@ -54,6 +54,7 @@ import (
 	"github.com/coreos/rkt/pkg/fs"
 	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/sys"
+	"github.com/coreos/rkt/pkg/user"
 	"github.com/coreos/rkt/stage1/init/kvm"
 	"github.com/coreos/rkt/stage1/init/kvm/hypervisor/hvlkvm"
 	"github.com/coreos/rkt/stage1/init/kvm/hypervisor/hvqemu"
@@ -437,7 +438,10 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 
 	machineIDBytes := append([]byte(machineID), '\n')
 	if err := ioutil.WriteFile(mPath, machineIDBytes, 0644); err != nil {
-		log.FatalE("error writing /etc/machine-id", err)
+		return nil, nil, errwrap.Wrap(errors.New("error writing /etc/machine-id"), err)
+	}
+	if err := user.ShiftFiles([]string{mPath}, &p.UidRange); err != nil {
+		return nil, nil, errwrap.Wrap(errors.New("error shifting /etc/machine-id"), err)
 	}
 
 	// link journal only if the host is running systemd
@@ -587,6 +591,9 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 	if err := ioutil.WriteFile(hostnamePath, []byte(p.Hostname), 0644); err != nil {
 		log.PrintE("error writing "+hostnamePath, err)
 		return 254
+	}
+	if err := user.ShiftFiles([]string{hostnamePath}, &p.UidRange); err != nil {
+		log.PrintE("error shifting "+hostnamePath, err)
 	}
 
 	if p.ResolvConfMode == "host" {
