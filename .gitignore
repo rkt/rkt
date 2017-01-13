@@ -2,6 +2,7 @@
 
 .cache
 .vagrant
+*.pem
 /.config.args
 /Makefile
 /acbuild
