@@ -20,16 +20,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
 
+	"github.com/coreos/rkt/pkg/aci/acitest"
 	"github.com/coreos/rkt/tests/testutils"
-)
 
-const (
-
-	// The expected image manifest of the 'rkt-inspect-image-cat-manifest.aci'.
-	manifestTemplate = `{"acKind":"ImageManifest","acVersion":"0.8.9","name":"IMG_NAME","labels":[{"name":"version","value":"1.22.0"},{"name":"arch","value":"amd64"},{"name":"os","value":"linux"}],"app":{"exec":["/inspect"],"user":"0","group":"0","workingDirectory":"/","environment":[{"name":"VAR_FROM_MANIFEST","value":"manifest"}]}}`
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
 
 // TestImageCatManifest tests 'rkt image cat-manifest', it will:
@@ -38,8 +35,27 @@ const (
 // Read some non-existing image manifest via the image name, and verify nothing is found.
 // Read some non-existing image manifest via the image hash, and verify nothing is found.
 func TestImageCatManifest(t *testing.T) {
-	testImageName := "coreos.com/rkt-image-cat-manifest-test"
-	expectManifest := strings.Replace(manifestTemplate, "IMG_NAME", testImageName, -1)
+	manifestCat := schema.ImageManifest{
+		Name: "coreos.com/rkt-image-cat-manifest-test",
+		App: &types.App{
+			Exec: types.Exec{"/inspect"},
+			User: "0", Group: "0",
+			WorkingDirectory: "/",
+			Environment: types.Environment{
+				{"VAR_FROM_MANIFEST", "manifest"},
+			},
+		},
+		Labels: types.Labels{
+			{"version", "1.22.0"},
+			{"arch", "amd64"},
+			{"os", "linux"},
+		},
+	}
+
+	expectManifest, err := acitest.ImageManifestString(&manifestCat)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	tmpManifest, err := ioutil.TempFile("", "rkt-TestImageCatManifest-")
 	if err != nil {
@@ -66,7 +82,7 @@ func TestImageCatManifest(t *testing.T) {
 		expect     string
 	}{
 		{
-			testImageName,
+			string(manifestCat.Name),
 			true,
 			expectManifest,
 		},

@@ -21,57 +21,26 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/pkg/aci/acitest"
 	"github.com/coreos/rkt/tests/testutils"
 	taas "github.com/coreos/rkt/tests/testutils/aci-server"
+
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 )
 
 const (
-	manifestDepsTemplate = `
-{
-   "acKind" : "ImageManifest",
-   "acVersion" : "0.8.9",
-   "dependencies" : [
-      DEPENDENCIES
-   ],
-   "labels" : [
-      {
-         "name" : "version",
-         "value" : "VERSION"
-      },
-      {
-         "name" : "arch",
-         "value" : "amd64"
-      },
-      {
-         "value" : "linux",
-         "name" : "os"
-      }
-   ],
-   "app" : {
-      "user" : "0",
-      "exec" : [
-         "/inspect", "--print-msg=HelloDependencies"
-      ],
-      "workingDirectory" : "/",
-      "group" : "0",
-      "environment" : [
-      ]
-   },
-   "name" : "IMG_NAME"
-}
-`
+	// topImage defines the name of the top-level image.
+	topImage = "localhost/image-a"
 )
-
-var topImage string = "localhost/image-a"
 
 type testImage struct {
 	shortName string
 	imageName string
-	deps      string
+	deps      types.Dependencies
 	version   string
 	prefetch  bool
 
@@ -80,11 +49,29 @@ type testImage struct {
 }
 
 func generateComplexDependencyTree(t *testing.T, ctx *testutils.RktRunCtx) (map[string]string, []testImage) {
+	// manifest specifies the generic configuration
+	// of the image manifest used in dependencies tests.
+	manifest := schema.ImageManifest{
+		App: &types.App{
+			Exec: types.Exec{
+				"/inspect",
+				"--print-msg=HelloDependencies",
+			},
+			User: "0", Group: "0",
+			WorkingDirectory: "/",
+		},
+		Labels: types.Labels{
+			{"arch", "amd64"},
+			{"os", "linux"},
+		},
+	}
+
 	tmpDir := createTempDirOrPanic("rkt-TestImageDeps-")
 	defer os.RemoveAll(tmpDir)
 
 	baseImage := getInspectImagePath()
-	if _, err := importImageAndFetchHash(t, ctx, "", baseImage); err != nil {
+	_, err := importImageAndFetchHash(t, ctx, "", baseImage)
+	if err != nil {
 		t.Fatalf("%v", err)
 	}
 	emptyImage := getEmptyImagePath()
@@ -108,45 +95,72 @@ func generateComplexDependencyTree(t *testing.T, ctx *testutils.RktRunCtx) (map[
 		{
 			shortName: "a",
 			imageName: topImage,
-			deps:      `{"imageName":"localhost/image-b"}, {"imageName":"localhost/image-c"}, {"imageName":"localhost/image-d"}`,
-			version:   "1",
+			deps: types.Dependencies{
+				{ImageName: "localhost/image-b"},
+				{ImageName: "localhost/image-c"},
+				{ImageName: "localhost/image-d"},
+			},
+			version: "1",
 		},
 		{
 			shortName: "b",
 			imageName: "localhost/image-b",
-			deps:      ``,
 			version:   "1",
 			prefetch:  true,
 		},
 		{
 			shortName: "c",
 			imageName: "localhost/image-c",
-			deps:      `{"imageName":"localhost/image-b"}, {"imageName":"localhost/image-e", "labels": [{"name": "version", "value": "1"}]}`,
-			version:   "1",
+			deps: types.Dependencies{
+				{ImageName: "localhost/image-b"},
+				{ImageName: "localhost/image-e",
+					Labels: types.Labels{{"version", "1"}}},
+			},
+			version: "1",
 		},
 		{
 			shortName: "d",
 			imageName: "localhost/image-d",
-			deps:      `{"imageName":"localhost/image-b"}, {"imageName":"localhost/image-e", "labels": [{"name": "version", "value": "1"}]}`,
-			version:   "1",
+			deps: types.Dependencies{
+				{ImageName: "localhost/image-b"},
+				{ImageName: "localhost/image-e",
+					Labels: types.Labels{{"version", "1"}}},
+			},
+			version: "1",
 		},
 		{
 			shortName: "e",
 			imageName: "localhost/image-e",
-			deps:      `{"imageName":"coreos.com/rkt-inspect"}`,
-			version:   "1",
+			deps: types.Dependencies{
+				{ImageName: "coreos.com/rkt-inspect"},
+			},
+			version: "1",
 		},
 	}
+
+	// Copy original labels of the image manifest, as on
+	// the next step this list will be populated with a
+	// version for each test.
+	labels := make(types.Labels, len(manifest.Labels))
+	copy(labels, manifest.Labels)
 
 	for i := range imageList {
 		// We need a reference rather than a new copy from "range"
 		// because we modify the content
 		img := &imageList[i]
 
-		img.manifest = manifestDepsTemplate
-		img.manifest = strings.Replace(img.manifest, "IMG_NAME", img.imageName, -1)
-		img.manifest = strings.Replace(img.manifest, "DEPENDENCIES", img.deps, -1)
-		img.manifest = strings.Replace(img.manifest, "VERSION", img.version, -1)
+		imgLabels := types.Labels{{"version", img.version}}
+
+		// Customize fields of the generic image manifest.
+		manifest.Name = types.ACIdentifier(img.imageName)
+		manifest.Labels = append(imgLabels, labels...)
+		manifest.Dependencies = img.deps
+
+		// Marshal the modified image manifest into JSON string.
+		img.manifest, err = acitest.ImageManifestString(&manifest)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		tmpManifest, err := ioutil.TempFile(tmpDir, "manifest-"+img.shortName+"-")
 		if err != nil {

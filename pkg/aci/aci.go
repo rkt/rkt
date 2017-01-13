@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/appc/spec/aci"
 	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 	"github.com/hashicorp/errwrap"
 	"golang.org/x/crypto/openpgp"
 )
@@ -107,8 +107,18 @@ func (aw *imageArchiveWriter) Close() error {
 // NewBasicACI creates a new ACI in the given directory with the given name.
 // Used for testing.
 func NewBasicACI(dir string, name string) (*os.File, error) {
-	manifest := fmt.Sprintf(`{"acKind":"ImageManifest","acVersion":"0.8.9","name":"%s"}`, name)
-	return NewACI(dir, manifest, nil)
+	manifest := schema.ImageManifest{
+		ACKind:    schema.ImageManifestKind,
+		ACVersion: schema.AppContainerVersion,
+		Name:      types.ACIdentifier(name),
+	}
+
+	b, err := manifest.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewACI(dir, string(b), nil)
 }
 
 // NewACI creates a new ACI in the given directory with the given image
