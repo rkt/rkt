@@ -747,7 +747,7 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 func areHostV1CgroupsMounted(enabledV1Cgroups map[int][]string) bool {
 	controllers := v1.GetControllerDirs(enabledV1Cgroups)
 	for _, c := range controllers {
-		if !v1.IsControllerMounted(c) {
+		if mounted, _ := v1.IsControllerMounted(c); !mounted {
 			return false
 		}
 	}
@@ -769,7 +769,11 @@ func mountHostV1Cgroups(m fs.Mounter, enabledCgroups map[int][]string) error {
 		}
 	}
 
-	if !v1.IsControllerMounted("systemd") {
+	mounted, err := v1.IsControllerMounted("systemd")
+	if err != nil {
+		return err
+	}
+	if !mounted {
 		if err := os.MkdirAll(systemdControllerPath, 0700); err != nil {
 			return err
 		}
@@ -791,7 +795,7 @@ func mountContainerV1Cgroups(m fs.Mounter, p *stage1commontypes.Pod, enabledCgro
 		return errwrap.Wrap(errors.New("error creating container cgroups"), err)
 	}
 
-	if err := v1.RemountCgroups(m, stage1Root, enabledCgroups, subcgroup, serviceNames, p.InsecureOptions.DisablePaths); err != nil {
+	if err := v1.RemountCgroups(m, stage1Root, enabledCgroups, subcgroup, p.InsecureOptions.DisablePaths); err != nil {
 		return errwrap.Wrap(errors.New("error restricting container cgroups"), err)
 	}
 

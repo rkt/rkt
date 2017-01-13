@@ -17,23 +17,17 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/coreos/go-systemd/unit"
-	"github.com/coreos/rkt/common/cgroup"
-	"github.com/coreos/rkt/common/cgroup/v1"
 	rktlog "github.com/coreos/rkt/pkg/log"
 	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1types "github.com/coreos/rkt/stage1/common/types"
 	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
-	"github.com/hashicorp/errwrap"
 
-	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 )
 
@@ -77,11 +71,6 @@ func main() {
 		log.FatalE("failed to load pod", err)
 	}
 
-	flavor, _, err := stage1initcommon.GetFlavor(p)
-	if err != nil {
-		log.FatalE("failed to get stage1 flavor", err)
-	}
-
 	ra := p.Manifest.Apps.Get(*appName)
 	if ra == nil {
 		log.Fatalf("failed to find app %q", *appName)
@@ -100,14 +89,6 @@ func main() {
 	err = stage1initcommon.AppAddMounts(p, ra, enterCmd)
 	if err != nil {
 		log.FatalE("error adding app mounts", err)
-	}
-
-	// when using host cgroups, make the subgroup writable by pod systemd
-	if flavor != "kvm" {
-		err = prepareAppCgroups(p, ra, enterCmd)
-		if err != nil {
-			log.FatalE("error preparing cgroups", err)
-		}
 	}
 
 	// write service files
@@ -139,36 +120,4 @@ func main() {
 	}
 
 	os.Exit(0)
-}
-
-// prepareAppCgroups makes the cgroups-v1 hierarchy for this application writable
-// by pod supervisor
-func prepareAppCgroups(p *stage1types.Pod, ra *schema.RuntimeApp, enterCmd []string) error {
-	isUnified, err := cgroup.IsCgroupUnified("/")
-	if err != nil {
-		return errwrap.Wrap(errors.New("failed to determine cgroup version"), err)
-	}
-
-	if isUnified {
-		return nil
-	}
-
-	enabledCgroups, err := v1.GetEnabledCgroups()
-	if err != nil {
-		return errwrap.Wrap(errors.New("error getting cgroups"), err)
-	}
-
-	b, err := ioutil.ReadFile(filepath.Join(p.Root, "subcgroup"))
-	if err != nil {
-		log.PrintE("continuing with per-app isolators disabled", err)
-		return nil
-	}
-
-	subcgroup := string(b)
-	serviceName := stage1initcommon.ServiceUnitName(ra.Name)
-	if err := v1.RemountCgroupKnobsRW(enabledCgroups, subcgroup, serviceName, enterCmd); err != nil {
-		return errwrap.Wrap(errors.New("error restricting application cgroups"), err)
-	}
-
-	return nil
 }
