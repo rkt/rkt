@@ -136,12 +136,8 @@ func runDocker2ACI(arg string) error {
 		return err
 	}
 
-	if err := printConvertedVolumes(*manifest); err != nil {
-		return err
-	}
-	if err := printConvertedPorts(*manifest); err != nil {
-		return err
-	}
+	printConvertedVolumes(*manifest)
+	printConvertedPorts(*manifest)
 
 	fmt.Printf("\nGenerated ACI(s):\n")
 	for _, aciFile := range aciLayerPaths {
@@ -151,33 +147,29 @@ func runDocker2ACI(arg string) error {
 	return nil
 }
 
-func printConvertedVolumes(manifest schema.ImageManifest) error {
-	if manifest.App != nil && manifest.App.MountPoints != nil {
-		mps := manifest.App.MountPoints
-		if len(mps) > 0 {
-			fmt.Printf("\nConverted volumes:\n")
-			for _, mp := range mps {
-				fmt.Printf("\tname: %q, path: %q, readOnly: %v\n", mp.Name, mp.Path, mp.ReadOnly)
-			}
+func printConvertedVolumes(manifest schema.ImageManifest) {
+	if manifest.App == nil {
+		return
+	}
+	if mps := manifest.App.MountPoints; len(mps) > 0 {
+		fmt.Printf("\nConverted volumes:\n")
+		for _, mp := range mps {
+			fmt.Printf("\tname: %q, path: %q, readOnly: %v\n", mp.Name, mp.Path, mp.ReadOnly)
 		}
 	}
-
-	return nil
 }
 
-func printConvertedPorts(manifest schema.ImageManifest) error {
-	if manifest.App != nil && manifest.App.Ports != nil {
-		ports := manifest.App.Ports
-		if len(ports) > 0 {
-			fmt.Printf("\nConverted ports:\n")
-			for _, port := range ports {
-				fmt.Printf("\tname: %q, protocol: %q, port: %v, count: %v, socketActivated: %v\n",
-					port.Name, port.Protocol, port.Port, port.Count, port.SocketActivated)
-			}
+func printConvertedPorts(manifest schema.ImageManifest) {
+	if manifest.App == nil {
+		return
+	}
+	if ports := manifest.App.Ports; len(ports) > 0 {
+		fmt.Printf("\nConverted ports:\n")
+		for _, port := range ports {
+			fmt.Printf("\tname: %q, protocol: %q, port: %v, count: %v, socketActivated: %v\n",
+				port.Name, port.Protocol, port.Port, port.Count, port.SocketActivated)
 		}
 	}
-
-	return nil
 }
 
 func getManifest(aciPath string) (*schema.ImageManifest, error) {
@@ -197,9 +189,9 @@ func getManifest(aciPath string) (*schema.ImageManifest, error) {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "docker2aci [--debug] [--nosquash] [--compression=(gzip|none)] IMAGE\n")
+	fmt.Fprintf(os.Stderr, "docker2aci [-debug] [-nosquash] [-compression=(gzip|none)] IMAGE\n")
 	fmt.Fprintf(os.Stderr, "  Where IMAGE is\n")
-	fmt.Fprintf(os.Stderr, "    [--image=IMAGE_NAME[:TAG]] FILEPATH\n")
+	fmt.Fprintf(os.Stderr, "    [-image=IMAGE_NAME[:TAG]] FILEPATH\n")
 	fmt.Fprintf(os.Stderr, "  or\n")
 	fmt.Fprintf(os.Stderr, "    docker://[REGISTRYURL/]IMAGE_NAME[:TAG]\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
@@ -216,7 +208,7 @@ func main() {
 		return
 	}
 
-	if len(args) < 1 {
+	if len(args) != 1 {
 		usage()
 		os.Exit(2)
 	}

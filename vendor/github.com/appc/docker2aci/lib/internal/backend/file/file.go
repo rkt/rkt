@@ -54,10 +54,15 @@ func NewFileBackend(file *os.File, debug, info log.Logger) *FileBackend {
 }
 
 func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *common.ParsedDockerURL, error) {
-	parsedDockerURL, err := common.ParseDockerURL(dockerURL)
-	if err != nil {
-		// a missing Docker URL could mean that the file only contains one
-		// image, so we ignore the error here, we'll handle it in getImageID
+	// a missing Docker URL could mean that the file only contains one
+	// image so it's okay for dockerURL to be blank
+	var parsedDockerURL *common.ParsedDockerURL
+	if dockerURL != "" {
+		var err error
+		parsedDockerURL, err = common.ParseDockerURL(dockerURL)
+		if err != nil {
+			return nil, nil, fmt.Errorf("image provided couldnot be parsed: %v", err)
+		}
 	}
 
 	var ancestry []string
@@ -214,9 +219,20 @@ func getImageID(file *os.File, dockerURL *common.ParsedDockerURL, name string, d
 				return fmt.Errorf("error reading repositories file: %v", err)
 			}
 
-			var repositories apps
-			if err := json.Unmarshal(repob, &repositories); err != nil {
+			var unparsedRepositories apps
+			if err := json.Unmarshal(repob, &unparsedRepositories); err != nil {
 				return fmt.Errorf("error unmarshaling repositories file")
+			}
+
+			repositories := make(apps, 0)
+			// Normalize repository keys since the image potentially passed in is
+			// normalized
+			for key, val := range unparsedRepositories {
+				parsed, err := common.ParseDockerURL(key)
+				if err != nil {
+					return fmt.Errorf("error parsing key %q in repositories: %v", key, err)
+				}
+				repositories[parsed.ImageName] = val
 			}
 
 			if dockerURL == nil {
