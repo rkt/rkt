@@ -414,7 +414,7 @@ func (c testCmd) CombinedOutput(t *testing.T) string {
 	out, err := c.Cmd.CombinedOutput()
 
 	if err != nil {
-		t.Fatal(err, "output", out)
+		t.Fatal(err, "output", string(out))
 	}
 
 	return string(out)

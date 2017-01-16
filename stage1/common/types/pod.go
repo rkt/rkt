@@ -58,6 +58,7 @@ type RuntimePod struct {
 	ResolvConfMode     string         `json:"ResolvConfMode"`
 	EtcHostsMode       string         `json:"EtcHostsMode"`
 	NetList            common.NetList `json:"NetList"`
+	Interactive        bool           `json:"Interactive"`
 	InsecureOptions    struct {
 		DisablePaths        bool `json:"DisablePaths"`
 		DisableCapabilities bool `json:"DisableCapabilities"`
