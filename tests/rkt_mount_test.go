@@ -27,7 +27,7 @@ import (
 )
 
 func TestMountSymlink(t *testing.T) {
-	tmpDir := createTempDirOrPanic("rkt-mount-test-")
+	tmpDir := mustTempDir("rkt-mount-test-")
 	defer os.RemoveAll(tmpDir)
 	mountSrcFile := filepath.Join(tmpDir, "hello")
 	if err := ioutil.WriteFile(mountSrcFile, []byte("world"), 0666); err != nil {

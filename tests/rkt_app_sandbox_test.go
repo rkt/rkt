@@ -352,7 +352,7 @@ func testSandbox(t *testing.T, testFunc func(*testutils.RktRunCtx, *gexpect.Expe
 	}
 	defer os.Unsetenv("RKT_EXPERIMENT_APP")
 
-	tmpDir := createTempDirOrPanic("rkt-test-cri-")
+	tmpDir := mustTempDir("rkt-test-cri-")
 	uuidFile := filepath.Join(tmpDir, "uuid")
 	defer os.RemoveAll(tmpDir)
 
