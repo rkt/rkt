@@ -348,6 +348,13 @@ func TestAppSandboxRestart(t *testing.T) {
 }
 
 func TestAppSandboxMount(t *testing.T) {
+	// this test hast to be skipped on semaphore for now,
+	// because it uses an outdated kernel hindering mount propagation,
+	// letting this test fail.
+	if os.Getenv("SEMAPHORE") == "true" {
+		t.Skip("skipped on semaphore")
+	}
+
 	mntSrcDir := mustTempDir("rkt-mount-test-")
 	defer os.RemoveAll(mntSrcDir)
 
