@@ -166,6 +166,42 @@ func generateEPCmdAnnotation(dockerEP, dockerCmd []string) (string, string, erro
 	return entrypointAnnotation, cmdAnnotation, nil
 }
 
+// setLabel sets the label entries associated with non-empty key
+// to the single non-empty value. It replaces any existing values
+// associated with key.
+func setLabel(labels map[appctypes.ACIdentifier]string, key, val string) {
+	if key != "" && val != "" {
+		labels[*appctypes.MustACIdentifier(key)] = val
+	}
+}
+
+// setOSArch translates the given OS and architecture strings into
+// the compatible with application container specification and sets
+// the respective label entries.
+//
+// Returns an error if label translation fails.
+func setOSArch(labels map[appctypes.ACIdentifier]string, os, arch string) error {
+	// Translate arch tuple into the appc arch tuple.
+	appcOS, appcArch, err := appctypes.ToAppcOSArch(os, arch, "")
+	if err != nil {
+		return err
+	}
+
+	// Set translated labels.
+	setLabel(labels, "os", appcOS)
+	setLabel(labels, "arch", appcArch)
+	return nil
+}
+
+// setAnnotation sets the annotation entries associated with non-empty
+// key to the single non-empty value. It replaces any existing values
+// associated with key.
+func setAnnotation(annotations *appctypes.Annotations, key, val string) {
+	if key != "" && val != "" {
+		annotations.Set(*appctypes.MustACIdentifier(key), val)
+	}
+}
+
 // GenerateManifest converts the docker manifest format to an appc
 // ImageManifest.
 func GenerateManifest(layerData types.DockerImageData, dockerURL *common.ParsedDockerURL, debug log.Logger) (*schema.ImageManifest, error) {
@@ -195,42 +231,23 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *common.ParsedD
 	labels := make(map[appctypes.ACIdentifier]string)
 	parentLabels := make(map[appctypes.ACIdentifier]string)
 
-	addLabel := func(key, val string) {
-		if key != "" && val != "" {
-			labels[*appctypes.MustACIdentifier(key)] = val
-		}
-	}
+	setLabel(labels, "layer", layerData.ID)
+	setLabel(labels, "version", dockerURL.Tag)
 
-	addParentLabel := func(key, val string) {
-		if key != "" && val != "" {
-			parentLabels[*appctypes.MustACIdentifier(key)] = val
-		}
-	}
+	setOSArch(labels, layerData.OS, layerData.Architecture)
+	setOSArch(parentLabels, layerData.OS, layerData.Architecture)
 
-	addAnno := func(key, val string) {
-		if key != "" && val != "" {
-			annotations.Set(*appctypes.MustACIdentifier(key), val)
-		}
-	}
-
-	addLabel("layer", layerData.ID)
-	addLabel("version", dockerURL.Tag)
-	addLabel("os", layerData.OS)
-	addParentLabel("os", layerData.OS)
-	addLabel("arch", layerData.Architecture)
-	addParentLabel("arch", layerData.OS)
-
-	addAnno("authors", layerData.Author)
+	setAnnotation(&annotations, "authors", layerData.Author)
 	epoch := time.Unix(0, 0)
 	if !layerData.Created.Equal(epoch) {
-		addAnno("created", layerData.Created.Format(time.RFC3339))
+		setAnnotation(&annotations, "created", layerData.Created.Format(time.RFC3339))
 	}
-	addAnno("docker-comment", layerData.Comment)
-	addAnno(common.AppcDockerOriginalName, dockerURL.OriginalName)
-	addAnno(common.AppcDockerRegistryURL, dockerURL.IndexURL)
-	addAnno(common.AppcDockerRepository, dockerURL.ImageName)
-	addAnno(common.AppcDockerImageID, layerData.ID)
-	addAnno(common.AppcDockerParentImageID, layerData.Parent)
+	setAnnotation(&annotations, "docker-comment", layerData.Comment)
+	setAnnotation(&annotations, common.AppcDockerOriginalName, dockerURL.OriginalName)
+	setAnnotation(&annotations, common.AppcDockerRegistryURL, dockerURL.IndexURL)
+	setAnnotation(&annotations, common.AppcDockerRepository, dockerURL.ImageName)
+	setAnnotation(&annotations, common.AppcDockerImageID, layerData.ID)
+	setAnnotation(&annotations, common.AppcDockerParentImageID, layerData.Parent)
 
 	if dockerConfig != nil {
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
@@ -265,10 +282,10 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *common.ParsedD
 			return nil, err
 		}
 		if len(ep) > 0 {
-			addAnno(common.AppcDockerEntrypoint, ep)
+			setAnnotation(&annotations, common.AppcDockerEntrypoint, ep)
 		}
 		if len(cmd) > 0 {
-			addAnno(common.AppcDockerCmd, cmd)
+			setAnnotation(&annotations, common.AppcDockerCmd, cmd)
 		}
 
 		genManifest.App = app
@@ -292,7 +309,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *common.ParsedD
 
 		genManifest.Dependencies = append(genManifest.Dependencies, appctypes.Dependency{ImageName: *parentImageName, Labels: plbl})
 
-		addAnno(common.AppcDockerTag, dockerURL.Tag)
+		setAnnotation(&annotations, common.AppcDockerTag, dockerURL.Tag)
 	}
 
 	genManifest.Labels, err = appctypes.LabelsFromMap(labels)
@@ -310,15 +327,15 @@ func GenerateEmptyManifest(name string) (*schema.ImageManifest, error) {
 		return nil, err
 	}
 
-	labels := appctypes.Labels{
-		appctypes.Label{
-			Name:  *appctypes.MustACIdentifier("arch"),
-			Value: runtime.GOARCH,
-		},
-		appctypes.Label{
-			Name:  *appctypes.MustACIdentifier("os"),
-			Value: runtime.GOOS,
-		},
+	labelsMap := make(map[appctypes.ACIdentifier]string)
+	err = setOSArch(labelsMap, runtime.GOOS, runtime.GOARCH)
+	if err != nil {
+		return nil, err
+	}
+
+	labels, err := appctypes.LabelsFromMap(labelsMap)
+	if err != nil {
+		return nil, err
 	}
 
 	return &schema.ImageManifest{
@@ -338,30 +355,17 @@ func GenerateManifestV22(name string, dockerURL *common.ParsedDockerURL, config 
 	labels := manifest.Labels.ToMap()
 	annotations := manifest.Annotations
 
-	addLabel := func(key, val string) {
-		if key != "" && val != "" {
-			labels[*appctypes.MustACIdentifier(key)] = val
-		}
-	}
+	setLabel(labels, "version", dockerURL.Tag)
+	setOSArch(labels, config.OS, config.Architecture)
 
-	addAnno := func(key, val string) {
-		if key != "" && val != "" {
-			annotations.Set(*appctypes.MustACIdentifier(key), val)
-		}
-	}
+	setAnnotation(&annotations, "author", config.Author)
+	setAnnotation(&annotations, "created", config.Created)
 
-	addLabel("version", dockerURL.Tag)
-	addLabel("os", config.OS)
-	addLabel("arch", config.Architecture)
-
-	addAnno("author", config.Author)
-	addAnno("created", config.Created)
-
-	addAnno(common.AppcDockerOriginalName, dockerURL.OriginalName)
-	addAnno(common.AppcDockerRegistryURL, dockerURL.IndexURL)
-	addAnno(common.AppcDockerRepository, dockerURL.ImageName)
-	addAnno(common.AppcDockerImageID, imageDigest)
-	addAnno("created", config.Created)
+	setAnnotation(&annotations, common.AppcDockerOriginalName, dockerURL.OriginalName)
+	setAnnotation(&annotations, common.AppcDockerRegistryURL, dockerURL.IndexURL)
+	setAnnotation(&annotations, common.AppcDockerRepository, dockerURL.ImageName)
+	setAnnotation(&annotations, common.AppcDockerImageID, imageDigest)
+	setAnnotation(&annotations, "created", config.Created)
 
 	if config.Config != nil {
 		innerCfg := config.Config
@@ -393,10 +397,10 @@ func GenerateManifestV22(name string, dockerURL *common.ParsedDockerURL, config 
 			return nil, err
 		}
 		if len(ep) > 0 {
-			addAnno(common.AppcDockerEntrypoint, ep)
+			setAnnotation(&annotations, common.AppcDockerEntrypoint, ep)
 		}
 		if len(cmd) > 0 {
-			addAnno(common.AppcDockerCmd, cmd)
+			setAnnotation(&annotations, common.AppcDockerCmd, cmd)
 		}
 	}
 
