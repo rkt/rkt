@@ -561,7 +561,7 @@ func TestFetchImageCache(t *testing.T) {
 			Ks:            ks,
 			InsecureFlags: secureFlags,
 			// Skip local store
-			NoStore: true,
+			PullPolicy: image.PullPolicyUpdate,
 		}
 		u, err := url.Parse(aciURL)
 		if err != nil {

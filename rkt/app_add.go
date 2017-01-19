@@ -101,8 +101,7 @@ func runAppAdd(cmd *cobra.Command, args []string) (exit int) {
 		Ts: ts,
 		Ks: getKeystore(),
 
-		StoreOnly: true,
-		NoStore:   false,
+		PullPolicy: image.PullPolicyNever,
 	}
 
 	img, err := fn.FindImage(args[1], "")

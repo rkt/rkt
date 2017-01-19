@@ -234,13 +234,13 @@ func createFileOrPanic(dirName, fileName string) string {
 
 func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img string, fetchArgs string, gid int) (string, error) {
 	// Import the test image into store manually.
-	cmd := fmt.Sprintf("%s --insecure-options=image,tls fetch %s %s", ctx.Cmd(), fetchArgs, img)
+	cmd := fmt.Sprintf("%s --insecure-options=image,tls fetch --pull-policy=new %s %s", ctx.Cmd(), fetchArgs, img)
 
 	// TODO(jonboulle): non-root user breaks trying to read root-written
 	// config directories. Should be a better way to approach this. Should
 	// config directories be readable by the rkt group too?
 	if gid != 0 {
-		cmd = fmt.Sprintf("%s --insecure-options=image,tls fetch %s %s", ctx.CmdNoConfig(), fetchArgs, img)
+		cmd = fmt.Sprintf("%s --insecure-options=image,tls fetch --pull-policy=new %s %s", ctx.CmdNoConfig(), fetchArgs, img)
 	}
 	child, err := gexpect.Command(cmd)
 	if err != nil {

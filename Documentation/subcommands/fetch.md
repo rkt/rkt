@@ -70,8 +70,8 @@ Docker images do not support signature verification.
 When fetching, rkt will try to avoid unnecessary network transfers.
 For example, if an image is already in the local store, rkt will use HTTP's ETag and Cache-Control to avoid downloading it again unless the image was updated on the remote server.
 
-This behavior can be changed by using the `--store-only` and `--no-store` flags.
-Their meanings are detailed in the [image fetching behavior][img-fetch] documentation.
+This behavior can be changed by using the `--pull-policy` flag.
+Usage of this flag is detailed in the [image fetching behavior][img-fetch] documentation.
 
 ## Authentication
 
@@ -86,9 +86,8 @@ Note that the configuration kind for images downloaded via https:// and images d
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
 | `--full` |  `false` | `true` or `false` | Print the full image hash after fetching |
-| `--no-store` |  `false` | `true` or `false` | Fetch images ignoring the local store. See [image fetching behavior][img-fetch] |
 | `--signature` |  `` | A file path | Local signature file to use in validating the preceding image |
-| `--store-only` |  `false` | `true` or `false` | Use only available images in the store (do not discover or download from remote URLs). See [image fetching behavior][img-fetch] |
+| `--pull-policy` | `new` | `never`, `new`, or `update` | Sets the policy for when to fetch an image. See [image fetching behavior][img-fetch] |
 
 ## Global options
 

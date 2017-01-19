@@ -119,9 +119,9 @@ func TestFetchAny(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		testFetchDefault(t, tt.args, tt.image, tt.imageArgs, tt.finalURL)
-		testFetchStoreOnly(t, tt.args, tt.image, tt.imageArgs, tt.finalURL)
-		testFetchNoStore(t, tt.args, tt.image, tt.imageArgs, tt.finalURL)
+		testFetchNew(t, tt.args, tt.image, tt.imageArgs, tt.finalURL)
+		testFetchNever(t, tt.args, tt.image, tt.imageArgs, tt.finalURL)
+		testFetchUpdate(t, tt.args, tt.image, tt.imageArgs, tt.finalURL)
 	}
 }
 
@@ -150,7 +150,7 @@ func TestFetchFullHash(t *testing.T) {
 	}
 }
 
-func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, finalURL string) {
+func testFetchNew(t *testing.T, arg string, image string, imageArgs string, finalURL string) {
 	remoteFetchMsgTpl := `remote fetching from URL %q`
 	storeMsgTpl := `using image from local store for .* %s`
 	if finalURL == "" {
@@ -162,7 +162,7 @@ func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, 
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s %s %s %s", ctx.Cmd(), arg, image, imageArgs)
+	cmd := fmt.Sprintf("%s --pull-policy=new %s %s %s", ctx.Cmd(), arg, image, imageArgs)
 
 	// 1. Run cmd with the image not available in the store, should get $remoteFetchMsg.
 	err := runRktAndCheckRegexOutput(t, cmd, remoteFetchMsg)
@@ -176,7 +176,7 @@ func testFetchDefault(t *testing.T, arg string, image string, imageArgs string, 
 	runRktAndCheckRegexOutput(t, cmd, storeMsg)
 }
 
-func testFetchStoreOnly(t *testing.T, args string, image string, imageArgs string, finalURL string) {
+func testFetchNever(t *testing.T, args string, image string, imageArgs string, finalURL string) {
 	cannotFetchMsgTpl := `unable to fetch.* image from .* %q`
 	storeMsgTpl := `using image from local store for .* %s`
 	cannotFetchMsg := fmt.Sprintf(cannotFetchMsgTpl, image)
@@ -185,7 +185,7 @@ func testFetchStoreOnly(t *testing.T, args string, image string, imageArgs strin
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	cmd := fmt.Sprintf("%s --store-only %s %s %s", ctx.Cmd(), args, image, imageArgs)
+	cmd := fmt.Sprintf("%s --pull-policy=never %s %s %s", ctx.Cmd(), args, image, imageArgs)
 
 	// 1. Run cmd with the image not available in the store should get $cannotFetchMsg.
 	runRktAndCheckRegexOutput(t, cmd, cannotFetchMsg)
@@ -198,7 +198,7 @@ func testFetchStoreOnly(t *testing.T, args string, image string, imageArgs strin
 	runRktAndCheckRegexOutput(t, cmd, storeMsg)
 }
 
-func testFetchNoStore(t *testing.T, args string, image string, imageArgs string, finalURL string) {
+func testFetchUpdate(t *testing.T, args string, image string, imageArgs string, finalURL string) {
 	remoteFetchMsgTpl := `remote fetching from URL %q`
 	remoteFetchMsg := fmt.Sprintf(remoteFetchMsgTpl, finalURL)
 
@@ -209,7 +209,7 @@ func testFetchNoStore(t *testing.T, args string, image string, imageArgs string,
 		t.Skip(fmt.Sprintf("%v, probably a network failure. Skipping...", err))
 	}
 
-	cmd := fmt.Sprintf("%s --no-store %s %s %s", ctx.Cmd(), args, image, imageArgs)
+	cmd := fmt.Sprintf("%s --pull-policy=update %s %s %s", ctx.Cmd(), args, image, imageArgs)
 
 	// 1. Run cmd with the image available in the store, should get $remoteFetchMsg.
 	err := runRktAndCheckRegexOutput(t, cmd, remoteFetchMsg)

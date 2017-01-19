@@ -64,7 +64,10 @@ func init() {
 	cmdPrepare.Flags().Var(&flagExplicitEnv, "set-env", "environment variable to set for all the apps in the form key=value, this will be overriden by --environment")
 	cmdPrepare.Flags().Var(&flagEnvFromFile, "set-env-file", "the path to an environment variables file")
 	cmdPrepare.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
+	cmdPrepare.Flags().MarkDeprecated("store-only", "please use --pull-policy=never")
 	cmdPrepare.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
+	cmdPrepare.Flags().MarkDeprecated("no-store", "please use --pull-policy=update")
+	cmdPrepare.Flags().StringVar(&flagPullPolicy, "pull-policy", image.PullPolicyNew, "when to pull an image")
 	cmdPrepare.Flags().StringVar(&flagPodManifest, "pod-manifest", "", "the path to the pod manifest. If it's non-empty, then only '--quiet' and '--no-overlay' will have effect")
 	cmdPrepare.Flags().Var((*appsVolume)(&rktApps), "volume", "volumes to make available in the pod")
 
@@ -94,6 +97,12 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		stderr.Print("both --store-only and --no-store specified")
 		return 254
 	}
+	if flagStoreOnly {
+		flagPullPolicy = image.PullPolicyNever
+	}
+	if flagNoStore {
+		flagPullPolicy = image.PullPolicyUpdate
+	}
 
 	if flagPrivateUsers {
 		if !common.SupportsUserNS() {
@@ -110,8 +119,9 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 
 	if len(flagPodManifest) > 0 && (rktApps.Count() > 0 ||
 		(*appsVolume)(&rktApps).String() != "" || (*appMount)(&rktApps).String() != "" ||
-		len(flagPorts) > 0 || flagStoreOnly || flagNoStore ||
-		flagInheritEnv || !flagExplicitEnv.IsEmpty() || !flagEnvFromFile.IsEmpty()) {
+		len(flagPorts) > 0 || flagPullPolicy == image.PullPolicyNever ||
+		flagPullPolicy == image.PullPolicyUpdate || flagInheritEnv ||
+		!flagExplicitEnv.IsEmpty() || !flagEnvFromFile.IsEmpty()) {
 		stderr.Print("conflicting flags set with --pod-manifest (see --help)")
 		return 254
 	}
@@ -155,9 +165,8 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 		Debug:              globalFlags.Debug,
 		TrustKeysFromHTTPS: globalFlags.TrustKeysFromHTTPS,
 
-		StoreOnly: flagStoreOnly,
-		NoStore:   flagNoStore,
-		WithDeps:  true,
+		PullPolicy: flagPullPolicy,
+		WithDeps:   true,
 	}
 	if err := fn.FindImages(&rktApps); err != nil {
 		stderr.PrintE("error finding images", err)
