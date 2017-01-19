@@ -56,7 +56,7 @@ func TestImageExport(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	tmpDir := createTempDirOrPanic("rkt-TestImageExport-")
+	tmpDir := mustTempDir("rkt-TestImageExport-")
 	defer os.RemoveAll(tmpDir)
 
 	tmpManifest, err := ioutil.TempFile(tmpDir, "manifest")

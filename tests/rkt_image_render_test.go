@@ -66,7 +66,7 @@ func TestImageRender(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	tmpDir := createTempDirOrPanic("rkt-TestImageRender-")
+	tmpDir := mustTempDir("rkt-TestImageRender-")
 	defer os.RemoveAll(tmpDir)
 
 	tmpManifest, err := ioutil.TempFile(tmpDir, "manifest")
