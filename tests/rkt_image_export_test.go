@@ -45,7 +45,7 @@ func TestImageExport(t *testing.T) {
 			},
 		},
 		Labels: types.Labels{
-			{"version", "1.22.0"},
+			{"version", "1.23.0"},
 			{"arch", "amd64"},
 			{"os", "linux"},
 		},
