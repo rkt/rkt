@@ -161,5 +161,15 @@ This option to enable [logging to the TPM][rkt-tpm] is set by default. For loggi
 
 This option to allow building rkt with go having known security issues is unset by default. Use it with caution.
 
+## Development
+
+#### `--enable-incremental-build`
+
+This option enables incremental compilation. This is useful for local development.
+In contrast to a release build this option enables `go install` vs `go build`
+which decreases incremental compilation time.
+Note that this option is not supported in cross-compile builds.
+For this reason the incremental build option must not be used for release builds.
+
 [rkt-tpm]: devel/tpm.md
 [trousers]: http://trousers.sourceforge.net/

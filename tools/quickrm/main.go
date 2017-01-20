@@ -35,6 +35,7 @@ type processor interface {
 	setWordsNumber(number int)
 	processWord(word string) error
 	getList() []string
+	remove(name string) error
 }
 
 // fileProcessor is the simplest from all processor
@@ -61,7 +62,7 @@ type dirProcessor struct {
 }
 
 type items struct {
-	kind string
+	proc processor
 	list []string
 }
 
@@ -77,11 +78,11 @@ func main() {
 	failed := false
 	for _, i := range allItems {
 		for _, el := range i.list {
-			if err := os.Remove(el); err != nil {
+			if err := i.proc.remove(el); err != nil {
 				if os.IsNotExist(err) {
 					continue
 				}
-				common.Warn("Failed to remove %s %q: %v", i.kind, el, err)
+				common.Warn("Failed to remove %s %q: %v", i.proc.kind(), el, err)
 				failed = true
 				if infos, err := ioutil.ReadDir(el); err == nil {
 					var contents []string
@@ -131,7 +132,7 @@ func getItems() []items {
 			common.Die("Failed to get %s list: %v", k.proc.kind(), err)
 		}
 		allItems = append(allItems, items{
-			kind: k.proc.kind(),
+			proc: k.proc,
 			list: l,
 		})
 	}
@@ -175,6 +176,10 @@ func (proc *fileProcessor) kind() string {
 	return "file"
 }
 
+func (proc *fileProcessor) remove(name string) error {
+	return os.Remove(name)
+}
+
 func (proc *fileProcessor) setWordsNumber(number int) {
 	proc.list = make([]string, 0, number)
 }
@@ -194,6 +199,10 @@ func (proc *fileProcessor) getList() []string {
 
 func (proc *symlinkProcessor) kind() string {
 	return "symlink"
+}
+
+func (proc *symlinkProcessor) remove(name string) error {
+	return os.Remove(name)
 }
 
 func (proc *symlinkProcessor) setWordsNumber(number int) {
@@ -225,6 +234,10 @@ func (proc *symlinkProcessor) getList() []string {
 
 func (proc *dirProcessor) kind() string {
 	return "directory"
+}
+
+func (proc *dirProcessor) remove(name string) error {
+	return os.RemoveAll(name)
 }
 
 func (proc *dirProcessor) setWordsNumber(number int) {

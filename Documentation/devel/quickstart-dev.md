@@ -58,7 +58,7 @@ Run the autogen and configure commands with the relevant arguments, for example 
 
 ```sh
 $ cd ~/Repos/rkt
-$ ./autogen.sh && ./configure --enable-functional-tests --with-stage1-flavors=kvm
+$ ./autogen.sh && ./configure --enable-functional-tests --enable-incremental-build --with-stage1-flavors=kvm
 ```
 
 Now build rkt with:
