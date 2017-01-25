@@ -37,9 +37,12 @@ var rootRequiringCommands = []string{
 // user without them
 func TestCommandsNeedRoot(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
+
+	uid, gid := ctx.GetUidGidRktBinOwnerNotRoot()
+
 	defer ctx.Cleanup()
 	for _, sc := range rootRequiringCommands {
 		cmd := fmt.Sprintf("%s %s", ctx.Cmd(), sc)
-		runRktAsUidGidAndCheckOutput(t, cmd, "cannot run as unprivileged user", true, nobodyUid, nobodyGid)
+		runRktAsUidGidAndCheckOutput(t, cmd, "cannot run as unprivileged user", true, uid, gid)
 	}
 }

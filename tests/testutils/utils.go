@@ -21,6 +21,15 @@ import (
 	"time"
 )
 
+const (
+	nobodyUid = 65534
+	nobodyGid = 65534
+)
+
+func GetUnprivilegedUidGid() (int, int) {
+	return nobodyUid, nobodyGid
+}
+
 func GetValueFromEnvOrPanic(envVar string) string {
 	path := os.Getenv(envVar)
 	if path == "" {
