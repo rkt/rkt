@@ -9,7 +9,7 @@ Given a list of pod UUIDs, rkt stop will shut them down, for the shipped stage1 
 The `--force` flag will stop a pod forcibly, that is:
 
 * default systemd-nspawn stage1: the container is killed.
-* kvm stage1: the lkvm process receives a KILL signal.
+* kvm stage1: the qemu or lkvm process receives a KILL signal.
 * rkt fly stage1: the app receives a KILL signal.
 
 ```

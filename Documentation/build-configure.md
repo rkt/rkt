@@ -15,7 +15,7 @@ Note that specifying this parameter does not necessarily mean that rkt will use 
 Available flavors are:
 
 - `coreos` - it takes systemd and bash from a CoreOS PXE image; uses systemd-nspawn
-- `kvm` - it takes systemd, bash and other binaries from a CoreOS PXE image; uses lkvm
+- `kvm` - it takes systemd, bash and other binaries from a CoreOS PXE image; uses lkvm or qemu
 - `src` - it builds systemd, takes bash from the host at build time; uses built systemd-nspawn
 - `host` - it takes systemd and bash from host at runtime; uses systemd-nspawn from the host
 - `fly` - chroot-only approach for single-application minimal isolation containers; native Go implementation
