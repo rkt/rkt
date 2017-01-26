@@ -118,7 +118,7 @@ func TestAppUserGroup(t *testing.T) {
 					image, tt.rktParams,
 					imageDummy,
 				)
-				runRktAndCheckOutput(t, rktCmd, tt.expected, false)
+				runRktAndCheckRegexOutput(t, rktCmd, tt.expected)
 
 				// run the user/group overridden app last
 				rktCmd = fmt.Sprintf(
@@ -128,7 +128,7 @@ func TestAppUserGroup(t *testing.T) {
 					imageDummy,
 					image, tt.rktParams,
 				)
-				runRktAndCheckOutput(t, rktCmd, tt.expected, false)
+				runRktAndCheckRegexOutput(t, rktCmd, tt.expected)
 			}
 		}()
 	}
