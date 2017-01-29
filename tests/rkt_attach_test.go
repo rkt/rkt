@@ -142,3 +142,86 @@ func TestAttachSmoke(t *testing.T) {
 		waitOrFail(t, podProc, 0)
 	}
 }
+
+func TestAttachStartStop(t *testing.T) {
+	testSandbox(t, func(ctx *testutils.RktRunCtx, child *gexpect.ExpectSubprocess, podUUID string) {
+		// total retry timeout: 10s
+		r := retry{
+			n: 20,
+			t: 500 * time.Millisecond,
+		}
+
+		assertStatus := func(name, status string) error {
+			return r.Retry(func() error {
+				got := combinedOutput(t, ctx.ExecCmd("app", "status", podUUID, "--app="+name))
+
+				if !strings.Contains(got, status) {
+					return fmt.Errorf("unexpected result, got %q", got)
+				}
+
+				return nil
+			})
+		}
+
+		aci := patchTestACI(
+			"rkt-inspect-attach-start-stop.aci",
+			"--name=coreos.com/rkt-inspect/attach-start-stop",
+			"--exec=/inspect -read-stdin -sleep 30",
+		)
+		defer os.Remove(aci)
+
+		// fetch app
+		combinedOutput(t, ctx.ExecCmd("fetch", "--insecure-options=image", aci))
+
+		// add app
+		combinedOutput(t, ctx.ExecCmd(
+			"app", "add", podUUID,
+			"coreos.com/rkt-inspect/attach-start-stop",
+			"--name=attach-start-stop",
+			"--stdin=stream", "--stdout=stream", "--stderr=stream",
+		))
+
+		// start app
+		combinedOutput(t, ctx.ExecCmd("app", "start", "--debug", podUUID, "--app=attach-start-stop"))
+		if err := assertStatus("attach-start-stop", "running"); err != nil {
+			t.Error(err)
+			return
+		}
+
+		// attach and unblock app by sending some input
+		rktAttachCmd := fmt.Sprintf("%s attach %s", ctx.Cmd(), podUUID)
+		attachProc := spawnOrFail(t, rktAttachCmd)
+		input := "some_input"
+		if err := attachProc.SendLine(input); err != nil {
+			t.Errorf("Failed to send %q on the prompt: %v", input, err)
+			return
+		}
+
+		feedback := fmt.Sprintf("Received text: %s", input)
+		if err := expectTimeoutWithOutput(attachProc, feedback, 30*time.Second); err != nil {
+			t.Errorf("Waited for the prompt but not found: %v", err)
+			return
+		}
+
+		// stop after entering input
+		combinedOutput(t, ctx.ExecCmd("app", "stop", "--debug", podUUID, "--app=attach-start-stop"))
+		if err := assertStatus("attach-start-stop", "exited"); err != nil {
+			t.Error(err)
+			return
+		}
+
+		// restart app
+		combinedOutput(t, ctx.ExecCmd("app", "start", "--debug", podUUID, "--app=attach-start-stop"))
+		if err := assertStatus("attach-start-stop", "running"); err != nil {
+			t.Error(err)
+			return
+		}
+
+		// stop without entering input
+		combinedOutput(t, ctx.ExecCmd("app", "stop", "--debug", podUUID, "--app=attach-start-stop"))
+		if err := assertStatus("attach-start-stop", "exited"); err != nil {
+			t.Error(err)
+			return
+		}
+	})
+}

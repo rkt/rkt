@@ -951,3 +951,40 @@ func checkExitStatus(child *gexpect.ExpectSubprocess) error {
 
 	return nil
 }
+
+// combinedOutput executes the given command c for the given test context t
+// and fails test t if command execution failed.
+// It returns the command output.
+func combinedOutput(t *testing.T, c *exec.Cmd) string {
+	t.Log("Running", c.Args)
+	out, err := c.CombinedOutput()
+
+	if err != nil {
+		t.Fatal(err, "output", string(out))
+	}
+
+	return string(out)
+}
+
+// retry is the struct that represents retrying function calls.
+type retry struct {
+	n int
+	t time.Duration
+}
+
+// Retry retries the given function f n times with a delay t between invocations
+// until no error is returned from f or n is exceeded.
+// The last occured error is returned.
+func (r retry) Retry(f func() error) error {
+	var err error
+
+	for i := 0; i < r.n; i++ {
+		err = f()
+		if err == nil {
+			return nil
+		}
+		time.Sleep(r.t)
+	}
+
+	return err
+}

@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -309,6 +310,8 @@ func actionTTYMux(statusFile string) error {
 	go acceptConn(listener, clients, "tty")
 	go proxyIO(clients, ptm, c)
 
+	dispatchSig(c)
+
 	// If nothing else fails, ttymux service will be waiting here forever
 	// and be terminated by systemd only when the main application exits.
 	return <-c
@@ -449,9 +452,30 @@ func actionIOMux(statusFile string) error {
 		}
 	}
 
+	dispatchSig(c)
+
 	// If nothing else fails, iomux service will be waiting here forever
 	// and be terminated by systemd only when the main application exits.
 	return <-c
+}
+
+// dispatchSig launches a goroutine and closes the given stop channel
+// when SIGTERM, SIGHUP, or SIGINT is received.
+func dispatchSig(stop chan<- error) {
+	sigChan := make(chan os.Signal)
+	signal.Notify(
+		sigChan,
+		syscall.SIGTERM,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+	)
+
+	go func() {
+		diag.Println("Waiting for signal")
+		sig := <-sigChan
+		diag.Printf("Received signal %v\n", sig)
+		close(stop)
+	}()
 }
 
 // bufferLine buffers and queues a single line from a Reader to a multiplexer
@@ -492,8 +516,8 @@ func proxyIO(clients <-chan net.Conn, tty *os.File, ttyFailure chan<- error) {
 	ttyToRemote := func(dst net.Conn, src *os.File) {
 		_, err := io.Copy(dst, src)
 		if err == nil {
-			dst.Close()
-			ec <- io.EOF
+			_ = dst.Close()
+			close(ec)
 		}
 	}
 
