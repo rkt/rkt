@@ -48,8 +48,6 @@ import (
 
 const (
 	defaultTimeLayout = "2006-01-02 15:04:05.999 -0700 MST"
-	nobodyUid         = 65534
-	nobodyGid         = 65534
 
 	baseAppName = "rkt-inspect"
 )
@@ -232,7 +230,7 @@ func createFileOrPanic(dirName, fileName string) string {
 	return name
 }
 
-func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img string, fetchArgs string, gid int) (string, error) {
+func importImageAndFetchHashAsUidGid(t *testing.T, ctx *testutils.RktRunCtx, img string, fetchArgs string, uid int, gid int) (string, error) {
 	// Import the test image into store manually.
 	cmd := fmt.Sprintf("%s --insecure-options=image,tls fetch %s %s", ctx.Cmd(), fetchArgs, img)
 
@@ -248,7 +246,7 @@ func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img st
 	}
 	if gid != 0 {
 		child.Cmd.SysProcAttr = &syscall.SysProcAttr{}
-		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(nobodyUid), Gid: uint32(gid)}
+		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)}
 	}
 
 	err = child.Start()
@@ -270,7 +268,7 @@ func importImageAndFetchHashAsGid(t *testing.T, ctx *testutils.RktRunCtx, img st
 }
 
 func importImageAndFetchHash(t *testing.T, ctx *testutils.RktRunCtx, fetchArgs string, img string) (string, error) {
-	return importImageAndFetchHashAsGid(t, ctx, fetchArgs, img, 0)
+	return importImageAndFetchHashAsUidGid(t, ctx, fetchArgs, img, 0, 0)
 }
 
 func importImageAndRun(imagePath string, t *testing.T, ctx *testutils.RktRunCtx) {
@@ -340,6 +338,7 @@ func runRktAndGetUUID(t *testing.T, rktCmd string) string {
 }
 
 func runRktAsGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool, gid int) {
+	nobodyUid, _ := testutils.GetUnprivilegedUidGid()
 	runRktAsUidGidAndCheckOutput(t, rktCmd, expectedLine, expectError, nobodyUid, gid)
 }
 
@@ -403,6 +402,7 @@ func startRktAsGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, gid 
 	}
 	if gid != 0 {
 		child.Cmd.SysProcAttr = &syscall.SysProcAttr{}
+		nobodyUid, _ := testutils.GetUnprivilegedUidGid()
 		child.Cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(nobodyUid), Gid: uint32(gid)}
 	}
 

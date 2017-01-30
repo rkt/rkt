@@ -21,6 +21,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/coreos/gexpect"
 	"github.com/coreos/rkt/tests/testutils/logger"
@@ -218,6 +219,23 @@ func (ctx *RktRunCtx) rktBin() string {
 		abs = rkt
 	}
 	return abs
+}
+
+func (ctx *RktRunCtx) GetUidGidRktBinOwnerNotRoot() (int, int) {
+	s, err := os.Stat(ctx.rktBin())
+	if err != nil {
+		return GetUnprivilegedUidGid()
+	}
+
+	uid := int(s.Sys().(*syscall.Stat_t).Uid)
+	gid := int(s.Sys().(*syscall.Stat_t).Gid)
+
+	// If owner is root, fallback to user "nobody"
+	if uid == 0 {
+		return GetUnprivilegedUidGid()
+	}
+
+	return uid, gid
 }
 
 func (ctx *RktRunCtx) rktOptions() []string {
