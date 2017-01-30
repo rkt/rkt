@@ -26,8 +26,11 @@ QUICKRMTOOL := $(TOOLSDIR)/quickrm
 GO_TEST_PACKAGES ?= ./...
 GO_TEST_FUNC_ARGS ?=
 
+GOOS := $(shell "$(GO)" env GOOS)
+
 GO_ENV := $(strip \
 	GO15VENDOREXPERIMENT=1 \
+	GOOS="$(GOOS)" \
 	GOARCH="$(GOARCH)" \
 	$(if $(GOARM),GOARM="$(GOARM)") \
 	CGO_ENABLED=1 \
@@ -48,3 +51,7 @@ CREATE_DIRS += \
 	$(FILELISTDIR) \
 	$(MAINTEMPDIR) \
 	$(CLEANDIR)
+
+CLEAN_DIRS += \
+	$(GOPATH)/bin \
+	$(GOPATH)/pkg
