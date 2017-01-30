@@ -21,14 +21,25 @@ import (
 	"github.com/appc/spec/schema/types"
 )
 
+// The algorithm/reasoning:
+// When running the VM takes a small amount of memory out of the container
+//  (systemMemOverhead below)
+// The VM also has a transient startup need - some extra 'space' really only
+//  needed to 'get going' before we get to the workload.
+//
+// So, we have two rules:
+// - we always add on the system overhead
+// - we bump up to the minimum required for boot if we need to
+//
+// From those, and the app memory asks, calculate how much memory to hand to
+//  the VM.
 const (
-	defaultMem        = 128 // MB
-	systemMemOverhead = 128 // MB
+	minMem            = 512 // MB - minimum we need in VM
+	systemMemOverhead = 128 // MB - overhead we need for VM
 )
 
 // findResources finds value of last isolator for particular type.
 func findResources(isolators types.Isolators) (mem, cpus int64) {
-	mem = defaultMem
 	for _, i := range isolators {
 		switch v := i.Value().(type) {
 		case *types.ResourceMemory:
@@ -65,6 +76,11 @@ func GetAppsResources(apps schema.AppList) (totalCpus, totalMem int64) {
 
 	// Add an overhead for the VM system
 	totalMem += systemMemOverhead
+
+	// Always ensure we have at least the minimum RAM needed
+	if totalMem < minMem {
+		totalMem = minMem
+	}
 
 	return totalCpus, totalMem
 }
