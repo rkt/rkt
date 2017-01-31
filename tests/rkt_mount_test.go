@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build host coreos src
-
 package main
 
 import (
@@ -125,7 +123,7 @@ func TestMountSymlink(t *testing.T) {
 
 		// Read the actual file.
 		rktCmd := fmt.Sprintf(
-			"%s --insecure-options=image run %s --set-env=FILE=%s %s",
+			"%s --insecure-options=image --debug run %s --set-env=FILE=%s %s",
 			ctx.Cmd(), paramMount, tt.actualFile, image,
 		)
 		t.Logf("%s\n", rktCmd)
