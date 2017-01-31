@@ -39,6 +39,7 @@ import (
 	"github.com/coreos/rkt/pkg/user"
 	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
+	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
 )
 
 const (
@@ -380,7 +381,16 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 			hostPathInfo = nil
 		}
 
-		absTargetPath := filepath.Join(mount.TargetPrefixPath, mount.RelTargetPath)
+		absTargetPath := mount.RelTargetPath
+		if mount.TargetPrefixPath != "" {
+			absStage2RootFS := common.AppRootfsPath(p.Root, ra.Name)
+			targetPath, err := stage1initcommon.EvaluateSymlinksInsideApp(absStage2RootFS, mount.RelTargetPath)
+			if err != nil {
+				log.PrintE(fmt.Sprintf("evaluate target path %q in %q", mount.RelTargetPath, absStage2RootFS), err)
+				return 254
+			}
+			absTargetPath = filepath.Join(absStage2RootFS, targetPath)
+		}
 		if targetPathInfo, err = os.Stat(absTargetPath); err != nil && !os.IsNotExist(err) {
 			log.PrintE(fmt.Sprintf("stat of target path %s", absTargetPath), err)
 			return 254
