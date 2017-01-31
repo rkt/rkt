@@ -42,6 +42,9 @@ again.`,
 		Run: runWrapper(runFetch),
 	}
 	flagFullHash bool
+	// We can't have different defaults for a given flag variable shared across
+	// subcommands, so we can't use pullPolicyUpdate here
+	flagPullPolicyDefaultUpdate string
 )
 
 func init() {
@@ -52,8 +55,11 @@ func init() {
 
 	cmdFetch.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
 	cmdFetch.Flags().BoolVar(&flagStoreOnly, "store-only", false, "use only available images in the store (do not discover or download from remote URLs)")
+	cmdFetch.Flags().MarkDeprecated("store-only", "please use --pull-policy=never")
 	cmdFetch.Flags().BoolVar(&flagNoStore, "no-store", false, "fetch images ignoring the local store")
+	cmdFetch.Flags().MarkDeprecated("no-store", "please use --pull-policy=update")
 	cmdFetch.Flags().BoolVar(&flagFullHash, "full", false, "print the full image hash after fetching")
+	cmdFetch.Flags().StringVar(&flagPullPolicyDefaultUpdate, "pull-policy", image.PullPolicyUpdate, "when to pull an image")
 
 	cmdRkt.AddCommand(cmdFetch)
 
@@ -74,9 +80,19 @@ func runFetch(cmd *cobra.Command, args []string) (exit int) {
 		return 254
 	}
 
+	// flagPullPolicy defaults to new regardless of subcommand, so we use a
+	// different variable for the flag on fetch and then set it here
+	flagPullPolicy = flagPullPolicyDefaultUpdate
+
 	if flagStoreOnly && flagNoStore {
 		stderr.Print("both --store-only and --no-store specified")
 		return 254
+	}
+	if flagStoreOnly {
+		flagPullPolicy = image.PullPolicyNever
+	}
+	if flagNoStore {
+		flagPullPolicy = image.PullPolicyUpdate
 	}
 
 	s, err := imagestore.NewStore(storeDir())
@@ -107,9 +123,8 @@ func runFetch(cmd *cobra.Command, args []string) (exit int) {
 		Debug:              globalFlags.Debug,
 		TrustKeysFromHTTPS: globalFlags.TrustKeysFromHTTPS,
 
-		StoreOnly: flagStoreOnly,
-		NoStore:   flagNoStore,
-		WithDeps:  true,
+		PullPolicy: flagPullPolicy,
+		WithDeps:   true,
 	}
 
 	err = ft.FetchImages(&rktApps)

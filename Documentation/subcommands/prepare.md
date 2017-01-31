@@ -63,7 +63,7 @@ c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 | `--mount` | none | Mount syntax (ex. `--mount volume=NAME,target=PATH`) | Mount point binding a volume to a path within an app. See [Mounting Volumes without Mount Points][vol-no-mount]. |
 | `--name` | none | Name of the app | Set the name of the app (example: '--name=foo'). If not set, then the app name default to the image's name |
 | `--no-overlay` | `false` | `true` or `false` | Disable the overlay filesystem. |
-| `--no-store` | `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior][img-fetch] |
+| `--pull-policy` | `new` | `never`, `new`, or `update` | Sets the policy for when to fetch an image. See [image fetching behavior][img-fetch] |
 | `--pod-manifest` | none | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect. |
 | `--port` | none | A port name and number pair | Container port name to expose through host port number. Requires [contained network][contained]. Syntax: `--port=NAME:HOSTPORT` The NAME is that given in the ACI. By convention, Docker containers' EXPOSEd ports are given a name formed from the port number, a hyphen, and the protocol, e.g., `80-tcp`, giving something like `--port=80-tcp:8080` |
 | `--private-users` |  `false` | `true` or `false` | Run within user namespaces |
@@ -76,7 +76,6 @@ c9fad0e6-8236-4fc2-ad17-55d0a4c7d742
 | `--stage1-name` |  `` | A name of a stage1 image. Will perform a discovery if the image is not in the store | Image to use as stage1 |
 | `--stage1-hash` |  `` | A hash of a stage1 image. The image must exist in the store | Image to use as stage1 |
 | `--stage1-from-dir` |  `` | A stage1 image file inside the default stage1 images directory | Image to use as stage1 |
-| `--store-only` |  `false` | `true` or `false` | Use only available images in the store (do not discover or download from remote URLs). See [image fetching behavior][img-fetch] |
 | `--user` | none | uid, username or file path | user override for the preceding image (example: '--user=user') |
 | `--volume` |  `` | Volume syntax (`NAME,kind=KIND,source=PATH,readOnly=BOOL,recursive=BOOL`). See [Mount Volumes into a Pod][mount-vol] | Volumes to make available in the pod |
 

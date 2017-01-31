@@ -265,7 +265,7 @@ func TestRenderOnFetch(t *testing.T) {
 		}
 	}
 
-	fetchCmd := fmt.Sprintf("%s --debug --insecure-options=image,tls fetch %s", ctx.Cmd(), topImage)
+	fetchCmd := fmt.Sprintf("%s --debug --insecure-options=image,tls fetch --pull-policy=new %s", ctx.Cmd(), topImage)
 	child := spawnOrFail(t, fetchCmd)
 
 	treeStoreDir := filepath.Join(ctx.DataDir(), "cas", "tree")

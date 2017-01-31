@@ -302,11 +302,12 @@ func getConfiguredStage1Hash(s *imagestore.Store, ts *treestore.Store, imgRef, i
 	}
 	fn := getStage1Finder(s, ts, !trusted)
 	if !strings.HasSuffix(imgRef, "-dirty") {
-		fn.StoreOnly = true
+		oldPolicy := fn.PullPolicy
+		fn.PullPolicy = image.PullPolicyNever
 		if hash, err := fn.FindImage(imgRef, ""); err == nil {
 			return hash, nil
 		}
-		fn.StoreOnly = false
+		fn.PullPolicy = oldPolicy
 	}
 	if imgLoc == "" && imgFileName == "" {
 		return nil, fmt.Errorf("neither the location of the default stage1 image nor its filename are set, use --stage1-{path,url,name,hash,from-dir} flag")
@@ -327,9 +328,8 @@ func getStage1Finder(s *imagestore.Store, ts *treestore.Store, withKeystore bool
 		InsecureFlags:      globalFlags.InsecureFlags,
 		TrustKeysFromHTTPS: globalFlags.TrustKeysFromHTTPS,
 
-		StoreOnly: false,
-		NoStore:   false,
-		WithDeps:  false,
+		PullPolicy: image.PullPolicyNew,
+		WithDeps:   false,
 	}
 
 	if withKeystore {

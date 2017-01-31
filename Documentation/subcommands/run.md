@@ -407,7 +407,6 @@ This feature will be disabled automatically if the underlying filesystem does no
 | `--name` | none | Name of the app | Set the name of the app (example: '--name=foo'). If not set, then the app name default to the image's name |
 | `--net` | `default` | A comma-separated list of networks. (e.g. `--net[=n[:args], ...]`) | Configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively. |
 | `--no-overlay` | `false` | `true` or `false` | Disable the overlay filesystem. |
-| `--no-store` | `false` | `true` or `false` | Fetch images, ignoring the local store. See [image fetching behavior][img-fetch]. |
 | `--pod-manifest` | none | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect. |
 | `--port` | none | A port name and number pair | Container port name to expose through host port number. Requires [contained network][contained]. Syntax: `--port=NAME:HOSTPORT` The NAME is that given in the ACI. By convention, Docker containers' EXPOSEd ports are given a name formed from the port number, a hyphen, and the protocol, e.g., `80-tcp`, giving something like `--port=80-tcp:8080`. |
 | `--private-users` | `false` | `true` or `false` | Run within user namespaces. |
@@ -419,7 +418,7 @@ This feature will be disabled automatically if the underlying filesystem does no
 | `--stage1-name` | none | Image name (e.g. `--stage1-name=coreos.com/rkt/stage1-coreos`) | A name of a stage1 image. Will perform a discovery if the image is not in the store. |
 | `--stage1-path` | none | Absolute or relative path | A path to a stage1 image. |
 | `--stage1-url` | none | URL with protocol | A URL to a stage1 image. HTTP/HTTPS/File/Docker URLs are supported. |
-| `--store-only` | `false` | `true` or `false` | Use only available images in the store (do not discover or download from remote URLs). See [image fetching behavior][img-fetch]. |
+| `--pull-policy` | `new` | `never`, `new`, or `update` | Sets the policy for when to fetch an image. See [image fetching behavior][img-fetch] |
 | `--user` | none | uid, username or file path (e.g. `--user=core`) | User override for the preceding image. |
 | `--uuid-file-save` | none | A file path | Write out the pod UUID to a file. |
 | `--volume` | none | Volume syntax (e.g. `--volume NAME,kind=KIND,source=PATH,readOnly=BOOL`) | Volumes to make available in the pod. See [Mount Volumes into a Pod](#mount-volumes-into-a-pod). |

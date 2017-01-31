@@ -233,7 +233,7 @@ func (f *Fetcher) fetchSingleImageByDockerURL(d *dist.Docker) (string, error) {
 }
 
 func (f *Fetcher) maybeCheckRemoteFromStore(rem *imagestore.Remote) string {
-	if f.NoStore || rem == nil {
+	if f.PullPolicy == PullPolicyUpdate || rem == nil {
 		return ""
 	}
 	diag.Printf("using image from local store for url %s", rem.ACIURL)
@@ -241,7 +241,7 @@ func (f *Fetcher) maybeCheckRemoteFromStore(rem *imagestore.Remote) string {
 }
 
 func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *imagestore.Remote, u *url.URL, a *asc) (string, error) {
-	if !f.StoreOnly {
+	if f.PullPolicy != PullPolicyNever {
 		diag.Printf("remote fetching from URL %q", u.String())
 		hf := &httpFetcher{
 			InsecureFlags: f.InsecureFlags,
@@ -257,7 +257,7 @@ func (f *Fetcher) maybeFetchHTTPURLFromRemote(rem *imagestore.Remote, u *url.URL
 }
 
 func (f *Fetcher) maybeFetchDockerURLFromRemote(u *url.URL) (string, error) {
-	if !f.StoreOnly {
+	if f.PullPolicy != PullPolicyNever {
 		diag.Printf("remote fetching from URL %q", u.String())
 		df := &dockerFetcher{
 			InsecureFlags: f.InsecureFlags,
@@ -313,7 +313,7 @@ func (f *Fetcher) fetchSingleImageByName(db *distBundle, a *asc) (string, error)
 }
 
 func (f *Fetcher) maybeCheckStoreForApp(db *distBundle) (string, error) {
-	if !f.NoStore {
+	if f.PullPolicy != PullPolicyUpdate {
 		key, err := f.getStoreKeyFromApp(db)
 		if err == nil {
 			diag.Printf("using image from local store for image name %s", db.image)
@@ -348,7 +348,7 @@ func (f *Fetcher) getStoreKeyFromApp(db *distBundle) (string, error) {
 }
 
 func (f *Fetcher) maybeFetchImageFromRemote(db *distBundle, a *asc) (string, error) {
-	if !f.StoreOnly {
+	if f.PullPolicy != PullPolicyNever {
 		app := db.dist.(*dist.Appc).App()
 		nf := &nameFetcher{
 			InsecureFlags:      f.InsecureFlags,

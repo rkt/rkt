@@ -42,6 +42,10 @@ type imageStringType int
 const (
 	imageStringName imageStringType = iota // image type to be guessed
 	imageStringPath                        // absolute or relative path
+
+	PullPolicyNever  = "never"
+	PullPolicyNew    = "new"
+	PullPolicyUpdate = "update"
 )
 
 // action is a common type for Finder and Fetcher
@@ -69,13 +73,9 @@ type action struct {
 	// via the https protocol can be trusted
 	TrustKeysFromHTTPS bool
 
-	// StoreOnly tells whether to avoid getting images from a
-	// local filesystem or a remote location.
-	StoreOnly bool
-	// NoStore tells whether to avoid getting images from the
-	// store. Note that transport caching (like http Etags) can be still
-	// used to avoid refetching.
-	NoStore bool
+	// PullPolicy controls when to pull images from remote, versus using a copy
+	// on the local filesystem, versus checking for updates to local images
+	PullPolicy string
 	// NoCache tells to ignore transport caching.
 	NoCache bool
 	// WithDeps tells whether image dependencies should be

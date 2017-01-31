@@ -2,18 +2,19 @@
 
 When fetching, rkt will try to avoid unnecessary network transfers: if an updated image is already in the local store there's no need to download it again.
 
-This behavior can be controlled with the `--store-only` and `--no-store` flags.
+This behavior can be controlled with the `--pull-policy` flag.
 
 ## General Behavior
 
-The following table describes the meaning of the `--store-only` and `--no-store` flags.
+The following table describes the meaning of the `--pull-policy` flag.
 
-Flags                     | Description
+This flag accepts one of three options:
+
+Option                    | Description
 ------------------------- | ---------------------------------------------------------------------------------------------------
-_no flags_                | **Default behavior.** Do `store` and if it doesn't return an image do `remote`.
-`--store-only`            | Check the local store only.
-`--no-store`              | Execute a remote download, while handling caching logic for `http(s)://` and `docker://`.
-`--store-only --no-store` | Invalid option.
+`new`                     | __Default behavior in run and prepare__ Check the store, and if the image is missing fetch from remote
+`update`                  | __Default behavior in fetch__ Attempt to fetch from remote, but if the remote image matches something in our store don't pull it
+`never`                   | Only check the store, and don't fetch from remote.
 
 ## Details
 
