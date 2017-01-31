@@ -32,6 +32,7 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/fileutil"
 	pkgflag "github.com/coreos/rkt/pkg/flag"
+	"github.com/coreos/rkt/pkg/fs"
 	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/mountinfo"
 	"github.com/coreos/rkt/pkg/sys"
@@ -358,9 +359,12 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 		}
 	}
 
+	mounter := fs.NewLoggingMounter(
+		fs.MounterFunc(syscall.Mount),
+		fs.UnmounterFunc(syscall.Unmount),
+		diag.Printf,
+	)
 	for _, mount := range effectiveMounts {
-		diag.Printf("Processing %+v", mount)
-
 		var (
 			err            error
 			hostPathInfo   os.FileInfo
@@ -418,7 +422,7 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 			}
 		}
 
-		if err := syscall.Mount(mount.HostPath, absTargetPath, mount.Fs, mount.Flags, ""); err != nil {
+		if err := mounter.Mount(mount.HostPath, absTargetPath, mount.Fs, mount.Flags, ""); err != nil {
 			log.PrintE(fmt.Sprintf("can't mount %q on %q with flags %v", mount.HostPath, absTargetPath, mount.Flags), err)
 			return 254
 		}
