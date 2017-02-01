@@ -32,12 +32,14 @@ import (
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/pkg/fileutil"
 	pkgflag "github.com/coreos/rkt/pkg/flag"
+	"github.com/coreos/rkt/pkg/fs"
 	rktlog "github.com/coreos/rkt/pkg/log"
 	"github.com/coreos/rkt/pkg/mountinfo"
 	"github.com/coreos/rkt/pkg/sys"
 	"github.com/coreos/rkt/pkg/user"
 	stage1common "github.com/coreos/rkt/stage1/common"
 	stage1commontypes "github.com/coreos/rkt/stage1/common/types"
+	stage1initcommon "github.com/coreos/rkt/stage1/init/common"
 )
 
 const (
@@ -358,9 +360,12 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 		}
 	}
 
+	mounter := fs.NewLoggingMounter(
+		fs.MounterFunc(syscall.Mount),
+		fs.UnmounterFunc(syscall.Unmount),
+		diag.Printf,
+	)
 	for _, mount := range effectiveMounts {
-		diag.Printf("Processing %+v", mount)
-
 		var (
 			err            error
 			hostPathInfo   os.FileInfo
@@ -376,7 +381,16 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 			hostPathInfo = nil
 		}
 
-		absTargetPath := filepath.Join(mount.TargetPrefixPath, mount.RelTargetPath)
+		absTargetPath := mount.RelTargetPath
+		if mount.TargetPrefixPath != "" {
+			absStage2RootFS := common.AppRootfsPath(p.Root, ra.Name)
+			targetPath, err := stage1initcommon.EvaluateSymlinksInsideApp(absStage2RootFS, mount.RelTargetPath)
+			if err != nil {
+				log.PrintE(fmt.Sprintf("evaluate target path %q in %q", mount.RelTargetPath, absStage2RootFS), err)
+				return 254
+			}
+			absTargetPath = filepath.Join(absStage2RootFS, targetPath)
+		}
 		if targetPathInfo, err = os.Stat(absTargetPath); err != nil && !os.IsNotExist(err) {
 			log.PrintE(fmt.Sprintf("stat of target path %s", absTargetPath), err)
 			return 254
@@ -418,7 +432,7 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 			}
 		}
 
-		if err := syscall.Mount(mount.HostPath, absTargetPath, mount.Fs, mount.Flags, ""); err != nil {
+		if err := mounter.Mount(mount.HostPath, absTargetPath, mount.Fs, mount.Flags, ""); err != nil {
 			log.PrintE(fmt.Sprintf("can't mount %q on %q with flags %v", mount.HostPath, absTargetPath, mount.Flags), err)
 			return 254
 		}
