@@ -162,7 +162,7 @@ func AddApp(cfg AddConfig) error {
 	}
 
 	if app.Args != nil {
-		ra.App.Exec = append(ra.App.Exec, app.Args...)
+		ra.App.Exec = append(ra.App.Exec[:1], app.Args...)
 	}
 
 	if app.WorkingDir != "" {
