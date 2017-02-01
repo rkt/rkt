@@ -26,9 +26,6 @@ Changes to the validator need to be reflected in app_manifest.json, and vice-ver
 The App Container Execution spec defines the following expectations within the execution environment:
  - Working Directory defaults to the root of the application image, overridden with "workingDirectory"
  - PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
- - USER, LOGNAME username of the user executing this app
- - HOME home directory of the user
- - SHELL login shell of the user
  - AC_APP_NAME the entrypoint that this process was defined from
 
 In addition, we validate:
@@ -81,10 +78,6 @@ var (
 	// "Environment"
 	env = map[string]string{
 		"IN_ACE_VALIDATOR": "correct",
-		"HOME":             "/root",
-		"USER":             "root",
-		"LOGNAME":          "root",
-		"SHELL":            "/bin/sh",
 	}
 	// "MountPoints"
 	mps = map[string]types.MountPoint{
