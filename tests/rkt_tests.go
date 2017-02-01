@@ -172,6 +172,37 @@ func waitPodReady(ctx *testutils.RktRunCtx, t *testing.T, uuidFile string, timeo
 	return string(podUUID), nil
 }
 
+// waitAppAttachable waits for an attachable application to get ready, busy-looping until `timeout`
+// while waiting for it. It returns an error on failure.
+func waitAppAttachable(ctx *testutils.RktRunCtx, t *testing.T, podUUID, appName string, timeout time.Duration) error {
+	var (
+		err         error
+		output      []byte
+		appNameFlag string
+	)
+
+	if appName != "" {
+		appNameFlag = "--app=" + appName
+	}
+	cmd := strings.Fields(fmt.Sprintf("%s attach --mode=list %s %s", ctx.Cmd(), appNameFlag, podUUID))
+
+	interval := 500 * time.Millisecond
+	elapsed := time.Duration(0)
+	for elapsed < timeout {
+		time.Sleep(interval)
+		elapsed += interval
+		statusCmd := exec.Command(cmd[0], cmd[1:]...)
+		output, err = statusCmd.CombinedOutput()
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("%s", output)
+	}
+	return nil
+}
+
 func spawnAndWaitOrFail(t *testing.T, cmd string, expectedStatus int) {
 	child := spawnOrFail(t, cmd)
 	waitOrFail(t, child, expectedStatus)

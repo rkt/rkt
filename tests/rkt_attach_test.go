@@ -117,6 +117,11 @@ func TestAttachSmoke(t *testing.T) {
 			}
 		}
 
+		// wait for the app to become attachable
+		if err := waitAppAttachable(ctx, t, uuid, appName, 30*time.Second); err != nil {
+			t.Fatalf("Failed to wait for attachable app #%v: %v", i, err)
+		}
+
 		// attach and unblock app by sending some input
 		rktAttachCmd := fmt.Sprintf("%s attach %s", ctx.Cmd(), uuid)
 		attachProc := spawnOrFail(t, rktAttachCmd)
@@ -145,6 +150,7 @@ func TestAttachSmoke(t *testing.T) {
 
 func TestAttachStartStop(t *testing.T) {
 	testSandbox(t, func(ctx *testutils.RktRunCtx, child *gexpect.ExpectSubprocess, podUUID string) {
+		appName := "attach-start-stop"
 		// total retry timeout: 10s
 		r := retry{
 			n: 20,
@@ -177,15 +183,20 @@ func TestAttachStartStop(t *testing.T) {
 		combinedOutput(t, ctx.ExecCmd(
 			"app", "add", podUUID,
 			"coreos.com/rkt-inspect/attach-start-stop",
-			"--name=attach-start-stop",
+			"--name="+appName,
 			"--stdin=stream", "--stdout=stream", "--stderr=stream",
 		))
 
 		// start app
-		combinedOutput(t, ctx.ExecCmd("app", "start", "--debug", podUUID, "--app=attach-start-stop"))
+		combinedOutput(t, ctx.ExecCmd("app", "start", "--debug", podUUID, "--app="+appName))
 		if err := assertStatus("attach-start-stop", "running"); err != nil {
 			t.Error(err)
 			return
+		}
+
+		// wait for the app to become attachable
+		if err := waitAppAttachable(ctx, t, podUUID, appName, 30*time.Second); err != nil {
+			t.Fatalf("Failed to wait for attachable app: %v", err)
 		}
 
 		// attach and unblock app by sending some input
@@ -197,28 +208,27 @@ func TestAttachStartStop(t *testing.T) {
 			return
 		}
 
-		feedback := fmt.Sprintf("Received text: %s", input)
-		if err := expectTimeoutWithOutput(attachProc, feedback, 30*time.Second); err != nil {
-			t.Errorf("Waited for the prompt but not found: %v", err)
+		if err := expectTimeoutWithOutput(attachProc, input, 30*time.Second); err != nil {
+			t.Errorf("Waited for feedback %q but not found: %v", input, err)
 			return
 		}
 
 		// stop after entering input
-		combinedOutput(t, ctx.ExecCmd("app", "stop", "--debug", podUUID, "--app=attach-start-stop"))
+		combinedOutput(t, ctx.ExecCmd("app", "stop", "--debug", podUUID, "--app="+appName))
 		if err := assertStatus("attach-start-stop", "exited"); err != nil {
 			t.Error(err)
 			return
 		}
 
 		// restart app
-		combinedOutput(t, ctx.ExecCmd("app", "start", "--debug", podUUID, "--app=attach-start-stop"))
+		combinedOutput(t, ctx.ExecCmd("app", "start", "--debug", podUUID, "--app="+appName))
 		if err := assertStatus("attach-start-stop", "running"); err != nil {
 			t.Error(err)
 			return
 		}
 
 		// stop without entering input
-		combinedOutput(t, ctx.ExecCmd("app", "stop", "--debug", podUUID, "--app=attach-start-stop"))
+		combinedOutput(t, ctx.ExecCmd("app", "stop", "--debug", podUUID, "--app="+appName))
 		if err := assertStatus("attach-start-stop", "exited"); err != nil {
 			t.Error(err)
 			return
