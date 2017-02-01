@@ -65,30 +65,12 @@ func newApp(ra *schema.RuntimeApp, podManifest *schema.PodManifest, pod *pkgPod.
 		UserLabels:      ra.App.UserLabels,
 	}
 
-	// Generate mounts
-	for _, mnt := range ra.App.MountPoints {
-		name := mnt.Name.String()
-		containerPath := mnt.Path
-		readOnly := mnt.ReadOnly
-
-		var hostPath string
-		for _, vol := range podManifest.Volumes {
-			if vol.Name != mnt.Name {
-				continue
-			}
-
-			hostPath = vol.Source
-			if vol.ReadOnly != nil && !readOnly {
-				readOnly = *vol.ReadOnly
-			}
-			break
-		}
-
+	for _, mnt := range ra.Mounts {
 		app.Mounts = append(app.Mounts, &Mount{
-			Name:          name,
-			ContainerPath: containerPath,
-			HostPath:      hostPath,
-			ReadOnly:      readOnly,
+			Name:          mnt.Volume.String(),
+			ContainerPath: mnt.Path,
+			HostPath:      mnt.AppVolume.Source,
+			ReadOnly:      *mnt.AppVolume.ReadOnly,
 		})
 	}
 
