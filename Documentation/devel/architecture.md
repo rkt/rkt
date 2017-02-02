@@ -244,7 +244,25 @@ Additionally, since appc dependencies can be found only via discovery, a depende
 
 Given this 1:N relation between an ACI and their rendered images, the ACIStore and TreeStore are decoupled.
 
+
+## Logging and attaching
+
+Applications running inside a rkt pod can produce output on stdout/stderr, which can be redirected at runtime. Optionally, they can receive input on stdin from an external component that can be attached/detached during execution.
+
+The internal architecture for attaching (TTY and single streams) and logging is described in full details in the [Logging and attaching design document][attach-design].
+
+For each application, rkt support separately configuring stdin/stdout/stderr via runtime command-line flags. The following modes are available:
+ * interactive: application will be run under the TTY of the parent process. A single application is allowed in the pod, which is tied to the lifetime of the parent terminal and cannot be later re-attached.
+ * TTY: selected I/O streams will be run under a newly allocated TTY, which can be later used for external attaching.
+ * streaming: selected I/O streams will be supervised by a separate multiplexing process (running in the pod context). They can be later externally attached.
+ * logging: selected output streams will be supervised by a separate logging process (running in the pod context). Output entries will be handled as log entries, and the application cannot be later re-attached.
+ * null: selected I/O streams will be closed. Application will not received the file-descriptor for the corresponding stream, and it cannot be later re-attached.
+
+From a UI perspective, main consumers of the logging and attaching subsystem are the `rkt attach` subcommand and the `--stdin`, `--stdout`, `--stderr` runtime options.
+
+
 [acirenderer]: https://github.com/appc/spec/tree/master/pkg/acirenderer
+[attach-design]: ./log-attach-design.md
 [appc-spec]: https://github.com/appc/spec
 [appc-dependencies]: https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
 [appc-discovery]: https://github.com/appc/spec/blob/master/spec/discovery.md

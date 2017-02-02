@@ -794,3 +794,104 @@ func (au *appSupplementaryGIDs) String() string {
 func (au *appSupplementaryGIDs) Type() string {
 	return "appSupplementaryGIDs"
 }
+
+// `--stdin=mode` flag
+type appStdin apps.Apps
+
+func (au *appStdin) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--stdin must follow an application")
+	}
+	allowedInModes := map[string]apps.AppIO{
+		apps.AppIONull.String():   apps.AppIONull,
+		apps.AppIOStream.String(): apps.AppIOStream,
+		apps.AppIOTTY.String():    apps.AppIOTTY,
+	}
+	mode, ok := allowedInModes[s]
+	if !ok {
+		return fmt.Errorf("invalid stdin mode %q", s)
+	}
+	app.Stdin = mode
+	return nil
+}
+
+func (au *appStdin) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	return app.Stdin.String()
+}
+
+func (au *appStdin) Type() string {
+	return "appStdin"
+}
+
+// `--stdout=mode` flag
+type appStdout apps.Apps
+
+func (au *appStdout) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--stdout must follow an application")
+	}
+	allowedOutModes := map[string]apps.AppIO{
+		apps.AppIOLog.String():    apps.AppIOLog,
+		apps.AppIONull.String():   apps.AppIONull,
+		apps.AppIOStream.String(): apps.AppIOStream,
+		apps.AppIOTTY.String():    apps.AppIOTTY,
+	}
+	mode, ok := allowedOutModes[s]
+	if !ok {
+		return fmt.Errorf("invalid stdout mode %q", s)
+	}
+	app.Stdout = mode
+	return nil
+}
+
+func (au *appStdout) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	return app.Stdout.String()
+}
+
+func (au *appStdout) Type() string {
+	return "appStdout"
+}
+
+// `--stderr=mode` flag
+type appStderr apps.Apps
+
+func (au *appStderr) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--stderr must follow an application")
+	}
+	allowedErrModes := map[string]apps.AppIO{
+		apps.AppIOLog.String():    apps.AppIOLog,
+		apps.AppIONull.String():   apps.AppIONull,
+		apps.AppIOStream.String(): apps.AppIOStream,
+		apps.AppIOTTY.String():    apps.AppIOTTY,
+	}
+	mode, ok := allowedErrModes[s]
+	if !ok {
+		return fmt.Errorf("invalid stderr mode %q", s)
+	}
+	app.Stderr = mode
+	return nil
+}
+
+func (au *appStderr) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	return app.Stderr.String()
+}
+
+func (au *appStderr) Type() string {
+	return "appStderr"
+}

@@ -27,7 +27,9 @@ import (
 const (
 	// UnitsDir is the default path to systemd systemd unit directory
 	UnitsDir        = "/usr/lib/systemd/system"
-	envDir          = "/rkt/env" // TODO(vc): perhaps this doesn't belong in /rkt?
+	envDir          = "/rkt/env"
+	statusDir       = "/rkt/status"
+	ioMuxDir        = "/rkt/iottymux"
 	defaultWantsDir = UnitsDir + "/default.target.wants"
 	socketsWantsDir = UnitsDir + "/sockets.target.wants"
 )
@@ -60,6 +62,11 @@ func EnvFilePath(root string, appName types.ACName) string {
 	return filepath.Join(common.Stage1RootfsPath(root), RelEnvFilePath(appName))
 }
 
+// IOMUxFilePath returns the path to the environment file for the given app name.
+func IOMuxDir(root string, appName types.ACName) string {
+	return filepath.Join(common.Stage1RootfsPath(root), ioMuxDir, appName.String())
+}
+
 // ServiceWantPath returns the systemd default.target want symlink path for the
 // given app name.
 func ServiceWantPath(root string, appName types.ACName) string {
@@ -88,4 +95,9 @@ func SocketUnitPath(root string, appName types.ACName) string {
 // given app name.
 func SocketWantPath(root string, appName types.ACName) string {
 	return filepath.Join(common.Stage1RootfsPath(root), socketsWantsDir, SocketUnitName(appName))
+}
+
+// TypedUnitPath returns the path to a custom-typed unit file
+func TypedUnitPath(root string, unitName string, unitType string) string {
+	return filepath.Join(common.Stage1RootfsPath(root), UnitsDir, unitName+"."+unitType)
 }

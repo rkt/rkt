@@ -21,8 +21,13 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 	"github.com/coreos/rkt/common"
+	"github.com/coreos/rkt/common/apps"
+	stage1types "github.com/coreos/rkt/stage1/common/types"
 	"github.com/hashicorp/errwrap"
+	"strconv"
 )
 
 // CrossingEntrypoint represents a stage1 entrypoint whose execution
@@ -100,4 +105,90 @@ func (ce CrossingEntrypoint) Run() error {
 	}
 
 	return nil
+}
+
+// generateRuntimeApp merges runtime information from the image manifest and from
+// runtime configuration overrides, returning a full configuration for a runtime app
+func generateRuntimeApp(appRunConfig *apps.App, am *schema.ImageManifest, podMounts []schema.Mount) (schema.RuntimeApp, error) {
+
+	ra := schema.RuntimeApp{
+		App: am.App,
+		Image: schema.RuntimeImage{
+			Name:   &am.Name,
+			ID:     appRunConfig.ImageID,
+			Labels: am.Labels,
+		},
+		Mounts:         MergeMounts(podMounts, appRunConfig.Mounts),
+		ReadOnlyRootFS: appRunConfig.ReadOnlyRootFS,
+	}
+
+	appName, err := types.NewACName(appRunConfig.Name)
+	if err != nil {
+		return ra, errwrap.Wrap(errors.New("invalid app name format"), err)
+	}
+	ra.Name = *appName
+
+	if appRunConfig.Exec != "" {
+		// Create a minimal App section if not present
+		if am.App == nil {
+			ra.App = &types.App{
+				User:  strconv.Itoa(os.Getuid()),
+				Group: strconv.Itoa(os.Getgid()),
+			}
+		}
+		ra.App.Exec = []string{appRunConfig.Exec}
+	}
+
+	if appRunConfig.Args != nil {
+		ra.App.Exec = append(ra.App.Exec, appRunConfig.Args...)
+	}
+
+	if appRunConfig.WorkingDir != "" {
+		ra.App.WorkingDirectory = appRunConfig.WorkingDir
+	}
+
+	if err := prepareIsolators(appRunConfig, ra.App); err != nil {
+		return ra, err
+	}
+
+	if appRunConfig.User != "" {
+		ra.App.User = appRunConfig.User
+	}
+
+	if appRunConfig.Group != "" {
+		ra.App.Group = appRunConfig.Group
+	}
+
+	if appRunConfig.SupplementaryGIDs != nil {
+		ra.App.SupplementaryGIDs = appRunConfig.SupplementaryGIDs
+	}
+
+	if appRunConfig.UserAnnotations != nil {
+		ra.App.UserAnnotations = appRunConfig.UserAnnotations
+	}
+
+	if appRunConfig.UserLabels != nil {
+		ra.App.UserLabels = appRunConfig.UserLabels
+	}
+
+	if appRunConfig.Stdin != "" {
+		ra.Annotations.Set(stage1types.AppStdinMode, appRunConfig.Stdin.String())
+	}
+	if appRunConfig.Stdout != "" {
+		ra.Annotations.Set(stage1types.AppStdoutMode, appRunConfig.Stdout.String())
+	}
+	if appRunConfig.Stderr != "" {
+		ra.Annotations.Set(stage1types.AppStderrMode, appRunConfig.Stderr.String())
+	}
+
+	if appRunConfig.Environments != nil {
+		envs := make([]string, 0, len(appRunConfig.Environments))
+		for name, value := range appRunConfig.Environments {
+			envs = append(envs, fmt.Sprintf("%s=%s", name, value))
+		}
+		// Let the app level environment override the environment variables.
+		mergeEnvs(&ra.App.Environment, envs, true)
+	}
+
+	return ra, nil
 }

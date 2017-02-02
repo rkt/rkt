@@ -96,17 +96,18 @@ type RunConfig struct {
 
 // CommonConfig defines the configuration shared by both Run and Prepare
 type CommonConfig struct {
-	DataDir      string            // The path to the data directory, e.g. /var/lib/rkt/pods
-	Store        *imagestore.Store // store containing all of the configured application images
-	TreeStore    *treestore.Store  // store containing all of the configured application images
-	Stage1Image  types.Hash        // stage1 image containing usable /init and /enter entrypoints
-	UUID         *types.UUID       // UUID of the pod
-	RootHash     string            // Hash of the root filesystem
-	ManifestData string            // The pod manifest data
-	Debug        bool
-	MountLabel   string // selinux label to use for fs
-	ProcessLabel string // selinux label to use
-	Mutable      bool   // whether this pod is mutable
+	DataDir      string                        // The path to the data directory, e.g. /var/lib/rkt/pods
+	Store        *imagestore.Store             // store containing all of the configured application images
+	TreeStore    *treestore.Store              // store containing all of the configured application images
+	Stage1Image  types.Hash                    // stage1 image containing usable /init and /enter entrypoints
+	UUID         *types.UUID                   // UUID of the pod
+	RootHash     string                        // hash of the root filesystem
+	ManifestData string                        // the pod manifest data
+	Debug        bool                          // debug mode
+	MountLabel   string                        // SELinux label to use for fs
+	ProcessLabel string                        // SELinux label to use
+	Mutable      bool                          // whether this pod is mutable
+	Annotations  map[types.ACIdentifier]string // pod-level annotations, for internal/experimental usage
 }
 
 // HostsEntries encapsulates the entries in an etc-hosts file: mapping from IP
@@ -210,82 +211,32 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 			return errwrap.Wrap(errors.New("error getting the manifest"), err)
 		}
 
-		var appName *types.ACName
-		if app.Name != "" {
-			appName, err = types.NewACName(app.Name)
-			if err != nil {
-				return errwrap.Wrap(errors.New("invalid app name format"), err)
-			}
-		} else {
-			appName, err = imageNameToAppName(am.Name)
+		if app.Name == "" {
+			appName, err := imageNameToAppName(am.Name)
 			if err != nil {
 				return errwrap.Wrap(errors.New("error converting image name to app name"), err)
 			}
+			app.Name = appName.String()
+		}
+
+		appName, err := types.NewACName(app.Name)
+		if err != nil {
+			return errwrap.Wrap(errors.New("invalid app name format"), err)
 		}
 
 		if _, err := prepareAppImage(cfg, *appName, img, dir, cfg.UseOverlay); err != nil {
 			return errwrap.Wrap(fmt.Errorf("error preparing image %s", img), err)
 		}
 		if pm.Apps.Get(*appName) != nil {
-			return fmt.Errorf("error: multiple apps with name %s", am.Name)
+			return fmt.Errorf("error: multiple apps with name %s", app.Name)
 		}
 		if am.App == nil && app.Exec == "" {
 			return fmt.Errorf("error: image %s has no app section and --exec argument is not provided", img)
 		}
-		ra := schema.RuntimeApp{
-			// TODO(vc): leverage RuntimeApp.Name for disambiguating the apps
-			Name: *appName,
-			App:  am.App,
-			Image: schema.RuntimeImage{
-				Name:   &am.Name,
-				ID:     img,
-				Labels: am.Labels,
-			},
-			Mounts:         MergeMounts(cfg.Apps.Mounts, app.Mounts),
-			ReadOnlyRootFS: app.ReadOnlyRootFS,
-		}
 
-		if app.Exec != "" {
-			// Create a minimal App section if not present
-			if am.App == nil {
-				ra.App = &types.App{
-					User:  strconv.Itoa(os.Getuid()),
-					Group: strconv.Itoa(os.Getgid()),
-				}
-			}
-			ra.App.Exec = []string{app.Exec}
-		}
-
-		if app.Args != nil {
-			ra.App.Exec = append(ra.App.Exec, app.Args...)
-		}
-
-		if app.WorkingDir != "" {
-			ra.App.WorkingDirectory = app.WorkingDir
-		}
-
-		if err := prepareIsolators(app, ra.App); err != nil {
+		ra, err := generateRuntimeApp(app, am, cfg.Apps.Mounts)
+		if err != nil {
 			return err
-		}
-
-		if app.User != "" {
-			ra.App.User = app.User
-		}
-
-		if app.Group != "" {
-			ra.App.Group = app.Group
-		}
-
-		if app.SupplementaryGIDs != nil {
-			ra.App.SupplementaryGIDs = app.SupplementaryGIDs
-		}
-
-		if app.UserAnnotations != nil {
-			ra.App.UserAnnotations = app.UserAnnotations
-		}
-
-		if app.UserLabels != nil {
-			ra.App.UserLabels = app.UserLabels
 		}
 
 		// loading the environment from the lowest priority to highest
@@ -297,15 +248,8 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		mergeEnvs(&ra.App.Environment, cfg.EnvFromFile, true)
 		mergeEnvs(&ra.App.Environment, cfg.ExplicitEnv, true)
 
-		if app.Environments != nil {
-			envs := make([]string, 0, len(app.Environments))
-			for name, value := range app.Environments {
-				envs = append(envs, fmt.Sprintf("%s=%s", name, value))
-			}
-			mergeEnvs(&ra.App.Environment, envs, true)
-		}
-
 		pm.Apps = append(pm.Apps, ra)
+
 		return nil
 	}); err != nil {
 		return nil, err
@@ -328,6 +272,14 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 
 	pm.UserAnnotations = cfg.UserAnnotations
 	pm.UserLabels = cfg.UserLabels
+
+	// Add internal annotations for rkt experiments
+	for k, v := range cfg.Annotations {
+		if _, ok := pm.Annotations.Get(k.String()); ok {
+			continue
+		}
+		pm.Annotations.Set(k, v)
+	}
 
 	pmb, err := json.Marshal(pm)
 	if err != nil {

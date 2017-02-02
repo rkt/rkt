@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -426,6 +425,11 @@ func testSandbox(t *testing.T, testFunc func(*testutils.RktRunCtx, *gexpect.Expe
 	}
 	defer os.Unsetenv("RKT_EXPERIMENT_APP")
 
+	if err := os.Setenv("RKT_EXPERIMENT_ATTACH", "true"); err != nil {
+		panic(err)
+	}
+	defer os.Unsetenv("RKT_EXPERIMENT_ATTACH")
+
 	tmpDir := mustTempDir("rkt-test-cri-")
 	uuidFile := filepath.Join(tmpDir, "uuid")
 	defer os.RemoveAll(tmpDir)
@@ -454,38 +458,4 @@ func testSandbox(t *testing.T, testFunc func(*testutils.RktRunCtx, *gexpect.Expe
 	combinedOutput(t, ctx.ExecCmd("stop", podUUID))
 
 	waitOrFail(t, child, 0)
-}
-
-// retry is the struct that represents retrying function calls.
-type retry struct {
-	n int
-	t time.Duration
-}
-
-// Retry retries the given function f n times with a delay t between invocations
-// until no error is retrurned from f or n is exceeded.
-// The last occured error is returned.
-func (r retry) Retry(f func() error) error {
-	var err error
-
-	for i := 0; i < r.n; i++ {
-		err = f()
-		if err == nil {
-			return nil
-		}
-		time.Sleep(r.t)
-	}
-
-	return err
-}
-
-func combinedOutput(t *testing.T, c *exec.Cmd) string {
-	t.Log("Running", c.Args)
-	out, err := c.CombinedOutput()
-
-	if err != nil {
-		t.Fatal(err, "output", string(out))
-	}
-
-	return string(out)
 }

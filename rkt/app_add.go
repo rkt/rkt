@@ -109,6 +109,7 @@ func runAppAdd(cmd *cobra.Command, args []string) (exit int) {
 		stderr.PrintE("error finding images", err)
 		return 254
 	}
+	rktApps.Last().ImageID = *img
 
 	podPID, err := p.ContainerPid1()
 	if err != nil {

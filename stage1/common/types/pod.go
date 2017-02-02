@@ -29,8 +29,15 @@ import (
 	"github.com/hashicorp/errwrap"
 )
 
-// The filename where we persist the RuntimePod data
-const RuntimeConfigPath = "runtime-config"
+const (
+	// The filename where we persist the RuntimePod data
+	RuntimeConfigPath = "runtime-config"
+
+	// App-level annotations: streams mode
+	AppStdinMode  = "coreos.com/rkt/stage2/stdin"
+	AppStdoutMode = "coreos.com/rkt/stage2/stdout"
+	AppStderrMode = "coreos.com/rkt/stage2/stderr"
+)
 
 // Pod encapsulates a PodManifest and ImageManifests
 type Pod struct {
