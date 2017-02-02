@@ -1,5 +1,5 @@
-hash: d4d89bbae9978ca0305ddeb4f80bf28a1e7697215fa3fe2e11271240d234038e
-updated: 2017-01-16T13:12:04.012198138+03:00
+hash: ab29310f45cc4931a6769b71ce4968a2d49581c0ded1e116f4719b4c09648f22
+updated: 2017-02-01T15:08:20.265780035+01:00
 imports:
 - name: github.com/appc/docker2aci
   version: cfd196b05e02185b34aa3a844eff07b943c7e3ec
@@ -20,7 +20,7 @@ imports:
   subpackages:
   - proj2aci
 - name: github.com/appc/spec
-  version: d7de4875ad542ca48f4ff1f1f0a487764a825fbd
+  version: ba99d6b8ccbbed2942e53eb5395fddae113cdf8e
   subpackages:
   - ace
   - aci
@@ -33,6 +33,7 @@ imports:
   - schema/common
   - schema/lastditch
   - schema/types
+  - schema/types/resource
 - name: github.com/aws/aws-sdk-go
   version: 13a12060f716145019378a10e2806c174356b857
   subpackages:
@@ -299,10 +300,6 @@ imports:
   - transport
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
-- name: k8s.io/kubernetes
-  version: 5aadd18b051c7c156ee9815055beb180c8365309
-  subpackages:
-  - pkg/api/resource
 testImports:
 - name: github.com/kr/text
   version: 7cafcd837844e784b526369c9bce262804aebc60

@@ -247,7 +247,7 @@ If the annotation is not present, rkt assumes the version is 1.
 ```json
 {
     "acKind": "ImageManifest",
-    "acVersion": "0.8.9",
+    "acVersion": "0.8.10",
     "name": "foo.com/rkt/stage1",
     "labels": [
         {

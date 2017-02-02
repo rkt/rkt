@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 
-	"k8s.io/kubernetes/pkg/api/resource"
+	"github.com/appc/spec/schema/types/resource"
 )
 
 var (
