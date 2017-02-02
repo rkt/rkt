@@ -12,14 +12,14 @@ QEMU_BIOS_BINARIES := bios-256k.bin \
 QEMU_CONFIGURATION_OPTS := --disable-bsd-user --disable-docs --disable-guest-agent --disable-guest-agent-msi \
     --disable-sdl --disable-gtk --disable-vte --disable-curses --disable-cocoa --disable-brlapi --disable-vnc \
     --disable-seccomp --disable-curl --disable-bluez --disable-cap-ng --disable-rbd --disable-libiscsi \
-    --disable-libnfs --disable-smartcard --disable-libusb --disable-glusterfs --disable-archipelago --disable-vhdx \
+    --disable-libnfs --disable-smartcard --disable-libusb --disable-glusterfs --disable-archipelago \
     --disable-tcmalloc --disable-jemalloc --disable-debug-info --static --enable-virtfs --target-list=x86_64-softmmu \
     --python=/usr/bin/python2 --disable-werror
 QEMU_ACI_BINARY := $(HV_ACIROOTFSDIR)/qemu
 
 # Using 2.7.0 stable release from official repository
 QEMU_GIT := git://git.qemu-project.org/qemu.git
-QEMU_GIT_COMMIT := v2.7.0
+QEMU_GIT_COMMIT := v2.8.0
 
 $(call setup-stamp-file,QEMU_BUILD_STAMP,/build)
 $(call setup-stamp-file,QEMU_BIOS_BUILD_STAMP,/bios_build)
