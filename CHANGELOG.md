@@ -1,3 +1,41 @@
+## 1.24.0
+
+This release includes experimental support for attaching to a running application's input and output. It also introduces
+a more finely grained pull-policy flag.
+
+## New Features:
+- rkt: add experimental support for attachable applications ([#3396](https://github.com/coreos/rkt/pull/3396)).
+    It consists of:
+    * a new `attach` subcommand
+    * a set of per-app flags to control stdin/stdout/stderr modes
+    * a stage1 `iottymux` binary for multiplexing and attaching
+    * two new templated stage1 services, `iomux` and `ttymux`
+- run/prepare/fetch: replace --no-store and --store-only with --pull-policy ([#3554](https://github.com/coreos/rkt/pull/3554)).
+    * Replaces the `--no-store` and `--store-only` flags with a singular
+    flag `--pull-policy`.
+    * can accept one of three things, `never`, `new`, and `update`.
+    * `--no-store` has been aliased to `--pull-policy=update`
+    * `--store-only` has been aliased to `--pull-policy=never`
+
+### Bug fixes
+- image gc: don't remove images that currently running pods were made from ([#3549](https://github.com/coreos/rkt/pull/3549)).
+- stage1/fly: evaluate symlinks in mount targets ([#3570](https://github.com/coreos/rkt/pull/3570)).
+- lib/app: use runtime app mounts and appVolumes rather than mountpoints ([#3571](https://github.com/coreos/rkt/pull/3571)).
+
+## Other changes:
+- kvm/qemu: Update QEMU to v2.8.0 ([#3568](https://github.com/coreos/rkt/pull/3568)).
+- stage0/app-add: CLI args should override image ones ([#3566](https://github.com/coreos/rkt/pull/3566)).
+- lib/app: use runtime app mounts and appVolumes rather than mountpoints ([#3571](https://github.com/coreos/rkt/pull/3571)).
+- kvm/lkvm: update lkvm version to HEAD ([#3569](https://github.com/coreos/rkt/pull/3569)).
+- vendor: bump appc to v0.8.10 ([#3574](https://github.com/coreos/rkt/pull/3574)).
+- docs: ([#3552](https://github.com/coreos/rkt/pull/3552))
+
+### Build & Test:
+- tests: remove gexpect from TestAppUserGroup ([#3561](https://github.com/coreos/rkt/pull/3561)).
+- travis: remove "gimme.local" script ([#3556](https://github.com/coreos/rkt/pull/3556)).
+- tests: fix when $HOME is only accessible by current user ([#3559](https://github.com/coreos/rkt/pull/3559)).
+- makelib: introduce --enable-incremental-build, enabling "go install" ([#3553](https://github.com/coreos/rkt/pull/3553)).
+
 ## 1.23.0
 
 This release adds a lot of bugfixes around the rkt fly flavor, garbage collection, kvm, and the sandbox. The new experimental `app` subcommand now follows the semantic of CRI of not quitting prematurely if apps fail or exit. Finally docker2aci received an important update fixing issues with os/arch labels which caused issues on arm architectures, a big thanks here goes to @ybubnov for this contribution.
