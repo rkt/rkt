@@ -38,7 +38,9 @@ func TestNonRootReadInfo(t *testing.T) {
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
-	gid, err := common.LookupGid(common.RktGroup)
+	uid, _ := ctx.GetUidGidRktBinOwnerNotRoot()
+
+	rktGid, err := common.LookupGid(common.RktGroup)
 	if err != nil {
 		t.Skipf("Skipping the test because there's no %q group", common.RktGroup)
 	}
@@ -82,7 +84,7 @@ func TestNonRootReadInfo(t *testing.T) {
 
 	imgListCmd := fmt.Sprintf("%s image list", ctx.Cmd())
 	t.Logf("Running %s", imgListCmd)
-	runRktAsGidAndCheckOutput(t, imgListCmd, "inspect-", false, gid)
+	runRktAsUidGidAndCheckOutput(t, imgListCmd, "inspect-", false, uid, rktGid)
 }
 
 // TestNonRootFetchRmGCImage tests that non-root users can remove all images but
