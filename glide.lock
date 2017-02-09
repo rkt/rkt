@@ -1,5 +1,5 @@
-hash: ab29310f45cc4931a6769b71ce4968a2d49581c0ded1e116f4719b4c09648f22
-updated: 2017-02-01T15:08:20.265780035+01:00
+hash: bb1e09a77900796205fe212186f97cdb3fea30edb8161fc27d1eec71b236472e
+updated: 2017-02-09T13:51:00.832051936-08:00
 imports:
 - name: github.com/appc/docker2aci
   version: cfd196b05e02185b34aa3a844eff07b943c7e3ec
@@ -154,7 +154,7 @@ imports:
   subpackages:
   - proto
 - name: github.com/golang/protobuf
-  version: c3cefd437628a0b7d31b34fe44b3a7a540e98527
+  version: 8ee79997227bf9b34611aee7946ae64735e6fd93
   subpackages:
   - proto
   - protoc-gen-go
@@ -286,7 +286,7 @@ imports:
   subpackages:
   - go/vcs
 - name: google.golang.org/grpc
-  version: 02fca896ff5f50c6bbbee0860345a49344b37a03
+  version: 708a7f9f3283aa2d4f6132d287d78683babe55c8
   subpackages:
   - codes
   - credentials
