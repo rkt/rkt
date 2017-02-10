@@ -370,10 +370,15 @@ func runRktAndGetUUID(t *testing.T, rktCmd string) string {
 
 func runRktAsGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool, gid int) {
 	nobodyUid, _ := testutils.GetUnprivilegedUidGid()
-	runRktAsUidGidAndCheckOutput(t, rktCmd, expectedLine, expectError, nobodyUid, gid)
+	runRktAsUidGidAndCheckOutput(t, rktCmd, expectedLine, false, expectError, nobodyUid, gid)
 }
 
-func runRktAsUidGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool, uid, gid int) {
+func runRktAsGidAndCheckREOutput(t *testing.T, rktCmd, expectedLine string, expectError bool, gid int) {
+	nobodyUid, _ := testutils.GetUnprivilegedUidGid()
+	runRktAsUidGidAndCheckOutput(t, rktCmd, expectedLine, true, expectError, nobodyUid, gid)
+}
+
+func runRktAsUidGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, lineIsRegex, expectError bool, uid, gid int) {
 	child, err := gexpect.Command(rktCmd)
 	if err != nil {
 		t.Fatalf("cannot exec rkt: %v", err)
@@ -394,9 +399,18 @@ func runRktAsUidGidAndCheckOutput(t *testing.T, rktCmd, expectedLine string, exp
 	defer waitOrFail(t, child, expectedStatus)
 
 	if expectedLine != "" {
-		if err := expectWithOutput(child, expectedLine); err != nil {
-			t.Fatalf("didn't receive expected output %q: %v", expectedLine, err)
+		if lineIsRegex == true {
+			_, _, err := expectRegexWithOutput(child, expectedLine)
+			if err != nil {
+				t.Fatalf("didn't receive expected regex %q in output: %v", expectedLine, err)
+			}
+		} else {
+			err = expectWithOutput(child, expectedLine)
+			if err != nil {
+				t.Fatalf("didn't receive expected output %q: %v", expectedLine, err)
+			}
 		}
+
 	}
 }
 
@@ -498,6 +512,10 @@ func runRktAndCheckRegexOutput(t *testing.T, rktCmd, match string) error {
 
 func runRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string, expectError bool) {
 	runRktAsGidAndCheckOutput(t, rktCmd, expectedLine, expectError, 0)
+}
+
+func runRktAndCheckREOutput(t *testing.T, rktCmd, expectedLine string, expectError bool) {
+	runRktAsGidAndCheckREOutput(t, rktCmd, expectedLine, expectError, 0)
 }
 
 func startRktAndCheckOutput(t *testing.T, rktCmd, expectedLine string) *gexpect.ExpectSubprocess {

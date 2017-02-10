@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build coreos src
+// +build coreos src kvm
 
 package main
 
@@ -27,6 +27,10 @@ import (
 // TestPathsWrite checks whether access to paths like /proc/sysrq-trigger are
 // restricted
 func TestPathsWrite(t *testing.T) {
+	if TestedFlavor.Kvm == true {
+		t.Skip("Not running test for kvm flavour")
+	}
+
 	imageFile := patchTestACI("rkt-inspect-paths.aci",
 		"--exec=/inspect --write-file --print-msg=testing-insecure-option")
 	defer os.Remove(imageFile)
@@ -84,25 +88,32 @@ func TestPathsWrite(t *testing.T) {
 	}
 }
 
-// TestPathsStat checks that access to inaccessible paths under
+// TestProcPathsStat checks that access to inaccessible paths under
 // /proc or /sys is correctly restricted:
 // https://github.com/coreos/rkt/issues/2484
-func TestPathsStat(t *testing.T) {
+func TestProcPathsStat(t *testing.T) {
 	tests := []struct {
 		Path         string
 		ExpectedMode string
+		SkipUnderKvm bool
 	}{
 		{
 			Path:         "/sys/firmware",
 			ExpectedMode: "d---------",
+			SkipUnderKvm: false,
 		},
 		{
 			Path:         "/proc/kcore",
 			ExpectedMode: "----------",
+			SkipUnderKvm: true,
 		},
 	}
 
 	for _, tt := range tests {
+		if TestedFlavor.Kvm == true && tt.SkipUnderKvm == true {
+			t.Skip("Not running test for kvm flavour")
+		}
+
 		hiddenImage := patchTestACI("rkt-inspect-stat-procfs.aci", fmt.Sprintf("--exec=/inspect --stat-file --file-name %s", tt.Path))
 		defer os.Remove(hiddenImage)
 
@@ -118,5 +129,51 @@ func TestPathsStat(t *testing.T) {
 		uuid := runRktAndGetUUID(t, hiddenCmd)
 		hiddenCmd = fmt.Sprintf("%s --debug run-prepared --mds-register=false %s", hiddenCtx.Cmd(), uuid)
 		runRktAndCheckOutput(t, hiddenCmd, hiddenExpectedLine, false)
+	}
+}
+
+// TestDevPathsStat checks that particular devices have been created as
+// expected.
+func TestDevPathsStat(t *testing.T) {
+	tests := []struct {
+		Path          string
+		ExpectedMode  string
+		ExpectedOwner int
+		ExpectedGroup int
+	}{
+		{
+			Path:          "/dev/ptmx",
+			ExpectedMode:  "Dcrw-rw-rw-",
+			ExpectedOwner: 0,
+			ExpectedGroup: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		hiddenImage := patchTestACI("rkt-inspect-stat-devices.aci", fmt.Sprintf("--exec=/inspect --stat-file --file-name %s", tt.Path))
+		defer os.Remove(hiddenImage)
+
+		hiddenCtx := testutils.NewRktRunCtx()
+		defer hiddenCtx.Cleanup()
+
+		//run
+		hiddenCmd := fmt.Sprintf("%s --debug --insecure-options=image run %s", hiddenCtx.Cmd(), hiddenImage)
+
+		lines := ""
+		lines += fmt.Sprintf("%s: mode: %s.*", tt.Path, tt.ExpectedMode)
+		lines += fmt.Sprintf("%s: user: %d.*", tt.Path, tt.ExpectedOwner)
+		lines += fmt.Sprintf("%s: group: %d.*", tt.Path, tt.ExpectedGroup)
+
+		// enable multi-line matching and search for all substrings
+		hiddenExpectedLines := fmt.Sprintf("(?s:.*%s)", lines)
+
+		runRktAndCheckREOutput(t, hiddenCmd, hiddenExpectedLines, false)
+
+		// run-prepared
+		hiddenCmd = fmt.Sprintf(`%s --insecure-options=image prepare %s`, hiddenCtx.Cmd(), hiddenImage)
+		uuid := runRktAndGetUUID(t, hiddenCmd)
+		hiddenCmd = fmt.Sprintf("%s --debug run-prepared --mds-register=false %s", hiddenCtx.Cmd(), uuid)
+
+		runRktAndCheckREOutput(t, hiddenCmd, hiddenExpectedLines, false)
 	}
 }
