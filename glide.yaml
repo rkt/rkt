@@ -147,7 +147,7 @@ import:
   subpackages:
   - proto
 - package: github.com/golang/protobuf
-  version: c3cefd437628a0b7d31b34fe44b3a7a540e98527
+  version: 8ee79997227bf9b34611aee7946ae64735e6fd93
   subpackages:
   - proto
   - protoc-gen-go
@@ -242,7 +242,7 @@ import:
   subpackages:
   - go/vcs
 - package: google.golang.org/grpc
-  version: 02fca896ff5f50c6bbbee0860345a49344b37a03
+  version: v1.0.5
   subpackages:
   - codes
   - credentials

@@ -42,11 +42,13 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/transport"
 )
 
@@ -227,7 +229,7 @@ type parser struct {
 // No other error values or types must be returned, which also means
 // that the underlying io.Reader must not return an incompatible
 // error.
-func (p *parser) recvMsg() (pf payloadFormat, msg []byte, err error) {
+func (p *parser) recvMsg(maxMsgSize int) (pf payloadFormat, msg []byte, err error) {
 	if _, err := io.ReadFull(p.r, p.header[:]); err != nil {
 		return 0, nil, err
 	}
@@ -237,6 +239,9 @@ func (p *parser) recvMsg() (pf payloadFormat, msg []byte, err error) {
 
 	if length == 0 {
 		return pf, nil, nil
+	}
+	if length > uint32(maxMsgSize) {
+		return 0, nil, Errorf(codes.Internal, "grpc: received message length %d exceeding the max size %d", length, maxMsgSize)
 	}
 	// TODO(bradfitz,zhaoq): garbage. reuse buffer after proto decoding instead
 	// of making it for each message:
@@ -252,15 +257,23 @@ func (p *parser) recvMsg() (pf payloadFormat, msg []byte, err error) {
 
 // encode serializes msg and prepends the message header. If msg is nil, it
 // generates the message header of 0 message length.
-func encode(c Codec, msg interface{}, cp Compressor, cbuf *bytes.Buffer) ([]byte, error) {
-	var b []byte
-	var length uint
+func encode(c Codec, msg interface{}, cp Compressor, cbuf *bytes.Buffer, outPayload *stats.OutPayload) ([]byte, error) {
+	var (
+		b      []byte
+		length uint
+	)
 	if msg != nil {
 		var err error
 		// TODO(zhaoq): optimize to reduce memory alloc and copying.
 		b, err = c.Marshal(msg)
 		if err != nil {
 			return nil, err
+		}
+		if outPayload != nil {
+			outPayload.Payload = msg
+			// TODO truncate large payload.
+			outPayload.Data = b
+			outPayload.Length = len(b)
 		}
 		if cp != nil {
 			if err := cp.Do(cbuf, b); err != nil {
@@ -292,6 +305,10 @@ func encode(c Codec, msg interface{}, cp Compressor, cbuf *bytes.Buffer) ([]byte
 	// Copy encoded msg to buf
 	copy(buf[5:], b)
 
+	if outPayload != nil {
+		outPayload.WireLength = len(buf)
+	}
+
 	return buf, nil
 }
 
@@ -300,18 +317,21 @@ func checkRecvPayload(pf payloadFormat, recvCompress string, dc Decompressor) er
 	case compressionNone:
 	case compressionMade:
 		if dc == nil || recvCompress != dc.Type() {
-			return transport.StreamErrorf(codes.Unimplemented, "grpc: Decompressor is not installed for grpc-encoding %q", recvCompress)
+			return Errorf(codes.Unimplemented, "grpc: Decompressor is not installed for grpc-encoding %q", recvCompress)
 		}
 	default:
-		return transport.StreamErrorf(codes.Internal, "grpc: received unexpected payload format %d", pf)
+		return Errorf(codes.Internal, "grpc: received unexpected payload format %d", pf)
 	}
 	return nil
 }
 
-func recv(p *parser, c Codec, s *transport.Stream, dc Decompressor, m interface{}) error {
-	pf, d, err := p.recvMsg()
+func recv(p *parser, c Codec, s *transport.Stream, dc Decompressor, m interface{}, maxMsgSize int, inPayload *stats.InPayload) error {
+	pf, d, err := p.recvMsg(maxMsgSize)
 	if err != nil {
 		return err
+	}
+	if inPayload != nil {
+		inPayload.WireLength = len(d)
 	}
 	if err := checkRecvPayload(pf, s.RecvCompress(), dc); err != nil {
 		return err
@@ -319,11 +339,23 @@ func recv(p *parser, c Codec, s *transport.Stream, dc Decompressor, m interface{
 	if pf == compressionMade {
 		d, err = dc.Do(bytes.NewReader(d))
 		if err != nil {
-			return transport.StreamErrorf(codes.Internal, "grpc: failed to decompress the received message %v", err)
+			return Errorf(codes.Internal, "grpc: failed to decompress the received message %v", err)
 		}
 	}
+	if len(d) > maxMsgSize {
+		// TODO: Revisit the error code. Currently keep it consistent with java
+		// implementation.
+		return Errorf(codes.Internal, "grpc: received a message of %d bytes exceeding %d limit", len(d), maxMsgSize)
+	}
 	if err := c.Unmarshal(d, m); err != nil {
-		return transport.StreamErrorf(codes.Internal, "grpc: failed to unmarshal the received message %v", err)
+		return Errorf(codes.Internal, "grpc: failed to unmarshal the received message %v", err)
+	}
+	if inPayload != nil {
+		inPayload.RecvTime = time.Now()
+		inPayload.Payload = m
+		// TODO truncate large payload.
+		inPayload.Data = d
+		inPayload.Length = len(d)
 	}
 	return nil
 }
@@ -440,10 +472,10 @@ func convertCode(err error) codes.Code {
 	return codes.Unknown
 }
 
-// SupportPackageIsVersion3 is referenced from generated protocol buffer files
+// SupportPackageIsVersion4 is referenced from generated protocol buffer files
 // to assert that that code is compatible with this version of the grpc package.
 //
 // This constant may be renamed in the future if a change in the generated code
 // requires a synchronised update of grpc-go and protoc-gen-go. This constant
 // should not be referenced from any other code.
-const SupportPackageIsVersion3 = true
+const SupportPackageIsVersion4 = true
