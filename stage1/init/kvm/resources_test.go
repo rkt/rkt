@@ -20,6 +20,9 @@ import (
 	"github.com/appc/spec/schema/types"
 )
 
+// Check that findResources is returning the answers we expect.
+// In the current implementation, that is exactly what we pass in to it for
+// the cpu value, and the memory value is divided by (1024 * 1024) - MB
 func TestFindResources(t *testing.T) {
 	tests := []struct {
 		in types.Isolators
@@ -27,10 +30,27 @@ func TestFindResources(t *testing.T) {
 		wmem int64
 		wcpu int64
 	}{
+		//empty values should return us empty results
 		{
 			types.Isolators{},
 
-			defaultMem,
+			0,
+			0,
+		},
+		//check values in isolators actually come back
+		{
+			types.Isolators([]types.Isolator{
+				newIsolator(`
+				{
+					"name":     "resource/cpu",
+					"value": {
+						"limit": 0,
+						"request": 0
+						}
+				}`),
+			}),
+
+			0,
 			0,
 		},
 		{
@@ -39,14 +59,46 @@ func TestFindResources(t *testing.T) {
 				{
 					"name":     "resource/cpu",
 					"value": {
-						"limit": 100,
-						"request": 100
+						"limit": 1,
+						"request": 1
 						}
 				}`),
 			}),
 
-			defaultMem,
-			100,
+			0,
+			1,
+		},
+		{
+			// 1M test
+			types.Isolators([]types.Isolator{
+				newIsolator(`
+				{
+					"name":     "resource/memory",
+					"value": {
+						"limit": 1048576,
+						"request": 1048576
+						}
+				}`),
+			}),
+
+			1,
+			0,
+		},
+		{
+			// 128M test
+			types.Isolators([]types.Isolator{
+				newIsolator(`
+				{
+					"name":     "resource/memory",
+					"value": {
+						"limit": 134217728,
+						"request": 134217728
+						}
+				}`),
+			}),
+
+			128,
+			0,
 		},
 	}
 
