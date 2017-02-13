@@ -18,23 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	spec "github.com/opencontainers/image-spec/specs-go/v1"
-)
-
-const (
-	MediaTypeDockerV21Manifest       = "application/vnd.docker.distribution.manifest.v1+json"
-	MediaTypeDockerV21SignedManifest = "application/vnd.docker.distribution.manifest.v1+prettyjws"
-	MediaTypeDockerV21ManifestLayer  = "application/vnd.docker.container.image.rootfs.diff+x-gtar"
-
-	MediaTypeDockerV22Manifest     = "application/vnd.docker.distribution.manifest.v2+json"
-	MediaTypeDockerV22ManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
-	MediaTypeDockerV22Config       = "application/vnd.docker.container.image.v1+json"
-	MediaTypeDockerV22RootFS       = "application/vnd.docker.image.rootfs.diff.tar.gzip"
-
-	MediaTypeOCIManifest     = spec.MediaTypeImageManifest
-	MediaTypeOCIManifestList = spec.MediaTypeImageManifestList
-	MediaTypeOCIConfig       = spec.MediaTypeImageConfig
-	MediaTypeOCILayer        = spec.MediaTypeImageLayer
+	"github.com/appc/docker2aci/lib/common"
 )
 
 var (
@@ -74,7 +58,7 @@ func (im *ImageManifest) PrettyString() string {
 }
 
 func (im *ImageManifest) Validate() error {
-	if im.MediaType != MediaTypeDockerV22Manifest && im.MediaType != MediaTypeOCIManifest {
+	if im.MediaType != common.MediaTypeDockerV22Manifest && im.MediaType != common.MediaTypeOCIV1Manifest {
 		return ErrIncorrectMediaType
 	}
 	if im.Config == nil {

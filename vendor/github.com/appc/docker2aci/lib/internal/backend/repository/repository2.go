@@ -35,6 +35,7 @@ import (
 	"github.com/appc/docker2aci/lib/internal/util"
 	"github.com/appc/spec/schema"
 	"github.com/coreos/pkg/progressutil"
+	godigest "github.com/opencontainers/go-digest"
 )
 
 const (
@@ -54,24 +55,24 @@ type v2Manifest struct {
 	Signature []byte `json:"signature"`
 }
 
-func (rb *RepositoryBackend) getImageInfoV2(dockerURL *common.ParsedDockerURL) ([]string, *common.ParsedDockerURL, error) {
-	layers, err := rb.getManifestV2(dockerURL)
+func (rb *RepositoryBackend) getImageInfoV2(dockerURL *common.ParsedDockerURL) ([]string, string, *common.ParsedDockerURL, error) {
+	layers, manhash, err := rb.getManifestV2(dockerURL)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", nil, err
 	}
 
-	return layers, dockerURL, nil
+	return layers, manhash, dockerURL, nil
 }
 
-func (rb *RepositoryBackend) buildACIV2(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (rb *RepositoryBackend) buildACIV2(layerIDs []string, manhash string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	_, isVersion22 := rb.imageV2Manifests[*dockerURL]
 	if isVersion22 {
-		return rb.buildACIV22(layerIDs, dockerURL, outputDir, tmpBaseDir, compression)
+		return rb.buildACIV22(layerIDs, manhash, dockerURL, outputDir, tmpBaseDir, compression)
 	}
-	return rb.buildACIV21(layerIDs, dockerURL, outputDir, tmpBaseDir, compression)
+	return rb.buildACIV21(layerIDs, manhash, dockerURL, outputDir, tmpBaseDir, compression)
 }
 
-func (rb *RepositoryBackend) buildACIV21(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (rb *RepositoryBackend) buildACIV21(layerIDs []string, manhash string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	layerFiles := make([]*os.File, len(layerIDs))
 	layerDatas := make([]types.DockerImageData, len(layerIDs))
 
@@ -160,7 +161,7 @@ func (rb *RepositoryBackend) buildACIV21(layerIDs []string, dockerURL *common.Pa
 	var curPwl []string
 	for i := len(layerIDs) - 1; i >= 0; i-- {
 		rb.debug.Println("Generating layer ACI...")
-		aciPath, aciManifest, err := internal.GenerateACI(i, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression, rb.debug)
+		aciPath, aciManifest, err := internal.GenerateACI(i, manhash, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression, rb.debug)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 		}
@@ -181,7 +182,7 @@ type layer struct {
 	err    error
 }
 
-func (rb *RepositoryBackend) buildACIV22(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (rb *RepositoryBackend) buildACIV22(layerIDs []string, manhash string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	layerFiles := make([]*os.File, len(layerIDs))
 
 	tmpParentDir, err := ioutil.TempDir(tmpBaseDir, "docker2aci-")
@@ -268,7 +269,7 @@ func (rb *RepositoryBackend) buildACIV22(layerIDs []string, dockerURL *common.Pa
 		curPwl = aciManifest.PathWhitelist
 	}
 	rb.debug.Println("Generating layer ACI...")
-	aciPath, aciManifest, err := internal.GenerateACI22TopLayer(dockerURL, rb.imageConfigs[*dockerURL], layerIDs[i], outputDir, layerFiles[i], curPwl, compression, aciManifests, rb.debug)
+	aciPath, aciManifest, err := internal.GenerateACI22TopLayer(dockerURL, manhash, rb.imageConfigs[*dockerURL], layerIDs[i], outputDir, layerFiles[i], curPwl, compression, aciManifests, rb.debug)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 	}
@@ -278,7 +279,7 @@ func (rb *RepositoryBackend) buildACIV22(layerIDs []string, dockerURL *common.Pa
 	return aciLayerPaths, aciManifests, nil
 }
 
-func (rb *RepositoryBackend) getManifestV2(dockerURL *common.ParsedDockerURL) ([]string, error) {
+func (rb *RepositoryBackend) getManifestV2(dockerURL *common.ParsedDockerURL) ([]string, string, error) {
 	var reference string
 	if dockerURL.Digest != "" {
 		reference = dockerURL.Digest
@@ -289,59 +290,55 @@ func (rb *RepositoryBackend) getManifestV2(dockerURL *common.ParsedDockerURL) ([
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	rb.setBasicAuth(req)
 
-	accepting := []string{
-		typesV2.MediaTypeOCIManifest,
-		typesV2.MediaTypeDockerV22Manifest,
-		typesV2.MediaTypeDockerV21Manifest,
-	}
-
-	res, err := rb.makeRequest(req, dockerURL.ImageName, accepting)
+	res, err := rb.makeRequest(req, dockerURL.ImageName, rb.mediaTypes.ManifestMediaTypes())
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, &httpStatusErr{res.StatusCode, req.URL}
+		return nil, "", &httpStatusErr{res.StatusCode, req.URL}
 	}
 
 	switch res.Header.Get("content-type") {
-	case typesV2.MediaTypeDockerV22Manifest, typesV2.MediaTypeOCIManifest:
+	case common.MediaTypeDockerV22Manifest, common.MediaTypeOCIV1Manifest:
 		return rb.getManifestV22(dockerURL, res)
-	case typesV2.MediaTypeDockerV21Manifest:
+	case common.MediaTypeDockerV21Manifest:
 		return rb.getManifestV21(dockerURL, res)
 	}
 	return rb.getManifestV21(dockerURL, res)
 }
 
-func (rb *RepositoryBackend) getManifestV21(dockerURL *common.ParsedDockerURL, res *http.Response) ([]string, error) {
+func (rb *RepositoryBackend) getManifestV21(dockerURL *common.ParsedDockerURL, res *http.Response) ([]string, string, error) {
 	manblob, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	manifest := &v2Manifest{}
 
 	err = json.Unmarshal(manblob, manifest)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
+	manhash := godigest.FromBytes(manblob)
+
 	if manifest.Name != dockerURL.ImageName {
-		return nil, fmt.Errorf("name doesn't match what was requested, expected: %s, downloaded: %s", dockerURL.ImageName, manifest.Name)
+		return nil, "", fmt.Errorf("name doesn't match what was requested, expected: %s, downloaded: %s", dockerURL.ImageName, manifest.Name)
 	}
 
 	if dockerURL.Tag != "" && manifest.Tag != dockerURL.Tag {
-		return nil, fmt.Errorf("tag doesn't match what was requested, expected: %s, downloaded: %s", dockerURL.Tag, manifest.Tag)
+		return nil, "", fmt.Errorf("tag doesn't match what was requested, expected: %s, downloaded: %s", dockerURL.Tag, manifest.Tag)
 	}
 
 	if err := fixManifestLayers(manifest); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	//TODO: verify signature here
@@ -357,21 +354,23 @@ func (rb *RepositoryBackend) getManifestV21(dockerURL *common.ParsedDockerURL, r
 
 	rb.imageManifests[*dockerURL] = *manifest
 
-	return layers, nil
+	return layers, string(manhash), nil
 }
 
-func (rb *RepositoryBackend) getManifestV22(dockerURL *common.ParsedDockerURL, res *http.Response) ([]string, error) {
+func (rb *RepositoryBackend) getManifestV22(dockerURL *common.ParsedDockerURL, res *http.Response) ([]string, string, error) {
 	manblob, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	manifest := &typesV2.ImageManifest{}
 
 	err = json.Unmarshal(manblob, manifest)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
+
+	manhash := godigest.FromBytes(manblob)
 
 	//TODO: verify signature here
 
@@ -383,12 +382,12 @@ func (rb *RepositoryBackend) getManifestV22(dockerURL *common.ParsedDockerURL, r
 
 	err = rb.getConfigV22(dockerURL, manifest.Config.Digest)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	rb.imageV2Manifests[*dockerURL] = manifest
 
-	return layers, nil
+	return layers, string(manhash), nil
 }
 
 func (rb *RepositoryBackend) getConfigV22(dockerURL *common.ParsedDockerURL, configDigest string) error {
@@ -400,12 +399,7 @@ func (rb *RepositoryBackend) getConfigV22(dockerURL *common.ParsedDockerURL, con
 
 	rb.setBasicAuth(req)
 
-	accepting := []string{
-		typesV2.MediaTypeOCIConfig,
-		typesV2.MediaTypeDockerV22Config,
-	}
-
-	res, err := rb.makeRequest(req, dockerURL.ImageName, accepting)
+	res, err := rb.makeRequest(req, dockerURL.ImageName, rb.mediaTypes.ConfigMediaTypes())
 	if err != nil {
 		return err
 	}
@@ -486,12 +480,7 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *common.Parsed
 
 	rb.setBasicAuth(req)
 
-	accepting := []string{
-		typesV2.MediaTypeDockerV22RootFS,
-		typesV2.MediaTypeOCILayer,
-	}
-
-	res, err = rb.makeRequest(req, dockerURL.ImageName, accepting)
+	res, err = rb.makeRequest(req, dockerURL.ImageName, rb.mediaTypes.LayerMediaTypes())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -511,7 +500,7 @@ func (rb *RepositoryBackend) getLayerV2(layerID string, dockerURL *common.Parsed
 			}
 			res.Body.Close()
 			res = nil
-			res, err = rb.makeRequest(req, dockerURL.ImageName, accepting)
+			res, err = rb.makeRequest(req, dockerURL.ImageName, rb.mediaTypes.LayerMediaTypes())
 			if err != nil {
 				return nil, nil, err
 			}

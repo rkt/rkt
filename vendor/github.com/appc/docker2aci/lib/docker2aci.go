@@ -42,10 +42,11 @@ import (
 // CommonConfig represents the shared configuration options for converting
 // Docker images.
 type CommonConfig struct {
-	Squash      bool               // squash the layers in one file
-	OutputDir   string             // where to put the resulting ACI
-	TmpDir      string             // directory to use for temporary files
-	Compression common.Compression // which compression to use for the resulting file(s)
+	Squash                bool               // squash the layers in one file
+	OutputDir             string             // where to put the resulting ACI
+	TmpDir                string             // directory to use for temporary files
+	Compression           common.Compression // which compression to use for the resulting file(s)
+	CurrentManifestHashes []string           // any manifest hashes the caller already has
 
 	Info  log.Logger
 	Debug log.Logger
@@ -65,9 +66,11 @@ func (c *CommonConfig) initLogger() {
 // converting Docker images.
 type RemoteConfig struct {
 	CommonConfig
-	Username string                // username to use if the image to convert needs authentication
-	Password string                // password to use if the image to convert needs authentication
-	Insecure common.InsecureConfig // Insecure options
+	Username        string                // username to use if the image to convert needs authentication
+	Password        string                // password to use if the image to convert needs authentication
+	Insecure        common.InsecureConfig // Insecure options
+	MediaTypes      common.MediaTypeSet
+	RegistryOptions common.RegistryOptionSet
 }
 
 // FileConfig represents the saved file specific configuration for converting
@@ -94,6 +97,8 @@ func ConvertRemoteRepo(dockerURL string, config RemoteConfig) ([]string, error) 
 			config.Password,
 			config.Insecure,
 			config.Debug,
+			config.MediaTypes,
+			config.RegistryOptions,
 		),
 		dockerURL: dockerURL,
 		config:    config.CommonConfig,
@@ -141,9 +146,14 @@ type converter struct {
 
 func (c *converter) convert() ([]string, error) {
 	c.config.Debug.Println("Getting image info...")
-	ancestry, parsedDockerURL, err := c.backend.GetImageInfo(c.dockerURL)
+	ancestry, manhash, parsedDockerURL, err := c.backend.GetImageInfo(c.dockerURL)
 	if err != nil {
 		return nil, err
+	}
+	for _, h := range c.config.CurrentManifestHashes {
+		if manhash == h {
+			return nil, nil
+		}
 	}
 
 	layersOutputDir := c.config.OutputDir
@@ -163,7 +173,7 @@ func (c *converter) convert() ([]string, error) {
 		layerCompression = common.NoCompression
 	}
 
-	aciLayerPaths, aciManifests, err := c.backend.BuildACI(ancestry, parsedDockerURL, layersOutputDir, c.config.TmpDir, layerCompression)
+	aciLayerPaths, aciManifests, err := c.backend.BuildACI(ancestry, manhash, parsedDockerURL, layersOutputDir, c.config.TmpDir, layerCompression)
 	if err != nil {
 		return nil, err
 	}

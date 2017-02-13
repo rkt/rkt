@@ -21,6 +21,8 @@ import (
 
 	"github.com/appc/docker2aci/lib/internal/docker"
 	"github.com/docker/distribution/reference"
+
+	spec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type Compression int
@@ -48,6 +50,7 @@ const (
 	AppcDockerParentImageID = "appc.io/docker/parentimageid"
 	AppcDockerEntrypoint    = "appc.io/docker/entrypoint"
 	AppcDockerCmd           = "appc.io/docker/cmd"
+	AppcDockerManifestHash  = "appc.io/docker/manifesthash"
 )
 
 const defaultTag = "latest"
@@ -111,4 +114,146 @@ func ValidateLayerId(id string) error {
 		return fmt.Errorf("invalid layer ID %q", id)
 	}
 	return nil
+}
+
+/*
+ * Media Type Selectors Section
+ */
+
+const (
+	MediaTypeDockerV21Manifest       = "application/vnd.docker.distribution.manifest.v1+json"
+	MediaTypeDockerV21SignedManifest = "application/vnd.docker.distribution.manifest.v1+prettyjws"
+	MediaTypeDockerV21ManifestLayer  = "application/vnd.docker.container.image.rootfs.diff+x-gtar"
+
+	MediaTypeDockerV22Manifest     = "application/vnd.docker.distribution.manifest.v2+json"
+	MediaTypeDockerV22ManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
+	MediaTypeDockerV22Config       = "application/vnd.docker.container.image.v1+json"
+	MediaTypeDockerV22RootFS       = "application/vnd.docker.image.rootfs.diff.tar.gzip"
+
+	MediaTypeOCIV1Manifest     = spec.MediaTypeImageManifest
+	MediaTypeOCIV1ManifestList = spec.MediaTypeImageManifestList
+	MediaTypeOCIV1Config       = spec.MediaTypeImageConfig
+	MediaTypeOCIV1Layer        = spec.MediaTypeImageLayer
+)
+
+// MediaTypeOption represents the media types for a given docker image (or oci)
+// spec.
+type MediaTypeOption int
+
+const (
+	MediaTypeOptionDockerV21 = iota
+	MediaTypeOptionDockerV22
+	MediaTypeOptionOCIV1Pre
+)
+
+// MediaTypeSet represents a set of media types which docker2aci is to use when
+// fetchimg images. As an example if a MediaTypeSet is equal to
+// {MediaTypeOptionDockerV22, MediaTypeOptionOCIV1Pre}, then when an image pull
+// is made V2.1 images will not be fetched. This doesn't apply to V1 pulls. As
+// an edge case if a MedaTypeSet is nil or empty, that means that _every_ type
+// of media type is enabled. This type is intended to be a set, and putting
+// duplicates in this set is generally unadvised.
+type MediaTypeSet []MediaTypeOption
+
+func (m MediaTypeSet) ManifestMediaTypes() []string {
+	if len(m) == 0 {
+		return []string{
+			MediaTypeDockerV21Manifest,
+			MediaTypeDockerV22Manifest,
+			MediaTypeOCIV1Manifest,
+		}
+	}
+	ret := []string{}
+	for _, option := range m {
+		switch option {
+		case MediaTypeOptionDockerV21:
+			ret = append(ret, MediaTypeDockerV21Manifest)
+		case MediaTypeOptionDockerV22:
+			ret = append(ret, MediaTypeDockerV22Manifest)
+		case MediaTypeOptionOCIV1Pre:
+			ret = append(ret, MediaTypeOCIV1Manifest)
+		}
+	}
+	return ret
+}
+
+func (m MediaTypeSet) ConfigMediaTypes() []string {
+	if len(m) == 0 {
+		return []string{
+			MediaTypeDockerV22Config,
+			MediaTypeOCIV1Config,
+		}
+	}
+	ret := []string{}
+	for _, option := range m {
+		switch option {
+		case MediaTypeOptionDockerV21:
+		case MediaTypeOptionDockerV22:
+			ret = append(ret, MediaTypeDockerV22Config)
+		case MediaTypeOptionOCIV1Pre:
+			ret = append(ret, MediaTypeOCIV1Config)
+		}
+	}
+	return ret
+}
+
+func (m MediaTypeSet) LayerMediaTypes() []string {
+	if len(m) == 0 {
+		return []string{
+			MediaTypeDockerV22RootFS,
+			MediaTypeOCIV1Layer,
+		}
+	}
+	ret := []string{}
+	for _, option := range m {
+		switch option {
+		case MediaTypeOptionDockerV21:
+		case MediaTypeOptionDockerV22:
+			ret = append(ret, MediaTypeDockerV22RootFS)
+		case MediaTypeOptionOCIV1Pre:
+			ret = append(ret, MediaTypeOCIV1Layer)
+		}
+	}
+	return ret
+}
+
+// RegistryOption represents a type of a registry, based on the version of the
+// docker http API.
+type RegistryOption int
+
+const (
+	RegistryOptionV1 = iota
+	RegistryOptionV2
+)
+
+// RegistryOptionSet represents a set of registry types which docker2aci is to
+// use when fetching images. As an example if a RegistryOptionSet is equal to
+// {RegistryOptionV2}, then v1 pulls are disabled. As an edge case if a
+// RegistryOptionSet is nil or empty, that means that _every_ type of registry
+// is enabled. This type is intended to be a set, and putting duplicates in this
+// set is generally unadvised.
+type RegistryOptionSet []RegistryOption
+
+func (r RegistryOptionSet) AllowsV1() bool {
+	if len(r) == 0 {
+		return true
+	}
+	for _, o := range r {
+		if o == RegistryOptionV1 {
+			return true
+		}
+	}
+	return false
+}
+
+func (r RegistryOptionSet) AllowsV2() bool {
+	if len(r) == 0 {
+		return true
+	}
+	for _, o := range r {
+		if o == RegistryOptionV2 {
+			return true
+		}
+	}
+	return false
 }

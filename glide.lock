@@ -1,8 +1,8 @@
-hash: 62bf475671ecbac0d0d8350a9e8e3aad3c29253fdb3728b8b4cd09ae262e5fa8
-updated: 2017-02-10T17:19:45.543064389-08:00
+hash: 5b01507338879a95e4f789cc14dac4aee0ae1ef7661da521a437621e207ba7fa
+updated: 2017-02-13T16:50:01.49078982Z
 imports:
 - name: github.com/appc/docker2aci
-  version: cfd196b05e02185b34aa3a844eff07b943c7e3ec
+  version: 4537ee8e3139455eac6092d47a224d8fa19bf08a
   subpackages:
   - lib
   - lib/common
@@ -199,6 +199,8 @@ imports:
   version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
 - name: github.com/kr/pty
   version: f7ee69f31298ecbe5d2b349c711e2547a617d398
+- name: github.com/opencontainers/go-digest
+  version: 21dfd564fd89c944783d00d069f33e3e7123c448
 - name: github.com/opencontainers/image-spec
   version: 6e820ec55259e89ccd7092f3131c63e8419a349b
   subpackages:
@@ -276,7 +278,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 2910a502d2bf9e43193af9d68ca516529614eed3
+  version: 06d6eba81293389cafdff7fca90d75592194b2d9
   subpackages:
   - transform
   - unicode/norm
