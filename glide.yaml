@@ -242,7 +242,7 @@ import:
   subpackages:
   - go/vcs
 - package: google.golang.org/grpc
-  version: v1.0.5
+  version: v1.0.4
   subpackages:
   - codes
   - credentials

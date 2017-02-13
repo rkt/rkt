@@ -1,5 +1,5 @@
-hash: bb1e09a77900796205fe212186f97cdb3fea30edb8161fc27d1eec71b236472e
-updated: 2017-02-09T13:51:00.832051936-08:00
+hash: 62bf475671ecbac0d0d8350a9e8e3aad3c29253fdb3728b8b4cd09ae262e5fa8
+updated: 2017-02-10T17:19:45.543064389-08:00
 imports:
 - name: github.com/appc/docker2aci
   version: cfd196b05e02185b34aa3a844eff07b943c7e3ec
@@ -286,7 +286,7 @@ imports:
   subpackages:
   - go/vcs
 - name: google.golang.org/grpc
-  version: 708a7f9f3283aa2d4f6132d287d78683babe55c8
+  version: 777daa17ff9b5daef1cfdf915088a2ada3332bf0
   subpackages:
   - codes
   - credentials
