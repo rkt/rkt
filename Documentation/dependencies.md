@@ -58,7 +58,7 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
   * bc
   * binutils
   * openssl
-* build dependencies for lkvm
+* build dependencies for lkvm and/or qemu
 
 ### Specific dependencies for the src flavor
 
