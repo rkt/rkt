@@ -53,13 +53,19 @@ import (
 // BuildACI takes a Docker layer, converts it to ACI and returns its output
 // path and its converted ImageManifest.
 type Docker2ACIBackend interface {
-	GetImageInfo(dockerUrl string) ([]string, *common.ParsedDockerURL, error)
-	BuildACI(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error)
+	// GetImageInfo, given the url for a docker image, will return the
+	// following:
+	// - []string: an ordered list of all layer hashes
+	// - string: a unique identifier for this image, like a hash of the manifest
+	// - *common.ParsedDockerURL: a parsed docker URL
+	// - error: an error if one occurred
+	GetImageInfo(dockerUrl string) ([]string, string, *common.ParsedDockerURL, error)
+	BuildACI(layerIDs []string, manhash string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error)
 }
 
 // GenerateACI takes a Docker layer and generates an ACI from it.
-func GenerateACI(layerNumber int, layerData types.DockerImageData, dockerURL *common.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression, debug log.Logger) (string, *schema.ImageManifest, error) {
-	manifest, err := GenerateManifest(layerData, dockerURL, debug)
+func GenerateACI(layerNumber int, manhash string, layerData types.DockerImageData, dockerURL *common.ParsedDockerURL, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression, debug log.Logger) (string, *schema.ImageManifest, error) {
+	manifest, err := GenerateManifest(layerData, manhash, dockerURL, debug)
 	if err != nil {
 		return "", nil, fmt.Errorf("error generating the manifest: %v", err)
 	}
@@ -104,13 +110,13 @@ func GenerateACI22LowerLayer(dockerURL *common.ParsedDockerURL, layerDigest stri
 	return aciPath, manifest, nil
 }
 
-func GenerateACI22TopLayer(dockerURL *common.ParsedDockerURL, imageConfig *typesV2.ImageConfig, layerDigest string, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression, lowerLayers []*schema.ImageManifest, debug log.Logger) (string, *schema.ImageManifest, error) {
+func GenerateACI22TopLayer(dockerURL *common.ParsedDockerURL, manhash string, imageConfig *typesV2.ImageConfig, layerDigest string, outputDir string, layerFile *os.File, curPwl []string, compression common.Compression, lowerLayers []*schema.ImageManifest, debug log.Logger) (string, *schema.ImageManifest, error) {
 	aciName := fmt.Sprintf("%s/%s-%s", dockerURL.IndexURL, dockerURL.ImageName, layerDigest)
 	sanitizedAciName, err := appctypes.SanitizeACIdentifier(aciName)
 	if err != nil {
 		return "", nil, err
 	}
-	manifest, err := GenerateManifestV22(sanitizedAciName, dockerURL, imageConfig, layerDigest, lowerLayers, debug)
+	manifest, err := GenerateManifestV22(sanitizedAciName, manhash, layerDigest, dockerURL, imageConfig, lowerLayers, debug)
 	if err != nil {
 		return "", nil, err
 	}
@@ -204,7 +210,7 @@ func setAnnotation(annotations *appctypes.Annotations, key, val string) {
 
 // GenerateManifest converts the docker manifest format to an appc
 // ImageManifest.
-func GenerateManifest(layerData types.DockerImageData, dockerURL *common.ParsedDockerURL, debug log.Logger) (*schema.ImageManifest, error) {
+func GenerateManifest(layerData types.DockerImageData, manhash string, dockerURL *common.ParsedDockerURL, debug log.Logger) (*schema.ImageManifest, error) {
 	dockerConfig := layerData.Config
 	genManifest := &schema.ImageManifest{}
 
@@ -248,6 +254,7 @@ func GenerateManifest(layerData types.DockerImageData, dockerURL *common.ParsedD
 	setAnnotation(&annotations, common.AppcDockerRepository, dockerURL.ImageName)
 	setAnnotation(&annotations, common.AppcDockerImageID, layerData.ID)
 	setAnnotation(&annotations, common.AppcDockerParentImageID, layerData.Parent)
+	setAnnotation(&annotations, common.AppcDockerManifestHash, manhash)
 
 	if dockerConfig != nil {
 		exec := getExecCommand(dockerConfig.Entrypoint, dockerConfig.Cmd)
@@ -346,7 +353,18 @@ func GenerateEmptyManifest(name string) (*schema.ImageManifest, error) {
 	}, nil
 }
 
-func GenerateManifestV22(name string, dockerURL *common.ParsedDockerURL, config *typesV2.ImageConfig, imageDigest string, lowerLayers []*schema.ImageManifest, debug log.Logger) (*schema.ImageManifest, error) {
+// GenerateManifestV22, given a large set of information (documented a couple
+// lines down), will produce an image manifest compliant with the Dockver V2.2
+// image spec
+func GenerateManifestV22(
+	name string, // The name of this image
+	manhash string, // The hash of this image's manifest
+	imageDigest string, // The digest of the image
+	dockerURL *common.ParsedDockerURL, // The parsed docker URL
+	config *typesV2.ImageConfig, // The image config
+	lowerLayers []*schema.ImageManifest, // A list of manifests for the lower layers
+	debug log.Logger, // The debug logger, for logging debug information
+) (*schema.ImageManifest, error) {
 	manifest, err := GenerateEmptyManifest(name)
 	if err != nil {
 		return nil, err
@@ -366,6 +384,7 @@ func GenerateManifestV22(name string, dockerURL *common.ParsedDockerURL, config 
 	setAnnotation(&annotations, common.AppcDockerRepository, dockerURL.ImageName)
 	setAnnotation(&annotations, common.AppcDockerImageID, imageDigest)
 	setAnnotation(&annotations, "created", config.Created)
+	setAnnotation(&annotations, common.AppcDockerManifestHash, manhash)
 
 	if config.Config != nil {
 		innerCfg := config.Config

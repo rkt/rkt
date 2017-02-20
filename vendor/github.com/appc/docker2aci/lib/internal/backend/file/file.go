@@ -53,7 +53,13 @@ func NewFileBackend(file *os.File, debug, info log.Logger) *FileBackend {
 	}
 }
 
-func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *common.ParsedDockerURL, error) {
+// GetImageInfo, given the url for a docker image, will return the
+// following:
+// - []string: an ordered list of all layer hashes
+// - string: a unique identifier for this image, like a hash of the manifest
+// - *common.ParsedDockerURL: a parsed docker URL
+// - error: an error if one occurred
+func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, string, *common.ParsedDockerURL, error) {
 	// a missing Docker URL could mean that the file only contains one
 	// image so it's okay for dockerURL to be blank
 	var parsedDockerURL *common.ParsedDockerURL
@@ -61,7 +67,7 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *common.ParsedD
 		var err error
 		parsedDockerURL, err = common.ParseDockerURL(dockerURL)
 		if err != nil {
-			return nil, nil, fmt.Errorf("image provided couldnot be parsed: %v", err)
+			return nil, "", nil, fmt.Errorf("image provided couldnot be parsed: %v", err)
 		}
 	}
 
@@ -70,25 +76,25 @@ func (lb *FileBackend) GetImageInfo(dockerURL string) ([]string, *common.ParsedD
 	name := strings.Split(filepath.Base(lb.file.Name()), ".")[0]
 	appImageID, ancestry, parsedDockerURL, err := getImageID(lb.file, parsedDockerURL, name, lb.debug)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", nil, err
 	}
 
 	if len(ancestry) == 0 {
 		ancestry, err = getAncestry(lb.file, appImageID, lb.debug)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error getting ancestry: %v", err)
+			return nil, "", nil, fmt.Errorf("error getting ancestry: %v", err)
 		}
 	} else {
 		// for oci the first image is the config
 		ancestry = append([]string{appImageID}, ancestry...)
 	}
 
-	return ancestry, parsedDockerURL, nil
+	return ancestry, appImageID, parsedDockerURL, nil
 }
 
-func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (lb *FileBackend) BuildACI(layerIDs []string, manhash string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	if strings.Contains(layerIDs[0], ":") {
-		return lb.BuildACIV22(layerIDs, dockerURL, outputDir, tmpBaseDir, compression)
+		return lb.BuildACIV22(layerIDs, manhash, dockerURL, outputDir, tmpBaseDir, compression)
 	}
 	var aciLayerPaths []string
 	var aciManifests []*schema.ImageManifest
@@ -125,7 +131,7 @@ func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *common.ParsedDocke
 		defer layerFile.Close()
 
 		lb.debug.Println("Generating layer ACI...")
-		aciPath, manifest, err := internal.GenerateACI(i, layerData, dockerURL, outputDir, layerFile, curPwl, compression, lb.debug)
+		aciPath, manifest, err := internal.GenerateACI(i, manhash, layerData, dockerURL, outputDir, layerFile, curPwl, compression, lb.debug)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 		}
@@ -138,7 +144,7 @@ func (lb *FileBackend) BuildACI(layerIDs []string, dockerURL *common.ParsedDocke
 	return aciLayerPaths, aciManifests, nil
 }
 
-func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (lb *FileBackend) BuildACIV22(layerIDs []string, manhash string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	if len(layerIDs) < 2 {
 		return nil, nil, fmt.Errorf("insufficient layers for oci image")
 	}
@@ -179,7 +185,7 @@ func (lb *FileBackend) BuildACIV22(layerIDs []string, dockerURL *common.ParsedDo
 		if i != 0 {
 			aciPath, manifest, err = internal.GenerateACI22LowerLayer(dockerURL, parts[1], outputDir, layerFile, curPwl, compression)
 		} else {
-			aciPath, manifest, err = internal.GenerateACI22TopLayer(dockerURL, &imageConfig, parts[1], outputDir, layerFile, curPwl, compression, aciManifests, lb.debug)
+			aciPath, manifest, err = internal.GenerateACI22TopLayer(dockerURL, manhash, &imageConfig, parts[1], outputDir, layerFile, curPwl, compression, aciManifests, lb.debug)
 		}
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)

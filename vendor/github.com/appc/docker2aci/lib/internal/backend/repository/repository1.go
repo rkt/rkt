@@ -40,29 +40,29 @@ type RepoData struct {
 	Cookie    []string
 }
 
-func (rb *RepositoryBackend) getImageInfoV1(dockerURL *common.ParsedDockerURL) ([]string, *common.ParsedDockerURL, error) {
+func (rb *RepositoryBackend) getImageInfoV1(dockerURL *common.ParsedDockerURL) ([]string, string, *common.ParsedDockerURL, error) {
 	repoData, err := rb.getRepoDataV1(dockerURL.IndexURL, dockerURL.ImageName)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting repository data: %v", err)
+		return nil, "", nil, fmt.Errorf("error getting repository data: %v", err)
 	}
 
 	// TODO(iaguis) check more endpoints
 	appImageID, err := rb.getImageIDFromTagV1(repoData.Endpoints[0], dockerURL.ImageName, dockerURL.Tag, repoData)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting ImageID from tag %s: %v", dockerURL.Tag, err)
+		return nil, "", nil, fmt.Errorf("error getting ImageID from tag %s: %v", dockerURL.Tag, err)
 	}
 
 	ancestry, err := rb.getAncestryV1(appImageID, repoData.Endpoints[0], repoData)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", nil, err
 	}
 
 	rb.repoData = repoData
 
-	return ancestry, dockerURL, nil
+	return ancestry, appImageID, dockerURL, nil
 }
 
-func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
+func (rb *RepositoryBackend) buildACIV1(layerIDs []string, manhash string, dockerURL *common.ParsedDockerURL, outputDir string, tmpBaseDir string, compression common.Compression) ([]string, []*schema.ImageManifest, error) {
 	layerFiles := make([]*os.File, len(layerIDs))
 	layerDatas := make([]types.DockerImageData, len(layerIDs))
 
@@ -121,7 +121,7 @@ func (rb *RepositoryBackend) buildACIV1(layerIDs []string, dockerURL *common.Par
 
 	for i := len(layerIDs) - 1; i >= 0; i-- {
 		rb.debug.Println("Generating layer ACI...")
-		aciPath, manifest, err := internal.GenerateACI(i, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression, rb.debug)
+		aciPath, manifest, err := internal.GenerateACI(i, manhash, layerDatas[i], dockerURL, outputDir, layerFiles[i], curPwl, compression, rb.debug)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating ACI: %v", err)
 		}
