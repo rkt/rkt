@@ -12,17 +12,6 @@ rkt's version 1.0 release marks the command line user interface and on-disk data
 - [OCI native support](https://github.com/coreos/rkt/projects/4): supporting OCI specs natively in rkt.
 - [appc phase-out](https://github.com/coreos/rkt/projects/5): following OCI evolution and stabilization, appc will be naturally deprecated and phased-out.
 
-## Next releases
-
-### rkt 1.25.0 (February)
-
-Up-to-date planning at https://github.com/coreos/rkt/milestone/59.
-
-### rkt 1.26.0 (February)
-
-Up-to-date planning at https://github.com/coreos/rkt/milestone/60.
-
-
 ### Upcoming
 
 Future tasks without a specific timeline are tracked at https://github.com/coreos/rkt/milestone/30.
