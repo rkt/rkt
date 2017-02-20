@@ -1,3 +1,19 @@
+## 1.25.0
+
+This minor release contains bugfixes and other improvements related to the KVM flavour, which is now using qemu-kvm by default.
+
+## New Features:
+- Switch default kvm flavour from lkvm to qemu ([#3562](https://github.com/coreos/rkt/pull/3562)).
+
+### Bug fixes
+- stage1/kvm: Change RAM calculation, and increase minimum ([#3572](https://github.com/coreos/rkt/pull/3572)).
+- stage1: Ensure ptmx device usable by non-root for all flavours ([#3484](https://github.com/coreos/rkt/pull/3484)).
+
+## Other changes:
+- tests: fix TestNonRootReadInfo when $HOME is only accessible by current user ([#3580](https://github.com/coreos/rkt/pull/3580)).
+- glide: bump grpc to 1.0.4 ([#3584](https://github.com/coreos/rkt/pull/3584)).
+- vendor: bump docker2aci to 0.16.0 ([#3591](https://github.com/coreos/rkt/pull/3591)).
+
 ## 1.24.0
 
 This release includes experimental support for attaching to a running application's input and output. It also introduces

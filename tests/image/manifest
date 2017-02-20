@@ -5,7 +5,7 @@
     "labels": [
         {
             "name": "version",
-            "value": "1.24.0"
+            "value": "1.25.0"
         },
         {
             "name": "arch",
