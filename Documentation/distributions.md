@@ -2,7 +2,7 @@
 
 - [Arch](#arch)
 - [CentOS](#centos)
-- [CoreOS](#coreos)
+- [Container Linux by CoreOS](#container-linux)
 - [Debian](#debian)
 - [Fedora](#fedora)
 - [NixOS](#nixos)
@@ -31,12 +31,12 @@ sudo pacman -S rkt
 rkt is available in the [CentOS Community Build Service][pkg-centos] for CentOS 7.
 However, this is [not yet ready for production use][rkt-1305] due to pending systemd upgrade issues.
 
-## CoreOS
+## Container Linux
 
-rkt is an integral part of CoreOS, installed with the operating system.
+rkt is an integral part of Container Linux, installed with the operating system.
 The [CoreOS releases page][coreos-releases] lists the version of rkt available in each CoreOS release channel.
 
-If the version of rkt included in CoreOS is too old, it's fairly trivial to fetch the desired version [via a systemd unit][coreos-install-rkt].
+If the version of rkt included in Container Linux is too old, it's fairly trivial to fetch the desired version [via a systemd unit][coreos-install-rkt].
 
 ## Debian
 
