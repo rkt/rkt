@@ -11,6 +11,9 @@ Kumulus Technologies offers classes and services to optimize your Cloud. They've
 ## [Kinvolk.io](https://kinvolk.io/)
 Kinvolk are a professional consulting team and active contributors to systemd, rkt, and the Linux kernel. rkt helps them easily [test various Linux kernels and configurations](https://kinvolk.io/blog/2017/02/using-custom-rkt-stage1-images-to-test-against-various-kernel-versions/).
 
+## [Adfin.com](http://www.adfin.com/)
+Per Milosz Tanski, [from HN comments](https://news.ycombinator.com/item?id=12366932). "The same experiences we switched to using rkt, supervised by upstart (and now systemd). We have an "application" state template in our salt config and every docker update something would cause all of them to fail. Thankful the "application" state template abstracted running container enough were we switched from docker -> rkt under the covers without anybody noticing, except now we no longer fearing of container software updates."
+
 ## Individual Use Cases
 
 These are blog posts and stories from people evaluating rkt. Although most aren't production use cases; just some further useful links.
