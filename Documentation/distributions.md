@@ -5,6 +5,7 @@
 - [Container Linux by CoreOS](#container-linux)
 - [Debian](#debian)
 - [Fedora](#fedora)
+- [Gentoo](#gentoo)
 - [NixOS](#nixos)
 - [openSUSE](#opensuse)
 - [Ubuntu](#ubuntu)
@@ -84,6 +85,14 @@ sudo firewall-cmd --add-source=172.16.28.0/24 --zone=trusted
 
 172.16.28.0/24 is the subnet of the [default pod network][networking-overview-default]. The command must be adapted when rkt is configured to use a [different network][networking-overview-additional] with a different subnet.
 
+## Gentoo
+
+rkt is [packaged for gentoo][pkg-gentoo] and available via portage.
+
+```
+sudo emerge rkt
+```
+
 ## NixOS
 
 rkt can be installed on NixOS using the following command:
@@ -157,6 +166,7 @@ sudo dpkg -i rkt_1.25.0-1_amd64.deb
 [pkg-centos]: https://cbs.centos.org/koji/packageinfo?packageID=4464
 [pkg-debian]: https://packages.debian.org/sid/utils/rkt
 [pkg-fedora]: https://admin.fedoraproject.org/pkgdb/package/rpms/rkt/
+[pkg-gentoo]: https://packages.gentoo.org/packages/app-emulation/rkt
 [rkt-nixos]: https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/virtualization/rkt/default.nix
 [rkt-opensuse]: https://build.opensuse.org/package/show/Virtualization:containers/rkt
 [rkt-void]: https://github.com/voidlinux/void-packages/tree/master/srcpkgs/rkt
