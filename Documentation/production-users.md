@@ -4,6 +4,8 @@ This document tracks people and use cases for rkt in production. [Join the commu
 
 ## [BlaBlaCar](https://www.blablacar.com/)
 BlaBlaCar is a trusted car-pooling service based in France. They've [blogged about](http://blablatech.com/blog/why-and-how-blablacar-went-full-containers) the stability of rkt being a big appeal.
+- Media report from [LeMagIT](http://www.lemagit.fr/actualites/4500272608/avec-rkt-10-CoreOS-estime-que-sa-technologie-de-conteneur-est-mure-pour-la-production): "rkt has become the container technology of choice for the French carpool specialist Blablacar. The company, which has adopted early container technologies, now relies on rkt and CoreOS for 90% of its applications."
+- Media report from [Silicon.fr](http://www.silicon.fr/blablacar-generalise-conteneurs-rocket-159564.html), "Rocket tackled the limitations we had identified with Docker. In particular, the solution eliminated the use of a daemon (process running in the background, Editor's note) and approached the network part in a very modular way"
 
 ## [Kumul.us](https://kumul.us/)
 Kumulus Technologies offers classes and services to optimize your Cloud. They've [blogged about](https://kumul.us/docker-youve-failed-me-again-rkt-please-save-me/) rkt's pod native features and Kubernetes support being a reason for their adoption.
