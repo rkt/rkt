@@ -496,17 +496,11 @@ var goarm uint8
 // and armv6l, armv7l, arm64 otherwise
 func GetArch() string {
 	arch := runtime.GOARCH
-	switch arch {
-	case "arm":
-		{
-			os := GetOS()
-			_, arch, _ = types.ToAppcOSArch(os, "arm", strconv.Itoa(int(goarm)))
-		}
-	case "arm64":
-		{
-			arch = "aarch64"
-		}
+	flavor := ""
+	if arch == "arm" {
+		flavor = strconv.Itoa(int(goarm))
 	}
+	_, arch, _ = types.ToAppcOSArch(GetOS(), arch, flavor)
 	return arch
 }
 
