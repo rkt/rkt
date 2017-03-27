@@ -200,10 +200,9 @@ func runPrepare(cmd *cobra.Command, args []string) (exit int) {
 	}
 
 	pcfg := stage0.PrepareConfig{
-		CommonConfig:       &cfg,
-		UseOverlay:         !flagNoOverlay && ovlOk,
-		PrivateUsers:       privateUsers,
-		SkipTreeStoreCheck: globalFlags.InsecureFlags.SkipOnDiskCheck(),
+		CommonConfig: &cfg,
+		UseOverlay:   !flagNoOverlay && ovlOk,
+		PrivateUsers: privateUsers,
 	}
 
 	if len(flagPodManifest) > 0 {

@@ -321,10 +321,9 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 	useOverlay := !flagNoOverlay && ovlOk
 
 	pcfg := stage0.PrepareConfig{
-		CommonConfig:       &cfg,
-		UseOverlay:         useOverlay,
-		PrivateUsers:       privateUsers,
-		SkipTreeStoreCheck: globalFlags.InsecureFlags.SkipOnDiskCheck(),
+		CommonConfig: &cfg,
+		UseOverlay:   useOverlay,
+		PrivateUsers: privateUsers,
 	}
 
 	if len(flagPodManifest) > 0 {

@@ -24,7 +24,7 @@ const (
 	insecureNone  = 0
 	insecureImage = 1 << (iota - 1)
 	insecureTLS
-	insecureOnDisk
+	insecureOnDisk // ignored, left for backwards compatibility
 	insecureHTTP
 	insecurePubKey
 	insecureCapabilities
@@ -32,7 +32,7 @@ const (
 	insecureSeccomp
 
 	insecureAllFetch = (insecureImage | insecureTLS | insecureHTTP | insecurePubKey)
-	insecureAllRun   = (insecureOnDisk | insecureCapabilities | insecurePaths | insecureSeccomp)
+	insecureAllRun   = (insecureCapabilities | insecurePaths | insecureSeccomp)
 	insecureAll      = (insecureAllFetch | insecureAllRun)
 )
 
@@ -85,6 +85,8 @@ func NewSecFlags(defOpts string) (*SecFlags, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Ignore ondisk
+	bf.Flags = bf.Flags &^ insecureOnDisk
 
 	sf := &SecFlags{
 		BitFlags: bf,
@@ -98,10 +100,6 @@ func (sf *SecFlags) SkipImageCheck() bool {
 
 func (sf *SecFlags) SkipTLSCheck() bool {
 	return sf.HasFlag(insecureTLS)
-}
-
-func (sf *SecFlags) SkipOnDiskCheck() bool {
-	return sf.HasFlag(insecureOnDisk)
 }
 
 func (sf *SecFlags) AllowHTTP() bool {
