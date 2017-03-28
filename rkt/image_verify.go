@@ -15,15 +15,18 @@
 package main
 
 import (
-	"github.com/coreos/rkt/store/imagestore"
-	"github.com/coreos/rkt/store/treestore"
+	"os"
+
+	"github.com/hashicorp/errwrap"
+	"github.com/rkt/rkt/store/imagestore"
+	"github.com/rkt/rkt/store/treestore"
 	"github.com/spf13/cobra"
 )
 
 var (
 	cmdImageVerify = &cobra.Command{
 		Use:   "verify IMAGE...",
-		Short: "Verify one or more images in the local store",
+		Short: "Verify one or more rendered images in the local store",
 		Long: `Verify is able to check that, based on the stored hash value, a rendered image on disk has not changed.
 
 This command may be used if the user suspects disk corruption might have damaged the rkt store.`,
@@ -65,6 +68,10 @@ func runVerifyImage(cmd *cobra.Command, args []string) int {
 			return 254
 		}
 		_, err = ts.Check(id)
+		if isNotRenderedErr(err) {
+			stdout.Printf("image %q not rendered; no verification needed", img)
+			continue
+		}
 		if err != nil {
 			stdout.Printf("tree cache verification failed for image %s: %v;  rebuilding...", img, err)
 			_, _, err = ts.Render(key, true)
@@ -77,4 +84,18 @@ func runVerifyImage(cmd *cobra.Command, args []string) int {
 		}
 	}
 	return 0
+}
+
+func isNotRenderedErr(err error) bool {
+	containsIsNotExist := false
+	containsReadHashErr := false
+	errwrap.Walk(err, func(e error) {
+		if os.IsNotExist(e) {
+			containsIsNotExist = true
+		}
+		if e == treestore.ErrReadHashfile {
+			containsReadHashErr = true
+		}
+	})
+	return containsIsNotExist && containsReadHashErr
 }
