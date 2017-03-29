@@ -6,4 +6,4 @@ OnActiveSec=0s
 OnUnitActiveSec=12h
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
