@@ -215,6 +215,7 @@ Some popular Docker registries:
 * registry-1.docker.io (Assumed as the default when no specific registry is named on the rkt command line, as in `docker:///redis`.)
 * quay.io
 * gcr.io
+* `<aws_account_id>`.dkr.ecr.`<region>`.amazonaws.com (AWS ECR)
 
 Example `dockerAuth` configuration:
 
