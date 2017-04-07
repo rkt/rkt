@@ -1,6 +1,6 @@
 # How to Contribute
 
-CoreOS projects are [Apache 2.0 licensed](LICENSE) and accept contributions via
+rkt is [Apache 2.0 licensed](LICENSE) and accepts contributions via
 GitHub pull requests.  This document outlines some of the conventions on
 development workflow, commit message formatting, contact points and other
 resources to make it easier to get your contribution accepted.
@@ -51,13 +51,20 @@ Thanks for your contributions!
 
 ### Coding Style
 
-CoreOS projects written in Go follow a set of style guidelines that we've documented
-[here](https://github.com/coreos/docs/tree/master/golang). Please follow them when
-working on your contributions.
+Go style in the rkt project essentially just means following the upstream conventions:
+  - [Effective Go][effectivego]
+  - [CodeReviewComments][codereview]
+  - [Godoc][godoc]
+
+It's recommended to set a save hook in your editor of choice that runs `goimports` against your code.
+
+[effectivego]: https://golang.org/doc/effective_go.html
+[codereview]: https://github.com/golang/go/wiki/CodeReviewComments
+[godoc]: http://blog.golang.org/godoc-documenting-go-code[here](https://github.com/coreos/docs/tree/master/golang).
 
 ### Documentation Style
 
-CoreOS project docs should follow the [Documentation style and formatting
+Project docs should follow the [Documentation style and formatting
 guide](https://github.com/coreos/docs/tree/master/STYLE.md). Thank you for documenting!
 
 ### Format of the Commit Message
