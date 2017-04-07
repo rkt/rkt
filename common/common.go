@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -485,4 +486,25 @@ func GetExitStatus(err error) (int, error) {
 		}
 	}
 	return -1, err
+}
+
+// reference to GOARM, needs to be globally, if in GetArch() function it resolves to zero
+//go:linkname goarm runtime.goarm
+var goarm uint8
+
+// GetArch returns the current architecture. It returns runtime.GOARCH if not on a arm device
+// and armv6l, armv7l, arm64 otherwise
+func GetArch() string {
+	arch := runtime.GOARCH
+	flavor := ""
+	if arch == "arm" {
+		flavor = strconv.Itoa(int(goarm))
+	}
+	_, arch, _ = types.ToAppcOSArch(GetOS(), arch, flavor)
+	return arch
+}
+
+// GetOS returns the current operating system (linux, windows etc...)
+func GetOS() string {
+	return runtime.GOOS
 }

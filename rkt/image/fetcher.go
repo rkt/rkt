@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"runtime"
 
 	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
@@ -287,10 +286,10 @@ func (f *Fetcher) fetchSingleImageByPath(path string, a *asc) (string, error) {
 func (db *distBundle) setAppDefaults() error {
 	app := db.dist.(*dist.Appc).App()
 	if _, ok := app.Labels["arch"]; !ok {
-		app.Labels["arch"] = runtime.GOARCH
+		app.Labels["arch"] = common.GetArch()
 	}
 	if _, ok := app.Labels["os"]; !ok {
-		app.Labels["os"] = runtime.GOOS
+		app.Labels["os"] = common.GetOS()
 	}
 	if err := types.IsValidOSArch(app.Labels, stage0.ValidOSArch); err != nil {
 		return errwrap.Wrap(fmt.Errorf("invalid Appc distribution %q", db.image), err)

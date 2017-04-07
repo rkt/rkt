@@ -15,9 +15,8 @@
 package main
 
 import (
-	"runtime"
-
 	"github.com/appc/spec/schema/types"
+	"github.com/coreos/rkt/common"
 	"github.com/coreos/rkt/common/apps"
 	"github.com/coreos/rkt/rkt/image"
 	"github.com/coreos/rkt/store/imagestore"
@@ -26,13 +25,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	defaultOS   = runtime.GOOS
-	defaultArch = runtime.GOARCH
-)
-
 var (
-	cmdFetch = &cobra.Command{
+	defaultOS   = common.GetOS()
+	defaultArch = common.GetArch()
+	cmdFetch    = &cobra.Command{
 		Use:   "fetch IMAGE_URL...",
 		Short: "Fetch image(s) and store them in the local store",
 		Long: `Locates and downloads remote ACIs and their attached signatures.
