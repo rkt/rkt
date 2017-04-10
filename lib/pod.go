@@ -44,7 +44,19 @@ func NewPodFromInternalPod(p *pkgPod.Pod) (*Pod, error) {
 	}
 
 	for _, app := range manifest.Apps {
+		// for backwards compatibility
 		pod.AppNames = append(pod.AppNames, app.Name.String())
+	}
+
+	var appState appStateFunc
+	if p.IsMutable() {
+		appState = appStateInMutablePod
+	} else {
+		appState = appStateInImmutablePod
+	}
+	pod.Apps, err = appsForPod(p, "", appState)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(manifest.UserAnnotations) > 0 {

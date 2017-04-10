@@ -24,6 +24,14 @@ import (
 	pkgPod "github.com/rkt/rkt/pkg/pod"
 )
 
+// appStateFunc fills in known state information:
+// * App.State
+// * App.CreatedAt
+// * App.StartedAt
+// * App.FinishedAt
+// * App.ExitCode
+type appStateFunc func(*App, *pkgPod.Pod) error
+
 // AppsForPod returns the apps of the pod with the given uuid in the given data directory.
 // If appName is non-empty, then only the app with the given name will be returned.
 func AppsForPod(uuid, dataDir string, appName string) ([]*App, error) {
@@ -33,6 +41,10 @@ func AppsForPod(uuid, dataDir string, appName string) ([]*App, error) {
 	}
 	defer p.Close()
 
+	return appsForPod(p, appName, appStateInMutablePod)
+}
+
+func appsForPod(p *pkgPod.Pod, appName string, appState appStateFunc) ([]*App, error) {
 	_, podManifest, err := p.PodManifest()
 	if err != nil {
 		return nil, err
@@ -44,7 +56,7 @@ func AppsForPod(uuid, dataDir string, appName string) ([]*App, error) {
 			continue
 		}
 
-		app, err := newApp(&ra, podManifest, p)
+		app, err := newApp(&ra, podManifest, p, appState)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot get app status: %v", err)
 			continue
@@ -57,7 +69,7 @@ func AppsForPod(uuid, dataDir string, appName string) ([]*App, error) {
 }
 
 // newApp constructs the App object with the runtime app and pod manifest.
-func newApp(ra *schema.RuntimeApp, podManifest *schema.PodManifest, pod *pkgPod.Pod) (*App, error) {
+func newApp(ra *schema.RuntimeApp, podManifest *schema.PodManifest, pod *pkgPod.Pod, appState appStateFunc) (*App, error) {
 	app := &App{
 		Name:            ra.Name.String(),
 		ImageID:         ra.Image.ID.String(),
@@ -82,7 +94,7 @@ func newApp(ra *schema.RuntimeApp, podManifest *schema.PodManifest, pod *pkgPod.
 	return app, nil
 }
 
-func appState(app *App, pod *pkgPod.Pod) error {
+func appStateInMutablePod(app *App, pod *pkgPod.Pod) error {
 	app.State = AppStateUnknown
 
 	defer func() {
@@ -151,6 +163,61 @@ func appState(app *App, pod *pkgPod.Pod) error {
 	app.ExitCode = &exitCode
 
 	return nil
+}
+
+// appStateInImmutablePod infers most App state from the Pod itself, since all apps are created and destroyed with the Pod
+func appStateInImmutablePod(app *App, pod *pkgPod.Pod) error {
+	app.State = appStateFromPod(pod)
+
+	t, err := pod.CreationTime()
+	if err != nil {
+		return err
+	}
+	createdAt := t.UnixNano()
+	app.CreatedAt = &createdAt
+
+	code, err := pod.AppExitCode(app.Name)
+	if err == nil {
+		// there is an exit code, it is definitely Exited
+		app.State = AppStateExited
+		exitCode := int32(code)
+		app.ExitCode = &exitCode
+	}
+
+	start, err := pod.StartTime()
+	if err != nil {
+		return err
+	}
+	if !start.IsZero() {
+		startedAt := start.UnixNano()
+		app.StartedAt = &startedAt
+	}
+	// the best we can guess for immutable pods
+	finish, err := pod.GCMarkedTime()
+	if err != nil {
+		return err
+	}
+	if !finish.IsZero() {
+		finishedAt := finish.UnixNano()
+		app.FinishedAt = &finishedAt
+	}
+
+	return nil
+}
+
+func appStateFromPod(pod *pkgPod.Pod) AppState {
+	switch pod.State() {
+	case pkgPod.Embryo, pkgPod.Preparing, pkgPod.AbortedPrepare:
+		return AppStateUnknown
+	case pkgPod.Prepared:
+		return AppStateCreated
+	case pkgPod.Running:
+		return AppStateRunning
+	case pkgPod.Deleting, pkgPod.ExitedDeleting, pkgPod.Exited, pkgPod.ExitedGarbage, pkgPod.Garbage:
+		return AppStateExited
+	default:
+		return AppStateUnknown
+	}
 }
 
 func readExitCode(path string) (int32, error) {

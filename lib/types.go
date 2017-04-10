@@ -73,7 +73,10 @@ type (
 		// Networks are the information of the networks.
 		Networks []netinfo.NetInfo `json:"networks,omitempty"`
 		// AppNames are the names of the apps.
+		// Deprecated: use Apps instead.
 		AppNames []string `json:"app_names,omitempty"`
+		// Apps holds current information about each app.
+		Apps []*App `json:"apps,omitempty"`
 		// The start time of the pod.
 		StartedAt *int64 `json:"started_at,omitempty"`
 		// UserAnnotations are the pod user annotations.
