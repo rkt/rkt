@@ -135,14 +135,13 @@ func runAppSandbox(cmd *cobra.Command, args []string) int {
 	useOverlay := !flagNoOverlay && ovlOk
 
 	pcfg := stage0.PrepareConfig{
-		CommonConfig:       &cfg,
-		UseOverlay:         useOverlay,
-		PrivateUsers:       user.NewBlankUidRange(),
-		SkipTreeStoreCheck: globalFlags.InsecureFlags.SkipOnDiskCheck(),
-		Apps:               &rktApps,
-		Ports:              []types.ExposedPort(flagAppPorts),
-		UserAnnotations:    parseAnnotations(&flagAnnotations),
-		UserLabels:         parseLabels(&flagLabels),
+		CommonConfig:    &cfg,
+		UseOverlay:      useOverlay,
+		PrivateUsers:    user.NewBlankUidRange(),
+		Apps:            &rktApps,
+		Ports:           []types.ExposedPort(flagAppPorts),
+		UserAnnotations: parseAnnotations(&flagAnnotations),
+		UserLabels:      parseLabels(&flagLabels),
 	}
 
 	if globalFlags.Debug {

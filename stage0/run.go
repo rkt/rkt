@@ -61,17 +61,16 @@ var debugEnabled bool
 // PrepareConfig defines the configuration parameters required by Prepare
 type PrepareConfig struct {
 	*CommonConfig
-	Apps               *apps.Apps            // apps to prepare
-	InheritEnv         bool                  // inherit parent environment into apps
-	ExplicitEnv        []string              // always set these environment variables for all the apps
-	EnvFromFile        []string              // environment variables loaded from files, set for all the apps
-	Ports              []types.ExposedPort   // list of ports that rkt will expose on the host
-	UseOverlay         bool                  // prepare pod with overlay fs
-	SkipTreeStoreCheck bool                  // skip checking the treestore before rendering
-	PodManifest        string                // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
-	PrivateUsers       *user.UidRange        // user namespaces
-	UserAnnotations    types.UserAnnotations // user annotations for the pod.
-	UserLabels         types.UserLabels      // user labels for the pod.
+	Apps            *apps.Apps            // apps to prepare
+	InheritEnv      bool                  // inherit parent environment into apps
+	ExplicitEnv     []string              // always set these environment variables for all the apps
+	EnvFromFile     []string              // environment variables loaded from files, set for all the apps
+	Ports           []types.ExposedPort   // list of ports that rkt will expose on the host
+	UseOverlay      bool                  // prepare pod with overlay fs
+	PodManifest     string                // use the pod manifest specified by the user, this will ignore flags such as '--volume', '--port', etc.
+	PrivateUsers    *user.UidRange        // user namespaces
+	UserAnnotations types.UserAnnotations // user annotations for the pod.
+	UserLabels      types.UserLabels      // user labels for the pod.
 }
 
 // RunConfig defines the configuration parameters needed by Run
@@ -737,19 +736,6 @@ func prepareAppImage(cfg PrepareConfig, appName types.ACName, img types.Hash, cd
 			return "", errwrap.Wrap(errors.New("error rendering tree image"), err)
 		}
 
-		if !cfg.SkipTreeStoreCheck {
-			hash, err := cfg.TreeStore.Check(treeStoreID)
-			if err != nil {
-				log.PrintE("warning: tree cache is in a bad state.  Rebuilding...", err)
-				var err error
-				treeStoreID, hash, err = cfg.TreeStore.Render(img.String(), true)
-				if err != nil {
-					return "", errwrap.Wrap(errors.New("error rendering tree image"), err)
-				}
-			}
-			cfg.CommonConfig.RootHash = hash
-		}
-
 		if err := ioutil.WriteFile(common.AppTreeStoreIDPath(cdir, appName), []byte(treeStoreID), common.DefaultRegularFilePerm); err != nil {
 			return "", errwrap.Wrap(errors.New("error writing app treeStoreID"), err)
 		}
@@ -852,19 +838,6 @@ func prepareStage1Image(cfg PrepareConfig, cdir string) error {
 	treeStoreID, _, err := cfg.TreeStore.Render(cfg.Stage1Image.String(), false)
 	if err != nil {
 		return errwrap.Wrap(errors.New("error rendering tree image"), err)
-	}
-
-	if !cfg.SkipTreeStoreCheck {
-		hash, err := cfg.TreeStore.Check(treeStoreID)
-		if err != nil {
-			log.Printf("warning: tree cache is in a bad state: %v. Rebuilding...", err)
-			var err error
-			treeStoreID, hash, err = cfg.TreeStore.Render(cfg.Stage1Image.String(), true)
-			if err != nil {
-				return errwrap.Wrap(errors.New("error rendering tree image"), err)
-			}
-		}
-		cfg.CommonConfig.RootHash = hash
 	}
 
 	if err := writeManifest(*cfg.CommonConfig, cfg.Stage1Image, s1); err != nil {

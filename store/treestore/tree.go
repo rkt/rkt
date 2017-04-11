@@ -56,6 +56,10 @@ const (
 	minlenKey  = len(hashPrefix) + 2 // at least sha512-aa
 )
 
+var (
+	ErrReadHashfile = errors.New("cannot read hash file")
+)
+
 // Store represents a store of rendered ACIs
 type Store struct {
 	dir string
@@ -362,7 +366,7 @@ func (ts *Store) check(id string) (string, error) {
 	treepath := ts.GetPath(id)
 	hash, err := ioutil.ReadFile(filepath.Join(treepath, hashfilename))
 	if err != nil {
-		return "", errwrap.Wrap(errors.New("cannot read hash file"), err)
+		return "", errwrap.Wrap(ErrReadHashfile, err)
 	}
 	curhash, err := ts.Hash(id)
 	if err != nil {

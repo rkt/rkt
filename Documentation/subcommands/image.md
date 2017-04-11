@@ -141,6 +141,17 @@ rkt: successfully removed aci for image: "sha512-91e98d7f167905b69cce91b163963cc
 rkt: 2 image(s) successfully removed
 ```
 
+## rkt image verify
+
+Given one or more image IDs or image names, verify will verify that their
+ondisk checksum matches the value previously calculated on render.
+
+```
+# rkt image verify quay.io/coreos/etcd:v3.1.0 sha512-887890e697d9
+successfully verified checksum for image: "quay.io/coreos/etcd:v3.1.0" ("sha512-e70ec975ce5327ea52c4a30cc4a951ecea55217a290e866e70888517964ba700")                   
+successfully verified checksum for image: "sha512-887890e697d9" ("sha512-887890e697d9a0229eff22436def3c436cb4b18f72ac274c8c05427b39539307")
+```
+
 ## Global options
 
 See the table with [global options in general commands documentation][global-options].
