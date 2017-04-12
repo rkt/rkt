@@ -230,10 +230,6 @@ func newPodListReadError(p *pkgPod.Pod, err error) error {
 	return fmt.Errorf("%s", strings.Join(lines, "\n"))
 }
 
-func newPodListZeroAppsError(p *pkgPod.Pod) error {
-	return fmt.Errorf("pod %s contains zero apps", p.UUID.String())
-}
-
 func newPodListLoadImageManifestError(p *pkgPod.Pod, err error) error {
 	return errwrap.Wrap(fmt.Errorf("pod %s ImageManifest could not be loaded", p.UUID.String()), err)
 }
