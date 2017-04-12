@@ -28,6 +28,7 @@ import (
 	"github.com/appc/spec/schema/types"
 	"github.com/dustin/go-humanize"
 	"github.com/hashicorp/errwrap"
+	"github.com/rkt/rkt/api/v1"
 	lib "github.com/rkt/rkt/lib"
 	"github.com/rkt/rkt/networking/netinfo"
 	pkgPod "github.com/rkt/rkt/pkg/pod"
@@ -66,7 +67,7 @@ func runList(cmd *cobra.Command, args []string) int {
 		}
 	}
 
-	var pods []*lib.Pod
+	var pods []*v1.Pod
 
 	if err := pkgPod.WalkPods(getDataDir(), pkgPod.IncludeMostDirs, func(p *pkgPod.Pod) {
 		if flagFormat != outputFormatTabbed {
