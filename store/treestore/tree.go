@@ -57,6 +57,7 @@ const (
 )
 
 var (
+	// ErrReadHashfile when the hashfile cannot be read
 	ErrReadHashfile = errors.New("cannot read hash file")
 )
 
@@ -68,6 +69,7 @@ type Store struct {
 	lockDir string
 }
 
+// NewStore creates a Store for managing filesystem trees, including the dependency graph resolution of the underlying image layers.
 func NewStore(dir string, store *imagestore.Store) (*Store, error) {
 	// TODO(sgotti) backward compatibility with the current tree store paths. Needs a migration path to better paths.
 	ts := &Store{dir: filepath.Join(dir, "tree"), store: store}
@@ -349,7 +351,7 @@ func (ts *Store) Hash(id string) (string, error) {
 	treepath := ts.GetPath(id)
 
 	hash := sha512.New()
-	iw := NewHashWriter(hash)
+	iw := newHashWriter(hash)
 	err := filepath.Walk(treepath, buildWalker(treepath, iw))
 	if err != nil {
 		return "", errwrap.Wrap(errors.New("error walking rootfs"), err)
@@ -417,8 +419,8 @@ type xattr struct {
 type fileInfo struct {
 	Name     string // name of header file entry
 	Mode     int64  // permission and mode bits
-	Uid      int    // user id of owner
-	Gid      int    // group id of owner
+	UID      int    // user id of owner
+	GID      int    // group id of owner
 	Size     int64  // length in bytes
 	Typeflag byte   // type of header entry
 	Linkname string // target name of link
@@ -427,12 +429,12 @@ type fileInfo struct {
 	Xattrs   []xattr
 }
 
-func FileInfoFromHeader(hdr *tar.Header) *fileInfo {
+func fileInfoFromHeader(hdr *tar.Header) *fileInfo {
 	fi := &fileInfo{
 		Name:     hdr.Name,
 		Mode:     hdr.Mode,
-		Uid:      hdr.Uid,
-		Gid:      hdr.Gid,
+		UID:      hdr.Uid,
+		GID:      hdr.Gid,
 		Size:     hdr.Size,
 		Typeflag: hdr.Typeflag,
 		Linkname: hdr.Linkname,
@@ -527,13 +529,13 @@ type imageHashWriter struct {
 	io.Writer
 }
 
-func NewHashWriter(w io.Writer) specaci.ArchiveWriter {
+func newHashWriter(w io.Writer) specaci.ArchiveWriter {
 	return &imageHashWriter{w}
 }
 
 func (aw *imageHashWriter) AddFile(hdr *tar.Header, r io.Reader) error {
 	// Write the json encoding of the FileInfo struct
-	hdrj, err := json.Marshal(FileInfoFromHeader(hdr))
+	hdrj, err := json.Marshal(fileInfoFromHeader(hdr))
 	if err != nil {
 		return err
 	}
