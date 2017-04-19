@@ -16,6 +16,6 @@ This document tracks projects that integrate with rkt. [Join the community](http
 
 [SELinux](https://coreos.com/rkt/docs/latest/selinux.html): an access control and security toolkit for containers.
 
-[Linux](https://coreos.com/rkt/docs/latest/distributions.html): an open an extensible OS. rkt is included in the package managers on Red Hat, Ubuntu, and many other popular Linux distributions.
+[Linux](https://coreos.com/rkt/docs/latest/distributions.html): an open and extensible OS. rkt is included in the package managers on Red Hat, Ubuntu, and many other popular Linux distributions.
 
 [cAdvisor](https://github.com/google/cadvisor): a daemon that monitors resource usage and performance for running containers.
