@@ -14,11 +14,14 @@
 
 package rkt
 
-import pkgPod "github.com/rkt/rkt/pkg/pod"
+import (
+	"github.com/rkt/rkt/api/v1"
+	pkgPod "github.com/rkt/rkt/pkg/pod"
+)
 
 // NewPodFromInternalPod converts *pkgPod.Pod to *Pod
-func NewPodFromInternalPod(p *pkgPod.Pod) (*Pod, error) {
-	pod := &Pod{
+func NewPodFromInternalPod(p *pkgPod.Pod) (*v1.Pod, error) {
+	pod := &v1.Pod{
 		UUID:     p.UUID.String(),
 		State:    p.State(),
 		Networks: p.Nets,
@@ -44,7 +47,19 @@ func NewPodFromInternalPod(p *pkgPod.Pod) (*Pod, error) {
 	}
 
 	for _, app := range manifest.Apps {
+		// for backwards compatibility
 		pod.AppNames = append(pod.AppNames, app.Name.String())
+	}
+
+	var appState appStateFunc
+	if p.IsMutable() {
+		appState = appStateInMutablePod
+	} else {
+		appState = appStateInImmutablePod
+	}
+	pod.Apps, err = appsForPod(p, "", appState)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(manifest.UserAnnotations) > 0 {

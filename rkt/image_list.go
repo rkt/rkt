@@ -21,13 +21,12 @@ import (
 	"strings"
 	"time"
 
-	rktlib "github.com/rkt/rkt/lib"
-	rktflag "github.com/rkt/rkt/pkg/flag"
-	"github.com/rkt/rkt/store/imagestore"
-
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/lastditch"
 	"github.com/dustin/go-humanize"
+	"github.com/rkt/rkt/api/v1"
+	rktflag "github.com/rkt/rkt/pkg/flag"
+	"github.com/rkt/rkt/store/imagestore"
 	"github.com/spf13/cobra"
 )
 
@@ -81,7 +80,7 @@ var (
 )
 
 type printableImage struct {
-	rktlib.ImageListEntry
+	v1.ImageListEntry
 
 	format outputFormat
 	full   bool
@@ -301,7 +300,7 @@ func runImages(cmd *cobra.Command, args []string) int {
 		}
 
 		imagesToPrint = append(imagesToPrint, printableImage{
-			ImageListEntry: rktlib.ImageListEntry{
+			ImageListEntry: v1.ImageListEntry{
 				ID:           imageID,
 				Name:         imageName,
 				ImportTime:   aciInfo.ImportTime.UnixNano(),

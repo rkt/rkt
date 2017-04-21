@@ -1211,3 +1211,8 @@ func (p *Pod) AppExitCode(appName string) (int, error) {
 	statusFile := filepath.Join(stage1RootfsPath, "/rkt/status/", appName)
 	return p.readIntFromFile(statusFile)
 }
+
+// IsMutable can be used to determine if a pod is mutable
+func (p *Pod) IsMutable() bool {
+	return p.mutable
+}

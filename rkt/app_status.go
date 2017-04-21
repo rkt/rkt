@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rkt/rkt/api/v1"
 	rkt "github.com/rkt/rkt/lib"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +40,7 @@ func init() {
 	cmdAppStatus.Flags().Var(&flagFormat, "format", "choose the output format, allowed format includes 'json', 'json-pretty'. If empty, then the result is printed as key value pairs")
 }
 
-func printApp(app *rkt.App) {
+func printApp(app *v1.App) {
 	stdout.Printf("name=%s\n", app.Name)
 	stdout.Printf("state=%s\n", app.State)
 	stdout.Printf("image_id=%s\n", app.ImageID)
