@@ -59,7 +59,7 @@ func TestImageVerify(t *testing.T) {
 		t.Fatalf("unable to walk treestore %v: %v", treestorePath, err)
 	}
 	if numDeleted != 1 {
-		t.Fatalf("expected to find one 'inspect' binary in the tree to delete")
+		t.Fatalf("expected to find one 'inspect' binary in the tree to delete; found %v", numDeleted)
 	}
 
 	cmd := fmt.Sprintf("%s image verify %s", ctx.Cmd(), imgHash)
