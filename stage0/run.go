@@ -173,9 +173,10 @@ func deduplicateMPs(mounts []schema.Mount) []schema.Mount {
 	var res []schema.Mount
 	seen := make(map[string]struct{})
 	for _, m := range mounts {
-		if _, ok := seen[m.Path]; !ok {
+		cleanPath := path.Clean(m.Path)
+		if _, ok := seen[cleanPath]; !ok {
 			res = append(res, m)
-			seen[m.Path] = struct{}{}
+			seen[cleanPath] = struct{}{}
 		}
 	}
 	return res
