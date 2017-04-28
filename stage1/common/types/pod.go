@@ -131,6 +131,15 @@ func LoadPod(root string, uuid *types.UUID, rp *RuntimePod) (*Pod, error) {
 	}
 	p.Manifest = pm
 
+	// ensure volumes names are unique
+	volNames := make(map[types.ACName]bool, len(pm.Volumes))
+	for _, vol := range pm.Volumes {
+		if volNames[vol.Name] {
+			return nil, fmt.Errorf("duplicate volume name %q", vol.Name)
+		}
+		volNames[vol.Name] = true
+	}
+
 	for i, app := range p.Manifest.Apps {
 		impath := common.ImageManifestPath(p.Root, app.Name)
 		buf, err := ioutil.ReadFile(impath)
