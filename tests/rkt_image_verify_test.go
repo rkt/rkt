@@ -22,12 +22,17 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/rkt/rkt/common"
 	"github.com/rkt/rkt/tests/testutils"
 )
 
 // TestImageVerify tests 'rkt image verify'.
 // It renders an image, deletes a file from it, and verifies that 'verify' notices and repairs it.
 func TestImageVerify(t *testing.T) {
+	if err := common.SupportsOverlay(); err != nil {
+		t.Skipf("Overlay fs not supported: %v", err)
+	}
+
 	tmpDir := mustTempDir("rkt-TestImageVerify-")
 	defer os.RemoveAll(tmpDir)
 
