@@ -157,11 +157,16 @@ func evaluateMounts(rfs string, app string, p *stage1commontypes.Pod) ([]flyMoun
 		// Check if we have a mount for this volume
 		tuple, exists := namedVolumeMounts[v.Name]
 		if !exists {
-			return nil, fmt.Errorf("missing mount for volume %q", v.Name)
-		} else if tuple.M.Volume != v.Name {
-			// assertion regarding the implementation, should never happen
+			diag.Printf("skipping unused volume %q", v.Name)
+			continue
+		}
+
+		// Assertion regarding the implementation, should never happen
+		if tuple.M.Volume != v.Name {
 			return nil, fmt.Errorf("mismatched volume:mount pair: %q != %q", v.Name, tuple.M.Volume)
 		}
+
+		// Augment and replace mount entry, adding volume info
 		namedVolumeMounts[v.Name] = volumeMountTuple{V: v, M: tuple.M}
 		diag.Printf("adding %+v", namedVolumeMounts[v.Name])
 	}
