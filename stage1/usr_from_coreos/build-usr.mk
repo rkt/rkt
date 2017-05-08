@@ -169,7 +169,7 @@ $(call generate-stamp-rule,$(CBU_MKBASE_STAMP),$(CCN_SQUASHFS) $(CBU_COMPLETE_MA
 		echo -e "Files listed in $(CBU_COMPLETE_MANIFEST) are missing from $(CCN_SQUASHFS):\n$$$$(comm -1 -3 "$(CBU_SQUASHFS_FILES)" "$(CBU_COMPLETE_MANIFEST)")"; \
 		exit 1; \
 	fi; \
-	unsquashfs -dest "$(CBU_ROOTFS)/usr" -ef "$(CBU_COMPLETE_MANIFEST)" "$(CCN_SQUASHFS)"$(call vl3, >/dev/null))
+	unsquashfs -user-xattrs -dest "$(CBU_ROOTFS)/usr" -ef "$(CBU_COMPLETE_MANIFEST)" "$(CCN_SQUASHFS)"$(call vl3, >/dev/null))
 
 # If either squashfs file or the concatenated manifest file changes we
 # need to unpack the squashfs file again. Clean the directory holding
