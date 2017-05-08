@@ -17,7 +17,6 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -28,22 +27,6 @@ func TestVolumeMount(t *testing.T) {
 		volumeMountTestCasesRecursivePodManifest,
 		volumeMountTestCasesNonRecursivePodManifest,
 		volumeMountTestCasesNonRecursive,
-		{
-			{
-				"CLI: duplicate mount given",
-				[]imagePatch{
-					{
-						"rkt-test-run-read-file.aci",
-						[]string{fmt.Sprintf("--exec=/inspect --read-file --file-name %s", mountFilePath)},
-					},
-				},
-				fmt.Sprintf(
-					"--volume=test1,kind=host,source=%s --mount volume=test1,target=%s --volume=test2,kind=host,source=%s --mount volume=test1,target=%s",
-					volDir, mountDir,
-					volDir, mountDir,
-				),
-				nil,
-				`run: can't evaluate mounts: missing mount for volume "test2"`,
-			},
-		}}).Execute(t)
+		volumeMountTestCasesDuplicateVolume,
+	}).Execute(t)
 }

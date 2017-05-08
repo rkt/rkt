@@ -307,6 +307,21 @@ var (
 			outerFileContent,
 		},
 	}
+
+	volumeMountTestCasesDuplicateVolume = []volumeMountTestCase{
+		{
+			"CLI: duplicate volume name",
+			[]imagePatch{
+				{"rkt-test-run-pod-manifest-duplicate-mount.aci", []string{}},
+			},
+			fmt.Sprintf(
+				"--volume=test,kind=host,source=%s --mount volume=test,target=%s --volume=test,kind=empty --mount volume=test,target=%s",
+				volDir, mountDir, path.Join(mountDir, "dup"),
+			),
+			nil,
+			"duplicate volume name",
+		},
+	}
 )
 
 func NewTestVolumeMount(volumeMountTestCases [][]volumeMountTestCase) testutils.Test {

@@ -28,6 +28,7 @@ func TestVolumeMount(t *testing.T) {
 		volumeMountTestCasesRecursivePodManifest,
 		volumeMountTestCasesNonRecursivePodManifest,
 		volumeMountTestCasesNonRecursive,
+		volumeMountTestCasesDuplicateVolume,
 		{
 			{
 				"CLI: duplicate mount given",
@@ -40,7 +41,7 @@ func TestVolumeMount(t *testing.T) {
 				fmt.Sprintf(
 					"--volume=test1,kind=host,source=%s --mount volume=test1,target=%s --volume=test2,kind=host,source=%s --mount volume=test1,target=%s",
 					volDir, mountDir,
-					volDir, mountDir,
+					volDir, mountDir+"/",
 				),
 				nil,
 				innerFileContent,
