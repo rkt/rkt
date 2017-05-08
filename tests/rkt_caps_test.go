@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rkt/rkt/common"
 	"github.com/rkt/rkt/tests/testutils"
 	"github.com/syndtr/gocapability/capability"
 )
@@ -313,6 +314,10 @@ func capsSeveralAppsRunAndCheckOutput(t *testing.T, ctx *testutils.RktRunCtx, cm
 }
 
 func TestCapsSeveralAppWithPatches(t *testing.T) {
+	if err := common.SupportsOverlay(); err != nil {
+		t.Skipf("Skipping storage-intensive test, overlayfs not supported: %v", err)
+	}
+
 	// All the following images are launched together in the same pod
 
 	ctx := testutils.NewRktRunCtx()
@@ -346,8 +351,11 @@ func TestCapsSeveralAppWithPatches(t *testing.T) {
 }
 
 func TestCapsSeveralAppWithFlags(t *testing.T) {
-	// All the following images are launched together in the same pod
+	if err := common.SupportsOverlay(); err != nil {
+		t.Skipf("Skipping storage-intensive test, overlayfs not supported: %v", err)
+	}
 
+	// All the following images are launched together in the same pod
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
@@ -385,6 +393,10 @@ func TestCapsSeveralAppWithFlags(t *testing.T) {
 
 // Tests that flags on the command line override the isolator in the ACI
 func TestCapsOverride(t *testing.T) {
+	if err := common.SupportsOverlay(); err != nil {
+		t.Skipf("Skipping storage-intensive test, overlayfs not supported: %v", err)
+	}
+
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
@@ -502,6 +514,10 @@ func TestCapsOverride(t *testing.T) {
 
 // Tests that --insecure-options=capabilities allows everything
 func TestCapsInsecureOption(t *testing.T) {
+	if err := common.SupportsOverlay(); err != nil {
+		t.Skipf("Skipping storage-intensive test, overlayfs not supported: %v", err)
+	}
+
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
@@ -700,6 +716,10 @@ func NewCapsTest(hasStage1FullCaps bool) testutils.Test {
 }
 
 func TestCapsNonRoot(t *testing.T) {
+	if err := common.SupportsOverlay(); err != nil {
+		t.Skipf("Skipping storage-intensive test, overlayfs not supported: %v", err)
+	}
+
 	ctx := testutils.NewRktRunCtx()
 	defer ctx.Cleanup()
 
