@@ -78,3 +78,22 @@ This will build the rkt binary and the KVM stage1 aci image in `build-rkt-1.25.0
 [rkt-arch-stage1]: devel/architecture.md#stage-1
 [rkt-run]: subcommands/run.md#use-a-custom-stage-1
 [stage1-implementers-guide]: devel/stage1-implementors-guide.md
+
+## Additional parameters
+
+The KVM stage1 has some hypervisor specific parameters that can change the execution environment.
+
+### Extra kernel command line parameters
+
+Additional [Linux kernel's command line parameters](https://www.kernel.org/doc/html/latest/admin-guide/kernel-parameters.html) can be passed via the environment variable `RKT_HYPERVISOR_EXTRA_KERNEL_PARAMS`:
+
+```
+sudo RKT_HYPERVISOR_EXTRA_KERNEL_PARAMS="systemd.unified_cgroup_hierarchy=true max_loop=12 possible_cpus=1" \
+      rkt run --stage1-name=coreos.com/rkt/stage1-kvm:1.25.0 \
+      ...
+```
+
+The three command line parameters above are just examples and they are documented respectively in:
+- [systemd's kernel command line parameters](https://www.freedesktop.org/software/systemd/man/kernel-command-line.html)
+- [Linux' parameters](https://github.com/torvalds/linux/blob/master/Documentation/admin-guide/kernel-parameters.txt)
+- [Linux' CPU hotplug](https://github.com/torvalds/linux/blob/master/Documentation/core-api/cpu_hotplug.rst)

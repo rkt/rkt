@@ -14,6 +14,8 @@
 
 package hypervisor
 
+import "os"
+
 // KvmHypervisor structure describes KVM hypervisor binary and its parameters
 type KvmHypervisor struct {
 	Bin          string
@@ -43,5 +45,10 @@ func (hv *KvmHypervisor) InitKernelParams(isDebug bool) {
 			"quiet=vga",
 			"quiet systemd.log_level=emerg",
 		}...)
+	}
+
+	customKernelParams := os.Getenv("RKT_HYPERVISOR_EXTRA_KERNEL_PARAMS")
+	if customKernelParams != "" {
+		hv.KernelParams = append(hv.KernelParams, customKernelParams)
 	}
 }
