@@ -16,6 +16,8 @@
 
 package common
 
+import "runtime"
+
 // seccomp default whitelists/blacklists.
 // rkt tries not to diverge from docker here, for the moment.
 
@@ -392,6 +394,16 @@ var (
 		"vm86old",
 	}
 
+	//RktDefaultSeccompArmWhitelist contains the additional needed syscalls for arm support
+	RktDefaultSeccompArmWhitelist = []string{
+		"arm_fadvise64_64",
+		"arm_sync_file_range",
+		"breakpoint",
+		"cacheflush",
+		"set_tls",
+		"sync_file_range2",
+	}
+
 	// RktDefaultSeccompBlacklist contains a default blacklist of syscalls,
 	// used by rkt for seccomp filtering.
 	RktDefaultSeccompBlacklist = DockerDefaultSeccompBlacklist
@@ -399,3 +411,9 @@ var (
 	// used by rkt for seccomp filtering.
 	RktDefaultSeccompWhitelist = DockerDefaultSeccompWhitelist
 )
+
+func init() {
+	if arch := runtime.GOARCH; arch == "arm" || arch == "arm64" {
+		RktDefaultSeccompWhitelist = append(RktDefaultSeccompWhitelist, RktDefaultSeccompArmWhitelist...)
+	}
+}
