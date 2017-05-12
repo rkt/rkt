@@ -139,6 +139,6 @@ Backwards compatibility: Currently the biggest concern identified is backwards c
 [oci-algorithms]: https://github.com/opencontainers/image-spec/blob/v1.0.0-rc2/descriptor.md#algorithms
 [oci-image-layout]: https://github.com/opencontainers/image-spec/blob/v1.0.0-rc2/image-layout.md
 
-[app-container]: https://github.com/rkt/rkt/blob/v1.25.0/Documentation/app-container.md
-[image-lifecycle]: https://github.com/rkt/rkt/blob/v1.25.0/Documentation/devel/architecture.md#image-lifecycle
-[distribution-point]: https://github.com/rkt/rkt/blob/v1.25.0/Documentation/devel/distribution-point.md
+[app-container]: https://github.com/rkt/rkt/blob/v1.26.0/Documentation/app-container.md
+[image-lifecycle]: https://github.com/rkt/rkt/blob/v1.26.0/Documentation/devel/architecture.md#image-lifecycle
+[distribution-point]: https://github.com/rkt/rkt/blob/v1.26.0/Documentation/devel/distribution-point.md
