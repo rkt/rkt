@@ -1,3 +1,31 @@
+## 1.26.0
+
+This minor release contains bugfixes and other improvements. It also adds better support for the arm architecture to rkt, so that you can now fetch images via autodiscovery and have the correct seccomp whitelist to run them. Also notable is the new possibilty to pass extra kernel parameters to kvm, and last but not least a significant prepare/run speedup in stage0. This also introduces stricter validation on volume names, now rejecting duplicate ones.
+
+## New Features
+- stage1: improve duplicate mount-volume detection ([#3666](https://github.com/rkt/rkt/pull/3666)). Breaking change: volumes with duplicate names are now rejected.
+- stage0/{run,prepare}: remove ondisk verification ([#3623](https://github.com/rkt/rkt/pull/3623)). For backwards compatibility, specifying 'insecure-options=ondisk' will still run without error, however it will also not do anything.
+- kvm/qemu: add extra kernel parameters ([#3644](https://github.com/rkt/rkt/pull/3644)).
+
+## Bugfixes
+- seccomp: add arch-specific syscalls on ARM ([#3636](https://github.com/rkt/rkt/pull/3636)).
+- fetch: use proper appc os/arch labels ([#3621](https://github.com/rkt/rkt/pull/3621)).
+- tests/caps: skip if overlayfs support is missing ([#3670](https://github.com/rkt/rkt/pull/3670)).
+- build/stage1: transfer user xattr data ([#3665](https://github.com/rkt/rkt/pull/3665)).
+- stage1: include <sys/sysmacros.h> for makedev function ([#3604](https://github.com/rkt/rkt/pull/3604)).
+
+## Other changes
+- Add code of conduct ([#3661](https://github.com/rkt/rkt/pull/3661)). Required by CNCF.
+- rkt list|status: app state info (i.e. exit codes) in --format=json ([#3638](https://github.com/rkt/rkt/pull/3638)).
+- integrations: add mesos ([#3624](https://github.com/rkt/rkt/pull/3624)).
+- Documentation: add container linux and tectonic as production users ([#3618](https://github.com/rkt/rkt/pull/3618)).
+- Documentation: add Gentoo to the list of distributions that have rkt ([#3613](https://github.com/rkt/rkt/pull/3613)).
+- Documentation: add some individual blog posts ([#3611](https://github.com/rkt/rkt/pull/3611)).
+- Documentation: cleanup stage1 stuff ([#3612](https://github.com/rkt/rkt/pull/3612)).
+- dist: use multi-user.target instead of default.target ([#3620](https://github.com/rkt/rkt/pull/3620)).
+- added production-users and integrations pages ([#3602](https://github.com/rkt/rkt/pull/3602)).
+- scripts: update rkt-builder version ([#3595](https://github.com/rkt/rkt/pull/3595)).
+
 ## 1.25.0
 
 This minor release contains bugfixes and other improvements related to the KVM flavour, which is now using qemu-kvm by default.
@@ -81,7 +109,7 @@ This release adds a lot of bugfixes around the rkt fly flavor, garbage collectio
 - stage1: kvm: Update kernel to 4.9.2 ([#3530](https://github.com/rkt/rkt/pull/3530)).
 - stage1: remount entire subcgroup r/w, instead of each knob ([#3494](https://github.com/rkt/rkt/pull/3494)).
 - tests: update AWS CI setup ([#3509](https://github.com/rkt/rkt/pull/3509)).
-- pkg/fileutil: helper function to get major, minor numbers of a device file ([#3500](https://github.com/rkt/rkt/pull/3500)). 
+- pkg/fileutil: helper function to get major, minor numbers of a device file ([#3500](https://github.com/rkt/rkt/pull/3500)).
 - pkg/log: correctly handle var-arg printf params ([#3516](https://github.com/rkt/rkt/pull/3516)).
 - Documentation/stop: describe --uuid-file option ([#3511](https://github.com/rkt/rkt/pull/3511)).
 
@@ -198,7 +226,7 @@ A new experimental `app` subcommand has been introduced, which allows creating a
 ### Other changes
 - cgroup/v1: introduce mount flags to mountFsRO ([#3350](https://github.com/rkt/rkt/pull/3350)).
 - kvm: update QEMU version to 2.7.0 ([#3341](https://github.com/rkt/rkt/pull/3341)).
-- kvm: bump kernel version to 4.8.6, updated config ([#3342](https://github.com/rkt/rkt/pull/3342)). 
+- kvm: bump kernel version to 4.8.6, updated config ([#3342](https://github.com/rkt/rkt/pull/3342)).
 - vendor: introduce kr/pretty and bump go-systemd ([#3333](https://github.com/rkt/rkt/pull/3333)).
 - vendor: update docker2aci to 0.14.0 ([#3356](https://github.com/rkt/rkt/pull/3356)).
 - tests: add the --debug option to more tests ([#3340](https://github.com/rkt/rkt/pull/3340)).
@@ -211,20 +239,20 @@ This minor release contains bugfixes, UX enhancements, and other improvements.
 
 ### UX changes:
 - rkt: gate diagnostic output behind `--debug` ([#3297](https://github.com/rkt/rkt/pull/3297)).
-- rkt: Change exit codes to 254 ([#3261](https://github.com/rkt/rkt/pull/3261)). 
+- rkt: Change exit codes to 254 ([#3261](https://github.com/rkt/rkt/pull/3261)).
 
 
 ### Bug fixes:
-- stage1/kvm: correctly bind-mount read-only volumes ([#3304](https://github.com/rkt/rkt/pull/3304)). 
-- stage0/cas: apply xattr attributes ([#3305](https://github.com/rkt/rkt/pull/3305)). 
-- scripts/install-rkt: add iptables dependency ([#3309](https://github.com/rkt/rkt/pull/3309)). 
+- stage1/kvm: correctly bind-mount read-only volumes ([#3304](https://github.com/rkt/rkt/pull/3304)).
+- stage0/cas: apply xattr attributes ([#3305](https://github.com/rkt/rkt/pull/3305)).
+- scripts/install-rkt: add iptables dependency ([#3309](https://github.com/rkt/rkt/pull/3309)).
 - stage0/image: set proxy if InsecureSkipVerify is set ([#3303](https://github.com/rkt/rkt/pull/3303)).
 
 ### Other changes
 - vendor: update docker2aci to 0.13.0 ([#3314](https://github.com/rkt/rkt/pull/3314)). This fixes multiple fetching and conversion bugs, including two security issues.
-- scripts: update glide vendor script ([#3313](https://github.com/rkt/rkt/pull/3313)). 
-- vendor: update appc/spec to v0.8.8 ([#3310](https://github.com/rkt/rkt/pull/3310)). 
-- stage1: update to CoreOS 1192.0.0 (and update sanity checks) ([#3283](https://github.com/rkt/rkt/pull/3283)). 
+- scripts: update glide vendor script ([#3313](https://github.com/rkt/rkt/pull/3313)).
+- vendor: update appc/spec to v0.8.8 ([#3310](https://github.com/rkt/rkt/pull/3310)).
+- stage1: update to CoreOS 1192.0.0 (and update sanity checks) ([#3283](https://github.com/rkt/rkt/pull/3283)).
 - cgroup: introduce proper cgroup/v1, cgroup/v2 packages ([#3277](https://github.com/rkt/rkt/pull/3277)).
 - Documentation updates: ([#3281](https://github.com/rkt/rkt/pull/3281)), ([#3319](https://github.com/rkt/rkt/pull/3319)), ([#3308](https://github.com/rkt/rkt/pull/3308)).
 
@@ -306,7 +334,7 @@ This release updates the coreos and kvm flavors, bringing in a newer stable syst
 - rkt: avoid possible panic in api-server ([#3111](https://github.com/rkt/rkt/pull/3111)).
 - rkt/run: allow --set-env-file files with comments ([#3115](https://github.com/rkt/rkt/pull/3115)).
 - scripts/install-rkt: add wget as dependency ([#3124](https://github.com/rkt/rkt/pull/3124)).
-- install-rkt.sh: scripts: Fix missing files in .deb when using install-rkt.sh ([#3127](https://github.com/rkt/rkt/pull/3127)). 
+- install-rkt.sh: scripts: Fix missing files in .deb when using install-rkt.sh ([#3127](https://github.com/rkt/rkt/pull/3127)).
 - tests: check for run-prepared with insecure options ([#3139](https://github.com/rkt/rkt/pull/3139)).
 
 #### Other changes
@@ -503,7 +531,7 @@ This release focuses on bug fixes and developer tooling and UX improvements.
 - rkt/run: added --set-env-file switch and priorities for environments ([#2816](https://github.com/rkt/rkt/pull/2816)). --set-env-file gets an environment variables file path in the format "VAR=VALUE\n...".
 - run: add --cap-retain and --cap-remove ([#2771](https://github.com/rkt/rkt/pull/2771)).
 - store: print more information on rm as non-root ([#2805](https://github.com/rkt/rkt/pull/2805)).
-- Documentation/vagrant: use rkt binary for getting started ([#2808](https://github.com/rkt/rkt/pull/2808)). 
+- Documentation/vagrant: use rkt binary for getting started ([#2808](https://github.com/rkt/rkt/pull/2808)).
 - docs: New file in documentation - instruction for new developers in rkt ([#2639](https://github.com/rkt/rkt/pull/2639)).
 - stage0/trust: change error message if prefix/root flag missing ([#2661](https://github.com/rkt/rkt/pull/2661)).
 
@@ -516,10 +544,10 @@ This release focuses on bug fixes and developer tooling and UX improvements.
 
 #### Other changes
 
-- stage1: update coreos image to 1068.0.0 ([#2821](https://github.com/rkt/rkt/pull/2821)). 
+- stage1: update coreos image to 1068.0.0 ([#2821](https://github.com/rkt/rkt/pull/2821)).
 - KVM: Update LKVM patch to mount with mmap mode ([#2795](https://github.com/rkt/rkt/pull/2795)).
 - stage1: always write /etc/machine-id ([#2440](https://github.com/rkt/rkt/pull/2440)). Prepare rkt for systemd-v230 in stage1.
-- stage1/prepare-app: always adjust /etc/hostname ([#2761](https://github.com/rkt/rkt/pull/2761)). 
+- stage1/prepare-app: always adjust /etc/hostname ([#2761](https://github.com/rkt/rkt/pull/2761)).
 
 ## v1.8.0
 
@@ -613,7 +641,7 @@ This release focuses on security enhancements. It provides additional isolators,
 - dist: Update tmpfiles to create /etc/rkt ([#2472](https://github.com/rkt/rkt/pull/2472)). By creating this directory, users can run `rkt trust` without being root, if the user is in the rkt group.
 - Invoke gofmt with simplify-code flag ([#2489](https://github.com/rkt/rkt/pull/2489)). Enables code simplification checks of gofmt.
 - Implement composable uid/gid generators ([#2510](https://github.com/rkt/rkt/pull/2510)). This cleans up the code a bit and implements uid/gid functionality for rkt fly.
-- stage1: download CoreOS over HTTPS ([#2568](https://github.com/rkt/rkt/pull/2568)). 
+- stage1: download CoreOS over HTTPS ([#2568](https://github.com/rkt/rkt/pull/2568)).
 - Documentation updates ([#2555](https://github.com/rkt/rkt/pull/2555), [#2609](https://github.com/rkt/rkt/pull/2609), [#2605](https://github.com/rkt/rkt/pull/2605), [#2578](https://github.com/rkt/rkt/pull/2578), [#2614](https://github.com/rkt/rkt/pull/2614), [#2579](https://github.com/rkt/rkt/pull/2579), [#2570](https://github.com/rkt/rkt/pull/2570)).
 - Test improvements ([#2613](https://github.com/rkt/rkt/pull/2613), [#2566](https://github.com/rkt/rkt/pull/2566), [#2508](https://github.com/rkt/rkt/pull/2508)).
 
@@ -707,7 +735,7 @@ This release includes a number of new features and bugfixes like a new config su
 
 - kvm: fix pid vs ppid usage ([#2396](https://github.com/rkt/rkt/pull/2396)). Fixes a bug in `rkt enter` in the kvm flavor causing an infinite loop.
 
-- kvm: Fix connectivity issue in macvtap networks caused by macvlan NICs having incorrect names ([#2181](https://github.com/rkt/rkt/pull/2181)). 
+- kvm: Fix connectivity issue in macvtap networks caused by macvlan NICs having incorrect names ([#2181](https://github.com/rkt/rkt/pull/2181)).
 
 - tests: TestRktListCreatedStarted: fix timing issue causing the test to fail on slow machines ([#2366](https://github.com/rkt/rkt/pull/2366)).
 
@@ -1289,7 +1317,7 @@ fixes and a new ipvlan network plugin.
 
 rkt 0.5.5 includes a move to [cni](https://github.com/appc/cni) network
 plugins, a number of minor bug fixes and two new experimental commands for
-handling images: `rkt images` and `rkt rmimage`. 
+handling images: `rkt images` and `rkt rmimage`.
 
 Full changelog:
 - switched to using [cni](https://github.com/appc/cni) based network plugins
@@ -1311,10 +1339,10 @@ more. Further, although we aren't yet guaranteeing API/ABI stability between
 releases, we have added important work towards this goal including functional
 testing and database migration code.
 
-This release also sees the removal of the `--spawn-metadata-svc` flag to 
+This release also sees the removal of the `--spawn-metadata-svc` flag to
 `rkt run`. The flag was originally provided as a convenience, making it easy
 for users to get started with the metadata service.  In rkt v0.5.4 we removed
-it in favor of explicitly starting it via `rkt metadata-service` command. 
+it in favor of explicitly starting it via `rkt metadata-service` command.
 
 Full changelog:
 - added configuration support for repository authentication (HTTP Basic Auth,
@@ -1331,7 +1359,7 @@ Full changelog:
 - the store DB now supports migrations for future versions
 - systemd-nspawn machine names are now set to pod UUID
 - removed the `--spawn-metadata-svc` option from `rkt run`; this mode was
-  inherently racy and really only for convenience. A separate 
+  inherently racy and really only for convenience. A separate
   `rkt metadata-service` invocation should be used instead.
 - various internal codebase refactoring: "cas" renamed to "store", tasks to
   encapsulate image fetch operations, etc
@@ -1434,7 +1462,7 @@ of the [appc spec](https://github.com/appc/spec/releases/tag/v0.4.0) yesterday.
 Note that due to the introduction of a database for indexing the local CAS,
 users upgrading from previous versions of Rocket on a system may need to clear
 their local cache by removing the `cas` directory. For example, using the
-standard Rocket setup, this would be accomplished with 
+standard Rocket setup, this would be accomplished with
 `rm -fr /var/lib/rkt/cas`.
 
 Major changes since v0.3.2:
