@@ -55,7 +55,7 @@ func TestImageRender(t *testing.T) {
 			{ImageName: "coreos.com/rkt-inspect"},
 		},
 		Labels: types.Labels{
-			{"version", "1.25.0"},
+			{"version", "1.26.0"},
 			{"arch", "amd64"},
 			{"os", "linux"},
 		},
