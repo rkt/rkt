@@ -61,6 +61,9 @@ vagrant up --provider=libvirt
 
 With a subsequent `vagrant ssh` you will have access to run rkt:
 
+If you are running an outdated version of VirtualBox, it may be that SSH asks for a password. You can find the password for the `ubuntu` user in `~/.vagrant.d/boxes/ubuntu-VAGRANTSLASH-xenial64/[DATE]/virtualbox/Vagrantfile`
+under `config.ssh.password`.
+
 ```
 vagrant ssh
 rkt --help
