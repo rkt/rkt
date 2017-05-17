@@ -161,7 +161,7 @@ just run `newgrp rkt` to enable it and continue in the same session.
 Now fetch the etcd image as an unprivileged user:
 
 ```
-./rkt fetch coreos.com/etcd:v2.3.7
+./rkt fetch coreos.com/etcd:v3.1.7
 ```
 
 Success! Now rkt can fetch and download images as an unprivileged user.
@@ -202,11 +202,11 @@ For more information, see the [detailed, step-by-step guide for the signing proc
 Now that the CoreOS public key is trusted, fetch the ACI using [`rkt fetch`][rkt-fetch]. This step doesn't need root privileges if the rkt host has been [configured for privilege separation][id-privsep]:
 
 ```
-$ rkt fetch coreos.com/etcd:v2.3.7
-rkt: searching for app image coreos.com/etcd:v2.3.7
-rkt: fetching image from https://github.com/coreos/etcd/releases/download/v2.3.7/etcd-v2.3.7-linux-amd64.aci
+$ rkt fetch coreos.com/etcd:v3.1.7
+rkt: searching for app image coreos.com/etcd:v3.1.7
+rkt: fetching image from https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.aci
 Downloading aci: [==========================================   ] 3.47 MB/3.7 MB
-Downloading signature from https://github.com/coreos/etcd/releases/download/v2.3.7/etcd-v2.3.7-linux-amd64.aci.asc
+Downloading signature from https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.asc
 rkt: signature verified:
   CoreOS ACI Builder <release@coreos.com>
 sha512-7d28419b27d5ae56cca97f4c6ccdd309c...
@@ -231,21 +231,21 @@ $ find /var/lib/rkt/cas/blob/
 According to the [App Container specification][aci-archives], the SHA-512 hash is that of the `tar` file compressed in the ACI, and can be examined with standard tools:
 
 ```
-$ wget https://github.com/coreos/etcd/releases/download/v2.3.7/etcd-v2.3.7-linux-amd64.aci
+$ wget https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.aci
 ...
-$ gzip -dc etcd-v2.3.7-linux-amd64.aci > etcd-v2.3.7-linux-amd64.tar
-$ sha512sum etcd-v2.3.7-linux-amd64.tar
-7d28419b27d5ae56cca97f4c6ccdd309c95b967ca0119f6962b187d1287ec9967f49e367c36b0e44ecd73675bc06d112dec86386d0e9b84c2265cddd45d15020  etcd-v2.3.7-linux-amd64.tar
+$ gzip -dc etcd-v3.1.7-linux-amd64.aci >  etcd-v3.1.7-linux-amd64.tar
+$ sha512sum etcd-v3.1.7-linux-amd64.tar
+7d28419b27d5ae56cca97f4c6ccdd309c95b967ca0119f6962b187d1287ec9967f49e367c36b0e44ecd73675bc06d112dec86386d0e9b84c2265cddd45d15020  etcd-v3.1.7-linux-amd64.tar
 ```
 
 ### Running an ACI with rkt
 
-After it has been retrieved and stored locally, an ACI can be run by pointing [`rkt run`][rkt-run] at either the original image reference (in this case, `coreos.com/etcd:v2.3.7`), the ACI hash, or the full URL of the ACI. Therefore the following three examples are equivalent:
+After it has been retrieved and stored locally, an ACI can be run by pointing [`rkt run`][rkt-run] at either the original image reference (in this case, `coreos.com/etcd:v3.1.7`), the ACI hash, or the full URL of the ACI. Therefore the following three examples are equivalent:
 
 #### Running the container by ACI name and version
 
 ```
-$ sudo rkt run coreos.com/etcd:v2.3.7
+$ sudo rkt run coreos.com/etcd:v3.1.7
 ...
 Press ^] three times to kill container
 ```
@@ -261,7 +261,7 @@ $ sudo rkt run sha512-1eba37d9b344b33d272181e176da111e
 #### Running the container by ACI URL
 
 ```
-$ sudo rkt run https://github.com/coreos/etcd/releases/download/v2.3.7/etcd-v2.3.7-linux-amd64.aci
+$ sudo rkt run https://github.com/coreos/etcd/releases/download/v3.1.7/etcd-v3.1.7-linux-amd64.aci
 ...
 ^]]]
 ```
