@@ -48,6 +48,7 @@ func dbIsPopulated(tx *sql.Tx) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	defer rows.Close()
 	count := 0
 	for rows.Next() {
 		count++
@@ -68,6 +69,7 @@ func getDBVersion(tx *sql.Tx) (int, error) {
 	if err != nil {
 		return -1, err
 	}
+	defer rows.Close()
 	found := false
 	for rows.Next() {
 		if err := rows.Scan(&version); err != nil {
