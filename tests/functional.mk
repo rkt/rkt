@@ -187,8 +187,7 @@ $$(call forward-vars,$2/manifest,ABS_GO)
 $2/manifest: $4 | $2
 	$$(VQ) \
 	$$(call vb,v2,GEN,$$(call vsp,$$@)) \
-	GOARCH="$$$$($$(ABS_GO) env GOARCH)"; \
-	sed -e "s/@GOOS@/linux/" -e "s/@GOARCH@/$$$$GOARCH/" <$$< >$$@
+	sed -e "s/@GOOS@/linux/" -e "s/@GOARCH@/$${RKT_ACI_ARCH}/" <$$< >$$@
 
 $$(call forward-vars,$1,ACTOOL)
 $1: $2/manifest $2/rootfs/ace-validator | $2/rootfs/opt/acvalidator
