@@ -466,6 +466,7 @@ func getAllACIInfosV0_2(tx *sql.Tx) ([]*ACIInfoV0_2, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		aciinfo := &ACIInfoV0_2{}
 		if err := rows.Scan(&aciinfo.BlobKey, &aciinfo.AppName, &aciinfo.ImportTime, &aciinfo.Latest); err != nil {
@@ -485,6 +486,7 @@ func getAllACIInfosV3(tx *sql.Tx) ([]*ACIInfoV3, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		aciinfo := &ACIInfoV3{}
 		if rows.Scan(&aciinfo.BlobKey, &aciinfo.Name, &aciinfo.ImportTime, &aciinfo.Latest); err != nil {
@@ -504,6 +506,7 @@ func getAllACIInfosV4(tx *sql.Tx) ([]*ACIInfoV4, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		aciinfo := &ACIInfoV4{}
 		if rows.Scan(&aciinfo.BlobKey, &aciinfo.Name, &aciinfo.ImportTime, &aciinfo.LastUsed, &aciinfo.Latest); err != nil {
@@ -523,6 +526,7 @@ func getAllACIInfosV5(tx *sql.Tx) ([]*ACIInfoV5, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		aciinfo := &ACIInfoV5{}
 		if rows.Scan(&aciinfo.BlobKey, &aciinfo.Name, &aciinfo.ImportTime, &aciinfo.LastUsed, &aciinfo.Latest, &aciinfo.Size, &aciinfo.TreeStoreSize); err != nil {
@@ -542,6 +546,7 @@ func getAllACIInfosV6(tx *sql.Tx) ([]*ACIInfoV6, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		aciinfo := &ACIInfoV6{}
 		if rows.Scan(&aciinfo.BlobKey, &aciinfo.Name, &aciinfo.ImportTime, &aciinfo.LastUsed, &aciinfo.Latest, &aciinfo.Size, &aciinfo.TreeStoreSize, &aciinfo.InsecureOptions); err != nil {
@@ -561,6 +566,7 @@ func getAllACIInfosV7(tx *sql.Tx) ([]*ACIInfoV7, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		aciinfo := &ACIInfoV7{}
 		if rows.Scan(&aciinfo.BlobKey, &aciinfo.Name, &aciinfo.ImportTime, &aciinfo.LastUsed, &aciinfo.Latest, &aciinfo.Size, &aciinfo.TreeStoreSize); err != nil {
@@ -587,6 +593,7 @@ func getAllRemoteV0_1(tx *sql.Tx) ([]*RemoteV0_1, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		remote := &RemoteV0_1{}
 		if err := rows.Scan(&remote.ACIURL, &remote.SigURL, &remote.ETag, &remote.BlobKey); err != nil {
@@ -615,6 +622,7 @@ func getAllRemoteV2_7(tx *sql.Tx) ([]*RemoteV2_7, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		remote := &RemoteV2_7{}
 		if err := rows.Scan(&remote.ACIURL, &remote.SigURL, &remote.ETag, &remote.BlobKey, &remote.CacheMaxAge, &remote.DownloadTime); err != nil {

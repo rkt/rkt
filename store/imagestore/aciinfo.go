@@ -71,6 +71,7 @@ func GetACIInfosWithKeyPrefix(tx *sql.Tx, prefix string) ([]*ACIInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		aciinfo := &ACIInfo{}
 		if err := aciinfoRowScan(rows, aciinfo); err != nil {
@@ -93,6 +94,7 @@ func GetACIInfosWithName(tx *sql.Tx, name string) ([]*ACIInfo, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		found = true
 		aciinfo := &ACIInfo{}
@@ -116,6 +118,7 @@ func GetACIInfoWithBlobKey(tx *sql.Tx, blobKey string) (*ACIInfo, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		found = true
 		if err := aciinfoRowScan(rows, aciinfo); err != nil {
@@ -147,6 +150,7 @@ func GetAllACIInfos(tx *sql.Tx, sortfields []string, ascending bool) ([]*ACIInfo
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		aciinfo := &ACIInfo{}
 		if err := aciinfoRowScan(rows, aciinfo); err != nil {

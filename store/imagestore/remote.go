@@ -58,6 +58,7 @@ func GetRemote(tx *sql.Tx, aciURL string) (*Remote, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	if ok := rows.Next(); !ok {
 		return nil, ErrRemoteNotFound
@@ -86,6 +87,7 @@ func GetAllRemotes(tx *sql.Tx) ([]*Remote, error) {
 		return nil, err
 
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		r := &Remote{}
