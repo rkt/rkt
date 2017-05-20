@@ -26,15 +26,12 @@ import (
 	"strings"
 	"syscall"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/appc/spec/schema/types"
-	"github.com/hashicorp/errwrap"
-
 	"github.com/containernetworking/cni/pkg/ns"
-
+	"github.com/hashicorp/errwrap"
 	"github.com/rkt/rkt/common"
 	"github.com/rkt/rkt/networking/netinfo"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -42,8 +39,7 @@ const (
 	UserNetPathSuffix = "net.d"
 
 	// Default net path relative to stage1 root
-	DefaultNetPath           = "etc/rkt/net.d/99-default.conf"
-	DefaultRestrictedNetPath = "etc/rkt/net.d/99-default-restricted.conf"
+	BuiltinNetPath = "etc/rkt/" + UserNetPathSuffix
 )
 
 // "base" struct that's populated from the beginning
@@ -63,33 +59,36 @@ type activeNet struct {
 	runtime   *netinfo.NetInfo
 }
 
-// Loads nets specified by user and default one from stage1
+type byFilename []activeNet
+
+func (s byFilename) Len() int      { return len(s) }
+func (s byFilename) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s byFilename) Less(i, j int) bool {
+	fiName := filepath.Base(s[i].runtime.ConfPath)
+	fjName := filepath.Base(s[j].runtime.ConfPath)
+	return strings.Compare(fiName, fjName) < 0
+}
+
+// Loads nets specified by user, both from a configurable user location and builtin from stage1. User supplied network
+// configs override what is built into stage1.
+// The order in which networks are applied to pods will be defined by their filenames.
 func (e *podEnv) loadNets() ([]activeNet, error) {
-	nets, err := loadUserNets(e.localConfig, e.netsLoadList)
+	if e.netsLoadList.None() {
+		stderr.Printf("networking namespace with loopback only")
+		return nil, nil
+	}
+
+	nets, err := e.newNetLoader().loadNets(e.netsLoadList)
 	if err != nil {
 		return nil, err
 	}
-
-	if e.netsLoadList.None() {
-		return nets, nil
+	netSlice := make([]activeNet, 0, len(nets))
+	for _, net := range nets {
+		netSlice = append(netSlice, net)
 	}
+	sort.Sort(byFilename(netSlice))
 
-	if !netExists(nets, "default") && !netExists(nets, "default-restricted") {
-		var defaultNet string
-		if e.netsLoadList.Specific("default") || e.netsLoadList.All() {
-			defaultNet = DefaultNetPath
-		} else {
-			defaultNet = DefaultRestrictedNetPath
-		}
-		defPath := path.Join(common.Stage1RootfsPath(e.podRoot), defaultNet)
-		n, err := loadNet(defPath)
-		if err != nil {
-			return nil, err
-		}
-		nets = append(nets, *n)
-	}
-
-	missing := missingNets(e.netsLoadList, nets)
+	missing := missingNets(e.netsLoadList, netSlice)
 	if len(missing) > 0 {
 		return nil, fmt.Errorf("networks not found: %v", strings.Join(missing, ", "))
 	}
@@ -99,7 +98,7 @@ func (e *podEnv) loadNets() ([]activeNet, error) {
 	for _, n := range nets {
 		n.runtime.Args = e.netsLoadList.SpecificArgs(n.conf.Name)
 	}
-	return nets, nil
+	return netSlice, nil
 }
 
 // podNSCreate creates the network namespace and saves a reference to its path.
@@ -266,7 +265,6 @@ func (e *podEnv) setupNets(nets []activeNet, noDNS bool) error {
 }
 
 func (e *podEnv) teardownNets(nets []activeNet) {
-
 	for i := len(nets) - 1; i >= 0; i-- {
 		if debuglog {
 			stderr.Printf("teardown - executing net-plugin %v", nets[i].conf.Type)
@@ -290,6 +288,97 @@ func (e *podEnv) teardownNets(nets []activeNet) {
 	}
 }
 
+// netLoader loads network definitions hierarchically. Child loaders can override definitions from parents.
+type netLoader struct {
+	parent     *netLoader
+	configPath string
+}
+
+// Build a Loader that looks first for custom (user provided) plugins, then builtin.
+func (e *podEnv) newNetLoader() *netLoader {
+	return &netLoader{
+		parent: &netLoader{
+			configPath: path.Join(common.Stage1RootfsPath(e.podRoot), BuiltinNetPath),
+		},
+		configPath: filepath.Join(e.localConfig, UserNetPathSuffix),
+	}
+}
+
+func (l *netLoader) loadNets(netsLoadList common.NetList) (map[string]activeNet, error) {
+	var parentNets map[string]activeNet
+	if l.parent != nil {
+		var err error
+		if parentNets, err = l.parent.loadNets(netsLoadList); err != nil {
+			return nil, err
+		}
+	} else {
+		parentNets = make(map[string]activeNet)
+	}
+
+	if debuglog {
+		stderr.Printf("loading networks from %v", l.configPath)
+	}
+
+	files, err := listFiles(l.configPath)
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(files)
+	nets := make(map[string]activeNet, len(files))
+
+	for _, filename := range files {
+		filepath := filepath.Join(l.configPath, filename)
+
+		if !strings.HasSuffix(filepath, ".conf") {
+			continue
+		}
+
+		n, err := loadNet(filepath)
+		if err != nil {
+			return nil, err
+		}
+
+		if !(netsLoadList.All() || netsLoadList.Specific(n.conf.Name)) {
+			continue
+		}
+
+		if _, ok := nets[n.conf.Name]; ok {
+			stderr.Printf("%q network already defined, ignoring %v", n.conf.Name, filename)
+			continue
+		}
+
+		nets[n.conf.Name] = *n
+	}
+
+	// merge with parent
+	for name, net := range nets {
+		if _, exists := parentNets[name]; exists {
+			stderr.Printf(`overriding %q network with one from %v`, name, l.configPath)
+		}
+		parentNets[name] = net
+	}
+	return parentNets, nil
+}
+
+func missingNets(defined common.NetList, loaded []activeNet) []string {
+	diff := make(map[string]struct{})
+	for _, n := range defined.StringsOnlyNames() {
+		if n != "all" {
+			diff[n] = struct{}{}
+		}
+	}
+
+	for _, an := range loaded {
+		delete(diff, an.conf.Name)
+	}
+
+	var missing []string
+	for n := range diff {
+		missing = append(missing, n)
+	}
+	return missing
+}
+
 func listFiles(dir string) ([]string, error) {
 	dirents, err := ioutil.ReadDir(dir)
 	switch {
@@ -310,15 +399,6 @@ func listFiles(dir string) ([]string, error) {
 	}
 
 	return files, nil
-}
-
-func netExists(nets []activeNet, name string) bool {
-	for _, n := range nets {
-		if n.conf.Name == name {
-			return true
-		}
-	}
-	return false
 }
 
 func loadNet(filepath string) (*activeNet, error) {
@@ -359,76 +439,4 @@ func copyFileToDir(src, dstdir string) (string, error) {
 
 	_, err = io.Copy(d, s)
 	return dst, err
-}
-
-// loadUserNets will load all network configuration files from the user-supplied
-// configuration directory (typically /etc/rkt/net.d). Do not do any mutation here -
-// we also load networks in a few other code paths.
-func loadUserNets(localConfig string, netsLoadList common.NetList) ([]activeNet, error) {
-	if netsLoadList.None() {
-		stderr.Printf("networking namespace with loopback only")
-		return nil, nil
-	}
-
-	userNetPath := filepath.Join(localConfig, UserNetPathSuffix)
-	if debuglog {
-		stderr.Printf("loading networks from %v", userNetPath)
-	}
-
-	files, err := listFiles(userNetPath)
-	if err != nil {
-		return nil, err
-	}
-	sort.Strings(files)
-	nets := make([]activeNet, 0, len(files))
-
-	for _, filename := range files {
-		filepath := filepath.Join(userNetPath, filename)
-
-		if !strings.HasSuffix(filepath, ".conf") {
-			continue
-		}
-
-		n, err := loadNet(filepath)
-		if err != nil {
-			return nil, err
-		}
-
-		if !(netsLoadList.All() || netsLoadList.Specific(n.conf.Name)) {
-			continue
-		}
-
-		if n.conf.Name == "default" ||
-			n.conf.Name == "default-restricted" {
-			stderr.Printf(`overriding %q network with %v`, n.conf.Name, filename)
-		}
-
-		if netExists(nets, n.conf.Name) {
-			stderr.Printf("%q network already defined, ignoring %v", n.conf.Name, filename)
-			continue
-		}
-
-		nets = append(nets, *n)
-	}
-
-	return nets, nil
-}
-
-func missingNets(defined common.NetList, loaded []activeNet) []string {
-	diff := make(map[string]struct{})
-	for _, n := range defined.StringsOnlyNames() {
-		if n != "all" {
-			diff[n] = struct{}{}
-		}
-	}
-
-	for _, an := range loaded {
-		delete(diff, an.conf.Name)
-	}
-
-	var missing []string
-	for n := range diff {
-		missing = append(missing, n)
-	}
-	return missing
 }
