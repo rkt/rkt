@@ -1,5 +1,7 @@
 $(call setup-stamp-file,TST_SHORT_TESTS_STAMP,/short-tests)
 
+GO_RACE := $(if $(call equal,$(GOARCH),amd64),--race,)
+
 # gofmt takes list of directories
 # go vet and go test take a list of packages
 $(call forward-vars,$(TST_SHORT_TESTS_STAMP), \
@@ -26,7 +28,7 @@ $(TST_SHORT_TESTS_STAMP):
 	); \
 	if [ -n "$${res}" ]; then echo -e "license header checking failed:\n$${res}"; exit 1; fi; \
 	$(call vb,vt,GO TEST,$(TST_GO_TEST_PACKAGES)) \
-	$(GO_ENV) "$(GO)" test -timeout 60s -cover $(RKT_TAGS) $(TST_GO_TEST_PACKAGES) --race
+	$(GO_ENV) "$(GO)" test -timeout 60s -cover $(RKT_TAGS) $(TST_GO_TEST_PACKAGES) $(GO_RACE)
 
 TOPLEVEL_CHECK_STAMPS += $(TST_SHORT_TESTS_STAMP)
 TOPLEVEL_UNIT_CHECK_STAMPS += $(TST_SHORT_TESTS_STAMP)
