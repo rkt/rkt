@@ -48,7 +48,9 @@ install -Dm755 $builddir/target/bin/rkt $prefix/usr/bin/rkt
 
 ## install stage1s
 for flavor in fly coreos kvm; do
-    install -Dm644 $builddir/target/bin/stage1-${flavor}.aci $prefix/usr/lib/rkt/stage1-images/stage1-${flavor}.aci
+    stage1_aci="$builddir/target/bin/stage1-${flavor}.aci"
+    [[ -f "$stage1_aci" ]] || continue # skip nonexistent
+    install -Dm644 $stage1_aci $prefix/usr/lib/rkt/stage1-images/stage1-${flavor}.aci
 done
 
 ## manpages & doc
