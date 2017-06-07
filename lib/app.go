@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
 	"github.com/rkt/rkt/api/v1"
 	"github.com/rkt/rkt/common"
 	pkgPod "github.com/rkt/rkt/pkg/pod"
@@ -78,12 +79,32 @@ func newApp(ra *schema.RuntimeApp, podManifest *schema.PodManifest, pod *pkgPod.
 		UserLabels:      ra.App.UserLabels,
 	}
 
+	podVols := podManifest.Volumes
+	podVolsByName := make(map[types.ACName]types.Volume, len(podVols))
+	for i := range podManifest.Volumes {
+		podVolsByName[podVols[i].Name] = podVols[i]
+	}
+
 	for _, mnt := range ra.Mounts {
+		readOnly := false
+		var hostPath string
+		// AppVolume is optional
+		if av := mnt.AppVolume; av != nil {
+			hostPath = av.Source
+			if ro := av.ReadOnly; ro != nil {
+				readOnly = *ro
+			}
+		} else {
+			hostPath = podVolsByName[mnt.Volume].Source
+			if ro := podVolsByName[mnt.Volume].ReadOnly; ro != nil {
+				readOnly = *ro
+			}
+		}
 		app.Mounts = append(app.Mounts, &v1.Mount{
 			Name:          mnt.Volume.String(),
 			ContainerPath: mnt.Path,
-			HostPath:      mnt.AppVolume.Source,
-			ReadOnly:      *mnt.AppVolume.ReadOnly,
+			HostPath:      hostPath,
+			ReadOnly:      readOnly,
 		})
 	}
 
