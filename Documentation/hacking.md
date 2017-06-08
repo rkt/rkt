@@ -40,7 +40,7 @@ Replace `$SRC` with the absolute path to your rkt source code:
 
 ### Building systemd in stage1 from source
 
-By default, rkt gets systemd from a CoreOS image to generate stage1.
+By default, rkt gets systemd from a CoreOS Container Linux image to generate stage1.
 It's also possible to build systemd from source.
 To do this, use the following `configure` parameters after running `./autogen.sh`:
 
@@ -59,7 +59,7 @@ Example:
 
 ### Building stage1 with kvm as execution engine
 
-The stage1 kvm image is based on CoreOS, but with additional components for running containers on top of a hypervisor.
+The stage1 kvm image is based on Container Linux, but with additional components for running containers on top of a hypervisor.
 
 To build this stage1 image, pass `kvm` to `--with-stage1-flavors` parameter in `./configure`
 

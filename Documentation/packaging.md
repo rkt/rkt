@@ -8,7 +8,7 @@ Please see [the list of build-time dependencies][build-deps].
 
 ### Offline builds
 
-By default, the rkt build will download a CoreOS PXE image from the internet and extract some binaries, such as `systemd-nspawn` and `bash`. However, some packaging environments don't allow internet access during the build. To work around this, download the CoreOS PXE image before starting the build process, and use the `--with-coreos-local-pxe-image-path` and `--with-coreos-local-pxe-image-systemd-version` parameters. For more details, see the [configure script parameters documentation][build-config].
+By default, the rkt build will download a CoreOS Container Linux PXE image from the internet and extract some binaries, such as `systemd-nspawn` and `bash`. However, some packaging environments don't allow internet access during the build. To work around this, download the Container Linux PXE image before starting the build process, and use the `--with-coreos-local-pxe-image-path` and `--with-coreos-local-pxe-image-systemd-version` parameters. For more details, see the [configure script parameters documentation][build-config].
 
 ### Bundling with systemd
 

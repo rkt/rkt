@@ -7,7 +7,7 @@ The process is quite manual because it's not done often, but improvements are we
 
 ## Extract the root filesystem of the image
 
-Let's assume you want to update from version 991.0.0 to version 1032.0.0.
+Let's assume you want to update CoreOS Container Linux from version 991.0.0 to version 1032.0.0.
 
 First, you need to download and verify the image.
 Make sure you trust the [CoreOS Image Signing Key][coreos-key].
@@ -64,7 +64,7 @@ You should have now the rootfs of the image in the `squashfs-root` directory.
 
 ## Update the manifest files
 
-Back to the rkt repo, in the directory `stage1/usr_from_coreos/manifest.d`, there are some manifest files that define which files are copied from the CoreOS image to the stage1 image.
+Back to the rkt repo, in the directory `stage1/usr_from_coreos/manifest.d`, there are some manifest files that define which files are copied from the Container Linux image to the stage1 image.
 
 You need to go through all of them and check that the files listed correspond to files that are in the actual rootfs of the image (which we extracted in the previous step). Do this from your root directory:
 
@@ -78,11 +78,11 @@ done
 ```
 
 Usually, there are some updated libraries which need an update on their version numbers.
-In our case, there are no updates and all the files mentioned in the manifest are present in the updated CoreOS image.
+In our case, there are no updates and all the files mentioned in the manifest are present in the updated Container Linux image.
 
 ## Update the coreos flavor version used by the build system
 
-In the file `stage1/usr_from_coreos/coreos-common.mk`, we define which CoreOS image version we use for the coreos flavor.
+In the file `stage1/usr_from_coreos/coreos-common.mk`, we define which Container Linux image version we use for the coreos flavor.
 Update `CCN_IMG_RELEASE` to 1032.0.0 and `CCN_SYSTEMD_VERSION` to the systemd version shipped with the image (in our case, v229).
 
 ```diff

@@ -1,6 +1,6 @@
-# Installing a different version of rkt in CoreOS
+# Installing a different version of rkt in CoreOS Container Linux
 
-If a different version of rkt is required than what ships with CoreOS, a
+If a different version of rkt is required than what ships with CoreOS Container Linux, a
 oneshot systemd unit can be used to download and install an alternate version
 on boot.
 
