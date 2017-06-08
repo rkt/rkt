@@ -35,9 +35,9 @@ However, this is [not yet ready for production use][rkt-1305] due to pending sys
 ## Container Linux
 
 rkt is an integral part of Container Linux, installed with the operating system.
-The [CoreOS releases page][coreos-releases] lists the version of rkt available in each CoreOS release channel.
+The [Container Linux releases page][cl-releases] lists the version of rkt available in each Container Linux release channel.
 
-If the version of rkt included in Container Linux is too old, it's fairly trivial to fetch the desired version [via a systemd unit][coreos-install-rkt].
+If the version of rkt included in Container Linux is too old, it's fairly trivial to fetch the desired version [via a systemd unit][cl-install-rkt].
 
 ## Debian
 
@@ -156,8 +156,8 @@ gpg --verify rkt_1.26.0-1_amd64.deb.asc
 sudo dpkg -i rkt_1.26.0-1_amd64.deb
 ```
 
-[coreos-install-rkt]: install-rkt-in-coreos.md
-[coreos-releases]: https://coreos.com/releases/
+[cl-install-rkt]: install-rkt-in-coreos.md
+[cl-releases]: https://coreos.com/releases/
 [debian-823322]: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=823322
 [firewalld]: https://fedoraproject.org/wiki/FirewallD
 [networking-overview-additional]: networking/overview.md#setting-up-additional-networks

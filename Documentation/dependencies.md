@@ -47,7 +47,7 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
 * sort
 * unsquashfs
 * wget
-* gpg (optional, required when downloading the CoreOS PXE image during the build)
+* gpg (optional, required when downloading the CoreOS Container Linux PXE image during the build)
 
 ### Specific dependencies for the kvm flavor
 

@@ -14,8 +14,8 @@ Depending on a default stage1 image setup, this list is by default either empty 
 Note that specifying this parameter does not necessarily mean that rkt will use them in the end.
 Available flavors are:
 
-- `coreos` - it takes systemd and bash from a CoreOS PXE image; uses systemd-nspawn
-- `kvm` - it takes systemd, bash and other binaries from a CoreOS PXE image; uses lkvm or qemu
+- `coreos` - it takes systemd and bash from a CoreOS Container Linux PXE image; uses systemd-nspawn
+- `kvm` - it takes systemd, bash and other binaries from a Container Linux PXE image; uses lkvm or qemu
 - `src` - it builds systemd, takes bash from the host at build time; uses built systemd-nspawn
 - `host` - it takes systemd and bash from host at runtime; uses systemd-nspawn from the host
 - `fly` - chroot-only approach for single-application minimal isolation containers; native Go implementation
@@ -115,11 +115,11 @@ The default is `master`.
 
 ### `coreos` and `kvm` flavor
 
-`coreos` and `kvm` flavors provide parameters related to CoreOS PXE image.
+`coreos` and `kvm` flavors provide parameters related to CoreOS Container Linux PXE image.
 
 #### `--with-coreos-local-pxe-image-path`
 
-This parameter is used to point the build system to a local CoreOS PXE image.
+This parameter is used to point the build system to a local Container Linux PXE image.
 This can be helpful for some packagers, where downloading anything over the network is a no-no.
 The parameter takes either relative or absolute paths.
 The default value is empty, so the image will be downloaded over the network.
@@ -127,7 +127,7 @@ If this parameter is specified, then also `--with-coreos-local-pxe-image-systemd
 
 #### `--with-coreos-local-pxe-image-systemd-version`
 
-The build system has no reliable way to deduce automatically what version of systemd the CoreOS PXE image contains, so it needs some help.
+The build system has no reliable way to deduce automatically what version of systemd the Container Linux PXE image contains, so it needs some help.
 This parameters tells the build systemd what is the version of systemd in the local PXE image.
 The value should be like tag name in systemd git repository, that is - `v<number>`, like `v229`.
 If this parameter is specified, then also `--with-coreos-local-pxe-image-path` must be specified too.
