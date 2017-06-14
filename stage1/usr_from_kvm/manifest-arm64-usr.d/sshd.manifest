@@ -17,6 +17,5 @@ lib64/libutil-2.21.so
 lib64/libutil.so.1
 lib64/libz.so.1
 lib64/libz.so.1.2.8
-libcrypt-2.21.so
 lib/ld-linux-aarch64.so.1
 sbin/sshd
