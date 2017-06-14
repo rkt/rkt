@@ -279,7 +279,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 		// kernel and hypervisor binaries are located relative to the working directory
 		// of init (/var/lib/rkt/..../uuid)
 		// TODO: move to path.go
-		kernelPath := filepath.Join(common.Stage1RootfsPath(p.Root), "bzImage")
+		kernelPath := filepath.Join(common.Stage1RootfsPath(p.Root), "kernel_image")
 		netDescriptions := kvm.GetNetworkDescriptions(n)
 
 		cpu, mem := kvm.GetAppsResources(p.Manifest.Apps)
