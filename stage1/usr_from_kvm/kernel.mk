@@ -9,12 +9,13 @@ KERNEL_BUILDDIR := $(abspath $(KERNEL_TMPDIR)/build-$(KERNEL_VERSION))
 KERNEL_URL := https://www.kernel.org/pub/linux/kernel/v4.x/$(KERNEL_TARBALL)
 KERNEL_MAKEFILE := $(KERNEL_SRCDIR)/Makefile
 KERNEL_STUFFDIR := $(MK_SRCDIR)/kernel
-KERNEL_SRC_CONFIG := $(KERNEL_STUFFDIR)/cutdown-config
+KERNEL_SRC_CONFIG := $(KERNEL_STUFFDIR)/cutdown-config-$(GOARCH)
 KERNEL_PATCHESDIR := $(KERNEL_STUFFDIR)/patches
 KERNEL_PATCHES := $(abspath $(KERNEL_PATCHESDIR)/*.patch)
 KERNEL_BUILD_CONFIG := $(KERNEL_BUILDDIR)/.config
 
-KERNEL_IMAGE := $(KERNEL_BUILDDIR)/arch/x86/boot/bzImage
+KERNEL_IMAGE_amd64 := $(KERNEL_BUILDDIR)/arch/x86/boot/bzImage
+KERNEL_IMAGE := $(KERNEL_IMAGE_$(GOARCH))
 KERNEL_ACI_IMAGE := $(S1_RF_ACIROOTFSDIR)/kernel_image
 
 $(call setup-stamp-file,KERNEL_STAMP,/build_kernel)
