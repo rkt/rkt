@@ -1,2 +1,7 @@
-rm -rf /var/lib/rkt
+if test `stat -c%d "/var/lib/rkt"` == `stat -c%d "/var/lib"`; then
+    rm -rf /var/lib/rkt
+else
+    # is a mountpoint, so just delete contents
+    rm -rf /var/lib/rkt/*
+fi
 systemctl daemon-reload || true
