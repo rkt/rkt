@@ -139,25 +139,26 @@ Additionaly, logs can be programmatically accessed via the [sd-journal API][sd-j
 
 Currently there are two known main issues with logging in rkt:
 * In some rare situations when an application inside the pod is writing to `/dev/stdout` and `/dev/stderr` (i.e. nginx) there is no way to obtain logs.
- The app should be modified so it will write to `stdout` or `syslog`. In the case of nginx:
- ```
- error_log stderr;
- 
- http {
-     access_log syslog:server=unix:/dev/log main;
-     [...]
- }
- ```
- should be added to ```/etc/nginx/nginx.conf```
+ The app should be modified so it will write to `stdout` or `syslog`. In the case of nginx the following snippet should be added to ```/etc/nginx/nginx.conf```:
+
+```
+error_log stderr;
+
+http {
+    access_log syslog:server=unix:/dev/log main;
+    [...]
+}
+```
 
 * Some applications, like etcd 3.0, write directly to journald. Such log entries will not be written to stdout or stderr.
  These logs can be retrieved by passing the machine ID to journalctl:
 
- ```
- $ journalctl -M rkt-bc3c1451-2e81-45c6-aeb0-807db44e31b4
- ```
 
- For the specific etcd case, since release 3.1.0-rc.1 it is possible to force emitting logs to stdout via a `--log-output=stdout` command-line option.
+```
+$ journalctl -M rkt-bc3c1451-2e81-45c6-aeb0-807db44e31b4
+```
+
+For the specific etcd case, since release 3.1.0-rc.1 it is possible to force emitting logs to stdout via a `--log-output=stdout` command-line option.
 
 ##### Stopped pod
 
