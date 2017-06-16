@@ -203,38 +203,24 @@ func printStatus(p *pkgPod.Pod) error {
 		stdout.Printf("networks=%s", fmtNets(p.Nets))
 	}
 
-	if state == pkgPod.Running || state == pkgPod.Deleting || state == pkgPod.ExitedDeleting || state == pkgPod.Exited || state == pkgPod.ExitedGarbage {
-		var pid int
-		pidCh := make(chan int, 1)
+	if !(state == pkgPod.Running || state == pkgPod.Deleting || state == pkgPod.ExitedDeleting || state == pkgPod.Exited || state == pkgPod.ExitedGarbage) {
+		return nil
+	}
 
-		// Wait slightly because the pid file might not be written yet when the state changes to 'Running'.
-		go func() {
-			for {
-				pid, err := p.Pid()
-				if err == nil {
-					pidCh <- pid
-					return
-				}
-				time.Sleep(time.Millisecond * 100)
-			}
-		}()
+	if pid, err := p.Pid(); err == nil {
+		// the pid file might not be written yet when the state changes to 'Running'
+		// it may also never be written if systemd never executes (e.g.: a bad command)
+		stdout.Printf("pid=%d", pid)
+	}
+	stdout.Printf("exited=%t", (state == pkgPod.Exited || state == pkgPod.ExitedGarbage))
 
-		select {
-		case pid = <-pidCh:
-		case <-time.After(time.Second):
-			return fmt.Errorf("unable to get PID for pod %q: %v", p.UUID, err)
+	if state != pkgPod.Running {
+		stats, err := getExitStatuses(p)
+		if err != nil {
+			return fmt.Errorf("unable to get exit statuses for pod %q: %v", p.UUID, err)
 		}
-
-		stdout.Printf("pid=%d\nexited=%t", pid, (state == pkgPod.Exited || state == pkgPod.ExitedGarbage))
-
-		if state != pkgPod.Running {
-			stats, err := getExitStatuses(p)
-			if err != nil {
-				return fmt.Errorf("unable to get exit statuses for pod %q: %v", p.UUID, err)
-			}
-			for app, stat := range stats {
-				stdout.Printf("app-%s=%d", app, stat)
-			}
+		for app, stat := range stats {
+			stdout.Printf("app-%s=%d", app, stat)
 		}
 	}
 	return nil

@@ -14,6 +14,10 @@ app-redis=0
 app-etcd=0
 ```
 
+Note that `pid` may not be available shortly after `rkt run`, or `rkt run-prepared`, even when `state=running`.
+
+The `--wait` flags below can be used to wait for a Pod to be running with its pid captured.
+
 If the pod is still running, you can wait for it to finish and then get the status with `rkt status --wait UUID`.
 To wait for the pod to become ready, execute `rkt status --wait-ready`.
 Both options also accept a duration. To wait up to 10 seconds until the pod is finished, execute `rkt status --wait=10s UUID`.
