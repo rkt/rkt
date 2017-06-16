@@ -23,8 +23,11 @@ import (
 	"syscall"
 
 	"github.com/appc/spec/schema"
+	"github.com/appc/spec/schema/types"
+	"github.com/rkt/rkt/common"
 	rktlog "github.com/rkt/rkt/pkg/log"
 	stage1commontypes "github.com/rkt/rkt/stage1/common/types"
+	stage1initcommon "github.com/rkt/rkt/stage1/init/common"
 	"github.com/rkt/rkt/stage1_fly"
 )
 
@@ -40,7 +43,7 @@ var (
 func init() {
 	flag.BoolVar(&debug, "debug", false, "Run in debug mode")
 	flag.StringVar(&podPid, "pid", "", "Pod PID")
-	flag.StringVar(&appName, "appname", "", "Application (Ignored in rkt fly)")
+	flag.StringVar(&appName, "appname", "", "Application name")
 
 	log, diag, _ = rktlog.NewLogSet("fly-enter", false)
 }
@@ -59,10 +62,9 @@ func getRuntimeApp(pm *schema.PodManifest) (*schema.RuntimeApp, error) {
 	return &pm.Apps[0], nil
 }
 
-func execArgs() error {
+func execArgs(envv []string) error {
 	argv0 := flag.Arg(0)
 	argv := flag.Args()
-	envv := []string{}
 
 	return syscall.Exec(argv0, argv, envv)
 }
@@ -107,6 +109,16 @@ func main() {
 		log.FatalE("failed to lookup process credentials", err)
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.FatalE("Failed to get cwd", err)
+	}
+
+	env, err := common.ReadEnvFileRaw(stage1initcommon.EnvFilePath(cwd, types.ACName(appName)))
+	if err != nil {
+		log.FatalE("Failed to read app env", err)
+	}
+
 	if err := os.Chdir(root); err != nil {
 		log.FatalE("Failed to change to new root", err)
 	}
@@ -124,7 +136,7 @@ func main() {
 	diag.Println("APP:", appName)
 	diag.Println("ARGS:", flag.Args())
 
-	if err := execArgs(); err != nil {
+	if err := execArgs(env); err != nil {
 		log.PrintE("exec failed", err)
 	}
 

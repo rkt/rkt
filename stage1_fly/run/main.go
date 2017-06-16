@@ -36,6 +36,7 @@ import (
 	rktlog "github.com/rkt/rkt/pkg/log"
 	"github.com/rkt/rkt/pkg/mountinfo"
 	"github.com/rkt/rkt/pkg/sys"
+	"github.com/rkt/rkt/pkg/user"
 	stage1common "github.com/rkt/rkt/stage1/common"
 	stage1commontypes "github.com/rkt/rkt/stage1/common/types"
 	stage1initcommon "github.com/rkt/rkt/stage1/init/common"
@@ -287,11 +288,6 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 		workDir = ra.App.WorkingDirectory
 	}
 
-	env := []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
-	for _, e := range ra.App.Environment {
-		env = append(env, e.Name+"="+e.Value)
-	}
-
 	rfs := filepath.Join(common.AppPath(p.Root, ra.Name), "rootfs")
 
 	argFlyMounts, err := evaluateMounts(rfs, string(ra.Name), p)
@@ -455,6 +451,12 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 	credentials, err := stage1_fly.LookupProcessCredentials(p, &ra, rfs)
 	if err != nil {
 		log.PrintE("failed to lookup process credentials", err)
+		return 254
+	}
+
+	env := common.ComposeEnviron(ra.App.Environment)
+	if err = common.WriteEnvFile(env, user.NewBlankUidRange(), stage1initcommon.EnvFilePath(p.Root, ra.Name)); err != nil {
+		log.PrintE("can't write env", err)
 		return 254
 	}
 
