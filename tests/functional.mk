@@ -183,7 +183,6 @@ include makelib/build_go_bin.mk
 # 4 - manifest.json.in
 define FTST_GENERATE_ACE_IMAGE
 
-$$(call forward-vars,$2/manifest,ABS_GO)
 $2/manifest: $4 | $2
 	$$(VQ) \
 	$$(call vb,v2,GEN,$$(call vsp,$$@)) \
