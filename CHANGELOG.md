@@ -1,3 +1,24 @@
+## 1.27.0
+
+This minor release contains bugfixes and other improvements related to the tests and the documentation.
+
+## New Features
+- stage1/kvm: add arm64 build ([#3690](https://github.com/rkt/rkt/pull/3690)).
+
+## Bugfixes
+- stage0: list|status --format=json panics: RuntimeApp.Mounts.AppVolume is optional ([#3699](https://github.com/rkt/rkt/pull/3699)). When it is nil, the Volume info at the Pod level (with the same name) should be used. Without this patch `rkt list --format=json` panics on a nil pointer when Apps reference Volumes from the Pod level.
+- imagestore: Fix sql resource leaks ([#3682](https://github.com/rkt/rkt/pull/3682)). When using sql queries the rows iterator needs to be closed if the entire query  result is not iterated over. Failure to close the iterator results in resource leakage.
+
+## Other changes
+- networking: change the default-restricted subnet ([#3718](https://github.com/rkt/rkt/pull/3718)). Previously, we were using 172.17/16, which conflicts with the default
+Docker networking. Change it to 172.31/16.
+- scripts/pkg: improved detection of active mounts ([#3710](https://github.com/rkt/rkt/pull/3710)). On systems which have /var/lib/rkt as a separate partition, the active mount detection in before-remove needs to not get confused by the presence of /var/lib/rkt itself as a mount.  Therefore a longer path is used for active mount detection.
+- stage1/usr_from_coreos: add new image signing sub-key EF4B4ED9 ([#3686](https://github.com/rkt/rkt/pull/3686)). See coreos/init#236.
+- scripts: skip nonexistent stage1 images when packaging ([#3687](https://github.com/rkt/rkt/pull/3687)). Not all builds will generate all stage1 images. It depends on what `./configure` flags (`--with-stage1-flavors`) were used.
+- tests: Only run race test on supported arch ([#3684](https://github.com/rkt/rkt/pull/3684)). Fixes build errors like these when run on non amd64 machines:
+- functional test: Fix manifest arch error ([#3681](https://github.com/rkt/rkt/pull/3681)). The manifest contains values for the ACI arch and OS, not the go language values.
+- Documentation updates: [#3680](https://github.com/rkt/rkt/pull/3680), [#3679](https://github.com/rkt/rkt/pull/3679), [#3700](https://github.com/rkt/rkt/pull/3700), [#3709](https://github.com/rkt/rkt/pull/3709)
+
 ## 1.26.0
 
 This minor release contains bugfixes and other improvements. It also adds better support for the arm architecture to rkt, so that you can now fetch images via autodiscovery and have the correct seccomp whitelist to run them. Also notable is the new possibilty to pass extra kernel parameters to kvm, and last but not least a significant prepare/run speedup in stage0. This also introduces stricter validation on volume names, now rejecting duplicate ones.
