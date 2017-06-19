@@ -1125,7 +1125,7 @@ func NewNetOverrideTest() testutils.Test {
 
 		expectedIP := "11.11.4.244"
 
-		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=all --net=\"%s:IP=%s\" --mds-register=false %s", ctx.Cmd(), nt.Name, expectedIP, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=\"%s:IP=%s\" --mds-register=false %s", ctx.Cmd(), nt.Name, expectedIP, testImage)
 		child := spawnOrFail(t, cmd)
 		defer waitOrFail(t, child, 0)
 
