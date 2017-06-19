@@ -428,7 +428,7 @@ func PathSupportsOverlay(path string) error {
 
 	dir, err := os.OpenFile(path, syscall.O_RDONLY|syscall.O_DIRECTORY, 0755)
 	if err != nil {
-		return errwrap.Wrap(fmt.Errorf("cannot open %q", dir), err)
+		return errwrap.Wrap(fmt.Errorf("cannot open %q", path), err)
 	}
 	defer dir.Close()
 
@@ -437,7 +437,7 @@ func PathSupportsOverlay(path string) error {
 	// passing the buffer size.
 	n, err := syscall.ReadDirent(int(dir.Fd()), buf)
 	if err != nil {
-		return errwrap.Wrap(fmt.Errorf("cannot read directory %q", dir), err)
+		return errwrap.Wrap(fmt.Errorf("cannot read directory %q", path), err)
 	}
 
 	offset := 0

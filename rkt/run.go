@@ -553,10 +553,10 @@ func (e *envFileMap) Set(s string) error {
 		pair := strings.SplitN(line, "=", 2)
 		// Malformed lines
 		if len(pair) != 2 || len(pair[0]) == 0 {
-			return fmt.Errorf("environment variable must be specified as name=value (file %q)", file)
+			return fmt.Errorf("environment variable must be specified as name=value (file %q)", s)
 		}
 		if _, exists := e.mapping[pair[0]]; exists {
-			return fmt.Errorf("environment variable %q already set (file %q)", pair[0], file)
+			return fmt.Errorf("environment variable %q already set (file %q)", pair[0], s)
 		}
 		e.mapping[pair[0]] = pair[1]
 	}
