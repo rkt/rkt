@@ -7,7 +7,7 @@
 
 ![rkt Logo](logos/rkt-horizontal-color.png)
 
-rkt (pronounced _"rock-it"_) is a CLI for running application containers on Linux. rkt is designed to be secure, composable, and standards-based.
+rkt (pronounced like a _"rocket"_) is a CLI for running application containers on Linux. rkt is designed to be secure, composable, and standards-based.
 
 Some of rkt's key features and goals include:
 
