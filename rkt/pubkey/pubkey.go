@@ -163,25 +163,21 @@ func (m *Manager) metaDiscoverPubKeyLocations(prefix string) ([]string, error) {
 
 	hostHeaders := config.ResolveAuthPerHost(m.AuthPerHost)
 	insecure := discovery.InsecureNone
-
 	if m.InsecureAllowHTTP {
 		insecure = insecure | discovery.InsecureHTTP
 	}
 	if m.InsecureSkipTLSCheck {
 		insecure = insecure | discovery.InsecureTLS
 	}
-	keys, attempts, err := discovery.DiscoverPublicKeys(*app, hostHeaders, insecure, 0)
-	if err != nil {
-		return nil, err
-	}
 
-	if m.Debug {
+	keys, attempts, err := discovery.DiscoverPublicKeys(*app, hostHeaders, insecure, 0)
+	if err != nil && m.Debug {
 		for _, a := range attempts {
 			log.PrintE(fmt.Sprintf("meta tag 'ac-discovery-pubkeys' not found on %s", a.Prefix), a.Error)
 		}
 	}
 
-	return keys, nil
+	return keys, err
 }
 
 // getPubKey retrieves a public key (if remote), and verifies it's a gpg key
