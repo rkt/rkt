@@ -15,21 +15,17 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"syscall"
 
 	"github.com/appc/spec/schema"
-	"github.com/hashicorp/errwrap"
 	rktlog "github.com/rkt/rkt/pkg/log"
+	stage1commontypes "github.com/rkt/rkt/stage1/common/types"
 	"github.com/rkt/rkt/stage1_fly"
-)
-
-const (
-	flavor = "fly"
 )
 
 var (
@@ -55,28 +51,9 @@ func getRootDir(pid string) (string, error) {
 	return os.Readlink(rootLink)
 }
 
-func getPodManifest() (*schema.PodManifest, error) {
-	f, err := os.Open("pod")
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	pmb, err := ioutil.ReadAll(f)
-
-	if err != nil {
-		return nil, errwrap.Wrap(errors.New("error reading pod manifest"), err)
-	}
-	pm := &schema.PodManifest{}
-	if err = pm.UnmarshalJSON(pmb); err != nil {
-		return nil, errwrap.Wrap(errors.New("invalid pod manifest"), err)
-	}
-	return pm, nil
-}
-
 func getRuntimeApp(pm *schema.PodManifest) (*schema.RuntimeApp, error) {
 	if len(pm.Apps) != 1 {
-		return nil, fmt.Errorf("flavor %q only supports 1 application per Pod for now", flavor)
+		return nil, fmt.Errorf("fly only supports 1 application per Pod for now")
 	}
 
 	return &pm.Apps[0], nil
@@ -100,14 +77,20 @@ func main() {
 		diag.SetOutput(ioutil.Discard)
 	}
 
+	// lock the current goroutine to its current OS thread.
+	// This will force the subsequent syscalls *made by this goroutine only*
+	// to be executed in the same OS thread as Setresuid, and Setresgid,
+	// see https://github.com/golang/go/issues/1435#issuecomment-66054163.
+	runtime.LockOSThread()
+
 	root, err := getRootDir(podPid)
 	if err != nil {
 		log.FatalE("Failed to get pod root", err)
 	}
 
-	pm, err := getPodManifest()
+	pm, err := stage1commontypes.LoadPodManifest(".")
 	if err != nil {
-		log.FatalE("Failed to get pod manifest", err)
+		log.FatalE("Failed to load pod manifest", err)
 	}
 
 	ra, err := getRuntimeApp(pm)

@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -39,10 +40,6 @@ import (
 	stage1commontypes "github.com/rkt/rkt/stage1/common/types"
 	stage1initcommon "github.com/rkt/rkt/stage1/init/common"
 	"github.com/rkt/rkt/stage1_fly"
-)
-
-const (
-	flavor = "fly"
 )
 
 type flyMount struct {
@@ -266,7 +263,7 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 
 	// Sanity checks
 	if len(p.Manifest.Apps) != 1 {
-		log.Printf("flavor %q only supports 1 application per Pod for now", flavor)
+		log.Printf("fly only supports 1 application per Pod for now")
 		return 254
 	}
 
@@ -526,6 +523,12 @@ func main() {
 	if !debug {
 		diag.SetOutput(ioutil.Discard)
 	}
+
+	// lock the current goroutine to its current OS thread.
+	// This will force the subsequent syscalls *made by this goroutine only*
+	// to be executed in the same OS thread as Setresuid, and Setresgid,
+	// see https://github.com/golang/go/issues/1435#issuecomment-66054163.
+	runtime.LockOSThread()
 
 	// move code into stage1() helper so defered fns get run
 	os.Exit(stage1(rp))

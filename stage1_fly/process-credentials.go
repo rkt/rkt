@@ -15,14 +15,12 @@
 package stage1_fly
 
 import (
-	"fmt"
-	"runtime"
 	"syscall"
 
 	"github.com/appc/spec/schema"
-	"github.com/hashicorp/errwrap"
 	rktlog "github.com/rkt/rkt/pkg/log"
-	"github.com/rkt/rkt/pkg/user"
+	stage1commontypes "github.com/rkt/rkt/stage1/common/types"
+	stage1initcommon "github.com/rkt/rkt/stage1/init/common"
 )
 
 type ProcessCredentials struct {
@@ -31,33 +29,17 @@ type ProcessCredentials struct {
 	supplementaryGIDs []int
 }
 
-func LookupProcessCredentials(ra *schema.RuntimeApp, rfs string) (*ProcessCredentials, error) {
+func LookupProcessCredentials(ra *schema.RuntimeApp, root string) (*ProcessCredentials, error) {
 	var c ProcessCredentials
+	var err error
 
-	uidResolver, err := user.NumericIDs(ra.App.User)
+	// mock up a pod so we can call ParseUserGroup
+	pod := &stage1commontypes.Pod{
+		Root: root,
+	}
+	c.uid, c.gid, err = stage1initcommon.ParseUserGroup(pod, ra)
 	if err != nil {
-		uidResolver, err = user.IDsFromStat(rfs, ra.App.User, nil)
-	}
-
-	if err != nil { // give up
-		return nil, errwrap.Wrap(fmt.Errorf("invalid user %q", ra.App.User), err)
-	}
-
-	if c.uid, _, err = uidResolver.IDs(); err != nil {
-		return nil, errwrap.Wrap(fmt.Errorf("failed to configure user %q", ra.App.User), err)
-	}
-
-	gidResolver, err := user.NumericIDs(ra.App.Group)
-	if err != nil {
-		gidResolver, err = user.IDsFromStat(rfs, ra.App.Group, nil)
-	}
-
-	if err != nil { // give up
-		return nil, errwrap.Wrap(fmt.Errorf("invalid group %q", ra.App.Group), err)
-	}
-
-	if _, c.gid, err = gidResolver.IDs(); err != nil {
-		return nil, errwrap.Wrap(fmt.Errorf("failed to configure group %q", ra.App.Group), err)
+		return nil, err
 	}
 
 	// supplementary groups - ensure primary group is included
@@ -70,11 +52,6 @@ func LookupProcessCredentials(ra *schema.RuntimeApp, rfs string) (*ProcessCreden
 }
 
 func SetProcessCredentials(c *ProcessCredentials, diag *rktlog.Logger) error {
-	// lock the current goroutine to its current OS thread.
-	// This will force the subsequent syscalls to be executed in the same OS thread as Setresuid, and Setresgid,
-	// see https://github.com/golang/go/issues/1435#issuecomment-66054163.
-	runtime.LockOSThread()
-
 	diag.Printf("setting credentials: uid=%d, gid=%d, suppGids=%v", c.uid, c.gid, c.supplementaryGIDs)
 	if err := syscall.Setresgid(c.gid, c.gid, c.gid); err != nil {
 		return err

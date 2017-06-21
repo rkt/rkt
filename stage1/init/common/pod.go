@@ -357,7 +357,7 @@ func supportsNotify(p *stage1commontypes.Pod, appName string) bool {
 	return false
 }
 
-// parseUserGroup parses the User and Group fields of an App and returns its
+// ParseUserGroup parses the User and Group fields of an App and returns its
 // UID and GID.
 // The User and Group fields accept several formats:
 //   1. the hardcoded string "root"
@@ -365,7 +365,7 @@ func supportsNotify(p *stage1commontypes.Pod, appName string) bool {
 //   3. a number
 //   4. a name in reference to /etc/{group,passwd} in the image
 // See https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
-func parseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp) (int, int, error) {
+func ParseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp) (int, int, error) {
 	var uidResolver, gidResolver user.Resolver
 	var uid, gid int
 	var err error
