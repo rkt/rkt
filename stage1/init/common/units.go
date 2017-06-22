@@ -169,6 +169,7 @@ func ImmutableEnv(p *stage1commontypes.Pod) error {
 		}
 
 		uw.AppUnit(ra, binPath,
+			unit.NewUnitOption("Unit", "After", "systemd-journald.service"),
 			// When an app fails, we shut down the pod
 			unit.NewUnitOption("Unit", "OnFailure", "halt.target"))
 
