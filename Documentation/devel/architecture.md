@@ -83,6 +83,13 @@ Specifically, it must:
   - systemd/nspawn: a cgroup/namespace based isolation environment using systemd, and systemd-nspawn.
   - kvm: a fully isolated kvm environment.
 
+There are also out of tree stage1:
+- [stage1-xen](https://github.com/rkt/stage1-xen), stage1 based on the Xen hypervisor
+- [volo](https://github.com/lucab/rkt-volo), stage1 written in Rust, akin to stage1-fly
+- [docker-skim](https://github.com/coreos/docker-skim), a weaker version of stage1-fly using `LD_PRELOAD` tricks instead of chroot
+- [dgr/aci-builder](https://github.com/blablacar/dgr), a stage1 used internally by the container build and runtime tool dgr
+- [stage1-builder](https://github.com/kinvolk/stage1-builder), scripts and tools to generate KVM-based stage1 with customized Linux kernels
+
 ### Stage 2
 
 The final stage, stage2, is the actual environment in which the applications run, as launched by stage1.
