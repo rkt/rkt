@@ -18,7 +18,6 @@ import (
 	"syscall"
 
 	"github.com/appc/spec/schema"
-	rktlog "github.com/rkt/rkt/pkg/log"
 	stage1commontypes "github.com/rkt/rkt/stage1/common/types"
 	stage1initcommon "github.com/rkt/rkt/stage1/init/common"
 )
@@ -29,14 +28,10 @@ type ProcessCredentials struct {
 	supplementaryGIDs []int
 }
 
-func LookupProcessCredentials(ra *schema.RuntimeApp, root string) (*ProcessCredentials, error) {
+func LookupProcessCredentials(pod *stage1commontypes.Pod, ra *schema.RuntimeApp, root string) (*ProcessCredentials, error) {
 	var c ProcessCredentials
 	var err error
 
-	// mock up a pod so we can call ParseUserGroup
-	pod := &stage1commontypes.Pod{
-		Root: root,
-	}
 	c.uid, c.gid, err = stage1initcommon.ParseUserGroup(pod, ra)
 	if err != nil {
 		return nil, err
@@ -51,8 +46,7 @@ func LookupProcessCredentials(ra *schema.RuntimeApp, root string) (*ProcessCrede
 	return &c, nil
 }
 
-func SetProcessCredentials(c *ProcessCredentials, diag *rktlog.Logger) error {
-	diag.Printf("setting credentials: uid=%d, gid=%d, suppGids=%v", c.uid, c.gid, c.supplementaryGIDs)
+func SetProcessCredentials(c *ProcessCredentials) error {
 	if err := syscall.Setresgid(c.gid, c.gid, c.gid); err != nil {
 		return err
 	}

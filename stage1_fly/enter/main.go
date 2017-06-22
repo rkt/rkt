@@ -98,7 +98,11 @@ func main() {
 		log.FatalE("Failed to get app", err)
 	}
 
-	credentials, err := stage1_fly.LookupProcessCredentials(ra, root)
+	// mock up a pod so we can call LookupProcessCredentials
+	pod := &stage1commontypes.Pod{
+		Root: root,
+	}
+	credentials, err := stage1_fly.LookupProcessCredentials(pod, ra, root)
 	if err != nil {
 		log.FatalE("failed to lookup process credentials", err)
 	}
@@ -111,7 +115,8 @@ func main() {
 		log.FatalE("Failed to chroot", err)
 	}
 
-	if err := stage1_fly.SetProcessCredentials(credentials, diag); err != nil {
+	diag.Printf("setting credentials: %+v", credentials)
+	if err := stage1_fly.SetProcessCredentials(credentials); err != nil {
 		log.FatalE("can't set process credentials", err)
 	}
 
