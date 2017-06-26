@@ -19,9 +19,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"syscall"
 
+	"github.com/appc/spec/schema"
 	rktlog "github.com/rkt/rkt/pkg/log"
+	stage1commontypes "github.com/rkt/rkt/stage1/common/types"
+	"github.com/rkt/rkt/stage1_fly"
 )
 
 var (
@@ -47,6 +51,14 @@ func getRootDir(pid string) (string, error) {
 	return os.Readlink(rootLink)
 }
 
+func getRuntimeApp(pm *schema.PodManifest) (*schema.RuntimeApp, error) {
+	if len(pm.Apps) != 1 {
+		return nil, fmt.Errorf("fly only supports 1 application per Pod for now")
+	}
+
+	return &pm.Apps[0], nil
+}
+
 func execArgs() error {
 	argv0 := flag.Arg(0)
 	argv := flag.Args()
@@ -65,9 +77,34 @@ func main() {
 		diag.SetOutput(ioutil.Discard)
 	}
 
+	// lock the current goroutine to its current OS thread.
+	// This will force the subsequent syscalls *made by this goroutine only*
+	// to be executed in the same OS thread as Setresuid, and Setresgid,
+	// see https://github.com/golang/go/issues/1435#issuecomment-66054163.
+	runtime.LockOSThread()
+
 	root, err := getRootDir(podPid)
 	if err != nil {
 		log.FatalE("Failed to get pod root", err)
+	}
+
+	pm, err := stage1commontypes.LoadPodManifest(".")
+	if err != nil {
+		log.FatalE("Failed to load pod manifest", err)
+	}
+
+	ra, err := getRuntimeApp(pm)
+	if err != nil {
+		log.FatalE("Failed to get app", err)
+	}
+
+	// mock up a pod so we can call LookupProcessCredentials
+	pod := &stage1commontypes.Pod{
+		Root: root,
+	}
+	credentials, err := stage1_fly.LookupProcessCredentials(pod, ra, root)
+	if err != nil {
+		log.FatalE("failed to lookup process credentials", err)
 	}
 
 	if err := os.Chdir(root); err != nil {
@@ -76,6 +113,11 @@ func main() {
 
 	if err := syscall.Chroot(root); err != nil {
 		log.FatalE("Failed to chroot", err)
+	}
+
+	diag.Printf("setting credentials: %+v", credentials)
+	if err := stage1_fly.SetProcessCredentials(credentials); err != nil {
+		log.FatalE("can't set process credentials", err)
 	}
 
 	diag.Println("PID:", podPid)

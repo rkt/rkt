@@ -36,14 +36,10 @@ import (
 	rktlog "github.com/rkt/rkt/pkg/log"
 	"github.com/rkt/rkt/pkg/mountinfo"
 	"github.com/rkt/rkt/pkg/sys"
-	"github.com/rkt/rkt/pkg/user"
 	stage1common "github.com/rkt/rkt/stage1/common"
 	stage1commontypes "github.com/rkt/rkt/stage1/common/types"
 	stage1initcommon "github.com/rkt/rkt/stage1/init/common"
-)
-
-const (
-	flavor = "fly"
+	"github.com/rkt/rkt/stage1_fly"
 )
 
 type flyMount struct {
@@ -267,7 +263,7 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 
 	// Sanity checks
 	if len(p.Manifest.Apps) != 1 {
-		log.Printf("flavor %q only supports 1 application per Pod for now", flavor)
+		log.Printf("fly only supports 1 application per Pod for now")
 		return 254
 	}
 
@@ -456,36 +452,9 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 		return 254
 	}
 
-	var uidResolver, gidResolver user.Resolver
-	var uid, gid int
-
-	uidResolver, err = user.NumericIDs(ra.App.User)
+	credentials, err := stage1_fly.LookupProcessCredentials(p, &ra, rfs)
 	if err != nil {
-		uidResolver, err = user.IDsFromStat(rfs, ra.App.User, nil)
-	}
-
-	if err != nil { // give up
-		log.PrintE(fmt.Sprintf("invalid user %q", ra.App.User), err)
-		return 254
-	}
-
-	if uid, _, err = uidResolver.IDs(); err != nil {
-		log.PrintE(fmt.Sprintf("failed to configure user %q", ra.App.User), err)
-		return 254
-	}
-
-	gidResolver, err = user.NumericIDs(ra.App.Group)
-	if err != nil {
-		gidResolver, err = user.IDsFromStat(rfs, ra.App.Group, nil)
-	}
-
-	if err != nil { // give up
-		log.PrintE(fmt.Sprintf("invalid group %q", ra.App.Group), err)
-		return 254
-	}
-
-	if _, gid, err = gidResolver.IDs(); err != nil {
-		log.PrintE(fmt.Sprintf("failed to configure group %q", ra.App.Group), err)
+		log.PrintE("failed to lookup process credentials", err)
 		return 254
 	}
 
@@ -500,19 +469,9 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 		return 254
 	}
 
-	// lock the current goroutine to its current OS thread.
-	// This will force the subsequent syscalls to be executed in the same OS thread as Setresuid, and Setresgid,
-	// see https://github.com/golang/go/issues/1435#issuecomment-66054163.
-	runtime.LockOSThread()
-
-	// set process credentials
-	diag.Printf("setting credentials: uid=%d, gid=%d", uid, gid)
-	if err := syscall.Setresgid(gid, gid, gid); err != nil {
-		log.PrintE(fmt.Sprintf("can't set gid %d", gid), err)
-		return 254
-	}
-	if err := syscall.Setresuid(uid, uid, uid); err != nil {
-		log.PrintE(fmt.Sprintf("can't set uid %d", uid), err)
+	diag.Printf("setting credentials: %+v", credentials)
+	if err := stage1_fly.SetProcessCredentials(credentials); err != nil {
+		log.PrintE("can't set process credentials", err)
 		return 254
 	}
 
@@ -565,6 +524,12 @@ func main() {
 	if !debug {
 		diag.SetOutput(ioutil.Discard)
 	}
+
+	// lock the current goroutine to its current OS thread.
+	// This will force the subsequent syscalls *made by this goroutine only*
+	// to be executed in the same OS thread as Setresuid, and Setresgid,
+	// see https://github.com/golang/go/issues/1435#issuecomment-66054163.
+	runtime.LockOSThread()
 
 	// move code into stage1() helper so defered fns get run
 	os.Exit(stage1(rp))

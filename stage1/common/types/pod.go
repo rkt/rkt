@@ -97,6 +97,20 @@ func (p *Pod) SaveRuntime() error {
 	return ioutil.WriteFile(path, buf, 0644)
 }
 
+// LoadPodManifest loads a Pod Manifest.
+func LoadPodManifest(root string) (*schema.PodManifest, error) {
+	buf, err := ioutil.ReadFile(common.PodManifestPath(root))
+	if err != nil {
+		return nil, errwrap.Wrap(errors.New("failed reading pod manifest"), err)
+	}
+
+	pm := &schema.PodManifest{}
+	if err := json.Unmarshal(buf, pm); err != nil {
+		return nil, errwrap.Wrap(errors.New("failed unmarshalling pod manifest"), err)
+	}
+	return pm, nil
+}
+
 // LoadPod loads a Pod Manifest (as prepared by stage0), the runtime data, and
 // its associated Application Manifests, under $root/stage1/opt/stage1/$apphash
 func LoadPod(root string, uuid *types.UUID, rp *RuntimePod) (*Pod, error) {
@@ -120,14 +134,9 @@ func LoadPod(root string, uuid *types.UUID, rp *RuntimePod) (*Pod, error) {
 		}
 	}
 
-	buf, err := ioutil.ReadFile(common.PodManifestPath(p.Root))
+	pm, err := LoadPodManifest(p.Root)
 	if err != nil {
-		return nil, errwrap.Wrap(errors.New("failed reading pod manifest"), err)
-	}
-
-	pm := &schema.PodManifest{}
-	if err := json.Unmarshal(buf, pm); err != nil {
-		return nil, errwrap.Wrap(errors.New("failed unmarshalling pod manifest"), err)
+		return nil, err
 	}
 	p.Manifest = pm
 

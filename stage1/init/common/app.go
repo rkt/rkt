@@ -104,7 +104,7 @@ func prepareApp(p *stage1commontypes.Pod, ra *schema.RuntimeApp) (*preparedApp, 
 	var err error
 
 	// Determine numeric uid and gid
-	u, g, err := parseUserGroup(p, ra)
+	u, g, err := ParseUserGroup(p, ra)
 	if err != nil {
 		return nil, errwrap.Wrap(errors.New("unable to determine app's uid and gid"), err)
 	}
