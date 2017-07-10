@@ -1125,7 +1125,7 @@ func NewNetOverrideTest() testutils.Test {
 
 		expectedIP := "11.11.4.244"
 
-		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=all --net=\"%s:IP=%s\" --mds-register=false %s", ctx.Cmd(), nt.Name, expectedIP, testImage)
+		cmd := fmt.Sprintf("%s --debug --insecure-options=image run --net=\"%s:IP=%s\" --mds-register=false %s", ctx.Cmd(), nt.Name, expectedIP, testImage)
 		child := spawnOrFail(t, cmd)
 		defer waitOrFail(t, child, 0)
 
@@ -1318,19 +1318,11 @@ func NewNetPreserveNetNameTest() testutils.Test {
 			t.Fatalf("Can't open net-info.json for reading: %v", err)
 		}
 
-		if len(info) != 2 {
+		if len(info) != 1 {
 			t.Fatalf("Incorrect number of networks: %v", len(info))
 		}
 
-		found := false
-		for _, net := range info {
-			if net.NetName == ntFlannel.Name {
-				found = true
-				break
-			}
-		}
-
-		if !found {
+		if info[0].NetName != ntFlannel.Name {
 			t.Fatalf("Network '%s' not found!\nnetInfo[0]: %v\nnetInfo[1]: %v", ntFlannel.Name, info[0], info[1])
 		}
 	})
