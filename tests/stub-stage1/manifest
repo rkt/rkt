@@ -9,11 +9,11 @@
         },
         {
             "name": "arch",
-            "value": "amd64"
+            "value": "@ACI_ARCH@"
         },
         {
             "name": "os",
-            "value": "linux"
+            "value": "@ACI_OS@"
         }
     ],
     "annotations": [

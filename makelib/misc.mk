@@ -570,6 +570,20 @@ $(strip \
 	$(call undefine-namespaces,_MISC_GPF))
 endef
 
+# Generate an ACI manifest from a source template.  Fills in
+# machine specific values.
+#
+# 1 - input: manifest source template file
+# 2 - output: generated manifest file
+define generate-manifest-file
+	sed \
+		-e "s/@ACI_OS@/linux/" \
+		-e "s/@ACI_ARCH@/${RKT_ACI_ARCH}/" \
+		-e "s/@GOOS@/linux/" \
+		-e "s/@GOARCH@/${RKT_ACI_ARCH}/" \
+		$(1) >$(2);
+endef
+
 # Recursive wildcard - recursively generate a list of files
 #
 # 1 - root directory
