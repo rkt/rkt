@@ -16,7 +16,10 @@
 
 package main
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestNetHost(t *testing.T) {
 	NewNetHostTest().Execute(t)
@@ -50,6 +53,10 @@ func TestNetCustomMacvlan(t *testing.T) {
 }
 
 func TestNetCustomBridge(t *testing.T) {
+	// Flaking test: https://github.com/rkt/rkt/issues/3739
+	if os.Getenv("SEMAPHORE") == "true" {
+		t.Skip("skipped on semaphore")
+	}
 	NewNetCustomBridgeTest().Execute(t)
 }
 
@@ -66,6 +73,10 @@ func TestNetIPConflict(t *testing.T) {
 }
 
 func TestNetCustomPtp(t *testing.T) {
+	// Flaking test: https://github.com/rkt/rkt/issues/3739
+	if os.Getenv("SEMAPHORE") == "true" {
+		t.Skip("skipped on semaphore")
+	}
 	// PTP means connection Point-To-Point. That is, connections to other pods/containers should be forbidden
 	NewNetCustomPtpTest(true).Execute(t)
 }
