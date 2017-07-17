@@ -99,7 +99,7 @@ func TestFetchAny(t *testing.T) {
 	aci_os, aci_arch := common.GetOSArch()
 	os_arch := aci_os + "-" + aci_arch
 
-	etcdVersion := "v2.1.2"
+	etcdVersion := "v3.2.2"
 	etcdImage := "coreos.com/etcd:" + etcdVersion
 	etcdURL := "https://github.com/coreos/etcd/releases/download/" + etcdVersion + "/etcd-" + etcdVersion + "-" + os_arch + ".aci"
 
