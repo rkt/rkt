@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/rkt/rkt/common"
 	"github.com/rkt/rkt/pkg/aci/acitest"
 	"github.com/rkt/rkt/tests/testutils"
 
@@ -36,8 +37,8 @@ func TestRunOverrideExec(t *testing.T) {
 		Name: "coreos.com/rkt-inspect",
 		Labels: types.Labels{
 			{"version", "1.27.0"},
-			{"arch", "amd64"},
-			{"os", "linux"},
+			{"arch", common.GetArch()},
+			{"os", common.GetOS()},
 		},
 	}
 

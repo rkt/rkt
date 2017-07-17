@@ -61,8 +61,8 @@ func generateComplexDependencyTree(t *testing.T, ctx *testutils.RktRunCtx) (map[
 			WorkingDirectory: "/",
 		},
 		Labels: types.Labels{
-			{"arch", "amd64"},
-			{"os", "linux"},
+			{"arch", common.GetArch()},
+			{"os", common.GetOS()},
 		},
 	}
 

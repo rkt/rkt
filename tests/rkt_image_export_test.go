@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/rkt/rkt/common"
 	"github.com/rkt/rkt/pkg/aci/acitest"
 	"github.com/rkt/rkt/tests/testutils"
 
@@ -46,8 +47,8 @@ func TestImageExport(t *testing.T) {
 		},
 		Labels: types.Labels{
 			{"version", "1.27.0"},
-			{"arch", "amd64"},
-			{"os", "linux"},
+			{"arch", common.GetArch()},
+			{"os", common.GetOS()},
 		},
 	}
 
