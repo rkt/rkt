@@ -49,6 +49,8 @@ lib64/libmount.so.1
 lib64/libmount.so.1.1.0
 lib64/libncurses.so.5
 lib64/libncurses.so.5.9
+lib64/libnss_files.so.2
+lib64/libnss_files-2.21.so
 lib64/libpam.so.0
 lib64/libpam.so.0.84.1
 lib64/libpthread-2.21.so
