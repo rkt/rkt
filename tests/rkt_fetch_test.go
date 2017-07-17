@@ -96,26 +96,34 @@ func TestFetchAny(t *testing.T) {
 
 	defer os.Remove(imagePath)
 
+	etcdVersion := "v2.1.2"
+	etcdImage := "coreos.com/etcd:" + etcdVersion
+	etcdURL := "https://github.com/coreos/etcd/releases/download/" + etcdVersion + "/etcd-" + etcdVersion + "-linux-amd64.aci"
+
+	dockerVersion := "latest"
+	dockerImage := "docker://busybox"
+	dockerImageV := dockerImage + ":" + dockerVersion
+
 	tests := []struct {
 		args      string
 		image     string
 		imageArgs string
 		finalURL  string
 	}{
-		{"--insecure-options=image --debug fetch", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image --debug fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image --debug fetch", "docker://busybox", "", "docker://busybox"},
-		{"--insecure-options=image --debug fetch", "docker://busybox:latest", "", "docker://busybox:latest"},
-		{"--insecure-options=image --debug run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /etcdctl", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image --debug run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /etcdctl", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image --debug run --mds-register=false", "docker://busybox", "", "docker://busybox"},
-		{"--insecure-options=image --debug run --mds-register=false", "docker://busybox:latest", "", "docker://busybox:latest"},
-		{"--insecure-options=image --debug prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image --debug prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image --debug fetch", etcdImage, "", etcdURL},
+		{"--insecure-options=image --debug fetch", etcdURL, "", etcdURL},
+		{"--insecure-options=image --debug fetch", dockerImage, "", dockerImage},
+		{"--insecure-options=image --debug fetch", dockerImageV, "", dockerImageV},
+		{"--insecure-options=image --debug run --mds-register=false", etcdImage, "--exec /etcdctl", etcdURL},
+		{"--insecure-options=image --debug run --mds-register=false", etcdURL, "--exec /etcdctl", etcdURL},
+		{"--insecure-options=image --debug run --mds-register=false", dockerImage, "", dockerImage},
+		{"--insecure-options=image --debug run --mds-register=false", dockerImageV, "", dockerImageV},
+		{"--insecure-options=image --debug prepare", etcdURL, "", etcdURL},
+		{"--insecure-options=image --debug prepare", etcdImage, "", etcdURL},
 		// test --insecure-options=tls to make sure
 		// https://github.com/rkt/rkt/issues/1829 is not an issue anymore
-		{"--insecure-options=image,tls --debug prepare", "docker://busybox", "", "docker://busybox"},
-		{"--insecure-options=image --debug prepare", "docker://busybox:latest", "", "docker://busybox:latest"},
+		{"--insecure-options=image,tls --debug prepare", dockerImage, "", dockerImage},
+		{"--insecure-options=image --debug prepare", dockerImageV, "", dockerImageV},
 	}
 
 	for _, tt := range tests {
