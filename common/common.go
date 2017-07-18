@@ -488,23 +488,28 @@ func GetExitStatus(err error) (int, error) {
 	return -1, err
 }
 
+// GetOS returns the current ACI operating system (linux, windows etc...)
+func GetOS() string {
+	os, _ := GetOSArch()
+	return os
+}
+
+// GetArch returns the current ACI architecture.
+func GetArch() string {
+	_, arch := GetOSArch()
+	return arch
+}
+
 // reference to GOARM, needs to be globally, if in GetArch() function it resolves to zero
 //go:linkname goarm runtime.goarm
 var goarm uint8
 
-// GetArch returns the current architecture. It returns runtime.GOARCH if not on a arm device
-// and armv6l, armv7l, arm64 otherwise
-func GetArch() string {
-	arch := runtime.GOARCH
+func GetOSArch() (os string, arch string) {
+	arch = runtime.GOARCH
 	flavor := ""
 	if arch == "arm" {
 		flavor = strconv.Itoa(int(goarm))
 	}
-	_, arch, _ = types.ToAppcOSArch(GetOS(), arch, flavor)
-	return arch
-}
-
-// GetOS returns the current operating system (linux, windows etc...)
-func GetOS() string {
-	return runtime.GOOS
+	os, arch, _ = types.ToAppcOSArch(runtime.GOOS, arch, flavor)
+	return os, arch
 }

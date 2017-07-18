@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/rkt/rkt/common"
 	"github.com/rkt/rkt/pkg/aci/acitest"
 	"github.com/rkt/rkt/tests/testutils"
 
@@ -47,6 +48,8 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 
 	defer osArchTestRemoveImages(tests)
 
+	aci_os, aci_arch := common.GetOSArch()
+
 	manifestOSArch := schema.ImageManifest{
 		Name: "coreos.com/rkt-missing-os-arch-test",
 		App: &types.App{
@@ -70,8 +73,8 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	// Test a valid image as a sanity check
 	manifestOSArch.Labels = append(
 		labels,
-		types.Label{"os", "linux"},
-		types.Label{"arch", "amd64"},
+		types.Label{"os", aci_os},
+		types.Label{"arch", aci_arch},
 	)
 
 	goodManifestFile := "good-manifest.json"
@@ -95,7 +98,7 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	tests = append(tests, goodTest)
 
 	// Test an image with a missing os label
-	manifestOSArch.Labels = append(labels, types.Label{"arch", "amd64"})
+	manifestOSArch.Labels = append(labels, types.Label{"arch", aci_arch})
 
 	missingOSManifestFile := "missingOS-manifest.json"
 	missingOSManifestStr, err := acitest.ImageManifestString(&manifestOSArch)
@@ -118,7 +121,7 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	tests = append(tests, missingOSTest)
 
 	// Test an image with a missing arch label
-	manifestOSArch.Labels = append(labels, types.Label{"os", "linux"})
+	manifestOSArch.Labels = append(labels, types.Label{"os", aci_os})
 
 	missingArchManifestFile := "missingArch-manifest.json"
 	missingArchManifestStr, err := acitest.ImageManifestString(&manifestOSArch)
@@ -144,7 +147,7 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 	manifestOSArch.Labels = append(
 		labels,
 		types.Label{"os", "freebsd"},
-		types.Label{"arch", "amd64"},
+		types.Label{"arch", aci_arch},
 	)
 
 	invalidOSManifestFile := "invalid-os-manifest.json"
@@ -165,12 +168,16 @@ func getMissingOrInvalidTests(t *testing.T, ctx *testutils.RktRunCtx) []osArchTe
 		expectedLine: `bad os "freebsd"`,
 		expectError:  true,
 	}
-	tests = append(tests, invalidOSTest)
+
+	// only do this test on amd64 since freebsd is not supported on all architectures.
+	if aci_arch == "amd64" {
+		tests = append(tests, invalidOSTest)
+	}
 
 	// Test an image with an invalid arch
 	manifestOSArch.Labels = append(
 		labels,
-		types.Label{"os", "linux"},
+		types.Label{"os", aci_os},
 		types.Label{"arch", "armv5l"},
 	)
 

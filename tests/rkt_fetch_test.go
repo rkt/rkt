@@ -96,26 +96,40 @@ func TestFetchAny(t *testing.T) {
 
 	defer os.Remove(imagePath)
 
+	aci_os, aci_arch := common.GetOSArch()
+	os_arch := aci_os + "-" + aci_arch
+
+	etcdVersion := "v3.2.2"
+	etcdImage := "coreos.com/etcd:" + etcdVersion
+	etcdURL := "https://github.com/coreos/etcd/releases/download/" + etcdVersion + "/etcd-" + etcdVersion + "-" + os_arch + ".aci"
+
+	dockerVersion := "latest"
+	dockerImage := "docker://busybox"
+	if aci_arch != "amd64" {
+		dockerImage = "docker://" + aci_arch + "/busybox"
+	}
+	dockerImageV := dockerImage + ":" + dockerVersion
+
 	tests := []struct {
 		args      string
 		image     string
 		imageArgs string
 		finalURL  string
 	}{
-		{"--insecure-options=image --debug fetch", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image --debug fetch", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image --debug fetch", "docker://busybox", "", "docker://busybox"},
-		{"--insecure-options=image --debug fetch", "docker://busybox:latest", "", "docker://busybox:latest"},
-		{"--insecure-options=image --debug run --mds-register=false", "coreos.com/etcd:v2.1.2", "--exec /etcdctl", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image --debug run --mds-register=false", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "--exec /etcdctl", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image --debug run --mds-register=false", "docker://busybox", "", "docker://busybox"},
-		{"--insecure-options=image --debug run --mds-register=false", "docker://busybox:latest", "", "docker://busybox:latest"},
-		{"--insecure-options=image --debug prepare", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
-		{"--insecure-options=image --debug prepare", "coreos.com/etcd:v2.1.2", "", "https://github.com/coreos/etcd/releases/download/v2.1.2/etcd-v2.1.2-linux-amd64.aci"},
+		{"--insecure-options=image --debug fetch", etcdImage, "", etcdURL},
+		{"--insecure-options=image --debug fetch", etcdURL, "", etcdURL},
+		{"--insecure-options=image --debug fetch", dockerImage, "", dockerImage},
+		{"--insecure-options=image --debug fetch", dockerImageV, "", dockerImageV},
+		{"--insecure-options=image --debug run --mds-register=false", etcdImage, "--exec /etcdctl", etcdURL},
+		{"--insecure-options=image --debug run --mds-register=false", etcdURL, "--exec /etcdctl", etcdURL},
+		{"--insecure-options=image --debug run --mds-register=false", dockerImage, "", dockerImage},
+		{"--insecure-options=image --debug run --mds-register=false", dockerImageV, "", dockerImageV},
+		{"--insecure-options=image --debug prepare", etcdURL, "", etcdURL},
+		{"--insecure-options=image --debug prepare", etcdImage, "", etcdURL},
 		// test --insecure-options=tls to make sure
 		// https://github.com/rkt/rkt/issues/1829 is not an issue anymore
-		{"--insecure-options=image,tls --debug prepare", "docker://busybox", "", "docker://busybox"},
-		{"--insecure-options=image --debug prepare", "docker://busybox:latest", "", "docker://busybox:latest"},
+		{"--insecure-options=image,tls --debug prepare", dockerImage, "", dockerImage},
+		{"--insecure-options=image --debug prepare", dockerImageV, "", dockerImageV},
 	}
 
 	for _, tt := range tests {
@@ -540,11 +554,13 @@ func TestDeferredSignatureDownload(t *testing.T) {
 func TestDifferentDiscoveryLabels(t *testing.T) {
 	const imageName = "localhost/rkt-test-different-discovery-labels-image"
 
+	aci_os, aci_arch := common.GetOSArch()
+
 	manifest, err := acitest.ImageManifestString(&schema.ImageManifest{
 		Name: imageName, Labels: types.Labels{
 			{"version", "1.2.0"},
-			{"arch", "amd64"},
-			{"os", "linux"},
+			{"arch", aci_arch},
+			{"os", aci_os},
 		},
 	})
 
@@ -583,13 +599,18 @@ func TestDifferentDiscoveryLabels(t *testing.T) {
 		t.Fatalf("Failed to populate a file list in test aci server: %v", err)
 	}
 
+	other_arch := "armv7b"
+	if aci_arch == "armv7b" {
+		other_arch = "amd64"
+	}
+
 	tests := []struct {
 		imageName       string
 		expectedMessage string
 	}{
 		{imageName + ":2.0", fmt.Sprintf("requested value for label %q: %q differs from fetched aci label value: %q", "version", "2.0", "1.2.0")},
 		{imageName + ":latest", fmt.Sprintf("requested value for label %q: %q differs from fetched aci label value: %q", "version", "latest", "1.2.0")},
-		{imageName + ",arch=armv7b", fmt.Sprintf("requested value for label %q: %q differs from fetched aci label value: %q", "arch", "armv7b", "amd64")},
+		{imageName + ",arch=" + other_arch, fmt.Sprintf("requested value for label %q: %q differs from fetched aci label value: %q", "arch", other_arch, aci_arch)},
 		{imageName + ",unexistinglabel=bla", fmt.Sprintf("requested label %q not provided by the image manifest", "unexistinglabel")},
 	}
 
