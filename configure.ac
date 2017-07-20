@@ -105,7 +105,7 @@ AC_ARG_WITH(stage1-default-images-directory,
 
 AC_ARG_WITH([stage1-systemd-src],
             [AS_HELP_STRING([--with-stage1-systemd-src],
-                            [address to git repository of systemd, used in 'src' stage1 flavor (default: 'https://github.com/systemd/systemd.git')])],
+                            [URL to a systemd Git repository or path to a local systemd source directory, used in 'src' stage1 flavor (default: 'https://github.com/systemd/systemd.git')])],
             [RKT_STAGE1_SYSTEMD_SRC="${withval}"],
             [RKT_STAGE1_SYSTEMD_SRC='auto'])
 
@@ -117,7 +117,7 @@ AC_ARG_WITH([stage1-systemd-version],
 
 AC_ARG_WITH([stage1-systemd-revision],
             [AS_HELP_STRING([--with-stage1-systemd-revision],
-                            [systemd revision to check out to build, used in 'src' stage1 flavor (default: the same value as --stage1-systemd-version)])],
+                            [systemd revision to check out to build, used in 'src' stage1 flavor when --with-stage1-systemd-src is a Git repository (default: the same value as --with-stage1-systemd-version)])],
             [RKT_STAGE1_SYSTEMD_REV="${withval}"],
             [RKT_STAGE1_SYSTEMD_REV='auto'])
 
@@ -869,8 +869,8 @@ RKT_IF_HAS_VALUE([${RKT_STAGE1_FLAVORS}], [src],
                   [AC_MSG_RESULT([
         src flavor specific build parameters
 
-        systemd git repo:                       '${RKT_STAGE1_SYSTEMD_SRC}'
-        systemd git revision:                   '${RKT_STAGE1_SYSTEMD_REV}'
+        systemd source:                         '${RKT_STAGE1_SYSTEMD_SRC}'
+        systemd Git revision:                   '${RKT_STAGE1_SYSTEMD_REV}'
         systemd version:                        '${RKT_STAGE1_SYSTEMD_VER}'])])
 
 RKT_IF_HAS_VALUE([${RKT_STAGE1_FLAVORS}], [kvm],
