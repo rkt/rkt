@@ -150,7 +150,7 @@ func AddApp(cfg AddConfig) error {
 	env.Set("AC_APP_NAME", appName.String())
 	envFilePath := filepath.Join(common.Stage1RootfsPath(cfg.PodPath), "rkt", "env", appName.String())
 
-	if err := common.WriteEnvFile(env, pcfg.PrivateUsers, envFilePath); err != nil {
+	if err := common.WriteEnvFile(common.ComposeEnviron(env), pcfg.PrivateUsers, envFilePath); err != nil {
 		return err
 	}
 

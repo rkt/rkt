@@ -523,7 +523,7 @@ func (uw *UnitWriter) appSystemdUnit(pa *preparedApp, binPath string, opts []*un
 	}
 
 	// Write env file
-	if err := common.WriteEnvFile(pa.env, &uw.p.UidRange, EnvFilePath(uw.p.Root, pa.app.Name)); err != nil {
+	if err := common.WriteEnvFile(common.ComposeEnviron(pa.env), &uw.p.UidRange, EnvFilePath(uw.p.Root, pa.app.Name)); err != nil {
 		uw.err = errwrap.Wrapf("unable to write environment file", err)
 		return nil
 	}
