@@ -387,29 +387,33 @@ This feature will be disabled automatically if the underlying filesystem does no
 
 | Flag | Default | Options | Description |
 | --- | --- | --- | --- |
-| `--user-annotation` | none | annotation add to the app's UserAnnotations field | Set the app's annotations (example: '--user-annotation=foo=bar'). |
 | `--caps-remove` | none | capability to remove (e.g. `--caps-remove=CAP_SYS_CHROOT,CAP_MKNOD`) | Capabilities to remove from the process's capabilities bounding set; all others from the default set will be included. |
 | `--caps-retain` | none | capability to retain (e.g. `--caps-retain=CAP_SYS_ADMIN,CAP_NET_ADMIN`) | Capabilities to retain in the process's capabilities bounding set; all others will be removed. |
 | `--cpu` | none | CPU units (e.g. `--cpu=500m`) | CPU limit for the preceding image in [Kubernetes resource model][k8s-resources] format. |
 | `--dns` | none | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times. |
+| `--dns-domain` | none | DNS domain (e.g., `--dns-domain=example.com`) | DNS domain to write in `/etc/resolv.conf`. |
 | `--dns-opt` | none | DNS option | DNS option from resolv.conf(5) to write in `/etc/resolv.conf`. It can be specified several times. |
 | `--dns-search` | none | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times. |
 | `--environment` | none | environment variables add to the app's environment variables | Set the app's environment variables (example: '--environment=foo=bar'). |
 | `--exec` | none | Path to executable | Override the exec command for the preceding image. |
 | `--group` | root | gid, groupname or file path (e.g. `--group=core`) | Group override for the preceding image. |
+| `--hosts-entry` | none | an /etc/hosts entry within the container (e.g., `--hosts-entry=10.2.1.42=db`) | Entries to add to the pod-wide /etc/hosts. Pass 'host' to use the host's /etc/hosts. |
 | `--hostname` | `rkt-$PODUUID` | A host name | Set pod's host name. |
 | `--inherit-env` | `false` | `true` or `false` | Inherit all environment variables not set by apps. |
 | `--interactive` | `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied. |
-| `--user-label` | none | label add to the apps' UserLabels field | Set the app's labels (example: '--user-label=foo=bar'). |
 | `--mds-register` | `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net` as `default`, `default-restricted`, or `host`). |
 | `--memory` | none | Memory units (e.g. `--memory=50M`) | Memory limit for the preceding image in [Kubernetes resource model][k8s-resources] format. |
 | `--mount` | none | Mount syntax (e.g. `--mount volume=NAME,target=PATH`) | Mount point binding a volume to a path within an app. See [Mounting Volumes without Mount Points](#mounting-volumes-without-mount-points). |
 | `--name` | none | Name of the app | Set the name of the app (example: '--name=foo'). If not set, then the app name default to the image's name |
 | `--net` | `default` | A comma-separated list of networks. (e.g. `--net[=n[:args], ...]`) | Configure the pod's networking. Optionally, pass a list of user-configured networks to load and set arguments to pass to each network, respectively. |
 | `--no-overlay` | `false` | `true` or `false` | Disable the overlay filesystem. |
+| `--oom-score-adjust` | none | adjust /proc/$pid/oom_score_adj  | oom-score-adj isolator override. |
 | `--pod-manifest` | none | A path | The path to the pod manifest. If it's non-empty, then only `--net`, `--no-overlay` and `--interactive` will have effect. |
 | `--port` | none | A port name and number pair | Container port name to expose through host port number. Requires [contained network][contained]. Syntax: `--port=NAME:HOSTPORT` The NAME is that given in the ACI. By convention, Docker containers' EXPOSEd ports are given a name formed from the port number, a hyphen, and the protocol, e.g., `80-tcp`, giving something like `--port=80-tcp:8080`. |
 | `--private-users` | `false` | `true` or `false` | Run within user namespaces. |
+| `--pull-policy` | `new` | `never`, `new`, or `update` | Sets the policy for when to fetch an image. See [image fetching behavior][img-fetch] |
+| `--readonly-rootfs` | none | set root filesystem readonly (e.g., `--readonly-rootfs=true`) | if set, the app's rootfs will be mounted read-only |
+| `--seccomp` | none | filter override (e.g., `--seccomp mode=retain,errno=EPERM,chmod,chown`) | seccomp filter override |
 | `--set-env` | none | An environment variable (e.g. `--set-env=NAME=VALUE`) | An environment variable to set for apps. |
 | `--set-env-file` | none | Path of an environment variables file (e.g. `--set-env-file=/path/to/env/file`) | Environment variables to set for apps. |
 | `--signature` | none | A file path | Local signature file to use in validating the preceding image. |
@@ -418,10 +422,13 @@ This feature will be disabled automatically if the underlying filesystem does no
 | `--stage1-name` | none | Image name (e.g. `--stage1-name=coreos.com/rkt/stage1-coreos`) | A name of a stage1 image. Will perform a discovery if the image is not in the store. |
 | `--stage1-path` | none | Absolute or relative path | A path to a stage1 image. |
 | `--stage1-url` | none | URL with protocol | A URL to a stage1 image. HTTP/HTTPS/File/Docker URLs are supported. |
-| `--pull-policy` | `new` | `never`, `new`, or `update` | Sets the policy for when to fetch an image. See [image fetching behavior][img-fetch] |
+| `--supplementary-gids` | none | supplementary group IDs (e.g., `--supplementary-gids=1024,2048`) | supplementary group IDs override for the preceding image |
 | `--user` | none | uid, username or file path (e.g. `--user=core`) | User override for the preceding image. |
+| `--user-annotation` | none | annotation add to the app's UserAnnotations field | Set the app's annotations (example: '--user-annotation=foo=bar'). |
+| `--user-label` | none | label add to the apps' UserLabels field | Set the app's labels (example: '--user-label=foo=bar'). |
 | `--uuid-file-save` | none | A file path | Write out the pod UUID to a file. |
 | `--volume` | none | Volume syntax (e.g. `--volume NAME,kind=KIND,source=PATH,readOnly=BOOL`) | Volumes to make available in the pod. See [Mount Volumes into a Pod](#mount-volumes-into-a-pod). |
+| `--working-dir` | none | working directory override (e.g. `--working-dir=/tmp/bar`) | Override the working directory in the preceding image. |
 
 ## Per-application options
 
