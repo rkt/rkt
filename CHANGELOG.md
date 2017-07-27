@@ -1,3 +1,37 @@
+## 1.28.0
+
+This release contains changes to the behavior of `rkt run`, `rkt status`, and `rkt fly` to make them more consistent. Two of them need particular attention:
+
+- `rkt status` can now omit the pid field when non-existent. Use `--wait[-ready]` to ensure a pid will be available.
+- the `default[-restricted]` network is not added by default when a custom network is specified with `--net`.
+
+There are also some improvements on documentation and tests working on arm64.
+
+### New features and UX changes
+
+- stage0/status: fix failure when systemd never runs in stage1 ([#3713](https://github.com/rkt/rkt/pull/3713)). This changes the behavior of `rkt status` when a PID is not available: instead of crashing, it will now omit the pid field. Users that need to read the PID shortly after an invocation of `rkt run` should now use the `--wait[-ready]` flag explicitly.
+- **BREAKING** network: do not automatically add `default*` networks when custom ones are specified ([#3685](https://github.com/rkt/rkt/pull/3685)).
+- stage1/fly: preserve environment between run and enter ([#3712](https://github.com/rkt/rkt/pull/3712)). Fly run now writes the app env file, and `fly enter` reads it.
+- stage1/fly: make run/enter honour uid/gid/suppGids ([#3717](https://github.com/rkt/rkt/pull/3717)). Refactored common functionality out of run.
+
+### Bugfixes
+
+- stage1/init/units: keep journald running while apps are shutting down ([#3726](https://github.com/rkt/rkt/pull/3726)). This prevents a race when apps are writing to their stdout/err (and output is being sent to stage1's journal) while shutting down. If journald terminates before the apps finish shutting down, their output will be lost.
+- tests: get functional tests working on arm64 ([#3737](https://github.com/rkt/rkt/pull/3737)). Various arch fixups to get `make check` with a coreos stage1 working on arm64 machines.
+- Fix `--user --group` on arm64 ([#3736](https://github.com/rkt/rkt/pull/3736)). Fixes issue https://github.com/rkt/rkt/issues/3714 (`rkt run --user` fails on arm64).
+
+### Other changes
+
+- docs: update CLI flags in run.md ([#3748](https://github.com/rkt/rkt/pull/3748)). Also added rkt-run options present in rkt 1.27.0 but not present in the run.md markdown.  The entries in markdown have been sorted.
+- tests/net: skip TestNetCustomBridge on semaphore ([#3740](https://github.com/rkt/rkt/pull/3740)). Reference https://github.com/rkt/rkt/issues/3739
+- doc: mention external stage1s ([#3723](https://github.com/rkt/rkt/pull/3723)). This was discussed on:
+https://github.com/rkt/rkt/pull/3645#issuecomment-296865635
+- rkt/pubkeys: print debug logs on discovery errors ([#3705](https://github.com/rkt/rkt/pull/3705)). Thisreorders log-printing and error-returning when pubkeys discovery
+fails, in order to print useful debugging information on error.
+- docs: correct rkt pronunciation ([#3674](https://github.com/rkt/rkt/pull/3674)). `rkt` has an icon of a rocket but previously the official pronunciation was "rock-it" which is incompatible with the logo. This change fixes that.
+- stage0: fix message formatting errors, stale forward-vars ([#3722](https://github.com/rkt/rkt/pull/3722)).
+
+
 ## 1.27.0
 
 This minor release contains bugfixes and other improvements related to the tests and the documentation.
