@@ -46,7 +46,7 @@ func TestImageExport(t *testing.T) {
 			},
 		},
 		Labels: types.Labels{
-			{"version", "1.27.0"},
+			{"version", "1.28.0"},
 			{"arch", common.GetArch()},
 			{"os", common.GetOS()},
 		},

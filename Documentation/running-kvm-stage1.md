@@ -9,7 +9,7 @@ The KVM stage1 does not yet implement all of the default stage1's features and s
 Provided you have hardware virtualization support and the [kernel KVM module][kvm-module] loaded (refer to your distribution for instructions), you can then run an image like you would normally do with rkt:
 
 ```
-sudo rkt run --debug --insecure-options=image --stage1-name=coreos.com/rkt/stage1-kvm:1.27.0 docker://redis
+sudo rkt run --debug --insecure-options=image --stage1-name=coreos.com/rkt/stage1-kvm:1.28.0 docker://redis
 ```
 
 This output is the same you'll get if you run a container-based rkt.
@@ -67,7 +67,7 @@ $ ./autogen.sh && ./configure --with-stage1-flavors=kvm --with-stage1-kvm-hyperv
 ```
 
 For more details about configure parameters, see [configure script parameters documentation][build-configure].
-This will build the rkt binary and the KVM stage1 aci image in `build-rkt-1.27.0+git/target/bin/`. Depending on the configuration options, it will be `stage1-kvm.aci` (if one hypervisor is set), or `stage1-kvm-lkvm.aci` and `stage1-kvm-qemu.aci` (if you want to have both images built once).
+This will build the rkt binary and the KVM stage1 aci image in `build-rkt-1.28.0+git/target/bin/`. Depending on the configuration options, it will be `stage1-kvm.aci` (if one hypervisor is set), or `stage1-kvm-lkvm.aci` and `stage1-kvm-qemu.aci` (if you want to have both images built once).
 
 
 [build-configure]: build-configure.md
@@ -89,7 +89,7 @@ Additional [Linux kernel's command line parameters](https://www.kernel.org/doc/h
 
 ```
 sudo RKT_HYPERVISOR_EXTRA_KERNEL_PARAMS="systemd.unified_cgroup_hierarchy=true max_loop=12 possible_cpus=1" \
-      rkt run --stage1-name=coreos.com/rkt/stage1-kvm:1.27.0 \
+      rkt run --stage1-name=coreos.com/rkt/stage1-kvm:1.28.0 \
       ...
 ```
 
