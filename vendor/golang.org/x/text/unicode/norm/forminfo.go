@@ -56,31 +56,28 @@ type formInfo struct {
 	nextMain                 iterFunc
 }
 
-var formTable = []*formInfo{{
-	form:          NFC,
-	composing:     true,
-	compatibility: false,
-	info:          lookupInfoNFC,
-	nextMain:      nextComposed,
-}, {
-	form:          NFD,
-	composing:     false,
-	compatibility: false,
-	info:          lookupInfoNFC,
-	nextMain:      nextDecomposed,
-}, {
-	form:          NFKC,
-	composing:     true,
-	compatibility: true,
-	info:          lookupInfoNFKC,
-	nextMain:      nextComposed,
-}, {
-	form:          NFKD,
-	composing:     false,
-	compatibility: true,
-	info:          lookupInfoNFKC,
-	nextMain:      nextDecomposed,
-}}
+var formTable []*formInfo
+
+func init() {
+	formTable = make([]*formInfo, 4)
+
+	for i := range formTable {
+		f := &formInfo{}
+		formTable[i] = f
+		f.form = Form(i)
+		if Form(i) == NFKD || Form(i) == NFKC {
+			f.compatibility = true
+			f.info = lookupInfoNFKC
+		} else {
+			f.info = lookupInfoNFC
+		}
+		f.nextMain = nextDecomposed
+		if Form(i) == NFC || Form(i) == NFKC {
+			f.nextMain = nextComposed
+			f.composing = true
+		}
+	}
+}
 
 // We do not distinguish between boundaries for NFC, NFD, etc. to avoid
 // unexpected behavior for the user.  For example, in NFD, there is a boundary
