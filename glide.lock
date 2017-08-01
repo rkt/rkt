@@ -1,5 +1,5 @@
-hash: 5b01507338879a95e4f789cc14dac4aee0ae1ef7661da521a437621e207ba7fa
-updated: 2017-02-13T16:50:01.49078982Z
+hash: 0d70dcd3d02dde6c7f3a493536fb7629dfb18151eaef79fff15fc05439f69674
+updated: 2017-08-01T11:21:48.713539074+02:00
 imports:
 - name: github.com/appc/docker2aci
   version: 4537ee8e3139455eac6092d47a224d8fa19bf08a
@@ -79,7 +79,7 @@ imports:
   subpackages:
   - semver
 - name: github.com/coreos/go-systemd
-  version: 48702e0da86bd25e76cfef347e2adeb434a0d0a6
+  version: d2196463941895ee908e13531a23a39feb9e1243
   subpackages:
   - activation
   - daemon
@@ -278,7 +278,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 06d6eba81293389cafdff7fca90d75592194b2d9
+  version: 2910a502d2bf9e43193af9d68ca516529614eed3
   subpackages:
   - transform
   - unicode/norm

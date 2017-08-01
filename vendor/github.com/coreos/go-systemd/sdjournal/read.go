@@ -185,6 +185,10 @@ func (r *JournalReader) Follow(until <-chan time.Time, writer io.Writer) (err er
 	// Process journal entries and events. Entries are flushed until the tail or
 	// timeout is reached, and then we wait for new events or the timeout.
 	var msg = make([]byte, 64*1<<(10))
+	var waitCh = make(chan int)
+	var waitStop = make(chan bool)
+	defer close(waitStop)
+
 process:
 	for {
 		c, err := r.Read(msg)
@@ -196,43 +200,38 @@ process:
 		case <-until:
 			return ErrExpired
 		default:
-			if c > 0 {
-				if _, err = writer.Write(msg[:c]); err != nil {
-					break process
-				}
-				continue process
+		}
+		if c > 0 {
+			if _, err = writer.Write(msg[:c]); err != nil {
+				break process
 			}
+			continue process
 		}
 
 		// We're at the tail, so wait for new events or time out.
 		// Holds journal events to process. Tightly bounded for now unless there's a
 		// reason to unblock the journal watch routine more quickly.
-		events := make(chan int, 1)
-		pollDone := make(chan bool, 1)
-		go func() {
-			for {
+		for {
+			go func() {
 				select {
-				case <-pollDone:
-					return
+				case <-waitStop:
+				case waitCh <- r.journal.Wait(1 * time.Second):
+				}
+			}()
+
+			select {
+			case <-until:
+				return ErrExpired
+			case e := <-waitCh:
+				switch e {
+				case SD_JOURNAL_NOP:
+					// the journal did not change since the last invocation
+				case SD_JOURNAL_APPEND, SD_JOURNAL_INVALIDATE:
+					continue process
 				default:
-					events <- r.journal.Wait(time.Duration(1) * time.Second)
+					log.Printf("Received unknown event: %d\n", e)
 				}
 			}
-		}()
-
-		select {
-		case <-until:
-			pollDone <- true
-			return ErrExpired
-		case e := <-events:
-			pollDone <- true
-			switch e {
-			case SD_JOURNAL_NOP, SD_JOURNAL_APPEND, SD_JOURNAL_INVALIDATE:
-				// TODO: need to account for any of these?
-			default:
-				log.Printf("Received unknown event: %d\n", e)
-			}
-			continue process
 		}
 	}
 
