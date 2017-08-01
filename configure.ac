@@ -1,5 +1,5 @@
 AC_PREREQ([2.63])
-AC_INIT([rkt], [1.28.1], [https://github.com/rkt/rkt/issues])
+AC_INIT([rkt], [1.28.1+git], [https://github.com/rkt/rkt/issues])
 
 AC_PROG_CC
 AC_PROG_CXX
