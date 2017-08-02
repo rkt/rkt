@@ -1,3 +1,11 @@
+## 1.28.1
+
+This is a minor bugfix release. It does not contain any changes to the rkt code, but it updates dependencies and runtime versions for bugfixes:
+
+- vendor: update go-systemd to v15 ([#3759](https://github.com/rkt/rkt/pull/3759)). rkt stopped working when running in a service with systemd v234. This update fixes it.
+- scripts: update rkt-builder version to 1.3.0 ([#3754](https://github.com/rkt/rkt/pull/3754)). This updates the default Go runtime to 1.8, fixing [#3738](https://github.com/rkt/rkt/issues/3738).
+
+
 ## 1.28.0
 
 This release contains changes to the behavior of `rkt run`, `rkt status`, and `rkt fly` to make them more consistent. Two of them need particular attention:
