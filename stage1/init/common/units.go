@@ -226,7 +226,7 @@ func (uw *UnitWriter) SetupAppIO(p *stage1commontypes.Pod, ra *schema.RuntimeApp
 		((flavor == "coreos" || flavor == "kvm") && systemdVersion < 231) {
 		// Explicit error if systemd is too old for attaching
 		if stdin != "" || stdout != "" || stderr != "" {
-			uw.err = fmt.Errorf("stage1 systemd %q does not support attachable I/O", systemdVersion)
+			uw.err = fmt.Errorf("stage1 systemd %d does not support attachable I/O", systemdVersion)
 			return opts
 		}
 		opts = append(opts, unit.NewUnitOption("Service", "StandardInput", "null"))
