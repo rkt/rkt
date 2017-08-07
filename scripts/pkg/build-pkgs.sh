@@ -86,7 +86,6 @@ fpm -s dir -t deb \
 	--after-remove $workdir/after-remove \
 	--before-remove $workdir/before-remove \
 	--after-upgrade $workdir/after-install \
-	--before-upgrade $workdir/before-remove \
     --license "$LICENSE" --vendor "$VENDOR" --url "$HOMEPAGE" -m "$MAINTAINER" --category utils \
     -d adduser \
     -d dbus \
@@ -103,7 +102,6 @@ fpm -s dir -t rpm \
 	--after-remove $workdir/after-remove \
 	--before-remove $workdir/before-remove \
 	--after-upgrade $workdir/after-install \
-	--before-upgrade $workdir/before-remove \
     --license "$LICENSE" --vendor "$VENDOR" --url "$HOMEPAGE" -m "$MAINTAINER" --category utils \
     --provides rkt \
     -d 'shadow-utils' \
