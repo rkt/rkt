@@ -78,8 +78,8 @@ $(call generate-stamp-rule,$(UNI_STAMP),$(UNI_COPY_STAMP) $(UNI_UNIT_TARGET_DEPS
 # this stamp makes sure that everything is copied
 $(call generate-stamp-rule,$(UNI_COPY_STAMP),$(UNI_UNITS),$(UNI_SYMLINKS) $(UNI_UNIT_DIRS))
 
-# this removes the ACI rootfs directory
-$(call generate-rm-dir-rule,$(UNI_REMOVE_ACIROOTFSDIR_STAMP),$(UNI_ACIROOTFSDIR))
+# this cleans up the units directory in the ACI rootfs
+$(call generate-rm-dir-rule,$(UNI_REMOVE_ACIROOTFSDIR_STAMP),$(UNI_UNITDIR))
 
 STAGE1_INSTALL_FILES_$(UNI_FLAVOR) += $(UNI_INSTALL_FILES_TRIPLETS)
 STAGE1_INSTALL_DIRS_$(UNI_FLAVOR) += $(UNI_INSTALL_DIRS_PAIRS)
@@ -95,19 +95,19 @@ STAGE1_SECONDARY_STAMPS_$(UNI_FLAVOR) += $(UNI_STAMP)
 # This filelist of all target unit files can be generated any time.
 $(call generate-shallow-filelist,$(UNI_UNIT_TARGET_FILELIST),$(UNI_SRC_UNITDIR),.target)
 # This dep.mk can be generated only after the filelist above was
-# generated. Will trigger removing of the ACI rootfs directory in all
+# generated. Will trigger removing of the units directory in all
 # ACI rootfses if target unit files change.
 $(call generate-glob-deps,$(UNI_UNIT_TARGET_DEPS_STAMP),$(UNI_REMOVE_ACIROOTFSDIR_STAMP),$(UNI_UNIT_TARGET_DEPMK),.target,$(UNI_UNIT_TARGET_FILELIST),$(UNI_SRC_UNITDIR),normal)
 
 # This filelist of all service unit files can be generated any time.
 $(call generate-shallow-filelist,$(UNI_UNIT_SERVICE_FILELIST),$(UNI_SRC_UNITDIR),.service)
 # This dep.mk can be generated only after the filelist above was
-# generated. Will trigger removing of the ACI rootfs directory in all
+# generated. Will trigger removing of the units directory in all
 # ACI rootfses if service unit files change.
 $(call generate-glob-deps,$(UNI_UNIT_SERVICE_DEPS_STAMP),$(UNI_REMOVE_ACIROOTFSDIR_STAMP),$(UNI_UNIT_SERVICE_DEPMK),.service,$(UNI_UNIT_SERVICE_FILELIST),$(UNI_SRC_UNITDIR),normal)
 
-# This dep.mk will force the removal of the ACI rootfs directory if
-# any symlink to be created changes.
+# This dep.mk will force the removal of the units directory in the
+# ACI rootfs if any symlink to be created changes.
 $(call generate-kv-deps,$(UNI_UNIT_SYMLINKS_KV_DEPS_STAMP),$(UNI_REMOVE_ACIROOTFSDIR_STAMP),$(UNI_UNIT_SYMLINKS_KV_DEPMK),UNI_SYMLINK_TARGETS UNI_SYMLINK_FILENAMES)
 
 $(call undefine-namespaces,UNI)
