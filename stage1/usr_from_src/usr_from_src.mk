@@ -203,7 +203,7 @@ $(UFS_SYSTEMD_CONFIGURE):
 	if [ -d "$(UFS_PATCHES_DIR)" ]; then \
 		for p in "$(abspath $(UFS_PATCHES_DIR))"/*.patch; do \
 			$(call vb,v2,PATCH,$${p#$(MK_TOPLEVEL_ABS_SRCDIR)/}) \
-			"$(GIT)" -C "$(UFS_SYSTEMD_SRCDIR)" am $(call vl3,--quiet) "$${p}"; \
+			patch $(call vl3,--silent )--directory="$(UFS_SYSTEMD_SRCDIR)" --strip=1 --forward <"$${p}"; \
 		done; \
 	fi; \
 	pushd "$(UFS_SYSTEMD_SRCDIR)" $(call vl3,>/dev/null); \
@@ -233,6 +233,16 @@ $(call generate-patches-filelist,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR))
 # regenerated.
 $(call generate-glob-deps,$(UFS_PATCHES_DEPS_STAMP),$(UFS_SYSTEMD_CONFIGURE_AC),$(UFS_PATCHES_DEPMK),.patch,$(UFS_PATCHES_FILELIST),$(UFS_PATCHES_DIR),normal)
 
+# Copy a local systemd source directory if not given a Git URL.
+ifeq ($(RKT_STAGE1_SYSTEMD_SRC),$(subst ://,,$(RKT_STAGE1_SYSTEMD_SRC)))
+
+$(UFS_SYSTEMD_CONFIGURE): $(UFS_SYSTEMD_SRCDIR)/autogen.sh
+$(UFS_SYSTEMD_SRCDIR)/autogen.sh: | $(UFS_SYSTEMDDIR)
+	cp -af $(RKT_STAGE1_SYSTEMD_SRC) $(@D)
+
+# Clone the systemd source repository if not using a local source tree.
+else
+
 # parameters for makelib/git.mk
 GCL_REPOSITORY := $(RKT_STAGE1_SYSTEMD_SRC)
 GCL_DIRECTORY := $(UFS_SYSTEMD_SRCDIR)
@@ -255,6 +265,8 @@ GCL_DO_CHECK :=
 endif
 
 include makelib/git.mk
+
+endif
 
 # Remove the build directory if there were some changes in sources
 # (like different branch or repository, or a change in patches)
