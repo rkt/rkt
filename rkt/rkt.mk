@@ -39,13 +39,9 @@ manpages: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 		grep -vE $(LOCAL_DIST_SRC_FILTER) | \
 		$(GO_ENV) xargs "$(GO)" run $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/manpages_gen.go
 
-$(call forward-vars,bash-completion,LOCAL_DIST_SRC_FILTER)
-bash-completion: GO_ENV += GOARCH=$(GOARCH_FOR_BUILD) CC=$(CC_FOR_BUILD)
-bash-completion: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
+bash-completion: $(RKT_BINARY) $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 	mkdir -p dist/bash_completion/
-	ls $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/*.go | \
-		grep -vE $(LOCAL_DIST_SRC_FILTER) | \
-		$(GO_ENV) xargs "$(GO)" run $(GOPATH_TO_CREATE)/src/$(REPO_PATH)/rkt/bash_completion_gen.go
+	$(RKT_BINARY) completion bash > dist/bash_completion/rkt.bash
 
 protobuf: | $(GOPATH_TO_CREATE)/src/$(REPO_PATH)
 	GOPATH=$(GOPATH_TO_CREATE) scripts/genproto.sh
