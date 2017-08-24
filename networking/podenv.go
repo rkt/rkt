@@ -101,6 +101,39 @@ func (e *podEnv) loadNets() ([]activeNet, error) {
 	return netSlice, nil
 }
 
+// Ensure the netns directory is mounted before adding new netns like `ip netns add <netns>` command does.
+// See https://github.com/kubernetes/kubernetes/issues/48427
+// Make it possible for network namespace mounts to propagate between mount namespaces.
+// This makes it likely that an unmounting a network namespace file in one namespace will unmount the network namespace.
+// file in all namespaces allowing the network namespace to be freed sooner.
+func (e *podEnv) mountNetnsDirectory() error {
+	err := os.MkdirAll(mountNetnsDirectory, 0755)
+	if err != nil {
+		return err
+	}
+
+	err = syscall.Mount("", mountNetnsDirectory, "none", syscall.MS_SHARED|syscall.MS_REC, "")
+	if err != nil {
+		// Fail unless we need to make the mount point
+		if err != syscall.EINVAL {
+			return fmt.Errorf("mount --make-rshared %s failed: %q", mountNetnsDirectory, err)
+		}
+
+		// Upgrade mountTarget to a mount point
+		err = syscall.Mount(mountNetnsDirectory, mountNetnsDirectory, "none", syscall.MS_BIND|syscall.MS_REC, "")
+		if err != nil {
+			return fmt.Errorf("mount --rbind %s %s failed: %q", mountNetnsDirectory, mountNetnsDirectory, err)
+		}
+
+		// Remount after the Upgrade
+		err = syscall.Mount("", mountNetnsDirectory, "none", syscall.MS_SHARED|syscall.MS_REC, "")
+		if err != nil {
+			return fmt.Errorf("mount --make-rshared %s failed: %q", mountNetnsDirectory, err)
+		}
+	}
+	return nil
+}
+
 // podNSCreate creates the network namespace and saves a reference to its path.
 // NewNS will bind-mount the namespace in /run/netns, so we write that filename
 // to disk.
