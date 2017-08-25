@@ -123,7 +123,13 @@ func (ks *Keystore) MaskTrustedKeySystemPrefix(prefix, fingerprint string) (stri
 		return "", err
 	}
 	dst := path.Join(ks.LocalPrefixPath, acidentifier.String(), fingerprint)
-	return dst, ioutil.WriteFile(dst, []byte(""), 0644)
+	if err := ioutil.WriteFile(dst, []byte(""), 0644); err != nil {
+		return "", err
+	}
+	if err := os.Chmod(dst, 0644); err != nil {
+		return "", err
+	}
+	return dst, nil
 }
 
 // DeleteTrustedKeyRoot deletes the root trusted key identified by fingerprint.
@@ -134,7 +140,13 @@ func (ks *Keystore) DeleteTrustedKeyRoot(fingerprint string) error {
 // MaskTrustedKeySystemRoot masks the system root trusted key identified by fingerprint.
 func (ks *Keystore) MaskTrustedKeySystemRoot(fingerprint string) (string, error) {
 	dst := path.Join(ks.LocalRootPath, fingerprint)
-	return dst, ioutil.WriteFile(dst, []byte(""), 0644)
+	if err := ioutil.WriteFile(dst, []byte(""), 0644); err != nil {
+		return "", err
+	}
+	if err := os.Chmod(dst, 0644); err != nil {
+		return "", err
+	}
+	return dst, nil
 }
 
 // TrustKeyPrefixExists returns whether or not there exists 1 or more trusted
@@ -251,6 +263,9 @@ func storeTrustedKey(dir string, r io.Reader) (string, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", err
 	}
+	if err := os.Chmod(dir, 0755); err != nil {
+		return "", err
+	}
 	entityList, err := openpgp.ReadArmoredKeyRing(bytes.NewReader(pubkeyBytes))
 	if err != nil {
 		return "", err
@@ -263,6 +278,10 @@ func storeTrustedKey(dir string, r io.Reader) (string, error) {
 	if err := ioutil.WriteFile(trustedKeyPath, pubkeyBytes, 0644); err != nil {
 		return "", err
 	}
+	if err := os.Chmod(trustedKeyPath, 0644); err != nil {
+		return "", err
+	}
+
 	return trustedKeyPath, nil
 }
 
@@ -363,6 +382,10 @@ func NewTestKeystore() (*Keystore, string, error) {
 		if err := os.MkdirAll(path, 0755); err != nil {
 			return nil, "", err
 		}
+		if err := os.Chmod(dir, 0755); err != nil {
+			return nil, "", err
+		}
+
 	}
 	return New(c), dir, nil
 }
