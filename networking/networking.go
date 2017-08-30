@@ -36,8 +36,9 @@ import (
 )
 
 const (
-	IfNamePattern = "eth%d"
-	selfNetNS     = "/proc/self/ns/net"
+	IfNamePattern       = "eth%d"
+	selfNetNS           = "/proc/self/ns/net"
+	mountNetnsDirectory = "/var/run/netns"
 )
 
 // Networking describes the networking details of a pod.
@@ -83,8 +84,13 @@ func Setup(podRoot string, podID types.UUID, fps []commonnet.ForwardedPort, netL
 		},
 	}
 
+	err := n.mountNetnsDirectory()
+	if err != nil {
+		return nil, err
+	}
+
 	// Create the network namespace (and save its name in a file)
-	err := n.podNSCreate()
+	err = n.podNSCreate()
 	if err != nil {
 		return nil, err
 	}
