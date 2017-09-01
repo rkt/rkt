@@ -316,6 +316,11 @@ func CreateCgroups(m fs.Mounter, root string, enabledCgroups map[int][]string, m
 		return err
 	}
 
+	unifiedPath := filepath.Join(root, "/sys/fs/cgroup/unified")
+	if err := os.MkdirAll(unifiedPath, 0700); err != nil {
+		return err
+	}
+
 	// Bind-mount cgroup tmpfs filesystem read-only
 	return mountFsRO(m, cgroupTmpfs, cgroupTmpfsFlags)
 }
