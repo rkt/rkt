@@ -35,62 +35,6 @@ const (
 	cliDescription = "rkt, the application container runner"
 
 	defaultDataDir = "/var/lib/rkt"
-
-	bash_completion_func = `__rkt_parse_image()
-{
-    local rkt_output
-    if rkt_output=$(rkt image list --no-legend 2>/dev/null); then
-        out=($(echo "${rkt_output}" | awk '{print $1}'))
-        COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
-    fi
-}
-
-__rkt_parse_list()
-{
-    local rkt_output
-    if rkt_output=$(rkt list --no-legend 2>/dev/null); then
-        if [[ -n "$1" ]]; then
-            out=($(echo "${rkt_output}" | grep ${1} | awk '{print $1}'))
-        else
-            out=($(echo "${rkt_output}" | awk '{print $1}'))
-        fi
-        COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
-    fi
-}
-
-__custom_func() {
-    case ${last_command} in
-        rkt_image_export | \
-        rkt_image_extract | \
-        rkt_image_cat-manifest | \
-        rkt_image_render | \
-        rkt_image_rm | \
-        rkt_run | \
-        rkt_prepare)
-            __rkt_parse_image
-            return
-            ;;
-        rkt_run-prepared)
-            __rkt_parse_list prepared
-            return
-            ;;
-        rkt_enter)
-            __rkt_parse_list running
-            return
-            ;;
-        rkt_rm)
-            __rkt_parse_list "prepare\|exited"
-            return
-            ;;
-        rkt_status)
-            __rkt_parse_list
-            return
-            ;;
-        *)
-            ;;
-    esac
-}
-`
 )
 
 type absDir string
@@ -153,7 +97,7 @@ var cmdRkt = &cobra.Command{
 	Long: `A CLI for running app containers on Linux.
 
 To get the help on any specific command, run "rkt help command".`,
-	BashCompletionFunction: bash_completion_func,
+	BashCompletionFunction: bashCompletionFunc,
 	Run: runMissingCommand,
 }
 
