@@ -1,0 +1,127 @@
+From 474c90156c8dcc2fa815e6716cc9394d7930cb9c Mon Sep 17 00:00:00 2001
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Thu, 2 Mar 2017 12:17:22 -0800
+Subject: [PATCH] give up on gcc ilog2() constant optimizations
+
+gcc-7 has an "optimization" pass that completely screws up, and
+generates the code expansion for the (impossible) case of calling
+ilog2() with a zero constant, even when the code gcc compiles does not
+actually have a zero constant.
+
+And we try to generate a compile-time error for anybody doing ilog2() on
+a constant where that doesn't make sense (be it zero or negative).  So
+now gcc7 will fail the build due to our sanity checking, because it
+created that constant-zero case that didn't actually exist in the source
+code.
+
+There's a whole long discussion on the kernel mailing about how to work
+around this gcc bug.  The gcc people themselevs have discussed their
+"feature" in
+
+   https://gcc.gnu.org/bugzilla/show_bug.cgi?id=72785
+
+but it's all water under the bridge, because while it looked at one
+point like it would be solved by the time gcc7 was released, that was
+not to be.
+
+So now we have to deal with this compiler braindamage.
+
+And the only simple approach seems to be to just delete the code that
+tries to warn about bad uses of ilog2().
+
+So now "ilog2()" will just return 0 not just for the value 1, but for
+any non-positive value too.
+
+It's not like I can recall anybody having ever actually tried to use
+this function on any invalid value, but maybe the sanity check just
+meant that such code never made it out in public.
+
+Reported-by: Laura Abbott <labbott@redhat.com>
+Cc: John Stultz <john.stultz@linaro.org>,
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ include/linux/log2.h       | 13 ++-----------
+ tools/include/linux/log2.h | 13 ++-----------
+ 2 files changed, 4 insertions(+), 22 deletions(-)
+
+diff --git a/include/linux/log2.h b/include/linux/log2.h
+index ef3d4f67118c..c373295f359f 100644
+--- a/include/linux/log2.h
++++ b/include/linux/log2.h
+@@ -16,12 +16,6 @@
+ #include <linux/bitops.h>
+ 
+ /*
+- * deal with unrepresentable constant logarithms
+- */
+-extern __attribute__((const, noreturn))
+-int ____ilog2_NaN(void);
+-
+-/*
+  * non-constant log of base 2 calculators
+  * - the arch may override these in asm/bitops.h if they can be implemented
+  *   more efficiently than using fls() and fls64()
+@@ -85,7 +79,7 @@ unsigned long __rounddown_pow_of_two(unsigned long n)
+ #define ilog2(n)				\
+ (						\
+ 	__builtin_constant_p(n) ? (		\
+-		(n) < 1 ? ____ilog2_NaN() :	\
++		(n) < 2 ? 0 :			\
+ 		(n) & (1ULL << 63) ? 63 :	\
+ 		(n) & (1ULL << 62) ? 62 :	\
+ 		(n) & (1ULL << 61) ? 61 :	\
+@@ -148,10 +142,7 @@ unsigned long __rounddown_pow_of_two(unsigned long n)
+ 		(n) & (1ULL <<  4) ?  4 :	\
+ 		(n) & (1ULL <<  3) ?  3 :	\
+ 		(n) & (1ULL <<  2) ?  2 :	\
+-		(n) & (1ULL <<  1) ?  1 :	\
+-		(n) & (1ULL <<  0) ?  0 :	\
+-		____ilog2_NaN()			\
+-				   ) :		\
++		1 ) :				\
+ 	(sizeof(n) <= 4) ?			\
+ 	__ilog2_u32(n) :			\
+ 	__ilog2_u64(n)				\
+diff --git a/tools/include/linux/log2.h b/tools/include/linux/log2.h
+index 41446668ccce..d5677d39c1e4 100644
+--- a/tools/include/linux/log2.h
++++ b/tools/include/linux/log2.h
+@@ -13,12 +13,6 @@
+ #define _TOOLS_LINUX_LOG2_H
+ 
+ /*
+- * deal with unrepresentable constant logarithms
+- */
+-extern __attribute__((const, noreturn))
+-int ____ilog2_NaN(void);
+-
+-/*
+  * non-constant log of base 2 calculators
+  * - the arch may override these in asm/bitops.h if they can be implemented
+  *   more efficiently than using fls() and fls64()
+@@ -78,7 +72,7 @@ unsigned long __rounddown_pow_of_two(unsigned long n)
+ #define ilog2(n)				\
+ (						\
+ 	__builtin_constant_p(n) ? (		\
+-		(n) < 1 ? ____ilog2_NaN() :	\
++		(n) < 2 ? 0 :			\
+ 		(n) & (1ULL << 63) ? 63 :	\
+ 		(n) & (1ULL << 62) ? 62 :	\
+ 		(n) & (1ULL << 61) ? 61 :	\
+@@ -141,10 +135,7 @@ unsigned long __rounddown_pow_of_two(unsigned long n)
+ 		(n) & (1ULL <<  4) ?  4 :	\
+ 		(n) & (1ULL <<  3) ?  3 :	\
+ 		(n) & (1ULL <<  2) ?  2 :	\
+-		(n) & (1ULL <<  1) ?  1 :	\
+-		(n) & (1ULL <<  0) ?  0 :	\
+-		____ilog2_NaN()			\
+-				   ) :		\
++		1 ) :				\
+ 	(sizeof(n) <= 4) ?			\
+ 	__ilog2_u32(n) :			\
+ 	__ilog2_u64(n)				\
+-- 
+2.13.5
+
