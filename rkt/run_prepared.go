@@ -52,6 +52,7 @@ func init() {
 	cmdRunPrepared.Flags().BoolVar(&flagInteractive, "interactive", false, "run pod interactively")
 	cmdRunPrepared.Flags().BoolVar(&flagMDSRegister, "mds-register", false, "register pod with metadata service")
 	cmdRunPrepared.Flags().StringVar(&flagHostname, "hostname", "", `pod's hostname. If empty, it will be "rkt-$PODUUID"`)
+	cmdRunPrepared.Flags().StringVar(&flagIPCMode, "ipc", "", `whether to stay in the host IPC namespace. Syntax: --ipc=[auto|private|parent]`)
 }
 
 func runRunPrepared(cmd *cobra.Command, args []string) (exit int) {

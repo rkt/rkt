@@ -96,6 +96,12 @@ This interface version is not yet finalized, thus marked as experimental.
 
 * `--mutable` to run a mutable pod
 
+#### Arguments added in interface version 6
+
+* `--ipc=[auto|private|parent]` (default to `auto` if missing): Allows to stay in the host IPC namespace. The default
+	to `auto` does what makes more sense for the flavor (`parent` for `stage1-fly` and `private` for `stage1-coreos`
+	and `stage1-kvm`).
+
 ### rkt enter
 
 `coreos.com/rkt/stage1/enter`

@@ -134,6 +134,7 @@ func parseFlags() *stage1commontypes.RuntimePod {
 		"hosts":  "default",
 	})
 	flag.Var(dnsConfMode, "dns-conf-mode", "DNS config file modes")
+	flag.StringVar(&rp.IPCMode, "ipc", "", "IPC mode --ipc=[auto|private|parent]")
 
 	flag.Parse()
 
@@ -262,7 +263,7 @@ func installAssets(systemdVersion int) error {
 
 // getArgsEnv returns the nspawn or lkvm args and env according to the flavor
 // as the first two return values respectively.
-func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister bool, debug bool, n *networking.Networking) ([]string, []string, error) {
+func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister bool, debug bool, n *networking.Networking, parentIPC bool) ([]string, []string, error) {
 	var args []string
 	env := os.Environ()
 
@@ -475,6 +476,10 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 		env = append(env, "SYSTEMD_LOG_LEVEL=err") // silence log_warning too
 	}
 
+	if parentIPC {
+		env = append(env, "SYSTEMD_NSPAWN_SHARE_NS_IPC=true")
+	}
+
 	env = append(env, "SYSTEMD_NSPAWN_CONTAINER_SERVICE=rkt")
 	// TODO (alepuccetti) remove this line when rkt will use cgroup namespace
 	// If the kernel has the cgroup namespace enabled, systemd v232 will use it by default.
@@ -655,7 +660,26 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 	}
 	diag.Printf("canMachinedRegister %t", canMachinedRegister)
 
-	args, env, err := getArgsEnv(p, flavor, canMachinedRegister, debug, n)
+	// --ipc=[auto|private|parent]
+	// default to private
+	parentIPC := false
+	switch p.IPCMode {
+	case "parent":
+		parentIPC = true
+	case "private":
+		parentIPC = false
+	case "auto":
+		fallthrough
+	case "":
+		parentIPC = false
+	default:
+		log.Fatalf("unknown value for --ipc parameter: %v", p.IPCMode)
+	}
+	if parentIPC && flavor == "kvm" {
+		log.Fatal("flavor kvm requires private IPC namespace (try to remove --ipc)")
+	}
+
+	args, env, err := getArgsEnv(p, flavor, canMachinedRegister, debug, n, parentIPC)
 	if err != nil {
 		log.FatalE("cannot get environment", err)
 	}

@@ -401,6 +401,7 @@ This feature will be disabled automatically if the underlying filesystem does no
 | `--hostname` | `rkt-$PODUUID` | A host name | Set pod's host name. |
 | `--inherit-env` | `false` | `true` or `false` | Inherit all environment variables not set by apps. |
 | `--interactive` | `false` | `true` or `false` | Run pod interactively. If true, only one image may be supplied. |
+| `--ipc` | `auto` | `auto`, `private` or `parent` | Whether to stay in the host IPC namespace. |
 | `--mds-register` | `false` | `true` or `false` | Register pod with metadata service. It needs network connectivity to the host (`--net` as `default`, `default-restricted`, or `host`). |
 | `--memory` | none | Memory units (e.g. `--memory=50M`) | Memory limit for the preceding image in [Kubernetes resource model][k8s-resources] format. |
 | `--mount` | none | Mount syntax (e.g. `--mount volume=NAME,target=PATH`) | Mount point binding a volume to a path within an app. See [Mounting Volumes without Mount Points](#mounting-volumes-without-mount-points). |

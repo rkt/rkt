@@ -125,3 +125,7 @@ func interfaceVersionSupportsDNSConfMode(version int) bool {
 func interfaceVersionSupportsGCLocalConfig(version int) bool {
 	return version >= 5
 }
+
+func interfaceVersionSupportsIPCMode(version int) bool {
+	return version >= 6
+}
