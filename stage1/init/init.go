@@ -190,7 +190,7 @@ func machinedRegister() bool {
 	return found == 2
 }
 
-func installAssets() error {
+func installAssets(systemdVersion int) error {
 	systemctlBin, err := common.LookupPath("systemctl", os.Getenv("PATH"))
 	if err != nil {
 		return err
@@ -248,6 +248,13 @@ func installAssets() error {
 		// systemd-shutdown has to be installed at the same path as on the host
 		// because it depends on systemd build flag -DSYSTEMD_SHUTDOWN_BINARY_PATH=
 		proj2aci.GetAssetString(systemdShutdownBin, systemdShutdownBin),
+	}
+
+	// systemd-journal-flush.service was added in systemd-v233. Required to place
+	// the logs in /var/log/journal instead of /run/log/journal. See:
+	// https://github.com/systemd/systemd/commit/f78273c8dacf678cc8fd7387f678e6344a99405c
+	if systemdVersion >= 233 {
+		assets = append(assets, proj2aci.GetAssetString(fmt.Sprintf("%s/systemd-journal-flush.service", systemdUnitsPath), fmt.Sprintf("%s/systemd-journald.service", systemdUnitsPath)))
 	}
 
 	return proj2aci.PrepareAssets(assets, "./stage1/rootfs/", nil)
@@ -411,7 +418,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 		}
 
 		// Copy systemd, bash, etc. in stage1 at run-time
-		if err := installAssets(); err != nil {
+		if err := installAssets(version); err != nil {
 			return nil, nil, errwrap.Wrap(errors.New("cannot install assets from the host"), err)
 		}
 
