@@ -870,8 +870,7 @@ func setupStage1Image(cfg RunConfig, cdir string, useOverlay bool) error {
 			return err
 		}
 
-		// pass an empty appName: make sure it remains consistent with
-		// overlayStatusDirTemplate
+		// pass an empty appName
 		if err := overlayRender(cfg, string(treeStoreID), cdir, s1, ""); err != nil {
 			return errwrap.Wrap(errors.New("error rendering overlay filesystem"), err)
 		}

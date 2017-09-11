@@ -43,9 +43,8 @@ They can also be set to a duration. If the duration is less than zero, wait inde
 )
 
 const (
-	overlayStatusDirTemplate = "overlay/%s/upper/rkt/status"
-	regularStatusDir         = "stage1/rootfs/rkt/status"
-	cmdStatusName            = "status"
+	regularStatusDir = "stage1/rootfs/rkt/status"
+	cmdStatusName    = "status"
 )
 
 func init() {
