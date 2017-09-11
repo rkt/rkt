@@ -403,7 +403,25 @@ func ParseUserGroup(p *stage1commontypes.Pod, ra *schema.RuntimeApp) (int, int, 
 	}
 
 	if _, gid, err = gidResolver.IDs(); err != nil {
-		return -1, -1, errwrap.Wrap(fmt.Errorf("failed to configure group %q", ra.App.Group), err)
+		// If we can't resolve the GID, it might be an image converted from
+		// docker.
+		//
+		// Docker uses the UID as GID if you only specify the "user". In that
+		// case, docker2aci sets the group name to the user name because the
+		// appc spec requires both user and group to be set. This will fail
+		// because that group name won't be found in /etc/group. Let's detect
+		// if the image was converted from docker and set the GID to the UID in
+		// that case.
+		//
+		// We only do this if the group in RuntimeApp is the same as the one in
+		// the image, otherwise we trust that the user knows what they're
+		// doing.
+		img := p.Images[ra.Name.String()]
+		if ConvertedFromDocker(img) && img.App.User == img.App.Group && ra.App.Group == img.App.Group {
+			gid = uid
+		} else {
+			return -1, -1, errwrap.Wrap(fmt.Errorf("failed to configure group %q", ra.App.Group), err)
+		}
 	}
 
 	return uid, gid, nil
