@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
@@ -137,23 +136,14 @@ func appStateInMutablePod(app *v1.App, pod *pkgPod.Pod) error {
 			}
 		}
 	}()
-	createdFile := common.AppCreatedPath(pod.Path(), app.Name)
-	startedFile := common.AppStartedPath(pod.Path(), app.Name)
-	appStatusFile := common.AppStatusPath(pod.Path(), app.Name)
 
-	if pod.UsesOverlay() {
-		treeStoreID, err := pod.GetStage1TreeStoreID()
-		if err != nil {
-			return err
-		}
-		s1Dir := filepath.Join(filepath.Join(pod.Path(), "overlay"), treeStoreID)
-		upper := filepath.Join(s1Dir, "upper")
-		appStatusesPath := filepath.Join(upper, "/rkt/status")
-
-		createdFile = filepath.Join(appStatusesPath, fmt.Sprintf("%s-created", app.Name))
-		startedFile = filepath.Join(appStatusesPath, fmt.Sprintf("%s-started", app.Name))
-		appStatusFile = filepath.Join(appStatusesPath, app.Name)
+	stage1RootfsPath, err := pod.Stage1RootfsPath()
+	if err != nil {
+		return err
 	}
+	createdFile := common.AppCreatedPathFromStage1Rootfs(stage1RootfsPath, app.Name)
+	startedFile := common.AppStartedPathFromStage1Rootfs(stage1RootfsPath, app.Name)
+	appStatusFile := common.AppStatusPathFromStage1Rootfs(stage1RootfsPath, app.Name)
 
 	// Check if the app is created.
 	fi, err := os.Stat(createdFile)
