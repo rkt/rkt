@@ -70,6 +70,7 @@ var (
 		Content            string
 		CheckCgroupMounts  bool
 		PrintNetNS         bool
+		PrintIpcNS         bool
 		PrintIPv4          string
 		PrintIPv6          string
 		PrintDefaultGWv4   bool
@@ -116,6 +117,7 @@ func init() {
 	globalFlagset.StringVar(&globalFlags.Content, "content", "", "The content to write, $CONTENT will be ignored if this is specified")
 	globalFlagset.BoolVar(&globalFlags.CheckCgroupMounts, "check-cgroups", false, "Try to write to the cgroup filesystem. Everything should be RO except some well-known files")
 	globalFlagset.BoolVar(&globalFlags.PrintNetNS, "print-netns", false, "Print the network namespace")
+	globalFlagset.BoolVar(&globalFlags.PrintIpcNS, "print-ipcns", false, "Print the IPC namespace")
 	globalFlagset.StringVar(&globalFlags.PrintIPv4, "print-ipv4", "", "Takes an interface name and prints its IPv4")
 	globalFlagset.StringVar(&globalFlags.PrintIPv6, "print-ipv6", "", "Takes an interface name and prints its IPv6")
 	globalFlagset.BoolVar(&globalFlags.PrintDefaultGWv4, "print-defaultgwv4", false, "Print the default IPv4 gateway")
@@ -537,6 +539,15 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("NetNS: %s\n", ns)
+	}
+
+	if globalFlags.PrintIpcNS {
+		ns, err := os.Readlink("/proc/self/ns/ipc")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("IPCNS: %s\n", ns)
 	}
 
 	if globalFlags.PrintIPv4 != "" {

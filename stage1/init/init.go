@@ -134,6 +134,7 @@ func parseFlags() *stage1commontypes.RuntimePod {
 		"hosts":  "default",
 	})
 	flag.Var(dnsConfMode, "dns-conf-mode", "DNS config file modes")
+	flag.StringVar(&rp.IPCMode, "ipc", "", "IPC mode --ipc=[auto|private|parent]")
 
 	flag.Parse()
 
@@ -190,7 +191,7 @@ func machinedRegister() bool {
 	return found == 2
 }
 
-func installAssets() error {
+func installAssets(systemdVersion int) error {
 	systemctlBin, err := common.LookupPath("systemctl", os.Getenv("PATH"))
 	if err != nil {
 		return err
@@ -250,12 +251,19 @@ func installAssets() error {
 		proj2aci.GetAssetString(systemdShutdownBin, systemdShutdownBin),
 	}
 
+	// systemd-journal-flush.service was added in systemd-v233. Required to place
+	// the logs in /var/log/journal instead of /run/log/journal. See:
+	// https://github.com/systemd/systemd/commit/f78273c8dacf678cc8fd7387f678e6344a99405c
+	if systemdVersion >= 233 {
+		assets = append(assets, proj2aci.GetAssetString(fmt.Sprintf("%s/systemd-journal-flush.service", systemdUnitsPath), fmt.Sprintf("%s/systemd-journald.service", systemdUnitsPath)))
+	}
+
 	return proj2aci.PrepareAssets(assets, "./stage1/rootfs/", nil)
 }
 
 // getArgsEnv returns the nspawn or lkvm args and env according to the flavor
 // as the first two return values respectively.
-func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister bool, debug bool, n *networking.Networking) ([]string, []string, error) {
+func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister bool, debug bool, n *networking.Networking, parentIPC bool) ([]string, []string, error) {
 	var args []string
 	env := os.Environ()
 
@@ -411,7 +419,7 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 		}
 
 		// Copy systemd, bash, etc. in stage1 at run-time
-		if err := installAssets(); err != nil {
+		if err := installAssets(version); err != nil {
 			return nil, nil, errwrap.Wrap(errors.New("cannot install assets from the host"), err)
 		}
 
@@ -466,6 +474,10 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 	if !debug {
 		args = append(args, "--quiet")             // silence most nspawn output (log_warning is currently not covered by this)
 		env = append(env, "SYSTEMD_LOG_LEVEL=err") // silence log_warning too
+	}
+
+	if parentIPC {
+		env = append(env, "SYSTEMD_NSPAWN_SHARE_NS_IPC=true")
 	}
 
 	env = append(env, "SYSTEMD_NSPAWN_CONTAINER_SERVICE=rkt")
@@ -648,7 +660,26 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 	}
 	diag.Printf("canMachinedRegister %t", canMachinedRegister)
 
-	args, env, err := getArgsEnv(p, flavor, canMachinedRegister, debug, n)
+	// --ipc=[auto|private|parent]
+	// default to private
+	parentIPC := false
+	switch p.IPCMode {
+	case "parent":
+		parentIPC = true
+	case "private":
+		parentIPC = false
+	case "auto":
+		fallthrough
+	case "":
+		parentIPC = false
+	default:
+		log.Fatalf("unknown value for --ipc parameter: %v", p.IPCMode)
+	}
+	if parentIPC && flavor == "kvm" {
+		log.Fatal("flavor kvm requires private IPC namespace (try to remove --ipc)")
+	}
+
+	args, env, err := getArgsEnv(p, flavor, canMachinedRegister, debug, n, parentIPC)
 	if err != nil {
 		log.FatalE("cannot get environment", err)
 	}

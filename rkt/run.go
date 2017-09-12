@@ -78,6 +78,7 @@ image arguments with a lone "---" to resume argument parsing.`,
 	flagHostname     string
 	flagHostsEntries flagStringList
 	flagPullPolicy   string
+	flagIPCMode      string
 )
 
 func addIsolatorFlags(cmd *cobra.Command, compat bool) {
@@ -153,6 +154,7 @@ func init() {
 	cmdRun.Flags().StringVar(&flagUUIDFileSave, "uuid-file-save", "", "write out pod UUID to specified file")
 	cmdRun.Flags().StringVar(&flagHostname, "hostname", "", `pod's hostname. If empty, it will be "rkt-$PODUUID"`)
 	cmdRun.Flags().Var((*appsVolume)(&rktApps), "volume", "volumes to make available in the pod")
+	cmdRun.Flags().StringVar(&flagIPCMode, "ipc", "", `whether to stay in the host IPC namespace. Syntax: --ipc=[auto|private|parent]`)
 
 	// per-app flags
 	cmdRun.Flags().Var((*appAsc)(&rktApps), "signature", "local signature file to use in validating the preceding image")
@@ -394,6 +396,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		InsecureSeccomp:      globalFlags.InsecureFlags.SkipSeccomp(),
 		UseOverlay:           useOverlay,
 		HostsEntries:         *HostsEntries,
+		IPCMode:              flagIPCMode,
 	}
 
 	_, manifest, err := p.PodManifest()

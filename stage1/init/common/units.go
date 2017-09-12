@@ -595,7 +595,17 @@ func (uw *UnitWriter) appSystemdUnit(pa *preparedApp, binPath string, opts []*un
 		}
 
 		if systemdVersion >= 233 {
-			opts = append(opts, unit.NewUnitOption("Service", "ProtectKernelTunables", "true"))
+			// ProtectKernelTunables is introduced in systemd-v232 but didn't work
+			// until v233 due to a systemd bug, see
+			// https://github.com/systemd/systemd/pull/4594
+			// However, from v233, setting ProtectKernelTunables + RootDirectory causes
+			// MountAPIVFS to be enabled unconditionally, which we don't want.
+			//
+			// opts = append(opts, unit.NewUnitOption("Service", "ProtectKernelTunables", "true"))
+
+			// MountAPIVFS is introduced in systemd-233. Don't let systemd mount /sys:
+			// it is mounted by prepare-app (tested by TestVolumeSysfs)
+			opts = append(opts, unit.NewUnitOption("Service", "MountAPIVFS", "false"))
 		}
 
 		// MountFlags=shared creates a new mount namespace and (as unintuitive

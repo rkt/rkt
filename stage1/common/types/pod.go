@@ -71,6 +71,7 @@ type RuntimePod struct {
 		DisableCapabilities bool `json:"DisableCapabilities"`
 		DisableSeccomp      bool `json:"DisableSeccomp"`
 	} `json:"InsecureOptions"`
+	IPCMode string `json:"IPCMode"`
 }
 
 // AppNameToImageName takes the name of an app in the Pod and returns the name
