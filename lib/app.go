@@ -137,8 +137,16 @@ func appStateInMutablePod(app *v1.App, pod *pkgPod.Pod) error {
 		}
 	}()
 
+	stage1RootfsPath, err := pod.Stage1RootfsPath()
+	if err != nil {
+		return err
+	}
+	createdFile := common.AppCreatedPathFromStage1Rootfs(stage1RootfsPath, app.Name)
+	startedFile := common.AppStartedPathFromStage1Rootfs(stage1RootfsPath, app.Name)
+	appStatusFile := common.AppStatusPathFromStage1Rootfs(stage1RootfsPath, app.Name)
+
 	// Check if the app is created.
-	fi, err := os.Stat(common.AppCreatedPath(pod.Path(), app.Name))
+	fi, err := os.Stat(createdFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return fmt.Errorf("cannot stat app creation file: %v", err)
@@ -151,7 +159,7 @@ func appStateInMutablePod(app *v1.App, pod *pkgPod.Pod) error {
 	app.CreatedAt = &createdAt
 
 	// Check if the app is started.
-	fi, err = os.Stat(common.AppStartedPath(pod.Path(), app.Name))
+	fi, err = os.Stat(startedFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return fmt.Errorf("cannot stat app started file: %v", err)
@@ -164,7 +172,6 @@ func appStateInMutablePod(app *v1.App, pod *pkgPod.Pod) error {
 	app.StartedAt = &startedAt
 
 	// Check if the app is exited.
-	appStatusFile := common.AppStatusPath(pod.Path(), app.Name)
 	fi, err = os.Stat(appStatusFile)
 	if err != nil {
 		if !os.IsNotExist(err) {

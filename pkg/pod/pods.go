@@ -1208,7 +1208,7 @@ func (p *Pod) AppExitCode(appName string) (int, error) {
 		return -1, err
 	}
 
-	statusFile := filepath.Join(stage1RootfsPath, "/rkt/status/", appName)
+	statusFile := common.AppStatusPathFromStage1Rootfs(stage1RootfsPath, appName)
 	return p.readIntFromFile(statusFile)
 }
 

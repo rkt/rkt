@@ -125,14 +125,26 @@ func PodManifestLockPath(root string) string {
 	return filepath.Join(root, "pod.lck")
 }
 
+// AppsStatusesPathFromStage1Rootfs returns the path of the status dir for all apps.
+// It receives the stage1 rootfs as parameter instead of the pod root.
+func AppsStatusesPathFromStage1Rootfs(rootfs string) string {
+	return filepath.Join(rootfs, "/rkt/status")
+}
+
 // AppsStatusesPath returns the path of the status dir for all apps.
 func AppsStatusesPath(root string) string {
-	return filepath.Join(Stage1RootfsPath(root), "/rkt/status")
+	return AppsStatusesPathFromStage1Rootfs(Stage1RootfsPath(root))
 }
 
 // AppStatusPath returns the path of the status file of an app.
 func AppStatusPath(root, appName string) string {
 	return filepath.Join(AppsStatusesPath(root), appName)
+}
+
+// AppStatusPathFromStage1Rootfs returns the path of the status file of an app.
+// It receives the stage1 rootfs as parameter instead of the pod root.
+func AppStatusPathFromStage1Rootfs(rootfs, appName string) string {
+	return filepath.Join(AppsStatusesPathFromStage1Rootfs(rootfs), appName)
 }
 
 // AppCreatedPath returns the path of the ${appname}-created file, which is used to record
@@ -141,10 +153,24 @@ func AppCreatedPath(root, appName string) string {
 	return filepath.Join(AppsStatusesPath(root), fmt.Sprintf("%s-created", appName))
 }
 
+// AppCreatedPathFromStage1Rootfs returns the path of the ${appname}-created file,
+// which is used to record the creation timestamp of the app.
+// It receives the stage1 rootfs as parameter instead of the pod root.
+func AppCreatedPathFromStage1Rootfs(rootfs, appName string) string {
+	return filepath.Join(AppsStatusesPathFromStage1Rootfs(rootfs), fmt.Sprintf("%s-created", appName))
+}
+
 // AppStartedPath returns the path of the ${appname}-started file, which is used to record
 // the start timestamp of the app.
 func AppStartedPath(root, appName string) string {
 	return filepath.Join(AppsStatusesPath(root), fmt.Sprintf("%s-started", appName))
+}
+
+// AppStartedPathFromStage1Rootfs returns the path of the ${appname}-started file, which is used to record
+// the start timestamp of the app.
+// It receives the stage1 rootfs as parameter instead of the pod root.
+func AppStartedPathFromStage1Rootfs(rootfs, appName string) string {
+	return filepath.Join(AppsStatusesPathFromStage1Rootfs(rootfs), fmt.Sprintf("%s-started", appName))
 }
 
 // AppsPath returns the path where the apps within a pod live.
