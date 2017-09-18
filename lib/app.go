@@ -16,7 +16,6 @@ package rkt
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/appc/spec/schema"
@@ -184,11 +183,14 @@ func appStateInMutablePod(app *v1.App, pod *pkgPod.Pod) error {
 	finishedAt := fi.ModTime().UnixNano()
 	app.FinishedAt = &finishedAt
 
-	// Read exit code.
-	exitCode, err := readExitCode(appStatusFile)
+	code, err := pod.AppExitCode(app.Name)
 	if err != nil {
-		return err
+		// if we can't get the exit code (e.g. we didn't have time to write it
+		// after a pod dies) let's continue instead of erroring out, the exit code
+		// will be a generic 1 and we'll let callers handle it.
+		code = 1
 	}
+	exitCode := int32(code)
 	app.ExitCode = &exitCode
 
 	return nil
@@ -247,17 +249,4 @@ func appStateFromPod(pod *pkgPod.Pod) v1.AppState {
 	default:
 		return v1.AppStateUnknown
 	}
-}
-
-func readExitCode(path string) (int32, error) {
-	var exitCode int32
-
-	b, err := ioutil.ReadFile(path)
-	if err != nil {
-		return -1, fmt.Errorf("cannot read app exited file: %v", err)
-	}
-	if _, err := fmt.Sscanf(string(b), "%d", &exitCode); err != nil {
-		return -1, fmt.Errorf("cannot parse exit code: %v", err)
-	}
-	return exitCode, nil
 }
