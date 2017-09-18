@@ -361,7 +361,7 @@ func (s *resumableSession) setHTTPHeaders(req *http.Request, stripAuth bool) {
 			continue
 		}
 		for _, e := range v {
-			req.Header.Add(k, e)
+			req.Header.Set(k, e)
 		}
 	}
 	req.Header.Add("User-Agent", fmt.Sprintf("rkt/%s", version.Version))
