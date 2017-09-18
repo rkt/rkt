@@ -77,6 +77,8 @@ type (
 		AppNames []string `json:"app_names,omitempty"`
 		// Apps holds current information about each app.
 		Apps []*App `json:"apps,omitempty"`
+		// The creation time of the pod.
+		CreatedAt *int64 `json:"created_at,omitempty"`
 		// The start time of the pod.
 		StartedAt *int64 `json:"started_at,omitempty"`
 		// UserAnnotations are the pod user annotations.
