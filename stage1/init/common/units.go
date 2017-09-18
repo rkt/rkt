@@ -328,6 +328,16 @@ func (uw *UnitWriter) SetupAppIO(p *stage1commontypes.Pod, ra *schema.RuntimeApp
 			if ok {
 				file.WriteString(fmt.Sprintf("STAGE1_LOGMODE=%s\n", logMode))
 			}
+			switch logMode {
+			case "k8s-plain":
+				kubernetesLogPath, ok := ra.Annotations.Get("coreos.com/rkt/experiment/kubernetes-log-path")
+				if !ok {
+					uw.err = fmt.Errorf("kubernetes-log-path annotation needs to be specified when k8s-plain logging mode is used")
+					return nil
+				}
+				file.WriteString(fmt.Sprintf("KUBERNETES_LOG_PATH=%s\n", kubernetesLogPath))
+			}
+
 		} else if needsTTYMux {
 			// tty mode brings in a `ttymux@.service` after-dependency (it needs to create the TTY first)
 			opts = append(opts, unit.NewUnitOption("Service", "TTYPath", filepath.Join("/rkt/iottymux", ra.Name.String(), "stage2-pts")))
