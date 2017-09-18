@@ -61,20 +61,18 @@ func runAppRm(cmd *cobra.Command, args []string) (exit int) {
 		stderr.PrintE("invalid app name", err)
 	}
 
-	if p.State() != pkgPod.Running {
-		stderr.Printf("pod %q is not running", p.UUID)
-		return 254
-	}
+	var podPID int
+	if p.State() == pkgPod.Running {
+		if !p.IsSupervisorReady() {
+			stderr.Printf("pod %q is running but its supervisor is not ready yet", p.UUID)
+			return 254
+		}
 
-	if !p.IsSupervisorReady() {
-		stderr.Printf("supervisor for pod %q is not ready yet", p.UUID)
-		return 254
-	}
-
-	podPID, err := p.ContainerPid1()
-	if err != nil {
-		stderr.PrintE(fmt.Sprintf("unable to determine the pid for pod %q", p.UUID), err)
-		return 254
+		podPID, err = p.ContainerPid1()
+		if err != nil {
+			stderr.PrintE(fmt.Sprintf("unable to determine the pid for pod %q", p.UUID), err)
+			return 254
+		}
 	}
 
 	ccfg := stage0.CommonConfig{
