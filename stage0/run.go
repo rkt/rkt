@@ -156,18 +156,6 @@ func mergeEnvs(appEnv *types.Environment, env []string, override bool) {
 	}
 }
 
-func imageNameToAppName(name types.ACIdentifier) (*types.ACName, error) {
-	parts := strings.Split(name.String(), "/")
-	last := parts[len(parts)-1]
-
-	sn, err := types.SanitizeACName(last)
-	if err != nil {
-		return nil, err
-	}
-
-	return types.MustACName(sn), nil
-}
-
 // deduplicateMPs removes Mounts with duplicated paths. If there's more than
 // one Mount with the same path, it keeps the first one encountered.
 func deduplicateMPs(mounts []schema.Mount) []schema.Mount {
@@ -213,7 +201,7 @@ func generatePodManifest(cfg PrepareConfig, dir string) ([]byte, error) {
 		}
 
 		if app.Name == "" {
-			appName, err := imageNameToAppName(am.Name)
+			appName, err := common.ImageNameToAppName(am.Name)
 			if err != nil {
 				return errwrap.Wrap(errors.New("error converting image name to app name"), err)
 			}
