@@ -130,9 +130,9 @@ Backwards compatibility: Currently the biggest concern identified is backwards c
 [docker2aci]: https://github.com/appc/docker2aci
 [oci-runtime]: https://github.com/opencontainers/runtime-spec
 
-[aci]: https://github.com/appc/spec/blob/v0.8.10/spec/aci.md#app-container-image
-[ace-fs]: https://github.com/appc/spec/blob/v0.8.10/spec/ace.md#filesystem-setup
-[appc-image-id-type]: https://github.com/appc/spec/blob/v0.8.10/spec/types.md#image-id-type
+[aci]: https://github.com/appc/spec/blob/v0.8.11/spec/aci.md#app-container-image
+[ace-fs]: https://github.com/appc/spec/blob/v0.8.11/spec/ace.md#filesystem-setup
+[appc-image-id-type]: https://github.com/appc/spec/blob/v0.8.11/spec/types.md#image-id-type
 
 [oci]: https://github.com/opencontainers/image-spec
 [oci-manifest]: https://github.com/opencontainers/image-spec/blob/v1.0.0-rc2/manifest.md#image-manifest

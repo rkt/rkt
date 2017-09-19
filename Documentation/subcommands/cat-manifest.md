@@ -5,7 +5,7 @@ For debugging or inspection you may want to extract the PodManifest to stdout.
 ```
 # rkt cat-manifest UUID
 {
-  "acVersion":"0.8.10",
+  "acVersion":"0.8.11",
   "acKind":"PodManifest"
 ...
 ```

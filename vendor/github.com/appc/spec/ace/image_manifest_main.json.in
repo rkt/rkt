@@ -1,11 +1,11 @@
 {
-    "acVersion": "0.8.10",
+    "acVersion": "0.8.11",
     "acKind": "ImageManifest",
     "name": "coreos.com/ace-validator-main",
     "labels": [
-        { "name": "version", "value": "0.8.10" },
-        { "name": "os", "value": "@GOOS@" },
-        { "name": "arch", "value": "@GOARCH@" }
+        { "name": "version", "value": "0.8.11" },
+        { "name": "os", "value": "@ACI_OS@" },
+        { "name": "arch", "value": "@ACI_ARCH@" }
     ],
     "app": {
         "exec": [

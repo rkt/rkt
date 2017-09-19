@@ -228,7 +228,7 @@ func TestGetAci(t *testing.T) {
 				{
 					`{
 						"acKind": "ImageManifest",
-						"acVersion": "0.8.10",
+						"acVersion": "0.8.11",
 						"name": "example.com/test01"
 					}`,
 					false,
@@ -236,7 +236,7 @@ func TestGetAci(t *testing.T) {
 				{
 					`{
 						"acKind": "ImageManifest",
-						"acVersion": "0.8.10",
+						"acVersion": "0.8.11",
 						"name": "example.com/test02",
 						"labels": [
 							{
@@ -250,7 +250,7 @@ func TestGetAci(t *testing.T) {
 				{
 					`{
 						"acKind": "ImageManifest",
-						"acVersion": "0.8.10",
+						"acVersion": "0.8.11",
 						"name": "example.com/test02",
 						"labels": [
 							{
