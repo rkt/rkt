@@ -45,6 +45,7 @@ func TestVolumeMount(t *testing.T) {
 				),
 				nil,
 				innerFileContent,
+				false,
 			},
 		},
 	}).Execute(t)

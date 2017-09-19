@@ -103,6 +103,7 @@ type volumeMountTestCase struct {
 	cmdArgs        string
 	podManifest    *schema.PodManifest
 	expectedResult string
+	skipPrepared   bool
 }
 
 var (
@@ -121,6 +122,7 @@ var (
 			),
 			nil,
 			innerFileContent,
+			false,
 		},
 		{
 			"CLI: recursive read-only mount write file must fail",
@@ -136,6 +138,7 @@ var (
 			),
 			nil,
 			"read-only file system",
+			false,
 		},
 	}
 
@@ -154,6 +157,7 @@ var (
 			),
 			nil,
 			outerFileContent,
+			false,
 		},
 		{
 			"CLI: read-only non-recursive write file must fail",
@@ -169,6 +173,7 @@ var (
 			),
 			nil,
 			"read-only file system",
+			false,
 		},
 	}
 
@@ -203,6 +208,7 @@ var (
 				},
 			},
 			innerFileContent,
+			false,
 		},
 		{
 			"Write of nested file for recursive/read-only mount must fail",
@@ -235,6 +241,7 @@ var (
 				},
 			},
 			"read-only file system",
+			false,
 		},
 	}
 
@@ -271,6 +278,7 @@ var (
 				},
 			},
 			"host:foo",
+			false,
 		},
 	}
 
@@ -305,6 +313,7 @@ var (
 				},
 			},
 			outerFileContent,
+			false,
 		},
 	}
 
@@ -320,6 +329,7 @@ var (
 			),
 			nil,
 			"duplicate volume name",
+			true,
 		},
 	}
 )
@@ -383,6 +393,9 @@ func NewTestVolumeMount(volumeMountTestCases [][]volumeMountTestCase) testutils.
 				verifyHostFile(t, volDir, "file", i, tt.expectedResult)
 
 				// 2. Test 'rkt prepare' + 'rkt run-prepared'.
+				if tt.skipPrepared {
+					continue
+				}
 				prepareCmd := fmt.Sprintf("%s prepare", ctx.Cmd())
 				if manifestFile != "" {
 					prepareCmd += fmt.Sprintf(" --pod-manifest=%s", manifestFile)
