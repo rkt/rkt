@@ -20,7 +20,7 @@ import:
   subpackages:
   - proj2aci
 - package: github.com/appc/spec
-  version: v0.8.10
+  version: v0.8.11
   subpackages:
   - ace
   - aci

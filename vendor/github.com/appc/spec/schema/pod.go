@@ -83,6 +83,15 @@ func (pm *PodManifest) assertValid() error {
 	if pm.ACKind != PodManifestKind {
 		return pmKindError
 	}
+
+	// ensure volumes names are unique (unique key)
+	volNames := make(map[types.ACName]bool, len(pm.Volumes))
+	for _, vol := range pm.Volumes {
+		if volNames[vol.Name] {
+			return fmt.Errorf("duplicate volume name %q", vol.Name)
+		}
+		volNames[vol.Name] = true
+	}
 	return nil
 }
 

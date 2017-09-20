@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	envPattern = regexp.MustCompile("^[A-Za-z_][A-Za-z_0-9]*$")
+	envPattern = regexp.MustCompile("^[A-Za-z_][A-Za-z_0-9.-]*$")
 )
 
 type Environment []EnvironmentVariable

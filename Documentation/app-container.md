@@ -35,8 +35,8 @@ To validate that `rkt` successfully implements the ACE part of the spec, use the
 # rkt --insecure-options=image run \
 	--mds-register \
 	--volume=database,kind=host,source=/tmp \
-	https://github.com/appc/spec/releases/download/v0.8.10/ace-validator-main.aci \
-	https://github.com/appc/spec/releases/download/v0.8.10/ace-validator-sidekick.aci
+	https://github.com/appc/spec/releases/download/v0.8.11/ace-validator-main.aci \
+	https://github.com/appc/spec/releases/download/v0.8.11/ace-validator-sidekick.aci
 ```
 
 [acbuild]: https://github.com/containers/build

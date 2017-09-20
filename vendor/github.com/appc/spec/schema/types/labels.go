@@ -28,7 +28,11 @@ var ValidOSArch = map[string][]string{
 
 type Labels []Label
 
-type labels Labels
+type labelsSlice Labels
+
+func (l labelsSlice) Len() int           { return len(l) }
+func (l labelsSlice) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+func (l labelsSlice) Less(i, j int) bool { return l[i].Name < l[j].Name }
 
 type Label struct {
 	Name  ACIdentifier `json:"name"`
@@ -97,11 +101,11 @@ func (l Labels) MarshalJSON() ([]byte, error) {
 	if err := l.assertValid(); err != nil {
 		return nil, err
 	}
-	return json.Marshal(labels(l))
+	return json.Marshal(labelsSlice(l))
 }
 
 func (l *Labels) UnmarshalJSON(data []byte) error {
-	var jl labels
+	var jl labelsSlice
 	if err := json.Unmarshal(data, &jl); err != nil {
 		return err
 	}
@@ -141,6 +145,7 @@ func LabelsFromMap(labelsMap map[ACIdentifier]string) (Labels, error) {
 	if err := labels.assertValid(); err != nil {
 		return nil, err
 	}
+	sort.Sort(labelsSlice(labels))
 	return labels, nil
 }
 
