@@ -673,6 +673,14 @@ func parsePodInfoOutput(t *testing.T, result string, p *podInfo) {
 			}
 		}
 	}
+
+	if p.state == "" {
+		t.Fatalf("Unexpected empty state for pod")
+	}
+
+	if p.createdAt <= 0 {
+		t.Fatalf("Unexpected createdAt <= 0 for pod")
+	}
 }
 
 func getPodDir(t *testing.T, ctx *testutils.RktRunCtx, podID string) string {

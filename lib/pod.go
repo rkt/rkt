@@ -15,6 +15,8 @@
 package rkt
 
 import (
+	"errors"
+
 	"github.com/rkt/rkt/api/v1"
 	pkgPod "github.com/rkt/rkt/pkg/pod"
 )
@@ -36,6 +38,17 @@ func NewPodFromInternalPod(p *pkgPod.Pod) (*v1.Pod, error) {
 		startedAt := startTime.Unix()
 		pod.StartedAt = &startedAt
 	}
+
+	creationTime, err := p.CreationTime()
+	if err != nil {
+		return nil, err
+	}
+
+	createdAt := creationTime.Unix()
+	if creationTime.IsZero() || createdAt <= 0 {
+		return nil, errors.New("invalid creation time")
+	}
+	pod.CreatedAt = &createdAt
 
 	if !p.PodManifestAvailable() {
 		return pod, nil
