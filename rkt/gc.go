@@ -26,6 +26,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/rkt/rkt/common"
+	"github.com/rkt/rkt/pkg/mountinfo"
 	pkgPod "github.com/rkt/rkt/pkg/pod"
 	"github.com/rkt/rkt/stage0"
 	"github.com/rkt/rkt/store/imagestore"
@@ -197,29 +198,51 @@ func emptyGarbage() error {
 	return nil
 }
 
-func mountPodStage1(ts *treestore.Store, p *pkgPod.Pod) error {
+// mountPodStage1 tries to remount stage1 image overlay in case
+// it is not anymore available in place (e.g. a reboot happened
+// in-between). If an overlay mount is already there, we assume
+// stage1 image is properly in place and we don't perform any
+// further actions. A boolean is returned to signal whether a
+// a new mount was performed.
+func mountPodStage1(ts *treestore.Store, p *pkgPod.Pod) (bool, error) {
 	if !p.UsesOverlay() {
-		return nil
+		return false, nil
 	}
 
 	s1Id, err := p.GetStage1TreeStoreID()
 	if err != nil {
-		return errwrap.Wrap(errors.New("error getting stage1 treeStoreID"), err)
+		return false, errwrap.Wrap(errors.New("error getting stage1 treeStoreID"), err)
 	}
 	s1rootfs := ts.GetRootFS(s1Id)
-
 	stage1Dir := common.Stage1RootfsPath(p.Path())
+
+	if mounts, err := mountinfo.ParseMounts(0); err == nil {
+		for _, m := range mounts {
+			if m.MountPoint == stage1Dir {
+				// stage1 image overlay already in place
+				return false, nil
+			}
+		}
+	}
+
 	overlayDir := filepath.Join(p.Path(), "overlay")
 	imgDir := filepath.Join(overlayDir, s1Id)
 	upperDir := filepath.Join(imgDir, "upper")
 	workDir := filepath.Join(imgDir, "work")
 
 	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", s1rootfs, upperDir, workDir)
-	if err := syscall.Mount("overlay", stage1Dir, "overlay", 0, opts); err != nil {
-		return errwrap.Wrap(errors.New("error mounting stage1"), err)
+	err = syscall.Mount("overlay", stage1Dir, "overlay", 0, opts)
+	if err != nil {
+		// -EBUSY means the overlay mount is already present.
+		// This behavior was introduced in Linux 4.13, double-mounts were allowed
+		// in older kernels.
+		if err == syscall.EBUSY {
+			stderr.Println("mount detected on stage1 target, skipping overlay mount")
+			return false, nil
+		}
+		return false, errwrap.Wrap(errors.New("error mounting stage1"), err)
 	}
-
-	return nil
+	return true, nil
 }
 
 // deletePod cleans up files and resource associated with the pod
@@ -250,16 +273,15 @@ func deletePod(p *pkgPod.Pod) bool {
 			stage0.InitDebug()
 		}
 
-		if err := mountPodStage1(ts, p); err == nil {
+		if newMount, err := mountPodStage1(ts, p); err == nil {
 			if err = stage0.GC(p.Path(), p.UUID, globalFlags.LocalConfigDir); err != nil {
 				stderr.PrintE(fmt.Sprintf("problem performing stage1 GC on %q", p.UUID), err)
 			}
-			// an overlay fs can be mounted over itself, let's unmount it here
-			// if we mounted it before to avoid problems when running
-			// stage0.MountGC
-			if p.UsesOverlay() {
+			// Linux <4.13 allows an overlay fs to be mounted over itself, so let's
+			// unmount it here to avoid problems when running stage0.MountGC
+			if p.UsesOverlay() && newMount {
 				stage1Mnt := common.Stage1RootfsPath(p.Path())
-				if err := syscall.Unmount(stage1Mnt, 0); err != nil {
+				if err := syscall.Unmount(stage1Mnt, 0); err != nil && err != syscall.EBUSY {
 					stderr.PrintE("error unmounting stage1", err)
 				}
 			}
