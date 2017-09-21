@@ -74,6 +74,10 @@ func AddApp(cfg AddConfig) error {
 	}
 	defer pod.Close()
 
+	if pod.State() != pkgPod.Running {
+		return errors.New("pod is not running")
+	}
+
 	debug("locking pod manifest")
 	if err := pod.ExclusiveLockManifest(); err != nil {
 		return errwrap.Wrap(errors.New("failed to lock pod manifest"), err)

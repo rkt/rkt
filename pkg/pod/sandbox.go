@@ -94,12 +94,8 @@ func (p *Pod) UpdateManifest(m *schema.PodManifest, path string) error {
 }
 
 // ExclusiveLockManifest gets an exclusive lock on only the pod manifest in the app sandbox.
-// Since the pod is already running, we won't be able to get an exclusive lock on the pod itself.
+// Since the pod might already be running, we can't just get an exclusive lock on the pod itself.
 func (p *Pod) ExclusiveLockManifest() error {
-	if !p.isRunning() {
-		return errors.New("pod is not running")
-	}
-
 	if p.manifestLock != nil {
 		return p.manifestLock.ExclusiveLock() // This is idempotent
 	}
@@ -115,10 +111,6 @@ func (p *Pod) ExclusiveLockManifest() error {
 
 // UnlockManifest unlocks the pod manifest lock.
 func (p *Pod) UnlockManifest() error {
-	if !p.isRunning() {
-		return errors.New("pod is not running")
-	}
-
 	if p.manifestLock == nil {
 		return nil
 	}

@@ -102,7 +102,9 @@ func RmApp(cfg RmConfig) error {
 		}
 
 		appRootfs := common.AppRootfsPath(cfg.PodPath, *cfg.AppName)
-		if err := syscall.Unmount(appRootfs, 0); err != nil {
+		// if the system reboots stage1 won't be mounted and appRootfs won't
+		// exist, ignore this error
+		if err := syscall.Unmount(appRootfs, 0); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 
@@ -121,12 +123,17 @@ func RmApp(cfg RmConfig) error {
 		return err
 	}
 
-	appStatusPath := filepath.Join(common.Stage1RootfsPath(cfg.PodPath), "rkt", "status", cfg.AppName.String())
+	stage1RootfsPath, err := pod.Stage1RootfsPath()
+	if err != nil {
+		return err
+	}
+
+	appStatusPath := filepath.Join(stage1RootfsPath, "rkt", "status", cfg.AppName.String())
 	if err := os.Remove(appStatusPath); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
-	envPath := filepath.Join(common.Stage1RootfsPath(cfg.PodPath), "rkt", "env", cfg.AppName.String())
+	envPath := filepath.Join(stage1RootfsPath, "rkt", "env", cfg.AppName.String())
 	if err := os.Remove(envPath); err != nil && !os.IsNotExist(err) {
 		return err
 	}
