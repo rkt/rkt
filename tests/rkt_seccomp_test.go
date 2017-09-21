@@ -22,12 +22,26 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rkt/rkt/common"
 	"github.com/rkt/rkt/tests/testutils"
 )
 
 const (
 	baseApp = `--exec=/inspect -file-name / -stat-file`
 )
+
+// Returns the syscall used by syscall.Stat()
+func getStatCall() string {
+	m := map[string]string{
+		"default": "stat",
+		"aarch64": "newfstatat",
+	}
+
+	if v, ok := m[common.GetArch()]; ok {
+		return v
+	}
+	return m["default"]
+}
 
 var seccompTestCases = []struct {
 	name           string
@@ -73,7 +87,7 @@ var seccompTestCases = []struct {
 	},
 	{
 		`remove-set blacklist stat with custom error`,
-		[]string{baseApp, "--seccomp-mode=remove,errno=EXFULL", "--seccomp-set=stat"},
+		[]string{baseApp, "--seccomp-mode=remove,errno=EXFULL", "--seccomp-set=" + getStatCall()},
 		nil,
 		"exchange full",
 		true,
@@ -108,7 +122,7 @@ var seccompTestCases = []struct {
 	},
 	{
 		`CLI override whitelist all`,
-		[]string{baseApp, "--seccomp-mode=remove,errno=EXFULL", "--seccomp-set=stat"},
+		[]string{baseApp, "--seccomp-mode=remove,errno=EXFULL", "--seccomp-set=" + getStatCall()},
 		[]string{"--seccomp=mode=retain,@appc.io/all"},
 		`/: mode: d`,
 		false,
@@ -116,27 +130,27 @@ var seccompTestCases = []struct {
 	{
 		`CLI override blacklist stat with custom error`,
 		[]string{baseApp},
-		[]string{"--seccomp=mode=remove,errno=EXFULL,stat"},
+		[]string{"--seccomp=mode=remove,errno=EXFULL," + getStatCall()},
 		"exchange full",
 		true,
 	},
 	{
 		`insecure-options fake override: remove-set blacklist stat with custom error`,
-		[]string{baseApp, "--seccomp-mode=remove,errno=EMULTIHOP", "--seccomp-set=stat"},
+		[]string{baseApp, "--seccomp-mode=remove,errno=EMULTIHOP", "--seccomp-set=" + getStatCall()},
 		[]string{"--insecure-options=image,ondisk,capabilities,paths"},
 		"multihop attempted",
 		true,
 	},
 	{
 		`insecure-options simple override: remove-set blacklist stat with custom error`,
-		[]string{baseApp, "--seccomp-mode=remove,errno=EMULTIHOP", "--seccomp-set=stat"},
+		[]string{baseApp, "--seccomp-mode=remove,errno=EMULTIHOP", "--seccomp-set=" + getStatCall()},
 		[]string{"--insecure-options=image,seccomp"},
 		`/: mode: d`,
 		false,
 	},
 	{
 		`insecure-options complete override: remove-set blacklist stat with custom error`,
-		[]string{baseApp, "--seccomp-mode=remove,errno=EMULTIHOP", "--seccomp-set=stat"},
+		[]string{baseApp, "--seccomp-mode=remove,errno=EMULTIHOP", "--seccomp-set=" + getStatCall()},
 		[]string{"--insecure-options=image,all-run"},
 		`/: mode: d`,
 		false,
