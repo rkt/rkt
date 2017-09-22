@@ -4,8 +4,8 @@ bin/ssh-keygen
 lib64/libcom_err.so.2
 lib64/libcom_err.so.2.1
 lib64/libcrypt-2.23.so
-lib64/libcrypt.so.1
 lib64/libcrypto.so.1.0.0
+lib64/libcrypt.so.1
 lib64/libgssapi_krb5.so.2
 lib64/libgssapi_krb5.so.2.2
 lib64/libk5crypto.so.3
