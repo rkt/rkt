@@ -93,6 +93,8 @@ func MutableEnv(p *stage1commontypes.Pod) error {
 		unit.NewUnitOption("Service", "RemainAfterExit", "yes"),
 	)
 
+	w.Activate("systemd-journal-flush.service", ServiceWantPath(p.Root, "systemd-journal-flush"))
+
 	return w.Error()
 }
 
@@ -179,6 +181,8 @@ func ImmutableEnv(p *stage1commontypes.Pod) error {
 			unit.NewUnitOption("Unit", "After", "shutdown.service"),
 		)
 	}
+
+	uw.Activate("systemd-journal-flush.service", ServiceWantPath(p.Root, "systemd-journal-flush"))
 
 	return uw.Error()
 }
