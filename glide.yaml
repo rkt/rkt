@@ -175,7 +175,7 @@ import:
 - package: github.com/kr/pty
   version: f7ee69f31298ecbe5d2b349c711e2547a617d398
 - package: github.com/pborman/uuid
-  version: cccd189d45f7ac3368a0d127efb7f4d08ae0b655
+  version: v1.1
 - package: github.com/peterbourgon/diskv
   version: v2.0.0
 - package: github.com/russross/blackfriday
