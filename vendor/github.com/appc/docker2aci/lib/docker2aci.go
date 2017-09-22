@@ -150,6 +150,9 @@ func (c *converter) convert() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(ancestry) == 0 {
+		return nil, fmt.Errorf("backend image had no useful layers: not creating ACI")
+	}
 	for _, h := range c.config.CurrentManifestHashes {
 		if manhash == h {
 			return nil, nil

@@ -262,7 +262,9 @@ func GenerateManifest(layerData types.DockerImageData, manhash string, dockerURL
 		var env appctypes.Environment
 		for _, v := range dockerConfig.Env {
 			parts := strings.SplitN(v, "=", 2)
-			env.Set(parts[0], parts[1])
+                        if len(parts) == 2 {
+				env.Set(parts[0], parts[1])
+                        }
 		}
 		app := &appctypes.App{
 			Exec:             exec,
@@ -393,7 +395,9 @@ func GenerateManifestV22(
 		var env appctypes.Environment
 		for _, v := range innerCfg.Env {
 			parts := strings.SplitN(v, "=", 2)
-			env.Set(parts[0], parts[1])
+                        if len(parts) == 2 {
+				env.Set(parts[0], parts[1])
+                        }
 		}
 		manifest.App = &appctypes.App{
 			Exec:             exec,
