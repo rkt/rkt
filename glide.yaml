@@ -126,7 +126,7 @@ import:
 - package: github.com/d2g/dhcp4client
   version: bed07e1bc5b85f69c6f0fd73393aa35ec68ed892
 - package: github.com/docker/distribution
-  version: v2.3.0
+  version: 5db89f0ca68677abc5eefce8f2a0a772c98ba52d
   subpackages:
   - digest
   - reference
