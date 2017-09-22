@@ -1,5 +1,5 @@
-hash: 5b06576039a24b5039701b611547d833429d8c94bcaf8c0c87e86a17eae97a55
-updated: 2017-09-19T12:27:26.119724281+02:00
+hash: fb6826e4dd20d01356b635ac2c186ce58e8f8c459129ab4836c0b1fc76d955ac
+updated: 2017-09-22T08:41:59.222546512Z
 imports:
 - name: github.com/appc/docker2aci
   version: 4537ee8e3139455eac6092d47a224d8fa19bf08a
@@ -207,7 +207,7 @@ imports:
   - specs-go
   - specs-go/v1
 - name: github.com/pborman/uuid
-  version: cccd189d45f7ac3368a0d127efb7f4d08ae0b655
+  version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/peterbourgon/diskv
   version: 937c5a91d7fb1477fa6d2bb71410b2ae7a0f2143
 - name: github.com/PuerkitoBio/purell
