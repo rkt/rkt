@@ -108,9 +108,7 @@ func (h *oAuthBearerTokenHeaderer) SignRequest(r *http.Request) *http.Request {
 }
 
 type awsAuthHeaderer struct {
-	accessKeyID     string
-	secretAccessKey string
-	region          string
+	auth awsV1
 }
 
 func (h *awsAuthHeaderer) GetHeader() http.Header {
@@ -118,7 +116,7 @@ func (h *awsAuthHeaderer) GetHeader() http.Header {
 }
 
 func (h *awsAuthHeaderer) SignRequest(r *http.Request) *http.Request {
-	region := h.region
+	region := h.auth.Region
 
 	var body io.ReadSeeker
 	if r.Body != nil {
@@ -134,7 +132,7 @@ func (h *awsAuthHeaderer) SignRequest(r *http.Request) *http.Request {
 			SigningName:   awsS3Service,
 		},
 		Config: aws.Config{
-			Credentials: credentials.NewStaticCredentials(h.accessKeyID, h.secretAccessKey, ""),
+			Credentials: credentials.NewStaticCredentials(h.auth.AccessKeyID, h.auth.SecretAccessKey, ""),
 		},
 		HTTPRequest: r,
 		Body:        body,
@@ -243,9 +241,7 @@ func (p *authV1JsonParser) getAWSV1Headerer(raw json.RawMessage) (Headerer, erro
 		return nil, fmt.Errorf("no AWS Secret Access Key specified")
 	}
 	return &awsAuthHeaderer{
-		accessKeyID:     aws.AccessKeyID,
-		secretAccessKey: aws.SecretAccessKey,
-		region:          aws.Region,
+		auth: aws,
 	}, nil
 }
 

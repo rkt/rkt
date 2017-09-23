@@ -81,6 +81,9 @@ func (c *Config) MarshalJSON() ([]byte, error) {
 		case *oAuthBearerTokenHeaderer:
 			typ = "oauth"
 			credentials = h.auth
+		case *awsAuthHeaderer:
+			typ = "aws"
+			credentials = h.auth
 		default:
 			return nil, errors.New("unknown headerer type")
 		}
