@@ -82,7 +82,7 @@ func (e *ErrSeveralImages) Error() string {
 // ParseDockerURL takes a Docker URL and returns a ParsedDockerURL with its
 // index URL, image name, and tag.
 func ParseDockerURL(arg string) (*ParsedDockerURL, error) {
-	r, err := reference.ParseNamed(arg)
+	r, err := reference.ParseNormalizedNamed(arg)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func ParseDockerURL(arg string) (*ParsedDockerURL, error) {
 		tag = defaultTag
 	}
 
-	indexURL, remoteName := docker.SplitReposName(r.Name())
+	indexURL, remoteName := docker.SplitReposName(reference.FamiliarName(r))
 
 	return &ParsedDockerURL{
 		OriginalName: arg,

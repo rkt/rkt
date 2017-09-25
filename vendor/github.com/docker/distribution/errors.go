@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/distribution/digest"
+	"github.com/opencontainers/go-digest"
 )
+
+// ErrAccessDenied is returned when an access to a requested resource is
+// denied.
+var ErrAccessDenied = errors.New("access denied")
 
 // ErrManifestNotModified is returned when a conditional manifest GetByTag
 // returns nil due to the client indicating it has the latest version
@@ -73,7 +77,7 @@ func (err ErrManifestUnknownRevision) Error() string {
 type ErrManifestUnverified struct{}
 
 func (ErrManifestUnverified) Error() string {
-	return fmt.Sprintf("unverified manifest")
+	return "unverified manifest"
 }
 
 // ErrManifestVerification provides a type to collect errors encountered

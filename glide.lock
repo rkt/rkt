@@ -1,8 +1,8 @@
-hash: fb6826e4dd20d01356b635ac2c186ce58e8f8c459129ab4836c0b1fc76d955ac
-updated: 2017-09-22T08:41:59.222546512Z
+hash: 57f42aad7f59db30f4bea9a422c8f904dc474a44830d5f26f2c2617d71d85bb3
+updated: 2017-09-22T16:07:34.061851427+02:00
 imports:
 - name: github.com/appc/docker2aci
-  version: 4537ee8e3139455eac6092d47a224d8fa19bf08a
+  version: 76a5ef32f8b027b68027374252f90bbacf4f64a3
   subpackages:
   - lib
   - lib/common
@@ -133,9 +133,10 @@ imports:
   subpackages:
   - spew
 - name: github.com/docker/distribution
-  version: 099622876197e3b24d627a72053d1bcc8968076a
+  version: 5db89f0ca68677abc5eefce8f2a0a772c98ba52d
   subpackages:
   - digest
+  - digestset
   - reference
 - name: github.com/dustin/go-humanize
   version: c20a8bde38c8f5ba06f6600edf473705c96829d1
