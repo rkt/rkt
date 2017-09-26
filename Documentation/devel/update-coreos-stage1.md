@@ -80,6 +80,8 @@ done
 Usually, there are some updated libraries which need an update on their version numbers.
 In our case, there are no updates and all the files mentioned in the manifest are present in the updated Container Linux image.
 
+If any of the manifest files have been modified run the script `scripts/sort-stage1-manifests.sh` to keep the manifest files in sorted order.
+
 ## Update the coreos flavor version used by the build system
 
 In the file `stage1/usr_from_coreos/coreos-common.mk`, we define which Container Linux image version we use for the coreos flavor.
