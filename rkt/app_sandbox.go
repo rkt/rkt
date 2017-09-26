@@ -39,9 +39,9 @@ var (
 		Long:  "Initializes an empty pod having no applications.",
 		Run:   runWrapper(runAppSandbox),
 	}
-	flagAppPorts    appPortList
-	flagAnnotations kvMap
-	flagLabels      kvMap
+	flagAppPorts        appPortList
+	flagUserAnnotations kvMap
+	flagLabels          kvMap
 )
 
 func init() {
@@ -60,7 +60,7 @@ func init() {
 	cmdAppSandbox.Flags().Var(&flagAppPorts, "port", "ports to forward. format: \"name:proto:podPort:hostIP:hostPort\"")
 
 	flagAppPorts = appPortList{}
-	cmdAppSandbox.Flags().Var(&flagAnnotations, "user-annotation", "optional, set the pod's annotations in the form of key=value")
+	cmdAppSandbox.Flags().Var(&flagUserAnnotations, "user-annotation", "optional, set the pod's annotations in the form of key=value")
 	cmdAppSandbox.Flags().Var(&flagLabels, "user-label", "optional, set the pod's label in the form of key=value")
 }
 
@@ -140,7 +140,7 @@ func runAppSandbox(cmd *cobra.Command, args []string) int {
 		PrivateUsers:    user.NewBlankUidRange(),
 		Apps:            &rktApps,
 		Ports:           []types.ExposedPort(flagAppPorts),
-		UserAnnotations: parseAnnotations(&flagAnnotations),
+		UserAnnotations: parseAnnotations(&flagUserAnnotations),
 		UserLabels:      parseLabels(&flagLabels),
 	}
 
@@ -297,12 +297,12 @@ func (apl *appPortList) Type() string {
 
 // parseAnnotations converts the annotations set by '--user-annotation' flag,
 // and returns types.UserAnnotations.
-func parseAnnotations(flagAnnotations *kvMap) types.UserAnnotations {
-	if flagAnnotations.IsEmpty() {
+func parseAnnotations(flagUserAnnotations *kvMap) types.UserAnnotations {
+	if flagUserAnnotations.IsEmpty() {
 		return nil
 	}
 	annotations := make(types.UserAnnotations)
-	for k, v := range flagAnnotations.mapping {
+	for k, v := range flagUserAnnotations.mapping {
 		annotations[k] = v
 	}
 	return annotations

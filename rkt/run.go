@@ -108,7 +108,8 @@ func addAppFlags(cmd *cobra.Command) {
 	cmd.Flags().Var((*appGroup)(&rktApps), "group", "group override for the preceding image (example: '--group=group')")
 	cmd.Flags().Var((*appSupplementaryGIDs)(&rktApps), "supplementary-gids", "supplementary group IDs override for the preceding image (examples: '--supplementary-gids=1024,2048'")
 	cmd.Flags().Var((*appName)(&rktApps), "name", "set the name of the app (example: '--name=foo'). If not set, then the app name default to the image's name")
-	cmd.Flags().Var((*appAnnotation)(&rktApps), "user-annotation", "set the app's annotations (example: '--user-annotation=foo=bar')")
+	cmd.Flags().Var((*appAnnotation)(&rktApps), "annotation", "set the app's annotations (example: '--annotation=foo=bar')")
+	cmd.Flags().Var((*appUserAnnotation)(&rktApps), "user-annotation", "set the app's annotations (example: '--user-annotation=foo=bar')")
 	cmd.Flags().Var((*appLabel)(&rktApps), "user-label", "set the app's labels (example: '--user-label=foo=bar')")
 	cmd.Flags().Var((*appEnv)(&rktApps), "environment", "set the app's environment variables (example: '--environment=foo=bar')")
 	if common.IsExperimentEnabled("attach") {
