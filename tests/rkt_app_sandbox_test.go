@@ -446,6 +446,53 @@ func TestAppSandboxMount(t *testing.T) {
 }
 
 func TestAppSandboxAnnotations(t *testing.T) {
+	for _, tt := range []struct {
+		args                    []string
+		expectedAnnotations     map[string]string
+		expectedUserAnnotations map[string]string
+	}{
+		{
+			args: []string{
+				"--annotation=foo=bar",
+				"--user-annotation=ayy=lmao",
+			},
+			expectedAnnotations:     map[string]string{"foo": "bar"},
+			expectedUserAnnotations: map[string]string{"ayy": "lmao"},
+		},
+	} {
+		testSandboxWithArgs(t, tt.args, func(ctx *testutils.RktRunCtx, child *gexpect.ExpectSubprocess, podUUID string) {
+			podInfo := getPodInfo(t, ctx, podUUID)
+
+			annotations := make(map[string]string)
+			for _, annotation := range podInfo.manifest.Annotations {
+				annotations[annotation.Name.String()] = annotation.Value
+			}
+
+			userAnnotations := make(map[string]string)
+			for k, v := range podInfo.manifest.UserAnnotations {
+				userAnnotations[k] = v
+			}
+
+			// Annotations contain both the data from CLI and data generated dufing rkt runtime.
+			// We check here only for the data we provided with CLi.
+			for k, v := range tt.expectedAnnotations {
+				value, ok := annotations[k]
+				if !ok {
+					t.Errorf("key %s doesn't exist in annotations", k)
+				}
+				if v != value {
+					t.Errorf("got value %s, expected value %s", v, value)
+				}
+			}
+
+			if !reflect.DeepEqual(userAnnotations, tt.expectedUserAnnotations) {
+				t.Errorf("got %v user annotations, expected %v user annotations", userAnnotations, tt.expectedUserAnnotations)
+			}
+		})
+	}
+}
+
+func TestAppSandboxAppAnnotations(t *testing.T) {
 	testSandbox(t, func(ctx *testutils.RktRunCtx, child *gexpect.ExpectSubprocess, podUUID string) {
 		for _, tt := range []struct {
 			args                    []string
@@ -501,6 +548,10 @@ func TestAppSandboxAnnotations(t *testing.T) {
 }
 
 func testSandbox(t *testing.T, testFunc func(*testutils.RktRunCtx, *gexpect.ExpectSubprocess, string)) {
+	testSandboxWithArgs(t, nil, testFunc)
+}
+
+func testSandboxWithArgs(t *testing.T, args []string, testFunc func(*testutils.RktRunCtx, *gexpect.ExpectSubprocess, string)) {
 	if err := os.Setenv("RKT_EXPERIMENT_APP", "true"); err != nil {
 		panic(err)
 	}
@@ -519,6 +570,9 @@ func testSandbox(t *testing.T, testFunc func(*testutils.RktRunCtx, *gexpect.Expe
 	defer ctx.Cleanup()
 
 	rkt := ctx.Cmd() + " app sandbox --uuid-file-save=" + uuidFile
+	if args != nil {
+		rkt = rkt + " " + strings.Join(args, " ")
+	}
 	child := spawnOrFail(t, rkt)
 
 	// wait for the sandbox to start
