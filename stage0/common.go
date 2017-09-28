@@ -164,6 +164,18 @@ func generateRuntimeApp(appRunConfig *apps.App, am *schema.ImageManifest, podMou
 		ra.App.SupplementaryGIDs = appRunConfig.SupplementaryGIDs
 	}
 
+	for k, v := range appRunConfig.Annotations {
+		if _, ok := ra.Annotations.Get(k); ok {
+			continue
+		}
+		kAci, err := types.NewACIdentifier(k)
+		if err != nil {
+			return ra, errwrap.Wrap(fmt.Errorf("error parsing annotation key %q", k), err)
+		}
+
+		ra.Annotations.Set(*kAci, v)
+	}
+
 	if appRunConfig.UserAnnotations != nil {
 		ra.App.UserAnnotations = appRunConfig.UserAnnotations
 	}

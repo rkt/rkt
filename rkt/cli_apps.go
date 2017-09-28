@@ -600,10 +600,47 @@ func (au *appName) Type() string {
 	return "appName"
 }
 
-// appAnnotation is for --user-annotation flags in the form of: --user-annotation=NAME=VALUE.
+// appAnnotation is for --annotation flags in the form of: --annotation=name=value
 type appAnnotation apps.Apps
 
 func (au *appAnnotation) Set(s string) error {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return fmt.Errorf("--annotation must follow an image")
+	}
+
+	fields := strings.SplitN(s, "=", 2)
+	if len(fields) != 2 {
+		return fmt.Errorf("invalid format of --annotation flag %q", s)
+	}
+
+	if app.Annotations == nil {
+		app.Annotations = make(map[string]string)
+	}
+	app.Annotations[fields[0]] = fields[1]
+	return nil
+}
+
+func (au *appAnnotation) String() string {
+	app := (*apps.Apps)(au).Last()
+	if app == nil {
+		return ""
+	}
+	var annotations []string
+	for name, value := range app.Annotations {
+		annotations = append(annotations, fmt.Sprintf("%s=%s", name, value))
+	}
+	return strings.Join(annotations, ",")
+}
+
+func (au *appAnnotation) Type() string {
+	return "appAnnotation"
+}
+
+// appUserAnnotation is for --user-annotation flags in the form of: --user-annotation=NAME=VALUE.
+type appUserAnnotation apps.Apps
+
+func (au *appUserAnnotation) Set(s string) error {
 	app := (*apps.Apps)(au).Last()
 	if app == nil {
 		return fmt.Errorf("--user-annotation must follow an image")
@@ -621,7 +658,7 @@ func (au *appAnnotation) Set(s string) error {
 	return nil
 }
 
-func (au *appAnnotation) String() string {
+func (au *appUserAnnotation) String() string {
 	app := (*apps.Apps)(au).Last()
 	if app == nil {
 		return ""
@@ -633,8 +670,8 @@ func (au *appAnnotation) String() string {
 	return strings.Join(annotations, ",")
 }
 
-func (au *appAnnotation) Type() string {
-	return "appAnnotation"
+func (au *appUserAnnotation) Type() string {
+	return "appUserAnnotation"
 }
 
 // appLabel is for --user-label flags in the form of: --user-label=NAME=VALUE.

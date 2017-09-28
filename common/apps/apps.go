@@ -63,6 +63,7 @@ type App struct {
 	CapsRemove        *types.LinuxCapabilitiesRevokeSet // os/linux/capabilities-remove-set overrides
 	SeccompFilter     string                            // seccomp CLI overrides
 	OOMScoreAdj       *types.LinuxOOMScoreAdj           // oom-score-adj isolator override
+	Annotations       map[string]string                 // the annotations of the app
 	UserAnnotations   map[string]string                 // the user annotations of the app.
 	UserLabels        map[string]string                 // the user labels of the app.
 	Environments      map[string]string                 // the environments of the app.

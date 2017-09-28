@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -415,6 +416,61 @@ func TestAppSandboxMount(t *testing.T) {
 			}
 
 			combinedOutput(t, ctx.ExecCmd("app", "rm", "--debug", podUUID, "--app=mounter"))
+		}
+	})
+}
+
+func TestAppSandboxAnnotations(t *testing.T) {
+	testSandbox(t, func(ctx *testutils.RktRunCtx, child *gexpect.ExpectSubprocess, podUUID string) {
+		for _, tt := range []struct {
+			args                    []string
+			expectedAnnotations     map[string]string
+			expectedUserAnnotations map[string]string
+		}{
+			{
+				args: []string{
+					"--annotation=foo=bar",
+					"--user-annotation=ayy=lmao",
+				},
+				expectedAnnotations:     map[string]string{"foo": "bar"},
+				expectedUserAnnotations: map[string]string{"ayy": "lmao"},
+			},
+		} {
+			imageName := "coreos.com/rkt-inspect/hello"
+			msg := "HelloFromAppInSandbox"
+
+			aciHello := patchTestACI("rkt-inspect-hello.aci", "--name="+imageName, "--exec=/inspect --print-msg="+msg)
+			defer os.Remove(aciHello)
+
+			combinedOutput(t, ctx.ExecCmd("fetch", "--insecure-options=image", aciHello))
+
+			args := []string{
+				"app", "add", "--debug", podUUID,
+				"coreos.com/rkt-inspect/hello",
+				"--name=annotation-test",
+			}
+			args = append(args, tt.args...)
+
+			combinedOutput(t, ctx.ExecCmd(args...))
+
+			podInfo := getPodInfo(t, ctx, podUUID)
+
+			annotations := make(map[string]string)
+			for _, annotation := range podInfo.manifest.Apps[0].Annotations {
+				annotations[annotation.Name.String()] = annotation.Value
+			}
+
+			userAnnotations := make(map[string]string)
+			for k, v := range podInfo.manifest.Apps[0].App.UserAnnotations {
+				userAnnotations[k] = v
+			}
+
+			if !reflect.DeepEqual(annotations, tt.expectedAnnotations) {
+				t.Errorf("expected %v annotations, got %v annotations", annotations, tt.expectedAnnotations)
+			}
+			if !reflect.DeepEqual(userAnnotations, tt.expectedUserAnnotations) {
+				t.Errorf("expected %v user annotations, got %v user annotations", userAnnotations, tt.expectedUserAnnotations)
+			}
 		}
 	})
 }
