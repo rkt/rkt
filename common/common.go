@@ -539,3 +539,17 @@ func GetOSArch() (os string, arch string) {
 	os, arch, _ = types.ToAppcOSArch(runtime.GOOS, arch, flavor)
 	return os, arch
 }
+
+// ImageNameToAppName converts the full name of image to an app name without special
+// characters - we use it as a default app name when specyfing it is optional
+func ImageNameToAppName(name types.ACIdentifier) (*types.ACName, error) {
+	parts := strings.Split(name.String(), "/")
+	last := parts[len(parts)-1]
+
+	sn, err := types.SanitizeACName(last)
+	if err != nil {
+		return nil, err
+	}
+
+	return types.MustACName(sn), nil
+}

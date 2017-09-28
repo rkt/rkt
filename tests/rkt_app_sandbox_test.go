@@ -62,6 +62,31 @@ func TestAppSandboxAddStartRemove(t *testing.T) {
 	})
 }
 
+// TestAppSandboxAddDefaultAppName tests applying default names to apps.
+// It starts the sandbox, adds one app and ensures that it has a name converted from
+// the image name.
+func TestAppSandboxAddDefaultAppName(t *testing.T) {
+	testSandbox(t, func(ctx *testutils.RktRunCtx, child *gexpect.ExpectSubprocess, podUUID string) {
+		imageName := "coreos.com/rkt-inspect/hello"
+		msg := "HelloFromAppInSandbox"
+
+		expectedAppName := "hello"
+
+		aciHello := patchTestACI("rkt-inspect-hello.aci", "--name="+imageName, "--exec=/inspect --print-msg="+msg)
+		defer os.Remove(aciHello)
+
+		combinedOutput(t, ctx.ExecCmd("fetch", "--insecure-options=image", aciHello))
+		combinedOutput(t, ctx.ExecCmd("app", "add", "--debug", podUUID, imageName))
+
+		podInfo := getPodInfo(t, ctx, podUUID)
+		appName := podInfo.manifest.Apps[0].Name
+
+		if appName.String() != expectedAppName {
+			t.Errorf("got %s app name, expected %s app name", appName, expectedAppName)
+		}
+	})
+}
+
 // TestAppSandboxMultipleApps tests multiple apps in a sandbox:
 // one that exits successfully, one that exits with an error, and one that keeps running.
 func TestAppSandboxMultipleApps(t *testing.T) {
