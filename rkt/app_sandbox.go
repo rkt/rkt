@@ -40,6 +40,7 @@ var (
 		Run:   runWrapper(runAppSandbox),
 	}
 	flagAppPorts        appPortList
+	flagAnnotations     kvMap
 	flagUserAnnotations kvMap
 	flagLabels          kvMap
 )
@@ -60,7 +61,8 @@ func init() {
 	cmdAppSandbox.Flags().Var(&flagAppPorts, "port", "ports to forward. format: \"name:proto:podPort:hostIP:hostPort\"")
 
 	flagAppPorts = appPortList{}
-	cmdAppSandbox.Flags().Var(&flagUserAnnotations, "user-annotation", "optional, set the pod's annotations in the form of key=value")
+	cmdAppSandbox.Flags().Var(&flagAnnotations, "annotation", "optional, set the pod's annotations in the form of key=value")
+	cmdAppSandbox.Flags().Var(&flagUserAnnotations, "user-annotation", "optional, set the pod's user annotations in the form of key=value")
 	cmdAppSandbox.Flags().Var(&flagLabels, "user-label", "optional, set the pod's label in the form of key=value")
 }
 
@@ -119,6 +121,7 @@ func runAppSandbox(cmd *cobra.Command, args []string) int {
 		UUID:         p.UUID,
 		Debug:        globalFlags.Debug,
 		Mutable:      true,
+		Annotations:  parseAnnotations(&flagAnnotations),
 	}
 
 	ovlOk := true
@@ -140,7 +143,7 @@ func runAppSandbox(cmd *cobra.Command, args []string) int {
 		PrivateUsers:    user.NewBlankUidRange(),
 		Apps:            &rktApps,
 		Ports:           []types.ExposedPort(flagAppPorts),
-		UserAnnotations: parseAnnotations(&flagUserAnnotations),
+		UserAnnotations: parseUserAnnotations(&flagUserAnnotations),
 		UserLabels:      parseLabels(&flagLabels),
 	}
 
@@ -295,15 +298,28 @@ func (apl *appPortList) Type() string {
 	return "appPortList"
 }
 
-// parseAnnotations converts the annotations set by '--user-annotation' flag,
+// parseUserAnnotations converts the user annotations set by '--user-annotation' flag,
 // and returns types.UserAnnotations.
-func parseAnnotations(flagUserAnnotations *kvMap) types.UserAnnotations {
+func parseUserAnnotations(flagUserAnnotations *kvMap) types.UserAnnotations {
 	if flagUserAnnotations.IsEmpty() {
 		return nil
 	}
-	annotations := make(types.UserAnnotations)
+	userAnnotations := make(types.UserAnnotations)
 	for k, v := range flagUserAnnotations.mapping {
-		annotations[k] = v
+		userAnnotations[k] = v
+	}
+	return userAnnotations
+}
+
+// parseAnnotations converts the annotations set by '--annotation' flag,
+// and returns map[types.ACIdentifier]string
+func parseAnnotations(flagAnnotations *kvMap) map[types.ACIdentifier]string {
+	if flagAnnotations.IsEmpty() {
+		return nil
+	}
+	annotations := make(map[types.ACIdentifier]string)
+	for k, v := range flagAnnotations.mapping {
+		annotations[types.ACIdentifier(k)] = v
 	}
 	return annotations
 }
