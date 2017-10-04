@@ -20,9 +20,9 @@ rkt is written in Go and can be compiled for several CPU architectures. The rkt 
 To start running the latest version of rkt on amd64, grab the release directly from the rkt GitHub project:
 
 ```
-wget https://github.com/rkt/rkt/releases/download/v1.28.1/rkt-v1.28.1.tar.gz
-tar xzvf rkt-v1.28.1.tar.gz
-cd rkt-v1.28.1
+wget https://github.com/rkt/rkt/releases/download/v1.29.0/rkt-v1.29.0.tar.gz
+tar xzvf rkt-v1.29.0.tar.gz
+cd rkt-v1.29.0
 ./rkt help
 ```
 

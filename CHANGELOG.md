@@ -1,3 +1,44 @@
+## 1.29.0
+
+This release contains a number of bugfixes, new features like the ability to share the host IPC namespace, dependency updates, and build system improvements.
+
+### Bugfixes
+
+- app/add: Use the image name as a default name for app ([#3802](https://github.com/rkt/rkt/pull/3802)). Make the `--name` flag optional like stated in the help message.
+- stage1/init: activate systemd-journal-flush.service ([#3807](https://github.com/rkt/rkt/pull/3807)). It's needed to make systemd-journald write to /var/log/journal instead of /run/log/journal.
+- stage0/gc: try to avoid double overlay mounts ([#3806](https://github.com/rkt/rkt/pull/3806)). Before Linux 4.13, it used to be possible to perform double overlayfs mounts and now it's not, handle this case.
+- api: add CreatedAt to v1.Pod ([#3797](https://github.com/rkt/rkt/pull/3797)). It might happen that the pod is created but we can't get its start time so we add a CreatedAt field to the API.
+- lib: don't error out if we can't get the app exit code ([#3800](https://github.com/rkt/rkt/pull/3800)). This can happen if the pod dies but we don't have time to register the app exit code.
+- image: set the header instead of adding it ([#3796](https://github.com/rkt/rkt/pull/3796)). The go [http/client](https://golang.org/doc/go1.8#net_http) changes its behavior for redirect and header's copy since the go 1.8:
+- lib/app: check in upper/ if the pod uses overlay ([#3791](https://github.com/rkt/rkt/pull/3791)). Getting creation/start time and status of applications will fail for pods using overlay if stage1 was unmounted (e.g. when rebooting).
+- stage1: handle docker group semantics ([#3792](https://github.com/rkt/rkt/pull/3792)). Docker uses the UID as GID if you only specify the "user".
+- stage1: support hybrid cgroup hierarchy ([#3784](https://github.com/rkt/rkt/pull/3784)). systemd introduced the hybrid cgroup hierarchy in v233, which was breaking the host flavor of rkt.
+- pkg/keystore: ensure correct permissions on path creation ([#3780](https://github.com/rkt/rkt/pull/3780)). Allow writing to `/etc/rkt/trustedkeys` as a user in the rkt group in systems with restrictive umask.
+- networking: ensure the netns directory is mounted ([#3761](https://github.com/rkt/rkt/pull/3761)). Allows using rktnetes and rkt on the same host.
+- stage1: fix systemd version fmt in error message ([#3767](https://github.com/rkt/rkt/pull/3767)). The previous version caused cryptic error messages.
+
+### New features and UX changes
+
+- app/add: Allow to define annotations for app from CLI ([#3814](https://github.com/rkt/rkt/pull/3814)).
+- app/sandbox: Allow to define annotations for sandbox from CLI ([#3816](https://github.com/rkt/rkt/pull/3816)).
+- stage0,rkt: don't require the pod to be running to remove apps ([#3799](https://github.com/rkt/rkt/pull/3799)).
+- stage1: enable host IPC namespace ([#3787](https://github.com/rkt/rkt/pull/3787)). rkt normally creates a new IPC namespace for the pod. In order to stay in the host IPC namespace, a new option `--ipc=` was added.
+- rkt: bash completion code ([#3774](https://github.com/rkt/rkt/pull/3774)). This patch provides an implementation of the command used to generate completion code for the bash shell.
+
+### Other changes
+
+- vendor: bump docker2aci to v0.17.0 ([#3810](https://github.com/rkt/rkt/pull/3810)).
+- vendor: update pborman/uuid to v1.1 ([#3809](https://github.com/rkt/rkt/pull/3809)).
+- vendor: bump appc/spec to v0.8.11 ([#3803](https://github.com/rkt/rkt/pull/3803)).
+- rkt\_seccomp\_test: Fix arm64 stat tests ([#3804](https://github.com/rkt/rkt/pull/3804)).
+- build: sort stage1 manifest files ([#3808](https://github.com/rkt/rkt/pull/3808)). To ease maintenance.
+
+### Build system
+
+- build/stage1: support local systemd source for offline builds ([#3746](https://github.com/rkt/rkt/pull/3746)).
+- RPM/deb package can upgrade even if running pods ([#3766](https://github.com/rkt/rkt/pull/3766)).
+- src flavor: copy the real libnss\_files.so.2 file from the host ([#3764](https://github.com/rkt/rkt/pull/3764)). It was copying a symbolic link instead.
+
 ## 1.28.1
 
 This is a minor bugfix release. It does not contain any changes to the rkt code, but it updates dependencies and runtime versions for bugfixes:
