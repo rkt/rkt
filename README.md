@@ -3,7 +3,6 @@
 [![godoc](https://godoc.org/github.com/rkt/rkt?status.svg)](http://godoc.org/github.com/rkt/rkt)
 [![Build Status (Travis)](https://travis-ci.org/rkt/rkt.svg?branch=master)](https://travis-ci.org/rkt/rkt)
 [![Build Status (SemaphoreCI)](https://semaphoreci.com/api/v1/rkt/rkt/branches/master/badge.svg)](https://semaphoreci.com/rkt/rkt)
-[![Build Status (Jenkins)](https://jenkins-rkt-public.prod.coreos.systems/job/rkt-master-periodic/badge/icon)](https://jenkins-rkt-public.prod.coreos.systems/view/rkt/job/rkt-master-periodic/)
 
 ![rkt Logo](logos/rkt-horizontal-color.png)
 
