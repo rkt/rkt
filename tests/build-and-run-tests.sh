@@ -74,7 +74,7 @@ function checkFlavorValue {
 
 # Parse user provided parameters
 function parseParameters {
-    while getopts "f:s:r:cxujd" option; do
+    while getopts "f:s:r:cxujdv" option; do
         case ${option} in
         f)
             RKT_STAGE1_USR_FROM="${OPTARG}"
@@ -110,6 +110,9 @@ function parseParameters {
             ;;
         d)
             DIRTYBUILD=true
+            ;;
+        v)
+            VERBOSITY="V=3"
             ;;
         \?)
             set -
@@ -167,14 +170,14 @@ function build {
 
     CORES=$(grep -c ^processor /proc/cpuinfo)
     echo "Running make with ${CORES} threads"
-    make "-j${CORES}"
+    make "-j${CORES}" ${VERBOSITY}
     make manpages bash-completion
 
     if [[ ${PRECLEANUP} == true ]]; then
         rm -rf "${BUILD_DIR}/tmp/usr_from_${RKT_STAGE1_USR_FROM}"
     fi
     if [[ ${JUSTBUILD} != true ]]; then
-        make check
+        make ${VERBOSITY} check
         make "-j${CORES}" clean
     fi
 }
@@ -230,6 +233,7 @@ function usage {
     echo -e "-s\tSystemd version"
     echo -e "-r\tSystemd revision"
     echo -e "-u\tShow this message"
+    echo -e "-v\tRun make with verbose flag"
     echo -e "-x\tUse with '-c' to force cleanup on non-CI systems"
 }
 
