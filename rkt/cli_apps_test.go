@@ -62,6 +62,15 @@ func TestParseAppArgs(t *testing.T) {
 			},
 			false,
 		},
+		{
+			"example.com/foo  example.com/bar",
+			[]string{"example.com/foo", "example.com/bar"},
+			[][]string{
+				nil,
+				nil,
+			},
+			false,
+		},
 	}
 
 	for i, tt := range tests {
