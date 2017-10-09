@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -30,6 +31,13 @@ import (
 
 	"github.com/coreos/gexpect"
 	"github.com/rkt/rkt/tests/testutils"
+)
+
+const (
+	// Number of retries to read CRI log file.
+	criLogsReadRetries = 5
+	// Delay between each retry attempt in reading CRI log file.
+	criLogsReadRetryDelay = 5 * time.Second
 )
 
 // TestAppSandboxOneApp is a basic test for `rkt app` sandbox.
@@ -545,6 +553,73 @@ func TestAppSandboxAppAnnotations(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestAppSandboxCRILogs(t *testing.T) {
+	if TestedFlavor.Kvm || TestedFlavor.Fly {
+		t.Skip("CRI logs are not supported in kvm and fly flavors yet")
+	}
+
+	for _, tt := range []struct {
+		kubernetesLogDir  string
+		kubernetesLogPath string
+	}{
+		{
+			kubernetesLogDir:  "/tmp/rkt-test-logs",
+			kubernetesLogPath: "hello_0.log",
+		},
+	} {
+		args := []string{
+			"--annotation=coreos.com/rkt/experiment/logmode=k8s-plain",
+			fmt.Sprintf("--annotation=coreos.com/rkt/experiment/kubernetes-log-dir=%s", tt.kubernetesLogDir),
+		}
+
+		if err := os.MkdirAll(tt.kubernetesLogDir, 0777); err != nil {
+			t.Fatalf("Couldn't create directory for CRI logs: %v", err)
+		}
+		defer os.RemoveAll(tt.kubernetesLogDir)
+
+		testSandboxWithArgs(t, args, func(ctx *testutils.RktRunCtx, child *gexpect.ExpectSubprocess, podUUID string) {
+			imageName := "coreos.com/rkt-inspect/hello"
+			msg := "HelloFromAppInSandbox"
+
+			aciHello := patchTestACI("rkt-inspect-hello.aci", "--name="+imageName, "--exec=/inspect --print-msg="+msg)
+			defer os.Remove(aciHello)
+
+			combinedOutput(t, ctx.ExecCmd("fetch", "--insecure-options=image", aciHello))
+
+			combinedOutput(t, ctx.ExecCmd(
+				"app", "add", "--debug", podUUID,
+				imageName, "--name=hello", "--stdin=stream",
+				"--stdout=stream", "--stderr=stream",
+				fmt.Sprintf("--annotation=coreos.com/rkt/experiment/kubernetes-log-path=%s", tt.kubernetesLogPath),
+			))
+			combinedOutput(t, ctx.ExecCmd("app", "start", "--debug", podUUID, "--app=hello"))
+
+			// It takes some time to have iottymux unit running inside the stage1 container,
+			// so we are looking for CRI logs with a reasonable amount of retries.
+			var content []byte
+			var err error
+			for i := 0; i < criLogsReadRetries; i++ {
+				kubernetesLogFullPath := path.Join(tt.kubernetesLogDir, tt.kubernetesLogPath)
+				content, err = ioutil.ReadFile(kubernetesLogFullPath)
+				if err == nil {
+					sContent := string(content)
+					if strings.Contains(sContent, "stdout HelloFromAppInSandbox") {
+						break
+					}
+					err = fmt.Errorf("Expected CRI logs to contain 'stdout HelloFromAppInSandbox', instead got: %s", sContent)
+				} else {
+					err = fmt.Errorf("Couldn't open file with CRI logs: %v", err)
+				}
+				time.Sleep(criLogsReadRetryDelay)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+		})
+	}
 }
 
 func testSandbox(t *testing.T, testFunc func(*testutils.RktRunCtx, *gexpect.ExpectSubprocess, string)) {

@@ -410,9 +410,20 @@ func actionIOMux(statusFile string) error {
 	switch logMode {
 	case "k8s-plain":
 		var err error
-		// TODO(lucab): check what should be the target path with Euan
-		logTarget := filepath.Join(pathPrefix, appName, "logfile")
-		logFile, err = os.OpenFile(logTarget, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
+
+		// TODO(nhlfr): logPath coming from CRI/kubelet should be always a file name,
+		// but we may want to ensure that here and check that value explicitly.
+		logPath := os.Getenv("KUBERNETES_LOG_PATH")
+		logFullPath := filepath.Clean(filepath.Join("/rkt/kubernetes/log", logPath))
+
+		match, err := filepath.Match("/rkt/kubernetes/log/*", logFullPath)
+		if err != nil {
+			return fmt.Errorf("couldn't analyze the full log path %s: %s", logFullPath, err)
+		} else if !match {
+			return fmt.Errorf("log path is not inside /rkt/kubernetes/log, refusing path traversal")
+		}
+
+		logFile, err = os.OpenFile(logFullPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
 		if err != nil {
 			return err
 		}
