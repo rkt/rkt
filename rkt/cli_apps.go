@@ -1,4 +1,4 @@
-// Copyright 2015 The rkt Authors
+// Copyright 2015-2017 The rkt Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,9 @@ func parseApps(al *apps.Apps, args []string, flags *pflag.FlagSet, allowAppArgs 
 	inAppArgs := false
 	for i := 0; i < len(args); i++ {
 		a := args[i]
+		if len(a) == 0 {
+			continue
+		}
 		if inAppArgs {
 			switch a {
 			case "---":
