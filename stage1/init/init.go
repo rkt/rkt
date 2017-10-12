@@ -394,6 +394,11 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 			args = append(args, fmt.Sprintf("--register=false"))
 		}
 
+		kubernetesLogDir, ok := p.Manifest.Annotations.Get("coreos.com/rkt/experiment/kubernetes-log-dir")
+		if ok {
+			args = append(args, fmt.Sprintf("--bind=%s:/rkt/kubernetes/log", kubernetesLogDir))
+		}
+
 		// use only dynamic libraries provided in the image
 		// from systemd v231 there's a new internal libsystemd-shared-v231.so
 		// which is present in /usr/lib/systemd
@@ -442,6 +447,11 @@ func getArgsEnv(p *stage1commontypes.Pod, flavor string, canMachinedRegister boo
 
 		if context := os.Getenv(common.EnvSELinuxMountContext); context != "" {
 			args = append(args, fmt.Sprintf("-L%s", context))
+		}
+
+		kubernetesLogDir, ok := p.Manifest.Annotations.Get("coreos.com/rkt/experiment/kubernetes-log-dir")
+		if ok {
+			args = append(args, fmt.Sprintf("--bind=%s:/rkt/kubernetes/log", kubernetesLogDir))
 		}
 
 	default:
