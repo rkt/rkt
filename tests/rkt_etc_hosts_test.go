@@ -80,6 +80,11 @@ func TestEtcHosts(t *testing.T) {
 			"--exec=/inspect -- -file-name=/etc/hosts -hash-file",
 			sum,
 		},
+		{ // Test that multiple '--hosts-entry=host' entries are fine
+			"--hosts-entry=host --hosts-entry=host",
+			"--exec=/inspect -- -file-name=/etc/hosts -hash-file",
+			sum,
+		},
 		{ // test that we create our own
 			"--hosts-entry=128.66.0.99=host1",
 			"--exec=/inspect -- -file-name=/etc/hosts -read-file",
