@@ -18,6 +18,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -643,13 +644,8 @@ func parseDNSFlags(flagHostsEntries, flagDNS, flagDNSSearch, flagDNSOpt []string
 	// Parse out --hosts-entries, also looking for the magic value "host"
 	for _, entry := range flagHostsEntries {
 		if entry == "host" {
-			if len(flagHostsEntries) == 1 {
-				DNSConfMode.Hosts = "host"
-			} else {
-				return DNSConfMode, DNSConfig, &HostsEntries,
-					fmt.Errorf("cannot pass --hosts-entry=host with multiple hosts-entries")
-			}
-			break
+			DNSConfMode.Hosts = "host"
+			continue
 		}
 		for _, entry := range strings.Split(entry, ",") {
 			vals := strings.SplitN(entry, "=", 2)
@@ -677,6 +673,10 @@ func parseDNSFlags(flagHostsEntries, flagDNS, flagDNSSearch, flagDNSOpt []string
 	}
 
 	if len(HostsEntries) > 0 {
+		if DNSConfMode.Hosts == "host" {
+			return DNSConfMode, DNSConfig, &HostsEntries,
+				errors.New("cannot pass --hosts-entry=host with multiple hosts-entries")
+		}
 		DNSConfMode.Hosts = "stage0"
 	}
 
