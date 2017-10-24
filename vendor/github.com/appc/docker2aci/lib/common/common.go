@@ -159,6 +159,7 @@ func (m MediaTypeSet) ManifestMediaTypes() []string {
 	if len(m) == 0 {
 		return []string{
 			MediaTypeDockerV21Manifest,
+			MediaTypeDockerV21SignedManifest,
 			MediaTypeDockerV22Manifest,
 			MediaTypeOCIV1Manifest,
 		}
@@ -168,6 +169,7 @@ func (m MediaTypeSet) ManifestMediaTypes() []string {
 		switch option {
 		case MediaTypeOptionDockerV21:
 			ret = append(ret, MediaTypeDockerV21Manifest)
+			ret = append(ret, MediaTypeDockerV21SignedManifest)
 		case MediaTypeOptionDockerV22:
 			ret = append(ret, MediaTypeDockerV22Manifest)
 		case MediaTypeOptionOCIV1Pre:
