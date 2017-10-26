@@ -1,5 +1,5 @@
 hash: f763c3172b6e3e37f77970cbd8601d9101221fd4a25815961f98f47148f20615
-updated: 2017-10-24T13:44:07.972543348+02:00
+updated: 2017-10-26T12:55:14.287892242-07:00
 imports:
 - name: github.com/appc/docker2aci
   version: b62d1b9cbba9aa4eddc65dad290bff4aee211feb
@@ -279,7 +279,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 2910a502d2bf9e43193af9d68ca516529614eed3
+  version: 6eab0e8f74e86c598ec3b6fad4888e0c11482d48
   subpackages:
   - transform
   - unicode/norm
