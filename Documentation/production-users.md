@@ -39,4 +39,4 @@ These are blog posts and stories from people evaluating rkt. Although most aren'
 - [Scott Lowe, Developer at VMWare](http://www.slideshare.net/lowescott/getting-started-with-containers) getting started with containers
 - [Yutaka Matsubara, CTO at Abby](http://www.slideshare.net/YutakaMatsubara/rocket-46800960) rkt
 - [Thuc Le Dong, Developer at Silicon Straits](http://www.slideshare.net/ledongthuc/rkt-container-engine) overview of the rkt container engine
-- [Avi Deitcher, Business Technology Consultant](http://blog.atomicinc.com/2016/10/14/can-rktkubernetes-provide-a-real-alternative-to-docker-2896/)
+- [Avi Deitcher, Business Technology Consultant](http://blog.atomicinc.com/2016/10/14/can-rktkubernetes-provide-a-real-alternative-to-docker/)
