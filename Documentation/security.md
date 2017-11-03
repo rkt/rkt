@@ -19,6 +19,7 @@ Here are some security best practices:
 * **Use read-only volumes unless writing to them is necessary.**
 * If you use Linux v4.2 or older, **avoid sharing directories when tools on the host can move files outside the directory** (such as Nautilus moving directories to the trash bin when a user deletes it). This could expose the entire host filesystem to the container. See [moby/moby#12317 (comment)](https://github.com/moby/moby/issues/12317#issuecomment-92692061).
 * To avoid the previous point: **share a full filesystem instead of just a directory in a filesystem if possible**. For example, a mounted partition or some file mounted with `mount -o loop`.
+* **Sharing devices from the host to the container is generally not recommended**. If you need to do it, you can find examples in the [block devices documentation](block-devices.md).
 
 [aci-schema]: https://github.com/appc/spec/blob/master/spec/aci.md#image-manifest-schema
 [rkt-run-subcommands]: subcommands/run.md#options

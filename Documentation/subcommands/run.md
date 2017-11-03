@@ -214,6 +214,11 @@ Here we set the recursive option to false to avoid making further mounts inside 
 # rkt run --volume data,kind=host,source=/srv/data,readOnly=false,recursive=false example.com/app1
 ```
 
+#### Host Devices
+
+Using devices from the host inside the container in rkt works by just creating volumes with the source set to the particular device.
+You can find some examples in the [block devices documentation](../block-devices.md).
+
 #### Empty Volumes
 
 If you don't intend to persist the data and you just want to have a volume shared between all the apps in the pod, you can use an `empty` volume:
