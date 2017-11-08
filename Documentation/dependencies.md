@@ -17,7 +17,7 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
   * the rkt binary links against the library
 * gofmt (usually distributed with Go)
 * govet (usually distributed with Go)
-* TrouSerS (only when TPM is enabled)
+* TrouSerS (only when TPM is enabled, see [build configuration][build-configure] for details)
   * development headers
   * the rkt binary links against the library
 * libsystemd-journal
@@ -90,3 +90,4 @@ For the most part the codebase is self-contained (e.g. all dependencies are vend
   * systemd-journald
 
 [kernel-build-deps]: https://www.kernel.org/doc/Documentation/Changes
+[build-configure]: build-configure.md#--enable-tpm
