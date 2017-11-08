@@ -120,6 +120,16 @@ ID                                                                        NAME  
 sha512-96323da393621d846c632e71551b77089ac0b004ceb5c2362be4f5ced2212db9   registry-1.docker.io/library/redis:latest    2015-12-14 12:30:33.652 +0100 CET    2015-12-14 12:33:40.812 +0100 CET   113309184  true
 ```
 
+### Image size
+
+In rkt, dependencies between ACI images form a directed acyclic graph.
+An image is pre-rendered in what is called the tree store.
+A rendered image in the tree store contains a ready-to-execute filesystem tree with all the files of the image plus the relevant files of its dependencies as specified by the [appc spec][ace-fs].
+
+The size shown in `rkt image list` is the uncompressed size of the image itself **plus** the size of its related tree stores.
+
+**Note**: There's currently a bug in the size calculation logic. rkt assumes there can only be one tree store per image but, if a dependency changes, there will be multiple different tree stores. This bug is tracked by [#2968][rkt-2968]
+
 ### Options
 
 | Flag | Default | Options | Description |
@@ -158,3 +168,5 @@ See the table with [global options in general commands documentation][global-opt
 
 
 [global-options]: ../commands.md#global-options
+[ace-fs]: https://github.com/appc/spec/blob/v0.8.11/spec/ace.md#filesystem-setup
+[rkt-2968]: https://github.com/rkt/rkt/issues/2968
