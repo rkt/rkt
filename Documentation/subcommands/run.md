@@ -201,13 +201,13 @@ In the following example, we make the host's `/srv/data` accessible to app1 on `
 # rkt run --volume data,kind=host,source=/srv/data,readOnly=false example.com/app1
 ```
 
+#### Empty Volumes
+
 If you don't intend to persist the data and you just want to have a volume shared between all the apps in the pod, you can use an `empty` volume:
 
 ```
 # rkt run --volume data,kind=empty,readOnly=false example.com/app1
 ```
-
-#### Empty Volumes
 
 For `empty` volumes, the `--volume` flag allows you to specify the volume name, and the mode, UID and GID of the generated volume.
 The volume name is mandatory.
