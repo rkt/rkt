@@ -38,6 +38,8 @@ Since running a Docker container from the command line (i.e. using `docker run`)
 
 rkt has no centralized "init" daemon, instead launching containers directly from client commands, making it compatible with init systems such as systemd, upstart, and others.
 
+A more detailed view to rkt's process model is shown in the [architecture documentation][architecture].
+
 #### Privilege Separation
 
 rkt uses standard Unix group permissions to allow privilege separation between different operations.
@@ -141,3 +143,4 @@ rkt can optionally use lkvm or qemu-kvm as an additional security measure over a
 [oci]: https://www.opencontainers.org/
 [oci-spec-github]: https://github.com/opencontainers/specs
 [runc-github]: https://github.com/opencontainers/runc
+[architecture]: devel/architecture.md
