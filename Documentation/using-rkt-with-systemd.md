@@ -79,7 +79,17 @@ If the output contains `-XZ`, journal entries will not be available.
 
 ### Notifications
 
+Sometimes, defining dependencies between containers makes sense.
+An example use case of this is a container running a server, and another container running a client.
+We want the server to start before the client tries to connect.
+
+![sd_notify-background](sd_notify-background.svg)
+
+This can be accomplished by using systemd services and dependencies.
+However, for this to work in rkt containers, we need special support.
+
 systemd inside stage1 can notify systemd on the host that it is ready, to make sure that stage1 systemd send the notification at the right time you can use the [sd_notify][sd_notify] mechanism.
+
 To make use of this feature, you need to set the annotation `appc.io/executor/supports-systemd-notify` to true in the image manifest whenever the app supports sd\_notify (see example manifest below).
 If you build your image with [`acbuild`][acbuild] you can use the command: `acbuild annotation add appc.io/executor/supports-systemd-notify true`.
 
@@ -109,8 +119,16 @@ To verify how it works, run in a terminal the command: `sudo systemd-run --unit=
 If the pod uses a stage1 image with systemd v231 (or greater), then the pod will be seen active form the host when systemd inside stage1 will reach default target.
 Instead, before it was marked as active as soon as it started.
 In this way it is possible to easily set up dependencies between pods and host services.
+
 Moreover, using [`SdNotify()`][sdnotify-go] in the application it is possible to make the pod marked as ready when all the apps or a particular one is ready.
 For more information check [systemd services unit][systemd-unit] documentation.
+
+This is how the sd_notify signal is propagated to the host system:
+
+![sd_notify-propagation](sd_notify-propagation.svg)
+
+#### Using the systemd notification mechanism in an app
+
 Below there is a simple example of an app using the systemd notification mechanism via [go-systemd][go-systemd] binding library.
 
 ```go
