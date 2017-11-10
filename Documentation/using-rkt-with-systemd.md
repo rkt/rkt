@@ -2,6 +2,8 @@
 
 `rkt` is designed to cooperate with init systems, like [`systemd`][systemd]. rkt implements a simple CLI that directly executes processes, and does not interpose a long-running daemon, so the lifecycle of rkt pods can be directly managed by systemd. Standard systemd idioms like `systemctl start` and `systemctl stop` work out of the box.
 
+![rkt-systemd-interaction](rkt-systemd-interaction.svg)
+
 In the shell excerpts below, a `#` prompt indicates commands that require root privileges, while the `$` prompt denotes commands issued as an unprivileged user.
 
 ## systemd-run
