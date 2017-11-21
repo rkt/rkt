@@ -30,7 +30,7 @@ import (
 
 var (
 	cmdStatus = &cobra.Command{
-		Use:   "status [--wait=bool|timeout] [--wait-ready=bool|timeout] UUID",
+		Use:   "status [--wait=bool|timeout] [--wait-ready=bool|timeout] --uuid-file=FILE | UUID",
 		Short: "Check the status of a rkt pod",
 		Long: `Prints assorted information about the pod such as its state, pid and exit status.
 
@@ -55,10 +55,25 @@ func init() {
 
 	cmdStatus.Flags().Lookup("wait").NoOptDefVal = "true"
 	cmdStatus.Flags().Lookup("wait-ready").NoOptDefVal = "true"
+	cmdStatus.Flags().StringVar(&flagUUIDFile, "uuid-file", "", "read pod UUID from file instead of argument")
 }
 
 func runStatus(cmd *cobra.Command, args []string) (exit int) {
-	if len(args) != 1 {
+	var podUUID string
+
+	switch {
+	case len(args) == 0 && flagUUIDFile != "":
+		UUID, err := pkgPod.ReadUUIDFromFile(flagUUIDFile)
+		if err != nil {
+			stderr.PrintE("unable to resolve UUID from file", err)
+			return 1
+		}
+		podUUID = UUID
+
+	case len(args) == 1 && flagUUIDFile == "":
+		podUUID = args[0]
+
+	default:
 		cmd.Usage()
 		return 254
 	}
@@ -74,8 +89,7 @@ func runStatus(cmd *cobra.Command, args []string) (exit int) {
 		cmd.Usage()
 		return 254
 	}
-
-	p, err := pkgPod.PodFromUUIDString(getDataDir(), args[0])
+	p, err := pkgPod.PodFromUUIDString(getDataDir(), podUUID)
 	if err != nil {
 		stderr.PrintE("problem retrieving pod", err)
 		return 254
