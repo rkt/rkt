@@ -150,7 +150,7 @@ func gcStore(s *imagestore.Store, gracePeriod time.Duration) error {
 			break
 		}
 		if isInSet(ai.BlobKey, runningImages) {
-			break
+			continue
 		}
 		imagesToRemove = append(imagesToRemove, ai.BlobKey)
 	}
