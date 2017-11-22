@@ -460,6 +460,17 @@ func stage1(rp *stage1commontypes.RuntimePod) int {
 		return 254
 	}
 
+	// syscall.Exec takes a path and not a command name, so in the event that args[0] is a command name we have to convert it into a path
+	path, err := stage1initcommon.FindBinPath(p, &ra)
+	if err != nil {
+		log.PrintE(fmt.Sprintf("can't find the absolute executable for %q", args[0]), err)
+		return 254
+	}
+	if path != args[0] {
+		diag.Printf("converting args[0] (%q) into an absolute path: %q", args[0], path)
+		args[0] = path
+	}
+
 	diag.Printf("chroot to %q", rfs)
 	if err := syscall.Chroot(rfs); err != nil {
 		log.PrintE("can't chroot", err)
