@@ -551,6 +551,7 @@ func (uw *UnitWriter) appSystemdUnit(pa *preparedApp, binPath string, opts []*un
 		unit.NewUnitOption("Service", "EnvironmentFile", RelEnvFilePath(appName)),
 		unit.NewUnitOption("Service", "User", strconv.Itoa(int(pa.uid))),
 		unit.NewUnitOption("Service", "Group", strconv.Itoa(int(pa.gid))),
+		unit.NewUnitOption("Service", "PermissionsStartOnly", "true"),
 		unit.NewUnitOption("Unit", "Requires", InstantiatedPrepareAppUnitName(ra.Name)),
 		unit.NewUnitOption("Unit", "After", InstantiatedPrepareAppUnitName(ra.Name)),
 	)
