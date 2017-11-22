@@ -6,8 +6,8 @@ This document is a walk-through guide describing how to use rkt isolators for
 * [About Linux Capabilities](#about-linux-capabilities)
 * [Default Capabilities](#default-capabilities)
 * [Capability Isolators](#capability-isolators)
-* [Usage Example](#usage-example)
-* [Overriding Capabilities](#overriding-capabilities)
+* [Configure capabilities via the command line](#configure-capabilities-via-the-command-line)
+* [Configure capabilities in ACI images](#configure-capabilities-in-aci-images)
 * [Recommendations](#recommendations)
 
 ## About Linux Capabilities
@@ -97,7 +97,43 @@ For example, an application that will need to perform multiple privileged
 operations but is known to never open a raw socket, will have
 `CAP_NET_RAW` specified in its "remove-set".
 
-## Usage Example
+## Configure capabilities via the command line
+
+Capabilities can be directly overridden at run time from the command-line,
+without changing the executed images.
+The `--caps-retain` option to `rkt run` manipulates the `retain` capabilities set.
+The `--caps-remove` option manipulates the `remove` set.
+
+Capabilities specified from the command-line will replace all capability settings in the image manifest.
+Also as stated above the options `--caps-retain`, and `--caps-remove` are mutually exclusive.
+Only one can be specified at a time.
+
+Capabilities isolators can be added on the command line at run time by
+specifying the desired overriding set, as shown in this example:
+
+```
+$ sudo rkt run --interactive quay.io/coreos/alpine-sh --caps-retain CAP_NET_BIND_SERVICE
+image: using image from file /usr/local/bin/stage1-coreos.aci
+image: using image from local store for image name quay.io/coreos/alpine-sh
+
+/ # whoami
+root
+
+/ # ping -c 1 8.8.8.8
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+ping: permission denied (are you root?)
+
+```
+
+Capability sets are application-specific configuration entries, and in a
+`rkt run` command line, they must follow the application container image to
+which they apply.
+Each application within a pod can have different capability sets.
+
+## Configure capabilities in ACI images
+
+Capability sets are typically defined when creating images, as they are tightly
+linked to specific app requirements.
 
 The goal of these examples is to show how to build ACIs with [`acbuild`][acbuild],
 where some capabilities are either explicitly blocked or allowed.
@@ -221,14 +257,6 @@ root
 nc: bind: Permission denied
 ```
 
-## Overriding capabilities
-
-Capability sets are typically defined when creating images, as they are tightly
-linked to specific app requirements. However, image consumers may need to further
-tweak/restrict the set of available capabilities in specific local scenarios.
-This can be done either by permanently patching the manifest of specific images, or
-by overriding capability isolators with command line options.
-
 ### Patching images
 
 Image manifests can be manipulated manually, by unpacking the image and editing
@@ -290,39 +318,6 @@ image: using image from local store for image name quay.io/coreos/alpine-sh
 / # nc -v -l -p 80
 listening on [::]:80 ...
 ```
-
-### Overriding capabilities at run-time
-
-Capabilities can be directly overridden at run time from the command-line,
-without changing the executed images.
-The `--caps-retain` option to `rkt run` manipulates the `retain` capabilities set.
-The `--caps-remove` option manipulates the `remove` set.
-
-Capabilities specified from the command-line will replace all capability settings in the image manifest.
-Also as stated above the options `--caps-retain`, and `--caps-remove` are mutually exclusive.
-Only one can be specified at a time.
-
-Capabilities isolators can be added on the command line at run time by
-specifying the desired overriding set, as shown in this example:
-
-```
-$ sudo rkt run --interactive quay.io/coreos/alpine-sh --caps-retain CAP_NET_BIND_SERVICE
-image: using image from file /usr/local/bin/stage1-coreos.aci
-image: using image from local store for image name quay.io/coreos/alpine-sh
-
-/ # whoami
-root
-
-/ # ping -c 1 8.8.8.8
-PING 8.8.8.8 (8.8.8.8): 56 data bytes
-ping: permission denied (are you root?)
-
-```
-
-Capability sets are application-specific configuration entries, and in a
-`rkt run` command line, they must follow the application container image to
-which they apply.
-Each application within a pod can have different capability sets.
 
 ## Recommendations
 
