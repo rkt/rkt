@@ -191,14 +191,15 @@ There are two kinds of volumes, `host` and `empty`.
 
 #### Host Volumes
 
-For `host` volumes, the `--volume` flag allows you to specify the volume name, the location on the host, and whether the volume is read-only or not.
+For `host` volumes, the `--volume` flag allows you to specify the volume name, the location on the host, whether the volume is read-only or not, and whether the volume is recursive or not.
 The volume name and location on the host are mandatory.
 The read-only parameter is false by default.
+The recursive parameter is true by default for the coreos and KVM stage1 flavors, and false by default for the fly stage1 flavor.
 
 Syntax:
 
 ```
---volume NAME,kind=host,source=SOURCE_PATH,readOnly=BOOL
+--volume NAME,kind=host,source=SOURCE_PATH,readOnly=BOOL,recursive=BOOL
 ```
 
 In the following example, we make the host's `/srv/data` accessible to app1 on `/var/data`:
@@ -207,13 +208,19 @@ In the following example, we make the host's `/srv/data` accessible to app1 on `
 # rkt run --volume data,kind=host,source=/srv/data,readOnly=false example.com/app1
 ```
 
+Here we set the recursive option to false to avoid making further mounts inside `/srv/data` available to the container:
+
+```
+# rkt run --volume data,kind=host,source=/srv/data,readOnly=false,recursive=false example.com/app1
+```
+
+#### Empty Volumes
+
 If you don't intend to persist the data and you just want to have a volume shared between all the apps in the pod, you can use an `empty` volume:
 
 ```
 # rkt run --volume data,kind=empty,readOnly=false example.com/app1
 ```
-
-#### Empty Volumes
 
 For `empty` volumes, the `--volume` flag allows you to specify the volume name, and the mode, UID and GID of the generated volume.
 The volume name is mandatory.
