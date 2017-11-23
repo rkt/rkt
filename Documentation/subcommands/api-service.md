@@ -7,6 +7,8 @@ The API service is implemented with [gRPC][grpc].
 The API service is designed to run without root privileges, and currently provides a read-only interface.
 The API service is optional for running pods, the start/stop/crash of the API service won't affect any pods or images.
 
+![api-service](api-service.svg)
+
 ## Running the API service
 
 The API service listens for gRPC requests on the address and port specified by the `--listen` option.
