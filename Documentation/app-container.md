@@ -4,7 +4,7 @@
 
 rkt's native [image format](#aci) and [runtime environment](#pods) are those defined by the [specification][appc-spec].
 
-_Note that as of late 2016, appc is [no longer being actively developed](https://github.com/appc/spec#-disclaimer-), and future versions of rkt will instead [natively use OCI formats](https://github.com/rkt/rkt/projects/4)._
+_Note that as of late 2016, appc is [no longer being actively developed, other than minor tweaks](https://github.com/appc/spec#-disclaimer-). However, appc is fully functional and stable and will continue to be supported. Future versions of rkt might gain [native support of OCI formats](https://github.com/rkt/rkt/projects/4)._
 
 ## ACI
 
