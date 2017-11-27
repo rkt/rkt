@@ -28,9 +28,9 @@ function ciSkip {
     exit 0
 }
 
-# Finds the branching point of two commits. 
-# For example, let B and D be two commits, and their ancestry graph as A -> B, A -> C -> D. 
-# Given commits B and D, it returns A. 
+# Finds the branching point of two commits.
+# For example, let B and D be two commits, and their ancestry graph as A -> B, A -> C -> D.
+# Given commits B and D, it returns A.
 function getBranchingPoint {
     diff --old-line-format='' --new-line-format='' \
         <(git rev-list --first-parent "${1:-$1}") \
@@ -51,7 +51,7 @@ function semaphoreCIConfiguration {
     if [ -f /opt/change-go-version.sh ]; then
         . /opt/change-go-version.sh
         change-go-version 1.7
-        
+
 	# systemd v229 doesn't build on gcc-4.8, set the compiler to gcc-5
         export CC=gcc-5
     fi
