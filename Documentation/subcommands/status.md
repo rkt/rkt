@@ -28,6 +28,7 @@ Both options also accept a duration. To wait up to 10 seconds until the pod is f
 | --- | --- | --- | --- |
 | `--wait` |  `false` | `true` or `false` or duration | Toggle waiting for the pod to finish. |
 | `--wait-ready` |  `false` | `true` or `false` or duration | Toggle waiting until the pod is ready. |
+| `--uuid-file` | "" | UUID file | UUID of the pod. |
 
 ## Global options
 
