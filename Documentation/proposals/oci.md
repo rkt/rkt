@@ -35,6 +35,8 @@ Currently rkt does support ACI, Docker, and OCI images, but the conversion step 
 It introduces CPU and I/O bound overhead and is bound by semantical differences between the formats. For these reasons native support of OCI images inside rkt is envisioned.
 
 The goal therefore is to support OCI images natively next to ACI.
+rkt will continue to support the ACI image format and distribution mechanism.
+There is currently no plans to remove that support.
 
 This document outlines the following necessary steps and references existing work to transition to native OCI image support in rkt:
 
