@@ -1031,7 +1031,7 @@ type retry struct {
 
 // Retry retries the given function f n times with a delay t between invocations
 // until no error is returned from f or n is exceeded.
-// The last occured error is returned.
+// The last occurred error is returned.
 func (r retry) Retry(f func() error) error {
 	var err error
 

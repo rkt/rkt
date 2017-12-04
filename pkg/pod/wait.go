@@ -36,7 +36,7 @@ func (p *Pod) WaitFinished(ctx context.Context) error {
 			// i.e. in pepare, run, exitedGarbage, garbage state.
 			return false
 		default:
-			// some error occured, bail out.
+			// some error occurred, bail out.
 			return true
 		}
 
