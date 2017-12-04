@@ -3,6 +3,7 @@
 [![godoc](https://godoc.org/github.com/rkt/rkt?status.svg)](http://godoc.org/github.com/rkt/rkt)
 [![Build Status (Travis)](https://travis-ci.org/rkt/rkt.svg?branch=master)](https://travis-ci.org/rkt/rkt)
 [![Build Status (SemaphoreCI)](https://semaphoreci.com/api/v1/rkt/rkt/branches/master/badge.svg)](https://semaphoreci.com/rkt/rkt)
+[![Go Report Card](https://goreportcard.com/badge/github.com/rkt/rkt)](https://goreportcard.com/report/github.com/rkt/rkt)
 
 ![rkt Logo](logos/rkt-horizontal-color.png)
 
