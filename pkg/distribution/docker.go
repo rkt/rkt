@@ -116,7 +116,7 @@ func (d *Docker) ReferenceURL() string {
 	return d.url
 }
 
-// SimpleDockerRef returns a simplyfied docker reference. This means removing
+// SimpleDockerRef returns a simplified docker reference. This means removing
 // the index url if it's the default docker registry (registry-1.docker.io),
 // removing the default repo (library) when using the default docker registry
 func SimpleDockerRef(p *d2acommon.ParsedDockerURL) string {

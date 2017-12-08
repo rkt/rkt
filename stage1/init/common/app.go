@@ -33,7 +33,7 @@ import (
 
 // preparedApp contains some internal state needed to actually run an app.
 // We add this intermediate step to prevent unit file generation from being
-// totally unwieldly.
+// totally unwieldy.
 type preparedApp struct {
 	app             *schema.RuntimeApp
 	uid             uint32

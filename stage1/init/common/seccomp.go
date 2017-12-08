@@ -122,7 +122,7 @@ func seccompUnitOptions(opts []*unit.UnitOption, sf *seccompFilter) ([]*unit.Uni
 	case ModeBlacklist:
 		filterPrefix = sdBlacklistPrefix
 	default:
-		return nil, fmt.Errorf("unkown filter mode %v", sf.mode)
+		return nil, fmt.Errorf("unknown filter mode %v", sf.mode)
 	}
 
 	// SystemCallFilter options are written down one entry per line, because
