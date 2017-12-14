@@ -49,5 +49,5 @@ default via 10.2.0.1 dev eth0
 Note that the _[default-restricted][default-restricted]_ network has been loaded in addition to the requested network.
 
 
-[cni-bridge]: https://github.com/appc/cni/blob/master/Documentation/bridge.md
+[cni-bridge]: https://github.com/containernetworking/plugins/blob/master/plugins/main/bridge/README.md
 [default-restricted]: overview.md#the-default-restricted-network

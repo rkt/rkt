@@ -24,7 +24,7 @@ Some of rkt's key features and goals include:
 [networking]: Documentation/networking.md
 [kvm]: Documentation/running-kvm-stage1.md
 [rkt-and-appc]: Documentation/app-container.md
-[cni]: https://github.com/appc/cni
+[cni]: https://github.com/containernetworking/cni
 [selinux]: Documentation/selinux.md
 [tpm]: Documentation/devel/tpm.md
 [oci-image-spec]: https://github.com/opencontainers/image-spec

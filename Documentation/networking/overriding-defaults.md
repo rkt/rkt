@@ -45,6 +45,6 @@ This is not documented yet.
 Please follow CNI issue [#56][cni-56] to track the progress of the documentation.
 
 
-[cni-56]: https://github.com/appc/cni/issues/56
-[cni-plugin-parameters]: https://github.com/appc/cni/blob/master/SPEC.md#parameters
+[cni-56]: https://github.com/containernetworking/cni/issues/56
+[cni-plugin-parameters]: https://github.com/containernetworking/cni/blob/master/SPEC.md#parameters
 [overview]: overview.md
