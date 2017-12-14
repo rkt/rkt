@@ -97,6 +97,11 @@ rkt expects stage1 images to be signed except in the following cases:
 
 Follow the instructions on [Update coreos flavor stage1][update-coreos-stage1].
 
+## Running tests
+
+The rkt repository includes both unit and functional tests.
+Follow the instructions in [Manually running the tests][manual-run-tests] for details on how to run the different tests.
+
 ## Managing dependencies
 
 rkt uses [`glide`][glide] and [`glide-vc`][glide-vc] to manage third-party dependencies.
@@ -213,3 +218,4 @@ If something looks awry, restart, pray to your preferred deity, and try again.
 [rkt-builder]: https://github.com/rkt/rkt-builder
 [run-time-dependencies]: dependencies.md#run-time-dependencies
 [update-coreos-stage1]: devel/update-coreos-stage1.md
+[manual-run-tests]: ../tests/README.md#manually-running-the-tests
