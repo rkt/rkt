@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>Protocol Documentation</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Ubuntu:400,700,400italic"/>
+    <style>
+      body {
+        width: 60em;
+        margin: 1em auto;
+        color: #222;
+        font-family: "Ubuntu", sans-serif;
+        padding-bottom: 4em;
+      }
+
+      h1 {
+        font-weight: normal;
+        border-bottom: 1px solid #aaa;
+        padding-bottom: 0.5ex;
+      }
+
+      h2 {
+        border-bottom: 1px solid #aaa;
+        padding-bottom: 0.5ex;
+        margin: 1.5em 0;
+      }
+
+      h3 {
+        font-weight: normal;
+        border-bottom: 1px solid #aaa;
+        padding-bottom: 0.5ex;
+      }
+
+      a {
+        text-decoration: none;
+        color: #567e25;
+      }
+
+      table {
+        width: 100%;
+        font-size: 80%;
+        border-collapse: collapse;
+      }
+
+      thead {
+        font-weight: 700;
+        background-color: #dcdcdc;
+      }
+
+      tbody tr:nth-child(even) {
+        background-color: #fbfbfb;
+      }
+
+      td {
+        border: 1px solid #ccc;
+        padding: 0.5ex 2ex;
+      }
+
+      td p {
+        text-indent: 1em;
+        margin: 0;
+      }
+
+      td p:nth-child(1) {
+        text-indent: 0;  
+      }
+
+       
+      .field-table td:nth-child(1) {  
+        width: 10em;
+      }
+      .field-table td:nth-child(2) {  
+        width: 10em;
+      }
+      .field-table td:nth-child(3) {  
+        width: 6em;
+      }
+      .field-table td:nth-child(4) {  
+        width: auto;
+      }
+
+       
+      .extension-table td:nth-child(1) {  
+        width: 10em;
+      }
+      .extension-table td:nth-child(2) {  
+        width: 10em;
+      }
+      .extension-table td:nth-child(3) {  
+        width: 10em;
+      }
+      .extension-table td:nth-child(4) {  
+        width: 5em;
+      }
+      .extension-table td:nth-child(5) {  
+        width: auto;
+      }
+
+       
+      .enum-table td:nth-child(1) {  
+        width: 10em;
+      }
+      .enum-table td:nth-child(2) {  
+        width: 10em;
+      }
+      .enum-table td:nth-child(3) {  
+        width: auto;
+      }
+
+       
+      .scalar-value-types-table tr {
+        height: 3em;
+      }
+
+       
+      #toc-container ul {
+        list-style-type: none;
+        padding-left: 1em;
+        line-height: 180%;
+        margin: 0;
+      }
+      #toc > li > a {
+        font-weight: bold;
+      }
+
+       
+      .file-heading {
+        width: 100%;
+        display: table;
+        border-bottom: 1px solid #aaa;
+        margin: 4em 0 1.5em 0;
+      }
+      .file-heading h2 {
+        border: none;
+        display: table-cell;
+      }
+      .file-heading a {
+        text-align: right;
+        display: table-cell;
+      }
+
+       
+      .badge {
+        width: 1.6em;
+        height: 1.6em;
+        display: inline-block;
+
+        line-height: 1.6em;
+        text-align: center;
+        font-weight: bold;
+        font-size: 60%;
+
+        color: #89ba48;
+        background-color: #dff0c8;
+
+        margin: 0.5ex 1em 0.5ex -1em;
+        border: 1px solid #fbfbfb;
+        border-radius: 1ex;
+      }
+    </style>
+
+    
+    <link rel="stylesheet" type="text/css" href="stylesheet.css"/>
+  </head>
+
+  <body>
+
+    <h1 id="title">Protocol Documentation</h1>
+
+    <h2>Table of Contents</h2>
+
+    <div id="toc-container">
+      <ul id="toc">
+        
+          
+          <li>
+            <a href="#api.proto">api.proto</a>
+            <ul>
+              
+                <li>
+                  <a href="#v1alpha.App"><span class="badge">M</span>App</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.Event"><span class="badge">M</span>Event</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.EventFilter"><span class="badge">M</span>EventFilter</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.GetInfoRequest"><span class="badge">M</span>GetInfoRequest</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.GetInfoResponse"><span class="badge">M</span>GetInfoResponse</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.GetLogsRequest"><span class="badge">M</span>GetLogsRequest</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.GetLogsResponse"><span class="badge">M</span>GetLogsResponse</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.GlobalFlags"><span class="badge">M</span>GlobalFlags</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.Image"><span class="badge">M</span>Image</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.ImageFilter"><span class="badge">M</span>ImageFilter</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.ImageFormat"><span class="badge">M</span>ImageFormat</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.Info"><span class="badge">M</span>Info</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.InspectImageRequest"><span class="badge">M</span>InspectImageRequest</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.InspectImageResponse"><span class="badge">M</span>InspectImageResponse</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.InspectPodRequest"><span class="badge">M</span>InspectPodRequest</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.InspectPodResponse"><span class="badge">M</span>InspectPodResponse</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.KeyValue"><span class="badge">M</span>KeyValue</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.ListImagesRequest"><span class="badge">M</span>ListImagesRequest</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.ListImagesResponse"><span class="badge">M</span>ListImagesResponse</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.ListPodsRequest"><span class="badge">M</span>ListPodsRequest</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.ListPodsResponse"><span class="badge">M</span>ListPodsResponse</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.ListenEventsRequest"><span class="badge">M</span>ListenEventsRequest</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.ListenEventsResponse"><span class="badge">M</span>ListenEventsResponse</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.Network"><span class="badge">M</span>Network</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.Pod"><span class="badge">M</span>Pod</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.PodFilter"><span class="badge">M</span>PodFilter</a>
+                </li>
+              
+              
+                <li>
+                  <a href="#v1alpha.AppState"><span class="badge">E</span>AppState</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.EventType"><span class="badge">E</span>EventType</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.ImageType"><span class="badge">E</span>ImageType</a>
+                </li>
+              
+                <li>
+                  <a href="#v1alpha.PodState"><span class="badge">E</span>PodState</a>
+                </li>
+              
+              
+              
+                <li>
+                  <a href="#v1alpha.PublicAPI"><span class="badge">S</span>PublicAPI</a>
+                </li>
+              
+            </ul>
+          </li>
+        
+        <li><a href="#scalar-value-types">Scalar Value Types</a></li>
+      </ul>
+    </div>
+
+    
+      
+      <div class="file-heading">
+        <h2 id="api.proto">api.proto</h2><a href="#title">Top</a>
+      </div>
+      <p></p>
+
+      
+        <h3 id="v1alpha.App">App</h3>
+        <p>App describes the information of an app that's running in a pod.</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>name</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Name of the app, required. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>image</td>
+                  <td><a href="#v1alpha.Image">Image</a></td>
+                  <td></td>
+                  <td><p>Image used by the app, required. However, this may only contain the image id
+if it is returned by ListPods(). </p></td>
+                </tr>
+              
+                <tr>
+                  <td>state</td>
+                  <td><a href="#v1alpha.AppState">AppState</a></td>
+                  <td></td>
+                  <td><p>State of the app. optional, non-empty only if it&#39;s returned by InspectPod(). </p></td>
+                </tr>
+              
+                <tr>
+                  <td>exit_code</td>
+                  <td><a href="#sint32">sint32</a></td>
+                  <td></td>
+                  <td><p>Exit code of the app. optional, only valid if it&#39;s returned by InspectPod() and
+the app has already exited. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>annotations</td>
+                  <td><a href="#v1alpha.KeyValue">KeyValue</a></td>
+                  <td>repeated</td>
+                  <td><p>Annotations for this app. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.Event">Event</h3>
+        <p>Event describes the events that will be received via ListenEvents().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>type</td>
+                  <td><a href="#v1alpha.EventType">EventType</a></td>
+                  <td></td>
+                  <td><p>Type of the event, required. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>id</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>ID of the subject that causes the event, required.
+If the event is a pod or app event, the id is the pod&#39;s uuid.
+If the event is an image event, the id is the image&#39;s id. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>from</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Name of the subject that causes the event, required.
+If the event is a pod event, the name is the pod&#39;s name.
+If the event is an app event, the name is the app&#39;s name.
+If the event is an image event, the name is the image&#39;s name. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>time</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>Timestamp of when the event happens, it is the seconds since epoch, required. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>data</td>
+                  <td><a href="#v1alpha.KeyValue">KeyValue</a></td>
+                  <td>repeated</td>
+                  <td><p>Data of the event, in the form of key-value pairs, optional. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.EventFilter">EventFilter</h3>
+        <p>EventFilter defines the condition that the returned events needs to satisfy in ListImages().</p><p>The condition are combined by 'AND'.</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>types</td>
+                  <td><a href="#v1alpha.EventType">EventType</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, then only returns the events that have the listed types. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>ids</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, then only returns the events whose &#39;id&#39; is included in the listed ids. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>names</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, then only returns the events whose &#39;from&#39; is included in the listed names. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>since_time</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>If set, then only returns the events after this timestamp.
+If the server starts after since_time, then only the events happened after the start of the server will be returned.
+If since_time is a future timestamp, then no events will be returned until that time. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>until_time</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>If set, then only returns the events before this timestamp.
+If it is a future timestamp, then the event stream will be closed at that moment. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.GetInfoRequest">GetInfoRequest</h3>
+        <p>Request for GetInfo().</p>
+
+        
+
+        
+      
+        <h3 id="v1alpha.GetInfoResponse">GetInfoResponse</h3>
+        <p>Response for GetInfo().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>info</td>
+                  <td><a href="#v1alpha.Info">Info</a></td>
+                  <td></td>
+                  <td><p>Required. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.GetLogsRequest">GetLogsRequest</h3>
+        <p>Request for GetLogs().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>pod_id</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>ID of the pod which we will get logs from, required. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>app_name</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Name of the app within the pod which we will get logs
+from, optional. If not set, then the logs of all the
+apps within the pod will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>lines</td>
+                  <td><a href="#int32">int32</a></td>
+                  <td></td>
+                  <td><p>Number of most recent lines to return, optional. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>follow</td>
+                  <td><a href="#bool">bool</a></td>
+                  <td></td>
+                  <td><p>If true, then a response stream will not be closed,
+and new log response will be sent via the stream, default is false. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>since_time</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>If set, then only the logs after the timestamp will
+be returned, optional. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>until_time</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>If set, then only the logs before the timestamp will
+be returned, optional. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.GetLogsResponse">GetLogsResponse</h3>
+        <p>Response for GetLogs().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>lines</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>List of the log lines that returned, optional as the response can contain no logs. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.GlobalFlags">GlobalFlags</h3>
+        <p>GlobalFlags describes the flags that passed to rkt api service when it is launched.</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>dir</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Data directory. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>system_config_dir</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>System configuration directory. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>local_config_dir</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Local configuration directory. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>user_config_dir</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>User configuration directory. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>insecure_flags</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Insecure flags configurates what security features to disable. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>trust_keys_from_https</td>
+                  <td><a href="#bool">bool</a></td>
+                  <td></td>
+                  <td><p>Whether to automatically trust gpg keys fetched from https </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.Image">Image</h3>
+        <p>Image describes the image's information.</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>base_format</td>
+                  <td><a href="#v1alpha.ImageFormat">ImageFormat</a></td>
+                  <td></td>
+                  <td><p>Base format of the image, required. This indicates the original format
+for the image as nowadays all the image formats will be transformed to
+ACI. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>id</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>ID of the image, a string that can be used to uniquely identify the image,
+e.g. sha512 hash of the ACIs, required. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>name</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Name of the image in the image manifest, e.g. &#39;coreos.com/etcd&#39;, optional. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>version</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Version of the image, e.g. &#39;latest&#39;, &#39;2.0.10&#39;, optional. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>import_timestamp</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>Timestamp of when the image is imported, it is the seconds since epoch, optional. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>manifest</td>
+                  <td><a href="#bytes">bytes</a></td>
+                  <td></td>
+                  <td><p>JSON-encoded byte array that represents the image manifest, optional. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>size</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>Size is the size in bytes of this image in the store. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>annotations</td>
+                  <td><a href="#v1alpha.KeyValue">KeyValue</a></td>
+                  <td>repeated</td>
+                  <td><p>Annotations on this image. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>labels</td>
+                  <td><a href="#v1alpha.KeyValue">KeyValue</a></td>
+                  <td>repeated</td>
+                  <td><p>Labels of this image. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.ImageFilter">ImageFilter</h3>
+        <p>ImageFilter defines the condition that the returned images need to satisfy in ListImages().</p><p>The conditions are combined by 'AND', and different filters are combined by 'OR'.</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>ids</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the images that have any of the ids will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>prefixes</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>if not empty, the images that have any of the prefixes in the name will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>base_names</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the images that have any of the base names will be returned.
+For example, both &#39;coreos.com/etcd&#39; and &#39;k8s.io/etcd&#39; will be returned if &#39;etcd&#39; is included,
+however &#39;k8s.io/etcd-backup&#39; will not be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>keywords</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the images that have any of the keywords in the name will be returned.
+For example, both &#39;kubernetes-etcd&#39;, &#39;etcd:latest&#39; will be returned if &#39;etcd&#39; is included, </p></td>
+                </tr>
+              
+                <tr>
+                  <td>labels</td>
+                  <td><a href="#v1alpha.KeyValue">KeyValue</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the images that have all of the labels will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>imported_after</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>If set, the images that are imported after this timestamp will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>imported_before</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>If set, the images that are imported before this timestamp will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>annotations</td>
+                  <td><a href="#v1alpha.KeyValue">KeyValue</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the images that have all of the annotations will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>full_names</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the images that have any of the exact full names will be returned. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.ImageFormat">ImageFormat</h3>
+        <p>ImageFormat defines the format of the image.</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>type</td>
+                  <td><a href="#v1alpha.ImageType">ImageType</a></td>
+                  <td></td>
+                  <td><p>Type of the image, required. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>version</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Version of the image format, required. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.Info">Info</h3>
+        <p>Info describes the information of rkt on the machine.</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>rkt_version</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Version of rkt, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/). </p></td>
+                </tr>
+              
+                <tr>
+                  <td>appc_version</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Version of appc, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/). </p></td>
+                </tr>
+              
+                <tr>
+                  <td>api_version</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Latest version of the api that&#39;s supported by the service, required, in the form of Semantic Versioning 2.0.0 (http://semver.org/). </p></td>
+                </tr>
+              
+                <tr>
+                  <td>global_flags</td>
+                  <td><a href="#v1alpha.GlobalFlags">GlobalFlags</a></td>
+                  <td></td>
+                  <td><p>The global flags that passed to the rkt api service when it&#39;s launched. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.InspectImageRequest">InspectImageRequest</h3>
+        <p>Request for InspectImage().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>id</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Required. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.InspectImageResponse">InspectImageResponse</h3>
+        <p>Response for InspectImage().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>image</td>
+                  <td><a href="#v1alpha.Image">Image</a></td>
+                  <td></td>
+                  <td><p>Required. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.InspectPodRequest">InspectPodRequest</h3>
+        <p>Request for InspectPod().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>id</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>ID of the pod which we are querying status for, required. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.InspectPodResponse">InspectPodResponse</h3>
+        <p>Response for InspectPod().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>pod</td>
+                  <td><a href="#v1alpha.Pod">Pod</a></td>
+                  <td></td>
+                  <td><p>Required. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.KeyValue">KeyValue</h3>
+        <p></p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>Key</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Key part of the key-value pair. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>value</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Value part of the key-value pair. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.ListImagesRequest">ListImagesRequest</h3>
+        <p>Request for ListImages().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>filters</td>
+                  <td><a href="#v1alpha.ImageFilter">ImageFilter</a></td>
+                  <td>repeated</td>
+                  <td><p>Optional. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>detail</td>
+                  <td><a href="#bool">bool</a></td>
+                  <td></td>
+                  <td><p>Optional. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.ListImagesResponse">ListImagesResponse</h3>
+        <p>Response for ListImages().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>images</td>
+                  <td><a href="#v1alpha.Image">Image</a></td>
+                  <td>repeated</td>
+                  <td><p>Required. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.ListPodsRequest">ListPodsRequest</h3>
+        <p>Request for ListPods().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>filters</td>
+                  <td><a href="#v1alpha.PodFilter">PodFilter</a></td>
+                  <td>repeated</td>
+                  <td><p>Optional. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>detail</td>
+                  <td><a href="#bool">bool</a></td>
+                  <td></td>
+                  <td><p>Optional. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.ListPodsResponse">ListPodsResponse</h3>
+        <p>Response for ListPods().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>pods</td>
+                  <td><a href="#v1alpha.Pod">Pod</a></td>
+                  <td>repeated</td>
+                  <td><p>Required. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.ListenEventsRequest">ListenEventsRequest</h3>
+        <p>Request for ListenEvents().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>filter</td>
+                  <td><a href="#v1alpha.EventFilter">EventFilter</a></td>
+                  <td></td>
+                  <td><p>Optional. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.ListenEventsResponse">ListenEventsResponse</h3>
+        <p>Response for ListenEvents().</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>events</td>
+                  <td><a href="#v1alpha.Event">Event</a></td>
+                  <td>repeated</td>
+                  <td><p>Aggregate multiple events to reduce round trips, optional as the response can contain no events. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.Network">Network</h3>
+        <p>Network describes the network information of a pod.</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>name</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Name of the network that a pod belongs to, required. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>ipv4</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Pod&#39;s IPv4 address within the network, optional if IPv6 address is given. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>ipv6</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Pod&#39;s IPv6 address within the network, optional if IPv4 address is given. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.Pod">Pod</h3>
+        <p>Pod describes a pod's information.</p><p>If a pod is in Embryo, Preparing, AbortedPrepare state,</p><p>only id and state will be returned.</p><p>If a pod is in other states, the pod manifest and</p><p>apps will be returned when 'detailed' is true in the request.</p><p>A valid pid of the stage1 process of the pod will be returned</p><p>if the pod is Running has run once.</p><p>Networks are only returned when a pod is in Running.</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>id</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>ID of the pod, in the form of a UUID. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>pid</td>
+                  <td><a href="#sint32">sint32</a></td>
+                  <td></td>
+                  <td><p>PID of the stage1 process of the pod. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>state</td>
+                  <td><a href="#v1alpha.PodState">PodState</a></td>
+                  <td></td>
+                  <td><p>State of the pod. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>apps</td>
+                  <td><a href="#v1alpha.App">App</a></td>
+                  <td>repeated</td>
+                  <td><p>List of apps in the pod. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>networks</td>
+                  <td><a href="#v1alpha.Network">Network</a></td>
+                  <td>repeated</td>
+                  <td><p>Network information of the pod.
+Note that a pod can be in multiple networks. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>manifest</td>
+                  <td><a href="#bytes">bytes</a></td>
+                  <td></td>
+                  <td><p>JSON-encoded byte array that represents the pod manifest of the pod. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>annotations</td>
+                  <td><a href="#v1alpha.KeyValue">KeyValue</a></td>
+                  <td>repeated</td>
+                  <td><p>Annotations on this pod. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>cgroup</td>
+                  <td><a href="#string">string</a></td>
+                  <td></td>
+                  <td><p>Cgroup of the pod, empty if the pod is not running. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>created_at</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>Timestamp of when the pod is created, nanoseconds since epoch.
+Zero if the pod is not created. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>started_at</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>Timestamp of when the pod is started, nanoseconds since epoch.
+Zero if the pod is not started. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>gc_marked_at</td>
+                  <td><a href="#int64">int64</a></td>
+                  <td></td>
+                  <td><p>Timestamp of when the pod is moved to exited-garbage/garbage,
+in nanoseconds since epoch.
+Zero if the pod is not moved to exited-garbage/garbage yet. </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+        <h3 id="v1alpha.PodFilter">PodFilter</h3>
+        <p>PodFilter defines the condition that the returned pods need to satisfy in ListPods().</p><p>The conditions are combined by 'AND', and different filters are combined by 'OR'.</p>
+
+        
+          <table class="field-table">
+            <thead>
+              <tr><td>Field</td><td>Type</td><td>Label</td><td>Description</td></tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>ids</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the pods that have any of the ids will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>states</td>
+                  <td><a href="#v1alpha.PodState">PodState</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the pods that have any of the states will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>app_names</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the pods that all of the apps will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>image_ids</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the pods that have all of the images(in the apps) will be returned </p></td>
+                </tr>
+              
+                <tr>
+                  <td>network_names</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the pods that are in all of the networks will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>annotations</td>
+                  <td><a href="#v1alpha.KeyValue">KeyValue</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the pods that have all of the annotations will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>cgroups</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the pods whose cgroup are listed will be returned. </p></td>
+                </tr>
+              
+                <tr>
+                  <td>pod_sub_cgroups</td>
+                  <td><a href="#string">string</a></td>
+                  <td>repeated</td>
+                  <td><p>If not empty, the pods whose these cgroup belong to will be returned.
+i.e. the pod&#39;s cgroup is a prefix of the specified cgroup </p></td>
+                </tr>
+              
+            </tbody>
+          </table>
+        
+
+        
+      
+
+      
+        <h3 id="v1alpha.AppState">AppState</h3>
+        <p>AppState defines the possible states of the app.</p>
+        <table class="enum-table">
+          <thead>
+            <tr><td>Name</td><td>Number</td><td>Description</td></tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td>APP_STATE_UNDEFINED</td>
+                <td>0</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>APP_STATE_RUNNING</td>
+                <td>1</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>APP_STATE_EXITED</td>
+                <td>2</td>
+                <td><p></p></td>
+              </tr>
+            
+          </tbody>
+        </table>
+      
+        <h3 id="v1alpha.EventType">EventType</h3>
+        <p>EventType defines the type of the events that will be received via ListenEvents().</p>
+        <table class="enum-table">
+          <thead>
+            <tr><td>Name</td><td>Number</td><td>Description</td></tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td>EVENT_TYPE_UNDEFINED</td>
+                <td>0</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>EVENT_TYPE_POD_PREPARED</td>
+                <td>1</td>
+                <td><p>Pod events.</p></td>
+              </tr>
+            
+              <tr>
+                <td>EVENT_TYPE_POD_PREPARE_ABORTED</td>
+                <td>2</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>EVENT_TYPE_POD_STARTED</td>
+                <td>3</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>EVENT_TYPE_POD_EXITED</td>
+                <td>4</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>EVENT_TYPE_POD_GARBAGE_COLLECTED</td>
+                <td>5</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>EVENT_TYPE_APP_STARTED</td>
+                <td>6</td>
+                <td><p>App events.</p></td>
+              </tr>
+            
+              <tr>
+                <td>EVENT_TYPE_APP_EXITED</td>
+                <td>7</td>
+                <td><p>(XXX)yifan: Maybe also return exit code in the event object?</p></td>
+              </tr>
+            
+              <tr>
+                <td>EVENT_TYPE_IMAGE_IMPORTED</td>
+                <td>8</td>
+                <td><p>Image events.</p></td>
+              </tr>
+            
+              <tr>
+                <td>EVENT_TYPE_IMAGE_REMOVED</td>
+                <td>9</td>
+                <td><p></p></td>
+              </tr>
+            
+          </tbody>
+        </table>
+      
+        <h3 id="v1alpha.ImageType">ImageType</h3>
+        <p>ImageType defines the supported image type.</p>
+        <table class="enum-table">
+          <thead>
+            <tr><td>Name</td><td>Number</td><td>Description</td></tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td>IMAGE_TYPE_UNDEFINED</td>
+                <td>0</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>IMAGE_TYPE_APPC</td>
+                <td>1</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>IMAGE_TYPE_DOCKER</td>
+                <td>2</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>IMAGE_TYPE_OCI</td>
+                <td>3</td>
+                <td><p></p></td>
+              </tr>
+            
+          </tbody>
+        </table>
+      
+        <h3 id="v1alpha.PodState">PodState</h3>
+        <p>PodState defines the possible states of the pod.</p><p>See https://github.com/rkt/rkt/blob/master/Documentation/devel/pod-lifecycle.md for a detailed</p><p>explanation of each state.</p>
+        <table class="enum-table">
+          <thead>
+            <tr><td>Name</td><td>Number</td><td>Description</td></tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td>POD_STATE_UNDEFINED</td>
+                <td>0</td>
+                <td><p></p></td>
+              </tr>
+            
+              <tr>
+                <td>POD_STATE_EMBRYO</td>
+                <td>1</td>
+                <td><p>States before the pod is running.
+
+
+Pod is created, ready to entering &#39;preparing&#39; state.</p></td>
+              </tr>
+            
+              <tr>
+                <td>POD_STATE_PREPARING</td>
+                <td>2</td>
+                <td><p>Pod is being prepared. On success it will become &#39;prepared&#39;, otherwise it will become &#39;aborted prepared&#39;.</p></td>
+              </tr>
+            
+              <tr>
+                <td>POD_STATE_PREPARED</td>
+                <td>3</td>
+                <td><p>Pod has been successfully prepared, ready to enter &#39;running&#39; state. it can also enter &#39;deleting&#39; if it&#39;s garbage collected before running.</p></td>
+              </tr>
+            
+              <tr>
+                <td>POD_STATE_RUNNING</td>
+                <td>4</td>
+                <td><p>State that indicates the pod is running.
+
+
+Pod is running, when it exits, it will become &#39;exited&#39;.</p></td>
+              </tr>
+            
+              <tr>
+                <td>POD_STATE_ABORTED_PREPARE</td>
+                <td>5</td>
+                <td><p>States that indicates the pod is exited, and will never run.
+
+
+Pod failed to prepare, it will only be garbage collected and will never run again.</p></td>
+              </tr>
+            
+              <tr>
+                <td>POD_STATE_EXITED</td>
+                <td>6</td>
+                <td><p>Pod has exited, it now can be garbage collected.</p></td>
+              </tr>
+            
+              <tr>
+                <td>POD_STATE_DELETING</td>
+                <td>7</td>
+                <td><p>Pod is being garbage collected, after that it will enter &#39;garbage&#39; state.</p></td>
+              </tr>
+            
+              <tr>
+                <td>POD_STATE_GARBAGE</td>
+                <td>8</td>
+                <td><p>Pod is marked as garbage collected, it no longer exists on the machine.</p></td>
+              </tr>
+            
+          </tbody>
+        </table>
+      
+
+      
+
+      
+        <h3 id="v1alpha.PublicAPI">PublicAPI</h3>
+        <p>PublicAPI defines the read-only APIs that will be supported.</p><p>These will be handled over TCP sockets.</p>
+        <table class="enum-table">
+          <thead>
+            <tr><td>Method Name</td><td>Request Type</td><td>Response Type</td><td>Description</td></tr>
+          </thead>
+          <tbody>
+            
+              <tr>
+                <td>GetInfo</td>
+                <td><a href="#v1alpha.GetInfoRequest">GetInfoRequest</a></td>
+                <td><a href="#v1alpha.GetInfoResponse">GetInfoResponse</a></td>
+                <td><p>GetInfo gets the rkt&#39;s information on the machine.</p></td>
+              </tr>
+            
+              <tr>
+                <td>ListPods</td>
+                <td><a href="#v1alpha.ListPodsRequest">ListPodsRequest</a></td>
+                <td><a href="#v1alpha.ListPodsResponse">ListPodsResponse</a></td>
+                <td><p>ListPods lists rkt pods on the machine.</p></td>
+              </tr>
+            
+              <tr>
+                <td>InspectPod</td>
+                <td><a href="#v1alpha.InspectPodRequest">InspectPodRequest</a></td>
+                <td><a href="#v1alpha.InspectPodResponse">InspectPodResponse</a></td>
+                <td><p>InspectPod gets detailed pod information of the specified pod.</p></td>
+              </tr>
+            
+              <tr>
+                <td>ListImages</td>
+                <td><a href="#v1alpha.ListImagesRequest">ListImagesRequest</a></td>
+                <td><a href="#v1alpha.ListImagesResponse">ListImagesResponse</a></td>
+                <td><p>ListImages lists the images on the machine.</p></td>
+              </tr>
+            
+              <tr>
+                <td>InspectImage</td>
+                <td><a href="#v1alpha.InspectImageRequest">InspectImageRequest</a></td>
+                <td><a href="#v1alpha.InspectImageResponse">InspectImageResponse</a></td>
+                <td><p>InspectImage gets the detailed image information of the specified image.</p></td>
+              </tr>
+            
+              <tr>
+                <td>ListenEvents</td>
+                <td><a href="#v1alpha.ListenEventsRequest">ListenEventsRequest</a></td>
+                <td><a href="#v1alpha.ListenEventsResponse">ListenEventsResponse</a></td>
+                <td><p>ListenEvents listens for the events, it will return a response stream
+that will contain event objects.</p></td>
+              </tr>
+            
+              <tr>
+                <td>GetLogs</td>
+                <td><a href="#v1alpha.GetLogsRequest">GetLogsRequest</a></td>
+                <td><a href="#v1alpha.GetLogsResponse">GetLogsResponse</a></td>
+                <td><p>GetLogs gets the logs for a pod, if the app is also specified, then only the logs
+of the app will be returned.
+
+If &#39;follow&#39; in the &#39;GetLogsRequest&#39; is set to &#39;true&#39;, then the response stream
+will not be closed after the first response, the future logs will be sent via
+the stream.</p></td>
+              </tr>
+            
+          </tbody>
+        </table>
+      
+    
+
+    <h2 id="scalar-value-types">Scalar Value Types</h2>
+    <table class="scalar-value-types-table">
+      <thead>
+        <tr><td>.proto Type</td><td>Notes</td><td>C++ Type</td><td>Java Type</td><td>Python Type</td></tr>
+      </thead>
+      <tbody>
+        
+          <tr id="double">
+            <td>double</td>
+            <td></td>
+            <td>double</td>
+            <td>double</td>
+            <td>float</td>
+          </tr>
+        
+          <tr id="float">
+            <td>float</td>
+            <td></td>
+            <td>float</td>
+            <td>float</td>
+            <td>float</td>
+          </tr>
+        
+          <tr id="int32">
+            <td>int32</td>
+            <td>Uses variable-length encoding. Inefficient for encoding negative numbers – if your field is likely to have negative values, use sint32 instead.</td>
+            <td>int32</td>
+            <td>int</td>
+            <td>int</td>
+          </tr>
+        
+          <tr id="int64">
+            <td>int64</td>
+            <td>Uses variable-length encoding. Inefficient for encoding negative numbers – if your field is likely to have negative values, use sint64 instead.</td>
+            <td>int64</td>
+            <td>long</td>
+            <td>int/long</td>
+          </tr>
+        
+          <tr id="uint32">
+            <td>uint32</td>
+            <td>Uses variable-length encoding.</td>
+            <td>uint32</td>
+            <td>int</td>
+            <td>int/long</td>
+          </tr>
+        
+          <tr id="uint64">
+            <td>uint64</td>
+            <td>Uses variable-length encoding.</td>
+            <td>uint64</td>
+            <td>long</td>
+            <td>int/long</td>
+          </tr>
+        
+          <tr id="sint32">
+            <td>sint32</td>
+            <td>Uses variable-length encoding. Signed int value. These more efficiently encode negative numbers than regular int32s.</td>
+            <td>int32</td>
+            <td>int</td>
+            <td>int</td>
+          </tr>
+        
+          <tr id="sint64">
+            <td>sint64</td>
+            <td>Uses variable-length encoding. Signed int value. These more efficiently encode negative numbers than regular int64s.</td>
+            <td>int64</td>
+            <td>long</td>
+            <td>int/long</td>
+          </tr>
+        
+          <tr id="fixed32">
+            <td>fixed32</td>
+            <td>Always four bytes. More efficient than uint32 if values are often greater than 2^28.</td>
+            <td>uint32</td>
+            <td>int</td>
+            <td>int</td>
+          </tr>
+        
+          <tr id="fixed64">
+            <td>fixed64</td>
+            <td>Always eight bytes. More efficient than uint64 if values are often greater than 2^56.</td>
+            <td>uint64</td>
+            <td>long</td>
+            <td>int/long</td>
+          </tr>
+        
+          <tr id="sfixed32">
+            <td>sfixed32</td>
+            <td>Always four bytes.</td>
+            <td>int32</td>
+            <td>int</td>
+            <td>int</td>
+          </tr>
+        
+          <tr id="sfixed64">
+            <td>sfixed64</td>
+            <td>Always eight bytes.</td>
+            <td>int64</td>
+            <td>long</td>
+            <td>int/long</td>
+          </tr>
+        
+          <tr id="bool">
+            <td>bool</td>
+            <td></td>
+            <td>bool</td>
+            <td>boolean</td>
+            <td>boolean</td>
+          </tr>
+        
+          <tr id="string">
+            <td>string</td>
+            <td>A string must always contain UTF-8 encoded or 7-bit ASCII text.</td>
+            <td>string</td>
+            <td>String</td>
+            <td>str/unicode</td>
+          </tr>
+        
+          <tr id="bytes">
+            <td>bytes</td>
+            <td>May contain any arbitrary sequence of bytes.</td>
+            <td>string</td>
+            <td>ByteString</td>
+            <td>str</td>
+          </tr>
+        
+      </tbody>
+    </table>
+  </body>
+</html>
+

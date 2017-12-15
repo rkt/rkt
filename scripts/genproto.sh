@@ -27,5 +27,26 @@ popd
 trap 'rm -f "protoc-gen-go"' EXIT
 
 echo "generating code"
-API_DIR="api/v1alpha"
+API_DIR="${PWD}/api/v1alpha"
 protoc -I "${API_DIR}" "${API_DIR}"/*.proto --go_out=plugins=grpc:"${API_DIR}"
+echo "generating HTML documentation"
+sudo rkt \
+    --insecure-options=image \
+    run \
+    --volume=volume-out,kind=host,source="${API_DIR}"/docs \
+    --volume=volume-protos,kind=host,source="${API_DIR}" \
+    docker://pseudomuto/protoc-gen-doc:1.0.0 \
+    --user=$UID \
+    --group=$GID
+echo "generating Markdown documentation"
+sudo rkt \
+    --insecure-options=image \
+    run \
+    --volume=volume-out,kind=host,source="${API_DIR}"/docs \
+    --volume=volume-protos,kind=host,source="${API_DIR}" \
+    docker://pseudomuto/protoc-gen-doc:1.0.0 \
+    --user=$UID \
+    --group=$GID \
+    --exec=/entrypoint.sh \
+    -- \
+    --doc_opt=markdown,docs.md
