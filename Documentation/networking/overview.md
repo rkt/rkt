@@ -308,6 +308,56 @@ The basic network configuration is as follows:
 This will set up a linux-bridge, connect the container to the bridge and assign container IPs out of the subnet that flannel assigned to the host.
 For more information included advanced configuration options, see [CNI docs][cni-flannel].
 
+## Custom plugins
+
+Apart from the aforementioned plugins bundled with rkt, it is possible to run custom plugins that implement the [CNI (Container Network Interface)][cni].
+CNI plugins are just binaries that receive a JSON configuration file and rkt looks for plugin binaries and configuration files in certain well-defined locations.
+
+As we saw before, the default location where rkt looks for CNI configurations is `$LOCAL_CONFIG_DIRECTORY/net.d/`, where `$LOCAL_CONFIG_DIRECTORY` is `/etc/rkt` by default (it can be changed with rkt's `--local-config` flag).
+
+rkt looks for plugin binaries in two directories: `/usr/lib/rkt/plugins/net` and `$LOCAL_CONFIG_DIRECTORY/net.d/`.
+
+### Example
+
+We'll use a the loopback plugin.
+This is a very simple plugin that just brings up a loopback interface.
+
+To build the plugin, you can get the containernetworking/plugins repo, build it, and copy it to one of the directories where rkt looks for plugins:
+
+```
+$ go get -d github.com/containernetworking/plugins
+$ cd $GOPATH/containernetworking/plugins/plugins/main/loopback
+$ go build
+$ sudo cp loopback /usr/lib/rkt/plugins/net
+```
+
+Then you need a JSON configuration in the appropriate directory:
+
+```json
+$ cat /etc/rkt/net.d/10-loopback.conf
+{
+    "name": "loopback-test",
+    "type": "loopback"
+}
+```
+
+Finally, just run rkt with `--net` set to the name of the network, in this case `loopback-test`.
+We'll run it with `--debug` to check that the plugin is actually loaded:
+
+```sh
+$ sudo rkt --debug run --net=loopback-test --interactive kinvolk.io/aci/busybox --exec=ip -- a
+(...)
+networking: loading network loopback-test with type loopback
+(...)
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+Container rkt-7d7ec0ef-a6be-4b6f-8abf-0505a402af37 exited successfully.
+```
+
 ## Exposing container ports on the host
 
 Apps declare their public ports in the image manifest file.
