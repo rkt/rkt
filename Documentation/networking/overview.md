@@ -355,9 +355,9 @@ This is documented in [Socket-activated service][socket-activated].
 * [Overriding defaults][overriding]
 
 
-[cni]: https://github.com/appc/cni
-[cni-dhcp]: https://github.com/appc/cni/blob/master/Documentation/dhcp.md
-[cni-flannel]: https://github.com/appc/cni/blob/master/Documentation/flannel.md
+[cni]: https://github.com/containernetworking/cni
+[cni-dhcp]: https://github.com/containernetworking/plugins/blob/master/plugins/ipam/dhcp/README.md
+[cni-flannel]: https://github.com/containernetworking/plugins/blob/master/plugins/meta/flannel/README.md
 [dns]: dns.md
 [examples-bridge]: examples-bridge.md
 [ipvlan]: https://www.kernel.org/doc/Documentation/networking/ipvlan.txt
