@@ -29,8 +29,16 @@ func main() {
 Next we need to build our application.
 We are going to statically link our app so we can ship an App Container Image with no external dependencies.
 
+With Go 1.9:
+
 ```
 $ CGO_ENABLED=0 go build -ldflags '-extldflags "-static"'
+```
+
+Note that if you use [gccgo][gcc-go], the command is instead:
+
+```
+$ go build -compiler gccgo -gccgoflags '-static'
 ```
 
 Before proceeding, verify that the produced binary is statically linked:
@@ -100,3 +108,4 @@ hello
 [rkt-releases]: https://github.com/containers/build/releases
 [rkt-vagrant]: https://github.com/rkt/rkt/blob/master/Documentation/trying-out-rkt.md#rkt-using-vagrant
 [signing-guide]: signing-and-verification-guide.md
+[gcc-go]: https://golang.org/doc/install/gccgo
