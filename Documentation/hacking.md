@@ -196,6 +196,10 @@ stdout := rktlog.Logger(os.Stdout, "", false)
 
 Here, the prefix is an empty string and debug is set to `false`.
 
+## Debugging
+
+Check out the [debugging guide](devel/debugging.md) for some common techniques that can be used to debug rkt.
+
 ## Finishing Up
 
 At this point, you should be good to submit a PR.
