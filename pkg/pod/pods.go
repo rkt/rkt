@@ -269,7 +269,7 @@ func getPod(dataDir string, uuid *types.UUID) (*Pod, error) {
 
 	p.FileLock = l
 
-	if p.isRunning() {
+	if p.isRunning() || p.isExit() {
 		cfd, err := p.Fd()
 		if err != nil {
 			return nil, errwrap.Wrap(fmt.Errorf("error acquiring pod %v dir fd", uuid), err)
@@ -1198,6 +1198,11 @@ func (p *Pod) IsAfterRun() bool {
 // IsFinished returns true if the pod is in a terminal state, else false.
 func (p *Pod) IsFinished() bool {
 	return p.isExited || p.isAbortedPrepare || p.isGarbage || p.isGone
+}
+
+// isExit returns true if the pod is in exited states
+func (p *Pod) isExit() bool {
+	return p.isExited
 }
 
 // AppExitCode returns the app's exit code.
