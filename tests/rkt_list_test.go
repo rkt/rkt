@@ -57,6 +57,14 @@ func TestRktList(t *testing.T) {
 	// Get hash
 	imageID := fmt.Sprintf("sha512-%s", imgID.hash[:12])
 
+	cmd = fmt.Sprintf("%s --insecure-options=image run-prepared %s", ctx.Cmd(), podUuid)
+	nobodyUid, _ := testutils.GetUnprivilegedUidGid()
+	_, status := runRkt(t, cmd, nobodyUid, 0)
+	if status != 0 {
+		panic(fmt.Errorf("expected exit status code 0, got %d", status))
+	}
+	podInfo := getPodInfo(t, ctx, podUuid)
+	ipv4 := podInfo.networks["default"].ipv4
 	// Define tests
 	tests := []struct {
 		cmd           string
@@ -98,6 +106,12 @@ func TestRktList(t *testing.T) {
 			"list --full",
 			true,
 			imageID,
+		},
+		//	Test that ip is in json output
+		{
+			"list --format=json",
+			true,
+			ipv4,
 		},
 	}
 
