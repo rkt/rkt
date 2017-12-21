@@ -212,7 +212,7 @@ func printStatus(p *pkgPod.Pod) error {
 		stdout.Printf("started=%s", startedStr)
 	}
 
-	if state == pkgPod.Running {
+	if state == pkgPod.Running || state == pkgPod.Exited {
 		stdout.Printf("networks=%s", fmtNets(p.Nets))
 	}
 
