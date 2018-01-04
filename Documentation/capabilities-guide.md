@@ -8,6 +8,7 @@ This document is a walk-through guide describing how to use rkt isolators for
 * [Capability Isolators](#capability-isolators)
 * [Configure capabilities via the command line](#configure-capabilities-via-the-command-line)
 * [Configure capabilities in ACI images](#configure-capabilities-in-aci-images)
+* [Capabilities when running as non-root](#capabilities-when-running-as-non-root)
 * [Recommendations](#recommendations)
 
 ## About Linux Capabilities
@@ -319,6 +320,93 @@ image: using image from local store for image name quay.io/coreos/alpine-sh
 listening on [::]:80 ...
 ```
 
+## Capabilities when running as non-root
+
+The capability isolators (and default capabilities) mentioned in this document operate on the capability bounding set.
+When running containers as non-root, capabilities are not added to the effective set of the process, which is the one the kernel will check when the app is attempting to perform a privileged operation.
+This means the process won't be able to run the privileged operations enabled by the capabilities granted to the container directly.
+
+For example, including `CAP_NET_RAW` in the retain set when running a container as non-root doesn't allow the container to run `ping` (which uses raw sockets):
+
+```
+$ sudo rkt run --interactive kinvolk.io/aci/busybox --user=1000 --group=1000 --caps-retain=CAP_NET_RAW --exec ping -- 8.8.8.8
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+ping: permission denied (are you root?)
+```
+
+To be able to execute `ping` as a non-root user, the binary needs to have the corresponding file capability.
+
+**Note**: running an image with file capabilities currently requires disabling seccomp in rkt.
+This is due to a systemd bug where using seccomp results in enabling [no_new_privs][NNP] (you can track progress in [#3896](https://github.com/rkt/rkt/issues/3896)).
+
+### Building images with file capabilities
+
+Building images that include files with file capabilities is challenging since:
+
+* [build][acbuild] doesn't preserve file capabilities. See [containers/build#197](https://github.com/containers/build/issues/197).
+* docker build doesn't preserve file capabilities. See [moby/moby#35699](https://github.com/moby/moby/issues/35699).
+
+However, provided we have an ACI (created for example with [build][acbuild] or with [docker2aci][docker2aci]), we can extract it and add the file capabilities manually.
+
+#### Example
+
+We'll use build to create an Ubuntu ACI with ping installed:
+
+```bash
+#!/usr/bin/env bash
+
+acbuild --debug begin docker://ubuntu
+acbuild --debug set-name example.com/filecap
+
+# Install ping
+acbuild --debug run -- apt-get update
+acbuild --debug run -- apt-get install -y inetutils-ping
+
+# ping comes as a setuid file, we don't want that
+acbuild --debug run -- chmod -s /bin/ping
+
+acbuild --debug set-exec /bin/bash
+
+acbuild --debug write --overwrite filecaps.aci
+```
+
+After running the script, we'll extract the ACI, add file capabilities, and rebuild it.
+
+```
+$ sudo tar -xf filecaps.aci
+$ sudo setcap cap_net_raw+ep rootfs/bin/ping
+$ sudo tar --xattrs -cf filecaps-mod.aci manifest rootfs
+```
+
+Now we can run rkt with that image as a non-root user and with the right capability and ping should work fine:
+
+```
+$ sudo rkt --insecure-options=image,seccomp run --interactive filecaps-mod.aci --user=1000 --group=1000 --caps-retain=cap_net_raw
+groups: cannot find name for group ID 1000
+bash: /root/.bashrc: Permission denied
+I have no name!@rkt-4a9e66a0-6ee0-496f-8b7a-ab259362cba7:/$ ls -l /bin/ping
+-rwxr-xr-x 1 root root 70680 Feb  6  2016 /bin/ping
+I have no name!@rkt-4a9e66a0-6ee0-496f-8b7a-ab259362cba7:/$ getcap /bin/ping
+/bin/ping = cap_net_raw+ep
+I have no name!@rkt-4a9e66a0-6ee0-496f-8b7a-ab259362cba7:/$ ping 8.8.8.8
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+64 bytes from 8.8.8.8: icmp_seq=0 ttl=52 time=21.859 ms
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=52 time=20.298 ms
+64 bytes from 8.8.8.8: icmp_seq=2 ttl=52 time=25.207 ms
+^C--- 8.8.8.8 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 20.298/22.455/25.207/2.048 ms
+```
+
+### Ambient capabilities
+
+There's a way in Linux to give capabilities to non-root processes without needing file capabilities to perform the privileged task: ambient capabilities.
+
+When a capability is added to the ambient set, it will be preserved in the effective set of the process executed in the container.
+However, this is currently not implemented in rkt.
+
+For more information about ambient capabilities, check [capabilities(7)][man-capabilities].
+
 ## Recommendations
 
 As with most security features, capability isolators may require some
@@ -337,8 +425,10 @@ set of capabilities requirements and follow best practices:
     possible.
 
 [acbuild]: https://github.com/containers/build
+[docker2aci]: https://github.com/appc/docker2aci
 [actool]: https://github.com/appc/spec#building-acis
 [capabilities]: https://lwn.net/Kernel/Index/#Capabilities
 [default-caps]: https://github.com/appc/spec/blob/master/spec/ace.md#oslinuxcapabilities-remove-set
 [grsec-forums]: https://forums.grsecurity.net/viewtopic.php?f=7&t=2522
 [man-capabilities]: http://man7.org/linux/man-pages/man7/capabilities.7.html
+[NNP]: https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt
