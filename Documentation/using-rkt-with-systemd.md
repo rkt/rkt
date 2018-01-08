@@ -67,15 +67,15 @@ MACHINE CLASS SERVICE
 0 machines listed.
 ```
 
-Note that journald integration is only supported if systemd is compiled with `xz` compression enabled. To inspect this, use `systemctl`:
+Note that, for the "coreos" and "kvm" stage1 flavors, journald integration is only supported if systemd is compiled with `lz4` compression enabled. To inspect this, use `systemctl`:
 
 ```
 $ systemctl --version
-systemd v231
-[...] +XZ [...]
+systemd 235
+[...] +LZ4 [...]
 ```
 
-If the output contains `-XZ`, journal entries will not be available.
+If the output contains `-LZ4`, journal entries will not be available.
 
 ## Managing pods as systemd services
 
