@@ -20,7 +20,7 @@ If you have an existing gpg signing key skip to the [Signing the ACI](#signing-t
 
 ### Generate a gpg signing key
 
-Create a file named `gpg-batch`
+Create a file named `gpg-batch` with the following contents:
 
 ```
 %echo Generating a default key
