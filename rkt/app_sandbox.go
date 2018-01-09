@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	"github.com/appc/spec/schema/types"
+	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/rkt/rkt/common"
-	"github.com/rkt/rkt/pkg/label"
 	"github.com/rkt/rkt/pkg/lock"
 	"github.com/rkt/rkt/pkg/pod"
 	"github.com/rkt/rkt/pkg/user"
@@ -104,7 +104,7 @@ func runAppSandbox(cmd *cobra.Command, args []string) int {
 		}
 	}
 
-	processLabel, mountLabel, err := label.InitLabels("/var/run/rkt/mcs", []string{})
+	processLabel, mountLabel, err := label.InitLabels([]string{})
 	if err != nil {
 		stderr.PrintE("error initialising SELinux", err)
 		return 1

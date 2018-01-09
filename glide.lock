@@ -1,5 +1,5 @@
-hash: f763c3172b6e3e37f77970cbd8601d9101221fd4a25815961f98f47148f20615
-updated: 2017-10-24T13:44:07.972543348+02:00
+hash: 5e63c98da9454db1ed765efed9a54a8df79da833d0db1e939d2c8956086132da
+updated: 2017-10-26T12:59:31.154326718-07:00
 imports:
 - name: github.com/appc/docker2aci
   version: b62d1b9cbba9aa4eddc65dad290bff4aee211feb
@@ -207,6 +207,11 @@ imports:
   subpackages:
   - specs-go
   - specs-go/v1
+- name: github.com/opencontainers/selinux
+  version: 4a2974bf1ee960774ffd517717f1f45325af0206
+  subpackages:
+  - go-selinux
+  - go-selinux/label
 - name: github.com/pborman/uuid
   version: e790cca94e6cc75c7064b1332e63811d4aae1a53
 - name: github.com/peterbourgon/diskv
@@ -279,7 +284,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 2910a502d2bf9e43193af9d68ca516529614eed3
+  version: 6eab0e8f74e86c598ec3b6fad4888e0c11482d48
   subpackages:
   - transform
   - unicode/norm

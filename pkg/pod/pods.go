@@ -30,10 +30,10 @@ import (
 	"github.com/appc/spec/schema"
 	"github.com/appc/spec/schema/types"
 	"github.com/hashicorp/errwrap"
+	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/pborman/uuid"
 	"github.com/rkt/rkt/common"
 	"github.com/rkt/rkt/networking/netinfo"
-	"github.com/rkt/rkt/pkg/label"
 	"github.com/rkt/rkt/pkg/lock"
 	"github.com/rkt/rkt/pkg/sys"
 )
@@ -414,8 +414,7 @@ func (p *Pod) ToRun() error {
 	if err := p.ExclusiveLock(); err != nil {
 		return err
 	}
-
-	label.Relabel(p.Path(), p.MountLabel, "Z")
+	label.Relabel(p.Path(), p.MountLabel, false)
 	if err := os.Rename(p.Path(), p.runPath()); err != nil {
 		// TODO(vc): we could race here with a concurrent ToRun(), let caller deal with the error.
 		return err

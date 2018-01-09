@@ -28,8 +28,8 @@ import (
 	"github.com/appc/spec/schema/types"
 	cnitypes "github.com/containernetworking/cni/pkg/types"
 	"github.com/hashicorp/errwrap"
+	"github.com/opencontainers/selinux/go-selinux/label"
 	"github.com/rkt/rkt/common"
-	"github.com/rkt/rkt/pkg/label"
 	"github.com/rkt/rkt/pkg/lock"
 	pkgPod "github.com/rkt/rkt/pkg/pod"
 	"github.com/rkt/rkt/pkg/user"
@@ -292,7 +292,7 @@ func runRun(cmd *cobra.Command, args []string) (exit int) {
 		}
 	}
 
-	processLabel, mountLabel, err := label.InitLabels("/var/run/rkt/mcs", []string{})
+	processLabel, mountLabel, err := label.InitLabels([]string{})
 	if err != nil {
 		stderr.PrintE("error initialising SELinux", err)
 		return 254

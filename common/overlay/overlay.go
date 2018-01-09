@@ -20,7 +20,7 @@ import (
 	"syscall"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/rkt/rkt/pkg/label"
+	"github.com/opencontainers/selinux/go-selinux/label"
 )
 
 // sanitizer defines a string translator used to escape colon and comma
