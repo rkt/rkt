@@ -38,6 +38,8 @@ The flag `--pod-manifest` allows users to specify a [*runtime manifest*](https:/
 to run as a pod. This means image manifests for apps in the pod will be
 overriden and any configuration specified in them will be ignored.
 
+For more details about generating a *runtime manifest*, check the [pod manifest walkthrough][pod-manifest-walkthrough].
+
 ## Overriding the app's name
 
 Be default, the image's name will be used as the app's name.
@@ -475,3 +477,4 @@ See the table with [global options in general commands documentation][global-opt
 [rkt-arch]: ../devel/architecture.md
 [rkt-hacking]: ../hacking.md
 [systemd-run]: ../using-rkt-with-systemd.md#systemd-run
+[pod-manifest-walkthrough]: ../pod-manifest.md
