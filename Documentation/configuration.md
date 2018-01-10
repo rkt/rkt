@@ -207,7 +207,7 @@ A short list of popular Docker registries is given below.
 The `credentials` field holds the necessary data to authenticate against the Docker registry.
 This field must be specified and cannot be empty.
 
-Currently, Docker registries only support basic HTTP authentication, so `credentials` has two subfields - `user` and `password`. These fields must be specified and cannot be empty. For registries like [AWS ECR](https://aws.amazon.com/ecr/) tools may be used to obtain credentials and registry endpoints. For example, use `aws ecr get-login` to fetch login credentials when using AWS.
+Currently, Docker registries only support basic HTTP authentication, so `credentials` has two subfields - `user` and `password`. These fields must be specified and cannot be empty. For registries like [AWS ECR](https://aws.amazon.com/ecr/) tools may be used to obtain credentials and registry endpoints. For example, use `aws ecr get-login` to fetch login credentials when using AWS. Please keep in mind that when using ECR the credentials will expire and will need to be refreshed.
 
 Some popular Docker registries:
 
