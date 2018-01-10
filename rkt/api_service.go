@@ -537,6 +537,7 @@ func fillPodDetails(store *imagestore.Store, p *pkgPod.Pod, v1pod *v1alpha.Pod) 
 		v1pod.State = v1alpha.PodState_POD_STATE_DELETING
 	case pkgPod.Exited:
 		v1pod.State = v1alpha.PodState_POD_STATE_EXITED
+		v1pod.Networks = getNetworks(p)
 	case pkgPod.Garbage, pkgPod.ExitedGarbage:
 		v1pod.State = v1alpha.PodState_POD_STATE_GARBAGE
 	default:
