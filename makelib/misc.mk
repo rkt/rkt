@@ -172,7 +172,7 @@ endef
 # Example: $(call go-find-directories,./...,TestGoFiles XTestGoFiles,tests)
 define go-find-directories
 $(strip \
-	$(eval _MISC_GFD_ESCAPED_SRCDIR := $(MK_TOPLEVEL_ABS_SRCDIR)) \
+	$(eval _MISC_GFD_ESCAPED_SRCDIR := $(shell cd $(MK_TOPLEVEL_SRCDIR) && pwd)) \
 	$(eval _MISC_GFD_ESCAPED_SRCDIR := $(subst .,\.,$(_MISC_GFD_ESCAPED_SRCDIR))) \
 	$(eval _MISC_GFD_ESCAPED_SRCDIR := $(subst /,\/,$(_MISC_GFD_ESCAPED_SRCDIR))) \
 	$(eval _MISC_GFD_SPACE_ :=) \
