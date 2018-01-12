@@ -19,3 +19,7 @@ and execute from the top-level directory:
 ```
 $ make protobuf
 ```
+
+## Documentation
+
+HTML and Markdown Protobuf documentation is automatically generated and placed in [docs](docs/).
