@@ -81,15 +81,7 @@ For more information, see the [CoreOS security disclosure page](https://coreos.c
 
 ## Known issues
 
-Due to limitations in the Linux kernel, using rkt's overlay support on top of an overlay filesystem requires the upperdir and workdir to support the creation of trusted.* extended attributes and valid d_type in readdir responses (see [kernel/Documentation/filesystems/overlayfs.txt](https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt)). When starting rkt inside rkt this means that either:
-- the inner `/var/lib/rkt` directory needs to be mounted on a host volume.
-- the outer or inner rkt container needs to be started using `--no-overlay`.
-
-Due to a bug in the Linux kernel, using rkt when `/var/lib/rkt` is on btrfs requires Linux 4.5.2+ ([#2175](https://github.com/rkt/rkt/issues/2175)).
-
-Due to a bug in the Linux kernel, using rkt's overlay support in conjunction with SELinux requires a set of patches that are only currently available on some Linux distributions (for example, [CoreOS Linux](https://github.com/coreos/coreos-overlay/tree/master/sys-kernel/coreos-sources/files)). Work is ongoing to merge this work into the mainline Linux kernel ([#1727](https://github.com/rkt/rkt/issues/1727#issuecomment-173203129)).
-
-Linux 3.18+ is required to successfully garbage collect rkt pods when system services such as udevd are in a slave mount namespace (see [lazy umounts on unlinked files and directories](https://github.com/torvalds/linux/commit/8ed936b) and [#1922](https://github.com/rkt/rkt/issues/1922)).
+Check the [troubleshooting document](Documentation/troubleshooting.md).
 
 ## Related Links
 
