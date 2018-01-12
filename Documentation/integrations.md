@@ -2,7 +2,7 @@
 This document tracks projects that integrate with rkt. [Join the community](https://github.com/rkt/rkt/), and help us keep the list up-to-date.
 
 ## Projects 
-[Kubernetes](https://kubernetes.io/docs/getting-started-guides/rkt/): a enterprise grade container orchestration solution. Kubernetes offers rkt support as an alternative to the standard install.
+[Kubernetes](https://github.com/kubernetes-incubator/rktlet): an enterprise grade container orchestration solution. Kubernetes offers rkt support as an alternative to the standard install.
 
 [Mesos](http://mesos.apache.org/blog/mesos-1-0-0-released/): Apache Mesos abstracts CPU, memory, storage, and other compute resources away from machines (physical or virtual), enabling fault-tolerant and elastic distributed systems to easily be built and run effectively.
 
