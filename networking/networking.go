@@ -165,7 +165,7 @@ func (n *Networking) enableDefaultLocalnetRouting() error {
 		if err != nil {
 			return err
 		}
-		if string(routeLocalnetValue) != "1" {
+		if strings.TrimSpace(string(routeLocalnetValue)) != "1" {
 			routeLocalnetFile, err := os.OpenFile(routeLocalnetPath, os.O_WRONLY, 0)
 			if err != nil {
 				return err
