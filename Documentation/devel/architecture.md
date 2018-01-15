@@ -1,5 +1,8 @@
 # rkt architecture
 
+This document discusses rkt architecture in detail.
+For a more hands-on guide to inspecting rkt's internals, check [Inspect how rkt works](inspect-containers.md).
+
 ## Overview
 
 rkt's primary interface is a command-line tool, `rkt`, which does not require a long running daemon.
