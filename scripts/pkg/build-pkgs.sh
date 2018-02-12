@@ -104,7 +104,7 @@ fpm -s dir -t rpm \
 	--after-upgrade $workdir/after-install \
     --license "$LICENSE" --vendor "$VENDOR" --url "$HOMEPAGE" -m "$MAINTAINER" --category utils \
     --provides rkt \
-    -d 'shadow-utils' \
+    -d '/usr/sbin/groupadd' \
     -C ${prefix} 
 
 rm -rf $workdir
