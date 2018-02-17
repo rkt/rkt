@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	defaultBrName     = "kvm-cni0"
+	defaultBrName     = "cni0"
 	defaultSubnetFile = "/run/flannel/subnet.env"
 	defaultMTU        = 1500
 )
