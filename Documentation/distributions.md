@@ -104,7 +104,7 @@ virtualisation.rkt.enable = true;
 Using the nix package manager on another OS you can use:
 
 ```
-nix-env -iA nixos.rkt
+nix-env -iA nixpkgs.rkt
 ```
 
 The source for the rkt.nix expression can be found on [GitHub][rkt-nixos]
