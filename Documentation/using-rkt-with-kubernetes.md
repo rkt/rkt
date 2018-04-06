@@ -44,5 +44,5 @@ Known issues and tips for using rkt with Kubernetes can be found in the [rktnete
 [k8s-on-vagrant]: https://coreos.com/kubernetes/docs/latest/kubernetes-on-vagrant-single.html
 [minikube]: https://github.com/kubernetes/minikube
 [minikube-quickstart]: https://github.com/kubernetes/minikube/blob/master/README.md#quickstart
-[rktnetes]: http://kubernetes.io/docs/getting-started-guides/rkt/
+[rktnetes]: https://v1-8.docs.kubernetes.io/docs/getting-started-guides/rkt/
 [rktnetes-notes]: http://kubernetes.io/docs/getting-started-guides/rkt/notes/
