@@ -410,7 +410,7 @@ This feature will be disabled automatically if the underlying filesystem does no
 | `--caps-remove` | none | capability to remove (e.g. `--caps-remove=CAP_SYS_CHROOT,CAP_MKNOD`) | Capabilities to remove from the process's capabilities bounding set; all others from the default set will be included. |
 | `--caps-retain` | none | capability to retain (e.g. `--caps-retain=CAP_SYS_ADMIN,CAP_NET_ADMIN`) | Capabilities to retain in the process's capabilities bounding set; all others will be removed. |
 | `--cpu` | none | CPU units (e.g. `--cpu=500m`) | CPU limit for the preceding image in [Kubernetes resource model][k8s-resources] format. |
-| `--dns` | none | IP Address | Name server to write in `/etc/resolv.conf`. It can be specified several times. |
+| `--dns` | none | IP Address(seperated with comma), host or none | Name server to write in `/etc/resolv.conf`. It can be specified several times. Pass 'host' only to use host's resolv.conf or 'none' only to ignore CNI DNS config. |
 | `--dns-domain` | none | DNS domain (e.g., `--dns-domain=example.com`) | DNS domain to write in `/etc/resolv.conf`. |
 | `--dns-opt` | none | DNS option | DNS option from resolv.conf(5) to write in `/etc/resolv.conf`. It can be specified several times. |
 | `--dns-search` | none | Domain name | DNS search domain to write in `/etc/resolv.conf`. It can be specified several times. |
