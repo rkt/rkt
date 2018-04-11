@@ -36,7 +36,7 @@ func TestRunOverrideExec(t *testing.T) {
 	noappManifest := schema.ImageManifest{
 		Name: "coreos.com/rkt-inspect",
 		Labels: types.Labels{
-			{"version", "1.29.0"},
+			{"version", "1.30.0"},
 			{"arch", common.GetArch()},
 			{"os", common.GetOS()},
 		},

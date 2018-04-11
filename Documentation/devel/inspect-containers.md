@@ -69,7 +69,7 @@ The default network uses the [ptp plugin][ptp] with [host-local][host-local] as 
 5730  execve("stage1/rootfs/usr/lib/rkt/plugins/net/host-local", ["stage1/rootfs/usr/lib/rkt/plugins/net/host-local"], 0xc42008e240 /* 32 vars */ <unfinished ...>
 ```
 
-In this case, the CNI plugins use come from rkt's stage1, but [rkt is also able to pick a CNI plugin installed externally](https://github.com/rkt/rkt/blob/v1.29.0/Documentation/networking/overview.md#custom-plugins).
+In this case, the CNI plugins use come from rkt's stage1, but [rkt is also able to pick a CNI plugin installed externally](https://github.com/rkt/rkt/blob/v1.30.0/Documentation/networking/overview.md#custom-plugins).
 
 The plugins will do some iptables magic to configure the network:
 
