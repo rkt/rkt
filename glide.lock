@@ -1,8 +1,8 @@
-hash: 5e63c98da9454db1ed765efed9a54a8df79da833d0db1e939d2c8956086132da
-updated: 2017-10-26T12:59:31.154326718-07:00
+hash: 1a955b0303fbf7d88c8f32a17036a2ecb48c30ce42ce1771a025445126198986
+updated: 2018-04-13T16:23:44.423828285Z
 imports:
 - name: github.com/appc/docker2aci
-  version: b62d1b9cbba9aa4eddc65dad290bff4aee211feb
+  version: 1bfc43596cd2fdca46e9ddb33cfe7d56f87644ab
   subpackages:
   - lib
   - lib/common
@@ -146,6 +146,10 @@ imports:
   version: 572eabb84c424e76a0d39d31510dd7dfd62f70b2
   subpackages:
   - oleutil
+- name: github.com/go4org/go4
+  version: 03efcb870d84809319ea509714dd6d19a1498483
+  subpackages:
+  - errorutil
 - name: github.com/godbus/dbus
   version: a1b8ba5163b7f041b22761461eabd02b70d1f824
   subpackages:
@@ -284,7 +288,7 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 6eab0e8f74e86c598ec3b6fad4888e0c11482d48
+  version: 7922cc490dd5a7dbaa7fd5d6196b49db59ac042f
   subpackages:
   - transform
   - unicode/norm

@@ -3,7 +3,7 @@ import:
 - package: github.com/StackExchange/wmi
   version: f3e2bae1e0cb5aef83e319133eabfee30013a4a5
 - package: github.com/appc/docker2aci
-  version: v0.17.1
+  version: v0.17.2
   subpackages:
   - lib
   - lib/common
@@ -213,7 +213,7 @@ import:
   version: ecf47fd5739b3d2c3daf7c89c4b9715a2605c21b
   subpackages:
   - nl
-- package: go4.org
+- package: github.com/go4org/go4
   version: 03efcb870d84809319ea509714dd6d19a1498483
   subpackages:
   - errorutil
