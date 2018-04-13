@@ -613,23 +613,40 @@ func writeACI(layer io.ReadSeeker, manifest schema.ImageManifest, curPwl []strin
 		if name == "./" {
 			return nil
 		}
-		t.Header.Name = path.Join("rootfs", name)
-		absolutePath := strings.TrimPrefix(t.Header.Name, "rootfs")
+		newName := path.Join("rootfs", name)
+		absolutePath := strings.TrimPrefix(newName, "rootfs")
 
 		if filepath.Clean(absolutePath) == "/dev" && t.Header.Typeflag != tar.TypeDir {
 			return fmt.Errorf(`invalid layer: "/dev" is not a directory`)
 		}
 
 		fileMap[absolutePath] = struct{}{}
-		if strings.Contains(t.Header.Name, "/.wh.") {
+		if strings.Contains(newName, "/.wh.") {
 			whiteouts = append(whiteouts, strings.Replace(absolutePath, ".wh.", "", 1))
 			return nil
 		}
-		if t.Header.Typeflag == tar.TypeLink {
-			t.Header.Linkname = path.Join("rootfs", t.Linkname())
-		}
 
-		if err := trw.WriteHeader(t.Header); err != nil {
+		newHeader := &tar.Header{
+			Typeflag:   t.Header.Typeflag,
+			Name:       newName,
+			Linkname:   t.Header.Linkname,
+			Size:       t.Header.Size,
+			Mode:       t.Header.Mode,
+			Uid:        t.Header.Uid,
+			Gid:        t.Header.Gid,
+			Uname:      t.Header.Uname,
+			Gname:      t.Header.Gname,
+			ModTime:    t.Header.ModTime,
+			AccessTime: t.Header.AccessTime,
+			ChangeTime: t.Header.ChangeTime,
+			Devmajor:   t.Header.Devmajor,
+			Devminor:   t.Header.Devminor,
+			Xattrs:     t.Header.Xattrs,
+		}
+		if t.Header.Typeflag == tar.TypeLink {
+			newHeader.Linkname = path.Join("rootfs", t.Linkname())
+		}
+		if err := trw.WriteHeader(newHeader); err != nil {
 			return err
 		}
 		if _, err := io.Copy(trw, t.TarStream); err != nil {
