@@ -213,7 +213,7 @@ import:
   version: ecf47fd5739b3d2c3daf7c89c4b9715a2605c21b
   subpackages:
   - nl
-- package: go4.org
+- package: github.com/go4org/go4
   version: 03efcb870d84809319ea509714dd6d19a1498483
   subpackages:
   - errorutil
