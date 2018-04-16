@@ -23,7 +23,7 @@ The resulting pod manifest file is:
 
 ```json
 {
-	"acVersion": "1.29.0",
+	"acVersion": "1.30.0",
 	"acKind": "PodManifest",
 	"apps": [
 		{

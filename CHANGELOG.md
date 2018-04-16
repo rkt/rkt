@@ -1,3 +1,43 @@
+## 1.30.0
+
+This release includes some small command line tweaks and adds support for CRI logging in iottymux which is required by rktlet.
+It also fixes a number of bugs, adds a lot of new documentation, and updates some dependencies.
+
+### New features
+
+- status: added read from uuid-file ([#3860](https://github.com/rkt/rkt/pull/3860)).
+- stage0/run: relax '--hosts-entry' parser ([#3833](https://github.com/rkt/rkt/pull/3833)).
+- iottymux: store logs for kubelet in the appropriate location ([#3798](https://github.com/rkt/rkt/pull/3798)). This change is made for rktlet. iottymux will store the logs directly in the CRI format.
+- rkt: add AWS auth headerer support to `rkt config` ([#3910](https://github.com/rkt/rkt/pull/3910)).
+
+### Bugfixes
+
+- kvm: solve certain routing issues by using the same default bridge as CNI ([#3905](https://github.com/rkt/rkt/pull/3905)).
+- networking/portfwd: fix compare routeLocalnetValue ([#3897](https://github.com/rkt/rkt/pull/3897)).
+- list: add ip of non-running pods to status output ([#3857](https://github.com/rkt/rkt/pull/3857)).
+- stage1: execute pre-start/post-stop hooks as privileged ([#3844](https://github.com/rkt/rkt/pull/3844)). Even if we run the container as an unprivileged user.
+- stage1-fly/run: allow non absolute commands to be run ([#3845](https://github.com/rkt/rkt/pull/3845)).
+- rkt: prevent skipping some images in image gc ([#3858](https://github.com/rkt/rkt/pull/3858)).
+- rkt: skip parsing in case of an empty string ([#3822](https://github.com/rkt/rkt/pull/3822)). Fix issue where `rkt app add` fails with an error message like `must give only one app`, even when only one app name is given.
+
+### Build system
+
+- scripts: Add libfdt to install deps ([#3834](https://github.com/rkt/rkt/pull/3834)). libfdt-dev is needed when building kernels for architectures that support a device tree.
+- makelib: Fix go-find-directories symlink problem ([#3824](https://github.com/rkt/rkt/pull/3824)).
+- scripts: adding missing dependecies to debian dependency installer ([#3829](https://github.com/rkt/rkt/pull/3829)).
+- scripts/build-pkgs: use RPM file dependency for shadow tools ([#3904](https://github.com/rkt/rkt/pull/3904)).
+
+### Other changes
+
+- Lots of [documentation updates](https://github.com/rkt/rkt/pulls?q=is%3Apr+label%3Akind%2Fdocumentation++milestone%3Av1.30.0).
+- selinux: Update to latest ([#3818](https://github.com/rkt/rkt/pull/3818)).
+- travis: update go versions ([#3821](https://github.com/rkt/rkt/pull/3821)).
+- vendor: bump docker2aci to v0.17.1 ([#3835](https://github.com/rkt/rkt/pull/3835)). It fixes an image pulling bug for some images in GCR.
+- Fixes all the misspell ([#3870](https://github.com/rkt/rkt/pull/3870)).
+- stage1/usr_from_coreos: add new image signing subkey 0638EB2F ([#3902](https://github.com/rkt/rkt/pull/3902)).
+- tests: Use semaphore install-package ([#3827](https://github.com/rkt/rkt/pull/3827)).
+- tests: Add verbose flag to build-and-run-tests.sh ([#3819](https://github.com/rkt/rkt/pull/3819)).
+
 ## 1.29.0
 
 This release contains a number of bugfixes, new features like the ability to share the host IPC namespace, dependency updates, and build system improvements.
