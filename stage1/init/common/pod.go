@@ -55,6 +55,7 @@ func execEscape(i int, str string) string {
 
 	if i > 0 { // These are escaped only after the first argument
 		escapeMap[`$`] = `$`
+		escapeMap[`%`] = `%`
 	}
 
 	escArg := fmt.Sprintf("%q", str)
