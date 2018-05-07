@@ -56,6 +56,9 @@ func TestQuoteExec(t *testing.T) {
 			input:  []string{`$path$`, `$argument`},
 			output: `"$path$" "$$argument"`,
 		}, {
+			input:  []string{`%path%`, `%argument`},
+			output: `"%path%" "%%argument"`,
+		}, {
 			input:  []string{`path`, `Args\nwith\nnewlines`},
 			output: `"path" "Args\\nwith\\nnewlines"`,
 		}, {
