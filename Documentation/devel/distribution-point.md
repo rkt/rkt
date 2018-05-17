@@ -163,6 +163,6 @@ For example there may exist multiple transport plugins (file, http, s3, bittorre
 
 [3986]: https://tools.ietf.org/html/rfc3986
 [docker2aci_GH]: https://github.com/appc/docker2aci
-[oci_image_spec_readme]: https://github.com/opencontainers/image-spec#running-an-oci-imag://github.com/appc/docker2aci
+[oci_image_spec_readme]: https://github.com/opencontainers/image-spec#running-an-oci-image
 [oci_layout]: https://github.com/opencontainers/image-spec/blob/master/image-layout.md
 [rkt-2964]: https://github.com/rkt/rkt/pull/2964
