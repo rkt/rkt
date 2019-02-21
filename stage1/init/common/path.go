@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	// UnitsDir is the default path to systemd systemd unit directory
+	// UnitsDir is the default path to systemd unit directory
 	UnitsDir        = "/usr/lib/systemd/system"
 	envDir          = "/rkt/env"
 	statusDir       = "/rkt/status"
