@@ -37,8 +37,8 @@ Known issues and tips for using rkt with Kubernetes can be found in the [rktnete
 
 [coreos-baremetal]: https://github.com/coreos/coreos-baremetal
 [coreos-kubernetes]: https://github.com/coreos/coreos-kubernetes
-[k8s]: http://kubernetes.io
-[k8s-1.3-release]: http://blog.kubernetes.io/2016/07/rktnetes-brings-rkt-container-engine-to-Kubernetes.html
+[k8s]: https://kubernetes.io
+[k8s-1.3-release]: https://kubernetes.io/blog/2016/07/rktnetes-brings-rkt-container-engine-to-kubernetes/
 [k8s-on-aws]: https://coreos.com/kubernetes/docs/latest/kubernetes-on-aws.html
 [k8s-baremetal]: https://github.com/coreos/coreos-baremetal/blob/master/Documentation/kubernetes.md
 [k8s-on-vagrant]: https://coreos.com/kubernetes/docs/latest/kubernetes-on-vagrant-single.html

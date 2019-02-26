@@ -72,9 +72,9 @@ This will build the rkt binary and the KVM stage1 aci image in `build-rkt-1.30.0
 
 [build-configure]: build-configure.md
 [clear-containers]: https://lwn.net/Articles/644675/
-[kvm-module]: http://www.linux-kvm.org/page/Getting_the_kvm_kernel_modules
+[kvm-module]: https://www.linux-kvm.org/page/Getting_the_kvm_kernel_modules
 [lkvm]: https://kernel.googlesource.com/pub/scm/linux/kernel/git/will/kvmtool/+/master/README
-[qemu]: http://qemu-project.org/Main_Page
+[qemu]: https://wiki.qemu.org/Main_Page
 [rkt-arch-stage1]: devel/architecture.md#stage-1
 [rkt-run]: subcommands/run.md#use-a-custom-stage-1
 [stage1-implementers-guide]: devel/stage1-implementors-guide.md
