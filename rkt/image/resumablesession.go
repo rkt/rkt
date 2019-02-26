@@ -39,7 +39,7 @@ func (*statusAcceptedError) Error() string {
 	return "HTTP 202"
 }
 
-// cacheData holds caching-specific informations taken from various
+// cacheData holds caching-specific information taken from various
 // HTTP headers.
 type cacheData struct {
 	// whether we should reuse an image from store
