@@ -138,7 +138,7 @@ sudo build*/target/bin/rkt run quay.io/coreos/alpine-sh
 
 
 ## Fixing errors
-If there are some new libraries missing from the image, you need to add them to the correspoding manifest file.
+If there are some new libraries missing from the image, you need to add them to the corresponding manifest file.
 
 For example, this update breaks systemd.
 When you try to run rkt, you get this error:
