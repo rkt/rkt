@@ -94,7 +94,7 @@ func init() {
 	globalFlagset.BoolVar(&globalFlags.ReadStdin, "read-stdin", false, "Read a line from stdin")
 	globalFlagset.BoolVar(&globalFlags.CheckTty, "check-tty", false, "Check if stdin is a terminal")
 	globalFlagset.BoolVar(&globalFlags.CheckPath, "check-path", false, "Check if environment variable PATH does not contain \\n")
-	globalFlagset.BoolVar(&globalFlags.PrintExec, "print-exec", false, "Print the command we were execed as (i.e. argv[0])")
+	globalFlagset.BoolVar(&globalFlags.PrintExec, "print-exec", false, "Print the command we were exceed as (i.e. argv[0])")
 	globalFlagset.StringVar(&globalFlags.PrintMsg, "print-msg", "", "Print the message given as parameter")
 	globalFlagset.StringVar(&globalFlags.SuffixMsg, "suffix-msg", "", "Print this suffix after some commands")
 	globalFlagset.BoolVar(&globalFlags.PrintCwd, "print-cwd", false, "Print the current working directory")
@@ -262,7 +262,7 @@ func main() {
 	}
 
 	if globalFlags.PrintExec {
-		fmt.Fprintf(os.Stdout, "inspect execed as: %s\n", os.Args[0])
+		fmt.Fprintf(os.Stdout, "inspect exceed as: %s\n", os.Args[0])
 	}
 
 	if globalFlags.PrintMsg != "" {
