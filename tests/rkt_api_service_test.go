@@ -445,7 +445,7 @@ func NewAPIServiceListInspectPodsTest() testutils.Test {
 
 		// ListPods with corrupt pod directory
 		// Note that we don't checkPodDetails here, the failure this is testing is
-		// the api server panicing, which results in a list call hanging for ages
+		// the api server panicking, which results in a list call hanging for ages
 		// and then failing.
 		// TODO: do further validation on the partial pods returned
 		for _, p := range resp.Pods {

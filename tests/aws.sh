@@ -110,7 +110,7 @@ done
 NAME=rkt-ci-jenkins-$(date +"%Y-%m-%d")-$DISTRO
 AMI_ID=$(aws --region $REGION ec2 create-image --instance-id $INSTANCE_ID --name $NAME --output text)
 
-echo -e "\nWaiting for the AMI to be avaliable..."
+echo -e "\nWaiting for the AMI to be available..."
 while ! aws --region $REGION ec2 describe-images --image-id $AMI_ID | grep -q available
 do
   echo -n '.'
