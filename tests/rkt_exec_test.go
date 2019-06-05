@@ -66,23 +66,23 @@ func TestRunOverrideExec(t *testing.T) {
 		{
 			// Sanity check - make sure no --exec override prints the expected exec invocation
 			rktCmd:        fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s -- --print-exec", ctx.Cmd(), execImage),
-			expectedRegex: "inspect execed as: /inspect",
+			expectedRegex: "inspect exceed as: /inspect",
 		},
 		{
 			// Now test overriding the entrypoint (which is a symlink to /inspect so should behave identically)
 			rktCmd:        fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s --exec /inspect-link -- --print-exec", ctx.Cmd(), execImage),
-			expectedRegex: "inspect execed as: /inspect-link",
+			expectedRegex: "inspect exceed as: /inspect-link",
 		},
 		{
 			// Test overriding the entrypoint with a relative path
 			rktCmd:        fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s --exec inspect-link-bin -- --print-exec", ctx.Cmd(), execImage),
-			expectedRegex: "inspect execed as: .*inspect-link-bin",
+			expectedRegex: "inspect exceed as: .*inspect-link-bin",
 		},
 
 		{
 			// Test overriding the entrypoint with a missing app section
 			rktCmd:        fmt.Sprintf("%s --insecure-options=image run --mds-register=false %s --exec /inspect -- --print-exec", ctx.Cmd(), noappImage),
-			expectedRegex: "inspect execed as: /inspect",
+			expectedRegex: "inspect exceed as: /inspect",
 		},
 	} {
 		runRktAndCheckRegexOutput(t, tt.rktCmd, tt.expectedRegex)
@@ -102,7 +102,7 @@ func TestRunPreparedOverrideExec(t *testing.T) {
 	uuid = runRktAndGetUUID(t, rktCmd)
 
 	rktCmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), uuid)
-	expected = "inspect execed as: /inspect"
+	expected = "inspect exceed as: /inspect"
 	runRktAndCheckOutput(t, rktCmd, expected, false)
 
 	// Now test overriding the entrypoint (which is a symlink to /inspect so should behave identically)
@@ -110,6 +110,6 @@ func TestRunPreparedOverrideExec(t *testing.T) {
 	uuid = runRktAndGetUUID(t, rktCmd)
 
 	rktCmd = fmt.Sprintf("%s run-prepared --mds-register=false %s", ctx.Cmd(), uuid)
-	expected = "inspect execed as: /inspect-link"
+	expected = "inspect exceed as: /inspect-link"
 	runRktAndCheckOutput(t, rktCmd, expected, false)
 }
