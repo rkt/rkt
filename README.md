@@ -1,3 +1,16 @@
+## :warning: End of project :warning:
+
+[![development](https://img.shields.io/badge/development-halted-red.svg)](https://github.com/rkt/rkt/issues/4024)
+
+This project [has ended](https://github.com/rkt/rkt/issues/4024), and **all development/maintenance activities have halted**.
+
+As it is free software, people are free and welcome to fork and develop the codebase on their own.
+However, to avoid any confusion, the original repository is archived and we recommend any further fork/development to proceed with an explicit rename and rebranding first.
+
+We encourage all interested parties to mirror any relevant bits as we can't actively guarantee their existence in the future.
+
+---
+
 # rkt - the pod-native container engine
 
 [![godoc](https://godoc.org/github.com/rkt/rkt?status.svg)](http://godoc.org/github.com/rkt/rkt)
